@@ -1,12 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use clap::arg_enum;
 use config::config::{NodeConfig, PersistableConfig};
 use failure::prelude::*;
 use logger::prelude::*;
 use std::{ffi::OsStr, fs, net::IpAddr, path::PathBuf, str::FromStr};
-use structopt::StructOpt;
+use structopt::{clap::arg_enum, StructOpt};
 use walkdir::WalkDir;
 
 arg_enum! {
@@ -21,49 +20,48 @@ arg_enum! {
 #[derive(Debug, StructOpt)]
 pub struct BenchOpt {
     /// Validator address list separated by whitespace: `ip_address:port ip_address:port ...`.
-    /// It is required unless (and hence conflict with) swarm_config_dir is present.
+    /// It is required unless (and hence conflict with) swarm-config-dir is present.
     #[structopt(
         short = "a",
-        long = "validator_addresses",
-        conflicts_with = "swarm_config_dir",
-        required_unless = "swarm_config_dir"
+        long,
+        conflicts_with = "swarm-config-dir",
+        required_unless = "swarm-config-dir"
     )]
     pub validator_addresses: Vec<String>,
     /// libra-swarm's config file directory, which holds libra-node's config .toml file(s).
-    /// It is requried unless (and hence conflicts with) validator_addresses .
+    /// It is requried unless (and hence conflicts with) validator-addresses.
     #[structopt(
         short = "s",
-        long = "swarm_config_dir",
-        conflicts_with = "validator_addresses",
-        required_unless = "validator_addresses"
+        long,
+        conflicts_with = "validator-addresses",
+        required_unless = "validator-addresses"
     )]
     pub swarm_config_dir: Option<String>,
     /// Metrics server process's address.
     /// If this argument is not present, RuBen will not spawn metrics server.
-    #[structopt(short = "m", long = "metrics_server_address")]
+    #[structopt(short = "m", long)]
     pub metrics_server_address: Option<String>,
     /// Valid faucet key file path.
-    #[structopt(short = "f", long = "faucet_key_file_path", required = true)]
+    #[structopt(short = "f", long, required = true)]
     pub faucet_key_file_path: String,
     /// Number of AC clients.
     /// If not specified or equals 0, it will be set to #validators * #cpus. Why this value?
     /// We want to create/connect 1 AC client to each AC thread on each validator.
-    #[structopt(short = "c", long = "num_clients", default_value = "0")]
+    #[structopt(short = "c", long, default_value = "0")]
     pub num_clients: usize,
     /// Randomly distribute the clients to start sending requests over the stagger_range_ms time.
     /// A value of 1 ms effectively means starting all clients at once.
-    #[structopt(short = "g", long = "stagger_range_ms", default_value = "64")]
+    #[structopt(short = "g", long, default_value = "64")]
     pub stagger_range_ms: u16,
     /// Submit constant number of requests per second per client; otherwise flood requests.
-    #[structopt(short = "k", long = "submit_rate")]
+    #[structopt(short = "k", long)]
     pub submit_rate: Option<u64>,
 }
 
 /// CLI options for RuBen.
 #[derive(Debug, StructOpt)]
 #[structopt(
-    name = "RuBen",
-    author = "Libra",
+    name = "ruben",
     about = "RuBen (Ru)ns The Libra (Ben)chmarker For You."
 )]
 pub struct RubenOpt {
@@ -71,19 +69,19 @@ pub struct RubenOpt {
     #[structopt(flatten)]
     pub bench_opt: BenchOpt,
     /// Number of accounts to create in Libra.
-    #[structopt(short = "n", long = "num_accounts", default_value = "32")]
+    #[structopt(short = "n", long, default_value = "32")]
     pub num_accounts: u64,
     /// Number of repetition to attempt, in one epoch, to increase overall number of sent requests.
-    #[structopt(short = "r", long = "num_rounds", default_value = "1")]
+    #[structopt(short = "r", long, default_value = "1")]
     pub num_rounds: u64,
     /// Number of epochs to measure the TXN throughput, each time with newly created Benchmarker.
-    #[structopt(short = "e", long = "num_epochs", default_value = "10")]
+    #[structopt(short = "e", long, default_value = "10")]
     pub num_epochs: u64,
     /// Choices of how to generate TXNs.
     #[structopt(
         short = "t",
-        long = "txn_pattern",
-        raw(possible_values = "&TransactionPattern::variants()"),
+        long,
+        possible_values(&TransactionPattern::variants()),
         case_insensitive = true,
         default_value = "Ring"
     )]
@@ -92,29 +90,25 @@ pub struct RubenOpt {
 
 /// CLI options for linear search max throughput.
 #[derive(Debug, StructOpt)]
-#[structopt(
-    name = "max_throughput",
-    author = "Libra",
-    about = "Linear Search Maximum Throughput."
-)]
+#[structopt(name = "max-throughput", about = "Linear Search Maximum Throughput.")]
 pub struct SearchOpt {
     // Options for creating Benchmarker.
     #[structopt(flatten)]
     pub bench_opt: BenchOpt,
     /// Upper bound value of submission rate for each client.
-    #[structopt(short = "u", long = "upper_bound", default_value = "8000")]
+    #[structopt(short = "u", long, default_value = "8000")]
     pub upper_bound: u64,
     /// Lower bound value of submission rate for each client.
-    #[structopt(short = "l", long = "lower_bound", default_value = "10")]
+    #[structopt(short = "l", long, default_value = "10")]
     pub lower_bound: u64,
     /// Increase step of submission rate for each client.
-    #[structopt(short = "i", long = "inc_step", default_value = "10")]
+    #[structopt(short = "i", long, default_value = "10")]
     pub inc_step: u64,
     /// Number of epochs to send TXNs at a fixed rate.
-    #[structopt(short = "e", long = "num_epochs", default_value = "4")]
+    #[structopt(short = "e", long, default_value = "4")]
     pub num_epochs: u64,
     /// How many times to repeat the same linear search. Each time with new accounts/TXNs.
-    #[structopt(short = "b", long = "num_searches", default_value = "10")]
+    #[structopt(short = "b", long, default_value = "10")]
     pub num_searches: u64,
 }
 
