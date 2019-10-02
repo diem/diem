@@ -29,6 +29,7 @@ proto_conv = { path = "../../common/proto_conv", features = ["derive"] }
 config =  { path = "../../config" }
 logger = { path = "../../common/logger" }
 stdlib = { path = "../stdlib" }
+walkdir = "2.2.9"
 
 [dev-dependencies]
 types = { path = "../../types", features = ["testing"] }

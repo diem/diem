@@ -18,6 +18,7 @@ use types::{
 };
 use vm::{errors::*, CompiledModule};
 use vm_runtime::data_cache::RemoteCache;
+use walkdir::WalkDir;
 
 lazy_static! {
     /// The write set encoded in the genesis transaction.
@@ -35,12 +36,15 @@ lazy_static! {
         base_path.pop();
         base_path.push("terraform/validator-sets/");
 
-        let files = std::fs::read_dir(base_path).unwrap();
-        files
-            .filter_map(std::io::Result::ok)
+        let files = WalkDir::new(base_path)
+            .into_iter()
+            .filter_map(|f| f.ok())
             .filter(|f| f.path().ends_with("genesis.blob"))
-            .map(|f| load_genesis(f.path()))
-            .collect()
+            .map(|f| load_genesis(f.path().to_path_buf()))
+            .collect::<Vec<_>>();
+
+        assert!(!files.is_empty());
+        files
     };
 }
 
