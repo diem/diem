@@ -259,7 +259,7 @@ fn slow_get_frozen_subtree_roots_impl(root: Position, max_leaf_index: u64) -> Ve
     }
 }
 
-fn slow_get_frozen_subtree_roots(num_leaves: u64) -> Vec<Position> {
+fn slow_get_frozen_subtree_roots(num_leaves: LeafCount) -> Vec<Position> {
     if num_leaves == 0 {
         Vec::new()
     } else {
@@ -279,7 +279,7 @@ fn test_frozen_subtree_iterator() {
     }
 }
 
-fn collect_all_positions(num_leaves: u64, num_new_leaves: u64) -> Vec<u64> {
+fn collect_all_positions(num_leaves: LeafCount, num_new_leaves: LeafCount) -> Vec<u64> {
     FrozenSubtreeSiblingIterator::new(num_leaves, num_new_leaves)
         .map(Position::to_inorder_index)
         .collect()
