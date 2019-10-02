@@ -21,7 +21,7 @@ RUN cargo build --release -p libra-node -p client -p benchmark
 FROM debian:stretch
 
 RUN mkdir -p /opt/libra/bin /opt/libra/etc
-COPY docker/validator/install-tools.sh /root
+COPY docker/install-tools.sh /root
 COPY --from=builder /libra/target/release/libra-node /opt/libra/bin
 
 # Admission control
