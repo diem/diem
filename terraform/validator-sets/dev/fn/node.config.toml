@@ -1,6 +1,15 @@
 [[networks]]
-advertised_address = "/ip4/${self_ip}/tcp/6180"
+listen_address = "/ip4/0.0.0.0/tcp/6181"
+advertised_address = "/ip4/${self_ip}/tcp/6181"
 peer_id = "${peer_id}"
+role = "full_node"
+network_peers_file = "fullnode_peers.config.toml"
+
+[state_sync]
+upstream_peers = ["${upstream_peer}"]
+
+[consensus]
+consensus_keypair_file = ""
 
 [debug-interface]
 address = "0.0.0.0"

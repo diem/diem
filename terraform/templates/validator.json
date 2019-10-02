@@ -7,6 +7,7 @@
         "essential": true,
         "portMappings": [
             {"containerPort": 6180, "hostPort": 6180},
+            {"containerPort": 6181, "hostPort": 6181},
             {"containerPort": 8000, "hostPort": 8000},
             {"containerPort": 9101, "hostPort": 9101},
             {"containerPort": 6191, "hostPort": 6191}
@@ -15,6 +16,7 @@
             {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"},
             {"sourceVolume": "consensus-peers", "containerPath": "/opt/libra/etc/consensus_peers.config.toml"},
             {"sourceVolume": "network-peers", "containerPath": "/opt/libra/etc/network_peers.config.toml"},
+            {"sourceVolume": "fullnode-peers", "containerPath": "/opt/libra/etc/fullnode_peers.config.toml"},
             {"sourceVolume": "genesis-blob", "containerPath": "/opt/libra/etc/genesis.blob"}
         ],
         "environment": [
@@ -49,8 +51,13 @@
 %{ endif }
         },
         "secrets": [
-            {"name": "NETWORK_KEYPAIRS", "valueFrom": "${network_secret}"},
-            {"name": "CONSENSUS_KEYPAIR", "valueFrom": "${consensus_secret}"}
+%{if fullnode_secret != "" }
+            {"name": "FULLNODE_KEYPAIRS", "valueFrom": "${fullnode_secret}"},
+%{ endif }
+%{if consensus_secret != "" }
+            {"name": "CONSENSUS_KEYPAIR", "valueFrom": "${consensus_secret}"},
+%{ endif }
+            {"name": "NETWORK_KEYPAIRS", "valueFrom": "${network_secret}"}
         ]
     }
 ]

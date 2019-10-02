@@ -141,6 +141,7 @@ data "template_file" "user_data" {
   vars = {
     ecs_cluster     = aws_ecs_cluster.testnet.name
     network_peers   = "s3://${aws_s3_bucket.config.id}/${aws_s3_bucket_object.network_peers.id}"
+    fullnode_peers  = "s3://${aws_s3_bucket.config.id}/${aws_s3_bucket_object.fullnode_peers.id}"
     consensus_peers = "s3://${aws_s3_bucket.config.id}/${aws_s3_bucket_object.consensus_peers.id}"
     genesis_blob    = "s3://${aws_s3_bucket.config.id}/${aws_s3_bucket_object.genesis_blob.id}"
   }
@@ -220,13 +221,24 @@ resource "aws_secretsmanager_secret_version" "validator_network" {
   secret_string = element(data.local_file.network_keys.*.content, count.index)
 }
 
+resource "aws_secretsmanager_secret" "validator_fullnode" {
+  name                    = "${terraform.workspace}-validator-fullnode"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "validator_fullnode" {
+  secret_id     = aws_secretsmanager_secret.validator_fullnode.id
+  secret_string = file("${var.validator_set}/val/${var.validator_fullnode_id}.network.keys.toml")
+}
+
 data "template_file" "validator_config" {
   count    = length(var.peer_ids)
   template = file("${var.validator_set}/val/node.config.toml")
 
   vars = {
-    self_ip = var.validator_use_public_ip == true ? element(aws_instance.validator.*.public_ip, count.index) : element(aws_instance.validator.*.private_ip, count.index)
-    peer_id = var.peer_ids[count.index]
+    self_ip     = var.validator_use_public_ip == true ? element(aws_instance.validator.*.public_ip, count.index) : element(aws_instance.validator.*.private_ip, count.index)
+    peer_id     = var.peer_ids[count.index]
+    fullnode_id = var.validator_fullnode_id
   }
 }
 
@@ -235,7 +247,7 @@ data "template_file" "seed_peers" {
 
   vars = {
     validators = join(",", formatlist("%s:%s", slice(var.peer_ids, 0, 3), var.validator_use_public_ip == true ? slice(aws_instance.validator.*.public_ip, 0, 3) : slice(aws_instance.validator.*.private_ip, 0, 3)))
-
+    port       = 6180
   }
 }
 
@@ -254,6 +266,7 @@ data "template_file" "ecs_task_definition" {
     peer_id          = var.peer_ids[count.index]
     network_secret   = element(aws_secretsmanager_secret.validator_network.*.arn, count.index)
     consensus_secret = element(aws_secretsmanager_secret.validator_consensus.*.arn, count.index)
+    fullnode_secret  = aws_secretsmanager_secret.validator_fullnode.arn
     log_level        = var.validator_log_level
     log_group        = var.cloudwatch_logs ? aws_cloudwatch_log_group.testnet.name : ""
     log_region       = var.region
@@ -285,6 +298,11 @@ resource "aws_ecs_task_definition" "validator" {
   volume {
     name      = "network-peers"
     host_path = "/opt/libra/network_peers.config.toml"
+  }
+
+  volume {
+    name      = "fullnode-peers"
+    host_path = "/opt/libra/fullnode_peers.config.toml"
   }
 
   volume {
