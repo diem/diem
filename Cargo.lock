@@ -379,7 +379,7 @@ version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "bytecode_to_boogie"
+name = "bytecode-to-boogie"
 version = "0.1.0"
 dependencies = [
  "bytecode_verifier 0.1.0",
