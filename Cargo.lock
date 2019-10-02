@@ -808,7 +808,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cost_synthesis"
+name = "cost-synthesis"
 version = "0.1.0"
 dependencies = [
  "bytecode_verifier 0.1.0",
@@ -818,7 +818,7 @@ dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
- "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "types 0.1.0",
  "vm 0.1.0",
  "vm_cache_map 0.1.0",
@@ -4489,7 +4489,7 @@ name = "test_generation"
 version = "0.1.0"
 dependencies = [
  "bytecode_verifier 0.1.0",
- "cost_synthesis 0.1.0",
+ "cost-synthesis 0.1.0",
  "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "language_e2e_tests 0.1.0",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",

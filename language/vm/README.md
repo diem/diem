@@ -49,7 +49,7 @@ simple abstraction over the file format. Additionally, a set of
 
 ```
 .
-├── cost_synthesis  # Infrastructure for gas cost synthesis
+├── cost-synthesis  # Infrastructure for gas cost synthesis
 ├── src             # VM core files
 ├── tests           # Proptests
 ├── vm_genesis      # Helpers to generate a genesis block, the initial state of the blockchain
