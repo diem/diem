@@ -5,11 +5,14 @@
 fn main() {
     let proto_files = [
         "src/proto/consensus.proto",
-        "src/proto/state_synchronizer.proto",
         "src/proto/admission_control.proto",
     ];
 
-    let proto_files_prost = ["src/proto/network.proto", "src/proto/mempool.proto"];
+    let proto_files_prost = [
+        "src/proto/network.proto",
+        "src/proto/mempool.proto",
+        "src/proto/state_synchronizer.proto",
+    ];
 
     let includes = ["../types/src/proto", "src/proto"];
 

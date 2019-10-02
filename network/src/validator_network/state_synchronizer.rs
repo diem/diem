@@ -8,10 +8,10 @@ use crate::{
     interface::{NetworkNotification, NetworkRequest},
     proto::StateSynchronizerMsg,
     protocols::direct_send::Message,
+    utils::MessageExt,
     validator_network::Event,
     ProtocolId,
 };
-use bytes::Bytes;
 use channel;
 use futures::{
     stream::Map,
@@ -19,7 +19,7 @@ use futures::{
     SinkExt, Stream, StreamExt,
 };
 use pin_utils::unsafe_pinned;
-use protobuf::Message as proto_msg;
+use prost::Message as _;
 use std::pin::Pin;
 use types::PeerId;
 
@@ -52,7 +52,7 @@ impl StateSynchronizerEvents {
                 unimplemented!("StateSynchronizer does not currently use RPC");
             }
             NetworkNotification::RecvMessage(peer_id, msg) => {
-                let msg = ::protobuf::parse_from_bytes(msg.mdata.as_ref())?;
+                let msg = StateSynchronizerMsg::decode(msg.mdata.as_ref())?;
                 Ok(Event::Message((peer_id, msg)))
             }
         });
@@ -90,7 +90,7 @@ impl StateSynchronizerSender {
                 recipient,
                 Message {
                     protocol,
-                    mdata: Bytes::from(msg.write_to_bytes().unwrap()),
+                    mdata: msg.to_bytes().unwrap(),
                 },
             ))
             .await?;
@@ -102,7 +102,7 @@ impl StateSynchronizerSender {
 mod tests {
 
     use super::*;
-    use crate::proto::{GetChunkRequest, GetChunkResponse};
+    use crate::proto::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg_oneof};
     use futures::executor::block_on;
 
     // `StateSynchronizerSender` should serialize outbound messages
@@ -113,10 +113,10 @@ mod tests {
         let peer_id = PeerId::random();
 
         // Create GetChunkRequest and embed in StateSynchronizerMsg.
-        let mut chunk_request = GetChunkRequest::new();
-        chunk_request.set_limit(100);
-        let mut send_msg = StateSynchronizerMsg::new();
-        send_msg.set_chunk_request(chunk_request);
+        let mut chunk_request = GetChunkRequest::default();
+        chunk_request.limit = 100;
+        let mut send_msg = StateSynchronizerMsg::default();
+        send_msg.message = Some(StateSynchronizerMsg_oneof::ChunkRequest(chunk_request));
 
         // Send msg to network layer.
         block_on(sender.send_to(peer_id, send_msg.clone())).unwrap();
@@ -128,8 +128,7 @@ mod tests {
                 assert_eq!(recv_peer_id, peer_id);
                 assert_eq!(msg.protocol.as_ref(), STATE_SYNCHRONIZER_MSG_PROTOCOL);
                 // check request deserializes
-                let recv_msg: StateSynchronizerMsg =
-                    ::protobuf::parse_from_bytes(msg.mdata.as_ref()).unwrap();
+                let recv_msg = StateSynchronizerMsg::decode(msg.mdata.as_ref()).unwrap();
                 assert_eq!(recv_msg, send_msg);
             }
             event => panic!("Unexpected event: {:?}", event),
@@ -144,16 +143,16 @@ mod tests {
         let peer_id = PeerId::random();
 
         // Create GetChunkResponse and embed in StateSynchronizerMsg.
-        let chunk_response = GetChunkResponse::new();
-        let mut state_sync_msg = StateSynchronizerMsg::new();
-        state_sync_msg.set_chunk_response(chunk_response);
+        let chunk_response = GetChunkResponse::default();
+        let mut state_sync_msg = StateSynchronizerMsg::default();
+        state_sync_msg.message = Some(StateSynchronizerMsg_oneof::ChunkResponse(chunk_response));
 
         // mock receiving request.
         let event = NetworkNotification::RecvMessage(
             peer_id,
             Message {
                 protocol: ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
-                mdata: state_sync_msg.write_to_bytes().unwrap().into(),
+                mdata: state_sync_msg.clone().to_bytes().unwrap(),
             },
         );
         block_on(state_sync_tx.send(event)).unwrap();

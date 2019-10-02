@@ -17,12 +17,12 @@ use futures::{
 };
 use logger::prelude::*;
 use network::{
-    proto::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg},
+    proto::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg, StateSynchronizerMsg_oneof},
     validator_network::{Event, StateSynchronizerEvents, StateSynchronizerSender},
 };
-use proto_conv::{FromProto, IntoProto};
 use std::{
     collections::HashMap,
+    convert::TryInto,
     str::FromStr,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -145,19 +145,21 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                     self.peer_manager.disable_peer(&peer_id);
                                 }
                                 Event::Message((peer_id, mut message)) => {
-                                    if message.has_chunk_request() {
-                                        let known_version = message.get_chunk_request().get_known_version();
-                                        if let Err(err) = self.process_chunk_request(peer_id, message.take_chunk_request()).await {
-                                            error!("[state sync] failed to serve chunk request to {} with known version {}: {:?}", peer_id, known_version, err);
+                                    match message.message.unwrap() {
+                                        StateSynchronizerMsg_oneof::ChunkRequest(request) => {
+                                            let known_version = request.known_version;
+                                            if let Err(err) = self.process_chunk_request(peer_id, request).await {
+                                                error!("[state sync] failed to serve chunk request to {} with known version {}: {:?}", peer_id, known_version, err);
+                                            }
                                         }
-                                    }
-                                    if message.has_chunk_response() {
-                                        if let Err(err) = self.process_chunk_response(&peer_id, message.take_chunk_response()).await {
-                                            error!("[state sync] failed to process chunk response from {}: {:?}", peer_id, err);
-                                            counters::OP_COUNTERS.inc(&format!("{}.{}", counters::APPLY_CHUNK_FAILURE, peer_id));
-                                        } else {
-                                            self.peer_manager.update_score(&peer_id, PeerScoreUpdateType::Success);
-                                            counters::OP_COUNTERS.inc(&format!("{}.{}", counters::APPLY_CHUNK_SUCCESS, peer_id));
+                                        StateSynchronizerMsg_oneof::ChunkResponse(response) => {
+                                            if let Err(err) = self.process_chunk_response(&peer_id, response).await {
+                                                error!("[state sync] failed to process chunk response from {}: {:?}", peer_id, err);
+                                                counters::OP_COUNTERS.inc(&format!("{}.{}", counters::APPLY_CHUNK_FAILURE, peer_id));
+                                            } else {
+                                                self.peer_manager.update_score(&peer_id, PeerScoreUpdateType::Success);
+                                                counters::OP_COUNTERS.inc(&format!("{}.{}", counters::APPLY_CHUNK_SUCCESS, peer_id));
+                                            }
                                         }
                                     }
                                 }
@@ -272,8 +274,16 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
 
         let latest_ledger_info = self.executor_proxy.get_latest_ledger_info().await?;
-        let target = LedgerInfo::from_proto(request.take_ledger_info_with_sigs())
-            .unwrap_or_else(|_| latest_ledger_info.clone());
+        let target = match request
+            .ledger_info_with_sigs
+            .take()
+            .map(TryInto::try_into)
+            .transpose()
+        {
+            Ok(Some(x)) => x,
+            _ => latest_ledger_info.clone(),
+        };
+
         debug!("[state sync] chunk request: peer_id: {:?}, known_version: {}, latest_ledger_info: {}, target: {}", peer_id, request.known_version, latest_ledger_info.ledger_info().version(), target.ledger_info().version());
 
         // if upstream synchronizer doesn't have new data and request timeout is set
@@ -318,8 +328,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .executor_proxy
             .get_chunk(known_version, limit, target)
             .await?;
-        let mut msg = StateSynchronizerMsg::new();
-        msg.set_chunk_response(response);
+        let msg = StateSynchronizerMsg {
+            message: Some(StateSynchronizerMsg_oneof::ChunkResponse(response)),
+        };
         if network_sender.send_to(peer_id, msg).await.is_err() {
             error!("[state sync] failed to send p2p message");
         }
@@ -331,11 +342,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     async fn process_chunk_response(
         &mut self,
         peer_id: &PeerId,
-        mut response: GetChunkResponse,
+        response: GetChunkResponse,
     ) -> Result<()> {
         counters::OP_COUNTERS.inc(&format!("{}.{}", counters::RESPONSES_RECEIVED, peer_id));
-        let txn_list_with_proof =
-            TransactionListWithProof::from_proto(response.take_txn_list_with_proof())?;
+        let txn_list_with_proof: TransactionListWithProof = response
+            .txn_list_with_proof
+            .ok_or_else(|| format_err!("Missing txn_list_with_proof"))?
+            .try_into()?;
 
         if let Some(version) = txn_list_with_proof.first_transaction_version {
             let has_requested = self.peer_manager.has_requested(version, *peer_id);
@@ -359,9 +372,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         let previous_version = self.known_version;
         let chunk_size = txn_list_with_proof.len();
+        let target: LedgerInfo = response
+            .ledger_info_with_sigs
+            .ok_or_else(|| format_err!("Missing ledger_info_with_sigs"))?
+            .try_into()?;
 
         let result = self
-            .validate_and_store_chunk(txn_list_with_proof, response)
+            .validate_and_store_chunk(txn_list_with_proof, target)
             .await;
         let latest_version = self.executor_proxy.get_latest_version().await?;
         if latest_version <= previous_version {
@@ -382,7 +399,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     async fn validate_and_store_chunk(
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
-        mut response: GetChunkResponse,
+        target: LedgerInfo,
     ) -> Result<()> {
         // optimistically fetch next chunk
         let chunk_size = txn_list_with_proof.len() as u64;
@@ -392,7 +409,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             chunk_size
         );
 
-        let target = LedgerInfo::from_proto(response.take_ledger_info_with_sigs())?;
         self.executor_proxy.validate_ledger_info(&target)?;
 
         self.store_transactions(txn_list_with_proof, target).await?;
@@ -430,18 +446,18 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     async fn request_next_chunk(&mut self, offset: u64) {
         if self.autosync || self.known_version + offset < self.target_version() {
             if let Some((peer_id, mut sender)) = self.peer_manager.pick_peer() {
-                let mut req = GetChunkRequest::new();
-                req.set_known_version(self.known_version + offset);
-                req.set_limit(self.config.chunk_limit);
+                let mut req = GetChunkRequest::default();
+                req.known_version = self.known_version + offset;
+                req.limit = self.config.chunk_limit;
                 self.peer_manager
                     .process_request(self.known_version + offset + 1, peer_id);
                 let timeout = match &self.target {
                     Some(target) => {
-                        req.set_ledger_info_with_sigs(target.clone().into_proto());
+                        req.ledger_info_with_sigs = Some(target.clone().into());
                         0
                     }
                     None => {
-                        req.set_timeout(self.config.long_poll_timeout_ms);
+                        req.timeout = self.config.long_poll_timeout_ms;
                         self.config.long_poll_timeout_ms
                     }
                 };
@@ -452,8 +468,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     timeout
                 );
 
-                let mut msg = StateSynchronizerMsg::new();
-                msg.set_chunk_request(req);
+                let msg = StateSynchronizerMsg {
+                    message: Some(StateSynchronizerMsg_oneof::ChunkRequest(req)),
+                };
 
                 if sender.send_to(peer_id, msg).await.is_err() {
                     error!("[state sync] failed to send p2p message");
