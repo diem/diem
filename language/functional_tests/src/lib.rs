@@ -8,6 +8,7 @@ pub mod checker;
 pub mod config;
 pub mod errors;
 pub mod evaluator;
+mod genesis_accounts;
 pub mod utils;
 
 #[cfg(test)]
