@@ -14,6 +14,8 @@ use crate::{
     },
 };
 
+use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
+use codespan::Span;
 use failure::*;
 use libra_types::{account_address::AccountAddress, identifier::Identifier};
 use std::{
@@ -26,12 +28,45 @@ use std::{
 use vm::{
     access::ModuleAccess,
     file_format::{
-        self, Bytecode, CodeUnit, CompiledModule, CompiledModuleMut, CompiledProgram,
+        self, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut, CompiledProgram,
         CompiledScript, CompiledScriptMut, FieldDefinition, FieldDefinitionIndex,
         FunctionDefinition, FunctionSignature, Kind, LocalsSignature, MemberCount, SignatureToken,
         StructDefinition, StructFieldInformation, StructHandleIndex, TableIndex,
     },
 };
+
+macro_rules! record_srcloc_info {
+    ($context:expr, $code:expr, $loc:expr) => {
+        let code_offset = $code.len() as CodeOffset;
+        $context.add_source_info(
+            $context.current_function_definition_index(),
+            code_offset,
+            $loc,
+        );
+    };
+    (local | $context:expr, $var:expr) => {
+        $context.add_local_mapping($context.current_function_definition_index(), $var);
+    };
+    (field | $context:expr, $var:expr) => {
+        $context.add_field_mapping($context.current_struct_definition_index(), $var);
+    };
+    (function type_formals | $context:expr, $var:expr) => {
+        for (ty_var, _) in $var.iter() {
+            $context.add_function_type_parameter_mapping(
+                $context.current_function_definition_index(),
+                ty_var,
+            );
+        }
+    };
+    (struct type_formals | $context:expr, $var:expr) => {
+        for (ty_var, _) in $var.iter() {
+            $context.add_struct_type_parameter_mapping(
+                $context.current_struct_definition_index(),
+                ty_var,
+            );
+        }
+    };
+}
 
 #[derive(Debug, Default)]
 struct LoopInfo {
@@ -244,24 +279,27 @@ pub fn compile_program<'a, T: 'a + ModuleAccess>(
     address: AccountAddress,
     program: Program,
     deps: impl IntoIterator<Item = &'a T>,
-) -> Result<CompiledProgram> {
+) -> Result<(CompiledProgram, SourceMap)> {
     let deps = deps
         .into_iter()
         .map(|dep| dep.as_module())
         .collect::<Vec<_>>();
     // This is separate to avoid unnecessary code gen due to monomorphization.
     let mut modules = vec![];
+    let mut source_maps = vec![];
     for m in program.modules {
-        let module = {
+        let (module, source_map) = {
             let deps = deps.iter().copied().chain(&modules);
             compile_module(address, m, deps)?
         };
         modules.push(module);
+        source_maps.push(source_map);
     }
 
     let deps = deps.into_iter().chain(modules.iter());
-    let script = compile_script(address, program.script, deps)?;
-    Ok(CompiledProgram { modules, script })
+    let (script, source_map) = compile_script(address, program.script, deps)?;
+    source_maps.push(source_map);
+    Ok((CompiledProgram { modules, script }, source_maps))
 }
 
 /// Compile a transaction script.
@@ -269,7 +307,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
     address: AccountAddress,
     script: Script,
     dependencies: impl IntoIterator<Item = &'a T>,
-) -> Result<CompiledScript> {
+) -> Result<(CompiledScript, ModuleSourceMap)> {
     let current_module = QualifiedModuleIdent {
         address,
         name: ModuleName::new(file_format::self_module_name().to_owned()),
@@ -285,18 +323,21 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
     context.declare_function(self_name.clone(), main_name.clone(), sig)?;
     let main = compile_function(&mut context, &self_name, main_name, function)?;
 
-    let MaterializedPools {
-        module_handles,
-        struct_handles,
-        function_handles,
-        type_signatures,
-        function_signatures,
-        locals_signatures,
-        identifiers,
-        user_strings,
-        byte_array_pool,
-        address_pool,
-    } = context.materialize_pools();
+    let (
+        MaterializedPools {
+            module_handles,
+            struct_handles,
+            function_handles,
+            type_signatures,
+            function_signatures,
+            locals_signatures,
+            identifiers,
+            user_strings,
+            byte_array_pool,
+            address_pool,
+        },
+        source_map,
+    ) = context.materialize_pools();
     let compiled_script = CompiledScriptMut {
         module_handles,
         struct_handles,
@@ -313,6 +354,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
     compiled_script
         .freeze()
         .map_err(|errs| InternalCompilerError::BoundsCheckErrors(errs).into())
+        .map(|frozen_script| (frozen_script, source_map))
 }
 
 /// Compile a module.
@@ -320,7 +362,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
     address: AccountAddress,
     module: ModuleDefinition,
     dependencies: impl IntoIterator<Item = &'a T>,
-) -> Result<CompiledModule> {
+) -> Result<(CompiledModule, ModuleSourceMap)> {
     let current_module = QualifiedModuleIdent {
         address,
         name: module.name,
@@ -351,18 +393,21 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
 
     let function_defs = compile_functions(&mut context, &self_name, module.functions)?;
 
-    let MaterializedPools {
-        module_handles,
-        struct_handles,
-        function_handles,
-        type_signatures,
-        function_signatures,
-        locals_signatures,
-        identifiers,
-        user_strings,
-        byte_array_pool,
-        address_pool,
-    } = context.materialize_pools();
+    let (
+        MaterializedPools {
+            module_handles,
+            struct_handles,
+            function_handles,
+            type_signatures,
+            function_signatures,
+            locals_signatures,
+            identifiers,
+            user_strings,
+            byte_array_pool,
+            address_pool,
+        },
+        source_map,
+    ) = context.materialize_pools();
     let compiled_module = CompiledModuleMut {
         module_handles,
         struct_handles,
@@ -381,6 +426,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
     compiled_module
         .freeze()
         .map_err(|errs| InternalCompilerError::BoundsCheckErrors(errs).into())
+        .map(|frozen_module| (frozen_module, source_map))
 }
 
 fn compile_imports(
@@ -484,6 +530,8 @@ fn compile_structs(
             name: s.name.clone(),
         };
         let sh_idx = context.struct_handle_index(sident.clone())?;
+        // TODO/XXX/TZ: Add source loc info to TypeVars
+        record_srcloc_info!(struct type_formals | context, &s.type_formals);
         let (map, _) = type_formals(&s.type_formals)?;
         context.bind_type_formals(map)?;
         let field_information = compile_fields(context, &mut field_defs, sh_idx, s.value.fields)?;
@@ -515,6 +563,8 @@ fn compile_fields(
 
             for (decl_order, (f, ty)) in fields.into_iter().enumerate() {
                 let name = context.identifier_index(f.name())?;
+                // TODO/XXX/TZ: Add source loc info to struct fields
+                record_srcloc_info!(field | context, Spanned::no_loc(Identifier::from(f.name())));
                 let sig_token = compile_type(context, &ty)?;
                 let signature = context.type_signature_index(sig_token.clone())?;
                 context.declare_field(sh_idx, f.value, sig_token, decl_order)?;
@@ -565,12 +615,14 @@ fn compile_function(
 
     let code = match ast_function.body {
         FunctionBody::Move { locals, code } => {
+            record_srcloc_info!(function type_formals | context, &ast_function.signature.type_formals);
             let (m, _) = type_formals(&ast_function.signature.type_formals)?;
             context.bind_type_formals(m)?;
             compile_function_body(context, ast_function.signature.formals, locals, code)?
         }
         FunctionBody::Native => CodeUnit::default(),
     };
+    context.incr_function_index();
     Ok(FunctionDefinition {
         function: fh_idx,
         flags,
@@ -591,11 +643,14 @@ fn compile_function_body(
         let sig = compile_type(context, &t)?;
         function_frame.define_local(&var, sig.clone())?;
         locals_signature.0.push(sig);
+        // TODO/XXX/TZ: Update Var in formals to contain source location info
+        record_srcloc_info!(local | context, Spanned::no_loc(var));
     }
     for (var_, t) in locals {
         let sig = compile_type(context, &t)?;
         function_frame.define_local(&var_.value, sig.clone())?;
         locals_signature.0.push(sig);
+        record_srcloc_info!(local | context, var_);
     }
     let sig_idx = context.locals_signature_index(locals_signature)?;
 
@@ -777,12 +832,14 @@ fn compile_command(
     match cmd.value {
         Cmd::Return(exps) => {
             compile_expression(context, function_frame, code, *exps)?;
+            record_srcloc_info!(context, code, cmd.span);
             code.push(Bytecode::Ret);
         }
         Cmd::Abort(exp_opt) => {
             if let Some(exp) = exp_opt {
                 compile_expression(context, function_frame, code, *exp)?;
             }
+            record_srcloc_info!(context, code, cmd.span);
             code.push(Bytecode::Abort);
             function_frame.pop()?;
         }
@@ -797,6 +854,7 @@ fn compile_command(
             compile_expression(context, function_frame, code, *e)?;
 
             let def_idx = context.struct_definition_index(&name)?;
+            record_srcloc_info!(context, code, cmd.span);
             code.push(Bytecode::Unpack(def_idx, type_actuals_id));
             function_frame.pop()?;
 
@@ -808,11 +866,13 @@ fn compile_command(
         }
         Cmd::Continue => {
             let loc = function_frame.get_loop_start()?;
+            record_srcloc_info!(context, code, cmd.span);
             code.push(Bytecode::Branch(loc as u16));
         }
         Cmd::Break => {
             function_frame.push_loop_break(code.len())?;
             // placeholder, to be replaced when the enclosing while is compiled
+            record_srcloc_info!(context, code, cmd.span);
             code.push(Bytecode::Branch(0));
         }
         Cmd::Exp(e) => {
@@ -835,16 +895,19 @@ fn compile_lvalues(
         match lvalue_.value {
             LValue::Var(v) => {
                 let loc_idx = function_frame.get_local(&v.value)?;
+                record_srcloc_info!(context, code, lvalue_.span);
                 code.push(Bytecode::StLoc(loc_idx));
                 function_frame.pop()?;
             }
             LValue::Mutate(e) => {
                 compile_expression(context, function_frame, code, e)?;
+                record_srcloc_info!(context, code, lvalue_.span);
                 code.push(Bytecode::WriteRef);
                 function_frame.pop()?;
                 function_frame.pop()?;
             }
             LValue::Pop => {
+                record_srcloc_info!(context, code, lvalue_.span);
                 code.push(Bytecode::Pop);
 
                 function_frame.pop()?;
@@ -870,6 +933,7 @@ fn compile_expression(
         Exp::Move(v) => {
             let loc_idx = function_frame.get_local(&v.value)?;
             let load_loc = Bytecode::MoveLoc(loc_idx);
+            record_srcloc_info!(context, code, exp.span);
             code.push(load_loc);
             function_frame.push()?;
             let loc_type = function_frame.get_local_type(loc_idx)?;
@@ -878,6 +942,7 @@ fn compile_expression(
         Exp::Copy(v) => {
             let loc_idx = function_frame.get_local(&v.value)?;
             let load_loc = Bytecode::CopyLoc(loc_idx);
+            record_srcloc_info!(context, code, exp.span);
             code.push(load_loc);
             function_frame.push()?;
             let loc_type = function_frame.get_local_type(loc_idx)?;
@@ -887,6 +952,7 @@ fn compile_expression(
             let loc_idx = function_frame.get_local(&v.value)?;
             let loc_type = function_frame.get_local_type(loc_idx)?;
             let inner_token = Box::new(InferredType::from_signature_token(loc_type));
+            record_srcloc_info!(context, code, exp.span);
             if is_mutable {
                 code.push(Bytecode::MutBorrowLoc(loc_idx));
                 function_frame.push()?;
@@ -897,35 +963,38 @@ fn compile_expression(
                 vec_deque![InferredType::Reference(inner_token)]
             }
         }
-        Exp::Value(cv) => match cv.value {
-            CopyableVal::Address(address) => {
-                let addr_idx = context.address_index(address)?;
-                code.push(Bytecode::LdAddr(addr_idx));
-                function_frame.push()?;
-                vec_deque![InferredType::Address]
+        Exp::Value(cv) => {
+            record_srcloc_info!(context, code, exp.span);
+            match cv.value {
+                CopyableVal::Address(address) => {
+                    let addr_idx = context.address_index(address)?;
+                    code.push(Bytecode::LdAddr(addr_idx));
+                    function_frame.push()?;
+                    vec_deque![InferredType::Address]
+                }
+                CopyableVal::U64(i) => {
+                    code.push(Bytecode::LdConst(i));
+                    function_frame.push()?;
+                    vec_deque![InferredType::U64]
+                }
+                CopyableVal::ByteArray(buf) => {
+                    let buf_idx = context.byte_array_index(&buf)?;
+                    code.push(Bytecode::LdByteArray(buf_idx));
+                    function_frame.push()?;
+                    vec_deque![InferredType::ByteArray]
+                }
+                CopyableVal::Bool(b) => {
+                    code.push(if b {
+                        Bytecode::LdTrue
+                    } else {
+                        Bytecode::LdFalse
+                    });
+                    function_frame.push()?;
+                    vec_deque![InferredType::Bool]
+                }
+                CopyableVal::String(_) => bail!("nice try! come back later {:?}", cv),
             }
-            CopyableVal::U64(i) => {
-                code.push(Bytecode::LdConst(i));
-                function_frame.push()?;
-                vec_deque![InferredType::U64]
-            }
-            CopyableVal::ByteArray(buf) => {
-                let buf_idx = context.byte_array_index(&buf)?;
-                code.push(Bytecode::LdByteArray(buf_idx));
-                function_frame.push()?;
-                vec_deque![InferredType::ByteArray]
-            }
-            CopyableVal::Bool(b) => {
-                code.push(if b {
-                    Bytecode::LdTrue
-                } else {
-                    Bytecode::LdFalse
-                });
-                function_frame.push()?;
-                vec_deque![InferredType::Bool]
-            }
-            CopyableVal::String(_) => bail!("nice try! come back later {:?}", cv),
-        },
+        }
         Exp::Pack(name, tys, fields) => {
             let tokens = LocalsSignature(compile_types(context, &tys)?);
             let type_actuals_id = context.locals_signature_index(tokens)?;
@@ -948,6 +1017,7 @@ fn compile_expression(
 
                 compile_expression(context, function_frame, code, e)?;
             }
+            record_srcloc_info!(context, code, exp.span);
             code.push(Bytecode::Pack(def_idx, type_actuals_id));
             for _ in 0..num_fields {
                 function_frame.pop()?;
@@ -958,6 +1028,7 @@ fn compile_expression(
         }
         Exp::UnaryExp(op, e) => {
             compile_expression(context, function_frame, code, *e)?;
+            record_srcloc_info!(context, code, exp.span);
             match op {
                 UnaryOp::Not => {
                     code.push(Bytecode::Not);
@@ -969,6 +1040,7 @@ fn compile_expression(
             compile_expression(context, function_frame, code, *e1)?;
             compile_expression(context, function_frame, code, *e2)?;
             function_frame.pop()?;
+            record_srcloc_info!(context, code, exp.span);
             match op {
                 BinOp::Add => {
                     code.push(Bytecode::Add);
@@ -1038,7 +1110,7 @@ fn compile_expression(
         }
         Exp::Dereference(e) => {
             let loc_type = compile_expression(context, function_frame, code, *e)?.pop_front();
-
+            record_srcloc_info!(context, code, exp.span);
             code.push(Bytecode::ReadRef);
             match loc_type {
                 Some(InferredType::MutableReference(sig_ref_token)) => vec_deque![*sig_ref_token],
@@ -1048,16 +1120,17 @@ fn compile_expression(
         }
         Exp::Borrow {
             is_mutable,
-            exp,
+            exp: inner_exp,
             field,
         } => {
-            let loc_type_opt = compile_expression(context, function_frame, code, *exp)?.pop_front();
+            let loc_type_opt = compile_expression(context, function_frame, code, *inner_exp)?.pop_front();
             let loc_type =
                 loc_type_opt.ok_or_else(|| format_err!("Impossible no expression to borrow"))?;
             let sh_idx = loc_type.get_struct_handle()?;
             let (fd_idx, field_type, _) = context.field(sh_idx, field)?;
             function_frame.pop()?;
             let inner_token = Box::new(InferredType::from_signature_token(&field_type));
+            record_srcloc_info!(context, code, exp.span);
             if is_mutable {
                 code.push(Bytecode::MutBorrowField(fd_idx));
                 function_frame.push()?;
@@ -1092,6 +1165,8 @@ fn compile_call(
     call: FunctionCall_,
     mut argument_types: VecDeque<InferredType>,
 ) -> Result<VecDeque<InferredType>> {
+    // TODO/XXX/TZ Update function calls to track the loc of the fcall
+    record_srcloc_info!(context, code, Span::default());
     Ok(match call.value {
         FunctionCall::Builtin(function) => {
             match function {

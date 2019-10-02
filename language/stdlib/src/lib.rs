@@ -8,9 +8,10 @@ use bytecode_verifier::{verify_module_dependencies, VerifiedModule};
 use ir_to_bytecode::compiler::compile_module;
 use lazy_static::lazy_static;
 use libra_types::{account_address::AccountAddress, account_config};
+use bytecode_source_map::source_map::{SourceMap, ModuleSourceMap};
 
 lazy_static! {
-    static ref STDLIB_MODULES: Vec<VerifiedModule> =
+    static ref ANNOTATED_STDLIB: (Vec<VerifiedModule>, SourceMap) =
         { build_stdlib(account_config::core_code_address()) };
 }
 
@@ -19,18 +20,27 @@ lazy_static! {
 ///
 /// The order the modules are presented in is important: later modules depend on earlier ones.
 pub fn stdlib_modules() -> &'static [VerifiedModule] {
-    &*STDLIB_MODULES
+    &*ANNOTATED_STDLIB.0
+}
+
+/// Returns a reference to the source maps for the standard library.
+///
+/// The order of the modules returned in this follows the same order as the modules returned in the
+/// stdlib_modules.
+pub fn stdlib_source_map() -> &'static [ModuleSourceMap] {
+    &*ANNOTATED_STDLIB.1
 }
 
 /// Builds and returns a copy of the standard library with this address as the self address.
 ///
 /// A copy of the stdlib built with the [default address](account_config::core_code_address) is
 /// available through [`stdlib_modules`].
-pub fn build_stdlib(address: AccountAddress) -> Vec<VerifiedModule> {
+pub fn build_stdlib(address: AccountAddress) -> (Vec<VerifiedModule>, SourceMap) {
     let mut stdlib_modules = vec![];
+    let mut stdlib_source_maps = vec![];
 
     for module_def in stdlib::module_defs() {
-        let compiled_module = compile_module(address, (*module_def).clone(), &stdlib_modules)
+        let (compiled_module, source_map) = compile_module(address, (*module_def).clone(), &stdlib_modules)
             .expect("stdlib module failed to compile");
         let verified_module =
             VerifiedModule::new(compiled_module).expect("stdlib module failed to verify");
@@ -43,7 +53,8 @@ pub fn build_stdlib(address: AccountAddress) -> Vec<VerifiedModule> {
         assert!(verification_errors.is_empty());
 
         stdlib_modules.push(verified_module);
+        stdlib_source_maps.push(source_map)
     }
 
-    stdlib_modules
+    (stdlib_modules, stdlib_source_maps)
 }
