@@ -433,6 +433,7 @@ where
         self.block().timestamp_usecs()
     }
 
+    #[cfg(any(test, feature = "fuzzing"))]
     pub fn quorum_cert(&self) -> &QuorumCert {
         self.block().quorum_cert()
     }
