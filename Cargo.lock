@@ -599,7 +599,7 @@ dependencies = [
  "rustyline 4.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
- "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tools 0.1.0",
  "transaction_builder 0.1.0",
  "types 0.1.0",
