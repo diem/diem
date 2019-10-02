@@ -19,6 +19,7 @@ use futures::{
     StreamExt,
 };
 use parity_multiaddr::Multiaddr;
+use proto_conv::IntoProto;
 use protobuf::Message as proto_msg;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashMap, convert::TryFrom, time::Duration};
@@ -165,7 +166,7 @@ fn test_mempool_sync() {
     mempool_msg.set_peer_id(dialer_peer_id.into());
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
     let keypair = compat::generate_keypair(&mut rng);
-    let txn = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None);
+    let txn = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None).into_proto();
     mempool_msg.set_transactions(::protobuf::RepeatedField::from_vec(vec![txn.clone()]));
 
     let f_dialer = async move {
@@ -308,7 +309,7 @@ fn test_permissionless_mempool_sync() {
     mempool_msg.set_peer_id(dialer_peer_id.into());
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
     let keypair = compat::generate_keypair(&mut rng);
-    let txn = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None);
+    let txn = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None).into_proto();
     mempool_msg.set_transactions(::protobuf::RepeatedField::from_vec(vec![txn.clone()]));
 
     let f_dialer = async move {

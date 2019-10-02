@@ -92,7 +92,8 @@ impl MockExecutorProxy {
             GENESIS_KEYPAIR.0.clone(),
             GENESIS_KEYPAIR.1.clone(),
             Some(program),
-        );
+        )
+        .into_proto();
 
         let txn_info = TransactionInfo::new(
             HashValue::zero(),

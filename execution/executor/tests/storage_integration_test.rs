@@ -9,7 +9,7 @@ use failure::prelude::*;
 use futures::executor::block_on;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
-use proto_conv::FromProto;
+use proto_conv::{FromProto, IntoProto};
 use rand::SeedableRng;
 use std::{collections::HashMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
@@ -23,7 +23,7 @@ use types::{
     crypto_proxies::ValidatorVerifier,
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    test_helpers::transaction_test_helpers::get_test_signed_txn as get_test_signed_txn_proto,
+    test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{
         Script, SignedTransaction, SignedTransactionWithProof, TransactionListWithProof,
     },
@@ -83,13 +83,9 @@ fn get_test_signed_transaction(
     public_key: Ed25519PublicKey,
     program: Option<Script>,
 ) -> SignedTransaction {
-    SignedTransaction::from_proto(get_test_signed_txn_proto(
-        sender,
-        sequence_number,
-        private_key,
-        public_key,
-        program,
-    ))
+    SignedTransaction::from_proto(
+        get_test_signed_txn(sender, sequence_number, private_key, public_key, program).into_proto(),
+    )
     .unwrap()
 }
 
