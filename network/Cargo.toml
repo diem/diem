@@ -25,7 +25,6 @@ bounded-executor = { path = "../common/bounded-executor" }
 channel = { path = "../common/channel" }
 config = { path = "../config" }
 crypto = { path = "../crypto/crypto" }
-proto_conv = { path = "../common/proto_conv" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 logger = { path = "../common/logger" }
 memsocket = { path = "memsocket" }

@@ -4,7 +4,7 @@
 //! Integration tests for validator_network.
 use crate::{
     common::NetworkPublicKeys,
-    proto::{ConsensusMsg, MempoolSyncMsg, RequestBlock, RespondBlock, SignedTransaction},
+    proto::{ConsensusMsg, MempoolSyncMsg, RequestBlock, RespondBlock},
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
         Event, CONSENSUS_RPC_PROTOCOL, MEMPOOL_DIRECT_SEND_PROTOCOL,
@@ -19,13 +19,17 @@ use futures::{
     StreamExt,
 };
 use parity_multiaddr::Multiaddr;
-use proto_conv::IntoProto;
 use protobuf::Message as proto_msg;
 use rand::{rngs::StdRng, SeedableRng};
-use std::{collections::HashMap, convert::TryFrom, time::Duration};
+use std::{
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    time::Duration,
+};
 use tokio::runtime::Runtime;
 use types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
+    proto::types::SignedTransaction,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     PeerId,
 };
@@ -162,12 +166,14 @@ fn test_mempool_sync() {
         .spawn(network_provider.start().unit_error().compat());
 
     // The dialer dials the listener and sends a mempool sync message
-    let mut mempool_msg = MempoolSyncMsg::new();
-    mempool_msg.set_peer_id(dialer_peer_id.into());
+    let mut mempool_msg = MempoolSyncMsg::default();
+    mempool_msg.peer_id = dialer_peer_id.into();
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
     let keypair = compat::generate_keypair(&mut rng);
-    let txn = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None).into_proto();
-    mempool_msg.set_transactions(::protobuf::RepeatedField::from_vec(vec![txn.clone()]));
+    let txn: SignedTransaction = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None)
+        .try_into()
+        .unwrap();
+    mempool_msg.transactions.push(txn.clone());
 
     let f_dialer = async move {
         // Wait until dialing finished and NewPeer event received
@@ -201,7 +207,7 @@ fn test_mempool_sync() {
                 assert_eq!(peer_id, dialer_peer_id);
                 let dialer_peer_id_bytes = Vec::from(&dialer_peer_id);
                 assert_eq!(msg.peer_id, dialer_peer_id_bytes);
-                let transactions: Vec<SignedTransaction> = msg.transactions.into();
+                let transactions: Vec<SignedTransaction> = msg.transactions;
                 assert_eq!(transactions, vec![txn]);
             }
             event => panic!("Unexpected event {:?}", event),
@@ -305,12 +311,14 @@ fn test_permissionless_mempool_sync() {
         .spawn(network_provider.start().unit_error().compat());
 
     // The dialer dials the listener and sends a mempool sync message
-    let mut mempool_msg = MempoolSyncMsg::new();
-    mempool_msg.set_peer_id(dialer_peer_id.into());
+    let mut mempool_msg = MempoolSyncMsg::default();
+    mempool_msg.peer_id = dialer_peer_id.into();
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
     let keypair = compat::generate_keypair(&mut rng);
-    let txn = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None).into_proto();
-    mempool_msg.set_transactions(::protobuf::RepeatedField::from_vec(vec![txn.clone()]));
+    let txn: SignedTransaction = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None)
+        .try_into()
+        .unwrap();
+    mempool_msg.transactions.push(txn.clone());
 
     let f_dialer = async move {
         // Wait until dialing finished and NewPeer event received
@@ -344,7 +352,7 @@ fn test_permissionless_mempool_sync() {
                 assert_eq!(peer_id, dialer_peer_id);
                 let dialer_peer_id_bytes = Vec::from(&dialer_peer_id);
                 assert_eq!(msg.peer_id, dialer_peer_id_bytes);
-                let transactions: Vec<SignedTransaction> = msg.transactions.into();
+                let transactions: Vec<SignedTransaction> = msg.transactions;
                 assert_eq!(transactions, vec![txn]);
             }
             event => panic!("Unexpected event {:?}", event),

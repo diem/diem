@@ -20,9 +20,10 @@ use network::{
     proto::MempoolSyncMsg,
     validator_network::{MempoolNetworkEvents, MempoolNetworkSender},
 };
-use proto_conv::FromProto;
+use prost::Message;
 use std::{
     collections::{HashMap, HashSet},
+    convert::TryFrom,
     sync::{Arc, Mutex},
 };
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
@@ -120,11 +121,9 @@ impl SharedMempoolNetwork {
 
         match network_req {
             NetworkRequest::SendMessage(peer_id, msg) => {
-                let mut sync_msg: MempoolSyncMsg =
-                    ::protobuf::parse_from_bytes(msg.mdata.as_ref()).unwrap();
+                let mut sync_msg = MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
                 let transaction =
-                    SignedTransaction::from_proto(sync_msg.take_transactions().pop().unwrap())
-                        .unwrap();
+                    SignedTransaction::try_from(sync_msg.transactions.pop().unwrap()).unwrap();
                 // send it to peer
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
                 block_on(

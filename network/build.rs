@@ -11,7 +11,7 @@ fn main() {
         "src/proto/admission_control.proto",
     ];
 
-    let proto_files_prost = ["src/proto/network.proto"];
+    let proto_files_prost = ["src/proto/network.proto", "src/proto/mempool.proto"];
 
     let includes = ["../types/src/proto", "src/proto"];
 

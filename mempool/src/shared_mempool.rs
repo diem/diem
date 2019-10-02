@@ -19,9 +19,9 @@ use network::{
     proto::MempoolSyncMsg,
     validator_network::{Event, MempoolNetworkEvents, MempoolNetworkSender},
 };
-use proto_conv::{FromProto, IntoProto};
 use std::{
     collections::HashMap,
+    convert::{TryFrom, TryInto},
     ops::Deref,
     pin::Pin,
     sync::{Arc, Mutex},
@@ -164,14 +164,12 @@ async fn sync_with_peers<'a>(
 
             if !transactions.is_empty() {
                 OP_COUNTERS.inc_by("smp.sync_with_peers", transactions.len());
-                let mut msg = MempoolSyncMsg::new();
-                msg.set_peer_id(peer_id.into());
-                msg.set_transactions(
-                    transactions
-                        .into_iter()
-                        .map(IntoProto::into_proto)
-                        .collect(),
-                );
+                let mut msg = MempoolSyncMsg::default();
+                msg.peer_id = peer_id.into();
+                msg.transactions = transactions
+                    .into_iter()
+                    .map(|txn| txn.try_into().unwrap())
+                    .collect();
 
                 debug!(
                     "MempoolNetworkSender.send_to peer {} msg {:?}",
@@ -326,12 +324,13 @@ async fn inbound_network_task<V>(
                     lost_peer(&peer_info, peer_id);
                     notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                 }
-                Event::Message((peer_id, mut msg)) => {
+                Event::Message((peer_id, msg)) => {
                     OP_COUNTERS.inc("smp.event.message");
                     let transactions: Vec<_> = msg
-                        .take_transactions()
+                        .transactions
+                        .clone()
                         .into_iter()
-                        .filter_map(|txn| match SignedTransaction::from_proto(txn) {
+                        .filter_map(|txn| match SignedTransaction::try_from(txn) {
                             Ok(t) => Some(t),
                             Err(e) => {
                                 security_log(SecurityEvent::InvalidTransactionMP)

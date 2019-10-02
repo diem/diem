@@ -8,10 +8,10 @@ use crate::{
     interface::{NetworkNotification, NetworkRequest},
     proto::MempoolSyncMsg,
     protocols::direct_send::Message,
+    utils::MessageExt,
     validator_network::Event,
     ProtocolId,
 };
-use bytes::Bytes;
 use channel;
 use futures::{
     stream::Map,
@@ -19,7 +19,7 @@ use futures::{
     SinkExt, Stream, StreamExt,
 };
 use pin_utils::unsafe_pinned;
-use protobuf::Message as proto_msg;
+use prost::Message as proto_msg;
 use std::pin::Pin;
 use types::PeerId;
 
@@ -64,7 +64,7 @@ impl MempoolNetworkEvents {
                     unimplemented!("Mempool does not currently use RPC");
                 }
                 NetworkNotification::RecvMessage(peer_id, msg) => {
-                    let msg = ::protobuf::parse_from_bytes(msg.mdata.as_ref())?;
+                    let msg = MempoolSyncMsg::decode(msg.mdata.as_ref())?;
                     Ok(Event::Message((peer_id, msg)))
                 }
             });
@@ -115,7 +115,7 @@ impl MempoolNetworkSender {
                 recipient,
                 Message {
                     protocol: ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
-                    mdata: Bytes::from(message.write_to_bytes().unwrap()),
+                    mdata: message.to_bytes().unwrap(),
                 },
             ))
             .await?;
@@ -129,9 +129,8 @@ mod tests {
     use futures::executor::block_on;
 
     fn new_test_sync_msg(peer_id: PeerId) -> MempoolSyncMsg {
-        let mut mempool_msg = MempoolSyncMsg::new();
-        mempool_msg.set_peer_id(peer_id.into());
-        mempool_msg.set_transactions(::protobuf::RepeatedField::from_vec(vec![]));
+        let mut mempool_msg = MempoolSyncMsg::default();
+        mempool_msg.peer_id = peer_id.into();
         mempool_msg
     }
 
@@ -146,7 +145,7 @@ mod tests {
         let mempool_msg = new_test_sync_msg(peer_id);
         let network_msg = Message {
             protocol: ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
-            mdata: mempool_msg.write_to_bytes().unwrap().into(),
+            mdata: mempool_msg.clone().to_bytes().unwrap(),
         };
 
         block_on(mempool_tx.send(NetworkNotification::RecvMessage(peer_id, network_msg))).unwrap();
@@ -168,7 +167,7 @@ mod tests {
         let mempool_msg = new_test_sync_msg(peer_id);
         let expected_network_msg = Message {
             protocol: ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
-            mdata: mempool_msg.clone().write_to_bytes().unwrap().into(),
+            mdata: mempool_msg.clone().to_bytes().unwrap(),
         };
 
         // Send the message to network layer
