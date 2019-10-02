@@ -32,7 +32,7 @@ use failure::prelude::*;
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt, time::Duration};
+use std::{collections::HashMap, convert::TryFrom, fmt, time::Duration};
 
 mod module;
 mod program;
@@ -523,6 +523,23 @@ impl IntoProto for SignedTransaction {
         let mut transaction = Self::ProtoType::new();
         transaction.set_signed_txn(signed_txn);
         transaction
+    }
+}
+
+impl TryFrom<crate::proto::types::SignedTransaction> for SignedTransaction {
+    type Error = Error;
+
+    fn try_from(txn: crate::proto::types::SignedTransaction) -> Result<Self> {
+        SimpleDeserializer::deserialize(&txn.signed_txn)
+    }
+}
+
+impl TryFrom<SignedTransaction> for crate::proto::types::SignedTransaction {
+    type Error = Error;
+
+    fn try_from(txn: SignedTransaction) -> Result<Self> {
+        let signed_txn = SimpleSerializer::<Vec<u8>>::serialize(&txn)?;
+        Ok(Self { signed_txn })
     }
 }
 
