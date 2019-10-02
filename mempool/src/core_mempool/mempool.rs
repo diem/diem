@@ -39,7 +39,7 @@ impl Mempool {
     pub(crate) fn new(config: &NodeConfig) -> Self {
         Mempool {
             transactions: TransactionStore::new(&config.mempool),
-            sequence_number_cache: LruCache::new(config.mempool.sequence_cache_capacity),
+            sequence_number_cache: LruCache::new(config.mempool.capacity),
             metrics_cache: TtlCache::new(config.mempool.capacity),
             system_transaction_timeout: Duration::from_secs(
                 config.mempool.system_transaction_timeout_secs,
