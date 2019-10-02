@@ -3,6 +3,11 @@
 
 #![allow(bare_trait_objects)]
 
+#[allow(clippy::large_enum_variant)]
+pub mod types {
+    include!(concat!(env!("OUT_DIR"), "/types.rs"));
+}
+
 pub mod access_path;
 pub mod account_state_blob;
 pub mod events;

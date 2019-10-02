@@ -4901,6 +4901,8 @@ dependencies = [
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest_helpers 0.1.0",
+ "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proto_conv 0.1.0",
  "protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "radix_trie 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",

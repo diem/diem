@@ -3,8 +3,8 @@
 
 #![allow(bare_trait_objects)]
 
+use ::types::proto::*;
 use mempool::proto::shared::mempool_status;
-use types::proto::*;
 
 /// Auto generated proto src files
 pub mod admission_control;
