@@ -19,7 +19,7 @@ num-traits = "0.2"
 reqwest = { version = "0.9.19", default-features = false }
 serde = { version = "1.0.96", features = ["derive"] }
 serde_json = "1.0.40"
-structopt = "0.2.15"
+structopt = "0.3.2"
 
 admission_control_proto = { version = "0.1.0", path = "../admission_control/admission_control_proto" }
 config = { path = "../config" }
