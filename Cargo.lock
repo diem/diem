@@ -1977,6 +1977,7 @@ dependencies = [
  "vm_genesis 0.1.0",
  "vm_runtime 0.1.0",
  "vm_runtime_types 0.1.0",
+ "walkdir 2.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
