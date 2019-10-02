@@ -11,13 +11,10 @@ fn functional_tests(path: &Path) -> datatest_stable::Result<()> {
     file.read_to_string(&mut input)?;
 
     let (config, directives, transactions) = parse_input(&input)?;
-    let res = eval(&config, &transactions)?;
-    if let Err(e) = check(&res, &directives) {
-        if res.use_debug_output {
-            println!("{:?}", res);
-        } else {
-            println!("{}", res);
-        }
+    let log = eval(&config, &transactions)?;
+    if let Err(e) = check(&log, &directives) {
+        // TODO: allow the user to select debug/display mode
+        println!("{}", log);
         return Err(e.into());
     }
     Ok(())

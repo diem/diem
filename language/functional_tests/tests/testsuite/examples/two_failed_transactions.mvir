@@ -1,0 +1,17 @@
+main() {
+    assert(false, 42);
+    return;
+}
+
+// check: ABORTED
+// check: 42
+
+
+//! new-transaction
+main() {
+    assert(false, 43);
+    return;
+}
+
+// check: ABORTED
+// check: 43
