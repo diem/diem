@@ -18,6 +18,7 @@ mkdir -p /opt/libra
 yum -y install awscli
 aws s3 cp ${consensus_peers} /opt/libra/consensus_peers.config.toml
 aws s3 cp ${network_peers} /opt/libra/network_peers.config.toml
+aws s3 cp ${fullnode_peers} /opt/libra/fullnode_peers.config.toml
 aws s3 cp ${genesis_blob} /opt/libra/genesis.blob
 
 echo ECS_CLUSTER=${ecs_cluster} >> /etc/ecs/ecs.config
