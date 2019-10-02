@@ -44,10 +44,8 @@ impl Program {
 
 impl fmt::Debug for Program {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // XXX note that "code" will eventually be encoded bytecode and will no longer be a
-        // UTF8-ish string -- at that point the from_utf8_lossy will stop making sense.
         f.debug_struct("Program")
-            .field("code", &String::from_utf8_lossy(&self.code))
+            .field("code", &hex::encode(&self.code))
             .field("args", &self.args)
             .finish()
     }
