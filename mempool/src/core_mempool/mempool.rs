@@ -71,14 +71,15 @@ impl Mempool {
                 .reject_transaction(&sender, sequence_number);
         } else {
             // update current cached sequence number for account
-            let last_commited_seq = match self.sequence_number_cache.remove(sender) {
-                Some(seq) => max(seq, sequence_number),
-                None => sequence_number,
-            };
+            let current_seq_number = self
+                .sequence_number_cache
+                .remove(&sender)
+                .unwrap_or_default();
+            let new_seq_number = max(current_seq_number, sequence_number + 1);
             self.sequence_number_cache
-                .insert(sender.clone(), last_commited_seq + 1);
+                .insert(sender.clone(), new_seq_number);
             self.transactions
-                .commit_transaction(&sender, last_commited_seq);
+                .commit_transaction(&sender, new_seq_number);
         }
     }
 
