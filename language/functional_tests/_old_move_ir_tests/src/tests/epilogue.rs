@@ -41,34 +41,6 @@ main() {
 }
 
 #[test]
-fn increment_sequence_number_on_tx_script_failure() {
-    let mut test_env = TestEnvironment::default();
-
-    let sequence_number = 0;
-    assert_error_type!(
-        test_env.run_with_sequence_number(
-            sequence_number,
-            to_script(
-                b"
-main() {
-  assert(false, 77);
-  return;
-}
-",
-                vec![]
-            )
-        ),
-        ErrorKind::AssertError(77, _)
-    );
-
-    // there was a failure during the transaction script, but
-    // sequence number should still be bumped
-    let sequence_number = 1;
-    assert_no_error!(test_env
-        .run_with_sequence_number(sequence_number, to_script(b"main() { return; }", vec![]),))
-}
-
-#[test]
 fn charge_more_gas_on_tx_script_failure1() {
     // Make sure that we charge more for a transaction that was aborted
     let mut test_env = TestEnvironment::default();

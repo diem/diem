@@ -3,7 +3,7 @@
 
 use crate::{
     checker::{check, run_filecheck, Directive},
-    evaluator::{EvaluationOutput, EvaluationResult, OutputType, Stage, Status},
+    evaluator::{EvaluationLog, EvaluationOutput, OutputType, Stage, Status},
 };
 use vm::{
     file_format::{empty_module, CompiledModuleMut},
@@ -84,18 +84,17 @@ fn check_basic() {
     module.user_strings = vec![VMString::new("baz")];
     let baz_mod = make_output(module.clone());
 
-    let res = EvaluationResult {
+    let res = EvaluationLog {
         outputs: vec![
-            EvaluationOutput::Transaction,
+            EvaluationOutput::Transaction(0),
             EvaluationOutput::Stage(Stage::Compiler),
             foo_mod,
             EvaluationOutput::Stage(Stage::Verifier),
             baz_mod,
             EvaluationOutput::Stage(Stage::Runtime),
             bar_mod,
+            EvaluationOutput::Status(Status::Success),
         ],
-        status: Status::Success,
-        use_debug_output: false,
     };
 
     check(&res, &make_directives(r"
@@ -135,16 +134,15 @@ fn check_match_twice() {
     module.user_strings = vec![VMString::new("baz")];
     let baz_mod = make_output(module.clone());
 
-    let res = EvaluationResult {
+    let res = EvaluationLog {
         outputs: vec![
-            EvaluationOutput::Transaction,
+            EvaluationOutput::Transaction(0),
             EvaluationOutput::Stage(Stage::Compiler),
             foo_mod,
             EvaluationOutput::Stage(Stage::Verifier),
             baz_mod,
+            EvaluationOutput::Status(Status::Success),
         ],
-        status: Status::Success,
-        use_debug_output: false,
     };
 
     check(&res, &make_directives(r"
@@ -166,14 +164,13 @@ fn check_no_stage() {
     let mut module = empty_module();
     module.user_strings = vec![VMString::new("baz")];
     let baz_mod = make_output(module.clone());
-    let res = EvaluationResult {
+    let res = EvaluationLog {
         outputs: vec![
-            EvaluationOutput::Transaction,
+            EvaluationOutput::Transaction(0),
             EvaluationOutput::Stage(Stage::Verifier),
             baz_mod,
+            EvaluationOutput::Status(Status::Success),
         ],
-        status: Status::Success,
-        use_debug_output: false,
     };
 
     check(&res, &make_directives(r"
