@@ -4,6 +4,7 @@
 use crate::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
+    block_metadata::BlockMetadata,
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
     proof::{
@@ -1472,4 +1473,25 @@ impl From<TransactionListWithProof> for crate::proto::types::TransactionListWith
             proof_of_last_transaction,
         }
     }
+}
+
+/// `Transaction` will be the transaction type used internally in the libra node to represent the
+/// transaction to be processed and persisted.
+///
+/// We suppress the clippy warning here as we would expect most of the transaction to be user
+/// transaction.
+#[allow(clippy::large_enum_variant)]
+pub enum Transaction {
+    /// Transaction submitted by the user. e.g: P2P payment transaction, publishing module
+    /// transaction, etc.
+    /// TODO: We need to rename SignedTransaction to SignedUserTransaction, as well as all the other
+    ///       transaction types we had in our codebase.
+    UserTransaction(SignedTransaction),
+
+    /// Transaction that applies a WriteSet to the current storage. This should be used for ONLY for
+    /// genesis right now.
+    WriteSet(WriteSet),
+
+    /// Transaction to update the block metadata resource at the beginning of a block.
+    BlockMetadata(BlockMetadata),
 }
