@@ -684,7 +684,7 @@ dependencies = [
  "ir_to_bytecode 0.1.0",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
- "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "types 0.1.0",
  "vm 0.1.0",
 ]

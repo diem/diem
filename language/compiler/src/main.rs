@@ -25,11 +25,7 @@ use types::{
 use vm::file_format::CompiledModule;
 
 #[derive(Debug, StructOpt)]
-#[structopt(
-    name = "IR Compiler",
-    author = "Libra",
-    about = "Move IR to bytecode compiler."
-)]
+#[structopt(name = "IR Compiler", about = "Move IR to bytecode compiler.")]
 struct Args {
     /// Treat input file as a module (default is to treat file as a program)
     #[structopt(short = "m", long = "module")]
@@ -47,7 +43,7 @@ struct Args {
     #[structopt(parse(from_os_str))]
     pub source_path: PathBuf,
     /// Instead of compiling the source, emit a dependency list of the compiled source
-    #[structopt(short = "-l", long = "list_dependencies")]
+    #[structopt(short = "-l", long = "list-dependencies")]
     pub list_dependencies: bool,
     /// Path to the list of modules that we want to link with
     #[structopt(long = "deps")]
