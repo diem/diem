@@ -9,7 +9,7 @@ use executor::Executor;
 use futures::future::Future;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
-use proto_conv::FromProto;
+use proto_conv::{FromProto, IntoProto};
 use rand::SeedableRng;
 use std::{sync::Arc, u64};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
@@ -102,7 +102,8 @@ fn test_validate_transaction() {
         keypair.private_key,
         keypair.public_key,
         Some(program),
-    );
+    )
+    .into_proto();
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
@@ -153,7 +154,8 @@ fn test_validate_known_script_too_large_args() {
         0,
         0, /* max gas price */
         None,
-    );
+    )
+    .into_proto();
     let txn = SignedTransaction::from_proto(txn).unwrap();
     let ret = vm_validator.validate_transaction(txn).wait().unwrap();
     assert_eq!(
@@ -177,7 +179,8 @@ fn test_validate_max_gas_units_above_max() {
         0,
         0,              /* max gas price */
         Some(u64::MAX), // Max gas units
-    );
+    )
+    .into_proto();
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
         .wait()
@@ -203,7 +206,8 @@ fn test_validate_max_gas_units_below_min() {
         0,
         0,       /* max gas price */
         Some(1), // Max gas units
-    );
+    )
+    .into_proto();
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
         .wait()
@@ -229,7 +233,8 @@ fn test_validate_max_gas_price_above_bounds() {
         0,
         u64::MAX, /* max gas price */
         None,
-    );
+    )
+    .into_proto();
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
         .wait()
@@ -259,7 +264,8 @@ fn test_validate_max_gas_price_below_bounds() {
         0,
         0, /* max gas price */
         None,
-    );
+    )
+    .into_proto();
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
         .wait()
@@ -284,7 +290,8 @@ fn test_validate_unknown_script() {
         keypair.private_key,
         keypair.public_key,
         None,
-    );
+    )
+    .into_proto();
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
@@ -307,7 +314,8 @@ fn test_validate_module_publishing() {
         keypair.private_key,
         keypair.public_key,
         Module::new(vec![]),
-    );
+    )
+    .into_proto();
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
@@ -332,7 +340,8 @@ fn test_validate_invalid_auth_key() {
         other_private_key,
         other_public_key,
         Some(program),
-    );
+    )
+    .into_proto();
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
@@ -358,7 +367,8 @@ fn test_validate_balance_below_gas_fee() {
         // changing those may cause this test to fail.
         10_000, /* max gas price */
         Some(1_000_000),
-    );
+    )
+    .into_proto();
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
@@ -386,7 +396,8 @@ fn test_validate_account_doesnt_exist() {
         0,
         1, /* max gas price */
         None,
-    );
+    )
+    .into_proto();
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
@@ -410,7 +421,8 @@ fn test_validate_sequence_number_too_new() {
         keypair.private_key,
         keypair.public_key,
         Some(program),
-    );
+    )
+    .into_proto();
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()
@@ -432,7 +444,8 @@ fn test_validate_invalid_arguments() {
         keypair.private_key,
         keypair.public_key,
         Some(program),
-    );
+    )
+    .into_proto();
     let ret = vm_validator
         .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
         .wait()

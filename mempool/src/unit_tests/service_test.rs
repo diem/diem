@@ -14,7 +14,7 @@ use config::config::NodeConfigHelpers;
 use crypto::ed25519::compat::generate_keypair;
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder};
-use proto_conv::FromProto;
+use proto_conv::{FromProto, IntoProto};
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
@@ -58,7 +58,8 @@ fn create_add_transaction_request(expiration_time: u64) -> AddTransactionWithVal
         expiration_time,
         1,
         None,
-    );
+    )
+    .into_proto();
     req.set_signed_txn(transaction.clone());
     req.set_max_gas_cost(10);
     req.set_account_balance(1000);

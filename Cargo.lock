@@ -2513,6 +2513,7 @@ dependencies = [
  "pin-utils 0.1.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-build 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proto_conv 0.1.0",
  "protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "protoc-rust 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -12,7 +12,7 @@ use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse}
 
 use crypto::{ed25519::*, test_utils::TEST_SEED};
 use mempool::proto::shared::mempool_status::MempoolAddTransactionStatusCode;
-use proto_conv::FromProto;
+use proto_conv::{FromProto, IntoProto};
 use rand::SeedableRng;
 use std::sync::Arc;
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
@@ -51,101 +51,65 @@ fn test_submit_txn_inner_vm() {
     let mut req: SubmitTransactionRequest = SubmitTransactionRequest::new();
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
     let keypair = compat::generate_keypair(&mut rng);
-    req.set_signed_txn(get_test_signed_txn(
-        sender,
-        0,
-        keypair.0.clone(),
-        keypair.1.clone(),
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into_proto(),
+    );
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(
         response,
         VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST),
     );
     let sender = AccountAddress::new([1; ADDRESS_LENGTH]);
-    req.set_signed_txn(get_test_signed_txn(
-        sender,
-        0,
-        keypair.0.clone(),
-        keypair.1.clone(),
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into_proto(),
+    );
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(response, VMStatus::new(StatusCode::INVALID_SIGNATURE));
     let sender = AccountAddress::new([2; ADDRESS_LENGTH]);
-    req.set_signed_txn(get_test_signed_txn(
-        sender,
-        0,
-        keypair.0.clone(),
-        keypair.1.clone(),
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into_proto(),
+    );
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(
         response,
         VMStatus::new(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE),
     );
     let sender = AccountAddress::new([3; ADDRESS_LENGTH]);
-    req.set_signed_txn(get_test_signed_txn(
-        sender,
-        0,
-        keypair.0.clone(),
-        keypair.1.clone(),
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into_proto(),
+    );
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(response, VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_NEW));
     let sender = AccountAddress::new([4; ADDRESS_LENGTH]);
-    req.set_signed_txn(get_test_signed_txn(
-        sender,
-        0,
-        keypair.0.clone(),
-        keypair.1.clone(),
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into_proto(),
+    );
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(response, VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_OLD));
     let sender = AccountAddress::new([5; ADDRESS_LENGTH]);
-    req.set_signed_txn(get_test_signed_txn(
-        sender,
-        0,
-        keypair.0.clone(),
-        keypair.1.clone(),
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into_proto(),
+    );
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(response, VMStatus::new(StatusCode::TRANSACTION_EXPIRED));
     let sender = AccountAddress::new([6; ADDRESS_LENGTH]);
-    req.set_signed_txn(get_test_signed_txn(
-        sender,
-        0,
-        keypair.0.clone(),
-        keypair.1.clone(),
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into_proto(),
+    );
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(response, VMStatus::new(StatusCode::INVALID_AUTH_KEY));
     let sender = AccountAddress::new([8; ADDRESS_LENGTH]);
-    req.set_signed_txn(get_test_signed_txn(
-        sender,
-        0,
-        keypair.0.clone(),
-        keypair.1.clone(),
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(sender, 0, keypair.0.clone(), keypair.1.clone(), None).into_proto(),
+    );
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(response, VMStatus::new(StatusCode::EXECUTED));
 
     let sender = AccountAddress::new([8; ADDRESS_LENGTH]);
     let test_key = compat::generate_keypair(&mut rng);
-    req.set_signed_txn(get_test_signed_txn(
-        sender,
-        0,
-        keypair.0.clone(),
-        test_key.1.clone(),
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(sender, 0, keypair.0.clone(), test_key.1.clone(), None).into_proto(),
+    );
     let response = ac_service.submit_transaction_inner(req.clone()).unwrap();
     assert_status(response, VMStatus::new(StatusCode::INVALID_SIGNATURE));
 }
@@ -156,13 +120,16 @@ fn test_submit_txn_inner_mempool() {
     let mut req: SubmitTransactionRequest = SubmitTransactionRequest::new();
     let keypair = compat::generate_keypair(None);
     let insufficient_balance_add = AccountAddress::new([100; ADDRESS_LENGTH]);
-    req.set_signed_txn(get_test_signed_txn(
-        insufficient_balance_add,
-        0,
-        keypair.0.clone(),
-        keypair.1.clone(),
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(
+            insufficient_balance_add,
+            0,
+            keypair.0.clone(),
+            keypair.1.clone(),
+            None,
+        )
+        .into_proto(),
+    );
     let response = SubmitTransactionResponse::from_proto(
         ac_service.submit_transaction_inner(req.clone()).unwrap(),
     )
@@ -172,13 +139,16 @@ fn test_submit_txn_inner_mempool() {
         MempoolAddTransactionStatusCode::InsufficientBalance
     );
     let invalid_seq_add = AccountAddress::new([101; ADDRESS_LENGTH]);
-    req.set_signed_txn(get_test_signed_txn(
-        invalid_seq_add,
-        0,
-        keypair.0.clone(),
-        keypair.1.clone(),
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(
+            invalid_seq_add,
+            0,
+            keypair.0.clone(),
+            keypair.1.clone(),
+            None,
+        )
+        .into_proto(),
+    );
     let response = SubmitTransactionResponse::from_proto(
         ac_service.submit_transaction_inner(req.clone()).unwrap(),
     )
@@ -188,13 +158,10 @@ fn test_submit_txn_inner_mempool() {
         MempoolAddTransactionStatusCode::InvalidSeqNumber
     );
     let sys_error_add = AccountAddress::new([102; ADDRESS_LENGTH]);
-    req.set_signed_txn(get_test_signed_txn(
-        sys_error_add,
-        0,
-        keypair.0.clone(),
-        keypair.1.clone(),
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(sys_error_add, 0, keypair.0.clone(), keypair.1.clone(), None)
+            .into_proto(),
+    );
     let response = SubmitTransactionResponse::from_proto(
         ac_service.submit_transaction_inner(req.clone()).unwrap(),
     )
@@ -204,13 +171,10 @@ fn test_submit_txn_inner_mempool() {
         MempoolAddTransactionStatusCode::InvalidUpdate
     );
     let accepted_add = AccountAddress::new([103; ADDRESS_LENGTH]);
-    req.set_signed_txn(get_test_signed_txn(
-        accepted_add,
-        0,
-        keypair.0.clone(),
-        keypair.1.clone(),
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(accepted_add, 0, keypair.0.clone(), keypair.1.clone(), None)
+            .into_proto(),
+    );
     let response = SubmitTransactionResponse::from_proto(
         ac_service.submit_transaction_inner(req.clone()).unwrap(),
     )
@@ -220,13 +184,9 @@ fn test_submit_txn_inner_mempool() {
         AdmissionControlStatus::Accepted,
     );
     let accepted_add = AccountAddress::new([104; ADDRESS_LENGTH]);
-    req.set_signed_txn(get_test_signed_txn(
-        accepted_add,
-        0,
-        keypair.0.clone(),
-        keypair.1,
-        None,
-    ));
+    req.set_signed_txn(
+        get_test_signed_txn(accepted_add, 0, keypair.0.clone(), keypair.1, None).into_proto(),
+    );
     let response = SubmitTransactionResponse::from_proto(
         ac_service.submit_transaction_inner(req.clone()).unwrap(),
     )
