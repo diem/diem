@@ -20,7 +20,7 @@ use std::collections::BTreeMap;
 ///    info by calling into the read method of that resource, which would thus give users the
 ///    information such as the current leader.
 #[derive(Debug, PartialEq, Eq)]
-pub struct BlockMetaData {
+pub struct BlockMetadata {
     id: HashValue,
     timestamp_usec: u64,
     // Since Move doesn't support hashmaps, this vote map would be stored as a vector of key value
@@ -30,7 +30,7 @@ pub struct BlockMetaData {
     proposer: AccountAddress,
 }
 
-impl BlockMetaData {
+impl BlockMetadata {
     pub fn new(
         id: HashValue,
         timestamp_usec: u64,
@@ -56,7 +56,7 @@ impl BlockMetaData {
     }
 }
 
-impl CanonicalSerialize for BlockMetaData {
+impl CanonicalSerialize for BlockMetadata {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_bytes(self.id.as_ref())?
@@ -67,7 +67,7 @@ impl CanonicalSerialize for BlockMetaData {
     }
 }
 
-impl CanonicalDeserialize for BlockMetaData {
+impl CanonicalDeserialize for BlockMetadata {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let id = HashValue::from_slice(deserializer.decode_bytes()?.as_slice())?;
         let timestamp_usec = deserializer.decode_u64()?;
