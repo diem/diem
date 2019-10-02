@@ -1,5 +1,5 @@
 [package]
-name = "libra_fuzzer"
+name = "libra-fuzzer"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -17,7 +17,7 @@ proptest_helpers = { path = "../../common/proptest_helpers" }
 proto_conv = { path = "../../common/proto_conv" }
 rusty-fork = { version = "0.2.2", default-features = false }
 sha-1 = { version = "0.8.1", default-features = false }
-structopt = { version = "0.2.18", default-features = false }
+structopt = "0.3.2"
 
 # List out modules with data structures being fuzzed here.
 types = { path = "../../types" }

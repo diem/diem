@@ -35,7 +35,7 @@ enum Command {
         #[structopt(
             short = "n",
             long = "num-items",
-            raw(default_value = "&GENERATE_DEFAULT_ITEMS_STR")
+            default_value("&GENERATE_DEFAULT_ITEMS_STR")
         )]
         num_items: usize,
         /// Custom directory for corpus output to be stored in (required if not running under
@@ -50,7 +50,7 @@ enum Command {
     #[structopt(name = "fuzz", usage = "fuzzer fuzz <TARGET> -- [ARGS]")]
     Fuzz {
         /// Target to fuzz (use `list` to list targets)
-        #[structopt(name = "TARGET", raw(required = "true"))]
+        #[structopt(name = "TARGET", required = true)]
         target: FuzzTarget,
         /// Custom directory for corpus
         #[structopt(long = "corpus-dir", parse(from_os_str))]
@@ -59,7 +59,7 @@ enum Command {
         #[structopt(long = "artifact-dir", parse(from_os_str))]
         artifact_dir: Option<PathBuf>,
         /// Arguments for `cargo fuzz run`
-        #[structopt(name = "ARGS", parse(from_os_str), raw(allow_hyphen_values = "true"))]
+        #[structopt(name = "ARGS", parse(from_os_str), allow_hyphen_values = true)]
         args: Vec<OsString>,
     },
     /// List fuzz targets
