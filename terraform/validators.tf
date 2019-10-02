@@ -117,8 +117,8 @@ resource "aws_s3_bucket_public_access_block" "config" {
 resource "aws_s3_bucket_object" "network_peers" {
   bucket = aws_s3_bucket.config.id
   key    = "network_peers.config.toml"
-  source = "${var.validator_set}/network_peers.config.toml"
-  etag   = filemd5("${var.validator_set}/network_peers.config.toml")
+  source = "${var.validator_set}/val/network_peers.config.toml"
+  etag   = filemd5("${var.validator_set}/val/network_peers.config.toml")
 }
 
 resource "aws_s3_bucket_object" "consensus_peers" {
@@ -188,7 +188,7 @@ resource "aws_instance" "validator" {
 
 data "local_file" "consensus_keys" {
   count    = length(var.peer_ids)
-  filename = "${var.validator_set}/${var.peer_ids[count.index]}.node.consensus.keys.toml"
+  filename = "${var.validator_set}/val/${var.peer_ids[count.index]}.node.consensus.keys.toml"
 }
 
 resource "aws_secretsmanager_secret" "validator_consensus" {
@@ -205,7 +205,7 @@ resource "aws_secretsmanager_secret_version" "validator_consensus" {
 
 data "local_file" "network_keys" {
   count    = length(var.peer_ids)
-  filename = "${var.validator_set}/${var.peer_ids[count.index]}.node.network.keys.toml"
+  filename = "${var.validator_set}/val/${var.peer_ids[count.index]}.node.network.keys.toml"
 }
 
 resource "aws_secretsmanager_secret" "validator_network" {
@@ -220,9 +220,9 @@ resource "aws_secretsmanager_secret_version" "validator_network" {
   secret_string = element(data.local_file.network_keys.*.content, count.index)
 }
 
-data "template_file" "node_config" {
+data "template_file" "validator_config" {
   count    = length(var.peer_ids)
-  template = file("${var.validator_set}/node.config.toml")
+  template = file("${var.validator_set}/val/node.config.toml")
 
   vars = {
     self_ip = var.validator_use_public_ip == true ? element(aws_instance.validator.*.public_ip, count.index) : element(aws_instance.validator.*.private_ip, count.index)
@@ -248,7 +248,7 @@ data "template_file" "ecs_task_definition" {
     image_version    = local.image_version
     cpu              = local.cpu_by_instance[var.validator_type]
     mem              = local.mem_by_instance[var.validator_type]
-    node_config      = jsonencode(element(data.template_file.node_config.*.rendered, count.index))
+    node_config      = jsonencode(element(data.template_file.validator_config.*.rendered, count.index))
     seed_peers       = jsonencode(data.template_file.seed_peers.rendered)
     genesis_blob     = jsonencode(filebase64("${var.validator_set}/genesis.blob"))
     peer_id          = var.peer_ids[count.index]

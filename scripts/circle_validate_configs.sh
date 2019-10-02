@@ -11,9 +11,7 @@
 # Generate Configs
 echo "--- Generating all the configs ---"
 cd terraform/validator-sets
-./build.sh dev -n 4
-./build.sh 60 -n 60
-./build.sh 100 -n 100
+./build-all.sh
 
 # Compare configs
 # Notice: This is not comparing all configs yet.
