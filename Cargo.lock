@@ -190,7 +190,6 @@ name = "benchmark"
 version = "0.1.0"
 dependencies = [
  "admission_control_proto 0.1.0",
- "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "client 0.1.0",
  "config 0.1.0",
  "crypto 0.1.0",
@@ -209,7 +208,7 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tools 0.1.0",
  "transaction_builder 0.1.0",
  "types 0.1.0",

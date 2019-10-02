@@ -34,8 +34,8 @@ use std::ops::DerefMut;
 
 fn main() {
     let _g = logger::set_default_global_logger(false, Some(256));
-    info!("RuBen: the utility to (Ru)n (Ben)chmarker");
     let args = RubenOpt::new_from_args();
+    info!("RuBen: the utility to (Ru)n (Ben)chmarker");
     info!("Parsed arguments: {:#?}", args);
     try_start_metrics_server(&args.bench_opt);
     let mut bm = create_benchmarker_from_opt(&args.bench_opt);
