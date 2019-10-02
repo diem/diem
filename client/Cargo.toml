@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 bincode = "1.1.1"
+chrono = "0.4.7"
 futures = "0.1.28"
 grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
 hex = "0.3.2"
