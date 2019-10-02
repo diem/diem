@@ -114,10 +114,10 @@ impl MockExecutorProxy {
             None,
         );
 
-        let mut resp = GetChunkResponse::new();
-        resp.set_txn_list_with_proof(txns.into_proto());
-        resp.set_ledger_info_with_sigs(target.into_proto());
-        resp
+        GetChunkResponse {
+            txn_list_with_proof: Some(txns.into()),
+            ledger_info_with_sigs: Some(target.into()),
+        }
     }
 }
 

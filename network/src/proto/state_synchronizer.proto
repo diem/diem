@@ -3,7 +3,7 @@
 
 syntax = "proto3";
 
-package network;
+package state_synchronizer;
 
 import "ledger_info.proto";
 import "transaction.proto";

@@ -6,14 +6,15 @@
 //! Protobuf definitions for data structures sent over the network
 mod admission_control;
 mod consensus;
-mod state_synchronizer;
 
 mod network {
     include!(concat!(env!("OUT_DIR"), "/network.rs"));
 }
-
 mod mempool {
     include!(concat!(env!("OUT_DIR"), "/mempool.rs"));
+}
+mod state_synchronizer {
+    include!(concat!(env!("OUT_DIR"), "/state_synchronizer.rs"));
 }
 
 use ::types::proto::{ledger_info, transaction, types};
@@ -30,5 +31,8 @@ pub use self::{
         identity_msg::Role as IdentityMsg_Role, DiscoveryMsg, FullNodePayload, IdentityMsg, Note,
         PeerInfo, Ping, Pong, SignedFullNodePayload, SignedPeerInfo,
     },
-    state_synchronizer::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg},
+    state_synchronizer::{
+        state_synchronizer_msg::Message as StateSynchronizerMsg_oneof, GetChunkRequest,
+        GetChunkResponse, StateSynchronizerMsg,
+    },
 };

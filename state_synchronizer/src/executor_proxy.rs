@@ -6,7 +6,6 @@ use futures::{channel::oneshot, Future, FutureExt};
 use grpcio::EnvBuilder;
 use logger::prelude::*;
 use network::proto::GetChunkResponse;
-use proto_conv::IntoProto;
 use std::{pin::Pin, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
 use types::{
@@ -128,10 +127,10 @@ impl ExecutorProxyTrait for ExecutorProxy {
                     limit, known_version
                 );
             }
-            let mut resp = GetChunkResponse::new();
-            resp.set_ledger_info_with_sigs(target.into_proto());
-            resp.set_txn_list_with_proof(transactions.into_proto());
-            Ok(resp)
+            Ok(GetChunkResponse {
+                ledger_info_with_sigs: Some(target.into()),
+                txn_list_with_proof: Some(transactions.into()),
+            })
         }
             .boxed()
     }
