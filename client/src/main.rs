@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use chrono::prelude::{SecondsFormat, Utc};
 use client::{client_proxy::ClientProxy, commands::*};
 use logger::set_default_global_logger;
 use rustyline::{config::CompletionType, error::ReadlineError, Config, Editor};
@@ -48,6 +49,9 @@ struct Args {
     /// If set, client will sync with validator during wallet recovery.
     #[structopt(short = "r", long = "sync")]
     pub sync: bool,
+    /// Verbose output.
+    #[structopt(short = "v", long = "verbose")]
+    pub verbose: bool,
 }
 
 fn main() -> std::io::Result<()> {
@@ -99,7 +103,12 @@ fn main() -> std::io::Result<()> {
                     continue;
                 }
                 match alias_to_cmd.get(&params[0]) {
-                    Some(cmd) => cmd.execute(&mut client_proxy, &params),
+                    Some(cmd) => {
+                        if args.verbose {
+                            println!("{}", Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true));
+                        }
+                        cmd.execute(&mut client_proxy, &params);
+                    }
                     None => match params[0] {
                         "quit" | "q!" => break,
                         "help" | "h" => print_help(&cli_info, &commands),
