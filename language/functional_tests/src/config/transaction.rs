@@ -117,7 +117,9 @@ impl Config {
             match entry {
                 Entry::Sender(name) => match sender {
                     None => {
-                        if config.accounts.contains_key(name) {
+                        if config.accounts.contains_key(name)
+                            || config.genesis_accounts.contains_key(name)
+                        {
                             sender = Some(name.to_string())
                         } else {
                             return Err(ErrorKind::Other(format!(

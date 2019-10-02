@@ -5,7 +5,8 @@
 // A config entry starts with "//!", differentiating it from a directive.
 
 use crate::errors::*;
-use language_e2e_tests::account::AccountData;
+use crate::genesis_accounts::make_genesis_accounts;
+use language_e2e_tests::account::{Account, AccountData};
 use std::{
     collections::{btree_map, BTreeMap},
     str::FromStr,
@@ -71,6 +72,7 @@ impl FromStr for Entry {
 pub struct Config {
     /// A map from account names to account data
     pub accounts: BTreeMap<String, AccountData>,
+    pub genesis_accounts: BTreeMap<String, Account>,
 }
 
 impl Config {
@@ -104,6 +106,16 @@ impl Config {
         if let btree_map::Entry::Vacant(entry) = accounts.entry("default".to_string()) {
             entry.insert(AccountData::new(DEFAULT_BALANCE, 0));
         }
-        Ok(Config { accounts })
+        Ok(Config {
+            accounts,
+            genesis_accounts: make_genesis_accounts(),
+        })
+    }
+
+    pub fn get_account_for_name(&self, name: &str) -> Option<&Account> {
+        self.accounts
+            .get(name)
+            .map(|account_data| account_data.account())
+            .or_else(|| self.genesis_accounts.get(name))
     }
 }

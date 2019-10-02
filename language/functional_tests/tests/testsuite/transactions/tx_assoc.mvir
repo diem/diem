@@ -1,0 +1,20 @@
+//! sender: association
+main() {
+    assert(get_txn_sender() == 0xA550C18, 0);
+    return;
+}
+
+//! new-transaction
+main() {
+    assert(get_txn_sender() != 0xA550C18, 1);
+    return;
+}
+
+//! new-transaction
+//! account: alice
+//! sender: alice
+main() {
+    assert(get_txn_sender() != 0xA550C18, 2);
+    assert({{alice}} != 0xA550C18, 3);
+    return;
+}

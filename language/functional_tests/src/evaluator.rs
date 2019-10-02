@@ -14,7 +14,7 @@ use ir_to_bytecode::{
     parser::parse_script_or_module,
 };
 use ir_to_bytecode_syntax::ast::ScriptOrModule;
-use language_e2e_tests::{account::AccountData, executor::FakeExecutor};
+use language_e2e_tests::{account::Account, executor::FakeExecutor};
 use std::{env, fmt, str::FromStr, time::Duration};
 use stdlib::stdlib_modules;
 use types::{
@@ -25,6 +25,7 @@ use types::{
     vm_error::StatusCode,
 };
 use vm::file_format::{CompiledModule, CompiledScript};
+use vm::gas_schedule::{GasAlgebra, MAXIMUM_NUMBER_OF_GAS_UNITS};
 
 /// A transaction to be evaluated by the testing infra.
 /// Contains code and a transaction config.
@@ -183,7 +184,7 @@ fn do_verify_module(module: CompiledModule, deps: &[VerifiedModule]) -> Result<V
 /// Creates and signs a script transaction.
 fn make_script_transaction(
     exec: &FakeExecutor,
-    data: &AccountData,
+    account: &Account,
     script: CompiledScript,
     args: Vec<TransactionArgument>,
 ) -> Result<SignedTransaction> {
@@ -191,13 +192,15 @@ fn make_script_transaction(
     script.serialize(&mut blob)?;
     let script = TransactionScript::new(blob, args);
 
-    let account = data.account();
     let account_resource = exec.read_account_resource(&account).unwrap();
     Ok(RawTransaction::new_script(
-        *data.address(),
+        *account.address(),
         account_resource.sequence_number(),
         script,
-        account_resource.balance(),
+        std::cmp::min(
+            MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+            account_resource.balance(),
+        ),
         1,
         Duration::from_secs(u64::max_value()),
     )
@@ -208,20 +211,22 @@ fn make_script_transaction(
 /// Creates and signs a module transaction.
 fn make_module_transaction(
     exec: &FakeExecutor,
-    data: &AccountData,
+    account: &Account,
     module: CompiledModule,
 ) -> Result<SignedTransaction> {
     let mut blob = vec![];
     module.serialize(&mut blob)?;
     let module = TransactionModule::new(blob);
 
-    let account = data.account();
     let account_resource = exec.read_account_resource(&account).unwrap();
     Ok(RawTransaction::new_module(
-        *data.address(),
+        *account.address(),
         account_resource.sequence_number(),
         module,
-        account_resource.balance(),
+        std::cmp::min(
+            MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+            account_resource.balance(),
+        ),
         1,
         Duration::from_secs(u64::max_value()),
     )
@@ -321,8 +326,10 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
 
     for transaction in transactions {
         // get the account data of the sender
-        let data = config.accounts.get(&transaction.config.sender).unwrap();
-        let addr = data.address();
+        let account = config
+            .get_account_for_name(&transaction.config.sender)
+            .unwrap();
+        let addr = account.address();
 
         // start processing a new transaction
         // insert a barrier in the output
@@ -375,7 +382,7 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
                 res.outputs.push(EvaluationOutput::Stage(Stage::Runtime));
                 let script_transaction = make_script_transaction(
                     &exec,
-                    data,
+                    account,
                     compiled_script,
                     transaction.config.args.clone(),
                 )?;
@@ -421,7 +428,7 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
                     continue;
                 }
                 res.outputs.push(EvaluationOutput::Stage(Stage::Runtime));
-                let module_transaction = make_module_transaction(&exec, data, compiled_module)?;
+                let module_transaction = make_module_transaction(&exec, account, compiled_module)?;
                 let txn_output =
                     unwrap_or_log!(run_transaction(&mut exec, module_transaction), res);
                 exec.apply_write_set(txn_output.write_set());

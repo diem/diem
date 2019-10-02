@@ -71,16 +71,24 @@ impl Account {
         }
     }
 
+    /// Creates a new account in memory representing an account created in the genesis transaction.
+    ///
+    /// The address will be [`address`], which should be an address for a genesis account and
+    /// the account will use [`GENESIS_KEYPAIR`][struct@GENESIS_KEYPAIR] as its keypair.
+    pub fn new_genesis_account(address: AccountAddress) -> Self {
+        Account {
+            addr: address,
+            pubkey: GENESIS_KEYPAIR.1.clone(),
+            privkey: GENESIS_KEYPAIR.0.clone(),
+        }
+    }
+
     /// Creates a new account representing the association in memory.
     ///
     /// The address will be [`association_address`][account_config::association_address], and
     /// the account will use [`GENESIS_KEYPAIR`][struct@GENESIS_KEYPAIR] as its keypair.
     pub fn new_association() -> Self {
-        Account {
-            addr: account_config::association_address(),
-            pubkey: GENESIS_KEYPAIR.1.clone(),
-            privkey: GENESIS_KEYPAIR.0.clone(),
-        }
+        Self::new_genesis_account(account_config::association_address())
     }
 
     /// Returns the address of the account. This is a hash of the public key the account was created
