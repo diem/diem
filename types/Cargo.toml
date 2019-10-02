@@ -18,6 +18,7 @@ logger = { path = "../common/logger" }
 proptest = { version = "0.9.4", default-features = false }
 proptest-derive = { version = "0.1.2", default-features = false }
 protobuf = "~2.7"
+prost = "0.5.0"
 radix_trie = { version = "0.1.4", default-features = false }
 rand = "0.6.5"
 serde = { version = "1.0.99", default-features = false }
@@ -32,6 +33,7 @@ num_enum = "0.4.1"
 
 [build-dependencies]
 build_helpers = { path = "../common/build_helpers" }
+prost-build = "0.5.0"
 
 [dev-dependencies]
 serde_json = "1.0.40"
