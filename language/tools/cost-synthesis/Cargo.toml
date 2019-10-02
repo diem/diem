@@ -1,5 +1,5 @@
 [package]
-name = "cost_synthesis"
+name = "cost-synthesis"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -20,7 +20,7 @@ vm_runtime_types = { path = "../../vm/vm_runtime/vm_runtime_types" }
 language_e2e_tests = { path = "../../e2e_tests" }
 vm_cache_map = { path = "../../vm/vm_runtime/vm_cache_map" }
 crypto = { path = "../../../crypto/crypto" }
-structopt = "0.2.15"
+structopt = "0.3.2"
 
 [dev-dependencies]
 types = { path = "../../../types", features = ["testing"] }

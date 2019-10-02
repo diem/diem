@@ -17,7 +17,7 @@ pub fn cargo_dir() -> PathBuf {
 }
 
 pub fn cost_synthesis_exe() -> PathBuf {
-    cargo_dir().join(format!("cost_synthesis{}", env::consts::EXE_SUFFIX))
+    cargo_dir().join(format!("cost-synthesis{}", env::consts::EXE_SUFFIX))
 }
 
 #[test]

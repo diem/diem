@@ -13,7 +13,7 @@ env_logger = "0.6"
 mirai-annotations = "1.4.0"
 structopt = "0.2.15"
 bytecode_verifier = { path = "../../bytecode_verifier" }
-cost_synthesis = { path = "../cost_synthesis" }
+cost-synthesis = { path = "../cost-synthesis" }
 vm = { path = "../../vm" }
 vm_runtime = { path = "../../vm/vm_runtime" }
 vm_runtime_types = { path = "../../vm/vm_runtime/vm_runtime_types" }

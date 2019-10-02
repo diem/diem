@@ -49,7 +49,7 @@ fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
 }
 
 /// This function runs a verified module in the VM runtime
-/// This code is based on `cost_synthesis/src/vm_runner.rs`
+/// This code is based on `cost-synthesis/src/vm_runner.rs`
 fn run_vm(module: VerifiedModule) -> Result<(), String> {
     use vm::access::ModuleAccess;
     let mut modules = ::stdlib::stdlib_modules().to_vec();
