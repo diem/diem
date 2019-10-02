@@ -1,4 +1,3 @@
-use clap::{App, Arg, ArgGroup, ArgMatches};
 use cluster_test::{
     aws::Aws,
     cluster::Cluster,
@@ -24,47 +23,81 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
+use structopt::{clap::ArgGroup, StructOpt};
 use termion::{color, style};
 use threadpool;
 
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
+#[derive(StructOpt, Debug)]
+#[structopt(group = ArgGroup::with_name("action").required(true))]
+struct Args {
+    #[structopt(short = "w", long)]
+    workplace: String,
+    #[structopt(short = "p", long, use_delimiter = true, conflicts_with = "prune-logs")]
+    peers: Vec<String>,
+
+    #[structopt(long, group = "action")]
+    wipe_all_db: bool,
+    #[structopt(long, group = "action")]
+    run: bool,
+    #[structopt(long, group = "action")]
+    run_once: bool,
+    #[structopt(long, group = "action")]
+    tail_logs: bool,
+    #[structopt(long, group = "action")]
+    health_check: bool,
+    #[structopt(long, group = "action")]
+    prune_logs: bool,
+    #[structopt(long, group = "action")]
+    reboot: bool,
+    #[structopt(long, group = "action")]
+    restart: bool,
+    #[structopt(long, group = "action")]
+    stop: bool,
+    #[structopt(long, group = "action")]
+    start: bool,
+    #[structopt(long, group = "action")]
+    emit_tx: bool,
+}
+
 pub fn main() {
     setup_log();
-    let matches = arg_matches();
 
-    if matches.is_present(ARG_PRUNE) {
-        let util = ClusterUtil::setup(&matches);
+    let args = Args::from_args();
+
+    if args.prune_logs {
+        let util = ClusterUtil::setup(&args);
         util.prune_logs();
         return;
-    } else if matches.is_present(ARG_EMIT_TX) {
-        let util = ClusterUtil::setup(&matches);
+    } else if args.emit_tx {
+        let util = ClusterUtil::setup(&args);
         util.emit_tx();
         return;
     }
 
-    let mut runner = ClusterTestRunner::setup(&matches);
+    let mut runner = ClusterTestRunner::setup(&args);
 
-    if matches.is_present(ARG_RUN) {
+    if args.run {
         runner.run_suite_in_loop();
-    } else if matches.is_present(ARG_RUN_ONCE) {
+    } else if args.run_once {
         let experiment = RebootRandomValidators::new(3, &runner.cluster);
         runner.run_single_experiment(Box::new(experiment)).unwrap();
-    } else if matches.is_present(ARG_TAIL_LOGS) {
+    } else if args.tail_logs {
         runner.tail_logs();
-    } else if matches.is_present(ARG_HEALTH_CHECK) {
+    } else if args.health_check {
         runner.run_health_check();
-    } else if matches.is_present(ARG_WIPE_ALL_DB) {
+    } else if args.wipe_all_db {
         runner.stop();
         runner.wipe_all_db(true);
         runner.start();
-    } else if matches.is_present(ARG_REBOOT) {
+    } else if args.reboot {
         runner.reboot();
-    } else if matches.is_present(ARG_RESTART) {
+    } else if args.restart {
         runner.restart();
-    } else if matches.is_present(ARG_STOP) {
+    } else if args.stop {
         runner.stop();
-    } else if matches.is_present(ARG_START) {
+    } else if args.start {
         runner.start();
     }
 }
@@ -98,17 +131,15 @@ struct ClusterTestRunner {
 }
 
 impl ClusterUtil {
-    pub fn setup(matches: &ArgMatches) -> Self {
-        let workplace = matches
-            .value_of(ARG_WORKPLACE)
-            .expect("workplace should be set");
-        let aws = Aws::new(workplace.into());
-        let peers = matches.values_of_lossy(ARG_PEERS);
+    pub fn setup(args: &Args) -> Self {
+        let aws = Aws::new(args.workplace.clone());
         let cluster = Cluster::discover(&aws).expect("Failed to discover cluster");
-        let cluster = match peers {
-            None => cluster,
-            Some(peers) => cluster.sub_cluster(peers),
+        let cluster = if args.peers.is_empty() {
+            cluster
+        } else {
+            cluster.sub_cluster(args.peers.clone())
         };
+
         info!("Discovered {} peers", cluster.instances().len());
         Self { cluster, aws }
     }
@@ -126,8 +157,8 @@ impl ClusterUtil {
 
 impl ClusterTestRunner {
     /// Discovers cluster, setup log, etc
-    pub fn setup(matches: &ArgMatches) -> Self {
-        let util = ClusterUtil::setup(matches);
+    pub fn setup(args: &Args) -> Self {
+        let util = ClusterUtil::setup(args);
         let cluster = util.cluster;
         let aws = util.aws;
         let log_tail_started = Instant::now();
@@ -522,83 +553,4 @@ impl ClusterTestRunner {
         }
         result
     }
-}
-
-const ARG_WORKPLACE: &str = "workplace";
-const ARG_PEERS: &str = "peers";
-// Actions:
-const ARG_TAIL_LOGS: &str = "tail-logs";
-const ARG_HEALTH_CHECK: &str = "health-check";
-const ARG_RUN: &str = "run";
-const ARG_RUN_ONCE: &str = "run-once";
-const ARG_WIPE_ALL_DB: &str = "wipe-all-db";
-const ARG_REBOOT: &str = "reboot";
-const ARG_STOP: &str = "stop";
-const ARG_START: &str = "start";
-const ARG_RESTART: &str = "restart";
-const ARG_EMIT_TX: &str = "emit-tx";
-const ARG_PRUNE: &str = "prune-logs";
-
-fn arg_matches() -> ArgMatches<'static> {
-    // Parameters
-    let workplace = Arg::with_name(ARG_WORKPLACE)
-        .long("--workplace")
-        .short("-w")
-        .takes_value(true)
-        .required(true);
-    let peers = Arg::with_name(ARG_PEERS)
-        .long("--peers")
-        .short("-p")
-        .takes_value(true)
-        .use_delimiter(true)
-        .conflicts_with(ARG_PRUNE);
-    // Actions
-    let wipe_all_db = Arg::with_name(ARG_WIPE_ALL_DB).long("--wipe-all-db");
-    let run = Arg::with_name(ARG_RUN).long("--run");
-    let run_once = Arg::with_name(ARG_RUN_ONCE).long("--run-once");
-    let tail_logs = Arg::with_name(ARG_TAIL_LOGS).long("--tail-logs");
-    let health_check = Arg::with_name(ARG_HEALTH_CHECK).long("--health-check");
-    let prune_logs = Arg::with_name(ARG_PRUNE).long("--prune-logs");
-    let reboot = Arg::with_name(ARG_REBOOT).long("--reboot");
-    let restart = Arg::with_name(ARG_RESTART).long("--restart");
-    let stop = Arg::with_name(ARG_STOP).long("--stop");
-    let start = Arg::with_name(ARG_START).long("--start");
-    let emit_tx = Arg::with_name(ARG_EMIT_TX).long("--emit-tx");
-    // This grouping requires one and only one action (tail logs, run test, etc)
-    let action_group = ArgGroup::with_name("action")
-        .args(&[
-            ARG_TAIL_LOGS,
-            ARG_RUN,
-            ARG_RUN_ONCE,
-            ARG_HEALTH_CHECK,
-            ARG_WIPE_ALL_DB,
-            ARG_REBOOT,
-            ARG_RESTART,
-            ARG_STOP,
-            ARG_START,
-            ARG_EMIT_TX,
-            ARG_PRUNE,
-        ])
-        .required(true);
-    App::new("cluster_test")
-        .author("Libra Association <opensource@libra.org>")
-        .group(action_group)
-        .args(&[
-            // parameters
-            workplace,
-            peers,
-            // actions
-            run,
-            run_once,
-            tail_logs,
-            health_check,
-            wipe_all_db,
-            reboot,
-            restart,
-            stop,
-            start,
-            prune_logs,
-            emit_tx,
-        ])
-        .get_matches()
 }

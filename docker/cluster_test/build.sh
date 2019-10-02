@@ -21,7 +21,7 @@ else
   docker run --name libra_cluster_test_builder_container -d -i -t -v $DIR/../..:/libra libra_cluster_test_builder bash
 fi
 
-docker exec -i -t libra_cluster_test_builder_container bash -c 'source /root/.cargo/env; cargo build -p cluster_test --target-dir /target && /bin/cp /target/debug/cluster_test target/cluster_test_docker_builder/'
+docker exec -i -t libra_cluster_test_builder_container bash -c 'source /root/.cargo/env; cargo build -p cluster-test --target-dir /target && /bin/cp /target/debug/cluster-test target/cluster_test_docker_builder/'
 
 if [ "$1" = "--build-docker-image" ]; then
   ln target/cluster_test_docker_builder/cluster_test cluster_test_docker_builder_cluster_test
@@ -29,5 +29,5 @@ if [ "$1" = "--build-docker-image" ]; then
   rm cluster_test_docker_builder_cluster_test
 else
   echo "Not building docker container, run with --build-docker-image to build docker image"
-  echo "Built binary is in target/cluster_test_docker_builder/cluster_test"
+  echo "Built binary is in target/cluster_test_docker_builder/cluster-test"
 fi

@@ -615,11 +615,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "cluster_test"
+name = "cluster-test"
 version = "0.1.0"
 dependencies = [
  "admission_control_proto 0.1.0",
- "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "crypto 0.1.0",
  "debug_interface 0.1.0",
  "failure_ext 0.1.0",
@@ -644,6 +643,7 @@ dependencies = [
  "slog-envlogger 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog-scope 4.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog-term 2.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "termion 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "threadpool 1.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction_builder 0.1.0",

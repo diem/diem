@@ -1,5 +1,5 @@
 [package]
-name = "cluster_test"
+name = "cluster-test"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -7,7 +7,6 @@ publish = false
 edition = "2018"
 
 [dependencies]
-clap = "2.32"
 flate2 = { version = "1.0", features = ["rust_backend"], default-features = false }
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["protobuf-codec"] }
 itertools = "0.8.0"
@@ -23,6 +22,7 @@ rusoto_logs = {version = "0.40.0", features=["rustls"], default_features = false
 serde_json = "1.0"
 termion = "1.5.3"
 serde = { version = "1.0.89", features = ["derive"] }
+structopt = "0.3.2"
 
 slog = { version = "2.5.0", features = ["max_level_debug", "release_max_level_debug"] }
 slog-term = "2.4.1"

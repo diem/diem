@@ -1,7 +1,7 @@
 FROM debian:stretch
 
 RUN mkdir -p /opt/libra/bin /opt/libra/etc
-COPY cluster_test_docker_builder_cluster_test /opt/libra/bin/cluster_test
+COPY cluster_test_docker_builder_cluster_test /opt/libra/bin/cluster-test
 
 # Capture backtrace on error
 ENV RUST_BACKTRACE 1
