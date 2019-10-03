@@ -1091,6 +1091,67 @@ impl IntoProto for TransactionToCommit {
     }
 }
 
+impl TryFrom<crate::proto::types::TransactionToCommit> for TransactionToCommit {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::TransactionToCommit) -> Result<Self> {
+        let signed_txn = proto
+            .signed_txn
+            .ok_or_else(|| format_err!("Missing signed_transaction"))?
+            .try_into()?;
+        let num_account_states = proto.account_states.len();
+        let account_states = proto
+            .account_states
+            .into_iter()
+            .map(|x| {
+                Ok((
+                    AccountAddress::try_from(x.address)?,
+                    AccountStateBlob::from(x.blob),
+                ))
+            })
+            .collect::<Result<HashMap<_, _>>>()?;
+        ensure!(
+            account_states.len() == num_account_states,
+            "account_states should have no duplication."
+        );
+        let events = proto
+            .events
+            .into_iter()
+            .map(ContractEvent::try_from)
+            .collect::<Result<Vec<_>>>()?;
+        let gas_used = proto.gas_used;
+        let major_status =
+            StatusCode::try_from(proto.major_status).unwrap_or(StatusCode::UNKNOWN_STATUS);
+
+        Ok(TransactionToCommit {
+            signed_txn,
+            account_states,
+            events,
+            gas_used,
+            major_status,
+        })
+    }
+}
+
+impl From<TransactionToCommit> for crate::proto::types::TransactionToCommit {
+    fn from(txn: TransactionToCommit) -> Self {
+        Self {
+            signed_txn: Some(txn.signed_txn.into()),
+            account_states: txn
+                .account_states
+                .into_iter()
+                .map(|(address, blob)| crate::proto::types::AccountState {
+                    address: address.as_ref().to_vec(),
+                    blob: blob.into(),
+                })
+                .collect(),
+            events: txn.events.into_iter().map(Into::into).collect(),
+            gas_used: txn.gas_used,
+            major_status: txn.major_status.into(),
+        }
+    }
+}
+
 /// The list may have three states:
 /// 1. The list is empty. Both proofs must be `None`.
 /// 2. The list has only 1 transaction/transaction_info. Then `proof_of_first_transaction`
