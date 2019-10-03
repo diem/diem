@@ -10,6 +10,7 @@ use rand::{
     thread_rng, Rng, SeedableRng,
 };
 use schemadb::schema::assert_encode_decode;
+use std::vec::IntoIter;
 use types::transaction::Version;
 
 fn row_with_arbitrary_validator(version: Version) -> (Key, ()) {
@@ -37,14 +38,13 @@ fn test_order() {
     let mut versions: Vec<u64> = (0..1024).collect();
     versions.shuffle(&mut thread_rng());
 
-    let encoded_sorted: Vec<Vec<u8>> = versions
+    let encoded_sorted: IntoIter<Vec<u8>> = versions
         .into_iter()
         .map(|v| row_with_arbitrary_validator(v).0.encode_key().unwrap())
         .sorted();
 
     let decoded_versions: Vec<Version> = encoded_sorted
-        .iter()
-        .map(|k| Key::decode_key(k).unwrap().version)
+        .map(|k| Key::decode_key(&k).unwrap().version)
         .collect();
 
     let ordered_versions: Vec<Version> = (0..1024).collect();
