@@ -10,8 +10,6 @@
 //! 1. SubmitTransaction, to submit transaction to associated validator.
 //! 2. UpdateToLatestLedger, to query storage, e.g. account state, transaction log, and proofs.
 
-/// Wrapper to run AC in a separate process.
-pub mod admission_control_node;
 /// AC gRPC service.
 pub mod admission_control_service;
 #[cfg(any(test, feature = "fuzzing"))]
