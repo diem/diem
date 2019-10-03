@@ -587,6 +587,43 @@ impl AccountStateProof {
     }
 }
 
+impl TryFrom<crate::proto::types::AccountStateProof> for AccountStateProof {
+    type Error = Error;
+
+    fn try_from(proto_proof: crate::proto::types::AccountStateProof) -> Result<Self> {
+        let ledger_info_to_transaction_info_proof = proto_proof
+            .ledger_info_to_transaction_info_proof
+            .ok_or_else(|| format_err!("Missing ledger_info_to_transaction_info_proof"))?
+            .try_into()?;
+        let transaction_info = proto_proof
+            .transaction_info
+            .ok_or_else(|| format_err!("Missing transaction_info"))?
+            .try_into()?;
+        let transaction_info_to_account_proof = proto_proof
+            .transaction_info_to_account_proof
+            .ok_or_else(|| format_err!("Missing transaction_info_to_account_proof"))?
+            .try_into()?;
+
+        Ok(AccountStateProof::new(
+            ledger_info_to_transaction_info_proof,
+            transaction_info,
+            transaction_info_to_account_proof,
+        ))
+    }
+}
+
+impl From<AccountStateProof> for crate::proto::types::AccountStateProof {
+    fn from(proof: AccountStateProof) -> Self {
+        Self {
+            ledger_info_to_transaction_info_proof: Some(
+                proof.ledger_info_to_transaction_info_proof.into(),
+            ),
+            transaction_info: Some(proof.transaction_info.into()),
+            transaction_info_to_account_proof: Some(proof.transaction_info_to_account_proof.into()),
+        }
+    }
+}
+
 /// The complete proof used to authenticate a contract event. This structure consists of the
 /// `AccumulatorProof` from `LedgerInfo` to `TransactionInfo`, the `TransactionInfo` object and the
 /// `AccumulatorProof` from event accumulator root to the event.
