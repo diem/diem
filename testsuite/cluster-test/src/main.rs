@@ -1,3 +1,6 @@
+use cluster_test::prometheus::Prometheus;
+use cluster_test::tx_emitter::{EmitJobRequest, EmitThreadParams};
+use cluster_test::util::unix_timestamp_now;
 use cluster_test::{
     aws::Aws,
     cluster::Cluster,
@@ -59,6 +62,14 @@ struct Args {
     start: bool,
     #[structopt(long, group = "action")]
     emit_tx: bool,
+
+    // emit_tx options
+    #[structopt(long, default_value = "10")]
+    accounts_per_client: usize,
+    #[structopt(long, default_value = "50")]
+    wait_millis: u64,
+    #[structopt(long)]
+    burst: bool,
 }
 
 pub fn main() {
@@ -72,7 +83,11 @@ pub fn main() {
         return;
     } else if args.emit_tx {
         let util = ClusterUtil::setup(&args);
-        util.emit_tx();
+        let thread_params = EmitThreadParams {
+            wait_millis: args.wait_millis,
+            wait_committed: !args.burst,
+        };
+        util.emit_tx(args.accounts_per_client, thread_params);
         return;
     }
 
@@ -118,6 +133,7 @@ fn setup_log() {
 struct ClusterUtil {
     cluster: Cluster,
     aws: Aws,
+    prometheus: Prometheus,
 }
 
 struct ClusterTestRunner {
@@ -139,9 +155,13 @@ impl ClusterUtil {
         } else {
             cluster.sub_cluster(args.peers.clone())
         };
-
+        let prometheus = Prometheus::new(cluster.prometheus_ip());
         info!("Discovered {} peers", cluster.instances().len());
-        Self { cluster, aws }
+        Self {
+            cluster,
+            aws,
+            prometheus,
+        }
     }
 
     pub fn prune_logs(&self) {
@@ -149,9 +169,53 @@ impl ClusterUtil {
         log_prune.prune_logs();
     }
 
-    pub fn emit_tx(self) {
-        let emitter = TxEmitter::new(&self.cluster);
-        emitter.run();
+    pub fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
+        let mut emitter = TxEmitter::new(&self.cluster);
+        let _job = emitter.start_job(EmitJobRequest {
+            instances: self.cluster.instances().to_vec(),
+            accounts_per_client,
+            thread_params,
+        });
+        self.run_stat_loop();
+    }
+
+    fn run_stat_loop(&self) {
+        thread::sleep(Duration::from_secs(30)); // warm up
+        loop {
+            thread::sleep(Duration::from_secs(10));
+            if let Err(err) = self.print_stat() {
+                info!("Stat error: {:?}", err);
+            }
+        }
+    }
+
+    fn print_stat(&self) -> failure::Result<()> {
+        let step = 10;
+        let end = unix_timestamp_now();
+        let start = end - Duration::from_secs(30); // avg over last 30 sec
+        let tps = self.prometheus.query_range(
+            "irate(consensus_gauge{op='last_committed_version'}[1m])".to_string(),
+            &start,
+            &end,
+            step,
+        )?;
+        let avg_tps = tps.avg().ok_or_else(|| format_err!("No tps data"))?;
+        let latency = self.prometheus.query_range(
+            "irate(mempool_duration_sum{op='e2e.latency'}[1m])/irate(mempool_duration_count{op='e2e.latency'}[1m])"
+                .to_string(),
+            &start,
+            &end,
+            step,
+        )?;
+        let avg_latency = latency
+            .avg()
+            .ok_or_else(|| format_err!("No latency data"))?;
+        info!(
+            "Tps: {:.0}, latency: {:.0} ms",
+            avg_tps,
+            avg_latency * 1000.
+        );
+        Ok(())
     }
 }
 
