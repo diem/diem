@@ -17,7 +17,7 @@ use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
 /// A proof that can be used authenticate an element in an accumulator given trusted root hash. For
 /// example, both `LedgerInfoToTransactionInfoProof` and `TransactionInfoToEventProof` can be
@@ -504,6 +504,37 @@ impl SignedTransactionProof {
     /// Returns the `transaction_info` object in this proof.
     pub fn transaction_info(&self) -> &TransactionInfo {
         &self.transaction_info
+    }
+}
+
+impl TryFrom<crate::proto::types::SignedTransactionProof> for SignedTransactionProof {
+    type Error = Error;
+
+    fn try_from(proto_proof: crate::proto::types::SignedTransactionProof) -> Result<Self> {
+        let ledger_info_to_transaction_info_proof = proto_proof
+            .ledger_info_to_transaction_info_proof
+            .ok_or_else(|| format_err!("Missing ledger_info_to_transaction_info_proof"))?
+            .try_into()?;
+        let transaction_info = proto_proof
+            .transaction_info
+            .ok_or_else(|| format_err!("Missing transaction_info"))?
+            .try_into()?;
+
+        Ok(SignedTransactionProof::new(
+            ledger_info_to_transaction_info_proof,
+            transaction_info,
+        ))
+    }
+}
+
+impl From<SignedTransactionProof> for crate::proto::types::SignedTransactionProof {
+    fn from(proof: SignedTransactionProof) -> Self {
+        Self {
+            ledger_info_to_transaction_info_proof: Some(
+                proof.ledger_info_to_transaction_info_proof.into(),
+            ),
+            transaction_info: Some(proof.transaction_info.into()),
+        }
     }
 }
 
