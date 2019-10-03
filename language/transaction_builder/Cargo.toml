@@ -2,6 +2,9 @@
 name = "transaction_builder"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra transaction_builder"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 edition = "2018"
 

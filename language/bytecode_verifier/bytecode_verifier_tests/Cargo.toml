@@ -2,6 +2,9 @@
 name = "bytecode_verifier_tests"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra bytecode_verifier_tests"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
