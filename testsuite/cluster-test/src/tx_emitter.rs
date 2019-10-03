@@ -5,14 +5,12 @@ use admission_control_proto::proto::admission_control::{
 use grpcio::{ChannelBuilder, EnvBuilder};
 use std::{
     convert::TryFrom,
-    env, slice,
-    str::FromStr,
+    slice,
     sync::Arc,
     thread,
     time::{Duration, Instant},
 };
 
-use crate::{prometheus::Prometheus, util::unix_timestamp_now};
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 use crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -32,6 +30,8 @@ use rand::{
     Rng, SeedableRng,
 };
 use slog_scope::{debug, info};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread::JoinHandle;
 use types::{
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},
@@ -44,129 +44,118 @@ use types::{
     transaction_helpers::create_signed_txn,
 };
 
-const ACCOUNT_PER_CLIENT_DEFAULT: usize = 10;
-const THREADS_PER_CLIENT_DEFAULT: usize = 1;
 const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempool
 
 pub struct TxEmitter {
-    prometheus: Prometheus,
-    clients: Vec<(Instance, AdmissionControlClient)>,
+    accounts: Vec<AccountData>,
+    mint_client: AdmissionControlClient,
+    faucet_account: AccountData,
+}
+
+pub struct EmitJob {
+    workers: Vec<Worker>,
+    stop: Arc<AtomicBool>,
+}
+
+#[derive(Clone)]
+pub struct EmitThreadParams {
+    pub wait_millis: u64,
+    pub wait_committed: bool,
+}
+
+impl Default for EmitThreadParams {
+    fn default() -> Self {
+        Self {
+            wait_millis: 50,
+            wait_committed: true,
+        }
+    }
+}
+
+pub struct EmitJobRequest {
+    pub instances: Vec<Instance>,
+    pub accounts_per_client: usize,
+    pub thread_params: EmitThreadParams,
 }
 
 impl TxEmitter {
     pub fn new(cluster: &Cluster) -> Self {
-        let clients = Self::create_ac_clients(cluster);
-        let prometheus = Prometheus::new(cluster.prometheus_ip());
-
+        let mint_client = Self::make_client(&cluster.instances()[0]);
+        let faucet_account = load_faucet_account(&mint_client, "mint.key");
         Self {
-            prometheus,
-            clients,
+            accounts: vec![],
+            mint_client,
+            faucet_account,
         }
     }
 
-    fn create_ac_clients(cluster: &Cluster) -> Vec<(Instance, AdmissionControlClient)> {
-        let mut clients = vec![];
-        let threads_per_client = get_env("THREADS_PER_CLIENT", THREADS_PER_CLIENT_DEFAULT);
-        for instance in cluster.instances() {
-            let address = format!("{}:8000", instance.ip());
-            for _ in 0..threads_per_client {
-                let env_builder = Arc::new(EnvBuilder::new().name_prefix("ac-grpc-").build());
-                let ch = ChannelBuilder::new(env_builder).connect(&address);
-                clients.push((instance.clone(), AdmissionControlClient::new(ch)));
-            }
-        }
-        clients
-    }
-
-    pub fn run(self) {
-        let mint_client = &self.clients[0].1;
-        let mut faucet_account = load_faucet_account(mint_client, "mint.key");
-        let account_per_client = get_env("ACCOUNT_PER_CLIENT", ACCOUNT_PER_CLIENT_DEFAULT);
-        let num_accounts = account_per_client * self.clients.len();
+    pub fn start_job(&mut self, req: EmitJobRequest) -> EmitJob {
+        let num_clients = req.instances.len();
+        let num_accounts = req.accounts_per_client * num_clients;
         info!("Minting accounts");
-        let mut all_accounts: Vec<AccountData> = vec![];
-        for _ in 0..(num_accounts + MAX_TXN_BATCH_SIZE - 1) / MAX_TXN_BATCH_SIZE {
+        while self.accounts.len() < num_accounts {
             let mut accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
-            let mint_requests = gen_mint_txn_requests(&mut faucet_account, &accounts);
-            execute_and_wait_transactions(&mint_client, &faucet_account, mint_requests);
-            all_accounts.append(&mut accounts);
+            let mint_requests = gen_mint_txn_requests(&mut self.faucet_account, &accounts);
+            execute_and_wait_transactions(
+                &self.mint_client,
+                &mut self.faucet_account,
+                mint_requests,
+            );
+            self.accounts.append(&mut accounts);
         }
+        let all_accounts = self.accounts.split_off(self.accounts.len() - num_accounts);
         info!("Mint is done");
-        let mut join_handles = vec![];
+        let mut workers = vec![];
         let all_addresses: Vec<_> = all_accounts.iter().map(|d| d.address).collect();
         let all_addresses = Arc::new(all_addresses);
         let mut all_accounts = all_accounts.into_iter();
-        for (index, (instance, client)) in self.clients.into_iter().enumerate() {
-            let accounts = (&mut all_accounts).take(account_per_client).collect();
+        let stop = Arc::new(AtomicBool::new(false));
+        for instance in req.instances {
+            let client = Self::make_client(&instance);
+            let accounts = (&mut all_accounts).take(req.accounts_per_client).collect();
             let all_addresses = all_addresses.clone();
+            let stop = stop.clone();
+            let peer_id = instance.short_hash().clone();
+            let params = req.thread_params.clone();
             let thread = SubmissionThread {
                 accounts,
                 instance,
                 client,
                 all_addresses,
+                stop,
+                params,
             };
             let join_handle = thread::Builder::new()
-                .name(format!("thread-{}", index))
+                .name(format!("txem-{}", peer_id))
                 .spawn(move || thread.run())
                 .unwrap();
-            join_handles.push(join_handle);
+            workers.push(Worker { join_handle });
             thread::sleep(Duration::from_millis(10)); // Small stagger between starting threads
         }
-        info!("Threads started");
-        run_stat_loop(&self.prometheus);
-        for join_handle in join_handles {
-            join_handle.join().unwrap();
+        EmitJob { workers, stop }
+    }
+
+    pub fn stop_job(&mut self, job: EmitJob) {
+        job.stop.store(true, Ordering::Relaxed);
+        for worker in job.workers {
+            let mut accounts = worker
+                .join_handle
+                .join()
+                .expect("TxEmitter worker thread failed");
+            self.accounts.append(&mut accounts);
         }
     }
-}
 
-fn run_stat_loop(prometheus: &Prometheus) {
-    thread::sleep(Duration::from_secs(30)); // warm up
-    loop {
-        thread::sleep(Duration::from_secs(10));
-        if let Err(err) = print_stat(prometheus) {
-            info!("Stat error: {:?}", err);
-        }
+    fn make_client(instance: &Instance) -> AdmissionControlClient {
+        let address = format!("{}:8000", instance.ip());
+        let env_builder = Arc::new(EnvBuilder::new().name_prefix("ac-grpc-").build());
+        let ch = ChannelBuilder::new(env_builder).connect(&address);
+        AdmissionControlClient::new(ch)
     }
 }
 
-fn print_stat(prometheus: &Prometheus) -> failure::Result<()> {
-    let step = 10;
-    let end = unix_timestamp_now();
-    let start = end - Duration::from_secs(30); // avg over last 30 sec
-    let tps = prometheus.query_range(
-        "irate(consensus_gauge{op='last_committed_version'}[1m])".to_string(),
-        &start,
-        &end,
-        step,
-    )?;
-    let avg_tps = tps.avg().ok_or_else(|| format_err!("No tps data"))?;
-    let latency = prometheus.query_range(
-        "irate(mempool_duration_sum{op='e2e.latency'}[1m])/irate(mempool_duration_count{op='e2e.latency'}[1m])"
-            .to_string(),
-        &start,
-        &end,
-        step,
-    )?;
-    let avg_latency = latency
-        .avg()
-        .ok_or_else(|| format_err!("No latency data"))?;
-    info!(
-        "Tps: {:.0}, latency: {:.0} ms",
-        avg_tps,
-        avg_latency * 1000.
-    );
-    Ok(())
-}
-
-fn get_env<F: FromStr>(name: &str, default: F) -> F {
-    match env::var(name) {
-        Ok(v) => match v.parse() {
-            Ok(v) => v,
-            _ => panic!("Failed to parse env {}", name),
-        },
-        _ => default,
-    }
+struct Worker {
+    join_handle: JoinHandle<Vec<AccountData>>,
 }
 
 struct SubmissionThread {
@@ -174,27 +163,30 @@ struct SubmissionThread {
     instance: Instance,
     client: AdmissionControlClient,
     all_addresses: Arc<Vec<AccountAddress>>,
+    stop: Arc<AtomicBool>,
+    params: EmitThreadParams,
 }
 
 impl SubmissionThread {
-    fn run(mut self) {
-        let wait_millis = get_env("WAIT_MILLIS", 50);
-        let wait = Duration::from_millis(wait_millis);
-        let wait_committed = get_env("WAIT_COMMITTED", true);
+    #[allow(clippy::collapsible_if)]
+    fn run(mut self) -> Vec<AccountData> {
+        let wait = Duration::from_millis(self.params.wait_millis);
         let mut rng = ThreadRng::default();
-        loop {
+        while !self.stop.load(Ordering::Relaxed) {
             let requests = self.gen_requests(&mut rng);
             for request in requests {
                 let wait_util = Instant::now() + wait;
                 let resp = self.client.submit_transaction(&request);
                 match resp {
                     Err(e) => {
-                        debug!("Failed to submit request to {}: {:?}", self.instance, e);
+                        info!("Failed to submit request to {}: {:?}", self.instance, e);
                     }
                     Ok(r) => {
                         let r = SubmitTransactionResponse::try_from(r)
                             .expect("Failed to parse SubmitTransactionResponse");
-                        debug!("Request declined: {:?}", r);
+                        if !is_accepted(&r) {
+                            info!("Request declined: {:?}", r);
+                        }
                     }
                 }
                 let now = Instant::now();
@@ -204,10 +196,16 @@ impl SubmissionThread {
                     debug!("Thread for {} won't sleep", self.instance);
                 }
             }
-            if wait_committed {
-                wait_for_accounts_sequence(&self.client, &self.accounts);
+            if self.params.wait_committed {
+                if wait_for_accounts_sequence(&self.client, &mut self.accounts).is_err() {
+                    info!(
+                        "Some transactions was not committed before expiration {}",
+                        self.instance
+                    );
+                }
             }
         }
+        self.accounts
     }
 
     fn gen_requests(&mut self, rng: &mut ThreadRng) -> Vec<SubmitTransactionRequest> {
@@ -224,7 +222,11 @@ impl SubmissionThread {
     }
 }
 
-fn wait_for_accounts_sequence(client: &AdmissionControlClient, accounts: &[AccountData]) {
+fn wait_for_accounts_sequence(
+    client: &AdmissionControlClient,
+    accounts: &mut [AccountData],
+) -> Result<(), ()> {
+    let deadline = Instant::now() + TXN_MAX_WAIT;
     let addresses: Vec<_> = accounts.iter().map(|d| d.address).collect();
     loop {
         match query_sequence_numbers(client, &addresses) {
@@ -233,10 +235,17 @@ fn wait_for_accounts_sequence(client: &AdmissionControlClient, accounts: &[Accou
                 if is_sequence_equal(accounts, &sequence_numbers) {
                     break;
                 }
+                if Instant::now() > deadline {
+                    for (account, sequence_number) in zip(accounts, &sequence_numbers) {
+                        account.sequence_number = *sequence_number;
+                    }
+                    return Err(());
+                }
             }
         }
         thread::sleep(Duration::from_millis(100));
     }
+    Ok(())
 }
 
 fn is_sequence_equal(accounts: &[AccountData], sequence_numbers: &[u64]) -> bool {
@@ -288,7 +297,8 @@ fn query_sequence_numbers(
 
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
 const GAS_UNIT_PRICE: u64 = 0;
-const TXN_EXPIRATION: i64 = 100;
+const TXN_EXPIRATION_SECONDS: i64 = 50;
+const TXN_MAX_WAIT: Duration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64 + 10);
 
 fn gen_submit_transaction_request(
     script: Script,
@@ -301,7 +311,7 @@ fn gen_submit_transaction_request(
         sender_account.sequence_number,
         MAX_GAS_AMOUNT,
         GAS_UNIT_PRICE,
-        TXN_EXPIRATION,
+        TXN_EXPIRATION_SECONDS,
     )
     .expect("Failed to create signed transaction");
     let mut req = SubmitTransactionRequest::default();
@@ -356,7 +366,7 @@ fn gen_mint_txn_requests(
 
 fn execute_and_wait_transactions(
     client: &AdmissionControlClient,
-    account: &AccountData,
+    account: &mut AccountData,
     txn: Vec<SubmitTransactionRequest>,
 ) {
     for request in txn {
@@ -372,7 +382,8 @@ fn execute_and_wait_transactions(
             }
         }
     }
-    wait_for_accounts_sequence(client, slice::from_ref(account));
+    wait_for_accounts_sequence(client, slice::from_mut(account))
+        .expect("Mint transactions was not committed before expiration");
 }
 
 fn load_faucet_account(client: &AdmissionControlClient, faucet_account_path: &str) -> AccountData {
