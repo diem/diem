@@ -2,6 +2,9 @@
 name = "benchmark"
 version = "0.1.0"
 authors = ["Libra <oncall+libra@xmail.facebook.com>"]
+description = "Libra benchmark"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 publish = false
 edition = "2018"
 
