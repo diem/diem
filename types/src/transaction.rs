@@ -534,12 +534,11 @@ impl TryFrom<crate::proto::types::SignedTransaction> for SignedTransaction {
     }
 }
 
-impl TryFrom<SignedTransaction> for crate::proto::types::SignedTransaction {
-    type Error = Error;
-
-    fn try_from(txn: SignedTransaction) -> Result<Self> {
-        let signed_txn = SimpleSerializer::<Vec<u8>>::serialize(&txn)?;
-        Ok(Self { signed_txn })
+impl From<SignedTransaction> for crate::proto::types::SignedTransaction {
+    fn from(txn: SignedTransaction) -> Self {
+        let signed_txn = SimpleSerializer::<Vec<u8>>::serialize(&txn)
+            .expect("Unable to serialize SignedTransaction");
+        Self { signed_txn }
     }
 }
 
