@@ -17,6 +17,7 @@ use failure::Result;
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
+use std::convert::{TryFrom, TryInto};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 pub struct StructTag {
@@ -74,6 +75,26 @@ impl ModuleId {
 
     pub fn address(&self) -> &AccountAddress {
         &self.address
+    }
+}
+
+impl TryFrom<crate::proto::types::ModuleId> for ModuleId {
+    type Error = failure::Error;
+
+    fn try_from(proto: crate::proto::types::ModuleId) -> Result<Self> {
+        Ok(Self {
+            address: proto.address.try_into()?,
+            name: Identifier::new(proto.name)?,
+        })
+    }
+}
+
+impl From<ModuleId> for crate::proto::types::ModuleId {
+    fn from(txn: ModuleId) -> Self {
+        Self {
+            address: txn.address.into(),
+            name: txn.name.into_string(),
+        }
     }
 }
 
