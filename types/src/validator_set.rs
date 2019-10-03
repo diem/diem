@@ -19,7 +19,10 @@ use lazy_static::lazy_static;
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt,
+};
 
 lazy_static! {
     static ref VALIDATOR_SET_MODULE_NAME: Identifier = Identifier::new("ValidatorSet").unwrap();
@@ -129,5 +132,27 @@ impl IntoProto for ValidatorSet {
                 .collect(),
         ));
         out
+    }
+}
+
+impl TryFrom<crate::proto::types::ValidatorSet> for ValidatorSet {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::ValidatorSet) -> Result<Self> {
+        Ok(ValidatorSet::new(
+            proto
+                .validator_public_keys
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<_>>>()?,
+        ))
+    }
+}
+
+impl From<ValidatorSet> for crate::proto::types::ValidatorSet {
+    fn from(set: ValidatorSet) -> Self {
+        Self {
+            validator_public_keys: set.0.into_iter().map(Into::into).collect(),
+        }
     }
 }
