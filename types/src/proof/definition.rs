@@ -445,6 +445,28 @@ impl IntoProto for AccumulatorConsistencyProof {
     }
 }
 
+impl TryFrom<crate::proto::types::AccumulatorConsistencyProof> for AccumulatorConsistencyProof {
+    type Error = Error;
+
+    fn try_from(proto_proof: crate::proto::types::AccumulatorConsistencyProof) -> Result<Self> {
+        let subtrees = proto_proof
+            .subtrees
+            .into_iter()
+            .map(|hash_bytes| HashValue::from_slice(&hash_bytes))
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(Self::new(subtrees))
+    }
+}
+
+impl From<AccumulatorConsistencyProof> for crate::proto::types::AccumulatorConsistencyProof {
+    fn from(proof: AccumulatorConsistencyProof) -> Self {
+        Self {
+            subtrees: proof.subtrees.iter().map(HashValue::to_vec).collect(),
+        }
+    }
+}
+
 /// The complete proof used to authenticate a `SignedTransaction` object.  This structure consists
 /// of an `AccumulatorProof` from `LedgerInfo` to `TransactionInfo` the verifier needs to verify
 /// the correctness of the `TransactionInfo` object, and the `TransactionInfo` object that is
