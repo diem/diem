@@ -5,6 +5,7 @@ authors = ["Libra <oncall+libra@xmail.facebook.com>"]
 description = "Libra bytecode-to-boogie"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
+license = "Apache-2.0"
 publish = false
 edition = "2018"
 
