@@ -17,7 +17,7 @@ use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
 /// Entry produced via a call to the `emit_event` builtin.
 #[derive(Clone, Default, Eq, PartialEq, FromProto, IntoProto)]
@@ -208,5 +208,35 @@ impl EventWithProof {
         )?;
 
         Ok(())
+    }
+}
+
+impl TryFrom<crate::proto::types::EventWithProof> for EventWithProof {
+    type Error = Error;
+
+    fn try_from(event: crate::proto::types::EventWithProof) -> Result<Self> {
+        Ok(Self::new(
+            event.transaction_version,
+            event.event_index,
+            event
+                .event
+                .ok_or_else(|| format_err!("Missing event"))?
+                .try_into()?,
+            event
+                .proof
+                .ok_or_else(|| format_err!("Missing proof"))?
+                .try_into()?,
+        ))
+    }
+}
+
+impl From<EventWithProof> for crate::proto::types::EventWithProof {
+    fn from(event: EventWithProof) -> Self {
+        Self {
+            transaction_version: event.transaction_version,
+            event_index: event.event_index,
+            event: Some(event.event.into()),
+            proof: Some(event.proof.into()),
+        }
     }
 }
