@@ -1,10 +1,7 @@
-#[cfg(any(test, feature = "testing"))]
 use crate::account_address::AccountAddress;
-#[cfg(any(test, feature = "testing"))]
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
-#[cfg(any(test, feature = "testing"))]
 use crypto::HashValue;
 use failure::prelude::*;
 use hex;
@@ -46,7 +43,6 @@ impl EventKey {
         EventKey::try_from(HashValue::random().to_vec().as_slice()).unwrap()
     }
 
-    #[cfg(any(test, feature = "testing"))]
     /// Create a unique handle by using an AccountAddress and a counter.
     pub fn new_from_address(addr: &AccountAddress, salt: u64) -> Self {
         let mut output_bytes = salt.to_be_bytes().to_vec();
