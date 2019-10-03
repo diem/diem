@@ -17,6 +17,7 @@ use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
+use std::convert::TryFrom;
 
 /// Entry produced via a call to the `emit_event` builtin.
 #[derive(Clone, Default, Eq, PartialEq, FromProto, IntoProto)]
@@ -95,6 +96,27 @@ impl CryptoHash for ContractEvent {
         let mut state = Self::Hasher::default();
         state.write(&SimpleSerializer::<Vec<u8>>::serialize(self).expect("Failed to serialize."));
         state.finish()
+    }
+}
+
+impl TryFrom<crate::proto::types::Event> for ContractEvent {
+    type Error = Error;
+
+    fn try_from(event: crate::proto::types::Event) -> Result<Self> {
+        let key = EventKey::try_from(event.key.as_ref())?;
+        let sequence_number = event.sequence_number;
+        let event_data = event.event_data;
+        Ok(Self::new(key, sequence_number, event_data))
+    }
+}
+
+impl From<ContractEvent> for crate::proto::types::Event {
+    fn from(event: ContractEvent) -> Self {
+        Self {
+            key: event.key.to_vec(),
+            sequence_number: event.sequence_number,
+            event_data: event.event_data,
+        }
     }
 }
 
