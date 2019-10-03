@@ -308,6 +308,90 @@ impl IntoProto for SparseMerkleProof {
     }
 }
 
+impl TryFrom<crate::proto::types::SparseMerkleProof> for SparseMerkleProof {
+    type Error = Error;
+
+    fn try_from(proto_proof: crate::proto::types::SparseMerkleProof) -> Result<Self> {
+        let proto_leaf = proto_proof.leaf;
+        let leaf = if proto_leaf.is_empty() {
+            None
+        } else if proto_leaf.len() == HashValue::LENGTH * 2 {
+            let key = HashValue::from_slice(&proto_leaf[0..HashValue::LENGTH])?;
+            let value_hash = HashValue::from_slice(&proto_leaf[HashValue::LENGTH..])?;
+            Some((key, value_hash))
+        } else {
+            bail!(
+                "Mailformed proof. Leaf has {} bytes. Expect 0 or {} bytes.",
+                proto_leaf.len(),
+                HashValue::LENGTH * 2
+            );
+        };
+
+        let bitmap = proto_proof.bitmap;
+        if let Some(last_byte) = bitmap.last() {
+            ensure!(
+                *last_byte != 0,
+                "Malformed proof. The last byte of the bitmap is zero."
+            );
+        }
+        let num_non_default_siblings = bitmap.iter().fold(0, |total, x| total + x.count_ones());
+        ensure!(
+            num_non_default_siblings as usize == proto_proof.non_default_siblings.len(),
+            "Malformed proof. Bitmap indicated {} non-default siblings. Found {} siblings.",
+            num_non_default_siblings,
+            proto_proof.non_default_siblings.len()
+        );
+
+        let mut proto_siblings = proto_proof.non_default_siblings.into_iter();
+        // Iterate from the MSB of the first byte to the rightmost 1-bit in the bitmap. If a bit is
+        // set, the corresponding sibling is non-default and we take the sibling from
+        // proto_siblings. Otherwise the sibling on this position is default.
+        let siblings: Result<Vec<_>> = SparseMerkleBitmap::new(bitmap)
+            .iter()
+            .map(|x| {
+                if x {
+                    let hash_bytes = proto_siblings
+                        .next()
+                        .expect("Unexpected number of siblings.");
+                    HashValue::from_slice(&hash_bytes)
+                } else {
+                    Ok(*SPARSE_MERKLE_PLACEHOLDER_HASH)
+                }
+            })
+            .collect();
+
+        Ok(SparseMerkleProof::new(leaf, siblings?))
+    }
+}
+
+impl From<SparseMerkleProof> for crate::proto::types::SparseMerkleProof {
+    fn from(proof: SparseMerkleProof) -> Self {
+        let mut proto_proof = Self::default();
+        // If a leaf is present, we write the key and value hash as a single byte array of 64
+        // bytes. Otherwise we write an empty byte array.
+        if let Some((key, value_hash)) = proof.leaf {
+            proto_proof.leaf.extend_from_slice(key.as_ref());
+            proto_proof.leaf.extend_from_slice(value_hash.as_ref());
+        }
+        // Iterate over all siblings. For each non-default sibling, add to protobuf struct and set
+        // the corresponding bit in the bitmap.
+        let bitmap: SparseMerkleBitmap = proof
+            .siblings
+            .into_iter()
+            .map(|sibling| {
+                if sibling != *SPARSE_MERKLE_PLACEHOLDER_HASH {
+                    proto_proof.non_default_siblings.push(sibling.to_vec());
+                    true
+                } else {
+                    false
+                }
+            })
+            .collect();
+        proto_proof.bitmap = bitmap.into();
+        proto_proof
+    }
+}
+
 /// A proof that can be used to show that two Merkle accumulators are consistent -- the big one can
 /// be obtained by appending certain leaves to the small one. For example, at some point in time a
 /// client knows that the root hash of the ledger at version 10 is `old_root` (it could be a
