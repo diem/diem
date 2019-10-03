@@ -797,6 +797,38 @@ impl FromProto for TransactionInfo {
     }
 }
 
+impl TryFrom<crate::proto::types::TransactionInfo> for TransactionInfo {
+    type Error = Error;
+
+    fn try_from(proto_txn_info: crate::proto::types::TransactionInfo) -> Result<Self> {
+        let signed_txn_hash = HashValue::from_slice(&proto_txn_info.signed_transaction_hash)?;
+        let state_root_hash = HashValue::from_slice(&proto_txn_info.state_root_hash)?;
+        let event_root_hash = HashValue::from_slice(&proto_txn_info.event_root_hash)?;
+        let gas_used = proto_txn_info.gas_used;
+        let major_status =
+            StatusCode::try_from(proto_txn_info.major_status).unwrap_or(StatusCode::UNKNOWN_STATUS);
+        Ok(TransactionInfo::new(
+            signed_txn_hash,
+            state_root_hash,
+            event_root_hash,
+            gas_used,
+            major_status,
+        ))
+    }
+}
+
+impl From<TransactionInfo> for crate::proto::types::TransactionInfo {
+    fn from(txn_info: TransactionInfo) -> Self {
+        Self {
+            signed_transaction_hash: txn_info.signed_transaction_hash.to_vec(),
+            state_root_hash: txn_info.state_root_hash.to_vec(),
+            event_root_hash: txn_info.event_root_hash.to_vec(),
+            gas_used: txn_info.gas_used,
+            major_status: txn_info.major_status.into(),
+        }
+    }
+}
+
 /// `TransactionInfo` is the object we store in the transaction accumulator. It consists of the
 /// transaction as well as the execution result of this transaction.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, IntoProto)]
