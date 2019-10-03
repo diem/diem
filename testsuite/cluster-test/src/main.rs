@@ -17,6 +17,8 @@ use failure::{
     self,
     prelude::{bail, format_err},
 };
+use rand::prelude::ThreadRng;
+use rand::Rng;
 use slog::{o, Drain};
 use slog_scope::info;
 use std::{
@@ -62,6 +64,8 @@ struct Args {
     start: bool,
     #[structopt(long, group = "action")]
     emit_tx: bool,
+    #[structopt(long, group = "action")]
+    stop_experiment: bool,
 
     // emit_tx options
     #[structopt(long, default_value = "10")]
@@ -70,6 +74,10 @@ struct Args {
     wait_millis: u64,
     #[structopt(long)]
     burst: bool,
+
+    //stop_experiment options
+    #[structopt(long, default_value = "10")]
+    max_stopped: usize,
 }
 
 pub fn main() {
@@ -88,6 +96,10 @@ pub fn main() {
             wait_committed: !args.burst,
         };
         util.emit_tx(args.accounts_per_client, thread_params);
+        return;
+    } else if args.stop_experiment {
+        let util = ClusterUtil::setup(&args);
+        util.stop_experiment(args.max_stopped);
         return;
     }
 
@@ -179,20 +191,69 @@ impl ClusterUtil {
         self.run_stat_loop();
     }
 
+    pub fn stop_experiment(self, max_stopped: usize) {
+        let mut emitter = TxEmitter::new(&self.cluster);
+        let mut instances = self.cluster.instances().to_vec();
+        let mut rng = ThreadRng::default();
+        let mut stop_effects = vec![];
+        let mut stopped_instance_ids = vec![];
+        let mut results = vec![];
+        let window = Duration::from_secs(60);
+        loop {
+            let job = emitter.start_job(EmitJobRequest {
+                instances: instances.clone(),
+                accounts_per_client: 10,
+                thread_params: EmitThreadParams::default(),
+            });
+            thread::sleep(Duration::from_secs(30) + window);
+            match self.print_stat(window) {
+                Err(e) => info!("Failed to get stats: {:?}", e),
+                Ok((tps, lat)) => results.push((stop_effects.len(), tps, lat)),
+            }
+            emitter.stop_job(job);
+            if stop_effects.len() > max_stopped {
+                break;
+            }
+            let stop_validator = rng.gen_range(0, instances.len());
+            let stop_validator = instances.remove(stop_validator);
+            stopped_instance_ids.push(stop_validator.short_hash().clone());
+            let stop_effect = StopContainer::new(stop_validator);
+            info!(
+                "Stopped {} validators: {}",
+                stopped_instance_ids.len(),
+                stopped_instance_ids.join(",")
+            );
+            stop_effect.activate().expect("Failed to stop container");
+            stop_effects.push(stop_effect);
+            thread::sleep(Duration::from_secs(30));
+        }
+        println!("Results in csv format:");
+        println!("DOWN\tTPS\tLAT");
+        for (stopped, tps, lat) in results {
+            println!("{}\t{:.0}\t{:.0}", stopped, tps, lat * 1000.);
+        }
+        for stop_effect in stop_effects {
+            if let Err(e) = stop_effect.deactivate() {
+                info!("Failed to deactivate {}: {:?}", stop_effect, e);
+            }
+        }
+    }
+
     fn run_stat_loop(&self) {
+        let window = Duration::from_secs(30);
         thread::sleep(Duration::from_secs(30)); // warm up
         loop {
             thread::sleep(Duration::from_secs(10));
-            if let Err(err) = self.print_stat() {
+            if let Err(err) = self.print_stat(window) {
                 info!("Stat error: {:?}", err);
             }
         }
     }
 
-    fn print_stat(&self) -> failure::Result<()> {
+    fn print_stat(&self, window: Duration) -> failure::Result<(f64, f64)> {
         let step = 10;
         let end = unix_timestamp_now();
-        let start = end - Duration::from_secs(30); // avg over last 30 sec
+        let start = end - window;
         let tps = self.prometheus.query_range(
             "irate(consensus_gauge{op='last_committed_version'}[1m])".to_string(),
             &start,
@@ -215,7 +276,7 @@ impl ClusterUtil {
             avg_tps,
             avg_latency * 1000.
         );
-        Ok(())
+        Ok((avg_tps, avg_latency))
     }
 }
 
