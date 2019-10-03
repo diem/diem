@@ -77,6 +77,20 @@ impl TryFrom<&BTreeMap<Vec<u8>, Vec<u8>>> for AccountStateBlob {
     }
 }
 
+impl TryFrom<crate::proto::types::AccountStateBlob> for AccountStateBlob {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::AccountStateBlob) -> Result<Self> {
+        Ok(proto.blob.into())
+    }
+}
+
+impl From<AccountStateBlob> for crate::proto::types::AccountStateBlob {
+    fn from(blob: AccountStateBlob) -> Self {
+        Self { blob: blob.blob }
+    }
+}
+
 #[cfg(any(test, feature = "testing"))]
 impl From<AccountResource> for AccountStateBlob {
     fn from(account_resource: AccountResource) -> Self {
