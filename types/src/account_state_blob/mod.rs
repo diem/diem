@@ -23,7 +23,11 @@ use proptest::{arbitrary::Arbitrary, prelude::*};
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, convert::TryFrom, fmt};
+use std::{
+    collections::BTreeMap,
+    convert::{TryFrom, TryInto},
+    fmt,
+};
 
 #[derive(Clone, Eq, PartialEq, FromProto, IntoProto, Serialize, Deserialize)]
 #[ProtoType(crate::proto::account_state_blob::AccountStateBlob)]
@@ -217,6 +221,35 @@ impl IntoProto for AccountStateWithProof {
         }
         out.set_proof(self.proof.into_proto());
         out
+    }
+}
+
+impl TryFrom<crate::proto::types::AccountStateWithProof> for AccountStateWithProof {
+    type Error = Error;
+
+    fn try_from(mut proto: crate::proto::types::AccountStateWithProof) -> Result<Self> {
+        Ok(Self::new(
+            proto.version,
+            proto
+                .blob
+                .take()
+                .map(AccountStateBlob::try_from)
+                .transpose()?,
+            proto
+                .proof
+                .ok_or_else(|| format_err!("Missing proof"))?
+                .try_into()?,
+        ))
+    }
+}
+
+impl From<AccountStateWithProof> for crate::proto::types::AccountStateWithProof {
+    fn from(account: AccountStateWithProof) -> Self {
+        Self {
+            version: account.version,
+            blob: account.blob.map(Into::into),
+            proof: Some(account.proof.into()),
+        }
     }
 }
 
