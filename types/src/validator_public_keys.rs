@@ -116,6 +116,36 @@ impl IntoProto for ValidatorPublicKeys {
     }
 }
 
+impl TryFrom<crate::proto::types::ValidatorPublicKeys> for ValidatorPublicKeys {
+    type Error = failure::Error;
+
+    fn try_from(proto: crate::proto::types::ValidatorPublicKeys) -> Result<Self> {
+        let account_address = AccountAddress::try_from(proto.account_address)?;
+        let consensus_public_key = Ed25519PublicKey::try_from(&proto.consensus_public_key[..])?;
+        let network_signing_public_key =
+            Ed25519PublicKey::try_from(&proto.network_signing_public_key[..])?;
+        let network_identity_public_key =
+            X25519StaticPublicKey::try_from(&proto.network_identity_public_key[..])?;
+        Ok(Self::new(
+            account_address,
+            consensus_public_key,
+            network_signing_public_key,
+            network_identity_public_key,
+        ))
+    }
+}
+
+impl From<ValidatorPublicKeys> for crate::proto::types::ValidatorPublicKeys {
+    fn from(keys: ValidatorPublicKeys) -> Self {
+        Self {
+            account_address: keys.account_address.to_vec(),
+            consensus_public_key: keys.consensus_public_key.to_bytes().to_vec(),
+            network_signing_public_key: keys.network_signing_public_key.to_bytes().to_vec(),
+            network_identity_public_key: keys.network_identity_public_key.to_bytes().to_vec(),
+        }
+    }
+}
+
 impl CanonicalSerialize for ValidatorPublicKeys {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
