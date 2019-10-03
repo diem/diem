@@ -32,7 +32,12 @@ use failure::prelude::*;
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, convert::TryFrom, fmt, time::Duration};
+use std::{
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    fmt,
+    time::Duration,
+};
 
 mod module;
 mod program;
@@ -652,6 +657,55 @@ impl IntoProto for SignedTransactionWithProof {
         }
 
         proto
+    }
+}
+
+impl TryFrom<crate::proto::types::SignedTransactionWithProof> for SignedTransactionWithProof {
+    type Error = Error;
+
+    fn try_from(mut proto: crate::proto::types::SignedTransactionWithProof) -> Result<Self> {
+        let version = proto.version;
+        let signed_transaction = proto
+            .signed_transaction
+            .ok_or_else(|| format_err!("Missing signed_transaction"))?
+            .try_into()?;
+        let proof = proto
+            .proof
+            .ok_or_else(|| format_err!("Missing proof"))?
+            .try_into()?;
+        let events = proto
+            .events
+            .take()
+            .map(|list| {
+                list.events
+                    .into_iter()
+                    .map(ContractEvent::try_from)
+                    .collect::<Result<Vec<_>>>()
+            })
+            .transpose()?;
+
+        Ok(Self {
+            version,
+            signed_transaction,
+            proof,
+            events,
+        })
+    }
+}
+
+impl From<SignedTransactionWithProof> for crate::proto::types::SignedTransactionWithProof {
+    fn from(mut txn: SignedTransactionWithProof) -> Self {
+        Self {
+            version: txn.version,
+            signed_transaction: Some(txn.signed_transaction.into()),
+            proof: Some(txn.proof.into()),
+            events: txn
+                .events
+                .take()
+                .map(|list| crate::proto::types::EventsList {
+                    events: list.into_iter().map(ContractEvent::into).collect(),
+                }),
+        }
     }
 }
 
