@@ -17,6 +17,7 @@ use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
+use std::convert::TryFrom;
 
 /// A proof that can be used authenticate an element in an accumulator given trusted root hash. For
 /// example, both `LedgerInfoToTransactionInfoProof` and `TransactionInfoToEventProof` can be
@@ -111,6 +112,63 @@ impl IntoProto for AccumulatorProof {
             })
             .collect();
         proto_proof.set_bitmap(bitmap.into());
+        proto_proof
+    }
+}
+
+impl TryFrom<crate::proto::types::AccumulatorProof> for AccumulatorProof {
+    type Error = Error;
+
+    fn try_from(proto_proof: crate::proto::types::AccumulatorProof) -> Result<Self> {
+        let bitmap = proto_proof.bitmap;
+        let num_non_default_siblings = bitmap.count_ones() as usize;
+        ensure!(
+            num_non_default_siblings == proto_proof.non_default_siblings.len(),
+            "Malformed proof. Bitmap indicated {} non-default siblings. Found {} siblings.",
+            num_non_default_siblings,
+            proto_proof.non_default_siblings.len()
+        );
+
+        let mut proto_siblings = proto_proof.non_default_siblings.into_iter();
+        // Iterate from the leftmost 1-bit to LSB in the bitmap. If a bit is set, the corresponding
+        // sibling is non-default and we take the sibling from proto_siblings.  Otherwise the
+        // sibling on this position is default.
+        let siblings = AccumulatorBitmap::new(bitmap)
+            .iter()
+            .map(|x| {
+                if x {
+                    let hash_bytes = proto_siblings
+                        .next()
+                        .expect("Unexpected number of siblings.");
+                    HashValue::from_slice(&hash_bytes)
+                } else {
+                    Ok(*ACCUMULATOR_PLACEHOLDER_HASH)
+                }
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(AccumulatorProof::new(siblings))
+    }
+}
+
+impl From<AccumulatorProof> for crate::proto::types::AccumulatorProof {
+    fn from(proof: AccumulatorProof) -> Self {
+        let mut proto_proof = Self::default();
+        // Iterate over all siblings. For each non-default sibling, add to protobuf struct and set
+        // the corresponding bit in the bitmap.
+        let bitmap: AccumulatorBitmap = proof
+            .siblings
+            .into_iter()
+            .map(|sibling| {
+                if sibling != *ACCUMULATOR_PLACEHOLDER_HASH {
+                    proto_proof.non_default_siblings.push(sibling.to_vec());
+                    true
+                } else {
+                    false
+                }
+            })
+            .collect();
+        proto_proof.bitmap = bitmap.into();
         proto_proof
     }
 }
