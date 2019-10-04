@@ -15,8 +15,6 @@ use crypto::{
 use executor::{ExecutedState, StateComputeResult};
 use failure::Result;
 use mirai_annotations::{assumed_postcondition, checked_precondition, checked_precondition_eq};
-use network::proto::Block as ProtoBlock;
-use proto_conv::{FromProto, IntoProto};
 use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
@@ -513,82 +511,13 @@ where
     }
 }
 
-impl<T> IntoProto for Block<T>
-where
-    T: Serialize + Default + CanonicalSerialize + PartialEq,
-{
-    type ProtoType = ProtoBlock;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_timestamp_usecs(self.timestamp_usecs);
-        proto.set_id(self.id().into());
-        proto.set_parent_id(self.parent_id().into());
-        proto.set_round(self.round());
-        proto.set_height(self.height());
-        proto.set_quorum_cert(self.quorum_cert().clone().into_proto());
-        if let BlockType::Proposal {
-            payload,
-            author,
-            signature,
-        } = self.block_type
-        {
-            proto.set_payload(
-                to_vec_named(&payload)
-                    .expect("fail to serialize payload")
-                    .into(),
-            );
-            let bytes = bytes::Bytes::from(&signature.to_bytes()[..]);
-            proto.set_signature(bytes);
-            proto.set_author(author.into());
-        }
-        proto
-    }
-}
-
-impl<T> FromProto for Block<T>
-where
-    T: DeserializeOwned + CanonicalDeserialize,
-{
-    type ProtoType = ProtoBlock;
-
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let id = HashValue::from_slice(object.get_id())?;
-        let parent_id = HashValue::from_slice(object.get_parent_id())?;
-        let timestamp_usecs = object.get_timestamp_usecs();
-        let round = object.get_round();
-        let height = object.get_height();
-        let quorum_cert = QuorumCert::from_proto(object.take_quorum_cert())?;
-        let block_type = if height == 0 {
-            BlockType::Genesis
-        } else if object.get_author().is_empty() {
-            BlockType::NilBlock
-        } else {
-            BlockType::Proposal {
-                payload: from_slice(object.get_payload())?,
-                author: Author::try_from(object.get_author())?,
-                signature: Signature::try_from(object.get_signature())?,
-            }
-        };
-        Ok(Block {
-            id,
-            parent_id,
-            round,
-            timestamp_usecs,
-            height,
-            quorum_cert,
-            block_type,
-        })
-    }
-}
-
-impl<T> TryFrom<network::proto::consensus_prost::Block> for Block<T>
+impl<T> TryFrom<network::proto::Block> for Block<T>
 where
     T: DeserializeOwned + CanonicalDeserialize,
 {
     type Error = failure::Error;
 
-    fn try_from(proto: network::proto::consensus_prost::Block) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::Block) -> failure::Result<Self> {
         let id = HashValue::from_slice(proto.id.as_ref())?;
         let parent_id = HashValue::from_slice(proto.parent_id.as_ref())?;
         let timestamp_usecs = proto.timestamp_usecs;
@@ -621,7 +550,7 @@ where
     }
 }
 
-impl<T> From<Block<T>> for network::proto::consensus_prost::Block
+impl<T> From<Block<T>> for network::proto::Block
 where
     T: Serialize + Default + CanonicalSerialize + PartialEq,
 {

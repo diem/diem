@@ -6,8 +6,6 @@ use crate::chained_bft::{
     consensus_types::{block::Block, sync_info::SyncInfo},
 };
 use failure::prelude::*;
-use network::proto::Proposal as ProtoProposal;
-use proto_conv::{FromProto, IntoProto};
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use types::crypto_proxies::ValidatorVerifier;
@@ -24,24 +22,10 @@ pub struct ProposalMsg<T> {
 /// via the `validate_signatures` function.
 pub struct ProposalUncheckedSignatures<T>(ProposalMsg<T>);
 
-impl<T: Payload> FromProto for ProposalUncheckedSignatures<T> {
-    type ProtoType = ProtoProposal;
-
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let proposal = Block::<T>::from_proto(object.take_proposed_block())?;
-        let sync_info = SyncInfo::from_proto(object.take_sync_info())?;
-        Ok(ProposalUncheckedSignatures(ProposalMsg::new(
-            proposal, sync_info,
-        )))
-    }
-}
-
-impl<T: Payload> TryFrom<network::proto::consensus_prost::Proposal>
-    for ProposalUncheckedSignatures<T>
-{
+impl<T: Payload> TryFrom<network::proto::Proposal> for ProposalUncheckedSignatures<T> {
     type Error = failure::Error;
 
-    fn try_from(proto: network::proto::consensus_prost::Proposal) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::Proposal) -> failure::Result<Self> {
         let proposal = proto
             .proposed_block
             .ok_or_else(|| format_err!("Missing proposed_block"))?
@@ -53,6 +37,17 @@ impl<T: Payload> TryFrom<network::proto::consensus_prost::Proposal>
         Ok(ProposalUncheckedSignatures(ProposalMsg::new(
             proposal, sync_info,
         )))
+    }
+}
+
+impl<T: Payload> TryFrom<network::proto::ConsensusMsg> for ProposalUncheckedSignatures<T> {
+    type Error = failure::Error;
+
+    fn try_from(proto: network::proto::ConsensusMsg) -> failure::Result<Self> {
+        match proto.message {
+            Some(network::proto::ConsensusMsg_oneof::Proposal(proposal)) => proposal.try_into(),
+            _ => bail!("Missing proposal"),
+        }
     }
 }
 
@@ -180,18 +175,7 @@ impl<T: Payload> fmt::Display for ProposalMsg<T> {
     }
 }
 
-impl<T: Payload> IntoProto for ProposalMsg<T> {
-    type ProtoType = ProtoProposal;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_proposed_block(self.proposal.into_proto());
-        proto.set_sync_info(self.sync_info.into_proto());
-        proto
-    }
-}
-
-impl<T: Payload> From<ProposalMsg<T>> for network::proto::consensus_prost::Proposal {
+impl<T: Payload> From<ProposalMsg<T>> for network::proto::Proposal {
     fn from(proposal: ProposalMsg<T>) -> Self {
         Self {
             proposed_block: Some(proposal.proposal.into()),

@@ -4,7 +4,8 @@
 //! Integration tests for validator_network.
 use crate::{
     common::NetworkPublicKeys,
-    proto::{ConsensusMsg, MempoolSyncMsg, RequestBlock, RespondBlock},
+    proto::{ConsensusMsg, ConsensusMsg_oneof, MempoolSyncMsg, RequestBlock, RespondBlock},
+    utils::MessageExt,
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
         Event, CONSENSUS_RPC_PROTOCOL, MEMPOOL_DIRECT_SEND_PROTOCOL,
@@ -19,7 +20,6 @@ use futures::{
     StreamExt,
 };
 use parity_multiaddr::Multiaddr;
-use protobuf::Message as proto_msg;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::HashMap,
@@ -449,10 +449,10 @@ fn test_consensus_rpc() {
         .spawn(network_provider.start().unit_error().compat());
 
     let block_id = vec![0_u8; 32];
-    let mut req_block_msg = RequestBlock::new();
-    req_block_msg.set_block_id(block_id.into());
+    let mut req_block_msg = RequestBlock::default();
+    req_block_msg.block_id = block_id;
 
-    let res_block_msg = RespondBlock::new();
+    let res_block_msg = RespondBlock::default();
 
     // The dialer dials the listener and sends a RequestBlock rpc request
     let req_block_msg_clone = req_block_msg.clone();
@@ -493,18 +493,20 @@ fn test_consensus_rpc() {
 
         // The listener then handles the RequestBlock rpc request.
         match listener_con_net_events.next().await.unwrap().unwrap() {
-            Event::RpcRequest((peer_id, mut req_msg, res_tx)) => {
+            Event::RpcRequest((peer_id, req_msg, res_tx)) => {
                 assert_eq!(peer_id, dialer_peer_id);
 
                 // Check the request
-                assert!(req_msg.has_request_block());
-                let req_block_msg = req_msg.take_request_block();
-                assert_eq!(req_block_msg, req_block_msg_clone);
+                assert_eq!(
+                    req_msg.message,
+                    Some(ConsensusMsg_oneof::RequestBlock(req_block_msg_clone))
+                );
 
                 // Send the serialized response back.
-                let mut res_msg = ConsensusMsg::new();
-                res_msg.set_respond_block(res_block_msg_clone);
-                let res_data = res_msg.write_to_bytes().unwrap().into();
+                let res_msg = ConsensusMsg {
+                    message: Some(ConsensusMsg_oneof::RespondBlock(res_block_msg_clone)),
+                };
+                let res_data = res_msg.to_bytes().unwrap();
                 res_tx.send(Ok(res_data)).unwrap();
             }
             event => panic!("Unexpected event {:?}", event),

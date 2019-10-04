@@ -17,10 +17,11 @@ use executor::ExecutedState;
 use futures::{channel::mpsc, executor::block_on, FutureExt, SinkExt, StreamExt, TryFutureExt};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
-    proto::{BlockRetrievalStatus, ConsensusMsg},
+    proto::{BlockRetrievalStatus, ConsensusMsg, ConsensusMsg_oneof},
     protocols::rpc::InboundRpcRequest,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
+use prost::Message;
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex, RwLock},
@@ -186,7 +187,7 @@ impl NetworkPlayground {
         // copy message data
         let msg_copy = match &msg_notif {
             NetworkNotification::RecvMessage(src, msg) => {
-                let msg: ConsensusMsg = ::protobuf::parse_from_bytes(msg.mdata.as_ref()).unwrap();
+                let msg = ConsensusMsg::decode(msg.mdata.as_ref()).unwrap();
                 (*src, msg)
             }
             msg_notif => panic!(
@@ -236,27 +237,43 @@ impl NetworkPlayground {
 
     /// Returns true for any message other than timeout
     pub fn exclude_timeout_msg(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        !msg_copy.1.has_timeout_msg()
+        !Self::timeout_msg_only(msg_copy)
     }
 
     /// Returns true for proposal messages only.
     pub fn proposals_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        msg_copy.1.has_proposal()
+        if let Some(ConsensusMsg_oneof::Proposal(_)) = msg_copy.1.message {
+            true
+        } else {
+            false
+        }
     }
 
     /// Returns true for vote messages only.
     pub fn votes_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        msg_copy.1.has_vote()
+        if let Some(ConsensusMsg_oneof::Vote(_)) = msg_copy.1.message {
+            true
+        } else {
+            false
+        }
     }
 
     /// Returns true for timeout messages only.
     pub fn timeout_msg_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        msg_copy.1.has_timeout_msg()
+        if let Some(ConsensusMsg_oneof::TimeoutMsg(_)) = msg_copy.1.message {
+            true
+        } else {
+            false
+        }
     }
 
     /// Returns true for sync info messages only.
     pub fn sync_info_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        msg_copy.1.has_sync_info()
+        if let Some(ConsensusMsg_oneof::SyncInfo(_)) = msg_copy.1.message {
+            true
+        } else {
+            false
+        }
     }
 
     fn is_message_dropped(&self, src: &Author, net_req: &NetworkRequest) -> bool {
@@ -410,7 +427,7 @@ fn test_rpc() {
             request
                 .response_sender
                 .send(BlockRetrievalResponse {
-                    status: BlockRetrievalStatus::SUCCEEDED,
+                    status: BlockRetrievalStatus::Succeeded,
                     blocks: vec![Block::clone(genesis_clone.as_ref())],
                 })
                 .unwrap();

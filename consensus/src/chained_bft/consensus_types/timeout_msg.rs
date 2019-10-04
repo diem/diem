@@ -13,14 +13,11 @@ use crypto::{
 use failure::prelude::*;
 use mirai_annotations::assumed_postcondition;
 use network;
-use proto_conv::{FromProto, IntoProto};
-use protobuf::RepeatedField;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
     convert::{TryFrom, TryInto},
     fmt,
-    iter::FromIterator,
 };
 use types::{
     account_address::AccountAddress,
@@ -123,46 +120,10 @@ impl PacemakerTimeout {
     }
 }
 
-impl IntoProto for PacemakerTimeout {
-    type ProtoType = network::proto::PacemakerTimeout;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_round(self.round);
-        proto.set_author(self.author.into());
-        proto.set_signature(bytes::Bytes::from(self.signature.to_bytes()));
-        if let Some(vote) = self.vote {
-            proto.set_vote(vote.into_proto());
-        }
-        proto
-    }
-}
-
-impl FromProto for PacemakerTimeout {
-    type ProtoType = network::proto::PacemakerTimeout;
-
-    fn from_proto(mut object: Self::ProtoType) -> failure::Result<Self> {
-        let round = object.get_round();
-        let author = Author::try_from(object.take_author())?;
-        let signature = Signature::try_from(object.get_signature())?;
-        let vote = if let Some(vote_msg) = object.vote.into_option() {
-            Some(VoteMsg::from_proto(vote_msg)?)
-        } else {
-            None
-        };
-        Ok(PacemakerTimeout {
-            round,
-            author,
-            signature,
-            vote,
-        })
-    }
-}
-
-impl TryFrom<network::proto::consensus_prost::PacemakerTimeout> for PacemakerTimeout {
+impl TryFrom<network::proto::PacemakerTimeout> for PacemakerTimeout {
     type Error = failure::Error;
 
-    fn try_from(proto: network::proto::consensus_prost::PacemakerTimeout) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::PacemakerTimeout) -> failure::Result<Self> {
         let round = proto.round;
         let author = Author::try_from(&proto.author[..])?;
         let signature = Signature::try_from(&proto.signature)?;
@@ -180,7 +141,7 @@ impl TryFrom<network::proto::consensus_prost::PacemakerTimeout> for PacemakerTim
     }
 }
 
-impl From<PacemakerTimeout> for network::proto::consensus_prost::PacemakerTimeout {
+impl From<PacemakerTimeout> for network::proto::PacemakerTimeout {
     fn from(timeout: PacemakerTimeout) -> Self {
         Self {
             round: timeout.round,
@@ -283,37 +244,10 @@ impl TimeoutMsg {
     }
 }
 
-impl FromProto for TimeoutMsg {
-    type ProtoType = network::proto::TimeoutMsg;
-
-    fn from_proto(mut object: network::proto::TimeoutMsg) -> failure::Result<Self> {
-        let sync_info = SyncInfo::from_proto(object.take_sync_info())?;
-        let pacemaker_timeout = PacemakerTimeout::from_proto(object.take_pacemaker_timeout())?;
-        let signature = Signature::try_from(object.get_signature())?;
-        Ok(TimeoutMsg {
-            sync_info,
-            pacemaker_timeout,
-            signature,
-        })
-    }
-}
-
-impl IntoProto for TimeoutMsg {
-    type ProtoType = network::proto::TimeoutMsg;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_sync_info(self.sync_info.into_proto());
-        proto.set_pacemaker_timeout(self.pacemaker_timeout.into_proto());
-        proto.set_signature(bytes::Bytes::from(self.signature.to_bytes()));
-        proto
-    }
-}
-
-impl TryFrom<network::proto::consensus_prost::TimeoutMsg> for TimeoutMsg {
+impl TryFrom<network::proto::TimeoutMsg> for TimeoutMsg {
     type Error = failure::Error;
 
-    fn try_from(proto: network::proto::consensus_prost::TimeoutMsg) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::TimeoutMsg) -> failure::Result<Self> {
         let sync_info = proto
             .sync_info
             .ok_or_else(|| format_err!("Missing sync_info"))?
@@ -331,12 +265,25 @@ impl TryFrom<network::proto::consensus_prost::TimeoutMsg> for TimeoutMsg {
     }
 }
 
-impl From<TimeoutMsg> for network::proto::consensus_prost::TimeoutMsg {
+impl From<TimeoutMsg> for network::proto::TimeoutMsg {
     fn from(timeout_msg: TimeoutMsg) -> Self {
         Self {
             sync_info: Some(timeout_msg.sync_info.into()),
             pacemaker_timeout: Some(timeout_msg.pacemaker_timeout.into()),
             signature: timeout_msg.signature.to_bytes(),
+        }
+    }
+}
+
+impl TryFrom<network::proto::ConsensusMsg> for TimeoutMsg {
+    type Error = failure::Error;
+
+    fn try_from(proto: network::proto::ConsensusMsg) -> failure::Result<Self> {
+        match proto.message {
+            Some(network::proto::ConsensusMsg_oneof::TimeoutMsg(timeout_msg)) => {
+                timeout_msg.try_into()
+            }
+            _ => bail!("Missing timeout_msg"),
         }
     }
 }
@@ -406,43 +353,10 @@ impl PacemakerTimeoutCertificate {
     }
 }
 
-impl IntoProto for PacemakerTimeoutCertificate {
-    type ProtoType = network::proto::PacemakerTimeoutCertificate;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_timeouts(RepeatedField::from_iter(
-            self.timeouts.into_iter().map(PacemakerTimeout::into_proto),
-        ));
-        proto.set_round(self.round);
-        proto
-    }
-}
-
-impl FromProto for PacemakerTimeoutCertificate {
-    type ProtoType = network::proto::PacemakerTimeoutCertificate;
-
-    fn from_proto(mut object: Self::ProtoType) -> failure::Result<Self> {
-        let timeouts = object
-            .take_timeouts()
-            .into_iter()
-            .map(PacemakerTimeout::from_proto)
-            .collect::<failure::Result<Vec<_>>>()?;
-        Ok(PacemakerTimeoutCertificate::new(
-            object.get_round(),
-            timeouts,
-        ))
-    }
-}
-
-impl TryFrom<network::proto::consensus_prost::PacemakerTimeoutCertificate>
-    for PacemakerTimeoutCertificate
-{
+impl TryFrom<network::proto::PacemakerTimeoutCertificate> for PacemakerTimeoutCertificate {
     type Error = failure::Error;
 
-    fn try_from(
-        proto: network::proto::consensus_prost::PacemakerTimeoutCertificate,
-    ) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::PacemakerTimeoutCertificate) -> failure::Result<Self> {
         let timeouts = proto
             .timeouts
             .into_iter()
@@ -452,9 +366,7 @@ impl TryFrom<network::proto::consensus_prost::PacemakerTimeoutCertificate>
     }
 }
 
-impl From<PacemakerTimeoutCertificate>
-    for network::proto::consensus_prost::PacemakerTimeoutCertificate
-{
+impl From<PacemakerTimeoutCertificate> for network::proto::PacemakerTimeoutCertificate {
     fn from(timeout: PacemakerTimeoutCertificate) -> Self {
         Self {
             round: timeout.round,

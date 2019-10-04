@@ -300,7 +300,7 @@ impl BlockRetriever {
                 }
                 Ok(response) => response,
             };
-            if response.status != BlockRetrievalStatus::SUCCEEDED {
+            if response.status != BlockRetrievalStatus::Succeeded {
                 warn!(
                     "Failed to fetch block {} from {}: {:?}, trying another peer",
                     block_id,

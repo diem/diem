@@ -5,9 +5,7 @@
 #![allow(clippy::large_enum_variant)]
 
 //! Protobuf definitions for data structures sent over the network
-mod consensus;
-
-pub mod consensus_prost {
+mod consensus {
     include!(concat!(env!("OUT_DIR"), "/consensus.rs"));
 }
 mod admission_control {
@@ -23,7 +21,7 @@ mod state_synchronizer {
     include!(concat!(env!("OUT_DIR"), "/state_synchronizer.rs"));
 }
 
-use ::types::proto::{ledger_info, types};
+use ::types::proto::types;
 
 pub use self::{
     admission_control::{
@@ -31,9 +29,9 @@ pub use self::{
         SubmitTransactionRequest, SubmitTransactionResponse,
     },
     consensus::{
-        Block, BlockRetrievalStatus, ConsensusMsg, PacemakerTimeout, PacemakerTimeoutCertificate,
-        Proposal, QuorumCert, RequestBlock, RespondBlock, SyncInfo, TimeoutCertificate, TimeoutMsg,
-        Vote, VoteData,
+        consensus_msg::Message as ConsensusMsg_oneof, Block, BlockRetrievalStatus, ConsensusMsg,
+        PacemakerTimeout, PacemakerTimeoutCertificate, Proposal, QuorumCert, RequestBlock,
+        RespondBlock, SyncInfo, TimeoutCertificate, TimeoutMsg, Vote, VoteData,
     },
     mempool::MempoolSyncMsg,
     network::{

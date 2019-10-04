@@ -25,12 +25,15 @@ use futures::{
 };
 use logger::prelude::*;
 use network::{
-    proto::{BlockRetrievalStatus, ConsensusMsg, RequestBlock, RespondBlock},
+    proto::{
+        BlockRetrievalStatus, ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock,
+        RespondBlock, SyncInfo as SyncInfoProto, TimeoutMsg as TimeoutMsgProto, Vote,
+    },
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
+    MessageExt,
 };
-use proto_conv::{FromProto, IntoProto};
-use protobuf::Message;
 use std::{
+    convert::TryFrom,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -47,7 +50,7 @@ pub struct BlockRetrievalResponse<T> {
 impl<T: Payload> BlockRetrievalResponse<T> {
     pub fn verify(&self, block_id: HashValue, num_blocks: u64) -> failure::Result<()> {
         ensure!(
-            self.status != BlockRetrievalStatus::SUCCEEDED
+            self.status != BlockRetrievalStatus::Succeeded
                 || self.blocks.len() as u64 == num_blocks,
             "not enough blocks returned, expect {}, get {}",
             num_blocks,
@@ -185,19 +188,20 @@ impl ConsensusNetworkImpl {
         timeout: Duration,
     ) -> failure::Result<BlockRetrievalResponse<T>> {
         ensure!(from != self.author, "Retrieve block from self");
-        let mut req_msg = RequestBlock::new();
-        req_msg.set_block_id(block_id.into());
-        req_msg.set_num_blocks(num_blocks);
+        let mut req_msg = RequestBlock::default();
+        req_msg.block_id = block_id.to_vec();
+        req_msg.num_blocks = num_blocks;
         counters::BLOCK_RETRIEVAL_COUNT.inc_by(num_blocks as i64);
         let pre_retrieval_instant = Instant::now();
 
-        let mut res_block = self
+        let res_block = self
             .network_sender
             .request_block(from, req_msg, timeout)
             .await?;
         let mut blocks = vec![];
-        for block in res_block.take_blocks().into_iter() {
-            match Block::from_proto(block) {
+        let status = res_block.status();
+        for block in res_block.blocks.into_iter() {
+            match Block::try_from(block) {
                 Ok(block) => {
                     block
                         .validate_signatures(self.epoch_mgr.validators().as_ref())
@@ -209,10 +213,7 @@ impl ConsensusNetworkImpl {
             };
         }
         counters::BLOCK_RETRIEVAL_DURATION_S.observe_duration(pre_retrieval_instant.elapsed());
-        let response = BlockRetrievalResponse {
-            status: res_block.get_status(),
-            blocks,
-        };
+        let response = BlockRetrievalResponse { status, blocks };
         response.verify(block_id, num_blocks)?;
         Ok(response)
     }
@@ -226,8 +227,9 @@ impl ConsensusNetworkImpl {
     /// out. It does not give indication about when the message is delivered to the recipients,
     /// as well as there is no indication about the network failures.
     pub async fn broadcast_proposal<T: Payload>(&mut self, proposal: ProposalMsg<T>) {
-        let mut msg = ConsensusMsg::new();
-        msg.set_proposal(proposal.into_proto());
+        let msg = ConsensusMsg {
+            message: Some(ConsensusMsg_oneof::Proposal(proposal.into())),
+        };
         self.broadcast(msg).await
     }
 
@@ -260,8 +262,9 @@ impl ConsensusNetworkImpl {
     pub async fn send_vote(&self, vote_msg: VoteMsg, recipients: Vec<Author>) {
         let mut network_sender = self.network_sender.clone();
         let mut self_sender = self.self_sender.clone();
-        let mut msg = ConsensusMsg::new();
-        msg.set_vote(vote_msg.into_proto());
+        let msg = ConsensusMsg {
+            message: Some(ConsensusMsg_oneof::Vote(vote_msg.into())),
+        };
         for peer in recipients {
             if self.author == peer {
                 let self_msg = Event::Message((self.author, msg.clone()));
@@ -278,8 +281,9 @@ impl ConsensusNetworkImpl {
 
     /// Broadcasts timeout message to all validators
     pub async fn broadcast_timeout_msg(&mut self, timeout_msg: TimeoutMsg) {
-        let mut msg = ConsensusMsg::new();
-        msg.set_timeout_msg(timeout_msg.into_proto());
+        let msg = ConsensusMsg {
+            message: Some(ConsensusMsg_oneof::TimeoutMsg(timeout_msg.into())),
+        };
         self.broadcast(msg).await
     }
 
@@ -291,8 +295,9 @@ impl ConsensusNetworkImpl {
             error!("An attempt to deliver sync info msg to itself: ignore.");
             return;
         }
-        let mut msg = ConsensusMsg::new();
-        msg.set_sync_info(sync_info.into_proto());
+        let msg = ConsensusMsg {
+            message: Some(ConsensusMsg_oneof::SyncInfo(sync_info.into())),
+        };
         let mut network_sender = self.network_sender.clone();
         if let Err(e) = network_sender.send_to(recipient, msg).await {
             warn!(
@@ -319,40 +324,50 @@ where
     T: Payload,
 {
     pub async fn run(mut self) {
+        use ConsensusMsg_oneof::*;
         while let Some(Ok(message)) = self.all_events.next().await {
             match message {
-                Event::Message((peer_id, mut msg)) => {
-                    let r = if msg.has_proposal() {
-                        self.process_proposal(&mut msg).await.map_err(|e| {
+                Event::Message((peer_id, msg)) => {
+                    let msg = match msg.message {
+                        Some(msg) => msg,
+                        None => {
+                            warn!("Unexpected msg from {}: {:?}", peer_id, msg);
+                            continue;
+                        }
+                    };
+
+                    let r = match msg.clone() {
+                        Proposal(proposal) => self.process_proposal(proposal).await.map_err(|e| {
                             security_log(SecurityEvent::InvalidConsensusProposal)
                                 .error(&e)
                                 .data(&msg)
                                 .log();
                             e
-                        })
-                    } else if msg.has_vote() {
-                        self.process_vote(&mut msg).await
-                    } else if msg.has_timeout_msg() {
-                        self.process_timeout_msg(&mut msg).await
-                    } else if msg.has_sync_info() {
-                        self.process_sync_info(&mut msg, peer_id).await
-                    } else {
-                        warn!("Unexpected msg from {}: {:?}", peer_id, msg);
-                        continue;
+                        }),
+                        Vote(vote) => self.process_vote(vote).await,
+                        TimeoutMsg(timeout_msg) => self.process_timeout_msg(timeout_msg).await,
+                        SyncInfo(sync_info) => self.process_sync_info(sync_info, peer_id).await,
+                        _ => {
+                            warn!("Unexpected msg from {}: {:?}", peer_id, msg);
+                            continue;
+                        }
                     };
                     if let Err(e) = r {
-                        warn!("Failed to process msg {:?}: {:?}", msg, e)
+                        warn!("Failed to process msg {:?}", e)
                     }
                 }
-                Event::RpcRequest((peer_id, mut msg, callback)) => {
-                    let r = if msg.has_request_block() {
-                        self.process_request_block(&mut msg, callback).await
-                    } else {
-                        warn!("Unexpected RPC from {}: {:?}", peer_id, msg);
-                        continue;
+                Event::RpcRequest((peer_id, msg, callback)) => {
+                    let r = match msg.message {
+                        Some(RequestBlock(request)) => {
+                            self.process_request_block(request, callback).await
+                        }
+                        _ => {
+                            warn!("Unexpected RPC from {}: {:?}", peer_id, msg);
+                            continue;
+                        }
                     };
                     if let Err(e) = r {
-                        warn!("Failed to process RPC {:?}: {:?}", msg, e)
+                        warn!("Failed to process RPC {:?}", e)
                     }
                 }
                 Event::NewPeer(peer_id) => {
@@ -365,8 +380,8 @@ where
         }
     }
 
-    async fn process_proposal<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
-        let proposal = ProposalUncheckedSignatures::<T>::from_proto(msg.take_proposal())?;
+    async fn process_proposal(&mut self, proposal: Proposal) -> failure::Result<()> {
+        let proposal = ProposalUncheckedSignatures::<T>::try_from(proposal)?;
         let proposal = proposal
             .validate_signatures(self.epoch_mgr.validators().as_ref())?
             .verify_well_formed()?;
@@ -375,8 +390,8 @@ where
         Ok(())
     }
 
-    async fn process_vote<'a>(&'a mut self, msg: &'a mut ConsensusMsg) -> failure::Result<()> {
-        let vote = VoteMsg::from_proto(msg.take_vote())?;
+    async fn process_vote(&mut self, vote: Vote) -> failure::Result<()> {
+        let vote = VoteMsg::try_from(vote)?;
         debug!("Received {}", vote);
         vote.verify(self.epoch_mgr.validators().as_ref())
             .map_err(|e| {
@@ -390,11 +405,8 @@ where
         Ok(())
     }
 
-    async fn process_timeout_msg<'a>(
-        &'a mut self,
-        msg: &'a mut ConsensusMsg,
-    ) -> failure::Result<()> {
-        let timeout_msg = TimeoutMsg::from_proto(msg.take_timeout_msg())?;
+    async fn process_timeout_msg(&mut self, timeout_msg: TimeoutMsgProto) -> failure::Result<()> {
+        let timeout_msg = TimeoutMsg::try_from(timeout_msg)?;
         timeout_msg
             .verify(self.epoch_mgr.validators().as_ref())
             .map_err(|e| {
@@ -408,12 +420,12 @@ where
         Ok(())
     }
 
-    async fn process_sync_info<'a>(
-        &'a mut self,
-        msg: &'a mut ConsensusMsg,
+    async fn process_sync_info(
+        &mut self,
+        sync_info: SyncInfoProto,
         peer: AccountAddress,
     ) -> failure::Result<()> {
-        let sync_info = SyncInfo::from_proto(msg.take_sync_info())?;
+        let sync_info = SyncInfo::try_from(sync_info)?;
         sync_info
             .verify(self.epoch_mgr.validators().as_ref())
             .map_err(|e| {
@@ -427,13 +439,13 @@ where
         Ok(())
     }
 
-    async fn process_request_block<'a>(
-        &'a mut self,
-        msg: &'a mut ConsensusMsg,
+    async fn process_request_block(
+        &mut self,
+        request: RequestBlock,
         callback: oneshot::Sender<Result<Bytes, RpcError>>,
     ) -> failure::Result<()> {
-        let block_id = HashValue::from_slice(msg.get_request_block().get_block_id())?;
-        let num_blocks = msg.get_request_block().get_num_blocks();
+        let block_id = HashValue::from_slice(&request.block_id[..])?;
+        let num_blocks = request.num_blocks;
         debug!(
             "Received request_block RPC for {} blocks from {:?}",
             num_blocks, block_id
@@ -446,16 +458,13 @@ where
         };
         self.block_request_tx.send(request).await?;
         let BlockRetrievalResponse { status, blocks } = rx.await?;
-        let mut response_msg = ConsensusMsg::new();
-        let mut response = RespondBlock::new();
+        let mut response = RespondBlock::default();
         response.set_status(status);
-        response.set_blocks(blocks.into_iter().map(IntoProto::into_proto).collect());
-        response_msg.set_respond_block(response);
-        let response_data = Bytes::from(
-            response_msg
-                .write_to_bytes()
-                .expect("fail to serialize proto"),
-        );
+        response.blocks = blocks.into_iter().map(Into::into).collect();
+        let response_msg = ConsensusMsg {
+            message: Some(ConsensusMsg_oneof::RespondBlock(response)),
+        };
+        let response_data = response_msg.to_bytes()?;
         callback
             .send(Ok(response_data))
             .map_err(|_| format_err!("handling inbound rpc call timed out"))

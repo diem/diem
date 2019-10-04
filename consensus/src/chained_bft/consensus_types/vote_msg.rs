@@ -4,9 +4,7 @@
 use crate::chained_bft::common;
 use crate::chained_bft::{common::Author, consensus_types::vote_data::VoteData};
 use crypto::hash::CryptoHash;
-use failure::{Result as ProtoResult, ResultExt};
-use network::proto::Vote as ProtoVote;
-use proto_conv::{FromProto, IntoProto};
+use failure::ResultExt;
 use serde::{Deserialize, Serialize};
 use std::{
     convert::{TryFrom, TryInto},
@@ -131,50 +129,10 @@ impl VoteMsg {
     }
 }
 
-impl IntoProto for VoteMsg {
-    type ProtoType = ProtoVote;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_vote_data(self.vote_data.into_proto());
-        proto.set_author(self.author.into());
-        proto.set_ledger_info(self.ledger_info.into_proto());
-        proto.set_signature(bytes::Bytes::from(self.signature.to_bytes()));
-        if let Some(round_signature) = self.round_signature {
-            proto.set_round_signature(bytes::Bytes::from(round_signature.to_bytes()));
-        }
-        proto
-    }
-}
-
-impl FromProto for VoteMsg {
-    type ProtoType = ProtoVote;
-
-    fn from_proto(mut object: Self::ProtoType) -> ProtoResult<Self> {
-        let vote_data = VoteData::from_proto(object.take_vote_data())?;
-        let author = Author::try_from(object.take_author())?;
-        let ledger_info = LedgerInfo::from_proto(object.take_ledger_info())?;
-        let signature = Signature::try_from(object.get_signature())?;
-        let round_signature = if object.get_round_signature().is_empty() {
-            None
-        } else {
-            Some(Signature::try_from(object.get_round_signature())?)
-        };
-
-        Ok(VoteMsg {
-            vote_data,
-            author,
-            ledger_info,
-            signature,
-            round_signature,
-        })
-    }
-}
-
-impl TryFrom<network::proto::consensus_prost::Vote> for VoteMsg {
+impl TryFrom<network::proto::Vote> for VoteMsg {
     type Error = failure::Error;
 
-    fn try_from(proto: network::proto::consensus_prost::Vote) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::Vote) -> failure::Result<Self> {
         let vote_data = proto
             .vote_data
             .ok_or_else(|| format_err!("Missing vote_data"))?
@@ -200,7 +158,18 @@ impl TryFrom<network::proto::consensus_prost::Vote> for VoteMsg {
     }
 }
 
-impl From<VoteMsg> for network::proto::consensus_prost::Vote {
+impl TryFrom<network::proto::ConsensusMsg> for VoteMsg {
+    type Error = failure::Error;
+
+    fn try_from(proto: network::proto::ConsensusMsg) -> failure::Result<Self> {
+        match proto.message {
+            Some(network::proto::ConsensusMsg_oneof::Vote(vote)) => vote.try_into(),
+            _ => bail!("Missing vote"),
+        }
+    }
+}
+
+impl From<VoteMsg> for network::proto::Vote {
     fn from(vote: VoteMsg) -> Self {
         Self {
             vote_data: Some(vote.vote_data.into()),

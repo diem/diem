@@ -114,7 +114,7 @@ impl AdmissionControlNetworkSender {
             message: Some(AdmissionControlMsg_oneof::SubmitTransactionRequest(req_msg)),
         };
 
-        let res_msg_enum = rpc::utils::unary_rpc_prost(
+        let res_msg_enum = rpc::utils::unary_rpc(
             self.inner.clone(),
             recipient,
             protocol,

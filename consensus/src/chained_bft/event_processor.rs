@@ -832,20 +832,20 @@ impl<T: Payload> EventProcessor<T> {
     /// future possible changes.
     pub async fn process_block_retrieval(&self, request: BlockRetrievalRequest<T>) {
         let mut blocks = vec![];
-        let mut status = BlockRetrievalStatus::SUCCEEDED;
+        let mut status = BlockRetrievalStatus::Succeeded;
         let mut id = request.block_id;
         while (blocks.len() as u64) < request.num_blocks {
             if let Some(executed_block) = self.block_store.get_block(id) {
                 id = executed_block.parent_id();
                 blocks.push(executed_block.block().clone());
             } else {
-                status = BlockRetrievalStatus::NOT_ENOUGH_BLOCKS;
+                status = BlockRetrievalStatus::NotEnoughBlocks;
                 break;
             }
         }
 
         if blocks.is_empty() {
-            status = BlockRetrievalStatus::ID_NOT_FOUND;
+            status = BlockRetrievalStatus::IdNotFound;
         }
 
         if let Err(e) = request
