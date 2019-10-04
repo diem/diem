@@ -130,7 +130,7 @@ impl<T: Payload> ProposalGenerator<T> {
         // parent (including) up to the root (excluding).
         let exclude_payload = pending_blocks
             .iter()
-            .map(|block| block.get_payload())
+            .flat_map(|block| block.payload())
             .collect();
 
         let block_timestamp = {
