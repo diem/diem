@@ -26,7 +26,9 @@ use std::{
     sync::Arc,
 };
 use types::{
-    crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
+    crypto_proxies::{
+        LedgerInfoWithSignatures, ValidatorSignature, ValidatorSigner, ValidatorVerifier,
+    },
     ledger_info::LedgerInfo,
 };
 
@@ -40,7 +42,7 @@ pub enum BlockSource {
         /// Author of the block that can be validated by the author's public key and the signature
         author: Author,
         /// Signature that the hash of this block has been authored by the owner of the private key
-        signature: Signature,
+        signature: ValidatorSignature,
     },
     /// NIL blocks don't have authors or signatures: they're generated upon timeouts to fill in the
     /// gaps in the rounds.
@@ -163,7 +165,7 @@ where
             quorum_cert: genesis_quorum_cert,
             block_source: BlockSource::Proposal {
                 author: genesis_validator_signer.author(),
-                signature: signature.into(),
+                signature,
             },
         }
     }
@@ -204,7 +206,7 @@ where
             quorum_cert,
             block_source: BlockSource::Proposal {
                 author: validator_signer.author(),
-                signature: signature.into(),
+                signature,
             },
         }
     }
@@ -292,7 +294,7 @@ where
         }
         // verify signature from leader if it's a real proposal
         if let BlockSource::Proposal { author, signature } = &self.block_source {
-            signature.verify(validator, *author, self.hash())?;
+            validator.verify_signature(*author, self.hash(), signature)?;
         }
         // verify signatures of quorum cert
         self.quorum_cert.verify(validator)
@@ -366,7 +368,7 @@ where
         }
     }
 
-    pub fn signature(&self) -> Option<&Signature> {
+    pub fn signature(&self) -> Option<&ValidatorSignature> {
         if let BlockSource::Proposal { signature, .. } = &self.block_source {
             Some(signature)
         } else {
@@ -570,7 +572,7 @@ where
         } else {
             BlockSource::Proposal {
                 author: Author::try_from(object.get_author())?,
-                signature: Signature::try_from(object.get_signature())?,
+                signature: ValidatorSignature::try_from(object.get_signature())?,
             }
         };
         Ok(Block {

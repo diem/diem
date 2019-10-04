@@ -12,7 +12,7 @@ use std::{
     fmt::{Display, Formatter},
 };
 use types::{
-    crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
+    crypto_proxies::{ValidatorSignature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
 };
 
@@ -29,7 +29,7 @@ pub struct VoteMsg {
     /// LedgerInfo of a block that is going to be committed in case this vote gathers QC.
     ledger_info: LedgerInfo,
     /// Signature of the LedgerInfo
-    signature: Signature,
+    signature: ValidatorSignature,
 }
 
 impl Display for VoteMsg {
@@ -52,14 +52,14 @@ impl VoteMsg {
         validator_signer: &ValidatorSigner,
     ) -> Self {
         ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
-        let li_sig = validator_signer
+        let signature = validator_signer
             .sign_message(ledger_info_placeholder.hash())
             .expect("Failed to sign LedgerInfo");
         Self {
             vote_data,
             author,
             ledger_info: ledger_info_placeholder,
-            signature: li_sig.into(),
+            signature,
         }
     }
 
@@ -78,7 +78,7 @@ impl VoteMsg {
     }
 
     /// Return the signature of the vote
-    pub fn signature(&self) -> &Signature {
+    pub fn signature(&self) -> &ValidatorSignature {
         &self.signature
     }
 
@@ -89,8 +89,8 @@ impl VoteMsg {
             self.ledger_info.consensus_data_hash() == self.vote_data.hash(),
             "Vote's hash mismatch with LedgerInfo"
         );
-        self.signature()
-            .verify(validator, self.author(), self.ledger_info.hash())
+        validator
+            .verify_signature(self.author, self.ledger_info.hash(), &self.signature)
             .with_context(|e| format!("Fail to verify VoteMsg: {:?}", e))?;
         Ok(())
     }
@@ -104,7 +104,7 @@ impl IntoProto for VoteMsg {
         proto.set_vote_data(self.vote_data.into_proto());
         proto.set_author(self.author.into());
         proto.set_ledger_info(self.ledger_info.into_proto());
-        proto.set_signature(bytes::Bytes::from(self.signature.to_bytes()));
+        proto.set_signature(bytes::Bytes::from(&self.signature.to_bytes()[..]));
         proto
     }
 }
@@ -116,7 +116,7 @@ impl FromProto for VoteMsg {
         let vote_data = VoteData::from_proto(object.take_vote_data())?;
         let author = Author::try_from(object.take_author())?;
         let ledger_info = LedgerInfo::from_proto(object.take_ledger_info())?;
-        let signature = Signature::try_from(object.get_signature())?;
+        let signature = ValidatorSignature::try_from(object.get_signature())?;
         Ok(VoteMsg {
             vote_data,
             author,

@@ -371,8 +371,8 @@ where
             LedgerInfoWithSignatures::new(vote_msg.ledger_info().clone(), HashMap::new())
         });
 
-        vote_msg.signature().clone().add_to_li(author, li_with_sig);
-        match validator_verifier.check_voting_power(li_with_sig.signatures().keys())
+        li_with_sig.add_signature(author, vote_msg.signature().clone());
+        match validator_verifier.batch_verify_aggregated_signature(li_with_sig.ledger_info().hash(), li_with_sig.signatures())
         {
             Ok(_) => {
                 let quorum_cert =

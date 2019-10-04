@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, convert::TryFrom, fmt, iter::FromIterator};
 use types::{
     account_address::AccountAddress,
-    crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
+    crypto_proxies::{ValidatorSignature, ValidatorSigner, ValidatorVerifier},
 };
 
 // Internal use only. Contains all the fields in PaceMakerTimeout that contributes to the
@@ -55,7 +55,7 @@ impl CryptoHash for PacemakerTimeoutSerializer {
 pub struct PacemakerTimeout {
     round: Round,
     author: Author,
-    signature: Signature,
+    signature: ValidatorSignature,
     vote: Option<VoteMsg>,
 }
 
@@ -70,7 +70,7 @@ impl PacemakerTimeout {
         PacemakerTimeout {
             round,
             author,
-            signature: signature.into(),
+            signature,
             vote,
         }
     }
@@ -94,8 +94,8 @@ impl PacemakerTimeout {
 
     /// Verifies that this message has valid signature
     pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
-        self.signature
-            .verify(validator, self.author, self.digest())
+        validator
+            .verify_signature(self.author, self.digest(), &self.signature)
             .map_err(Error::from)
             .and_then(|_| {
                 if let Some(vote) = self.vote.as_ref() {
@@ -113,7 +113,7 @@ impl PacemakerTimeout {
     }
 
     /// Returns the signature of the author for this timeout
-    pub fn signature(&self) -> &Signature {
+    pub fn signature(&self) -> &ValidatorSignature {
         &self.signature
     }
 }
@@ -125,7 +125,7 @@ impl IntoProto for PacemakerTimeout {
         let mut proto = Self::ProtoType::new();
         proto.set_round(self.round);
         proto.set_author(self.author.into());
-        proto.set_signature(bytes::Bytes::from(self.signature.to_bytes()));
+        proto.set_signature(bytes::Bytes::from(&self.signature.to_bytes()[..]));
         if let Some(vote) = self.vote {
             proto.set_vote(vote.into_proto());
         }
@@ -139,7 +139,7 @@ impl FromProto for PacemakerTimeout {
     fn from_proto(mut object: Self::ProtoType) -> failure::Result<Self> {
         let round = object.get_round();
         let author = Author::try_from(object.take_author())?;
-        let signature = Signature::try_from(object.get_signature())?;
+        let signature = ValidatorSignature::try_from(object.get_signature())?;
         let vote = if let Some(vote_msg) = object.vote.into_option() {
             Some(VoteMsg::from_proto(vote_msg)?)
         } else {
@@ -191,7 +191,7 @@ impl CryptoHash for TimeoutMsgSerializer {
 pub struct TimeoutMsg {
     sync_info: SyncInfo,
     pacemaker_timeout: PacemakerTimeout,
-    signature: Signature,
+    signature: ValidatorSignature,
 }
 
 impl TimeoutMsg {
@@ -208,7 +208,7 @@ impl TimeoutMsg {
         TimeoutMsg {
             sync_info,
             pacemaker_timeout,
-            signature: signature.into(),
+            signature,
         }
     }
 
@@ -241,7 +241,7 @@ impl TimeoutMsg {
 
     /// Returns a reference to the signature of the author
     #[allow(dead_code)]
-    pub fn signature(&self) -> &Signature {
+    pub fn signature(&self) -> &ValidatorSignature {
         &self.signature
     }
 }
@@ -252,7 +252,7 @@ impl FromProto for TimeoutMsg {
     fn from_proto(mut object: network::proto::TimeoutMsg) -> failure::Result<Self> {
         let sync_info = SyncInfo::from_proto(object.take_sync_info())?;
         let pacemaker_timeout = PacemakerTimeout::from_proto(object.take_pacemaker_timeout())?;
-        let signature = Signature::try_from(object.get_signature())?;
+        let signature = ValidatorSignature::try_from(object.get_signature())?;
         Ok(TimeoutMsg {
             sync_info,
             pacemaker_timeout,
@@ -268,7 +268,7 @@ impl IntoProto for TimeoutMsg {
         let mut proto = Self::ProtoType::new();
         proto.set_sync_info(self.sync_info.into_proto());
         proto.set_pacemaker_timeout(self.pacemaker_timeout.into_proto());
-        proto.set_signature(bytes::Bytes::from(self.signature.to_bytes()));
+        proto.set_signature(bytes::Bytes::from(&self.signature.to_bytes()[..]));
         proto
     }
 }
@@ -304,9 +304,8 @@ impl PacemakerTimeoutCertificate {
         let mut min_round: Option<Round> = None;
         let mut unique_authors = HashSet::new();
         for timeout in &self.timeouts {
-            timeout
-                .signature()
-                .verify(validator, timeout.author(), timeout.digest())
+            validator
+                .verify_signature(timeout.author(), timeout.digest(), timeout.signature())
                 .with_context(|e| format!("Fail to verify TimeoutCert: {:?}", e))?;
             unique_authors.insert(timeout.author());
             let timeout_round = timeout.round();
