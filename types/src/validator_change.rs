@@ -3,7 +3,9 @@
 
 use crate::{contract_event::EventWithProof, ledger_info::LedgerInfoWithSignatures};
 use crypto::*;
+use failure::*;
 use proto_conv::{FromProto, IntoProto};
+use std::convert::{TryFrom, TryInto};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ValidatorChangeEventWithProof<Sig> {
@@ -32,6 +34,38 @@ impl<Sig: Signature> FromProto for ValidatorChangeEventWithProof<Sig> {
             )?,
             event_with_proof: EventWithProof::from_proto(object.take_event_with_proof())?,
         })
+    }
+}
+
+impl<Sig: Signature> TryFrom<crate::proto::types::ValidatorChangeEventWithProof>
+    for ValidatorChangeEventWithProof<Sig>
+{
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::ValidatorChangeEventWithProof) -> Result<Self> {
+        let ledger_info_with_sigs = proto
+            .ledger_info_with_sigs
+            .ok_or_else(|| format_err!("Missing ledger_info_with_sigs"))?
+            .try_into()?;
+        let event_with_proof = proto
+            .event_with_proof
+            .ok_or_else(|| format_err!("Missing event_with_proof"))?
+            .try_into()?;
+        Ok(ValidatorChangeEventWithProof {
+            ledger_info_with_sigs,
+            event_with_proof,
+        })
+    }
+}
+
+impl<Sig: Signature> From<ValidatorChangeEventWithProof<Sig>>
+    for crate::proto::types::ValidatorChangeEventWithProof
+{
+    fn from(change: ValidatorChangeEventWithProof<Sig>) -> Self {
+        Self {
+            ledger_info_with_sigs: Some(change.ledger_info_with_sigs.into()),
+            event_with_proof: Some(change.event_with_proof.into()),
+        }
     }
 }
 
