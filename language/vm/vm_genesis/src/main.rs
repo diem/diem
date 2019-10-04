@@ -36,7 +36,7 @@ fn main() {
     file.write_all(&generate_genesis_blob()).unwrap();
 }
 
-// A test that fails if the generated genesis blob is different from the one on  disk. Intended
+// A test that fails if the generated genesis blob is different from the one on disk. Intended
 // to catch commits that
 // - accidentally change the genesis block
 // - change it without remembering to update the on-disk copy

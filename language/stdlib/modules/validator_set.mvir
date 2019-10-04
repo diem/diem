@@ -6,9 +6,9 @@ module ValidatorSet {
     struct ValidatorInfo {
         addr: address,
         consensus_pubkey: bytearray,
+        consensus_voting_power: u64,
         network_signing_pubkey: bytearray,
         network_identity_pubkey: bytearray,
-        // TODO: voting power
     }
 
     // A current or prospective validator should publish one of these under their address
@@ -124,13 +124,14 @@ module ValidatorSet {
         assert(LibraAccount.exists(copy(account_address)), 17);
 
         config_ref = borrow_global<ValidatorConfig>(copy(account_address));
-        // TODO: check for LIT, compute voting power based on LIT + stake
         validator_set_ref = borrow_global_mut<T>(0x1D8);
         Vector.push_back<Self.ValidatorInfo>(
             &mut move(validator_set_ref).validators,
             ValidatorInfo {
                 addr: move(account_address),
                 consensus_pubkey: *&copy(config_ref).consensus_pubkey,
+                // TODO: check for LIT, compute voting power based on LIT + stake
+                consensus_voting_power: 1,
                 network_signing_pubkey: *&copy(config_ref).network_signing_pubkey,
                 network_identity_pubkey: *&move(config_ref).network_identity_pubkey,
             }

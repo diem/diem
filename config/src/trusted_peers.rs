@@ -86,6 +86,8 @@ impl ConsensusPeersConfig {
                 ValidatorPublicKeys::new(
                     AccountAddress::from_str(peer_id_str).expect("[config] invalid peer_id"),
                     peer_info.consensus_pubkey.clone(),
+                    // TODO: Add support for dynamic voting weights in config
+                    1,
                     network_peers_config
                         .peers
                         .get(peer_id_str)
