@@ -45,7 +45,7 @@ impl EventKey {
 
     /// Create a unique handle by using an AccountAddress and a counter.
     pub fn new_from_address(addr: &AccountAddress, salt: u64) -> Self {
-        let mut output_bytes = salt.to_be_bytes().to_vec();
+        let mut output_bytes = salt.to_le_bytes().to_vec();
         output_bytes.append(&mut addr.to_vec());
         EventKey(*HashValue::from_sha3_256(&output_bytes).as_ref())
     }

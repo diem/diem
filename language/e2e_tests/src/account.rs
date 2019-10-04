@@ -257,6 +257,7 @@ pub struct AccountData {
     sequence_number: u64,
     delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
+    event_handle_generator: u64,
     sent_events: EventHandle,
     received_events: EventHandle,
 }
@@ -275,7 +276,16 @@ impl AccountData {
 
     /// Creates a new `AccountData` with the provided account.
     pub fn with_account(account: Account, balance: u64, sequence_number: u64) -> Self {
-        Self::with_account_and_event_counts(account, balance, sequence_number, 0, 0, false, false)
+        Self::with_account_and_event_counts(
+            account,
+            balance,
+            sequence_number,
+            2,
+            0,
+            0,
+            false,
+            false,
+        )
     }
 
     /// Creates a new `AccountData` with custom parameters.
@@ -283,6 +293,7 @@ impl AccountData {
         account: Account,
         balance: u64,
         sequence_number: u64,
+        event_handle_generator: u64,
         sent_events_count: u64,
         received_events_count: u64,
         delegated_key_rotation_capability: bool,
@@ -294,6 +305,7 @@ impl AccountData {
             sequence_number,
             delegated_key_rotation_capability,
             delegated_withdrawal_capability,
+            event_handle_generator,
             sent_events: new_event_handle(sent_events_count),
             received_events: new_event_handle(received_events_count),
         }
@@ -315,6 +327,7 @@ impl AccountData {
             coin,
             Value::bool(self.delegated_key_rotation_capability),
             Value::bool(self.delegated_withdrawal_capability),
+            Value::struct_(Struct::new(vec![Value::u64(self.event_handle_generator)])),
             Value::struct_(Struct::new(vec![
                 Value::u64(self.received_events.count()),
                 Value::byte_array(ByteArray::new(self.received_events.key().to_vec())),

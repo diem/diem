@@ -1,5 +1,4 @@
 module ValidatorSet {
-    import 0x0.Event;
     import 0x0.LibraAccount;
     import 0x0.Vector;
 
@@ -24,7 +23,7 @@ module ValidatorSet {
 
     resource T {
         validators: Vector.T<Self.ValidatorInfo>,
-        change_events: Event.Handle<Self.ChangeEvent>,
+        change_events: LibraAccount.EventHandle<Self.ChangeEvent>,
     }
 
     // This can only be invoked by the special validator set address, and only a single time.
@@ -35,7 +34,7 @@ module ValidatorSet {
 
         move_to_sender<T>(T {
             validators: Vector.empty<Self.ValidatorInfo>(),
-            change_events: Event.new_event_handle<Self.ChangeEvent>(),
+            change_events: LibraAccount.new_event_handle<Self.ChangeEvent>(),
         });
 
         return;
@@ -149,7 +148,7 @@ module ValidatorSet {
         // TODO: for now, we just emit the current validator set. Eventually, we'll compute the new
         // validator set from a larger list of candidate validators sorted by stake.
         validator_set_ref = borrow_global_mut<T>(0x1D8);
-        Event.emit_event<Self.ChangeEvent>(
+        LibraAccount.emit_event<Self.ChangeEvent>(
             &mut copy(validator_set_ref).change_events,
             ChangeEvent {
                 new_validator_set: *&move(validator_set_ref).validators,

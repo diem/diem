@@ -32,7 +32,6 @@ lazy_static! {
         make_module_definition!("../modules/vector.mvir");
     static ref BYTEARRAY_UTIL_MODULE: ModuleDefinition =
         make_module_definition!("../modules/bytearray_util.mvir");
-    static ref EVENT_MODULE: ModuleDefinition = make_module_definition!("../modules/event.mvir");
     static ref MODULE_DEFS: Vec<&'static ModuleDefinition> = {
         // Note: a module can depend on earlier modules in the list, but not vice versa. Don't try
         // to rearrange without considering this!
@@ -45,7 +44,6 @@ lazy_static! {
             &*SIGNATURE_MODULE,
             &*U64_UTIL_MODULE,
             &*VECTOR_MODULE,
-            &*EVENT_MODULE, // depends on AddressUtil, BytearrayUtil, Hash, U64Util
             &*ACCOUNT_MODULE, // depends on LibraCoin, Event, AddressUtil, BytearrayUtil, U64Util
             &*VALIDATOR_SET_MODULE, // depends on LibraAccount
         ]
@@ -82,10 +80,6 @@ pub fn u64_util_module() -> ModuleDefinition {
 
 pub fn bytearray_util_module() -> ModuleDefinition {
     BYTEARRAY_UTIL_MODULE.clone()
-}
-
-pub fn event_module() -> ModuleDefinition {
-    EVENT_MODULE.clone()
 }
 
 pub fn module_defs() -> &'static [&'static ModuleDefinition] {

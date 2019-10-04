@@ -214,7 +214,7 @@ lazy_static! {
             vec![]
         );
         // Event
-        add!(m, addr, "Event", "write_to_event_store",
+        add!(m, addr, "LibraAccount", "write_to_event_store",
             |_| { NativeReturnStatus::InvalidArguments },
             vec![Kind::Unrestricted],
             vec![ByteArray, U64, TypeParameter(0)],

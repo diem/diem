@@ -624,6 +624,7 @@ impl AccountResourceGen {
             ByteArray::new(account_info.public_key.to_bytes().to_vec()),
             self.delegated_key_rotation_capability,
             self.delegated_withdrawal_capability,
+            2,
             account_info.sent_event_handle.clone(),
             account_info.received_event_handle.clone(),
         )

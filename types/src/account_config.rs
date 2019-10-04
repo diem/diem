@@ -6,7 +6,7 @@ use crate::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     byte_array::ByteArray,
-    event::EventHandle,
+    event::{EventHandle, EventKey},
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
@@ -79,6 +79,7 @@ pub struct AccountResource {
     authentication_key: ByteArray,
     delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
+    event_handle_generator: u64,
     sent_events: EventHandle,
     received_events: EventHandle,
 }
@@ -91,6 +92,7 @@ impl AccountResource {
         authentication_key: ByteArray,
         delegated_key_rotation_capability: bool,
         delegated_withdrawal_capability: bool,
+        event_handle_generator: u64,
         sent_events: EventHandle,
         received_events: EventHandle,
     ) -> Self {
@@ -100,6 +102,7 @@ impl AccountResource {
             authentication_key,
             delegated_key_rotation_capability,
             delegated_withdrawal_capability,
+            event_handle_generator,
             sent_events,
             received_events,
         }
@@ -169,6 +172,7 @@ impl CanonicalSerialize for AccountResource {
             .encode_u64(self.balance)?
             .encode_bool(self.delegated_key_rotation_capability)?
             .encode_bool(self.delegated_withdrawal_capability)?
+            .encode_u64(self.event_handle_generator)?
             .encode_struct(&self.received_events)?
             .encode_struct(&self.sent_events)?
             .encode_u64(self.sequence_number)?;
@@ -182,6 +186,7 @@ impl CanonicalDeserialize for AccountResource {
         let balance = deserializer.decode_u64()?;
         let delegated_key_rotation_capability = deserializer.decode_bool()?;
         let delegated_withdrawal_capability = deserializer.decode_bool()?;
+        let event_handle_generator = deserializer.decode_u64()?;
         let received_events = deserializer.decode_struct()?;
         let sent_events = deserializer.decode_struct()?;
         let sequence_number = deserializer.decode_u64()?;
@@ -192,6 +197,7 @@ impl CanonicalDeserialize for AccountResource {
             authentication_key,
             delegated_key_rotation_capability,
             delegated_withdrawal_capability,
+            event_handle_generator,
             sent_events,
             received_events,
         })
@@ -259,5 +265,15 @@ impl AccountEvent {
     /// Get the amount sent or received
     pub fn amount(&self) -> u64 {
         self.amount
+    }
+
+    /// Given an address, get the key to its received_from event.
+    pub fn received_event_key(addr: &AccountAddress) -> EventKey {
+        EventKey::new_from_address(addr, 1)
+    }
+
+    /// Given an address, get the key to its sent_to event.
+    pub fn sent_event_key(addr: &AccountAddress) -> EventKey {
+        EventKey::new_from_address(addr, 0)
     }
 }

@@ -56,9 +56,6 @@ lazy_static! {
     /// The ModuleId for the LibraCoin module
     pub static ref COIN_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("LibraCoin").unwrap()) };
-    /// The ModuleId for the Event
-    pub static ref EVENT_MODULE: ModuleId =
-        { ModuleId::new(account_config::core_code_address(), Identifier::new("Event").unwrap()) };
 
     /// The ModuleId for the validator set
     pub static ref VALIDATOR_SET_MODULE: ModuleId =
@@ -267,12 +264,13 @@ where
                         let module = callee_function_ref.module();
                         let module_id = module.self_id();
                         let function_name = callee_function_ref.name();
+
                         let native_function =
                             match dispatch_native_function(&module_id, function_name) {
                                 None => return Err(VMStatus::new(StatusCode::LINKER_ERROR)),
                                 Some(native_function) => native_function,
                             };
-                        if module_id == *EVENT_MODULE
+                        if module_id == *ACCOUNT_MODULE
                             && function_name == EMIT_EVENT_NAME.as_ident_str()
                         {
                             let msg = self

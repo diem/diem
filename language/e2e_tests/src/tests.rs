@@ -12,6 +12,7 @@
 mod account_universe;
 mod arithmetic;
 mod create_account;
+mod event_key;
 mod function_call;
 mod genesis;
 mod mint;

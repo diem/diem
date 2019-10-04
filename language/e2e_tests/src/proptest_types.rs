@@ -37,6 +37,7 @@ impl AccountData {
                         account,
                         balance,
                         sequence_number,
+                        2,
                         sent_events_count,
                         received_events_count,
                         false, // TODO: vary withdrawal capability param?

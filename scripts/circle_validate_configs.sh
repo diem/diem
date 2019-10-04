@@ -19,7 +19,7 @@ cd terraform/validator-sets
 # Notice: This is not comparing all configs yet.
 
 # Cleanup files we do compare yet
-git checkout -- '**/seed_peers.config.toml' '**/genesis.blob'
+git checkout -- '**/seed_peers.config.toml' 
 git update-index --refresh
 
 echo "--- Compare configs ---"
