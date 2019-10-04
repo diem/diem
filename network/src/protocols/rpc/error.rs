@@ -22,6 +22,12 @@ pub enum RpcError {
     #[fail(display = "Error parsing protobuf message: {:?}", _0)]
     ProtobufParseError(#[fail(cause)] ProtobufError),
 
+    #[fail(display = "Error writing protobuf message: {:?}", _0)]
+    ProstEncodeError(#[fail(cause)] prost::EncodeError),
+
+    #[fail(display = "Error parsing protobuf message: {:?}", _0)]
+    ProstDecodeError(#[fail(cause)] prost::DecodeError),
+
     #[fail(display = "Received invalid rpc response message")]
     InvalidRpcResponse,
 
@@ -69,6 +75,18 @@ impl From<PeerManagerError> for RpcError {
 impl From<ProtobufError> for RpcError {
     fn from(err: ProtobufError) -> RpcError {
         RpcError::ProtobufParseError(err)
+    }
+}
+
+impl From<prost::EncodeError> for RpcError {
+    fn from(err: prost::EncodeError) -> RpcError {
+        RpcError::ProstEncodeError(err)
+    }
+}
+
+impl From<prost::DecodeError> for RpcError {
+    fn from(err: prost::DecodeError) -> RpcError {
+        RpcError::ProstDecodeError(err)
     }
 }
 

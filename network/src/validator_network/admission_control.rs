@@ -6,7 +6,10 @@
 use crate::{
     error::NetworkError,
     interface::{NetworkNotification, NetworkRequest},
-    proto::{AdmissionControlMsg, SubmitTransactionRequest, SubmitTransactionResponse},
+    proto::{
+        AdmissionControlMsg, AdmissionControlMsg_oneof, SubmitTransactionRequest,
+        SubmitTransactionResponse,
+    },
     protocols::rpc::{self, error::RpcError},
     validator_network::Event,
     ProtocolId,
@@ -18,6 +21,7 @@ use futures::{
     Stream, StreamExt,
 };
 use pin_utils::unsafe_pinned;
+use prost::Message as _;
 use std::{pin::Pin, time::Duration};
 use types::PeerId;
 
@@ -55,11 +59,11 @@ impl AdmissionControlNetworkEvents {
             NetworkNotification::NewPeer(peer_id) => Ok(Event::NewPeer(peer_id)),
             NetworkNotification::LostPeer(peer_id) => Ok(Event::LostPeer(peer_id)),
             NetworkNotification::RecvRpc(peer_id, rpc_req) => {
-                let req_msg = ::protobuf::parse_from_bytes(rpc_req.data.as_ref())?;
+                let req_msg = AdmissionControlMsg::decode(rpc_req.data.as_ref())?;
                 Ok(Event::RpcRequest((peer_id, req_msg, rpc_req.res_tx)))
             }
             NetworkNotification::RecvMessage(peer_id, msg) => {
-                let msg = ::protobuf::parse_from_bytes(msg.mdata.as_ref())?;
+                let msg = AdmissionControlMsg::decode(msg.mdata.as_ref())?;
                 Ok(Event::Message((peer_id, msg)))
             }
         });
@@ -106,9 +110,11 @@ impl AdmissionControlNetworkSender {
         timeout: Duration,
     ) -> Result<SubmitTransactionResponse, RpcError> {
         let protocol = ProtocolId::from_static(ADMISSION_CONTROL_RPC_PROTOCOL);
-        let mut send_txn_req_msg_enum = AdmissionControlMsg::new();
-        send_txn_req_msg_enum.set_submit_transaction_request(req_msg);
-        let mut res_msg_enum = rpc::utils::unary_rpc(
+        let send_txn_req_msg_enum = AdmissionControlMsg {
+            message: Some(AdmissionControlMsg_oneof::SubmitTransactionRequest(req_msg)),
+        };
+
+        let res_msg_enum = rpc::utils::unary_rpc_prost(
             self.inner.clone(),
             recipient,
             protocol,
@@ -117,8 +123,10 @@ impl AdmissionControlNetworkSender {
         )
         .await?;
 
-        if res_msg_enum.has_submit_transaction_response() {
-            Ok(res_msg_enum.take_submit_transaction_response())
+        if let Some(AdmissionControlMsg_oneof::SubmitTransactionResponse(response)) =
+            res_msg_enum.message
+        {
+            Ok(response)
         } else {
             // TODO: context
             Err(RpcError::InvalidRpcResponse)
@@ -130,8 +138,8 @@ impl AdmissionControlNetworkSender {
 mod tests {
     use super::*;
     use crate::protocols::rpc::InboundRpcRequest;
+    use crate::utils::MessageExt;
     use futures::{channel::oneshot, executor::block_on, future::try_join, SinkExt};
-    use protobuf::Message as proto_msg;
 
     // `AdmissionControlNetworkEvents` should deserialize inbound RPC requests
     #[test]
@@ -140,10 +148,12 @@ mod tests {
         let mut stream = AdmissionControlNetworkEvents::new(admission_control_rx);
 
         // build rpc request
-        let req_msg = SubmitTransactionRequest::new();
-        let mut req_msg_enum = AdmissionControlMsg::new();
-        req_msg_enum.set_submit_transaction_request(req_msg);
-        let req_data = req_msg_enum.clone().write_to_bytes().unwrap().into();
+        let req_msg = SubmitTransactionRequest::default();
+        let req_msg_enum = AdmissionControlMsg {
+            message: Some(AdmissionControlMsg_oneof::SubmitTransactionRequest(req_msg)),
+        };
+
+        let req_data = req_msg_enum.clone().to_bytes().unwrap();
 
         let (res_tx, _) = oneshot::channel();
         let rpc_req = InboundRpcRequest {
@@ -173,15 +183,18 @@ mod tests {
 
         // make submit_transaction_request rpc request
         let peer_id = PeerId::random();
-        let req_msg = SubmitTransactionRequest::new();
+        let req_msg = SubmitTransactionRequest::default();
         let f_res_msg =
             sender.send_transaction_upstream(peer_id, req_msg.clone(), Duration::from_secs(5));
 
         // build rpc response
-        let res_msg = SubmitTransactionResponse::new();
-        let mut res_msg_enum = AdmissionControlMsg::new();
-        res_msg_enum.set_submit_transaction_response(res_msg.clone());
-        let res_data = res_msg_enum.write_to_bytes().unwrap().into();
+        let res_msg = SubmitTransactionResponse::default();
+        let res_msg_enum = AdmissionControlMsg {
+            message: Some(AdmissionControlMsg_oneof::SubmitTransactionResponse(
+                res_msg.clone(),
+            )),
+        };
+        let res_data = res_msg_enum.to_bytes().unwrap();
 
         // the future response
         let f_recv = async move {
@@ -191,10 +204,12 @@ mod tests {
                     assert_eq!(req.protocol.as_ref(), ADMISSION_CONTROL_RPC_PROTOCOL);
 
                     // check request deserializes
-                    let mut req_msg_enum: AdmissionControlMsg =
-                        ::protobuf::parse_from_bytes(req.data.as_ref()).unwrap();
-                    let recv_req_msg = req_msg_enum.take_submit_transaction_request();
-                    assert_eq!(recv_req_msg, req_msg);
+                    let mut req_msg_enum = AdmissionControlMsg::decode(req.data.as_ref()).unwrap();
+                    let recv_req_msg = req_msg_enum.message.take();
+                    assert_eq!(
+                        recv_req_msg,
+                        Some(AdmissionControlMsg_oneof::SubmitTransactionRequest(req_msg))
+                    );
 
                     // remote replies with some response message
                     req.res_tx.send(Ok(res_data)).unwrap();

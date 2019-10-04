@@ -1,6 +1,7 @@
 use crate::{
     interface::NetworkRequest,
     protocols::rpc::{error::RpcError, OutboundRpcRequest},
+    utils::MessageExt,
     ProtocolId,
 };
 use futures::{channel::oneshot, SinkExt};
@@ -34,5 +35,30 @@ pub async fn unary_rpc<T: Message>(
     // wait for response and deserialize
     let res_data = res_rx.await??;
     let res_msg = ::protobuf::parse_from_bytes(res_data.as_ref())?;
+    Ok(res_msg)
+}
+
+pub async fn unary_rpc_prost<T: prost::Message + Default>(
+    mut inner: channel::Sender<NetworkRequest>,
+    recipient: PeerId,
+    protocol: ProtocolId,
+    req_msg: T,
+    timeout: Duration,
+) -> Result<T, RpcError> {
+    // serialize request
+    let req_data = req_msg.to_bytes()?;
+
+    // ask network to fulfill rpc request
+    let (res_tx, res_rx) = oneshot::channel();
+    let req = OutboundRpcRequest {
+        protocol,
+        data: req_data,
+        res_tx,
+        timeout,
+    };
+    inner.send(NetworkRequest::SendRpc(recipient, req)).await?;
+    // wait for response and deserialize
+    let res_data = res_rx.await??;
+    let res_msg = T::decode(res_data.as_ref())?;
     Ok(res_msg)
 }
