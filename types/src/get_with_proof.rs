@@ -24,7 +24,12 @@ use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
-use std::{cmp, mem, sync::Arc};
+use std::{
+    cmp,
+    convert::{TryFrom, TryInto},
+    mem,
+    sync::Arc,
+};
 
 #[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
@@ -504,6 +509,120 @@ impl IntoProto for RequestItem {
             }
         }
         out
+    }
+}
+
+impl TryFrom<crate::proto::types::RequestItem> for RequestItem {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::RequestItem) -> Result<Self> {
+        use crate::proto::types::request_item::RequestedItems::*;
+
+        let item = proto
+            .requested_items
+            .ok_or_else(|| format_err!("Missing requested_items"))?;
+
+        let request = match item {
+            GetAccountStateRequest(request) => {
+                let address = AccountAddress::try_from(request.address)?;
+                RequestItem::GetAccountState { address }
+            }
+            GetAccountTransactionBySequenceNumberRequest(request) => {
+                let account = AccountAddress::try_from(request.account)?;
+                let sequence_number = request.sequence_number;
+                let fetch_events = request.fetch_events;
+
+                RequestItem::GetAccountTransactionBySequenceNumber {
+                    account,
+                    sequence_number,
+                    fetch_events,
+                }
+            }
+            GetEventsByEventAccessPathRequest(request) => {
+                let access_path = request
+                    .access_path
+                    .ok_or_else(|| format_err!("Missing access_path"))?
+                    .try_into()?;
+                let start_event_seq_num = request.start_event_seq_num;
+                let ascending = request.ascending;
+                let limit = request.limit;
+
+                RequestItem::GetEventsByEventAccessPath {
+                    access_path,
+                    start_event_seq_num,
+                    ascending,
+                    limit,
+                }
+            }
+            GetTransactionsRequest(request) => {
+                let start_version = request.start_version;
+                let limit = request.limit;
+                let fetch_events = request.fetch_events;
+
+                RequestItem::GetTransactions {
+                    start_version,
+                    limit,
+                    fetch_events,
+                }
+            }
+        };
+
+        Ok(request)
+    }
+}
+
+impl From<RequestItem> for crate::proto::types::RequestItem {
+    fn from(request: RequestItem) -> Self {
+        use crate::proto::types::request_item::RequestedItems;
+        use crate::proto::types::{
+            GetAccountStateRequest, GetAccountTransactionBySequenceNumberRequest,
+            GetEventsByEventAccessPathRequest, GetTransactionsRequest,
+        };
+
+        let req = match request {
+            RequestItem::GetAccountState { address } => {
+                RequestedItems::GetAccountStateRequest(GetAccountStateRequest {
+                    address: address.into(),
+                })
+            }
+            RequestItem::GetAccountTransactionBySequenceNumber {
+                account,
+                sequence_number,
+                fetch_events,
+            } => RequestedItems::GetAccountTransactionBySequenceNumberRequest(
+                GetAccountTransactionBySequenceNumberRequest {
+                    account: account.into(),
+                    sequence_number,
+                    fetch_events,
+                },
+            ),
+            RequestItem::GetEventsByEventAccessPath {
+                access_path,
+                start_event_seq_num,
+                ascending,
+                limit,
+            } => RequestedItems::GetEventsByEventAccessPathRequest(
+                GetEventsByEventAccessPathRequest {
+                    access_path: Some(access_path.into()),
+                    start_event_seq_num,
+                    ascending,
+                    limit,
+                },
+            ),
+            RequestItem::GetTransactions {
+                start_version,
+                limit,
+                fetch_events,
+            } => RequestedItems::GetTransactionsRequest(GetTransactionsRequest {
+                start_version,
+                limit,
+                fetch_events,
+            }),
+        };
+
+        Self {
+            requested_items: Some(req),
+        }
     }
 }
 
