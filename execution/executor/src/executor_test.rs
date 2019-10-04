@@ -37,14 +37,13 @@ fn get_config() -> NodeConfig {
     // XXX Should this logic live in NodeConfigHelpers?
     let genesis_txn: types::proto::types::SignedTransaction =
         encode_genesis_transaction(&GENESIS_KEYPAIR.0, GENESIS_KEYPAIR.1.clone()).into();
-    let mut file = File::create(&config.execution.genesis_file_location).unwrap();
+    let mut file = File::create(config.get_genesis_transaction_file()).unwrap();
     file.write_all(&genesis_txn.to_vec().unwrap()).unwrap();
-
     config
 }
 
 fn create_storage_server(config: &mut NodeConfig) -> (grpcio::Server, mpsc::Receiver<()>) {
-    let (service, shutdown_receiver) = StorageService::new(&config.storage.get_dir());
+    let (service, shutdown_receiver) = StorageService::new(&config.get_storage_dir());
     let mut server = ServerBuilder::new(Arc::new(EnvBuilder::new().build()))
         .register_service(create_storage(service))
         .bind("localhost", 0)

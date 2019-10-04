@@ -351,11 +351,7 @@ fn test_startup_sync_state() {
     )
     .unwrap();
     // TODO Remove hardcoded path to state db
-    let state_db_path = node_config
-        .base
-        .data_dir_path
-        .join(node_config.storage.get_dir())
-        .join("libradb");
+    let state_db_path = node_config.get_storage_dir().join("libradb");
     // Verify that state_db_path exists and
     // we are not deleting a non-existent directory
     assert!(state_db_path.as_path().exists());

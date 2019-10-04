@@ -24,9 +24,10 @@ pub fn load_config_from_path(config: Option<&Path>) -> NodeConfig {
 }
 
 pub fn setup_metrics(peer_id: &str, node_config: &NodeConfig) {
-    if !node_config.metrics.dir.as_os_str().is_empty() {
+    let metrics_dir = node_config.get_metrics_dir();
+    if !metrics_dir.as_os_str().is_empty() {
         metrics::dump_all_metrics_to_file_periodically(
-            &node_config.metrics.dir,
+            &metrics_dir,
             &format!("{}.metrics", peer_id),
             node_config.metrics.collection_interval_ms,
         );
