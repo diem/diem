@@ -4,9 +4,11 @@
 #![allow(bare_trait_objects)]
 
 //! Protobuf definitions for data structures sent over the network
-mod admission_control;
 mod consensus;
 
+mod admission_control {
+    include!(concat!(env!("OUT_DIR"), "/admission_control.rs"));
+}
 mod network {
     include!(concat!(env!("OUT_DIR"), "/network.rs"));
 }
@@ -17,10 +19,13 @@ mod state_synchronizer {
     include!(concat!(env!("OUT_DIR"), "/state_synchronizer.rs"));
 }
 
-use ::types::proto::{ledger_info, transaction, types};
+use ::types::proto::{ledger_info, types};
 
 pub use self::{
-    admission_control::{AdmissionControlMsg, SubmitTransactionRequest, SubmitTransactionResponse},
+    admission_control::{
+        admission_control_msg::Message as AdmissionControlMsg_oneof, AdmissionControlMsg,
+        SubmitTransactionRequest, SubmitTransactionResponse,
+    },
     consensus::{
         Block, BlockRetrievalStatus, ConsensusMsg, PacemakerTimeout, PacemakerTimeoutCertificate,
         Proposal, QuorumCert, RequestBlock, RespondBlock, SyncInfo, TimeoutCertificate, TimeoutMsg,
