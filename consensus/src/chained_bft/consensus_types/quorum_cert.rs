@@ -12,6 +12,7 @@ use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
+    convert::{TryFrom, TryInto},
     fmt::{Display, Formatter},
 };
 use types::{
@@ -172,5 +173,34 @@ impl FromProto for QuorumCert {
             vote_data,
             signed_ledger_info,
         })
+    }
+}
+
+impl TryFrom<network::proto::consensus_prost::QuorumCert> for QuorumCert {
+    type Error = failure::Error;
+
+    fn try_from(proto: network::proto::consensus_prost::QuorumCert) -> failure::Result<Self> {
+        let vote_data = proto
+            .vote_data
+            .ok_or_else(|| format_err!("Missing vote_data"))?
+            .try_into()?;
+        let signed_ledger_info = proto
+            .signed_ledger_info
+            .ok_or_else(|| format_err!("Missing signed_ledger_info"))?
+            .try_into()?;
+
+        Ok(QuorumCert {
+            vote_data,
+            signed_ledger_info,
+        })
+    }
+}
+
+impl From<QuorumCert> for network::proto::consensus_prost::QuorumCert {
+    fn from(cert: QuorumCert) -> Self {
+        Self {
+            vote_data: Some(cert.vote_data.into()),
+            signed_ledger_info: Some(cert.signed_ledger_info.into()),
+        }
     }
 }
