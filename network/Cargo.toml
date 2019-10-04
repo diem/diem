@@ -39,12 +39,12 @@ proptest = { version = "0.9.4", default-features = false, optional = true }
 proptest-helpers = { path = "../common/proptest-helpers", optional = true }
 
 [dev-dependencies]
-criterion = "0.2.11"
-socket-bench-server = { path = "socket-bench-server" }
+criterion = "0.3.0"
 crypto = { path = "../crypto/crypto", features = ["testing"] }
 libra-types = { path = "../types", features = ["testing"]}
 proptest = { version = "0.9.4", default-features = false }
 proptest-helpers = { path = "../common/proptest-helpers" }
+socket-bench-server = { path = "socket-bench-server" }
 
 [build-dependencies]
 prost-build = "0.5.0"
