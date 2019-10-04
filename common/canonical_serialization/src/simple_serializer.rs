@@ -3,7 +3,7 @@
 
 use crate::{
     canonical_serialize::{CanonicalSerialize, CanonicalSerializer},
-    Endianness, ARRAY_MAX_LENGTH,
+    ensure_max_length, Endianness,
 };
 use byteorder::WriteBytesExt;
 use failure::prelude::*;
@@ -59,13 +59,7 @@ where
     }
 
     fn encode_bytes(&mut self, v: &[u8]) -> Result<&mut Self> {
-        ensure!(
-            v.len() <= ARRAY_MAX_LENGTH,
-            "array length exceeded the maximum length limit. \
-             length: {}, Max length limit: {}",
-            v.len(),
-            ARRAY_MAX_LENGTH,
-        );
+        ensure_max_length!(v.len());
 
         // first add the length as a 4-byte integer
         self.encode_u32(v.len() as u32)?;
@@ -135,13 +129,7 @@ where
                 SimpleSerializer::<Vec<u8>>::serialize(&value)?,
             );
         }
-
-        ensure!(
-            map.len() <= ARRAY_MAX_LENGTH,
-            "array length exceeded the maximum limit. length: {}, max length limit: {}",
-            map.len(),
-            ARRAY_MAX_LENGTH,
-        );
+        ensure_max_length!(map.len());
 
         // add the number of pairs in the map
         self.encode_u32(map.len() as u32)?;
@@ -167,12 +155,7 @@ where
     }
 
     fn encode_vec<T: CanonicalSerialize>(&mut self, v: &[T]) -> Result<&mut Self> {
-        ensure!(
-            v.len() <= ARRAY_MAX_LENGTH,
-            "array length exceeded the maximum limit. length: {}, max length limit: {}",
-            v.len(),
-            ARRAY_MAX_LENGTH,
-        );
+        ensure_max_length!(v.len());
 
         // add the number of items in the vec
         self.encode_u32(v.len() as u32)?;
