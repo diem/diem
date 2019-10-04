@@ -11,7 +11,10 @@ use failure::Result as ProtoResult;
 use network::proto::VoteData as ProtoVoteData;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
+use std::{
+    convert::TryFrom,
+    fmt::{Display, Formatter},
+};
 
 // Internal use only. Contains all the fields in VoteDataSerializer that contributes to the
 // computation of its hash.
@@ -216,5 +219,42 @@ impl FromProto for VoteData {
             grandparent_block_id,
             grandparent_block_round,
         })
+    }
+}
+
+impl TryFrom<network::proto::consensus_prost::VoteData> for VoteData {
+    type Error = failure::Error;
+
+    fn try_from(proto: network::proto::consensus_prost::VoteData) -> failure::Result<Self> {
+        let block_id = HashValue::from_slice(proto.block_id.as_ref())?;
+        let round = proto.round;
+        let executed_state_id = HashValue::from_slice(proto.executed_state_id.as_ref())?;
+        let parent_block_id = HashValue::from_slice(proto.parent_block_id.as_ref())?;
+        let parent_block_round = proto.parent_block_round;
+        let grandparent_block_id = HashValue::from_slice(proto.grandparent_block_id.as_ref())?;
+        let grandparent_block_round = proto.grandparent_block_round;
+        Ok(VoteData {
+            block_id,
+            executed_state_id,
+            round,
+            parent_block_id,
+            parent_block_round,
+            grandparent_block_id,
+            grandparent_block_round,
+        })
+    }
+}
+
+impl From<VoteData> for network::proto::consensus_prost::VoteData {
+    fn from(vote: VoteData) -> Self {
+        Self {
+            block_id: vote.block_id.to_vec(),
+            executed_state_id: vote.executed_state_id.to_vec(),
+            round: vote.round,
+            parent_block_id: vote.parent_block_id.to_vec(),
+            parent_block_round: vote.parent_block_round,
+            grandparent_block_id: vote.grandparent_block_id.to_vec(),
+            grandparent_block_round: vote.grandparent_block_round,
+        }
     }
 }
