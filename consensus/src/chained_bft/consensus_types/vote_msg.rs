@@ -9,7 +9,7 @@ use network::proto::Vote as ProtoVote;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{
-    convert::TryFrom,
+    convert::{TryFrom, TryInto},
     fmt::{Display, Formatter},
 };
 use types::{
@@ -168,5 +168,49 @@ impl FromProto for VoteMsg {
             signature,
             round_signature,
         })
+    }
+}
+
+impl TryFrom<network::proto::consensus_prost::Vote> for VoteMsg {
+    type Error = failure::Error;
+
+    fn try_from(proto: network::proto::consensus_prost::Vote) -> failure::Result<Self> {
+        let vote_data = proto
+            .vote_data
+            .ok_or_else(|| format_err!("Missing vote_data"))?
+            .try_into()?;
+        let author = Author::try_from(proto.author)?;
+        let ledger_info = proto
+            .ledger_info
+            .ok_or_else(|| format_err!("Missing ledger_info"))?
+            .try_into()?;
+        let signature = Signature::try_from(&proto.signature)?;
+        let round_signature = if proto.round_signature.is_empty() {
+            None
+        } else {
+            Some(Signature::try_from(&proto.round_signature)?)
+        };
+        Ok(Self {
+            vote_data,
+            author,
+            ledger_info,
+            signature,
+            round_signature,
+        })
+    }
+}
+
+impl From<VoteMsg> for network::proto::consensus_prost::Vote {
+    fn from(vote: VoteMsg) -> Self {
+        Self {
+            vote_data: Some(vote.vote_data.into()),
+            author: vote.author.into(),
+            ledger_info: Some(vote.ledger_info.into()),
+            signature: vote.signature.to_bytes(),
+            round_signature: vote
+                .round_signature
+                .map(|sig| sig.to_bytes())
+                .unwrap_or_else(Vec::new),
+        }
     }
 }
