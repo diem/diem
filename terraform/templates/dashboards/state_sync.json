@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 14,
+  "id": 29,
   "links": [],
   "panels": [
     {
@@ -74,7 +74,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "state_sync{op=\"active_upstream_peers\"}",
+          "expr": "state_sync_gauge{op=\"active_upstream_peers\"}",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -104,7 +104,7 @@
       "yaxes": [
         {
           "format": "short",
-          "label": null,
+          "label": "Num upstream peers",
           "logBase": 1,
           "max": null,
           "min": "0",
@@ -165,10 +165,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(irate(state_sync{op=~'apply_chunk_success..*'}[1m]), 'chunk_sender_id', '$1', 'op', '.*code: (.*?),.*')",
+          "expr": "label_replace(state_sync{op=~'apply_chunk_success.*'}, 'chunk_sender_id', '$1', 'op', 'apply_chunk_success.(.*)')",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}: {{status}}",
+          "legendFormat": "{{peer_id}}: {{chunk_sender_id}}",
           "refId": "A"
         }
       ],
@@ -254,10 +254,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(irate(state_sync{op=~'apply_chunk_failure..*'}[1m]), 'chunk_sender_id', '$1', 'op', '.*code: (.*?),.*')",
+          "expr": "label_replace(state_sync{op=~'apply_chunk_failure.*'}, 'chunk_sender_id', '$1', 'op', 'apply_chunk_failure.(.*)')",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}: {{status}}",
+          "legendFormat": "{{peer_id}}: {{chunk_sender_id}}",
           "refId": "A"
         }
       ],
@@ -355,7 +355,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "state_sync{op=\"committed_version\"}",
+          "expr": "state_sync_gauge{op=\"committed_version\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -383,7 +383,7 @@
       "yaxes": [
         {
           "format": "short",
-          "label": "/s",
+          "label": "version number",
           "logBase": 1,
           "max": null,
           "min": "0",
@@ -444,7 +444,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "state_sync{op=\"sync_progress_duration\"}",
+          "expr": "state_sync_duration_sum{op=\"sync_progress_duration\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -532,7 +532,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "state_sync{op=\"target_version\"}",
+          "expr": "state_sync_gauge{op=\"target_version\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -559,7 +559,7 @@
       },
       "yaxes": [
         {
-          "format": "s",
+          "format": "none",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -810,10 +810,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(irate(state_sync{op=~'requests_sent..*'}[1m]), 'requested_peer_id', '$1', 'op', '.*code: (.*?),.*')",
+          "expr": "label_replace(state_sync{op=~'requests_sent.*'}, 'requested_peer_id', '$1', 'op', 'requests_sent.(.*)')",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}:{{requested_peer_id}}",
+          "legendFormat": "{{peer_id}} : {{requested_peer_id}}",
           "refId": "A"
         }
       ],
@@ -898,10 +898,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(irate(state_sync{op=~'responses_received..*'}[1m]), 'response_received_peer_id', '$1', 'op', '.*code: (.*?),.*')",
+          "expr": "label_replace(state_sync{op=~'responses_received.*'}, 'response_sender_id', '$1', 'op', 'responses_received.(.*)')",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}:{{response_received_peer_id}}",
+          "legendFormat": "{{peer_id}} : {{response_sender_id}}",
           "refId": "A"
         }
       ],
@@ -985,5 +985,5 @@
   "timezone": "",
   "title": "State Sync",
   "uid": "r_u0dWtZk",
-  "version": 9
+  "version": 6
 }
