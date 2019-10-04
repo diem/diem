@@ -398,3 +398,31 @@ impl FromProto for PacemakerTimeoutCertificate {
         ))
     }
 }
+
+impl TryFrom<network::proto::consensus_prost::PacemakerTimeoutCertificate>
+    for PacemakerTimeoutCertificate
+{
+    type Error = failure::Error;
+
+    fn try_from(
+        proto: network::proto::consensus_prost::PacemakerTimeoutCertificate,
+    ) -> failure::Result<Self> {
+        let timeouts = proto
+            .timeouts
+            .into_iter()
+            .map(PacemakerTimeout::try_from)
+            .collect::<failure::Result<Vec<_>>>()?;
+        Ok(PacemakerTimeoutCertificate::new(proto.round, timeouts))
+    }
+}
+
+impl From<PacemakerTimeoutCertificate>
+    for network::proto::consensus_prost::PacemakerTimeoutCertificate
+{
+    fn from(timeout: PacemakerTimeoutCertificate) -> Self {
+        Self {
+            round: timeout.round,
+            timeouts: timeout.timeouts.into_iter().map(Into::into).collect(),
+        }
+    }
+}
