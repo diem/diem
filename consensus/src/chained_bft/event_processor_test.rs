@@ -43,10 +43,10 @@ use futures::{
     executor::block_on,
 };
 use network::{
-    proto::BlockRetrievalStatus,
+    proto::{BlockRetrievalStatus, ConsensusMsg_oneof},
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
-use proto_conv::FromProto;
+use std::convert::TryFrom;
 use std::{sync::Arc, time::Duration};
 use tokio::runtime::TaskExecutor;
 use types::crypto_proxies::{
@@ -243,11 +243,13 @@ fn basic_new_rank_event_test() {
             .await;
         let pending_proposals: Vec<ProposalMsg<TestPayload>> = pending_messages
             .into_iter()
-            .filter(|m| m.1.has_proposal())
-            .map(|mut m| {
-                ProposalUncheckedSignatures::<TestPayload>::from_proto(m.1.take_proposal())
-                    .unwrap()
-                    .into()
+            .filter_map(|m| match m.1.message {
+                Some(ConsensusMsg_oneof::Proposal(proposal)) => Some(
+                    ProposalUncheckedSignatures::<TestPayload>::try_from(proposal)
+                        .unwrap()
+                        .into(),
+                ),
+                _ => None,
             })
             .collect::<Vec<_>>();
         assert_eq!(pending_proposals.len(), 1);
@@ -299,11 +301,13 @@ fn basic_new_rank_event_test() {
             .await;
         let pending_proposals: Vec<ProposalMsg<TestPayload>> = pending_messages
             .into_iter()
-            .filter(|m| m.1.has_proposal())
-            .map(|mut m| {
-                ProposalUncheckedSignatures::<TestPayload>::from_proto(m.1.take_proposal())
-                    .unwrap()
-                    .into()
+            .filter_map(|m| match m.1.message {
+                Some(ConsensusMsg_oneof::Proposal(proposal)) => Some(
+                    ProposalUncheckedSignatures::<TestPayload>::try_from(proposal)
+                        .unwrap()
+                        .into(),
+                ),
+                _ => None,
             })
             .collect::<Vec<_>>();
         assert_eq!(pending_proposals.len(), 1);
@@ -348,8 +352,16 @@ fn process_successful_proposal_test() {
             .await;
         let pending_for_proposer = pending_messages
             .into_iter()
-            .filter(|m| m.1.has_vote() && m.0 == node.author)
-            .map(|mut m| VoteMsg::from_proto(m.1.take_vote()).unwrap())
+            .filter_map(|m| {
+                if m.0 != node.author {
+                    return None;
+                }
+
+                match m.1.message {
+                    Some(ConsensusMsg_oneof::Vote(vote)) => Some(VoteMsg::try_from(vote).unwrap()),
+                    _ => None,
+                }
+            })
             .collect::<Vec<_>>();
         assert_eq!(pending_for_proposer.len(), 1);
         assert_eq!(pending_for_proposer[0].author(), node.author);
@@ -399,8 +411,16 @@ fn process_old_proposal_test() {
             .await;
         let pending_for_me = pending_messages
             .into_iter()
-            .filter(|m| m.1.has_vote() && m.0 == node.author)
-            .map(|mut m| VoteMsg::from_proto(m.1.take_vote()).unwrap())
+            .filter_map(|m| {
+                if m.0 != node.author {
+                    return None;
+                }
+
+                match m.1.message {
+                    Some(ConsensusMsg_oneof::Vote(vote)) => Some(VoteMsg::try_from(vote).unwrap()),
+                    _ => None,
+                }
+            })
             .collect::<Vec<_>>();
         // just the new one
         assert_eq!(pending_for_me.len(), 1);
@@ -733,7 +753,7 @@ fn process_block_retrieval() {
             .await;
         match rx1.await {
             Ok(BlockRetrievalResponse { status, blocks }) => {
-                assert_eq!(status, BlockRetrievalStatus::SUCCEEDED);
+                assert_eq!(status, BlockRetrievalStatus::Succeeded);
                 assert_eq!(block_id, blocks.get(0).unwrap().id());
             }
             _ => panic!("block retrieval failure"),
@@ -751,7 +771,7 @@ fn process_block_retrieval() {
             .await;
         match rx2.await {
             Ok(BlockRetrievalResponse { status, blocks }) => {
-                assert_eq!(status, BlockRetrievalStatus::ID_NOT_FOUND);
+                assert_eq!(status, BlockRetrievalStatus::IdNotFound);
                 assert!(blocks.is_empty());
             }
             _ => panic!("block retrieval failure"),
@@ -769,7 +789,7 @@ fn process_block_retrieval() {
             .await;
         match rx3.await {
             Ok(BlockRetrievalResponse { status, blocks }) => {
-                assert_eq!(status, BlockRetrievalStatus::NOT_ENOUGH_BLOCKS);
+                assert_eq!(status, BlockRetrievalStatus::NotEnoughBlocks);
                 assert_eq!(block_id, blocks.get(0).unwrap().id());
                 assert_eq!(node.block_store.root().id(), blocks.get(1).unwrap().id());
             }
@@ -836,12 +856,12 @@ fn nil_vote_on_timeout() {
         // Process the outgoing timeout and verify that the TimeoutMsg contains a NIL vote that
         // extends genesis
         node.event_processor.process_local_timeout(1).await;
-        let timeout_msg = TimeoutMsg::from_proto(
+        let timeout_msg = TimeoutMsg::try_from(
             playground
                 .wait_for_messages(1, NetworkPlayground::timeout_msg_only)
                 .await[0]
                 .1
-                .take_timeout_msg(),
+                .clone(),
         )
         .unwrap();
         assert_eq!(timeout_msg.pacemaker_timeout().round(), 1);

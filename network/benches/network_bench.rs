@@ -8,7 +8,6 @@
 // Allow writing 1 * KiB or 1 * MiB
 #![allow(clippy::identity_op)]
 
-use bytes::Bytes;
 use config::config::RoleType;
 use core::str::FromStr;
 use criterion::{
@@ -25,16 +24,16 @@ use futures::{
     stream::{FuturesUnordered, StreamExt},
 };
 use network::{
-    proto::{Block, ConsensusMsg, RequestBlock, RespondBlock},
+    proto::{Block, ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock},
     protocols::rpc::error::RpcError,
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
         ConsensusNetworkSender, Event, CONSENSUS_DIRECT_SEND_PROTOCOL, CONSENSUS_RPC_PROTOCOL,
     },
-    NetworkPublicKeys, ProtocolId,
+    MessageExt, NetworkPublicKeys, ProtocolId,
 };
 use parity_multiaddr::Multiaddr;
-use protobuf::Message;
+
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashMap, time::Duration};
 use tokio::runtime::Runtime;
@@ -186,10 +185,12 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
 }
 
 fn compose_proposal(msg_len: usize) -> ConsensusMsg {
-    let mut msg = ConsensusMsg::new();
-    let proposal = msg.mut_proposal();
-    let block = proposal.mut_proposed_block();
-    block.set_payload(vec![0u8; msg_len].into());
+    let mut msg = ConsensusMsg::default();
+    let mut proposal = Proposal::default();
+    let mut block = Block::default();
+    block.payload = vec![0u8; msg_len];
+    proposal.proposed_block = Some(block);
+    msg.message = Some(ConsensusMsg_oneof::Proposal(proposal));
     msg
 }
 
@@ -302,11 +303,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
         while let Some(Ok(event)) = listener_events.next().await {
             match event {
                 Event::RpcRequest((_, _, res_tx)) => res_tx
-                    .send(Ok(Bytes::from(
-                        res.clone()
-                            .write_to_bytes()
-                            .expect("fail to serialize proto"),
-                    )))
+                    .send(Ok(res.clone().to_bytes().expect("fail to serialize proto")))
                     .expect("fail to send rpc response to network"),
                 event => panic!("Unexpected event: {:?}", event),
             }
@@ -343,17 +340,18 @@ async fn request_block(
 }
 
 fn compose_request_block() -> RequestBlock {
-    let mut req = RequestBlock::new();
-    req.set_block_id(vec![0u8; 32].into());
+    let mut req = RequestBlock::default();
+    req.block_id = vec![0u8; 32];
     req
 }
 
 fn compose_respond_block(msg_len: usize) -> ConsensusMsg {
-    let mut msg = ConsensusMsg::new();
-    let res = msg.mut_respond_block();
-    let mut block = Block::new();
-    block.set_payload(vec![0u8; msg_len].into());
-    res.mut_blocks().push(block);
+    let mut msg = ConsensusMsg::default();
+    let mut res = RespondBlock::default();
+    let mut block = Block::default();
+    block.payload = vec![0u8; msg_len];
+    res.blocks.push(block);
+    msg.message = Some(ConsensusMsg_oneof::RespondBlock(res));
     msg
 }
 

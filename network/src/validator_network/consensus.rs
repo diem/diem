@@ -6,15 +6,15 @@
 use crate::{
     error::NetworkError,
     interface::{NetworkNotification, NetworkRequest},
-    proto::{ConsensusMsg, RequestBlock, RespondBlock},
+    proto::{ConsensusMsg, ConsensusMsg_oneof, RequestBlock, RespondBlock},
     protocols::{
         direct_send::Message,
         rpc::{self, error::RpcError},
     },
+    utils::MessageExt,
     validator_network::Event,
     NetworkPublicKeys, ProtocolId,
 };
-use bytes::Bytes;
 use channel;
 use futures::{
     stream::Map,
@@ -22,7 +22,7 @@ use futures::{
     SinkExt, Stream, StreamExt,
 };
 use pin_utils::unsafe_pinned;
-use protobuf::Message as proto_msg;
+use prost::Message as _;
 use std::{pin::Pin, time::Duration};
 use types::{validator_public_keys::ValidatorPublicKeys, PeerId};
 
@@ -62,11 +62,11 @@ impl ConsensusNetworkEvents {
             NetworkNotification::NewPeer(peer_id) => Ok(Event::NewPeer(peer_id)),
             NetworkNotification::LostPeer(peer_id) => Ok(Event::LostPeer(peer_id)),
             NetworkNotification::RecvRpc(peer_id, rpc_req) => {
-                let req_msg = ::protobuf::parse_from_bytes(rpc_req.data.as_ref())?;
+                let req_msg = ConsensusMsg::decode(rpc_req.data.as_ref())?;
                 Ok(Event::RpcRequest((peer_id, req_msg, rpc_req.res_tx)))
             }
             NetworkNotification::RecvMessage(peer_id, msg) => {
-                let msg = ::protobuf::parse_from_bytes(msg.mdata.as_ref())?;
+                let msg = ConsensusMsg::decode(msg.mdata.as_ref())?;
                 Ok(Event::Message((peer_id, msg)))
             }
         });
@@ -116,7 +116,7 @@ impl ConsensusNetworkSender {
                 recipient,
                 Message {
                     protocol: ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
-                    mdata: Bytes::from(message.write_to_bytes().unwrap()),
+                    mdata: message.to_bytes().unwrap(),
                 },
             ))
             .await?;
@@ -135,9 +135,10 @@ impl ConsensusNetworkSender {
         timeout: Duration,
     ) -> Result<RespondBlock, RpcError> {
         let protocol = ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL);
-        let mut req_msg_enum = ConsensusMsg::new();
-        req_msg_enum.set_request_block(req_msg);
-        let mut res_msg_enum = rpc::utils::unary_rpc(
+        let req_msg_enum = ConsensusMsg {
+            message: Some(ConsensusMsg_oneof::RequestBlock(req_msg)),
+        };
+        let res_msg_enum = rpc::utils::unary_rpc(
             self.inner.clone(),
             recipient,
             protocol,
@@ -146,8 +147,8 @@ impl ConsensusNetworkSender {
         )
         .await?;
 
-        if res_msg_enum.has_respond_block() {
-            Ok(res_msg_enum.take_respond_block())
+        if let Some(ConsensusMsg_oneof::RespondBlock(response)) = res_msg_enum.message {
+            Ok(response)
         } else {
             // TODO: context
             Err(RpcError::InvalidRpcResponse)
@@ -188,17 +189,13 @@ mod tests {
     use futures::{channel::oneshot, executor::block_on, future::try_join};
 
     fn new_test_vote() -> ConsensusMsg {
-        let mut vote_data = VoteData::new();
-        vote_data.set_block_id(Bytes::new());
-        vote_data.set_executed_state_id(Bytes::new());
-        let mut vote = Vote::new();
-        vote.set_vote_data(vote_data);
-        vote.set_author(Bytes::new());
-        vote.set_signature(Bytes::new());
+        let vote_data = VoteData::default();
+        let mut vote = Vote::default();
+        vote.vote_data = Some(vote_data);
 
-        let mut consensus_msg = ConsensusMsg::new();
-        consensus_msg.set_vote(vote);
-        consensus_msg
+        ConsensusMsg {
+            message: Some(ConsensusMsg_oneof::Vote(vote)),
+        }
     }
 
     // Direct send messages should get deserialized through the
@@ -212,7 +209,7 @@ mod tests {
         let consensus_msg = new_test_vote();
         let network_msg = Message {
             protocol: ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
-            mdata: consensus_msg.clone().write_to_bytes().unwrap().into(),
+            mdata: consensus_msg.clone().to_bytes().unwrap(),
         };
 
         // Network sends inbound message to consensus
@@ -241,7 +238,7 @@ mod tests {
         let consensus_msg = new_test_vote();
         let expected_network_msg = Message {
             protocol: ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
-            mdata: consensus_msg.clone().write_to_bytes().unwrap().into(),
+            mdata: consensus_msg.clone().to_bytes().unwrap(),
         };
 
         // Send the message to network layer
@@ -265,10 +262,11 @@ mod tests {
         let mut stream = ConsensusNetworkEvents::new(consensus_rx);
 
         // build rpc request
-        let req_msg = RequestBlock::new();
-        let mut req_msg_enum = ConsensusMsg::new();
-        req_msg_enum.set_request_block(req_msg);
-        let req_data = req_msg_enum.clone().write_to_bytes().unwrap().into();
+        let req_msg = RequestBlock::default();
+        let req_msg_enum = ConsensusMsg {
+            message: Some(ConsensusMsg_oneof::RequestBlock(req_msg)),
+        };
+        let req_data = req_msg_enum.clone().to_bytes().unwrap();
 
         let (res_tx, _) = oneshot::channel();
         let rpc_req = InboundRpcRequest {
@@ -298,14 +296,15 @@ mod tests {
 
         // send get_block rpc request
         let peer_id = PeerId::random();
-        let req_msg = RequestBlock::new();
+        let req_msg = RequestBlock::default();
         let f_res_msg = sender.request_block(peer_id, req_msg.clone(), Duration::from_secs(5));
 
         // build rpc response
-        let res_msg = RespondBlock::new();
-        let mut res_msg_enum = ConsensusMsg::new();
-        res_msg_enum.set_respond_block(res_msg.clone());
-        let res_data = res_msg_enum.write_to_bytes().unwrap().into();
+        let res_msg = RespondBlock::default();
+        let res_msg_enum = ConsensusMsg {
+            message: Some(ConsensusMsg_oneof::RespondBlock(res_msg.clone())),
+        };
+        let res_data = res_msg_enum.to_bytes().unwrap();
 
         // the future response
         let f_recv = async move {
@@ -315,10 +314,11 @@ mod tests {
                     assert_eq!(req.protocol.as_ref(), CONSENSUS_RPC_PROTOCOL);
 
                     // check request deserializes
-                    let mut req_msg_enum: ConsensusMsg =
-                        ::protobuf::parse_from_bytes(req.data.as_ref()).unwrap();
-                    let recv_req_msg = req_msg_enum.take_request_block();
-                    assert_eq!(recv_req_msg, req_msg);
+                    let req_msg_enum = ConsensusMsg::decode(req.data.as_ref()).unwrap();
+                    assert_eq!(
+                        req_msg_enum.message,
+                        Some(ConsensusMsg_oneof::RequestBlock(req_msg))
+                    );
 
                     // remote replies with some response message
                     req.res_tx.send(Ok(res_data)).unwrap();

@@ -1,11 +1,9 @@
+use crate::chained_bft::common::Round;
 use crate::chained_bft::consensus_types::{
     quorum_cert::QuorumCert, timeout_msg::PacemakerTimeoutCertificate,
 };
-use network;
-
-use crate::chained_bft::common::Round;
 use failure::ResultExt;
-use proto_conv::{FromProto, IntoProto};
+use network;
 use serde::{Deserialize, Serialize};
 use std::{
     convert::{TryFrom, TryInto},
@@ -98,42 +96,10 @@ impl SyncInfo {
     }
 }
 
-impl FromProto for SyncInfo {
-    type ProtoType = network::proto::SyncInfo;
-
-    fn from_proto(mut object: network::proto::SyncInfo) -> failure::Result<Self> {
-        let highest_quorum_cert = QuorumCert::from_proto(object.take_highest_quorum_cert())?;
-        let highest_ledger_info = QuorumCert::from_proto(object.take_highest_ledger_info())?;
-        let highest_timeout_cert = if let Some(tc) = object.highest_timeout_cert.into_option() {
-            Some(PacemakerTimeoutCertificate::from_proto(tc)?)
-        } else {
-            None
-        };
-        Ok(SyncInfo::new(
-            highest_quorum_cert,
-            highest_ledger_info,
-            highest_timeout_cert,
-        ))
-    }
-}
-impl IntoProto for SyncInfo {
-    type ProtoType = network::proto::SyncInfo;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_highest_quorum_cert(self.highest_quorum_cert.into_proto());
-        proto.set_highest_ledger_info(self.highest_ledger_info.into_proto());
-        if let Some(tc) = self.highest_timeout_cert {
-            proto.set_highest_timeout_cert(tc.into_proto());
-        }
-        proto
-    }
-}
-
-impl TryFrom<network::proto::consensus_prost::SyncInfo> for SyncInfo {
+impl TryFrom<network::proto::SyncInfo> for SyncInfo {
     type Error = failure::Error;
 
-    fn try_from(proto: network::proto::consensus_prost::SyncInfo) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::SyncInfo) -> failure::Result<Self> {
         let highest_quorum_cert = proto
             .highest_quorum_cert
             .ok_or_else(|| format_err!("Missing highest_quorum_cert"))?
@@ -155,7 +121,7 @@ impl TryFrom<network::proto::consensus_prost::SyncInfo> for SyncInfo {
     }
 }
 
-impl From<SyncInfo> for network::proto::consensus_prost::SyncInfo {
+impl From<SyncInfo> for network::proto::SyncInfo {
     fn from(info: SyncInfo) -> Self {
         Self {
             highest_ledger_info: Some(info.highest_ledger_info.into()),

@@ -4,7 +4,6 @@
 use crate::chained_bft::common::{self, Author, Round};
 use failure::prelude::*;
 use network;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::{collections::HashMap, fmt};
@@ -65,46 +64,10 @@ impl TimeoutCertificate {
     }
 }
 
-impl IntoProto for TimeoutCertificate {
-    type ProtoType = network::proto::TimeoutCertificate;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_round(self.round);
-        self.signatures.into_iter().for_each(|(author, signature)| {
-            let mut validator_signature = types::proto::ledger_info::ValidatorSignature::new();
-            validator_signature.set_validator_id(author.into_proto());
-            validator_signature.set_signature(signature.to_bytes().to_vec());
-            proto.mut_signatures().push(validator_signature)
-        });
-        proto
-    }
-}
-
-impl FromProto for TimeoutCertificate {
-    type ProtoType = network::proto::TimeoutCertificate;
-
-    fn from_proto(mut object: Self::ProtoType) -> failure::Result<Self> {
-        let round = object.get_round();
-        let signatures_proto = object.take_signatures();
-        let signatures = signatures_proto
-            .into_iter()
-            .map(|proto| {
-                let author = AccountAddress::from_proto(proto.get_validator_id().to_vec())?;
-                let signature = Signature::try_from(proto.get_signature())?;
-                Ok((author, signature))
-            })
-            .collect::<Result<HashMap<_, _>>>()?;
-        Ok(TimeoutCertificate::new(round, signatures))
-    }
-}
-
-impl TryFrom<network::proto::consensus_prost::TimeoutCertificate> for TimeoutCertificate {
+impl TryFrom<network::proto::TimeoutCertificate> for TimeoutCertificate {
     type Error = failure::Error;
 
-    fn try_from(
-        proto: network::proto::consensus_prost::TimeoutCertificate,
-    ) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::TimeoutCertificate) -> failure::Result<Self> {
         let round = proto.round;
         let signatures = proto
             .signatures
@@ -119,7 +82,7 @@ impl TryFrom<network::proto::consensus_prost::TimeoutCertificate> for TimeoutCer
     }
 }
 
-impl From<TimeoutCertificate> for network::proto::consensus_prost::TimeoutCertificate {
+impl From<TimeoutCertificate> for network::proto::TimeoutCertificate {
     fn from(cert: TimeoutCertificate) -> Self {
         let signatures = cert
             .signatures

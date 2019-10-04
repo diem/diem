@@ -6,7 +6,6 @@
 use crate::peer_manager::PeerManagerError;
 use failure::{self, err_msg, Fail};
 use futures::channel::{mpsc, oneshot};
-use protobuf::error::ProtobufError;
 use std::io;
 use tokio::timer;
 use types::PeerId;
@@ -18,9 +17,6 @@ pub enum RpcError {
 
     #[fail(display = "Failed to open substream, not connected with peer: {}", _0)]
     NotConnected(PeerId),
-
-    #[fail(display = "Error parsing protobuf message: {:?}", _0)]
-    ProtobufParseError(#[fail(cause)] ProtobufError),
 
     #[fail(display = "Error writing protobuf message: {:?}", _0)]
     ProstEncodeError(#[fail(cause)] prost::EncodeError),
@@ -69,12 +65,6 @@ impl From<PeerManagerError> for RpcError {
             PeerManagerError::IoError(err) => RpcError::IoError(err),
             _ => unreachable!("open_substream only returns NotConnected or IoError"),
         }
-    }
-}
-
-impl From<ProtobufError> for RpcError {
-    fn from(err: ProtobufError) -> RpcError {
-        RpcError::ProtobufParseError(err)
     }
 }
 

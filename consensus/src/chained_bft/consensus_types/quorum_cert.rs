@@ -6,9 +6,7 @@ use crypto::{
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
 };
-use failure::{Result, ResultExt};
-use network::proto::QuorumCert as ProtoQuorumCert;
-use proto_conv::{FromProto, IntoProto};
+use failure::ResultExt;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -150,36 +148,10 @@ impl QuorumCert {
     }
 }
 
-impl IntoProto for QuorumCert {
-    type ProtoType = ProtoQuorumCert;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_vote_data(self.vote_data.into_proto());
-        proto.set_signed_ledger_info(self.signed_ledger_info.into_proto());
-        proto
-    }
-}
-
-impl FromProto for QuorumCert {
-    type ProtoType = ProtoQuorumCert;
-
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let vote_data = VoteData::from_proto(object.take_vote_data())?;
-        let signed_ledger_info =
-            LedgerInfoWithSignatures::from_proto(object.take_signed_ledger_info())?;
-
-        Ok(QuorumCert {
-            vote_data,
-            signed_ledger_info,
-        })
-    }
-}
-
-impl TryFrom<network::proto::consensus_prost::QuorumCert> for QuorumCert {
+impl TryFrom<network::proto::QuorumCert> for QuorumCert {
     type Error = failure::Error;
 
-    fn try_from(proto: network::proto::consensus_prost::QuorumCert) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::QuorumCert) -> failure::Result<Self> {
         let vote_data = proto
             .vote_data
             .ok_or_else(|| format_err!("Missing vote_data"))?
@@ -196,7 +168,7 @@ impl TryFrom<network::proto::consensus_prost::QuorumCert> for QuorumCert {
     }
 }
 
-impl From<QuorumCert> for network::proto::consensus_prost::QuorumCert {
+impl From<QuorumCert> for network::proto::QuorumCert {
     fn from(cert: QuorumCert) -> Self {
         Self {
             vote_data: Some(cert.vote_data.into()),

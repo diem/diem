@@ -4,7 +4,6 @@
 use crate::peer_manager::PeerManagerError;
 use failure::{err_msg, Backtrace, Context, Fail};
 use futures::channel::mpsc;
-use protobuf::error::ProtobufError;
 use std::{
     fmt::{self, Display},
     io,
@@ -99,12 +98,6 @@ impl From<io::Error> for NetworkError {
 impl From<VerifyError> for NetworkError {
     fn from(err: VerifyError) -> NetworkError {
         err.context(NetworkErrorKind::SignatureError).into()
-    }
-}
-
-impl From<ProtobufError> for NetworkError {
-    fn from(err: ProtobufError) -> NetworkError {
-        err.context(NetworkErrorKind::ProtobufParseError).into()
     }
 }
 

@@ -22,9 +22,10 @@ use lazy_static::lazy_static;
 use network::{
     proto::Proposal,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
+    MessageExt,
 };
-use proto_conv::{FromProto, IntoProto};
-use protobuf::Message as Message_imported_for_functions;
+use prost::Message as _;
+use std::convert::TryFrom;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
@@ -42,7 +43,7 @@ pub fn generate_corpus_proposal() -> Vec<u8> {
             .await;
         // serialize and return proposal
         let proposal = proposal.unwrap();
-        proposal.into_proto().write_to_bytes().unwrap()
+        Proposal::from(proposal).to_bytes().unwrap().to_vec()
     })
 }
 
@@ -167,7 +168,7 @@ pub fn fuzz_proposal(data: &[u8]) {
     // create node
     let mut event_processor = create_node_for_fuzzing();
 
-    let proposal: Proposal = match protobuf::parse_from_bytes(data) {
+    let proposal = match Proposal::decode(data) {
         Ok(xx) => xx,
         Err(_) => {
             if cfg!(test) {
@@ -177,7 +178,7 @@ pub fn fuzz_proposal(data: &[u8]) {
         }
     };
 
-    let proposal = match ProposalUncheckedSignatures::<TestPayload>::from_proto(proposal) {
+    let proposal = match ProposalUncheckedSignatures::<TestPayload>::try_from(proposal) {
         Ok(xx) => xx,
         Err(_) => {
             if cfg!(test) {

@@ -7,9 +7,6 @@ use crypto::{
     hash::{CryptoHash, CryptoHasher, VoteDataHasher},
     HashValue,
 };
-use failure::Result as ProtoResult;
-use network::proto::VoteData as ProtoVoteData;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{
     convert::TryFrom,
@@ -183,49 +180,10 @@ impl VoteData {
     }
 }
 
-impl IntoProto for VoteData {
-    type ProtoType = ProtoVoteData;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_block_id(self.block_id().into());
-        proto.set_executed_state_id(self.executed_state_id().into());
-        proto.set_round(self.round);
-        proto.set_parent_block_id(self.parent_block_id.into());
-        proto.set_parent_block_round(self.parent_block_round);
-        proto.set_grandparent_block_id(self.grandparent_block_id.into());
-        proto.set_grandparent_block_round(self.grandparent_block_round);
-        proto
-    }
-}
-
-impl FromProto for VoteData {
-    type ProtoType = ProtoVoteData;
-
-    fn from_proto(object: Self::ProtoType) -> ProtoResult<Self> {
-        let block_id = HashValue::from_slice(object.get_block_id())?;
-        let round = object.get_round();
-        let executed_state_id = HashValue::from_slice(object.get_executed_state_id())?;
-        let parent_block_id = HashValue::from_slice(object.get_parent_block_id())?;
-        let parent_block_round = object.get_parent_block_round();
-        let grandparent_block_id = HashValue::from_slice(object.get_grandparent_block_id())?;
-        let grandparent_block_round = object.get_grandparent_block_round();
-        Ok(VoteData {
-            block_id,
-            executed_state_id,
-            round,
-            parent_block_id,
-            parent_block_round,
-            grandparent_block_id,
-            grandparent_block_round,
-        })
-    }
-}
-
-impl TryFrom<network::proto::consensus_prost::VoteData> for VoteData {
+impl TryFrom<network::proto::VoteData> for VoteData {
     type Error = failure::Error;
 
-    fn try_from(proto: network::proto::consensus_prost::VoteData) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::VoteData) -> failure::Result<Self> {
         let block_id = HashValue::from_slice(proto.block_id.as_ref())?;
         let round = proto.round;
         let executed_state_id = HashValue::from_slice(proto.executed_state_id.as_ref())?;
@@ -245,7 +203,7 @@ impl TryFrom<network::proto::consensus_prost::VoteData> for VoteData {
     }
 }
 
-impl From<VoteData> for network::proto::consensus_prost::VoteData {
+impl From<VoteData> for network::proto::VoteData {
     fn from(vote: VoteData) -> Self {
         Self {
             block_id: vote.block_id.to_vec(),
