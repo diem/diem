@@ -16,7 +16,12 @@ use network;
 use proto_conv::{FromProto, IntoProto};
 use protobuf::RepeatedField;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, convert::TryFrom, fmt, iter::FromIterator};
+use std::{
+    collections::HashSet,
+    convert::{TryFrom, TryInto},
+    fmt,
+    iter::FromIterator,
+};
 use types::{
     account_address::AccountAddress,
     crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
@@ -302,6 +307,37 @@ impl IntoProto for TimeoutMsg {
         proto.set_pacemaker_timeout(self.pacemaker_timeout.into_proto());
         proto.set_signature(bytes::Bytes::from(self.signature.to_bytes()));
         proto
+    }
+}
+
+impl TryFrom<network::proto::consensus_prost::TimeoutMsg> for TimeoutMsg {
+    type Error = failure::Error;
+
+    fn try_from(proto: network::proto::consensus_prost::TimeoutMsg) -> failure::Result<Self> {
+        let sync_info = proto
+            .sync_info
+            .ok_or_else(|| format_err!("Missing sync_info"))?
+            .try_into()?;
+        let pacemaker_timeout = proto
+            .pacemaker_timeout
+            .ok_or_else(|| format_err!("Missing pacemaker_timeout"))?
+            .try_into()?;
+        let signature = Signature::try_from(&proto.signature)?;
+        Ok(TimeoutMsg {
+            sync_info,
+            pacemaker_timeout,
+            signature,
+        })
+    }
+}
+
+impl From<TimeoutMsg> for network::proto::consensus_prost::TimeoutMsg {
+    fn from(timeout_msg: TimeoutMsg) -> Self {
+        Self {
+            sync_info: Some(timeout_msg.sync_info.into()),
+            pacemaker_timeout: Some(timeout_msg.pacemaker_timeout.into()),
+            signature: timeout_msg.signature.to_bytes(),
+        }
     }
 }
 
