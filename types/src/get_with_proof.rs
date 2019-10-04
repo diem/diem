@@ -119,6 +119,66 @@ impl<Sig: Signature> FromProto for UpdateToLatestLedgerResponse<Sig> {
     }
 }
 
+impl<Sig: Signature> TryFrom<crate::proto::types::UpdateToLatestLedgerResponse>
+    for UpdateToLatestLedgerResponse<Sig>
+{
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::UpdateToLatestLedgerResponse) -> Result<Self> {
+        let response_items = proto
+            .response_items
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<Vec<_>>>()?;
+        let ledger_info_with_sigs = proto
+            .ledger_info_with_sigs
+            .ok_or_else(|| format_err!("Missing ledger_info_with_sigs"))?
+            .try_into()?;
+        let validator_change_events = proto
+            .validator_change_events
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<Vec<_>>>()?;
+        let ledger_consistency_proof = proto
+            .ledger_consistency_proof
+            .ok_or_else(|| format_err!("Missing ledger_consistency_proof"))?
+            .try_into()?;
+
+        Ok(Self {
+            response_items,
+            ledger_info_with_sigs,
+            validator_change_events,
+            ledger_consistency_proof,
+        })
+    }
+}
+
+impl<Sig: Signature> From<UpdateToLatestLedgerResponse<Sig>>
+    for crate::proto::types::UpdateToLatestLedgerResponse
+{
+    fn from(response: UpdateToLatestLedgerResponse<Sig>) -> Self {
+        let response_items = response
+            .response_items
+            .into_iter()
+            .map(Into::into)
+            .collect();
+        let ledger_info_with_sigs = Some(response.ledger_info_with_sigs.into());
+        let validator_change_events = response
+            .validator_change_events
+            .into_iter()
+            .map(Into::into)
+            .collect();
+        let ledger_consistency_proof = Some(response.ledger_consistency_proof.into());
+
+        Self {
+            response_items,
+            ledger_info_with_sigs,
+            validator_change_events,
+            ledger_consistency_proof,
+        }
+    }
+}
+
 impl<Sig: Signature> UpdateToLatestLedgerResponse<Sig> {
     /// Constructor.
     pub fn new(
