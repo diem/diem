@@ -48,6 +48,34 @@ impl UpdateToLatestLedgerRequest {
     }
 }
 
+impl TryFrom<crate::proto::types::UpdateToLatestLedgerRequest> for UpdateToLatestLedgerRequest {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::UpdateToLatestLedgerRequest) -> Result<Self> {
+        Ok(Self {
+            client_known_version: proto.client_known_version,
+            requested_items: proto
+                .requested_items
+                .into_iter()
+                .map(TryFrom::try_from)
+                .collect::<Result<Vec<_>>>()?,
+        })
+    }
+}
+
+impl From<UpdateToLatestLedgerRequest> for crate::proto::types::UpdateToLatestLedgerRequest {
+    fn from(request: UpdateToLatestLedgerRequest) -> Self {
+        Self {
+            client_known_version: request.client_known_version,
+            requested_items: request
+                .requested_items
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct UpdateToLatestLedgerResponse<Sig> {
     pub response_items: Vec<ResponseItem>,
