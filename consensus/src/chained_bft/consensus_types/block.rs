@@ -21,7 +21,7 @@ use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     collections::HashMap,
-    convert::TryFrom,
+    convert::{TryFrom, TryInto},
     fmt::{Display, Formatter},
     sync::Arc,
 };
@@ -579,5 +579,78 @@ where
             quorum_cert,
             block_type,
         })
+    }
+}
+
+impl<T> TryFrom<network::proto::consensus_prost::Block> for Block<T>
+where
+    T: DeserializeOwned + CanonicalDeserialize,
+{
+    type Error = failure::Error;
+
+    fn try_from(proto: network::proto::consensus_prost::Block) -> failure::Result<Self> {
+        let id = HashValue::from_slice(proto.id.as_ref())?;
+        let parent_id = HashValue::from_slice(proto.parent_id.as_ref())?;
+        let timestamp_usecs = proto.timestamp_usecs;
+        let round = proto.round;
+        let height = proto.height;
+        let quorum_cert = proto
+            .quorum_cert
+            .ok_or_else(|| format_err!("Missing quorum_cert"))?
+            .try_into()?;
+        let block_type = if height == 0 {
+            BlockType::Genesis
+        } else if proto.author.is_empty() {
+            BlockType::NilBlock
+        } else {
+            BlockType::Proposal {
+                payload: from_slice(&proto.payload)?,
+                author: Author::try_from(proto.author)?,
+                signature: Signature::try_from(&proto.signature)?,
+            }
+        };
+        Ok(Block {
+            id,
+            parent_id,
+            round,
+            timestamp_usecs,
+            height,
+            quorum_cert,
+            block_type,
+        })
+    }
+}
+
+impl<T> From<Block<T>> for network::proto::consensus_prost::Block
+where
+    T: Serialize + Default + CanonicalSerialize + PartialEq,
+{
+    fn from(block: Block<T>) -> Self {
+        let (payload, signature, author) = if let BlockType::Proposal {
+            payload,
+            author,
+            signature,
+        } = block.block_type
+        {
+            (
+                to_vec_named(&payload).expect("fail to serialize payload"),
+                signature.to_bytes(),
+                author.into(),
+            )
+        } else {
+            (Vec::new(), Vec::new(), Vec::new())
+        };
+
+        Self {
+            id: block.id.to_vec(),
+            parent_id: block.parent_id.to_vec(),
+            payload,
+            round: block.round,
+            timestamp_usecs: block.timestamp_usecs,
+            height: block.height,
+            quorum_cert: Some(block.quorum_cert.into()),
+            signature,
+            author,
+        }
     }
 }
