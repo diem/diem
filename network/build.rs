@@ -7,8 +7,9 @@ fn main() {
 
     let proto_files_prost = [
         "src/proto/admission_control.proto",
-        "src/proto/network.proto",
+        "src/proto/consensus.proto",
         "src/proto/mempool.proto",
+        "src/proto/network.proto",
         "src/proto/state_synchronizer.proto",
     ];
 

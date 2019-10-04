@@ -2,10 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![allow(bare_trait_objects)]
+#![allow(clippy::large_enum_variant)]
 
 //! Protobuf definitions for data structures sent over the network
 mod consensus;
 
+pub mod consensus_prost {
+    include!(concat!(env!("OUT_DIR"), "/consensus.rs"));
+}
 mod admission_control {
     include!(concat!(env!("OUT_DIR"), "/admission_control.rs"));
 }
