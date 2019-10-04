@@ -410,7 +410,7 @@ fn socket_muxer_bench(c: &mut Criterion) {
         .throughput(|msg_len| {
             let msg_len = *msg_len as u32;
             let num_msgs = SENDS_PER_ITER as u32;
-            Throughput::Bytes(msg_len * num_msgs)
+            Throughput::Bytes((msg_len * num_msgs) as u64)
         });
 
     c.bench("socket_muxer_send_throughput", bench);

@@ -358,7 +358,7 @@ fn network_crate_benchmark(c: &mut Criterion) {
             .with_function("rpc", rpc_bench)
             .sample_size(10)
             .plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic))
-            .throughput(|msg_len| Throughput::Bytes((*msg_len as u32) * NUM_MSGS)),
+            .throughput(|msg_len| Throughput::Bytes(((*msg_len as u32) * NUM_MSGS).into())),
     );
 }
 

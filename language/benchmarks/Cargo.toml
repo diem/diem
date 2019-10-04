@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-criterion = "0.2.11"
+criterion = "0.3.0"
 proptest = "0.9.4"
 
 language_e2e_tests = { path = "../e2e_tests" }
