@@ -843,3 +843,116 @@ impl IntoProto for ResponseItem {
         out
     }
 }
+
+impl TryFrom<crate::proto::types::ResponseItem> for ResponseItem {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::ResponseItem) -> Result<Self> {
+        use crate::proto::types::response_item::ResponseItems::*;
+
+        let item = proto
+            .response_items
+            .ok_or_else(|| format_err!("Missing response_items"))?;
+
+        let response = match item {
+            GetAccountStateResponse(response) => {
+                let account_state_with_proof = response
+                    .account_state_with_proof
+                    .ok_or_else(|| format_err!("Missing account_state_with_proof"))?
+                    .try_into()?;
+                ResponseItem::GetAccountState {
+                    account_state_with_proof,
+                }
+            }
+            GetAccountTransactionBySequenceNumberResponse(response) => {
+                let signed_transaction_with_proof = response
+                    .signed_transaction_with_proof
+                    .map(TryInto::try_into)
+                    .transpose()?;
+                let proof_of_current_sequence_number = response
+                    .proof_of_current_sequence_number
+                    .map(TryInto::try_into)
+                    .transpose()?;
+
+                ResponseItem::GetAccountTransactionBySequenceNumber {
+                    signed_transaction_with_proof,
+                    proof_of_current_sequence_number,
+                }
+            }
+            GetEventsByEventAccessPathResponse(response) => {
+                let events_with_proof = response
+                    .events_with_proof
+                    .into_iter()
+                    .map(TryFrom::try_from)
+                    .collect::<Result<Vec<_>>>()?;
+                let proof_of_latest_event = response
+                    .proof_of_latest_event
+                    .ok_or_else(|| format_err!("Missing proof_of_latest_event"))?
+                    .try_into()?;
+
+                ResponseItem::GetEventsByEventAccessPath {
+                    events_with_proof,
+                    proof_of_latest_event,
+                }
+            }
+            GetTransactionsResponse(response) => {
+                let txn_list_with_proof = response
+                    .txn_list_with_proof
+                    .ok_or_else(|| format_err!("Missing txn_list_with_proof"))?
+                    .try_into()?;
+
+                ResponseItem::GetTransactions {
+                    txn_list_with_proof,
+                }
+            }
+        };
+
+        Ok(response)
+    }
+}
+
+impl From<ResponseItem> for crate::proto::types::ResponseItem {
+    fn from(response: ResponseItem) -> Self {
+        use crate::proto::types::response_item::ResponseItems;
+        use crate::proto::types::{
+            GetAccountStateResponse, GetAccountTransactionBySequenceNumberResponse,
+            GetEventsByEventAccessPathResponse, GetTransactionsResponse,
+        };
+
+        let res = match response {
+            ResponseItem::GetAccountState {
+                account_state_with_proof,
+            } => ResponseItems::GetAccountStateResponse(GetAccountStateResponse {
+                account_state_with_proof: Some(account_state_with_proof.into()),
+            }),
+            ResponseItem::GetAccountTransactionBySequenceNumber {
+                signed_transaction_with_proof,
+                proof_of_current_sequence_number,
+            } => ResponseItems::GetAccountTransactionBySequenceNumberResponse(
+                GetAccountTransactionBySequenceNumberResponse {
+                    signed_transaction_with_proof: signed_transaction_with_proof.map(Into::into),
+                    proof_of_current_sequence_number: proof_of_current_sequence_number
+                        .map(Into::into),
+                },
+            ),
+            ResponseItem::GetEventsByEventAccessPath {
+                events_with_proof,
+                proof_of_latest_event,
+            } => ResponseItems::GetEventsByEventAccessPathResponse(
+                GetEventsByEventAccessPathResponse {
+                    events_with_proof: events_with_proof.into_iter().map(Into::into).collect(),
+                    proof_of_latest_event: Some(proof_of_latest_event.into()),
+                },
+            ),
+            ResponseItem::GetTransactions {
+                txn_list_with_proof,
+            } => ResponseItems::GetTransactionsResponse(GetTransactionsResponse {
+                txn_list_with_proof: Some(txn_list_with_proof.into()),
+            }),
+        };
+
+        Self {
+            response_items: Some(res),
+        }
+    }
+}
