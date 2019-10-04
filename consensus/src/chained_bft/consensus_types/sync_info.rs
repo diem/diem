@@ -7,7 +7,10 @@ use crate::chained_bft::common::Round;
 use failure::ResultExt;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt::{Display, Formatter},
+};
 use types::crypto_proxies::ValidatorVerifier;
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
@@ -124,5 +127,40 @@ impl IntoProto for SyncInfo {
             proto.set_highest_timeout_cert(tc.into_proto());
         }
         proto
+    }
+}
+
+impl TryFrom<network::proto::consensus_prost::SyncInfo> for SyncInfo {
+    type Error = failure::Error;
+
+    fn try_from(proto: network::proto::consensus_prost::SyncInfo) -> failure::Result<Self> {
+        let highest_quorum_cert = proto
+            .highest_quorum_cert
+            .ok_or_else(|| format_err!("Missing highest_quorum_cert"))?
+            .try_into()?;
+        let highest_ledger_info = proto
+            .highest_ledger_info
+            .ok_or_else(|| format_err!("Missing highest_ledger_info"))?
+            .try_into()?;
+        let highest_timeout_cert = proto
+            .highest_timeout_cert
+            .map(TryInto::try_into)
+            .transpose()?;
+
+        Ok(SyncInfo::new(
+            highest_quorum_cert,
+            highest_ledger_info,
+            highest_timeout_cert,
+        ))
+    }
+}
+
+impl From<SyncInfo> for network::proto::consensus_prost::SyncInfo {
+    fn from(info: SyncInfo) -> Self {
+        Self {
+            highest_ledger_info: Some(info.highest_ledger_info.into()),
+            highest_quorum_cert: Some(info.highest_quorum_cert.into()),
+            highest_timeout_cert: info.highest_timeout_cert.map(Into::into),
+        }
     }
 }
