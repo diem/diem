@@ -157,12 +157,21 @@ impl SwarmConfig {
             let node_dir = output_dir.join(format!("{}", index));
             std::fs::create_dir_all(&node_dir).expect("unable to create config dir");
             // Copy contents of genesis file from upstream node.
-            let genesis_transaction_file = node_dir.join(&template.execution.genesis_file_location);
+            let genesis_transaction_file_target =
+                node_dir.join(&template.execution.genesis_file_location);
+            let genesis_transaction_file_src =
+                upstream_config_dir.join(&upstream_peer_config.execution.genesis_file_location);
             fs::copy(
-                upstream_config_dir
-                    .with_file_name(&upstream_peer_config.execution.genesis_file_location),
-                genesis_transaction_file,
-            )?;
+                genesis_transaction_file_src.clone(),
+                genesis_transaction_file_target.clone(),
+            )
+            .or_else(|err| {
+                error!(
+                    "Failed to copy {:?} to {:?}: {}",
+                    genesis_transaction_file_src, genesis_transaction_file_target, err
+                );
+                Err(err)
+            })?;
             // Remove network private keys for this peer.
             let peer_id = PeerId::from_str(&node_id).unwrap();
             warn!("Looking for peer id for peer: {}", node_id);
@@ -304,7 +313,7 @@ impl SwarmConfig {
             RoleType::FullNode => "full_node".to_string(),
         };
         let base_config = BaseConfig::new(
-            template.base.data_dir_path.clone(),
+            output_dir.to_path_buf(),
             template.base.node_sync_retries,
             template.base.node_sync_channel_buffer_size,
             template.base.node_async_log_chan_size,
@@ -356,7 +365,6 @@ impl SwarmConfig {
             secret_service: template.secret_service.clone(),
         };
         NodeConfigHelpers::randomize_config_ports(&mut config);
-        config.storage.dir = output_dir.join(&template.storage.dir).join("db");
         config.vm_config.publishing_options = VMPublishingOption::Open;
         config
     }

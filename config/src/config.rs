@@ -196,15 +196,6 @@ impl Default for ExecutionConfig {
     }
 }
 
-impl ExecutionConfig {
-    pub fn get_genesis_transaction(&self) -> Result<SignedTransaction> {
-        let mut file = File::open(self.genesis_file_location.clone())?;
-        let mut buffer = vec![];
-        file.read_to_end(&mut buffer)?;
-        SignedTransaction::try_from(types::proto::types::SignedTransaction::decode(&buffer)?)
-    }
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct LoggerConfig {
@@ -287,18 +278,12 @@ pub struct StorageConfig {
     pub grpc_max_receive_len: Option<i32>,
 }
 
-impl StorageConfig {
-    pub fn get_dir(&self) -> &Path {
-        &self.dir
-    }
-}
-
 impl Default for StorageConfig {
     fn default() -> StorageConfig {
         StorageConfig {
             address: "localhost".to_string(),
             port: 6184,
-            dir: PathBuf::from("libradb"),
+            dir: PathBuf::from("libradb/db"),
             grpc_max_receive_len: Some(100_000_000),
         }
     }
@@ -571,7 +556,7 @@ impl NodeConfig {
             }
         }
         config.consensus.load(path.as_ref())?;
-        NodeConfigHelpers::update_data_dir_path_if_needed(&mut config, &path)?;
+        NodeConfigHelpers::update_data_dir_path_if_needed(&mut config)?;
         Ok(config)
     }
 
@@ -588,6 +573,47 @@ impl NodeConfig {
             .iter()
             .filter(|network| RoleType::Validator == (&network.role).into())
             .last()
+    }
+
+    pub fn get_genesis_transaction_file(&self) -> PathBuf {
+        let path = PathBuf::from(self.execution.genesis_file_location.clone());
+        if path.is_relative() {
+            self.base.data_dir_path.join(path)
+        } else {
+            path
+        }
+    }
+
+    pub fn get_genesis_transaction(&self) -> Result<SignedTransaction> {
+        let file_path = self.get_genesis_transaction_file();
+        let mut file: File = File::open(&file_path).unwrap_or_else(|err| {
+            panic!(
+                "Failed to open file: {:?}; error: {:?}",
+                file_path.clone(),
+                err
+            );
+        });
+        let mut buffer = vec![];
+        file.read_to_end(&mut buffer)?;
+        SignedTransaction::try_from(types::proto::types::SignedTransaction::decode(&buffer)?)
+    }
+
+    pub fn get_storage_dir(&self) -> PathBuf {
+        let path = self.storage.dir.clone();
+        if path.is_relative() {
+            self.base.data_dir_path.join(path)
+        } else {
+            path
+        }
+    }
+
+    pub fn get_metrics_dir(&self) -> PathBuf {
+        let path = self.metrics.dir.clone();
+        if path.is_relative() {
+            self.base.data_dir_path.join(path)
+        } else {
+            path
+        }
     }
 }
 
@@ -648,45 +674,21 @@ impl NodeConfigHelpers {
         network.advertised_address = network.listen_address.clone();
         network.seed_peers = seed_peers_config;
         network.network_peers = test_network_peers;
-        NodeConfigHelpers::update_data_dir_path_if_needed(&mut config, ".")
-            .expect("creating tempdir");
+        NodeConfigHelpers::update_data_dir_path_if_needed(&mut config).expect("creating tempdir");
         config
     }
 
     /// Replaces temp marker with the actual path and returns holder to the temp dir.
-    fn update_data_dir_path_if_needed<P: AsRef<Path>>(
-        config: &mut NodeConfig,
-        base_path: P,
-    ) -> Result<()> {
+    fn update_data_dir_path_if_needed(config: &mut NodeConfig) -> Result<()> {
         if config.base.data_dir_path == Path::new(DISPOSABLE_DIR_MARKER) {
             let dir = TempPath::new();
             dir.create_as_dir().expect("error creating tempdir");
             config.base.data_dir_path = dir.path().to_owned();
             config.base.temp_data_dir = Some(dir);
         }
-
-        if !config.metrics.dir.as_os_str().is_empty() {
-            // do not set the directory if metrics.dir is empty to honor the check done
-            // in setup_metrics
-            config.metrics.dir = config.base.data_dir_path.join(&config.metrics.dir);
-        }
-        config.storage.dir = config.base.data_dir_path.join(config.storage.get_dir());
         if config.execution.genesis_file_location == DISPOSABLE_DIR_MARKER {
-            config.execution.genesis_file_location = config
-                .base
-                .data_dir_path
-                .join("genesis.blob")
-                .to_str()
-                .unwrap()
-                .to_string();
+            config.execution.genesis_file_location = "genesis.blob".to_string();
         }
-        config.execution.genesis_file_location = base_path
-            .as_ref()
-            .with_file_name(&config.execution.genesis_file_location)
-            .to_str()
-            .unwrap()
-            .to_string();
-
         Ok(())
     }
 

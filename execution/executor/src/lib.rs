@@ -197,7 +197,6 @@ where
 
         if committed_block_id == *PRE_GENESIS_BLOCK_ID {
             let genesis_transaction = config
-                .execution
                 .get_genesis_transaction()
                 .expect("failed to load genesis transaction!");
             executor.init_genesis(genesis_transaction);

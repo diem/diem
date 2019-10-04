@@ -329,7 +329,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
     fn start(config: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
         info!("Start consensus recovery.");
         let read_client = create_storage_read_client(config);
-        let db = Arc::new(ConsensusDB::new(config.storage.dir.clone()));
+        let db = Arc::new(ConsensusDB::new(config.get_storage_dir()));
         let proxy = Arc::new(Self::new(Arc::clone(&db)));
         let initial_data = db.get_data().expect("unable to recover consensus data");
         let consensus_state = initial_data.0.map_or_else(ConsensusState::default, |s| {
