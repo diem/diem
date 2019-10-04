@@ -19,6 +19,7 @@ use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
+    convert::TryFrom,
     fmt::{Display, Formatter},
 };
 
@@ -195,6 +196,49 @@ impl FromProto for LedgerInfo {
             timestamp_usecs,
             next_validator_set,
         ))
+    }
+}
+
+impl TryFrom<crate::proto::types::LedgerInfo> for LedgerInfo {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::LedgerInfo) -> Result<Self> {
+        let version = proto.version;
+        let transaction_accumulator_hash =
+            HashValue::from_slice(&proto.transaction_accumulator_hash)?;
+        let consensus_data_hash = HashValue::from_slice(&proto.consensus_data_hash)?;
+        let consensus_block_id = HashValue::from_slice(&proto.consensus_block_id)?;
+        let epoch_num = proto.epoch_num;
+        let timestamp_usecs = proto.timestamp_usecs;
+
+        let next_validator_set = if let Some(validator_set_proto) = proto.next_validator_set {
+            Some(ValidatorSet::try_from(validator_set_proto)?)
+        } else {
+            None
+        };
+        Ok(LedgerInfo::new(
+            version,
+            transaction_accumulator_hash,
+            consensus_data_hash,
+            consensus_block_id,
+            epoch_num,
+            timestamp_usecs,
+            next_validator_set,
+        ))
+    }
+}
+
+impl From<LedgerInfo> for crate::proto::types::LedgerInfo {
+    fn from(ledger_info: LedgerInfo) -> Self {
+        Self {
+            version: ledger_info.version,
+            transaction_accumulator_hash: ledger_info.transaction_accumulator_hash.to_vec(),
+            consensus_data_hash: ledger_info.consensus_data_hash.to_vec(),
+            consensus_block_id: ledger_info.consensus_block_id.to_vec(),
+            epoch_num: ledger_info.epoch_num,
+            timestamp_usecs: ledger_info.timestamp_usecs,
+            next_validator_set: ledger_info.next_validator_set.map(Into::into),
+        }
     }
 }
 
