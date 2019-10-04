@@ -35,8 +35,10 @@ use types::{
 pub mod block_test;
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
-pub enum BlockSource {
+pub enum BlockType<T> {
     Proposal {
+        /// T of the block (e.g. one or more transaction(s)
+        payload: T,
         /// Author of the block that can be validated by the author's public key and the signature
         author: Author,
         /// Signature that the hash of this block has been authored by the owner of the private key
@@ -45,6 +47,11 @@ pub enum BlockSource {
     /// NIL blocks don't have authors or signatures: they're generated upon timeouts to fill in the
     /// gaps in the rounds.
     NilBlock,
+    /// A genesis block is the first committed block in any epoch that is identically constructed on
+    /// all validators by any (potentially different) LedgerInfo that justifies the epoch change
+    /// from the previous epoch.  The genesis block is used as the the first root block of the
+    /// BlockTree for all epochs.
+    Genesis,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
@@ -55,8 +62,6 @@ pub struct Block<T> {
     id: HashValue,
     /// Parent block id of this block as a hash value (all zeros to indicate the genesis block)
     parent_id: HashValue,
-    /// T of the block (e.g. one or more transaction(s)
-    payload: T,
     /// The round of a block is an internal monotonically increasing counter used by Consensus
     /// protocol.
     round: Round,
@@ -84,7 +89,7 @@ pub struct Block<T> {
     /// voted on successfully
     quorum_cert: QuorumCert,
     /// If a block is a real proposal, contains its author and signature.
-    block_source: BlockSource,
+    block_type: BlockType<T>,
 }
 
 /// ExecutedBlocks are managed in a speculative tree, the committed blocks form a chain. Besides
@@ -101,9 +106,9 @@ pub struct ExecutedBlock<T> {
     compute_result: Arc<StateComputeResult>,
 }
 
-impl<T> Display for Block<T> {
+impl<T: PartialEq> Display for Block<T> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        let nil_marker = if self.block_source == BlockSource::NilBlock {
+        let nil_marker = if self.block_type == BlockType::NilBlock {
             " (NIL)"
         } else {
             ""
@@ -116,9 +121,71 @@ impl<T> Display for Block<T> {
     }
 }
 
-impl<T> Display for ExecutedBlock<T> {
+impl<T: PartialEq> Display for ExecutedBlock<T> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         self.block().fmt(f)
+    }
+}
+
+impl<T> Block<T> {
+    pub fn payload(&self) -> Option<&T> {
+        if let BlockType::Proposal { payload, .. } = &self.block_type {
+            Some(payload)
+        } else {
+            None
+        }
+    }
+
+    pub fn id(&self) -> HashValue {
+        self.id
+    }
+
+    pub fn parent_id(&self) -> HashValue {
+        self.parent_id
+    }
+
+    pub fn height(&self) -> Height {
+        // Height:
+        // - Reasonable to assume that the height of the block chain will not grow enough to exceed
+        // std::u64::MAX - 1 in the next million years at least
+        // - The upper limit of std::u64::MAX - 1 ensures that the parent check doesn't
+        // cause addition overflow.
+        // (Block::make_block)
+        assumed_postcondition!(self.height < std::u64::MAX);
+        self.height
+    }
+
+    pub fn round(&self) -> Round {
+        // Round numbers:
+        // - are reset to 0 periodically.
+        // - do not exceed std::u64::MAX - 2 per the 3 chain safety rule
+        // (ConsensusState::commit_rule_for_certified_block)
+        assumed_postcondition!(self.round < std::u64::MAX - 1);
+        self.round
+    }
+
+    pub fn timestamp_usecs(&self) -> u64 {
+        self.timestamp_usecs
+    }
+
+    pub fn quorum_cert(&self) -> &QuorumCert {
+        &self.quorum_cert
+    }
+
+    pub fn author(&self) -> Option<Author> {
+        if let BlockType::Proposal { author, .. } = self.block_type {
+            Some(author)
+        } else {
+            None
+        }
+    }
+
+    pub fn signature(&self) -> Option<&Signature> {
+        if let BlockType::Proposal { signature, .. } = &self.block_type {
+            Some(signature)
+        } else {
+            None
+        }
     }
 }
 
@@ -129,7 +196,6 @@ where
     // Make an empty genesis block
     pub fn make_genesis_block() -> Self {
         let ancestor_id = HashValue::zero();
-        let genesis_validator_signer = ValidatorSigner::genesis();
         let state_id = ExecutedState::state_for_genesis().state_id;
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
         // carrying information about version `0`.
@@ -148,23 +214,15 @@ where
                 HashMap::new(),
             ),
         );
-        let genesis_id = *GENESIS_BLOCK_ID;
-        let signature = genesis_validator_signer
-            .sign_message(genesis_id)
-            .expect("Failed to sign genesis id.");
 
         Block {
-            id: genesis_id,
-            payload: T::default(),
+            id: *GENESIS_BLOCK_ID,
             parent_id: HashValue::zero(),
             round: 0,
             height: 0,
             timestamp_usecs: 0, // The beginning of UNIX TIME
             quorum_cert: genesis_quorum_cert,
-            block_source: BlockSource::Proposal {
-                author: genesis_validator_signer.author(),
-                signature: signature.into(),
-            },
+            block_type: BlockType::Genesis,
         }
     }
 
@@ -181,7 +239,7 @@ where
     ) -> Self {
         let block_internal = BlockSerializer {
             parent_id,
-            payload: &payload,
+            payload: Some(&payload),
             round,
             height,
             timestamp_usecs,
@@ -196,13 +254,13 @@ where
 
         Block {
             id,
-            payload,
             parent_id,
             round,
             height,
             timestamp_usecs,
             quorum_cert,
-            block_source: BlockSource::Proposal {
+            block_type: BlockType::Proposal {
+                payload,
                 author: validator_signer.author(),
                 signature: signature.into(),
             },
@@ -246,16 +304,15 @@ where
         // parent_block.height() + 1 in the construction of BlockSerializer.
         checked_precondition!(parent_block.height() < std::u64::MAX);
 
-        let payload = T::default();
         // We want all the NIL blocks to agree on the timestamps even though they're generated
         // independently by different validators, hence we're using the timestamp of a parent + 1.
         // The reason for artificially adding 1 usec is to support execution state synchronization,
         // which doesn't have any other way of determining the order of ledger infos rather than
         // comparing their timestamps.
         let timestamp_usecs = parent_block.timestamp_usecs + 1;
-        let block_serializer = BlockSerializer {
+        let block_serializer = BlockSerializer::<T> {
             parent_id: parent_block.id(),
-            payload: &payload,
+            payload: None,
             round,
             height: parent_block.height() + 1,
             timestamp_usecs,
@@ -269,33 +326,28 @@ where
 
         Block {
             id,
-            payload,
             parent_id: parent_block.id(),
             round,
             height: parent_block.height() + 1,
             timestamp_usecs,
             quorum_cert,
-            block_source: BlockSource::NilBlock,
+            block_type: BlockType::NilBlock,
         }
-    }
-
-    pub fn get_payload(&self) -> &T {
-        &self.payload
     }
 
     /// Verifies that the proposal and the QC are correctly signed.
     /// If this is the genesis block, we skip these checks.
     pub fn validate_signatures(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
-        // if genesis block, we don't verify anything
-        if self.is_genesis_block() {
-            return Ok(());
+        match &self.block_type {
+            BlockType::Genesis => Ok(()),
+            BlockType::NilBlock => self.quorum_cert.verify(validator),
+            BlockType::Proposal {
+                author, signature, ..
+            } => {
+                signature.verify(validator, *author, self.hash())?;
+                self.quorum_cert.verify(validator)
+            }
         }
-        // verify signature from leader if it's a real proposal
-        if let BlockSource::Proposal { author, signature } = &self.block_source {
-            signature.verify(validator, *author, self.hash())?;
-        }
-        // verify signatures of quorum cert
-        self.quorum_cert.verify(validator)
     }
 
     /// Makes sure that the proposal makes sense, independently of the current state.
@@ -314,77 +366,15 @@ where
                 && self.round() >= self.height(),
             "Block has invalid round"
         );
-        // NIL block must not carry payload
-        ensure!(
-            self.block_source != BlockSource::NilBlock || self.payload == T::default(),
-            "Nil block carries payload"
-        );
         Ok(())
     }
 
-    pub fn id(&self) -> HashValue {
-        self.id
-    }
-
-    pub fn parent_id(&self) -> HashValue {
-        self.parent_id
-    }
-
-    pub fn height(&self) -> Height {
-        // Height:
-        // - Reasonable to assume that the height of the block chain will not grow enough to exceed
-        // std::u64::MAX - 1 in the next million years at least
-        // - The upper limit of std::u64::MAX - 1 ensures that the parent check doesn't
-        // cause addition overflow.
-        // (Block::make_block)
-        assumed_postcondition!(self.height < std::u64::MAX);
-        self.height
-    }
-
-    pub fn round(&self) -> Round {
-        // Round numbers:
-        // - are reset to 0 periodically.
-        // - do not exceed std::u64::MAX - 2 per the 3 chain safety rule
-        // (ConsensusState::commit_rule_for_certified_block)
-        assumed_postcondition!(self.round < std::u64::MAX - 1);
-        self.round
-    }
-
-    pub fn timestamp_usecs(&self) -> u64 {
-        self.timestamp_usecs
-    }
-
-    pub fn quorum_cert(&self) -> &QuorumCert {
-        &self.quorum_cert
-    }
-
-    pub fn author(&self) -> Option<Author> {
-        if let BlockSource::Proposal { author, .. } = self.block_source {
-            Some(author)
-        } else {
-            None
-        }
-    }
-
-    pub fn signature(&self) -> Option<&Signature> {
-        if let BlockSource::Proposal { signature, .. } = &self.block_source {
-            Some(signature)
-        } else {
-            None
-        }
-    }
-
     pub fn is_genesis_block(&self) -> bool {
-        self.id() == *GENESIS_BLOCK_ID
-            && self.payload == T::default()
-            && self.parent_id == HashValue::zero()
-            && self.round == 0
-            && self.height == 0
-            && self.timestamp_usecs == 0
+        self.block_type == BlockType::Genesis
     }
 
     pub fn is_nil_block(&self) -> bool {
-        self.block_source == BlockSource::NilBlock
+        self.block_type == BlockType::NilBlock
     }
 }
 
@@ -409,8 +399,8 @@ impl<T> ExecutedBlock<T>
 where
     T: Serialize + Default + CanonicalSerialize + PartialEq,
 {
-    pub fn get_payload(&self) -> &T {
-        self.block().get_payload()
+    pub fn payload(&self) -> Option<&T> {
+        self.block().payload()
     }
 
     pub fn id(&self) -> HashValue {
@@ -451,13 +441,13 @@ where
 
     fn hash(&self) -> HashValue {
         // The author value used by NIL blocks for calculating the hash is genesis.
-        let author = match self.block_source {
-            BlockSource::Proposal { author, .. } => Some(author),
-            BlockSource::NilBlock => None,
+        let author = match self.block_type {
+            BlockType::Proposal { author, .. } => Some(author),
+            BlockType::NilBlock | BlockType::Genesis => None,
         };
         let block_internal = BlockSerializer {
             parent_id: self.parent_id,
-            payload: &self.payload,
+            payload: self.payload(),
             round: self.round,
             height: self.height,
             timestamp_usecs: self.timestamp_usecs,
@@ -472,7 +462,7 @@ where
 // Block Id
 struct BlockSerializer<'a, T> {
     parent_id: HashValue,
-    payload: &'a T,
+    payload: Option<&'a T>,
     round: Round,
     height: Height,
     timestamp_usecs: u64,
@@ -504,7 +494,7 @@ where
             .encode_u64(self.timestamp_usecs)?
             .encode_u64(self.round)?
             .encode_u64(self.height)?
-            .encode_struct(self.payload)?
+            .encode_optional(&self.payload)?
             .encode_bytes(self.parent_id.as_ref())?
             .encode_bytes(self.quorum_cert.certified_block_id().as_ref())?
             .encode_optional(&self.author)?;
@@ -534,15 +524,20 @@ where
         proto.set_timestamp_usecs(self.timestamp_usecs);
         proto.set_id(self.id().into());
         proto.set_parent_id(self.parent_id().into());
-        proto.set_payload(
-            to_vec_named(self.get_payload())
-                .expect("fail to serialize payload")
-                .into(),
-        );
         proto.set_round(self.round());
         proto.set_height(self.height());
         proto.set_quorum_cert(self.quorum_cert().clone().into_proto());
-        if let BlockSource::Proposal { author, signature } = self.block_source {
+        if let BlockType::Proposal {
+            payload,
+            author,
+            signature,
+        } = self.block_type
+        {
+            proto.set_payload(
+                to_vec_named(&payload)
+                    .expect("fail to serialize payload")
+                    .into(),
+            );
             let bytes = bytes::Bytes::from(&signature.to_bytes()[..]);
             proto.set_signature(bytes);
             proto.set_author(author.into());
@@ -560,15 +555,17 @@ where
     fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
         let id = HashValue::from_slice(object.get_id())?;
         let parent_id = HashValue::from_slice(object.get_parent_id())?;
-        let payload = from_slice(object.get_payload())?;
         let timestamp_usecs = object.get_timestamp_usecs();
         let round = object.get_round();
         let height = object.get_height();
         let quorum_cert = QuorumCert::from_proto(object.take_quorum_cert())?;
-        let block_source = if object.get_author().is_empty() {
-            BlockSource::NilBlock
+        let block_type = if height == 0 {
+            BlockType::Genesis
+        } else if object.get_author().is_empty() {
+            BlockType::NilBlock
         } else {
-            BlockSource::Proposal {
+            BlockType::Proposal {
+                payload: from_slice(object.get_payload())?,
                 author: Author::try_from(object.get_author())?,
                 signature: Signature::try_from(object.get_signature())?,
             }
@@ -576,12 +573,11 @@ where
         Ok(Block {
             id,
             parent_id,
-            payload,
             round,
             timestamp_usecs,
             height,
             quorum_cert,
-            block_source,
+            block_type,
         })
     }
 }

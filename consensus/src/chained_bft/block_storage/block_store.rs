@@ -121,8 +121,13 @@ impl<T: Payload> BlockStore<T> {
             .map(|qc| (qc.certified_block_id(), qc))
             .collect::<HashMap<_, _>>();
         for block in blocks {
+            assert!(!block.is_genesis_block());
             let compute_res = state_computer
-                .compute(block.parent_id(), block.id(), block.get_payload())
+                .compute(
+                    block.parent_id(),
+                    block.id(),
+                    block.payload().unwrap_or(&T::default()),
+                )
                 .await
                 .expect("fail to rebuild scratchpad");
             // if this block is certified, ensure we agree with the certified state.
@@ -198,7 +203,11 @@ impl<T: Payload> BlockStore<T> {
         };
         let compute_res = self
             .state_computer
-            .compute(parent_id, block.id(), block.get_payload())
+            .compute(
+                parent_id,
+                block.id(),
+                block.payload().unwrap_or(&T::default()),
+            )
             .await
             .with_context(|e| format!("Execution failure for block {}: {:?}", block, e))?;
 

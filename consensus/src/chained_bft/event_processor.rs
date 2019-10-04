@@ -796,20 +796,22 @@ impl<T: Payload> EventProcessor<T> {
             {
                 counters::CREATION_TO_COMMIT_S.observe_duration(time_to_commit);
             }
-            let compute_result = self
-                .block_store
-                .get_compute_result(committed.id())
-                .expect("Compute result of a pending block is unknown");
-            if let Err(e) = self
-                .txn_manager
-                .commit_txns(
-                    committed.get_payload(),
-                    compute_result.as_ref(),
-                    committed.timestamp_usecs(),
-                )
-                .await
-            {
-                error!("Failed to notify mempool: {:?}", e);
+            if let Some(payload) = committed.payload() {
+                let compute_result = self
+                    .block_store
+                    .get_compute_result(committed.id())
+                    .expect("Compute result of a pending block is unknown");
+                if let Err(e) = self
+                    .txn_manager
+                    .commit_txns(
+                        payload,
+                        compute_result.as_ref(),
+                        committed.timestamp_usecs(),
+                    )
+                    .await
+                {
+                    error!("Failed to notify mempool: {:?}", e);
+                }
             }
         }
         counters::LAST_COMMITTED_ROUND.set(block_to_commit.round() as i64);

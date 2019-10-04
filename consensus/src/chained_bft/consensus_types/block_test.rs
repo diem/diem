@@ -4,7 +4,7 @@
 use crate::chained_bft::{
     common::{Height, Round},
     consensus_types::{
-        block::{Block, BlockSource},
+        block::{Block, BlockType},
         quorum_cert::QuorumCert,
     },
     test_utils::placeholder_certificate_for_block,
@@ -94,12 +94,12 @@ prop_compose! {
             Block {
                 timestamp_usecs: get_current_timestamp().as_micros() as u64,
                 id: fake_id,
-                payload: block.get_payload().clone(),
                 round: block.round(),
                 height: block.height(),
                 parent_id: block.parent_id(),
                 quorum_cert: block.quorum_cert().clone(),
-                block_source: BlockSource::Proposal {
+                block_type: BlockType::Proposal {
+                    payload: block.payload().unwrap().clone(),
                     author: block.author().unwrap(),
                     signature: block.signature().unwrap().clone(),
                 },
@@ -272,7 +272,7 @@ fn test_block_relation() {
         next_block.quorum_cert().certified_block_id(),
         genesis_block.id()
     );
-    assert_eq!(next_block.get_payload(), &payload);
+    assert_eq!(next_block.payload(), Some(&payload));
 
     let cloned_block = next_block.clone();
     assert_eq!(cloned_block.round(), next_block.round());
