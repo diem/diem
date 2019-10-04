@@ -28,7 +28,7 @@ struct Args {
     #[structopt(short = "m", long)]
     /// File location from which to load faucet account generated via generate_keypair tool
     faucet_account_file: String,
-    #[structopt(short = "r", long, default_value = "Validator")]
+    #[structopt(short = "r", long, default_value = "validator")]
     /// Role for the nodes: one of {"validator", "full_node"}
     role: String,
     #[structopt(short = "u", long)]
