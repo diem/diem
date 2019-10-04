@@ -19,7 +19,7 @@ use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
-    convert::TryFrom,
+    convert::{TryFrom, TryInto},
     fmt::{Display, Formatter},
 };
 
@@ -368,5 +368,62 @@ impl<Sig: Signature> IntoProto for LedgerInfoWithSignatures<Sig> {
                 proto.mut_signatures().push(validator_signature)
             });
         proto
+    }
+}
+
+impl<Sig: Signature> TryFrom<crate::proto::types::LedgerInfoWithSignatures>
+    for LedgerInfoWithSignatures<Sig>
+{
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::LedgerInfoWithSignatures) -> Result<Self> {
+        let ledger_info = proto
+            .ledger_info
+            .ok_or_else(|| format_err!("Missing ledger_info"))?
+            .try_into()?;
+
+        let signatures_proto = proto.signatures;
+        let num_signatures = signatures_proto.len();
+        let signatures = signatures_proto
+            .into_iter()
+            .map(|proto| {
+                let validator_id = AccountAddress::try_from(proto.validator_id)?;
+                let signature_bytes: &[u8] = proto.signature.as_ref();
+                let signature = Sig::try_from(signature_bytes)?;
+                Ok((validator_id, signature))
+            })
+            .collect::<Result<HashMap<_, _>>>()?;
+        ensure!(
+            signatures.len() == num_signatures,
+            "Signatures should be from different validators."
+        );
+
+        Ok(LedgerInfoWithSignatures {
+            ledger_info,
+            signatures,
+        })
+    }
+}
+
+impl<Sig: Signature> From<LedgerInfoWithSignatures<Sig>>
+    for crate::proto::types::LedgerInfoWithSignatures
+{
+    fn from(ledger_info_with_sigs: LedgerInfoWithSignatures<Sig>) -> Self {
+        let ledger_info = Some(ledger_info_with_sigs.ledger_info.into());
+        let signatures = ledger_info_with_sigs
+            .signatures
+            .into_iter()
+            .map(
+                |(validator_id, signature)| crate::proto::types::ValidatorSignature {
+                    validator_id: validator_id.to_vec(),
+                    signature: signature.to_bytes().to_vec(),
+                },
+            )
+            .collect();
+
+        Self {
+            signatures,
+            ledger_info,
+        }
     }
 }
