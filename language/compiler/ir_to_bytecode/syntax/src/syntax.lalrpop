@@ -8,7 +8,7 @@ use crate::ast::{
     Cmd_, Exp_, Exp, Var,  Var_, FunctionCall,
     FunctionName, Builtin, Statement, IfElse, While, Loop, Type, Field, Fields,
     StructName, QualifiedStructIdent, Function, BinOp, ModuleIdent, QualifiedModuleIdent, UnaryOp,
-    LValue, LValue_, parse_field,
+    LValue, LValue_, parse_field, Field_, TypeVar_,
 };
 use types::{account_address::AccountAddress, byte_array::ByteArray};
 use hex;
@@ -51,9 +51,13 @@ Var: Var = {
     <n:Name> =>? Var::parse(n),
 };
 
+Var_ = Sp<Var>;
+
 Field: Field = {
     <n:Name> =>? parse_field(n),
 };
+
+Field_ = Sp<Field>;
 
 CopyableVal: CopyableVal = {
     AccountAddress => CopyableVal::Address(<>),
@@ -164,8 +168,8 @@ CallOrTerm: Exp = {
     Term,
 }
 
-FieldExp: (Field, Exp_) = {
-    <f: Field> ":" <e: Sp<Exp>> => (f, e)
+FieldExp: (Field_, Exp_) = {
+    <f: Sp<Field>> ":" <e: Sp<Exp>> => (f, e)
 }
 
 Term: Exp = {
@@ -249,9 +253,9 @@ LValues: Vec<LValue_> = {
     }
 }
 
-FieldBindings: (Field, Var_) = {
-    <f: Field> ":" <v: Sp<Var>> => (f, v),
-    <f: Sp<Field>> => (f.value.clone(), Spanned { span: f.span, value: Var::new(f.value.name().into()) }),
+FieldBindings: (Field_, Var_) = {
+    <f: Sp<Field>> ":" <v: Sp<Var>> => (f, v),
+    <f: Sp<Field>> => (f.clone(), Spanned { span: f.span, value: Var::new(f.value.name().into()) }),
 }
 
 pub Cmd : Cmd = {
@@ -353,9 +357,25 @@ Kind: Kind = {
     "unrestricted" => Kind::Unrestricted,
 }
 
-TypeFormal: (TypeVar, Kind) = {
-    <n: Name> <k: (":" <Kind>)?> =>? {
-        let type_var = TypeVar::parse(n)?;
+Type: Type = {
+    "address" => Type::Address,
+    "u64" => Type::U64,
+    "bool" => Type::Bool,
+    "bytearray" => Type::ByteArray,
+    <s: QualifiedStructIdent> <tys: TypeActuals> => Type::Struct(s, tys),
+    "&" <t: Type> => Type::Reference(false, Box::new(t)),
+    "&mut " <t: Type> => Type::Reference(true, Box::new(t)),
+    <n: Name> =>? Ok(Type::TypeParameter(TypeVar::parse(n)?)),
+}
+
+TypeVar: TypeVar = {
+    <n: Name> =>? TypeVar::parse(n),
+}
+
+TypeVar_ = Sp<TypeVar>;
+
+TypeFormal: (TypeVar_, Kind) = {
+    <type_var: Sp<TypeVar>> <k: (":" <Kind>)?> =>? {
         match k {
             Some(k) => Ok((type_var, k)),
             None => Ok((type_var, Kind::All)),
@@ -369,7 +389,7 @@ TypeActuals: Vec<Type> = {
     }
 }
 
-NameAndTypeFormals: (String, Vec<(TypeVar, Kind)>) = {
+NameAndTypeFormals: (String, Vec<(TypeVar_, Kind)>) = {
     <n: NameBeginTy> <k: Comma<TypeFormal>> ">" => (n, k),
     <n: Name> => (n, vec![]),
 }
@@ -379,19 +399,8 @@ NameAndTypeActuals: (String, Vec<Type>) = {
     <n: Name> => (n, vec![]),
 }
 
-Type: Type = {
-    "address" => Type::Address,
-    "u64" => Type::U64,
-    "bool" => Type::Bool,
-    "bytearray" => Type::ByteArray,
-    <s: QualifiedStructIdent> <tys: TypeActuals> => Type::Struct(s, tys),
-    "&" <t: Type> => Type::Reference(false, Box::new(t)),
-    "&mut " <t: Type> => Type::Reference(true, Box::new(t)),
-    <n: Name> =>? Ok(Type::TypeParameter(TypeVar::parse(n)?)),
-}
-
-ArgDecl : (Var, Type) = {
-    <v: Var> ":" <t: Type> ","? => (v, t)
+ArgDecl : (Var_, Type) = {
+    <v: Sp<Var>> ":" <t: Type> ","? => (v, t)
 }
 
 NativeTag: () = {
@@ -456,8 +465,8 @@ NativeFunctionDecl: (FunctionName, Function) = {
     }
 }
 
-FieldDecl : (Field, Type) = {
-    <f: Field> ":" <t: Type> ","? => (f, t)
+FieldDecl : (Field_, Type) = {
+    <f: Sp<Field>> ":" <t: Type> ","? => (f, t)
 }
 
 StructKind: bool = {
