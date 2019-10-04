@@ -7,13 +7,13 @@ use crate::{
     proto::{
         mempool::*,
         mempool_grpc::{self, *},
-        shared::mempool_status::*,
     },
 };
 use config::config::NodeConfigHelpers;
 use crypto::ed25519::compat::generate_keypair;
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder};
+use mempool_shared_proto::proto::mempool_status::*;
 use proto_conv::{FromProto, IntoProto};
 use std::{
     sync::{Arc, Mutex},

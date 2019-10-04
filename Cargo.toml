@@ -55,6 +55,7 @@ members = [
     "network/noise",
     "network/socket_bench_server",
     "mempool",
+    "mempool/mempool-shared-proto",
     "state_synchronizer",
     "storage/accumulator",
     "storage/libradb",

@@ -8,8 +8,8 @@
 
 fn main() {
     let proto_root = "src/proto";
-    let proto_shared_root = "src/proto/shared";
     let dependent_root = "../types/src/proto";
+    let proto_shared_root = "mempool-shared-proto/src/proto/";
     // Build shared directory without further dependencies.
     build_helpers::build_helpers::compile_proto(proto_shared_root, vec![], false);
     build_helpers::build_helpers::compile_proto(

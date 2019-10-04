@@ -13,7 +13,7 @@ protobuf = "~2.7"
 
 failure = { package = "failure_ext", path = "../../common/failure_ext" }
 logger = { path = "../../common/logger" }
-mempool = { path = "../../mempool" }
+mempool-shared-proto = { path = "../../mempool/mempool-shared-proto" }
 proto_conv = { path = "../../common/proto_conv" }
 types = { path = "../../types" }
 

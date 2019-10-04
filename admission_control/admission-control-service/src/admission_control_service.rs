@@ -21,10 +21,10 @@ use logger::prelude::*;
 use mempool::proto::{
     mempool::{AddTransactionWithValidationRequest, HealthCheckRequest},
     mempool_client::MempoolClientTrait,
-    shared::mempool_status::{
-        MempoolAddTransactionStatus,
-        MempoolAddTransactionStatusCode::{self, MempoolIsFull},
-    },
+};
+use mempool_shared_proto::proto::mempool_status::{
+    MempoolAddTransactionStatus,
+    MempoolAddTransactionStatusCode::{self, MempoolIsFull},
 };
 use metrics::counters::SVC_COUNTERS;
 use proto_conv::{FromProto, IntoProto};

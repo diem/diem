@@ -8,16 +8,18 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::{
     core_mempool::{
         index::TxnPointer,
-        transaction::{MempoolAddTransactionStatus, MempoolTransaction, TimelineState},
+        transaction::{MempoolTransaction, TimelineState},
         transaction_store::TransactionStore,
     },
-    proto::shared::mempool_status::MempoolAddTransactionStatusCode,
     OP_COUNTERS,
 };
 use chrono::Utc;
 use config::config::NodeConfig;
 use logger::prelude::*;
 use lru_cache::LruCache;
+use mempool_shared_proto::proto::{
+    mempool_status::MempoolAddTransactionStatusCode, MempoolAddTransactionStatus,
+};
 use std::{cmp::max, collections::HashSet, convert::TryFrom};
 use ttl_cache::TtlCache;
 use types::{account_address::AccountAddress, transaction::SignedTransaction};

@@ -1,0 +1,18 @@
+[package]
+name = "mempool-shared-proto"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+#protobuf = "~2.7"
+prost = "0.5.0"
+
+types = { path = "../../types" }
+proto_conv = { path = "../../common/proto_conv" }
+failure = { path = "../../common/failure_ext", package = "failure_ext" }
+
+[build-dependencies]
+prost-build = "0.5.0"

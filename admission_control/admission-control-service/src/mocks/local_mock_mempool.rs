@@ -7,7 +7,9 @@ use mempool::proto::{
         HealthCheckRequest, HealthCheckResponse,
     },
     mempool_client::MempoolClientTrait,
-    shared::mempool_status::{MempoolAddTransactionStatus, MempoolAddTransactionStatusCode},
+};
+use mempool_shared_proto::proto::mempool_status::{
+    MempoolAddTransactionStatus, MempoolAddTransactionStatusCode,
 };
 use proto_conv::FromProto;
 use std::time::SystemTime;

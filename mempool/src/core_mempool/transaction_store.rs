@@ -7,14 +7,16 @@ use crate::{
             AccountTransactions, ParkingLotIndex, PriorityIndex, PriorityQueueIter, TTLIndex,
             TimelineIndex,
         },
-        transaction::{MempoolAddTransactionStatus, MempoolTransaction, TimelineState},
+        transaction::{MempoolTransaction, TimelineState},
     },
-    proto::shared::mempool_status::MempoolAddTransactionStatusCode,
     OP_COUNTERS,
 };
 use config::config::MempoolConfig;
 use failure::prelude::*;
 use logger::prelude::*;
+use mempool_shared_proto::proto::{
+    mempool_status::MempoolAddTransactionStatusCode, MempoolAddTransactionStatus,
+};
 use std::{
     collections::HashMap,
     ops::Bound,
