@@ -5,7 +5,6 @@
 fn main() {
     let proto_files = [
         "src/proto/consensus.proto",
-        "src/proto/network.proto",
         "src/proto/state_synchronizer.proto",
         "src/proto/admission_control.proto",
     ];
