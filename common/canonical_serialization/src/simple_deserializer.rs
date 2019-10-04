@@ -3,7 +3,7 @@
 
 use crate::{
     canonical_deserialize::{CanonicalDeserialize, CanonicalDeserializer},
-    Endianness, ARRAY_MAX_LENGTH,
+    ensure_max_length, Endianness,
 };
 use byteorder::ReadBytesExt;
 use failure::prelude::*;
@@ -61,12 +61,7 @@ impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
 
     fn decode_bytes(&mut self) -> Result<Vec<u8>> {
         let len = self.decode_u32()?;
-        ensure!(
-            len as usize <= ARRAY_MAX_LENGTH,
-            "array length longer than max allowed length. len: {}, max: {}",
-            len,
-            ARRAY_MAX_LENGTH
-        );
+        ensure_max_length!(len as usize);
 
         // make sure there is enough bytes left in the buffer
         let remain = self.raw_bytes.get_ref().len() - self.raw_bytes.position() as usize;
@@ -122,12 +117,7 @@ impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
         &mut self,
     ) -> Result<BTreeMap<K, V>> {
         let len = self.decode_u32()?;
-        ensure!(
-            len as usize <= ARRAY_MAX_LENGTH,
-            "array length longer than max allowed. size: {}, max: {}",
-            len,
-            ARRAY_MAX_LENGTH
-        );
+        ensure_max_length!(len as usize);
 
         let mut map = BTreeMap::new();
         for _i in 0..len {
@@ -148,12 +138,7 @@ impl<'a> CanonicalDeserializer for SimpleDeserializer<'a> {
 
     fn decode_vec<T: CanonicalDeserialize>(&mut self) -> Result<Vec<T>> {
         let len = self.decode_u32()?;
-        ensure!(
-            len as usize <= ARRAY_MAX_LENGTH,
-            "array length longer than max allowed. size: {}, max: {}",
-            len,
-            ARRAY_MAX_LENGTH
-        );
+        ensure_max_length!(len as usize);
 
         let mut vec = Vec::new();
         for _i in 0..len {
