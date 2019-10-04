@@ -9,8 +9,8 @@ use crate::{
         FunctionCall, FunctionName, FunctionSignature as AstFunctionSignature, FunctionVisibility,
         IfElse, ImportDefinition, LValue, LValue_, Loop, ModuleDefinition, ModuleIdent, ModuleName,
         Program, QualifiedModuleIdent, QualifiedStructIdent, Script, Statement,
-        StructDefinition as MoveStruct, StructDefinitionFields, Type, TypeVar, UnaryOp, Var, Var_,
-        While,
+        StructDefinition as MoveStruct, StructDefinitionFields, Type, TypeVar, TypeVar_, UnaryOp,
+        Var, Var_, While,
     },
 };
 
@@ -398,11 +398,11 @@ fn compile_imports(
     Ok(())
 }
 
-fn type_formals(ast_tys: &[(TypeVar, ast::Kind)]) -> Result<(HashMap<TypeVar, usize>, Vec<Kind>)> {
+fn type_formals(ast_tys: &[(TypeVar_, ast::Kind)]) -> Result<(HashMap<TypeVar, usize>, Vec<Kind>)> {
     let mut m = HashMap::new();
     let mut tys = vec![];
     for (idx, (ty_var, k)) in ast_tys.iter().enumerate() {
-        let old = m.insert(ty_var.clone(), idx);
+        let old = m.insert(ty_var.value.clone(), idx);
         if old.is_some() {
             bail!("Type formal '{}'' already bound", ty_var)
         }
@@ -517,7 +517,7 @@ fn compile_fields(
                 let name = context.identifier_index(f.name())?;
                 let sig_token = compile_type(context, &ty)?;
                 let signature = context.type_signature_index(sig_token.clone())?;
-                context.declare_field(sh_idx, f, sig_token, decl_order)?;
+                context.declare_field(sh_idx, f.value, sig_token, decl_order)?;
                 field_pool.push(FieldDefinition {
                     struct_: sh_idx,
                     name,
@@ -579,7 +579,7 @@ fn compile_function(
 
 fn compile_function_body(
     context: &mut Context,
-    formals: Vec<(Var, Type)>,
+    formals: Vec<(Var_, Type)>,
     locals: Vec<(Var_, Type)>,
     block: Block,
 ) -> Result<CodeUnit> {
@@ -939,7 +939,7 @@ fn compile_expression(
             let num_fields = fields.len();
             for (field_order, (field, e)) in fields.into_iter().enumerate() {
                 // Check that the fields are specified in order matching the definition.
-                let (_, _, decl_order) = context.field(sh_idx, field.clone())?;
+                let (_, _, decl_order) = context.field(sh_idx, field.value.clone())?;
                 if field_order != decl_order {
                     bail!("Field {} defined out of order for struct {}", field, name);
                 }

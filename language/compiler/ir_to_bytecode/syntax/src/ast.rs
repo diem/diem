@@ -136,6 +136,9 @@ pub type Var_ = Spanned<Var>;
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct TypeVar(Identifier);
 
+/// The type of a type variable with a location.
+pub type TypeVar_ = Spanned<TypeVar>;
+
 //**************************************************************************************************
 // Kinds
 //**************************************************************************************************
@@ -193,10 +196,14 @@ pub struct QualifiedStructIdent {
     pub name: StructName,
 }
 
-/// The file newtype
+/// The field newtype
 pub type Field = types::access_path::Field;
+
+/// A field coupled with source location information
+pub type Field_ = Spanned<Field>;
+
 /// A field map
-pub type Fields<T> = Vec<(Field, T)>;
+pub type Fields<T> = Vec<(Field_, T)>;
 
 /// Newtype for the name of a struct
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -211,7 +218,7 @@ pub struct StructDefinition {
     /// Human-readable name for the struct that also serves as a nominal type
     pub name: StructName,
     /// Kind constraints of the type parameters
-    pub type_formals: Vec<(TypeVar, Kind)>,
+    pub type_formals: Vec<(TypeVar_, Kind)>,
     /// the fields each instance has
     pub fields: StructDefinitionFields,
 }
@@ -237,11 +244,11 @@ pub struct FunctionName(Identifier);
 #[derive(PartialEq, Debug, Clone)]
 pub struct FunctionSignature {
     /// Possibly-empty list of (formal name, formal type) pairs. Names are unique.
-    pub formals: Vec<(Var, Type)>,
+    pub formals: Vec<(Var_, Type)>,
     /// Optional return types
     pub return_type: Vec<Type>,
     /// Possibly-empty list of (TypeVar, Kind) pairs.s.
-    pub type_formals: Vec<(TypeVar, Kind)>,
+    pub type_formals: Vec<(TypeVar_, Kind)>,
 }
 
 /// Public or internal modifier for a procedure
@@ -758,7 +765,7 @@ impl StructDefinition {
     pub fn move_declared<L, T>(
         is_nominal_resource: bool,
         name: impl Into<Box<str>>,
-        type_formals: Vec<(TypeVar, Kind)>,
+        type_formals: Vec<(TypeVar_, Kind)>,
         fields: Fields<Type>,
     ) -> Result<Self, ParseError<L, T, failure::Error>> {
         Ok(StructDefinition {
@@ -775,7 +782,7 @@ impl StructDefinition {
     pub fn native<L, T>(
         is_nominal_resource: bool,
         name: impl Into<Box<str>>,
-        type_formals: Vec<(TypeVar, Kind)>,
+        type_formals: Vec<(TypeVar_, Kind)>,
     ) -> Result<Self, ParseError<L, T, failure::Error>> {
         Ok(StructDefinition {
             is_nominal_resource,
@@ -811,9 +818,9 @@ impl FunctionName {
 impl FunctionSignature {
     /// Creates a new function signature from the parameters and the return types
     pub fn new(
-        formals: Vec<(Var, Type)>,
+        formals: Vec<(Var_, Type)>,
         return_type: Vec<Type>,
-        type_formals: Vec<(TypeVar, Kind)>,
+        type_formals: Vec<(TypeVar_, Kind)>,
     ) -> Self {
         FunctionSignature {
             formals,
@@ -828,9 +835,9 @@ impl Function {
     /// See the declaration of the struct `Function` for more details
     pub fn new(
         visibility: FunctionVisibility,
-        formals: Vec<(Var, Type)>,
+        formals: Vec<(Var_, Type)>,
         return_type: Vec<Type>,
-        type_formals: Vec<(TypeVar, Kind)>,
+        type_formals: Vec<(TypeVar_, Kind)>,
         acquires: Vec<StructName>,
         body: FunctionBody,
     ) -> Self {
@@ -1261,9 +1268,9 @@ fn intersperse<T: fmt::Display>(items: &[T], join: &str) -> String {
     })
 }
 
-fn format_fields<T: fmt::Display>(fields: &[(Field, T)]) -> String {
+fn format_fields<T: fmt::Display>(fields: &[(Field_, T)]) -> String {
     fields.iter().fold(String::new(), |acc, (field, val)| {
-        format!("{} {}: {},", acc, field, val)
+        format!("{} {}: {},", acc, field.value, val)
     })
 }
 
@@ -1293,13 +1300,13 @@ fn format_type_actuals(tys: &[Type]) -> String {
     }
 }
 
-fn format_type_formals(formals: &[(TypeVar, Kind)]) -> String {
+fn format_type_formals(formals: &[(TypeVar_, Kind)]) -> String {
     if formals.is_empty() {
         "".to_string()
     } else {
         let formatted = formals
             .iter()
-            .map(|(tv, k)| format!("{}: {}", tv, k))
+            .map(|(tv, k)| format!("{}: {}", tv.value, k))
             .collect::<Vec<_>>();
         format!("<{}>", intersperse(&formatted, ", "))
     }
