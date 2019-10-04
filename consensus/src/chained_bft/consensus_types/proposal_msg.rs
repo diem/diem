@@ -8,6 +8,7 @@ use crate::chained_bft::{
 use failure::prelude::*;
 use network::proto::Proposal as ProtoProposal;
 use proto_conv::{FromProto, IntoProto};
+use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use types::crypto_proxies::ValidatorVerifier;
 
@@ -29,6 +30,26 @@ impl<T: Payload> FromProto for ProposalUncheckedSignatures<T> {
     fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
         let proposal = Block::<T>::from_proto(object.take_proposed_block())?;
         let sync_info = SyncInfo::from_proto(object.take_sync_info())?;
+        Ok(ProposalUncheckedSignatures(ProposalMsg::new(
+            proposal, sync_info,
+        )))
+    }
+}
+
+impl<T: Payload> TryFrom<network::proto::consensus_prost::Proposal>
+    for ProposalUncheckedSignatures<T>
+{
+    type Error = failure::Error;
+
+    fn try_from(proto: network::proto::consensus_prost::Proposal) -> failure::Result<Self> {
+        let proposal = proto
+            .proposed_block
+            .ok_or_else(|| format_err!("Missing proposed_block"))?
+            .try_into()?;
+        let sync_info = proto
+            .sync_info
+            .ok_or_else(|| format_err!("Missing sync_info"))?
+            .try_into()?;
         Ok(ProposalUncheckedSignatures(ProposalMsg::new(
             proposal, sync_info,
         )))
@@ -167,5 +188,14 @@ impl<T: Payload> IntoProto for ProposalMsg<T> {
         proto.set_proposed_block(self.proposal.into_proto());
         proto.set_sync_info(self.sync_info.into_proto());
         proto
+    }
+}
+
+impl<T: Payload> From<ProposalMsg<T>> for network::proto::consensus_prost::Proposal {
+    fn from(proposal: ProposalMsg<T>) -> Self {
+        Self {
+            proposed_block: Some(proposal.proposal.into()),
+            sync_info: Some(proposal.sync_info.into()),
+        }
     }
 }
