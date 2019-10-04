@@ -154,6 +154,38 @@ impl FromProto for PacemakerTimeout {
     }
 }
 
+impl TryFrom<network::proto::consensus_prost::PacemakerTimeout> for PacemakerTimeout {
+    type Error = failure::Error;
+
+    fn try_from(proto: network::proto::consensus_prost::PacemakerTimeout) -> failure::Result<Self> {
+        let round = proto.round;
+        let author = Author::try_from(&proto.author[..])?;
+        let signature = Signature::try_from(&proto.signature)?;
+        let vote = if let Some(vote_msg) = proto.vote {
+            Some(VoteMsg::try_from(vote_msg)?)
+        } else {
+            None
+        };
+        Ok(PacemakerTimeout {
+            round,
+            author,
+            signature,
+            vote,
+        })
+    }
+}
+
+impl From<PacemakerTimeout> for network::proto::consensus_prost::PacemakerTimeout {
+    fn from(timeout: PacemakerTimeout) -> Self {
+        Self {
+            round: timeout.round,
+            author: timeout.author.to_vec(),
+            signature: timeout.signature.to_bytes(),
+            vote: timeout.vote.map(Into::into),
+        }
+    }
+}
+
 // Internal use only. Contains all the fields in TimeoutMsg that contributes to the computation of
 // its hash.
 struct TimeoutMsgSerializer {
