@@ -3,7 +3,7 @@
 
 syntax = "proto3";
 
-package mempool;
+package mempool_status;
 
 enum MempoolAddTransactionStatusCode {
   // Transaction was sent to Mempool

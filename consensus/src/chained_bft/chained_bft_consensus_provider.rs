@@ -19,7 +19,7 @@ use config::config::{ConsensusProposerType::FixedProposer, NodeConfig};
 use executor::Executor;
 use failure::prelude::*;
 use logger::prelude::*;
-use mempool::proto::mempool_grpc::MempoolClient;
+use mempool::proto::mempool::MempoolClient;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
 use std::{convert::TryFrom, sync::Arc};

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use admission_control_proto::proto::{
+    admission_control::AdmissionControlClient,
     admission_control::SubmitTransactionResponse as ProtoSubmitTransactionResponse,
-    admission_control_grpc::AdmissionControlClient,
 };
 use client::{AccountData, AccountStatus};
 use crypto::{ed25519::*, test_utils::KeyPair};

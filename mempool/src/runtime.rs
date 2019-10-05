@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::CoreMempool, mempool_service::MempoolService, proto::mempool_grpc,
+    core_mempool::CoreMempool, mempool_service::MempoolService, proto::mempool,
     shared_mempool::start_shared_mempool,
 };
 use config::config::NodeConfig;
@@ -44,7 +44,7 @@ impl MempoolRuntime {
         let handle = MempoolService {
             core_mempool: Arc::clone(&mempool),
         };
-        let service = mempool_grpc::create_mempool(handle);
+        let service = mempool::create_mempool(handle);
         let grpc_server = ::grpcio::ServerBuilder::new(env)
             .register_service(service)
             .bind(

@@ -57,7 +57,7 @@ message AddTransactionWithValidationResponse {
   // transaction will have version bigger than this 'current_version'
   uint64 current_version = 1;
   // The result of the transaction submission
-  MempoolAddTransactionStatus status = 2;
+  mempool_status.MempoolAddTransactionStatus status = 2;
 }
 
 // -----------------------------------------------------------------------------

@@ -12,7 +12,6 @@ use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,
 };
-use proto_conv::IntoProto;
 use reqwest;
 use rust_decimal::Decimal;
 use serde_json;
@@ -532,11 +531,11 @@ impl ClientProxy {
     ) -> Result<()> {
         let signed_txn = SignedTransaction::new(raw_txn, public_key.clone(), signature);
 
-        let mut req = SubmitTransactionRequest::new();
+        let mut req = SubmitTransactionRequest::default();
         let sender_address = signed_txn.sender();
         let sender_sequence = signed_txn.sequence_number();
 
-        req.set_signed_txn(signed_txn.into_proto());
+        req.signed_txn = Some(signed_txn.into());
         self.client.submit_transaction(None, &req)?;
         // blocking by default (until transaction completion)
         self.wait_for_transaction(sender_address, sender_sequence + 1);
@@ -1020,8 +1019,8 @@ impl ClientProxy {
             TX_EXPIRATION,
         )
         .unwrap();
-        let mut req = SubmitTransactionRequest::new();
-        req.set_signed_txn(signed_txn.into_proto());
+        let mut req = SubmitTransactionRequest::default();
+        req.signed_txn = Some(signed_txn.into());
         Ok(req)
     }
 

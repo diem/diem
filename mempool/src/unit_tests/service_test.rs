@@ -4,18 +4,14 @@
 use crate::{
     core_mempool::CoreMempool,
     mempool_service::MempoolService,
-    proto::{
-        mempool::*,
-        mempool_grpc::{self, *},
-        shared::mempool_status::*,
-    },
+    proto::{mempool::*, shared::mempool_status::*},
 };
 use config::config::NodeConfigHelpers;
 use crypto::ed25519::compat::generate_keypair;
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder};
-use proto_conv::{FromProto, IntoProto};
 use std::{
+    convert::TryFrom,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -31,7 +27,7 @@ fn setup_mempool() -> (::grpcio::Server, MempoolClient) {
     let env = Arc::new(EnvBuilder::new().build());
     let core_mempool = Arc::new(Mutex::new(CoreMempool::new(&node_config)));
     let handle = MempoolService { core_mempool };
-    let service = mempool_grpc::create_mempool(handle);
+    let service = create_mempool(handle);
 
     let server = ::grpcio::ServerBuilder::new(env.clone())
         .register_service(service)
@@ -45,7 +41,7 @@ fn setup_mempool() -> (::grpcio::Server, MempoolClient) {
 }
 
 fn create_add_transaction_request(expiration_time: u64) -> AddTransactionWithValidationRequest {
-    let mut req = AddTransactionWithValidationRequest::new();
+    let mut req = AddTransactionWithValidationRequest::default();
     let sender = AccountAddress::random();
     let (private_key, public_key) = generate_keypair(None);
 
@@ -59,10 +55,10 @@ fn create_add_transaction_request(expiration_time: u64) -> AddTransactionWithVal
         1,
         None,
     )
-    .into_proto();
-    req.set_signed_txn(transaction.clone());
-    req.set_max_gas_cost(10);
-    req.set_account_balance(1000);
+    .into();
+    req.signed_txn = Some(transaction);
+    req.max_gas_cost = 10;
+    req.account_balance = 1000;
     req
 }
 
@@ -72,11 +68,11 @@ fn test_add_transaction() {
     let _handle = ServerHandle::setup(server);
     // create request
     let mut req = create_add_transaction_request(0);
-    req.set_account_balance(100);
-    let mut response = client.add_transaction_with_validation(&req).unwrap();
+    req.account_balance = 100;
+    let response = client.add_transaction_with_validation(&req).unwrap();
     // check status
     assert_eq!(
-        response.take_status().get_code(),
+        response.status.unwrap().code(),
         MempoolAddTransactionStatusCode::Valid
     );
 }
@@ -88,14 +84,14 @@ fn test_get_block() {
 
     // add transaction to mempool
     let mut req = create_add_transaction_request(0);
-    req.set_account_balance(100);
+    req.account_balance = 100;
     client.add_transaction_with_validation(&req).unwrap();
 
     // get next block
-    let response = client.get_block(&GetBlockRequest::new()).unwrap();
-    let block = response.get_block();
-    assert_eq!(block.get_transactions().len(), 1);
-    assert_eq!(block.get_transactions()[0], *req.get_signed_txn(),);
+    let response = client.get_block(&GetBlockRequest::default()).unwrap();
+    let block = response.block.unwrap();
+    assert_eq!(block.transactions.len(), 1);
+    assert_eq!(block.transactions[0], req.signed_txn.unwrap(),);
 }
 
 #[test]
@@ -107,21 +103,21 @@ fn test_consensus_callbacks() {
     let add_req = create_add_transaction_request(0);
     client.add_transaction_with_validation(&add_req).unwrap();
 
-    let mut response = client.get_block(&GetBlockRequest::new()).unwrap();
-    assert_eq!(response.get_block().get_transactions().len(), 1);
+    let mut response = client.get_block(&GetBlockRequest::default()).unwrap();
+    assert_eq!(response.block.unwrap().transactions.len(), 1);
 
     // remove: transaction is committed
-    let mut transaction = CommittedTransaction::new();
-    let signed_txn = SignedTransaction::from_proto(add_req.get_signed_txn().clone()).unwrap();
+    let mut transaction = CommittedTransaction::default();
+    let signed_txn = SignedTransaction::try_from(add_req.signed_txn.unwrap().clone()).unwrap();
     let sender = signed_txn.sender().as_ref().to_vec();
-    transaction.set_sender(sender);
-    transaction.set_sequence_number(0);
+    transaction.sender = sender;
+    transaction.sequence_number = 0;
 
-    let mut req = CommitTransactionsRequest::new();
-    req.set_transactions(::protobuf::RepeatedField::from_vec(vec![transaction]));
+    let mut req = CommitTransactionsRequest::default();
+    req.transactions = vec![transaction];
     client.commit_transactions(&req).unwrap();
-    response = client.get_block(&GetBlockRequest::new()).unwrap();
-    assert!(response.get_block().get_transactions().is_empty());
+    response = client.get_block(&GetBlockRequest::default()).unwrap();
+    assert!(response.block.unwrap().transactions.is_empty());
 }
 
 #[test]
@@ -134,23 +130,23 @@ fn test_gc_by_expiration_time() {
     client.add_transaction_with_validation(&add_req).unwrap();
 
     // commit empty block with block_time 2
-    let mut req = CommitTransactionsRequest::new();
-    req.set_block_timestamp_usecs(Duration::from_secs(2).as_micros() as u64);
+    let mut req = CommitTransactionsRequest::default();
+    req.block_timestamp_usecs = Duration::from_secs(2).as_micros() as u64;
     client.commit_transactions(&req).unwrap();
 
     // verify that transaction is evicted from Mempool
-    let response = client.get_block(&GetBlockRequest::new()).unwrap();
-    assert!(response.get_block().get_transactions().is_empty());
+    let response = client.get_block(&GetBlockRequest::default()).unwrap();
+    assert!(response.block.unwrap().transactions.is_empty());
 
     // add transaction with expiration time 3
     let add_req = create_add_transaction_request(3);
     client.add_transaction_with_validation(&add_req).unwrap();
     // commit empty block with block_time 3
-    let mut req = CommitTransactionsRequest::new();
-    req.set_block_timestamp_usecs(Duration::from_secs(3).as_micros() as u64);
+    let mut req = CommitTransactionsRequest::default();
+    req.block_timestamp_usecs = Duration::from_secs(3).as_micros() as u64;
     client.commit_transactions(&req).unwrap();
 
     // verify that transaction is still in Mempool
-    let response = client.get_block(&GetBlockRequest::new()).unwrap();
-    assert_eq!(response.get_block().get_transactions().len(), 1);
+    let response = client.get_block(&GetBlockRequest::default()).unwrap();
+    assert_eq!(response.block.unwrap().transactions.len(), 1);
 }

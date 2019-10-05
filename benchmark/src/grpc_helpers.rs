@@ -1,11 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use admission_control_proto::proto::{
-    admission_control::{
-        AdmissionControlStatusCode, SubmitTransactionResponse as ProtoSubmitTransactionResponse,
-    },
-    admission_control_grpc::AdmissionControlClient,
+use admission_control_proto::proto::admission_control::{
+    AdmissionControlClient, AdmissionControlStatusCode,
+    SubmitTransactionResponse as ProtoSubmitTransactionResponse,
 };
 use client::AccountStatus;
 use failure::prelude::*;
@@ -15,14 +13,14 @@ use futures::{
 };
 use grpcio::{self, CallOption, Error};
 use logger::prelude::*;
-use proto_conv::{FromProto, IntoProto};
-use protobuf::Message;
+use prost::Message;
+use std::convert::TryFrom;
 use std::{collections::HashMap, marker::Send, slice::Chunks, thread, time};
 use types::{
     account_address::AccountAddress,
     account_config::get_account_resource_or_default,
     get_with_proof::{RequestItem, ResponseItem, UpdateToLatestLedgerRequest},
-    proto::get_with_proof::UpdateToLatestLedgerResponse,
+    proto::types::UpdateToLatestLedgerResponse,
 };
 
 use crate::{
@@ -61,34 +59,34 @@ pub fn divide_items<T>(items: &[T], num_chunks: usize) -> Chunks<T> {
 /// By checking 1) ac status, 2) vm status, and 3) mempool status, decide whether the reponse
 /// from AC is accepted. If not, classify what the error type is.
 fn check_ac_response(resp: &ProtoSubmitTransactionResponse) -> bool {
-    if resp.has_ac_status() {
-        let status = resp.get_ac_status().get_code();
-        if status == AdmissionControlStatusCode::Accepted {
-            OP_COUNTER.inc("submit_txns.success");
-            true
-        } else {
-            OP_COUNTER.inc(&format!("submit_txns.failure.ac.{:?}", status));
-            debug!("Request rejected by AC: {:?}", resp);
+    use admission_control_proto::proto::admission_control::submit_transaction_response::Status::*;
+
+    match &resp.status {
+        Some(AcStatus(status)) => {
+            if status.code() == AdmissionControlStatusCode::Accepted {
+                OP_COUNTER.inc("submit_txns.success");
+                true
+            } else {
+                OP_COUNTER.inc(&format!("submit_txns.failure.ac.{:?}", status));
+                debug!("Request rejected by AC: {:?}", resp);
+                false
+            }
+        }
+        Some(VmStatus(status)) => {
+            OP_COUNTER.inc(&format!("submit_txns.failure.vm.{:?}", status));
+            debug!("Request causes error on VM: {:?}", resp);
             false
         }
-    } else if resp.has_vm_status() {
-        OP_COUNTER.inc(&format!(
-            "submit_txns.failure.vm.{:?}",
-            resp.get_vm_status()
-        ));
-        debug!("Request causes error on VM: {:?}", resp);
-        false
-    } else if resp.has_mempool_status() {
-        OP_COUNTER.inc(&format!(
-            "submit_txns.failure.mempool.{:?}",
-            resp.get_mempool_status().get_code()
-        ));
-        debug!("Request causes error on mempool: {:?}", resp);
-        false
-    } else {
-        OP_COUNTER.inc("submit_txns.failure.Unknown");
-        debug!("Request rejected by AC for unknown error: {:?}", resp);
-        false
+        Some(MempoolStatus(status)) => {
+            OP_COUNTER.inc(&format!("submit_txns.failure.mempool.{:?}", status.code()));
+            debug!("Request causes error on mempool: {:?}", resp);
+            false
+        }
+        _ => {
+            OP_COUNTER.inc("submit_txns.failure.Unknown");
+            debug!("Request rejected by AC for unknown error: {:?}", resp);
+            false
+        }
     }
 }
 
@@ -103,7 +101,7 @@ fn wait_read_requests<
         for response_result in read_stream.wait() {
             match response_result {
                 Ok(proto_resp) => {
-                    let resp_size = f64::from(proto_resp.compute_size());
+                    let resp_size = proto_resp.encoded_len() as f64;
                     OP_COUNTER.observe("read_requests.response_bytes", resp_size);
                     debug!(
                         "Received {:?} bytes of UpdateToLatestLedgerResponse",
@@ -200,18 +198,18 @@ fn get_account_state_async(
     let requested_item = RequestItem::GetAccountState { address };
     let requested_items = vec![requested_item];
     let req = UpdateToLatestLedgerRequest::new(0, requested_items);
-    let proto_req = req.into_proto();
+    let proto_req = req.into();
     let ret = client
         .update_to_latest_ledger_async_opt(&proto_req, get_default_grpc_call_option())?
         .then(move |account_state_proof_resp| {
             // Instead of convert entire account_state_proof_resp to UpdateToLatestLedgerResponse,
             // directly get the ResponseItems and convert only first item to rust struct.
-            let mut response_items = account_state_proof_resp?.take_response_items();
+            let mut response_items = account_state_proof_resp?.response_items;
             // Directly call response_items.remove(0) may panic, which is not what we want.
             if response_items.is_empty() {
                 bail!("Failed to get first item from empty ResponseItem array")
             } else {
-                let response_item = ResponseItem::from_proto(response_items.remove(0))?;
+                let response_item = ResponseItem::try_from(response_items.remove(0))?;
                 Ok((address, response_item))
             }
         });
