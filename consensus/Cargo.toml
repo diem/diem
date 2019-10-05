@@ -16,7 +16,6 @@ mirai-annotations = { version = "1.4.0", default-features = false }
 num-derive = { version = "0.2.5", default-features = false }
 num-traits = { version = "0.2.8", default-features = false }
 parity-multiaddr = { version = "0.5.0", default-features = false }
-protobuf = "~2.7"
 prost = "0.5.0"
 rand = { version = "0.6.5", default-features = false }
 rmp-serde = { version = "0.13.7", default-features = false }
@@ -38,7 +37,6 @@ logger = { path = "../common/logger" }
 mempool = { path = "../mempool" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
-proto_conv = { path = "../common/proto_conv" }
 state_synchronizer = { path = "../state_synchronizer" }
 schemadb = { path = "../storage/schemadb" }
 storage_client = { path = "../storage/storage_client" }

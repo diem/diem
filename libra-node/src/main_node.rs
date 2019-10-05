@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use admission_control_proto::proto::admission_control_grpc::{
+use admission_control_proto::proto::admission_control::{
     create_admission_control, AdmissionControlClient,
 };
 use admission_control_service::admission_control_service::AdmissionControlService;
@@ -14,7 +14,7 @@ use futures::future::{FutureExt, TryFutureExt};
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
 use logger::prelude::*;
-use mempool::{proto::mempool_grpc::MempoolClient, MempoolRuntime};
+use mempool::{proto::mempool::MempoolClient, MempoolRuntime};
 use metrics::metric_server;
 use network::{
     validator_network::{

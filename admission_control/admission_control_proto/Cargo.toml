@@ -7,18 +7,18 @@ publish = false
 edition = "2018"
 
 [dependencies]
+bytes = "0.4.12"
 futures = "0.1.28"
-grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["protobuf-codec"] }
-protobuf = "~2.7"
+grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
+prost = "0.5.0"
 
 failure = { package = "failure_ext", path = "../../common/failure_ext" }
 logger = { path = "../../common/logger" }
 mempool = { path = "../../mempool" }
-proto_conv = { path = "../../common/proto_conv" }
 types = { path = "../../types" }
 
 [dev-dependencies]
 types = { path = "../../types", features = ["testing"]}
 
 [build-dependencies]
-build_helpers = { path = "../../common/build_helpers" }
+grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }

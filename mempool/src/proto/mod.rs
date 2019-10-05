@@ -7,8 +7,9 @@
 use crate::proto::shared::*;
 use ::types::proto::*;
 
-pub mod mempool;
-pub mod mempool_grpc;
+pub mod mempool {
+    include!(concat!(env!("OUT_DIR"), "/mempool.rs"));
+}
 pub mod shared;
 
 pub mod mempool_client {
@@ -28,7 +29,7 @@ pub mod mempool_client {
         }
     }
 
-    impl MempoolClientTrait for super::mempool_grpc::MempoolClient {
+    impl MempoolClientTrait for super::mempool::MempoolClient {
         fn add_transaction_with_validation(
             &self,
             req: &super::mempool::AddTransactionWithValidationRequest,

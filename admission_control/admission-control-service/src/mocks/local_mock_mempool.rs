@@ -9,7 +9,7 @@ use mempool::proto::{
     mempool_client::MempoolClientTrait,
     shared::mempool_status::{MempoolAddTransactionStatus, MempoolAddTransactionStatusCode},
 };
-use proto_conv::FromProto;
+use std::convert::TryFrom;
 use std::time::SystemTime;
 use types::{account_address::ADDRESS_LENGTH, transaction::SignedTransaction};
 
@@ -34,14 +34,15 @@ impl MempoolClientTrait for LocalMockMempool {
         &self,
         req: &AddTransactionWithValidationRequest,
     ) -> ::grpcio::Result<AddTransactionWithValidationResponse> {
-        let mut resp = AddTransactionWithValidationResponse::new();
-        let mut status = MempoolAddTransactionStatus::new();
+        let mut resp = AddTransactionWithValidationResponse::default();
+        let mut status = MempoolAddTransactionStatus::default();
         let insufficient_balance_add = [100_u8; ADDRESS_LENGTH];
         let invalid_seq_add = [101_u8; ADDRESS_LENGTH];
         let sys_error_add = [102_u8; ADDRESS_LENGTH];
         let accepted_add = [103_u8; ADDRESS_LENGTH];
         let mempool_full = [104_u8; ADDRESS_LENGTH];
-        let signed_txn = SignedTransaction::from_proto(req.get_signed_txn().clone()).unwrap();
+        let signed_txn =
+            SignedTransaction::try_from(req.clone().signed_txn.unwrap().clone()).unwrap();
         let sender = signed_txn.sender();
         if sender.as_ref() == insufficient_balance_add {
             status.set_code(MempoolAddTransactionStatusCode::InsufficientBalance);
@@ -54,16 +55,16 @@ impl MempoolClientTrait for LocalMockMempool {
         } else if sender.as_ref() == mempool_full {
             status.set_code(MempoolAddTransactionStatusCode::MempoolIsFull);
         }
-        resp.set_status(status);
+        resp.status = Some(status);
         Ok(resp)
     }
     fn health_check(&self, _req: &HealthCheckRequest) -> ::grpcio::Result<HealthCheckResponse> {
-        let mut ret = HealthCheckResponse::new();
+        let mut ret = HealthCheckResponse::default();
         let duration_ms = SystemTime::now()
             .duration_since(self.created_time)
             .unwrap()
             .as_millis();
-        ret.set_is_healthy(duration_ms > 500 || duration_ms < 300);
+        ret.is_healthy = duration_ms > 500 || duration_ms < 300;
         Ok(ret)
     }
 }

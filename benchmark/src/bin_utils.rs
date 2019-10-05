@@ -6,7 +6,7 @@ use crate::{
     load_generator::{gen_repeated_requests, LoadGenerator},
     BenchSummary, Benchmarker,
 };
-use admission_control_proto::proto::admission_control_grpc::AdmissionControlClient;
+use admission_control_proto::proto::admission_control::AdmissionControlClient;
 use client::AccountData;
 use grpcio::{ChannelBuilder, EnvBuilder};
 use logger::{self, prelude::*};

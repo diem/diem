@@ -8,8 +8,7 @@ use crate::{
 };
 use proptest;
 use proptest_helpers::ValueGenerator;
-use proto_conv::IntoProto;
-use protobuf;
+use prost::Message;
 use std::sync::Arc;
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
 use types::transaction::SignedTransaction;
@@ -27,17 +26,19 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
     // use proptest to generate a SignedTransaction
     let signed_txn = gen.generate(proptest::arbitrary::any::<SignedTransaction>());
     // wrap it in a SubmitTransactionRequest
-    let mut req = SubmitTransactionRequest::new();
-    req.set_signed_txn(signed_txn.into_proto());
+    let mut req = SubmitTransactionRequest::default();
+    req.signed_txn = Some(signed_txn.into());
 
-    protobuf::Message::write_to_bytes(&req).unwrap()
+    let mut bytes = bytes::BytesMut::with_capacity(req.encoded_len());
+    req.encode(&mut bytes).unwrap();
+    bytes.to_vec()
 }
 
 /// fuzzer takes a serialized SubmitTransactionRequest an process it with an admission control
 /// service
 pub fn fuzzer(data: &[u8]) {
     // parse SubmitTransactionRequest
-    let req: SubmitTransactionRequest = match protobuf::parse_from_bytes(data) {
+    let req = match SubmitTransactionRequest::decode(data) {
         Ok(value) => value,
         Err(_) => {
             if cfg!(test) {

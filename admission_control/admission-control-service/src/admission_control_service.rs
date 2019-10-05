@@ -7,9 +7,9 @@
 
 use crate::OP_COUNTERS;
 use admission_control_proto::{
-    proto::{
-        admission_control::{SubmitTransactionRequest, SubmitTransactionResponse},
-        admission_control_grpc::AdmissionControl,
+    proto::admission_control::{
+        submit_transaction_response::Status, AdmissionControl, SubmitTransactionRequest,
+        SubmitTransactionResponse,
     },
     AdmissionControlStatus,
 };
@@ -27,11 +27,11 @@ use mempool::proto::{
     },
 };
 use metrics::counters::SVC_COUNTERS;
-use proto_conv::{FromProto, IntoProto};
+use std::convert::TryFrom;
 use std::sync::Arc;
 use storage_client::StorageRead;
 use types::{
-    proto::get_with_proof::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
+    proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
     transaction::SignedTransaction,
 };
 use vm_validator::vm_validator::{get_account_state, TransactionValidation};
@@ -89,28 +89,27 @@ where
         if !self.can_send_txn_to_mempool()? {
             debug!("Mempool is full");
             OP_COUNTERS.inc_by("submit_txn.rejected.mempool_full", 1);
-            let mut response = SubmitTransactionResponse::new();
-            let mut status = MempoolAddTransactionStatus::new();
+            let mut response = SubmitTransactionResponse::default();
+            let mut status = MempoolAddTransactionStatus::default();
             status.set_code(MempoolIsFull);
-            status.set_message("Mempool is full".to_string());
-            response.set_mempool_status(status);
+            status.message = "Mempool is full".to_string();
+            response.status = Some(Status::MempoolStatus(status));
             return Ok(response);
         }
 
-        let signed_txn_proto = req.get_signed_txn();
+        let signed_txn_proto = req.signed_txn.clone().unwrap_or_else(Default::default);
 
-        let signed_txn = match SignedTransaction::from_proto(signed_txn_proto.clone()) {
+        let signed_txn = match SignedTransaction::try_from(signed_txn_proto.clone()) {
             Ok(t) => t,
             Err(e) => {
                 security_log(SecurityEvent::InvalidTransactionAC)
                     .error(&e)
                     .data(&signed_txn_proto)
                     .log();
-                let mut response = SubmitTransactionResponse::new();
-                response.set_ac_status(
-                    AdmissionControlStatus::Rejected("submit txn rejected".to_string())
-                        .into_proto(),
-                );
+                let mut response = SubmitTransactionResponse::default();
+                response.status = Some(Status::AcStatus(
+                    AdmissionControlStatus::Rejected("submit txn rejected".to_string()).into(),
+                ));
                 OP_COUNTERS.inc_by("submit_txn.rejected.invalid_txn", 1);
                 return Ok(response);
             }
@@ -129,24 +128,24 @@ where
                 e
             })?;
         if let Some(validation_status) = validation_status {
-            let mut response = SubmitTransactionResponse::new();
+            let mut response = SubmitTransactionResponse::default();
             OP_COUNTERS.inc_by("submit_txn.vm_validation.failure", 1);
             debug!(
                 "txn failed in vm validation, status: {:?}, txn: {:?}",
                 validation_status, signed_txn
             );
-            response.set_vm_status(validation_status.into_proto());
+            response.status = Some(Status::VmStatus(validation_status.into()));
             return Ok(response);
         }
         let sender = signed_txn.sender();
         let account_state = block_on(get_account_state(self.storage_read_client.clone(), sender));
-        let mut add_transaction_request = AddTransactionWithValidationRequest::new();
+        let mut add_transaction_request = AddTransactionWithValidationRequest::default();
         add_transaction_request.signed_txn = req.signed_txn.clone();
-        add_transaction_request.set_max_gas_cost(gas_cost);
+        add_transaction_request.max_gas_cost = gas_cost;
 
         if let Ok((sequence_number, balance)) = account_state {
-            add_transaction_request.set_account_balance(balance);
-            add_transaction_request.set_latest_sequence_number(sequence_number);
+            add_transaction_request.account_balance = balance;
+            add_transaction_request.latest_sequence_number = sequence_number;
         }
 
         self.add_txn_to_mempool(add_transaction_request)
@@ -154,9 +153,9 @@ where
 
     fn can_send_txn_to_mempool(&self) -> Result<bool> {
         if self.need_to_check_mempool_before_validation {
-            let req = HealthCheckRequest::new();
+            let req = HealthCheckRequest::default();
             let is_mempool_healthy = match &self.mempool_client {
-                Some(client) => client.health_check(&req)?.get_is_healthy(),
+                Some(client) => client.health_check(&req)?.is_healthy,
                 None => false,
             };
             return Ok(is_mempool_healthy);
@@ -171,23 +170,24 @@ where
     ) -> Result<SubmitTransactionResponse> {
         match &self.mempool_client {
             Some(mempool_client) => {
-                let mut mempool_result =
+                let mempool_result =
                     mempool_client.add_transaction_with_validation(&add_transaction_request)?;
 
                 debug!("[GRPC] Done with transaction submission request");
-                let mut response = SubmitTransactionResponse::new();
-                if mempool_result.get_status().get_code() == MempoolAddTransactionStatusCode::Valid
-                {
-                    OP_COUNTERS.inc_by("submit_txn.txn_accepted", 1);
-                    response.set_ac_status(AdmissionControlStatus::Accepted.into_proto());
-                } else {
-                    debug!(
-                        "txn failed in mempool, status: {:?}, txn: {:?}",
-                        mempool_result,
-                        add_transaction_request.get_signed_txn()
-                    );
-                    OP_COUNTERS.inc_by("submit_txn.mempool.failure", 1);
-                    response.set_mempool_status(mempool_result.take_status());
+                let mut response = SubmitTransactionResponse::default();
+                if let Some(status) = mempool_result.status {
+                    if status.code() == MempoolAddTransactionStatusCode::Valid {
+                        OP_COUNTERS.inc_by("submit_txn.txn_accepted", 1);
+                        response.status =
+                            Some(Status::AcStatus(AdmissionControlStatus::Accepted.into()));
+                    } else {
+                        debug!(
+                            "txn failed in mempool, status: {:?}, txn: {:?}",
+                            status, add_transaction_request.signed_txn
+                        );
+                        OP_COUNTERS.inc_by("submit_txn.mempool.failure", 1);
+                        response.status = Some(Status::MempoolStatus(status));
+                    }
                 }
                 Ok(response)
             }
@@ -200,7 +200,7 @@ where
         &self,
         req: UpdateToLatestLedgerRequest,
     ) -> Result<UpdateToLatestLedgerResponse> {
-        let rust_req = types::get_with_proof::UpdateToLatestLedgerRequest::from_proto(req)?;
+        let rust_req = types::get_with_proof::UpdateToLatestLedgerRequest::try_from(req)?;
         let (
             response_items,
             ledger_info_with_sigs,
@@ -215,7 +215,7 @@ where
             validator_change_events,
             ledger_consistency_proof,
         );
-        Ok(rust_resp.into_proto())
+        Ok(rust_resp.into())
     }
 }
 
@@ -251,8 +251,8 @@ where
     fn update_to_latest_ledger(
         &mut self,
         ctx: grpcio::RpcContext<'_>,
-        req: types::proto::get_with_proof::UpdateToLatestLedgerRequest,
-        sink: grpcio::UnarySink<types::proto::get_with_proof::UpdateToLatestLedgerResponse>,
+        req: types::proto::types::UpdateToLatestLedgerRequest,
+        sink: grpcio::UnarySink<types::proto::types::UpdateToLatestLedgerResponse>,
     ) {
         debug!("[GRPC] AdmissionControl::update_to_latest_ledger");
         let _timer = SVC_COUNTERS.req(&ctx);
