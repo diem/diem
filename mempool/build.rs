@@ -15,6 +15,6 @@ fn main() {
     build_helpers::build_helpers::compile_proto(
         proto_root,
         vec![dependent_root, proto_shared_root],
-        true,
+        false,
     );
 }
