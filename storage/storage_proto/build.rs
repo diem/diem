@@ -15,4 +15,10 @@ fn main() {
         vec![dependent_root],
         false, /* generate_client_code */
     );
+
+    let protos = ["src/proto/storage.proto"];
+
+    let includes = ["../../types/src/proto", "src/proto"];
+
+    prost_build::compile_protos(&protos, &includes).unwrap();
 }
