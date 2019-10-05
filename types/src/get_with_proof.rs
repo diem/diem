@@ -448,16 +448,15 @@ fn verify_get_txns_resp(
     req_fetch_events: bool,
     txn_list_with_proof: &TransactionListWithProof,
 ) -> Result<()> {
-    ensure!(
-        req_fetch_events == txn_list_with_proof.events.is_some(),
-        "Bad GetTransactions response. Events requested: {}, events returned: {}.",
-        req_fetch_events,
-        txn_list_with_proof.events.is_some(),
-    );
-
     if req_limit == 0 || req_start_version > ledger_info.version() {
         txn_list_with_proof.verify(ledger_info, None)
     } else {
+        ensure!(
+            req_fetch_events == txn_list_with_proof.events.is_some(),
+            "Bad GetTransactions response. Events requested: {}, events returned: {}.",
+            req_fetch_events,
+            txn_list_with_proof.events.is_some(),
+        );
         let num_txns = txn_list_with_proof.transaction_and_infos.len();
         ensure!(
             cmp::min(req_limit, ledger_info.version() - req_start_version + 1)
