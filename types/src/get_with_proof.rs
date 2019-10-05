@@ -132,7 +132,7 @@ impl<Sig: Signature> TryFrom<crate::proto::types::UpdateToLatestLedgerResponse>
             .collect::<Result<Vec<_>>>()?;
         let ledger_info_with_sigs = proto
             .ledger_info_with_sigs
-            .ok_or_else(|| format_err!("Missing ledger_info_with_sigs"))?
+            .unwrap_or_else(Default::default)
             .try_into()?;
         let validator_change_events = proto
             .validator_change_events
@@ -141,7 +141,7 @@ impl<Sig: Signature> TryFrom<crate::proto::types::UpdateToLatestLedgerResponse>
             .collect::<Result<Vec<_>>>()?;
         let ledger_consistency_proof = proto
             .ledger_consistency_proof
-            .ok_or_else(|| format_err!("Missing ledger_consistency_proof"))?
+            .unwrap_or_else(Default::default)
             .try_into()?;
 
         Ok(Self {
