@@ -30,7 +30,7 @@ use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -399,6 +399,27 @@ impl GetTransactionsResponse {
     pub fn new(txn_list_with_proof: TransactionListWithProof) -> Self {
         GetTransactionsResponse {
             txn_list_with_proof,
+        }
+    }
+}
+
+impl TryFrom<crate::proto::storage_prost::GetTransactionsResponse> for GetTransactionsResponse {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage_prost::GetTransactionsResponse) -> Result<Self> {
+        Ok(GetTransactionsResponse {
+            txn_list_with_proof: proto
+                .txn_list_with_proof
+                .unwrap_or_else(Default::default)
+                .try_into()?,
+        })
+    }
+}
+
+impl From<GetTransactionsResponse> for crate::proto::storage_prost::GetTransactionsResponse {
+    fn from(response: GetTransactionsResponse) -> Self {
+        Self {
+            txn_list_with_proof: Some(response.txn_list_with_proof.into()),
         }
     }
 }
