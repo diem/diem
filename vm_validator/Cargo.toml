@@ -10,7 +10,6 @@ edition = "2018"
 config = { path = "../config" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 futures = "0.1.28"
-proto_conv = { path = "../common/proto_conv" }
 scratchpad = { path = "../storage/scratchpad" }
 state_view = { path = "../storage/state_view" }
 storage_client = { path = "../storage/storage_client" }
