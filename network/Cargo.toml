@@ -30,6 +30,7 @@ memsocket = { path = "memsocket" }
 metrics = { path = "../common/metrics" }
 netcore = { path = "netcore" }
 noise = { path = "noise" }
+prost-ext = { path = "../common/prost-ext" }
 socket_bench_server = { path = "socket_bench_server" }
 types = { path = "../types" }
 

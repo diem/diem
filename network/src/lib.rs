@@ -24,7 +24,5 @@ mod sink;
 mod transport;
 mod utils;
 
-pub use self::utils::MessageExt;
-
 /// Type for unique identifier associated with each network protocol
 pub type ProtocolId = bytes::Bytes;

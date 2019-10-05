@@ -30,9 +30,10 @@ use network::{
         network_builder::{NetworkBuilder, TransportType},
         ConsensusNetworkSender, Event, CONSENSUS_DIRECT_SEND_PROTOCOL, CONSENSUS_RPC_PROTOCOL,
     },
-    MessageExt, NetworkPublicKeys, ProtocolId,
+    NetworkPublicKeys, ProtocolId,
 };
 use parity_multiaddr::Multiaddr;
+use prost_ext::MessageExt;
 
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashMap, time::Duration};

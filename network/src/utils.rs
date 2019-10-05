@@ -8,6 +8,7 @@ use futures::{
     io::AsyncRead,
     stream::StreamExt,
 };
+pub use prost_ext::MessageExt;
 use std::io;
 use tokio::codec::Framed;
 use unsigned_varint::codec::UviBytes;
@@ -27,17 +28,4 @@ where
     // Parse to message.
     let msg = T::decode(data)?;
     Ok(msg)
-}
-
-impl<T: ?Sized> MessageExt for T where T: prost::Message {}
-
-pub trait MessageExt: prost::Message {
-    fn to_bytes(self) -> Result<Bytes, prost::EncodeError>
-    where
-        Self: Sized,
-    {
-        let mut bytes = bytes::BytesMut::with_capacity(self.encoded_len());
-        self.encode(&mut bytes)?;
-        Ok(bytes.freeze())
-    }
 }
