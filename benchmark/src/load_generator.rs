@@ -10,11 +10,10 @@ use client::{AccountData, AccountStatus};
 use failure::prelude::*;
 use libra_wallet::wallet_library::WalletLibrary;
 use logger::prelude::*;
-use proto_conv::IntoProto;
 use types::{
     account_address::AccountAddress,
     get_with_proof::{RequestItem, UpdateToLatestLedgerRequest},
-    proto::get_with_proof::UpdateToLatestLedgerRequest as ProtoUpdateToLatestLedgerRequest,
+    proto::types::UpdateToLatestLedgerRequest as ProtoUpdateToLatestLedgerRequest,
     transaction::{Script, TransactionPayload},
     transaction_helpers::{create_signed_txn, TransactionSigner},
 };
@@ -105,8 +104,8 @@ fn gen_submit_transaction_request<T: TransactionSigner>(
         OP_COUNTER.inc("create_txn_request.failure");
         Err(e)
     })?;
-    let mut req = SubmitTransactionRequest::new();
-    req.set_signed_txn(signed_txn.into_proto());
+    let mut req = SubmitTransactionRequest::default();
+    req.signed_txn = Some(signed_txn.into());
     sender_account.sequence_number += 1;
     OP_COUNTER.inc("create_txn_request.success");
     Ok(Request::WriteRequest(req))
@@ -177,7 +176,7 @@ pub fn gen_get_txn_by_sequnece_number_request(
     };
     let request_items = vec![req_item];
     let req = UpdateToLatestLedgerRequest::new(0, request_items);
-    Request::ReadRequest(req.into_proto())
+    Request::ReadRequest(req.into())
 }
 
 /// -------------------------------------------------------------------------------- ///

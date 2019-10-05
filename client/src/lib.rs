@@ -8,7 +8,6 @@
 //! It supposes all public APIs.
 pub use crypto::{ed25519::*, test_utils::KeyPair, traits::ValidKeyStringExt};
 pub use libra_wallet::wallet_library::CryptoHash;
-pub use proto_conv::{FromProtoBytes, IntoProtoBytes};
 use serde::{Deserialize, Serialize};
 pub use types::{
     account_address::AccountAddress,

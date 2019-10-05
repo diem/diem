@@ -6,7 +6,7 @@ pub mod proto;
 use failure::prelude::*;
 use logger::prelude::*;
 use mempool::MempoolAddTransactionStatus;
-use proto_conv::{FromProto, IntoProto};
+use std::convert::TryFrom;
 use types::vm_error::VMStatus;
 
 /// AC response status of submit_transaction to clients.
@@ -20,46 +20,44 @@ pub enum AdmissionControlStatus {
     Rejected(String),
 }
 
-impl IntoProto for AdmissionControlStatus {
-    type ProtoType = crate::proto::admission_control::AdmissionControlStatus;
+impl TryFrom<crate::proto::admission_control::AdmissionControlStatus> for AdmissionControlStatus {
+    type Error = Error;
 
-    fn into_proto(self) -> Self::ProtoType {
+    fn try_from(proto: crate::proto::admission_control::AdmissionControlStatus) -> Result<Self> {
         use crate::proto::admission_control::AdmissionControlStatusCode as ProtoStatusCode;
-        let mut admission_control_status = Self::ProtoType::new();
-        match self {
-            AdmissionControlStatus::Accepted => {
-                admission_control_status.set_code(ProtoStatusCode::Accepted)
-            }
-            AdmissionControlStatus::Blacklisted(msg) => {
-                admission_control_status.set_message(msg);
-                admission_control_status.set_code(ProtoStatusCode::Blacklisted)
-            }
-            AdmissionControlStatus::Rejected(msg) => {
-                admission_control_status.set_message(msg);
-                admission_control_status.set_code(ProtoStatusCode::Rejected)
-            }
-        }
-        admission_control_status
-    }
-}
-
-impl FromProto for AdmissionControlStatus {
-    type ProtoType = crate::proto::admission_control::AdmissionControlStatus;
-
-    fn from_proto(mut proto_admission_control_status: Self::ProtoType) -> Result<Self> {
-        use crate::proto::admission_control::AdmissionControlStatusCode as ProtoStatusCode;
-        let ret = match proto_admission_control_status.get_code() {
+        let ret = match proto.code() {
             ProtoStatusCode::Accepted => AdmissionControlStatus::Accepted,
             ProtoStatusCode::Blacklisted => {
-                let msg = proto_admission_control_status.take_message();
+                let msg = proto.message;
                 AdmissionControlStatus::Blacklisted(msg)
             }
             ProtoStatusCode::Rejected => {
-                let msg = proto_admission_control_status.take_message();
+                let msg = proto.message;
                 AdmissionControlStatus::Rejected(msg)
             }
         };
         Ok(ret)
+    }
+}
+
+impl From<AdmissionControlStatus> for crate::proto::admission_control::AdmissionControlStatus {
+    fn from(status: AdmissionControlStatus) -> Self {
+        use crate::proto::admission_control::AdmissionControlStatusCode as ProtoStatusCode;
+        let mut admission_control_status = Self::default();
+        match status {
+            AdmissionControlStatus::Accepted => {
+                admission_control_status.set_code(ProtoStatusCode::Accepted)
+            }
+            AdmissionControlStatus::Blacklisted(msg) => {
+                admission_control_status.message = msg;
+                admission_control_status.set_code(ProtoStatusCode::Blacklisted)
+            }
+            AdmissionControlStatus::Rejected(msg) => {
+                admission_control_status.message = msg;
+                admission_control_status.set_code(ProtoStatusCode::Rejected)
+            }
+        }
+        admission_control_status
     }
 }
 
@@ -76,52 +74,51 @@ pub struct SubmitTransactionResponse {
     pub validator_id: Vec<u8>,
 }
 
-impl IntoProto for SubmitTransactionResponse {
-    type ProtoType = crate::proto::admission_control::SubmitTransactionResponse;
+impl TryFrom<crate::proto::admission_control::SubmitTransactionResponse>
+    for SubmitTransactionResponse
+{
+    type Error = Error;
 
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        if let Some(ac_st) = self.ac_status {
-            proto.set_ac_status(ac_st.into_proto());
-        } else if let Some(mem_err) = self.mempool_error {
-            proto.set_mempool_status(mem_err.into_proto());
-        } else if let Some(vm_st) = self.vm_error {
-            proto.set_vm_status(vm_st.into_proto());
-        } else {
-            error!("No status is available in SubmitTransactionResponse!");
-        }
-        proto.set_validator_id(self.validator_id);
-        proto
-    }
-}
+    fn try_from(proto: crate::proto::admission_control::SubmitTransactionResponse) -> Result<Self> {
+        use crate::proto::admission_control::submit_transaction_response::Status::*;
 
-impl FromProto for SubmitTransactionResponse {
-    type ProtoType = crate::proto::admission_control::SubmitTransactionResponse;
-
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let ac_status = if object.has_ac_status() {
-            Some(AdmissionControlStatus::from_proto(object.take_ac_status())?)
-        } else {
-            None
+        let validator_id = proto.validator_id;
+        let status = proto.status.ok_or_else(|| format_err!("Missing status"))?;
+        let (ac_status, mempool_error, vm_error) = match status {
+            VmStatus(status) => (None, None, Some(VMStatus::try_from(status)?)),
+            AcStatus(status) => (Some(AdmissionControlStatus::try_from(status)?), None, None),
+            MempoolStatus(status) => (
+                None,
+                Some(MempoolAddTransactionStatus::try_from(status)?),
+                None,
+            ),
         };
-        let mempool_error = if object.has_mempool_status() {
-            Some(MempoolAddTransactionStatus::from_proto(
-                object.take_mempool_status(),
-            )?)
-        } else {
-            None
-        };
-        let vm_error = if object.has_vm_status() {
-            Some(VMStatus::from_proto(object.take_vm_status())?)
-        } else {
-            None
-        };
-
         Ok(SubmitTransactionResponse {
             ac_status,
             mempool_error,
             vm_error,
-            validator_id: object.take_validator_id(),
+            validator_id,
         })
+    }
+}
+
+impl From<SubmitTransactionResponse>
+    for crate::proto::admission_control::SubmitTransactionResponse
+{
+    fn from(status: SubmitTransactionResponse) -> Self {
+        use crate::proto::admission_control::submit_transaction_response::Status::*;
+
+        let mut proto = Self::default();
+        if let Some(ac_st) = status.ac_status {
+            proto.status = Some(AcStatus(ac_st.into()));
+        } else if let Some(mem_err) = status.mempool_error {
+            proto.status = Some(MempoolStatus(mem_err.into()));
+        } else if let Some(vm_st) = status.vm_error {
+            proto.status = Some(VmStatus(vm_st.into()));
+        } else {
+            error!("No status is available in SubmitTransactionResponse!");
+        }
+        proto.validator_id = status.validator_id;
+        proto
     }
 }

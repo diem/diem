@@ -1,10 +1,10 @@
 use crate::{cluster::Cluster, instance::Instance};
-use admission_control_proto::proto::{
-    admission_control::SubmitTransactionRequest, admission_control_grpc::AdmissionControlClient,
+use admission_control_proto::proto::admission_control::{
+    AdmissionControlClient, SubmitTransactionRequest,
 };
 use grpcio::{ChannelBuilder, EnvBuilder};
-use proto_conv::IntoProto;
 use std::{
+    convert::TryFrom,
     env, slice,
     str::FromStr,
     sync::Arc,
@@ -25,7 +25,6 @@ use failure::{
 };
 use generate_keypair::load_key_from_file;
 use itertools::zip;
-use proto_conv::FromProto;
 use rand::{
     prelude::ThreadRng,
     rngs::{EntropyRng, StdRng},
@@ -37,8 +36,8 @@ use types::{
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},
     get_with_proof::ResponseItem,
-    proto::get_with_proof::{
-        GetAccountStateRequest, RequestItem, RequestItem_oneof_requested_items,
+    proto::types::{
+        request_item::RequestedItems, GetAccountStateRequest, RequestItem,
         UpdateToLatestLedgerRequest,
     },
     transaction::{Script, TransactionPayload},
@@ -193,7 +192,7 @@ impl SubmissionThread {
                         debug!("Failed to submit request to {}: {:?}", self.instance, e);
                     }
                     Ok(r) => {
-                        let r = SubmitTransactionResponse::from_proto(r)
+                        let r = SubmitTransactionResponse::try_from(r)
                             .expect("Failed to parse SubmitTransactionResponse");
                         debug!("Request declined: {:?}", r);
                     }
@@ -253,14 +252,14 @@ fn query_sequence_numbers(
     client: &AdmissionControlClient,
     addresses: &[AccountAddress],
 ) -> failure::Result<Vec<u64>> {
-    let mut update_request = UpdateToLatestLedgerRequest::new();
+    let mut update_request = UpdateToLatestLedgerRequest::default();
     for address in addresses {
-        let mut request_item = RequestItem::new();
-        let mut account_state_request = GetAccountStateRequest::new();
+        let mut request_item = RequestItem::default();
+        let mut account_state_request = GetAccountStateRequest::default();
         account_state_request.address = address.to_vec();
-        request_item.requested_items = Some(
-            RequestItem_oneof_requested_items::get_account_state_request(account_state_request),
-        );
+        request_item.requested_items = Some(RequestedItems::GetAccountStateRequest(
+            account_state_request,
+        ));
         update_request.requested_items.push(request_item);
     }
     let resp = client
@@ -268,7 +267,7 @@ fn query_sequence_numbers(
         .map_err(|e| format_err!("update_to_latest_ledger failed: {:?} ", e))?;
     let mut result = Vec::with_capacity(resp.response_items.len());
     for item in resp.response_items.into_iter() {
-        let item = ResponseItem::from_proto(item)
+        let item = ResponseItem::try_from(item)
             .map_err(|e| format_err!("ResponseItem::from_proto failed: {:?} ", e))?;
         if let ResponseItem::GetAccountState {
             account_state_with_proof,
@@ -305,8 +304,8 @@ fn gen_submit_transaction_request(
         TXN_EXPIRATION,
     )
     .expect("Failed to create signed transaction");
-    let mut req = SubmitTransactionRequest::new();
-    req.set_signed_txn(signed_txn.into_proto());
+    let mut req = SubmitTransactionRequest::default();
+    req.signed_txn = Some(signed_txn.into());
     sender_account.sequence_number += 1;
     req
 }
@@ -365,7 +364,7 @@ fn execute_and_wait_transactions(
         match resp {
             Err(e) => info!("Failed to submit request: {:?}", e),
             Ok(r) => {
-                let r = SubmitTransactionResponse::from_proto(r)
+                let r = SubmitTransactionResponse::try_from(r)
                     .expect("Failed to parse SubmitTransactionResponse");
                 if !is_accepted(&r) {
                     info!("Request declined: {:?}", r);

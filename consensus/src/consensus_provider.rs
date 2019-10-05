@@ -8,7 +8,7 @@ use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender}
 use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;
 use executor::Executor;
 use grpcio::{ChannelBuilder, EnvBuilder};
-use mempool::proto::mempool_grpc::MempoolClient;
+use mempool::proto::mempool::MempoolClient;
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};

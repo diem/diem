@@ -3,7 +3,7 @@
 
 use crate::proto::shared::mempool_status::MempoolAddTransactionStatusCode;
 use failure::prelude::*;
-use proto_conv::{FromProto, IntoProto};
+use std::convert::TryFrom;
 use std::time::Duration;
 use types::{account_address::AccountAddress, transaction::SignedTransaction};
 
@@ -73,24 +73,28 @@ impl MempoolAddTransactionStatus {
 //***********************************
 // Decoding/Encoding to Protobuffers
 //***********************************
-impl IntoProto for MempoolAddTransactionStatus {
-    type ProtoType = crate::proto::shared::mempool_status::MempoolAddTransactionStatus;
+impl TryFrom<crate::proto::shared::mempool_status::MempoolAddTransactionStatus>
+    for MempoolAddTransactionStatus
+{
+    type Error = Error;
 
-    fn into_proto(self) -> Self::ProtoType {
-        let mut mempool_add_transaction_status = Self::ProtoType::new();
-        mempool_add_transaction_status.set_message(self.message);
-        mempool_add_transaction_status.set_code(self.code);
-        mempool_add_transaction_status
+    fn try_from(
+        proto: crate::proto::shared::mempool_status::MempoolAddTransactionStatus,
+    ) -> Result<Self> {
+        Ok(MempoolAddTransactionStatus::new(
+            proto.code(),
+            proto.message,
+        ))
     }
 }
 
-impl FromProto for MempoolAddTransactionStatus {
-    type ProtoType = crate::proto::shared::mempool_status::MempoolAddTransactionStatus;
-
-    fn from_proto(proto: Self::ProtoType) -> Result<Self> {
-        Ok(MempoolAddTransactionStatus::new(
-            proto.get_code(),
-            proto.get_message().to_string(),
-        ))
+impl From<MempoolAddTransactionStatus>
+    for crate::proto::shared::mempool_status::MempoolAddTransactionStatus
+{
+    fn from(status: MempoolAddTransactionStatus) -> Self {
+        let mut mempool_add_transaction_status = Self::default();
+        mempool_add_transaction_status.message = status.message;
+        mempool_add_transaction_status.set_code(status.code);
+        mempool_add_transaction_status
     }
 }

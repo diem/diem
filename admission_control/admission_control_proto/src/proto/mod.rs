@@ -6,7 +6,6 @@
 use ::types::proto::*;
 use mempool::proto::shared::mempool_status;
 
-/// Auto generated proto src files
-pub mod admission_control;
-/// Auto generated proto src files
-pub mod admission_control_grpc;
+pub mod admission_control {
+    include!(concat!(env!("OUT_DIR"), "/admission_control.rs"));
+}
