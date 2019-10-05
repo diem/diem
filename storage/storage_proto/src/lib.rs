@@ -592,6 +592,30 @@ impl GetLatestLedgerInfosPerEpochRequest {
     }
 }
 
+impl TryFrom<crate::proto::storage_prost::GetLatestLedgerInfosPerEpochRequest>
+    for GetLatestLedgerInfosPerEpochRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        proto: crate::proto::storage_prost::GetLatestLedgerInfosPerEpochRequest,
+    ) -> Result<Self> {
+        Ok(Self {
+            start_epoch: proto.start_epoch,
+        })
+    }
+}
+
+impl From<GetLatestLedgerInfosPerEpochRequest>
+    for crate::proto::storage_prost::GetLatestLedgerInfosPerEpochRequest
+{
+    fn from(request: GetLatestLedgerInfosPerEpochRequest) -> Self {
+        Self {
+            start_epoch: request.start_epoch,
+        }
+    }
+}
+
 /// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochResponse`]
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
