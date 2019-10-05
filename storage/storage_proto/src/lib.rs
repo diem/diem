@@ -359,6 +359,30 @@ impl IntoProto for GetTransactionsRequest {
     }
 }
 
+impl TryFrom<crate::proto::storage_prost::GetTransactionsRequest> for GetTransactionsRequest {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage_prost::GetTransactionsRequest) -> Result<Self> {
+        Ok(GetTransactionsRequest {
+            start_version: proto.start_version,
+            batch_size: proto.batch_size,
+            ledger_version: proto.ledger_version,
+            fetch_events: proto.fetch_events,
+        })
+    }
+}
+
+impl From<GetTransactionsRequest> for crate::proto::storage_prost::GetTransactionsRequest {
+    fn from(request: GetTransactionsRequest) -> Self {
+        Self {
+            start_version: request.start_version,
+            batch_size: request.batch_size,
+            ledger_version: request.ledger_version,
+            fetch_events: request.fetch_events,
+        }
+    }
+}
+
 /// Helper to construct and parse [`proto::storage::GetTransactionsResponse`]
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
