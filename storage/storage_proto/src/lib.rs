@@ -30,6 +30,7 @@ use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use proto_conv::{FromProto, IntoProto};
+use std::convert::TryFrom;
 use types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -67,6 +68,32 @@ impl FromProto for GetAccountStateWithProofByVersionRequest {
         let address = AccountAddress::from_proto(object.take_address())?;
         let version = object.get_version();
         Ok(Self { address, version })
+    }
+}
+
+impl TryFrom<crate::proto::storage_prost::GetAccountStateWithProofByVersionRequest>
+    for GetAccountStateWithProofByVersionRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        proto: crate::proto::storage_prost::GetAccountStateWithProofByVersionRequest,
+    ) -> Result<Self> {
+        let address = AccountAddress::try_from(&proto.address[..])?;
+        let version = proto.version;
+
+        Ok(Self { address, version })
+    }
+}
+
+impl From<GetAccountStateWithProofByVersionRequest>
+    for crate::proto::storage_prost::GetAccountStateWithProofByVersionRequest
+{
+    fn from(version: GetAccountStateWithProofByVersionRequest) -> Self {
+        Self {
+            address: version.address.into(),
+            version: version.version,
+        }
     }
 }
 
