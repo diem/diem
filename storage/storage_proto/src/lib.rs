@@ -636,6 +636,38 @@ impl GetLatestLedgerInfosPerEpochResponse {
     }
 }
 
+impl TryFrom<crate::proto::storage_prost::GetLatestLedgerInfosPerEpochResponse>
+    for GetLatestLedgerInfosPerEpochResponse
+{
+    type Error = Error;
+
+    fn try_from(
+        proto: crate::proto::storage_prost::GetLatestLedgerInfosPerEpochResponse,
+    ) -> Result<Self> {
+        Ok(Self {
+            latest_ledger_infos: proto
+                .latest_ledger_infos
+                .into_iter()
+                .map(TryFrom::try_from)
+                .collect::<Result<Vec<_>>>()?,
+        })
+    }
+}
+
+impl From<GetLatestLedgerInfosPerEpochResponse>
+    for crate::proto::storage_prost::GetLatestLedgerInfosPerEpochResponse
+{
+    fn from(response: GetLatestLedgerInfosPerEpochResponse) -> Self {
+        Self {
+            latest_ledger_infos: response
+                .latest_ledger_infos
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        }
+    }
+}
+
 impl Into<Vec<LedgerInfoWithSignatures>> for GetLatestLedgerInfosPerEpochResponse {
     fn into(self) -> Vec<LedgerInfoWithSignatures> {
         self.latest_ledger_infos
