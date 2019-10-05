@@ -32,7 +32,6 @@ use prometheus::{
     proto::MetricFamily,
     HistogramOpts, HistogramTimer, HistogramVec, IntCounterVec, Opts, Result,
 };
-use protobuf::Message;
 use std::str;
 
 #[derive(Clone)]
@@ -107,14 +106,6 @@ impl ServiceMetrics {
                 .with_label_values(&[name.as_str()])
                 .inc_by(if success { 0 } else { 1 });
         }
-    }
-
-    pub fn message<M: Message>(&self, message: &M) {
-        let computed_size = message.compute_size();
-        let message_fullname = message.descriptor().full_name();
-        self.message_size
-            .with_label_values(&[message_fullname])
-            .observe(f64::from(computed_size));
     }
 
     pub fn register_default(&self) -> Result<()> {
