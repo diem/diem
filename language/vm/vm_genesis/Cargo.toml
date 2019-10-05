@@ -12,7 +12,7 @@ failure = { path = "../../../common/failure_ext", package = "failure_ext" }
 transaction_builder = { path = "../../transaction_builder"}
 crypto = { path = "../../../crypto/crypto" }
 stdlib = { path = "../../stdlib" }
-proto_conv = { path = "../../../common/proto_conv", features = ["derive"] }
+prost-ext = { path = "../../../common/prost-ext" }
 state_view = { path = "../../../storage/state_view" }
 types = { path = "../../../types" }
 vm = { path = "../" }
