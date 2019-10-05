@@ -17,7 +17,7 @@ crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 generate-keypair = { path = "../generate-keypair" }
 logger = { path = "../../common/logger" }
-proto_conv = { path = "../../common/proto_conv", features = ["derive"] }
+prost-ext = { path = "../../common/prost-ext" }
 types = { path = "../../types" }
 vm_genesis = { path = "../../language/vm/vm_genesis" }
 

@@ -548,6 +548,12 @@ impl From<SignedTransaction> for crate::proto::types::SignedTransaction {
     }
 }
 
+impl From<SignatureCheckedTransaction> for crate::proto::types::SignedTransaction {
+    fn from(txn: SignatureCheckedTransaction) -> Self {
+        txn.0.into()
+    }
+}
+
 impl IntoProto for SignatureCheckedTransaction {
     type ProtoType = crate::proto::transaction::SignedTransaction;
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Convenience structs and functions for generating configuration for a swarm of libra nodes
-use crate::util::gen_genesis_transaction;
+use crate::util::gen_genesis_transaction_bytes;
 use config::{
     config::{
         BaseConfig, ConsensusConfig, NetworkConfig, NodeConfig, NodeConfigHelpers,
@@ -20,7 +20,6 @@ use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
 use logger::prelude::*;
 use parity_multiaddr::{Multiaddr, Protocol};
-use proto_conv::IntoProtoBytes;
 use std::{
     collections::BTreeMap,
     fs::{self, File},
@@ -211,9 +210,11 @@ impl SwarmConfig {
             None,
             is_ipv4,
         );
-        let raw_genesis_transaction =
-            gen_genesis_transaction(&faucet_key, &consensus_peers_config, &network_peers_config)
-                .into_proto_bytes()?;
+        let raw_genesis_transaction = gen_genesis_transaction_bytes(
+            &faucet_key,
+            &consensus_peers_config,
+            &network_peers_config,
+        );
         // Extract peer addresses from seed peer config.
         let peer_addresses: BTreeMap<_, _> =
             seed_peers_config.seed_peers.clone().into_iter().collect();

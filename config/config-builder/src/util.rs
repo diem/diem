@@ -6,7 +6,7 @@ use config::{
     trusted_peers::{ConfigHelpers, ConsensusPeersConfig, NetworkPeersConfig},
 };
 use crypto::{ed25519::*, test_utils::KeyPair};
-use proto_conv::IntoProtoBytes;
+use prost_ext::MessageExt;
 use rand::{Rng, SeedableRng};
 use std::{fs::File, io::prelude::*};
 use types::transaction::SignatureCheckedTransaction;
@@ -24,6 +24,20 @@ pub fn gen_genesis_transaction(
     )
 }
 
+pub fn gen_genesis_transaction_bytes(
+    faucet_account_keypair: &KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+    consensus_peers_config: &ConsensusPeersConfig,
+    network_peers_config: &NetworkPeersConfig,
+) -> Vec<u8> {
+    let genesis_transaction = gen_genesis_transaction(
+        faucet_account_keypair,
+        consensus_peers_config,
+        network_peers_config,
+    );
+    let genesis_transaction: types::proto::types::SignedTransaction = genesis_transaction.into();
+    genesis_transaction.to_vec().unwrap()
+}
+
 /// Returns the config as well as the genesis keyapir
 pub fn get_test_config() -> (NodeConfig, KeyPair<Ed25519PrivateKey, Ed25519PublicKey>) {
     // TODO: test config should be moved here instead of config crate
@@ -37,11 +51,11 @@ pub fn get_test_config() -> (NodeConfig, KeyPair<Ed25519PrivateKey, Ed25519Publi
     let keypair = KeyPair::from(private_key);
     let (_, test_consensus_peers, test_network_peers) = ConfigHelpers::gen_validator_nodes(1, None);
     let genesis_transaction =
-        gen_genesis_transaction(&keypair, &test_consensus_peers, &test_network_peers);
+        gen_genesis_transaction_bytes(&keypair, &test_consensus_peers, &test_network_peers);
     let mut genesis_transaction_file = File::create(&config.execution.genesis_file_location)
         .expect("[config] Failed to create file for storing genesis transaction");
     genesis_transaction_file
-        .write_all(&genesis_transaction.into_proto_bytes().unwrap())
+        .write_all(&genesis_transaction)
         .expect("[config] Failed to write genesis txn to file");
     (config, keypair)
 }
