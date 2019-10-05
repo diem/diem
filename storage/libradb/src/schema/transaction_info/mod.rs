@@ -15,11 +15,13 @@
 use crate::schema::TRANSACTION_INFO_CF_NAME;
 use byteorder::{BigEndian, ReadBytesExt};
 use failure::prelude::*;
-use proto_conv::{FromProtoBytes, IntoProtoBytes};
+use prost::Message;
+use prost_ext::MessageExt;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
 };
+use std::convert::TryInto;
 use std::mem::size_of;
 use types::transaction::{TransactionInfo, Version};
 
@@ -47,11 +49,12 @@ impl KeyCodec<TransactionInfoSchema> for Version {
 
 impl ValueCodec<TransactionInfoSchema> for TransactionInfo {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        self.clone().into_proto_bytes()
+        let event: types::proto::types::TransactionInfo = self.clone().into();
+        Ok(event.to_vec()?)
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
-        Self::from_proto_bytes(data)
+        types::proto::types::TransactionInfo::decode(data)?.try_into()
     }
 }
 

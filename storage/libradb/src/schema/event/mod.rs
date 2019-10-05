@@ -13,11 +13,13 @@
 use crate::schema::{ensure_slice_len_eq, EVENT_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::prelude::*;
-use proto_conv::{FromProtoBytes, IntoProtoBytes};
+use prost::Message;
+use prost_ext::MessageExt;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, SeekKeyCodec, ValueCodec},
 };
+use std::convert::TryInto;
 use std::mem::size_of;
 use types::{contract_event::ContractEvent, transaction::Version};
 
@@ -49,11 +51,12 @@ impl KeyCodec<EventSchema> for Key {
 
 impl ValueCodec<EventSchema> for ContractEvent {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        self.clone().into_proto_bytes()
+        let event: types::proto::types::Event = self.clone().into();
+        Ok(event.to_vec()?)
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
-        Self::from_proto_bytes(data)
+        types::proto::types::Event::decode(data)?.try_into()
     }
 }
 
