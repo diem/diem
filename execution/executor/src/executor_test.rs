@@ -21,7 +21,7 @@ use std::{
     sync::{mpsc, Arc},
 };
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
-use storage_proto::proto::storage_grpc::create_storage;
+use storage_proto::proto::storage::create_storage;
 use storage_service::StorageService;
 use types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},

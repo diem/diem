@@ -14,8 +14,8 @@
 //!       * In [`proto::storage_grpc`] live the [GRPC](grpc.io) client struct and the service trait
 //! which correspond to our Protocol Buffers services.
 //!   1. Structs we wrote manually as helpers to ease the manipulation of the above category of
-//! structs. By implementing the [`FromProto`](proto_conv::FromProto) and
-//! [`IntoProto`](proto_conv::IntoProto) traits, these structs convert from/to the above category of
+//! structs. By implementing the [`TryFrom`](std::convert::TryFrom) and
+//! [`From`](std::convert::From) traits, these structs convert from/to the above category of
 //! structs in a single method call and in that process data integrity check can be done. These live
 //! right in the root module of this crate (this page).
 //!
@@ -29,7 +29,6 @@ use crypto::HashValue;
 use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use std::convert::{TryFrom, TryInto};
 use types::{
     account_address::AccountAddress,
@@ -41,11 +40,7 @@ use types::{
 };
 
 /// Helper to construct and parse [`proto::storage::GetAccountStateWithProofByVersionRequest`]
-///
-/// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
-/// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(PartialEq, Eq, Clone, IntoProto)]
-#[ProtoType(crate::proto::storage::GetAccountStateWithProofByVersionRequest)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct GetAccountStateWithProofByVersionRequest {
     /// The access path to query with.
     pub address: AccountAddress,
@@ -61,23 +56,13 @@ impl GetAccountStateWithProofByVersionRequest {
     }
 }
 
-impl FromProto for GetAccountStateWithProofByVersionRequest {
-    type ProtoType = crate::proto::storage::GetAccountStateWithProofByVersionRequest;
-
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let address = AccountAddress::from_proto(object.take_address())?;
-        let version = object.get_version();
-        Ok(Self { address, version })
-    }
-}
-
-impl TryFrom<crate::proto::storage_prost::GetAccountStateWithProofByVersionRequest>
+impl TryFrom<crate::proto::storage::GetAccountStateWithProofByVersionRequest>
     for GetAccountStateWithProofByVersionRequest
 {
     type Error = Error;
 
     fn try_from(
-        proto: crate::proto::storage_prost::GetAccountStateWithProofByVersionRequest,
+        proto: crate::proto::storage::GetAccountStateWithProofByVersionRequest,
     ) -> Result<Self> {
         let address = AccountAddress::try_from(&proto.address[..])?;
         let version = proto.version;
@@ -87,7 +72,7 @@ impl TryFrom<crate::proto::storage_prost::GetAccountStateWithProofByVersionReque
 }
 
 impl From<GetAccountStateWithProofByVersionRequest>
-    for crate::proto::storage_prost::GetAccountStateWithProofByVersionRequest
+    for crate::proto::storage::GetAccountStateWithProofByVersionRequest
 {
     fn from(version: GetAccountStateWithProofByVersionRequest) -> Self {
         Self {
@@ -98,9 +83,6 @@ impl From<GetAccountStateWithProofByVersionRequest>
 }
 
 /// Helper to construct and parse [`proto::storage::GetAccountStateWithProofByVersionResponse`]
-///
-/// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
-/// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
 #[derive(PartialEq, Eq, Clone)]
 pub struct GetAccountStateWithProofByVersionResponse {
     /// The account state blob requested.
@@ -123,45 +105,13 @@ impl GetAccountStateWithProofByVersionResponse {
     }
 }
 
-impl FromProto for GetAccountStateWithProofByVersionResponse {
-    type ProtoType = crate::proto::storage::GetAccountStateWithProofByVersionResponse;
-
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let account_state_blob = if object.has_account_state_blob() {
-            Some(AccountStateBlob::from_proto(
-                object.take_account_state_blob(),
-            )?)
-        } else {
-            None
-        };
-        Ok(Self {
-            account_state_blob,
-            sparse_merkle_proof: SparseMerkleProof::from_proto(object.take_sparse_merkle_proof())?,
-        })
-    }
-}
-
-impl IntoProto for GetAccountStateWithProofByVersionResponse {
-    type ProtoType = crate::proto::storage::GetAccountStateWithProofByVersionResponse;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut object = Self::ProtoType::new();
-
-        if let Some(account_state_blob) = self.account_state_blob {
-            object.set_account_state_blob(account_state_blob.into_proto());
-        }
-        object.set_sparse_merkle_proof(self.sparse_merkle_proof.into_proto());
-        object
-    }
-}
-
-impl TryFrom<crate::proto::storage_prost::GetAccountStateWithProofByVersionResponse>
+impl TryFrom<crate::proto::storage::GetAccountStateWithProofByVersionResponse>
     for GetAccountStateWithProofByVersionResponse
 {
     type Error = Error;
 
     fn try_from(
-        proto: crate::proto::storage_prost::GetAccountStateWithProofByVersionResponse,
+        proto: crate::proto::storage::GetAccountStateWithProofByVersionResponse,
     ) -> Result<Self> {
         let account_state_blob = proto
             .account_state_blob
@@ -177,7 +127,7 @@ impl TryFrom<crate::proto::storage_prost::GetAccountStateWithProofByVersionRespo
 }
 
 impl From<GetAccountStateWithProofByVersionResponse>
-    for crate::proto::storage_prost::GetAccountStateWithProofByVersionResponse
+    for crate::proto::storage::GetAccountStateWithProofByVersionResponse
 {
     fn from(response: GetAccountStateWithProofByVersionResponse) -> Self {
         Self {
@@ -196,9 +146,6 @@ impl Into<(Option<AccountStateBlob>, SparseMerkleProof)>
 }
 
 /// Helper to construct and parse [`proto::storage::SaveTransactionsRequest`]
-///
-/// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
-/// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct SaveTransactionsRequest {
@@ -222,54 +169,10 @@ impl SaveTransactionsRequest {
     }
 }
 
-impl FromProto for SaveTransactionsRequest {
-    type ProtoType = crate::proto::storage::SaveTransactionsRequest;
-
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let txns_to_commit = object
-            .take_txns_to_commit()
-            .into_iter()
-            .map(TransactionToCommit::from_proto)
-            .collect::<Result<Vec<_>>>()?;
-        let first_version = object.get_first_version();
-        let ledger_info_with_signatures = object
-            .ledger_info_with_signatures
-            .take()
-            .map(LedgerInfoWithSignatures::from_proto)
-            .transpose()?;
-
-        Ok(Self {
-            txns_to_commit,
-            first_version,
-            ledger_info_with_signatures,
-        })
-    }
-}
-
-impl IntoProto for SaveTransactionsRequest {
-    type ProtoType = crate::proto::storage::SaveTransactionsRequest;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_txns_to_commit(::protobuf::RepeatedField::from_vec(
-            self.txns_to_commit
-                .into_iter()
-                .map(TransactionToCommit::into_proto)
-                .collect::<Vec<_>>(),
-        ));
-        proto.set_first_version(self.first_version);
-        if let Some(x) = self.ledger_info_with_signatures {
-            proto.set_ledger_info_with_signatures(x.into_proto())
-        }
-
-        proto
-    }
-}
-
-impl TryFrom<crate::proto::storage_prost::SaveTransactionsRequest> for SaveTransactionsRequest {
+impl TryFrom<crate::proto::storage::SaveTransactionsRequest> for SaveTransactionsRequest {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage_prost::SaveTransactionsRequest) -> Result<Self> {
+    fn try_from(proto: crate::proto::storage::SaveTransactionsRequest) -> Result<Self> {
         let txns_to_commit = proto
             .txns_to_commit
             .into_iter()
@@ -289,7 +192,7 @@ impl TryFrom<crate::proto::storage_prost::SaveTransactionsRequest> for SaveTrans
     }
 }
 
-impl From<SaveTransactionsRequest> for crate::proto::storage_prost::SaveTransactionsRequest {
+impl From<SaveTransactionsRequest> for crate::proto::storage::SaveTransactionsRequest {
     fn from(request: SaveTransactionsRequest) -> Self {
         let txns_to_commit = request.txns_to_commit.into_iter().map(Into::into).collect();
         let first_version = request.first_version;
@@ -304,9 +207,6 @@ impl From<SaveTransactionsRequest> for crate::proto::storage_prost::SaveTransact
 }
 
 /// Helper to construct and parse [`proto::storage::GetTransactionsRequest`]
-///
-/// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
-/// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct GetTransactionsRequest {
@@ -333,36 +233,10 @@ impl GetTransactionsRequest {
     }
 }
 
-impl FromProto for GetTransactionsRequest {
-    type ProtoType = crate::proto::storage::GetTransactionsRequest;
-
-    fn from_proto(object: Self::ProtoType) -> Result<Self> {
-        Ok(GetTransactionsRequest {
-            start_version: object.get_start_version(),
-            batch_size: object.get_batch_size(),
-            ledger_version: object.get_ledger_version(),
-            fetch_events: object.get_fetch_events(),
-        })
-    }
-}
-
-impl IntoProto for GetTransactionsRequest {
-    type ProtoType = crate::proto::storage::GetTransactionsRequest;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut out = Self::ProtoType::new();
-        out.set_start_version(self.start_version);
-        out.set_batch_size(self.batch_size);
-        out.set_ledger_version(self.ledger_version);
-        out.set_fetch_events(self.fetch_events);
-        out
-    }
-}
-
-impl TryFrom<crate::proto::storage_prost::GetTransactionsRequest> for GetTransactionsRequest {
+impl TryFrom<crate::proto::storage::GetTransactionsRequest> for GetTransactionsRequest {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage_prost::GetTransactionsRequest) -> Result<Self> {
+    fn try_from(proto: crate::proto::storage::GetTransactionsRequest) -> Result<Self> {
         Ok(GetTransactionsRequest {
             start_version: proto.start_version,
             batch_size: proto.batch_size,
@@ -372,7 +246,7 @@ impl TryFrom<crate::proto::storage_prost::GetTransactionsRequest> for GetTransac
     }
 }
 
-impl From<GetTransactionsRequest> for crate::proto::storage_prost::GetTransactionsRequest {
+impl From<GetTransactionsRequest> for crate::proto::storage::GetTransactionsRequest {
     fn from(request: GetTransactionsRequest) -> Self {
         Self {
             start_version: request.start_version,
@@ -384,12 +258,8 @@ impl From<GetTransactionsRequest> for crate::proto::storage_prost::GetTransactio
 }
 
 /// Helper to construct and parse [`proto::storage::GetTransactionsResponse`]
-///
-/// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
-/// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[ProtoType(crate::proto::storage::GetTransactionsResponse)]
 pub struct GetTransactionsResponse {
     pub txn_list_with_proof: TransactionListWithProof,
 }
@@ -403,10 +273,10 @@ impl GetTransactionsResponse {
     }
 }
 
-impl TryFrom<crate::proto::storage_prost::GetTransactionsResponse> for GetTransactionsResponse {
+impl TryFrom<crate::proto::storage::GetTransactionsResponse> for GetTransactionsResponse {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage_prost::GetTransactionsResponse) -> Result<Self> {
+    fn try_from(proto: crate::proto::storage::GetTransactionsResponse) -> Result<Self> {
         Ok(GetTransactionsResponse {
             txn_list_with_proof: proto
                 .txn_list_with_proof
@@ -416,7 +286,7 @@ impl TryFrom<crate::proto::storage_prost::GetTransactionsResponse> for GetTransa
     }
 }
 
-impl From<GetTransactionsResponse> for crate::proto::storage_prost::GetTransactionsResponse {
+impl From<GetTransactionsResponse> for crate::proto::storage::GetTransactionsResponse {
     fn from(response: GetTransactionsResponse) -> Self {
         Self {
             txn_list_with_proof: Some(response.txn_list_with_proof.into()),
@@ -425,9 +295,6 @@ impl From<GetTransactionsResponse> for crate::proto::storage_prost::GetTransacti
 }
 
 /// Helper to construct and parse [`proto::storage::StartupInfo`]
-///
-/// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
-/// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct StartupInfo {
@@ -437,50 +304,10 @@ pub struct StartupInfo {
     pub ledger_frozen_subtree_hashes: Vec<HashValue>,
 }
 
-impl FromProto for StartupInfo {
-    type ProtoType = crate::proto::storage::StartupInfo;
-
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let ledger_info = LedgerInfo::from_proto(object.take_ledger_info())?;
-        let latest_version = object.get_latest_version();
-        let account_state_root_hash = HashValue::from_proto(object.take_account_state_root_hash())?;
-        let ledger_frozen_subtree_hashes = object
-            .take_ledger_frozen_subtree_hashes()
-            .into_iter()
-            .map(HashValue::from_proto)
-            .collect::<Result<Vec<_>>>()?;
-
-        Ok(Self {
-            ledger_info,
-            latest_version,
-            account_state_root_hash,
-            ledger_frozen_subtree_hashes,
-        })
-    }
-}
-
-impl IntoProto for StartupInfo {
-    type ProtoType = crate::proto::storage::StartupInfo;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_ledger_info(self.ledger_info.into_proto());
-        proto.set_latest_version(self.latest_version);
-        proto.set_account_state_root_hash(self.account_state_root_hash.into_proto());
-        proto.set_ledger_frozen_subtree_hashes(protobuf::RepeatedField::from_vec(
-            self.ledger_frozen_subtree_hashes
-                .into_iter()
-                .map(HashValue::into_proto)
-                .collect::<Vec<_>>(),
-        ));
-        proto
-    }
-}
-
-impl TryFrom<crate::proto::storage_prost::StartupInfo> for StartupInfo {
+impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage_prost::StartupInfo) -> Result<Self> {
+    fn try_from(proto: crate::proto::storage::StartupInfo) -> Result<Self> {
         let ledger_info = LedgerInfo::try_from(proto.ledger_info.unwrap_or_else(Default::default))?;
         let latest_version = proto.latest_version;
         let account_state_root_hash = HashValue::from_slice(&proto.account_state_root_hash[..])?;
@@ -500,7 +327,7 @@ impl TryFrom<crate::proto::storage_prost::StartupInfo> for StartupInfo {
     }
 }
 
-impl From<StartupInfo> for crate::proto::storage_prost::StartupInfo {
+impl From<StartupInfo> for crate::proto::storage::StartupInfo {
     fn from(info: StartupInfo) -> Self {
         let ledger_info = Some(info.ledger_info.into());
         let latest_version = info.latest_version;
@@ -521,52 +348,23 @@ impl From<StartupInfo> for crate::proto::storage_prost::StartupInfo {
 }
 
 /// Helper to construct and parse [`proto::storage::GetStartupInfoResponse`]
-///
-/// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
-/// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct GetStartupInfoResponse {
     pub info: Option<StartupInfo>,
 }
 
-impl FromProto for GetStartupInfoResponse {
-    type ProtoType = crate::proto::storage::GetStartupInfoResponse;
-
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let info = if object.has_info() {
-            Some(StartupInfo::from_proto(object.take_info())?)
-        } else {
-            None
-        };
-
-        Ok(Self { info })
-    }
-}
-
-impl IntoProto for GetStartupInfoResponse {
-    type ProtoType = crate::proto::storage::GetStartupInfoResponse;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        if let Some(info) = self.info {
-            proto.set_info(info.into_proto())
-        }
-        proto
-    }
-}
-
-impl TryFrom<crate::proto::storage_prost::GetStartupInfoResponse> for GetStartupInfoResponse {
+impl TryFrom<crate::proto::storage::GetStartupInfoResponse> for GetStartupInfoResponse {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage_prost::GetStartupInfoResponse) -> Result<Self> {
+    fn try_from(proto: crate::proto::storage::GetStartupInfoResponse) -> Result<Self> {
         let info = proto.info.map(StartupInfo::try_from).transpose()?;
 
         Ok(Self { info })
     }
 }
 
-impl From<GetStartupInfoResponse> for crate::proto::storage_prost::GetStartupInfoResponse {
+impl From<GetStartupInfoResponse> for crate::proto::storage::GetStartupInfoResponse {
     fn from(response: GetStartupInfoResponse) -> Self {
         Self {
             info: response.info.map(Into::into),
@@ -575,12 +373,8 @@ impl From<GetStartupInfoResponse> for crate::proto::storage_prost::GetStartupInf
 }
 
 /// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochRequest`]
-///
-/// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
-/// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[ProtoType(crate::proto::storage::GetLatestLedgerInfosPerEpochRequest)]
 pub struct GetLatestLedgerInfosPerEpochRequest {
     pub start_epoch: u64,
 }
@@ -592,14 +386,12 @@ impl GetLatestLedgerInfosPerEpochRequest {
     }
 }
 
-impl TryFrom<crate::proto::storage_prost::GetLatestLedgerInfosPerEpochRequest>
+impl TryFrom<crate::proto::storage::GetLatestLedgerInfosPerEpochRequest>
     for GetLatestLedgerInfosPerEpochRequest
 {
     type Error = Error;
 
-    fn try_from(
-        proto: crate::proto::storage_prost::GetLatestLedgerInfosPerEpochRequest,
-    ) -> Result<Self> {
+    fn try_from(proto: crate::proto::storage::GetLatestLedgerInfosPerEpochRequest) -> Result<Self> {
         Ok(Self {
             start_epoch: proto.start_epoch,
         })
@@ -607,7 +399,7 @@ impl TryFrom<crate::proto::storage_prost::GetLatestLedgerInfosPerEpochRequest>
 }
 
 impl From<GetLatestLedgerInfosPerEpochRequest>
-    for crate::proto::storage_prost::GetLatestLedgerInfosPerEpochRequest
+    for crate::proto::storage::GetLatestLedgerInfosPerEpochRequest
 {
     fn from(request: GetLatestLedgerInfosPerEpochRequest) -> Self {
         Self {
@@ -617,12 +409,8 @@ impl From<GetLatestLedgerInfosPerEpochRequest>
 }
 
 /// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochResponse`]
-///
-/// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
-/// providing [`into_proto`](IntoProto::into_proto) and [`from_proto`](FromProto::from_proto).
-#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[ProtoType(crate::proto::storage::GetLatestLedgerInfosPerEpochResponse)]
 pub struct GetLatestLedgerInfosPerEpochResponse {
     pub latest_ledger_infos: Vec<LedgerInfoWithSignatures>,
 }
@@ -636,13 +424,13 @@ impl GetLatestLedgerInfosPerEpochResponse {
     }
 }
 
-impl TryFrom<crate::proto::storage_prost::GetLatestLedgerInfosPerEpochResponse>
+impl TryFrom<crate::proto::storage::GetLatestLedgerInfosPerEpochResponse>
     for GetLatestLedgerInfosPerEpochResponse
 {
     type Error = Error;
 
     fn try_from(
-        proto: crate::proto::storage_prost::GetLatestLedgerInfosPerEpochResponse,
+        proto: crate::proto::storage::GetLatestLedgerInfosPerEpochResponse,
     ) -> Result<Self> {
         Ok(Self {
             latest_ledger_infos: proto
@@ -655,7 +443,7 @@ impl TryFrom<crate::proto::storage_prost::GetLatestLedgerInfosPerEpochResponse>
 }
 
 impl From<GetLatestLedgerInfosPerEpochResponse>
-    for crate::proto::storage_prost::GetLatestLedgerInfosPerEpochResponse
+    for crate::proto::storage::GetLatestLedgerInfosPerEpochResponse
 {
     fn from(response: GetLatestLedgerInfosPerEpochResponse) -> Self {
         Self {
