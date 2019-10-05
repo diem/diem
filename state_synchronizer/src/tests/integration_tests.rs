@@ -22,7 +22,6 @@ use network::{
     NetworkPublicKeys, ProtocolId,
 };
 use parity_multiaddr::Multiaddr;
-use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::HashMap,
@@ -40,7 +39,7 @@ use types::{
     ledger_info::LedgerInfo as TypesLedgerInfo,
     proof::AccumulatorProof,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{SignedTransaction, TransactionInfo, TransactionListWithProof},
+    transaction::{TransactionInfo, TransactionListWithProof},
     vm_error::StatusCode,
 };
 use vm_genesis::GENESIS_KEYPAIR;
@@ -92,8 +91,7 @@ impl MockExecutorProxy {
             GENESIS_KEYPAIR.0.clone(),
             GENESIS_KEYPAIR.1.clone(),
             Some(program),
-        )
-        .into_proto();
+        );
 
         let txn_info = TransactionInfo::new(
             HashValue::zero(),
@@ -104,10 +102,7 @@ impl MockExecutorProxy {
         );
         let accumulator_proof = AccumulatorProof::new(vec![]);
         let txns = TransactionListWithProof::new(
-            vec![(
-                SignedTransaction::from_proto(transaction).unwrap(),
-                txn_info,
-            )],
+            vec![(transaction, txn_info)],
             None,
             Some(version + 1),
             Some(accumulator_proof),
