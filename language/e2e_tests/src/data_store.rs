@@ -6,9 +6,9 @@
 use crate::account::AccountData;
 use failure::prelude::*;
 use lazy_static::lazy_static;
-use proto_conv::FromProto;
-use protobuf::parse_from_bytes;
+use prost::Message;
 use state_view::StateView;
+use std::convert::TryFrom;
 use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
 use types::{
     access_path::AccessPath,
@@ -52,7 +52,10 @@ fn load_genesis(path: PathBuf) -> WriteSet {
     let mut f = File::open(&path).unwrap();
     let mut bytes = vec![];
     f.read_to_end(&mut bytes).unwrap();
-    let txn = SignedTransaction::from_proto(parse_from_bytes(&bytes).unwrap()).unwrap();
+    let txn = SignedTransaction::try_from(
+        types::proto::types::SignedTransaction::decode(&bytes).unwrap(),
+    )
+    .unwrap();
     match txn.payload() {
         TransactionPayload::WriteSet(ws) => ws.clone(),
         _ => panic!("Expected writeset txn in genesis txn"),
