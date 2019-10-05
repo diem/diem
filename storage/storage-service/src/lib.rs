@@ -15,22 +15,20 @@ use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure
 use libradb::LibraDB;
 use logger::prelude::*;
 use metrics::counters::SVC_COUNTERS;
-use proto_conv::{FromProto, IntoProto};
 use std::{
+    convert::TryFrom,
     ops::Deref,
     path::Path,
     sync::{mpsc, Arc, Mutex},
 };
-use storage_proto::proto::{
-    storage::{
-        GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
-        GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
-        GetStartupInfoRequest, GetStartupInfoResponse, GetTransactionsRequest,
-        GetTransactionsResponse, SaveTransactionsRequest, SaveTransactionsResponse,
-    },
-    storage_grpc::{create_storage, Storage},
+use storage_proto::proto::storage::{
+    create_storage, GetAccountStateWithProofByVersionRequest,
+    GetAccountStateWithProofByVersionResponse, GetLatestLedgerInfosPerEpochRequest,
+    GetLatestLedgerInfosPerEpochResponse, GetStartupInfoRequest, GetStartupInfoResponse,
+    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
+    SaveTransactionsResponse, Storage,
 };
-use types::proto::get_with_proof::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
+use types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
 
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
@@ -142,7 +140,7 @@ impl StorageService {
         &self,
         req: UpdateToLatestLedgerRequest,
     ) -> Result<UpdateToLatestLedgerResponse> {
-        let rust_req = types::get_with_proof::UpdateToLatestLedgerRequest::from_proto(req)?;
+        let rust_req = types::get_with_proof::UpdateToLatestLedgerRequest::try_from(req)?;
 
         let (
             response_items,
@@ -160,14 +158,14 @@ impl StorageService {
             ledger_consistency_proof,
         };
 
-        Ok(rust_resp.into_proto())
+        Ok(rust_resp.into())
     }
 
     fn get_transactions_inner(
         &self,
         req: GetTransactionsRequest,
     ) -> Result<GetTransactionsResponse> {
-        let rust_req = storage_proto::GetTransactionsRequest::from_proto(req)?;
+        let rust_req = storage_proto::GetTransactionsRequest::try_from(req)?;
 
         let txn_list_with_proof = self.db.get_transactions(
             rust_req.start_version,
@@ -178,14 +176,14 @@ impl StorageService {
 
         let rust_resp = storage_proto::GetTransactionsResponse::new(txn_list_with_proof);
 
-        Ok(rust_resp.into_proto())
+        Ok(rust_resp.into())
     }
 
     fn get_account_state_with_proof_by_version_inner(
         &self,
         req: GetAccountStateWithProofByVersionRequest,
     ) -> Result<GetAccountStateWithProofByVersionResponse> {
-        let rust_req = storage_proto::GetAccountStateWithProofByVersionRequest::from_proto(req)?;
+        let rust_req = storage_proto::GetAccountStateWithProofByVersionRequest::try_from(req)?;
 
         let (account_state_blob, sparse_merkle_proof) = self
             .db
@@ -196,38 +194,38 @@ impl StorageService {
             sparse_merkle_proof,
         };
 
-        Ok(rust_resp.into_proto())
+        Ok(rust_resp.into())
     }
 
     fn save_transactions_inner(
         &self,
         req: SaveTransactionsRequest,
     ) -> Result<SaveTransactionsResponse> {
-        let rust_req = storage_proto::SaveTransactionsRequest::from_proto(req)?;
+        let rust_req = storage_proto::SaveTransactionsRequest::try_from(req)?;
         self.db.save_transactions(
             &rust_req.txns_to_commit,
             rust_req.first_version,
             &rust_req.ledger_info_with_signatures,
         )?;
-        Ok(SaveTransactionsResponse::new())
+        Ok(SaveTransactionsResponse::default())
     }
 
     fn get_startup_info_inner(&self) -> Result<GetStartupInfoResponse> {
         let info = self.db.get_startup_info()?;
         let rust_resp = storage_proto::GetStartupInfoResponse { info };
-        Ok(rust_resp.into_proto())
+        Ok(rust_resp.into())
     }
 
     fn get_latest_ledger_infos_per_epoch_inner(
         &self,
         req: GetLatestLedgerInfosPerEpochRequest,
     ) -> Result<GetLatestLedgerInfosPerEpochResponse> {
-        let rust_req = storage_proto::GetLatestLedgerInfosPerEpochRequest::from_proto(req)?;
+        let rust_req = storage_proto::GetLatestLedgerInfosPerEpochRequest::try_from(req)?;
         let ledger_infos = self
             .db
             .get_latest_ledger_infos_per_epoch(rust_req.start_epoch)?;
         let rust_resp = storage_proto::GetLatestLedgerInfosPerEpochResponse::new(ledger_infos);
-        Ok(rust_resp.into_proto())
+        Ok(rust_resp.into())
     }
 }
 

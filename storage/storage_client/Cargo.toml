@@ -9,13 +9,11 @@ edition = "2018"
 [dependencies]
 futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["compat"] }
 futures_01 = { version = "0.1.28", package = "futures" }
-grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["protobuf-codec"] }
-protobuf = "~2.7"
+grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 rand = "0.6.5"
 crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 metrics = { path = "../../common/metrics" }
-proto_conv = { path = "../../common/proto_conv" }
 scratchpad = { path = "../scratchpad" }
 state_view = { path = "../state_view" }
 storage_proto = { path = "../storage_proto" }
