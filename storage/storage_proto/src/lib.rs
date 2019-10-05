@@ -155,6 +155,38 @@ impl IntoProto for GetAccountStateWithProofByVersionResponse {
     }
 }
 
+impl TryFrom<crate::proto::storage_prost::GetAccountStateWithProofByVersionResponse>
+    for GetAccountStateWithProofByVersionResponse
+{
+    type Error = Error;
+
+    fn try_from(
+        proto: crate::proto::storage_prost::GetAccountStateWithProofByVersionResponse,
+    ) -> Result<Self> {
+        let account_state_blob = proto
+            .account_state_blob
+            .map(AccountStateBlob::try_from)
+            .transpose()?;
+        Ok(Self {
+            account_state_blob,
+            sparse_merkle_proof: SparseMerkleProof::try_from(
+                proto.sparse_merkle_proof.unwrap_or_else(Default::default),
+            )?,
+        })
+    }
+}
+
+impl From<GetAccountStateWithProofByVersionResponse>
+    for crate::proto::storage_prost::GetAccountStateWithProofByVersionResponse
+{
+    fn from(response: GetAccountStateWithProofByVersionResponse) -> Self {
+        Self {
+            account_state_blob: response.account_state_blob.map(Into::into),
+            sparse_merkle_proof: Some(response.sparse_merkle_proof.into()),
+        }
+    }
+}
+
 impl Into<(Option<AccountStateBlob>, SparseMerkleProof)>
     for GetAccountStateWithProofByVersionResponse
 {
