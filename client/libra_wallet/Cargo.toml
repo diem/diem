@@ -28,9 +28,6 @@ package = "crypto"
 [dependencies.canonical_serialization]
 path = "../../common/canonical_serialization"
 
-[dependencies.proto_conv]
-path = "../../common/proto_conv"
-
 [dependencies.failure]
 path = "../../common/failure_ext"
 package = "failure_ext"
