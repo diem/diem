@@ -7,12 +7,11 @@ use canonical_serialization::SimpleSerializer;
 use crypto::{ed25519::*, HashValue};
 use failure::prelude::*;
 use futures::prelude::*;
-use proto_conv::{FromProto, IntoProto};
 use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,
 };
-use std::{collections::BTreeMap, pin::Pin};
+use std::{collections::BTreeMap, convert::TryFrom, pin::Pin};
 use storage_client::StorageRead;
 use storage_proto::StartupInfo;
 use types::{
@@ -23,17 +22,12 @@ use types::{
     get_with_proof::{RequestItem, ResponseItem},
     proof::AccumulatorConsistencyProof,
     proof::SparseMerkleProof,
-    proto::{
-        account_state_blob::AccountStateWithProof,
-        get_with_proof::{
-            GetAccountStateResponse, GetTransactionsResponse, RequestItem as ProtoRequestItem,
-            RequestItem_oneof_requested_items, ResponseItem as ProtoResponseItem,
-            UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
-        },
-        ledger_info::LedgerInfoWithSignatures as ProtoLedgerInfoWithSignatures,
-        proof::AccumulatorProof,
-        transaction::TransactionListWithProof,
-        transaction_info::TransactionInfo,
+    proto::types::{
+        request_item::RequestedItems, response_item::ResponseItems, AccountStateWithProof,
+        AccumulatorProof, GetAccountStateResponse, GetTransactionsResponse,
+        LedgerInfoWithSignatures as ProtoLedgerInfoWithSignatures, RequestItem as ProtoRequestItem,
+        ResponseItem as ProtoResponseItem, TransactionInfo, TransactionListWithProof,
+        UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::Version,
@@ -62,10 +56,10 @@ impl StorageRead for MockStorageReadClient {
             client_known_version,
             request_items,
         );
-        let proto_request = request.into_proto();
+        let proto_request = request.into();
         let proto_response = get_mock_update_to_latest_ledger(&proto_request);
         let response =
-            types::get_with_proof::UpdateToLatestLedgerResponse::from_proto(proto_response)?;
+            types::get_with_proof::UpdateToLatestLedgerResponse::try_from(proto_response)?;
         Ok((
             response.response_items,
             response.ledger_info_with_sigs,
@@ -163,28 +157,28 @@ impl StorageRead for MockStorageReadClient {
 fn get_mock_update_to_latest_ledger(
     req: &UpdateToLatestLedgerRequest,
 ) -> UpdateToLatestLedgerResponse {
-    let mut resp = UpdateToLatestLedgerResponse::new();
-    for request_item in req.get_requested_items().iter() {
-        resp.mut_response_items()
+    let mut resp = UpdateToLatestLedgerResponse::default();
+    for request_item in req.requested_items.iter() {
+        resp.response_items
             .push(get_mock_response_item(request_item).unwrap());
     }
-    let mut ledger_info = types::proto::ledger_info::LedgerInfo::new();
-    ledger_info.set_transaction_accumulator_hash(HashValue::zero().to_vec());
-    ledger_info.set_consensus_data_hash(HashValue::zero().to_vec());
-    ledger_info.set_consensus_block_id(HashValue::zero().to_vec());
-    ledger_info.set_version(7);
-    let mut ledger_info_with_sigs = ProtoLedgerInfoWithSignatures::new();
-    ledger_info_with_sigs.set_ledger_info(ledger_info);
-    resp.set_ledger_info_with_sigs(ledger_info_with_sigs);
+    let mut ledger_info = types::proto::types::LedgerInfo::default();
+    ledger_info.transaction_accumulator_hash = HashValue::zero().to_vec();
+    ledger_info.consensus_data_hash = HashValue::zero().to_vec();
+    ledger_info.consensus_block_id = HashValue::zero().to_vec();
+    ledger_info.version = 7;
+    let mut ledger_info_with_sigs = ProtoLedgerInfoWithSignatures::default();
+    ledger_info_with_sigs.ledger_info = Some(ledger_info);
+    resp.ledger_info_with_sigs = Some(ledger_info_with_sigs);
     resp
 }
 
 fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoResponseItem> {
-    let mut response_item = ProtoResponseItem::new();
+    let mut response_item = ProtoResponseItem::default();
     if let Some(ref requested_item) = request_item.requested_items {
         match requested_item {
-            RequestItem_oneof_requested_items::get_account_state_request(_request) => {
-                let mut resp = GetAccountStateResponse::new();
+            RequestedItems::GetAccountStateRequest(_request) => {
+                let mut resp = GetAccountStateResponse::default();
                 let mut version_data = BTreeMap::new();
 
                 let account_resource = types::account_config::AccountResource::new(
@@ -200,12 +194,13 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                     types::account_config::account_resource_path(),
                     SimpleSerializer::serialize(&account_resource)?,
                 );
-                let mut account_state_with_proof = AccountStateWithProof::new();
-                let blob = AccountStateBlob::from(
-                    SimpleSerializer::<Vec<u8>>::serialize(&version_data)?
-                ).into_proto();
+                let mut account_state_with_proof = AccountStateWithProof::default();
+                let blob =
+                    AccountStateBlob::from(SimpleSerializer::<Vec<u8>>::serialize(&version_data)?)
+                        .into();
                 let proof = {
-                    let ledger_info_to_transaction_info_proof = types::proof::AccumulatorProof::new(vec![]);
+                    let ledger_info_to_transaction_info_proof =
+                        types::proof::AccumulatorProof::new(vec![]);
                     let transaction_info = types::transaction::TransactionInfo::new(
                         HashValue::zero(),
                         HashValue::zero(),
@@ -213,43 +208,45 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                         0,
                         StatusCode::UNKNOWN_STATUS,
                     );
-                    let transaction_info_to_account_proof = types::proof::SparseMerkleProof::new(None, vec![]);
+                    let transaction_info_to_account_proof =
+                        types::proof::SparseMerkleProof::new(None, vec![]);
                     types::proof::AccountStateProof::new(
                         ledger_info_to_transaction_info_proof,
                         transaction_info,
                         transaction_info_to_account_proof,
-                    ).into_proto()
+                    )
+                    .into()
                 };
-                account_state_with_proof.set_blob(blob);
-                account_state_with_proof.set_proof(proof);
-                resp.set_account_state_with_proof(account_state_with_proof);
-                response_item.set_get_account_state_response(resp);
+                account_state_with_proof.blob = Some(blob);
+                account_state_with_proof.proof = Some(proof);
+                resp.account_state_with_proof = Some(account_state_with_proof);
+                response_item.response_items = Some(ResponseItems::GetAccountStateResponse(resp));
             }
-            RequestItem_oneof_requested_items::get_account_transaction_by_sequence_number_request(_request) => {
+            RequestedItems::GetAccountTransactionBySequenceNumberRequest(_request) => {
                 unimplemented!();
             }
-            RequestItem_oneof_requested_items::get_events_by_event_access_path_request(_request) => {
+            RequestedItems::GetEventsByEventAccessPathRequest(_request) => {
                 unimplemented!();
             }
-            RequestItem_oneof_requested_items::get_transactions_request(request) => {
-                let mut ret = TransactionListWithProof::new();
+            RequestedItems::GetTransactionsRequest(request) => {
+                let mut ret = TransactionListWithProof::default();
                 let sender = AccountAddress::new([1; ADDRESS_LENGTH]);
                 if request.limit > 0 {
                     let (txns, infos) = get_mock_txn_data(sender, 0, request.limit - 1);
                     if !txns.is_empty() {
-                        ret.set_proof_of_first_transaction(get_accumulator_proof());
+                        ret.proof_of_first_transaction = Some(get_accumulator_proof());
                     }
                     if txns.len() >= 2 {
-                        ret.set_proof_of_last_transaction(get_accumulator_proof());
+                        ret.proof_of_last_transaction = Some(get_accumulator_proof());
                     }
-                    ret.set_transactions(protobuf::RepeatedField::from_vec(txns));
-                    ret.set_infos(protobuf::RepeatedField::from_vec(infos));
+                    ret.transactions = txns;
+                    ret.infos = infos;
                 }
 
-                let mut resp = GetTransactionsResponse::new();
-                resp.set_txn_list_with_proof(ret);
+                let mut resp = GetTransactionsResponse::default();
+                resp.txn_list_with_proof = Some(ret);
 
-                response_item.set_get_transactions_response(resp);
+                response_item.response_items = Some(ResponseItems::GetTransactionsResponse(resp));
             }
         }
     }
@@ -261,7 +258,7 @@ fn get_mock_txn_data(
     start_seq: u64,
     end_seq: u64,
 ) -> (
-    Vec<types::proto::transaction::SignedTransaction>,
+    Vec<types::proto::types::SignedTransaction>,
     Vec<TransactionInfo>,
 ) {
     let mut seed_rng = OsRng::new().expect("can't access OsRng");
@@ -272,17 +269,17 @@ fn get_mock_txn_data(
     let mut infos = vec![];
     for i in start_seq..=end_seq {
         let signed_txn =
-            get_test_signed_txn(address, i, priv_key.clone(), pub_key.clone(), None).into_proto();
+            get_test_signed_txn(address, i, priv_key.clone(), pub_key.clone(), None).into();
         txns.push(signed_txn);
 
-        let info = get_transaction_info().into_proto();
+        let info = get_transaction_info().into();
         infos.push(info);
     }
     (txns, infos)
 }
 
 fn get_accumulator_proof() -> AccumulatorProof {
-    types::proof::AccumulatorProof::new(vec![]).into_proto()
+    types::proof::AccumulatorProof::new(vec![]).into()
 }
 
 fn get_transaction_info() -> types::transaction::TransactionInfo {

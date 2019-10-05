@@ -22,7 +22,6 @@ grpc_helpers = { path = "../../common/grpc_helpers" }
 libradb = { path = "../libradb" }
 logger = { path = "../../common/logger" }
 metrics = { path = "../../common/metrics" }
-proto_conv = { path = "../../common/proto_conv", features = ["derive"] }
 storage_client = { path = "../storage_client" }
 storage_proto = { path = "../storage_proto" }
 types = { path = "../../types" }
