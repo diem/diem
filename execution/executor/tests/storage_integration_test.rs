@@ -9,7 +9,6 @@ use failure::prelude::*;
 use futures::executor::block_on;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
-use proto_conv::{FromProto, IntoProto};
 use rand::SeedableRng;
 use std::{collections::HashMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
@@ -83,10 +82,7 @@ fn get_test_signed_transaction(
     public_key: Ed25519PublicKey,
     program: Option<Script>,
 ) -> SignedTransaction {
-    SignedTransaction::from_proto(
-        get_test_signed_txn(sender, sequence_number, private_key, public_key, program).into_proto(),
-    )
-    .unwrap()
+    get_test_signed_txn(sender, sequence_number, private_key, public_key, program)
 }
 
 #[test]

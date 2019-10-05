@@ -21,7 +21,7 @@ crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 logger = { path = "../../common/logger" }
 metrics = { path = "../../common/metrics" }
-proto_conv = { path = "../../common/proto_conv" }
+prost-ext = { path = "../../common/prost-ext" }
 scratchpad = { path = "../../storage/scratchpad" }
 state_view = { path = "../../storage/state_view" }
 storage_client = { path = "../../storage/storage_client" }
