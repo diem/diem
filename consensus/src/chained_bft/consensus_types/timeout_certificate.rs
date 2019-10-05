@@ -6,6 +6,7 @@ use failure::prelude::*;
 use network;
 use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 use std::{collections::HashMap, fmt};
 use types::{
     account_address::AccountAddress,
@@ -95,5 +96,45 @@ impl FromProto for TimeoutCertificate {
             })
             .collect::<Result<HashMap<_, _>>>()?;
         Ok(TimeoutCertificate::new(round, signatures))
+    }
+}
+
+impl TryFrom<network::proto::consensus_prost::TimeoutCertificate> for TimeoutCertificate {
+    type Error = failure::Error;
+
+    fn try_from(
+        proto: network::proto::consensus_prost::TimeoutCertificate,
+    ) -> failure::Result<Self> {
+        let round = proto.round;
+        let signatures = proto
+            .signatures
+            .into_iter()
+            .map(|proto| {
+                let author = AccountAddress::try_from(proto.validator_id)?;
+                let signature = Signature::try_from(&proto.signature)?;
+                Ok((author, signature))
+            })
+            .collect::<Result<HashMap<_, _>>>()?;
+        Ok(TimeoutCertificate::new(round, signatures))
+    }
+}
+
+impl From<TimeoutCertificate> for network::proto::consensus_prost::TimeoutCertificate {
+    fn from(cert: TimeoutCertificate) -> Self {
+        let signatures = cert
+            .signatures
+            .into_iter()
+            .map(
+                |(validator_id, signature)| types::proto::types::ValidatorSignature {
+                    validator_id: validator_id.to_vec(),
+                    signature: signature.to_bytes().to_vec(),
+                },
+            )
+            .collect();
+
+        Self {
+            round: cert.round,
+            signatures,
+        }
     }
 }
