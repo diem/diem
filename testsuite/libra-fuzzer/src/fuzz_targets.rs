@@ -18,7 +18,7 @@ macro_rules! module_name {
 
 /// A fuzz target implementation for protobuf-compiled targets.
 macro_rules! proto_fuzz_target {
-    ($target:ident => $ty:ty) => {
+    ($target:ident => $ty:ty, $prototy:ty) => {
         #[derive(Clone, Debug, Default)]
         pub struct $target;
 
@@ -36,21 +36,19 @@ macro_rules! proto_fuzz_target {
                 _idx: usize,
                 gen: &mut ::proptest_helpers::ValueGenerator,
             ) -> Option<Vec<u8>> {
-                use proto_conv::IntoProtoBytes;
+                use prost_ext::MessageExt;
 
-                let value = gen.generate(::proptest::arbitrary::any::<$ty>());
-                Some(
-                    value
-                        .into_proto_bytes()
-                        .expect("failed to convert to bytes"),
-                )
+                let value: $prototy = gen.generate(::proptest::arbitrary::any::<$ty>()).into();
+
+                Some(value.to_vec().expect("failed to convert to bytes"))
             }
 
             fn fuzz(&self, data: &[u8]) {
-                use proto_conv::FromProtoBytes;
+                use prost::Message;
+                use std::convert::TryFrom;
 
                 // Errors are OK -- the fuzzer cares about panics and OOMs.
-                let _ = <$ty>::from_proto_bytes(data);
+                let _ = <$prototy>::decode(data).map(<$ty>::try_from);
             }
         }
     };
