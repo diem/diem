@@ -29,7 +29,7 @@ types = { path = "../../types" }
 vm_runtime = { path = "../../language/vm/vm_runtime" }
 
 [dev-dependencies]
-grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["protobuf-codec"] }
+grpcio = { version = "=0.5.0-alpha.4", default-features = false }
 proptest = "0.9.2"
 rand = "0.6.5"
 rusty-fork = "0.2.1"
