@@ -477,6 +477,49 @@ impl IntoProto for StartupInfo {
     }
 }
 
+impl TryFrom<crate::proto::storage_prost::StartupInfo> for StartupInfo {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage_prost::StartupInfo) -> Result<Self> {
+        let ledger_info = LedgerInfo::try_from(proto.ledger_info.unwrap_or_else(Default::default))?;
+        let latest_version = proto.latest_version;
+        let account_state_root_hash = HashValue::from_slice(&proto.account_state_root_hash[..])?;
+        let ledger_frozen_subtree_hashes = proto
+            .ledger_frozen_subtree_hashes
+            .iter()
+            .map(|x| &x[..])
+            .map(HashValue::from_slice)
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(Self {
+            ledger_info,
+            latest_version,
+            account_state_root_hash,
+            ledger_frozen_subtree_hashes,
+        })
+    }
+}
+
+impl From<StartupInfo> for crate::proto::storage_prost::StartupInfo {
+    fn from(info: StartupInfo) -> Self {
+        let ledger_info = Some(info.ledger_info.into());
+        let latest_version = info.latest_version;
+        let account_state_root_hash = info.account_state_root_hash.to_vec();
+        let ledger_frozen_subtree_hashes = info
+            .ledger_frozen_subtree_hashes
+            .into_iter()
+            .map(|x| x.to_vec())
+            .collect();
+
+        Self {
+            ledger_info,
+            latest_version,
+            account_state_root_hash,
+            ledger_frozen_subtree_hashes,
+        }
+    }
+}
+
 /// Helper to construct and parse [`proto::storage::GetStartupInfoResponse`]
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
