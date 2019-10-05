@@ -14,8 +14,8 @@ use crate::chained_bft::{
 };
 use crypto::HashValue;
 use executor::ExecutedState;
-use network::MessageExt;
 use prost::Message;
+use prost_ext::MessageExt;
 use std::convert::{TryFrom, TryInto};
 use types::validator_signer::ValidatorSigner;
 

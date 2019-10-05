@@ -30,8 +30,8 @@ use network::{
         RespondBlock, SyncInfo as SyncInfoProto, TimeoutMsg as TimeoutMsgProto, Vote,
     },
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
-    MessageExt,
 };
+use prost_ext::MessageExt;
 use std::{
     convert::TryFrom,
     sync::Arc,

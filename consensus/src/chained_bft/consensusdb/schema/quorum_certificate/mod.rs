@@ -13,8 +13,8 @@ use super::QC_CF_NAME;
 use crate::chained_bft::consensus_types::quorum_cert::QuorumCert;
 use crypto::HashValue;
 use failure::prelude::*;
-use network::MessageExt;
 use prost::Message;
+use prost_ext::MessageExt;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
@@ -36,7 +36,7 @@ impl KeyCodec<QCSchema> for HashValue {
 impl ValueCodec<QCSchema> for QuorumCert {
     fn encode_value(&self) -> Result<Vec<u8>> {
         let cert: network::proto::QuorumCert = self.clone().into();
-        Ok(cert.to_bytes()?.to_vec())
+        Ok(cert.to_vec()?)
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {

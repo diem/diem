@@ -13,8 +13,8 @@ use super::BLOCK_CF_NAME;
 use crate::chained_bft::{common::Payload, consensus_types::block::Block};
 use crypto::HashValue;
 use failure::prelude::*;
-use network::MessageExt;
 use prost::Message;
+use prost_ext::MessageExt;
 use schemadb::schema::{KeyCodec, Schema, ValueCodec};
 use std::convert::TryInto;
 use std::marker::PhantomData;
@@ -42,7 +42,7 @@ impl<T: Payload> KeyCodec<BlockSchema<T>> for HashValue {
 impl<T: Payload> ValueCodec<BlockSchema<T>> for Block<T> {
     fn encode_value(&self) -> Result<Vec<u8>> {
         let block: network::proto::Block = self.clone().into();
-        Ok(block.to_bytes()?.to_vec())
+        Ok(block.to_vec()?)
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {

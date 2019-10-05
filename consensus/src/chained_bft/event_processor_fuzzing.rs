@@ -22,9 +22,9 @@ use lazy_static::lazy_static;
 use network::{
     proto::Proposal,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
-    MessageExt,
 };
 use prost::Message as _;
+use prost_ext::MessageExt;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
