@@ -556,6 +556,24 @@ impl IntoProto for GetStartupInfoResponse {
     }
 }
 
+impl TryFrom<crate::proto::storage_prost::GetStartupInfoResponse> for GetStartupInfoResponse {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage_prost::GetStartupInfoResponse) -> Result<Self> {
+        let info = proto.info.map(StartupInfo::try_from).transpose()?;
+
+        Ok(Self { info })
+    }
+}
+
+impl From<GetStartupInfoResponse> for crate::proto::storage_prost::GetStartupInfoResponse {
+    fn from(response: GetStartupInfoResponse) -> Self {
+        Self {
+            info: response.info.map(Into::into),
+        }
+    }
+}
+
 /// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochRequest`]
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
