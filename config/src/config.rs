@@ -14,7 +14,7 @@ use crate::{
 use crypto::ValidKey;
 use failure::prelude::*;
 use parity_multiaddr::Multiaddr;
-use proto_conv::FromProtoBytes;
+use prost::Message;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     collections::HashSet,
@@ -201,7 +201,7 @@ impl ExecutionConfig {
         let mut file = File::open(self.genesis_file_location.clone())?;
         let mut buffer = vec![];
         file.read_to_end(&mut buffer)?;
-        SignedTransaction::from_proto_bytes(&buffer)
+        SignedTransaction::try_from(types::proto::types::SignedTransaction::decode(&buffer)?)
     }
 }
 
