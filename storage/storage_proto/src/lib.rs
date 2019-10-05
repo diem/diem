@@ -266,6 +266,43 @@ impl IntoProto for SaveTransactionsRequest {
     }
 }
 
+impl TryFrom<crate::proto::storage_prost::SaveTransactionsRequest> for SaveTransactionsRequest {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage_prost::SaveTransactionsRequest) -> Result<Self> {
+        let txns_to_commit = proto
+            .txns_to_commit
+            .into_iter()
+            .map(TransactionToCommit::try_from)
+            .collect::<Result<Vec<_>>>()?;
+        let first_version = proto.first_version;
+        let ledger_info_with_signatures = proto
+            .ledger_info_with_signatures
+            .map(LedgerInfoWithSignatures::try_from)
+            .transpose()?;
+
+        Ok(Self {
+            txns_to_commit,
+            first_version,
+            ledger_info_with_signatures,
+        })
+    }
+}
+
+impl From<SaveTransactionsRequest> for crate::proto::storage_prost::SaveTransactionsRequest {
+    fn from(request: SaveTransactionsRequest) -> Self {
+        let txns_to_commit = request.txns_to_commit.into_iter().map(Into::into).collect();
+        let first_version = request.first_version;
+        let ledger_info_with_signatures = request.ledger_info_with_signatures.map(Into::into);
+
+        Self {
+            txns_to_commit,
+            first_version,
+            ledger_info_with_signatures,
+        }
+    }
+}
+
 /// Helper to construct and parse [`proto::storage::GetTransactionsRequest`]
 ///
 /// It does so by implementing [`IntoProto`](#impl-IntoProto) and [`FromProto`](#impl-FromProto),
