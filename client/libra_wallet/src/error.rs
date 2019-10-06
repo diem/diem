@@ -64,12 +64,6 @@ impl convert::From<failure::prelude::Error> for WalletError {
     }
 }
 
-impl convert::From<protobuf::error::ProtobufError> for WalletError {
-    fn from(err: protobuf::error::ProtobufError) -> WalletError {
-        WalletError::LibraWalletGeneric(err.description().to_string())
-    }
-}
-
 impl convert::From<ed25519_dalek::SignatureError> for WalletError {
     fn from(err: ed25519_dalek::SignatureError) -> WalletError {
         WalletError::LibraWalletGeneric(format!("{}", err))

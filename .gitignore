@@ -4,12 +4,6 @@
 **/target
 **/*.rs.bk
 
-# Ignore generated files in proto folders
-**/proto/*.rs
-!**/proto/mod.rs
-**/proto/*/*.rs
-!**/proto/*/mod.rs
-
 # Ignore wallet mnemonic files used for deterministic key derivation
 *.mnemonic
 
