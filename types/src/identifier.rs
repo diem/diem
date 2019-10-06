@@ -15,7 +15,6 @@ use canonical_serialization::{
 use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest::prelude::*;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{borrow::Borrow, fmt, ops::Deref};
 
@@ -183,21 +182,5 @@ impl CanonicalSerialize for IdentStr {
 impl CanonicalDeserialize for Identifier {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         Identifier::new(deserializer.decode_string()?)
-    }
-}
-
-impl IntoProto for Identifier {
-    type ProtoType = String;
-
-    fn into_proto(self) -> Self::ProtoType {
-        self.0.into()
-    }
-}
-
-impl FromProto for Identifier {
-    type ProtoType = String;
-
-    fn from_proto(object: Self::ProtoType) -> Result<Self> {
-        Self::new(object)
     }
 }

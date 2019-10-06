@@ -15,7 +15,6 @@ use crypto::{
 use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -151,54 +150,6 @@ impl LedgerInfo {
     }
 }
 
-impl IntoProto for LedgerInfo {
-    type ProtoType = crate::proto::ledger_info::LedgerInfo;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_version(self.version);
-        proto.set_transaction_accumulator_hash(self.transaction_accumulator_hash.into_proto());
-        proto.set_consensus_data_hash(self.consensus_data_hash.into_proto());
-        proto.set_consensus_block_id(self.consensus_block_id.into_proto());
-        proto.set_epoch_num(self.epoch_num);
-        proto.set_timestamp_usecs(self.timestamp_usecs);
-        if let Some(next_validator_set) = self.next_validator_set {
-            proto.set_next_validator_set(next_validator_set.into_proto());
-        }
-        proto
-    }
-}
-
-impl FromProto for LedgerInfo {
-    type ProtoType = crate::proto::ledger_info::LedgerInfo;
-
-    fn from_proto(proto: Self::ProtoType) -> Result<Self> {
-        let version = proto.get_version();
-        let transaction_accumulator_hash =
-            HashValue::from_slice(proto.get_transaction_accumulator_hash())?;
-        let consensus_data_hash = HashValue::from_slice(proto.get_consensus_data_hash())?;
-        let consensus_block_id = HashValue::from_slice(proto.get_consensus_block_id())?;
-        let epoch_num = proto.get_epoch_num();
-        let timestamp_usecs = proto.get_timestamp_usecs();
-
-        let next_validator_set =
-            if let Some(validator_set_proto) = proto.next_validator_set.into_option() {
-                Some(ValidatorSet::from_proto(validator_set_proto)?)
-            } else {
-                None
-            };
-        Ok(LedgerInfo::new(
-            version,
-            transaction_accumulator_hash,
-            consensus_data_hash,
-            consensus_block_id,
-            epoch_num,
-            timestamp_usecs,
-            next_validator_set,
-        ))
-    }
-}
-
 impl TryFrom<crate::proto::types::LedgerInfo> for LedgerInfo {
     type Error = Error;
 
@@ -321,53 +272,6 @@ impl<Sig: Signature> LedgerInfoWithSignatures<Sig> {
         }
         let ledger_hash = self.ledger_info().hash();
         validator.batch_verify_aggregated_signature(ledger_hash, self.signatures())
-    }
-}
-
-impl<Sig: Signature> FromProto for LedgerInfoWithSignatures<Sig> {
-    type ProtoType = crate::proto::ledger_info::LedgerInfoWithSignatures;
-
-    fn from_proto(mut proto: Self::ProtoType) -> Result<Self> {
-        let ledger_info = LedgerInfo::from_proto(proto.take_ledger_info())?;
-
-        let signatures_proto = proto.take_signatures();
-        let num_signatures = signatures_proto.len();
-        let signatures = signatures_proto
-            .into_iter()
-            .map(|proto| {
-                let validator_id = AccountAddress::from_proto(proto.get_validator_id().to_vec())?;
-                let signature_bytes: &[u8] = proto.get_signature();
-                let signature = Sig::try_from(signature_bytes)?;
-                Ok((validator_id, signature))
-            })
-            .collect::<Result<HashMap<_, _>>>()?;
-        ensure!(
-            signatures.len() == num_signatures,
-            "Signatures should be from different validators."
-        );
-
-        Ok(LedgerInfoWithSignatures {
-            ledger_info,
-            signatures,
-        })
-    }
-}
-
-impl<Sig: Signature> IntoProto for LedgerInfoWithSignatures<Sig> {
-    type ProtoType = crate::proto::ledger_info::LedgerInfoWithSignatures;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_ledger_info(self.ledger_info.into_proto());
-        self.signatures
-            .into_iter()
-            .for_each(|(validator_id, signature)| {
-                let mut validator_signature = crate::proto::ledger_info::ValidatorSignature::new();
-                validator_signature.set_validator_id(validator_id.into_proto());
-                validator_signature.set_signature(signature.to_bytes().to_vec());
-                proto.mut_signatures().push(validator_signature)
-            });
-        proto
     }
 }
 

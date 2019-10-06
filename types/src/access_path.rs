@@ -54,7 +54,6 @@ use hex;
 use lazy_static::lazy_static;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use radix_trie::TrieKey;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -204,21 +203,8 @@ lazy_static! {
         AccessPath::new(association_address(), validator_set_path());
 }
 
-#[derive(
-    Clone,
-    Eq,
-    PartialEq,
-    Default,
-    Hash,
-    Serialize,
-    Deserialize,
-    Ord,
-    PartialOrd,
-    FromProto,
-    IntoProto,
-)]
+#[derive(Clone, Eq, PartialEq, Default, Hash, Serialize, Deserialize, Ord, PartialOrd)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[ProtoType(crate::proto::access_path::AccessPath)]
 pub struct AccessPath {
     pub address: AccountAddress,
     pub path: Vec<u8>,

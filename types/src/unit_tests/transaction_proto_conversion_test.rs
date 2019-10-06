@@ -3,27 +3,27 @@
 
 use crate::transaction::*;
 use proptest::prelude::*;
-use proto_conv::test_helper::assert_protobuf_encode_decode;
+use prost_ext::test_helpers::assert_protobuf_encode_decode;
 
 proptest! {
     #[test]
     fn test_signed_txn(signed_txn in any::<SignedTransaction>()) {
-        assert_protobuf_encode_decode(&signed_txn);
+        assert_protobuf_encode_decode::<crate::proto::types::SignedTransaction, SignedTransaction>(&signed_txn);
     }
 
     #[test]
     fn test_signed_txn_with_proof(signed_txn_with_proof in any::<SignedTransactionWithProof>()) {
-        assert_protobuf_encode_decode(&signed_txn_with_proof);
+        assert_protobuf_encode_decode::<crate::proto::types::SignedTransactionWithProof, SignedTransactionWithProof>(&signed_txn_with_proof);
     }
 
     #[test]
     fn test_transaction_info(txn_info in any::<TransactionInfo>()) {
-        assert_protobuf_encode_decode(&txn_info);
+        assert_protobuf_encode_decode::<crate::proto::types::TransactionInfo, TransactionInfo>(&txn_info);
     }
 
     #[test]
     fn test_transaction_to_commit(txn_to_commit in any::<TransactionToCommit>()) {
-        assert_protobuf_encode_decode(&txn_to_commit);
+        assert_protobuf_encode_decode::<crate::proto::types::TransactionToCommit, TransactionToCommit>(&txn_to_commit);
     }
 }
 
@@ -32,6 +32,6 @@ proptest! {
 
     #[test]
     fn test_transaction_list_with_proof(txn_list in any::<TransactionListWithProof>()) {
-        assert_protobuf_encode_decode(&txn_list);
+        assert_protobuf_encode_decode::<crate::proto::types::TransactionListWithProof, TransactionListWithProof>(&txn_list);
     }
 }

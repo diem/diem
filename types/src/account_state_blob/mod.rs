@@ -21,7 +21,6 @@ use failure::prelude::*;
 use proptest::{arbitrary::Arbitrary, prelude::*};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
@@ -29,8 +28,7 @@ use std::{
     fmt,
 };
 
-#[derive(Clone, Eq, PartialEq, FromProto, IntoProto, Serialize, Deserialize)]
-#[ProtoType(crate::proto::account_state_blob::AccountStateBlob)]
+#[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct AccountStateBlob {
     blob: Vec<u8>,
 }
@@ -191,36 +189,6 @@ impl AccountStateWithProof {
             &self.blob,
             &self.proof,
         )
-    }
-}
-
-impl FromProto for AccountStateWithProof {
-    type ProtoType = crate::proto::account_state_blob::AccountStateWithProof;
-
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        Ok(AccountStateWithProof {
-            version: object.get_version(),
-            blob: object
-                .blob
-                .take()
-                .map(AccountStateBlob::from_proto)
-                .transpose()?,
-            proof: AccountStateProof::from_proto(object.take_proof())?,
-        })
-    }
-}
-
-impl IntoProto for AccountStateWithProof {
-    type ProtoType = crate::proto::account_state_blob::AccountStateWithProof;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut out = Self::ProtoType::new();
-        out.set_version(self.version);
-        if let Some(blob) = self.blob {
-            out.set_blob(blob.into_proto());
-        }
-        out.set_proof(self.proof.into_proto());
-        out
     }
 }
 
