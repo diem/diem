@@ -4,7 +4,6 @@
 use crate::identifier::{IdentStr, Identifier};
 use canonical_serialization::test_helper::assert_canonical_encode_decode;
 use proptest::prelude::*;
-use proto_conv::test_helper::assert_protobuf_encode_decode_non_message;
 use serde_json;
 use std::borrow::Borrow;
 
@@ -36,11 +35,6 @@ proptest! {
     #[test]
     fn identifier_canonical_serialization(identifier in any::<Identifier>()) {
         assert_canonical_encode_decode(&identifier);
-    }
-
-    #[test]
-    fn identifier_roundtrip(identifier in any::<Identifier>()) {
-        assert_protobuf_encode_decode_non_message(&identifier);
     }
 }
 

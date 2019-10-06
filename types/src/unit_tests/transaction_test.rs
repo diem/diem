@@ -10,28 +10,26 @@ use canonical_serialization::{
 };
 use crypto::ed25519::*;
 use proptest::prelude::*;
-use proto_conv::{FromProto, IntoProto};
 use std::convert::TryFrom;
 
 #[test]
 fn test_invalid_signature() {
     let keypair = compat::generate_keypair(None);
-    let txn = SignedTransaction::from_proto(
-        SignedTransaction::new(
-            RawTransaction::new_script(
-                AccountAddress::random(),
-                0,
-                Script::new(vec![], vec![]),
-                0,
-                0,
-                std::time::Duration::new(0, 0),
-            ),
-            keypair.1,
-            Ed25519Signature::try_from(&[1u8; 64][..]).unwrap(),
-        )
-        .into_proto(),
+    let proto_txn: crate::proto::types::SignedTransaction = SignedTransaction::new(
+        RawTransaction::new_script(
+            AccountAddress::random(),
+            0,
+            Script::new(vec![], vec![]),
+            0,
+            0,
+            std::time::Duration::new(0, 0),
+        ),
+        keypair.1,
+        Ed25519Signature::try_from(&[1u8; 64][..]).unwrap(),
     )
-    .expect("initial conversion from_proto should succeed");
+    .into();
+    let txn = SignedTransaction::try_from(proto_txn)
+        .expect("initial conversion from_proto should succeed");
     txn.check_signature()
         .expect_err("signature checking should fail");
 }

@@ -17,7 +17,6 @@ use failure::prelude::*;
 use lazy_static::lazy_static;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{
     convert::{TryFrom, TryInto},
@@ -103,35 +102,6 @@ impl CanonicalDeserialize for ValidatorSet {
             payload.push(deserializer.decode_struct::<ValidatorPublicKeys>()?);
         }
         Ok(ValidatorSet::new(payload))
-    }
-}
-
-impl FromProto for ValidatorSet {
-    type ProtoType = crate::proto::validator_set::ValidatorSet;
-
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        Ok(ValidatorSet::new(
-            object
-                .take_validator_public_keys()
-                .into_iter()
-                .map(ValidatorPublicKeys::from_proto)
-                .collect::<Result<Vec<_>>>()?,
-        ))
-    }
-}
-
-impl IntoProto for ValidatorSet {
-    type ProtoType = crate::proto::validator_set::ValidatorSet;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut out = Self::ProtoType::new();
-        out.set_validator_public_keys(protobuf::RepeatedField::from_vec(
-            self.0
-                .into_iter()
-                .map(ValidatorPublicKeys::into_proto)
-                .collect(),
-        ));
-        out
     }
 }
 

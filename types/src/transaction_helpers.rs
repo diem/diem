@@ -3,7 +3,7 @@
 
 use crate::{
     account_address::AccountAddress,
-    proto::transaction::SignedTransaction as ProtoSignedTransaction,
+    proto::types::SignedTransaction as ProtoSignedTransaction,
     transaction::{RawTransaction, SignedTransaction, TransactionPayload},
 };
 use canonical_serialization::SimpleDeserializer;

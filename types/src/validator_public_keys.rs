@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    account_address::AccountAddress,
-    proto::validator_public_keys::ValidatorPublicKeys as ProtoValidatorPublicKeys,
-};
+use crate::account_address::AccountAddress;
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
@@ -12,7 +9,6 @@ use crypto::{ed25519::*, traits::ValidKey, x25519::X25519StaticPublicKey};
 use failure::Result;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 
@@ -79,47 +75,6 @@ impl ValidatorPublicKeys {
     /// Returns the key that establishes a validator's identity in the p2p network
     pub fn network_identity_public_key(&self) -> &X25519StaticPublicKey {
         &self.network_identity_public_key
-    }
-}
-
-impl FromProto for ValidatorPublicKeys {
-    type ProtoType = ProtoValidatorPublicKeys;
-
-    fn from_proto(object: Self::ProtoType) -> Result<Self> {
-        let account_address = AccountAddress::from_proto(object.get_account_address().to_vec())?;
-        let consensus_public_key = Ed25519PublicKey::try_from(object.get_consensus_public_key())?;
-        let consensus_voting_power = object.get_consensus_voting_power();
-        let network_signing_public_key =
-            Ed25519PublicKey::try_from(object.get_network_signing_public_key())?;
-        let network_identity_public_key =
-            X25519StaticPublicKey::try_from(object.get_network_identity_public_key())?;
-        Ok(Self::new(
-            account_address,
-            consensus_public_key,
-            consensus_voting_power,
-            network_signing_public_key,
-            network_identity_public_key,
-        ))
-    }
-}
-
-impl IntoProto for ValidatorPublicKeys {
-    type ProtoType = ProtoValidatorPublicKeys;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_account_address(AccountAddress::into_proto(self.account_address));
-        proto.set_consensus_public_key(
-            Ed25519PublicKey::to_bytes(&self.consensus_public_key).to_vec(),
-        );
-        proto.set_consensus_voting_power(self.consensus_voting_power);
-        proto.set_network_signing_public_key(
-            Ed25519PublicKey::to_bytes(&self.network_signing_public_key).to_vec(),
-        );
-        proto.set_network_identity_public_key(
-            X25519StaticPublicKey::to_bytes(&self.network_identity_public_key).to_vec(),
-        );
-        proto
     }
 }
 

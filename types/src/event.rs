@@ -7,7 +7,6 @@ use failure::prelude::*;
 use hex;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 
@@ -125,22 +124,6 @@ impl fmt::Display for EventKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         // Forward to the LowerHex impl with a "0x" prepended (the # flag).
         write!(f, "{:#x}", self)
-    }
-}
-
-impl FromProto for EventKey {
-    type ProtoType = Vec<u8>;
-
-    fn from_proto(key: Self::ProtoType) -> Result<Self> {
-        EventKey::try_from(&key[..])
-    }
-}
-
-impl IntoProto for EventKey {
-    type ProtoType = Vec<u8>;
-
-    fn into_proto(self) -> Self::ProtoType {
-        self.0.to_vec()
     }
 }
 

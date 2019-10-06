@@ -16,12 +16,10 @@ use crypto::{
 use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use std::convert::{TryFrom, TryInto};
 
 /// Entry produced via a call to the `emit_event` builtin.
-#[derive(Clone, Default, Eq, PartialEq, FromProto, IntoProto)]
-#[ProtoType(crate::proto::events::Event)]
+#[derive(Clone, Default, Eq, PartialEq)]
 pub struct ContractEvent {
     /// The unique key that the event was emitted to
     key: EventKey,
@@ -120,11 +118,10 @@ impl From<ContractEvent> for crate::proto::types::Event {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[ProtoType(crate::proto::events::EventWithProof)]
 pub struct EventWithProof {
-    pub transaction_version: u64, // Should be `Version`, but FromProto derive won't work that way.
+    pub transaction_version: u64, // Should be `Version`
     pub event_index: u64,
     pub event: ContractEvent,
     pub proof: EventProof,

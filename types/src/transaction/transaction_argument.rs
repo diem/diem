@@ -4,13 +4,12 @@
 //use crate::errors::*;
 use crate::{
     account_address::AccountAddress, byte_array::ByteArray,
-    proto::transaction::TransactionArgument_ArgType,
+    proto::types::transaction_argument::ArgType as TransactionArgument_ArgType,
 };
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
 };
 use failure::prelude::*;
-use protobuf::ProtobufEnum;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 
@@ -178,15 +177,15 @@ impl CanonicalSerialize for TransactionArgument {
                 serializer.encode_u64(*value)?;
             }
             TransactionArgument::Address(address) => {
-                serializer.encode_u32(TransactionArgument_ArgType::ADDRESS as u32)?;
+                serializer.encode_u32(TransactionArgument_ArgType::Address as u32)?;
                 serializer.encode_struct(address)?;
             }
             TransactionArgument::String(string) => {
-                serializer.encode_u32(TransactionArgument_ArgType::STRING as u32)?;
+                serializer.encode_u32(TransactionArgument_ArgType::String as u32)?;
                 serializer.encode_string(string)?;
             }
             TransactionArgument::ByteArray(byte_array) => {
-                serializer.encode_u32(TransactionArgument_ArgType::BYTEARRAY as u32)?;
+                serializer.encode_u32(TransactionArgument_ArgType::Bytearray as u32)?;
                 serializer.encode_struct(byte_array)?;
             }
         }
@@ -203,13 +202,13 @@ impl CanonicalDeserialize for TransactionArgument {
             Some(TransactionArgument_ArgType::U64) => {
                 Ok(TransactionArgument::U64(deserializer.decode_u64()?))
             }
-            Some(TransactionArgument_ArgType::ADDRESS) => {
+            Some(TransactionArgument_ArgType::Address) => {
                 Ok(TransactionArgument::Address(deserializer.decode_struct()?))
             }
-            Some(TransactionArgument_ArgType::STRING) => {
+            Some(TransactionArgument_ArgType::String) => {
                 Ok(TransactionArgument::String(deserializer.decode_string()?))
             }
-            Some(TransactionArgument_ArgType::BYTEARRAY) => Ok(TransactionArgument::ByteArray(
+            Some(TransactionArgument_ArgType::Bytearray) => Ok(TransactionArgument::ByteArray(
                 deserializer.decode_struct()?,
             )),
             None => Err(format_err!(
