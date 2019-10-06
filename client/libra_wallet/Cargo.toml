@@ -13,7 +13,6 @@ rand_core = "0.4.2"
 hex = "0.3"
 byteorder = "1.3.2"
 serde = "1.0.96"
-protobuf = "~2.7"
 sha3 = "0.8.2"
 sha2 = "0.8.0"
 types = { path = "../../types" }
