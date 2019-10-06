@@ -5,7 +5,6 @@ use crate::hash::*;
 use bitvec::BitVec;
 use byteorder::{LittleEndian, WriteBytesExt};
 use proptest::{collection::vec, prelude::*};
-use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::StdRng, SeedableRng};
 
 #[derive(Serialize)]
@@ -58,6 +57,10 @@ fn test_from_slice() {
         // The length is mismatched.
         let zero_byte_vec = vec![0; 31];
         assert!(HashValue::from_slice(&zero_byte_vec).is_err());
+    }
+    {
+        let bytes = vec![1; 123];
+        assert!(HashValue::from_slice(&bytes[..]).is_err());
     }
 }
 
@@ -215,12 +218,6 @@ fn test_common_prefix_nibbles_len() {
     }
 }
 
-#[test]
-fn test_from_proto_invalid_length() {
-    let bytes = vec![1; 123];
-    assert!(HashValue::from_proto(bytes).is_err());
-}
-
 proptest! {
     #[test]
     fn test_hashvalue_to_bits_roundtrip(hash in any::<HashValue>()) {
@@ -253,14 +250,6 @@ proptest! {
         let mut bytes: Vec<u8> = bitvec.into();
         bytes.reverse();
         let hash2 = HashValue::from_slice(&bytes).unwrap();
-        prop_assert_eq!(hash, hash2);
-    }
-
-    #[test]
-    fn test_hashvalue_proto_conversion_roundtrip(hash in any::<HashValue>()) {
-        let bytes = hash.into_proto();
-        prop_assert_eq!(bytes.clone(), hash.as_ref());
-        let hash2 = HashValue::from_proto(bytes).unwrap();
         prop_assert_eq!(hash, hash2);
     }
 }

@@ -73,7 +73,6 @@ use failure::prelude::*;
 use lazy_static::lazy_static;
 use nibble::Nibble;
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::EntropyRng, Rng};
 use serde::{Deserialize, Serialize};
 use std::{self, convert::AsRef, fmt};
@@ -267,22 +266,6 @@ impl fmt::Display for HashValue {
             write!(f, "{:02x}", byte)?;
         }
         Ok(())
-    }
-}
-
-impl FromProto for HashValue {
-    type ProtoType = Vec<u8>;
-
-    fn from_proto(bytes: Self::ProtoType) -> Result<Self> {
-        HashValue::from_slice(&bytes)
-    }
-}
-
-impl IntoProto for HashValue {
-    type ProtoType = Vec<u8>;
-
-    fn into_proto(self) -> Self::ProtoType {
-        self.to_vec()
     }
 }
 
