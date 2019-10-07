@@ -7,7 +7,7 @@ fn main() {
     let includes = [
         "../../types/src/proto",
         "src/proto",
-        "../../mempool/src/proto/shared",
+        "../../mempool/mempool-shared-proto/src/proto",
     ];
 
     grpcio_compiler::prost_codegen::compile_protos(

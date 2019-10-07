@@ -4,7 +4,7 @@
 #![allow(bare_trait_objects)]
 
 use ::types::proto::*;
-use mempool::proto::shared::mempool_status;
+use mempool_shared_proto::proto::mempool_status;
 
 pub mod admission_control {
     include!(concat!(env!("OUT_DIR"), "/admission_control.rs"));

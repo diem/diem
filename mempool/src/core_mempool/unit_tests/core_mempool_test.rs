@@ -1,17 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    core_mempool::{
-        unit_tests::common::{
-            add_signed_txn, add_txn, add_txns_to_mempool, exist_in_metrics_cache, setup_mempool,
-            TestTransaction,
-        },
-        CoreMempool, TimelineState,
+use crate::core_mempool::{
+    unit_tests::common::{
+        add_signed_txn, add_txn, add_txns_to_mempool, exist_in_metrics_cache, setup_mempool,
+        TestTransaction,
     },
-    proto::shared::mempool_status::MempoolAddTransactionStatusCode,
+    CoreMempool, TimelineState,
 };
 use config::config::NodeConfigHelpers;
+use mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use std::{collections::HashSet, time::Duration};
 use types::transaction::SignedTransaction;
 
