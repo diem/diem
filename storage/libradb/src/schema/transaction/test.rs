@@ -9,6 +9,6 @@ use schemadb::schema::assert_encode_decode;
 proptest! {
     #[test]
     fn test_encode_decode(txn in any::<SignedTransaction>()) {
-        assert_encode_decode::<SignedTransactionSchema>(&0u64, &txn);
+        assert_encode_decode::<TransactionSchema>(&0u64, &txn);
     }
 }
