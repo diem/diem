@@ -31,11 +31,11 @@ metrics = { path = "../common/metrics" }
 netcore = { path = "netcore" }
 noise = { path = "noise" }
 prost-ext = { path = "../common/prost-ext" }
-socket_bench_server = { path = "socket_bench_server" }
 types = { path = "../types" }
 
 [dev-dependencies]
 criterion = "0.2.11"
+socket_bench_server = { path = "socket_bench_server" }
 crypto = { path = "../crypto/crypto", features = ["testing"] }
 types = { path = "../types", features = ["testing"]}
 
