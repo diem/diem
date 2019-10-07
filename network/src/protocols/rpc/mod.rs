@@ -89,6 +89,11 @@ pub mod utils;
 #[cfg(test)]
 mod test;
 
+#[cfg(any(feature = "fuzzing", test))]
+#[path = "fuzzing.rs"]
+/// fuzzing module for the rpc protocol
+pub mod fuzzing;
+
 /// A wrapper struct for an inbound rpc request and its associated context.
 #[derive(Debug)]
 pub struct InboundRpcRequest {

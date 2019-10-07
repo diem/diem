@@ -58,6 +58,7 @@ macro_rules! proto_fuzz_target {
 mod admission_control;
 mod compiled_module;
 mod consensus_proposal;
+mod inbound_rpc_protocol;
 mod inner_signed_transaction;
 mod signed_transaction;
 mod vm_value;
@@ -72,6 +73,7 @@ lazy_static! {
             Box::new(vm_value::ValueTarget::default()),
             Box::new(consensus_proposal::ConsensusProposal::default()),
             Box::new(admission_control::AdmissionControlSubmitTransactionRequest::default()),
+            Box::new(inbound_rpc_protocol::RpcInboundRequest::default()),
         ];
         targets.into_iter().map(|target| (target.name(), target)).collect()
     };
