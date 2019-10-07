@@ -114,7 +114,7 @@ impl LibraDB {
             ),
             (LEDGER_COUNTERS_CF_NAME, ColumnFamilyOptions::default()),
             (STALE_NODE_INDEX_CF_NAME, ColumnFamilyOptions::default()),
-            (SIGNED_TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
+            (TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
             (
                 TRANSACTION_ACCUMULATOR_CF_NAME,
                 ColumnFamilyOptions::default(),

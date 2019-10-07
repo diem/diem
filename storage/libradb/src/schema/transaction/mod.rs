@@ -12,7 +12,7 @@
 //! `Version` is serialized in big endian so that records in RocksDB will be in order of it's
 //! numeric value.
 
-use crate::schema::{ensure_slice_len_eq, SIGNED_TRANSACTION_CF_NAME};
+use crate::schema::{ensure_slice_len_eq, TRANSACTION_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt};
 use failure::prelude::*;
 use libra_types::transaction::{SignedTransaction, Version};
@@ -26,13 +26,13 @@ use std::convert::TryInto;
 use std::mem::size_of;
 
 define_schema!(
-    SignedTransactionSchema,
+    TransactionSchema,
     Version,
     SignedTransaction,
-    SIGNED_TRANSACTION_CF_NAME
+    TRANSACTION_CF_NAME
 );
 
-impl KeyCodec<SignedTransactionSchema> for Version {
+impl KeyCodec<TransactionSchema> for Version {
     fn encode_key(&self) -> Result<Vec<u8>> {
         Ok(self.to_be_bytes().to_vec())
     }
@@ -43,7 +43,7 @@ impl KeyCodec<SignedTransactionSchema> for Version {
     }
 }
 
-impl ValueCodec<SignedTransactionSchema> for SignedTransaction {
+impl ValueCodec<TransactionSchema> for SignedTransaction {
     fn encode_value(&self) -> Result<Vec<u8>> {
         let event: libra_types::proto::types::SignedTransaction = self.clone().into();
         Ok(event.to_vec()?)

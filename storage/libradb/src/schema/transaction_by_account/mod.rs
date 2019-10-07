@@ -3,7 +3,7 @@
 
 //! This module defines physical storage schema for a transaction index via which the version of a
 //! transaction sent by `account_address` with `sequence_number` can be found. With the version one
-//! can resort to `SignedTransactionSchema` for the transaction content.
+//! can resort to `TransactionSchema` for the transaction content.
 //!
 //! ```text
 //! |<-------key------->|<-value->|

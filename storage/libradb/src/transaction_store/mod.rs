@@ -3,7 +3,7 @@
 
 //! This file defines transaction store APIs that are related to committed signed transactions.
 
-use super::schema::signed_transaction::*;
+use crate::schema::transaction::TransactionSchema;
 use crate::{
     change_set::ChangeSet, errors::LibraDbError,
     schema::transaction_by_account::TransactionByAccountSchema,
@@ -47,7 +47,7 @@ impl TransactionStore {
     /// Get signed transaction given `version`
     pub fn get_transaction(&self, version: Version) -> Result<SignedTransaction> {
         self.db
-            .get::<SignedTransactionSchema>(&version)?
+            .get::<TransactionSchema>(&version)?
             .ok_or_else(|| LibraDbError::NotFound(format!("Txn {}", version)).into())
     }
 
@@ -66,7 +66,7 @@ impl TransactionStore {
             &version,
         )?;
         cs.batch
-            .put::<SignedTransactionSchema>(&version, signed_transaction)?;
+            .put::<TransactionSchema>(&version, signed_transaction)?;
 
         Ok(())
     }
