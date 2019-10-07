@@ -29,19 +29,24 @@ channel = { path = "../common/channel" }
 config = { path = "../config" }
 crypto = { path = "../crypto/crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
+libra-types = { path = "../types" }
 logger = { path = "../common/logger" }
 memsocket = { path = "memsocket" }
 metrics = { path = "../common/metrics" }
 netcore = { path = "netcore" }
 noise = { path = "noise" }
 prost-ext = { path = "../common/prost-ext" }
-libra-types = { path = "../types" }
+
+proptest = { version = "0.9.4", default-features = false, optional = true }
+proptest_helpers = { path = "../common/proptest_helpers", optional = true }
 
 [dev-dependencies]
 criterion = "0.2.11"
 socket_bench_server = { path = "socket_bench_server" }
 crypto = { path = "../crypto/crypto", features = ["testing"] }
 libra-types = { path = "../types", features = ["testing"]}
+proptest = { version = "0.9.4", default-features = false }
+proptest_helpers = { path = "../common/proptest_helpers" }
 
 [build-dependencies]
 prost-build = "0.5.0"
@@ -53,3 +58,7 @@ harness = false
 [[bench]]
 name = "network_bench"
 harness = false
+
+[features]
+default = []
+fuzzing = ["proptest", "proptest_helpers"]
