@@ -20,10 +20,14 @@ To be effective, fuzzing requires a corpus of existing inputs. This
 crate contains support for generating corpuses with `proptest`. Generate
 a corpus with `cargo run generate <target>`.
 
-Once a corpus has been generated, the fuzzer is ready to use: run
-`cargo run fuzz <target>`. 
+Once a corpus has been generated, the fuzzer is ready to use, simply run:
 
-For more options, run `cargo run -- --help`.
+```
+RUSTC_BOOTSTRAP=1 cargo run fuzz <target> -- --release --debug-assertions
+```
+
+For more options, run `cargo run -- --help`. Note that `RUSTC_BOOTSTRAP=1` is
+required as `cargo fuzz` uses unstable compiler flags.
 
 ### Adding a new target
 
