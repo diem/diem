@@ -31,7 +31,7 @@ const LIBRA_NETWORK_ID_SHORT: &str = "lb";
 pub struct AccountAddress([u8; ADDRESS_LENGTH]);
 
 impl AccountAddress {
-    pub fn new(address: [u8; ADDRESS_LENGTH]) -> Self {
+    pub const fn new(address: [u8; ADDRESS_LENGTH]) -> Self {
         AccountAddress(address)
     }
 
