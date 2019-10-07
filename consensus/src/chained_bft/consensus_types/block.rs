@@ -58,8 +58,6 @@ pub enum BlockType<T> {
 pub struct Block<T> {
     /// This block's id as a hash value
     id: HashValue,
-    /// Parent block id of this block as a hash value (all zeros to indicate the genesis block)
-    parent_id: HashValue,
     /// The round of a block is an internal monotonically increasing counter used by Consensus
     /// protocol.
     round: Round,
@@ -114,7 +112,10 @@ impl<T: PartialEq> Display for Block<T> {
         write!(
             f,
             "[id: {}{}, round: {:02}, parent_id: {}]",
-            self.id, nil_marker, self.round, self.parent_id
+            self.id,
+            nil_marker,
+            self.round,
+            self.quorum_cert.certified_block_id(),
         )
     }
 }
@@ -139,7 +140,7 @@ impl<T> Block<T> {
     }
 
     pub fn parent_id(&self) -> HashValue {
-        self.parent_id
+        self.quorum_cert.certified_block_id()
     }
 
     pub fn height(&self) -> Height {
@@ -215,7 +216,6 @@ where
 
         Block {
             id: *GENESIS_BLOCK_ID,
-            parent_id: HashValue::zero(),
             round: 0,
             height: 0,
             timestamp_usecs: 0, // The beginning of UNIX TIME
@@ -228,7 +228,6 @@ where
     // chaining.  This functionality should typically only be used for testing.
     pub fn new_internal(
         payload: T,
-        parent_id: HashValue,
         round: Round,
         height: Height,
         timestamp_usecs: u64,
@@ -236,7 +235,6 @@ where
         validator_signer: &ValidatorSigner,
     ) -> Self {
         let block_internal = BlockSerializer {
-            parent_id,
             payload: Some(&payload),
             round,
             height,
@@ -252,7 +250,6 @@ where
 
         Block {
             id,
-            parent_id,
             round,
             height,
             timestamp_usecs,
@@ -282,7 +279,6 @@ where
         checked_precondition!(parent_block.height() < std::u64::MAX);
         Block::new_internal(
             payload,
-            parent_block.id(),
             round,
             // Height is always parent's height + 1 because it's just the position in the chain.
             parent_block.height() + 1,
@@ -309,7 +305,6 @@ where
         // comparing their timestamps.
         let timestamp_usecs = parent_block.timestamp_usecs + 1;
         let block_serializer = BlockSerializer::<T> {
-            parent_id: parent_block.id(),
             payload: None,
             round,
             height: parent_block.height() + 1,
@@ -324,7 +319,6 @@ where
 
         Block {
             id,
-            parent_id: parent_block.id(),
             round,
             height: parent_block.height() + 1,
             timestamp_usecs,
@@ -355,10 +349,6 @@ where
             return Ok(());
         }
         ensure!(self.id() == self.hash(), "Block id mismatch the hash");
-        ensure!(
-            self.quorum_cert().certified_block_id() == self.parent_id(),
-            "Block's quorum cert doesn't certify parent"
-        );
         ensure!(
             self.quorum_cert().certified_block_round() < self.round()
                 && self.round() >= self.height(),
@@ -406,7 +396,7 @@ where
     }
 
     pub fn parent_id(&self) -> HashValue {
-        self.block().parent_id()
+        self.quorum_cert().certified_block_id()
     }
 
     pub fn height(&self) -> Height {
@@ -421,7 +411,6 @@ where
         self.block().timestamp_usecs()
     }
 
-    #[cfg(any(test, feature = "fuzzing"))]
     pub fn quorum_cert(&self) -> &QuorumCert {
         self.block().quorum_cert()
     }
@@ -444,7 +433,6 @@ where
             BlockType::NilBlock | BlockType::Genesis => None,
         };
         let block_internal = BlockSerializer {
-            parent_id: self.parent_id,
             payload: self.payload(),
             round: self.round,
             height: self.height,
@@ -459,7 +447,6 @@ where
 // Internal use only. Contains all the fields in Block that contributes to the computation of
 // Block Id
 struct BlockSerializer<'a, T> {
-    parent_id: HashValue,
     payload: Option<&'a T>,
     round: Round,
     height: Height,
@@ -493,7 +480,6 @@ where
             .encode_u64(self.round)?
             .encode_u64(self.height)?
             .encode_optional(&self.payload)?
-            .encode_bytes(self.parent_id.as_ref())?
             .encode_bytes(self.quorum_cert.certified_block_id().as_ref())?
             .encode_optional(&self.author)?;
         Ok(())
@@ -507,7 +493,7 @@ where
 {
     // Is this block a parent of the parameter block?
     pub fn is_parent_of(&self, block: &Self) -> bool {
-        block.parent_id == self.id
+        block.parent_id() == self.id
     }
 }
 
@@ -519,7 +505,6 @@ where
 
     fn try_from(proto: network::proto::Block) -> failure::Result<Self> {
         let id = HashValue::from_slice(proto.id.as_ref())?;
-        let parent_id = HashValue::from_slice(proto.parent_id.as_ref())?;
         let timestamp_usecs = proto.timestamp_usecs;
         let round = proto.round;
         let height = proto.height;
@@ -540,7 +525,6 @@ where
         };
         Ok(Block {
             id,
-            parent_id,
             round,
             timestamp_usecs,
             height,
@@ -572,7 +556,6 @@ where
 
         Self {
             id: block.id.to_vec(),
-            parent_id: block.parent_id.to_vec(),
             payload,
             round: block.round,
             timestamp_usecs: block.timestamp_usecs,

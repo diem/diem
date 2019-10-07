@@ -32,13 +32,11 @@ prop_compose! {
     /// to generate it later on when adding to the tree.
     pub fn make_block(
         _ancestor_id: HashValue,
-        parent_id_strategy: impl Strategy<Value = HashValue>,
         round_strategy: impl Strategy<Value = Round>,
         height: Height,
         signer_strategy: impl Strategy<Value = ValidatorSigner>,
         parent_qc: QuorumCert,
     )(
-        parent_id in parent_id_strategy,
         round in round_strategy,
         payload in 0usize..10usize,
         height in Just(height),
@@ -47,7 +45,6 @@ prop_compose! {
     ) -> Block<Vec<usize>> {
         Block::new_internal(
             vec![payload],
-            parent_id,
             round,
             height,
             get_current_timestamp().as_micros() as u64,
@@ -69,7 +66,6 @@ prop_compose! {
     )(
         block in make_block(
             ancestor_id,
-            HashValue::arbitrary(),
             Round::arbitrary(),
             123,
             proptests::arb_signer(),
@@ -96,7 +92,6 @@ prop_compose! {
                 id: fake_id,
                 round: block.round(),
                 height: block.height(),
-                parent_id: block.parent_id(),
                 quorum_cert: block.quorum_cert().clone(),
                 block_type: BlockType::Proposal {
                     payload: block.payload().unwrap().clone(),
@@ -145,8 +140,6 @@ prop_compose! {
     )( block in make_block(
         // ancestor_id
         forest_vec[qc_idx].id(),
-        // parent_id
-        Just(forest_vec[parent_idx].id()),
         // round
         some_round(forest_vec[parent_idx].round()),
         // height,

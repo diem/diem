@@ -72,26 +72,23 @@ message TimeoutCertificate {
 message Block {
   // This block's id as a hash value
   bytes id = 1;
-  // Parent block id of this block as a hash value (all zeros to indicate the
-  // genesis block)
-  bytes parent_id = 2;
   // Payload of the block (e.g. one or more transaction(s)
-  bytes payload = 3;
+  bytes payload = 2;
   // The round of the block (internal monotonically increasing counter).
-  uint64 round = 4;
+  uint64 round = 3;
   // The height of the block (position in the chain).
-  uint64 height = 5;
+  uint64 height = 4;
   // The approximate physical microseconds since the epoch when the block was proposed
-  uint64 timestamp_usecs = 6;
+  uint64 timestamp_usecs = 5;
   // Contains the quorum certified ancestor and whether the quorum certified
   // ancestor was voted on successfully
-  QuorumCert quorum_cert = 7;
+  QuorumCert quorum_cert = 6;
   // Author of the block that can be validated by the author's public key and
   // the signature
-  bytes author = 8;
+  bytes author = 7;
   // Signature that the hash of this block has been authored by the owner of the
   // private key
-  bytes signature = 9;
+  bytes signature = 8;
 }
 
 message QuorumCert {
