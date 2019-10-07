@@ -281,7 +281,7 @@ impl<'a> ModuleTranslator<'a> {
                 vec![format!("call t{} := WriteRef(t{}, t{});", dest, dest, src)]
             }
             FreezeRef(dest, src) => vec![format!("call t{} := FreezeRef(t{});", dest, src)],
-            Call(dests, callee_index, args) => {
+            Call(dests, callee_index, _, args) => {
                 let callee_name = self.function_name_from_handle_index(*callee_index);
                 let callee_function_handle = self.module.function_handle_at(*callee_index);
                 let callee_function_signature = self
@@ -314,7 +314,7 @@ impl<'a> ModuleTranslator<'a> {
                 res_vec.extend(dest_type_assumptions);
                 res_vec
             }
-            Pack(dest, struct_def_index, fields) => {
+            Pack(dest, struct_def_index, _, fields) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 let mut fields_str = String::new();
                 let mut res_vec = vec![];
@@ -334,7 +334,7 @@ impl<'a> ModuleTranslator<'a> {
                 ));
                 res_vec
             }
-            Unpack(dests, struct_def_index, src) => {
+            Unpack(dests, struct_def_index, _, src) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 let mut dests_str = String::new();
                 let mut dest_type_assumptions = vec![];
@@ -363,14 +363,14 @@ impl<'a> ModuleTranslator<'a> {
                     self.format_type_checking(format!("t{}", dest), &field_sig),
                 ]
             }
-            Exists(dest, addr, struct_def_index) => {
+            Exists(dest, addr, struct_def_index, _) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 vec![format!(
                     "call t{} := Exists(t{}, rs_{});",
                     dest, addr, struct_str
                 )]
             }
-            BorrowGlobal(dest, addr, struct_def_index) => {
+            BorrowGlobal(dest, addr, struct_def_index, _) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 vec![
                     format!(
@@ -381,14 +381,14 @@ impl<'a> ModuleTranslator<'a> {
                     format!("assume is#Map(v#Reference(t{}));", dest),
                 ]
             }
-            MoveToSender(src, struct_def_index) => {
+            MoveToSender(src, struct_def_index, _) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 vec![format!(
                     "call rs_{} := MoveToSender(rs_{}, t{});",
                     struct_str, struct_str, src,
                 )]
             }
-            MoveFrom(dest, src, struct_def_index) => {
+            MoveFrom(dest, src, struct_def_index, _) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 vec![
                     format!(
@@ -695,7 +695,7 @@ impl<'a> ModuleTranslator<'a> {
                 }
                 res.push_str("\n");
             }
-            if let Call(_, _, args) = bytecode {
+            if let Call(_, _, _, args) = bytecode {
                 // update everything that might be related to the updated reference
                 for dest in args {
                     if !self.is_local_mutable_ref(*dest, idx) {
