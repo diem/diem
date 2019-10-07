@@ -10,6 +10,7 @@ use libra_swarm::{swarm::LibraSwarm, utils};
 use logger::prelude::*;
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
+use std::fs;
 use std::str::FromStr;
 use tools::tempdir::TempPath;
 
@@ -301,6 +302,68 @@ fn test_basic_restartability() {
     // restart node
     env.validator_swarm.kill_node(peer_to_restart);
     assert!(env.validator_swarm.add_node(peer_to_restart, false).is_ok());
+    assert_eq!(
+        Decimal::from_f64(90.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+    client_proxy
+        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(80.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(20.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+}
+
+#[test]
+fn test_startup_sync_state() {
+    let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(4, 0);
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy.mint_coins(&["mb", "0", "100"], true).unwrap();
+    client_proxy
+        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(90.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+    let peer_to_stop = 0;
+    env.validator_swarm.kill_node(peer_to_stop);
+    let node_config = NodeConfig::load(
+        env.validator_swarm
+            .config
+            .configs
+            .get(peer_to_stop)
+            .unwrap(),
+    )
+    .unwrap();
+    // TODO Remove hardcoded path to state db
+    let state_db_path = node_config
+        .base
+        .data_dir_path
+        .join(node_config.storage.get_dir())
+        .join("libradb");
+    // Verify that state_db_path exists and
+    // we are not deleting a non-existent directory
+    assert!(state_db_path.as_path().exists());
+    // Delete the state db to simulate state db lagging
+    // behind consensus db and forcing a state sync
+    // during a node startup
+    fs::remove_dir_all(state_db_path).unwrap();
+    assert!(env.validator_swarm.add_node(peer_to_stop, false).is_ok());
     assert_eq!(
         Decimal::from_f64(90.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
