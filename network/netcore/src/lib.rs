@@ -10,4 +10,3 @@
 pub mod multiplexing;
 pub mod negotiate;
 pub mod transport;
-mod utils;
