@@ -10,6 +10,14 @@ import "mempool_status.proto";
 import "transaction.proto";
 import "vm_errors.proto";
 
+// The request for submitting a transaction to an upstream validator or full node.
+message AdmissionControlMsg {
+  oneof message {
+    SubmitTransactionRequest submit_transaction_request = 1;
+    SubmitTransactionResponse submit_transaction_response = 2;
+  }
+}
+
 // -----------------------------------------------------------------------------
 // ---------------- Submit transaction
 // -----------------------------------------------------------------------------

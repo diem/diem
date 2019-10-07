@@ -6,13 +6,13 @@
 use crate::{
     error::NetworkError,
     interface::{NetworkNotification, NetworkRequest},
-    proto::{
-        AdmissionControlMsg, AdmissionControlMsg_oneof, SubmitTransactionRequest,
-        SubmitTransactionResponse,
-    },
     protocols::rpc::{self, error::RpcError},
     validator_network::Event,
     ProtocolId,
+};
+use admission_control_proto::proto::admission_control::{
+    admission_control_msg::Message as AdmissionControlMsg_oneof, AdmissionControlMsg,
+    SubmitTransactionRequest, SubmitTransactionResponse,
 };
 use channel;
 use futures::{

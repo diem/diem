@@ -8,9 +8,6 @@
 mod consensus {
     include!(concat!(env!("OUT_DIR"), "/consensus.rs"));
 }
-mod admission_control {
-    include!(concat!(env!("OUT_DIR"), "/admission_control.rs"));
-}
 mod network {
     include!(concat!(env!("OUT_DIR"), "/network.rs"));
 }
@@ -24,10 +21,6 @@ mod state_synchronizer {
 use ::types::proto::types;
 
 pub use self::{
-    admission_control::{
-        admission_control_msg::Message as AdmissionControlMsg_oneof, AdmissionControlMsg,
-        SubmitTransactionRequest, SubmitTransactionResponse,
-    },
     consensus::{
         consensus_msg::Message as ConsensusMsg_oneof, Block, BlockRetrievalStatus, ConsensusMsg,
         PacemakerTimeout, PacemakerTimeoutCertificate, Proposal, QuorumCert, RequestBlock,

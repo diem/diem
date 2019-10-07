@@ -2489,6 +2489,7 @@ dependencies = [
 name = "network"
 version = "0.1.0"
 dependencies = [
+ "admission_control_proto 0.1.0",
  "bounded-executor 0.1.0",
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "channel 0.1.0",
