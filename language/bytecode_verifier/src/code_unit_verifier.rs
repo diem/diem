@@ -5,7 +5,7 @@
 //! The overall verification is split between stack_usage_verifier.rs and
 //! abstract_interpreter.rs. CodeUnitVerifier simply orchestrates calls into these two files.
 use crate::control_flow_graph::VMControlFlowGraph;
-use types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
     errors::append_err_info,

@@ -4,11 +4,11 @@
 
 use crate::loaded_data::function::FunctionDef;
 use bytecode_verifier::VerifiedModule;
-use std::{collections::HashMap, sync::RwLock};
-use types::{
+use libra_types::{
     identifier::Identifier,
     vm_error::{StatusCode, VMStatus},
 };
+use std::{collections::HashMap, sync::RwLock};
 use vm::{
     access::ModuleAccess,
     errors::VMResult,

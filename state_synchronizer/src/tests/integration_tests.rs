@@ -13,6 +13,15 @@ use futures::{
     future::{FutureExt, TryFutureExt},
     Future,
 };
+use libra_types::{
+    account_address::AccountAddress,
+    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfo as TypesLedgerInfo,
+    proof::AccumulatorProof,
+    test_helpers::transaction_test_helpers::get_test_signed_txn,
+    transaction::{TransactionInfo, TransactionListWithProof},
+    vm_error::StatusCode,
+};
 use network::{
     proto::GetChunkResponse,
     validator_network::{
@@ -33,15 +42,6 @@ use std::{
 };
 use tokio::runtime::{Builder, Runtime};
 use transaction_builder::encode_transfer_script;
-use types::{
-    account_address::AccountAddress,
-    crypto_proxies::LedgerInfoWithSignatures,
-    ledger_info::LedgerInfo as TypesLedgerInfo,
-    proof::AccumulatorProof,
-    test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{TransactionInfo, TransactionListWithProof},
-    vm_error::StatusCode,
-};
 use vm_genesis::GENESIS_KEYPAIR;
 
 type MockRpcHandler =

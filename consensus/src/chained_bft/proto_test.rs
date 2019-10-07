@@ -14,10 +14,10 @@ use crate::chained_bft::{
 };
 use crypto::HashValue;
 use executor::ExecutedState;
+use libra_types::validator_signer::ValidatorSigner;
 use prost::Message;
 use prost_ext::MessageExt;
 use std::convert::{TryFrom, TryInto};
-use types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_proto_convert_block() {

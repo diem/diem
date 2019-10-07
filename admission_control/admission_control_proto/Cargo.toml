@@ -15,10 +15,10 @@ prost = "0.5.0"
 failure = { package = "failure_ext", path = "../../common/failure_ext" }
 logger = { path = "../../common/logger" }
 mempool-shared-proto = { path = "../../mempool/mempool-shared-proto" }
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 
 [dev-dependencies]
-types = { path = "../../types", features = ["testing"]}
+libra-types = { path = "../../types", features = ["testing"]}
 
 [build-dependencies]
 grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }

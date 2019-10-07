@@ -7,18 +7,18 @@ use crate::{
 };
 use canonical_serialization::*;
 use failure::prelude::*;
+use libra_types::{
+    access_path::AccessPath,
+    account_address::{AccountAddress, ADDRESS_LENGTH},
+    byte_array::ByteArray,
+    vm_error::{StatusCode, VMStatus},
+};
 use std::{
     cell::{Ref, RefCell},
     convert::TryFrom,
     mem::replace,
     ops::Add,
     rc::Rc,
-};
-use types::{
-    access_path::AccessPath,
-    account_address::{AccountAddress, ADDRESS_LENGTH},
-    byte_array::ByteArray,
-    vm_error::{StatusCode, VMStatus},
 };
 use vm::{
     errors::*,

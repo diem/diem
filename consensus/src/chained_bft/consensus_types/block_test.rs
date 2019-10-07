@@ -11,17 +11,17 @@ use crate::chained_bft::{
 };
 
 use crypto::HashValue;
+#[cfg(test)]
+use libra_types::crypto_proxies::SecretKey;
+use libra_types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
+#[cfg(test)]
+use libra_types::validator_signer::proptests;
 use proptest::{prelude::*, std_facade::hash_map::HashMap};
 use std::{
     panic,
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-#[cfg(test)]
-use types::crypto_proxies::SecretKey;
-use types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
-#[cfg(test)]
-use types::validator_signer::proptests;
 
 type LinearizedBlockForest<T> = Vec<Block<T>>;
 

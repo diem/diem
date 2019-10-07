@@ -43,7 +43,7 @@ state_synchronizer = { path = "../state_synchronizer" }
 schemadb = { path = "../storage/schemadb" }
 storage_client = { path = "../storage/storage_client" }
 tools = { path = "../common/tools" }
-types = { path = "../types" }
+libra-types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }
 
 [dev-dependencies]
@@ -53,7 +53,7 @@ rusty-fork = "0.2.2"
 
 storage-service = { path = "../storage/storage-service" }
 crypto = { path = "../crypto/crypto", features = ["testing"]}
-types = { path = "../types", features = ["testing"]}
+libra-types = { path = "../types", features = ["testing"]}
 vm_genesis = { path = "../language/vm/vm_genesis" }
 vm_validator = { path = "../vm_validator" }
 proptest = "0.9.4"

@@ -7,9 +7,9 @@ use crate::{
 };
 
 use failure::prelude::*;
+use libra_types::account_address::ADDRESS_LENGTH;
 use metrics::counters::*;
 use std::{collections::HashMap, sync::Arc};
-use types::account_address::ADDRESS_LENGTH;
 
 /// Print the error and bump up error counter.
 pub fn report_error(msg: &str, e: Error) {

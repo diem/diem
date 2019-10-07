@@ -4,6 +4,11 @@ use config::config::{VMConfig, VMPublishingOption};
 use crypto::HashValue;
 use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
+use libra_types::{
+    account_address::AccountAddress,
+    byte_array::ByteArray,
+    transaction::{Script, TransactionArgument, SCRIPT_HASH_LENGTH},
+};
 use std::{collections::HashSet, iter::FromIterator};
 use stdlib::{
     stdlib_modules,
@@ -11,11 +16,6 @@ use stdlib::{
         CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY, PEER_TO_PEER_TRANSFER_TXN_BODY,
         ROTATE_AUTHENTICATION_KEY_TXN_BODY,
     },
-};
-use types::{
-    account_address::AccountAddress,
-    byte_array::ByteArray,
-    transaction::{Script, TransactionArgument, SCRIPT_HASH_LENGTH},
 };
 #[cfg(any(test, feature = "testing"))]
 use vm::file_format::Bytecode;

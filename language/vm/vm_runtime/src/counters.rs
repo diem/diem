@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lazy_static;
-use metrics::OpMetrics;
-use prometheus::{IntCounter, IntGauge};
-use std::{convert::TryFrom, time::Instant};
-use types::{
+use libra_types::{
     transaction::TransactionStatus,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
+use metrics::OpMetrics;
+use prometheus::{IntCounter, IntGauge};
+use std::{convert::TryFrom, time::Instant};
 
 // constants used to create counters
 const TXN_EXECUTION_KEEP: &str = "txn.execution.keep";

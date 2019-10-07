@@ -13,11 +13,11 @@ use crate::{
     util::mock_time_service::SimulatedTimeService,
 };
 use futures::executor::block_on;
+use libra_types::crypto_proxies::ValidatorVerifier;
 use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use types::crypto_proxies::ValidatorVerifier;
 
 fn minute_from_now() -> Instant {
     Instant::now() + Duration::new(60, 0)

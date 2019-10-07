@@ -23,6 +23,13 @@ use crypto::{
 use failure::{format_err, Result};
 use futures::{channel::oneshot, executor::block_on};
 use lazy_static::lazy_static;
+use libra_types::{
+    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfo,
+    proof::accumulator::Accumulator,
+    transaction::{SignedTransaction, TransactionListWithProof, TransactionStatus, Version},
+    validator_set::ValidatorSet,
+};
 use logger::prelude::*;
 use scratchpad::SparseMerkleTree;
 use serde::{Deserialize, Serialize};
@@ -33,13 +40,6 @@ use std::{
     sync::{mpsc, Arc, Mutex},
 };
 use storage_client::{StorageRead, StorageWrite};
-use types::{
-    crypto_proxies::LedgerInfoWithSignatures,
-    ledger_info::LedgerInfo,
-    proof::accumulator::Accumulator,
-    transaction::{SignedTransaction, TransactionListWithProof, TransactionStatus, Version},
-    validator_set::ValidatorSet,
-};
 use vm_runtime::VMExecutor;
 
 lazy_static! {

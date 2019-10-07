@@ -21,10 +21,10 @@ use futures::{
     task::{Context, Poll},
     SinkExt, Stream, StreamExt,
 };
+use libra_types::{validator_public_keys::ValidatorPublicKeys, PeerId};
 use pin_utils::unsafe_pinned;
 use prost::Message as _;
 use std::{pin::Pin, time::Duration};
-use types::{validator_public_keys::ValidatorPublicKeys, PeerId};
 
 /// Protocol id for consensus RPC calls
 pub const CONSENSUS_RPC_PROTOCOL: &[u8] = b"/libra/consensus/rpc/0.1.0";

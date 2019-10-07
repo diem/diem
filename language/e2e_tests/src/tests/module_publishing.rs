@@ -6,7 +6,7 @@ use crate::{
     compile::compile_module_with_address, executor::FakeExecutor, transaction_status_eq,
 };
 use config::config::VMPublishingOption;
-use types::{
+use libra_types::{
     transaction::TransactionStatus,
     vm_error::{StatusCode, StatusType, VMStatus},
 };

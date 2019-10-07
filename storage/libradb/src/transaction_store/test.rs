@@ -3,10 +3,10 @@
 
 use super::*;
 use crate::LibraDB;
+use libra_types::proptest_types::{AccountInfoUniverse, SignatureCheckedTransactionGen};
 use proptest::{collection::vec, prelude::*};
 use proptest_helpers::Index;
 use tools::tempdir::TempPath;
-use types::proptest_types::{AccountInfoUniverse, SignatureCheckedTransactionGen};
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]

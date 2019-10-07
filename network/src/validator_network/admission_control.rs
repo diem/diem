@@ -20,10 +20,10 @@ use futures::{
     task::{Context, Poll},
     Stream, StreamExt,
 };
+use libra_types::PeerId;
 use pin_utils::unsafe_pinned;
 use prost::Message as _;
 use std::{pin::Pin, time::Duration};
-use types::PeerId;
 
 /// Protocol id for admission control RPC calls
 pub const ADMISSION_CONTROL_RPC_PROTOCOL: &[u8] = b"/libra/admission_control/rpc/0.1.0";

@@ -5,8 +5,8 @@ use crate::{
     loaded_data::{struct_def::StructDef, types::Type},
     value::{Struct, Value},
 };
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 use proptest::{collection::vec, prelude::*};
-use types::{account_address::AccountAddress, byte_array::ByteArray};
 use vm::vm_string::VMString;
 
 /// Strategies for property-based tests using `Value` instances.

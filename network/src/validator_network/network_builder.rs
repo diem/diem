@@ -33,6 +33,7 @@ use crypto::{
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
 use futures::{compat::Compat01As03, FutureExt, StreamExt, TryFutureExt};
+use libra_types::{validator_signer::ValidatorSigner, PeerId};
 use logger::prelude::*;
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
 use parity_multiaddr::Multiaddr;
@@ -44,7 +45,6 @@ use std::{
 use tokio::runtime::TaskExecutor;
 use tokio_retry::strategy::ExponentialBackoff;
 use tokio_timer::Interval;
-use types::{validator_signer::ValidatorSigner, PeerId};
 
 pub const NETWORK_CHANNEL_SIZE: usize = 1024;
 pub const DISCOVERY_INTERVAL_MS: u64 = 1000;

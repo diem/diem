@@ -30,14 +30,14 @@ failure = { package = "failure_ext", path = "../common/failure_ext" }
 libra_wallet = { path = "./libra_wallet" }
 logger =  { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
-types = { path = "../types" }
+libra-types = { path = "../types" }
 tools = { path = "../common/tools/" }
 transaction_builder = { path = "../language/transaction_builder" }
 
 [dev-dependencies]
 crypto = { path = "../crypto/crypto", features = ["testing"] }
-types = { path = "../types", features = ["testing"]}
+libra-types = { path = "../types", features = ["testing"]}
 
 [features]
 default = []
-testing = ["types/testing", "crypto/testing"]
+testing = ["libra-types/testing", "crypto/testing"]

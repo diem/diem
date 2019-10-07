@@ -2,7 +2,7 @@ use crate::{
     loaded_data::{struct_def::StructDef, types::Type},
     native_structs::NativeStructType,
 };
-use types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_error::{StatusCode, VMStatus};
 pub struct TypeContext(Vec<Type>);
 
 impl TypeContext {

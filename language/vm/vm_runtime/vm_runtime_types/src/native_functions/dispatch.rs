@@ -6,13 +6,13 @@ use crate::{
     native_structs::{dispatch::dispatch_native_struct, vector::NativeVector},
     value::Value,
 };
-use std::collections::{HashMap, VecDeque};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     account_config,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
 };
+use std::collections::{HashMap, VecDeque};
 use vm::file_format::{FunctionSignature, Kind, SignatureToken};
 
 /// Enum representing the result of running a native function

@@ -19,6 +19,12 @@ use futures::{
     future::{join, FutureExt, TryFutureExt},
     StreamExt,
 };
+use libra_types::{
+    account_address::{AccountAddress, ADDRESS_LENGTH},
+    proto::types::SignedTransaction,
+    test_helpers::transaction_test_helpers::get_test_signed_txn,
+    PeerId,
+};
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
@@ -27,12 +33,6 @@ use std::{
     time::Duration,
 };
 use tokio::runtime::Runtime;
-use types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
-    proto::types::SignedTransaction,
-    test_helpers::transaction_test_helpers::get_test_signed_txn,
-    PeerId,
-};
 
 #[test]
 fn test_network_builder() {

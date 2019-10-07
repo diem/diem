@@ -27,7 +27,7 @@ mempool = { path = "../../mempool" }
 mempool-shared-proto = { path = "../../mempool/mempool-shared-proto" }
 metrics = { path = "../../common/metrics" }
 storage_client = { path = "../../storage/storage_client" }
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 vm_validator = { path = "../../vm_validator" }
 
 storage-service = { path = "../../storage/storage-service", optional = true }
@@ -38,7 +38,7 @@ proptest = { version = "0.9.4", optional = true }
 assert_matches = "1.3.0"
 rand = "0.6.5"
 storage-service = { path = "../../storage/storage-service" }
-types = { path = "../../types", features = ["testing"] }
+libra-types = { path = "../../types", features = ["testing"] }
 proptest_helpers = { path = "../../common/proptest_helpers" }
 proptest = "0.9.4"
 

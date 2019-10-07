@@ -5,12 +5,12 @@
 
 use crate::{account::Account, compile::compile_script, gas_costs};
 use lazy_static::lazy_static;
-use stdlib::transaction_scripts;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     transaction::{SignedTransaction, TransactionArgument},
 };
+use stdlib::transaction_scripts;
 
 lazy_static! {
     /// A serialized transaction to create a new account.

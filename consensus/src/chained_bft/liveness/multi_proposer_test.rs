@@ -9,7 +9,7 @@ use crate::chained_bft::{
     },
 };
 use crypto::ed25519::*;
-use types::validator_signer::ValidatorSigner;
+use libra_types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_multi_proposer() {

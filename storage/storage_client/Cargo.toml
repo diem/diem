@@ -17,7 +17,7 @@ metrics = { path = "../../common/metrics" }
 scratchpad = { path = "../scratchpad" }
 state_view = { path = "../state_view" }
 storage_proto = { path = "../storage_proto" }
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 
 [dev-dependencies]
-types = { path = "../../types", features = ["testing"] }
+libra-types = { path = "../../types", features = ["testing"] }

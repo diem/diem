@@ -9,14 +9,14 @@ use crate::{
     bytecode_specifications::{frame_transition_info::frame_transitions, stack_transition_info::*},
     common::*,
 };
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::collections::HashMap;
-use types::{
+use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     byte_array::ByteArray,
     identifier::Identifier,
     language_storage::ModuleId,
 };
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use std::collections::HashMap;
 use vm::{
     access::*,
     file_format::{

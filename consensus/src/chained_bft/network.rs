@@ -23,6 +23,7 @@ use futures::{
     channel::oneshot, stream::select, FutureExt, SinkExt, Stream, StreamExt, TryFutureExt,
     TryStreamExt,
 };
+use libra_types::account_address::AccountAddress;
 use logger::prelude::*;
 use network::{
     proto::{
@@ -38,7 +39,6 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::runtime::TaskExecutor;
-use types::account_address::AccountAddress;
 
 /// The response sent back from EventProcessor for the BlockRetrievalRequest.
 #[derive(Debug)]

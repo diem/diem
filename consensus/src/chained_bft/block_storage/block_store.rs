@@ -20,14 +20,14 @@ use logger::prelude::*;
 
 use crate::chained_bft::persistent_storage::RecoveryData;
 use executor::StateComputeResult;
+use libra_types::{
+    crypto_proxies::{ValidatorSigner, ValidatorVerifier},
+    ledger_info::LedgerInfo,
+};
 use mirai_annotations::checked_precondition;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
     sync::{Arc, RwLock},
-};
-use types::{
-    crypto_proxies::{ValidatorSigner, ValidatorVerifier},
-    ledger_info::LedgerInfo,
 };
 
 #[cfg(test)]

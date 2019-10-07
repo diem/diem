@@ -13,14 +13,14 @@ use crate::chained_bft::{
 use crypto::{hash::CryptoHash, HashValue};
 use executor::ExecutedState;
 use futures::executor::block_on;
+use libra_types::{
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner},
+    ledger_info::LedgerInfo,
+};
 use logger::{set_simple_logger, set_simple_logger_prefix};
 use std::{collections::HashMap, sync::Arc};
 use termion::color::*;
 use tokio::runtime;
-use types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner},
-    ledger_info::LedgerInfo,
-};
 
 mod mock_state_computer;
 mod mock_storage;

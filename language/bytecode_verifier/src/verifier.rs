@@ -8,11 +8,11 @@ use crate::{
     signature::SignatureChecker, struct_defs::RecursiveStructDefChecker,
 };
 use failure::Error;
-use std::{collections::BTreeMap, fmt};
-use types::{
+use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
+use std::{collections::BTreeMap, fmt};
 use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{append_err_info, verification_error},

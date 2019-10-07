@@ -18,6 +18,7 @@ use config::{
 };
 use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
+use libra_types::PeerId;
 use logger::prelude::*;
 use parity_multiaddr::{Multiaddr, Protocol};
 use std::{
@@ -27,7 +28,6 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
-use types::PeerId;
 
 pub struct SwarmConfig {
     pub configs: Vec<PathBuf>,

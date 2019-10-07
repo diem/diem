@@ -24,6 +24,7 @@ use futures::{
     future::{BoxFuture, FutureExt},
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
+use libra_types::PeerId;
 use logger::prelude::*;
 use parity_multiaddr::Multiaddr;
 use std::{
@@ -34,7 +35,6 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::timer;
-use types::PeerId;
 
 #[cfg(test)]
 mod test;

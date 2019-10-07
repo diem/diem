@@ -7,6 +7,12 @@ use bytecode_verifier::{
 };
 use compiler::{util, Compiler};
 use ir_to_bytecode::parser::{parse_module, parse_script};
+use libra_types::{
+    access_path::AccessPath,
+    account_address::AccountAddress,
+    transaction::{Module, Script},
+    vm_error::VMStatus,
+};
 use serde_json;
 use std::{
     convert::TryFrom,
@@ -16,12 +22,6 @@ use std::{
 };
 use stdlib::stdlib_modules;
 use structopt::StructOpt;
-use types::{
-    access_path::AccessPath,
-    account_address::AccountAddress,
-    transaction::{Module, Script},
-    vm_error::VMStatus,
-};
 use vm::file_format::CompiledModule;
 
 #[derive(Debug, StructOpt)]

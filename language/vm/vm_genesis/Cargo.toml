@@ -14,7 +14,7 @@ crypto = { path = "../../../crypto/crypto" }
 stdlib = { path = "../../stdlib" }
 prost-ext = { path = "../../../common/prost-ext" }
 state_view = { path = "../../../storage/state_view" }
-types = { path = "../../../types" }
+libra-types = { path = "../../../types" }
 vm = { path = "../" }
 vm_cache_map = { path = "../vm_runtime/vm_cache_map" }
 vm_runtime = { path = "../vm_runtime" }
@@ -28,4 +28,4 @@ crypto = { path = "../../../crypto/crypto", features = ["testing"]}
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
 proptest_helpers = { path = "../../../common/proptest_helpers" }
-types = { path = "../../../types", features = ["testing"] }
+libra-types = { path = "../../../types", features = ["testing"] }

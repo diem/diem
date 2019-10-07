@@ -11,12 +11,7 @@ use crypto::{
 };
 use failure::Result;
 use lazy_static::lazy_static;
-use rand::{
-    rngs::{OsRng, StdRng},
-    Rng, SeedableRng,
-};
-use std::collections::HashMap;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::LedgerInfoWithSignatures,
@@ -25,6 +20,11 @@ use types::{
     transaction::{RawTransaction, Script, TransactionInfo, TransactionToCommit},
     vm_error::StatusCode,
 };
+use rand::{
+    rngs::{OsRng, StdRng},
+    Rng, SeedableRng,
+};
+use std::collections::HashMap;
 
 fn gen_mock_genesis() -> (
     TransactionInfo,

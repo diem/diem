@@ -29,14 +29,14 @@ metrics = { path = "../common/metrics" }
 network = { path = "../network" }
 crypto = { path = "../crypto/crypto" }
 storage_client = { path = "../storage/storage_client" }
-types = { path = "../types" }
+libra-types = { path = "../types" }
 vm_validator = { path = "../vm_validator" }
 
 [dev-dependencies]
 rand = "0.6.5"
 channel = { path = "../common/channel" }
 storage-service = { path = "../storage/storage-service" }
-types = { path = "../types", features = ["testing"] }
+libra-types = { path = "../types", features = ["testing"] }
 
 [build-dependencies]
 grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }

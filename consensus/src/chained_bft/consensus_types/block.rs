@@ -14,6 +14,10 @@ use crypto::{
 };
 use executor::{ExecutedState, StateComputeResult};
 use failure::Result;
+use libra_types::{
+    crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
+    ledger_info::LedgerInfo,
+};
 use mirai_annotations::{assumed_postcondition, checked_precondition, checked_precondition_eq};
 use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -22,10 +26,6 @@ use std::{
     convert::{TryFrom, TryInto},
     fmt::{Display, Formatter},
     sync::Arc,
-};
-use types::{
-    crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
-    ledger_info::LedgerInfo,
 };
 
 #[cfg(test)]

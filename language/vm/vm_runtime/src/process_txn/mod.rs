@@ -3,8 +3,8 @@ use crate::{
     loaded_data::loaded_module::LoadedModule,
 };
 use config::config::VMPublishingOption;
+use libra_types::transaction::SignatureCheckedTransaction;
 use std::marker::PhantomData;
-use types::transaction::SignatureCheckedTransaction;
 use vm::errors::VMResult;
 use vm_cache_map::Arena;
 

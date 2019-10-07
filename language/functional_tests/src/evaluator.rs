@@ -15,15 +15,15 @@ use ir_to_bytecode::{
 };
 use ir_to_bytecode_syntax::ast::ScriptOrModule;
 use language_e2e_tests::{account::Account, executor::FakeExecutor};
-use std::{fmt, str::FromStr, time::Duration};
-use stdlib::stdlib_modules;
-use types::{
+use libra_types::{
     transaction::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
         SignedTransaction, TransactionArgument, TransactionOutput, TransactionStatus,
     },
     vm_error::StatusCode,
 };
+use std::{fmt, str::FromStr, time::Duration};
+use stdlib::stdlib_modules;
 use vm::file_format::{CompiledModule, CompiledScript};
 use vm::gas_schedule::{GasAlgebra, MAXIMUM_NUMBER_OF_GAS_UNITS};
 

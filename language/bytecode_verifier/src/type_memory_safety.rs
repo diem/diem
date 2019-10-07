@@ -9,9 +9,9 @@ use crate::{
     control_flow_graph::VMControlFlowGraph,
     nonce::Nonce,
 };
+use libra_types::vm_error::{StatusCode, VMStatus};
 use mirai_annotations::checked_verify;
 use std::collections::{BTreeMap, BTreeSet};
-use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
     errors::{err_at_offset, VMResult},

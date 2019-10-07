@@ -21,7 +21,7 @@ sha-1 = { version = "0.8.1", default-features = false }
 structopt = "0.3.2"
 
 # List out modules with data structures being fuzzed here.
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 vm = { path = "../../language/vm" }
 vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types" }
 consensus = { path = "../../consensus" }
@@ -32,13 +32,13 @@ datatest-stable = { path = "../../common/datatest-stable" }
 stats_alloc = "0.1.8"
 rusty-fork = "0.2.2"
 
-types = { path = "../../types", features = ["testing"] }
+libra-types = { path = "../../types", features = ["testing"] }
 vm = { path = "../../language/vm", features = ["testing"] }
 vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types", features = ["testing"] }
 
 [features]
 default = ["testing", "fuzzing"]
-testing = ["types/testing", "vm/testing", "vm_runtime_types/testing"]
+testing = ["libra-types/testing", "vm/testing", "vm_runtime_types/testing"]
 fuzzing = ["consensus/fuzzing", "admission-control-service/fuzzing"]
 
 [[test]]

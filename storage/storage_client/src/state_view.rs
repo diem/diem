@@ -4,6 +4,12 @@
 use crate::StorageRead;
 use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
+use libra_types::{
+    access_path::AccessPath,
+    account_address::AccountAddress,
+    proof::{verify_sparse_merkle_element, SparseMerkleProof},
+    transaction::Version,
+};
 use scratchpad::{AccountState, SparseMerkleTree};
 use state_view::StateView;
 use std::{
@@ -11,12 +17,6 @@ use std::{
     collections::{hash_map::Entry, BTreeMap, HashMap},
     convert::TryInto,
     sync::Arc,
-};
-use types::{
-    access_path::AccessPath,
-    account_address::AccountAddress,
-    proof::{verify_sparse_merkle_element, SparseMerkleProof},
-    transaction::Version,
 };
 
 /// `VerifiedStateView` is like a snapshot of the global state comprised of state view at two

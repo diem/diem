@@ -15,7 +15,7 @@ lazy_static = "1.3.0"
 crypto = { path = "../../crypto/crypto"}
 rand = "0.6.5"
 state_view = { path = "../../storage/state_view" }
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 transaction_builder = { path = "../transaction_builder", features = ["testing"]}
 vm = { path = "../vm" }
 vm_genesis = { path = "../vm/vm_genesis" }
@@ -31,4 +31,4 @@ stdlib = { path = "../stdlib" }
 walkdir = "2.2.9"
 
 [dev-dependencies]
-types = { path = "../../types", features = ["testing"] }
+libra-types = { path = "../../types", features = ["testing"] }

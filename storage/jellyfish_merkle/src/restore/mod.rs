@@ -14,7 +14,7 @@ use crate::{
 };
 use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
-use types::{account_state_blob::AccountStateBlob, transaction::Version};
+use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum ChildInfo {

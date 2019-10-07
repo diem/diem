@@ -56,6 +56,11 @@ use futures::{
     sink::SinkExt,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
+use libra_types::{
+    crypto_proxies::{ValidatorSigner as Signer, ValidatorVerifier as SignatureValidator},
+    validator_verifier::ValidatorInfo as SignatureInfo,
+    PeerId,
+};
 use logger::prelude::*;
 use parity_multiaddr::Multiaddr;
 use prost::Message;
@@ -69,11 +74,6 @@ use std::{
     time::{Duration, SystemTime},
 };
 use tokio::{codec::Framed, prelude::FutureExt as _};
-use types::{
-    crypto_proxies::{ValidatorSigner as Signer, ValidatorVerifier as SignatureValidator},
-    validator_verifier::ValidatorInfo as SignatureInfo,
-    PeerId,
-};
 use unsigned_varint::codec::UviBytes;
 
 #[cfg(test)]

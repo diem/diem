@@ -11,6 +11,7 @@ use crate::{
     OP_COUNTER,
 };
 use failure::prelude::*;
+use libra_types::transaction::Version;
 use logger::prelude::*;
 use schemadb::{ReadOptions, SchemaBatch, SchemaIterator, DB};
 use std::{
@@ -20,7 +21,6 @@ use std::{
     },
     thread::JoinHandle,
 };
-use types::transaction::Version;
 
 use failure::_core::sync::atomic::Ordering;
 use jellyfish_merkle::StaleNodeIndex;

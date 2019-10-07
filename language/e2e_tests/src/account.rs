@@ -5,9 +5,7 @@
 
 use crypto::ed25519::*;
 use lazy_static::lazy_static;
-use rand::{Rng, SeedableRng};
-use std::time::Duration;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
@@ -17,6 +15,8 @@ use types::{
         RawTransaction, Script, SignedTransaction, TransactionArgument, TransactionPayload,
     },
 };
+use rand::{Rng, SeedableRng};
+use std::time::Duration;
 use vm_genesis::GENESIS_KEYPAIR;
 use vm_runtime::identifier::create_access_path;
 use vm_runtime_types::value::{Struct, Value};

@@ -12,10 +12,10 @@ use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use executor::{ExecutedState, StateComputeResult};
 use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use logger::prelude::*;
 use std::{pin::Pin, sync::Arc};
 use termion::color::*;
-use types::crypto_proxies::LedgerInfoWithSignatures;
 
 pub struct MockStateComputer {
     commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>,

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::file_format::CompiledScript;
-use types::test_helpers::transaction_test_helpers::placeholder_script;
+use libra_types::test_helpers::transaction_test_helpers::placeholder_script;
 
 // Ensure that the placeholder_script fixture deserializes properly, i.e. is kept up to date.
 #[test]

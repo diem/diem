@@ -72,8 +72,8 @@ use crypto::{
     hash::{HashValueBitIterator, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
+use libra_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
 use std::sync::Arc;
-use types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
 
 /// `AccountState` describes the result of querying an account from this SparseMerkleTree.
 #[derive(Debug, Eq, PartialEq)]

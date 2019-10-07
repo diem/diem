@@ -9,12 +9,12 @@ use crate::chained_bft::{
     consensus_types::{quorum_cert::QuorumCert, vote_msg::VoteMsg},
 };
 use crypto::{hash::CryptoHash, HashValue};
-use logger::prelude::*;
-use std::{collections::HashMap, sync::Arc};
-use types::{
+use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
     validator_verifier::VerifyError,
 };
+use logger::prelude::*;
+use std::{collections::HashMap, sync::Arc};
 
 #[cfg(test)]
 #[path = "pending_votes_test.rs"]

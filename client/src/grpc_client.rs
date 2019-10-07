@@ -13,10 +13,7 @@ use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::Future;
 use grpcio::{CallOption, ChannelBuilder, EnvBuilder};
-use logger::prelude::*;
-use std::convert::TryFrom;
-use std::sync::Arc;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::get_account_resource_or_default,
@@ -29,6 +26,9 @@ use types::{
     transaction::{SignedTransaction, Version},
     vm_error::StatusCode,
 };
+use logger::prelude::*;
+use std::convert::TryFrom;
+use std::sync::Arc;
 
 const MAX_GRPC_RETRY_COUNT: u64 = 1;
 

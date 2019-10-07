@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use libra_types::proof::verify_test_accumulator_element;
 use proptest::{collection::vec, prelude::*};
-use types::proof::verify_test_accumulator_element;
 
 #[test]
 fn test_error_on_bad_parameters() {

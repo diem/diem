@@ -4,11 +4,7 @@
 use crypto::{ed25519::*, traits::ValidKey};
 use failure::prelude::*;
 use lazy_static::lazy_static;
-use rand::{rngs::StdRng, SeedableRng};
-use state_view::StateView;
-use std::time::Duration;
-use stdlib::stdlib_modules;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
@@ -17,6 +13,10 @@ use types::{
     transaction::{RawTransaction, Script, SignatureCheckedTransaction, TransactionArgument},
     validator_set::ValidatorSet,
 };
+use rand::{rngs::StdRng, SeedableRng};
+use state_view::StateView;
+use std::time::Duration;
+use stdlib::stdlib_modules;
 use vm::{access::ModuleAccess, transaction_metadata::TransactionMetadata};
 use vm_cache_map::Arena;
 use vm_runtime::{

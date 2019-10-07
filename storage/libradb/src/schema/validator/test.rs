@@ -4,6 +4,7 @@
 use super::*;
 use crypto::ed25519::compat;
 use itertools::Itertools;
+use libra_types::transaction::Version;
 use rand::{
     rngs::{OsRng, StdRng},
     seq::SliceRandom,
@@ -11,7 +12,6 @@ use rand::{
 };
 use schemadb::schema::assert_encode_decode;
 use std::vec::IntoIter;
-use types::transaction::Version;
 
 fn row_with_arbitrary_validator(version: Version) -> (Key, ()) {
     let mut seed_rng = OsRng::new().expect("can't access OsRng");

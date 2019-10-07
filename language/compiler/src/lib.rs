@@ -12,12 +12,12 @@ use ir_to_bytecode::{
     compiler::{compile_module, compile_program},
     parser::parse_program,
 };
-use std::mem;
-use stdlib::stdlib_modules;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     transaction::{Script, TransactionArgument},
 };
+use std::mem;
+use stdlib::stdlib_modules;
 use vm::file_format::{CompiledModule, CompiledProgram, CompiledScript};
 
 /// An API for the compiler. Supports setting custom options.

@@ -7,14 +7,14 @@ use crate::{
     gas_costs,
 };
 use crypto::ed25519::{compat::keypair_strategy, *};
-use proptest::prelude::*;
-use proptest_derive::Arbitrary;
-use proptest_helpers::Index;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     transaction::{SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
+use proptest::prelude::*;
+use proptest_derive::Arbitrary;
+use proptest_helpers::Index;
 
 /// Represents a rotate-key transaction performed in the account universe.
 #[derive(Arbitrary, Clone, Debug)]

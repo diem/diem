@@ -33,11 +33,11 @@ use futures::{
     sink::SinkExt,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
+use libra_types::PeerId;
 use logger::prelude::*;
 use rand::{rngs::SmallRng, seq::SliceRandom, FromEntropy};
 use std::{collections::HashMap, fmt::Debug, time::Duration};
 use tokio::{codec::Framed, prelude::FutureExt as _};
-use types::PeerId;
 use unsigned_varint::codec::UviBytes;
 
 #[cfg(test)]

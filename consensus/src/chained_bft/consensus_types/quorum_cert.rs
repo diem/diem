@@ -7,15 +7,15 @@ use crypto::{
     HashValue,
 };
 use failure::ResultExt;
+use libra_types::{
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier},
+    ledger_info::LedgerInfo,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
     fmt::{Display, Formatter},
-};
-use types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier},
-    ledger_info::LedgerInfo,
 };
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]

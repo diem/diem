@@ -8,8 +8,8 @@
 //! - struct and field definitions are consistent
 //! - the handles in struct and function definitions point to IMPLEMENTED_MODULE_INDEX
 //! - all struct and function handles pointing to IMPLEMENTED_MODULE_INDEX have a definition
+use libra_types::vm_error::{StatusCode, VMStatus};
 use std::{collections::HashSet, hash::Hash};
-use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
     errors::verification_error,

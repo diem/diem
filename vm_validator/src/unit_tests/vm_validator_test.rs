@@ -9,17 +9,17 @@ use executor::Executor;
 use futures::future::Future;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
-use rand::SeedableRng;
-use std::{sync::Arc, u64};
-use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
-use storage_service::start_storage_service;
-use transaction_builder::encode_transfer_script;
-use types::{
+use libra_types::{
     account_address, account_config,
     test_helpers::transaction_test_helpers,
     transaction::{Module, Script, TransactionArgument, MAX_TRANSACTION_SIZE_IN_BYTES},
     vm_error::StatusCode,
 };
+use rand::SeedableRng;
+use std::{sync::Arc, u64};
+use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
+use storage_service::start_storage_service;
+use transaction_builder::encode_transfer_script;
 use vm_runtime::MoveVM;
 
 struct TestValidator {

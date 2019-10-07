@@ -12,15 +12,15 @@ petgraph = "0.4"
 
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 vm = { path = "../vm" }
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 vm_runtime_types = { path = "../vm/vm_runtime/vm_runtime_types" }
 
 
 [dev-dependencies]
 invalid_mutations = { path = "invalid_mutations" }
-types = { path = "../../types", features = ["testing"]}
+libra-types = { path = "../../types", features = ["testing"]}
 vm = { path = "../vm", features = ["testing"]}
 
 [features]
 default = []
-testing = ["vm/testing", "types/testing"]
+testing = ["vm/testing", "libra-types/testing"]

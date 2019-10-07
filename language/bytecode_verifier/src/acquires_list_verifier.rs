@@ -10,8 +10,8 @@
 //! - No missing resources (any resource acquired must be present)
 //! - No additional resources (no extraneous resources not actually acquired)
 
+use libra_types::vm_error::{StatusCode, VMStatus};
 use std::collections::BTreeSet;
-use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
     errors::err_at_offset,

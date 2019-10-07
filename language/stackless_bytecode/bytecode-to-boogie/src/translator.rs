@@ -1,13 +1,13 @@
 //! This module translates the bytecode of a module to Boogie code.
 
 use bytecode_verifier::VerifiedModule;
+use libra_types::identifier::Identifier;
 use num::{BigInt, Num};
 use stackless_bytecode_generator::{
     stackless_bytecode::StacklessBytecode::{self, *},
     stackless_bytecode_generator::{StacklessFunction, StacklessModuleGenerator},
 };
 use std::collections::{BTreeMap, BTreeSet};
-use types::identifier::Identifier;
 use vm::{
     access::ModuleAccess,
     file_format::{

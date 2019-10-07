@@ -6,6 +6,7 @@ use crypto::HashValue;
 use executor::{Executor, StateComputeResult};
 use failure::Result;
 use futures::{Future, FutureExt};
+use libra_types::{crypto_proxies::LedgerInfoWithSignatures, transaction::SignedTransaction};
 use logger::prelude::*;
 use state_synchronizer::StateSyncClient;
 use std::{
@@ -14,7 +15,6 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use types::{crypto_proxies::LedgerInfoWithSignatures, transaction::SignedTransaction};
 use vm_runtime::MoveVM;
 
 /// Basic communication with the Execution module;

@@ -6,7 +6,7 @@ use crate::{
 };
 use canonical_serialization::*;
 use failure::prelude::*;
-use types::vm_error::StatusCode;
+use libra_types::vm_error::StatusCode;
 use vm::errors::*;
 
 impl CanonicalSerialize for NativeVector {

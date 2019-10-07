@@ -13,9 +13,7 @@ use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
 use config::config::{NodeConfigHelpers, VMPublishingOption};
 use crypto::{ed25519::*, HashValue};
-use std::collections::HashSet;
-use transaction_builder::encode_transfer_script;
-use types::{
+use libra_types::{
     test_helpers::transaction_test_helpers,
     transaction::{
         Script, TransactionArgument, TransactionPayload, TransactionStatus,
@@ -23,6 +21,8 @@ use types::{
     },
     vm_error::{StatusCode, StatusType, VMStatus},
 };
+use std::collections::HashSet;
+use transaction_builder::encode_transfer_script;
 use vm::gas_schedule::{self, GasAlgebra};
 
 #[test]

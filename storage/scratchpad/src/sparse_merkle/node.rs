@@ -21,11 +21,11 @@ use crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use types::{
+use libra_types::{
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
 };
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 /// We wrap the node in `RwLock`. The only case when we will update the node is when we
 /// drop a subtree originated from this node and commit things to storage. In that case we will

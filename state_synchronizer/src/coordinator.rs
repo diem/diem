@@ -15,6 +15,9 @@ use futures::{
     stream::{futures_unordered::FuturesUnordered, select_all},
     StreamExt,
 };
+use libra_types::{
+    crypto_proxies::LedgerInfoWithSignatures, transaction::TransactionListWithProof,
+};
 use logger::prelude::*;
 use network::{
     proto::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg, StateSynchronizerMsg_oneof},
@@ -27,7 +30,6 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::timer::Interval;
-use types::{crypto_proxies::LedgerInfoWithSignatures, transaction::TransactionListWithProof};
 
 /// message used by StateSyncClient for communication with Coordinator
 pub enum CoordinatorMessage {

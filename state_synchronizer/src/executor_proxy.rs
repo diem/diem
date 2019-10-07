@@ -4,14 +4,14 @@ use executor::Executor;
 use failure::prelude::*;
 use futures::{channel::oneshot, Future, FutureExt};
 use grpcio::EnvBuilder;
+use libra_types::{
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
+    transaction::TransactionListWithProof,
+};
 use logger::prelude::*;
 use network::proto::GetChunkResponse;
 use std::{pin::Pin, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
-use types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
-    transaction::TransactionListWithProof,
-};
 use vm_runtime::MoveVM;
 
 /// Proxies interactions with execution and storage for state synchronization

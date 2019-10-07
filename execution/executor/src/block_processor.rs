@@ -14,17 +14,7 @@ use crypto::{
 };
 use failure::prelude::*;
 use futures::channel::oneshot;
-use logger::prelude::*;
-use scratchpad::{ProofRead, SparseMerkleTree};
-use std::{
-    collections::{hash_map, BTreeMap, HashMap, HashSet, VecDeque},
-    convert::TryFrom,
-    marker::PhantomData,
-    rc::Rc,
-    sync::{mpsc, Arc},
-};
-use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::LedgerInfoWithSignatures,
@@ -35,6 +25,16 @@ use types::{
     },
     write_set::{WriteOp, WriteSet},
 };
+use logger::prelude::*;
+use scratchpad::{ProofRead, SparseMerkleTree};
+use std::{
+    collections::{hash_map, BTreeMap, HashMap, HashSet, VecDeque},
+    convert::TryFrom,
+    marker::PhantomData,
+    rc::Rc,
+    sync::{mpsc, Arc},
+};
+use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
 use vm_runtime::VMExecutor;
 
 #[derive(Debug)]

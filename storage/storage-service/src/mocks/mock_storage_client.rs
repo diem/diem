@@ -7,14 +7,7 @@ use canonical_serialization::SimpleSerializer;
 use crypto::{ed25519::*, HashValue};
 use failure::prelude::*;
 use futures::prelude::*;
-use rand::{
-    rngs::{OsRng, StdRng},
-    Rng, SeedableRng,
-};
-use std::{collections::BTreeMap, convert::TryFrom, pin::Pin};
-use storage_client::StorageRead;
-use storage_proto::StartupInfo;
-use types::{
+use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
@@ -33,6 +26,13 @@ use types::{
     transaction::Version,
     vm_error::StatusCode,
 };
+use rand::{
+    rngs::{OsRng, StdRng},
+    Rng, SeedableRng,
+};
+use std::{collections::BTreeMap, convert::TryFrom, pin::Pin};
+use storage_client::StorageRead;
+use storage_proto::StartupInfo;
 
 /// This is a mock of the storage read client used in tests.
 ///
@@ -52,14 +52,14 @@ impl StorageRead for MockStorageReadClient {
         Vec<ValidatorChangeEventWithProof>,
         AccumulatorConsistencyProof,
     )> {
-        let request = types::get_with_proof::UpdateToLatestLedgerRequest::new(
+        let request = libra_types::get_with_proof::UpdateToLatestLedgerRequest::new(
             client_known_version,
             request_items,
         );
         let proto_request = request.into();
         let proto_response = get_mock_update_to_latest_ledger(&proto_request);
         let response =
-            types::get_with_proof::UpdateToLatestLedgerResponse::try_from(proto_response)?;
+            libra_types::get_with_proof::UpdateToLatestLedgerResponse::try_from(proto_response)?;
         Ok((
             response.response_items,
             response.ledger_info_with_sigs,
@@ -97,7 +97,7 @@ impl StorageRead for MockStorageReadClient {
         _batch_size: u64,
         _ledger_version: Version,
         _fetch_events: bool,
-    ) -> Result<types::transaction::TransactionListWithProof> {
+    ) -> Result<libra_types::transaction::TransactionListWithProof> {
         unimplemented!()
     }
 
@@ -107,8 +107,9 @@ impl StorageRead for MockStorageReadClient {
         _batch_size: u64,
         _ledger_version: Version,
         _fetch_events: bool,
-    ) -> Pin<Box<dyn Future<Output = Result<types::transaction::TransactionListWithProof>> + Send>>
-    {
+    ) -> Pin<
+        Box<dyn Future<Output = Result<libra_types::transaction::TransactionListWithProof>> + Send>,
+    > {
         unimplemented!()
     }
 
@@ -162,7 +163,7 @@ fn get_mock_update_to_latest_ledger(
         resp.response_items
             .push(get_mock_response_item(request_item).unwrap());
     }
-    let mut ledger_info = types::proto::types::LedgerInfo::default();
+    let mut ledger_info = libra_types::proto::types::LedgerInfo::default();
     ledger_info.transaction_accumulator_hash = HashValue::zero().to_vec();
     ledger_info.consensus_data_hash = HashValue::zero().to_vec();
     ledger_info.consensus_block_id = HashValue::zero().to_vec();
@@ -181,17 +182,17 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                 let mut resp = GetAccountStateResponse::default();
                 let mut version_data = BTreeMap::new();
 
-                let account_resource = types::account_config::AccountResource::new(
+                let account_resource = libra_types::account_config::AccountResource::new(
                     100,
                     0,
-                    types::byte_array::ByteArray::new(vec![]),
+                    libra_types::byte_array::ByteArray::new(vec![]),
                     false,
                     false,
                     EventHandle::random_handle(0),
                     EventHandle::random_handle(0),
                 );
                 version_data.insert(
-                    types::account_config::account_resource_path(),
+                    libra_types::account_config::account_resource_path(),
                     SimpleSerializer::serialize(&account_resource)?,
                 );
                 let mut account_state_with_proof = AccountStateWithProof::default();
@@ -200,8 +201,8 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                         .into();
                 let proof = {
                     let ledger_info_to_transaction_info_proof =
-                        types::proof::AccumulatorProof::new(vec![]);
-                    let transaction_info = types::transaction::TransactionInfo::new(
+                        libra_types::proof::AccumulatorProof::new(vec![]);
+                    let transaction_info = libra_types::transaction::TransactionInfo::new(
                         HashValue::zero(),
                         HashValue::zero(),
                         HashValue::zero(),
@@ -209,8 +210,8 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                         StatusCode::UNKNOWN_STATUS,
                     );
                     let transaction_info_to_account_proof =
-                        types::proof::SparseMerkleProof::new(None, vec![]);
-                    types::proof::AccountStateProof::new(
+                        libra_types::proof::SparseMerkleProof::new(None, vec![]);
+                    libra_types::proof::AccountStateProof::new(
                         ledger_info_to_transaction_info_proof,
                         transaction_info,
                         transaction_info_to_account_proof,
@@ -258,7 +259,7 @@ fn get_mock_txn_data(
     start_seq: u64,
     end_seq: u64,
 ) -> (
-    Vec<types::proto::types::SignedTransaction>,
+    Vec<libra_types::proto::types::SignedTransaction>,
     Vec<TransactionInfo>,
 ) {
     let mut seed_rng = OsRng::new().expect("can't access OsRng");
@@ -279,11 +280,11 @@ fn get_mock_txn_data(
 }
 
 fn get_accumulator_proof() -> AccumulatorProof {
-    types::proof::AccumulatorProof::new(vec![]).into()
+    libra_types::proof::AccumulatorProof::new(vec![]).into()
 }
 
-fn get_transaction_info() -> types::transaction::TransactionInfo {
-    types::transaction::TransactionInfo::new(
+fn get_transaction_info() -> libra_types::transaction::TransactionInfo {
+    libra_types::transaction::TransactionInfo::new(
         HashValue::zero(),
         HashValue::zero(),
         HashValue::zero(),

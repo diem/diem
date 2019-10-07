@@ -16,11 +16,11 @@ prost = "0.5.0"
 
 crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 
 [build-dependencies]
 grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }
 
 [dev-dependencies]
-types = { path = "../../types", features = ["testing"]}
+libra-types = { path = "../../types", features = ["testing"]}
 prost-ext = { path = "../../common/prost-ext" }

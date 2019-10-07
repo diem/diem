@@ -24,6 +24,11 @@ use crypto::{
     HashValue,
 };
 use failure::{Fail, Result, *};
+use libra_types::{
+    account_state_blob::AccountStateBlob,
+    proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
+    transaction::Version,
+};
 use nibble::Nibble;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::cast::FromPrimitive;
@@ -34,11 +39,6 @@ use std::{
     collections::hash_map::HashMap,
     io::{prelude::*, Cursor, Read, SeekFrom, Write},
     mem::size_of,
-};
-use types::{
-    account_state_blob::AccountStateBlob,
-    proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
-    transaction::Version,
 };
 
 /// The unique key of each node.

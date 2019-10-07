@@ -18,12 +18,12 @@ use futures::{
     sink::SinkExt,
     stream::StreamExt,
 };
+use libra_types::PeerId;
 use memsocket::MemorySocket;
 use tokio::{
     codec::Framed,
     runtime::{Runtime, TaskExecutor},
 };
-use types::PeerId;
 use unsigned_varint::codec::UviBytes;
 
 const PROTOCOL_1: &[u8] = b"/direct_send/1.0.0";

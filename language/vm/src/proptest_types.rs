@@ -13,6 +13,7 @@ use crate::{
     },
     vm_string::VMString,
 };
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
 use proptest::{
     collection::{vec, SizeRange},
     option,
@@ -20,7 +21,6 @@ use proptest::{
     sample::Index as PropIndex,
 };
 use proptest_helpers::GrowingSubset;
-use types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
 
 mod functions;
 mod signature;

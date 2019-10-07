@@ -12,16 +12,16 @@ use futures::{
     Future,
 };
 use grpcio::{self, CallOption, Error};
-use logger::prelude::*;
-use prost::Message;
-use std::convert::TryFrom;
-use std::{collections::HashMap, marker::Send, slice::Chunks, thread, time};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     account_config::get_account_resource_or_default,
     get_with_proof::{RequestItem, ResponseItem, UpdateToLatestLedgerRequest},
     proto::types::UpdateToLatestLedgerResponse,
 };
+use logger::prelude::*;
+use prost::Message;
+use std::convert::TryFrom;
+use std::{collections::HashMap, marker::Send, slice::Chunks, thread, time};
 
 use crate::{
     load_generator::{Request, TXN_EXPIRATION},

@@ -6,11 +6,11 @@ use crate::{
     NodeBatch, StaleNodeIndex, TreeReader, TreeUpdateBatch, TreeWriter,
 };
 use failure::prelude::*;
+use libra_types::transaction::Version;
 use std::{
     collections::{hash_map::Entry, BTreeSet, HashMap},
     sync::RwLock,
 };
-use types::transaction::Version;
 
 #[derive(Default)]
 pub(crate) struct MockTreeStore(RwLock<(HashMap<NodeKey, Node>, BTreeSet<StaleNodeIndex>)>);

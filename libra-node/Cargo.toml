@@ -34,10 +34,10 @@ network = { path = "../network" }
 state_synchronizer = { path = "../state_synchronizer" }
 storage_client = { path = "../storage/storage_client" }
 storage-service = { path = "../storage/storage-service" }
-types = { path = "../types" }
+libra-types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }
 vm_validator = { path = "../vm_validator" }
 
 [dev-dependencies]
 config-builder = { path = "../config/config-builder" }
-types = { path = "../types", features = ["testing"]}
+libra-types = { path = "../types", features = ["testing"]}

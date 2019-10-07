@@ -8,9 +8,9 @@ use crate::chained_bft::{
     consensus_types::{vote_data::VoteData, vote_msg::VoteMsg},
 };
 use crypto::HashValue;
+use libra_types::crypto_proxies::random_validator_verifier;
+use libra_types::ledger_info::LedgerInfo;
 use std::sync::Arc;
-use types::crypto_proxies::random_validator_verifier;
-use types::ledger_info::LedgerInfo;
 
 fn random_ledger_info() -> LedgerInfo {
     LedgerInfo::new(

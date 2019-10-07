@@ -15,6 +15,7 @@ use crate::{
 };
 
 use failure::*;
+use libra_types::{account_address::AccountAddress, identifier::Identifier};
 use std::{
     clone::Clone,
     collections::{
@@ -22,7 +23,6 @@ use std::{
         HashMap, VecDeque,
     },
 };
-use types::{account_address::AccountAddress, identifier::Identifier};
 use vm::{
     access::ModuleAccess,
     file_format::{

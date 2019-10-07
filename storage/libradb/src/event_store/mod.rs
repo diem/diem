@@ -21,15 +21,15 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
-use schemadb::{schema::ValueCodec, ReadOptions, DB};
-use std::{convert::TryFrom, sync::Arc};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     contract_event::ContractEvent,
     event::EventKey,
     proof::{position::Position, AccumulatorProof, EventProof},
     transaction::Version,
 };
+use schemadb::{schema::ValueCodec, ReadOptions, DB};
+use std::{convert::TryFrom, sync::Arc};
 
 pub(crate) struct EventStore {
     db: Arc<DB>,

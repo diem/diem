@@ -3,7 +3,7 @@
 
 //! This module implements a checker for verifying that a non-resource struct does not
 //! have resource fields inside it.
-use types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_error::{StatusCode, VMStatus};
 use vm::{errors::verification_error, file_format::CompiledModule, views::ModuleView, IndexKind};
 
 pub struct ResourceTransitiveChecker<'a> {

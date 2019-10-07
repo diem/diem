@@ -32,12 +32,12 @@ prost-ext = { path = "../../common/prost-ext" }
 schemadb = { path = "../schemadb" }
 storage_proto = { path = "../storage_proto" }
 tools = { path = "../../common/tools" }
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 
 [dev-dependencies]
 proptest_helpers = { path = "../../common/proptest_helpers" }
-types = { path = "../../types", features = ["testing"]}
+libra-types = { path = "../../types", features = ["testing"]}
 
 [features]
 default = []
-testing = ["types/testing"]
+testing = ["libra-types/testing"]

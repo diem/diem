@@ -21,7 +21,7 @@ logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
 storage_client = { path = "../storage/storage_client" }
-types = { path = "../types" }
+libra-types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }
 
 [dev-dependencies]
@@ -30,7 +30,7 @@ bytes = "0.4.12"
 config-builder = { path = "../config/config-builder" }
 crypto = { path = "../crypto/crypto", features = ["testing"]}
 parity-multiaddr = "0.5.0"
-types = { path = "../types", features = ["testing"] }
+libra-types = { path = "../types", features = ["testing"] }
 vm_genesis = { path = "../language/vm/vm_genesis" }
 transaction_builder = { path = "../language/transaction_builder" }
 channel = { path = "../common/channel" }

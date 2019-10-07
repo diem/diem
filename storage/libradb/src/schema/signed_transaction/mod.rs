@@ -15,6 +15,7 @@
 use crate::schema::{ensure_slice_len_eq, SIGNED_TRANSACTION_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt};
 use failure::prelude::*;
+use libra_types::transaction::{SignedTransaction, Version};
 use prost::Message;
 use prost_ext::MessageExt;
 use schemadb::{
@@ -23,7 +24,6 @@ use schemadb::{
 };
 use std::convert::TryInto;
 use std::mem::size_of;
-use types::transaction::{SignedTransaction, Version};
 
 define_schema!(
     SignedTransactionSchema,
@@ -45,12 +45,12 @@ impl KeyCodec<SignedTransactionSchema> for Version {
 
 impl ValueCodec<SignedTransactionSchema> for SignedTransaction {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        let event: types::proto::types::SignedTransaction = self.clone().into();
+        let event: libra_types::proto::types::SignedTransaction = self.clone().into();
         Ok(event.to_vec()?)
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
-        types::proto::types::SignedTransaction::decode(data)?.try_into()
+        libra_types::proto::types::SignedTransaction::decode(data)?.try_into()
     }
 }
 

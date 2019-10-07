@@ -11,8 +11,8 @@ proptest = "0.9.1"
 
 crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 
 [dev-dependencies]
 rand = "0.6.5"
-types = { path = "../../types", features = ["testing"] }
+libra-types = { path = "../../types", features = ["testing"] }

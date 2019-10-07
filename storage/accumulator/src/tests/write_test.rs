@@ -3,8 +3,8 @@
 
 use super::*;
 use crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
+use libra_types::proof::definition::LeafCount;
 use proptest::{collection::vec, prelude::*};
-use types::proof::definition::LeafCount;
 
 #[test]
 fn test_append_empty_on_empty() {

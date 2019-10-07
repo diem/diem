@@ -7,9 +7,9 @@ use language_e2e_tests::{
     executor::FakeExecutor,
     gas_costs::TXN_RESERVED,
 };
+use libra_types::transaction::SignedTransaction;
 use proptest::{collection::vec, strategy::Strategy};
 use proptest_helpers::ValueGenerator;
-use types::transaction::SignedTransaction;
 
 /// Benchmarking support for transactions.
 #[derive(Clone, Debug)]

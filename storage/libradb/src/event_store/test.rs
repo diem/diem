@@ -5,6 +5,13 @@ use super::*;
 use crate::LibraDB;
 use crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 use itertools::Itertools;
+use libra_types::{
+    account_address::AccountAddress,
+    contract_event::ContractEvent,
+    event::EventKey,
+    proof::verify_event_accumulator_element,
+    proptest_types::{AccountInfoUniverse, ContractEventGen},
+};
 use proptest::{
     collection::{hash_set, vec},
     prelude::*,
@@ -14,13 +21,6 @@ use proptest_helpers::Index;
 use rand::Rng;
 use std::collections::HashMap;
 use tools::tempdir::TempPath;
-use types::{
-    account_address::AccountAddress,
-    contract_event::ContractEvent,
-    event::EventKey,
-    proof::verify_event_accumulator_element,
-    proptest_types::{AccountInfoUniverse, ContractEventGen},
-};
 
 fn save(store: &EventStore, version: Version, events: &[ContractEvent]) -> HashValue {
     let mut cs = ChangeSet::new();

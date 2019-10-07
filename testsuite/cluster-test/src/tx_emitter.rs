@@ -23,16 +23,7 @@ use failure::{
 };
 use generate_keypair::load_key_from_file;
 use itertools::zip;
-use rand::{
-    prelude::ThreadRng,
-    rngs::{EntropyRng, StdRng},
-    seq::SliceRandom,
-    Rng, SeedableRng,
-};
-use slog_scope::{debug, info};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread::JoinHandle;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},
     get_with_proof::ResponseItem,
@@ -43,6 +34,15 @@ use types::{
     transaction::{Script, TransactionPayload},
     transaction_helpers::create_signed_txn,
 };
+use rand::{
+    prelude::ThreadRng,
+    rngs::{EntropyRng, StdRng},
+    seq::SliceRandom,
+    Rng, SeedableRng,
+};
+use slog_scope::{debug, info};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread::JoinHandle;
 
 const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempool
 

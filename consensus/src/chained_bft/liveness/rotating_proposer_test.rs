@@ -5,7 +5,7 @@ use crate::chained_bft::{
     consensus_types::{block::Block, quorum_cert::QuorumCert},
     liveness::{proposer_election::ProposerElection, rotating_proposer_election::RotatingProposer},
 };
-use types::validator_signer::ValidatorSigner;
+use libra_types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_rotating_proposer() {

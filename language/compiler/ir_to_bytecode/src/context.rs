@@ -7,12 +7,12 @@ use crate::parser::ast::{
 };
 
 use failure::*;
-use std::{clone::Clone, collections::HashMap, hash::Hash};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     identifier::{IdentStr, Identifier},
 };
+use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,
     file_format::{

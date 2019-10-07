@@ -18,8 +18,8 @@ failure = { path = "../../common/failure_ext", package = "failure_ext" }
 generate-keypair = { path = "../generate-keypair" }
 logger = { path = "../../common/logger" }
 prost-ext = { path = "../../common/prost-ext" }
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 vm_genesis = { path = "../../language/vm/vm_genesis" }
 
 [dev-dependencies]
-types = { path = "../../types", features = ["testing"]}
+libra-types = { path = "../../types", features = ["testing"]}

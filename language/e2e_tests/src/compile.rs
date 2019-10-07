@@ -4,7 +4,7 @@
 //! Support for compiling scripts and modules in tests.
 
 use compiler::Compiler;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     transaction::{Module, TransactionPayload},
 };

@@ -9,12 +9,12 @@
 //! instructions to check BrTrue, BrFalse, and Branch instructions.
 use crate::common::*;
 use bytecode_verifier::VerifiedModule;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::{cmp::min, collections::HashMap};
-use types::{
+use libra_types::{
     account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier,
     language_storage::ModuleId,
 };
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use std::{cmp::min, collections::HashMap};
 use vm::{
     access::*,
     file_format::{

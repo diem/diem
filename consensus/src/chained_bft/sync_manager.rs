@@ -17,6 +17,7 @@ use crate::{
     state_replication::StateComputer,
 };
 use failure;
+use libra_types::account_address::AccountAddress;
 use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
 use rand::{prelude::*, Rng};
@@ -26,7 +27,6 @@ use std::{
     time::{Duration, Instant},
 };
 use termion::color::*;
-use types::account_address::AccountAddress;
 
 /// SyncManager is responsible for fetching dependencies and 'catching up' for given qc/ledger info
 pub struct SyncManager<T> {

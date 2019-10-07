@@ -5,14 +5,14 @@ use crate::chained_bft::common;
 use crate::chained_bft::{common::Author, consensus_types::vote_data::VoteData};
 use crypto::hash::CryptoHash;
 use failure::ResultExt;
+use libra_types::{
+    crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
+    ledger_info::LedgerInfo,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     convert::{TryFrom, TryInto},
     fmt::{Display, Formatter},
-};
-use types::{
-    crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
-    ledger_info::LedgerInfo,
 };
 
 /// VoteMsg is the struct that is ultimately sent by the voter in response for

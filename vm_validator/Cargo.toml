@@ -13,7 +13,7 @@ futures = "0.1.28"
 scratchpad = { path = "../storage/scratchpad" }
 state_view = { path = "../storage/state_view" }
 storage_client = { path = "../storage/storage_client" }
-types = { path = "../types" }
+libra-types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }
 
 [dev-dependencies]
@@ -25,6 +25,6 @@ crypto = { path = "../crypto/crypto", features = ["testing"] }
 executor = { path = "../execution/executor" }
 grpc_helpers = { path = "../common/grpc_helpers" }
 storage-service = { path = "../storage/storage-service" }
-types = { path = "../types", features = ["testing"] }
+libra-types = { path = "../types", features = ["testing"] }
 vm_runtime = { path = "../language/vm/vm_runtime" }
 transaction_builder = { path = "../language/transaction_builder" }

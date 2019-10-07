@@ -9,7 +9,7 @@
 //! signature. Additionally, the stack height must not dip below that at the beginning of the
 //! block for any basic block.
 use crate::control_flow_graph::{BlockId, ControlFlowGraph, VMControlFlowGraph};
-use types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
     errors::err_at_offset,

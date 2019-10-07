@@ -71,12 +71,14 @@ mod tree_cache;
 
 use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
+use libra_types::{
+    account_state_blob::AccountStateBlob, proof::SparseMerkleProof, transaction::Version,
+};
 use nibble_path::{skip_common_prefix, NibbleIterator, NibblePath};
 use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey};
 use proptest_derive::Arbitrary;
 use std::collections::{BTreeMap, BTreeSet};
 use tree_cache::TreeCache;
-use types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof, transaction::Version};
 
 /// The hardcoded maximum height of a [`JellyfishMerkleTree`] in nibbles.
 const ROOT_NIBBLE_HEIGHT: usize = HashValue::LENGTH * 2;

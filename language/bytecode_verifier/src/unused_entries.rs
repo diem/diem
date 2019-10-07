@@ -1,4 +1,4 @@
-use types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
     errors::verification_error,
