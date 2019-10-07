@@ -14,23 +14,16 @@
 
 use crate::schema::{ensure_slice_len_eq, TRANSACTION_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt};
+use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
 use failure::prelude::*;
-use libra_types::transaction::{SignedTransaction, Version};
-use prost::Message;
-use prost_ext::MessageExt;
+use libra_types::transaction::{Transaction, Version};
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
 };
-use std::convert::TryInto;
 use std::mem::size_of;
 
-define_schema!(
-    TransactionSchema,
-    Version,
-    SignedTransaction,
-    TRANSACTION_CF_NAME
-);
+define_schema!(TransactionSchema, Version, Transaction, TRANSACTION_CF_NAME);
 
 impl KeyCodec<TransactionSchema> for Version {
     fn encode_key(&self) -> Result<Vec<u8>> {
@@ -43,14 +36,13 @@ impl KeyCodec<TransactionSchema> for Version {
     }
 }
 
-impl ValueCodec<TransactionSchema> for SignedTransaction {
+impl ValueCodec<TransactionSchema> for Transaction {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        let event: libra_types::proto::types::SignedTransaction = self.clone().into();
-        Ok(event.to_vec()?)
+        SimpleSerializer::<Vec<u8>>::serialize(self)
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
-        libra_types::proto::types::SignedTransaction::decode(data)?.try_into()
+        SimpleDeserializer::deserialize(data)
     }
 }
 
