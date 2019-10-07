@@ -28,6 +28,7 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -1192,6 +1193,8 @@ impl From<TransactionListWithProof> for crate::proto::types::TransactionListWith
 /// We suppress the clippy warning here as we would expect most of the transaction to be user
 /// transaction.
 #[allow(clippy::large_enum_variant)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Transaction {
     /// Transaction submitted by the user. e.g: P2P payment transaction, publishing module
     /// transaction, etc.
@@ -1205,4 +1208,49 @@ pub enum Transaction {
 
     /// Transaction to update the block metadata resource at the beginning of a block.
     BlockMetadata(BlockMetadata),
+}
+
+#[derive(IntoPrimitive, TryFromPrimitive)]
+#[repr(u8)]
+enum TransactionVariantTag {
+    UserTransaction = 0,
+    WriteSet = 1,
+    BlockMetadata = 2,
+}
+
+impl CanonicalSerialize for Transaction {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        match self {
+            Transaction::UserTransaction(txn) => {
+                serializer.encode_u8(TransactionVariantTag::UserTransaction.into())?;
+                serializer.encode_struct(txn)?;
+            }
+            Transaction::WriteSet(write_set) => {
+                serializer.encode_u8(TransactionVariantTag::WriteSet.into())?;
+                serializer.encode_struct(write_set)?;
+            }
+            Transaction::BlockMetadata(block_metadata) => {
+                serializer.encode_u8(TransactionVariantTag::BlockMetadata.into())?;
+                serializer.encode_struct(block_metadata)?;
+            }
+        };
+
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for Transaction {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
+        let tag = TransactionVariantTag::try_from(deserializer.decode_u8()?)?;
+        let transaction = match tag {
+            TransactionVariantTag::UserTransaction => {
+                Transaction::UserTransaction(deserializer.decode_struct()?)
+            }
+            TransactionVariantTag::WriteSet => Transaction::WriteSet(deserializer.decode_struct()?),
+            TransactionVariantTag::BlockMetadata => {
+                Transaction::BlockMetadata(deserializer.decode_struct()?)
+            }
+        };
+        Ok(transaction)
+    }
 }
