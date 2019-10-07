@@ -5,7 +5,6 @@ use super::*;
 use crate::{peer_manager::PeerManagerRequest, proto::DiscoveryMsg};
 use core::str::FromStr;
 use crypto::{test_utils::TEST_SEED, *};
-use futures::future::{FutureExt, TryFutureExt};
 use memsocket::MemorySocket;
 use rand::{rngs::StdRng, SeedableRng};
 use tokio::runtime::Runtime;
@@ -79,7 +78,7 @@ fn setup_discovery(
             Duration::from_secs(180),
         )
     };
-    rt.spawn(discovery.start().boxed().unit_error().compat());
+    rt.spawn(discovery.start());
     (
         peer_mgr_reqs_rx,
         conn_mgr_reqs_rx,
@@ -171,7 +170,7 @@ fn inbound() {
             .unwrap();
         // Wrap dialer substream in a framed substream.
         let mut dialer_substream =
-            Framed::new(dialer_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+            Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
 
         // Send DiscoveryMsg consisting of 2 notes to the discovery actor - one note for the
         // seed peer and one for another peer. The discovery actor should send addresses of the new
@@ -237,7 +236,7 @@ fn inbound() {
             .unwrap();
         // Wrap dialer substream in a framed substream.
         let mut dialer_substream =
-            Framed::new(dialer_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+            Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         // Compose new msg.
         let mut msg = DiscoveryMsg::default();
         msg.notes.push(note_other);
@@ -270,8 +269,7 @@ fn inbound() {
         )
         .await;
     };
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_peer_mgr);
 }
 
 #[test]
@@ -343,8 +341,7 @@ fn outbound() {
         assert_eq!(addrs, get_addrs_from_note(&msg.notes[0]));
     };
 
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_peer_mgr);
 }
 
 #[test]
@@ -399,7 +396,7 @@ fn addr_update_includes_seed_addrs() {
             .unwrap();
         // Wrap dialer substream in a framed substream.
         let mut dialer_substream =
-            Framed::new(dialer_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+            Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
 
         // Send DiscoveryMsg consisting of the new seed peer's discovery note.
         // The discovery actor should send the addrs in the new seed peer note
@@ -428,6 +425,5 @@ fn addr_update_includes_seed_addrs() {
         )
         .await;
     };
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_peer_mgr);
 }

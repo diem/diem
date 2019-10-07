@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! TCP Transport
-use crate::transport::Transport;
+use crate::{compat::IoCompat, transport::Transport};
 use futures::{
-    compat::{Compat01As03, Future01CompatExt},
     future::{self, Future},
     io::{AsyncRead, AsyncWrite},
     ready,
@@ -12,13 +11,15 @@ use futures::{
 };
 use parity_multiaddr::{Multiaddr, Protocol};
 use std::{
+    convert::TryFrom,
+    fmt::Debug,
     io,
-    net::{Shutdown, SocketAddr},
+    net::SocketAddr,
     pin::Pin,
     task::{Context, Poll},
     time::Duration,
 };
-use tokio::net::tcp::{ConnectFuture, Incoming, TcpListener, TcpStream};
+use tokio::net::tcp::{TcpListener, TcpStream};
 
 /// Transport to build TCP connections
 #[derive(Debug, Clone, Default)]
@@ -72,11 +73,15 @@ impl Transport for TcpTransport {
     fn listen_on(&self, addr: Multiaddr) -> Result<(Self::Listener, Multiaddr), Self::Error> {
         let socket_addr = multiaddr_to_socketaddr(&addr)?;
         let config = self.clone();
-        let listener = TcpListener::bind(&socket_addr)?;
+        let listener = ::std::net::TcpListener::bind(&socket_addr)?;
         let local_addr = socketaddr_to_multiaddr(listener.local_addr()?);
+        let listener = TcpListener::try_from(listener)?;
+        let incoming: Pin<Box<dyn Stream<Item = io::Result<TcpStream>> + Send + 'static>> =
+            Box::pin(listener.incoming());
+
         Ok((
             TcpListenerStream {
-                inner: Compat01As03::new(listener.incoming()),
+                inner: incoming,
                 config,
             },
             local_addr,
@@ -86,15 +91,15 @@ impl Transport for TcpTransport {
     fn dial(&self, addr: Multiaddr) -> Result<Self::Outbound, Self::Error> {
         let socket_addr = multiaddr_to_socketaddr(&addr)?;
         let config = self.clone();
-        let f = TcpStream::connect(&socket_addr).compat();
+        let f: Pin<Box<dyn Future<Output = io::Result<TcpStream>> + Send + 'static>> =
+            Box::pin(TcpStream::connect(socket_addr));
         Ok(TcpOutbound { inner: f, config })
     }
 }
 
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct TcpListenerStream {
-    inner: Compat01As03<Incoming>,
+    inner: Pin<Box<dyn Stream<Item = io::Result<TcpStream>> + Send + 'static>>,
     config: TcpTransport,
 }
 
@@ -123,15 +128,14 @@ impl Stream for TcpListenerStream {
     }
 }
 
-#[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
 pub struct TcpOutbound {
-    inner: Compat01As03<ConnectFuture>,
+    inner: Pin<Box<dyn Future<Output = io::Result<TcpStream>> + Send + 'static>>,
     config: TcpTransport,
 }
 
 impl Future for TcpOutbound {
-    type Output = Result<TcpSocket, ::std::io::Error>;
+    type Output = io::Result<TcpSocket>;
 
     fn poll(mut self: Pin<&mut Self>, context: &mut Context) -> Poll<Self::Output> {
         let socket = ready!(Pin::new(&mut self.inner).poll(context))?;
@@ -149,13 +153,13 @@ impl Future for TcpOutbound {
 //TODO Probably should add some tests for this
 #[derive(Debug)]
 pub struct TcpSocket {
-    inner: Compat01As03<TcpStream>,
+    inner: IoCompat<TcpStream>,
 }
 
 impl TcpSocket {
     fn new(socket: TcpStream) -> Self {
         Self {
-            inner: Compat01As03::new(socket),
+            inner: IoCompat::new(socket),
         }
     }
 }
@@ -183,8 +187,8 @@ impl AsyncWrite for TcpSocket {
         Pin::new(&mut self.inner).poll_flush(context)
     }
 
-    fn poll_close(self: Pin<&mut Self>, _context: &mut Context) -> Poll<io::Result<()>> {
-        Poll::Ready(self.inner.get_ref().shutdown(Shutdown::Write))
+    fn poll_close(mut self: Pin<&mut Self>, context: &mut Context) -> Poll<io::Result<()>> {
+        Pin::new(&mut self.inner).poll_close(context)
     }
 }
 
@@ -229,14 +233,13 @@ fn multiaddr_to_socketaddr(addr: &Multiaddr) -> ::std::io::Result<SocketAddr> {
 mod test {
     use crate::transport::{tcp::TcpTransport, ConnectionOrigin, Transport, TransportExt};
     use futures::{
-        executor::block_on,
         future::{join, FutureExt},
         io::{AsyncReadExt, AsyncWriteExt},
         stream::StreamExt,
     };
 
-    #[test]
-    fn simple_listen_and_dial() -> Result<(), ::std::io::Error> {
+    #[tokio::test]
+    async fn simple_listen_and_dial() -> Result<(), ::std::io::Error> {
         let t = TcpTransport::default().and_then(|mut out, connection| {
             async move {
                 match connection {
@@ -265,7 +268,7 @@ mod test {
             incoming.map(Result::unwrap)
         });
 
-        let (outgoing, _incoming) = block_on(join(dial, listener));
+        let (outgoing, _incoming) = join(dial, listener).await;
         assert!(outgoing.is_ok());
         Ok(())
     }

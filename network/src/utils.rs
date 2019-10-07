@@ -3,18 +3,14 @@
 
 use crate::error::NetworkError;
 use bytes::Bytes;
-use futures::{
-    compat::{Compat, Compat01As03Sink},
-    io::AsyncRead,
-    stream::StreamExt,
-};
+use futures::{io::AsyncRead, stream::StreamExt};
+use netcore::compat::IoCompat;
 pub use prost_ext::MessageExt;
 use std::io;
-use tokio::codec::Framed;
-use unsigned_varint::codec::UviBytes;
+use tokio::codec::{Framed, LengthDelimitedCodec};
 
 pub async fn read_proto<T, TSubstream>(
-    substream: &mut Compat01As03Sink<Framed<Compat<TSubstream>, UviBytes<Bytes>>, Bytes>,
+    substream: &mut Framed<IoCompat<TSubstream>, LengthDelimitedCodec>,
 ) -> Result<T, NetworkError>
 where
     T: prost::Message + Default,

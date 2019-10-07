@@ -10,7 +10,6 @@ use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
 use crypto::{ed25519::*, ValidKey};
 use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use executor::Executor;
-use futures::future::{FutureExt, TryFutureExt};
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
 use libra_mempool::{proto::mempool::MempoolClient, MempoolRuntime};
@@ -266,9 +265,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
                 .unwrap()
             );
             // Start the network provider.
-            runtime
-                .executor()
-                .spawn(network_provider.start().unit_error().compat());
+            runtime.executor().spawn(network_provider.start());
             network_runtimes.push(runtime);
             debug!("Network started for peer_id: {}", peer_id);
         }
@@ -304,9 +301,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> (AdmissionControlClien
                 ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
                 ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             ]);
-        runtime
-            .executor()
-            .spawn(network_provider.start().unit_error().compat());
+        runtime.executor().spawn(network_provider.start());
         network_runtimes.push(runtime);
         debug!("Network started for peer_id: {}", peer_id);
 

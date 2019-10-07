@@ -17,9 +17,7 @@ use criterion::{
 use crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use futures::{
     channel::mpsc,
-    compat::Future01CompatExt,
     executor::block_on,
-    future::{FutureExt, TryFutureExt},
     sink::SinkExt,
     stream::{FuturesUnordered, StreamExt},
 };
@@ -47,7 +45,7 @@ const TOLERANCE: u32 = 5;
 const HOUR_IN_MS: u64 = 60 * 60 * 1000;
 
 fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let (dialer_peer_id, dialer_addr) = (
         PeerId::random(),
         Multiaddr::from_str("/ip4/127.0.0.1/tcp/0").unwrap(),
@@ -112,9 +110,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
         network_provider.add_consensus(vec![ProtocolId::from_static(
             CONSENSUS_DIRECT_SEND_PROTOCOL,
         )]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     // Set up the dialer network
     let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
@@ -144,9 +140,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
         network_provider.add_consensus(vec![ProtocolId::from_static(
             CONSENSUS_DIRECT_SEND_PROTOCOL,
         )]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
@@ -172,7 +166,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
             }
         }
     };
-    runtime.spawn(f_listener.boxed().unit_error().compat());
+    runtime.spawn(f_listener);
 
     // The dialer side keeps sending messages. In each iteration of the benchmark, it sends
     // NUM_MSGS messages and wait until the listener side sends signal back.
@@ -182,7 +176,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
         }
         block_on(rx.next()).unwrap();
     });
-    block_on(runtime.shutdown_now().compat()).unwrap();
+    runtime.shutdown_now();
 }
 
 fn compose_proposal(msg_len: usize) -> ConsensusMsg {
@@ -196,7 +190,7 @@ fn compose_proposal(msg_len: usize) -> ConsensusMsg {
 }
 
 fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let (dialer_peer_id, dialer_addr) = (
         PeerId::random(),
         Multiaddr::from_str("/ip4/127.0.0.1/tcp/0").unwrap(),
@@ -257,9 +251,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     .build();
     let (_listener_sender, mut listener_events) =
         network_provider.add_consensus(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     // Set up the dialer network
     let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
@@ -285,9 +277,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     .build();
     let (dialer_sender, mut dialer_events) =
         network_provider.add_consensus(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
@@ -310,7 +300,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
             }
         }
     };
-    runtime.spawn(f_listener.boxed().unit_error().compat());
+    runtime.spawn(f_listener);
 
     // The dialer side keeps sending RPC requests. In each iteration of the benchmark, it sends
     // NUM_MSGS requests and blocks on getting the responses.
@@ -327,7 +317,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
             let _ = res.unwrap();
         }
     });
-    block_on(runtime.shutdown_now().compat()).unwrap();
+    runtime.shutdown_now();
 }
 
 async fn request_block(

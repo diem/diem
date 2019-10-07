@@ -3,7 +3,6 @@
 
 use super::*;
 use crate::{common::NegotiatedSubstream, peer_manager::PeerManagerRequest};
-use futures::future::{FutureExt, TryFutureExt};
 use memsocket::MemorySocket;
 use parity_multiaddr::Multiaddr;
 use std::str::FromStr;
@@ -29,7 +28,7 @@ fn setup_permissive_health_checker(
         PING_TIMEOUT,
         ping_failures_tolerated,
     );
-    rt.spawn(health_checker.start().boxed().unit_error().compat());
+    rt.spawn(health_checker.start());
     (peer_mgr_reqs_rx, peer_mgr_notifs_tx, ticker_tx)
 }
 
@@ -50,13 +49,14 @@ fn setup_default_health_checker(
         PING_TIMEOUT,
         0,
     );
-    rt.spawn(health_checker.start().boxed().unit_error().compat());
+    rt.spawn(health_checker.start());
     (peer_mgr_reqs_rx, peer_mgr_notifs_tx, ticker_tx)
 }
 
 async fn send_ping_expect_pong(substream: MemorySocket) {
     // Messages are length-prefixed. Wrap in a framed stream.
-    let mut substream = Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+    let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
+
     // Send ping.
     substream
         .send(Ping::default().to_bytes().unwrap())
@@ -68,7 +68,8 @@ async fn send_ping_expect_pong(substream: MemorySocket) {
 
 async fn expect_ping_send_ok(substream: MemorySocket) {
     // Messages are length-prefixed. Wrap in a framed stream.
-    let mut substream = Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+    let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
+
     // Read ping.
     let _: Ping = read_proto(&mut substream).await.unwrap();
     // Send Pong.
@@ -80,7 +81,8 @@ async fn expect_ping_send_ok(substream: MemorySocket) {
 
 async fn expect_ping_send_notok(substream: MemorySocket) {
     // Messages are length-prefixed. Wrap in a framed stream.
-    let mut substream = Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+    let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
+
     // Read ping.
     let _: Ping = read_proto(&mut substream).await.unwrap();
     substream.close().await.unwrap();
@@ -88,7 +90,8 @@ async fn expect_ping_send_notok(substream: MemorySocket) {
 
 async fn expect_ping_timeout(substream: MemorySocket) {
     // Messages are length-prefixed. Wrap in a framed stream.
-    let mut substream = Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+    let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
+
     // Read ping.
     let _: Ping = read_proto(&mut substream).await.unwrap();
     // Sleep for ping timeout plus a little bit.
@@ -179,7 +182,7 @@ fn outbound() {
         // Health checker should send a ping request.
         expect_ping_send_ok(listener_substream).await;
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }
 
 #[test]
@@ -197,7 +200,7 @@ fn inbound() {
         // Send ping and expect pong in return.
         send_ping_expect_pong(dialer_substream).await;
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }
 
 #[test]
@@ -236,7 +239,7 @@ fn outbound_failure_permissive() {
         // Health checker should disconnect from peer after tolerated number of failures
         expect_disconnect(peer_id, &mut peer_mgr_reqs_rx).await;
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }
 
 #[test]
@@ -296,7 +299,7 @@ fn ping_success_resets_fail_counter() {
         // Health checker should disconnect from peer after tolerated number of failures
         expect_disconnect(peer_id, &mut peer_mgr_reqs_rx).await;
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }
 
 #[test]
@@ -334,7 +337,7 @@ fn outbound_failure_strict() {
         // Health checker should disconnect from peer.
         expect_disconnect(peer_id, &mut peer_mgr_reqs_rx).await;
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }
 
 #[test]
@@ -372,5 +375,5 @@ fn ping_timeout() {
         // Health checker should disconnect from peer.
         expect_disconnect(peer_id, &mut peer_mgr_reqs_rx).await;
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }

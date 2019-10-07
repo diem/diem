@@ -11,7 +11,6 @@ use config::config::StateSyncConfig;
 use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
-    compat::Stream01CompatExt,
     stream::{futures_unordered::FuturesUnordered, select_all},
     StreamExt,
 };
@@ -105,9 +104,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .expect("[start sync] failed to fetch latest version from storage");
 
         let mut interval =
-            Interval::new_interval(Duration::from_millis(self.config.tick_interval_ms))
-                .compat()
-                .fuse();
+            Interval::new_interval(Duration::from_millis(self.config.tick_interval_ms)).fuse();
 
         let network_senders: Vec<StateSynchronizerSender> =
             network.iter().map(|t| t.0.clone()).collect();

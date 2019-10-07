@@ -10,7 +10,7 @@ use executor::Executor;
 use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
-    future::{Future, FutureExt, TryFutureExt},
+    future::Future,
     SinkExt,
 };
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
@@ -53,7 +53,7 @@ impl StateSynchronizer {
             state_sync_config.clone(),
             executor_proxy,
         );
-        executor.spawn(coordinator.start(network).boxed().unit_error().compat());
+        executor.spawn(coordinator.start(network));
 
         Self {
             _runtime: runtime,

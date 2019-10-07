@@ -7,6 +7,7 @@
 //! network from building `Transport`s and `StreamMultiplexer`s to negotiating protocols on a
 //! socket.
 
+pub mod compat;
 pub mod multiplexing;
 pub mod negotiate;
 pub mod transport;

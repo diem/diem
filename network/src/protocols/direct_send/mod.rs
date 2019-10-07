@@ -40,9 +40,6 @@
 //! 3. Awaits the serialized message on the newly negotiated substream.
 //! 4. Drops the substream.
 //!
-//! Note: negotiated substreams are currently framed with the
-//! [muiltiformats unsigned varint length-prefix](https://github.com/multiformats/unsigned-varint)
-//!
 //! [muxers]: ../../../netcore/multiplexing/index.html
 //! [substream negotiation]: ../../../netcore/negotiate/index.html
 //! [`protocol-select`]: ../../../netcore/negotiate/index.html
@@ -55,20 +52,21 @@ use crate::{
 use bytes::Bytes;
 use channel;
 use futures::{
-    compat::Sink01CompatExt,
-    future::{FutureExt, TryFutureExt},
-    io::{AsyncRead, AsyncReadExt, AsyncWrite},
+    io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
     stream::StreamExt,
 };
 use libra_types::PeerId;
 use logger::prelude::*;
+use netcore::compat::IoCompat;
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::Debug,
 };
-use tokio::{codec::Framed, runtime::TaskExecutor};
-use unsigned_varint::codec::UviBytes;
+use tokio::{
+    codec::{Framed, LengthDelimitedCodec},
+    runtime::TaskExecutor,
+};
 
 #[cfg(test)]
 mod test;
@@ -167,17 +165,12 @@ where
         trace!("PeerManagerNotification::{:?}", notif);
         match notif {
             PeerManagerNotification::NewInboundSubstream(peer_id, substream) => {
-                self.executor.spawn(
-                    Self::handle_inbound_substream(
-                        peer_id,
-                        substream.protocol,
-                        substream.substream,
-                        self.ds_notifs_tx.clone(),
-                    )
-                    .boxed()
-                    .unit_error()
-                    .compat(),
-                );
+                self.executor.spawn(Self::handle_inbound_substream(
+                    peer_id,
+                    substream.protocol,
+                    substream.substream,
+                    self.ds_notifs_tx.clone(),
+                ));
             }
             _ => unreachable!("Unexpected PeerManagerNotification"),
         }
@@ -190,8 +183,7 @@ where
         substream: TSubstream,
         mut ds_notifs_tx: channel::Sender<DirectSendNotification>,
     ) {
-        let mut substream =
-            Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
         while let Some(item) = substream.next().await {
             match item {
                 Ok(data) => {
@@ -242,8 +234,7 @@ where
 
         // Open a new substream for the (PeerId, ProtocolId) pair
         let raw_substream = peer_mgr_reqs_tx.open_substream(peer_id, protocol).await?;
-        let substream =
-            Framed::new(raw_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let substream = Framed::new(IoCompat::new(raw_substream), LengthDelimitedCodec::new());
 
         // Spawn a task to forward the messages from the queue to the substream.
         let f_substream = async move {
@@ -264,7 +255,7 @@ where
                     .get(),
             );
         };
-        executor.spawn(f_substream.boxed().unit_error().compat());
+        executor.spawn(f_substream);
 
         Ok(msg_tx)
     }

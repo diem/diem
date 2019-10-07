@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::chained_bft::{common::Author, epoch_manager::EpochManager};
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
@@ -23,17 +24,9 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
-use failure::prelude::*;
-use futures::{
-    compat::Future01CompatExt,
-    executor::block_on,
-    future::{FutureExt, TryFutureExt},
-    select,
-    stream::StreamExt,
-};
-
-use crate::chained_bft::{common::Author, epoch_manager::EpochManager};
 use config::config::{ConsensusConfig, ConsensusProposerType};
+use failure::prelude::*;
+use futures::{executor::block_on, select, stream::StreamExt};
 use libra_types::crypto_proxies::ValidatorSigner;
 use logger::prelude::*;
 use std::{sync::Arc, time::Duration};
@@ -183,7 +176,7 @@ impl<T: Payload> ChainedBftSMR<T> {
                 }
             }
         };
-        executor.spawn(fut.boxed().unit_error().compat());
+        executor.spawn(fut);
     }
 }
 
@@ -284,7 +277,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
     /// Stop is synchronous: waits for all the worker threads to terminate.
     fn stop(&mut self) {
         if let Some(rt) = self.runtime.take() {
-            block_on(rt.shutdown_now().compat()).unwrap();
+            rt.shutdown_now();
             debug!("Chained BFT SMR stopped.")
         }
     }

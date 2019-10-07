@@ -14,7 +14,7 @@ use crate::chained_bft::{
 use channel;
 use crypto::HashValue;
 use executor::ExecutedState;
-use futures::{channel::mpsc, executor::block_on, FutureExt, SinkExt, StreamExt, TryFutureExt};
+use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
     proto::{BlockRetrievalStatus, ConsensusMsg, ConsensusMsg_oneof},
@@ -153,7 +153,7 @@ impl NetworkPlayground {
             self.outbound_msgs_tx.clone(),
             self.node_consensus_txs.clone(),
         );
-        self.executor.spawn(fut.boxed().unit_error().compat());
+        self.executor.spawn(fut);
     }
 
     /// Deliver a `NetworkRequest` from peer `src` to the destination peer.
@@ -432,9 +432,7 @@ fn test_rpc() {
                 .unwrap();
         }
     };
-    runtime
-        .executor()
-        .spawn(on_request_block.boxed().unit_error().compat());
+    runtime.executor().spawn(on_request_block);
     let peer = peers[1];
     block_on(async move {
         let response = nodes[0]
