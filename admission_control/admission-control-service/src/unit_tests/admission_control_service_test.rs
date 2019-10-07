@@ -11,12 +11,12 @@ use crate::{
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 
 use crypto::{ed25519::*, test_utils::TEST_SEED};
+use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     vm_error::{StatusCode, VMStatus},
 };
-use mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use rand::SeedableRng;
 use std::convert::TryFrom;
 use std::sync::Arc;

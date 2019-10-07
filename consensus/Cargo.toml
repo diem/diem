@@ -38,7 +38,7 @@ debug_interface = { path = "../common/debug_interface" }
 executor = { path = "../execution/executor" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 logger = { path = "../common/logger" }
-mempool = { path = "../mempool" }
+libra-mempool = { path = "../mempool" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
 prost-ext = { path = "../common/prost-ext" }

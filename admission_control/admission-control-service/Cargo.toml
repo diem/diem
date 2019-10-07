@@ -26,8 +26,8 @@ failure = { package = "failure_ext", path = "../../common/failure_ext" }
 executable-helpers = { path = "../../common/executable-helpers" }
 grpc_helpers = { path = "../../common/grpc_helpers" }
 logger = { path = "../../common/logger" }
-mempool = { path = "../../mempool" }
-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto" }
+libra-mempool = { path = "../../mempool" }
+libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto" }
 metrics = { path = "../../common/metrics" }
 storage_client = { path = "../../storage/storage_client" }
 libra-types = { path = "../../types" }

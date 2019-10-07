@@ -4,9 +4,9 @@
 pub mod proto;
 
 use failure::prelude::*;
+use libra_mempool_shared_proto::MempoolAddTransactionStatus;
 use libra_types::vm_error::VMStatus;
 use logger::prelude::*;
-use mempool_shared_proto::MempoolAddTransactionStatus;
 use std::convert::TryFrom;
 
 /// AC response status of submit_transaction to clients.

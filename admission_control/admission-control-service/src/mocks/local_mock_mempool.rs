@@ -1,17 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::{account_address::ADDRESS_LENGTH, transaction::SignedTransaction};
-use mempool::proto::{
+use libra_mempool::proto::{
     mempool::{
         AddTransactionWithValidationRequest, AddTransactionWithValidationResponse,
         HealthCheckRequest, HealthCheckResponse,
     },
     mempool_client::MempoolClientTrait,
 };
-use mempool_shared_proto::proto::mempool_status::{
+use libra_mempool_shared_proto::proto::mempool_status::{
     MempoolAddTransactionStatus, MempoolAddTransactionStatusCode,
 };
+use libra_types::{account_address::ADDRESS_LENGTH, transaction::SignedTransaction};
 use std::convert::TryFrom;
 use std::time::SystemTime;
 
