@@ -13,6 +13,7 @@ proptest = "0.9"
 rayon = "1.1"
 rental = "0.5.4"
 mirai-annotations = "1.4.0"
+prometheus = { version = "0.7.0", default-features = false }
 
 bytecode_verifier = { path = "../../bytecode_verifier" }
 canonical_serialization = { path = "../../../common/canonical_serialization" }
@@ -25,11 +26,6 @@ types = { path = "../../../types" }
 vm = { path = "../" }
 vm_cache_map = { path = "vm_cache_map" }
 vm_runtime_types = { path = "vm_runtime_types" }
-
-[dependencies.prometheus]
-version  = "0.7.0"
-default-features = false
-features = ["protobuf"]
 
 [dev-dependencies]
 compiler = { path = "../../compiler" }
