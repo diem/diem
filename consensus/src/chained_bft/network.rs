@@ -386,7 +386,7 @@ where
             .validate_signatures(self.epoch_mgr.validators().as_ref())?
             .verify_well_formed()?;
         debug!("Received proposal {}", proposal);
-        self.proposal_tx.send(proposal).await?;
+        self.proposal_tx.try_send(proposal)?;
         Ok(())
     }
 
@@ -401,7 +401,7 @@ where
                     .log();
                 e
             })?;
-        self.vote_tx.send(vote).await?;
+        self.vote_tx.try_send(vote)?;
         Ok(())
     }
 
@@ -416,7 +416,7 @@ where
                     .log();
                 e
             })?;
-        self.timeout_msg_tx.send(timeout_msg).await?;
+        self.timeout_msg_tx.try_send(timeout_msg)?;
         Ok(())
     }
 
@@ -435,7 +435,7 @@ where
                     .log();
                 e
             })?;
-        self.sync_info_tx.send((sync_info, peer)).await?;
+        self.sync_info_tx.try_send((sync_info, peer))?;
         Ok(())
     }
 
@@ -456,7 +456,7 @@ where
             num_blocks,
             response_sender: tx,
         };
-        self.block_request_tx.send(request).await?;
+        self.block_request_tx.try_send(request)?;
         let BlockRetrievalResponse { status, blocks } = rx.await?;
         let mut response = RespondBlock::default();
         response.set_status(status);
