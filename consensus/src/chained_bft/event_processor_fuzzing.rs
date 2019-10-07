@@ -147,8 +147,8 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
 
     // event processor
     EventProcessor::new(
-        signer.author(),
         Arc::clone(&block_store),
+        None,
         pacemaker,
         proposer_election,
         proposal_generator,

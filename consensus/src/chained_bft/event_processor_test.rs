@@ -150,7 +150,7 @@ impl NodeSetup {
             Arc::clone(&epoch_mgr),
         );
         let consensus_state = initial_data.state();
-
+        let last_vote_sent = initial_data.last_vote();
         let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let state_computer = Arc::new(MockStateComputer::new(
             commit_cb_sender,
@@ -177,8 +177,8 @@ impl NodeSetup {
 
         let proposer_election = Self::create_proposer_election(proposer_author);
         let mut event_processor = EventProcessor::new(
-            author,
             Arc::clone(&block_store),
+            last_vote_sent,
             pacemaker,
             proposer_election,
             proposal_generator,

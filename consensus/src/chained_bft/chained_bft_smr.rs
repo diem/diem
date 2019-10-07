@@ -213,6 +213,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             .expect("already started, initial data is None");
         let consensus_state = initial_data.state();
         let highest_timeout_certificates = initial_data.highest_timeout_certificates().clone();
+        let last_vote = initial_data.last_vote();
         if initial_data.need_sync() {
             // make sure we sync to the root state in case we're not
             state_computer.sync_to_or_bail(initial_data.root_ledger_info());
@@ -257,8 +258,8 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
 
         let proposer_election = self.create_proposer_election();
         let event_processor = EventProcessor::new(
-            self.author,
             Arc::clone(&block_store),
+            last_vote,
             pacemaker,
             proposer_election,
             proposal_generator,
