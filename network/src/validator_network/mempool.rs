@@ -19,7 +19,7 @@ use futures::{
     SinkExt, Stream, StreamExt,
 };
 use libra_types::PeerId;
-use pin_utils::unsafe_pinned;
+use pin_project::pin_project;
 use prost::Message as proto_msg;
 use std::pin::Pin;
 
@@ -32,8 +32,10 @@ pub const MEMPOOL_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/mempool/direct-send/0.1
 /// raw `Bytes` direct-send and rpc messages are deserialized into
 /// `MempoolMessage` types. `MempoolNetworkEvents` is a thin wrapper around an
 /// `channel::Receiver<NetworkNotification>`.
+#[pin_project]
 pub struct MempoolNetworkEvents {
     // TODO(philiphayes): remove pub
+    #[pin]
     pub inner: Map<
         channel::Receiver<NetworkNotification>,
         fn(NetworkNotification) -> Result<Event<MempoolSyncMsg>, NetworkError>,
@@ -41,18 +43,6 @@ pub struct MempoolNetworkEvents {
 }
 
 impl MempoolNetworkEvents {
-    // This use of `unsafe_pinned` is safe because:
-    //   1. This struct does not implement [`Drop`]
-    //   2. This struct does not implement [`Unpin`]
-    //   3. This struct is not `#[repr(packed)]`
-    unsafe_pinned!(
-        inner:
-            Map<
-                channel::Receiver<NetworkNotification>,
-                fn(NetworkNotification) -> Result<Event<MempoolSyncMsg>, NetworkError>,
-            >
-    );
-
     pub fn new(receiver: channel::Receiver<NetworkNotification>) -> Self {
         let inner = receiver
             // TODO(philiphayes): filter_map might be better, so we can drop
@@ -77,7 +67,7 @@ impl Stream for MempoolNetworkEvents {
     type Item = Result<Event<MempoolSyncMsg>, NetworkError>;
 
     fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
-        self.inner().poll_next(context)
+        self.project().inner.poll_next(context)
     }
 }
 

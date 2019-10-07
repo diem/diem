@@ -19,31 +19,21 @@ use futures::{
     SinkExt, Stream, StreamExt,
 };
 use libra_types::PeerId;
-use pin_utils::unsafe_pinned;
+use pin_project::pin_project;
 use prost::Message as _;
 use std::pin::Pin;
 
 pub const STATE_SYNCHRONIZER_MSG_PROTOCOL: &[u8] = b"/libra/state_synchronizer/direct-send/0.1.0";
 
+#[pin_project]
 pub struct StateSynchronizerEvents {
+    #[pin]
     inner: Map<
         channel::Receiver<NetworkNotification>,
         fn(NetworkNotification) -> Result<Event<StateSynchronizerMsg>, NetworkError>,
     >,
 }
 impl StateSynchronizerEvents {
-    // This use of `unsafe_pinned` is safe because:
-    //   1. This struct does not implement [`Drop`]
-    //   2. This struct does not implement [`Unpin`]
-    //   3. This struct is not `#[repr(packed)]`
-    unsafe_pinned!(
-        inner:
-            Map<
-                channel::Receiver<NetworkNotification>,
-                fn(NetworkNotification) -> Result<Event<StateSynchronizerMsg>, NetworkError>,
-            >
-    );
-
     pub fn new(receiver: channel::Receiver<NetworkNotification>) -> Self {
         let inner = receiver.map::<_, fn(_) -> _>(|notification| match notification {
             NetworkNotification::NewPeer(peer_id) => Ok(Event::NewPeer(peer_id)),
@@ -65,7 +55,7 @@ impl Stream for StateSynchronizerEvents {
     type Item = Result<Event<StateSynchronizerMsg>, NetworkError>;
 
     fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
-        self.inner().poll_next(context)
+        self.project().inner.poll_next(context)
     }
 }
 
