@@ -1,5 +1,5 @@
 [package]
-name = "mempool"
+name = "libra-mempool"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra mempool"
@@ -22,7 +22,7 @@ prost = "0.5.0"
 tokio = "0.1.22"
 ttl_cache = "0.4.2"
 
-mempool-shared-proto = { path = "mempool-shared-proto" }
+libra-mempool-shared-proto = { path = "mempool-shared-proto" }
 bounded-executor = { path = "../common/bounded-executor" }
 config = { path = "../config" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }

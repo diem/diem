@@ -6,12 +6,12 @@ use config::config::NodeConfigHelpers;
 use crypto::ed25519::compat::generate_keypair;
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder};
+use libra_mempool_shared_proto::proto::mempool_status::*;
 use libra_types::{
     account_address::AccountAddress,
     test_helpers::transaction_test_helpers::get_test_signed_transaction,
     transaction::SignedTransaction,
 };
-use mempool_shared_proto::proto::mempool_status::*;
 use std::{
     convert::TryFrom,
     sync::{Arc, Mutex},

@@ -9,8 +9,8 @@ use crate::core_mempool::{
     CoreMempool, TimelineState,
 };
 use config::config::NodeConfigHelpers;
+use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use libra_types::transaction::SignedTransaction;
-use mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use std::{collections::HashSet, time::Duration};
 
 #[test]

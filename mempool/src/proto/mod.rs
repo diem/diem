@@ -5,7 +5,7 @@
 #![allow(missing_docs)]
 
 use ::libra_types::proto::*;
-use mempool_shared_proto::proto::mempool_status;
+use libra_mempool_shared_proto::proto::mempool_status;
 
 pub mod mempool {
     include!(concat!(env!("OUT_DIR"), "/mempool.rs"));

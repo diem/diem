@@ -13,9 +13,9 @@ use executor::Executor;
 use futures::future::{FutureExt, TryFutureExt};
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
+use libra_mempool::{proto::mempool::MempoolClient, MempoolRuntime};
 use libra_types::account_address::AccountAddress as PeerId;
 use logger::prelude::*;
-use mempool::{proto::mempool::MempoolClient, MempoolRuntime};
 use metrics::metric_server;
 use network::{
     validator_network::{
