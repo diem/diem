@@ -43,14 +43,13 @@ use criterion::{
     PlotConfiguration, Throughput,
 };
 use futures::{
-    compat::Sink01CompatExt,
     executor::block_on,
-    future::{FutureExt, TryFutureExt},
-    io::{AsyncRead, AsyncReadExt, AsyncWrite},
+    io::{AsyncRead, AsyncWrite},
     sink::{Sink, SinkExt},
     stream::{self, Stream, StreamExt},
 };
 use netcore::{
+    compat::IoCompat,
     multiplexing::StreamMultiplexer,
     transport::{memory::MemoryTransport, tcp::TcpTransport, Transport},
 };
@@ -61,8 +60,10 @@ use socket_bench_server::{
     build_tcp_noise_transport, start_muxer_server, start_stream_server, Args,
 };
 use std::{fmt::Debug, io, time::Duration};
-use tokio::{codec::Framed, runtime::Runtime};
-use unsigned_varint::codec::UviBytes;
+use tokio::{
+    codec::{Framed, LengthDelimitedCodec},
+    runtime::Runtime,
+};
 
 const KiB: usize = 1 << 10;
 const MiB: usize = 1 << 20;
@@ -113,10 +114,9 @@ where
     // Client dials the server. Some of our transports have timeouts built in,
     // which means the futures must be run on a tokio Runtime.
     let client_socket = runtime
-        .block_on(client_transport.dial(server_addr).unwrap().boxed().compat())
+        .block_on(client_transport.dial(server_addr).unwrap())
         .unwrap();
-    let mut client_stream =
-        Framed::new(client_socket.compat(), UviBytes::<Bytes>::default()).sink_compat();
+    let mut client_stream = Framed::new(IoCompat::new(client_socket), LengthDelimitedCodec::new());
 
     // Benchmark client sending data to server.
     bench_client_send(b, msg_len, &mut client_stream);
@@ -144,11 +144,9 @@ where
         let client_substream = client_muxer.open_outbound().await.unwrap();
         (client_muxer, client_substream)
     };
-    let (client_muxer, client_substream) = runtime
-        .block_on(f_client.boxed().unit_error().compat())
-        .unwrap();
+    let (client_muxer, client_substream) = runtime.block_on(f_client);
     let mut client_stream =
-        Framed::new(client_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        Framed::new(IoCompat::new(client_substream), LengthDelimitedCodec::new());
 
     // Benchmark client sending data to server.
     bench_client_send(b, msg_len, &mut client_stream);

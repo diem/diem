@@ -16,7 +16,7 @@ use crate::{common::NegotiatedSubstream, counters, protocols::identity::Identity
 use channel;
 use futures::{
     channel::oneshot,
-    future::{BoxFuture, FutureExt, TryFutureExt},
+    future::{BoxFuture, FutureExt},
     sink::SinkExt,
     stream::{Fuse, FuturesUnordered, StreamExt},
 };
@@ -353,8 +353,7 @@ where
             .connection_handler
             .take()
             .expect("Connection handler already taken");
-        self.executor
-            .spawn(connection_handler.listen().boxed().unit_error().compat());
+        self.executor.spawn(connection_handler.listen());
     }
 
     /// In the event two peers simultaneously dial each other we need to be able to do
@@ -446,8 +445,7 @@ where
             peer_id.short_str()
         );
         self.active_peers.insert(peer_id, peer_handle);
-        self.executor
-            .spawn(peer.start().boxed().unit_error().compat());
+        self.executor.spawn(peer.start());
 
         if send_new_peer_notification {
             for ch in &mut self.peer_event_handlers {

@@ -4,7 +4,7 @@
 // Timeout Transport
 
 use crate::transport::Transport;
-use futures::{compat::Compat01As03, future::Future, stream::Stream};
+use futures::{future::Future, stream::Stream};
 use parity_multiaddr::Multiaddr;
 use pin_project::pin_project;
 use std::{
@@ -12,7 +12,10 @@ use std::{
     task::{Context, Poll},
     time::{Duration, Instant},
 };
-use tokio::{executor::Executor, timer::Delay};
+use tokio::{
+    executor::Executor,
+    timer::{delay, Delay},
+};
 
 /// A [`TimeoutTransport`] is a transport which wraps another transport with a timeout on all
 /// inbound and outbound connection setup.
@@ -109,7 +112,7 @@ where
 pub struct TimeoutFuture<F> {
     #[pin]
     future: F,
-    timeout: Compat01As03<Delay>,
+    timeout: Delay,
 }
 
 impl<F> TimeoutFuture<F>
@@ -120,7 +123,7 @@ where
         let deadline = Instant::now() + timeout;
         Self {
             future,
-            timeout: Compat01As03::new(Delay::new(deadline)),
+            timeout: delay(deadline),
         }
     }
 }
@@ -149,8 +152,7 @@ where
         // Now check to see if we've overshot the timeout
         match Pin::new(self.as_mut().project().timeout).poll(&mut context) {
             Poll::Pending => Poll::Pending,
-            Poll::Ready(Err(err)) => Poll::Ready(Err(TimeoutTransportError::TimerError(err))),
-            Poll::Ready(Ok(())) => Poll::Ready(Err(TimeoutTransportError::Timeout)),
+            Poll::Ready(()) => Poll::Ready(Err(TimeoutTransportError::Timeout)),
         }
     }
 }

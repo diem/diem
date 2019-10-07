@@ -5,7 +5,7 @@ use super::*;
 use crate::peer_manager::PeerManagerRequest;
 use core::str::FromStr;
 use crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
-use futures::{FutureExt, SinkExt, TryFutureExt};
+use futures::SinkExt;
 use memsocket::MemorySocket;
 use rand::{rngs::StdRng, SeedableRng};
 use std::io;
@@ -52,7 +52,7 @@ fn setup_conn_mgr(
             300, /* ms */
         )
     };
-    rt.spawn(conn_mgr.start().boxed().unit_error().compat());
+    rt.spawn(conn_mgr.start());
     (
         peer_mgr_reqs_rx,
         peer_mgr_notifs_tx,
@@ -252,8 +252,7 @@ fn addr_change() {
         )
         .await;
     };
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_peer_mgr);
 }
 
 #[test]
@@ -322,8 +321,7 @@ fn lost_connection() {
         )
         .await;
     };
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_peer_mgr);
 }
 
 #[test]
@@ -386,7 +384,7 @@ fn disconnect() {
         )
         .await;
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }
 
 // Tests that connectivity manager retries dials and disconnects on failure.
@@ -486,7 +484,7 @@ fn retry_on_failure() {
         )
         .await;
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }
 
 #[test]
@@ -580,7 +578,7 @@ fn no_op_requests() {
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }
 
 #[test]
@@ -664,7 +662,7 @@ fn backoff_on_failure() {
             assert!(elapsed.as_millis() >= 100);
         }
     };
-    rt.block_on(events_f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(events_f);
 }
 
 // Test that connectivity manager will still connect to a peer if it advertises
@@ -731,8 +729,7 @@ fn multiple_addrs_basic() {
         )
         .await;
     };
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_peer_mgr);
 }
 
 // Test that connectivity manager will work with multiple addresses even if we
@@ -813,8 +810,7 @@ fn multiple_addrs_wrapping() {
         )
         .await;
     };
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_peer_mgr);
 }
 
 // Test that connectivity manager will still work when dialing a peer with
@@ -896,6 +892,5 @@ fn multiple_addrs_shrinking() {
         )
         .await;
     };
-    rt.block_on(f_peer_mgr.boxed().unit_error().compat())
-        .unwrap();
+    rt.block_on(f_peer_mgr);
 }

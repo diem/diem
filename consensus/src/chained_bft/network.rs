@@ -19,10 +19,7 @@ use bytes::Bytes;
 use channel;
 use crypto::HashValue;
 use failure::{self, ResultExt};
-use futures::{
-    channel::oneshot, stream::select, FutureExt, SinkExt, Stream, StreamExt, TryFutureExt,
-    TryStreamExt,
-};
+use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
 use libra_types::account_address::AccountAddress;
 use logger::prelude::*;
 use network::{
@@ -163,10 +160,7 @@ impl ConsensusNetworkImpl {
                 all_events,
                 epoch_mgr: Arc::clone(&self.epoch_mgr),
             }
-            .run()
-            .boxed()
-            .unit_error()
-            .compat(),
+            .run(),
         );
         NetworkReceivers {
             proposals: proposal_rx,

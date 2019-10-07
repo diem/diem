@@ -17,7 +17,7 @@ parity-multiaddr = "0.5.0"
 rayon = "1.2.0"
 signal-hook = "0.1.10"
 structopt = "0.3.2"
-tokio = "0.1.22"
+tokio = "=0.2.0-alpha.6"
 
 admission_control_proto = { path = "../admission_control/admission_control_proto" }
 admission-control-service = { path = "../admission_control/admission-control-service" }

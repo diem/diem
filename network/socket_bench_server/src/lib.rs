@@ -1,16 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bytes::Bytes;
 use futures::{
-    compat::Sink01CompatExt,
-    future::{Future, FutureExt, TryFutureExt},
-    io::{AsyncRead, AsyncReadExt, AsyncWrite},
+    future::Future,
+    io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
     stream::{Stream, StreamExt},
 };
 use memsocket::MemorySocket;
 use netcore::{
+    compat::IoCompat,
     multiplexing::{yamux::Yamux, StreamMultiplexer},
     transport::{
         memory::MemoryTransport,
@@ -21,8 +20,10 @@ use netcore::{
 use noise::{NoiseConfig, NoiseSocket};
 use parity_multiaddr::Multiaddr;
 use std::{convert::TryInto, env, ffi::OsString, sync::Arc};
-use tokio::{codec::Framed, runtime::TaskExecutor};
-use unsigned_varint::codec::UviBytes;
+use tokio::{
+    codec::{Framed, LengthDelimitedCodec},
+    runtime::TaskExecutor,
+};
 
 #[derive(Debug)]
 pub struct Args {
@@ -150,7 +151,7 @@ where
     // Wait for next inbound connection
     while let Some(Ok((f_stream, _client_addr))) = server_listener.next().await {
         let stream = f_stream.await.unwrap();
-        let mut stream = Framed::new(stream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut stream = Framed::new(IoCompat::new(stream), LengthDelimitedCodec::new());
 
         // Drain all messages from the client.
         while let Some(_) = stream.next().await {}
@@ -174,8 +175,7 @@ where
         // Wait for inbound client substream
         let mut muxer_inbounds = muxer.listen_for_inbound();
         let substream = muxer_inbounds.next().await.unwrap().unwrap();
-        let mut stream =
-            Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut stream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
 
         // Drain all messages from the client.
         while let Some(_) = stream.next().await {}
@@ -196,12 +196,7 @@ where
     E: ::std::error::Error + Send + Sync + 'static,
 {
     let (listener, server_addr) = transport.listen_on(listen_addr).unwrap();
-    executor.spawn(
-        server_stream_handler(listener)
-            .boxed()
-            .unit_error()
-            .compat(),
-    );
+    executor.spawn(server_stream_handler(listener));
     server_addr
 }
 
@@ -218,6 +213,6 @@ where
     E: ::std::error::Error + Send + Sync + 'static,
 {
     let (listener, server_addr) = transport.listen_on(listen_addr).unwrap();
-    executor.spawn(server_muxer_handler(listener).boxed().unit_error().compat());
+    executor.spawn(server_muxer_handler(listener));
     server_addr
 }

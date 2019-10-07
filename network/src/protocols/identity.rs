@@ -11,21 +11,17 @@ use crate::{
     ProtocolId,
 };
 use config::config::RoleType;
-use futures::{
-    compat::{Compat, Sink01CompatExt},
-    sink::SinkExt,
-    stream::StreamExt,
-};
+use futures::{sink::SinkExt, stream::StreamExt};
 use libra_types::PeerId;
 use netcore::{
+    compat::IoCompat,
     multiplexing::StreamMultiplexer,
     negotiate::{negotiate_inbound, negotiate_outbound_interactive},
     transport::ConnectionOrigin,
 };
 use prost::Message;
 use std::{convert::TryInto, io};
-use tokio::codec::Framed;
-use unsigned_varint::codec::UviBytes;
+use tokio::codec::{Framed, LengthDelimitedCodec};
 
 const IDENTITY_PROTOCOL_NAME: &[u8] = b"/identity/0.1.0";
 
@@ -97,8 +93,7 @@ where
     assert_eq!(proto, IDENTITY_PROTOCOL_NAME);
 
     // Create the Framed Sink/Stream
-    let mut framed_substream =
-        Framed::new(Compat::new(substream), UviBytes::default()).sink_compat();
+    let mut framed_substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
 
     // Build Identity Message
     let mut msg = IdentityMsg::default();

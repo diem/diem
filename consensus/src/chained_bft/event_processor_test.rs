@@ -39,7 +39,6 @@ use channel;
 use crypto::HashValue;
 use futures::{
     channel::{mpsc, oneshot},
-    compat::Future01CompatExt,
     executor::block_on,
 };
 use libra_types::crypto_proxies::{
@@ -706,7 +705,7 @@ fn process_votes_basic_test() {
             a1.id()
         );
     });
-    block_on(runtime.shutdown_now().compat()).unwrap();
+    runtime.shutdown_now();
 }
 
 #[test]

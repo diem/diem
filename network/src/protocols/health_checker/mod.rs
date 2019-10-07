@@ -24,21 +24,22 @@ use crate::{
     utils::{read_proto, MessageExt},
     ProtocolId,
 };
-use bytes::Bytes;
 use channel;
 use futures::{
-    compat::{Future01CompatExt, Sink01CompatExt},
     future::{FutureExt, TryFutureExt},
-    io::{AsyncRead, AsyncReadExt, AsyncWrite},
+    io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
 use libra_types::PeerId;
 use logger::prelude::*;
+use netcore::compat::IoCompat;
 use rand::{rngs::SmallRng, seq::SliceRandom, FromEntropy};
 use std::{collections::HashMap, fmt::Debug, time::Duration};
-use tokio::{codec::Framed, prelude::FutureExt as _};
-use unsigned_varint::codec::UviBytes;
+use tokio::{
+    codec::{Framed, LengthDelimitedCodec},
+    future::FutureExt as _,
+};
 
 #[cfg(test)]
 mod test;
@@ -218,7 +219,7 @@ where
                 .open_substream(peer_id, ProtocolId::from_static(PING_PROTOCOL_NAME))
                 .await?;
             // Messages are length-prefixed. Wrap in a framed stream.
-            let mut substream = Framed::new(substream.compat(), UviBytes::default()).sink_compat();
+            let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
             // Send Ping.
             debug!("Sending Ping to peer: {}", peer_id.short_str());
             substream
@@ -238,19 +239,20 @@ where
             peer_id,
             round,
             ping_result
-                .boxed()
-                .compat()
                 .timeout(ping_timeout)
-                .compat()
                 .map_err(Into::<NetworkError>::into)
+                .map(|r| match r {
+                    Ok(Ok(())) => Ok(()),
+                    Ok(Err(e)) => Err(e),
+                    Err(e) => Err(e),
+                })
                 .await,
         )
     }
 
     async fn handle_ping(peer_id: PeerId, substream: TSubstream) {
         // Messages are length-prefixed. Wrap in a framed stream.
-        let mut substream =
-            Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
         // Read ping.
         trace!("Waiting for Ping on new substream");
         let maybe_ping: Result<Ping, NetworkError> = read_proto(&mut substream).await;

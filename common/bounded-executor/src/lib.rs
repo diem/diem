@@ -5,7 +5,7 @@
 //! concurrently when spawned through this executor, defined by the initial
 //! `capacity`.
 
-use futures::future::{Future, FutureExt, TryFutureExt};
+use futures::future::{Future, FutureExt};
 use futures_semaphore::Semaphore;
 use tokio::runtime::TaskExecutor;
 
@@ -39,24 +39,22 @@ impl BoundedExecutor {
     {
         let spawn_permit = self.semaphore.acquire().await;
         let f = f.map(move |_| drop(spawn_permit));
-        self.executor.spawn(f.boxed().unit_error().compat());
+        self.executor.spawn(f);
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures::{compat::Future01CompatExt, executor::block_on, future::Future};
+    use futures::{executor::block_on, future::Future};
     use std::{
         sync::atomic::{AtomicU32, Ordering},
         time::{Duration, Instant},
     };
-    use tokio::{runtime::Runtime, timer::Delay};
+    use tokio::{runtime::Runtime, timer::delay};
 
     fn yield_task() -> impl Future<Output = ()> {
-        Delay::new(Instant::now() + Duration::from_millis(1))
-            .compat()
-            .map(|_| ())
+        delay(Instant::now() + Duration::from_millis(1)).map(|_| ())
     }
 
     // spawn NUM_TASKS futures on a BoundedExecutor, ensuring that no more than

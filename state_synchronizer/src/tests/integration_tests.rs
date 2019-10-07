@@ -8,11 +8,7 @@ use config::config::RoleType;
 use config_builder::util::get_test_config;
 use crypto::{ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, HashValue, SigningKey};
 use failure::{prelude::*, Result};
-use futures::{
-    executor::block_on,
-    future::{FutureExt, TryFutureExt},
-    Future,
-};
+use futures::{executor::block_on, future::FutureExt, Future};
 use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::LedgerInfoWithSignatures,
@@ -210,9 +206,7 @@ impl SynchronizerEnv {
         .direct_send_protocols(protocols.clone())
         .build();
         let (sender_b, events_b) = network_provider.add_state_synchronizer(protocols.clone());
-        runtime
-            .executor()
-            .spawn(network_provider.start().unit_error().compat());
+        runtime.executor().spawn(network_provider.start());
 
         let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
             runtime.executor(),
@@ -227,9 +221,7 @@ impl SynchronizerEnv {
         .direct_send_protocols(protocols.clone())
         .build();
         let (sender_a, events_a) = network_provider.add_state_synchronizer(protocols);
-        runtime
-            .executor()
-            .spawn(network_provider.start().unit_error().compat());
+        runtime.executor().spawn(network_provider.start());
 
         // create synchronizers
         let mut config = get_test_config().0;

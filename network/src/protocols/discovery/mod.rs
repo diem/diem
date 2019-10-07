@@ -41,7 +41,6 @@ use crate::{
     utils::{self, MessageExt},
     NetworkPublicKeys, ProtocolId,
 };
-use bytes::Bytes;
 use channel;
 use crypto::{
     ed25519::*,
@@ -50,9 +49,8 @@ use crypto::{
 };
 use failure::{format_err, Fail};
 use futures::{
-    compat::{Future01CompatExt, Sink01CompatExt},
     future::{Future, FutureExt, TryFutureExt},
-    io::{AsyncRead, AsyncReadExt, AsyncWrite},
+    io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
@@ -62,6 +60,7 @@ use libra_types::{
     PeerId,
 };
 use logger::prelude::*;
+use netcore::compat::IoCompat;
 use parity_multiaddr::Multiaddr;
 use prost::Message;
 use rand::{rngs::SmallRng, FromEntropy, Rng};
@@ -73,8 +72,10 @@ use std::{
     sync::{Arc, RwLock},
     time::{Duration, SystemTime},
 };
-use tokio::{codec::Framed, prelude::FutureExt as _};
-use unsigned_varint::codec::UviBytes;
+use tokio::{
+    codec::{Framed, LengthDelimitedCodec},
+    future::FutureExt as _,
+};
 
 #[cfg(test)]
 mod test;
@@ -237,13 +238,7 @@ where
             let msg = self.compose_discovery_msg();
             let timeout = self.msg_timeout;
             let fut = async move {
-                if let Err(err) = push_state_to_peer(sender, peer, msg)
-                    .boxed()
-                    .compat()
-                    .timeout(timeout)
-                    .compat()
-                    .await
-                {
+                if let Err(err) = push_state_to_peer(sender, peer, msg).timeout(timeout).await {
                     warn!(
                         "Failed to send discovery msg to {}; error: {:?}",
                         peer.short_str(),
@@ -457,11 +452,13 @@ where
 {
     // Read the `DiscoveryMsg` from the remote
     let res_msg = recv_msg(substream.substream)
-        .boxed()
-        .compat()
         .timeout(timeout)
-        .compat()
         .map_err(Into::<NetworkError>::into)
+        .map(|r| match r {
+            Ok(Ok(msg)) => Ok(msg),
+            Ok(Err(e)) => Err(e),
+            Err(e) => Err(e),
+        })
         .await;
 
     // Check that all received `Note`s are valid -- reject the whole message
@@ -596,7 +593,7 @@ where
         .open_substream(peer_id, ProtocolId::from_static(DISCOVERY_PROTOCOL_NAME))
         .await?;
     // Messages are length-prefixed. Wrap in a framed stream.
-    let mut substream = Framed::new(substream.compat(), UviBytes::default()).sink_compat();
+    let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
     // Send serialized message to peer.
     let bytes = msg
         .to_bytes()
@@ -610,7 +607,7 @@ where
     TSubstream: AsyncRead + AsyncWrite + Unpin,
 {
     // Messages are length-prefixed. Wrap in a framed stream.
-    let mut substream = Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+    let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
     // Read the message.
     utils::read_proto(&mut substream).await
 }

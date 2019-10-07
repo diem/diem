@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use channel;
-use futures::{compat::Future01CompatExt, Future, FutureExt, SinkExt, TryFutureExt};
+use futures::{Future, FutureExt, SinkExt};
 use logger::prelude::*;
 use std::{
     pin::Pin,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
-use tokio::{executor::Executor, runtime::TaskExecutor, timer::Delay};
+use tokio::{runtime::TaskExecutor, timer::delay};
 
 /// Time service is an abstraction for operations that depend on time
 /// It supports implementations that can simulated time or depend on actual time
@@ -96,16 +96,10 @@ impl TimeService for ClockTimeService {
     fn run_after(&self, timeout: Duration, mut t: Box<dyn ScheduledTask>) {
         let task = async move {
             let timeout_time = Instant::now() + timeout;
-            if let Err(e) = Delay::new(timeout_time).compat().await {
-                error!("Error on delay: {:?}", e);
-            };
+            delay(timeout_time).await;
             t.run().await;
         };
-        let task = task.boxed().unit_error().compat();
-        let mut executor = self.executor.clone();
-        if let Err(e) = Executor::spawn(&mut executor, Box::new(task)) {
-            warn!("Failed to submit task to runtime: {:?}", e)
-        }
+        self.executor.spawn(task);
     }
 
     fn get_current_timestamp(&self) -> Duration {
@@ -113,7 +107,7 @@ impl TimeService for ClockTimeService {
     }
 
     fn sleep(&self, t: Duration) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        async move { Delay::new(Instant::now() + t).compat().await.unwrap() }.boxed()
+        async move { delay(Instant::now() + t).await }.boxed()
     }
 }
 
