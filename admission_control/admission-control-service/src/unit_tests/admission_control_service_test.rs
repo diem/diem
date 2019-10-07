@@ -11,7 +11,7 @@ use crate::{
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 
 use crypto::{ed25519::*, test_utils::TEST_SEED};
-use mempool::proto::shared::mempool_status::MempoolAddTransactionStatusCode;
+use mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use rand::SeedableRng;
 use std::convert::TryFrom;
 use std::sync::Arc;

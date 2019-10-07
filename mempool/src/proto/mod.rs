@@ -4,13 +4,12 @@
 #![allow(bare_trait_objects)]
 #![allow(missing_docs)]
 
-use crate::proto::shared::*;
 use ::types::proto::*;
+use mempool_shared_proto::proto::mempool_status;
 
 pub mod mempool {
     include!(concat!(env!("OUT_DIR"), "/mempool.rs"));
 }
-pub mod shared;
 
 pub mod mempool_client {
     pub trait MempoolClientTrait: Clone + Send + Sync {

@@ -5,7 +5,7 @@ pub mod proto;
 
 use failure::prelude::*;
 use logger::prelude::*;
-use mempool::MempoolAddTransactionStatus;
+use mempool_shared_proto::MempoolAddTransactionStatus;
 use std::convert::TryFrom;
 use types::vm_error::VMStatus;
 

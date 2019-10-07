@@ -65,7 +65,6 @@ use metrics::OpMetrics;
 lazy_static! {
     static ref OP_COUNTERS: OpMetrics = OpMetrics::new_and_registered("mempool");
 }
-pub use crate::core_mempool::MempoolAddTransactionStatus;
 
 #[cfg(test)]
 mod unit_tests;

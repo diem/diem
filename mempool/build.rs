@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 fn main() {
-    let protos = [
-        "src/proto/mempool.proto",
-        "src/proto/shared/mempool_status.proto",
-    ];
+    let protos = ["src/proto/mempool.proto"];
 
-    let includes = ["../types/src/proto", "src/proto", "src/proto/shared"];
+    let includes = [
+        "../types/src/proto",
+        "src/proto",
+        "mempool-shared-proto/src/proto/",
+    ];
 
     grpcio_compiler::prost_codegen::compile_protos(
         &protos,

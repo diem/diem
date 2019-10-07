@@ -1,15 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    core_mempool::CoreMempool,
-    mempool_service::MempoolService,
-    proto::{mempool::*, shared::mempool_status::*},
-};
+use crate::{core_mempool::CoreMempool, mempool_service::MempoolService, proto::mempool::*};
 use config::config::NodeConfigHelpers;
 use crypto::ed25519::compat::generate_keypair;
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder};
+use mempool_shared_proto::proto::mempool_status::*;
 use std::{
     convert::TryFrom,
     sync::{Arc, Mutex},
