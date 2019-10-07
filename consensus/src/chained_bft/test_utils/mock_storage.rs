@@ -3,7 +3,7 @@
 
 use crate::chained_bft::{
     common::Payload,
-    consensus_types::{block::Block, quorum_cert::QuorumCert},
+    consensus_types::{block::Block, quorum_cert::QuorumCert, vote_msg::VoteMsg},
     liveness::pacemaker_timeout_manager::HighestTimeoutCertificates,
     persistent_storage::{PersistentLivenessStorage, PersistentStorage, RecoveryData},
     safety::safety_rules::ConsensusState,
@@ -22,6 +22,7 @@ pub struct MockSharedStorage<T> {
     pub block: Mutex<HashMap<HashValue, Block<T>>>,
     pub qc: Mutex<HashMap<HashValue, QuorumCert>>,
     pub state: Mutex<ConsensusState>,
+    pub last_vote: Mutex<Option<VoteMsg>>,
 
     // Liveness state
     pub highest_timeout_certificates: Mutex<HighestTimeoutCertificates>,
@@ -69,6 +70,7 @@ impl<T: Payload> MockStorage<T> {
         blocks.sort_by_key(Block::round);
         RecoveryData::new(
             self.shared_storage.state.lock().unwrap().clone(),
+            self.shared_storage.last_vote.lock().unwrap().clone(),
             blocks,
             quorum_certs,
             &self.storage_ledger.lock().unwrap(),
@@ -149,8 +151,13 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
         Ok(())
     }
 
-    fn save_consensus_state(&self, state: ConsensusState) -> Result<()> {
+    fn save_consensus_state(&self, state: ConsensusState, last_vote: VoteMsg) -> Result<()> {
         *self.shared_storage.state.lock().unwrap() = state;
+        self.shared_storage
+            .last_vote
+            .lock()
+            .unwrap()
+            .replace(last_vote);
         Ok(())
     }
 
@@ -159,6 +166,7 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
             block: Mutex::new(HashMap::new()),
             qc: Mutex::new(HashMap::new()),
             state: Mutex::new(ConsensusState::default()),
+            last_vote: Mutex::new(None),
             highest_timeout_certificates: Mutex::new(HighestTimeoutCertificates::new(None, None)),
         });
         let storage = MockStorage::new(Arc::clone(&shared_storage));
@@ -205,7 +213,7 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
         Ok(())
     }
 
-    fn save_consensus_state(&self, _: ConsensusState) -> Result<()> {
+    fn save_consensus_state(&self, _: ConsensusState, _: VoteMsg) -> Result<()> {
         Ok(())
     }
 
@@ -217,6 +225,7 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
             Arc::new(EmptyStorage),
             RecoveryData::new(
                 ConsensusState::default(),
+                None,
                 vec![genesis],
                 vec![genesis_qc.clone()],
                 genesis_qc.ledger_info().ledger_info(),

@@ -218,13 +218,6 @@ impl SafetyRules {
         None
     }
 
-    /// Return the new state if the voting round was increased, otherwise ignore.  Increasing the
-    /// last vote round is always safe, but can affect liveness and must be increasing
-    /// to protect safety.
-    pub fn increase_last_vote_round(&mut self, round: Round) -> Option<ConsensusState> {
-        self.state.set_last_vote_round(round)
-    }
-
     /// Clones the up-to-date state of consensus (for monitoring / debugging purposes)
     pub fn consensus_state(&self) -> ConsensusState {
         self.state.clone()

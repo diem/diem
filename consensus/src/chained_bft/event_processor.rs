@@ -79,8 +79,8 @@ pub struct EventProcessor<T> {
 
 impl<T: Payload> EventProcessor<T> {
     pub fn new(
-        author: Author,
         block_store: Arc<BlockStore<T>>,
+        last_vote: Option<VoteMsg>,
         pacemaker: Pacemaker,
         proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
         proposal_generator: ProposalGenerator<T>,
@@ -99,6 +99,11 @@ impl<T: Payload> EventProcessor<T> {
             network.clone(),
             Arc::clone(&state_computer),
         );
+        let author = block_store.signer().author();
+        let last_vote_sent = last_vote.map(|v| {
+            let round = v.vote_data().block_round();
+            (v, round)
+        });
         Self {
             author,
             block_store,
@@ -113,7 +118,7 @@ impl<T: Payload> EventProcessor<T> {
             sync_manager,
             time_service,
             enforce_increasing_timestamps,
-            last_vote_sent: None,
+            last_vote_sent,
             epoch_mgr,
         }
     }
@@ -395,28 +400,15 @@ impl<T: Payload> EventProcessor<T> {
             Some((vote, vote_round)) if (*vote_round == round) => Some(vote.clone()),
             _ => {
                 // Try to generate a backup vote
-                let backup_vote_res = self.gen_backup_vote(round).await;
-                match &backup_vote_res {
-                    Ok(backup_vote_msg) => {
-                        self.last_vote_sent
-                            .replace((backup_vote_msg.clone(), round));
+                match self.gen_backup_vote(round).await {
+                    Ok(backup_vote_msg) => Some(backup_vote_msg),
+                    Err(e) => {
+                        error!("Failed to generate a backup vote: {}", e);
+                        return;
                     }
-                    Err(e) => warn!("Failed to generate a backup vote: {}", e),
-                };
-                backup_vote_res.ok()
+                }
             }
         };
-
-        // Stop voting at this round, persist the consensus state to support restarting from
-        // a recent round (i.e. > the last vote round)  and then send the SyncInfo
-        let consensus_state = self.safety_rules.increase_last_vote_round(round);
-
-        if let Some(consensus_state) = consensus_state {
-            if let Err(e) = self.storage.save_consensus_state(consensus_state) {
-                error!("Failed to persist consensus state after increasing the last vote round due to {:?}", e);
-                return;
-            }
-        }
 
         self.network
             .broadcast_timeout_msg(TimeoutMsg::new(
@@ -541,8 +533,6 @@ impl<T: Payload> EventProcessor<T> {
                 >= certified_parent_block_round
         );
 
-        self.last_vote_sent
-            .replace((vote_msg.clone(), proposal_round));
         let recipients = self
             .proposer_election
             .get_valid_proposers(proposal_round + 1);
@@ -644,9 +634,6 @@ impl<T: Payload> EventProcessor<T> {
             .safety_rules
             .voting_rule(block)
             .with_context(|e| format!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e))?;
-        self.storage
-            .save_consensus_state(vote_info.consensus_state().clone())
-            .with_context(|e| format!("Fail to persist consensus state: {:?}", e))?;
 
         let proposal_id = vote_info.proposal_id();
         let executed_state_id = self
@@ -659,7 +646,7 @@ impl<T: Payload> EventProcessor<T> {
         let ledger_info_placeholder = self
             .block_store
             .ledger_info_placeholder(vote_info.potential_commit_id());
-        Ok(VoteMsg::new(
+        let vote_msg = VoteMsg::new(
             VoteData::new(
                 proposal_id,
                 executed_state_id,
@@ -672,7 +659,13 @@ impl<T: Payload> EventProcessor<T> {
             self.author,
             ledger_info_placeholder,
             self.block_store.signer(),
-        ))
+        );
+        self.storage
+            .save_consensus_state(vote_info.consensus_state().clone(), vote_msg.clone())
+            .with_context(|e| format!("Fail to persist consensus state: {:?}", e))?;
+        self.last_vote_sent
+            .replace((vote_msg.clone(), block.round()));
+        Ok(vote_msg)
     }
 
     /// Upon new vote:

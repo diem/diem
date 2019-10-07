@@ -37,9 +37,10 @@ impl Display for VoteMsg {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
-            "Vote: [vote data: {}, author: {}, {}]",
+            "Vote: [vote data: {}, author: {}, is_timeout: {}, {}]",
             self.vote_data,
             self.author.short_str(),
+            self.round_signature().is_some(),
             self.ledger_info
         )
     }

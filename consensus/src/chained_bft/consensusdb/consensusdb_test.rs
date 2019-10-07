@@ -17,7 +17,10 @@ fn test_put_get() {
     assert_eq!(old_blocks.len(), 0);
     assert_eq!(db.get_quorum_certificates().unwrap().len(), 0);
 
-    db.save_state(vec![0x01, 0x02, 0x03]).unwrap();
+    // The second parameter here is a serialization of the last vote message, which is hard to
+    // construct in this test, so it remains bogus (cannot be properly deserialized).
+    db.save_state(vec![0x01, 0x02, 0x03], vec![0x01, 0x02, 0x03])
+        .unwrap();
 
     let qcs = vec![QuorumCert::certificate_for_genesis()];
 

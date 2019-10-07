@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::{
         common::Payload,
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
+        consensus_types::{block::Block, quorum_cert::QuorumCert, vote_msg::VoteMsg},
         consensusdb::ConsensusDB,
         liveness::pacemaker_timeout_manager::HighestTimeoutCertificates,
         safety::safety_rules::ConsensusState,
@@ -50,7 +50,7 @@ pub trait PersistentStorage<T>: PersistentLivenessStorage + Send + Sync {
     fn prune_tree(&self, block_ids: Vec<HashValue>) -> Result<()>;
 
     /// Persist the consensus state.
-    fn save_consensus_state(&self, state: ConsensusState) -> Result<()>;
+    fn save_consensus_state(&self, state: ConsensusState, vote_msg: VoteMsg) -> Result<()>;
 
     /// When the node restart, construct the instance and returned the data read from db.
     /// This could guarantee we only read once during start, and we would panic if the
@@ -67,6 +67,8 @@ pub trait PersistentStorage<T>: PersistentLivenessStorage + Send + Sync {
 pub struct RecoveryData<T> {
     // Safety data
     state: ConsensusState,
+    // The last vote message sent by this validator.
+    last_vote: Option<VoteMsg>,
     root: (Block<T>, QuorumCert, QuorumCert),
     // 1. the blocks guarantee the topological ordering - parent <- child.
     // 2. all blocks are children of the root.
@@ -85,6 +87,7 @@ pub struct RecoveryData<T> {
 impl<T: Payload> RecoveryData<T> {
     pub fn new(
         state: ConsensusState,
+        last_vote: Option<VoteMsg>,
         mut blocks: Vec<Block<T>>,
         mut quorum_certs: Vec<QuorumCert>,
         storage_ledger: &LedgerInfo,
@@ -119,6 +122,7 @@ impl<T: Payload> RecoveryData<T> {
         let need_sync = storage_ledger.consensus_block_id() != root.0.id();
         Ok(RecoveryData {
             state,
+            last_vote,
             root,
             blocks,
             quorum_certs,
@@ -130,6 +134,10 @@ impl<T: Payload> RecoveryData<T> {
 
     pub fn state(&self) -> ConsensusState {
         self.state.clone()
+    }
+
+    pub fn last_vote(&self) -> Option<VoteMsg> {
+        self.last_vote.clone()
     }
 
     pub fn take(
@@ -322,8 +330,9 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         Ok(())
     }
 
-    fn save_consensus_state(&self, state: ConsensusState) -> Result<()> {
-        self.db.save_state(to_vec_named(&state)?)
+    fn save_consensus_state(&self, state: ConsensusState, vote_msg: VoteMsg) -> Result<()> {
+        self.db
+            .save_state(to_vec_named(&state)?, to_vec_named(&vote_msg)?)
     }
 
     fn start(config: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
@@ -336,13 +345,23 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             from_slice(&s[..]).expect("unable to deserialize consensus state")
         });
         debug!("Recovered consensus state: {}", consensus_state);
+
+        let last_vote_msg = initial_data.1.map(|vote_msg_data| {
+            from_slice(&vote_msg_data[..]).expect("unable to deserialize last vote msg")
+        });
+        let last_vote_repr = match &last_vote_msg {
+            Some(vote_msg) => format!("{}", vote_msg),
+            None => "None".to_string(),
+        };
+        debug!("Recovered last vote msg: {}", last_vote_repr);
+
         let highest_timeout_certificates = initial_data
-            .1
+            .2
             .map_or_else(HighestTimeoutCertificates::default, |s| {
                 from_slice(&s[..]).expect("unable to deserialize highest timeout certificates")
             });
-        let mut blocks = initial_data.2;
-        let mut quorum_certs: Vec<_> = initial_data.3;
+        let mut blocks = initial_data.3;
+        let mut quorum_certs: Vec<_> = initial_data.4;
         // bootstrap the empty store with genesis block and qc.
         if blocks.is_empty() && quorum_certs.is_empty() {
             blocks.push(Block::make_genesis_block());
@@ -371,6 +390,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             .expect("unable to read ledger info from storage");
         let mut initial_data = RecoveryData::new(
             consensus_state,
+            last_vote_msg,
             blocks,
             quorum_certs,
             ledger_info.ledger_info(),
