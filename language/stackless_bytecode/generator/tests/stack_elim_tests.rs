@@ -7,7 +7,7 @@ use stackless_bytecode_generator::{
 use stdlib::stdlib_modules;
 use vm::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, FieldDefinitionIndex, FunctionHandleIndex,
-    SignatureToken, StructDefinitionIndex, StructHandleIndex,
+    LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, StructHandleIndex,
 };
 
 #[test]
@@ -157,10 +157,20 @@ fn transform_code_with_pack_unpack() {
     let expected_code = vec![
         LdConst(4, 42),
         MoveLoc(5, 0),
-        Pack(6, StructDefinitionIndex::new(0), vec![4, 5]),
+        Pack(
+            6,
+            StructDefinitionIndex::new(0),
+            LocalsSignatureIndex::new(1),
+            vec![4, 5],
+        ),
         StLoc(1, 6),
         MoveLoc(7, 1),
-        Unpack(vec![8, 9], StructDefinitionIndex::new(0), 7),
+        Unpack(
+            vec![8, 9],
+            StructDefinitionIndex::new(0),
+            LocalsSignatureIndex::new(1),
+            7,
+        ),
         StLoc(3, 9),
         StLoc(2, 8),
         Ret(vec![]),
@@ -434,7 +444,12 @@ fn transform_code_with_function_call() {
         MoveLoc(6, 2),
         MoveLoc(7, 0),
         MoveLoc(8, 1),
-        Call(vec![11, 10, 9], FunctionHandleIndex::new(1), vec![6, 7, 8]),
+        Call(
+            vec![11, 10, 9],
+            FunctionHandleIndex::new(1),
+            LocalsSignatureIndex::new(1),
+            vec![6, 7, 8],
+        ),
         StLoc(5, 11),
         StLoc(4, 10),
         StLoc(3, 9),
@@ -484,16 +499,35 @@ fn transform_code_with_module_builtins() {
     let (actual_code, actual_types) = generate_code_from_string(code);
     let expected_code = vec![
         CopyLoc(4, 0),
-        Exists(5, 4, StructDefinitionIndex::new(0)),
+        Exists(
+            5,
+            4,
+            StructDefinitionIndex::new(0),
+            LocalsSignatureIndex::new(1),
+        ),
         StLoc(3, 5),
         CopyLoc(6, 0),
-        BorrowGlobal(7, 6, StructDefinitionIndex::new(0)),
+        BorrowGlobal(
+            7,
+            6,
+            StructDefinitionIndex::new(0),
+            LocalsSignatureIndex::new(1),
+        ),
         StLoc(2, 7),
         CopyLoc(8, 0),
-        MoveFrom(9, 8, StructDefinitionIndex::new(0)),
+        MoveFrom(
+            9,
+            8,
+            StructDefinitionIndex::new(0),
+            LocalsSignatureIndex::new(1),
+        ),
         StLoc(1, 9),
         MoveLoc(10, 1),
-        MoveToSender(10, StructDefinitionIndex::new(0)),
+        MoveToSender(
+            10,
+            StructDefinitionIndex::new(0),
+            LocalsSignatureIndex::new(1),
+        ),
         MoveLoc(11, 2),
         Ret(vec![11]),
     ];
@@ -539,7 +573,12 @@ fn transform_program_with_script() {
     let expected_code = vec![
         MoveLoc(2, 0),
         MoveLoc(3, 1),
-        Call(vec![], FunctionHandleIndex::new(1), vec![2, 3]),
+        Call(
+            vec![],
+            FunctionHandleIndex::new(1),
+            LocalsSignatureIndex::new(1),
+            vec![2, 3],
+        ),
         Ret(vec![]),
     ];
     let expected_types = vec![
@@ -547,6 +586,62 @@ fn transform_program_with_script() {
         SignatureToken::U64,
         SignatureToken::Address,
         SignatureToken::U64,
+    ];
+    assert_eq!(actual_code, expected_code);
+    assert_eq!(actual_types, expected_types);
+}
+
+#[test]
+fn transform_program_with_generics() {
+    let code = String::from(
+        "
+        module M {
+            struct Foo<T>{ x: T }
+
+            bar<T>(x: Self.Foo<u64>, w: T): T {
+                let y: &mut u64;
+                let z: u64;
+                y = &mut (&mut x).x;
+                _ = move(y);
+                Foo<u64> { x: z } = move(x);
+                return move(w);
+            }
+        }
+
+        ",
+    );
+    let (actual_code, actual_types) = generate_code_from_string(code);
+    let expected_code = vec![
+        BorrowLoc(4, 0),
+        BorrowField(5, 4, FieldDefinitionIndex::new(0)),
+        StLoc(2, 5),
+        MoveLoc(6, 2),
+        NoOp,
+        MoveLoc(7, 0),
+        Unpack(
+            vec![8],
+            StructDefinitionIndex::new(0),
+            LocalsSignatureIndex::new(1),
+            7,
+        ),
+        StLoc(3, 8),
+        MoveLoc(9, 1),
+        Ret(vec![9]),
+    ];
+    let expected_types = vec![
+        SignatureToken::Struct(StructHandleIndex::new(0), vec![SignatureToken::U64]),
+        SignatureToken::TypeParameter(0),
+        SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
+        SignatureToken::U64,
+        SignatureToken::MutableReference(Box::new(SignatureToken::Struct(
+            StructHandleIndex::new(0),
+            vec![SignatureToken::U64],
+        ))),
+        SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
+        SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
+        SignatureToken::Struct(StructHandleIndex::new(0), vec![SignatureToken::U64]),
+        SignatureToken::U64,
+        SignatureToken::TypeParameter(0),
     ];
     assert_eq!(actual_code, expected_code);
     assert_eq!(actual_types, expected_types);

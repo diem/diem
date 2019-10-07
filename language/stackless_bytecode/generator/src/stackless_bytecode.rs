@@ -1,6 +1,6 @@
 use vm::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FieldDefinitionIndex, FunctionHandleIndex,
-    LocalIndex, StructDefinitionIndex, UserStringIndex,
+    LocalIndex, LocalsSignatureIndex, StructDefinitionIndex, UserStringIndex,
 };
 
 type TempIndex = usize;
@@ -16,18 +16,48 @@ pub enum StacklessBytecode {
     WriteRef(TempIndex, TempIndex),  // *t1 = t2
     FreezeRef(TempIndex, TempIndex), // t1 = immutable(t2)
 
-    Call(Vec<TempIndex>, FunctionHandleIndex, Vec<TempIndex>), /* t1_vec = call(index) with
-                                                                * t2_vec as parameters */
+    Call(
+        Vec<TempIndex>,
+        FunctionHandleIndex,
+        LocalsSignatureIndex,
+        Vec<TempIndex>,
+    ), /* t1_vec = call(index) with
+        * t2_vec as parameters */
     Ret(Vec<TempIndex>),
 
-    Pack(TempIndex, StructDefinitionIndex, Vec<TempIndex>), /* t1 = struct(index) with t2_vec
-                                                             * as fields */
-    Unpack(Vec<TempIndex>, StructDefinitionIndex, TempIndex), // t1_vec = t2's fields
-    BorrowField(TempIndex, TempIndex, FieldDefinitionIndex),  // t1 = t2.field
-    MoveToSender(TempIndex, StructDefinitionIndex),           // move_to_sender<struct_index>(t)
-    MoveFrom(TempIndex, TempIndex, StructDefinitionIndex),    // t1 = move_from<struct_index>(t2)
-    BorrowGlobal(TempIndex, TempIndex, StructDefinitionIndex), /* t1 = borrow_global<struct_index>(t2) */
-    Exists(TempIndex, TempIndex, StructDefinitionIndex),       // t1 = exists<struct_index>(t2)
+    Pack(
+        TempIndex,
+        StructDefinitionIndex,
+        LocalsSignatureIndex,
+        Vec<TempIndex>,
+    ), /* t1 = struct(index) with t2_vec
+        * as fields */
+    Unpack(
+        Vec<TempIndex>,
+        StructDefinitionIndex,
+        LocalsSignatureIndex,
+        TempIndex,
+    ), // t1_vec = t2's fields
+    BorrowField(TempIndex, TempIndex, FieldDefinitionIndex), // t1 = t2.field
+    MoveToSender(TempIndex, StructDefinitionIndex, LocalsSignatureIndex), /* move_to_sender<struct_index>(t) */
+    MoveFrom(
+        TempIndex,
+        TempIndex,
+        StructDefinitionIndex,
+        LocalsSignatureIndex,
+    ), /* t1 = move_from<struct_index>(t2) */
+    BorrowGlobal(
+        TempIndex,
+        TempIndex,
+        StructDefinitionIndex,
+        LocalsSignatureIndex,
+    ), /* t1 = borrow_global<struct_index>(t2) */
+    Exists(
+        TempIndex,
+        TempIndex,
+        StructDefinitionIndex,
+        LocalsSignatureIndex,
+    ), /* t1 = exists<struct_index>(t2) */
 
     GetGasRemaining(TempIndex),
     GetTxnSequenceNumber(TempIndex),
