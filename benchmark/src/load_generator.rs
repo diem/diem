@@ -8,15 +8,15 @@ use crate::OP_COUNTER;
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use client::{AccountData, AccountStatus};
 use failure::prelude::*;
-use libra_wallet::wallet_library::WalletLibrary;
-use logger::prelude::*;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     get_with_proof::{RequestItem, UpdateToLatestLedgerRequest},
     proto::types::UpdateToLatestLedgerRequest as ProtoUpdateToLatestLedgerRequest,
     transaction::{Script, TransactionPayload},
     transaction_helpers::{create_signed_txn, TransactionSigner},
 };
+use libra_wallet::wallet_library::WalletLibrary;
+use logger::prelude::*;
 
 /// Placeholder values used to generate offline TXNs.
 const MAX_GAS_AMOUNT: u64 = 1_000_000;

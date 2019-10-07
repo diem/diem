@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
+use libra_types::account_address::AccountAddress;
 use std::{fs, path::Path};
-use types::account_address::AccountAddress;
 use vm::{access::ModuleAccess, file_format::CompiledModule};
 
 pub fn do_compile_module<T: ModuleAccess>(

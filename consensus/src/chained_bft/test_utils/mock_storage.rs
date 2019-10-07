@@ -11,11 +11,11 @@ use crate::chained_bft::{
 use config::config::{NodeConfig, NodeConfigHelpers};
 use crypto::HashValue;
 use failure::Result;
+use libra_types::ledger_info::LedgerInfo;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-use types::ledger_info::LedgerInfo;
 
 pub struct MockSharedStorage<T> {
     // Safety state

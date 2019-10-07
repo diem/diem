@@ -10,11 +10,11 @@ use crate::{
 };
 use config::config::VMPublishingOption;
 use crypto::HashValue;
-use logger::prelude::*;
-use types::{
+use libra_types::{
     transaction::{SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES},
     vm_error::{StatusCode, VMStatus},
 };
+use logger::prelude::*;
 use vm::{
     errors::convert_prologue_runtime_error,
     gas_schedule::{self, AbstractMemorySize, GasAlgebra, GasCarrier},

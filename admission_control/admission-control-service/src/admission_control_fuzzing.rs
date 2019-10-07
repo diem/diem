@@ -6,12 +6,12 @@ use crate::{
     admission_control_service::SubmitTransactionRequest,
     mocks::local_mock_mempool::LocalMockMempool,
 };
+use libra_types::transaction::SignedTransaction;
 use proptest;
 use proptest_helpers::ValueGenerator;
 use prost::Message;
 use std::sync::Arc;
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
-use types::transaction::SignedTransaction;
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
 #[test]

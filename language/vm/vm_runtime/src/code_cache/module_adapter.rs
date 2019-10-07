@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Fetches code data from the blockchain.
 
+use libra_types::language_storage::ModuleId;
 use logger::prelude::*;
 use state_view::StateView;
 use std::collections::HashMap;
-use types::language_storage::ModuleId;
 use vm::file_format::CompiledModule;
 
 /// Trait that describes how the VM expects code data to be stored.

@@ -7,9 +7,7 @@ mod mock_vm_test;
 use config::config::VMConfig;
 use crypto::ed25519::compat;
 use lazy_static::lazy_static;
-use state_view::StateView;
-use std::collections::HashMap;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
     contract_event::ContractEvent,
@@ -21,6 +19,8 @@ use types::{
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
+use state_view::StateView;
+use std::collections::HashMap;
 use vm_runtime::VMExecutor;
 
 #[derive(Debug)]

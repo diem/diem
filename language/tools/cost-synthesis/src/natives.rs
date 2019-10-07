@@ -6,8 +6,8 @@
 //! This implements a `StackAccessor` that generates random bytearrays of a user defined length. We
 //! then use this ability to run the native functions with different bytearray lengths in the
 //! generated synthesis binary.
+use libra_types::byte_array::ByteArray;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use types::byte_array::ByteArray;
 
 /// A wrapper around data used to generate random valid bytearrays
 pub struct StackAccessorMocker {

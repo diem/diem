@@ -11,6 +11,10 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
+use libra_types::{
+    account_address::AccountAddress,
+    crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
+};
 use mirai_annotations::assumed_postcondition;
 use network;
 use serde::{Deserialize, Serialize};
@@ -18,10 +22,6 @@ use std::{
     collections::HashSet,
     convert::{TryFrom, TryInto},
     fmt,
-};
-use types::{
-    account_address::AccountAddress,
-    crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
 };
 
 // Internal use only. Contains all the fields in PaceMakerTimeout that contributes to the

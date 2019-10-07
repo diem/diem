@@ -103,12 +103,12 @@
 
 use crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
 use failure::prelude::*;
-use std::marker::PhantomData;
-use types::proof::{
+use libra_types::proof::{
     definition::LeafCount,
     position::{FrozenSubTreeIterator, FrozenSubtreeSiblingIterator, Position},
     AccumulatorConsistencyProof, AccumulatorProof, MerkleTreeInternalNode,
 };
+use std::marker::PhantomData;
 
 /// Defines the interface between `MerkleAccumulator` and underlying storage.
 pub trait HashReader {
@@ -145,7 +145,7 @@ where
     /// `num_leaves` leaves in total. Siblings are read via `reader` (or generated dynamically
     /// if they are non-frozen).
     ///
-    /// See [`types::proof::AccumulatorProof`] for proof format.
+    /// See [`libra_types::proof::AccumulatorProof`] for proof format.
     pub fn get_proof(
         reader: &R,
         num_leaves: LeafCount,
@@ -156,7 +156,7 @@ where
 
     /// Gets a proof that shows the full accumulator is consistent with a smaller accumulator.
     ///
-    /// See [`types::proof::AccumulatorConsistencyProof`] for proof format.
+    /// See [`libra_types::proof::AccumulatorConsistencyProof`] for proof format.
     pub fn get_consistency_proof(
         reader: &R,
         full_acc_leaves: LeafCount,

@@ -8,12 +8,12 @@ use crate::{
     gas_costs, transaction_status_eq,
 };
 use config::config::VMPublishingOption;
-use std::time::Instant;
-use types::{
+use libra_types::{
     account_config::AccountEvent,
     transaction::{SignedTransaction, TransactionOutput, TransactionPayload, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
+use std::time::Instant;
 
 #[test]
 fn single_peer_to_peer_with_event() {

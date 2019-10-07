@@ -18,17 +18,17 @@ use crate::{
 use config::config::{ConsensusProposerType::FixedProposer, NodeConfig};
 use executor::Executor;
 use failure::prelude::*;
+use libra_types::{
+    account_address::AccountAddress,
+    crypto_proxies::{ValidatorSigner, ValidatorVerifier},
+    transaction::SignedTransaction,
+};
 use logger::prelude::*;
 use mempool::proto::mempool::MempoolClient;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
 use std::{convert::TryFrom, sync::Arc};
 use tokio::runtime;
-use types::{
-    account_address::AccountAddress,
-    crypto_proxies::{ValidatorSigner, ValidatorVerifier},
-    transaction::SignedTransaction,
-};
 use vm_runtime::MoveVM;
 
 struct InitialSetup {

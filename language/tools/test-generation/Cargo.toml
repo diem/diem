@@ -23,7 +23,7 @@ vm_runtime_types = { path = "../../vm/vm_runtime/vm_runtime_types" }
 vm_cache_map = { path = "../../vm/vm_runtime/vm_cache_map" }
 language_e2e_tests = { path = "../../e2e_tests" }
 stdlib = { path = "../../stdlib" }
-types = { path = "../../../types", features = ["testing"] }
+libra-types = { path = "../../../types", features = ["testing"] }
 
 [features]
 mirai-contracts = []

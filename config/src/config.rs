@@ -13,6 +13,10 @@ use crate::{
 };
 use crypto::ValidKey;
 use failure::prelude::*;
+use libra_types::{
+    transaction::{SignedTransaction, SCRIPT_HASH_LENGTH},
+    PeerId,
+};
 use parity_multiaddr::Multiaddr;
 use prost::Message;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -26,10 +30,6 @@ use std::{
 };
 use toml;
 use tools::tempdir::TempPath;
-use types::{
-    transaction::{SignedTransaction, SCRIPT_HASH_LENGTH},
-    PeerId,
-};
 
 #[cfg(test)]
 #[path = "unit_tests/config_test.rs"]
@@ -595,7 +595,9 @@ impl NodeConfig {
         });
         let mut buffer = vec![];
         file.read_to_end(&mut buffer)?;
-        SignedTransaction::try_from(types::proto::types::SignedTransaction::decode(&buffer)?)
+        SignedTransaction::try_from(libra_types::proto::types::SignedTransaction::decode(
+            &buffer,
+        )?)
     }
 
     pub fn get_storage_dir(&self) -> PathBuf {

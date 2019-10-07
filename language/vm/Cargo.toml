@@ -21,13 +21,13 @@ canonical_serialization = { path = "../../common/canonical_serialization" }
 crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 proptest_helpers = { path = "../../common/proptest_helpers" }
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 
 [dev-dependencies]
 serde_json = "1"
-types = { path = "../../types", features = ["testing"]}
+libra-types = { path = "../../types", features = ["testing"]}
 
 [features]
 default = []
 mirai-contracts = []
-testing = ["types/testing"]
+testing = ["libra-types/testing"]

@@ -19,8 +19,8 @@ use crate::{
 };
 use channel;
 use futures::{executor::block_on, StreamExt};
+use libra_types::crypto_proxies::random_validator_verifier;
 use std::{sync::Arc, time::Duration, u64};
-use types::crypto_proxies::random_validator_verifier;
 
 #[test]
 fn test_pacemaker_time_interval() {

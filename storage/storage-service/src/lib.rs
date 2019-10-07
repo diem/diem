@@ -12,6 +12,7 @@ pub mod mocks;
 use config::config::NodeConfig;
 use failure::prelude::*;
 use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle};
+use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
 use libradb::LibraDB;
 use logger::prelude::*;
 use metrics::counters::SVC_COUNTERS;
@@ -28,7 +29,6 @@ use storage_proto::proto::storage::{
     GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
     SaveTransactionsResponse, Storage,
 };
-use types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
 
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
@@ -140,7 +140,7 @@ impl StorageService {
         &self,
         req: UpdateToLatestLedgerRequest,
     ) -> Result<UpdateToLatestLedgerResponse> {
-        let rust_req = types::get_with_proof::UpdateToLatestLedgerRequest::try_from(req)?;
+        let rust_req = libra_types::get_with_proof::UpdateToLatestLedgerRequest::try_from(req)?;
 
         let (
             response_items,
@@ -151,7 +151,7 @@ impl StorageService {
             .db
             .update_to_latest_ledger(rust_req.client_known_version, rust_req.requested_items)?;
 
-        let rust_resp = types::get_with_proof::UpdateToLatestLedgerResponse {
+        let rust_resp = libra_types::get_with_proof::UpdateToLatestLedgerResponse {
             response_items,
             ledger_info_with_sigs,
             validator_change_events,

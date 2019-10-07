@@ -20,6 +20,7 @@ use futures::{
     sink::SinkExt,
     stream::{Fuse, FuturesUnordered, StreamExt},
 };
+use libra_types::PeerId;
 use logger::prelude::*;
 use netcore::{
     multiplexing::StreamMultiplexer,
@@ -29,7 +30,6 @@ use netcore::{
 use parity_multiaddr::Multiaddr;
 use std::{collections::HashMap, marker::PhantomData};
 use tokio::runtime::TaskExecutor;
-use types::PeerId;
 
 mod error;
 #[cfg(test)]

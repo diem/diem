@@ -5,11 +5,11 @@ use invalid_mutations::bounds::{
     ApplyCodeUnitBoundsContext, ApplyOutOfBoundsContext, CodeUnitBoundsMutation,
     OutOfBoundsMutation,
 };
-use proptest::{collection::vec, prelude::*};
-use types::{
+use libra_types::{
     account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier,
     vm_error::StatusCode,
 };
+use proptest::{collection::vec, prelude::*};
 use vm::{check_bounds::BoundsChecker, file_format::*, proptest_types::CompiledModuleStrategyGen};
 
 #[test]

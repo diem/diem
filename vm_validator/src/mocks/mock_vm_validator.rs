@@ -3,13 +3,13 @@
 
 use crate::vm_validator::TransactionValidation;
 use futures::future::{ok, Future};
-use state_view::StateView;
-use std::convert::TryFrom;
-use types::{
+use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     transaction::SignedTransaction,
     vm_error::{StatusCode, VMStatus},
 };
+use state_view::StateView;
+use std::convert::TryFrom;
 use vm_runtime::VMVerifier;
 
 #[derive(Clone)]

@@ -5,12 +5,12 @@ use crate::{
     counters::*, loaded_data::loaded_module::LoadedModule, runtime::VMRuntime, VMExecutor,
     VMVerifier,
 };
-use state_view::StateView;
-use std::sync::Arc;
-use types::{
+use libra_types::{
     transaction::{SignedTransaction, TransactionOutput},
     vm_error::VMStatus,
 };
+use state_view::StateView;
+use std::sync::Arc;
 use vm_cache_map::Arena;
 
 rental! {

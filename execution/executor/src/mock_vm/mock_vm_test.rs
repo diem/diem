@@ -4,12 +4,12 @@
 use super::{balance_ap, encode_mint_transaction, encode_transfer_transaction, seqnum_ap, MockVM};
 use config::config::VMConfig;
 use failure::Result;
-use state_view::StateView;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
     write_set::WriteOp,
 };
+use state_view::StateView;
 use vm_runtime::VMExecutor;
 
 fn gen_address(index: u8) -> AccountAddress {

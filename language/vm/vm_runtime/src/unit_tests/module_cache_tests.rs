@@ -16,7 +16,7 @@ use crate::{
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use compiler::Compiler;
 use hex;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     language_storage::ModuleId,
     vm_error::{StatusCode, StatusType},

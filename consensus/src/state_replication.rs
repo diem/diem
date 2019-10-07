@@ -6,8 +6,8 @@ use crypto::HashValue;
 use executor::StateComputeResult;
 use failure::Result;
 use futures::Future;
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use std::{pin::Pin, sync::Arc};
-use types::crypto_proxies::LedgerInfoWithSignatures;
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
 pub trait TxnManager: Send + Sync {

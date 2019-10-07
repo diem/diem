@@ -4,16 +4,16 @@
 use codespan::{ByteIndex, Span};
 use lalrpop_util::ParseError;
 use lazy_static::lazy_static;
-use std::{
-    collections::{HashSet, VecDeque},
-    fmt,
-    ops::Deref,
-};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
+};
+use std::{
+    collections::{HashSet, VecDeque},
+    fmt,
+    ops::Deref,
 };
 
 /// Generic wrapper that keeps file locations for any ast-node
@@ -197,7 +197,7 @@ pub struct QualifiedStructIdent {
 }
 
 /// The field newtype
-pub type Field = types::access_path::Field;
+pub type Field = libra_types::access_path::Field;
 
 /// A field coupled with source location information
 pub type Field_ = Spanned<Field>;

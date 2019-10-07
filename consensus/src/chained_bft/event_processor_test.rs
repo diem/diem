@@ -42,6 +42,9 @@ use futures::{
     compat::Future01CompatExt,
     executor::block_on,
 };
+use libra_types::crypto_proxies::{
+    random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
+};
 use network::{
     proto::{BlockRetrievalStatus, ConsensusMsg_oneof},
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
@@ -49,9 +52,6 @@ use network::{
 use std::convert::TryFrom;
 use std::{sync::Arc, time::Duration};
 use tokio::runtime::TaskExecutor;
-use types::crypto_proxies::{
-    random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
-};
 
 /// Auxiliary struct that is setting up node environment for the test.
 pub struct NodeSetup {

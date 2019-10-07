@@ -3,7 +3,7 @@
 
 #![allow(bare_trait_objects)]
 
-use ::types::proto::types;
+use ::libra_types::proto::types;
 
 pub mod storage {
     include!(concat!(env!("OUT_DIR"), "/storage.rs"));

@@ -6,6 +6,13 @@ use crypto::{
     traits::{ValidKey, ValidKeyStringExt},
     x25519::{self, X25519StaticPrivateKey, X25519StaticPublicKey},
 };
+use libra_types::{
+    account_address::AccountAddress,
+    crypto_proxies::{ValidatorInfo, ValidatorVerifier},
+    validator_public_keys::ValidatorPublicKeys,
+    validator_set::ValidatorSet,
+    PeerId,
+};
 use mirai_annotations::postcondition;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
@@ -14,13 +21,6 @@ use std::{
     convert::TryFrom,
     hash::BuildHasher,
     str::FromStr,
-};
-use types::{
-    account_address::AccountAddress,
-    crypto_proxies::{ValidatorInfo, ValidatorVerifier},
-    validator_public_keys::ValidatorPublicKeys,
-    validator_set::ValidatorSet,
-    PeerId,
 };
 
 #[cfg(test)]

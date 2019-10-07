@@ -320,7 +320,7 @@ impl DropConfig {
 }
 
 #[cfg(test)]
-use types::crypto_proxies::random_validator_verifier;
+use libra_types::crypto_proxies::random_validator_verifier;
 
 #[test]
 fn test_network_api() {

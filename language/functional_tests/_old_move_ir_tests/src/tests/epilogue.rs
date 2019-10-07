@@ -4,7 +4,7 @@
 use crate::*;
 use language_common::error_codes::*;
 use move_ir::{assert_error_type, assert_no_error};
-use types::transaction::TransactionArgument;
+use libra_types::transaction::TransactionArgument;
 
 #[test]
 fn increment_sequence_number_on_tx_script_success() {

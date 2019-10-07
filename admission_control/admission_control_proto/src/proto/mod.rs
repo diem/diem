@@ -3,7 +3,7 @@
 
 #![allow(bare_trait_objects)]
 
-use ::types::proto::*;
+use ::libra_types::proto::*;
 use mempool_shared_proto::proto::mempool_status;
 
 pub mod admission_control {

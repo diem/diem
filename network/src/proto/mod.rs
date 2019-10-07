@@ -18,7 +18,7 @@ mod state_synchronizer {
     include!(concat!(env!("OUT_DIR"), "/state_synchronizer.rs"));
 }
 
-use ::types::proto::types;
+use ::libra_types::proto::types;
 
 pub use self::{
     consensus::{

@@ -18,10 +18,10 @@ use futures::{
     task::{Context, Poll},
     SinkExt, Stream, StreamExt,
 };
+use libra_types::PeerId;
 use pin_utils::unsafe_pinned;
 use prost::Message as proto_msg;
 use std::pin::Pin;
-use types::PeerId;
 
 /// Protocol id for mempool direct-send calls
 pub const MEMPOOL_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/mempool/direct-send/0.1.0";

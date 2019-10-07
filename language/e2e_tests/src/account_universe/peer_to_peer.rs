@@ -9,13 +9,13 @@ use crate::{
     common_transactions::peer_to_peer_txn,
     gas_costs,
 };
-use proptest::prelude::*;
-use proptest_derive::Arbitrary;
-use proptest_helpers::Index;
-use types::{
+use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
+use proptest::prelude::*;
+use proptest_derive::Arbitrary;
+use proptest_helpers::Index;
 
 /// Represents a peer-to-peer transaction performed in the account universe.
 ///

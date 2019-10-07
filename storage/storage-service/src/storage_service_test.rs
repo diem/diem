@@ -5,6 +5,7 @@ use super::*;
 use config::config::NodeConfigHelpers;
 use grpcio::EnvBuilder;
 use itertools::zip_eq;
+use libra_types::get_with_proof::{RequestItem, ResponseItem};
 use libradb::mock_genesis::db_with_mock_genesis;
 #[cfg(any(test, feature = "testing"))]
 use libradb::test_helper::arb_blocks_to_commit;
@@ -13,7 +14,6 @@ use std::collections::HashMap;
 use storage_client::{
     StorageRead, StorageReadServiceClient, StorageWrite, StorageWriteServiceClient,
 };
-use types::get_with_proof::{RequestItem, ResponseItem};
 
 fn start_test_storage_with_read_write_client(
     need_to_use_genesis: bool,

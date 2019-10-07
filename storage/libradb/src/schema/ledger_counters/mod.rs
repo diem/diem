@@ -17,12 +17,12 @@ use crate::{ledger_counters::LedgerCounters, schema::ensure_slice_len_eq};
 use byteorder::{BigEndian, ReadBytesExt};
 use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
 use failure::prelude::*;
+use libra_types::transaction::Version;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
 };
 use std::mem::size_of;
-use types::transaction::Version;
 
 define_schema!(
     LedgerCountersSchema,

@@ -6,10 +6,10 @@ use crate::chained_bft::{
     consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
     persistent_storage::PersistentLivenessStorage,
 };
+use libra_types::crypto_proxies::ValidatorVerifier;
 use logger::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt, sync::Arc};
-use types::crypto_proxies::ValidatorVerifier;
 
 #[cfg(test)]
 #[path = "pacemaker_timeout_manager_test.rs"]

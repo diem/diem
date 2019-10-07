@@ -7,7 +7,7 @@ use crate::{
     executor::test_all_genesis,
 };
 use crypto::ed25519::compat;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     transaction::TransactionStatus,
     vm_error::{StatusCode, VMStatus},

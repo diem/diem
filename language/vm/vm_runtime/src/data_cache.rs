@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Scratchpad for on chain values during the execution.
 
-use logger::prelude::*;
-use state_view::StateView;
-use std::{collections::btree_map::BTreeMap, mem::replace};
-use types::{
+use libra_types::{
     access_path::AccessPath,
     language_storage::ModuleId,
     vm_error::{sub_status, StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
+use logger::prelude::*;
+use state_view::StateView;
+use std::{collections::btree_map::BTreeMap, mem::replace};
 use vm::{
     errors::*,
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},

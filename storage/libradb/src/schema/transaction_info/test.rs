@@ -3,8 +3,8 @@
 
 use super::*;
 use crypto::HashValue;
+use libra_types::{transaction::TransactionInfo, vm_error::StatusCode};
 use schemadb::schema::assert_encode_decode;
-use types::{transaction::TransactionInfo, vm_error::StatusCode};
 
 #[test]
 fn test_encode_decode() {

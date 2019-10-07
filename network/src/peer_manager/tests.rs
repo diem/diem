@@ -19,6 +19,7 @@ use futures::{
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
     stream::StreamExt,
 };
+use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::{
     multiplexing::{
@@ -31,7 +32,6 @@ use netcore::{
 use parity_multiaddr::Multiaddr;
 use std::{collections::HashMap, io, time::Duration};
 use tokio::{runtime::TaskExecutor, timer::Timeout};
-use types::PeerId;
 
 const HELLO_PROTOCOL: &[u8] = b"/hello-world/1.0.0";
 

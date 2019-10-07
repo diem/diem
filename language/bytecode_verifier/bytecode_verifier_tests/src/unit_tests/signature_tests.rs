@@ -6,12 +6,12 @@ use invalid_mutations::signature::{
     ApplySignatureDoubleRefContext, ApplySignatureFieldRefContext, DoubleRefMutation,
     FieldRefMutation,
 };
-use proptest::{collection::vec, prelude::*};
-use types::{
+use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     identifier::Identifier,
     vm_error::StatusCode,
 };
+use proptest::{collection::vec, prelude::*};
 use vm::file_format::{Bytecode::*, CompiledModule, SignatureToken::*, *};
 
 #[test]

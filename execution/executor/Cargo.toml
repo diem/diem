@@ -28,7 +28,7 @@ prost-ext = { path = "../../common/prost-ext" }
 scratchpad = { path = "../../storage/scratchpad" }
 state_view = { path = "../../storage/state_view" }
 storage_client = { path = "../../storage/storage_client" }
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 vm_runtime = { path = "../../language/vm/vm_runtime" }
 
 [dev-dependencies]
@@ -39,7 +39,7 @@ rusty-fork = "0.2.1"
 
 config = { path = "../../config", features = ["testing"]}
 grpc_helpers = { path = "../../common/grpc_helpers" }
-types = { path = "../../types", features = ["testing"]}
+libra-types = { path = "../../types", features = ["testing"]}
 
 storage_proto = { path = "../../storage/storage_proto" }
 storage-service = { path = "../../storage/storage-service" }

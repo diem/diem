@@ -20,13 +20,13 @@ use crypto::{
 };
 use failure::prelude::*;
 use itertools::Itertools;
-use schemadb::{ReadOptions, DB};
-use std::{ops::Deref, sync::Arc};
-use types::{
+use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     proof::{position::Position, AccumulatorConsistencyProof, AccumulatorProof},
     transaction::{TransactionInfo, Version},
 };
+use schemadb::{ReadOptions, DB};
+use std::{ops::Deref, sync::Arc};
 
 pub(crate) struct LedgerStore {
     db: Arc<DB>,

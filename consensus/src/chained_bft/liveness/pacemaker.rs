@@ -14,6 +14,7 @@ use crate::{
     util::time_service::{SendTask, TimeService},
 };
 use channel;
+use libra_types::crypto_proxies::ValidatorVerifier;
 use logger::prelude::*;
 use std::{
     fmt,
@@ -21,7 +22,6 @@ use std::{
     time::{Duration, Instant},
 };
 use termion::color::*;
-use types::crypto_proxies::ValidatorVerifier;
 
 /// A reason for starting a new round: introduced for monitoring / debug purposes.
 #[derive(Eq, Debug, PartialEq)]

@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 failure = { path = "../../../common/failure_ext", package = "failure_ext" }
 ir_to_bytecode_syntax = { path = "syntax" }
-types = { path = "../../../types" }
+libra-types = { path = "../../../types" }
 vm = { path = "../../vm" }
 lalrpop-util = "0.17.2"
 log = "0.4.7"
@@ -20,4 +20,4 @@ codespan = "0.2.1"
 codespan-reporting = "0.2.1"
 
 [dev-dependencies]
-types = { path = "../../../types", features = ["testing"] }
+libra-types = { path = "../../../types", features = ["testing"] }

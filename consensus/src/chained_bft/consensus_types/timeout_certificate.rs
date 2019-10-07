@@ -3,14 +3,14 @@
 
 use crate::chained_bft::common::{self, Author, Round};
 use failure::prelude::*;
+use libra_types::{
+    account_address::AccountAddress,
+    crypto_proxies::{Signature, ValidatorVerifier},
+};
 use network;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::{collections::HashMap, fmt};
-use types::{
-    account_address::AccountAddress,
-    crypto_proxies::{Signature, ValidatorVerifier},
-};
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 /// TimeoutCertificate is a proof that 2f+1 participants have voted in round r and we can now move
@@ -88,7 +88,7 @@ impl From<TimeoutCertificate> for network::proto::TimeoutCertificate {
             .signatures
             .into_iter()
             .map(
-                |(validator_id, signature)| types::proto::types::ValidatorSignature {
+                |(validator_id, signature)| libra_types::proto::types::ValidatorSignature {
                     validator_id: validator_id.to_vec(),
                     signature: signature.to_bytes().to_vec(),
                 },

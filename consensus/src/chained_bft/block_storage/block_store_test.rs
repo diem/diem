@@ -17,10 +17,10 @@ use crate::chained_bft::{
 };
 use crypto::{HashValue, PrivateKey};
 use futures::executor::block_on;
+use libra_types::crypto_proxies::{random_validator_verifier, ValidatorVerifier};
+use libra_types::{account_address::AccountAddress, crypto_proxies::ValidatorSigner};
 use proptest::prelude::*;
 use std::{cmp::min, collections::HashSet, sync::Arc};
-use types::crypto_proxies::{random_validator_verifier, ValidatorVerifier};
-use types::{account_address::AccountAddress, crypto_proxies::ValidatorSigner};
 
 fn build_simple_tree() -> (
     Vec<Arc<ExecutedBlock<Vec<usize>>>>,

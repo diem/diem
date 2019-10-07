@@ -15,6 +15,7 @@ use futures::{
 use futures_preview::{
     compat::Stream01CompatExt, executor::block_on, SinkExt, StreamExt, TryStreamExt,
 };
+use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
     proto::MempoolSyncMsg,
@@ -28,7 +29,6 @@ use std::{
 };
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
 use tokio::runtime::Runtime;
-use types::{transaction::SignedTransaction, PeerId};
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
 #[derive(Default)]

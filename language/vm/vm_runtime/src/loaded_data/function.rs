@@ -4,7 +4,7 @@
 
 use crate::loaded_data::loaded_module::LoadedModule;
 use bytecode_verifier::VerifiedModule;
-use types::identifier::IdentStr;
+use libra_types::identifier::IdentStr;
 use vm::{
     access::ModuleAccess,
     file_format::{Bytecode, CodeUnit, FunctionDefinitionIndex, FunctionHandle, FunctionSignature},

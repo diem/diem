@@ -6,11 +6,11 @@ use codespan_reporting::{emit, termcolor::Buffer, Diagnostic, Label, Severity};
 use failure::*;
 use ir_to_bytecode_syntax::syntax;
 use lalrpop_util::ParseError;
+use libra_types::account_address::AccountAddress;
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
-use types::account_address::AccountAddress;
 
 // Re-export this to make it convenient for other crates.
 pub use ir_to_bytecode_syntax::ast;

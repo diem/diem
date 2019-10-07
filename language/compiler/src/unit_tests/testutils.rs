@@ -7,8 +7,8 @@ use ir_to_bytecode::{
     compiler::{compile_module, compile_program},
     parser::{parse_module, parse_program},
 };
+use libra_types::{account_address::AccountAddress, vm_error::VMStatus};
 use stdlib::stdlib_modules;
-use types::{account_address::AccountAddress, vm_error::VMStatus};
 use vm::{
     access::ScriptAccess,
     file_format::{CompiledModule, CompiledScript},

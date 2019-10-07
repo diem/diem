@@ -13,17 +13,7 @@ use failure::prelude::*;
 use futures::{compat::Future01CompatExt, executor::block_on, prelude::*};
 use futures_01::future::Future as Future01;
 use grpcio::{ChannelBuilder, Environment};
-use rand::Rng;
-use std::convert::TryFrom;
-use std::{pin::Pin, sync::Arc};
-use storage_proto::{
-    proto::storage::{GetStartupInfoRequest, StorageClient},
-    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
-    GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
-    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    SaveTransactionsRequest, StartupInfo,
-};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
@@ -33,6 +23,16 @@ use types::{
     proof::AccumulatorConsistencyProof,
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
+};
+use rand::Rng;
+use std::convert::TryFrom;
+use std::{pin::Pin, sync::Arc};
+use storage_proto::{
+    proto::storage::{GetStartupInfoRequest, StorageClient},
+    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
+    GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
+    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
+    SaveTransactionsRequest, StartupInfo,
 };
 
 pub use crate::state_view::VerifiedStateView;

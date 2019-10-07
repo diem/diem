@@ -1,13 +1,13 @@
 use bytecode_to_boogie::translator::BoogieTranslator;
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
+use libra_types::account_address::AccountAddress;
 use std::{
     env,
     fs::{self, File},
     io::prelude::*,
 };
 use stdlib::stdlib_modules;
-use types::account_address::AccountAddress;
 
 // mod translator;
 fn compile_files(file_names: Vec<String>) -> Vec<VerifiedModule> {

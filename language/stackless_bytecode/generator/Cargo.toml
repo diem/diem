@@ -17,4 +17,4 @@ stdlib = { path = "../../stdlib" }
 [dev-dependencies]
 # invalid_mutations = { path = "invalid_mutations" }
 proptest = "0.9"
-types = { path = "../../../types", features = ["testing"]}
+libra-types = { path = "../../../types", features = ["testing"]}

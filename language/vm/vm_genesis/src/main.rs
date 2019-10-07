@@ -13,7 +13,7 @@ const GENESIS_LOCATION: &str = "genesis/genesis.blob";
 /// Generate the genesis blob used by the Libra blockchain
 fn generate_genesis_blob() -> Vec<u8> {
     let (_, consensus_config, network_config) = ConfigHelpers::gen_validator_nodes(10, None);
-    let genesis_txn: types::proto::types::SignedTransaction =
+    let genesis_txn: libra_types::proto::types::SignedTransaction =
         encode_genesis_transaction_with_validator(
             &GENESIS_KEYPAIR.0,
             GENESIS_KEYPAIR.1.clone(),

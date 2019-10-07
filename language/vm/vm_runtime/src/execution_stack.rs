@@ -7,8 +7,8 @@ use crate::{
     loaded_data::function::{FunctionRef, FunctionReference},
     IndexKind,
 };
+use libra_types::vm_error::{StatusCode, VMStatus};
 use std::{fmt, marker::PhantomData};
-use types::vm_error::{StatusCode, VMStatus};
 use vm::errors::*;
 use vm_runtime_types::value::{Locals, Value};
 

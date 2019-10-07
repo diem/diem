@@ -5,19 +5,19 @@ use crate::{block_tree::Block, ExecutedTrees, StateComputeResult};
 use crypto::{hash::EventAccumulatorHasher, HashValue};
 use failure::{format_err, Result};
 use futures::channel::oneshot;
-use logger::prelude::*;
-use scratchpad::SparseMerkleTree;
-use std::{
-    collections::{HashMap, HashSet},
-    rc::Rc,
-};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     crypto_proxies::LedgerInfoWithSignatures,
     proof::accumulator::Accumulator,
     transaction::{SignedTransaction, TransactionStatus},
+};
+use logger::prelude::*;
+use scratchpad::SparseMerkleTree;
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
 };
 
 /// `TransactionBlock` holds everything about the block of transactions.

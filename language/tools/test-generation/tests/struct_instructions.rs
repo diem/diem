@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extern crate test_generation;
+use libra_types::identifier::Identifier;
 use std::collections::HashMap;
 use test_generation::abstract_state::{AbstractState, AbstractValue};
-use types::identifier::Identifier;
 use vm::{
     access::ModuleAccess,
     file_format::{

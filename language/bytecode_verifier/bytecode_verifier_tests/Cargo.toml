@@ -14,6 +14,6 @@ petgraph = "0.4"
 proptest = "0.9.2"
 bytecode_verifier = {path = "../", features = ["testing"]}
 failure = { path = "../../../common/failure_ext", package = "failure_ext" }
-types = { path = "../../../types", features = ["testing"]}
+libra-types = { path = "../../../types", features = ["testing"]}
 invalid_mutations = { path = "../invalid_mutations" }
 vm = { path = "../../vm", features = ["testing"]}

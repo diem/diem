@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use std::time::Duration;
-use types::{account_address::AccountAddress, transaction::SignedTransaction};
 
 #[derive(Clone)]
 pub struct MempoolTransaction {

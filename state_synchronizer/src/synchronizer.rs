@@ -13,10 +13,10 @@ use futures::{
     future::{Future, FutureExt, TryFutureExt},
     SinkExt,
 };
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
-use types::crypto_proxies::LedgerInfoWithSignatures;
 use vm_runtime::MoveVM;
 
 pub struct StateSynchronizer {

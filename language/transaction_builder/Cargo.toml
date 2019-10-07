@@ -14,11 +14,11 @@ crypto = { path = "../../crypto/crypto" }
 ir_to_bytecode = { path = "../compiler/ir_to_bytecode" }
 lazy_static = "1.3.0"
 stdlib = { path = "../stdlib" }
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 vm = { path = "../vm" }
 
 [dev-dependencies]
-types = { path = "../../types", features = ["testing"]}
+libra-types = { path = "../../types", features = ["testing"]}
 
 [features]
-testing = ["types/testing", "crypto/testing"]
+testing = ["libra-types/testing", "crypto/testing"]

@@ -6,9 +6,9 @@ use crate::{
     TreeReader,
 };
 use crypto::HashValue;
+use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 use proptest::{collection::btree_map, prelude::*};
 use std::collections::BTreeMap;
-use types::{account_state_blob::AccountStateBlob, transaction::Version};
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]

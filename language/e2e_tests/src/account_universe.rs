@@ -26,12 +26,12 @@ use crate::{
 };
 use crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use lazy_static::lazy_static;
-use proptest::{prelude::*, strategy::Union};
-use std::{fmt, sync::Arc};
-use types::{
+use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
+use proptest::{prelude::*, strategy::Union};
+use std::{fmt, sync::Arc};
 
 lazy_static! {
     static ref UNIVERSE_SIZE: usize = {

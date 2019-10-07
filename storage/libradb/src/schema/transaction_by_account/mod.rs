@@ -13,15 +13,15 @@
 use crate::schema::{ensure_slice_len_eq, TRANSACTION_BY_ACCOUNT_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::prelude::*;
+use libra_types::{
+    account_address::{AccountAddress, ADDRESS_LENGTH},
+    transaction::Version,
+};
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
 };
 use std::{convert::TryFrom, mem::size_of};
-use types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
-    transaction::Version,
-};
 
 define_schema!(
     TransactionByAccountSchema,

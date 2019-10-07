@@ -21,8 +21,8 @@ use bytecode_generator::BytecodeGenerator;
 use bytecode_verifier::VerifiedModule;
 use cost_synthesis::module_generator::ModuleBuilder;
 use language_e2e_tests::data_store::FakeDataStore;
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 use std::{fs, io::Write, panic};
-use types::{account_address::AccountAddress, byte_array::ByteArray};
 use vm::{
     file_format::{
         Bytecode, CompiledModuleMut, FunctionDefinitionIndex, FunctionSignature, SignatureToken,

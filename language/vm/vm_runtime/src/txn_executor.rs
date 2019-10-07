@@ -15,8 +15,7 @@ use crate::{
     },
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
-use std::{collections::VecDeque, convert::TryFrom};
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
@@ -31,6 +30,7 @@ use types::{
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
+use std::{collections::VecDeque, convert::TryFrom};
 use vm::{
     access::ModuleAccess,
     errors::*,

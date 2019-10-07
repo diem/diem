@@ -34,10 +34,10 @@ use futures::{
 
 use crate::chained_bft::{common::Author, epoch_manager::EpochManager};
 use config::config::{ConsensusConfig, ConsensusProposerType};
+use libra_types::crypto_proxies::ValidatorSigner;
 use logger::prelude::*;
 use std::{sync::Arc, time::Duration};
 use tokio::runtime::{Runtime, TaskExecutor};
-use types::crypto_proxies::ValidatorSigner;
 
 /// Consensus configuration derived from ConsensusConfig
 pub struct ChainedBftSMRConfig {

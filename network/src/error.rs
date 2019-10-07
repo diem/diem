@@ -4,12 +4,12 @@
 use crate::peer_manager::PeerManagerError;
 use failure::{err_msg, Backtrace, Context, Fail};
 use futures::channel::mpsc;
+use libra_types::validator_verifier::VerifyError;
 use std::{
     fmt::{self, Display},
     io,
 };
 use tokio::timer;
-use types::validator_verifier::VerifyError;
 
 /// Errors propagated from the network module.
 #[derive(Debug)]

@@ -11,11 +11,11 @@ use crate::{
     },
 };
 use bytecode_verifier::VerifiedModule;
-use std::marker::PhantomData;
-use types::{
+use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
+use std::marker::PhantomData;
 use vm::{
     access::ModuleAccess,
     errors::*,

@@ -19,12 +19,12 @@ use jellyfish_merkle::{
     node_type::{LeafNode, Node, NodeKey},
     JellyfishMerkleTree, TreeReader,
 };
-use schemadb::DB;
-use std::{collections::HashMap, sync::Arc};
-use types::{
+use libra_types::{
     account_address::AccountAddress, account_state_blob::AccountStateBlob,
     proof::SparseMerkleProof, transaction::Version,
 };
+use schemadb::DB;
+use std::{collections::HashMap, sync::Arc};
 
 pub(crate) struct StateStore {
     db: Arc<DB>,

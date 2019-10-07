@@ -77,10 +77,10 @@ use futures::{
     stream::StreamExt,
     task::Context,
 };
+use libra_types::PeerId;
 use logger::prelude::*;
 use std::{fmt::Debug, io, time::Duration};
 use tokio::{codec::Framed, prelude::FutureExt as Future01Ext, runtime::TaskExecutor};
-use types::PeerId;
 use unsigned_varint::codec::UviBytes;
 
 pub mod error;

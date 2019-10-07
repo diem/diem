@@ -15,6 +15,7 @@ use crate::{
 };
 use chrono::Utc;
 use config::config::NodeConfig;
+use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use logger::prelude::*;
 use lru_cache::LruCache;
 use mempool_shared_proto::{
@@ -22,7 +23,6 @@ use mempool_shared_proto::{
 };
 use std::{cmp::max, collections::HashSet, convert::TryFrom};
 use ttl_cache::TtlCache;
-use types::{account_address::AccountAddress, transaction::SignedTransaction};
 
 pub struct Mempool {
     // stores metadata of all transactions in mempool (of all states)

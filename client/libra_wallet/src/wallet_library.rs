@@ -21,13 +21,13 @@ pub use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
 };
-use rand::{rngs::EntropyRng, Rng};
-use std::{collections::HashMap, path::Path};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     transaction::{RawTransaction, SignedTransaction},
     transaction_helpers::TransactionSigner,
 };
+use rand::{rngs::EntropyRng, Rng};
+use std::{collections::HashMap, path::Path};
 
 /// WalletLibrary contains all the information needed to recreate a particular wallet
 pub struct WalletLibrary {

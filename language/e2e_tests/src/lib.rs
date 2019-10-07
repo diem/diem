@@ -8,7 +8,7 @@
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use compiler::Compiler;
 use data_store::FakeDataStore;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     transaction::{TransactionArgument, TransactionStatus},

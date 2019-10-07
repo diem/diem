@@ -35,10 +35,10 @@ use network::{
 use parity_multiaddr::Multiaddr;
 use prost_ext::MessageExt;
 
+use libra_types::PeerId;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashMap, time::Duration};
 use tokio::runtime::Runtime;
-use types::PeerId;
 
 const KiB: usize = 1 << 10;
 const MiB: usize = 1 << 20;

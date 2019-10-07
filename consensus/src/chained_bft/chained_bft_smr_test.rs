@@ -33,9 +33,11 @@ use crate::chained_bft::{
 use config::config::ConsensusProposerType::{
     self, FixedProposer, MultipleOrderedProposers, RotatingProposer,
 };
+use libra_types::crypto_proxies::{
+    random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner,
+};
 use std::time::Duration;
 use tokio::runtime;
-use types::crypto_proxies::{random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner};
 
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {

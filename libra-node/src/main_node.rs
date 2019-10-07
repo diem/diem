@@ -13,6 +13,7 @@ use executor::Executor;
 use futures::future::{FutureExt, TryFutureExt};
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
+use libra_types::account_address::AccountAddress as PeerId;
 use logger::prelude::*;
 use mempool::{proto::mempool::MempoolClient, MempoolRuntime};
 use metrics::metric_server;
@@ -36,7 +37,6 @@ use std::{
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
-use types::account_address::AccountAddress as PeerId;
 use vm_runtime::MoveVM;
 use vm_validator::vm_validator::VMValidator;
 

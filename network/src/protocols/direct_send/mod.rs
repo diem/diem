@@ -61,13 +61,13 @@ use futures::{
     sink::SinkExt,
     stream::StreamExt,
 };
+use libra_types::PeerId;
 use logger::prelude::*;
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::Debug,
 };
 use tokio::{codec::Framed, runtime::TaskExecutor};
-use types::PeerId;
 use unsigned_varint::codec::UviBytes;
 
 #[cfg(test)]

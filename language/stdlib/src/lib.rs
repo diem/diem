@@ -7,7 +7,7 @@ pub mod transaction_scripts;
 use bytecode_verifier::{verify_module_dependencies, VerifiedModule};
 use ir_to_bytecode::compiler::compile_module;
 use lazy_static::lazy_static;
-use types::{account_address::AccountAddress, account_config};
+use libra_types::{account_address::AccountAddress, account_config};
 
 lazy_static! {
     static ref STDLIB_MODULES: Vec<VerifiedModule> =

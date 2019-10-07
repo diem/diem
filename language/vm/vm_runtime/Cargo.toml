@@ -25,7 +25,7 @@ crypto = { path = "../../../crypto/crypto" }
 logger = { path = "../../../common/logger" }
 metrics = { path = "../../../common/metrics" }
 state_view = { path = "../../../storage/state_view" }
-types = { path = "../../../types" }
+libra-types = { path = "../../../types" }
 vm = { path = "../" }
 vm_cache_map = { path = "vm_cache_map" }
 vm_runtime_types = { path = "vm_runtime_types" }
@@ -33,11 +33,11 @@ vm_runtime_types = { path = "vm_runtime_types" }
 [dev-dependencies]
 compiler = { path = "../../compiler" }
 
-types = { path = "../../../types", features = ["testing"] }
+libra-types = { path = "../../../types", features = ["testing"] }
 vm = { path = "../", features = ["testing"]}
 
 [features]
 default = []
 instruction_synthesis = []
-testing = ["types/testing"]
+testing = ["libra-types/testing"]
 mirai-contracts = []

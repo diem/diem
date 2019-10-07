@@ -3,12 +3,12 @@
 
 //! Random valid type inhabitant generation.
 use crate::common::*;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::collections::HashMap;
-use types::{
+use libra_types::{
     account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier,
     language_storage::ModuleId,
 };
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use std::collections::HashMap;
 use vm::{
     access::*,
     file_format::{

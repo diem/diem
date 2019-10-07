@@ -14,6 +14,7 @@ use futures_preview::{
     future::join_all,
     FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
+use libra_types::{transaction::SignedTransaction, PeerId};
 use logger::prelude::*;
 use network::{
     proto::MempoolSyncMsg,
@@ -32,7 +33,6 @@ use tokio::{
     runtime::{Builder, Runtime, TaskExecutor},
     timer::Interval,
 };
-use types::{transaction::SignedTransaction, PeerId};
 use vm_validator::vm_validator::{get_account_state, TransactionValidation};
 
 /// state of last sync with peer

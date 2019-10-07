@@ -16,7 +16,7 @@ lazy_static = "1.3.0"
 
 bytecode_verifier = { path = "../../bytecode_verifier" }
 stdlib = { path = "../../stdlib" }
-types = { path = "../../../types" }
+libra-types = { path = "../../../types" }
 vm = { path = "../../vm" }
 vm_runtime = { path = "../../vm/vm_runtime" }
 vm_runtime_types = { path = "../../vm/vm_runtime/vm_runtime_types" }
@@ -26,7 +26,7 @@ crypto = { path = "../../../crypto/crypto" }
 structopt = "0.3.2"
 
 [dev-dependencies]
-types = { path = "../../../types", features = ["testing"] }
+libra-types = { path = "../../../types", features = ["testing"] }
 
 [features]
 default = ["vm_runtime/instruction_synthesis"]

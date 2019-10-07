@@ -25,11 +25,11 @@ pub use consensus::{
     ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
     CONSENSUS_RPC_PROTOCOL,
 };
+use libra_types::PeerId;
 pub use mempool::{MempoolNetworkEvents, MempoolNetworkSender, MEMPOOL_DIRECT_SEND_PROTOCOL};
 pub use state_synchronizer::{
     StateSynchronizerEvents, StateSynchronizerSender, STATE_SYNCHRONIZER_MSG_PROTOCOL,
 };
-use types::PeerId;
 
 /// Events received by network clients in a validator
 ///

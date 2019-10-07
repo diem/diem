@@ -21,12 +21,12 @@ serde = { version = "1.0.89", features = ["derive"] }
 crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 nibble = { path = "../../common/nibble" }
-types = { path = "../../types" }
+libra-types = { path = "../../types" }
 
 [dev-dependencies]
 rand = "0.6.5"
-types = { path = "../../types", features = ["testing"]}
+libra-types = { path = "../../types", features = ["testing"]}
 
 [features]
 default = []
-testing = ["types/testing"]
+testing = ["libra-types/testing"]

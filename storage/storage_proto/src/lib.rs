@@ -27,10 +27,7 @@ pub mod proto;
 
 use crypto::HashValue;
 use failure::prelude::*;
-#[cfg(any(test, feature = "testing"))]
-use proptest_derive::Arbitrary;
-use std::convert::{TryFrom, TryInto};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::LedgerInfoWithSignatures,
@@ -38,6 +35,9 @@ use types::{
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
+use std::convert::{TryFrom, TryInto};
 
 /// Helper to construct and parse [`proto::storage::GetAccountStateWithProofByVersionRequest`]
 #[derive(PartialEq, Eq, Clone)]

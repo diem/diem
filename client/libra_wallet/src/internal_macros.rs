@@ -95,7 +95,7 @@ macro_rules! impl_array_newtype {
             #[inline]
             fn cmp(&self, other: &$thing) -> ::std::cmp::Ordering {
                 // manually implement comparison to get little-endian ordering
-                // (we need this for our numeric types; non-numeric ones shouldn't
+                // (we need this for our numeric libra_types; non-numeric ones shouldn't
                 // be ordered anyway except to put them in BTrees or whatever, and
                 // they don't care how we order as long as we're consistent).
                 for i in 0..$len {

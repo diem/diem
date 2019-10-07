@@ -19,6 +19,7 @@ use crate::{
 };
 use futures::{channel::mpsc, executor::block_on};
 use lazy_static::lazy_static;
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 use network::{
     proto::Proposal,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
@@ -28,7 +29,6 @@ use prost_ext::MessageExt;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
-use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 
 // This generates a proposal for round 1
 pub fn generate_corpus_proposal() -> Vec<u8> {

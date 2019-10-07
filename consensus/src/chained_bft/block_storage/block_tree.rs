@@ -13,6 +13,7 @@ use crate::{
 use canonical_serialization::CanonicalSerialize;
 use crypto::HashValue;
 use executor::StateComputeResult;
+use libra_types::crypto_proxies::ValidatorVerifier;
 use logger::prelude::*;
 use mirai_annotations::{checked_verify_eq, precondition};
 use serde::Serialize;
@@ -22,7 +23,6 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use types::crypto_proxies::ValidatorVerifier;
 
 /// This structure is a wrapper of [`ExecutedBlock`](crate::consensus_types::block::ExecutedBlock)
 /// that adds `children` field to know the parent-child relationship between blocks.

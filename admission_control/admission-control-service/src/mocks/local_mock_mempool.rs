@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_types::{account_address::ADDRESS_LENGTH, transaction::SignedTransaction};
 use mempool::proto::{
     mempool::{
         AddTransactionWithValidationRequest, AddTransactionWithValidationResponse,
@@ -13,7 +14,6 @@ use mempool_shared_proto::proto::mempool_status::{
 };
 use std::convert::TryFrom;
 use std::time::SystemTime;
-use types::{account_address::ADDRESS_LENGTH, transaction::SignedTransaction};
 
 /// Define a local mempool to use for unit tests and fuzzing,
 /// ignore methods not used

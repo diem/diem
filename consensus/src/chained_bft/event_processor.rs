@@ -35,6 +35,7 @@ use crate::{
 };
 use crypto::HashValue;
 use failure::ResultExt;
+use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use logger::prelude::*;
 use mirai_annotations::{
     debug_checked_precondition, debug_checked_precondition_eq, debug_checked_verify,
@@ -43,7 +44,6 @@ use mirai_annotations::{
 use network::proto::BlockRetrievalStatus;
 use std::{sync::Arc, time::Duration};
 use termion::color::*;
-use types::crypto_proxies::LedgerInfoWithSignatures;
 
 #[cfg(test)]
 #[path = "event_processor_test.rs"]

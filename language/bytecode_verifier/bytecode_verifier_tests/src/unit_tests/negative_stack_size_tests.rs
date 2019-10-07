@@ -1,5 +1,5 @@
 use bytecode_verifier::CodeUnitVerifier;
-use types::vm_error::StatusCode;
+use libra_types::vm_error::StatusCode;
 use vm::file_format::{self, Bytecode};
 
 #[test]

@@ -13,13 +13,13 @@ use crate::chained_bft::{
 };
 use cached::{cached_key, SizedCache};
 use crypto::HashValue;
+use libra_types::validator_signer::ValidatorSigner;
 use proptest::prelude::*;
 use std::{
     collections::{hash_map::DefaultHasher, BTreeMap},
     hash::{Hash, Hasher},
     sync::Arc,
 };
-use types::validator_signer::ValidatorSigner;
 
 fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();

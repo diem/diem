@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 
 #[test]
 fn test_value() {

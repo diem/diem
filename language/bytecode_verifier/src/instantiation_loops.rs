@@ -12,6 +12,7 @@
 //! instances. We do reject recursive functions that create a new type upon each call but do
 //! terminate eventually.
 
+use libra_types::vm_error::{StatusCode, VMStatus};
 use petgraph::{
     algo::tarjan_scc,
     graph::{EdgeIndex, NodeIndex},
@@ -19,7 +20,6 @@ use petgraph::{
     Graph,
 };
 use std::collections::{hash_map, HashMap, HashSet};
-use types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
     file_format::{

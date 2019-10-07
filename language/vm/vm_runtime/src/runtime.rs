@@ -14,12 +14,12 @@ use crate::{
     process_txn::{validate::ValidationMode, ProcessTransaction},
 };
 use config::config::{VMConfig, VMPublishingOption};
-use logger::prelude::*;
-use state_view::StateView;
-use types::{
+use libra_types::{
     transaction::{SignedTransaction, TransactionOutput},
     vm_error::{StatusCode, VMStatus},
 };
+use logger::prelude::*;
+use state_view::StateView;
 use vm_cache_map::Arena;
 
 /// An instantiation of the MoveVM.

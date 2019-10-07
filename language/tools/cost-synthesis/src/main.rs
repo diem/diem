@@ -15,6 +15,7 @@ use cost_synthesis::{
 };
 use csv;
 use language_e2e_tests::data_store::FakeDataStore;
+use libra_types::vm_error::StatusCode;
 use std::{
     collections::{HashMap, VecDeque},
     convert::TryFrom,
@@ -23,7 +24,6 @@ use std::{
     u64,
 };
 use structopt::StructOpt;
-use types::vm_error::StatusCode;
 use vm::{
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex,

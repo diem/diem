@@ -137,11 +137,11 @@ pub use process_txn::verify::static_verify_program;
 pub use txn_executor::execute_function;
 
 use config::config::VMConfig;
-use state_view::StateView;
-use types::{
+use libra_types::{
     transaction::{SignedTransaction, TransactionOutput},
     vm_error::VMStatus,
 };
+use state_view::StateView;
 use vm::IndexKind;
 
 /// This trait describes the VM's verification interfaces.

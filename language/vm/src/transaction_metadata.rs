@@ -3,7 +3,7 @@
 
 use crate::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, GasUnits};
 use crypto::ed25519::{compat, Ed25519PublicKey};
-use types::{account_address::AccountAddress, transaction::SignedTransaction};
+use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 
 pub struct TransactionMetadata {
     pub sender: AccountAddress,

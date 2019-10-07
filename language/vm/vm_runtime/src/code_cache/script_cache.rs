@@ -8,11 +8,11 @@ use crate::loaded_data::{
 };
 use bytecode_verifier::VerifiedScript;
 use crypto::HashValue;
-use logger::prelude::*;
-use types::{
+use libra_types::{
     transaction::SCRIPT_HASH_LENGTH,
     vm_error::{StatusCode, VMStatus},
 };
+use logger::prelude::*;
 use vm::{
     errors::{vm_error, Location, VMResult},
     file_format::CompiledScript,

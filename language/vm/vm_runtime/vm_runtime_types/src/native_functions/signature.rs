@@ -9,8 +9,8 @@ use crypto::{
     traits::*,
     HashValue,
 };
+use libra_types::byte_array::ByteArray;
 use std::{collections::VecDeque, convert::TryFrom};
-use types::byte_array::ByteArray;
 
 // TODO: Talk to Crypto to determine these costs
 const ED25519_COST: u64 = 35;

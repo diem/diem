@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! A bunch of helper functions to fetch the storage key for move resources and values.
 
-use types::{
+use libra_types::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
     language_storage::{ResourceKey, StructTag},

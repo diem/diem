@@ -14,13 +14,13 @@ use crate::{
 use config::config::NodeConfig;
 use crypto::HashValue;
 use failure::{Result, ResultExt};
+use libra_types::ledger_info::LedgerInfo;
 use logger::prelude::*;
 use rmp_serde::{from_slice, to_vec_named};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
-use types::ledger_info::LedgerInfo;
 
 /// Persistent storage for liveness data
 pub trait PersistentLivenessStorage: Send + Sync {

@@ -11,6 +11,12 @@ use config::config::{NodeConfig, NodeConfigHelpers};
 use crypto::{hash::GENESIS_BLOCK_ID, HashValue};
 use futures::executor::block_on;
 use grpcio::{EnvBuilder, ServerBuilder};
+use libra_types::{
+    account_address::{AccountAddress, ADDRESS_LENGTH},
+    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfo,
+    transaction::{SignedTransaction, TransactionListWithProof, Version},
+};
 use proptest::prelude::*;
 use prost_ext::MessageExt;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
@@ -23,19 +29,13 @@ use std::{
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_proto::proto::storage::create_storage;
 use storage_service::StorageService;
-use types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
-    crypto_proxies::LedgerInfoWithSignatures,
-    ledger_info::LedgerInfo,
-    transaction::{SignedTransaction, TransactionListWithProof, Version},
-};
 use vm_genesis::{encode_genesis_transaction, GENESIS_KEYPAIR};
 
 fn get_config() -> NodeConfig {
     let config = NodeConfigHelpers::get_single_node_test_config(true);
     // Write out the genesis blob to the correct location.
     // XXX Should this logic live in NodeConfigHelpers?
-    let genesis_txn: types::proto::types::SignedTransaction =
+    let genesis_txn: libra_types::proto::types::SignedTransaction =
         encode_genesis_transaction(&GENESIS_KEYPAIR.0, GENESIS_KEYPAIR.1.clone()).into();
     let mut file = File::create(config.get_genesis_transaction_file()).unwrap();
     file.write_all(&genesis_txn.to_vec().unwrap()).unwrap();

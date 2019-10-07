@@ -17,6 +17,10 @@ use failure::prelude::*;
 use futures::future::Future;
 use futures03::executor::block_on;
 use grpc_helpers::provide_grpc_response;
+use libra_types::{
+    proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
+    transaction::SignedTransaction,
+};
 use logger::prelude::*;
 use mempool::proto::{
     mempool::{AddTransactionWithValidationRequest, HealthCheckRequest},
@@ -30,10 +34,6 @@ use metrics::counters::SVC_COUNTERS;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use storage_client::StorageRead;
-use types::{
-    proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
-    transaction::SignedTransaction,
-};
 use vm_validator::vm_validator::{get_account_state, TransactionValidation};
 
 #[cfg(test)]
@@ -200,7 +200,7 @@ where
         &self,
         req: UpdateToLatestLedgerRequest,
     ) -> Result<UpdateToLatestLedgerResponse> {
-        let rust_req = types::get_with_proof::UpdateToLatestLedgerRequest::try_from(req)?;
+        let rust_req = libra_types::get_with_proof::UpdateToLatestLedgerRequest::try_from(req)?;
         let (
             response_items,
             ledger_info_with_sigs,
@@ -209,7 +209,7 @@ where
         ) = self
             .storage_read_client
             .update_to_latest_ledger(rust_req.client_known_version, rust_req.requested_items)?;
-        let rust_resp = types::get_with_proof::UpdateToLatestLedgerResponse::new(
+        let rust_resp = libra_types::get_with_proof::UpdateToLatestLedgerResponse::new(
             response_items,
             ledger_info_with_sigs,
             validator_change_events,
@@ -251,8 +251,8 @@ where
     fn update_to_latest_ledger(
         &mut self,
         ctx: grpcio::RpcContext<'_>,
-        req: types::proto::types::UpdateToLatestLedgerRequest,
-        sink: grpcio::UnarySink<types::proto::types::UpdateToLatestLedgerResponse>,
+        req: libra_types::proto::types::UpdateToLatestLedgerRequest,
+        sink: grpcio::UnarySink<libra_types::proto::types::UpdateToLatestLedgerResponse>,
     ) {
         debug!("[GRPC] AdmissionControl::update_to_latest_ledger");
         let _timer = SVC_COUNTERS.req(&ctx);

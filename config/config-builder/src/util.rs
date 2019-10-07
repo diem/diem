@@ -6,10 +6,10 @@ use config::{
     trusted_peers::{ConfigHelpers, ConsensusPeersConfig, NetworkPeersConfig},
 };
 use crypto::{ed25519::*, test_utils::KeyPair};
+use libra_types::transaction::SignatureCheckedTransaction;
 use prost_ext::MessageExt;
 use rand::{Rng, SeedableRng};
 use std::{fs::File, io::prelude::*};
-use types::transaction::SignatureCheckedTransaction;
 use vm_genesis::encode_genesis_transaction_with_validator;
 
 pub fn gen_genesis_transaction(
@@ -34,7 +34,8 @@ pub fn gen_genesis_transaction_bytes(
         consensus_peers_config,
         network_peers_config,
     );
-    let genesis_transaction: types::proto::types::SignedTransaction = genesis_transaction.into();
+    let genesis_transaction: libra_types::proto::types::SignedTransaction =
+        genesis_transaction.into();
     genesis_transaction.to_vec().unwrap()
 }
 

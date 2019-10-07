@@ -18,10 +18,10 @@ use futures::{
     task::{Context, Poll},
     SinkExt, Stream, StreamExt,
 };
+use libra_types::PeerId;
 use pin_utils::unsafe_pinned;
 use prost::Message as _;
 use std::pin::Pin;
-use types::PeerId;
 
 pub const STATE_SYNCHRONIZER_MSG_PROTOCOL: &[u8] = b"/libra/state_synchronizer/direct-send/0.1.0";
 

@@ -13,6 +13,7 @@ use crate::{
 };
 use config::config::MempoolConfig;
 use failure::prelude::*;
+use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use logger::prelude::*;
 use mempool_shared_proto::{
     proto::mempool_status::MempoolAddTransactionStatusCode, MempoolAddTransactionStatus,
@@ -22,7 +23,6 @@ use std::{
     ops::Bound,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use types::{account_address::AccountAddress, transaction::SignedTransaction};
 
 /// TransactionStore is in-memory storage for all transactions in mempool
 pub struct TransactionStore {

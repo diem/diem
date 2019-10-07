@@ -8,6 +8,10 @@ use crate::{
 };
 use futures::Future;
 use grpc_helpers::{create_grpc_invalid_arg_status, default_reply_error_logger};
+use libra_types::{
+    account_address::AccountAddress, proto::types::SignedTransactionsBlock,
+    transaction::SignedTransaction,
+};
 use logger::prelude::*;
 use metrics::counters::SVC_COUNTERS;
 use std::{
@@ -16,10 +20,6 @@ use std::{
     convert::TryFrom,
     sync::{Arc, Mutex},
     time::Duration,
-};
-use types::{
-    account_address::AccountAddress, proto::types::SignedTransactionsBlock,
-    transaction::SignedTransaction,
 };
 
 #[derive(Clone)]

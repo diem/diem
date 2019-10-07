@@ -9,8 +9,7 @@ use crate::{
 };
 use canonical_serialization::SimpleDeserializer;
 use config::config::{NodeConfig, NodeConfigHelpers, VMPublishingOption};
-use state_view::StateView;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_config::AccountResource,
     language_storage::ModuleId,
@@ -18,6 +17,7 @@ use types::{
     vm_error::VMStatus,
     write_set::WriteSet,
 };
+use state_view::StateView;
 use vm::CompiledModule;
 use vm_runtime::{MoveVM, VMExecutor, VMVerifier};
 

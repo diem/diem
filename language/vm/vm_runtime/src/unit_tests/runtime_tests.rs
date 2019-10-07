@@ -13,11 +13,11 @@ use crate::{
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use crypto::ed25519::compat;
-use std::collections::HashMap;
-use types::{
+use libra_types::{
     access_path::AccessPath, account_address::AccountAddress, byte_array::ByteArray,
     vm_error::StatusCode,
 };
+use std::collections::HashMap;
 use vm::{
     access::ModuleAccess,
     errors::VMResult,
