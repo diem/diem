@@ -9,3 +9,7 @@ use mempool_shared_proto::proto::mempool_status;
 pub mod admission_control {
     include!(concat!(env!("OUT_DIR"), "/admission_control.rs"));
 }
+
+pub use self::admission_control::{
+    AdmissionControlMsg, SubmitTransactionRequest, SubmitTransactionResponse,
+};
