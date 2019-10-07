@@ -25,3 +25,4 @@ libra-types = { path = "../../types", features = ["testing"]}
 
 [build-dependencies]
 grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }
+prost-build = "0.5.0"
