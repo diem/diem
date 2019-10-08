@@ -25,7 +25,7 @@ serde = { version = "1.0.96", features = ["derive"] }
 serde_json = "1.0.40"
 structopt = "0.3.2"
 
-admission_control_proto = { version = "0.1.0", path = "../admission_control/admission_control_proto" }
+admission-control-proto = { version = "0.1.0", path = "../admission_control/admission-control-proto" }
 config = { path = "../config" }
 crash_handler = { path = "../common/crash_handler" }
 crypto = { path = "../crypto/crypto" }

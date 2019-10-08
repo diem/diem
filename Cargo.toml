@@ -2,7 +2,7 @@
 
 members = [
     "admission_control/admission-control-service",
-    "admission_control/admission_control_proto",
+    "admission_control/admission-control-proto",
     "benchmark",
     "client",
     "client/libra_wallet",

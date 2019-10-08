@@ -21,7 +21,7 @@ rand = "0.6.5"
 tokio = "=0.2.0-alpha.6"
 tokio-retry = "0.2.0"
 
-admission_control_proto = { path = "../admission_control/admission_control_proto" }
+admission-control-proto = { path = "../admission_control/admission-control-proto" }
 bounded-executor = { path = "../common/bounded-executor" }
 channel = { path = "../common/channel" }
 config = { path = "../config" }
