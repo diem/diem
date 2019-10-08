@@ -500,9 +500,6 @@ impl SwarmConfigBuilder {
         template.base.data_dir_path = self.output_dir.clone();
         template.admission_control.address = listen_address.clone();
         template.debug_interface.address = listen_address;
-        template.execution.genesis_file_location = "genesis.blob".to_string();
-        template.consensus.consensus_peers_file =
-            PathBuf::from("consensus_peers.config.toml".to_string());
         // TODO:
         // [] Use rng instead of seed to prevent duplicate key generation in trusted_peers.rs.
         if self.role == RoleType::Validator {
