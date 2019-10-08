@@ -35,8 +35,6 @@ use tools::tempdir::TempPath;
 #[path = "unit_tests/config_test.rs"]
 mod config_test;
 
-pub const DISPOSABLE_DIR_MARKER: &str = "<USE_TEMP_DIR>";
-
 // path is relative to this file location
 static CONFIG_TEMPLATE: &[u8] = include_bytes!("../data/configs/node.config.toml");
 
@@ -96,7 +94,7 @@ pub struct BaseConfig {
 impl Default for BaseConfig {
     fn default() -> BaseConfig {
         BaseConfig {
-            data_dir_path: PathBuf::from("<USE_TEMP_DIR>"),
+            data_dir_path: PathBuf::from("."),
             temp_data_dir: None,
             node_sync_retries: 7,
             node_sync_channel_buffer_size: 10,
@@ -556,7 +554,6 @@ impl NodeConfig {
             }
         }
         config.consensus.load(path.as_ref())?;
-        NodeConfigHelpers::update_data_dir_path_if_needed(&mut config)?;
         Ok(config)
     }
 
@@ -640,6 +637,11 @@ impl NodeConfigHelpers {
         let config_string = String::from_utf8_lossy(CONFIG_TEMPLATE);
         let mut config =
             NodeConfig::parse(&config_string).expect("Error parsing single node test config");
+        // Create temporary directory for persisting configs.
+        let dir = TempPath::new();
+        dir.create_as_dir().expect("error creating tempdir");
+        config.base.data_dir_path = dir.path().to_owned();
+        config.base.temp_data_dir = Some(dir);
         if random_ports {
             NodeConfigHelpers::randomize_config_ports(&mut config);
         }
@@ -676,22 +678,7 @@ impl NodeConfigHelpers {
         network.advertised_address = network.listen_address.clone();
         network.seed_peers = seed_peers_config;
         network.network_peers = test_network_peers;
-        NodeConfigHelpers::update_data_dir_path_if_needed(&mut config).expect("creating tempdir");
         config
-    }
-
-    /// Replaces temp marker with the actual path and returns holder to the temp dir.
-    fn update_data_dir_path_if_needed(config: &mut NodeConfig) -> Result<()> {
-        if config.base.data_dir_path == Path::new(DISPOSABLE_DIR_MARKER) {
-            let dir = TempPath::new();
-            dir.create_as_dir().expect("error creating tempdir");
-            config.base.data_dir_path = dir.path().to_owned();
-            config.base.temp_data_dir = Some(dir);
-        }
-        if config.execution.genesis_file_location == DISPOSABLE_DIR_MARKER {
-            config.execution.genesis_file_location = "genesis.blob".to_string();
-        }
-        Ok(())
     }
 
     pub fn randomize_config_ports(config: &mut NodeConfig) {
