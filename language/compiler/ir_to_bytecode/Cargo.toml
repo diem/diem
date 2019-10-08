@@ -2,7 +2,7 @@
 name = "ir_to_bytecode"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra ir_to_bytecode"
+description = "Libra ir to bytecode"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"

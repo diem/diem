@@ -2,7 +2,7 @@
 name = "stackless_bytecode_generator"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra stackless_bytecode_generator"
+description = "Libra stackless bytecode generator"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"

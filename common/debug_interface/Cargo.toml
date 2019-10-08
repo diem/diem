@@ -2,7 +2,7 @@
 name = "debug_interface"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra debug_interface"
+description = "Libra debug interface"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"

@@ -2,7 +2,7 @@
 name = "vm_runtime_types"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra vm_runtime_types"
+description = "Libra vm runtime types"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"

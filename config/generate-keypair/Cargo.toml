@@ -2,7 +2,7 @@
 name = "generate-keypair"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra generate-keypair"
+description = "Libra generate keypair"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"

@@ -2,7 +2,7 @@
 name = "socket_bench_server"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra socket_bench_server"
+description = "Libra socket bench server"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"
