@@ -2,7 +2,7 @@
 name = "canonical_serialization"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra canonical_serialization"
+description = "Libra canonical serialization"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"

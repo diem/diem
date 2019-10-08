@@ -2,7 +2,7 @@
 name = "serializer_tests"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra serializer_tests"
+description = "Libra serializer tests"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"

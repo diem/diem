@@ -2,7 +2,7 @@
 name = "storage-service"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra storage-service"
+description = "Libra storage service"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"
