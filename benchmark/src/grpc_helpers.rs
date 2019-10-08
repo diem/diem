@@ -5,13 +5,13 @@ use admission_control_proto::proto::admission_control::{
     AdmissionControlClient, AdmissionControlStatusCode,
     SubmitTransactionResponse as ProtoSubmitTransactionResponse,
 };
-use client::AccountStatus;
 use failure::prelude::*;
 use futures::{
     stream::{self, Stream},
     Future,
 };
 use grpcio::{self, CallOption, Error};
+use libra_client::AccountStatus;
 use libra_types::{
     account_address::AccountAddress,
     account_config::get_account_resource_or_default,

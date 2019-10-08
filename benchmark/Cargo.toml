@@ -1,5 +1,5 @@
 [package]
-name = "benchmark"
+name = "libra-benchmark"
 version = "0.1.0"
 authors = ["Libra <oncall+libra@xmail.facebook.com>"]
 description = "Libra benchmark"
@@ -21,7 +21,7 @@ num_cpus = "1.10.1"
 walkdir = "2.2.9"
 
 admission_control_proto = { path = "../admission_control/admission_control_proto" }
-client = { path = "../client" }
+libra-client = { path = "../client" }
 config = { path = "../config" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 generate-keypair = { path = "../config/generate-keypair" }

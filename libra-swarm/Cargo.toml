@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-client_lib = { package = "client", path = "../client" }
+client_lib = { package = "libra-client", path = "../client" }
 ctrlc = { version = "3.1.3", default-features = false }
 lazy_static = { version = "1.3.0", default-features = false }
 structopt = "0.3.2"

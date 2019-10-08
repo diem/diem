@@ -1,4 +1,4 @@
-use benchmark::{
+use libra_benchmark::{
     bin_utils::{
         create_benchmarker_from_opt, linear_search_max_throughput, try_start_metrics_server,
     },

@@ -5,10 +5,10 @@ use admission_control_proto::proto::{
     admission_control::AdmissionControlClient,
     admission_control::SubmitTransactionResponse as ProtoSubmitTransactionResponse,
 };
-use client::{AccountData, AccountStatus};
 use crypto::{ed25519::*, test_utils::KeyPair};
 use generate_keypair::load_key_from_file;
 use lazy_static::lazy_static;
+use libra_client::{AccountData, AccountStatus};
 use libra_types::{account_address::AccountAddress, account_config::association_address};
 use logger::prelude::*;
 use metrics::OpMetrics;

@@ -6,8 +6,8 @@
 /// ---------------------------------------------------------------------------------- ///
 use crate::OP_COUNTER;
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
-use client::{AccountData, AccountStatus};
 use failure::prelude::*;
+use libra_client::{AccountData, AccountStatus};
 use libra_types::{
     account_address::AccountAddress,
     get_with_proof::{RequestItem, UpdateToLatestLedgerRequest},

@@ -27,7 +27,7 @@ structopt = "0.3.2"
 libra-types = { path = "../../types" }
 vm = { path = "../../language/vm" }
 vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types" }
-consensus = { path = "../../consensus" }
+libra-consensus = { path = "../../consensus" }
 admission-control-service = { path = "../../admission_control/admission-control-service" }
 
 [dev-dependencies]
@@ -42,7 +42,7 @@ vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types", fea
 [features]
 default = ["testing", "fuzzing"]
 testing = ["libra-types/testing", "vm/testing", "vm_runtime_types/testing"]
-fuzzing = ["consensus/fuzzing", "admission-control-service/fuzzing"]
+fuzzing = ["libra-consensus/fuzzing", "admission-control-service/fuzzing"]
 
 [[test]]
 name = "artifacts"

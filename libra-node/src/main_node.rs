@@ -6,13 +6,13 @@ use admission_control_proto::proto::admission_control::{
 };
 use admission_control_service::admission_control_service::AdmissionControlService;
 use config::config::{NetworkConfig, NodeConfig, RoleType};
-use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
 use crypto::{ed25519::*, ValidKey};
 use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use executor::Executor;
 use futures::future::{FutureExt, TryFutureExt};
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
+use libra_consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
 use libra_types::account_address::AccountAddress as PeerId;
 use logger::prelude::*;
 use mempool::{proto::mempool::MempoolClient, MempoolRuntime};

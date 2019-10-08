@@ -7,8 +7,8 @@ use crate::{
     BenchSummary, Benchmarker,
 };
 use admission_control_proto::proto::admission_control::AdmissionControlClient;
-use client::AccountData;
 use grpcio::{ChannelBuilder, EnvBuilder};
+use libra_client::AccountData;
 use logger::{self, prelude::*};
 use metrics::metric_server::start_server;
 use std::{sync::Arc, time};

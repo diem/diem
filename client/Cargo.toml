@@ -1,5 +1,5 @@
 [package]
-name = "client"
+name = "libra-client"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra client"

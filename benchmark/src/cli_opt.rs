@@ -53,7 +53,7 @@ pub struct BenchOpt {
     /// A value of 1 ms effectively means starting all clients at once.
     #[structopt(short = "g", long, default_value = "64")]
     pub stagger_range_ms: u16,
-    /// Submit constant number of requests per second per client; otherwise flood requests.
+    /// Submit constant number of requests per second per libra_client; otherwise flood requests.
     #[structopt(short = "k", long)]
     pub submit_rate: Option<u64>,
 }

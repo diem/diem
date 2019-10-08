@@ -1,13 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use benchmark::{
+use config::config::RoleType;
+use libra_benchmark::{
     bin_utils::{create_ac_clients, measure_throughput},
     cli_opt::parse_swarm_config_from_dir,
     load_generator::PairwiseTransferTxnGenerator,
     Benchmarker,
 };
-use config::config::RoleType;
 use libra_swarm::swarm::LibraSwarm;
 use num::traits::Float;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};

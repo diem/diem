@@ -1,5 +1,5 @@
 [package]
-name = "consensus"
+name = "libra-consensus"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra consensus"

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use benchmark::{
+use libra_benchmark::{
     bin_utils::{create_benchmarker_from_opt, measure_throughput, try_start_metrics_server},
     cli_opt::{RubenOpt, TransactionPattern},
     load_generator::{LoadGenerator, PairwiseTransferTxnGenerator, RingTransferTxnGenerator},
@@ -57,7 +57,8 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use crate::{create_benchmarker_from_opt, measure_throughput};
-    use benchmark::{
+    use config::config::RoleType;
+    use libra_benchmark::{
         cli_opt::BenchOpt,
         load_generator::{
             gen_get_txn_by_sequnece_number_request, LoadGenerator, Request,
@@ -65,8 +66,7 @@ mod tests {
         },
         OP_COUNTER,
     };
-    use client::AccountData;
-    use config::config::RoleType;
+    use libra_client::AccountData;
     use libra_swarm::swarm::LibraSwarm;
     use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
     use std::ops::Range;

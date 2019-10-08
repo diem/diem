@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use chrono::prelude::{SecondsFormat, Utc};
-use client::{client_proxy::ClientProxy, commands::*};
+use libra_client::{client_proxy::ClientProxy, commands::*};
 use logger::set_default_global_logger;
 use rustyline::{config::CompletionType, error::ReadlineError, Config, Editor};
 use std::num::NonZeroU16;
