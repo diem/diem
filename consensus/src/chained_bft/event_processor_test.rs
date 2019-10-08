@@ -28,7 +28,7 @@ use crate::{
         persistent_storage::{PersistentStorage, RecoveryData},
         safety::safety_rules::{ConsensusState, SafetyRules},
         test_utils::{
-            consensus_runtime, placeholder_certificate_for_block, placeholder_ledger_info,
+            self, consensus_runtime, placeholder_certificate_for_block, placeholder_ledger_info,
             MockStateComputer, MockStorage, MockTransactionManager, TestPayload, TreeInserter,
         },
     },
@@ -280,6 +280,7 @@ fn basic_new_rank_event_test() {
             node.block_store.signer().author(),
             placeholder_ledger_info(),
             node.block_store.signer(),
+            test_utils::placeholder_sync_info(),
         );
         let validator_verifier = Arc::new(ValidatorVerifier::new_single(
             node.block_store.signer().author(),
@@ -695,6 +696,7 @@ fn process_votes_basic_test() {
         node.block_store.signer().author(),
         placeholder_ledger_info(),
         node.block_store.signer(),
+        test_utils::placeholder_sync_info(),
     );
     block_on(async move {
         node.event_processor.process_vote(vote_msg).await;

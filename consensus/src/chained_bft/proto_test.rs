@@ -10,7 +10,7 @@ use crate::chained_bft::{
         vote_data::VoteData,
         vote_msg::VoteMsg,
     },
-    test_utils::placeholder_ledger_info,
+    test_utils::{self, placeholder_ledger_info},
 };
 use crypto::HashValue;
 use executor::ExecutedState;
@@ -65,6 +65,7 @@ fn test_proto_convert_vote() {
         signer.author(),
         placeholder_ledger_info(),
         &signer,
+        test_utils::placeholder_sync_info(),
     );
     let vote_proto = network::proto::Vote::from(vote.clone());
     assert_eq!(vote, vote_proto.try_into().unwrap());

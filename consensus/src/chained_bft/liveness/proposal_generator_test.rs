@@ -7,7 +7,7 @@ use crate::{
         consensus_types::{quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsg},
         liveness::proposal_generator::ProposalGenerator,
         test_utils::{
-            build_empty_tree, placeholder_ledger_info, MockTransactionManager, TreeInserter,
+            self, build_empty_tree, placeholder_ledger_info, MockTransactionManager, TreeInserter,
         },
     },
     util::mock_time_service::SimulatedTimeService,
@@ -86,6 +86,7 @@ fn test_proposal_generation_parent() {
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
+        test_utils::placeholder_sync_info(),
     );
     let validator_verifier = Arc::new(ValidatorVerifier::new_single(
         block_store.signer().author(),
@@ -114,6 +115,7 @@ fn test_proposal_generation_parent() {
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
+        test_utils::placeholder_sync_info(),
     );
     let validator_verifier = Arc::new(ValidatorVerifier::new_single(
         block_store.signer().author(),
@@ -155,6 +157,7 @@ fn test_old_proposal_generation() {
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
+        test_utils::placeholder_sync_info(),
     );
     let validator_verifier = Arc::new(ValidatorVerifier::new_single(
         block_store.signer().author(),

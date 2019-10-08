@@ -11,8 +11,8 @@ use crate::chained_bft::{
         vote_msg::VoteMsg,
     },
     test_utils::{
-        build_empty_tree, build_empty_tree_with_custom_signing, placeholder_certificate_for_block,
-        placeholder_ledger_info, TreeInserter,
+        self, build_empty_tree, build_empty_tree_with_custom_signing,
+        placeholder_certificate_for_block, placeholder_ledger_info, TreeInserter,
     },
 };
 use crypto::{HashValue, PrivateKey};
@@ -82,6 +82,7 @@ fn test_block_store_create_block() {
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
+        test_utils::placeholder_sync_info(),
     );
     let validator_verifier = Arc::new(ValidatorVerifier::new_single(
         block_store.signer().author(),
@@ -353,6 +354,7 @@ fn test_insert_vote() {
             voter.author(),
             placeholder_ledger_info(),
             voter,
+            test_utils::placeholder_sync_info(),
         );
         let vote_res =
             block_store.insert_vote_and_qc(vote_msg.clone(), Arc::clone(&validator_verifier));
@@ -385,6 +387,7 @@ fn test_insert_vote() {
         final_voter.author(),
         placeholder_ledger_info(),
         final_voter,
+        test_utils::placeholder_sync_info(),
     );
     match block_store.insert_vote_and_qc(vote_msg, validator_verifier) {
         VoteReceptionResult::NewQuorumCertificate(qc) => {

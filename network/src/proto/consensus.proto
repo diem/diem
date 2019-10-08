@@ -124,6 +124,8 @@ message Vote {
   bytes signature = 4;
   // The round signatures can be aggregated into the timeout certificate.
   bytes round_signature = 5;
+  // Sync info for exchanging information about highest QC, TC and LedgerInfo
+  SyncInfo sync_info = 6;
 }
 
 message RequestBlock {
