@@ -39,7 +39,6 @@ fn test_proposal_generation_empty_tree() {
     let proposal = block_on(proposal_generator.generate_proposal(1, minute_from_now())).unwrap();
     assert_eq!(proposal.parent_id(), genesis.id());
     assert_eq!(proposal.round(), 1);
-    assert_eq!(proposal.height(), 1);
     assert_eq!(proposal.quorum_cert().certified_block_id(), genesis.id());
 
     // Duplicate proposals on the same round are not allowed
@@ -99,7 +98,6 @@ fn test_proposal_generation_parent() {
         block_on(proposal_generator.generate_proposal(11, minute_from_now())).unwrap();
     assert_eq!(a1_child_res.parent_id(), a1.id());
     assert_eq!(a1_child_res.round(), 11);
-    assert_eq!(a1_child_res.height(), 2);
     assert_eq!(a1_child_res.quorum_cert().certified_block_id(), a1.id());
 
     // Once b1 is certified, it should be the one to choose from
@@ -130,7 +128,6 @@ fn test_proposal_generation_parent() {
         block_on(proposal_generator.generate_proposal(12, minute_from_now())).unwrap();
     assert_eq!(b1_child_res.parent_id(), b1.id());
     assert_eq!(b1_child_res.round(), 12);
-    assert_eq!(b1_child_res.height(), 2);
     assert_eq!(b1_child_res.quorum_cert().certified_block_id(), b1.id());
 }
 

@@ -392,10 +392,6 @@ impl<T: Payload> BlockStore<T> {
             None => bail!("Block with missing parent {}", block.parent_id()),
             Some(parent) => parent,
         };
-        ensure!(
-            parent.height() + 1 == block.height(),
-            "Block with invalid height"
-        );
         ensure!(parent.round() < block.round(), "Block with invalid round");
         ensure!(
             !self.enforce_increasing_timestamps

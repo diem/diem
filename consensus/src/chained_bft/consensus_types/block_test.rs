@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    common::{Height, Round},
+    common::Round,
     consensus_types::{
         block::{Block, BlockType},
         quorum_cert::QuorumCert,
@@ -33,20 +33,17 @@ prop_compose! {
     pub fn make_block(
         _ancestor_id: HashValue,
         round_strategy: impl Strategy<Value = Round>,
-        height: Height,
         signer_strategy: impl Strategy<Value = ValidatorSigner>,
         parent_qc: QuorumCert,
     )(
         round in round_strategy,
         payload in 0usize..10usize,
-        height in Just(height),
         signer in signer_strategy,
         parent_qc in Just(parent_qc)
     ) -> Block<Vec<usize>> {
         Block::new_internal(
             vec![payload],
             round,
-            height,
             get_current_timestamp().as_micros() as u64,
             parent_qc,
             &signer,
@@ -67,7 +64,6 @@ prop_compose! {
         block in make_block(
             ancestor_id,
             Round::arbitrary(),
-            123,
             proptests::arb_signer(),
             QuorumCert::certificate_for_genesis(),
         )
@@ -91,7 +87,6 @@ prop_compose! {
                 timestamp_usecs: get_current_timestamp().as_micros() as u64,
                 id: fake_id,
                 round: block.round(),
-                height: block.height(),
                 quorum_cert: block.quorum_cert().clone(),
                 block_type: BlockType::Proposal {
                     payload: block.payload().unwrap().clone(),
@@ -142,8 +137,6 @@ prop_compose! {
         forest_vec[qc_idx].id(),
         // round
         some_round(forest_vec[parent_idx].round()),
-        // height,
-        forest_vec[parent_idx].height() + 1,
         // signer
         Just(signer),
         // parent_qc
@@ -189,7 +182,6 @@ pub fn block_forest_and_its_keys(
 fn test_genesis() {
     // Test genesis and the next block
     let genesis_block = Block::<i64>::make_genesis_block();
-    assert_eq!(genesis_block.height(), 0);
     assert_eq!(genesis_block.parent_id(), HashValue::zero());
     assert_ne!(genesis_block.id(), HashValue::zero());
     assert!(genesis_block.is_genesis_block());
@@ -259,7 +251,6 @@ fn test_block_relation() {
         &signer,
     );
     assert_eq!(next_block.round(), 1);
-    assert_eq!(next_block.height(), 1);
     assert_eq!(genesis_block.is_parent_of(&next_block), true);
     assert_eq!(
         next_block.quorum_cert().certified_block_id(),
@@ -312,7 +303,7 @@ fn test_block_qc() {
     assert!(result.is_err());
 
     // once qc is correct, should not panic
-    let a2 = Block::make_block(
+    let _a2 = Block::make_block(
         &a1,
         payload,
         2,
@@ -320,7 +311,6 @@ fn test_block_qc() {
         a1_qc.clone(),
         &signer,
     );
-    assert_eq!(a2.height(), 2);
 }
 
 // Using current_timestamp in this test
