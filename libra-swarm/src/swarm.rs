@@ -535,7 +535,8 @@ impl Drop for LibraSwarm {
         // If panicking, we don't want to gc the swarm directory.
         if std::thread::panicking() {
             // let dir = self.dir;
-            if let LibraSwarmDir::Temporary(temp_dir) = &self.dir {
+            if let LibraSwarmDir::Temporary(temp_dir) = &mut self.dir {
+                temp_dir.persist();
                 let log_path = temp_dir.path();
                 println!("logs located at {:?}", log_path);
 

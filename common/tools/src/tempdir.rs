@@ -13,13 +13,18 @@ use std::{
 /// We use this in lieu of tempfile because tempfile brings in too many
 /// dependencies.
 #[derive(Debug)]
-pub struct TempPath(PathBuf);
+pub struct TempPath {
+    path_buf: PathBuf,
+    persist: bool,
+}
 
 impl Drop for TempPath {
     fn drop(&mut self) {
-        fs::remove_dir_all(&self.0)
-            .or_else(|_| fs::remove_file(&self.0))
-            .unwrap_or(());
+        if !self.persist {
+            fs::remove_dir_all(&self.path_buf)
+                .or_else(|_| fs::remove_file(&self.path_buf))
+                .unwrap_or(());
+        }
     }
 }
 
@@ -28,12 +33,19 @@ impl TempPath {
     /// isn't created automatically
     pub fn new() -> Self {
         let tmpdir = create_path();
-        TempPath(tmpdir)
+        TempPath {
+            path_buf: tmpdir,
+            persist: false,
+        }
     }
 
     /// Return the underlying path to this temporary directory.
     pub fn path(&self) -> &Path {
-        &self.0
+        &self.path_buf
+    }
+
+    pub fn persist(&mut self) {
+        self.persist = true;
     }
 
     pub fn create_as_file(&self) -> io::Result<()> {
