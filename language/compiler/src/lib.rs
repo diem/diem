@@ -11,7 +11,7 @@ use bytecode_verifier::VerifiedModule;
 use failure::prelude::*;
 use ir_to_bytecode::{
     compiler::{compile_module, compile_program},
-    parser::parse_program,
+    parser::{ast::Loc, parse_program},
 };
 use libra_types::{
     account_address::AccountAddress,
@@ -54,7 +54,7 @@ impl Compiler {
     pub fn into_compiled_program_and_source_maps(
         mut self,
         code: &str,
-    ) -> Result<(CompiledProgram, SourceMap)> {
+    ) -> Result<(CompiledProgram, SourceMap<Loc>)> {
         let (compiled_program, source_maps, _) = self.compile_impl(code)?;
         Ok((compiled_program, source_maps))
     }
@@ -62,7 +62,7 @@ impl Compiler {
     pub fn into_compiled_program_and_source_maps_deps(
         mut self,
         code: &str,
-    ) -> Result<(CompiledProgram, SourceMap, Vec<VerifiedModule>)> {
+    ) -> Result<(CompiledProgram, SourceMap<Loc>, Vec<VerifiedModule>)> {
         Ok(self.compile_impl(code)?)
     }
 
@@ -112,7 +112,7 @@ impl Compiler {
     fn compile_impl(
         &mut self,
         code: &str,
-    ) -> Result<(CompiledProgram, SourceMap, Vec<VerifiedModule>)> {
+    ) -> Result<(CompiledProgram, SourceMap<Loc>, Vec<VerifiedModule>)> {
         let parsed_program = parse_program(code)?;
         let deps = self.deps();
         let (compiled_program, source_maps) = compile_program(self.address, parsed_program, &deps)?;
@@ -122,7 +122,7 @@ impl Compiler {
     fn compile_mod(
         &mut self,
         code: &str,
-    ) -> Result<(CompiledModule, ModuleSourceMap, Vec<VerifiedModule>)> {
+    ) -> Result<(CompiledModule, ModuleSourceMap<Loc>, Vec<VerifiedModule>)> {
         let parsed_program = parse_program(code)?;
         let deps = self.deps();
         let mut modules = parsed_program.modules;

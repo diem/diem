@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::parser::ast::{
-    Field, FunctionName, Loc, ModuleName, QualifiedModuleIdent, QualifiedStructIdent, Spanned,
-    StructName, TypeVar, Var_,
+    Field, FunctionName, Loc, ModuleName, QualifiedModuleIdent, QualifiedStructIdent, StructName,
+    TypeVar,
 };
 
 use bytecode_source_map::source_map::ModuleSourceMap;
-use codespan::Span;
 use failure::*;
 use libra_types::{
     account_address::AccountAddress,
@@ -18,11 +17,11 @@ use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FieldDefinitionIndex,
-        FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex, FunctionSignature,
-        FunctionSignatureIndex, IdentifierIndex, Kind, LocalsSignature, LocalsSignatureIndex,
-        ModuleHandle, ModuleHandleIndex, SignatureToken, StructDefinitionIndex, StructHandle,
-        StructHandleIndex, TableIndex, TypeSignature, TypeSignatureIndex,
+        AddressPoolIndex, ByteArrayPoolIndex, FieldDefinitionIndex, FunctionDefinitionIndex,
+        FunctionHandle, FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex,
+        IdentifierIndex, Kind, LocalsSignature, LocalsSignatureIndex, ModuleHandle,
+        ModuleHandleIndex, SignatureToken, StructDefinitionIndex, StructHandle, StructHandleIndex,
+        TableIndex, TypeSignature, TypeSignatureIndex,
     },
     vm_string::VMString,
 };
@@ -196,7 +195,7 @@ pub struct Context<'a> {
     current_function_index: FunctionDefinitionIndex,
 
     // Source location mapping for this module
-    source_map: ModuleSourceMap,
+    pub source_map: ModuleSourceMap<Loc>,
 }
 
 impl<'a> Context<'a> {
@@ -261,7 +260,7 @@ impl<'a> Context<'a> {
     }
 
     /// Finish compilation, and materialize the pools for file format.
-    pub fn materialize_pools(self) -> (MaterializedPools, ModuleSourceMap) {
+    pub fn materialize_pools(self) -> (MaterializedPools, ModuleSourceMap<Loc>) {
         let num_functions = self.function_handles.len();
         assert!(num_functions == self.function_signatures.len());
         let function_handles = Self::materialize_pool(
@@ -298,70 +297,6 @@ impl<'a> Context<'a> {
             })
             .collect::<Result<_>>()?;
         Ok(())
-    }
-
-    /// Add the source location to the bytecode instruction sequence starting at `offset` within
-    /// the function body given by the `FunctionDefinitionIndex`
-    pub fn add_source_info(
-        &mut self,
-        fdef_idx: FunctionDefinitionIndex,
-        offset: CodeOffset,
-        location: Loc,
-    ) {
-        self.source_map.add_code_mapping(fdef_idx, offset, location);
-    }
-
-    pub fn add_local_mapping(&mut self, fdef_idx: FunctionDefinitionIndex, variable: Var_) {
-        self.source_map.add_local_mapping(fdef_idx, variable)
-    }
-
-    pub fn add_function_type_parameter_mapping(
-        &mut self,
-        fdef_idx: FunctionDefinitionIndex,
-        ty_var: &TypeVar,
-    ) {
-        // TODO/XX/TZ: Change this ast node to record the span
-        let source_name = (Identifier::from(ty_var.name()), Span::default());
-        self.source_map
-            .add_function_type_parameter_mapping(fdef_idx, source_name)
-    }
-
-    pub fn add_struct_type_parameter_mapping(
-        &mut self,
-        struct_def_idx: StructDefinitionIndex,
-        ty_var: &TypeVar,
-    ) {
-        // TODO/XX/TZ: Change this ast node to record the span
-        let source_name = (Identifier::from(ty_var.name()), Span::default());
-        self.source_map
-            .add_struct_type_parameter_mapping(struct_def_idx, source_name)
-    }
-
-    pub fn add_field_mapping(
-        &mut self,
-        struct_def_idx: StructDefinitionIndex,
-        name: Spanned<Identifier>,
-    ) {
-        let source_name = (name.value, name.span);
-        self.source_map
-            .add_struct_field_mapping(struct_def_idx, source_name);
-    }
-
-    pub fn incr_function_index(&mut self) {
-        match self.current_function_index {
-            FunctionDefinitionIndex(i) => {
-                self.current_function_index = FunctionDefinitionIndex(i + 1)
-            }
-        }
-    }
-
-    pub fn current_function_definition_index(&self) -> FunctionDefinitionIndex {
-        self.current_function_index.clone()
-    }
-
-    pub fn current_struct_definition_index(&self) -> StructDefinitionIndex {
-        let idx = self.struct_defs.len();
-        StructDefinitionIndex(idx as TableIndex)
     }
 
     //**********************************************************************************************
@@ -471,6 +406,19 @@ impl<'a> Context<'a> {
             &mut self.locals_signatures,
             locals,
         )?))
+    }
+
+    pub fn set_function_index(&mut self, index: TableIndex) {
+        self.current_function_index = FunctionDefinitionIndex(index);
+    }
+
+    pub fn current_function_definition_index(&self) -> FunctionDefinitionIndex {
+        self.current_function_index
+    }
+
+    pub fn current_struct_definition_index(&self) -> StructDefinitionIndex {
+        let idx = self.struct_defs.len();
+        StructDefinitionIndex(idx as TableIndex)
     }
 
     //**********************************************************************************************
