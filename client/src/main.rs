@@ -111,7 +111,16 @@ fn main() -> std::io::Result<()> {
                     }
                     None => match params[0] {
                         "quit" | "q!" => break,
-                        "help" | "h" => print_help(&cli_info, &commands),
+                        "help" | "h" => {
+                            if params.len() > 1 {
+                                match alias_to_cmd.get(&params[1]) {
+                                    Some(cmd) => cmd.print_usage(&params[1..]),
+                                    None => print_help(&cli_info, &commands),
+                                }
+                            } else {
+                                print_help(&cli_info, &commands);
+                            }
+                        }
                         "" => continue,
                         x => println!("Unknown command: {:?}", x),
                     },
@@ -141,15 +150,13 @@ fn print_help(client_info: &str, commands: &[std::sync::Arc<dyn Command>]) {
     println!("usage: <command> <args>\n\nUse the following commands:\n");
     for cmd in commands {
         println!(
-            "{} {}\n\t{}",
+            "{:<35}{}",
             cmd.get_aliases().join(" | "),
-            cmd.get_params_help(),
             cmd.get_description()
         );
     }
-
-    println!("help | h \n\tPrints this help");
-    println!("quit | q! \n\tExit this client");
+    println!("{:<35}Prints this help", "help | h");
+    println!("{:<35}Exit this client", "quit | q!");
     println!("\n");
 }
 

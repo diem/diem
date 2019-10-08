@@ -11,22 +11,17 @@ impl Command for TransferCommand {
         vec!["transfer", "transferb", "t", "tb"]
     }
     fn get_params_help(&self) -> &'static str {
-        "\n\t<sender_account_address>|<sender_account_ref_id> \
-         <receiver_account_address>|<receiver_account_ref_id> <number_of_coins> \
-         [gas_unit_price_in_micro_libras (default=0)] [max_gas_amount_in_micro_libras (default 140000)] \
-         Suffix 'b' is for blocking. "
+        "<sender_account_address>\n<sender_account_ref_id> \
+         <receiver_account_address>\n<receiver_account_ref_id> <number_of_coins> \
+         [gas_unit_price_in_micro_libras (default=0)] [max_gas_amount_in_micro_libras (default 140000)]"
     }
     fn get_description(&self) -> &'static str {
-        "Transfer coins (in libra) from account to another."
+        "Transfer coins (in libra) from account to another. Suffix 'b' is for blocking. "
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         if params.len() < 4 || params.len() > 6 {
-            println!("Invalid number of arguments for transfer");
-            println!(
-                "{} {}",
-                self.get_aliases().join(" | "),
-                self.get_params_help()
-            );
+            println!("Invalid number of arguments for transfer\n");
+            self.print_usage(&params);
             return;
         }
 
@@ -47,5 +42,8 @@ impl Command for TransferCommand {
             }
             Err(e) => report_error("Failed to perform transaction", e),
         }
+    }
+    fn print_usage(&self, _params: &[&str]) {
+        print_sub_command_usage("transfer", self.get_description(), self.get_params_help());
     }
 }

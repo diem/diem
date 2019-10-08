@@ -5,8 +5,49 @@ use crate::{client_proxy::ClientProxy, commands::*};
 use transaction_builder::get_transaction_name;
 use types::account_config::get_account_resource_or_default;
 
+use std::collections::HashMap;
+
 /// Major command for query operations.
-pub struct QueryCommand {}
+pub struct QueryCommand {
+    pub sub_commands: Vec<Box<dyn Command>>,
+    pub command_map: HashMap<&'static str, usize>,
+}
+
+impl QueryCommand {
+    pub fn new() -> QueryCommand {
+        let commands: Vec<Box<dyn Command>> = vec![
+            Box::new(QueryCommandGetBalance {}),
+            Box::new(QueryCommandGetSeqNum {}),
+            Box::new(QueryCommandGetLatestAccountState {}),
+            Box::new(QueryCommandGetTxnByAccountSeq {}),
+            Box::new(QueryCommandGetTxnByRange {}),
+            Box::new(QueryCommandGetEvent {}),
+        ];
+        let mut commands_map = HashMap::new();
+        for (i, cmd) in commands.iter().enumerate() {
+            for alias in cmd.get_aliases() {
+                if commands_map.insert(alias, i) != None {
+                    panic!("Duplicate alias {}", alias);
+                }
+            }
+        }
+        QueryCommand {
+            sub_commands: commands,
+            command_map: commands_map,
+        }
+    }
+    fn print_helper(&self) {
+        println!("usage: query <arg>\n\nUse the following sub-commands for this command:\n");
+        for cmd in &self.sub_commands {
+            println!(
+                "{:<35}{}",
+                cmd.get_aliases().join(" | "),
+                cmd.get_description()
+            );
+        }
+        println!("\n");
+    }
+}
 
 impl Command for QueryCommand {
     fn get_aliases(&self) -> Vec<&'static str> {
@@ -16,16 +57,20 @@ impl Command for QueryCommand {
         "Query operations"
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
-        let commands: Vec<Box<dyn Command>> = vec![
-            Box::new(QueryCommandGetBalance {}),
-            Box::new(QueryCommandGetSeqNum {}),
-            Box::new(QueryCommandGetLatestAccountState {}),
-            Box::new(QueryCommandGetTxnByAccountSeq {}),
-            Box::new(QueryCommandGetTxnByRange {}),
-            Box::new(QueryCommandGetEvent {}),
-        ];
-
-        subcommand_execute(&params[0], commands, client, &params[1..]);
+        match self.command_map.get(&params[1]) {
+            Some(&idx) => self.sub_commands[idx].execute(client, &params[1..]),
+            _ => self.print_usage(&params),
+        }
+    }
+    fn print_usage(&self, params: &[&str]) {
+        if params.len() > 1 {
+            match self.command_map.get(&params[1]) {
+                Some(&idx) => self.sub_commands[idx].print_usage(&params),
+                _ => self.print_helper(),
+            }
+        } else {
+            self.print_helper()
+        }
     }
 }
 
@@ -37,7 +82,7 @@ impl Command for QueryCommandGetBalance {
         vec!["balance", "b"]
     }
     fn get_params_help(&self) -> &'static str {
-        "<account_ref_id>|<account_address>"
+        "<account_ref_id>\n<account_address>"
     }
     fn get_description(&self) -> &'static str {
         "Get the current balance of an account"
@@ -52,6 +97,13 @@ impl Command for QueryCommandGetBalance {
             Err(e) => report_error("Failed to get balance", e),
         }
     }
+    fn print_usage(&self, _params: &[&str]) {
+        print_sub_command_usage(
+            "query balance",
+            self.get_description(),
+            self.get_params_help(),
+        );
+    }
 }
 
 /// Sub command to get the latest sequence number from validator for the account specified.
@@ -62,7 +114,7 @@ impl Command for QueryCommandGetSeqNum {
         vec!["sequence", "s"]
     }
     fn get_params_help(&self) -> &'static str {
-        "<account_ref_id>|<account_address> [reset_sequence_number=true|false]"
+        "<account_ref_id>\n<account_address> [reset_sequence_number=true|false]"
     }
     fn get_description(&self) -> &'static str {
         "Get the current sequence number for an account, \
@@ -75,6 +127,13 @@ impl Command for QueryCommandGetSeqNum {
             Err(e) => report_error("Error getting sequence number", e),
         }
     }
+    fn print_usage(&self, _params: &[&str]) {
+        print_sub_command_usage(
+            "query sequence",
+            self.get_description(),
+            self.get_params_help(),
+        );
+    }
 }
 
 /// Command to query latest account state from validator.
@@ -85,7 +144,7 @@ impl Command for QueryCommandGetLatestAccountState {
         vec!["account_state", "as"]
     }
     fn get_params_help(&self) -> &'static str {
-        "<account_ref_id>|<account_address>"
+        "<account_ref_id>\n<account_address>"
     }
     fn get_description(&self) -> &'static str {
         "Get the latest state for an account"
@@ -110,6 +169,13 @@ impl Command for QueryCommandGetLatestAccountState {
             Err(e) => report_error("Error getting latest account state", e),
         }
     }
+    fn print_usage(&self, _params: &[&str]) {
+        print_sub_command_usage(
+            "query account_state",
+            self.get_description(),
+            self.get_params_help(),
+        );
+    }
 }
 
 /// Sub command  to get transaction by account and sequence number from validator.
@@ -120,7 +186,7 @@ impl Command for QueryCommandGetTxnByAccountSeq {
         vec!["txn_acc_seq", "ts"]
     }
     fn get_params_help(&self) -> &'static str {
-        "<account_ref_id>|<account_address> <sequence_number> <fetch_events=true|false>"
+        "<account_ref_id>\n<account_address> <sequence_number> <fetch_events=true|false>"
     }
     fn get_description(&self) -> &'static str {
         "Get the committed transaction by account and sequence number.  \
@@ -151,6 +217,13 @@ impl Command for QueryCommandGetTxnByAccountSeq {
                 e,
             ),
         }
+    }
+    fn print_usage(&self, _params: &[&str]) {
+        print_sub_command_usage(
+            "query txn_acc_seq",
+            self.get_description(),
+            self.get_params_help(),
+        );
     }
 }
 
@@ -196,6 +269,13 @@ impl Command for QueryCommandGetTxnByRange {
             Err(e) => report_error("Error getting committed transactions by range", e),
         }
     }
+    fn print_usage(&self, _params: &[&str]) {
+        println!(
+            "usage: query txn_range {}\n\n{}\n",
+            self.get_params_help(),
+            self.get_description()
+        );
+    }
 }
 
 /// Sub command to query events from validator.
@@ -206,7 +286,7 @@ impl Command for QueryCommandGetEvent {
         vec!["event", "ev"]
     }
     fn get_params_help(&self) -> &'static str {
-        "<account_ref_id>|<account_address> <sent|received> <start_sequence_number> <ascending=true|false> <limit>"
+        "<account_ref_id>\n<account_address> <sent|received> <start_sequence_number> <ascending=true|false> <limit>"
     }
     fn get_description(&self) -> &'static str {
         "Get events by account and event type (sent|received)."
@@ -226,5 +306,12 @@ impl Command for QueryCommandGetEvent {
             }
             Err(e) => report_error("Error getting events by access path", e),
         }
+    }
+    fn print_usage(&self, _params: &[&str]) {
+        print_sub_command_usage(
+            "query event",
+            self.get_description(),
+            self.get_params_help(),
+        );
     }
 }

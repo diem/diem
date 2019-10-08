@@ -60,12 +60,12 @@ pub fn get_commands(
     HashMap<&'static str, Arc<dyn Command>>,
 ) {
     let mut commands: Vec<Arc<dyn Command>> = vec![
-        Arc::new(AccountCommand {}),
-        Arc::new(QueryCommand {}),
+        Arc::new(AccountCommand::new()),
+        Arc::new(QueryCommand::new()),
         Arc::new(TransferCommand {}),
     ];
     if include_dev {
-        commands.push(Arc::new(DevCommand {}));
+        commands.push(Arc::new(DevCommand::new()));
     }
     let mut alias_to_cmd = HashMap::new();
     for command in &commands {
@@ -81,49 +81,10 @@ pub fn parse_cmd(cmd_str: &str) -> Vec<&str> {
     cmd_str.split_ascii_whitespace().collect()
 }
 
-/// Print the help message for all sub commands.
-pub fn print_subcommand_help(parent_command: &str, commands: &[Box<dyn Command>]) {
-    println!(
-        "usage: {} <arg>\n\nUse the following args for this command:\n",
-        parent_command
-    );
-    for cmd in commands {
-        println!(
-            "{} {}\n\t{}",
-            cmd.get_aliases().join(" | "),
-            cmd.get_params_help(),
-            cmd.get_description()
-        );
-    }
-    println!("\n");
-}
-
-/// Execute sub command.
-// TODO: Convert subcommands arrays to lazy statics
-pub fn subcommand_execute(
-    parent_command_name: &str,
-    commands: Vec<Box<dyn Command>>,
-    client: &mut ClientProxy,
-    params: &[&str],
-) {
-    let mut commands_map = HashMap::new();
-    for (i, cmd) in commands.iter().enumerate() {
-        for alias in cmd.get_aliases() {
-            if commands_map.insert(alias, i) != None {
-                panic!("Duplicate alias {}", alias);
-            }
-        }
-    }
-
-    if params.is_empty() {
-        print_subcommand_help(parent_command_name, &commands);
-        return;
-    }
-
-    match commands_map.get(&params[0]) {
-        Some(&idx) => commands[idx].execute(client, &params),
-        _ => print_subcommand_help(parent_command_name, &commands),
-    }
+/// helper to print sub command usage
+pub fn print_sub_command_usage(command: &str, description: &str, param: &str) {
+    println!("usage: {} <options>\n\n{}\n", command, description);
+    println!("Use the following options for this command:\n\n{}\n", param);
 }
 
 /// Trait to perform client operations.
@@ -138,4 +99,6 @@ pub trait Command {
     fn get_description(&self) -> &'static str;
     /// code to execute.
     fn execute(&self, client: &mut ClientProxy, params: &[&str]);
+    /// print usage msg
+    fn print_usage(&self, params: &[&str]);
 }
