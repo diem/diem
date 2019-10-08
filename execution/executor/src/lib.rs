@@ -33,8 +33,8 @@ use libra_types::{
 use logger::prelude::*;
 use scratchpad::SparseMerkleTree;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::{
-    collections::HashMap,
     marker::PhantomData,
     rc::Rc,
     sync::{mpsc, Arc, Mutex},
@@ -229,8 +229,7 @@ where
             /* timestamp_usecs = */ 0,
             None,
         );
-        let ledger_info_with_sigs =
-            LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ HashMap::new());
+        let ledger_info_with_sigs = LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new());
         block_on(self.commit_block(ledger_info_with_sigs))
             .expect("Response sender was unexpectedly dropped.")
             .expect("Failed to commit genesis block.");

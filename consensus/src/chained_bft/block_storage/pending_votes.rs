@@ -14,6 +14,7 @@ use libra_types::{
     validator_verifier::VerifyError,
 };
 use logger::prelude::*;
+use std::collections::BTreeMap;
 use std::{collections::HashMap, sync::Arc};
 
 #[cfg(test)]
@@ -88,7 +89,7 @@ impl PendingVotes {
         // covering vote data hash (in its `consensus_data_hash` field).
         let li_digest = vote_msg.ledger_info().hash();
         let li_with_sig = self.li_digest_to_votes.entry(li_digest).or_insert_with(|| {
-            LedgerInfoWithSignatures::new(vote_msg.ledger_info().clone(), HashMap::new())
+            LedgerInfoWithSignatures::new(vote_msg.ledger_info().clone(), BTreeMap::new())
         });
         // TODO: we'd prefer to use LedgerInfoWithSignatures::add_signature instead, but the
         // CryptoProxy types should be properly updated first.

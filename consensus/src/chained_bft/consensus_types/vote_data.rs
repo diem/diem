@@ -7,6 +7,7 @@ use crypto::{
     hash::{CryptoHash, CryptoHasher, VoteDataHasher},
     HashValue,
 };
+use failure::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
     convert::TryFrom,
@@ -175,5 +176,17 @@ impl From<VoteData> for network::proto::VoteData {
             parent_block_id: vote.parent_block_id.to_vec(),
             parent_block_round: vote.parent_block_round,
         }
+    }
+}
+
+impl CanonicalSerialize for VoteData {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer
+            .encode_bytes(self.block_id.as_ref())?
+            .encode_bytes(self.executed_state_id.as_ref())?
+            .encode_u64(self.round)?
+            .encode_bytes(self.parent_block_id.as_ref())?
+            .encode_u64(self.parent_block_round)?;
+        Ok(())
     }
 }

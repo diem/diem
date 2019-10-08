@@ -2,18 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{common::Round, consensus_types::vote_data::VoteData};
+use canonical_serialization::{CanonicalSerialize, CanonicalSerializer};
 use crypto::{
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
 };
-use failure::ResultExt;
+use failure::prelude::*;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::{
-    collections::HashMap,
     convert::{TryFrom, TryInto},
     fmt::{Display, Formatter},
 };
@@ -33,6 +34,15 @@ impl Display for QuorumCert {
             "QuorumCert: [{}, {}]",
             self.vote_data, self.signed_ledger_info
         )
+    }
+}
+
+impl CanonicalSerialize for QuorumCert {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer
+            .encode_struct(&self.vote_data)?
+            .encode_struct(&self.signed_ledger_info)?;
+        Ok(())
     }
 }
 
@@ -103,7 +113,7 @@ impl QuorumCert {
         let signature = signer
             .sign_message(li.hash())
             .expect("Fail to sign genesis ledger info");
-        let mut signatures = HashMap::new();
+        let mut signatures = BTreeMap::new();
         signatures.insert(signer.author(), signature);
         QuorumCert::new(
             VoteData::new(

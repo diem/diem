@@ -33,7 +33,7 @@ use network::{
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     pin::Pin,
     sync::{
         atomic::{AtomicU64, AtomicUsize, Ordering},
@@ -72,7 +72,7 @@ impl MockExecutorProxy {
             0,
             None,
         );
-        let mut signatures = HashMap::new();
+        let mut signatures = BTreeMap::new();
         let private_key = Ed25519PrivateKey::genesis();
         let signature = private_key.sign_message(&HashValue::zero());
         signatures.insert(peer_id, signature);

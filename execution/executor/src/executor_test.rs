@@ -21,7 +21,7 @@ use proptest::prelude::*;
 use prost_ext::MessageExt;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     fs::File,
     io::Write,
     sync::{mpsc, Arc},
@@ -172,7 +172,7 @@ fn gen_ledger_info(
         timestamp_usecs,
         None,
     );
-    LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ HashMap::new())
+    LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
 }
 
 #[test]

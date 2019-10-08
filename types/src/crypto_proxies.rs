@@ -79,7 +79,7 @@ impl<Sig: RawSignature> From<Sig> for SignatureWrapper<Sig> {
 // below is banned.
 
 use crypto::ed25519::*;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 // used in chained_bft::consensus_types::block_test
 #[cfg(any(test, feature = "testing"))]
@@ -101,8 +101,7 @@ pub fn random_validator_verifier(
     pseudo_random_account_address: bool,
 ) -> (Vec<ValidatorSigner>, ValidatorVerifier) {
     let mut signers = Vec::new();
-    let mut account_address_to_validator_info: HashMap<AccountAddress, ValidatorInfo> =
-        HashMap::new();
+    let mut account_address_to_validator_info = BTreeMap::new();
     for i in 0..count {
         let random_signer = if pseudo_random_account_address {
             ValidatorSigner::from_int(i as u8)

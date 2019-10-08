@@ -23,7 +23,7 @@ use libra_types::{
     },
 };
 use rand::SeedableRng;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use transaction_builder::{encode_create_account_script, encode_transfer_script};
@@ -47,7 +47,7 @@ fn gen_ledger_info_with_sigs(
         /* timestamp = */ 0,
         None,
     );
-    LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ HashMap::new())
+    LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
 }
 
 fn create_storage_service_and_executor(config: &NodeConfig) -> (ServerHandle, Executor<MoveVM>) {
@@ -285,7 +285,7 @@ fn test_execution_with_storage() {
         .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     verify_update_to_latest_ledger_response(
-        Arc::new(ValidatorVerifier::new(HashMap::new())),
+        Arc::new(ValidatorVerifier::new(BTreeMap::new())),
         0,
         &request_items,
         &response_items,
@@ -483,7 +483,7 @@ fn test_execution_with_storage() {
         .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     verify_update_to_latest_ledger_response(
-        Arc::new(ValidatorVerifier::new(HashMap::new())),
+        Arc::new(ValidatorVerifier::new(BTreeMap::new())),
         0,
         &request_items,
         &response_items,

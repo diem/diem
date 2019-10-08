@@ -16,8 +16,8 @@ use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::{
-    collections::HashMap,
     convert::{TryFrom, TryInto},
     fmt::{Display, Formatter},
 };
@@ -229,7 +229,16 @@ pub struct LedgerInfoWithSignatures<Sig> {
     ledger_info: LedgerInfo,
     /// The validator is identified by its account address: in order to verify a signature
     /// one needs to retrieve the public key of the validator for the given epoch.
-    signatures: HashMap<AccountAddress, Sig>,
+    signatures: BTreeMap<AccountAddress, Sig>,
+}
+
+impl<Sig: CanonicalSerialize> CanonicalSerialize for LedgerInfoWithSignatures<Sig> {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer
+            .encode_struct(&self.ledger_info)?
+            .encode_btreemap(&self.signatures)?;
+        Ok(())
+    }
 }
 
 impl<Sig> Display for LedgerInfoWithSignatures<Sig> {
@@ -239,7 +248,7 @@ impl<Sig> Display for LedgerInfoWithSignatures<Sig> {
 }
 
 impl<Sig: Signature> LedgerInfoWithSignatures<Sig> {
-    pub fn new(ledger_info: LedgerInfo, signatures: HashMap<AccountAddress, Sig>) -> Self {
+    pub fn new(ledger_info: LedgerInfo, signatures: BTreeMap<AccountAddress, Sig>) -> Self {
         LedgerInfoWithSignatures {
             ledger_info,
             signatures,
@@ -258,7 +267,7 @@ impl<Sig: Signature> LedgerInfoWithSignatures<Sig> {
         self.signatures.remove(&validator);
     }
 
-    pub fn signatures(&self) -> &HashMap<AccountAddress, Sig> {
+    pub fn signatures(&self) -> &BTreeMap<AccountAddress, Sig> {
         &self.signatures
     }
 
@@ -296,7 +305,7 @@ impl<Sig: Signature> TryFrom<crate::proto::types::LedgerInfoWithSignatures>
                 let signature = Sig::try_from(signature_bytes)?;
                 Ok((validator_id, signature))
             })
-            .collect::<Result<HashMap<_, _>>>()?;
+            .collect::<Result<BTreeMap<_, _>>>()?;
         ensure!(
             signatures.len() == num_signatures,
             "Signatures should be from different validators."
@@ -329,5 +338,68 @@ impl<Sig: Signature> From<LedgerInfoWithSignatures<Sig>>
             signatures,
             ledger_info,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ledger_info::{LedgerInfo, LedgerInfoWithSignatures};
+    use crate::validator_signer::ValidatorSigner;
+    use canonical_serialization::SimpleSerializer;
+    use crypto::{ed25519::*, HashValue};
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn test_signatures_hash() {
+        let ledger_info = LedgerInfo::new(
+            0,
+            HashValue::zero(),
+            HashValue::zero(),
+            HashValue::zero(),
+            0,
+            0,
+            None,
+        );
+
+        let random_hash = HashValue::random();
+        const NUM_SIGNERS: u8 = 7;
+        // Generate NUM_SIGNERS random signers.
+        let validator_signers: Vec<ValidatorSigner<Ed25519PrivateKey>> = (0..NUM_SIGNERS)
+            .map(|i| ValidatorSigner::random([i; 32]))
+            .collect();
+        let mut author_to_signature_map = BTreeMap::new();
+        for validator in validator_signers.iter() {
+            author_to_signature_map.insert(
+                validator.author(),
+                validator.sign_message(random_hash).unwrap(),
+            );
+        }
+
+        let ledger_info_with_signatures =
+            LedgerInfoWithSignatures::new(ledger_info.clone(), author_to_signature_map);
+
+        // Add the signatures in reverse order and ensure the serialization matches
+        let mut author_to_signature_map = BTreeMap::new();
+        for validator in validator_signers.iter().rev() {
+            author_to_signature_map.insert(
+                validator.author(),
+                validator.sign_message(random_hash).unwrap(),
+            );
+        }
+
+        let ledger_info_with_signatures_reversed =
+            LedgerInfoWithSignatures::new(ledger_info.clone(), author_to_signature_map);
+
+        let ledger_info_with_signatures_bytes =
+            SimpleSerializer::<Vec<u8>>::serialize(&ledger_info_with_signatures)
+                .expect("block serialization failed");
+        let ledger_info_with_signatures_reversed_bytes =
+            SimpleSerializer::<Vec<u8>>::serialize(&ledger_info_with_signatures_reversed)
+                .expect("block serialization failed");
+
+        assert_eq!(
+            ledger_info_with_signatures_bytes,
+            ledger_info_with_signatures_reversed_bytes
+        );
     }
 }
