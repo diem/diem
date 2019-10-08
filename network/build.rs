@@ -13,7 +13,7 @@ fn main() {
     let includes = [
         "../types/src/proto",
         "src/proto",
-        "../admission_control/admission_control_proto/src/proto",
+        "../admission_control/admission-control-proto/src/proto",
     ];
 
     prost_build::compile_protos(&proto_files, &includes).unwrap();

@@ -1,5 +1,5 @@
 [package]
-name = "admission_control_proto"
+name = "admission-control-proto"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra admission control proto"
