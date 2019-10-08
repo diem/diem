@@ -1,14 +1,14 @@
 use std::str::FromStr;
 use codespan::{ByteIndex, Span};
 
-use crate::ast::{ModuleDefinition, StructDefinition, Script, Program, ScriptOrModule};
 use crate::ast::{
+    ModuleDefinition, StructDefinition, Script, Program, ScriptOrModule,
     FunctionBody, FunctionVisibility, ImportDefinition, ModuleName,
     Block, Cmd, CopyableVal, Spanned, Kind, TypeVar,
     Cmd_, Exp_, Exp, Var,  Var_, FunctionCall,
     FunctionName, Builtin, Statement, IfElse, While, Loop, Type, Field, Fields,
     StructName, QualifiedStructIdent, Function, BinOp, ModuleIdent, QualifiedModuleIdent, UnaryOp,
-    LValue, LValue_, parse_field, Field_, TypeVar_,
+    LValue, LValue_, parse_field, Field_, TypeVar_, Function_, StructDefinition_,
 };
 use types::{account_address::AccountAddress, byte_array::ByteArray};
 use hex;
@@ -160,11 +160,11 @@ UnaryExp : Exp = {
 }
 
 Call: Exp = {
-    <f: QualifiedFunctionName> <exp: Sp<CallOrTerm>> => Exp::FunctionCall(f, Box::new(exp)),
+    <f: Sp<QualifiedFunctionName>> <exp: Sp<CallOrTerm>> => Exp::FunctionCall(f, Box::new(exp)),
 }
 
 CallOrTerm: Exp = {
-    <f: QualifiedFunctionName> <exp: Sp<CallOrTerm>> => Exp::FunctionCall(f, Box::new(exp)),
+    <f: Sp<QualifiedFunctionName>> <exp: Sp<CallOrTerm>> => Exp::FunctionCall(f, Box::new(exp)),
     Term,
 }
 
@@ -427,9 +427,9 @@ AcquireList: Vec<StructName> = {
     }
 }
 
-FunctionDecl : (FunctionName, Function) = {
-  <f: MoveFunctionDecl> => (f.0, f.1),
-  <f: NativeFunctionDecl> => (f.0, f.1),
+FunctionDecl : (FunctionName, Function_) = {
+  <f: Sp<MoveFunctionDecl>> => (f.value.0, Spanned { span: f.span, value: f.value.1 }),
+  <f: Sp<NativeFunctionDecl>> => (f.value.0, Spanned { span: f.span, value: f.value.1 }),
 }
 
 MoveFunctionDecl : (FunctionName, Function) = {
@@ -502,13 +502,13 @@ pub Program : Program = {
                     code: Block::new(vec![return_stmt]),
                 },
             );
-        Program::new(vec![m], Script::new(vec![], main))
+        Program::new(vec![m], Script::new(vec![], Spanned::no_loc(main)))
     }
 }
 
 pub Script : Script = {
-    <imports: (ImportDecl)*>
-    "main" "(" <args: (ArgDecl)*> ")" <locals_body: FunctionBlock> => {
+    <l: @L> <imports: (ImportDecl)*>
+    "main" "(" <args: (ArgDecl)*> ")" <locals_body: FunctionBlock> <r: @R> => {
         let (locals, body) = locals_body;
         let main =
             Function::new(
@@ -519,22 +519,29 @@ pub Script : Script = {
                 vec![],
                 FunctionBody::Move{ locals: locals, code: body },
             );
+        let main = Spanned{ span: Span::new(ByteIndex(l as u32), ByteIndex(r as u32)), value: main };
         Script::new(imports, main)
     }
 }
 
-StructDecl: StructDefinition = {
-    <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> "{" <data: (FieldDecl)*> "}" =>? {
+StructDecl: StructDefinition_ = {
+    <l: @L> <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> "{" <data: (FieldDecl)*> "}" <r: @R> =>? {
         let (name, type_formals) = name_and_type_formals;
         let mut fields = Fields::new();
         for (field, type_) in data.into_iter() {
             fields.push((field, type_));
         }
-        StructDefinition::move_declared(is_nominal_resource, name, type_formals, fields)
+        Ok(Spanned {
+            span: Span::new(ByteIndex(l as u32), ByteIndex(r as u32)),
+            value: StructDefinition::move_declared(is_nominal_resource, name, type_formals, fields)?,
+        })
     },
-    <native: NativeTag> <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> ";" =>? {
+    <l: @L> <native: NativeTag> <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> ";" <r: @R> =>? {
         let (name, type_formals) = name_and_type_formals;
-        StructDefinition::native(is_nominal_resource, name, type_formals)
+        Ok(Spanned {
+            span: Span::new(ByteIndex(l as u32), ByteIndex(r as u32)),
+            value: StructDefinition::native(is_nominal_resource, name, type_formals)?,
+        })
     }
 }
 

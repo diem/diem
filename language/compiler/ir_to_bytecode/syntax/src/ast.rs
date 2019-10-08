@@ -64,7 +64,7 @@ pub struct Script {
     /// The dependencies of `main`, i.e. of the transaction script
     pub imports: Vec<ImportDefinition>,
     /// The transaction script's `main` procedure
-    pub main: Function,
+    pub main: Function_,
 }
 
 //**************************************************************************************************
@@ -93,9 +93,9 @@ pub struct ModuleDefinition {
     /// the module's dependencies
     pub imports: Vec<ImportDefinition>,
     /// the structs (including resources) that the module defines
-    pub structs: Vec<StructDefinition>,
+    pub structs: Vec<StructDefinition_>,
     /// the procedure that the module defines
-    pub functions: Vec<(FunctionName, Function)>,
+    pub functions: Vec<(FunctionName, Function_)>,
 }
 
 /// Either a qualified module name like `addr.m` or `Transaction.m`, which refers to a module in
@@ -223,6 +223,9 @@ pub struct StructDefinition {
     pub fields: StructDefinitionFields,
 }
 
+/// The type of a StructDefinition along with its source location information
+pub type StructDefinition_ = Spanned<StructDefinition>;
+
 /// The fields of a Move struct definition
 #[derive(Clone, Debug, PartialEq)]
 pub enum StructDefinitionFields {
@@ -291,6 +294,9 @@ pub struct Function {
     /// The code for the procedure
     pub body: FunctionBody,
 }
+
+/// The type of a Function coupled with its source location information.
+pub type Function_ = Spanned<Function>;
 
 //**************************************************************************************************
 // Statements
@@ -536,7 +542,7 @@ pub enum Exp {
     /// `&x` or `&mut x`
     BorrowLocal(bool, Var_),
     /// `f(e)` or `f(e_1, e_2, ..., e_j)`
-    FunctionCall(FunctionCall, Box<Exp_>),
+    FunctionCall(FunctionCall_, Box<Exp_>),
     /// (e_1, e_2, e_3, ..., e_j)
     ExprList(Vec<Exp_>),
 }
@@ -567,7 +573,7 @@ impl Program {
 
 impl Script {
     /// Create a new `Script` from the imports and the main function
-    pub fn new(imports: Vec<ImportDefinition>, main: Function) -> Self {
+    pub fn new(imports: Vec<ImportDefinition>, main: Function_) -> Self {
         Script { imports, main }
     }
 
@@ -656,8 +662,8 @@ impl ModuleDefinition {
     pub fn new<L, T>(
         name: impl Into<Box<str>>,
         imports: Vec<ImportDefinition>,
-        structs: Vec<StructDefinition>,
-        functions: Vec<(FunctionName, Function)>,
+        structs: Vec<StructDefinition_>,
+        functions: Vec<(FunctionName, Function_)>,
     ) -> Result<Self, ParseError<L, T, failure::Error>> {
         Ok(ModuleDefinition {
             name: ModuleName::parse(name.into())?,
@@ -1042,7 +1048,7 @@ impl Exp {
     }
 
     /// Creates a new function call `Exp` with no location information
-    pub fn function_call(f: FunctionCall, e: Exp_) -> Exp_ {
+    pub fn function_call(f: FunctionCall_, e: Exp_) -> Exp_ {
         Spanned::no_loc(Exp::FunctionCall(f, Box::new(e)))
     }
 
@@ -1070,7 +1076,7 @@ impl Iterator for Script {
     type Item = Statement;
 
     fn next(&mut self) -> Option<Statement> {
-        match self.main.body {
+        match self.main.value.body {
             FunctionBody::Move { ref mut code, .. } => code.stmts.pop_front(),
             FunctionBody::Native => panic!("main() cannot be native code"),
         }

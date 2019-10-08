@@ -5,11 +5,11 @@ use crate::{
     context::{Context, MaterializedPools},
     errors::*,
     parser::ast::{
-        self, BinOp, Block, Builtin, Cmd, Cmd_, CopyableVal, Exp, Exp_, Function, FunctionBody,
-        FunctionCall, FunctionName, FunctionSignature as AstFunctionSignature, FunctionVisibility,
-        IfElse, ImportDefinition, LValue, LValue_, Loop, ModuleDefinition, ModuleIdent, ModuleName,
-        Program, QualifiedModuleIdent, QualifiedStructIdent, Script, Statement,
-        StructDefinition as MoveStruct, StructDefinitionFields, Type, TypeVar, TypeVar_, UnaryOp,
+        self, BinOp, Block, Builtin, Cmd, Cmd_, CopyableVal, Exp, Exp_, FunctionBody, FunctionCall,
+        FunctionCall_, FunctionName, FunctionSignature as AstFunctionSignature, FunctionVisibility,
+        Function_, IfElse, ImportDefinition, LValue, LValue_, Loop, ModuleDefinition, ModuleIdent,
+        ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent, Script, Statement,
+        StructDefinitionFields, StructDefinition_ as MoveStruct_, Type, TypeVar, TypeVar_, UnaryOp,
         Var, Var_, While,
     },
 };
@@ -474,7 +474,7 @@ fn function_signature(
 fn compile_structs(
     context: &mut Context,
     self_name: &ModuleName,
-    structs: Vec<MoveStruct>,
+    structs: Vec<MoveStruct_>,
 ) -> Result<(Vec<StructDefinition>, Vec<FieldDefinition>)> {
     let mut struct_defs = vec![];
     let mut field_defs = vec![];
@@ -486,8 +486,8 @@ fn compile_structs(
         let sh_idx = context.struct_handle_index(sident.clone())?;
         let (map, _) = type_formals(&s.type_formals)?;
         context.bind_type_formals(map)?;
-        let field_information = compile_fields(context, &mut field_defs, sh_idx, s.fields)?;
-        context.declare_struct_definition_index(s.name)?;
+        let field_information = compile_fields(context, &mut field_defs, sh_idx, s.value.fields)?;
+        context.declare_struct_definition_index(s.value.name)?;
         struct_defs.push(StructDefinition {
             struct_handle: sh_idx,
             field_information,
@@ -532,7 +532,7 @@ fn compile_fields(
 fn compile_functions(
     context: &mut Context,
     self_name: &ModuleName,
-    functions: Vec<(FunctionName, Function)>,
+    functions: Vec<(FunctionName, Function_)>,
 ) -> Result<Vec<FunctionDefinition>> {
     functions
         .into_iter()
@@ -544,9 +544,11 @@ fn compile_function(
     context: &mut Context,
     self_name: &ModuleName,
     name: FunctionName,
-    ast_function: Function,
+    ast_function: Function_,
 ) -> Result<FunctionDefinition> {
     let fh_idx = context.function_handle(self_name.clone(), name)?.1;
+
+    let ast_function = ast_function.value;
 
     let flags = match ast_function.visibility {
         FunctionVisibility::Internal => 0,
@@ -1089,10 +1091,10 @@ fn compile_call(
     context: &mut Context,
     function_frame: &mut FunctionFrame,
     code: &mut Vec<Bytecode>,
-    call: FunctionCall,
+    call: FunctionCall_,
     mut argument_types: VecDeque<InferredType>,
 ) -> Result<VecDeque<InferredType>> {
-    Ok(match call {
+    Ok(match call.value {
         FunctionCall::Builtin(function) => {
             match function {
                 Builtin::GetTxnGasUnitPrice => {
