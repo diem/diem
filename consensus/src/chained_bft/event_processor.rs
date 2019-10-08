@@ -42,6 +42,7 @@ use mirai_annotations::{
     debug_checked_verify_eq,
 };
 use network::proto::BlockRetrievalStatus;
+use std::time::Instant;
 use std::{sync::Arc, time::Duration};
 use termion::color::*;
 
@@ -302,11 +303,7 @@ impl<T: Payload> EventProcessor<T> {
                     .highest_quorum_cert()
                     .certified_block_round()
         {
-            let sync_info = SyncInfo::new(
-                self.block_store.highest_quorum_cert().as_ref().clone(),
-                self.block_store.highest_ledger_info().as_ref().clone(),
-                self.pacemaker.highest_timeout_certificate(),
-            );
+            let sync_info = self.gen_sync_info();
 
             debug!(
                 "Peer {} is at round {} with hqc round {}, sending it {}",
@@ -341,12 +338,22 @@ impl<T: Payload> EventProcessor<T> {
             .certified_block_round();
 
         if current_hqc_round < sync_info.hqc_round() {
+            let deadline = self.pacemaker.current_round_deadline();
+            let now = Instant::now();
+            let deadline_repr = if deadline.gt(&now) {
+                deadline
+                    .checked_duration_since(now)
+                    .map_or("0 ms".to_string(), |v| format!("{:?}", v))
+            } else {
+                now.checked_duration_since(deadline)
+                    .map_or("0 ms".to_string(), |v| format!("Already late by {:?}", v))
+            };
             debug!(
-                "Starting sync: current_hqc_round = {}, sync_info_hqc_round = {}",
+                "Starting sync: current_hqc_round = {}, sync_info_hqc_round = {}, deadline = {:?}",
                 current_hqc_round,
                 sync_info.hqc_round(),
+                deadline_repr,
             );
-            let deadline = self.pacemaker.current_round_deadline();
             let sync_mgr_context = SyncMgrContext::new(sync_info, author);
             self.sync_manager
                 .sync_to(deadline, sync_mgr_context)
@@ -412,11 +419,7 @@ impl<T: Payload> EventProcessor<T> {
 
         self.network
             .broadcast_timeout_msg(TimeoutMsg::new(
-                SyncInfo::new(
-                    self.block_store.highest_quorum_cert().as_ref().clone(),
-                    self.block_store.highest_ledger_info().as_ref().clone(),
-                    self.pacemaker.highest_timeout_certificate(),
-                ),
+                self.gen_sync_info(),
                 PacemakerTimeout::new(round, self.block_store.signer(), vote_msg_to_attach),
                 self.block_store.signer(),
             ))
@@ -604,6 +607,15 @@ impl<T: Payload> EventProcessor<T> {
         Ok(())
     }
 
+    /// Generate sync info that can be attached to an outgoing message
+    fn gen_sync_info(&self) -> SyncInfo {
+        SyncInfo::new(
+            self.block_store.highest_quorum_cert().as_ref().clone(),
+            self.block_store.highest_ledger_info().as_ref().clone(),
+            self.pacemaker.highest_timeout_certificate(),
+        )
+    }
+
     /// The function generates a VoteMsg for a given proposed_block:
     /// * first execute the block and add it to the block store
     /// * then verify the voting rules
@@ -657,6 +669,14 @@ impl<T: Payload> EventProcessor<T> {
             self.author,
             ledger_info_placeholder,
             self.block_store.signer(),
+            // Note that SyncInfo carried by VoteMsg cannot include PacemakerTimeoutCertificate,
+            // because PacemakerTimeoutCertificate might include the VoteMsg, which would create
+            // gigantic chains of SyncInfo.
+            SyncInfo::new(
+                self.block_store.highest_quorum_cert().as_ref().clone(),
+                self.block_store.highest_ledger_info().as_ref().clone(),
+                None,
+            ),
         );
         self.storage
             .save_consensus_state(vote_info.consensus_state().clone(), vote_msg.clone())
@@ -690,7 +710,14 @@ impl<T: Payload> EventProcessor<T> {
                 .log();
             return;
         }
-
+        if self
+            .sync_up(vote_msg.sync_info(), vote_msg.author(), true)
+            .await
+            .is_err()
+        {
+            warn!("Stop vote processing because of sync up error.");
+            return;
+        };
         self.add_vote(vote_msg).await;
     }
 

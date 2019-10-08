@@ -6,6 +6,7 @@ use crate::chained_bft::common::Round;
 use crate::chained_bft::{
     block_storage::VoteReceptionResult,
     consensus_types::{vote_data::VoteData, vote_msg::VoteMsg},
+    test_utils,
 };
 use crypto::HashValue;
 use libra_types::crypto_proxies::random_validator_verifier;
@@ -50,6 +51,7 @@ fn test_qc_aggregation() {
         signers[0].author(),
         li1.clone(),
         &signers[0],
+        test_utils::placeholder_sync_info(),
     );
 
     // first time a new vote is added the result is VoteAdded
@@ -71,6 +73,7 @@ fn test_qc_aggregation() {
         signers[0].author(),
         li2.clone(),
         &signers[0],
+        test_utils::placeholder_sync_info(),
     );
     assert_eq!(
         pending_votes.insert_vote(&vote_data_2_author_0, Arc::clone(&validator_verifier)),
@@ -83,6 +86,7 @@ fn test_qc_aggregation() {
         signers[1].author(),
         li2.clone(),
         &signers[1],
+        test_utils::placeholder_sync_info(),
     );
     assert_eq!(
         pending_votes.insert_vote(&vote_data_2_author_1, Arc::clone(&validator_verifier)),
@@ -94,6 +98,7 @@ fn test_qc_aggregation() {
         signers[2].author(),
         li2.clone(),
         &signers[2],
+        test_utils::placeholder_sync_info(),
     );
     match pending_votes.insert_vote(&vote_data_2_author_2, Arc::clone(&validator_verifier)) {
         VoteReceptionResult::NewQuorumCertificate(qc) => {
@@ -123,6 +128,7 @@ fn test_qc_aggregation_keep_last_only() {
         signers[0].author(),
         li1.clone(),
         &signers[0],
+        test_utils::placeholder_sync_info(),
     );
 
     // first time a new vote is added the result is VoteAdded
@@ -139,6 +145,7 @@ fn test_qc_aggregation_keep_last_only() {
         signers[0].author(),
         li2.clone(),
         &signers[0],
+        test_utils::placeholder_sync_info(),
     );
     assert_eq!(
         pending_votes.insert_vote(&vote_round_2_author_0, Arc::clone(&validator_verifier)),
@@ -151,6 +158,7 @@ fn test_qc_aggregation_keep_last_only() {
         signers[1].author(),
         li1.clone(),
         &signers[1],
+        test_utils::placeholder_sync_info(),
     );
     assert_eq!(
         pending_votes.insert_vote(&vote_round_1_author_1, Arc::clone(&validator_verifier)),
@@ -163,6 +171,7 @@ fn test_qc_aggregation_keep_last_only() {
         signers[1].author(),
         li2.clone(),
         &signers[1],
+        test_utils::placeholder_sync_info(),
     );
     match pending_votes.insert_vote(&vote_round_2_author_1, Arc::clone(&validator_verifier)) {
         VoteReceptionResult::NewQuorumCertificate(qc) => {
@@ -192,6 +201,7 @@ fn test_tc_aggregation() {
         signers[0].author(),
         li1.clone(),
         &signers[0],
+        test_utils::placeholder_sync_info(),
     );
     vote_round_1_author_0.add_round_signature(&signers[0]);
 
@@ -210,6 +220,7 @@ fn test_tc_aggregation() {
         signers[1].author(),
         li2.clone(),
         &signers[1],
+        test_utils::placeholder_sync_info(),
     );
     assert_eq!(
         pending_votes.insert_vote(&vote2_round_1_author_1, Arc::clone(&validator_verifier)),
@@ -246,6 +257,7 @@ fn test_tc_aggregation_keep_last_only() {
         signers[0].author(),
         li1.clone(),
         &signers[0],
+        test_utils::placeholder_sync_info(),
     );
     vote_round_1_author_0.add_round_signature(&signers[0]);
 
@@ -263,6 +275,7 @@ fn test_tc_aggregation_keep_last_only() {
         signers[0].author(),
         li2.clone(),
         &signers[0],
+        test_utils::placeholder_sync_info(),
     );
     vote_round_2_author_0.add_round_signature(&signers[0]);
     assert_eq!(
@@ -278,6 +291,7 @@ fn test_tc_aggregation_keep_last_only() {
         signers[1].author(),
         li3.clone(),
         &signers[1],
+        test_utils::placeholder_sync_info(),
     );
     vote3_round_1_author_1.add_round_signature(&signers[1]);
     assert_eq!(
@@ -293,6 +307,7 @@ fn test_tc_aggregation_keep_last_only() {
         signers[1].author(),
         li4.clone(),
         &signers[1],
+        test_utils::placeholder_sync_info(),
     );
     vote4_round_2_author_1.add_round_signature(&signers[1]);
     match pending_votes.insert_vote(&vote4_round_2_author_1, Arc::clone(&validator_verifier)) {

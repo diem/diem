@@ -1,8 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::common;
-use crate::{common::Author, vote_data::VoteData};
+use crate::{
+    common::{self, Author},
+    sync_info::SyncInfo,
+    vote_data::VoteData,
+};
 use crypto::hash::CryptoHash;
 use failure::{bail, ensure, format_err, ResultExt};
 use libra_types::{
@@ -31,6 +34,8 @@ pub struct VoteMsg {
     signature: Signature,
     /// The round signatures can be aggregated into a timeout certificate if present.
     round_signature: Option<Signature>,
+    /// Sync info carries information about highest QC, TC and LedgerInfo
+    sync_info: SyncInfo,
 }
 
 impl Display for VoteMsg {
@@ -54,6 +59,7 @@ impl VoteMsg {
         author: Author,
         mut ledger_info_placeholder: LedgerInfo,
         validator_signer: &ValidatorSigner,
+        sync_info: SyncInfo,
     ) -> Self {
         ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
         let li_sig = validator_signer
@@ -65,6 +71,7 @@ impl VoteMsg {
             ledger_info: ledger_info_placeholder,
             signature: li_sig.into(),
             round_signature: None,
+            sync_info,
         }
     }
 
@@ -99,6 +106,11 @@ impl VoteMsg {
     /// Return the signature of the vote
     pub fn signature(&self) -> &Signature {
         &self.signature
+    }
+
+    /// SyncInfo of the given vote message
+    pub fn sync_info(&self) -> &SyncInfo {
+        &self.sync_info
     }
 
     /// Returns the signature for the vote_data.block_round() that can be aggregated for
@@ -149,12 +161,17 @@ impl TryFrom<network::proto::Vote> for VoteMsg {
         } else {
             Some(Signature::try_from(&proto.round_signature)?)
         };
+        let sync_info = proto
+            .sync_info
+            .ok_or_else(|| format_err!("Missing sync_info"))?
+            .try_into()?;
         Ok(Self {
             vote_data,
             author,
             ledger_info,
             signature,
             round_signature,
+            sync_info,
         })
     }
 }
@@ -181,6 +198,7 @@ impl From<VoteMsg> for network::proto::Vote {
                 .round_signature
                 .map(|sig| sig.to_bytes())
                 .unwrap_or_else(Vec::new),
+            sync_info: Some(vote.sync_info.into()),
         }
     }
 }

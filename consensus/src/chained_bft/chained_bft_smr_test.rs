@@ -490,11 +490,12 @@ fn block_retrieval_with_timeout() {
         playground.stop_drop_message_for(&nodes[0].signer.author(), &nodes[2].signer.author());
 
         playground
-            .wait_for_messages(2, NetworkPlayground::proposals_only)
+            .wait_for_messages(2, NetworkPlayground::votes_only)
             .await;
+        // Wait until timeout for current round
         playground.drop_message_for(&nodes[1].signer.author(), nodes[0].signer.author());
-        // Block RPC and wait until timeout for current round
         playground.drop_message_for(&nodes[2].signer.author(), nodes[0].signer.author());
+
         playground
             .wait_for_messages(1, NetworkPlayground::timeout_msg_only)
             .await;
@@ -857,7 +858,6 @@ fn secondary_proposers() {
         // 10 rounds should be more than enough. Note that it's hard to say what round is going to
         // have 2 proposals and what round is going to have just one proposal because we don't want
         // to predict the rounds with proposer 0 being a leader.
-        let mut secondary_proposal_committed = false;
         for _ in 0..10 {
             playground
                 .wait_for_messages(2, NetworkPlayground::votes_only)
@@ -866,11 +866,10 @@ fn secondary_proposers() {
             // has been committed.
             while let Ok(Some(li)) = nodes[1].commit_cb_receiver.try_next() {
                 if li.ledger_info().consensus_block_id() == secondary_proposal_id {
-                    secondary_proposal_committed = true;
-                    break;
+                    return;
                 }
             }
         }
-        assert_eq!(secondary_proposal_committed, true);
+        panic!("Did not commit the secondary proposal");
     });
 }

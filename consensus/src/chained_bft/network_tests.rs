@@ -9,7 +9,7 @@ use crate::chained_bft::{
     },
     epoch_manager::EpochManager,
     network::{BlockRetrievalResponse, ConsensusNetworkImpl, NetworkReceivers},
-    test_utils::{consensus_runtime, placeholder_ledger_info},
+    test_utils::{self, consensus_runtime, placeholder_ledger_info},
 };
 use channel;
 use crypto::HashValue;
@@ -359,6 +359,7 @@ fn test_network_api() {
         peers[0],
         placeholder_ledger_info(),
         &signers[0],
+        test_utils::placeholder_sync_info(),
     );
     let previous_block = Block::make_genesis_block();
     let previous_qc = QuorumCert::certificate_for_genesis();

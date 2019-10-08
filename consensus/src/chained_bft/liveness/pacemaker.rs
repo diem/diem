@@ -225,7 +225,14 @@ impl Pacemaker {
         let timeout = self
             .time_interval
             .get_round_duration(round_index_after_committed_round);
-        self.current_round_deadline = Instant::now() + timeout;
+        let now = Instant::now();
+        debug!(
+            "{:?} passed since the previous deadline.",
+            now.checked_duration_since(self.current_round_deadline)
+                .map_or("0 ms".to_string(), |v| format!("{:?}", v))
+        );
+        debug!("Set round deadline to {:?} from now", timeout);
+        self.current_round_deadline = now + timeout;
         timeout
     }
 

@@ -26,6 +26,7 @@ mod mock_state_computer;
 mod mock_storage;
 mod mock_txn_manager;
 
+use crate::chained_bft::consensus_types::sync_info::SyncInfo;
 pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
 pub use mock_storage::{EmptyStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;
@@ -190,6 +191,14 @@ pub fn placeholder_certificate_for_block(
             certified_parent_block_round,
         ),
         LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures),
+    )
+}
+
+pub fn placeholder_sync_info() -> SyncInfo {
+    SyncInfo::new(
+        QuorumCert::certificate_for_genesis(),
+        QuorumCert::certificate_for_genesis(),
+        None,
     )
 }
 
