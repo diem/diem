@@ -18,7 +18,7 @@ use libra_types::{
     ledger_info::LedgerInfo,
 };
 use logger::{set_simple_logger, set_simple_logger_prefix};
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 use termion::color::*;
 use tokio::runtime;
 
@@ -172,7 +172,7 @@ pub fn placeholder_certificate_for_block(
     let mut ledger_info_placeholder = placeholder_ledger_info();
     ledger_info_placeholder.set_consensus_data_hash(consensus_data_hash);
 
-    let mut signatures = HashMap::new();
+    let mut signatures = BTreeMap::new();
     for signer in signers {
         let li_sig = signer
             .sign_message(ledger_info_placeholder.hash())

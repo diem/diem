@@ -22,7 +22,7 @@ use mirai_annotations::{assumed_postcondition, checked_precondition, checked_pre
 use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     convert::{TryFrom, TryInto},
     fmt::{Display, Formatter},
     sync::Arc,
@@ -197,7 +197,7 @@ where
                     0,
                     None,
                 ),
-                HashMap::new(),
+                BTreeMap::new(),
             ),
         );
 
@@ -444,7 +444,7 @@ where
             .encode_u64(self.timestamp_usecs)?
             .encode_u64(self.round)?
             .encode_optional(&self.payload)?
-            .encode_bytes(self.quorum_cert.certified_block_id().as_ref())?
+            .encode_struct(self.quorum_cert)?
             .encode_optional(&self.author)?;
         Ok(())
     }

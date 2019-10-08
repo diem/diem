@@ -10,14 +10,16 @@ use crate::chained_bft::{
     test_utils::placeholder_certificate_for_block,
 };
 
-use crypto::HashValue;
+use crate::chained_bft::consensus_types::vote_data::VoteData;
+use crypto::{hash::CryptoHash, HashValue};
 #[cfg(test)]
 use libra_types::crypto_proxies::SecretKey;
 use libra_types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
 #[cfg(test)]
 use libra_types::validator_signer::proptests;
-use proptest::{prelude::*, std_facade::hash_map::HashMap};
+use proptest::prelude::*;
 use std::{
+    collections::BTreeMap,
     panic,
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -205,7 +207,7 @@ fn test_nil_block() {
     assert_eq!(nil_block.is_nil_block(), true);
     assert!(nil_block.author().is_none());
 
-    let dummy_verifier = Arc::new(ValidatorVerifier::new(HashMap::new()));
+    let dummy_verifier = Arc::new(ValidatorVerifier::new(BTreeMap::new()));
     assert!(nil_block
         .validate_signatures(dummy_verifier.as_ref())
         .is_ok());
@@ -307,6 +309,60 @@ fn test_block_qc() {
         a1_qc.clone(),
         &signer,
     );
+}
+
+// Ensure that blocks that extend from the same QuorumCertificate but with different signatures
+// have different block ids.
+#[test]
+fn test_same_qc_different_authors() {
+    let signer = ValidatorSigner::random(None);
+    let genesis_block = Block::make_genesis_block();
+    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let round = 1;
+    let payload = 42;
+    let current_timestamp = get_current_timestamp().as_micros() as u64;
+    let block_round_1 = Block::make_block(
+        &genesis_block,
+        payload,
+        round,
+        current_timestamp,
+        genesis_qc.clone(),
+        &signer,
+    );
+
+    let signature = signer
+        .sign_message(genesis_qc.ledger_info().ledger_info().hash())
+        .expect("Signing a hash should succeed");
+    let mut ledger_info_altered = genesis_qc.ledger_info().clone();
+    ledger_info_altered.add_signature(signer.author(), signature);
+    let vote_data = VoteData::new(
+        genesis_qc.certified_block_id(),
+        genesis_qc.certified_state_id(),
+        genesis_qc.certified_block_round(),
+        genesis_qc.parent_block_id(),
+        genesis_qc.parent_block_round(),
+    );
+    let genesis_qc_altered = QuorumCert::new(vote_data, ledger_info_altered);
+    let block_round_1_altered = Block::make_block(
+        &genesis_block,
+        payload,
+        round,
+        current_timestamp,
+        genesis_qc_altered.clone(),
+        &signer,
+    );
+
+    let block_round_1_same = Block::make_block(
+        &genesis_block,
+        payload,
+        round,
+        current_timestamp,
+        genesis_qc.clone(),
+        &signer,
+    );
+
+    assert!(block_round_1.id() != block_round_1_altered.id());
+    assert_eq!(block_round_1.id(), block_round_1_same.id());
 }
 
 // Using current_timestamp in this test

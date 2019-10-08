@@ -5,7 +5,7 @@ use crate::account_address::AccountAddress;
 use crypto::*;
 use failure::prelude::*;
 use logger::prelude::*;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// Errors possible during signature verification.
 #[derive(Debug, Fail, PartialEq)]
@@ -63,7 +63,7 @@ impl<PublicKey: VerifyingKey> ValidatorInfo<PublicKey> {
 /// verification, respectively.
 #[derive(Clone)]
 pub struct ValidatorVerifier<PublicKey> {
-    address_to_validator_info: HashMap<AccountAddress, ValidatorInfo<PublicKey>>,
+    address_to_validator_info: BTreeMap<AccountAddress, ValidatorInfo<PublicKey>>,
     /// The minimum voting power required to achieve a quorum
     quorum_voting_power: u64,
     /// Total voting power of all validators (cached from address_to_validator_info)
@@ -74,7 +74,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
     /// Initialize with a map of account address to validator info and set quorum size to
     /// default (`2f + 1`) or zero if `address_to_validator_info` is empty.
     pub fn new(
-        address_to_validator_info: HashMap<AccountAddress, ValidatorInfo<PublicKey>>,
+        address_to_validator_info: BTreeMap<AccountAddress, ValidatorInfo<PublicKey>>,
     ) -> Self {
         let total_voting_power = address_to_validator_info
             .values()
@@ -94,7 +94,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
 
     /// Initializes a validator verifier with a specified quorum voting power.
     pub fn new_with_quorum_voting_power(
-        address_to_validator_info: HashMap<AccountAddress, ValidatorInfo<PublicKey>>,
+        address_to_validator_info: BTreeMap<AccountAddress, ValidatorInfo<PublicKey>>,
         quorum_voting_power: u64,
     ) -> Result<Self> {
         let total_voting_power = address_to_validator_info
@@ -116,7 +116,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
 
     /// Helper method to initialize with a single author and public key with quorum voting power 1.
     pub fn new_single(author: AccountAddress, public_key: PublicKey) -> Self {
-        let mut author_to_validator_info = HashMap::new();
+        let mut author_to_validator_info = BTreeMap::new();
         author_to_validator_info.insert(author, ValidatorInfo::new(public_key, 1));
         Self::new(author_to_validator_info)
     }
@@ -148,7 +148,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
     pub fn verify_aggregated_signature<T>(
         &self,
         hash: HashValue,
-        aggregated_signature: &HashMap<AccountAddress, T>,
+        aggregated_signature: &BTreeMap<AccountAddress, T>,
     ) -> std::result::Result<(), VerifyError>
     where
         T: Into<PublicKey::SignatureMaterial> + Clone,
@@ -166,12 +166,12 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
     pub fn batch_verify_aggregated_signature<T>(
         &self,
         hash: HashValue,
-        aggregated_signature: &HashMap<AccountAddress, T>,
+        aggregated_signature: &BTreeMap<AccountAddress, T>,
     ) -> std::result::Result<(), VerifyError>
     where
         T: Into<PublicKey::SignatureMaterial> + Clone,
     {
-        self.check_num_of_signatures(&aggregated_signature)?;
+        self.check_num_of_signatures(aggregated_signature)?;
         self.check_voting_power(aggregated_signature.keys())?;
         let keys_and_signatures: Vec<(PublicKey, PublicKey::SignatureMaterial)> =
             aggregated_signature
@@ -198,7 +198,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
     /// Ensure there are not more than the maximum expected signatures (all possible signatures).
     fn check_num_of_signatures<T>(
         &self,
-        aggregated_signature: &HashMap<AccountAddress, T>,
+        aggregated_signature: &BTreeMap<AccountAddress, T>,
     ) -> std::result::Result<(), VerifyError>
     where
         T: Into<PublicKey::SignatureMaterial> + Clone,
@@ -280,17 +280,16 @@ mod tests {
     use crate::crypto_proxies::random_validator_verifier;
     use crate::validator_verifier::VerifyError::TooLittleVotingPower;
     use crate::{
-        account_address::AccountAddress,
         validator_signer::ValidatorSigner,
         validator_verifier::{ValidatorInfo, ValidatorVerifier, VerifyError},
     };
     use crypto::{ed25519::*, test_utils::TEST_SEED, HashValue};
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     #[test]
     fn test_check_voting_power() {
         let (validator_signers, validator_verifier) = random_validator_verifier(2, None, false);
-        let mut author_to_signature_map: HashMap<AccountAddress, Ed25519Signature> = HashMap::new();
+        let mut author_to_signature_map = BTreeMap::new();
 
         assert_eq!(
             validator_verifier
@@ -353,8 +352,7 @@ mod tests {
         let random_hash = HashValue::random();
 
         // Create a map from authors to public keys with equal voting power.
-        let mut author_to_public_key_map: HashMap<AccountAddress, ValidatorInfo<Ed25519PublicKey>> =
-            HashMap::new();
+        let mut author_to_public_key_map = BTreeMap::new();
         for validator in validator_signers.iter() {
             author_to_public_key_map.insert(
                 validator.author(),
@@ -363,7 +361,7 @@ mod tests {
         }
 
         // Create a map from author to signatures.
-        let mut author_to_signature_map: HashMap<AccountAddress, Ed25519Signature> = HashMap::new();
+        let mut author_to_signature_map = BTreeMap::new();
         for validator in validator_signers.iter() {
             author_to_signature_map.insert(
                 validator.author(),
@@ -463,9 +461,8 @@ mod tests {
 
         // Create a map from authors to public keys with increasing weights (0, 1, 2, 3) and
         // a map of author to signature.
-        let mut author_to_public_key_map: HashMap<AccountAddress, ValidatorInfo<Ed25519PublicKey>> =
-            HashMap::new();
-        let mut author_to_signature_map: HashMap<AccountAddress, Ed25519Signature> = HashMap::new();
+        let mut author_to_public_key_map = BTreeMap::new();
+        let mut author_to_signature_map = BTreeMap::new();
         for (i, validator_signer) in validator_signers.iter().enumerate() {
             author_to_public_key_map.insert(
                 validator_signer.author(),

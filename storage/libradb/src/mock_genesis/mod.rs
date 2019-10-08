@@ -24,7 +24,7 @@ use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,
 };
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 fn gen_mock_genesis() -> (
     TransactionInfo,
@@ -83,7 +83,7 @@ fn gen_mock_genesis() -> (
         None,
     );
     let ledger_info_with_sigs =
-        LedgerInfoWithSignatures::new(ledger_info, HashMap::new() /* signatures */);
+        LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new() /* signatures */);
 
     (txn_info, ledger_info_with_sigs, txn_to_commit)
 }
