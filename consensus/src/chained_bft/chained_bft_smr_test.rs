@@ -212,7 +212,6 @@ fn basic_start_test() {
             ProposalUncheckedSignatures::<Vec<u64>>::try_from(msg[0].1.clone())
                 .unwrap()
                 .into();
-        assert_eq!(first_proposal.proposal().height(), 1);
         assert_eq!(first_proposal.proposal().parent_id(), genesis.id());
         assert_eq!(
             first_proposal.proposal().quorum_cert().certified_block_id(),
@@ -292,7 +291,6 @@ fn basic_full_round(
                 .unwrap()
                 .into();
         assert!(next_proposal.proposal().round() >= 2);
-        assert!(next_proposal.proposal().height() >= 2);
     });
 }
 
@@ -350,16 +348,18 @@ fn basic_commit_and_restart() {
             let vote_msg = VoteMsg::try_from(votes[0].1.clone()).unwrap();
             block_ids.push(vote_msg.vote_data().block_id());
         }
+
         assert!(
-            nodes[0].smr.block_store().unwrap().root().height() >= 6,
-            "height of node 0 is {}",
-            nodes[0].smr.block_store().unwrap().root().height()
+            nodes[0].smr.block_store().unwrap().root().round() >= 7,
+            "round of node 0 is {}",
+            nodes[0].smr.block_store().unwrap().root().round()
         );
         assert!(
-            nodes[1].smr.block_store().unwrap().root().height() >= 6,
-            "height of node 1 is {}",
-            nodes[1].smr.block_store().unwrap().root().height()
+            nodes[1].smr.block_store().unwrap().root().round() >= 7,
+            "round of node 1 is {}",
+            nodes[1].smr.block_store().unwrap().root().round()
         );
+
         // This message is for proposal with round 11 to delivery the QC, but not gather the QC
         // so after restart, proposer will propose round 11 again.
         playground
@@ -390,19 +390,20 @@ fn basic_commit_and_restart() {
                 }
             }
         }
+
         // Because of the race, we can't assert the commit reliably, instead we assert
         // both nodes commit to at least round 17.
         // We cannot reliable wait for the event of "commit & prune": the only thing that we know is
         // that after receiving the vote for round 20, the root should be at least height 16.
         assert!(
-            nodes[0].smr.block_store().unwrap().root().height() >= 16,
-            "height of node 0 is {}",
-            nodes[0].smr.block_store().unwrap().root().height()
+            nodes[0].smr.block_store().unwrap().root().round() >= 18,
+            "round of node 0 is {}",
+            nodes[0].smr.block_store().unwrap().root().round()
         );
         assert!(
-            nodes[1].smr.block_store().unwrap().root().height() >= 16,
-            "height of node 1 is {}",
-            nodes[1].smr.block_store().unwrap().root().height()
+            nodes[1].smr.block_store().unwrap().root().round() >= 18,
+            "round of node 1 is {}",
+            nodes[1].smr.block_store().unwrap().root().round()
         );
     });
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    common::{Author, Height, Round},
+    common::{Author, Round},
     consensus_types::{quorum_cert::QuorumCert, vote_data::VoteData},
 };
 use canonical_serialization::{
@@ -61,8 +61,6 @@ pub struct Block<T> {
     /// The round of a block is an internal monotonically increasing counter used by Consensus
     /// protocol.
     round: Round,
-    /// The height of a block is its position in the chain (block height = parent block height + 1)
-    height: Height,
     /// The approximate physical time a block is proposed by a proposer.  This timestamp is used
     /// for
     /// * Time-dependent logic in smart contracts (the current time of execution)
@@ -143,17 +141,6 @@ impl<T> Block<T> {
         self.quorum_cert.certified_block_id()
     }
 
-    pub fn height(&self) -> Height {
-        // Height:
-        // - Reasonable to assume that the height of the block chain will not grow enough to exceed
-        // std::u64::MAX - 1 in the next million years at least
-        // - The upper limit of std::u64::MAX - 1 ensures that the parent check doesn't
-        // cause addition overflow.
-        // (Block::make_block)
-        assumed_postcondition!(self.height < std::u64::MAX);
-        self.height
-    }
-
     pub fn round(&self) -> Round {
         // Round numbers:
         // - are reset to 0 periodically.
@@ -217,7 +204,6 @@ where
         Block {
             id: *GENESIS_BLOCK_ID,
             round: 0,
-            height: 0,
             timestamp_usecs: 0, // The beginning of UNIX TIME
             quorum_cert: genesis_quorum_cert,
             block_type: BlockType::Genesis,
@@ -229,7 +215,6 @@ where
     pub fn new_internal(
         payload: T,
         round: Round,
-        height: Height,
         timestamp_usecs: u64,
         quorum_cert: QuorumCert,
         validator_signer: &ValidatorSigner,
@@ -237,7 +222,6 @@ where
         let block_internal = BlockSerializer {
             payload: Some(&payload),
             round,
-            height,
             timestamp_usecs,
             quorum_cert: &quorum_cert,
             author: Some(validator_signer.author()),
@@ -251,7 +235,6 @@ where
         Block {
             id,
             round,
-            height,
             timestamp_usecs,
             quorum_cert,
             block_type: BlockType::Proposal {
@@ -274,14 +257,9 @@ where
         checked_precondition_eq!(quorum_cert.certified_block_id(), parent_block.id());
         checked_precondition!(round > parent_block.round());
 
-        // This precondition guards the addition overflow caused by passing
-        // parent_block.height() + 1 to new_internal.
-        checked_precondition!(parent_block.height() < std::u64::MAX);
         Block::new_internal(
             payload,
             round,
-            // Height is always parent's height + 1 because it's just the position in the chain.
-            parent_block.height() + 1,
             timestamp_usecs,
             quorum_cert,
             validator_signer,
@@ -294,10 +272,6 @@ where
         checked_precondition_eq!(quorum_cert.certified_block_id(), parent_block.id());
         checked_precondition!(round > parent_block.round());
 
-        // This precondition guards the addition overflow caused by using
-        // parent_block.height() + 1 in the construction of BlockSerializer.
-        checked_precondition!(parent_block.height() < std::u64::MAX);
-
         // We want all the NIL blocks to agree on the timestamps even though they're generated
         // independently by different validators, hence we're using the timestamp of a parent + 1.
         // The reason for artificially adding 1 usec is to support execution state synchronization,
@@ -307,7 +281,6 @@ where
         let block_serializer = BlockSerializer::<T> {
             payload: None,
             round,
-            height: parent_block.height() + 1,
             timestamp_usecs,
             quorum_cert: &quorum_cert,
             // the author here doesn't really matter for as long as all the NIL Blocks are hashing
@@ -320,7 +293,6 @@ where
         Block {
             id,
             round,
-            height: parent_block.height() + 1,
             timestamp_usecs,
             quorum_cert,
             block_type: BlockType::NilBlock,
@@ -350,8 +322,7 @@ where
         }
         ensure!(self.id() == self.hash(), "Block id mismatch the hash");
         ensure!(
-            self.quorum_cert().certified_block_round() < self.round()
-                && self.round() >= self.height(),
+            self.quorum_cert().certified_block_round() < self.round(),
             "Block has invalid round"
         );
         Ok(())
@@ -399,10 +370,6 @@ where
         self.quorum_cert().certified_block_id()
     }
 
-    pub fn height(&self) -> Height {
-        self.block().height()
-    }
-
     pub fn round(&self) -> Round {
         self.block().round()
     }
@@ -435,7 +402,6 @@ where
         let block_internal = BlockSerializer {
             payload: self.payload(),
             round: self.round,
-            height: self.height,
             timestamp_usecs: self.timestamp_usecs,
             quorum_cert: &self.quorum_cert,
             author,
@@ -449,7 +415,6 @@ where
 struct BlockSerializer<'a, T> {
     payload: Option<&'a T>,
     round: Round,
-    height: Height,
     timestamp_usecs: u64,
     quorum_cert: &'a QuorumCert,
     author: Option<Author>,
@@ -478,7 +443,6 @@ where
         serializer
             .encode_u64(self.timestamp_usecs)?
             .encode_u64(self.round)?
-            .encode_u64(self.height)?
             .encode_optional(&self.payload)?
             .encode_bytes(self.quorum_cert.certified_block_id().as_ref())?
             .encode_optional(&self.author)?;
@@ -507,12 +471,11 @@ where
         let id = HashValue::from_slice(proto.id.as_ref())?;
         let timestamp_usecs = proto.timestamp_usecs;
         let round = proto.round;
-        let height = proto.height;
         let quorum_cert = proto
             .quorum_cert
             .ok_or_else(|| format_err!("Missing quorum_cert"))?
             .try_into()?;
-        let block_type = if height == 0 {
+        let block_type = if round == 0 {
             BlockType::Genesis
         } else if proto.author.is_empty() {
             BlockType::NilBlock
@@ -527,7 +490,6 @@ where
             id,
             round,
             timestamp_usecs,
-            height,
             quorum_cert,
             block_type,
         })
@@ -559,7 +521,6 @@ where
             payload,
             round: block.round,
             timestamp_usecs: block.timestamp_usecs,
-            height: block.height,
             quorum_cert: Some(block.quorum_cert.into()),
             signature,
             author,

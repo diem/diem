@@ -313,7 +313,6 @@ fn basic_new_rank_event_test() {
         assert_eq!(pending_proposals.len(), 1);
         assert_eq!(pending_proposals[0].proposal().round(), 2);
         assert_eq!(pending_proposals[0].proposal().parent_id(), a1.id());
-        assert_eq!(pending_proposals[0].proposal().height(), 2);
         assert_eq!(
             pending_proposals[0]
                 .proposal()

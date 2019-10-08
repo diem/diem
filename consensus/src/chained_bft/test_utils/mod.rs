@@ -134,7 +134,6 @@ impl TreeInserter {
         let new_block = Block::new_internal(
             block.payload().unwrap().clone(),
             block.round(),
-            block.height(),
             block.timestamp_usecs(),
             parent_qc,
             block_signer,

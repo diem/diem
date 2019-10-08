@@ -76,8 +76,6 @@ message Block {
   bytes payload = 2;
   // The round of the block (internal monotonically increasing counter).
   uint64 round = 3;
-  // The height of the block (position in the chain).
-  uint64 height = 4;
   // The approximate physical microseconds since the epoch when the block was proposed
   uint64 timestamp_usecs = 5;
   // Contains the quorum certified ancestor and whether the quorum certified

@@ -23,7 +23,6 @@ mod proposal_generator_test;
 /// used by a validator that believes it's a valid candidate for serving as a proposer at a given
 /// round.
 /// ProposalGenerator is the one choosing the branch to extend:
-/// - height is determined as parent.height + 1,
 /// - round is given by the caller (typically determined by Pacemaker).
 /// The transactions for the proposed block are delivered by TxnManager.
 ///
@@ -90,8 +89,7 @@ impl<T: Payload> ProposalGenerator<T> {
     /// The logic for choosing the branch to extend is as follows:
     /// 1. The function gets the highest head of a one-chain from block tree.
     /// The new proposal must extend hqc_block to ensure optimistic responsiveness.
-    /// 2. While the height is ultimately determined as the parent.height + 1, the round is provided
-    /// by the caller.
+    /// 2. The round is provided by the caller.
     /// 3. In case a given round is not greater than the calculated parent, return an OldRound
     /// error.
     pub async fn generate_proposal(

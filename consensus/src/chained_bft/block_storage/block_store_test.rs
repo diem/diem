@@ -62,7 +62,6 @@ fn test_block_store_create_block() {
     let a1 = block_store.create_block(genesis.block(), vec![1], 1, 1);
     assert_eq!(a1.parent_id(), genesis.id());
     assert_eq!(a1.round(), 1);
-    assert_eq!(a1.height(), 1);
     assert_eq!(a1.quorum_cert().certified_block_id(), genesis.id());
 
     let a1_ref = block_on(block_store.execute_and_insert_block(a1)).unwrap();
@@ -95,7 +94,6 @@ fn test_block_store_create_block() {
     let b1 = block_store.create_block(a1_ref.block(), vec![2], 2, 2);
     assert_eq!(b1.parent_id(), a1_ref.id());
     assert_eq!(b1.round(), 2);
-    assert_eq!(b1.height(), 2);
     assert_eq!(b1.quorum_cert().certified_block_id(), a1_ref.id());
 }
 
@@ -205,9 +203,7 @@ proptest! {
                 else {
                     // The parent must be present if we get to this line.
                     let parent = block_store.get_block(block.parent_id()).unwrap();
-                    if block.height() != parent.height() + 1 {
-                        prop_assert!(res.is_err());
-                    } else if block.round() <= parent.round() {
+                    if block.round() <= parent.round() {
                         prop_assert!(res.is_err());
                     } else {
                         let executed_block = res.unwrap();
@@ -415,7 +411,6 @@ fn test_illegal_timestamp() {
     let genesis = block_store.root();
     let block_with_illegal_timestamp = Block::<Vec<usize>>::new_internal(
         vec![],
-        1,
         1,
         // This timestamp is illegal, it is the same as genesis
         genesis.timestamp_usecs(),
