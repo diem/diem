@@ -1,14 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use codespan::Span;
-use ir_to_bytecode_syntax::ast::{Loc, QualifiedModuleIdent, Var_};
+use failure::prelude::*;
+use ir_to_bytecode_syntax::ast::QualifiedModuleIdent;
+use libra_types::account_address::AccountAddress;
+use libra_types::identifier::Identifier;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::collections::HashMap;
 use std::ops::Bound;
-use types::account_address::AccountAddress;
-use types::identifier::Identifier;
 use vm::file_format::{
     CodeOffset, FieldDefinitionIndex, FunctionDefinitionIndex, StructDefinitionIndex, TableIndex,
 };
@@ -18,237 +17,313 @@ use vm::internals::ModuleIndex;
 // Source location mapping
 //***************************************************************************
 
-pub type SourceMap = Vec<ModuleSourceMap>;
-pub type SourceName = (Identifier, Loc);
+pub type SourceMap<Location> = Vec<ModuleSourceMap<Location>>;
+pub type SourceName<Location> = (Identifier, Location);
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct StructSourceMap {
-    // NB type parameters need to be added in the order of their declaration
-    type_parameters: Vec<SourceName>,
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct StructSourceMap<Location: Clone + Eq> {
+    /// The source declaration location of the struct
+    pub decl_location: Location,
 
-    // NB that fields to a struct source map need to be added in the order of the fields.
-    fields: Vec<SourceName>,
+    /// Important: type parameters need to be added in the order of their declaration
+    pub type_parameters: Vec<SourceName<Location>>,
+
+    /// Note that fields to a struct source map need to be added in the order of the fields in the
+    /// struct definition.
+    pub fields: Vec<Location>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FunctionSourceMap {
-    // NB type parameters need to be added in the order of their declaration
-    type_parameters: Vec<SourceName>,
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FunctionSourceMap<Location: Clone + Eq> {
+    /// The source location for the definition of this entire function. Note that in certain
+    /// instances this will have no valid source location e.g. the "main" function for modules that
+    /// are treated as programs are synthesized and therefore have no valid source location.
+    pub decl_location: Location,
 
-    // The index into the vector is the locals index. The corresponding `(Identifier, Loc)` tuple
-    // is the name and location of the local.
-    locals: Vec<SourceName>,
+    /// Note that type parameters need to be added in the order of their declaration
+    pub type_parameters: Vec<SourceName<Location>>,
 
-    // The source location map for the function body.
-    code_map: BTreeMap<CodeOffset, Loc>,
+    /// The index into the vector is the locals index. The corresponding `(Identifier, Location)` tuple
+    /// is the name and location of the local.
+    pub locals: Vec<SourceName<Location>>,
+
+    /// The source location map for the function body.
+    pub code_map: BTreeMap<CodeOffset, Location>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ModuleSourceMap {
-    // The name <address.module_name> for module that this source map is for
-    module_name: (AccountAddress, Identifier),
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ModuleSourceMap<Location: Clone + Eq> {
+    /// The name <address.module_name> for module that this source map is for
+    pub module_name: (AccountAddress, Identifier),
 
     // A mapping of StructDefinitionIndex to source map for each struct/resource
-    struct_map: HashMap<TableIndex, StructSourceMap>,
+    struct_map: BTreeMap<TableIndex, StructSourceMap<Location>>,
 
     // A mapping of FunctionDefinitionIndex to the soure map for that function.
-    function_map: HashMap<TableIndex, FunctionSourceMap>,
+    function_map: BTreeMap<TableIndex, FunctionSourceMap<Location>>,
 }
 
-impl StructSourceMap {
-    pub fn new() -> Self {
+impl<Location: Clone + Eq> StructSourceMap<Location> {
+    pub fn new(decl_location: Location) -> Self {
         Self {
+            decl_location,
             type_parameters: Vec::new(),
             fields: Vec::new(),
         }
     }
 
-    pub fn add_type_parameter(&mut self, type_name: SourceName) {
+    pub fn add_type_parameter(&mut self, type_name: SourceName<Location>) {
         self.type_parameters.push(type_name)
     }
 
-    pub fn get_type_parameter_name(&self, type_parameter_idx: usize) -> Option<SourceName> {
+    pub fn get_type_parameter_name(
+        &self,
+        type_parameter_idx: usize,
+    ) -> Option<SourceName<Location>> {
         self.type_parameters.get(type_parameter_idx).cloned()
     }
 
-    pub fn add_field(&mut self, field_name: SourceName) {
-        self.fields.push(field_name)
+    pub fn add_field_location(&mut self, field_loc: Location) {
+        self.fields.push(field_loc)
     }
 
-    pub fn get_field_name(&self, field_index: FieldDefinitionIndex) -> Option<SourceName> {
+    pub fn get_field_location(&self, field_index: FieldDefinitionIndex) -> Option<Location> {
         self.fields.get(field_index.into_index()).cloned()
     }
 }
 
-impl FunctionSourceMap {
-    pub fn new() -> Self {
+impl<Location: Clone + Eq> FunctionSourceMap<Location> {
+    pub fn new(decl_location: Location) -> Self {
         Self {
+            decl_location,
             type_parameters: Vec::new(),
             locals: Vec::new(),
             code_map: BTreeMap::new(),
         }
     }
 
-    pub fn add_type_parameter(&mut self, type_name: SourceName) {
+    pub fn add_type_parameter(&mut self, type_name: SourceName<Location>) {
         self.type_parameters.push(type_name)
     }
 
-    pub fn get_type_parameter_name(&self, type_parameter_idx: usize) -> Option<SourceName> {
+    pub fn get_type_parameter_name(
+        &self,
+        type_parameter_idx: usize,
+    ) -> Option<SourceName<Location>> {
         self.type_parameters.get(type_parameter_idx).cloned()
     }
 
     /// A single source-level instruction may possibly map to a number of bytecode instructions. In
     /// order to not store a location for each instruction, we instead use a BTreeMap to represent
-    /// a segement map (holding the left-hand-sands of the segments).  Thus, an instruction
-    /// sequence is always marked from the starting point. To determine what part of the source
+    /// a segment map (holding the left-hand-sides of each segment).  Thus, an instruction
+    /// sequence is always marked from its starting point. To determine what part of the source
     /// code corresponds to a given `CodeOffset` we query to find the element that is the largest
-    /// number less than or equal to the query. This will give us the location for that bytcode
+    /// number less than or equal to the query. This will give us the location for that bytecode
     /// range.
-    pub fn add_code_mapping(&mut self, start_offset: CodeOffset, location: Loc) {
-        self.code_map.insert(start_offset, location);
+    pub fn add_code_mapping(&mut self, start_offset: CodeOffset, location: Location) {
+        let possible_segment = self.get_code_location(start_offset);
+        match possible_segment.map(|other_location| other_location != location) {
+            Some(true) | None => {
+                self.code_map.insert(start_offset, location);
+            }
+            _ => (),
+        };
     }
 
-    // NB that locations must be added in order.
-    pub fn add_local_mapping(&mut self, name: Var_) {
-        let loc = name.span;
-        let name = Identifier::from(name.value.name());
-        self.locals.push((name, loc));
+    // Not that it is important that locations be added in order.
+    pub fn add_local_mapping(&mut self, name: SourceName<Location>) {
+        self.locals.push(name);
     }
 
     /// Recall that we are using a segment tree. We therefore lookup the location for the code
     /// offset by performing a range query for the largest number less than or equal to the code
     /// offset passed in.
-    pub fn get_code_location(&self, code_offset: CodeOffset) -> Option<Loc> {
+    pub fn get_code_location(&self, code_offset: CodeOffset) -> Option<Location> {
         self.code_map
             .range((Bound::Unbounded, Bound::Included(&code_offset)))
             .next_back()
-            .and_then(|(_, vl)| Some(Span::from(vl.clone())))
+            .map(|(_, vl)| vl.clone())
     }
 
-    pub fn get_local_name(&self, local_index: u64) -> Option<SourceName> {
+    pub fn get_local_name(&self, local_index: u64) -> Option<SourceName<Location>> {
         self.locals.get(local_index as usize).cloned()
     }
 }
 
-impl ModuleSourceMap {
+impl<Location: Clone + Eq> ModuleSourceMap<Location> {
     pub fn new(module_name: QualifiedModuleIdent) -> Self {
         Self {
             module_name: (module_name.address, module_name.name.into_inner()),
-            struct_map: HashMap::new(),
-            function_map: HashMap::new(),
+            struct_map: BTreeMap::new(),
+            function_map: BTreeMap::new(),
+        }
+    }
+
+    pub fn add_top_level_function_mapping(
+        &mut self,
+        fdef_idx: FunctionDefinitionIndex,
+        location: Location,
+    ) -> Result<()> {
+        match self.function_map.insert(fdef_idx.0, FunctionSourceMap::new(location)) {
+                None => Ok(()),
+                Some(_) => Err(format_err!(
+                    "Multiple functions at same function definition index encountered when constructing source map"
+                )),
         }
     }
 
     pub fn add_function_type_parameter_mapping(
         &mut self,
         fdef_idx: FunctionDefinitionIndex,
-        name: SourceName,
-    ) {
-        let func_entry = self
-            .function_map
-            .entry(fdef_idx.0)
-            .or_insert_with(|| FunctionSourceMap::new());
+        name: SourceName<Location>,
+    ) -> Result<()> {
+        let func_entry = self.function_map.get_mut(&fdef_idx.0).ok_or_else(|| {
+            format_err!("Tried to add function type parameter mapping to undefined function index")
+        })?;
         func_entry.add_type_parameter(name);
+        Ok(())
     }
 
     pub fn get_function_type_parameter_name(
         &self,
         fdef_idx: FunctionDefinitionIndex,
         type_parameter_idx: usize,
-    ) -> Option<SourceName> {
+    ) -> Result<SourceName<Location>> {
         self.function_map
             .get(&fdef_idx.0)
             .and_then(|function_source_map| {
                 function_source_map.get_type_parameter_name(type_parameter_idx)
             })
+            .ok_or_else(|| format_err!("Unable to get function type parameter name"))
     }
 
     pub fn add_code_mapping(
         &mut self,
         function_definition_index: FunctionDefinitionIndex,
         start_offset: CodeOffset,
-        location: Loc,
-    ) {
+        location: Location,
+    ) -> Result<()> {
         let func_entry = self
             .function_map
-            .entry(function_definition_index.0)
-            .or_insert_with(|| FunctionSourceMap::new());
+            .get_mut(&function_definition_index.0)
+            .ok_or_else(|| format_err!("Tried to add code mapping to undefined function index"))?;
         func_entry.add_code_mapping(start_offset, location);
+        Ok(())
     }
 
     /// Given a function definition and a code offset within that function definition, this returns
     /// the location in the source code associated with the instruction at that offset.
     pub fn get_code_location(
         &self,
-        function_definition_index: &FunctionDefinitionIndex,
+        function_definition_index: FunctionDefinitionIndex,
         offset: CodeOffset,
-    ) -> Option<Loc> {
+    ) -> Result<Location> {
         self.function_map
             .get(&function_definition_index.0)
             .and_then(|function_source_map| function_source_map.get_code_location(offset))
+            .ok_or_else(|| format_err!("Tried to get code location from undefined function index"))
     }
 
-    pub fn add_local_mapping(&mut self, fdef_idx: FunctionDefinitionIndex, name: Var_) {
+    pub fn add_local_mapping(
+        &mut self,
+        fdef_idx: FunctionDefinitionIndex,
+        name: SourceName<Location>,
+    ) -> Result<()> {
         let func_entry = self
             .function_map
-            .entry(fdef_idx.0)
-            .or_insert_with(|| FunctionSourceMap::new());
+            .get_mut(&fdef_idx.0)
+            .ok_or_else(|| format_err!("Tried to add local mapping to undefined function index"))?;
         func_entry.add_local_mapping(name);
+        Ok(())
     }
 
     pub fn get_local_name(
         &self,
         fdef_idx: FunctionDefinitionIndex,
         index: u64,
-    ) -> Option<SourceName> {
+    ) -> Result<SourceName<Location>> {
         self.function_map
             .get(&fdef_idx.0)
             .and_then(|function_source_map| function_source_map.get_local_name(index))
+            .ok_or_else(|| format_err!("Tried to get local name at undefined function index"))
+    }
+
+    pub fn add_top_level_struct_mapping(
+        &mut self,
+        struct_def_idx: StructDefinitionIndex,
+        location: Location,
+    ) -> Result<()> {
+        match self.struct_map.insert(struct_def_idx.0, StructSourceMap::new(location)) {
+                None => Ok(()),
+                Some(_) => Err(format_err!(
+                "Multiple structs at same struct definition index encountered when constructing source map"
+                )),
+        }
     }
 
     pub fn add_struct_field_mapping(
         &mut self,
         struct_def_idx: StructDefinitionIndex,
-        name: SourceName,
-    ) {
+        location: Location,
+    ) -> Result<()> {
         let struct_entry = self
             .struct_map
-            .entry(struct_def_idx.0)
-            .or_insert_with(|| StructSourceMap::new());
-        struct_entry.add_field(name);
+            .get_mut(&struct_def_idx.0)
+            .ok_or_else(|| format_err!("Tried to add file mapping to undefined struct index"))?;
+        struct_entry.add_field_location(location);
+        Ok(())
     }
 
     pub fn get_struct_field_name(
         &self,
         struct_def_idx: StructDefinitionIndex,
         field_idx: FieldDefinitionIndex,
-    ) -> Option<SourceName> {
+    ) -> Option<Location> {
         self.struct_map
             .get(&struct_def_idx.0)
-            .and_then(|struct_source_map| struct_source_map.get_field_name(field_idx))
+            .and_then(|struct_source_map| struct_source_map.get_field_location(field_idx))
     }
 
     pub fn add_struct_type_parameter_mapping(
         &mut self,
         fdef_idx: StructDefinitionIndex,
-        name: SourceName,
-    ) {
-        let struct_entry = self
-            .struct_map
-            .entry(fdef_idx.0)
-            .or_insert_with(|| StructSourceMap::new());
+        name: SourceName<Location>,
+    ) -> Result<()> {
+        let struct_entry = self.struct_map.get_mut(&fdef_idx.0).ok_or_else(|| {
+            format_err!("Tried to add function type parameter mapping to undefined function index")
+        })?;
         struct_entry.add_type_parameter(name);
+        Ok(())
     }
 
     pub fn get_struct_type_parameter_name(
         &self,
         fdef_idx: StructDefinitionIndex,
         type_parameter_idx: usize,
-    ) -> Option<SourceName> {
+    ) -> Result<SourceName<Location>> {
         self.struct_map
             .get(&fdef_idx.0)
             .and_then(|struct_source_map| {
                 struct_source_map.get_type_parameter_name(type_parameter_idx)
             })
+            .ok_or_else(|| format_err!("Unable to get function type parameter name"))
+    }
+
+    pub fn get_function_source_map(
+        &self,
+        fdef_idx: FunctionDefinitionIndex,
+    ) -> Result<&FunctionSourceMap<Location>> {
+        self.function_map
+            .get(&fdef_idx.0)
+            .ok_or_else(|| format_err!("Unable to get function source map"))
+    }
+
+    pub fn get_struct_source_map(
+        &self,
+        fdef_idx: StructDefinitionIndex,
+    ) -> Result<&StructSourceMap<Location>> {
+        self.struct_map
+            .get(&fdef_idx.0)
+            .ok_or_else(|| format_err!("Unable to get struct source map"))
     }
 }

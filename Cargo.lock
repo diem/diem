@@ -383,21 +383,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bytecode_source_map"
-version = "0.1.0"
-dependencies = [
- "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "failure_ext 0.1.0",
- "ir_to_bytecode_syntax 0.1.0",
- "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
- "types 0.1.0",
- "vm 0.1.0",
-]
-
-[[package]]
-name = "bytecode_verifier"
+name = "bytecode-verifier"
 version = "0.1.0"
 dependencies = [
  "failure_ext 0.1.0",
@@ -407,6 +393,21 @@ dependencies = [
  "petgraph 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
  "vm_runtime_types 0.1.0",
+]
+
+[[package]]
+name = "bytecode_source_map"
+version = "0.1.0"
+dependencies = [
+ "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure_ext 0.1.0",
+ "ir_to_bytecode_syntax 0.1.0",
+ "libra-types 0.1.0",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vm 0.1.0",
 ]
 
 [[package]]
@@ -684,8 +685,8 @@ dependencies = [
 name = "compiler"
 version = "0.1.0"
 dependencies = [
+ "bytecode-verifier 0.1.0",
  "bytecode_source_map 0.1.0",
- "bytecode_verifier 0.1.0",
  "failure_ext 0.1.0",
  "ir_to_bytecode 0.1.0",
  "libra-types 0.1.0",
@@ -4263,8 +4264,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "stdlib"
 version = "0.1.0"
 dependencies = [
+ "bytecode-verifier 0.1.0",
  "bytecode_source_map 0.1.0",
- "bytecode_verifier 0.1.0",
  "ir_to_bytecode 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",

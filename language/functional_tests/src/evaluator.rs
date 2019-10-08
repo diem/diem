@@ -343,7 +343,7 @@ fn eval_transaction(
             log.append(EvaluationOutput::Stage(Stage::Compiler));
 
             let compiled_script =
-                unwrap_or_abort!(compile_script(*addr, parsed_script, &*deps), log);
+                unwrap_or_abort!(compile_script(*addr, parsed_script, &*deps), log).0;
             log.append(EvaluationOutput::Output(Box::new(
                 OutputType::CompiledScript(compiled_script.clone()),
             )));
@@ -386,7 +386,7 @@ fn eval_transaction(
             log.append(EvaluationOutput::Stage(Stage::Compiler));
 
             let compiled_module =
-                unwrap_or_abort!(compile_module(*addr, parsed_module, &*deps), log);
+                unwrap_or_abort!(compile_module(*addr, parsed_module, &*deps), log).0;
             log.append(EvaluationOutput::Output(Box::new(
                 OutputType::CompiledModule(compiled_module.clone()),
             )));

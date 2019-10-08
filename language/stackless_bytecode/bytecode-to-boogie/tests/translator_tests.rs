@@ -16,8 +16,9 @@ fn compile_files(file_names: Vec<String>) -> Vec<VerifiedModule> {
     for file_name in dep_files {
         let code = fs::read_to_string(file_name).unwrap();
         let module = parse_module(&code).unwrap();
-        let compiled_module =
-            compile_module(address, module, &verified_modules).expect("module failed to compile");
+        let compiled_module = compile_module(address, module, &verified_modules)
+            .expect("module failed to compile")
+            .0;
         let verified_module_res = VerifiedModule::new(compiled_module);
 
         match verified_module_res {
