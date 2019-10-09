@@ -1,5 +1,5 @@
 [package]
-name = "canonical_serialization"
+name = "canonical-serialization"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra canonical serialization"

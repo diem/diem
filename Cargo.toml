@@ -7,7 +7,7 @@ members = [
     "client",
     "client/libra_wallet",
     "common/bounded-executor",
-    "common/canonical_serialization",
+    "common/canonical-serialization",
     "common/crash_handler",
     "common/datatest-stable",
     "common/debug_interface",

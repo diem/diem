@@ -17,7 +17,7 @@ mirai-annotations = "1.4.0"
 proptest = "0.9"
 proptest-derive = "0.1.1"
 serde = { version = "1", features = ["derive"] }
-canonical_serialization = { path = "../../common/canonical_serialization" }
+canonical-serialization = { path = "../../common/canonical-serialization" }
 crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 proptest_helpers = { path = "../../common/proptest_helpers" }
