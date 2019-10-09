@@ -86,7 +86,6 @@ impl ChainedBftProvider {
             initial_data.highest_timeout_certificates()
         );
         let smr = ChainedBftSMR::new(
-            initial_setup.author,
             initial_setup.signer,
             proposer,
             network,
