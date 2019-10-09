@@ -35,7 +35,7 @@ channel = { path = "../common/channel" }
 config = { path = "../config" }
 consensus-types = { path = "consensus-types", default-features = false }
 crypto = { path = "../crypto/crypto" }
-debug_interface = { path = "../common/debug_interface" }
+debug-interface = { path = "../common/debug-interface" }
 executor = { path = "../execution/executor" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 logger = { path = "../common/logger" }

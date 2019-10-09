@@ -10,7 +10,7 @@ members = [
     "common/canonical-serialization",
     "common/crash-handler",
     "common/datatest-stable",
-    "common/debug_interface",
+    "common/debug-interface",
     "common/executable-helpers",
     "common/failure_ext",
     "common/futures-semaphore",

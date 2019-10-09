@@ -1,5 +1,5 @@
 [package]
-name = "debug_interface"
+name = "debug-interface"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra debug interface"

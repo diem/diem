@@ -2,7 +2,7 @@
 advertised_address = "/ip4/${self_ip}/tcp/6180"
 peer_id = "${peer_id}"
 
-[debug_interface]
+[debug-interface]
 address = "0.0.0.0"
 
 [storage]

@@ -34,7 +34,7 @@ slog-async = "2.3"
 slog-envlogger = "2.1.0"
 
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
-debug_interface = { path = "../../common/debug_interface"}
+debug-interface = { path = "../../common/debug-interface"}
 admission-control-proto = { path = "../../admission_control/admission-control-proto" }
 
 libra-types = { path = "../../types" }
