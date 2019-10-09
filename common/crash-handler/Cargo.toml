@@ -1,5 +1,5 @@
 [package]
-name = "crash_handler"
+name = "crash-handler"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra crash handler"
