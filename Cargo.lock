@@ -572,7 +572,7 @@ dependencies = [
  "bincode 1.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "config 0.1.0",
- "crash_handler 0.1.0",
+ "crash-handler 0.1.0",
  "crypto 0.1.0",
  "failure_ext 0.1.0",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -833,7 +833,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "crash_handler"
+name = "crash-handler"
 version = "0.1.0"
 dependencies = [
  "backtrace 0.3.37 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1300,7 +1300,7 @@ name = "executable-helpers"
 version = "0.1.0"
 dependencies = [
  "config 0.1.0",
- "crash_handler 0.1.0",
+ "crash-handler 0.1.0",
  "logger 0.1.0",
  "metrics 0.1.0",
  "slog-scope 4.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2125,7 +2125,7 @@ dependencies = [
  "config 0.1.0",
  "config-builder 0.1.0",
  "consensus 0.1.0",
- "crash_handler 0.1.0",
+ "crash-handler 0.1.0",
  "crypto 0.1.0",
  "debug_interface 0.1.0",
  "executable-helpers 0.1.0",
