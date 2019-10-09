@@ -346,7 +346,7 @@ String representation:
 LCS representation:
 [020000000D00000048656C6C6F2C20576F726C6421]
 
-**TransactionArgument ByteAddress**
+**TransactionArgument ByteArray**
 
 String representation:
 ```
