@@ -21,8 +21,6 @@ struct VoteDataSerializer {
     round: Round,
     parent_block_id: HashValue,
     parent_block_round: Round,
-    grandparent_block_id: HashValue,
-    grandparent_block_round: Round,
 }
 
 impl CanonicalSerialize for VoteDataSerializer {
@@ -32,9 +30,7 @@ impl CanonicalSerialize for VoteDataSerializer {
             .encode_bytes(self.executed_state_id.as_ref())?
             .encode_u64(self.round)?
             .encode_bytes(self.parent_block_id.as_ref())?
-            .encode_u64(self.parent_block_round)?
-            .encode_bytes(self.grandparent_block_id.as_ref())?
-            .encode_u64(self.grandparent_block_round)?;
+            .encode_u64(self.parent_block_round)?;
         Ok(())
     }
 }
@@ -53,7 +49,7 @@ impl CryptoHash for VoteDataSerializer {
     }
 }
 
-/// VoteData keeps the information about the block, its parent and grandparent.
+/// VoteData keeps the information about the block, and its parent.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct VoteData {
     /// The id of the proposed block.
@@ -66,10 +62,6 @@ pub struct VoteData {
     parent_block_id: HashValue,
     /// The round of the parent block of the proposal
     parent_block_round: Round,
-    /// The id of the grandparent block of the proposal
-    grandparent_block_id: HashValue,
-    /// The round of the grandparent block of the proposal
-    grandparent_block_round: Round,
 }
 
 impl Display for VoteData {
@@ -77,13 +69,8 @@ impl Display for VoteData {
         write!(
             f,
             "VoteData: [block id: {}, round: {:02}, parent_block_id: {}, \
-             parent_block_round: {:02}, grandparent_block_id: {}, grandparent_block_round: {:02}]",
-            self.block_id,
-            self.round,
-            self.parent_block_id,
-            self.parent_block_round,
-            self.grandparent_block_id,
-            self.grandparent_block_round,
+             parent_block_round: {:02}]",
+            self.block_id, self.round, self.parent_block_id, self.parent_block_round,
         )
     }
 }
@@ -95,8 +82,6 @@ impl VoteData {
         round: Round,
         parent_block_id: HashValue,
         parent_block_round: Round,
-        grandparent_block_id: HashValue,
-        grandparent_block_round: Round,
     ) -> Self {
         Self {
             block_id,
@@ -104,8 +89,6 @@ impl VoteData {
             round,
             parent_block_id,
             parent_block_round,
-            grandparent_block_id,
-            grandparent_block_round,
         }
     }
 
@@ -134,16 +117,6 @@ impl VoteData {
         self.parent_block_round
     }
 
-    /// Return the id of the grandparent block of the proposed block
-    pub fn grandparent_block_id(&self) -> HashValue {
-        self.grandparent_block_id
-    }
-
-    /// Return the round of the grandparent block of the proposed block
-    pub fn grandparent_block_round(&self) -> Round {
-        self.grandparent_block_round
-    }
-
     /// Return the hash of this struct
     pub fn hash(&self) -> HashValue {
         Self::vote_digest(
@@ -152,8 +125,6 @@ impl VoteData {
             self.round,
             self.parent_block_id,
             self.parent_block_round,
-            self.grandparent_block_id,
-            self.grandparent_block_round,
         )
     }
 
@@ -164,8 +135,6 @@ impl VoteData {
         round: Round,
         parent_block_id: HashValue,
         parent_block_round: Round,
-        grandparent_block_id: HashValue,
-        grandparent_block_round: Round,
     ) -> HashValue {
         VoteDataSerializer {
             block_id,
@@ -173,8 +142,6 @@ impl VoteData {
             round,
             parent_block_id,
             parent_block_round,
-            grandparent_block_id,
-            grandparent_block_round,
         }
         .hash()
     }
@@ -189,16 +156,12 @@ impl TryFrom<network::proto::VoteData> for VoteData {
         let executed_state_id = HashValue::from_slice(proto.executed_state_id.as_ref())?;
         let parent_block_id = HashValue::from_slice(proto.parent_block_id.as_ref())?;
         let parent_block_round = proto.parent_block_round;
-        let grandparent_block_id = HashValue::from_slice(proto.grandparent_block_id.as_ref())?;
-        let grandparent_block_round = proto.grandparent_block_round;
         Ok(VoteData {
             block_id,
             executed_state_id,
             round,
             parent_block_id,
             parent_block_round,
-            grandparent_block_id,
-            grandparent_block_round,
         })
     }
 }
@@ -211,8 +174,6 @@ impl From<VoteData> for network::proto::VoteData {
             round: vote.round,
             parent_block_id: vote.parent_block_id.to_vec(),
             parent_block_round: vote.parent_block_round,
-            grandparent_block_id: vote.grandparent_block_id.to_vec(),
-            grandparent_block_round: vote.grandparent_block_round,
         }
     }
 }

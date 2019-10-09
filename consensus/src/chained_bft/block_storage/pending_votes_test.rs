@@ -32,8 +32,6 @@ fn random_vote_data(round: Round) -> VoteData {
         round,
         HashValue::random(),
         round - 1,
-        HashValue::random(),
-        if round >= 2 { round - 2 } else { round - 1 },
     )
 }
 

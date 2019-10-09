@@ -355,8 +355,6 @@ fn test_network_api() {
             1,
             HashValue::random(),
             0,
-            HashValue::random(),
-            0,
         ),
         peers[0],
         placeholder_ledger_info(),

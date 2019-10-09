@@ -64,13 +64,6 @@ impl QuorumCert {
         self.vote_data.parent_block_round()
     }
 
-    pub fn grandparent_block_id(&self) -> HashValue {
-        self.vote_data.grandparent_block_id()
-    }
-    pub fn grandparent_block_round(&self) -> Round {
-        self.vote_data.grandparent_block_round()
-    }
-
     pub fn ledger_info(&self) -> &LedgerInfoWithSignatures {
         &self.signed_ledger_info
     }
@@ -96,8 +89,6 @@ impl QuorumCert {
             0,
             *GENESIS_BLOCK_ID,
             0,
-            *GENESIS_BLOCK_ID,
-            0,
         );
         let signer = ValidatorSigner::genesis();
         let li = LedgerInfo::new(
@@ -118,8 +109,6 @@ impl QuorumCert {
             VoteData::new(
                 *GENESIS_BLOCK_ID,
                 *ACCUMULATOR_PLACEHOLDER_HASH,
-                0,
-                *GENESIS_BLOCK_ID,
                 0,
                 *GENESIS_BLOCK_ID,
                 0,

@@ -61,8 +61,6 @@ fn test_proto_convert_vote() {
             1,
             HashValue::random(),
             0,
-            HashValue::random(),
-            0,
         ),
         signer.author(),
         placeholder_ledger_info(),
