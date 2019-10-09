@@ -24,7 +24,7 @@ admission-control-service = { path = "../admission_control/admission-control-ser
 config = { path = "../config" }
 consensus = { path = "../consensus" }
 crash-handler = { path = "../common/crash_handler" }
-debug_interface = { path = "../common/debug_interface" }
+debug-interface = { path = "../common/debug_interface" }
 executable-helpers = { path = "../common/executable-helpers" }
 executor = { path = "../execution/executor" }
 futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["async-await", "io-compat", "compat"] }

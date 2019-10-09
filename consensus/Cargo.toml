@@ -34,7 +34,7 @@ canonical-serialization = { path = "../common/canonical_serialization" }
 channel = { path = "../common/channel" }
 config = { path = "../config" }
 crypto = { path = "../crypto/crypto" }
-debug_interface = { path = "../common/debug_interface" }
+debug-interface = { path = "../common/debug_interface" }
 executor = { path = "../execution/executor" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 logger = { path = "../common/logger" }

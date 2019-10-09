@@ -21,7 +21,7 @@ structopt = "0.3.2"
 admission-control-proto = { path = "../admission-control-proto" }
 config = { path = "../../config" }
 crypto = { path = "../../crypto/crypto" }
-debug_interface = { path = "../../common/debug_interface" }
+debug-interface = { path = "../../common/debug_interface" }
 failure = { package = "failure_ext", path = "../../common/failure_ext" }
 executable-helpers = { path = "../../common/executable-helpers" }
 grpc_helpers = { path = "../../common/grpc_helpers" }
