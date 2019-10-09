@@ -17,7 +17,7 @@ structopt = "0.3.2"
 canonical-serialization = { path = "../../common/canonical-serialization" }
 config = { path = "../../config" }
 crypto = { path = "../../crypto/crypto" }
-debug_interface = { path = "../../common/debug_interface" }
+debug-interface = { path = "../../common/debug-interface" }
 executable-helpers = { path = "../../common/executable-helpers" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 grpc_helpers = { path = "../../common/grpc_helpers" }
