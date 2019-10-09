@@ -543,10 +543,8 @@ fn load_identifiers(
             if count != size {
                 return Err(VMStatus::new(StatusCode::MALFORMED));
             }
-            let s = match Identifier::from_utf8(buffer) {
-                Ok(bytes) => bytes,
-                Err(_) => return Err(VMStatus::new(StatusCode::MALFORMED)),
-            };
+            let s =
+                Identifier::from_utf8(buffer).map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
 
             identifiers.push(s);
         }
@@ -573,10 +571,8 @@ fn load_user_strings(
             if count != size {
                 return Err(VMStatus::new(StatusCode::MALFORMED));
             }
-            let us = match VMString::from_utf8(buffer) {
-                Ok(bytes) => bytes,
-                Err(_) => return Err(VMStatus::new(StatusCode::MALFORMED)),
-            };
+            let us =
+                VMString::from_utf8(buffer).map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
 
             user_strings.push(us);
         }

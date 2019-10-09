@@ -164,10 +164,8 @@ impl fmt::Display for EvaluationLog {
 
 /// Verifies a script & its dependencies.
 fn do_verify_script(script: CompiledScript, deps: &[VerifiedModule]) -> Result<VerifiedScript> {
-    let verified_script = match VerifiedScript::new(script) {
-        Ok(verified_script) => verified_script,
-        Err((_, errs)) => return Err(ErrorKind::VerificationFailure(errs).into()),
-    };
+    let verified_script =
+        VerifiedScript::new(script).map_err(|(_, errs)| ErrorKind::VerificationFailure(errs))?;
     let errs = verify_script_dependencies(&verified_script, deps);
     if !errs.is_empty() {
         return Err(ErrorKind::VerificationFailure(errs).into());
@@ -177,10 +175,8 @@ fn do_verify_script(script: CompiledScript, deps: &[VerifiedModule]) -> Result<V
 
 /// Verifies a module & its dependencies.
 fn do_verify_module(module: CompiledModule, deps: &[VerifiedModule]) -> Result<VerifiedModule> {
-    let verified_module = match VerifiedModule::new(module) {
-        Ok(verified_module) => verified_module,
-        Err((_, errs)) => return Err(ErrorKind::VerificationFailure(errs).into()),
-    };
+    let verified_module =
+        VerifiedModule::new(module).map_err(|(_, errs)| ErrorKind::VerificationFailure(errs))?;
     let errs = verify_module_dependencies(&verified_module, deps);
     if !errs.is_empty() {
         return Err(ErrorKind::VerificationFailure(errs).into());

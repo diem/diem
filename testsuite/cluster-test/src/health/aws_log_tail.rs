@@ -314,17 +314,11 @@ impl AwsLogThread {
     }
 
     fn parse_commit_log_entry(&self, e: &LogEntry) -> Option<Commit> {
-        let cap = match self.re_commit.captures(e.message) {
-            Some(cap) => cap,
-            None => return None,
-        };
+        let cap = self.re_commit.captures(e.message)?;
         let commit = &cap[1];
         let round = &cap[2];
         let parent = &cap[3];
-        let round = match round.parse::<u64>() {
-            Ok(round) => round,
-            Err(..) => return None,
-        };
+        let round = round.parse::<u64>().ok()?;
         Some(Commit {
             commit: commit.into(),
             round,
