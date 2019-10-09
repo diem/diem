@@ -117,13 +117,25 @@ jobs:
           name: Terraform validate
           command: terraform validate
           working_directory: terraform/
-
+  docker-build:
+    description: Build Docker images
+    docker:
+      - image: circleci/rust:stretch
+    steps:
+      - build_setup
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build validator
+          command: ./docker/validator/build.sh
+      - build_teardown
 workflows:
   commit-workflow:
     jobs:
       - build
       - validate-config
       - terraform
+      - docker-build
 
   scheduled-workflow:
     triggers:

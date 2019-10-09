@@ -15,4 +15,5 @@ COPY rust-toolchain /libra/rust-toolchain
 RUN rustup install $(cat rust-toolchain)
 
 COPY . /libra
-RUN cargo build --release -p libra-node -p client -p benchmark
+RUN nproc && free
+RUN cargo build --release -p libra-node -p client -p benchmark -j 16
