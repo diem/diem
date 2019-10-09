@@ -1,14 +1,19 @@
+import 0x0.ValidatorConfig;
 import 0x0.ValidatorSet;
 
 // register Alice as a validator candidate, then rotate a key + check that it worked
 main() {
-    ValidatorSet.register_candidate_validator(h"10", h"20", h"30");
+    let config: ValidatorConfig.Config;
 
-    assert(ValidatorSet.get_consensus_pubkey(get_txn_sender()) == h"30", 77);
+    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30");
 
-    ValidatorSet.rotate_consensus_pubkey(h"40");
+    config = ValidatorConfig.config(get_txn_sender());
 
-    assert(ValidatorSet.get_consensus_pubkey(get_txn_sender()) == h"40", 88);
+    assert(ValidatorConfig.consensus_pubkey(&config) == h"30", 77);
+
+    ValidatorConfig.rotate_consensus_pubkey(h"40");
+
+    assert(ValidatorConfig.consensus_pubkey(&config) == h"40", 88);
 
     return;
 }

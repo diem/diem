@@ -317,6 +317,7 @@ module LibraAccount {
         return *&(borrow_global<T>(move(addr))).delegated_withdrawal_capability;
     }
 
+
     // Return a reference to the address associated with the given withdrawal capability
     public withdrawal_capability_address(cap: &Self.WithdrawalCapability): &address {
         return &move(cap).account_address;

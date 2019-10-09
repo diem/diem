@@ -59,7 +59,9 @@ lazy_static! {
     /// The ModuleId for the Event
     pub static ref EVENT_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("Event").unwrap()) };
-
+    /// The ModuleId for the validator config
+    pub static ref VALIDATOR_CONFIG_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), Identifier::new("ValidatorConfig").unwrap()) };
     /// The ModuleId for the validator set
     pub static ref VALIDATOR_SET_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("ValidatorSet").unwrap()) };
