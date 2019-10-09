@@ -105,13 +105,7 @@ impl<'a> StructDefGraphBuilder<'a> {
 
         fields.filter_map(move |field| {
             let type_signature = field.type_signature();
-            let sh_idx = match type_signature.token().struct_index() {
-                Some(sh_idx) => sh_idx,
-                None => {
-                    // This field doesn't refer to a struct.
-                    return None;
-                }
-            };
+            let sh_idx = type_signature.token().struct_index()?;
             match handle_to_def.get(&sh_idx) {
                 Some(sd_idx) => Some(*sd_idx),
                 None => {

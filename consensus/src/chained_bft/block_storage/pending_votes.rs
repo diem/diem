@@ -117,12 +117,7 @@ impl PendingVotes {
         vote_msg: &VoteMsg,
         validator_verifier: &Arc<ValidatorVerifier>,
     ) -> Option<VoteReceptionResult> {
-        let round_signature = match vote_msg.round_signature() {
-            Some(round_signature) => round_signature.clone(),
-            None => {
-                return None;
-            }
-        };
+        let round_signature = vote_msg.round_signature().cloned()?;
         let round = vote_msg.vote_data().block_round();
         let tc = self
             .round_to_tc

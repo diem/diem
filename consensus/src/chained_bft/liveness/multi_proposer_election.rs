@@ -92,12 +92,7 @@ impl<T: Payload> ProposerElection<T> for MultiProposer<T> {
     }
 
     fn process_proposal(&mut self, proposal: Block<T>) -> Option<Block<T>> {
-        let author = match proposal.author() {
-            Some(author) => author,
-            None => {
-                return None;
-            }
-        };
+        let author = proposal.author()?;
         let round = proposal.round();
         let candidates = self.get_candidates(round);
         for (rank, candidate) in candidates.iter().enumerate() {
