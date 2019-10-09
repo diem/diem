@@ -273,11 +273,9 @@ impl BlockRetriever {
             attempt += 1;
 
             let timeout = retrieval_timeout(&self.deadline, attempt);
-            let timeout = if let Some(timeout) = timeout {
-                timeout
-            } else {
-                bail!("Failed to fetch block {} from {}, attempt {}: round deadline was reached, won't make more attempts", block_id, peer, attempt);
-            };
+            let timeout = timeout.ok_or_else(|| {
+                format_err!("Failed to fetch block {} from {}, attempt {}: round deadline was reached, won't make more attempts", block_id, peer, attempt)
+            })?;
             debug!(
                 "Fetching {} from {}, attempt {}",
                 block_id,
