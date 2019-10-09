@@ -82,10 +82,8 @@ impl Cluster {
             !instances.is_empty(),
             "No instances were discovered for cluster"
         );
-        let prometheus_ip = match prometheus_ip {
-            Some(ip) => ip,
-            None => bail!("Prometheus was not found in workplace"),
-        };
+        let prometheus_ip =
+            prometheus_ip.ok_or_else(|| format_err!("Prometheus was not found in workplace"))?;
         Ok(Self {
             instances,
             prometheus_ip,

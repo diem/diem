@@ -87,10 +87,9 @@ pub fn fuzz_target(
 
     // Pass the target name in as an environment variable.
     // Use the manifest directory as the current one.
-    let manifest_dir = match env::var_os("CARGO_MANIFEST_DIR") {
-        Some(dir) => dir,
-        None => bail!("Fuzzing requires CARGO_MANIFEST_DIR to be set (are you using `cargo run`?)"),
-    };
+    let manifest_dir = env::var_os("CARGO_MANIFEST_DIR").ok_or_else(|| {
+        format_err!("Fuzzing requires CARGO_MANIFEST_DIR to be set (are you using `cargo run`?)")
+    })?;
 
     let status = Command::new("cargo")
         .arg("fuzz")

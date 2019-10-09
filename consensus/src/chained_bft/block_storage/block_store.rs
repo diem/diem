@@ -388,10 +388,9 @@ impl<T: Payload> BlockStore<T> {
             "Block with old round"
         );
 
-        let parent = match self.get_block(block.parent_id()) {
-            None => bail!("Block with missing parent {}", block.parent_id()),
-            Some(parent) => parent,
-        };
+        let parent = self
+            .get_block(block.parent_id())
+            .ok_or_else(|| format_err!("Block with missing parent {}", block.parent_id()))?;
         ensure!(parent.round() < block.round(), "Block with invalid round");
         ensure!(
             !self.enforce_increasing_timestamps
