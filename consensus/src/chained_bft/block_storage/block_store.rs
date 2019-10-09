@@ -472,7 +472,6 @@ impl<T: Payload> BlockReader for BlockStore<T> {
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-#[allow(dead_code)]
 impl<T: Payload> BlockStore<T> {
     /// Returns the number of blocks in the tree
     fn len(&self) -> usize {

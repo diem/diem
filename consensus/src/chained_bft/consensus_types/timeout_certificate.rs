@@ -26,7 +26,6 @@ impl fmt::Display for TimeoutCertificate {
     }
 }
 
-#[allow(dead_code)]
 impl TimeoutCertificate {
     /// Creates new TimeoutCertificate
     pub fn new(round: Round, signatures: HashMap<Author, Signature>) -> Self {
