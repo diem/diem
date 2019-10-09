@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-extern crate consensus_types;
+use consensus_types;
 pub use consensus_types::common;
 mod consensusdb;
 mod safety;

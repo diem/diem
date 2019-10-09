@@ -1,9 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[macro_use]
-extern crate failure;
-
 pub mod block;
 pub mod common;
 pub mod proposal_msg;

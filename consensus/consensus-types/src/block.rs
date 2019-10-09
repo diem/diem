@@ -14,7 +14,7 @@ use crypto::{
     HashValue,
 };
 use executor::{ExecutedState, StateComputeResult};
-use failure::Result;
+use failure::{ensure, format_err, Result};
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,

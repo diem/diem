@@ -4,7 +4,7 @@
 use crate::common;
 use crate::{common::Author, vote_data::VoteData};
 use crypto::hash::CryptoHash;
-use failure::ResultExt;
+use failure::{bail, ensure, format_err, ResultExt};
 use libra_types::{
     crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,

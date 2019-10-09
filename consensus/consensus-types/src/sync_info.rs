@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{common::Round, quorum_cert::QuorumCert, timeout_msg::PacemakerTimeoutCertificate};
-use failure::ResultExt;
+use failure::{format_err, ResultExt};
 use libra_types::crypto_proxies::ValidatorVerifier;
 use network;
 use serde::{Deserialize, Serialize};
