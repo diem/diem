@@ -95,7 +95,7 @@ module ValidatorSet {
                 // TODO: check for LIT, compute voting power based on LIT + stake
                 consensus_voting_power: 1,
                 network_signing_pubkey: ValidatorConfig.network_signing_pubkey(copy(config_ref)),
-                network_identity_pubkey: ValidatorConfig.network_identity_pubkey(copy(config_ref)),
+                network_identity_pubkey: ValidatorConfig.network_identity_pubkey(move(config_ref)),
             }
         );
 
