@@ -8,7 +8,10 @@ use crate::{
     consensus_provider::create_storage_read_client,
 };
 use config::config::NodeConfig;
-use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert, vote_msg::VoteMsg, timeout_certificate::TimeoutCertificate};
+use consensus_types::{
+    block::Block, common::Payload, quorum_cert::QuorumCert,
+    timeout_certificate::TimeoutCertificate, vote_msg::VoteMsg,
+};
 use crypto::HashValue;
 use failure::{Result, ResultExt};
 use libra_types::ledger_info::LedgerInfo;

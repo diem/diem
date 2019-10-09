@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{common::Round, quorum_cert::QuorumCert, timeout_msg::PacemakerTimeoutCertificate};
+use crate::{common::Round, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate};
 use failure::{format_err, ResultExt};
 use libra_types::crypto_proxies::ValidatorVerifier;
 use network;
@@ -19,7 +19,7 @@ pub struct SyncInfo {
     /// Highest ledger info known to the peer.
     highest_ledger_info: QuorumCert,
     /// Optional highest timeout certificate if available.
-    highest_timeout_cert: Option<PacemakerTimeoutCertificate>,
+    highest_timeout_cert: Option<TimeoutCertificate>,
 }
 
 impl Display for SyncInfo {
@@ -43,7 +43,7 @@ impl SyncInfo {
     pub fn new(
         highest_quorum_cert: QuorumCert,
         highest_ledger_info: QuorumCert,
-        highest_timeout_cert: Option<PacemakerTimeoutCertificate>,
+        highest_timeout_cert: Option<TimeoutCertificate>,
     ) -> Self {
         Self {
             highest_quorum_cert,
@@ -63,7 +63,7 @@ impl SyncInfo {
     }
 
     /// Highest timeout certificate if available
-    pub fn highest_timeout_certificate(&self) -> Option<&PacemakerTimeoutCertificate> {
+    pub fn highest_timeout_certificate(&self) -> Option<&TimeoutCertificate> {
         self.highest_timeout_cert.as_ref()
     }
 

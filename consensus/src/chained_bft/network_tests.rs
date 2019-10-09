@@ -236,7 +236,7 @@ impl NetworkPlayground {
 
     /// Returns true for any message other than timeout
     pub fn exclude_timeout_msg(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        !Self::timeout_msg_only(msg_copy)
+        !Self::timeout_votes_only(msg_copy)
     }
 
     /// Returns true for proposal messages only.
@@ -257,10 +257,11 @@ impl NetworkPlayground {
         }
     }
 
-    /// Returns true for timeout messages only.
-    pub fn timeout_msg_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        if let Some(ConsensusMsg_oneof::TimeoutMsg(_)) = msg_copy.1.message {
-            true
+    /// Returns true for vote messages that carry round signatures only.
+    pub fn timeout_votes_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
+        // Timeout votes carry non-empty round signatures.
+        if let Some(ConsensusMsg_oneof::Vote(vote)) = &msg_copy.1.message {
+            !vote.round_signature.is_empty()
         } else {
             false
         }

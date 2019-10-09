@@ -114,27 +114,18 @@ impl<T: Payload> ProposalMsg<T> {
             self.proposal.parent_id(),
         );
         let previous_round = self.proposal.round() - 1;
-        if let Some(tc) = self.sync_info.highest_timeout_certificate() {
-            let previous_round = self.proposal.round() - 1;
-            ensure!(
-                tc.round() == previous_round,
-                "Proposal for {} has a timeout certificate with an incorrect round={}",
-                self.proposal,
-                tc.round(),
-            );
-            ensure!(
-                self.proposal.quorum_cert().certified_block_round() != tc.round(),
-                "Proposal for {} has a timeout certificate and a quorum certificate that have the same round",
-                self.proposal,
-            );
-        } else {
-            ensure!(
-                self.proposal.quorum_cert().certified_block_round() == previous_round,
-                "Proposal for {} has a timeout certificate with an incorrect round={}",
-                self.proposal,
-                self.proposal.quorum_cert().certified_block_round(),
-            );
-        }
+        let highest_certified_round = std::cmp::max(
+            self.proposal.quorum_cert().certified_block_round(),
+            self.sync_info
+                .highest_timeout_certificate()
+                .map_or(0, |tc| tc.round()),
+        );
+        ensure!(
+            previous_round == highest_certified_round,
+            "Proposal {} does not have a certified round {}",
+            self.proposal,
+            previous_round
+        );
         ensure!(
             self.proposal.author().is_some(),
             "Proposal {} does not define an author",

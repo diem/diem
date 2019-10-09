@@ -269,10 +269,10 @@ impl ConsensusNetworkImpl {
         }
     }
 
-    /// Broadcasts timeout message to all validators
-    pub async fn broadcast_timeout_msg(&mut self, timeout_msg: TimeoutMsg) {
+    /// Broadcasts vote message to all validators
+    pub async fn broadcast_vote(&mut self, vote_msg: VoteMsg) {
         let msg = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::TimeoutMsg(timeout_msg.into())),
+            message: Some(ConsensusMsg_oneof::Vote(vote_msg.into())),
         };
         self.broadcast(msg).await
     }

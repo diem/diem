@@ -52,7 +52,7 @@ message SyncInfo {
   // Highest ledger info
   QuorumCert highest_ledger_info = 2;
   // Optional highest timeout certificate if available
-  PacemakerTimeoutCertificate highest_timeout_cert = 3;
+  TimeoutCertificate highest_timeout_cert = 3;
 }
 
 message PacemakerTimeoutCertificate {

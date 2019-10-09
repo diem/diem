@@ -13,7 +13,6 @@ use crate::{
 use channel;
 use consensus_types::{
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
-    timeout_msg::TimeoutMsg,
     vote_msg::VoteMsg,
 };
 use crypto::hash::CryptoHash;
@@ -483,7 +482,7 @@ fn block_retrieval_with_timeout() {
         playground.drop_message_for(&nodes[2].signer.author(), nodes[0].signer.author());
 
         playground
-            .wait_for_messages(1, NetworkPlayground::timeout_msg_only)
+            .wait_for_messages(1, NetworkPlayground::timeout_votes_only)
             .await;
         // Unblock RPC
         playground.stop_drop_message_for(&nodes[2].signer.author(), &nodes[0].signer.author());
@@ -618,7 +617,7 @@ fn state_sync_on_timeout() {
         // (node 0 cannot send to anyone).  Note that there are 6 messages waited on
         // since 2 can timeout 2x while waiting for 1 to timeout.
         playground
-            .wait_for_messages(6, NetworkPlayground::timeout_msg_only)
+            .wait_for_messages(6, NetworkPlayground::timeout_votes_only)
             .await;
 
         let mut node2_commits = vec![];
@@ -664,7 +663,7 @@ fn sync_info_sent_if_remote_stale() {
         // Wait for some timeout message from 2 to {0, 1}.
         playground.stop_drop_message_for(&nodes[2].signer.author(), &nodes[1].signer.author());
         playground
-            .wait_for_messages(2, NetworkPlayground::timeout_msg_only)
+            .wait_for_messages(2, NetworkPlayground::timeout_votes_only)
             .await;
         // Now wait for a sync info message from 1 to 2.
         playground
@@ -724,7 +723,7 @@ fn aggregate_timeout_votes() {
 
         // Wait for the timeout messages sent by 1 and 2 to each other
         playground
-            .wait_for_messages(2, NetworkPlayground::timeout_msg_only)
+            .wait_for_messages(2, NetworkPlayground::timeout_votes_only)
             .await;
 
         // Node 0 cannot form a QC
@@ -740,7 +739,7 @@ fn aggregate_timeout_votes() {
         // Nodes 1 and 2 form a QC and move to the next round.
         // Wait for the timeout messages from 1 and 2
         playground
-            .wait_for_messages(2, NetworkPlayground::timeout_msg_only)
+            .wait_for_messages(2, NetworkPlayground::timeout_votes_only)
             .await;
 
         assert_eq!(
@@ -788,7 +787,7 @@ fn chain_with_nil_blocks() {
         // Upon the third timeout nodes 1 and 2 send NIL block_2 with a QC to NIL block_1.
         // G <- p1 <- p2 <- p3 <- NIL1 <- NIL2
         playground
-            .wait_for_messages(4 * 3, NetworkPlayground::timeout_msg_only)
+            .wait_for_messages(4 * 3, NetworkPlayground::timeout_votes_only)
             .await;
         // We can't guarantee the timing of the last timeout processing, the only thing we can
         // look at is that HQC round is at least 4.
@@ -819,21 +818,14 @@ fn secondary_proposers() {
         playground.drop_message_for(&nodes[0].signer.author(), nodes[2].signer.author());
         // Run a system until node 0 is a designated primary proposer. In this round the
         // secondary proposal should be voted for and attached to the timeout message.
-        let timeout_msgs = playground
-            .wait_for_messages(2 * 2, NetworkPlayground::timeout_msg_only)
+        let timeout_votes = playground
+            .wait_for_messages(2 * 2, NetworkPlayground::timeout_votes_only)
             .await;
         let mut secondary_proposal_ids = vec![];
-        for msg in timeout_msgs {
-            let timeout_msg = TimeoutMsg::try_from(msg.1).unwrap();
-            assert!(timeout_msg.pacemaker_timeout().vote_msg().is_some());
-            secondary_proposal_ids.push(
-                timeout_msg
-                    .pacemaker_timeout()
-                    .vote_msg()
-                    .unwrap()
-                    .vote_data()
-                    .block_id(),
-            );
+        for msg in timeout_votes {
+            let vote = VoteMsg::try_from(msg.1).unwrap();
+            assert!(vote.round_signature().is_some());
+            secondary_proposal_ids.push(vote.vote_data().block_id());
         }
         assert_eq!(secondary_proposal_ids.len(), 4);
         let secondary_proposal_id = secondary_proposal_ids[0];
