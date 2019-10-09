@@ -1050,10 +1050,8 @@ fn compile_expression(
             field,
         } => {
             let loc_type_opt = compile_expression(context, function_frame, code, *exp)?.pop_front();
-            let loc_type = match loc_type_opt {
-                Some(t) => t,
-                None => bail!("Impossible no expression to borrow"),
-            };
+            let loc_type =
+                loc_type_opt.ok_or_else(|| format_err!("Impossible no expression to borrow"))?;
             let sh_idx = loc_type.get_struct_handle()?;
             let (fd_idx, field_type, _) = context.field(sh_idx, field)?;
             function_frame.pop()?;

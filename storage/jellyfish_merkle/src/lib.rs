@@ -495,11 +495,9 @@ where
             let next_node = self.reader.get_node(&next_node_key)?;
             match next_node {
                 Node::Internal(internal_node) => {
-                    let queried_child_index = match nibble_iter.next() {
-                        Some(nibble) => nibble,
-                        // Shouldn't happen
-                        None => bail!("ran out of nibbles"),
-                    };
+                    let queried_child_index = nibble_iter
+                        .next()
+                        .ok_or_else(|| format_err!("ran out of nibbles"))?;
                     let (child_node_key, mut siblings_in_internal) =
                         internal_node.get_child_with_siblings(&next_node_key, queried_child_index);
                     siblings.append(&mut siblings_in_internal);

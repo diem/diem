@@ -268,10 +268,8 @@ where
                         let module_id = module.self_id();
                         let function_name = callee_function_ref.name();
                         let native_function =
-                            match dispatch_native_function(&module_id, function_name) {
-                                None => return Err(VMStatus::new(StatusCode::LINKER_ERROR)),
-                                Some(native_function) => native_function,
-                            };
+                            dispatch_native_function(&module_id, function_name)
+                                .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
                         if module_id == *EVENT_MODULE
                             && function_name == EMIT_EVENT_NAME.as_ident_str()
                         {
@@ -725,14 +723,11 @@ where
         function_name: &IdentStr,
         args: Vec<Value>,
     ) -> VMResult<()> {
-        let loaded_module = match self
+        let loaded_module = self
             .execution_stack
             .module_cache
             .get_loaded_module(module)?
-        {
-            Some(module) => module,
-            None => return Err(VMStatus::new(StatusCode::LINKER_ERROR)),
-        };
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         let func_idx = loaded_module
             .function_defs_table
             .get(function_name)
