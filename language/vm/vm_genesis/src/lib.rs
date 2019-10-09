@@ -26,7 +26,8 @@ use vm_runtime::{
     },
     data_cache::BlockDataCache,
     txn_executor::{
-        TransactionExecutor, ACCOUNT_MODULE, BLOCK_MODULE, COIN_MODULE, VALIDATOR_SET_MODULE,
+        TransactionExecutor, ACCOUNT_MODULE, BLOCK_MODULE, COIN_MODULE, VALIDATOR_CONFIG_MODULE,
+        VALIDATOR_SET_MODULE,
     },
 };
 use vm_runtime_types::value::Value;
@@ -266,7 +267,7 @@ pub fn encode_genesis_transaction_with_validator(
                 txn_executor
                     .execute_function_with_sender_FOR_GENESIS_ONLY(
                         validator_address,
-                        &VALIDATOR_SET_MODULE,
+                        &VALIDATOR_CONFIG_MODULE,
                         &REGISTER_CANDIDATE_VALIDATOR,
                         vec![
                             Value::byte_array(ByteArray::new(

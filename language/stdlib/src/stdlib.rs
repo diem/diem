@@ -22,6 +22,8 @@ lazy_static! {
         make_module_definition!("../modules/hash.mvir");
     static ref SIGNATURE_MODULE: ModuleDefinition =
         make_module_definition!("../modules/signature.mvir");
+    static ref VALIDATOR_CONFIG_MODULE: ModuleDefinition =
+        make_module_definition!("../modules/validator_config.mvir");
     static ref VALIDATOR_SET_MODULE: ModuleDefinition =
         make_module_definition!("../modules/validator_set.mvir");
     static ref ADDRESS_UTIL_MODULE: ModuleDefinition =
@@ -47,7 +49,8 @@ lazy_static! {
             &*VECTOR_MODULE,
             &*EVENT_MODULE, // depends on AddressUtil, BytearrayUtil, Hash, U64Util
             &*ACCOUNT_MODULE, // depends on LibraCoin, Event, AddressUtil, BytearrayUtil, U64Util
-            &*VALIDATOR_SET_MODULE, // depends on LibraAccount
+            &*VALIDATOR_CONFIG_MODULE,
+            &*VALIDATOR_SET_MODULE, // depends on LibraAccount, ValidatorConfig
         ]
     };
 }
@@ -66,6 +69,10 @@ pub fn native_hash_module() -> ModuleDefinition {
 
 pub fn signature_module() -> ModuleDefinition {
     SIGNATURE_MODULE.clone()
+}
+
+pub fn validator_config_module() -> ModuleDefinition {
+    VALIDATOR_CONFIG_MODULE.clone()
 }
 
 pub fn validator_set_module() -> ModuleDefinition {

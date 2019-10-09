@@ -1,6 +1,7 @@
 module ValidatorSet {
     import 0x0.Event;
     import 0x0.LibraAccount;
+    import 0x0.ValidatorConfig;
     import 0x0.Vector;
 
     struct ValidatorInfo {
@@ -9,13 +10,6 @@ module ValidatorSet {
         consensus_voting_power: u64,
         network_signing_pubkey: bytearray,
         network_identity_pubkey: bytearray,
-    }
-
-    // A current or prospective validator should publish one of these under their address
-    resource ValidatorConfig {
-        network_signing_pubkey: bytearray,
-        network_identity_pubkey: bytearray,
-        consensus_pubkey: bytearray,
     }
 
     struct ChangeEvent {
@@ -77,63 +71,31 @@ module ValidatorSet {
         return false;
     }
 
-    // Register the transaction sender as a candidate validator by creating a ValidatorConfig
-    // resource under their account
-    public register_candidate_validator(
-        network_signing_pubkey: bytearray,
-        network_identity_pubkey: bytearray,
-        consensus_pubkey: bytearray) {
-
-        move_to_sender<ValidatorConfig>(
-            ValidatorConfig {
-                network_signing_pubkey: move(network_signing_pubkey),
-                network_identity_pubkey: move(network_identity_pubkey),
-                consensus_pubkey: move(consensus_pubkey),
-            });
-
-        return;
-    }
-
-    // Get the consensus public key for the validator candidate at the given address
-    public get_consensus_pubkey(addr: address): bytearray acquires ValidatorConfig {
-        let config_ref: &Self.ValidatorConfig;
-
-        config_ref = borrow_global<ValidatorConfig>(move(addr));
-        return *&move(config_ref).consensus_pubkey;
-    }
-
-    // Rotate a validator candidate's consensus public key. The change will not take effect until
-    // the next reconfiguration.
-    public rotate_consensus_pubkey(consensus_pubkey: bytearray) acquires ValidatorConfig {
-        let config_ref: &mut Self.ValidatorConfig;
-
-        config_ref = borrow_global_mut<ValidatorConfig>(get_txn_sender());
-        *(&mut move(config_ref).consensus_pubkey) = move(consensus_pubkey);
-
-        return;
-    }
-
     // TODO: Decide on access control policy. For now, we ensure that this is only callable from the
     // genesis txn. Obviously, we'll need a different policy once we support reconfiguration.
-    add_validator(account_address: address) acquires T, ValidatorConfig {
-        let config_ref: &Self.ValidatorConfig;
+    add_validator(account_address: address) acquires T {
+        let config: ValidatorConfig.Config;
+        let config_ref: &ValidatorConfig.Config;
         let validator_set_ref: &mut Self.T;
         let vector_ref: &mut Vector.T<Self.ValidatorInfo>;
 
         // A prospective validator must have an account
         assert(LibraAccount.exists(copy(account_address)), 17);
 
-        config_ref = borrow_global<ValidatorConfig>(copy(account_address));
+        config = ValidatorConfig.config(copy(account_address));
+        config_ref = &config;
+
         validator_set_ref = borrow_global_mut<T>(0x1D8);
+
         Vector.push_back<Self.ValidatorInfo>(
             &mut move(validator_set_ref).validators,
             ValidatorInfo {
                 addr: move(account_address),
-                consensus_pubkey: *&copy(config_ref).consensus_pubkey,
+                consensus_pubkey: ValidatorConfig.consensus_pubkey(copy(config_ref)),
                 // TODO: check for LIT, compute voting power based on LIT + stake
                 consensus_voting_power: 1,
-                network_signing_pubkey: *&copy(config_ref).network_signing_pubkey,
-                network_identity_pubkey: *&move(config_ref).network_identity_pubkey,
+                network_signing_pubkey: ValidatorConfig.network_signing_pubkey(copy(config_ref)),
+                network_identity_pubkey: ValidatorConfig.network_identity_pubkey(move(config_ref)),
             }
         );
 
