@@ -171,7 +171,7 @@ A subtle point not explicated by the rules above is that `BorrowField` and `Free
 
 ```text
 *
-├── invalid_mutations  # Library used by proptests
+├── invalid-mutations  # Library used by proptests
 ├── src                # Core bytecode verifier files
 ├── tests              # Proptests
 ```

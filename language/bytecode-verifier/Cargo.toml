@@ -20,7 +20,7 @@ vm_runtime_types = { path = "../vm/vm_runtime/vm_runtime_types" }
 
 
 [dev-dependencies]
-invalid_mutations = { path = "invalid_mutations" }
+invalid-mutations = { path = "invalid-mutations" }
 libra-types = { path = "../../types", features = ["testing"]}
 vm = { path = "../vm", features = ["testing"]}
 
