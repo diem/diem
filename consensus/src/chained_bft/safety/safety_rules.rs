@@ -38,10 +38,6 @@ pub struct VoteInfo {
     parent_block_id: HashValue,
     /// The round of the parent block of the proposal
     parent_block_round: Round,
-    /// The id of the grandparent block of the proposal
-    grandparent_block_id: HashValue,
-    /// The round of the grandparent block of the proposal
-    grandparent_block_round: Round,
 }
 
 impl VoteInfo {
@@ -63,14 +59,6 @@ impl VoteInfo {
 
     pub fn parent_block_round(&self) -> Round {
         self.parent_block_round
-    }
-
-    pub fn grandparent_block_id(&self) -> HashValue {
-        self.grandparent_block_id
-    }
-
-    pub fn grandparent_block_round(&self) -> Round {
-        self.grandparent_block_round
     }
 }
 
@@ -260,8 +248,6 @@ impl SafetyRules {
                 potential_commit_id,
                 parent_block_id: proposed_block.quorum_cert().certified_block_id(),
                 parent_block_round: proposed_block.quorum_cert().certified_block_round(),
-                grandparent_block_id: proposed_block.quorum_cert().parent_block_id(),
-                grandparent_block_round: proposed_block.quorum_cert().parent_block_round(),
             })
         } else {
             Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {

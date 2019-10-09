@@ -186,7 +186,7 @@ where
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
         // carrying information about version `0`.
         let genesis_quorum_cert = QuorumCert::new(
-            VoteData::new(ancestor_id, state_id, 0, ancestor_id, 0, ancestor_id, 0),
+            VoteData::new(ancestor_id, state_id, 0, ancestor_id, 0),
             LedgerInfoWithSignatures::new(
                 LedgerInfo::new(
                     0,

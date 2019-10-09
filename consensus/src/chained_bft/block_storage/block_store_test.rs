@@ -78,8 +78,6 @@ fn test_block_store_create_block() {
             a1_ref.round(),
             a1_ref.quorum_cert().parent_block_id(),
             a1_ref.quorum_cert().parent_block_round(),
-            a1_ref.quorum_cert().grandparent_block_id(),
-            a1_ref.quorum_cert().grandparent_block_round(),
         ),
         block_store.signer().author(),
         placeholder_ledger_info(),
@@ -351,8 +349,6 @@ fn test_insert_vote() {
                 block.round(),
                 block.quorum_cert().parent_block_id(),
                 block.quorum_cert().parent_block_round(),
-                block.quorum_cert().grandparent_block_id(),
-                block.quorum_cert().grandparent_block_round(),
             ),
             voter.author(),
             placeholder_ledger_info(),
@@ -385,8 +381,6 @@ fn test_insert_vote() {
             block.round(),
             block.quorum_cert().parent_block_id(),
             block.quorum_cert().parent_block_round(),
-            block.quorum_cert().grandparent_block_id(),
-            block.quorum_cert().grandparent_block_round(),
         ),
         final_voter.author(),
         placeholder_ledger_info(),
@@ -455,8 +449,6 @@ fn test_need_fetch_for_qc() {
         a3.round() + 1,
         HashValue::zero(),
         a3.round(),
-        HashValue::zero(),
-        a3.round() - 1,
     );
     let too_old_qc = QuorumCert::certificate_for_genesis();
     let can_insert_qc = placeholder_certificate_for_block(
@@ -465,8 +457,6 @@ fn test_need_fetch_for_qc() {
         a3.round(),
         a2.id(),
         a2.round(),
-        a1.id(),
-        a1.round(),
     );
     let duplicate_qc = block_tree.get_quorum_cert_for_block(a2.id()).unwrap();
     assert_eq!(
@@ -505,8 +495,6 @@ fn test_need_sync_for_qc() {
         a3.round() + 3,
         HashValue::zero(),
         a3.round() + 2,
-        HashValue::zero(),
-        a3.round() + 1,
     );
     assert_eq!(
         block_tree.need_sync_for_quorum_cert(HashValue::zero(), &qc),
@@ -518,8 +506,6 @@ fn test_need_sync_for_qc() {
         a3.round() + 2,
         HashValue::zero(),
         a3.round() + 1,
-        HashValue::zero(),
-        a3.round(),
     );
     assert_eq!(
         block_tree.need_sync_for_quorum_cert(HashValue::zero(), &qc),

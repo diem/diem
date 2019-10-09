@@ -653,8 +653,6 @@ impl<T: Payload> EventProcessor<T> {
                 block.round(),
                 vote_info.parent_block_id(),
                 vote_info.parent_block_round(),
-                vote_info.grandparent_block_id(),
-                vote_info.grandparent_block_round(),
             ),
             self.author,
             ledger_info_placeholder,
