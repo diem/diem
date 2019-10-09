@@ -117,13 +117,25 @@ jobs:
           name: Terraform validate
           command: terraform validate
           working_directory: terraform/
-
+  docker-build:
+    description: Build Docker images
+    executor: build-executor
+    steps:
+      - build_setup
+      - run:
+          name: Start container
+          command: docker run -v "/var/run/docker.sock:/var/run/docker.sock" "debian:stretch"
+      - run:
+          name: Build validator
+          command: ./docker/validator/build.sh
+      - build_teardown
 workflows:
   commit-workflow:
     jobs:
       - build
       - validate-config
       - terraform
+      - docker-build
 
   scheduled-workflow:
     triggers:
