@@ -15,7 +15,7 @@ log = "0.4"
 env_logger = "0.6"
 mirai-annotations = "1.4.0"
 structopt = "0.3.2"
-bytecode_verifier = { path = "../../bytecode_verifier" }
+bytecode-verifier = { path = "../../bytecode-verifier" }
 cost-synthesis = { path = "../cost-synthesis" }
 vm = { path = "../../vm" }
 vm_runtime = { path = "../../vm/vm_runtime" }

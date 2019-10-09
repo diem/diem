@@ -372,7 +372,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "bytecode-to-boogie"
 version = "0.1.0"
 dependencies = [
- "bytecode_verifier 0.1.0",
+ "bytecode-verifier 0.1.0",
  "ir_to_bytecode 0.1.0",
  "libra-types 0.1.0",
  "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -383,7 +383,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bytecode_verifier"
+name = "bytecode-verifier"
 version = "0.1.0"
 dependencies = [
  "failure_ext 0.1.0",
@@ -399,7 +399,7 @@ dependencies = [
 name = "bytecode_verifier_tests"
 version = "0.1.0"
 dependencies = [
- "bytecode_verifier 0.1.0",
+ "bytecode-verifier 0.1.0",
  "failure_ext 0.1.0",
  "invalid_mutations 0.1.0",
  "libra-types 0.1.0",
@@ -668,7 +668,7 @@ dependencies = [
 name = "compiler"
 version = "0.1.0"
 dependencies = [
- "bytecode_verifier 0.1.0",
+ "bytecode-verifier 0.1.0",
  "failure_ext 0.1.0",
  "ir_to_bytecode 0.1.0",
  "libra-types 0.1.0",
@@ -817,7 +817,7 @@ dependencies = [
 name = "cost-synthesis"
 version = "0.1.0"
 dependencies = [
- "bytecode_verifier 0.1.0",
+ "bytecode-verifier 0.1.0",
  "crypto 0.1.0",
  "csv 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "language_e2e_tests 0.1.0",
@@ -1434,7 +1434,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "functional_tests"
 version = "0.1.0"
 dependencies = [
- "bytecode_verifier 0.1.0",
+ "bytecode-verifier 0.1.0",
  "config 0.1.0",
  "datatest-stable 0.1.0",
  "failure_ext 0.1.0",
@@ -2001,7 +2001,7 @@ dependencies = [
 name = "language_e2e_tests"
 version = "0.1.0"
 dependencies = [
- "bytecode_verifier 0.1.0",
+ "bytecode-verifier 0.1.0",
  "canonical_serialization 0.1.0",
  "compiler 0.1.0",
  "config 0.1.0",
@@ -4245,7 +4245,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "stdlib"
 version = "0.1.0"
 dependencies = [
- "bytecode_verifier 0.1.0",
+ "bytecode-verifier 0.1.0",
  "ir_to_bytecode 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
@@ -4489,7 +4489,7 @@ dependencies = [
 name = "test-generation"
 version = "0.1.0"
 dependencies = [
- "bytecode_verifier 0.1.0",
+ "bytecode-verifier 0.1.0",
  "cost-synthesis 0.1.0",
  "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "language_e2e_tests 0.1.0",
@@ -5224,7 +5224,7 @@ dependencies = [
 name = "vm_runtime"
 version = "0.1.0"
 dependencies = [
- "bytecode_verifier 0.1.0",
+ "bytecode-verifier 0.1.0",
  "canonical_serialization 0.1.0",
  "compiler 0.1.0",
  "config 0.1.0",
