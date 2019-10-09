@@ -10,7 +10,7 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
-bytecode_verifier = { path = "../bytecode_verifier" }
+bytecode-verifier = { path = "../bytecode-verifier" }
 canonical_serialization = { path = "../../common/canonical_serialization" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 compiler = { path = "../compiler" }
