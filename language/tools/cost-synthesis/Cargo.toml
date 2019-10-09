@@ -14,7 +14,7 @@ csv = "1.1.1"
 rand = "0.6.5"
 lazy_static = "1.3.0"
 
-bytecode_verifier = { path = "../../bytecode_verifier" }
+bytecode-verifier = { path = "../../bytecode_verifier" }
 stdlib = { path = "../../stdlib" }
 libra-types = { path = "../../../types" }
 vm = { path = "../../vm" }

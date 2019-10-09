@@ -14,7 +14,7 @@ The Move language directory consists of five parts:
 
 - [virtual machine](vm/) (VM) &mdash; contains the bytecode format, a bytecode interpreter, and infrastructure for executing a block of transactions. This directory also contains the infrastructure to generate the genesis block.
 
-- [bytecode verifier](bytecode_verifier/) &mdash; contains a static analysis tool for rejecting invalid Move bytecode. The virtual machine runs the bytecode verifier on any new Move code it encounters before executing it. The compiler runs the bytecode verifier on its output and surfaces the errors to the programmer.
+- [bytecode verifier](bytecode-verifier/) &mdash; contains a static analysis tool for rejecting invalid Move bytecode. The virtual machine runs the bytecode verifier on any new Move code it encounters before executing it. The compiler runs the bytecode verifier on its output and surfaces the errors to the programmer.
 
 - [compiler](compiler/) &mdash; contains the Move intermediate representation (IR) compiler which compiles human-readable program text into Move bytecode. *Warning: the IR compiler is a testing tool. It can generate invalid bytecode that will be rejected by the Move bytecode verifier. The IR syntax is a work in progress that will undergo significant changes.*
 
@@ -39,7 +39,7 @@ Libra Core components interact with the language component through the VM. Speci
 ```
 ├── README.md          # This README
 ├── benchmarks         # Benchmarks for the Move language VM and surrounding code
-├── bytecode_verifier  # The bytecode verifier
+├── bytecode-verifier  # The bytecode verifier
 ├── e2e_tests          # Infrastructure and tests for the end-to-end flow
 ├── functional_tests   # Testing framework for the Move language
 ├── compiler           # The IR to Move bytecode compiler

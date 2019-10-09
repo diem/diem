@@ -15,7 +15,7 @@ ir_to_bytecode = { path = "../compiler/ir_to_bytecode" }
 stdlib = { path = "../stdlib" }
 libra-types = { path = "../../types" }
 vm = { path = "../vm" }
-bytecode_verifier = { path = "../bytecode_verifier" }
+bytecode-verifier = { path = "../bytecode_verifier" }
 language_e2e_tests = { path = "../e2e_tests" }
 config = { path = "../../config" }
 filecheck = "0.4.0"

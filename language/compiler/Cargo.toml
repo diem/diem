@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bytecode_verifier = { path = "../bytecode_verifier" }
+bytecode-verifier = { path = "../bytecode_verifier" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 ir_to_bytecode = { path = "ir_to_bytecode" }
 stdlib = { path = "../stdlib" }
