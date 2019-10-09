@@ -11,7 +11,7 @@ publish = false
 
 [dependencies]
 bytecode-verifier = { path = "../bytecode_verifier" }
-canonical_serialization = { path = "../../common/canonical_serialization" }
+canonical-serialization = { path = "../../common/canonical_serialization" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 compiler = { path = "../compiler" }
 lazy_static = "1.3.0"

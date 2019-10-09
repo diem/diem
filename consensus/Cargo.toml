@@ -30,7 +30,7 @@ termion = { version = "1.5.3", default-features = false }
 tokio = { version = "0.1.22", default-features = false }
 prometheus = { version = "0.7.0", default-features = false }
 
-canonical_serialization = { path = "../common/canonical_serialization" }
+canonical-serialization = { path = "../common/canonical_serialization" }
 channel = { path = "../common/channel" }
 config = { path = "../config" }
 crypto = { path = "../crypto/crypto" }

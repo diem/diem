@@ -19,7 +19,7 @@ mirai-annotations = "1.4.0"
 prometheus = { version = "0.7.0", default-features = false }
 
 bytecode-verifier = { path = "../../bytecode_verifier" }
-canonical_serialization = { path = "../../../common/canonical_serialization" }
+canonical-serialization = { path = "../../../common/canonical_serialization" }
 config = { path = "../../../config" }
 crypto = { path = "../../../crypto/crypto" }
 logger = { path = "../../../common/logger" }

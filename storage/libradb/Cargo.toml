@@ -25,7 +25,7 @@ strum = "0.15.0"
 strum_macros = "0.15.0"
 
 accumulator = { path = "../accumulator" }
-canonical_serialization = { path = "../../common/canonical_serialization" }
+canonical-serialization = { path = "../../common/canonical_serialization" }
 crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 jellyfish_merkle = { path = "../jellyfish_merkle" }

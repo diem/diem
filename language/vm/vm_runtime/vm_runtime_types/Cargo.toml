@@ -16,7 +16,7 @@ proptest = "0.9"
 sha2 = "0.8.0"
 libra-types = { path = "../../../../types" }
 vm = { path = "../../" }
-canonical_serialization = { path = "../../../../common/canonical_serialization" }
+canonical-serialization = { path = "../../../../common/canonical_serialization" }
 crypto = { path = "../../../../crypto/crypto" }
 failure = { path = "../../../../common/failure_ext", package = "failure_ext" }
 

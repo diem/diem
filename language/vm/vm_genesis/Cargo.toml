@@ -26,7 +26,7 @@ lazy_static = "1.3.0"
 rand = "0.6.5"
 
 [dev-dependencies]
-canonical_serialization = { path = "../../../common/canonical_serialization" }
+canonical-serialization = { path = "../../../common/canonical_serialization" }
 crypto = { path = "../../../crypto/crypto", features = ["testing"]}
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
