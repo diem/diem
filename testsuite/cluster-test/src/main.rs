@@ -601,11 +601,11 @@ impl ClusterTestRunner {
     }
 
     pub fn stop(&self) {
-        self.activate_all(&self.make_stop_effects())
+        self.activate_all(&mut self.make_stop_effects())
     }
 
     pub fn start(&self) {
-        self.deactivate_all(&self.make_stop_effects())
+        self.deactivate_all(&mut self.make_stop_effects())
     }
 
     fn make_stop_effects(&self) -> Vec<StopContainer> {
@@ -617,9 +617,9 @@ impl ClusterTestRunner {
             .collect()
     }
 
-    fn activate_all<T: Effect>(&self, effects: &[T]) {
+    fn activate_all<T: Effect>(&self, effects: &mut [T]) {
         let jobs = effects
-            .iter()
+            .iter_mut()
             .map(|effect| {
                 move || {
                     if let Err(e) = effect.activate() {
@@ -631,9 +631,9 @@ impl ClusterTestRunner {
         self.execute_jobs(jobs);
     }
 
-    fn deactivate_all<T: Effect>(&self, effects: &[T]) {
+    fn deactivate_all<T: Effect>(&self, effects: &mut [T]) {
         let jobs = effects
-            .iter()
+            .iter_mut()
             .map(|effect| {
                 move || {
                     if let Err(e) = effect.deactivate() {
