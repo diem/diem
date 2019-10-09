@@ -238,7 +238,6 @@ impl TimeoutMsg {
     }
 
     /// Returns a reference to the signature of the author
-    #[allow(dead_code)]
     pub fn signature(&self) -> &Signature {
         &self.signature
     }
