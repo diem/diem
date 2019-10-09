@@ -387,7 +387,7 @@ name = "bytecode-verifier"
 version = "0.1.0"
 dependencies = [
  "failure_ext 0.1.0",
- "invalid_mutations 0.1.0",
+ "invalid-mutations 0.1.0",
  "libra-types 0.1.0",
  "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "petgraph 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -401,7 +401,7 @@ version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
  "failure_ext 0.1.0",
- "invalid_mutations 0.1.0",
+ "invalid-mutations 0.1.0",
  "libra-types 0.1.0",
  "petgraph 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1821,7 +1821,7 @@ version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "invalid_mutations"
+name = "invalid-mutations"
 version = "0.1.0"
 dependencies = [
  "libra-types 0.1.0",
