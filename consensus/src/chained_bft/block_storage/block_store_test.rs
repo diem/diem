@@ -405,6 +405,7 @@ fn test_illegal_timestamp() {
     let genesis = block_store.root();
     let block_with_illegal_timestamp = Block::<Vec<usize>>::new_internal(
         vec![],
+        0,
         1,
         // This timestamp is illegal, it is the same as genesis
         genesis.timestamp_usecs(),

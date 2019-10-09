@@ -45,6 +45,7 @@ prop_compose! {
     ) -> Block<Vec<usize>> {
         Block::new_internal(
             vec![payload],
+            0,
             round,
             get_current_timestamp().as_micros() as u64,
             parent_qc,
@@ -88,6 +89,7 @@ prop_compose! {
             Block {
                 timestamp_usecs: get_current_timestamp().as_micros() as u64,
                 id: fake_id,
+                epoch: block.epoch(),
                 round: block.round(),
                 quorum_cert: block.quorum_cert().clone(),
                 block_type: BlockType::Proposal {

@@ -74,8 +74,10 @@ message Block {
   bytes id = 1;
   // Payload of the block (e.g. one or more transaction(s)
   bytes payload = 2;
+  // Epoch number corresponds to the set of validators that are active for this block.
+  uint64 epoch = 3;
   // The round of the block (internal monotonically increasing counter).
-  uint64 round = 3;
+  uint64 round = 4;
   // The approximate physical microseconds since the epoch when the block was proposed
   uint64 timestamp_usecs = 5;
   // Contains the quorum certified ancestor and whether the quorum certified

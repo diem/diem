@@ -58,6 +58,8 @@ pub enum BlockType<T> {
 pub struct Block<T> {
     /// This block's id as a hash value
     id: HashValue,
+    /// Epoch number corresponds to the set of validators that are active for this block.
+    epoch: u64,
     /// The round of a block is an internal monotonically increasing counter used by Consensus
     /// protocol.
     round: Round,
@@ -137,6 +139,10 @@ impl<T> Block<T> {
         self.id
     }
 
+    pub fn epoch(&self) -> u64 {
+        self.epoch
+    }
+
     pub fn parent_id(&self) -> HashValue {
         self.quorum_cert.certified_block_id()
     }
@@ -203,6 +209,7 @@ where
 
         Block {
             id: *GENESIS_BLOCK_ID,
+            epoch: 0,
             round: 0,
             timestamp_usecs: 0, // The beginning of UNIX TIME
             quorum_cert: genesis_quorum_cert,
@@ -214,6 +221,7 @@ where
     // chaining.  This functionality should typically only be used for testing.
     pub fn new_internal(
         payload: T,
+        epoch: u64,
         round: Round,
         timestamp_usecs: u64,
         quorum_cert: QuorumCert,
@@ -221,6 +229,7 @@ where
     ) -> Self {
         let block_internal = BlockSerializer {
             payload: Some(&payload),
+            epoch,
             round,
             timestamp_usecs,
             quorum_cert: &quorum_cert,
@@ -234,6 +243,7 @@ where
 
         Block {
             id,
+            epoch,
             round,
             timestamp_usecs,
             quorum_cert,
@@ -259,6 +269,7 @@ where
 
         Block::new_internal(
             payload,
+            parent_block.epoch(),
             round,
             timestamp_usecs,
             quorum_cert,
@@ -278,8 +289,10 @@ where
         // which doesn't have any other way of determining the order of ledger infos rather than
         // comparing their timestamps.
         let timestamp_usecs = parent_block.timestamp_usecs + 1;
+        let epoch = parent_block.epoch();
         let block_serializer = BlockSerializer::<T> {
             payload: None,
+            epoch,
             round,
             timestamp_usecs,
             quorum_cert: &quorum_cert,
@@ -292,6 +305,7 @@ where
 
         Block {
             id,
+            epoch,
             round,
             timestamp_usecs,
             quorum_cert,
@@ -401,6 +415,7 @@ where
         };
         let block_internal = BlockSerializer {
             payload: self.payload(),
+            epoch: self.epoch,
             round: self.round,
             timestamp_usecs: self.timestamp_usecs,
             quorum_cert: &self.quorum_cert,
@@ -414,6 +429,7 @@ where
 // Block Id
 struct BlockSerializer<'a, T> {
     payload: Option<&'a T>,
+    epoch: u64,
     round: Round,
     timestamp_usecs: u64,
     quorum_cert: &'a QuorumCert,
@@ -442,6 +458,7 @@ where
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_u64(self.timestamp_usecs)?
+            .encode_u64(self.epoch)?
             .encode_u64(self.round)?
             .encode_optional(&self.payload)?
             .encode_struct(self.quorum_cert)?
@@ -470,12 +487,13 @@ where
     fn try_from(proto: network::proto::Block) -> failure::Result<Self> {
         let id = HashValue::from_slice(proto.id.as_ref())?;
         let timestamp_usecs = proto.timestamp_usecs;
+        let epoch = proto.epoch;
         let round = proto.round;
         let quorum_cert = proto
             .quorum_cert
             .ok_or_else(|| format_err!("Missing quorum_cert"))?
             .try_into()?;
-        let block_type = if round == 0 {
+        let block_type = if proto.round == 0 {
             BlockType::Genesis
         } else if proto.author.is_empty() {
             BlockType::NilBlock
@@ -488,6 +506,7 @@ where
         };
         Ok(Block {
             id,
+            epoch,
             round,
             timestamp_usecs,
             quorum_cert,
@@ -519,6 +538,7 @@ where
         Self {
             id: block.id.to_vec(),
             payload,
+            epoch: block.epoch,
             round: block.round,
             timestamp_usecs: block.timestamp_usecs,
             quorum_cert: Some(block.quorum_cert.into()),
