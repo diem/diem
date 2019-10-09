@@ -9,8 +9,8 @@ use crate::{
 
 use canonical_serialization::CanonicalSerialize;
 use consensus_types::{
-    block::ExecutedBlock, quorum_cert::QuorumCert,
-    vote_msg::VoteMsg, timeout_certificate::TimeoutCertificate
+    block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
+    vote_msg::VoteMsg,
 };
 use crypto::HashValue;
 use executor::StateComputeResult;

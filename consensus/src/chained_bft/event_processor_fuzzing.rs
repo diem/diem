@@ -4,8 +4,7 @@ use crate::{
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
         liveness::{
-            pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
-            pacemaker_timeout_manager::HighestTimeoutCertificates,
+            pacemaker_new::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
             rotating_proposer_election::RotatingProposer,
         },
@@ -77,15 +76,7 @@ fn create_pacemaker() -> Pacemaker {
     let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
     let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
     let time_service = Arc::new(SimulatedTimeService::new());
-    Pacemaker::new(
-        MockStorage::<TestPayload>::start_for_testing()
-            .0
-            .persistent_liveness_storage(),
-        time_interval,
-        time_service,
-        pacemaker_timeout_sender,
-        HighestTimeoutCertificates::default(),
-    )
+    Pacemaker::new(time_interval, time_service, pacemaker_timeout_sender)
 }
 
 // Creates an EventProcessor for fuzzing

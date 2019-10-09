@@ -8,7 +8,7 @@ use crate::chained_bft::{
 use config::config::{NodeConfig, NodeConfigHelpers};
 use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
-    vote_msg::VoteMsg, timeout_certificate::TimeoutCertificate
+    timeout_certificate::TimeoutCertificate, vote_msg::VoteMsg,
 };
 use crypto::HashValue;
 use failure::Result;

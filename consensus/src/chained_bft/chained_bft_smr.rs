@@ -9,14 +9,13 @@ use crate::{
         event_processor::EventProcessor,
         liveness::{
             multi_proposer_election::MultiProposer,
-            pacemaker::{ExponentialTimeInterval, Pacemaker},
-            pacemaker_timeout_manager::HighestTimeoutCertificates,
+            pacemaker_new::{ExponentialTimeInterval, Pacemaker},
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
             rotating_proposer_election::{choose_leader, RotatingProposer},
         },
-        network::ConsensusNetworkImpl,
-        persistent_storage::{PersistentLivenessStorage, PersistentStorage, RecoveryData},
+        network::{ConsensusNetworkImpl, NetworkReceivers},
+        persistent_storage::{PersistentStorage, RecoveryData},
     },
     counters,
     state_replication::{StateComputer, StateMachineReplication, TxnManager},
@@ -98,10 +97,8 @@ impl<T: Payload> ChainedBftSMR<T> {
 
     fn create_pacemaker(
         &self,
-        persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
         time_service: Arc<dyn TimeService>,
         timeout_sender: channel::Sender<Round>,
-        highest_timeout_certificate: HighestTimeoutCertificates,
     ) -> Pacemaker {
         // 1.5^6 ~= 11
         // Timeout goes from initial_timeout to initial_timeout*11 in 6 steps
@@ -110,13 +107,7 @@ impl<T: Payload> ChainedBftSMR<T> {
             1.5,
             6,
         ));
-        Pacemaker::new(
-            persistent_liveness_storage,
-            time_interval,
-            time_service,
-            timeout_sender,
-            highest_timeout_certificate,
-        )
+        Pacemaker::new(time_interval, time_service, timeout_sender)
     }
 
     /// Create a proposer election handler based on proposers
@@ -164,9 +155,7 @@ impl<T: Payload> ChainedBftSMR<T> {
                     vote_msg = network_receivers.votes.select_next_some() => {
                         event_processor.process_vote(vote_msg).await;
                     }
-                    remote_timeout_msg = network_receivers.timeout_msgs.select_next_some() => {
-                        event_processor.process_remote_timeout_msg(remote_timeout_msg).await;
-                    }
+                    remote_timeout_msg = network_receivers.timeout_msgs.select_next_some() => (),
                     local_timeout_round = pacemaker_timeout_sender_rx.select_next_some() => {
                         event_processor.process_local_timeout(local_timeout_round).await;
                     }
@@ -231,12 +220,7 @@ impl<T: Payload> ChainedBftSMR<T> {
 
         let (timeout_sender, timeout_receiver) =
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
-        let pacemaker = self.create_pacemaker(
-            self.storage.persistent_liveness_storage(),
-            time_service.clone(),
-            timeout_sender,
-            HighestTimeoutCertificates::default(),
-        );
+        let pacemaker = self.create_pacemaker(time_service.clone(), timeout_sender);
 
         let proposer_election = self.create_proposer_election(epoch_mgr.validators().as_ref());
         let event_processor = EventProcessor::new(

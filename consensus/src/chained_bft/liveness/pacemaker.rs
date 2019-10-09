@@ -356,10 +356,6 @@ impl Pacemaker {
         if round != self.current_round {
             return false;
         }
-        warn!(
-            "Round {} has timed out, broadcasting new round message to all replicas",
-            round
-        );
         counters::TIMEOUT_COUNT.inc();
         self.setup_timeout();
         true

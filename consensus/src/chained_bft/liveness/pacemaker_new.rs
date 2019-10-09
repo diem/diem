@@ -6,9 +6,7 @@ use crate::{
     util::time_service::{SendTask, TimeService},
 };
 use channel;
-use consensus_types::{
-    common::Round, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
-};
+use consensus_types::common::Round;
 use logger::prelude::*;
 use std::{
     fmt,
@@ -19,17 +17,15 @@ use std::{
 /// A reason for starting a new round: introduced for monitoring / debug purposes.
 #[derive(Eq, Debug, PartialEq)]
 pub enum NewRoundReason {
-    QCReady { cert: Arc<QuorumCert> },
-    Timeout { cert: Arc<TimeoutCertificate> },
+    QCReady,
+    Timeout,
 }
 
 impl fmt::Display for NewRoundReason {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            NewRoundReason::QCReady { cert } => {
-                write!(f, "QCReady (round={})", cert.certified_block_round())
-            }
-            NewRoundReason::Timeout { cert } => write!(f, "TCReady (round={})", cert.round()),
+            NewRoundReason::QCReady => write!(f, "QCReady"),
+            NewRoundReason::Timeout => write!(f, "TCReady"),
         }
     }
 }
@@ -202,14 +198,12 @@ impl Pacemaker {
     /// Note that some of these values might not be available by the caller.
     pub fn process_certificates(
         &mut self,
-        highest_qc: Option<Arc<QuorumCert>>,
-        highest_tc: Option<Arc<TimeoutCertificate>>,
+        hqc_round: Option<Round>,
+        htc_round: Option<Round>,
         highest_committed_round: Option<Round>,
     ) -> Option<NewRoundEvent> {
-        let qc_round = highest_qc
-            .as_ref()
-            .map_or(0, |qc| qc.certified_block_round());
-        let tc_round = highest_tc.as_ref().map_or(0, |tc| tc.round());
+        let qc_round = hqc_round.map_or(0, |r| r);
+        let tc_round = htc_round.map_or(0, |r| r);
         if let Some(committed_round) = highest_committed_round {
             if committed_round > self.highest_committed_round {
                 self.highest_committed_round = committed_round;
@@ -222,13 +216,9 @@ impl Pacemaker {
             let timeout = self.setup_timeout();
             // The new round reason is QCReady in case both QC and TC are equal
             let new_round_reason = if qc_round >= tc_round {
-                NewRoundReason::QCReady {
-                    cert: highest_qc.expect("None QC generated a new round"),
-                }
+                NewRoundReason::QCReady
             } else {
-                NewRoundReason::Timeout {
-                    cert: highest_tc.expect("None TC generated a new round"),
-                }
+                NewRoundReason::Timeout
             };
             let new_round_event = NewRoundEvent {
                 round: self.current_round,

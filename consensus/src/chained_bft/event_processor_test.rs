@@ -7,8 +7,7 @@ use crate::{
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
         liveness::{
-            pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
-            pacemaker_timeout_manager::HighestTimeoutCertificates,
+            pacemaker_new::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
             rotating_proposer_election::RotatingProposer,
@@ -31,7 +30,7 @@ use consensus_types::{
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
-    timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
+    timeout_certificate::TimeoutCertificate,
     vote_data::VoteData,
     vote_msg::VoteMsg,
 };
@@ -49,7 +48,7 @@ use network::{
 };
 use safety_rules::{ConsensusState, SafetyRules};
 use std::convert::TryFrom;
-use std::{sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::runtime::TaskExecutor;
 
 /// Auxiliary struct that is setting up node environment for the test.
@@ -84,15 +83,7 @@ impl NodeSetup {
         let base_timeout = Duration::new(60, 0);
         let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
         let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
-        Pacemaker::new(
-            MockStorage::<TestPayload>::start_for_testing()
-                .0
-                .persistent_liveness_storage(),
-            time_interval,
-            time_service,
-            pacemaker_timeout_sender,
-            HighestTimeoutCertificates::default(),
-        )
+        Pacemaker::new(time_interval, time_service, pacemaker_timeout_sender)
     }
 
     fn create_proposer_election(
@@ -482,9 +473,9 @@ fn process_round_mismatch_test() {
 }
 
 #[test]
-/// Ensure that after new round messages are sent that the receivers have the latest
-/// quorum certificate
-fn process_new_round_msg_test() {
+/// Ensure that after the vote messages are broadcasted upon timeout, the receivers
+/// have the highest quorum certificate (carried by the SyncInfo of the vote message)
+fn process_vote_timeout_msg_test() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.executor());
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
@@ -536,20 +527,31 @@ fn process_new_round_msg_test() {
         1
     );
 
-    // As the static proposer processes the new round message it should learn about
+    // As the static proposer processes the the vote message it should learn about the
     // block_0_quorum_cert at round 1.
+    let dummy_vote_data = VoteData::new(
+        HashValue::random(),
+        HashValue::random(),
+        1,
+        HashValue::random(),
+        0,
+    );
+    let mut vote_msg_on_timeout = VoteMsg::new(
+        dummy_vote_data,
+        non_proposer.signer.author(),
+        placeholder_ledger_info(),
+        &non_proposer.signer,
+        SyncInfo::new(
+            block_0_quorum_cert,
+            QuorumCert::certificate_for_genesis(),
+            None,
+        ),
+    );
+    vote_msg_on_timeout.add_round_signature(&non_proposer.signer);
     block_on(
         static_proposer
             .event_processor
-            .process_remote_timeout_msg(TimeoutMsg::new(
-                SyncInfo::new(
-                    block_0_quorum_cert,
-                    QuorumCert::certificate_for_genesis(),
-                    None,
-                ),
-                PacemakerTimeout::new(2, &non_proposer.signer, None),
-                &non_proposer.signer,
-            )),
+            .process_vote(vote_msg_on_timeout),
     );
     assert_eq!(
         static_proposer
@@ -614,7 +616,7 @@ fn process_proposer_mismatch_test() {
 }
 
 #[test]
-/// We allow to 'skips' round if proposal carries timeout certificate for next round
+/// We allow to 'skip' round if proposal carries timeout certificate for next round
 fn process_timeout_certificate_test() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.executor());
@@ -641,8 +643,8 @@ fn process_timeout_certificate_test() {
         genesis_qc.clone(),
         node.block_store.signer(),
     );
-    let tc =
-        PacemakerTimeoutCertificate::new(1, vec![PacemakerTimeout::new(1, &node.signer, None)]);
+    let tc = TimeoutCertificate::new(1, HashMap::new());
+
     block_on(async move {
         let skip_round_proposal = ProposalMsg::<TestPayload>::new(
             block_skip_round,
@@ -732,7 +734,8 @@ fn process_block_retrieval() {
     block_on(async move {
         node.event_processor
             .process_certificates(block.quorum_cert(), None)
-            .await;
+            .await
+            .expect("Failed to process certificates");
         node.event_processor.process_proposed_block(block).await;
 
         // first verify that we can retrieve the block if it's in the tree
@@ -819,7 +822,8 @@ fn basic_restart_test() {
             node_mut
                 .event_processor
                 .process_certificates(proposal.quorum_cert(), None),
-        );
+        )
+        .expect("Failed to process certificates");
         block_on(
             node_mut
                 .event_processor
@@ -845,22 +849,18 @@ fn nil_vote_on_timeout() {
     // It needs 2 nodes to test network message.
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
     let node = &mut nodes[0];
-    let genesis_id = node.block_store.root().id();
     block_on(async move {
-        // Process the outgoing timeout and verify that the TimeoutMsg contains a NIL vote that
-        // extends genesis
+        // Process the outgoing vote message and verify that it contains a round signature
+        // and that the vote extends genesis.
         node.event_processor.process_local_timeout(1).await;
-        let timeout_msg = TimeoutMsg::try_from(
+        let vote_msg = VoteMsg::try_from(
             playground
-                .wait_for_messages(1, NetworkPlayground::timeout_msg_only)
+                .wait_for_messages(1, NetworkPlayground::timeout_votes_only)
                 .await[0]
                 .1
                 .clone(),
         )
         .unwrap();
-        assert_eq!(timeout_msg.pacemaker_timeout().round(), 1);
-        let vote_msg = timeout_msg.pacemaker_timeout().vote_msg().unwrap().clone();
-        assert_eq!(vote_msg.vote_data().block_round(), 1);
-        assert_eq!(vote_msg.vote_data().parent_block_id(), genesis_id);
+        assert!(vote_msg.round_signature().is_some());
     });
 }
