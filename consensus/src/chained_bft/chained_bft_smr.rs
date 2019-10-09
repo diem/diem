@@ -70,7 +70,6 @@ impl ChainedBftSMRConfig {
 /// driver. ChainedBftSMR implements the StateMachineReplication, it is going to be used by
 /// ConsensusProvider for the e2e flow.
 pub struct ChainedBftSMR<T> {
-    author: Author,
     signer: Option<ValidatorSigner>,
     proposers: Vec<Author>,
     runtime: Option<Runtime>,
@@ -84,7 +83,6 @@ pub struct ChainedBftSMR<T> {
 
 impl<T: Payload> ChainedBftSMR<T> {
     pub fn new(
-        author: Author,
         signer: ValidatorSigner,
         proposers: Vec<Author>,
         network: ConsensusNetworkImpl,
@@ -95,7 +93,6 @@ impl<T: Payload> ChainedBftSMR<T> {
         epoch_mgr: Arc<EpochManager>,
     ) -> Self {
         Self {
-            author,
             signer: Some(signer),
             proposers,
             runtime: Some(runtime),
