@@ -15,6 +15,6 @@ ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
 stdlib = { path = "../../stdlib" }
 #
 [dev-dependencies]
-# invalid_mutations = { path = "invalid_mutations" }
+# invalid-mutations = { path = "invalid-mutations" }
 proptest = "0.9"
 libra-types = { path = "../../../types", features = ["testing"]}
