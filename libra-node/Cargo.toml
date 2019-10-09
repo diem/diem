@@ -23,7 +23,7 @@ admission-control-proto = { path = "../admission_control/admission-control-proto
 admission-control-service = { path = "../admission_control/admission-control-service" }
 config = { path = "../config" }
 consensus = { path = "../consensus" }
-crash_handler = { path = "../common/crash_handler" }
+crash-handler = { path = "../common/crash_handler" }
 debug_interface = { path = "../common/debug_interface" }
 executable-helpers = { path = "../common/executable-helpers" }
 executor = { path = "../execution/executor" }

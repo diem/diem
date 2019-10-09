@@ -27,7 +27,7 @@ structopt = "0.3.2"
 
 admission-control-proto = { version = "0.1.0", path = "../admission_control/admission-control-proto" }
 config = { path = "../config" }
-crash_handler = { path = "../common/crash_handler" }
+crash-handler = { path = "../common/crash_handler" }
 crypto = { path = "../crypto/crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 libra_wallet = { path = "./libra_wallet" }

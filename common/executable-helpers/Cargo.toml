@@ -13,6 +13,6 @@ edition = "2018"
 slog-scope = "4.0"
 
 config = { path = "../../config"}
-crash_handler = { path = "../crash_handler" }
+crash-handler = { path = "../crash_handler" }
 logger =  { path = "../logger" }
 metrics = { path = "../metrics" }
