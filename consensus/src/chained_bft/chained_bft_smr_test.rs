@@ -396,12 +396,12 @@ fn basic_commit_and_restart() {
         // We cannot reliable wait for the event of "commit & prune": the only thing that we know is
         // that after receiving the vote for round 20, the root should be at least height 16.
         assert!(
-            nodes[0].smr.block_store().unwrap().root().round() >= 18,
+            nodes[0].smr.block_store().unwrap().root().round() >= 17,
             "round of node 0 is {}",
             nodes[0].smr.block_store().unwrap().root().round()
         );
         assert!(
-            nodes[1].smr.block_store().unwrap().root().round() >= 18,
+            nodes[1].smr.block_store().unwrap().root().round() >= 17,
             "round of node 1 is {}",
             nodes[1].smr.block_store().unwrap().root().round()
         );
