@@ -31,7 +31,7 @@
 //!
 //! ## Example
 //!
-//! ```
+//! ```ignore
 //! # #[macro_use] extern crate crypto_derive;
 //! use crypto::{
 //!     hash::HashValue,
