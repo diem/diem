@@ -260,8 +260,7 @@ where
             // the next dial attempt for this peer.
             let now = Instant::now();
             let dial_delay = dial_state.next_backoff_delay(max_delay);
-            let dial_time = now.checked_add(dial_delay).unwrap_or_else(Instant::now);
-            let f_delay = timer::delay(dial_time);
+            let f_delay = timer::delay_for(dial_delay);
 
             let (cancel_tx, cancel_rx) = oneshot::channel();
 

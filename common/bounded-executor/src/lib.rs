@@ -49,12 +49,12 @@ mod test {
     use futures::{executor::block_on, future::Future};
     use std::{
         sync::atomic::{AtomicU32, Ordering},
-        time::{Duration, Instant},
+        time::Duration,
     };
-    use tokio::{runtime::Runtime, timer::delay};
+    use tokio::{runtime::Runtime, timer::delay_for};
 
     fn yield_task() -> impl Future<Output = ()> {
-        delay(Instant::now() + Duration::from_millis(1)).map(|_| ())
+        delay_for(Duration::from_millis(1)).map(|_| ())
     }
 
     // spawn NUM_TASKS futures on a BoundedExecutor, ensuring that no more than

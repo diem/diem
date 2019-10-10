@@ -10,11 +10,11 @@ use pin_project::pin_project;
 use std::{
     pin::Pin,
     task::{Context, Poll},
-    time::{Duration, Instant},
+    time::Duration,
 };
 use tokio::{
     executor::Executor,
-    timer::{delay, Delay},
+    timer::{delay_for, Delay},
 };
 
 /// A [`TimeoutTransport`] is a transport which wraps another transport with a timeout on all
@@ -120,10 +120,9 @@ where
     F: Future,
 {
     fn new(future: F, timeout: Duration) -> Self {
-        let deadline = Instant::now() + timeout;
         Self {
             future,
-            timeout: delay(deadline),
+            timeout: delay_for(timeout),
         }
     }
 }
