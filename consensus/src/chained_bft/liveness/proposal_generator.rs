@@ -1,13 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{common::Round, consensus_types::block::Block};
-
 use crate::{
-    chained_bft::{block_storage::BlockReader, common::Payload},
+    chained_bft::block_storage::BlockReader,
     counters,
     state_replication::TxnManager,
     util::time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},
+};
+use consensus_types::{
+    block::Block,
+    common::{Payload, Round},
 };
 use logger::prelude::*;
 use std::{

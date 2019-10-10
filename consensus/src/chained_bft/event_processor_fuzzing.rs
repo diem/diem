@@ -1,7 +1,6 @@
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
-        consensus_types::proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
         liveness::{
@@ -17,6 +16,7 @@ use crate::{
     },
     util::mock_time_service::SimulatedTimeService,
 };
+use consensus_types::proposal_msg::{ProposalMsg, ProposalUncheckedSignatures};
 use futures::{channel::mpsc, executor::block_on};
 use lazy_static::lazy_static;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};

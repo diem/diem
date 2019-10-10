@@ -4,15 +4,15 @@
 use crate::{
     chained_bft::{
         block_storage::{block_tree::BlockTree, BlockReader, VoteReceptionResult},
-        common::{Payload, Round},
-        consensus_types::{
-            block::{Block, ExecutedBlock},
-            quorum_cert::QuorumCert,
-            vote_msg::VoteMsg,
-        },
         persistent_storage::PersistentStorage,
     },
     state_replication::StateComputer,
+};
+use consensus_types::{
+    block::{Block, ExecutedBlock},
+    common::{Payload, Round},
+    quorum_cert::QuorumCert,
+    vote_msg::VoteMsg,
 };
 use crypto::HashValue;
 use failure::ResultExt;

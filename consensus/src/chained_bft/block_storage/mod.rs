@@ -1,12 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
+use consensus_types::{
+    block::{Block, ExecutedBlock},
     common::Round,
-    consensus_types::{
-        block::{Block, ExecutedBlock},
-        quorum_cert::QuorumCert,
-    },
+    quorum_cert::QuorumCert,
+    timeout_certificate::TimeoutCertificate,
 };
 use crypto::HashValue;
 use std::sync::Arc;
@@ -15,7 +14,6 @@ mod block_store;
 mod block_tree;
 mod pending_votes;
 
-use crate::chained_bft::consensus_types::timeout_certificate::TimeoutCertificate;
 pub use block_store::{BlockStore, NeedFetchResult};
 use executor::StateComputeResult;
 

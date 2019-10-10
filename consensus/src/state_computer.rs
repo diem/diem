@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{chained_bft::QuorumCert, counters, state_replication::StateComputer};
+use crate::{counters, state_replication::StateComputer};
+use consensus_types::quorum_cert::QuorumCert;
 use crypto::HashValue;
 use executor::{Executor, StateComputeResult};
 use failure::Result;

@@ -1,10 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
+use crate::chained_bft::persistent_storage::PersistentLivenessStorage;
+use consensus_types::{
     common::Author,
-    consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
-    persistent_storage::PersistentLivenessStorage,
+    timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
 };
 use libra_types::crypto_proxies::ValidatorVerifier;
 use logger::prelude::*;

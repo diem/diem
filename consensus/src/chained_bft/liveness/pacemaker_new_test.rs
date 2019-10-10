@@ -3,8 +3,6 @@
 
 use crate::{
     chained_bft::{
-        common::Round,
-        consensus_types::quorum_cert::QuorumCert,
         liveness::pacemaker_new::{
             ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker,
             PacemakerTimeInterval,
@@ -13,9 +11,11 @@ use crate::{
     },
     util::mock_time_service::SimulatedTimeService,
 };
+
 use channel;
 use consensus_types::timeout_certificate::TimeoutCertificate;
 use consensus_types::vote_data::VoteData;
+use consensus_types::{common::Round, quorum_cert::QuorumCert};
 use crypto::HashValue;
 use futures::{executor::block_on, StreamExt};
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;

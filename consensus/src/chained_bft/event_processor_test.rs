@@ -4,16 +4,6 @@
 use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
-        common::Author,
-        consensus_types::{
-            block::Block,
-            proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
-            quorum_cert::QuorumCert,
-            sync_info::SyncInfo,
-            timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
-            vote_data::VoteData,
-            vote_msg::VoteMsg,
-        },
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
         liveness::{
@@ -36,6 +26,16 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
+use consensus_types::{
+    block::Block,
+    common::Author,
+    proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
+    quorum_cert::QuorumCert,
+    sync_info::SyncInfo,
+    timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
+    vote_data::VoteData,
+    vote_msg::VoteMsg,
+};
 use crypto::HashValue;
 use futures::{
     channel::{mpsc, oneshot},

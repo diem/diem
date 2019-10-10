@@ -10,7 +10,7 @@
 //! ```
 
 use super::QC_CF_NAME;
-use crate::chained_bft::consensus_types::quorum_cert::QuorumCert;
+use consensus_types::quorum_cert::QuorumCert;
 use crypto::HashValue;
 use failure::prelude::*;
 use prost::Message;

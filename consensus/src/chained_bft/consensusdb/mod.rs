@@ -5,15 +5,12 @@
 mod consensusdb_test;
 mod schema;
 
-use crate::chained_bft::{
-    common::Payload,
-    consensus_types::{block::Block, quorum_cert::QuorumCert},
-    consensusdb::schema::{
-        block::{BlockSchema, SchemaBlock},
-        quorum_certificate::QCSchema,
-        single_entry::{SingleEntryKey, SingleEntrySchema},
-    },
+use crate::chained_bft::consensusdb::schema::{
+    block::{BlockSchema, SchemaBlock},
+    quorum_certificate::QCSchema,
+    single_entry::{SingleEntryKey, SingleEntrySchema},
 };
+use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert};
 use crypto::HashValue;
 use failure::prelude::*;
 use logger::prelude::*;

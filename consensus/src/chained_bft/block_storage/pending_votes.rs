@@ -1,12 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::common::Round;
-use crate::chained_bft::consensus_types::timeout_certificate::TimeoutCertificate;
-use crate::chained_bft::{
-    block_storage::VoteReceptionResult,
-    common::Author,
-    consensus_types::{quorum_cert::QuorumCert, vote_msg::VoteMsg},
+use crate::chained_bft::block_storage::VoteReceptionResult;
+use consensus_types::{
+    common::{Author, Round},
+    quorum_cert::QuorumCert,
+    timeout_certificate::TimeoutCertificate,
+    vote_msg::VoteMsg,
 };
 use crypto::{hash::CryptoHash, HashValue};
 use libra_types::{

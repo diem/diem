@@ -10,7 +10,7 @@
 //! ```
 
 use super::BLOCK_CF_NAME;
-use crate::chained_bft::{common::Payload, consensus_types::block::Block};
+use consensus_types::{block::Block, common::Payload};
 use crypto::HashValue;
 use failure::prelude::*;
 use prost::Message;

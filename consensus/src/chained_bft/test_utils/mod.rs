@@ -1,14 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
-    block_storage::BlockStore,
+use crate::chained_bft::block_storage::BlockStore;
+use consensus_types::{
+    block::{Block, ExecutedBlock},
     common::Round,
-    consensus_types::{
-        block::{Block, ExecutedBlock},
-        quorum_cert::QuorumCert,
-        vote_data::VoteData,
-    },
+    quorum_cert::QuorumCert,
+    sync_info::SyncInfo,
+    vote_data::VoteData,
 };
 use crypto::{hash::CryptoHash, HashValue};
 use executor::ExecutedState;
@@ -26,7 +25,6 @@ mod mock_state_computer;
 mod mock_storage;
 mod mock_txn_manager;
 
-use crate::chained_bft::consensus_types::sync_info::SyncInfo;
 pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
 pub use mock_storage::{EmptyStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;

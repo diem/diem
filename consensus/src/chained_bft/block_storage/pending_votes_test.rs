@@ -2,12 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::block_storage::pending_votes::PendingVotes;
-use crate::chained_bft::common::Round;
-use crate::chained_bft::{
-    block_storage::VoteReceptionResult,
-    consensus_types::{vote_data::VoteData, vote_msg::VoteMsg},
-    test_utils,
-};
+use crate::chained_bft::{block_storage::VoteReceptionResult, test_utils};
+
+use consensus_types::{common::Round, vote_data::VoteData, vote_msg::VoteMsg};
 use crypto::HashValue;
 use libra_types::crypto_proxies::random_validator_verifier;
 use libra_types::ledger_info::LedgerInfo;

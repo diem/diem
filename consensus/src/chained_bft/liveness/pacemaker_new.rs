@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{
-        common::Round,
-        consensus_types::{quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate},
-    },
     counters,
     util::time_service::{SendTask, TimeService},
 };
 use channel;
+use consensus_types::{
+    common::Round, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
+};
 use logger::prelude::*;
 use std::{
     fmt,

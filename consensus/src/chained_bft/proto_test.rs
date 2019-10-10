@@ -1,16 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
-    consensus_types::{
-        block::Block,
-        proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
-        quorum_cert::QuorumCert,
-        sync_info::SyncInfo,
-        vote_data::VoteData,
-        vote_msg::VoteMsg,
-    },
-    test_utils::{self, placeholder_ledger_info},
+use crate::chained_bft::test_utils::{self, placeholder_ledger_info};
+use consensus_types::{
+    block::Block,
+    proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
+    quorum_cert::QuorumCert,
+    sync_info::SyncInfo,
+    vote_data::VoteData,
+    vote_msg::VoteMsg,
 };
 use crypto::HashValue;
 use executor::ExecutedState;
