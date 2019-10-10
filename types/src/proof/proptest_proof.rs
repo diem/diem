@@ -15,20 +15,26 @@ use crypto::{
 use proptest::{collection::vec, prelude::*};
 use rand::{seq::SliceRandom, thread_rng};
 
+fn arb_non_placeholder_accumulator_sibling() -> impl Strategy<Value = HashValue> {
+    any::<HashValue>().prop_filter("Filter out placeholder sibling.", |x| {
+        *x != *ACCUMULATOR_PLACEHOLDER_HASH
+    })
+}
+
+fn arb_accumulator_sibling() -> impl Strategy<Value = HashValue> {
+    prop_oneof![
+        arb_non_placeholder_accumulator_sibling(),
+        Just(*ACCUMULATOR_PLACEHOLDER_HASH),
+    ]
+}
+
 prop_compose! {
     fn arb_accumulator_proof()(
-        non_default_siblings in vec(any::<HashValue>(), 0..MAX_ACCUMULATOR_PROOF_DEPTH),
-        total_num_siblings in 0..=MAX_ACCUMULATOR_PROOF_DEPTH,
+        first_sibling in arb_non_placeholder_accumulator_sibling(),
+        other_siblings in vec(arb_accumulator_sibling(), 0..MAX_ACCUMULATOR_PROOF_DEPTH - 1),
     ) -> AccumulatorProof {
-        let mut siblings = non_default_siblings;
-        if !siblings.is_empty() {
-            let total_num_siblings = std::cmp::max(siblings.len(), total_num_siblings);
-            for _ in siblings.len()..total_num_siblings {
-                siblings.push(ACCUMULATOR_PLACEHOLDER_HASH.clone());
-            }
-            assert_eq!(siblings.len(), total_num_siblings);
-            (&mut siblings[1..]).shuffle(&mut thread_rng());
-        }
+        let mut siblings = vec![first_sibling];
+        siblings.extend(other_siblings.into_iter());
         AccumulatorProof::new(siblings)
     }
 }
