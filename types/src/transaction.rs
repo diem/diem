@@ -889,7 +889,7 @@ impl CryptoHash for TransactionInfo {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TransactionToCommit {
-    signed_txn: SignedTransaction,
+    transaction: Transaction,
     account_states: HashMap<AccountAddress, AccountStateBlob>,
     events: Vec<ContractEvent>,
     gas_used: u64,
@@ -898,14 +898,14 @@ pub struct TransactionToCommit {
 
 impl TransactionToCommit {
     pub fn new(
-        signed_txn: SignedTransaction,
+        transaction: Transaction,
         account_states: HashMap<AccountAddress, AccountStateBlob>,
         events: Vec<ContractEvent>,
         gas_used: u64,
         major_status: StatusCode,
     ) -> Self {
         TransactionToCommit {
-            signed_txn,
+            transaction,
             account_states,
             events,
             gas_used,
@@ -913,8 +913,15 @@ impl TransactionToCommit {
         }
     }
 
-    pub fn signed_txn(&self) -> &SignedTransaction {
-        &self.signed_txn
+    pub fn transaction(&self) -> &Transaction {
+        &self.transaction
+    }
+
+    pub fn as_signed_user_txn(&self) -> Result<&SignedTransaction> {
+        match &self.transaction {
+            Transaction::UserTransaction(txn) => Ok(txn),
+            _ => Err(format_err!("Not a user transaction.")),
+        }
     }
 
     pub fn account_states(&self) -> &HashMap<AccountAddress, AccountStateBlob> {
@@ -938,8 +945,8 @@ impl TryFrom<crate::proto::types::TransactionToCommit> for TransactionToCommit {
     type Error = Error;
 
     fn try_from(proto: crate::proto::types::TransactionToCommit) -> Result<Self> {
-        let signed_txn = proto
-            .signed_txn
+        let transaction = proto
+            .transaction
             .ok_or_else(|| format_err!("Missing signed_transaction"))?
             .try_into()?;
         let num_account_states = proto.account_states.len();
@@ -967,7 +974,7 @@ impl TryFrom<crate::proto::types::TransactionToCommit> for TransactionToCommit {
             StatusCode::try_from(proto.major_status).unwrap_or(StatusCode::UNKNOWN_STATUS);
 
         Ok(TransactionToCommit {
-            signed_txn,
+            transaction,
             account_states,
             events,
             gas_used,
@@ -979,7 +986,7 @@ impl TryFrom<crate::proto::types::TransactionToCommit> for TransactionToCommit {
 impl From<TransactionToCommit> for crate::proto::types::TransactionToCommit {
     fn from(txn: TransactionToCommit) -> Self {
         Self {
-            signed_txn: Some(txn.signed_txn.into()),
+            transaction: Some(txn.transaction.into()),
             account_states: txn
                 .account_states
                 .into_iter()

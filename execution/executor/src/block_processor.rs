@@ -20,8 +20,8 @@ use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     proof::{accumulator::Accumulator, definition::LeafCount, SparseMerkleProof},
     transaction::{
-        SignedTransaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
-        TransactionPayload, TransactionStatus, TransactionToCommit, Version,
+        SignedTransaction, Transaction, TransactionInfo, TransactionListWithProof,
+        TransactionOutput, TransactionPayload, TransactionStatus, TransactionToCommit, Version,
     },
     write_set::{WriteOp, WriteSet},
 };
@@ -362,7 +362,7 @@ where
                 i,
             );
             txns_to_commit.push(TransactionToCommit::new(
-                txn,
+                Transaction::UserTransaction(txn),
                 txn_data.account_blobs().clone(),
                 txn_data.events().to_vec(),
                 txn_data.gas_used(),
@@ -499,7 +499,7 @@ where
             ) {
                 if let TransactionStatus::Keep(_) = txn_data.status() {
                     txns_to_commit.push(TransactionToCommit::new(
-                        txn.clone(),
+                        Transaction::UserTransaction(txn.clone()),
                         txn_data.account_blobs().clone(),
                         txn_data.events().to_vec(),
                         txn_data.gas_used(),

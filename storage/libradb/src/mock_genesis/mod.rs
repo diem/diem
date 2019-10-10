@@ -17,7 +17,7 @@ use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo,
     proof::SparseMerkleLeafNode,
-    transaction::{RawTransaction, Script, TransactionInfo, TransactionToCommit},
+    transaction::{RawTransaction, Script, Transaction, TransactionInfo, TransactionToCommit},
     vm_error::StatusCode,
 };
 use rand::{
@@ -56,7 +56,7 @@ fn gen_mock_genesis() -> (
         .collect::<HashMap<_, _>>();
 
     let txn_to_commit = TransactionToCommit::new(
-        signed_txn,
+        Transaction::UserTransaction(signed_txn),
         account_states.clone(),
         vec![], /* events */
         0,      /* gas_used */

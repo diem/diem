@@ -33,7 +33,7 @@ proptest! {
         let mut cs = ChangeSet::new();
         for (ver, txn) in txns.iter().enumerate() {
             store
-                .put_transaction(ver as Version, &txn, &mut cs)
+                .put_transaction(ver as Version, &Transaction::UserTransaction(txn.clone()), &mut cs)
                 .unwrap();
         }
         store.db.write_schemas(cs.batch).unwrap();

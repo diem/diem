@@ -33,7 +33,7 @@ fn to_blocks_to_commit(
                 cur_ver += 1;
                 let mut cs = ChangeSet::new();
 
-                let txn_hash = txn_to_commit.signed_txn().hash();
+                let txn_hash = txn_to_commit.as_signed_user_txn()?.hash();
                 let state_root_hash = db.state_store.put_account_state_sets(
                     vec![txn_to_commit.account_states().clone()],
                     cur_ver,
