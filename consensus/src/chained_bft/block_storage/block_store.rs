@@ -19,6 +19,7 @@ use failure::ResultExt;
 use logger::prelude::*;
 
 use crate::chained_bft::persistent_storage::RecoveryData;
+use consensus_types::timeout_certificate::TimeoutCertificate;
 use executor::StateComputeResult;
 use libra_types::{
     crypto_proxies::{ValidatorSigner, ValidatorVerifier},
@@ -78,12 +79,14 @@ impl<T: Payload> BlockStore<T> {
         enforce_increasing_timestamps: bool,
         max_pruned_blocks_in_mem: usize,
     ) -> Self {
+        let highest_tc = initial_data.highest_timeout_certificate();
         let (root, blocks, quorum_certs) = initial_data.take();
         let inner = Arc::new(RwLock::new(
             Self::build_block_tree(
                 root,
                 blocks,
                 quorum_certs,
+                highest_tc,
                 Arc::clone(&state_computer),
                 max_pruned_blocks_in_mem,
             )
@@ -102,6 +105,7 @@ impl<T: Payload> BlockStore<T> {
         root: (Block<T>, QuorumCert, QuorumCert),
         blocks: Vec<Block<T>>,
         quorum_certs: Vec<QuorumCert>,
+        highest_timeout_cert: Option<TimeoutCertificate>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         max_pruned_blocks_in_mem: usize,
     ) -> BlockTree<T> {
@@ -116,6 +120,9 @@ impl<T: Payload> BlockStore<T> {
             root_li,
             max_pruned_blocks_in_mem,
         );
+        if let Some(tc) = highest_timeout_cert {
+            tree.replace_timeout_cert(Arc::new(tc));
+        }
         let quorum_certs = quorum_certs
             .into_iter()
             .map(|qc| (qc.certified_block_id(), qc))
@@ -160,6 +167,7 @@ impl<T: Payload> BlockStore<T> {
             root,
             blocks,
             quorum_certs,
+            None,
             Arc::clone(&self.state_computer),
             max_pruned_blocks_in_mem,
         )
@@ -279,6 +287,25 @@ impl<T: Payload> BlockStore<T> {
             .save_tree(vec![], vec![qc.clone()])
             .with_context(|e| format!("Insert block failed with {:?} when saving quorum", e))?;
         self.inner.write().unwrap().insert_quorum_cert(qc)
+    }
+
+    /// Replace the highest timeout certificate in case the given one has a higher round.
+    /// In case a timeout certificate is updated, persist it to storage.
+    pub fn insert_timeout_certificate(&self, tc: Arc<TimeoutCertificate>) -> failure::Result<()> {
+        let cur_tc_round = self.highest_timeout_cert().map_or(0, |tc| tc.round());
+        if tc.round() <= cur_tc_round {
+            return Ok(());
+        }
+        self.storage
+            .save_highest_timeout_cert(tc.as_ref().clone())
+            .with_context(|e| {
+                format!(
+                    "Timeout certificate insert failed with {:?} when persisting to DB",
+                    e
+                )
+            })?;
+        self.inner.write().unwrap().replace_timeout_cert(tc);
+        Ok(())
     }
 
     /// Adds a vote for the block.
@@ -467,6 +494,10 @@ impl<T: Payload> BlockReader for BlockStore<T> {
 
     fn highest_ledger_info(&self) -> Arc<QuorumCert> {
         self.inner.read().unwrap().highest_ledger_info()
+    }
+
+    fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>> {
+        self.inner.read().unwrap().highest_timeout_cert()
     }
 }
 

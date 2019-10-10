@@ -20,7 +20,7 @@ use schemadb::{
 };
 use std::{collections::HashMap, iter::Iterator, path::Path, time::Instant};
 
-type HighestTimeoutCertificates = Vec<u8>;
+type HighestTimeoutCertificate = Vec<u8>;
 type ConsensusStateData = Vec<u8>;
 type VoteMsgData = Vec<u8>;
 
@@ -63,13 +63,13 @@ impl ConsensusDB {
     ) -> Result<(
         Option<ConsensusStateData>,
         Option<VoteMsgData>,
-        Option<HighestTimeoutCertificates>,
+        Option<HighestTimeoutCertificate>,
         Vec<Block<T>>,
         Vec<QuorumCert>,
     )> {
         let consensus_state = self.get_state()?;
         let last_vote_msg_data = self.get_last_vote_msg_data()?;
-        let highest_timeout_certificates = self.get_highest_timeout_certificates()?;
+        let highest_timeout_certificate = self.get_highest_timeout_certificate()?;
         let consensus_blocks = self
             .get_blocks()?
             .into_iter()
@@ -83,20 +83,20 @@ impl ConsensusDB {
         Ok((
             consensus_state,
             last_vote_msg_data,
-            highest_timeout_certificates,
+            highest_timeout_certificate,
             consensus_blocks,
             consensus_qcs,
         ))
     }
 
-    pub fn save_highest_timeout_certificates(
+    pub fn save_highest_timeout_certificate(
         &self,
-        highest_timeout_certificates: HighestTimeoutCertificates,
+        highest_timeout_certificate: HighestTimeoutCertificate,
     ) -> Result<()> {
         let mut batch = SchemaBatch::new();
         batch.put::<SingleEntrySchema>(
-            &SingleEntryKey::HighestTimeoutCertificates,
-            &highest_timeout_certificates,
+            &SingleEntryKey::HighestTimeoutCertificate,
+            &highest_timeout_certificate,
         )?;
         self.commit(batch)
     }
@@ -157,9 +157,9 @@ impl ConsensusDB {
     }
 
     /// Get latest timeout certificates (we only store the latest highest timeout certificates).
-    fn get_highest_timeout_certificates(&self) -> Result<Option<Vec<u8>>> {
+    fn get_highest_timeout_certificate(&self) -> Result<Option<Vec<u8>>> {
         self.db
-            .get::<SingleEntrySchema>(&SingleEntryKey::HighestTimeoutCertificates)
+            .get::<SingleEntrySchema>(&SingleEntryKey::HighestTimeoutCertificate)
     }
 
     /// Get latest consensus state (we only store the latest state).

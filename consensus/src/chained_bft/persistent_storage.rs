@@ -3,12 +3,12 @@
 
 use crate::{
     chained_bft::{
-        consensusdb::ConsensusDB, liveness::pacemaker_timeout_manager::HighestTimeoutCertificates,
+        consensusdb::ConsensusDB,
     },
     consensus_provider::create_storage_read_client,
 };
 use config::config::NodeConfig;
-use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert, vote_msg::VoteMsg};
+use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert, vote_msg::VoteMsg, timeout_certificate::TimeoutCertificate};
 use crypto::HashValue;
 use failure::{Result, ResultExt};
 use libra_types::ledger_info::LedgerInfo;
@@ -24,10 +24,7 @@ use std::{
 pub trait PersistentLivenessStorage: Send + Sync {
     /// Persist the highest timeout certificate for improved liveness - proof for other replicas
     /// to jump to this round
-    fn save_highest_timeout_cert(
-        &self,
-        highest_timeout_certs: HighestTimeoutCertificates,
-    ) -> Result<()>;
+    fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()>;
 }
 
 /// Persistent storage is essential for maintaining safety when a node crashes.  Specifically,
@@ -75,7 +72,7 @@ pub struct RecoveryData<T> {
     blocks_to_prune: Option<Vec<HashValue>>,
 
     // Liveness data
-    highest_timeout_certificates: HighestTimeoutCertificates,
+    highest_timeout_certificate: Option<TimeoutCertificate>,
 
     // If root is not consistent with StateComputer, need to state synchronize before
     // starting
@@ -89,7 +86,7 @@ impl<T: Payload> RecoveryData<T> {
         mut blocks: Vec<Block<T>>,
         mut quorum_certs: Vec<QuorumCert>,
         storage_ledger: &LedgerInfo,
-        highest_timeout_certificates: HighestTimeoutCertificates,
+        highest_timeout_certificate: Option<TimeoutCertificate>,
     ) -> Result<Self> {
         let root =
             Self::find_root(&mut blocks, &mut quorum_certs, storage_ledger).with_context(|e| {
@@ -125,7 +122,7 @@ impl<T: Payload> RecoveryData<T> {
             blocks,
             quorum_certs,
             blocks_to_prune,
-            highest_timeout_certificates,
+            highest_timeout_certificate,
             need_sync,
         })
     }
@@ -154,8 +151,8 @@ impl<T: Payload> RecoveryData<T> {
             .expect("blocks_to_prune already taken")
     }
 
-    pub fn highest_timeout_certificates(&self) -> &HighestTimeoutCertificates {
-        &self.highest_timeout_certificates
+    pub fn highest_timeout_certificate(&self) -> Option<TimeoutCertificate> {
+        self.highest_timeout_certificate.clone()
     }
 
     pub fn root_ledger_info(&self) -> QuorumCert {
@@ -300,12 +297,9 @@ impl StorageWriteProxy {
 }
 
 impl PersistentLivenessStorage for StorageWriteProxy {
-    fn save_highest_timeout_cert(
-        &self,
-        highest_timeout_certs: HighestTimeoutCertificates,
-    ) -> Result<()> {
+    fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()> {
         self.db
-            .save_highest_timeout_certificates(to_vec_named(&highest_timeout_certs)?)
+            .save_highest_timeout_certificate(to_vec_named(&highest_timeout_cert)?)
     }
 }
 
@@ -353,11 +347,9 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         };
         debug!("Recovered last vote msg: {}", last_vote_repr);
 
-        let highest_timeout_certificates = initial_data
-            .2
-            .map_or_else(HighestTimeoutCertificates::default, |s| {
-                from_slice(&s[..]).expect("unable to deserialize highest timeout certificates")
-            });
+        let highest_timeout_certificate = initial_data.2.map(|ts| {
+            from_slice(&ts[..]).expect("unable to deserialize highest timeout certificate")
+        });
         let mut blocks = initial_data.3;
         let mut quorum_certs: Vec<_> = initial_data.4;
         // bootstrap the empty store with genesis block and qc.
@@ -392,7 +384,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             blocks,
             quorum_certs,
             ledger_info.ledger_info(),
-            highest_timeout_certificates,
+            highest_timeout_certificate,
         )
         .unwrap_or_else(|e| panic!("Can not construct recovery data due to {}", e));
 

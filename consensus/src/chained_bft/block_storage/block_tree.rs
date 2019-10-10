@@ -8,7 +8,10 @@ use crate::{
 };
 
 use canonical_serialization::CanonicalSerialize;
-use consensus_types::{block::ExecutedBlock, quorum_cert::QuorumCert, vote_msg::VoteMsg};
+use consensus_types::{
+    block::ExecutedBlock, quorum_cert::QuorumCert,
+    vote_msg::VoteMsg, timeout_certificate::TimeoutCertificate
+};
 use crypto::HashValue;
 use executor::StateComputeResult;
 use libra_types::crypto_proxies::ValidatorVerifier;
@@ -78,6 +81,8 @@ pub struct BlockTree<T> {
 
     /// The quorum certificate of highest_certified_block
     highest_quorum_cert: Arc<QuorumCert>,
+    /// The highest timeout certificate (if any).
+    highest_timeout_cert: Option<Arc<TimeoutCertificate>>,
     /// The quorum certificate that carries a highest ledger info
     highest_ledger_info: Arc<QuorumCert>,
     /// Manages pending votes to be aggregated.
@@ -128,6 +133,7 @@ where
             root_id,
             highest_certified_block_id: root_id,
             highest_quorum_cert: Arc::clone(&root_quorum_cert),
+            highest_timeout_cert: None,
             highest_ledger_info: Arc::new(root_ledger_info),
             pending_votes: PendingVotes::new(),
             id_to_quorum_cert,
@@ -189,6 +195,15 @@ where
 
     pub(super) fn highest_quorum_cert(&self) -> Arc<QuorumCert> {
         Arc::clone(&self.highest_quorum_cert)
+    }
+
+    pub(super) fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>> {
+        self.highest_timeout_cert.clone()
+    }
+
+    /// Replace highest timeout cert with the given value.
+    pub(super) fn replace_timeout_cert(&mut self, tc: Arc<TimeoutCertificate>) {
+        self.highest_timeout_cert.replace(tc);
     }
 
     pub(super) fn highest_ledger_info(&self) -> Arc<QuorumCert> {

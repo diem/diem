@@ -33,8 +33,8 @@ define_schema!(
 pub enum SingleEntryKey {
     // Used to store ConsensusState
     ConsensusState = 0,
-    // Used to store the highest timeout certificates
-    HighestTimeoutCertificates = 1,
+    // Used to store the highest timeout certificate
+    HighestTimeoutCertificate = 1,
     // Used to store the last vote
     LastVoteMsg = 2,
 }

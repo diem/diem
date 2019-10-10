@@ -205,7 +205,6 @@ impl<T: Payload> ChainedBftSMR<T> {
             Arc::clone(&epoch_mgr),
         );
 
-        let highest_timeout_certificates = initial_data.highest_timeout_certificates().clone();
         let last_vote = initial_data.last_vote();
         let safety_rules = SafetyRules::new(initial_data.state());
 
@@ -236,7 +235,7 @@ impl<T: Payload> ChainedBftSMR<T> {
             self.storage.persistent_liveness_storage(),
             time_service.clone(),
             timeout_sender,
-            highest_timeout_certificates,
+            HighestTimeoutCertificates::default(),
         );
 
         let proposer_election = self.create_proposer_election(epoch_mgr.validators().as_ref());
