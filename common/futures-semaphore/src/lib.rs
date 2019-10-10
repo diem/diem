@@ -158,9 +158,9 @@ mod test {
     };
     use std::{
         sync::atomic::{AtomicU32, Ordering},
-        time::{Duration, Instant},
+        time::Duration,
     };
-    use tokio::{runtime::Runtime, timer::delay};
+    use tokio::{runtime::Runtime, timer::delay_for};
 
     #[test]
     fn basic_functionality_semaphore() {
@@ -194,7 +194,7 @@ mod test {
     }
 
     fn yield_task() -> impl Future<Output = ()> {
-        delay(Instant::now() + Duration::from_millis(1)).map(|_| ())
+        delay_for(Duration::from_millis(1)).map(|_| ())
     }
 
     // spawn NUM_TASKS futures that acquire a common semaphore, ensuring that no

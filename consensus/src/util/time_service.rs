@@ -8,7 +8,7 @@ use std::{
     pin::Pin,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
-use tokio::{runtime::TaskExecutor, timer::delay};
+use tokio::{runtime::TaskExecutor, timer::delay_for};
 
 /// Time service is an abstraction for operations that depend on time
 /// It supports implementations that can simulated time or depend on actual time
@@ -95,8 +95,7 @@ impl ClockTimeService {
 impl TimeService for ClockTimeService {
     fn run_after(&self, timeout: Duration, mut t: Box<dyn ScheduledTask>) {
         let task = async move {
-            let timeout_time = Instant::now() + timeout;
-            delay(timeout_time).await;
+            delay_for(timeout).await;
             t.run().await;
         };
         self.executor.spawn(task);
@@ -107,7 +106,7 @@ impl TimeService for ClockTimeService {
     }
 
     fn sleep(&self, t: Duration) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        async move { delay(Instant::now() + t).await }.boxed()
+        async move { delay_for(t).await }.boxed()
     }
 }
 
