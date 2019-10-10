@@ -307,11 +307,11 @@ fn verify_committed_transactions(
         // Verify transaction hash.
         assert_eq!(
             txn_info.signed_transaction_hash(),
-            txn_to_commit.signed_txn().hash()
+            txn_to_commit.as_signed_user_txn()?.hash()
         );
 
         // Fetch and verify transaction itself.
-        let txn = txn_to_commit.signed_txn();
+        let txn = txn_to_commit.as_signed_user_txn()?;
         let txn_with_proof = db.get_transaction_with_proof(cur_ver, ledger_version, true)?;
         txn_with_proof.verify(ledger_info, cur_ver, txn.sender(), txn.sequence_number())?;
 

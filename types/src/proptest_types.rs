@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::transaction::Transaction;
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -747,7 +748,7 @@ impl TransactionToCommitGen {
             .collect();
 
         TransactionToCommit::new(
-            signed_txn,
+            Transaction::UserTransaction(signed_txn),
             account_states,
             events,
             self.gas_used,

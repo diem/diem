@@ -420,16 +420,22 @@ impl LibraDB {
         zip_eq(first_version..=last_version, txns_to_commit)
             .map(|(ver, txn_to_commit)| {
                 self.transaction_store
-                    .put_transaction(ver, txn_to_commit.signed_txn(), &mut cs)
+                    .put_transaction(ver, txn_to_commit.transaction(), &mut cs)
             })
             .collect::<Result<()>>()?;
 
         // Transaction accumulator updates. Get result root hash.
         let txn_infos = izip!(txns_to_commit, state_root_hashes, event_root_hashes)
             .map(|(t, s, e)| {
-                TransactionInfo::new(t.signed_txn().hash(), s, e, t.gas_used(), t.major_status())
+                Ok(TransactionInfo::new(
+                    t.as_signed_user_txn()?.hash(),
+                    s,
+                    e,
+                    t.gas_used(),
+                    t.major_status(),
+                ))
             })
-            .collect::<Vec<_>>();
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(txn_infos.len(), txns_to_commit.len());
 
         let new_root_hash =

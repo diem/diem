@@ -62,20 +62,16 @@ impl TransactionStore {
     pub fn put_transaction(
         &self,
         version: Version,
-        signed_transaction: &SignedTransaction,
+        transaction: &Transaction,
         cs: &mut ChangeSet,
     ) -> Result<()> {
-        cs.batch.put::<TransactionByAccountSchema>(
-            &(
-                signed_transaction.sender(),
-                signed_transaction.sequence_number(),
-            ),
-            &version,
-        )?;
-        cs.batch.put::<TransactionSchema>(
-            &version,
-            &Transaction::UserTransaction(signed_transaction.clone()),
-        )?;
+        if let Transaction::UserTransaction(txn) = transaction {
+            cs.batch.put::<TransactionByAccountSchema>(
+                &(txn.sender(), txn.sequence_number()),
+                &version,
+            )?;
+        }
+        cs.batch.put::<TransactionSchema>(&version, &transaction)?;
 
         Ok(())
     }

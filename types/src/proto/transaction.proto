@@ -71,7 +71,7 @@ message AccountState {
 // Transaction struct to commit to storage
 message TransactionToCommit {
     // The signed transaction which was executed
-    SignedTransaction signed_txn = 1;
+    Transaction transaction = 1;
     // State db updates
     repeated AccountState account_states = 2;
     // Events yielded by the transaction.
