@@ -129,9 +129,6 @@ impl fmt::Display for EventKey {
 
 impl CanonicalSerialize for EventKey {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        // We cannot use encode_raw_bytes as this structure will represent how Move Value of type
-        // EventKey is serialized into. And since Move doesn't have fix length bytearray, values
-        // can't be encoded in the fix length fasion.
         serializer.encode_bytes(&self.0)?;
         Ok(())
     }
