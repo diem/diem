@@ -347,7 +347,7 @@ where
                         }
                     };
                     if let Err(e) = r {
-                        warn!("Failed to process msg {:?}", e)
+                        warn!("Failed to process msg {}", e)
                     }
                 }
                 Event::RpcRequest((peer_id, msg, callback)) => {
@@ -380,7 +380,9 @@ where
             .validate_signatures(self.epoch_mgr.validators().as_ref())?
             .verify_well_formed()?;
         debug!("Received proposal {}", proposal);
-        self.proposal_tx.try_send(proposal)?;
+        if self.proposal_tx.try_send(proposal).is_err() {
+            counters::DROP_NETWORK_TO_CONSENSUS.inc();
+        }
         Ok(())
     }
 
@@ -395,7 +397,9 @@ where
                     .log();
                 e
             })?;
-        self.vote_tx.try_send(vote)?;
+        if self.vote_tx.try_send(vote).is_err() {
+            counters::DROP_NETWORK_TO_CONSENSUS.inc();
+        }
         Ok(())
     }
 
@@ -410,7 +414,9 @@ where
                     .log();
                 e
             })?;
-        self.timeout_msg_tx.try_send(timeout_msg)?;
+        if self.timeout_msg_tx.try_send(timeout_msg).is_err() {
+            counters::DROP_NETWORK_TO_CONSENSUS.inc();
+        }
         Ok(())
     }
 
@@ -450,7 +456,9 @@ where
             num_blocks,
             response_sender: tx,
         };
-        self.block_request_tx.try_send(request)?;
+        if self.block_request_tx.try_send(request).is_err() {
+            counters::DROP_NETWORK_TO_CONSENSUS.inc();
+        }
         let BlockRetrievalResponse { status, blocks } = rx.await?;
         let mut response = RespondBlock::default();
         response.set_status(status);
