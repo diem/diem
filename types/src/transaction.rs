@@ -1272,8 +1272,7 @@ impl TryFrom<crate::proto::types::Transaction> for Transaction {
 
 impl From<Transaction> for crate::proto::types::Transaction {
     fn from(txn: Transaction) -> Self {
-        let bytes =
-            SimpleSerializer::<Vec<u8>>::serialize(&txn).expect("Serialization should not fail.");
+        let bytes = SimpleSerializer::serialize(&txn).expect("Serialization should not fail.");
         Self { transaction: bytes }
     }
 }
