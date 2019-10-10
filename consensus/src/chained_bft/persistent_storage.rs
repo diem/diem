@@ -3,15 +3,13 @@
 
 use crate::{
     chained_bft::{
-        common::Payload,
-        consensus_types::{block::Block, quorum_cert::QuorumCert, vote_msg::VoteMsg},
-        consensusdb::ConsensusDB,
-        liveness::pacemaker_timeout_manager::HighestTimeoutCertificates,
+        consensusdb::ConsensusDB, liveness::pacemaker_timeout_manager::HighestTimeoutCertificates,
         safety::safety_rules::ConsensusState,
     },
     consensus_provider::create_storage_read_client,
 };
 use config::config::NodeConfig;
+use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert, vote_msg::VoteMsg};
 use crypto::HashValue;
 use failure::{Result, ResultExt};
 use libra_types::ledger_info::LedgerInfo;

@@ -3,17 +3,17 @@
 
 use crate::chained_bft::{
     block_storage::{BlockReader, BlockStore, NeedFetchResult, VoteReceptionResult},
-    common::Author,
-    consensus_types::{
-        block::{block_test_utils, Block, ExecutedBlock},
-        quorum_cert::QuorumCert,
-        vote_data::VoteData,
-        vote_msg::VoteMsg,
-    },
     test_utils::{
         self, build_empty_tree, build_empty_tree_with_custom_signing,
         placeholder_certificate_for_block, placeholder_ledger_info, TreeInserter,
     },
+};
+use consensus_types::{
+    block::{block_test_utils, Block, ExecutedBlock},
+    common::Author,
+    quorum_cert::QuorumCert,
+    vote_data::VoteData,
+    vote_msg::VoteMsg,
 };
 use crypto::{HashValue, PrivateKey};
 use futures::executor::block_on;

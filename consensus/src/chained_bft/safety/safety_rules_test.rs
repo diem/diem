@@ -3,15 +3,15 @@
 
 use crate::chained_bft::{
     block_storage::BlockReader,
-    common::Round,
-    consensus_types::{
-        block::{block_test_utils, ExecutedBlock},
-        quorum_cert::QuorumCert,
-    },
     safety::safety_rules::{ConsensusState, ProposalReject, SafetyRules},
     test_utils::{build_empty_tree, build_empty_tree_with_custom_signing, TreeInserter},
 };
 use cached::{cached_key, SizedCache};
+use consensus_types::{
+    block::{block_test_utils, ExecutedBlock},
+    common::Round,
+    quorum_cert::QuorumCert,
+};
 use crypto::HashValue;
 use libra_types::validator_signer::ValidatorSigner;
 use proptest::prelude::*;

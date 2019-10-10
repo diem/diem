@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
     liveness::pacemaker_timeout_manager::{HighestTimeoutCertificates, PacemakerTimeoutManager},
     persistent_storage::PersistentStorage,
     test_utils::{MockStorage, TestPayload},
 };
+use consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate};
 use libra_types::{crypto_proxies::random_validator_verifier, validator_signer::ValidatorSigner};
 use std::sync::Arc;
 

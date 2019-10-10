@@ -3,14 +3,12 @@
 
 use crate::chained_bft::block_storage::pending_votes::PendingVotes;
 use crate::{
-    chained_bft::{
-        block_storage::VoteReceptionResult,
-        consensus_types::{block::ExecutedBlock, quorum_cert::QuorumCert, vote_msg::VoteMsg},
-    },
-    counters,
+    chained_bft::block_storage::VoteReceptionResult, counters,
     util::time_service::duration_since_epoch,
 };
+
 use canonical_serialization::CanonicalSerialize;
+use consensus_types::{block::ExecutedBlock, quorum_cert::QuorumCert, vote_msg::VoteMsg};
 use crypto::HashValue;
 use executor::StateComputeResult;
 use libra_types::crypto_proxies::ValidatorVerifier;

@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{
-        consensus_types::quorum_cert::QuorumCert,
-        test_utils::{mock_storage::MockStorage, TestPayload},
-    },
+    chained_bft::test_utils::{mock_storage::MockStorage, TestPayload},
     state_replication::StateComputer,
 };
+use consensus_types::quorum_cert::QuorumCert;
 use crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use executor::{ExecutedState, StateComputeResult};
 use failure::Result;

@@ -4,7 +4,6 @@
 use crate::{
     chained_bft::{
         chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
-        common::Author,
         epoch_manager::EpochManager,
         network::ConsensusNetworkImpl,
         persistent_storage::{PersistentStorage, StorageWriteProxy},
@@ -16,6 +15,7 @@ use crate::{
     txn_manager::MempoolProxy,
 };
 use config::config::{ConsensusProposerType::FixedProposer, NodeConfig};
+use consensus_types::common::Author;
 use executor::Executor;
 use failure::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;

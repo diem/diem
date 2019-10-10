@@ -1,12 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{
-        common::{Payload, Round},
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
-    },
-    counters,
+use crate::counters;
+
+use consensus_types::{
+    block::Block,
+    common::{Payload, Round},
+    quorum_cert::QuorumCert,
 };
 
 use crypto::HashValue;

@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    common::Payload,
-    consensus_types::{block::Block, quorum_cert::QuorumCert, vote_msg::VoteMsg},
     liveness::pacemaker_timeout_manager::HighestTimeoutCertificates,
     persistent_storage::{PersistentLivenessStorage, PersistentStorage, RecoveryData},
     safety::safety_rules::ConsensusState,
 };
+
 use config::config::{NodeConfig, NodeConfigHelpers};
+use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert, vote_msg::VoteMsg};
 use crypto::HashValue;
 use failure::Result;
 use libra_types::ledger_info::LedgerInfo;

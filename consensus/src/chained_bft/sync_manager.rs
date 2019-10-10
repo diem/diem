@@ -4,17 +4,17 @@
 use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore, NeedFetchResult},
-        common::{Author, Payload},
-        consensus_types::{
-            block::{Block, ExecutedBlock},
-            quorum_cert::QuorumCert,
-            sync_info::SyncInfo,
-        },
         network::ConsensusNetworkImpl,
         persistent_storage::PersistentStorage,
     },
     counters,
     state_replication::StateComputer,
+};
+use consensus_types::{
+    block::{Block, ExecutedBlock},
+    common::{Author, Payload},
+    quorum_cert::QuorumCert,
+    sync_info::SyncInfo,
 };
 use failure;
 use libra_types::account_address::AccountAddress;

@@ -1,22 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{
-        common::{Author, Payload},
-        consensus_types::{
-            block::Block,
-            proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
-            sync_info::SyncInfo,
-            timeout_msg::TimeoutMsg,
-            vote_msg::VoteMsg,
-        },
-        epoch_manager::EpochManager,
-    },
-    counters,
-};
+use crate::{chained_bft::epoch_manager::EpochManager, counters};
 use bytes::Bytes;
 use channel;
+use consensus_types::{
+    block::Block,
+    common::{Author, Payload},
+    proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
+    sync_info::SyncInfo,
+    timeout_msg::TimeoutMsg,
+    vote_msg::VoteMsg,
+};
 use crypto::HashValue;
 use failure::{self, ResultExt};
 use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};

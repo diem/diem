@@ -3,8 +3,6 @@
 
 use crate::{
     chained_bft::{
-        common::Round,
-        consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
         liveness::pacemaker_timeout_manager::{
             HighestTimeoutCertificates, PacemakerTimeoutManager,
         },
@@ -14,6 +12,10 @@ use crate::{
     util::time_service::{SendTask, TimeService},
 };
 use channel;
+use consensus_types::{
+    common::Round,
+    timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
+};
 use libra_types::crypto_proxies::ValidatorVerifier;
 use logger::prelude::*;
 use std::{

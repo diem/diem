@@ -1,11 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{common::Author, epoch_manager::EpochManager};
+use crate::chained_bft::epoch_manager::EpochManager;
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
-        common::{Payload, Round},
         event_processor::EventProcessor,
         liveness::{
             multi_proposer_election::MultiProposer,
@@ -25,6 +24,7 @@ use crate::{
 };
 use channel;
 use config::config::{ConsensusConfig, ConsensusProposerType};
+use consensus_types::common::{Author, Payload, Round};
 use failure::prelude::*;
 use futures::{executor::block_on, select, stream::StreamExt};
 use libra_types::crypto_proxies::ValidatorSigner;

@@ -3,8 +3,6 @@
 
 use crate::{
     chained_bft::{
-        common::Round,
-        consensus_types::timeout_msg::PacemakerTimeout,
         liveness::{
             pacemaker::{
                 ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker,
@@ -18,6 +16,7 @@ use crate::{
     util::mock_time_service::SimulatedTimeService,
 };
 use channel;
+use consensus_types::{common::Round, timeout_msg::PacemakerTimeout};
 use futures::{executor::block_on, StreamExt};
 use libra_types::crypto_proxies::random_validator_verifier;
 use std::{sync::Arc, time::Duration, u64};

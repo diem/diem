@@ -2,16 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    common::Author,
-    consensus_types::{
-        block::Block, proposal_msg::ProposalMsg, quorum_cert::QuorumCert, sync_info::SyncInfo,
-        vote_data::VoteData, vote_msg::VoteMsg,
-    },
     epoch_manager::EpochManager,
     network::{BlockRetrievalResponse, ConsensusNetworkImpl, NetworkReceivers},
     test_utils::{self, consensus_runtime, placeholder_ledger_info},
 };
 use channel;
+use consensus_types::{
+    block::Block, common::Author, proposal_msg::ProposalMsg, quorum_cert::QuorumCert,
+    sync_info::SyncInfo, vote_data::VoteData, vote_msg::VoteMsg,
+};
 use crypto::HashValue;
 use executor::ExecutedState;
 use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};

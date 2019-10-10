@@ -1,10 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
+use crate::chained_bft::liveness::proposer_election::ProposerElection;
+use consensus_types::{
+    block::Block,
     common::{Author, Payload, Round},
-    consensus_types::block::Block,
-    liveness::proposer_election::ProposerElection,
 };
 use logger::prelude::*;
 use siphasher::sip::SipHasher24;

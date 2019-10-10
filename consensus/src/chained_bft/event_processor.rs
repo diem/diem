@@ -6,16 +6,6 @@ use crate::chained_bft::safety::safety_rules::ConsensusState;
 use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore, NeedFetchResult, VoteReceptionResult},
-        common::{Author, Payload, Round},
-        consensus_types::{
-            block::Block,
-            proposal_msg::ProposalMsg,
-            quorum_cert::QuorumCert,
-            sync_info::SyncInfo,
-            timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
-            vote_data::VoteData,
-            vote_msg::VoteMsg,
-        },
         epoch_manager::EpochManager,
         liveness::{
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
@@ -32,6 +22,16 @@ use crate::{
     util::time_service::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },
+};
+use consensus_types::{
+    block::Block,
+    common::{Author, Payload, Round},
+    proposal_msg::ProposalMsg,
+    quorum_cert::QuorumCert,
+    sync_info::SyncInfo,
+    timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
+    vote_data::VoteData,
+    vote_msg::VoteMsg,
 };
 use crypto::HashValue;
 use failure::ResultExt;

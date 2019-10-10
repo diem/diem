@@ -1,14 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use consensus_types;
-pub use consensus_types::common;
 mod consensusdb;
 mod safety;
 
 mod block_storage;
 pub mod chained_bft_consensus_provider;
-pub use consensus_types::quorum_cert::QuorumCert;
 mod chained_bft_smr;
 mod network;
 

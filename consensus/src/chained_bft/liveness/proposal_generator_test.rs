@@ -4,7 +4,6 @@
 use crate::{
     chained_bft::{
         block_storage::BlockReader,
-        consensus_types::{quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsg},
         liveness::proposal_generator::ProposalGenerator,
         test_utils::{
             self, build_empty_tree, placeholder_ledger_info, MockTransactionManager, TreeInserter,
@@ -12,6 +11,7 @@ use crate::{
     },
     util::mock_time_service::SimulatedTimeService,
 };
+use consensus_types::{quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsg};
 use futures::executor::block_on;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use std::{

@@ -5,11 +5,6 @@ use crate::{
     chained_bft::{
         block_storage::BlockReader,
         chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
-        common::Author,
-        consensus_types::{
-            proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
-            vote_msg::VoteMsg,
-        },
         network::ConsensusNetworkImpl,
         network_tests::NetworkPlayground,
         test_utils::{MockStateComputer, MockStorage, MockTransactionManager, TestPayload},
@@ -17,6 +12,12 @@ use crate::{
     state_replication::StateMachineReplication,
 };
 use channel;
+use consensus_types::{
+    common::Author,
+    proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
+    timeout_msg::TimeoutMsg,
+    vote_msg::VoteMsg,
+};
 use crypto::hash::CryptoHash;
 use futures::{channel::mpsc, executor::block_on, prelude::*};
 use network::proto::ConsensusMsg_oneof;
@@ -25,7 +26,6 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 
 use crate::chained_bft::{
-    consensus_types::timeout_msg::TimeoutMsg,
     epoch_manager::EpochManager,
     persistent_storage::RecoveryData,
     test_utils::{consensus_runtime, with_smr_id},

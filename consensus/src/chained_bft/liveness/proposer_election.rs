@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
+use consensus_types::{
+    block::Block,
     common::{Author, Round},
-    consensus_types::block::Block,
 };
 
 /// ProposerElection incorporates the logic of choosing a leader among multiple candidates.
