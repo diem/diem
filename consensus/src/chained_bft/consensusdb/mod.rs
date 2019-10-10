@@ -178,11 +178,8 @@ impl ConsensusDB {
     fn get_blocks<T: Payload>(&self) -> Result<HashMap<HashValue, Block<T>>> {
         let mut iter = self.db.iter::<BlockSchema<T>>(ReadOptions::default())?;
         iter.seek_to_first();
-        iter.map(|value| match value {
-            Ok((k, v)) => Ok((k, v.borrow_into_block().clone())),
-            Err(err) => Err(err),
-        })
-        .collect::<Result<HashMap<HashValue, Block<T>>>>()
+        iter.map(|value| value.and_then(|(k, v)| Ok((k, v.borrow_into_block().clone()))))
+            .collect::<Result<HashMap<HashValue, Block<T>>>>()
     }
 
     /// Get all consensus QCs.
