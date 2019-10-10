@@ -193,15 +193,15 @@ impl PacemakerTimeoutManager {
         );
         self.highest_timeout_certificates
             .highest_local_timeout_certificate = highest_timeout_certificate;
-        if let Err(e) = self
-            .persistent_liveness_storage
-            .save_highest_timeout_cert(self.highest_timeout_certificates.clone())
-        {
-            warn!(
-                "Failed to persist local highest timeout certificate in round {} due to {}",
-                highest_round, e
-            );
-        }
+        //        if let Err(e) = self
+        //            .persistent_liveness_storage
+        //            .save_highest_timeout_cert(self.highest_timeout_certificates.clone())
+        //        {
+        //            warn!(
+        //                "Failed to persist local highest timeout certificate in round {} due to {}",
+        //                highest_round, e
+        //            );
+        //        }
         highest_round > prev_highest_round.unwrap_or(0)
     }
 
@@ -224,16 +224,16 @@ impl PacemakerTimeoutManager {
             );
             self.highest_timeout_certificates
                 .highest_received_timeout_certificate = Some(timeout_certificate.clone());
-            if let Err(e) = self
-                .persistent_liveness_storage
-                .save_highest_timeout_cert(self.highest_timeout_certificates.clone())
-            {
-                warn!(
-                    "Failed to persist received highest timeout certificate in round {} due to {}",
-                    timeout_certificate.round(),
-                    e
-                );
-            }
+            //            if let Err(e) = self
+            //                .persistent_liveness_storage
+            //                .save_highest_timeout_cert(self.highest_timeout_certificates.clone())
+            //            {
+            //                warn!(
+            //                    "Failed to persist received highest timeout certificate in round {} due to {}",
+            //                    timeout_certificate.round(),
+            //                    e
+            //                );
+            //            }
             return true;
         }
         false
