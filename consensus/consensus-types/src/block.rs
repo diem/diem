@@ -19,7 +19,9 @@ use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
 };
-use mirai_annotations::{assumed_postcondition, checked_precondition, checked_precondition_eq};
+use mirai_annotations::{
+    assumed_postcondition, checked_precondition, checked_precondition_eq, debug_checked_verify_eq,
+};
 use rmp_serde::{from_slice, to_vec_named};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
@@ -339,7 +341,7 @@ where
         if self.is_genesis_block() {
             return Ok(());
         }
-        ensure!(self.id() == self.hash(), "Block id mismatch the hash");
+        debug_checked_verify_eq!(self.id(), self.hash(), "Block id mismatch the hash");
         ensure!(
             self.quorum_cert().certified_block_round() < self.round(),
             "Block has invalid round"
@@ -430,7 +432,7 @@ where
     }
 }
 
-// Internal use only. Contains all the fields in Block that contributes to the computation of
+// Internal use only. Contains all the fields in Block that contribute to the computation of
 // Block Id
 struct BlockSerializer<'a, T> {
     payload: Option<&'a T>,
@@ -485,12 +487,11 @@ where
 
 impl<T> TryFrom<network::proto::Block> for Block<T>
 where
-    T: DeserializeOwned + CanonicalDeserialize,
+    T: DeserializeOwned + CanonicalDeserialize + CanonicalSerialize,
 {
     type Error = failure::Error;
 
     fn try_from(proto: network::proto::Block) -> failure::Result<Self> {
-        let id = HashValue::from_slice(proto.id.as_ref())?;
         let timestamp_usecs = proto.timestamp_usecs;
         let epoch = proto.epoch;
         let round = proto.round;
@@ -498,16 +499,32 @@ where
             .quorum_cert
             .ok_or_else(|| format_err!("Missing quorum_cert"))?
             .try_into()?;
+        let author = Author::try_from(proto.author);
+        let payload = from_slice(&proto.payload);
+
+        let id = {
+            let block_internal = BlockSerializer {
+                payload: payload.as_ref().ok(),
+                epoch,
+                round,
+                timestamp_usecs,
+                quorum_cert: &quorum_cert,
+                author: author.as_ref().ok().cloned(),
+            };
+            block_internal.hash()
+        };
         let block_type = if proto.round == 0 {
             BlockType::Genesis
-        } else if proto.author.is_empty() {
-            BlockType::NilBlock
-        } else {
+        } else if let Ok(author) = author {
+            let signature = Signature::try_from(&proto.signature)?;
+            let payload = payload?;
             BlockType::Proposal {
-                payload: from_slice(&proto.payload)?,
-                author: Author::try_from(proto.author)?,
-                signature: Signature::try_from(&proto.signature)?,
+                payload,
+                author,
+                signature,
             }
+        } else {
+            BlockType::NilBlock
         };
         Ok(Block {
             id,
@@ -541,7 +558,6 @@ where
         };
 
         Self {
-            id: block.id.to_vec(),
             payload,
             epoch: block.epoch,
             round: block.round,

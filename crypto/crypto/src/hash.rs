@@ -584,7 +584,13 @@ lazy_static! {
 
     /// Genesis block id is used as a parent of the very first block executed by the executor.
     pub static ref GENESIS_BLOCK_ID: HashValue =
-        create_literal_hash("GENESIS_BLOCK_ID");
+        // This maintains the invariant that block.id() == block.hash(), for
+        // the genesis block and allows us to (de/)serialize it consistently
+        HashValue::new(
+            [0x10, 0x78, 0xfa, 0x2e, 0x6d, 0x13, 0x81, 0x95,
+             0x4c, 0x98, 0x63, 0xf9, 0xaa, 0xf0, 0x94, 0xbe,
+             0xf5, 0x19, 0x7f, 0x01, 0x9e, 0xe3, 0xc6, 0x6d,
+             0xd9, 0xa6, 0x9f, 0x61, 0x39, 0x1c, 0xa6, 0xba]);
 }
 
 /// Provides a test_only_hash() method that can be used in tests on types that implement
