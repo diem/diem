@@ -70,25 +70,23 @@ message TimeoutCertificate {
 }
 
 message Block {
-  // This block's id as a hash value
-  bytes id = 1;
   // Payload of the block (e.g. one or more transaction(s)
-  bytes payload = 2;
+  bytes payload = 1;
   // Epoch number corresponds to the set of validators that are active for this block.
-  uint64 epoch = 3;
+  uint64 epoch = 2;
   // The round of the block (internal monotonically increasing counter).
-  uint64 round = 4;
+  uint64 round = 3;
   // The approximate physical microseconds since the epoch when the block was proposed
-  uint64 timestamp_usecs = 5;
+  uint64 timestamp_usecs = 4;
   // Contains the quorum certified ancestor and whether the quorum certified
   // ancestor was voted on successfully
-  QuorumCert quorum_cert = 6;
+  QuorumCert quorum_cert = 5;
   // Author of the block that can be validated by the author's public key and
   // the signature
-  bytes author = 7;
+  bytes author = 6;
   // Signature that the hash of this block has been authored by the owner of the
   // private key
-  bytes signature = 8;
+  bytes signature = 7;
 }
 
 message QuorumCert {
