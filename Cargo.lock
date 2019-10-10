@@ -1035,7 +1035,6 @@ dependencies = [
 name = "crypto_derive"
 version = "0.1.0"
 dependencies = [
- "crypto 0.1.0",
  "failure_ext 0.1.0",
  "proc-macro2 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
