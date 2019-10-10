@@ -907,14 +907,13 @@ impl ClientProxy {
             account_vec.len() == ADDRESS_LENGTH,
             "The address {:?} is of invalid length. Addresses must be 32-bytes long"
         );
-        let account = match AccountAddress::try_from(&account_vec[..]) {
-            Ok(address) => address,
-            Err(error) => bail!(
+        let account = AccountAddress::try_from(&account_vec[..]).map_err(|error| {
+            format_err!(
                 "The address {:?} is invalid, error: {:?}",
                 &account_vec,
                 error,
-            ),
-        };
+            )
+        })?;
         Ok(account)
     }
 
