@@ -41,6 +41,9 @@ pub static ref SUCCESS_TXNS_COUNT: IntCounter = OP_COUNTERS.counter("success_txn
 /// FAILED_TXNS_COUNT + SUCCESS_TXN_COUNT == COMMITTED_TXNS_COUNT
 pub static ref FAILED_TXNS_COUNT: IntCounter = OP_COUNTERS.counter("failed_txns_count");
 
+/// Count of how many messages dropped between network task and main consensus task
+pub static ref DROP_NETWORK_TO_CONSENSUS: IntCounter = OP_COUNTERS.counter("drop_network_to_consensus");
+
 //////////////////////
 // PROPOSAL ELECTION
 //////////////////////
