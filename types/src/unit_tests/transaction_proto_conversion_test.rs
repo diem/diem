@@ -12,6 +12,11 @@ proptest! {
     }
 
     #[test]
+    fn test_txn(txn in any::<Transaction>()) {
+        assert_protobuf_encode_decode::<crate::proto::types::Transaction, Transaction>(&txn);
+    }
+
+    #[test]
     fn test_signed_txn_with_proof(signed_txn_with_proof in any::<SignedTransactionWithProof>()) {
         assert_protobuf_encode_decode::<crate::proto::types::SignedTransactionWithProof, SignedTransactionWithProof>(&signed_txn_with_proof);
     }

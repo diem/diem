@@ -1194,7 +1194,7 @@ impl From<TransactionListWithProof> for crate::proto::types::TransactionListWith
 /// transaction.
 #[allow(clippy::large_enum_variant)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Transaction {
     /// Transaction submitted by the user. e.g: P2P payment transaction, publishing module
     /// transaction, etc.
@@ -1252,5 +1252,21 @@ impl CanonicalDeserialize for Transaction {
             }
         };
         Ok(transaction)
+    }
+}
+
+impl TryFrom<crate::proto::types::Transaction> for Transaction {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::Transaction) -> Result<Self> {
+        SimpleDeserializer::deserialize(&proto.transaction)
+    }
+}
+
+impl From<Transaction> for crate::proto::types::Transaction {
+    fn from(txn: Transaction) -> Self {
+        let bytes =
+            SimpleSerializer::<Vec<u8>>::serialize(&txn).expect("Serialization should not fail.");
+        Self { transaction: bytes }
     }
 }

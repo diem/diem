@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 /// 3. Once that special resource is modified, the other user transactions can read the consensus
 ///    info by calling into the read method of that resource, which would thus give users the
 ///    information such as the current leader.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlockMetadata {
     id: HashValue,
     timestamp_usec: u64,
