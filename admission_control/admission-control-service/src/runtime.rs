@@ -4,10 +4,11 @@
 use crate::{admission_control_service::AdmissionControlService, upstream_proxy::UpstreamProxy};
 use admission_control_proto::proto::admission_control::{
     create_admission_control, AdmissionControlClient, SubmitTransactionRequest,
+    SubmitTransactionResponse,
 };
 use config::config::NodeConfig;
 use futures::{
-    channel::mpsc,
+    channel::{mpsc, oneshot},
     future::{FutureExt, TryFutureExt},
 };
 use grpc_helpers::ServerHandle;
@@ -65,7 +66,10 @@ impl AdmissionControlRuntime {
     /// setup Admission Control gRPC service
     pub fn setup_ac(
         config: &NodeConfig,
-        upstream_proxy_sender: mpsc::UnboundedSender<SubmitTransactionRequest>,
+        upstream_proxy_sender: mpsc::UnboundedSender<(
+            SubmitTransactionRequest,
+            oneshot::Sender<failure::Result<SubmitTransactionResponse>>,
+        )>,
     ) -> (::grpcio::Server, AdmissionControlClient) {
         let env = Arc::new(
             EnvBuilder::new()
