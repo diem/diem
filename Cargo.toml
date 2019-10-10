@@ -14,6 +14,7 @@ members = [
     "common/executable-helpers",
     "common/failure_ext",
     "common/futures-semaphore",
+    "common/lcs",
     "common/logger",
     "common/metrics",
     "common/proptest-helpers",

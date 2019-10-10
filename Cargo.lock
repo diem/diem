@@ -2068,6 +2068,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-canonical-serialization"
+version = "0.1.0"
+dependencies = [
+ "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "libra-fuzzer"
 version = "0.1.0"
 dependencies = [
