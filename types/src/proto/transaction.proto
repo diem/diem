@@ -27,6 +27,12 @@ message SignedTransaction {
     bytes signed_txn = 5;
 }
 
+// A generic structure that represents a transaction, covering all possible
+// variants.
+message Transaction {
+    bytes transaction = 1;
+}
+
 message SignedTransactionWithProof {
     // The version of the returned signed transaction.
     uint64 version = 1;
