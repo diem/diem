@@ -238,7 +238,7 @@ impl<T: Payload> EventProcessor<T> {
             .await
         {
             warn!(
-                "Dependencies of proposal {} could not be added to the block store: {:?}",
+                "Dependencies of proposal {} could not be added to the block store: {}",
                 proposal_msg, e
             );
             return None;
@@ -360,7 +360,7 @@ impl<T: Payload> EventProcessor<T> {
                 .await
                 .map_err(|e| {
                     warn!(
-                        "Fail to sync up to HQC @ round {}: {:?}",
+                        "Fail to sync up to HQC @ round {}: {}",
                         sync_info.hqc_round(),
                         e
                     );
@@ -383,7 +383,7 @@ impl<T: Payload> EventProcessor<T> {
         counters::SYNC_INFO_MSGS_RECEIVED_COUNT.inc();
         // To avoid a ping-pong cycle between two peers that move forward together.
         if let Err(e) = self.sync_up(&sync_info, peer, false).await {
-            error!("Fail to process sync info: {:?}", e);
+            error!("Fail to process sync info: {}", e);
         }
     }
 
@@ -744,14 +744,14 @@ impl<T: Payload> EventProcessor<T> {
                     .fetch_quorum_cert(qc.as_ref().clone(), preferred_peer, deadline)
                     .await
                 {
-                    error!("Error syncing to qc {}: {:?}", qc, e);
+                    error!("Error syncing to qc {}: {}", qc, e);
                     return None;
                 }
             } else if let Err(e) = self
                 .block_store
                 .insert_single_quorum_cert(qc.as_ref().clone())
             {
-                error!("Error inserting qc {}: {:?}", qc, e);
+                error!("Error inserting qc {}: {}", qc, e);
                 return None;
             }
             self.process_certificates(qc.as_ref(), None).await;
