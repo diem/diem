@@ -62,6 +62,17 @@ fn parse_args() {
 }
 
 #[test]
+fn parse_max_gas() {
+    for s in &["//! max-gas:77", "//!max-gas:0", "//! max-gas:  123"] {
+        s.parse::<Entry>().unwrap();
+    }
+
+    for s in &["//!max-gas:", "//!max-gas:abc", "//!max-gas: 123, 45"] {
+        s.parse::<Entry>().unwrap_err();
+    }
+}
+
+#[test]
 fn parse_new_transaction() {
     assert!(is_new_transaction("//! new-transaction"));
     assert!(is_new_transaction("//!new-transaction "));

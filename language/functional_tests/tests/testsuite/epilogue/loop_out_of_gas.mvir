@@ -1,0 +1,22 @@
+//! account: default, 100000
+
+//! max-gas: 10000
+main() {
+    loop {}
+    return;
+}
+
+// check: gas_used
+// check: 10000
+// check: OUT_OF_GAS
+
+
+//! new-transaction
+import 0x0.LibraAccount;
+
+main() {
+    assert(LibraAccount.balance(get_txn_sender()) == 90000, 42);
+    return;
+}
+
+// check: EXECUTED
