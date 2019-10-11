@@ -13,7 +13,7 @@ use crate::{
     event::{EventHandle, EventKey},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    proof::{AccumulatorConsistencyProof, AccumulatorProof},
+    proof::{AccumulatorConsistencyProof, TransactionAccumulatorProof},
     transaction::{
         Module, Program, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction,
         TransactionArgument, TransactionInfo, TransactionListWithProof, TransactionPayload,
@@ -831,8 +831,8 @@ fn arb_transaction_list_with_proof() -> impl Strategy<Value = TransactionListWit
             Just(transaction_and_infos),
             option::of(Just(events)),
             any::<Version>(),
-            any::<AccumulatorProof>(),
-            any::<AccumulatorProof>(),
+            any::<TransactionAccumulatorProof>(),
+            any::<TransactionAccumulatorProof>(),
         )
     })
     .prop_map(

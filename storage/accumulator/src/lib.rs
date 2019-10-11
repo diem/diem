@@ -150,7 +150,7 @@ where
         reader: &R,
         num_leaves: LeafCount,
         leaf_index: u64,
-    ) -> Result<AccumulatorProof> {
+    ) -> Result<AccumulatorProof<H>> {
         MerkleAccumulatorView::<R, H>::new(reader, num_leaves).get_proof(leaf_index)
     }
 
@@ -310,7 +310,7 @@ where
     }
 
     /// implementation for pub interface `MerkleAccumulator::get_proof`
-    fn get_proof(&self, leaf_index: u64) -> Result<AccumulatorProof> {
+    fn get_proof(&self, leaf_index: u64) -> Result<AccumulatorProof<H>> {
         ensure!(
             leaf_index < self.num_leaves as u64,
             "invalid leaf_index {}, num_leaves {}",

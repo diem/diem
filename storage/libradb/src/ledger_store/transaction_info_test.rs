@@ -3,7 +3,6 @@
 
 use super::*;
 use crate::LibraDB;
-use libra_types::proof::verify_transaction_accumulator_element;
 use proptest::{collection::vec, prelude::*};
 use tools::tempdir::TempPath;
 
@@ -25,8 +24,7 @@ fn verify(
                 .unwrap();
 
             assert_eq!(&txn_info, expected_txn_info);
-            verify_transaction_accumulator_element(root_hash, txn_info.hash(), version, &proof)
-                .unwrap();
+            proof.verify(root_hash, txn_info.hash(), version).unwrap();
         })
 }
 

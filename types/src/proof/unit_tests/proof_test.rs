@@ -7,11 +7,11 @@ use crate::{
     ledger_info::LedgerInfo,
     proof::{
         definition::MAX_ACCUMULATOR_PROOF_DEPTH, verify_account_state, verify_event,
-        verify_signed_transaction, verify_sparse_merkle_element, verify_test_accumulator_element,
-        AccountStateProof, AccumulatorProof, EventAccumulatorInternalNode, EventProof,
-        MerkleTreeInternalNode, SignedTransactionProof, SparseMerkleInternalNode,
-        SparseMerkleLeafNode, SparseMerkleProof, TestAccumulatorInternalNode,
-        TransactionAccumulatorInternalNode,
+        verify_signed_transaction, verify_sparse_merkle_element, AccountStateProof,
+        EventAccumulatorInternalNode, EventAccumulatorProof, EventProof, MerkleTreeInternalNode,
+        SignedTransactionProof, SparseMerkleInternalNode, SparseMerkleLeafNode, SparseMerkleProof,
+        TestAccumulatorInternalNode, TestAccumulatorProof, TransactionAccumulatorInternalNode,
+        TransactionAccumulatorProof,
     },
     transaction::{
         RawTransaction, Script, SignedTransaction, TransactionInfo, TransactionListWithProof,
@@ -32,16 +32,16 @@ use proptest::{collection::vec, prelude::*};
 fn test_verify_empty_accumulator() {
     let element_hash = b"hello".test_only_hash();
     let root_hash = *ACCUMULATOR_PLACEHOLDER_HASH;
-    let proof = AccumulatorProof::new(vec![]);
-    assert!(verify_test_accumulator_element(root_hash, element_hash, 0, &proof).is_err());
+    let proof = TestAccumulatorProof::new(vec![]);
+    assert!(proof.verify(root_hash, element_hash, 0).is_err());
 }
 
 #[test]
 fn test_verify_single_element_accumulator() {
     let element_hash = b"hello".test_only_hash();
     let root_hash = element_hash;
-    let proof = AccumulatorProof::new(vec![]);
-    assert!(verify_test_accumulator_element(root_hash, element_hash, 0, &proof).is_ok());
+    let proof = TestAccumulatorProof::new(vec![]);
+    assert!(proof.verify(root_hash, element_hash, 0).is_ok());
 }
 
 #[test]
@@ -50,20 +50,12 @@ fn test_verify_two_element_accumulator() {
     let element1_hash = b"world".test_only_hash();
     let root_hash = TestAccumulatorInternalNode::new(element0_hash, element1_hash).hash();
 
-    assert!(verify_test_accumulator_element(
-        root_hash,
-        element0_hash,
-        0,
-        &AccumulatorProof::new(vec![element1_hash]),
-    )
-    .is_ok());
-    assert!(verify_test_accumulator_element(
-        root_hash,
-        element1_hash,
-        1,
-        &AccumulatorProof::new(vec![element0_hash]),
-    )
-    .is_ok());
+    assert!(TestAccumulatorProof::new(vec![element1_hash])
+        .verify(root_hash, element0_hash, 0)
+        .is_ok());
+    assert!(TestAccumulatorProof::new(vec![element0_hash])
+        .verify(root_hash, element1_hash, 1)
+        .is_ok());
 }
 
 #[test]
@@ -76,27 +68,21 @@ fn test_verify_three_element_accumulator() {
         TestAccumulatorInternalNode::new(element2_hash, *ACCUMULATOR_PLACEHOLDER_HASH).hash();
     let root_hash = TestAccumulatorInternalNode::new(internal0_hash, internal1_hash).hash();
 
-    assert!(verify_test_accumulator_element(
-        root_hash,
-        element0_hash,
-        0,
-        &AccumulatorProof::new(vec![internal1_hash, element1_hash]),
-    )
-    .is_ok());
-    assert!(verify_test_accumulator_element(
-        root_hash,
-        element1_hash,
-        1,
-        &AccumulatorProof::new(vec![internal1_hash, element0_hash]),
-    )
-    .is_ok());
-    assert!(verify_test_accumulator_element(
-        root_hash,
-        element2_hash,
-        2,
-        &AccumulatorProof::new(vec![internal0_hash, *ACCUMULATOR_PLACEHOLDER_HASH]),
-    )
-    .is_ok());
+    assert!(
+        TestAccumulatorProof::new(vec![internal1_hash, element1_hash])
+            .verify(root_hash, element0_hash, 0)
+            .is_ok()
+    );
+    assert!(
+        TestAccumulatorProof::new(vec![internal1_hash, element0_hash])
+            .verify(root_hash, element1_hash, 1)
+            .is_ok()
+    );
+    assert!(
+        TestAccumulatorProof::new(vec![internal0_hash, *ACCUMULATOR_PLACEHOLDER_HASH])
+            .verify(root_hash, element2_hash, 2)
+            .is_ok()
+    );
 }
 
 #[test]
@@ -112,9 +98,9 @@ fn test_accumulator_proof_max_siblings_leftmost() {
         .fold(element_hash, |hash, sibling_hash| {
             TestAccumulatorInternalNode::new(hash, *sibling_hash).hash()
         });
-    let proof = AccumulatorProof::new(siblings);
+    let proof = TestAccumulatorProof::new(siblings);
 
-    assert!(verify_test_accumulator_element(root_hash, element_hash, 0, &proof).is_ok());
+    assert!(proof.verify(root_hash, element_hash, 0).is_ok());
 }
 
 #[test]
@@ -131,9 +117,9 @@ fn test_accumulator_proof_max_siblings_rightmost() {
             TestAccumulatorInternalNode::new(*sibling_hash, hash).hash()
         });
     let leaf_index = (std::u64::MAX - 1) / 2;
-    let proof = AccumulatorProof::new(siblings);
+    let proof = TestAccumulatorProof::new(siblings);
 
-    assert!(verify_test_accumulator_element(root_hash, element_hash, leaf_index, &proof).is_ok());
+    assert!(proof.verify(root_hash, element_hash, leaf_index).is_ok());
 }
 
 #[test]
@@ -150,9 +136,9 @@ fn test_accumulator_proof_sibling_overflow() {
         .fold(element_hash, |hash, sibling_hash| {
             TestAccumulatorInternalNode::new(hash, *sibling_hash).hash()
         });
-    let proof = AccumulatorProof::new(siblings);
+    let proof = TestAccumulatorProof::new(siblings);
 
-    assert!(verify_test_accumulator_element(root_hash, element_hash, 0, &proof).is_err());
+    assert!(proof.verify(root_hash, element_hash, 0).is_err());
 }
 
 #[test]
@@ -305,7 +291,7 @@ fn test_verify_signed_transaction() {
     );
 
     let ledger_info_to_transaction_info_proof =
-        AccumulatorProof::new(vec![internal_b_hash, txn_info0_hash]);
+        TransactionAccumulatorProof::new(vec![internal_b_hash, txn_info0_hash]);
     let proof = SignedTransactionProof::new(ledger_info_to_transaction_info_proof, txn_info1);
 
     // The proof can be used to verify txn1.
@@ -407,7 +393,7 @@ fn test_verify_account_state_and_event() {
     );
 
     let ledger_info_to_transaction_info_proof =
-        AccumulatorProof::new(vec![internal_a_hash, *ACCUMULATOR_PLACEHOLDER_HASH]);
+        TransactionAccumulatorProof::new(vec![internal_a_hash, *ACCUMULATOR_PLACEHOLDER_HASH]);
     let transaction_info_to_account_proof = SparseMerkleProof::new(
         Some((key2, blob2.hash())),
         vec![*SPARSE_MERKLE_PLACEHOLDER_HASH, leaf1_hash, leaf3_hash],
@@ -447,7 +433,7 @@ fn test_verify_account_state_and_event() {
     )
     .is_err());
 
-    let transaction_info_to_event_proof = AccumulatorProof::new(vec![event1_hash]);
+    let transaction_info_to_event_proof = EventAccumulatorProof::new(vec![event1_hash]);
     let event_proof = EventProof::new(
         ledger_info_to_transaction_info_proof.clone(),
         txn_info2.clone(),
@@ -574,11 +560,11 @@ proptest! {
                    last_index /= 2;
                }
                let first_proof =
-                   Some(AccumulatorProof::new(first_siblings.into_iter().rev().collect::<Vec<_>>()));
+                   Some(TransactionAccumulatorProof::new(first_siblings.into_iter().rev().collect::<Vec<_>>()));
                let last_proof = if first_version == last_version {
                    None
                } else {
-                   Some(AccumulatorProof::new(last_siblings.into_iter().rev().collect::<Vec<_>>()))
+                   Some(TransactionAccumulatorProof::new(last_siblings.into_iter().rev().collect::<Vec<_>>()))
                };
 
                TransactionListWithProof::new(
