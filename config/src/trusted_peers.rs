@@ -19,6 +19,7 @@ use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializ
 use std::{
     collections::{BTreeMap, HashMap},
     convert::TryFrom,
+    fmt,
     hash::BuildHasher,
     str::FromStr,
 };
@@ -44,11 +45,17 @@ pub struct NetworkPrivateKeys {
     pub network_identity_private_key: X25519StaticPrivateKey,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct NetworkPeersConfig {
     #[serde(flatten)]
     #[serde(serialize_with = "serialize_ordered_map")]
     pub peers: HashMap<String, NetworkPeerInfo>,
+}
+
+impl fmt::Debug for NetworkPeersConfig {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<{} keys>", self.peers.len())
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
