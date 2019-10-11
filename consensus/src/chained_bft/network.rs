@@ -9,7 +9,6 @@ use consensus_types::{
     common::{Author, Payload},
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
     sync_info::SyncInfo,
-    timeout_msg::TimeoutMsg,
     vote_msg::VoteMsg,
 };
 use crypto::HashValue;
@@ -20,7 +19,7 @@ use logger::prelude::*;
 use network::{
     proto::{
         BlockRetrievalStatus, ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock,
-        RespondBlock, SyncInfo as SyncInfoProto, TimeoutMsg as TimeoutMsgProto, Vote,
+        RespondBlock, SyncInfo as SyncInfoProto, Vote,
     },
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
 };
@@ -78,7 +77,6 @@ pub struct NetworkReceivers<T> {
     pub proposals: channel::Receiver<ProposalMsg<T>>,
     pub votes: channel::Receiver<VoteMsg>,
     pub block_retrieval: channel::Receiver<BlockRetrievalRequest<T>>,
-    pub timeout_msgs: channel::Receiver<TimeoutMsg>,
     pub sync_info_msgs: channel::Receiver<(SyncInfo, AccountAddress)>,
 }
 
@@ -132,8 +130,6 @@ impl ConsensusNetworkImpl {
         let (vote_tx, vote_rx) = channel::new(1_024, &counters::PENDING_VOTES);
         let (block_request_tx, block_request_rx) =
             channel::new(1_024, &counters::PENDING_BLOCK_REQUESTS);
-        let (timeout_msg_tx, timeout_msg_rx) =
-            channel::new(1_024, &counters::PENDING_NEW_ROUND_MESSAGES);
         let (sync_info_tx, sync_info_rx) = channel::new(1_024, &counters::PENDING_SYNC_INFO_MSGS);
         let network_events = self
             .network_events
@@ -150,7 +146,6 @@ impl ConsensusNetworkImpl {
                 proposal_tx,
                 vote_tx,
                 block_request_tx,
-                timeout_msg_tx,
                 sync_info_tx,
                 all_events,
                 epoch_mgr: Arc::clone(&self.epoch_mgr),
@@ -161,7 +156,6 @@ impl ConsensusNetworkImpl {
             proposals: proposal_rx,
             votes: vote_rx,
             block_retrieval: block_request_rx,
-            timeout_msgs: timeout_msg_rx,
             sync_info_msgs: sync_info_rx,
         }
     }
@@ -302,7 +296,6 @@ struct NetworkTask<T, S> {
     proposal_tx: channel::Sender<ProposalMsg<T>>,
     vote_tx: channel::Sender<VoteMsg>,
     block_request_tx: channel::Sender<BlockRetrievalRequest<T>>,
-    timeout_msg_tx: channel::Sender<TimeoutMsg>,
     sync_info_tx: channel::Sender<(SyncInfo, AccountAddress)>,
     all_events: S,
     epoch_mgr: Arc<EpochManager>,
@@ -335,7 +328,6 @@ where
                             e
                         }),
                         Vote(vote) => self.process_vote(vote).await,
-                        TimeoutMsg(timeout_msg) => self.process_timeout_msg(timeout_msg).await,
                         SyncInfo(sync_info) => self.process_sync_info(sync_info, peer_id).await,
                         _ => {
                             warn!("Unexpected msg from {}: {:?}", peer_id, msg);
@@ -394,23 +386,6 @@ where
                 e
             })?;
         if self.vote_tx.try_send(vote).is_err() {
-            counters::DROP_NETWORK_TO_CONSENSUS.inc();
-        }
-        Ok(())
-    }
-
-    async fn process_timeout_msg(&mut self, timeout_msg: TimeoutMsgProto) -> failure::Result<()> {
-        let timeout_msg = TimeoutMsg::try_from(timeout_msg)?;
-        timeout_msg
-            .verify(self.epoch_mgr.validators().as_ref())
-            .map_err(|e| {
-                security_log(SecurityEvent::InvalidConsensusRound)
-                    .error(&e)
-                    .data(&timeout_msg)
-                    .log();
-                e
-            })?;
-        if self.timeout_msg_tx.try_send(timeout_msg).is_err() {
             counters::DROP_NETWORK_TO_CONSENSUS.inc();
         }
         Ok(())

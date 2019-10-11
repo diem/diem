@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{
-        consensusdb::ConsensusDB,
-    },
-    consensus_provider::create_storage_read_client,
+    chained_bft::consensusdb::ConsensusDB, consensus_provider::create_storage_read_client,
 };
 use config::config::NodeConfig;
 use consensus_types::{

@@ -104,6 +104,7 @@ where
         root_quorum_cert: QuorumCert,
         root_ledger_info: QuorumCert,
         max_pruned_blocks_in_mem: usize,
+        highest_timeout_cert: Option<Arc<TimeoutCertificate>>,
     ) -> Self {
         assert_eq!(
             root.id(),
@@ -133,7 +134,7 @@ where
             root_id,
             highest_certified_block_id: root_id,
             highest_quorum_cert: Arc::clone(&root_quorum_cert),
-            highest_timeout_cert: None,
+            highest_timeout_cert,
             highest_ledger_info: Arc::new(root_ledger_info),
             pending_votes: PendingVotes::new(),
             id_to_quorum_cert,

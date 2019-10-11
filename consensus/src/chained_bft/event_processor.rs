@@ -5,7 +5,7 @@ use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore, NeedFetchResult, VoteReceptionResult},
         liveness::{
-            pacemaker_new::{NewRoundEvent, NewRoundReason, Pacemaker},
+            pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
         },
@@ -359,13 +359,8 @@ impl<T: Payload> EventProcessor<T> {
             self.proposer_election.get_valid_proposers(round).iter().map(|p| p.short_str()).collect::<Vec<String>>(),
         );
 
-        let timeout_vote_msg = match self.last_vote_sent.as_mut() {
-            Some((vote, vote_round)) if (*vote_round == round) => {
-                if vote.round_signature().is_none() {
-                    vote.add_round_signature(self.block_store.signer());
-                }
-                vote.clone()
-            }
+        let mut timeout_vote_msg = match self.last_vote_sent.as_ref() {
+            Some((vote, vote_round)) if (*vote_round == round) => vote.clone(),
             _ => {
                 // Didn't vote in this round yet, generate a backup vote
                 let backup_vote_res = self.gen_backup_vote(round).await;
@@ -379,6 +374,9 @@ impl<T: Payload> EventProcessor<T> {
             }
         };
 
+        if !timeout_vote_msg.is_timeout() {
+            timeout_vote_msg.add_round_signature(self.block_store.signer());
+        }
         self.network.broadcast_vote(timeout_vote_msg).await
     }
 
@@ -401,7 +399,7 @@ impl<T: Payload> EventProcessor<T> {
                 nil_block
             }
         };
-        self.execute_and_vote(block, true).await
+        self.execute_and_vote(block).await
     }
 
     /// This function is called only after all the dependencies of the given QC have been retrieved.
@@ -476,7 +474,7 @@ impl<T: Payload> EventProcessor<T> {
         let proposal_parent_id = proposal.parent_id();
         let certified_parent_block_round = proposal.quorum_cert().parent_block_round();
 
-        let vote_msg = match self.execute_and_vote(proposal, false).await {
+        let vote_msg = match self.execute_and_vote(proposal).await {
             Err(e) => {
                 warn!("{:?}", e);
                 return;
@@ -578,9 +576,10 @@ impl<T: Payload> EventProcessor<T> {
         let hqc = self.block_store.highest_quorum_cert().as_ref().clone();
         // No need to include HTC if it's lower than HQC
         let htc = self
-            .pacemaker
-            .highest_timeout_certificate()
-            .filter(|tc| tc.round() > hqc.certified_block_round());
+            .block_store
+            .highest_timeout_cert()
+            .filter(|tc| tc.round() > hqc.certified_block_round())
+            .map(|tc| tc.as_ref().clone());
         SyncInfo::new(
             hqc,
             self.block_store.highest_ledger_info().as_ref().clone(),
@@ -595,11 +594,7 @@ impl<T: Payload> EventProcessor<T> {
     /// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.
     ///
     /// This function assumes that it might be called from different tasks concurrently.
-    async fn execute_and_vote(
-        &mut self,
-        proposed_block: Block<T>,
-        is_timeout: bool,
-    ) -> failure::Result<VoteMsg> {
+    async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> failure::Result<VoteMsg> {
         let executed_block = self
             .sync_manager
             .execute_and_insert_block(proposed_block)
@@ -636,7 +631,7 @@ impl<T: Payload> EventProcessor<T> {
         let ledger_info_placeholder = self
             .block_store
             .ledger_info_placeholder(vote_info.potential_commit_id());
-        let mut vote_msg = VoteMsg::new(
+        let vote_msg = VoteMsg::new(
             VoteData::new(
                 proposal_id,
                 executed_state_id,
@@ -649,9 +644,6 @@ impl<T: Payload> EventProcessor<T> {
             self.block_store.signer(),
             self.gen_sync_info(),
         );
-        if is_timeout {
-            vote_msg.add_round_signature(self.block_store.signer());
-        }
         self.storage
             .save_consensus_state(vote_info.consensus_state().clone(), vote_msg.clone())
             .with_context(|e| format!("Fail to persist consensus state: {:?}", e))?;
@@ -667,7 +659,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 3. Once the QC successfully formed, notify the Pacemaker.
     pub async fn process_vote(&mut self, vote_msg: VoteMsg) {
         // Check whether this validator is a valid recipient of the vote.
-        if vote_msg.round_signature().is_none() {
+        if !vote_msg.is_timeout() {
             // Unlike timeout votes regular votes are sent to the leaders of the next round only.
             let next_round = vote_msg.vote_data().block_round() + 1;
             if self
@@ -709,10 +701,7 @@ impl<T: Payload> EventProcessor<T> {
     async fn add_vote(&mut self, vote: VoteMsg) -> failure::Result<()> {
         let vote_author = vote.author();
         // Add the vote and check whether it completes a new QC or a TC
-        match self
-            .block_store
-            .insert_vote(vote, self.validators.validators())
-        {
+        match self.block_store.insert_vote(vote, &self.validators) {
             VoteReceptionResult::NewQuorumCertificate(qc) => {
                 self.new_qc_aggregated(qc, vote_author).await
             }

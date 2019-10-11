@@ -824,7 +824,7 @@ fn secondary_proposers() {
         let mut secondary_proposal_ids = vec![];
         for msg in timeout_votes {
             let vote = VoteMsg::try_from(msg.1).unwrap();
-            assert!(vote.round_signature().is_some());
+            assert!(vote.is_timeout());
             secondary_proposal_ids.push(vote.vote_data().block_id());
         }
         assert_eq!(secondary_proposal_ids.len(), 4);

@@ -4,7 +4,7 @@ use crate::{
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
         liveness::{
-            pacemaker_new::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
+            pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
             rotating_proposer_election::RotatingProposer,
         },

@@ -68,8 +68,8 @@ impl ChainedBftProvider {
         info!(
             "Starting up the consensus state machine with recovery data - [consensus state {:?}], [last_vote {}], [highest timeout certificate: {}]",
             initial_data.state(),
-            initial_data.last_vote().map_or("None".to_string(), |v| format!("{}", v)),
-            initial_data.highest_timeout_certificate().map_or("None".to_string(), |v| format!("{}", v)),
+            initial_data.last_vote().map_or("None".to_string(), |v| v.to_string()),
+            initial_data.highest_timeout_certificate().map_or("None".to_string(), |v| v.to_string()),
         );
         let txn_manager = Arc::new(MempoolProxy::new(mempool_client.clone()));
         let state_computer = Arc::new(ExecutionProxy::new(executor, synchronizer_client.clone()));
