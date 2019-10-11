@@ -338,7 +338,7 @@ impl Pacemaker {
     pub fn process_remote_timeout(
         &mut self,
         pacemaker_timeout: PacemakerTimeout,
-        validator_verifier: Arc<ValidatorVerifier>,
+        validator_verifier: &ValidatorVerifier,
     ) -> Option<NewRoundEvent> {
         if self
             .pacemaker_timeout_manager

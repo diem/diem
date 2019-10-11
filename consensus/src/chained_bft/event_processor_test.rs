@@ -188,7 +188,7 @@ impl NodeSetup {
             storage.clone(),
             time_service,
             true,
-            Arc::clone(&epoch_mgr),
+            epoch_mgr.validators(),
         );
         block_on(event_processor.start());
         Self {
@@ -286,7 +286,7 @@ fn basic_new_rank_event_test() {
             node.block_store.signer().public_key(),
         ));
         node.block_store
-            .insert_vote_and_qc(vote_msg, validator_verifier);
+            .insert_vote_and_qc(vote_msg, validator_verifier.as_ref());
         node.event_processor
             .process_new_round_event(NewRoundEvent {
                 round: 2,

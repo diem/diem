@@ -6,7 +6,6 @@ use crate::chained_bft::safety::safety_rules::ConsensusState;
 use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore, NeedFetchResult, VoteReceptionResult},
-        epoch_manager::EpochManager,
         liveness::{
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
@@ -35,7 +34,7 @@ use consensus_types::{
 };
 use crypto::HashValue;
 use failure::ResultExt;
-use libra_types::crypto_proxies::LedgerInfoWithSignatures;
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
 use logger::prelude::*;
 use mirai_annotations::{
     debug_checked_precondition, debug_checked_precondition_eq, debug_checked_verify,
@@ -75,7 +74,7 @@ pub struct EventProcessor<T> {
     enforce_increasing_timestamps: bool,
     // Cache of the last sent vote message.
     last_vote_sent: Option<(VoteMsg, Round)>,
-    epoch_mgr: Arc<EpochManager>,
+    validators: Arc<ValidatorVerifier>,
 }
 
 impl<T: Payload> EventProcessor<T> {
@@ -92,7 +91,7 @@ impl<T: Payload> EventProcessor<T> {
         storage: Arc<dyn PersistentStorage<T>>,
         time_service: Arc<dyn TimeService>,
         enforce_increasing_timestamps: bool,
-        epoch_mgr: Arc<EpochManager>,
+        validators: Arc<ValidatorVerifier>,
     ) -> Self {
         let sync_manager = SyncManager::new(
             Arc::clone(&block_store),
@@ -120,7 +119,7 @@ impl<T: Payload> EventProcessor<T> {
             time_service,
             enforce_increasing_timestamps,
             last_vote_sent,
-            epoch_mgr,
+            validators,
         }
     }
 
@@ -279,7 +278,7 @@ impl<T: Payload> EventProcessor<T> {
         }
         if let Some(new_round_event) = self.pacemaker.process_remote_timeout(
             timeout_msg.pacemaker_timeout().clone(),
-            self.epoch_mgr.validators(),
+            self.validators.as_ref(),
         ) {
             self.process_new_round_event(new_round_event).await;
         }
@@ -734,9 +733,8 @@ impl<T: Payload> EventProcessor<T> {
         let preferred_peer = vote.author();
         // TODO [Reconfiguration] Verify epoch of the vote message.
         // Add the vote and check whether it completes a new QC.
-        if let VoteReceptionResult::NewQuorumCertificate(qc) = self
-            .block_store
-            .insert_vote(vote, self.epoch_mgr.validators())
+        if let VoteReceptionResult::NewQuorumCertificate(qc) =
+            self.block_store.insert_vote(vote, self.validators.as_ref())
         {
             if self.block_store.need_fetch_for_quorum_cert(&qc) == NeedFetchResult::NeedFetch {
                 if let Err(e) = self

@@ -1,11 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::state_replication::{StateComputer, TxnManager};
 use crate::{
     chained_bft::{
         chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
-        epoch_manager::EpochManager,
-        network::ConsensusNetworkImpl,
         persistent_storage::{PersistentStorage, StorageWriteProxy},
     },
     consensus_provider::ConsensusProvider,
@@ -14,7 +13,7 @@ use crate::{
     state_replication::StateMachineReplication,
     txn_manager::MempoolProxy,
 };
-use config::config::{ConsensusProposerType::FixedProposer, NodeConfig};
+use config::config::NodeConfig;
 use consensus_types::common::Author;
 use executor::Executor;
 use failure::prelude::*;
@@ -31,18 +30,21 @@ use std::{convert::TryFrom, sync::Arc};
 use tokio::runtime;
 use vm_runtime::MoveVM;
 
-struct InitialSetup {
-    author: Author,
-    signer: ValidatorSigner,
-    validator: ValidatorVerifier,
+///  The state necessary to begin state machine replication including ValidatorSet, networking etc.
+pub struct InitialSetup {
+    pub author: Author,
+    pub epoch: u64,
+    pub signer: ValidatorSigner,
+    pub validator: ValidatorVerifier,
+    pub network_sender: ConsensusNetworkSender,
+    pub network_events: ConsensusNetworkEvents,
 }
 
 /// Supports the implementation of ConsensusProvider using LibraBFT.
 pub struct ChainedBftProvider {
     smr: ChainedBftSMR<Vec<SignedTransaction>>,
-    mempool_client: Arc<MempoolClient>,
-    executor: Arc<Executor<MoveVM>>,
-    synchronizer_client: Arc<StateSyncClient>,
+    txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
+    state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
 }
 
 impl ChainedBftProvider {
@@ -59,24 +61,8 @@ impl ChainedBftProvider {
             .build()
             .expect("Failed to create Tokio runtime!");
 
-        let initial_setup = Self::initialize_setup(node_config);
-        let epoch_mgr = Arc::new(EpochManager::new(0, initial_setup.validator.clone()));
-        let network = ConsensusNetworkImpl::new(
-            initial_setup.author,
-            network_sender.clone(),
-            network_events,
-            Arc::clone(&epoch_mgr),
-        );
-        let proposer = {
-            let peers = epoch_mgr.validators().get_ordered_account_addresses();
-            if node_config.consensus.get_proposer_type() == FixedProposer {
-                vec![Self::choose_leader(peers)]
-            } else {
-                peers
-            }
-        };
+        let initial_setup = Self::initialize_setup(network_sender, network_events, node_config);
         debug!("[Consensus] My peer: {:?}", initial_setup.author);
-        debug!("[Consensus] Chosen proposer: {:?}", proposer);
         let config = ChainedBftSMRConfig::from_node_config(&node_config.consensus);
         let (storage, initial_data) = StorageWriteProxy::start(node_config);
         info!(
@@ -85,27 +71,23 @@ impl ChainedBftProvider {
             initial_data.last_vote().map_or("None".to_string(), |v| format!("{}", v)),
             initial_data.highest_timeout_certificates()
         );
-        let smr = ChainedBftSMR::new(
-            initial_setup.signer,
-            proposer,
-            network,
-            runtime,
-            config,
-            storage,
-            initial_data,
-            epoch_mgr,
-        );
+        let txn_manager = Arc::new(MempoolProxy::new(mempool_client.clone()));
+        let state_computer = Arc::new(ExecutionProxy::new(executor, synchronizer_client.clone()));
+        let smr = ChainedBftSMR::new(initial_setup, runtime, config, storage, initial_data);
         Self {
             smr,
-            mempool_client,
-            executor,
-            synchronizer_client,
+            txn_manager,
+            state_computer,
         }
     }
 
     /// Retrieve the initial "state" for consensus. This function is synchronous and returns after
     /// reading the local persistent store and retrieving the initial state from the executor.
-    fn initialize_setup(node_config: &mut NodeConfig) -> InitialSetup {
+    fn initialize_setup(
+        network_sender: ConsensusNetworkSender,
+        network_events: ConsensusNetworkEvents,
+        node_config: &mut NodeConfig,
+    ) -> InitialSetup {
         let peer_id_str = node_config
             .get_validator_network_config()
             .unwrap()
@@ -136,29 +118,23 @@ impl ChainedBftProvider {
         );
         InitialSetup {
             author,
+            // TODO: this is placeholder for now, replace with reconfiguration
+            epoch: 0,
             signer,
             validator,
+            network_sender,
+            network_events,
         }
-    }
-
-    /// Choose a proposer that is going to be the single leader (relevant for a mock fixed proposer
-    /// election only).
-    fn choose_leader(peers: Vec<Author>) -> Author {
-        // As it is just a tmp hack function, pick the max PeerId to be a proposer.
-        // TODO: VRF will be integrated later.
-        peers.into_iter().max().expect("No trusted peers found!")
     }
 }
 
 impl ConsensusProvider for ChainedBftProvider {
     fn start(&mut self) -> Result<()> {
-        let txn_manager = Arc::new(MempoolProxy::new(self.mempool_client.clone()));
-        let state_computer = Arc::new(ExecutionProxy::new(
-            Arc::clone(&self.executor),
-            self.synchronizer_client.clone(),
-        ));
         debug!("Starting consensus provider.");
-        self.smr.start(txn_manager, state_computer)
+        self.smr.start(
+            Arc::clone(&self.txn_manager),
+            Arc::clone(&self.state_computer),
+        )
     }
 
     fn stop(&mut self) {

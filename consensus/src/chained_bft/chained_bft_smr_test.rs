@@ -5,7 +5,6 @@ use crate::{
     chained_bft::{
         block_storage::BlockReader,
         chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
-        network::ConsensusNetworkImpl,
         network_tests::NetworkPlayground,
         test_utils::{MockStateComputer, MockStorage, MockTransactionManager, TestPayload},
     },
@@ -13,7 +12,6 @@ use crate::{
 };
 use channel;
 use consensus_types::{
-    common::Author,
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
     timeout_msg::TimeoutMsg,
     vote_msg::VoteMsg,
@@ -25,6 +23,7 @@ use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender}
 use std::convert::TryFrom;
 use std::sync::Arc;
 
+use crate::chained_bft::chained_bft_consensus_provider::InitialSetup;
 use crate::chained_bft::{
     epoch_manager::EpochManager,
     persistent_storage::RecoveryData,
@@ -43,7 +42,6 @@ use tokio::runtime;
 struct SMRNode {
     signer: ValidatorSigner,
     epoch_mgr: Arc<EpochManager>,
-    proposer: Vec<Author>,
     proposer_type: ConsensusProposerType,
     smr_id: usize,
     smr: ChainedBftSMR<TestPayload>,
@@ -58,7 +56,6 @@ impl SMRNode {
         playground: &mut NetworkPlayground,
         signer: ValidatorSigner,
         epoch_mgr: Arc<EpochManager>,
-        proposer: Vec<Author>,
         smr_id: usize,
         storage: Arc<MockStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
@@ -76,12 +73,6 @@ impl SMRNode {
             .after_start(with_smr_id(signer.author().short_str()))
             .build()
             .expect("Failed to create Tokio runtime!");
-        let network = ConsensusNetworkImpl::new(
-            author,
-            network_sender,
-            network_events,
-            Arc::clone(&epoch_mgr),
-        );
 
         let config = ChainedBftSMRConfig {
             max_pruned_blocks_in_mem: 10000,
@@ -90,15 +81,20 @@ impl SMRNode {
             contiguous_rounds: 2,
             max_block_size: 50,
         };
+        let initial_setup = InitialSetup {
+            author,
+            signer: signer.clone(),
+            epoch: 0,
+            validator: epoch_mgr.validators().as_ref().clone(),
+            network_sender,
+            network_events,
+        };
         let mut smr = ChainedBftSMR::new(
-            signer.clone(),
-            proposer.clone(),
-            network,
+            initial_setup,
             runtime,
             config,
             storage.clone(),
             initial_data,
-            Arc::clone(&epoch_mgr),
         );
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let mut mp = MockTransactionManager::new();
@@ -115,7 +111,6 @@ impl SMRNode {
         Self {
             signer,
             epoch_mgr,
-            proposer,
             proposer_type,
             smr_id,
             smr,
@@ -136,7 +131,6 @@ impl SMRNode {
             playground,
             self.signer,
             self.epoch_mgr,
-            self.proposer,
             self.smr_id + 10,
             self.storage,
             recover_data,
@@ -153,13 +147,6 @@ impl SMRNode {
         let (mut signers, validator_verifier) =
             random_validator_verifier(num_nodes, Some(quorum_voting_power), true);
         let epoch_mgr = Arc::new(EpochManager::new(0, validator_verifier));
-        let peers = epoch_mgr.validators().get_ordered_account_addresses();
-        let proposer = {
-            match proposer_type {
-                FixedProposer => vec![peers[0]],
-                RotatingProposer | MultipleOrderedProposers => peers,
-            }
-        };
         let mut nodes = vec![];
         for smr_id in 0..num_nodes {
             let (storage, initial_data) = MockStorage::start_for_testing();
@@ -167,7 +154,6 @@ impl SMRNode {
                 playground,
                 signers.remove(0),
                 Arc::clone(&epoch_mgr),
-                proposer.clone(),
                 smr_id,
                 storage,
                 initial_data,
