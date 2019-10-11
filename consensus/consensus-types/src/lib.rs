@@ -9,6 +9,5 @@ pub mod sync_info;
 #[cfg(any(test, feature = "testing"))]
 pub mod test_utils;
 pub mod timeout_certificate;
-pub mod timeout_msg;
 pub mod vote_data;
 pub mod vote_msg;

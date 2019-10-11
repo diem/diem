@@ -45,7 +45,7 @@ impl Display for VoteMsg {
             "Vote: [vote data: {}, author: {}, is_timeout: {}, {}]",
             self.vote_data,
             self.author.short_str(),
-            self.round_signature().is_some(),
+            self.is_timeout(),
             self.ledger_info
         )
     }
@@ -117,6 +117,12 @@ impl VoteMsg {
     /// TimeoutCertificate.
     pub fn round_signature(&self) -> Option<&Signature> {
         self.round_signature.as_ref()
+    }
+
+    /// The vote message is considered a timeout vote message if it carries a signature on the
+    /// round, which can then be used for aggregating it to the TimeoutCertificate.
+    pub fn is_timeout(&self) -> bool {
+        self.round_signature.is_some()
     }
 
     /// Verifies that the consensus data hash of LedgerInfo corresponds to the vote info,

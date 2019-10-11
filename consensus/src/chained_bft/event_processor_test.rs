@@ -7,7 +7,7 @@ use crate::{
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
         liveness::{
-            pacemaker_new::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
+            pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
             rotating_proposer_election::RotatingProposer,
@@ -861,6 +861,11 @@ fn nil_vote_on_timeout() {
                 .clone(),
         )
         .unwrap();
-        assert!(vote_msg.round_signature().is_some());
+        assert!(vote_msg.is_timeout());
+        assert_eq!(vote_msg.vote_data().block_round(), 1);
+        assert_eq!(
+            vote_msg.vote_data().parent_block_id(),
+            node.block_store.root().id()
+        );
     });
 }

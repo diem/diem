@@ -23,8 +23,8 @@ use ::libra_types::proto::types;
 pub use self::{
     consensus::{
         consensus_msg::Message as ConsensusMsg_oneof, Block, BlockRetrievalStatus, ConsensusMsg,
-        PacemakerTimeout, PacemakerTimeoutCertificate, Proposal, QuorumCert, RequestBlock,
-        RespondBlock, SyncInfo, TimeoutCertificate, TimeoutMsg, Vote, VoteData,
+        Proposal, QuorumCert, RequestBlock, RespondBlock, SyncInfo, TimeoutCertificate, Vote,
+        VoteData,
     },
     mempool::MempoolSyncMsg,
     network::{

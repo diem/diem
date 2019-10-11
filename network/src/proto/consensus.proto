@@ -14,7 +14,6 @@ message ConsensusMsg {
     Vote vote = 2;
     RequestBlock request_block = 3;
     RespondBlock respond_block = 4;
-    TimeoutMsg timeout_msg = 5;
     SyncInfo sync_info = 6;
   }
 }
@@ -26,26 +25,6 @@ message Proposal {
   SyncInfo sync_info = 2;
 }
 
-message PacemakerTimeout {
-  // Round that has timed out (e.g. we propose to switch to round + 1)
-  uint64 round = 1;
-  // Author of timeout
-  bytes author = 2;
-  // Signature that this timeout was authored by owner
-  bytes signature = 3;
-  // Optional vote for the given round
-  Vote vote = 4;
-}
-
-message TimeoutMsg {
-  // Information about the highest QC, LedgerInfo, TimeoutCertificate, etc.
-  SyncInfo sync_info = 1;
-  // Timeout
-  PacemakerTimeout pacemaker_timeout = 2;
-  // Signature that this timeout was authored by owner
-  bytes signature = 3;
-}
-
 message SyncInfo {
   // Highest quorum certificate
   QuorumCert highest_quorum_cert = 1;
@@ -53,13 +32,6 @@ message SyncInfo {
   QuorumCert highest_ledger_info = 2;
   // Optional highest timeout certificate if available
   TimeoutCertificate highest_timeout_cert = 3;
-}
-
-message PacemakerTimeoutCertificate {
-  // Round for which this certificate was created
-  uint64 round = 1;
-  // List of certified timeouts
-  repeated PacemakerTimeout timeouts = 2;
 }
 
 message TimeoutCertificate {

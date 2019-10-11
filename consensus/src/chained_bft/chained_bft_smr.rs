@@ -9,12 +9,12 @@ use crate::{
         event_processor::EventProcessor,
         liveness::{
             multi_proposer_election::MultiProposer,
-            pacemaker_new::{ExponentialTimeInterval, Pacemaker},
+            pacemaker::{ExponentialTimeInterval, Pacemaker},
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
             rotating_proposer_election::{choose_leader, RotatingProposer},
         },
-        network::{ConsensusNetworkImpl, NetworkReceivers},
+        network::ConsensusNetworkImpl,
         persistent_storage::{PersistentStorage, RecoveryData},
     },
     counters,
@@ -155,7 +155,6 @@ impl<T: Payload> ChainedBftSMR<T> {
                     vote_msg = network_receivers.votes.select_next_some() => {
                         event_processor.process_vote(vote_msg).await;
                     }
-                    remote_timeout_msg = network_receivers.timeout_msgs.select_next_some() => (),
                     local_timeout_round = pacemaker_timeout_sender_rx.select_next_some() => {
                         event_processor.process_local_timeout(local_timeout_round).await;
                     }

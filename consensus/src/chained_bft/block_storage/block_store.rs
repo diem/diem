@@ -119,10 +119,8 @@ impl<T: Payload> BlockStore<T> {
             root_qc,
             root_li,
             max_pruned_blocks_in_mem,
+            highest_timeout_cert.map(Arc::new),
         );
-        if let Some(tc) = highest_timeout_cert {
-            tree.replace_timeout_cert(Arc::new(tc));
-        }
         let quorum_certs = quorum_certs
             .into_iter()
             .map(|qc| (qc.certified_block_id(), qc))
@@ -163,11 +161,13 @@ impl<T: Payload> BlockStore<T> {
         quorum_certs: Vec<QuorumCert>,
     ) {
         let max_pruned_blocks_in_mem = self.inner.read().unwrap().max_pruned_blocks_in_mem();
+        // Rollover the previous highest TC from the old tree to the new one.
+        let prev_htc = self.highest_timeout_cert().map(|tc| tc.as_ref().clone());
         let tree = Self::build_block_tree(
             root,
             blocks,
             quorum_certs,
-            None,
+            prev_htc,
             Arc::clone(&self.state_computer),
             max_pruned_blocks_in_mem,
         )

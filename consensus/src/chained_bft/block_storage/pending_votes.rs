@@ -140,7 +140,7 @@ impl PendingVotes {
         let author = vote_msg.author();
         let round = vote_msg.vote_data().block_round();
         let li_digest = vote_msg.ledger_info().hash();
-        let is_timeout = vote_msg.round_signature().is_some();
+        let is_timeout = vote_msg.is_timeout();
         let vote_info = LastVoteInfo {
             li_digest,
             round,
