@@ -97,12 +97,21 @@ where
     }
 }
 
+fn non_zero(c: GasCarrier) -> GasCarrier {
+    std::cmp::max(1, c)
+}
+
+fn none(c: GasCarrier) -> GasCarrier {
+    c
+}
+
 // We would really like to be able to implement the standard arithmetic traits over the GasAlgebra
 // trait, but that isn't possible.
 macro_rules! define_gas_unit {
     {
         name: $name: ident,
         carrier: $carrier: ty,
+        invariant: $invariant:ident,
         doc: $comment: literal
     } => {
         #[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]
@@ -110,10 +119,11 @@ macro_rules! define_gas_unit {
         pub struct $name<GasCarrier>(GasCarrier);
         impl GasAlgebra<$carrier> for $name<$carrier> {
             fn new(c: GasCarrier) -> Self {
+                let c = $invariant(c);
                 Self(c)
             }
             fn get(&self) -> GasCarrier {
-                self.0
+                $invariant(self.0)
             }
         }
     }
@@ -122,18 +132,21 @@ macro_rules! define_gas_unit {
 define_gas_unit! {
     name: AbstractMemorySize,
     carrier: GasCarrier,
+    invariant: non_zero,
     doc: "A newtype wrapper that represents the (abstract) memory size that the instruciton will take up."
 }
 
 define_gas_unit! {
     name: GasUnits,
     carrier: GasCarrier,
+    invariant: none,
     doc: "A newtype wrapper around the underlying carrier for the gas cost."
 }
 
 define_gas_unit! {
     name: GasPrice,
     carrier: GasCarrier,
+    invariant: none, // Only for testnet. Later this will also be non-zero
     doc: "A newtype wrapper around the gas price for each unit of gas consumed."
 }
 
@@ -345,6 +358,9 @@ pub fn static_cost_instr(
     instr: &Bytecode,
     size_provider: AbstractMemorySize<GasCarrier>,
 ) -> GasCost {
+    // We already have this as an invariant for `AbstractMemorySize` but as an extra precaution we
+    // double-check it here as well.
+    let size_provider = size_provider.map(non_zero);
     GasCost {
         instruction_gas: GAS_SCHEDULE.comp_gas(instr, size_provider),
         memory_gas: GAS_SCHEDULE.memory_gas(instr, size_provider),

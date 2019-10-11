@@ -1,0 +1,32 @@
+//! account: default, 50000
+
+module M {
+    public rec() {
+        Self.rec();
+        return;
+    }
+}
+
+//! new-transaction
+//! max-gas: 5000
+import {{default}}.M;
+
+main() {
+    M.rec();
+    return;
+}
+
+// check: gas_used
+// check: 5000
+// check: OUT_OF_GAS
+
+
+//! new-transaction
+import 0x0.LibraAccount;
+
+main() {
+    assert(LibraAccount.balance(get_txn_sender()) == 45000, 42);
+    return;
+}
+
+// check: EXECUTED

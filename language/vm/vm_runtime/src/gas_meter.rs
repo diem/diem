@@ -248,8 +248,8 @@ impl GasMeter {
                     let size_difference = if new_val_size.app(&size, |new_vl_size, size| new_vl_size > size) {
                         new_val_size.sub(size)
                     } else {
-                        // The difference is always >= 0
-                        AbstractMemorySize::new(0)
+                        // The difference is always >= 1
+                        AbstractMemorySize::new(1)
                     };
                     default_gas.memory_gas = default_gas.memory_gas
                         // Charge for the iops on global memory
@@ -292,7 +292,9 @@ impl GasMeter {
                 let mem_size = if memory_size.get() > 1 {
                     memory_size.sub(AbstractMemorySize::new(1))
                 } else {
-                    AbstractMemorySize::new(0) // We already charged for size 1
+                    // We already charged, but we are restricted that we cannot have a memory size
+                    // of zero. So charge the minimal amount.
+                    AbstractMemorySize::new(1)
                 };
                 Self::gas_of(static_cost_instr(instr, mem_size))
             }
