@@ -255,7 +255,7 @@ impl SparseMerkleProof {
             self.siblings.len(),
         );
 
-        match (element_blob, self.leaf()) {
+        match (element_blob, self.leaf) {
             (Some(blob), Some((proof_key, proof_value_hash))) => {
                 // This is an inclusion proof, so the key and value hash provided in the proof
                 // should match element_key and element_value_hash. `siblings` should prove the
@@ -298,7 +298,7 @@ impl SparseMerkleProof {
             }
         }
 
-        let current_hash = match self.leaf() {
+        let current_hash = match self.leaf {
             Some((key, value_hash)) => SparseMerkleLeafNode::new(key, value_hash).hash(),
             None => *SPARSE_MERKLE_PLACEHOLDER_HASH,
         };
