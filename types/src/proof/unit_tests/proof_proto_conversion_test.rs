@@ -3,8 +3,8 @@
 
 use crate::proof::{
     definition::bitmap::{AccumulatorBitmap, SparseMerkleBitmap},
-    AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, EventProof,
-    SignedTransactionProof, SparseMerkleProof,
+    AccountStateProof, AccumulatorConsistencyProof, EventProof, SignedTransactionProof,
+    SparseMerkleProof, TestAccumulatorProof,
 };
 use crypto::{
     hash::{TestOnlyHash, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -69,14 +69,14 @@ fn accumulator_proof_protobuf_conversion_test(
     expected_bitmap: u64,
     expected_num_non_default_siblings: usize,
 ) {
-    let proof = AccumulatorProof::new(siblings);
+    let proof = TestAccumulatorProof::new(siblings);
     let compressed_proof: crate::proto::types::AccumulatorProof = proof.clone().into();
     assert_eq!(compressed_proof.bitmap, expected_bitmap);
     assert_eq!(
         compressed_proof.non_default_siblings.len(),
         expected_num_non_default_siblings
     );
-    let decompressed_proof = AccumulatorProof::try_from(compressed_proof).unwrap();
+    let decompressed_proof = TestAccumulatorProof::try_from(compressed_proof).unwrap();
     assert_eq!(decompressed_proof, proof);
 }
 
@@ -126,7 +126,7 @@ fn test_convert_accumulator_proof_wrong_number_of_siblings() {
     compressed_proof
         .non_default_siblings
         .push(sibling1.to_vec());
-    assert!(AccumulatorProof::try_from(compressed_proof).is_err());
+    assert!(TestAccumulatorProof::try_from(compressed_proof).is_err());
 }
 
 #[test]
@@ -137,7 +137,7 @@ fn test_convert_accumulator_proof_malformed_hashes() {
     let mut compressed_proof = crate::proto::types::AccumulatorProof::default();
     compressed_proof.bitmap = 0b100;
     compressed_proof.non_default_siblings.push(sibling0);
-    assert!(AccumulatorProof::try_from(compressed_proof).is_err());
+    assert!(TestAccumulatorProof::try_from(compressed_proof).is_err());
 }
 
 fn sparse_merkle_proof_protobuf_conversion_test(
@@ -306,8 +306,8 @@ proptest! {
     }
 
     #[test]
-    fn test_accumulator_protobuf_conversion_roundtrip(proof in any::<AccumulatorProof>()) {
-        assert_protobuf_encode_decode::<crate::proto::types::AccumulatorProof, AccumulatorProof>(&proof);
+    fn test_accumulator_protobuf_conversion_roundtrip(proof in any::<TestAccumulatorProof>()) {
+        assert_protobuf_encode_decode::<crate::proto::types::AccumulatorProof, TestAccumulatorProof>(&proof);
     }
 
     #[test]

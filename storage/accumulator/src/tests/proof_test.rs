@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use libra_types::proof::verify_test_accumulator_element;
 use proptest::{collection::vec, prelude::*};
 
 #[test]
@@ -90,6 +89,6 @@ fn verify(
     leaves.iter().enumerate().for_each(|(i, hash)| {
         let leaf_index = first_leaf_idx + i as u64;
         let proof = TestAccumulator::get_proof(store, num_leaves, leaf_index).unwrap();
-        verify_test_accumulator_element(root_hash, *hash, leaf_index, &proof).unwrap();
+        proof.verify(root_hash, *hash, leaf_index).unwrap();
     });
 }

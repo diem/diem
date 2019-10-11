@@ -15,7 +15,6 @@ use crate::{
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
-    proof::definition::MAX_ACCUMULATOR_PROOF_DEPTH,
     transaction::{TransactionInfo, TransactionListWithProof, Version},
 };
 use crypto::{
@@ -29,10 +28,13 @@ use crypto::{
 use failure::prelude::*;
 use std::{collections::VecDeque, marker::PhantomData};
 
-pub use crate::proof::definition::{
-    AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, EventProof,
-    SignedTransactionProof, SparseMerkleProof,
+pub use self::definition::{
+    AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, EventAccumulatorProof,
+    EventProof, SignedTransactionProof, SparseMerkleProof, TransactionAccumulatorProof,
 };
+
+#[cfg(any(test, feature = "testing"))]
+pub use self::definition::TestAccumulatorProof;
 
 /// Verifies that a `SignedTransaction` with hash value of `signed_transaction_hash`
 /// is the version `transaction_version` transaction in the ledger using the provided proof.
@@ -110,11 +112,10 @@ pub(crate) fn verify_event(
 ) -> Result<()> {
     let transaction_info = event_proof.transaction_info();
 
-    verify_event_accumulator_element(
+    event_proof.transaction_info_to_event_proof().verify(
         transaction_info.event_root_hash(),
         event_hash,
         event_version_within_transaction,
-        event_proof.transaction_info_to_event_proof(),
     )?;
 
     verify_transaction_info(
@@ -290,7 +291,7 @@ fn verify_transaction_info(
     ledger_info: &LedgerInfo,
     transaction_version: Version,
     transaction_info: &TransactionInfo,
-    ledger_info_to_transaction_info_proof: &AccumulatorProof,
+    ledger_info_to_transaction_info_proof: &TransactionAccumulatorProof,
 ) -> Result<()> {
     ensure!(
         transaction_version <= ledger_info.version(),
@@ -300,59 +301,11 @@ fn verify_transaction_info(
     );
 
     let transaction_info_hash = transaction_info.hash();
-    verify_transaction_accumulator_element(
+    ledger_info_to_transaction_info_proof.verify(
         ledger_info.transaction_accumulator_hash(),
         transaction_info_hash,
         transaction_version,
-        ledger_info_to_transaction_info_proof,
     )?;
-
-    Ok(())
-}
-
-/// Verifies an element whose hash is `element_hash` and version is `element_version` exists in the
-/// accumulator whose root hash is `expected_root_hash` using the provided proof.
-fn verify_accumulator_element<H: Clone + CryptoHasher>(
-    expected_root_hash: HashValue,
-    element_hash: HashValue,
-    element_index: u64,
-    accumulator_proof: &AccumulatorProof,
-) -> Result<()> {
-    let siblings = accumulator_proof.siblings();
-    ensure!(
-        siblings.len() <= MAX_ACCUMULATOR_PROOF_DEPTH,
-        "Accumulator proof has more than {} ({}) siblings.",
-        MAX_ACCUMULATOR_PROOF_DEPTH,
-        siblings.len()
-    );
-
-    let actual_root_hash = siblings
-        .iter()
-        .rev()
-        .fold(
-            (element_hash, element_index),
-            // `index` denotes the index of the ancestor of the element at the current level.
-            |(hash, index), sibling_hash| {
-                (
-                    if index % 2 == 0 {
-                        // the current node is a left child.
-                        MerkleTreeInternalNode::<H>::new(hash, *sibling_hash).hash()
-                    } else {
-                        // the current node is a right child.
-                        MerkleTreeInternalNode::<H>::new(*sibling_hash, hash).hash()
-                    },
-                    // The index of the parent at its level.
-                    index / 2,
-                )
-            },
-        )
-        .0;
-    ensure!(
-        actual_root_hash == expected_root_hash,
-        "Root hashes do not match. Actual root hash: {:x}. Expected root hash: {:x}.",
-        actual_root_hash,
-        expected_root_hash
-    );
 
     Ok(())
 }
@@ -384,25 +337,6 @@ pub(crate) fn get_accumulator_root_hash<H: Clone + CryptoHasher>(
 
     current_level[0]
 }
-
-type AccumulatorElementVerifier = fn(
-    expected_root_hash: HashValue,
-    element_hash: HashValue,
-    element_version: Version,
-    accumulator_proof: &AccumulatorProof,
-) -> Result<()>;
-
-#[allow(non_upper_case_globals)]
-pub const verify_event_accumulator_element: AccumulatorElementVerifier =
-    verify_accumulator_element::<EventAccumulatorHasher>;
-
-#[allow(non_upper_case_globals)]
-pub const verify_transaction_accumulator_element: AccumulatorElementVerifier =
-    verify_accumulator_element::<TransactionAccumulatorHasher>;
-
-#[allow(non_upper_case_globals)]
-pub const verify_test_accumulator_element: AccumulatorElementVerifier =
-    verify_accumulator_element::<TestOnlyHasher>;
 
 /// If `element_blob` is present, verifies an element whose key is `element_key` and value
 /// is `element_blob` exists in the Sparse Merkle Tree using the provided proof.

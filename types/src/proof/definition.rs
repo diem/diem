@@ -8,24 +8,33 @@
 mod proof_proto_conversion_test;
 
 use self::bitmap::{AccumulatorBitmap, SparseMerkleBitmap};
+use super::MerkleTreeInternalNode;
 use crate::transaction::TransactionInfo;
+#[cfg(any(test, feature = "testing"))]
+use crypto::hash::TestOnlyHasher;
 use crypto::{
-    hash::{ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
+    hash::{
+        CryptoHash, CryptoHasher, EventAccumulatorHasher, TransactionAccumulatorHasher,
+        ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH,
+    },
     HashValue,
 };
 use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use std::convert::{TryFrom, TryInto};
+use std::marker::PhantomData;
 
 /// A proof that can be used authenticate an element in an accumulator given trusted root hash. For
 /// example, both `LedgerInfoToTransactionInfoProof` and `TransactionInfoToEventProof` can be
 /// constructed on top of this structure.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct AccumulatorProof {
+#[derive(Clone)]
+pub struct AccumulatorProof<H> {
     /// All siblings in this proof, including the default ones. Siblings near the root are at the
     /// beginning of the vector.
     siblings: Vec<HashValue>,
+
+    phantom: PhantomData<H>,
 }
 
 /// Because leaves can only take half the space in the tree, any numbering of the tree leaves must
@@ -35,7 +44,10 @@ pub type LeafCount = u64;
 pub const MAX_ACCUMULATOR_PROOF_DEPTH: usize = 63;
 pub const MAX_ACCUMULATOR_LEAVES: LeafCount = 1 << MAX_ACCUMULATOR_PROOF_DEPTH;
 
-impl AccumulatorProof {
+impl<H> AccumulatorProof<H>
+where
+    H: CryptoHasher,
+{
     /// Constructs a new `AccumulatorProof` using a list of siblings.
     pub fn new(siblings: Vec<HashValue>) -> Self {
         // The sibling list could be empty in case the accumulator is empty or has a single
@@ -45,16 +57,83 @@ impl AccumulatorProof {
             assert_ne!(*first_sibling, *ACCUMULATOR_PLACEHOLDER_HASH);
         }
 
-        AccumulatorProof { siblings }
+        AccumulatorProof {
+            siblings,
+            phantom: PhantomData,
+        }
     }
 
     /// Returns the list of siblings in this proof.
     pub fn siblings(&self) -> &[HashValue] {
         &self.siblings
     }
+
+    /// Verifies an element whose hash is `element_hash` and version is `element_version` exists in
+    /// the accumulator whose root hash is `expected_root_hash` using the provided proof.
+    pub fn verify(
+        &self,
+        expected_root_hash: HashValue,
+        element_hash: HashValue,
+        element_index: u64,
+    ) -> Result<()> {
+        ensure!(
+            self.siblings.len() <= MAX_ACCUMULATOR_PROOF_DEPTH,
+            "Accumulator proof has more than {} ({}) siblings.",
+            MAX_ACCUMULATOR_PROOF_DEPTH,
+            self.siblings.len()
+        );
+
+        let actual_root_hash = self
+            .siblings
+            .iter()
+            .rev()
+            .fold(
+                (element_hash, element_index),
+                // `index` denotes the index of the ancestor of the element at the current level.
+                |(hash, index), sibling_hash| {
+                    (
+                        if index % 2 == 0 {
+                            // the current node is a left child.
+                            MerkleTreeInternalNode::<H>::new(hash, *sibling_hash).hash()
+                        } else {
+                            // the current node is a right child.
+                            MerkleTreeInternalNode::<H>::new(*sibling_hash, hash).hash()
+                        },
+                        // The index of the parent at its level.
+                        index / 2,
+                    )
+                },
+            )
+            .0;
+        ensure!(
+            actual_root_hash == expected_root_hash,
+            "Root hashes do not match. Actual root hash: {:x}. Expected root hash: {:x}.",
+            actual_root_hash,
+            expected_root_hash
+        );
+
+        Ok(())
+    }
 }
 
-impl TryFrom<crate::proto::types::AccumulatorProof> for AccumulatorProof {
+impl<H> std::fmt::Debug for AccumulatorProof<H> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "AccumulatorProof {{ siblings: {:?} }}", self.siblings)
+    }
+}
+
+impl<H> PartialEq for AccumulatorProof<H> {
+    fn eq(&self, other: &Self) -> bool {
+        self.siblings == other.siblings
+    }
+}
+
+impl<H> Eq for AccumulatorProof<H> {}
+
+impl<H> TryFrom<crate::proto::types::AccumulatorProof> for AccumulatorProof<H>
+where
+    H: CryptoHasher,
+{
     type Error = Error;
 
     fn try_from(proto_proof: crate::proto::types::AccumulatorProof) -> Result<Self> {
@@ -89,8 +168,8 @@ impl TryFrom<crate::proto::types::AccumulatorProof> for AccumulatorProof {
     }
 }
 
-impl From<AccumulatorProof> for crate::proto::types::AccumulatorProof {
-    fn from(proof: AccumulatorProof) -> Self {
+impl<H> From<AccumulatorProof<H>> for crate::proto::types::AccumulatorProof {
+    fn from(proof: AccumulatorProof<H>) -> Self {
         let mut proto_proof = Self::default();
         // Iterate over all siblings. For each non-default sibling, add to protobuf struct and set
         // the corresponding bit in the bitmap.
@@ -110,6 +189,11 @@ impl From<AccumulatorProof> for crate::proto::types::AccumulatorProof {
         proto_proof
     }
 }
+
+pub type TransactionAccumulatorProof = AccumulatorProof<TransactionAccumulatorHasher>;
+pub type EventAccumulatorProof = AccumulatorProof<EventAccumulatorHasher>;
+#[cfg(any(test, feature = "testing"))]
+pub type TestAccumulatorProof = AccumulatorProof<TestOnlyHasher>;
 
 /// A proof that can be used to authenticate an element in a Sparse Merkle Tree given trusted root
 /// hash. For example, `TransactionInfoToAccountProof` can be constructed on top of this structure.
@@ -297,7 +381,7 @@ impl From<AccumulatorConsistencyProof> for crate::proto::types::AccumulatorConsi
 pub struct SignedTransactionProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
     /// `TransactionInfo` object.
-    ledger_info_to_transaction_info_proof: AccumulatorProof,
+    ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
 
     /// The `TransactionInfo` object at the leaf of the accumulator.
     transaction_info: TransactionInfo,
@@ -307,7 +391,7 @@ impl SignedTransactionProof {
     /// Constructs a new `SignedTransactionProof` object using given
     /// `ledger_info_to_transaction_info_proof`.
     pub fn new(
-        ledger_info_to_transaction_info_proof: AccumulatorProof,
+        ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
         transaction_info: TransactionInfo,
     ) -> Self {
         SignedTransactionProof {
@@ -317,7 +401,7 @@ impl SignedTransactionProof {
     }
 
     /// Returns the `ledger_info_to_transaction_info_proof` object in this proof.
-    pub fn ledger_info_to_transaction_info_proof(&self) -> &AccumulatorProof {
+    pub fn ledger_info_to_transaction_info_proof(&self) -> &TransactionAccumulatorProof {
         &self.ledger_info_to_transaction_info_proof
     }
 
@@ -366,7 +450,7 @@ impl From<SignedTransactionProof> for crate::proto::types::SignedTransactionProo
 pub struct AccountStateProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
     /// `TransactionInfo` object.
-    ledger_info_to_transaction_info_proof: AccumulatorProof,
+    ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
 
     /// The `TransactionInfo` object at the leaf of the accumulator.
     transaction_info: TransactionInfo,
@@ -379,7 +463,7 @@ impl AccountStateProof {
     /// Constructs a new `AccountStateProof` using given `ledger_info_to_transaction_info_proof`,
     /// `transaction_info` and `transaction_info_to_account_proof`.
     pub fn new(
-        ledger_info_to_transaction_info_proof: AccumulatorProof,
+        ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
         transaction_info: TransactionInfo,
         transaction_info_to_account_proof: SparseMerkleProof,
     ) -> Self {
@@ -391,7 +475,7 @@ impl AccountStateProof {
     }
 
     /// Returns the `ledger_info_to_transaction_info_proof` object in this proof.
-    pub fn ledger_info_to_transaction_info_proof(&self) -> &AccumulatorProof {
+    pub fn ledger_info_to_transaction_info_proof(&self) -> &TransactionAccumulatorProof {
         &self.ledger_info_to_transaction_info_proof
     }
 
@@ -451,22 +535,22 @@ impl From<AccountStateProof> for crate::proto::types::AccountStateProof {
 pub struct EventProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
     /// `TransactionInfo` object.
-    ledger_info_to_transaction_info_proof: AccumulatorProof,
+    ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
 
     /// The `TransactionInfo` object at the leaf of the accumulator.
     transaction_info: TransactionInfo,
 
     /// The accumulator proof from event root to the actual event.
-    transaction_info_to_event_proof: AccumulatorProof,
+    transaction_info_to_event_proof: EventAccumulatorProof,
 }
 
 impl EventProof {
     /// Constructs a new `EventProof` using given `ledger_info_to_transaction_info_proof`,
     /// `transaction_info` and `transaction_info_to_event_proof`.
     pub fn new(
-        ledger_info_to_transaction_info_proof: AccumulatorProof,
+        ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
         transaction_info: TransactionInfo,
-        transaction_info_to_event_proof: AccumulatorProof,
+        transaction_info_to_event_proof: EventAccumulatorProof,
     ) -> Self {
         EventProof {
             ledger_info_to_transaction_info_proof,
@@ -476,7 +560,7 @@ impl EventProof {
     }
 
     /// Returns the `ledger_info_to_transaction_info_proof` object in this proof.
-    pub fn ledger_info_to_transaction_info_proof(&self) -> &AccumulatorProof {
+    pub fn ledger_info_to_transaction_info_proof(&self) -> &TransactionAccumulatorProof {
         &self.ledger_info_to_transaction_info_proof
     }
 
@@ -486,7 +570,7 @@ impl EventProof {
     }
 
     /// Returns the `transaction_info_to_event_proof` object in this proof.
-    pub fn transaction_info_to_event_proof(&self) -> &AccumulatorProof {
+    pub fn transaction_info_to_event_proof(&self) -> &EventAccumulatorProof {
         &self.transaction_info_to_event_proof
     }
 }

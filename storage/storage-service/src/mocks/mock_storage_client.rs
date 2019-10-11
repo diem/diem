@@ -280,7 +280,7 @@ fn get_mock_txn_data(
 }
 
 fn get_accumulator_proof() -> AccumulatorProof {
-    libra_types::proof::AccumulatorProof::new(vec![]).into()
+    libra_types::proof::TransactionAccumulatorProof::new(vec![]).into()
 }
 
 fn get_transaction_info() -> libra_types::transaction::TransactionInfo {

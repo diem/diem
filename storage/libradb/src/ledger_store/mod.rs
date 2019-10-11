@@ -22,7 +22,7 @@ use failure::prelude::*;
 use itertools::Itertools;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
-    proof::{position::Position, AccumulatorConsistencyProof, AccumulatorProof},
+    proof::{position::Position, AccumulatorConsistencyProof, TransactionAccumulatorProof},
     transaction::{TransactionInfo, Version},
 };
 use schemadb::{ReadOptions, DB};
@@ -113,7 +113,7 @@ impl LedgerStore {
         &self,
         version: Version,
         ledger_version: Version,
-    ) -> Result<(TransactionInfo, AccumulatorProof)> {
+    ) -> Result<(TransactionInfo, TransactionAccumulatorProof)> {
         Ok((
             self.get_transaction_info(version)?,
             self.get_transaction_proof(version, ledger_version)?,
@@ -125,7 +125,7 @@ impl LedgerStore {
         &self,
         version: Version,
         ledger_version: Version,
-    ) -> Result<AccumulatorProof> {
+    ) -> Result<TransactionAccumulatorProof> {
         Accumulator::get_proof(self, ledger_version + 1 /* num_leaves */, version)
     }
 

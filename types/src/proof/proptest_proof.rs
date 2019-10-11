@@ -9,7 +9,7 @@ use crate::proof::{
     SparseMerkleProof,
 };
 use crypto::{
-    hash::{ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
+    hash::{CryptoHasher, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
 use proptest::{collection::vec, prelude::*};
@@ -26,17 +26,6 @@ fn arb_accumulator_sibling() -> impl Strategy<Value = HashValue> {
         arb_non_placeholder_accumulator_sibling(),
         Just(*ACCUMULATOR_PLACEHOLDER_HASH),
     ]
-}
-
-prop_compose! {
-    fn arb_accumulator_proof()(
-        first_sibling in arb_non_placeholder_accumulator_sibling(),
-        other_siblings in vec(arb_accumulator_sibling(), 0..MAX_ACCUMULATOR_PROOF_DEPTH - 1),
-    ) -> AccumulatorProof {
-        let mut siblings = vec![first_sibling];
-        siblings.extend(other_siblings.into_iter());
-        AccumulatorProof::new(siblings)
-    }
 }
 
 prop_compose! {
@@ -79,7 +68,27 @@ macro_rules! impl_arbitrary_for_proof {
     };
 }
 
-impl_arbitrary_for_proof!(AccumulatorProof, arb_accumulator_proof);
+impl<H> Arbitrary for AccumulatorProof<H>
+where
+    H: CryptoHasher,
+{
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (
+            arb_non_placeholder_accumulator_sibling(),
+            vec(arb_accumulator_sibling(), MAX_ACCUMULATOR_PROOF_DEPTH - 1),
+        )
+            .prop_map(|(first_sibling, other_siblings)| {
+                let mut siblings = vec![first_sibling];
+                siblings.extend(other_siblings.into_iter());
+                AccumulatorProof::<H>::new(siblings)
+            })
+            .boxed()
+    }
+}
+
 impl_arbitrary_for_proof!(SparseMerkleProof, arb_sparse_merkle_proof);
 impl_arbitrary_for_proof!(
     AccumulatorConsistencyProof,
