@@ -9,11 +9,30 @@ use std::{thread, time::Duration};
 pub struct Cluster {
     // guaranteed non-empty
     instances: Vec<Instance>,
-    prometheus_ip: String,
+    prometheus_ip: Option<String>,
+    mint_file: String,
 }
 
 impl Cluster {
-    pub fn discover(aws: &Aws) -> failure::Result<Self> {
+    pub fn from_host_port(peers: Vec<(String, u32)>, mint_file: &str) -> Self {
+        let instances: Vec<Instance> = peers
+            .into_iter()
+            .map(|host_port| {
+                Instance::new(
+                    format!("{}:{}", &host_port.0, host_port.1), /* short_hash */
+                    host_port.0,
+                    host_port.1,
+                )
+            })
+            .collect();
+        Self {
+            instances,
+            prometheus_ip: None,
+            mint_file: mint_file.to_string(),
+        }
+    }
+
+    pub fn discover(aws: &Aws, mint_file: &str) -> failure::Result<Self> {
         let mut instances = vec![];
         let mut next_token = None;
         let mut retries_left = 10;
@@ -67,7 +86,7 @@ impl Cluster {
                         }
                         InstanceRole::Peer(peer_id) => {
                             let short_hash = peer_id[..8].into();
-                            instances.push(Instance::new(short_hash, ip));
+                            instances.push(Instance::new(short_hash, ip, 8000));
                         }
                         _ => {}
                     }
@@ -86,7 +105,8 @@ impl Cluster {
             prometheus_ip.ok_or_else(|| format_err!("Prometheus was not found in workplace"))?;
         Ok(Self {
             instances,
-            prometheus_ip,
+            prometheus_ip: Some(prometheus_ip),
+            mint_file: mint_file.to_string(),
         })
     }
 
@@ -99,8 +119,12 @@ impl Cluster {
         &self.instances
     }
 
-    pub fn prometheus_ip(&self) -> &str {
+    pub fn prometheus_ip(&self) -> &Option<String> {
         &self.prometheus_ip
+    }
+
+    pub fn mint_file(&self) -> &str {
+        &self.mint_file
     }
 
     pub fn get_instance(&self, name: &str) -> Option<&Instance> {
@@ -122,6 +146,7 @@ impl Cluster {
         Cluster {
             instances,
             prometheus_ip: self.prometheus_ip.clone(),
+            mint_file: self.mint_file.clone(),
         }
     }
 }
