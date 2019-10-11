@@ -84,11 +84,11 @@ fn test_block_store_create_block() {
         block_store.signer(),
         test_utils::placeholder_sync_info(),
     );
-    let validator_verifier = Arc::new(ValidatorVerifier::new_single(
+    let validator_verifier = ValidatorVerifier::new_single(
         block_store.signer().author(),
         block_store.signer().public_key(),
-    ));
-    block_store.insert_vote_and_qc(vote_msg, validator_verifier);
+    );
+    block_store.insert_vote_and_qc(vote_msg, &validator_verifier);
 
     let b1 = block_store.create_block(a1_ref.block(), vec![2], 2, 2);
     assert_eq!(b1.parent_id(), a1_ref.id());
@@ -330,7 +330,6 @@ fn test_insert_vote() {
     ::logger::try_init_for_testing();
     // Set up enough different authors to support different votes for the same block.
     let (signers, validator_verifier) = random_validator_verifier(11, Some(10), false);
-    let validator_verifier = Arc::new(validator_verifier);
     let my_signer = signers[10].clone();
     let block_store = build_empty_tree_with_custom_signing(my_signer);
     let genesis = block_store.root();
@@ -356,14 +355,13 @@ fn test_insert_vote() {
             voter,
             test_utils::placeholder_sync_info(),
         );
-        let vote_res =
-            block_store.insert_vote_and_qc(vote_msg.clone(), Arc::clone(&validator_verifier));
+        let vote_res = block_store.insert_vote_and_qc(vote_msg.clone(), &validator_verifier);
 
         // first vote of an author is accepted
         assert_eq!(vote_res, VoteReceptionResult::VoteAdded(i as u64));
         // filter out duplicates
         assert_eq!(
-            block_store.insert_vote_and_qc(vote_msg, Arc::clone(&validator_verifier)),
+            block_store.insert_vote_and_qc(vote_msg, &validator_verifier),
             VoteReceptionResult::DuplicateVote,
         );
         // qc is still not there
@@ -389,7 +387,7 @@ fn test_insert_vote() {
         final_voter,
         test_utils::placeholder_sync_info(),
     );
-    match block_store.insert_vote_and_qc(vote_msg, validator_verifier) {
+    match block_store.insert_vote_and_qc(vote_msg, &validator_verifier) {
         VoteReceptionResult::NewQuorumCertificate(qc) => {
             assert_eq!(qc.certified_block_id(), block.id());
         }

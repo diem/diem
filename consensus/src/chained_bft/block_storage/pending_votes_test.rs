@@ -8,7 +8,6 @@ use consensus_types::{common::Round, vote_data::VoteData, vote_msg::VoteMsg};
 use crypto::HashValue;
 use libra_types::crypto_proxies::random_validator_verifier;
 use libra_types::ledger_info::LedgerInfo;
-use std::sync::Arc;
 
 fn random_ledger_info() -> LedgerInfo {
     LedgerInfo::new(
@@ -38,7 +37,6 @@ fn random_vote_data(round: Round) -> VoteData {
 fn test_qc_aggregation() {
     ::logger::try_init_for_testing();
     let (signers, validator) = random_validator_verifier(4, Some(2), false);
-    let validator_verifier = Arc::new(validator);
     let mut pending_votes = PendingVotes::new();
 
     let li1 = random_ledger_info();
@@ -53,12 +51,12 @@ fn test_qc_aggregation() {
 
     // first time a new vote is added the result is VoteAdded
     assert_eq!(
-        pending_votes.insert_vote(&vote_data_1_author_0, Arc::clone(&validator_verifier)),
+        pending_votes.insert_vote(&vote_data_1_author_0, &validator),
         VoteReceptionResult::VoteAdded(1)
     );
     // same author voting for the same thing: result is DuplicateVote
     assert_eq!(
-        pending_votes.insert_vote(&vote_data_1_author_0, Arc::clone(&validator_verifier)),
+        pending_votes.insert_vote(&vote_data_1_author_0, &validator),
         VoteReceptionResult::DuplicateVote
     );
     // same author voting for a different result in the same round:
@@ -73,7 +71,7 @@ fn test_qc_aggregation() {
         test_utils::placeholder_sync_info(),
     );
     assert_eq!(
-        pending_votes.insert_vote(&vote_data_2_author_0, Arc::clone(&validator_verifier)),
+        pending_votes.insert_vote(&vote_data_2_author_0, &validator),
         VoteReceptionResult::EquivocateVote
     );
     // A different author voting for a different result in the same round but without a round
@@ -86,7 +84,7 @@ fn test_qc_aggregation() {
         test_utils::placeholder_sync_info(),
     );
     assert_eq!(
-        pending_votes.insert_vote(&vote_data_2_author_1, Arc::clone(&validator_verifier)),
+        pending_votes.insert_vote(&vote_data_2_author_1, &validator),
         VoteReceptionResult::VoteAdded(1)
     );
     // Two votes for the ledger info form a QC
@@ -97,9 +95,9 @@ fn test_qc_aggregation() {
         &signers[2],
         test_utils::placeholder_sync_info(),
     );
-    match pending_votes.insert_vote(&vote_data_2_author_2, Arc::clone(&validator_verifier)) {
+    match pending_votes.insert_vote(&vote_data_2_author_2, &validator) {
         VoteReceptionResult::NewQuorumCertificate(qc) => {
-            assert!(validator_verifier
+            assert!(validator
                 .check_voting_power(qc.ledger_info().signatures().keys())
                 .is_ok());
         }
@@ -115,7 +113,6 @@ fn test_qc_aggregation_keep_last_only() {
     ::logger::try_init_for_testing();
 
     let (signers, validator) = random_validator_verifier(4, Some(2), false);
-    let validator_verifier = Arc::new(validator);
     let mut pending_votes = PendingVotes::new();
 
     let li1 = random_ledger_info();
@@ -130,7 +127,7 @@ fn test_qc_aggregation_keep_last_only() {
 
     // first time a new vote is added the result is VoteAdded
     assert_eq!(
-        pending_votes.insert_vote(&vote_round_1_author_0, Arc::clone(&validator_verifier)),
+        pending_votes.insert_vote(&vote_round_1_author_0, &validator),
         VoteReceptionResult::VoteAdded(1)
     );
 
@@ -145,7 +142,7 @@ fn test_qc_aggregation_keep_last_only() {
         test_utils::placeholder_sync_info(),
     );
     assert_eq!(
-        pending_votes.insert_vote(&vote_round_2_author_0, Arc::clone(&validator_verifier)),
+        pending_votes.insert_vote(&vote_round_2_author_0, &validator),
         VoteReceptionResult::VoteAdded(1)
     );
 
@@ -158,7 +155,7 @@ fn test_qc_aggregation_keep_last_only() {
         test_utils::placeholder_sync_info(),
     );
     assert_eq!(
-        pending_votes.insert_vote(&vote_round_1_author_1, Arc::clone(&validator_verifier)),
+        pending_votes.insert_vote(&vote_round_1_author_1, &validator),
         VoteReceptionResult::VoteAdded(1)
     );
 
@@ -170,9 +167,9 @@ fn test_qc_aggregation_keep_last_only() {
         &signers[1],
         test_utils::placeholder_sync_info(),
     );
-    match pending_votes.insert_vote(&vote_round_2_author_1, Arc::clone(&validator_verifier)) {
+    match pending_votes.insert_vote(&vote_round_2_author_1, &validator) {
         VoteReceptionResult::NewQuorumCertificate(qc) => {
-            assert!(validator_verifier
+            assert!(validator
                 .check_voting_power(qc.ledger_info().signatures().keys())
                 .is_ok());
         }
@@ -188,7 +185,6 @@ fn test_tc_aggregation() {
     ::logger::try_init_for_testing();
 
     let (signers, validator) = random_validator_verifier(4, Some(2), false);
-    let validator_verifier = Arc::new(validator);
     let mut pending_votes = PendingVotes::new();
 
     let li1 = random_ledger_info();
@@ -204,7 +200,7 @@ fn test_tc_aggregation() {
 
     // first time a new vote is added the result is VoteAdded
     assert_eq!(
-        pending_votes.insert_vote(&vote_round_1_author_0, Arc::clone(&validator_verifier)),
+        pending_votes.insert_vote(&vote_round_1_author_0, &validator),
         VoteReceptionResult::VoteAdded(1)
     );
 
@@ -220,17 +216,15 @@ fn test_tc_aggregation() {
         test_utils::placeholder_sync_info(),
     );
     assert_eq!(
-        pending_votes.insert_vote(&vote2_round_1_author_1, Arc::clone(&validator_verifier)),
+        pending_votes.insert_vote(&vote2_round_1_author_1, &validator),
         VoteReceptionResult::VoteAdded(1)
     );
 
     // if that vote is now enhanced with a round signature, it can form a TC
     vote2_round_1_author_1.add_round_signature(&signers[1]);
-    match pending_votes.insert_vote(&vote2_round_1_author_1, Arc::clone(&validator_verifier)) {
+    match pending_votes.insert_vote(&vote2_round_1_author_1, &validator) {
         VoteReceptionResult::NewTimeoutCertificate(tc) => {
-            assert!(validator_verifier
-                .check_voting_power(tc.signatures().keys())
-                .is_ok());
+            assert!(validator.check_voting_power(tc.signatures().keys()).is_ok());
         }
         _ => {
             panic!("No TC formed.");
@@ -244,7 +238,6 @@ fn test_tc_aggregation_keep_last_only() {
     ::logger::try_init_for_testing();
 
     let (signers, validator) = random_validator_verifier(4, Some(2), false);
-    let validator_verifier = Arc::new(validator);
     let mut pending_votes = PendingVotes::new();
 
     let li1 = random_ledger_info();
@@ -260,7 +253,7 @@ fn test_tc_aggregation_keep_last_only() {
 
     // first time a new vote is added the result is VoteAdded
     assert_eq!(
-        pending_votes.insert_vote(&vote_round_1_author_0, Arc::clone(&validator_verifier)),
+        pending_votes.insert_vote(&vote_round_1_author_0, &validator),
         VoteReceptionResult::VoteAdded(1)
     );
 
@@ -276,7 +269,7 @@ fn test_tc_aggregation_keep_last_only() {
     );
     vote_round_2_author_0.add_round_signature(&signers[0]);
     assert_eq!(
-        pending_votes.insert_vote(&vote_round_2_author_0, Arc::clone(&validator_verifier)),
+        pending_votes.insert_vote(&vote_round_2_author_0, &validator),
         VoteReceptionResult::VoteAdded(1)
     );
 
@@ -292,7 +285,7 @@ fn test_tc_aggregation_keep_last_only() {
     );
     vote3_round_1_author_1.add_round_signature(&signers[1]);
     assert_eq!(
-        pending_votes.insert_vote(&vote3_round_1_author_1, Arc::clone(&validator_verifier)),
+        pending_votes.insert_vote(&vote3_round_1_author_1, &validator),
         VoteReceptionResult::VoteAdded(1)
     );
 
@@ -307,11 +300,9 @@ fn test_tc_aggregation_keep_last_only() {
         test_utils::placeholder_sync_info(),
     );
     vote4_round_2_author_1.add_round_signature(&signers[1]);
-    match pending_votes.insert_vote(&vote4_round_2_author_1, Arc::clone(&validator_verifier)) {
+    match pending_votes.insert_vote(&vote4_round_2_author_1, &validator) {
         VoteReceptionResult::NewTimeoutCertificate(tc) => {
-            assert!(validator_verifier
-                .check_voting_power(tc.signatures().keys())
-                .is_ok());
+            assert!(validator.check_voting_power(tc.signatures().keys()).is_ok());
         }
         _ => {
             panic!("No TC formed.");

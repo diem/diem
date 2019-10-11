@@ -159,7 +159,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         storage.clone(),
         time_service,
         enforce_increasing_timestamps,
-        Arc::clone(&epoch_mgr),
+        epoch_mgr.validators(),
     )
 }
 

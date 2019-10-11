@@ -56,7 +56,6 @@ fn test_timeout_certificate() {
     let rounds: Round = 5;
     let (signers, validator_verifier) =
         random_validator_verifier((rounds - 1) as usize, None, false);
-    let validator_verifier = Arc::new(validator_verifier);
     let (mut pm, _) = make_pacemaker();
 
     // Send timeout for rounds 1..5, each from a different author, so that they can be
@@ -64,7 +63,7 @@ fn test_timeout_certificate() {
     for round in 1..rounds {
         let signer = &signers[(round - 1) as usize];
         let pacemaker_timeout = PacemakerTimeout::new(round, signer, None);
-        let result = pm.process_remote_timeout(pacemaker_timeout, Arc::clone(&validator_verifier));
+        let result = pm.process_remote_timeout(pacemaker_timeout, &validator_verifier);
         // quorum size is 3 in make_pacemaker
         if round >= 3 {
             // Then timeout quorum for previous round (1,2,3) generates new round event for

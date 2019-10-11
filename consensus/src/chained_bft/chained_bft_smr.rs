@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::chained_bft::chained_bft_consensus_provider::InitialSetup;
 use crate::chained_bft::epoch_manager::EpochManager;
 use crate::{
     chained_bft::{
@@ -12,9 +13,9 @@ use crate::{
             pacemaker_timeout_manager::HighestTimeoutCertificates,
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
-            rotating_proposer_election::RotatingProposer,
+            rotating_proposer_election::{choose_leader, RotatingProposer},
         },
-        network::{ConsensusNetworkImpl, NetworkReceivers},
+        network::ConsensusNetworkImpl,
         persistent_storage::{PersistentLivenessStorage, PersistentStorage, RecoveryData},
         safety::safety_rules::SafetyRules,
     },
@@ -24,11 +25,12 @@ use crate::{
 };
 use channel;
 use config::config::{ConsensusConfig, ConsensusProposerType};
-use consensus_types::common::{Author, Payload, Round};
+use consensus_types::common::{Payload, Round};
 use failure::prelude::*;
 use futures::{executor::block_on, select, stream::StreamExt};
-use libra_types::crypto_proxies::ValidatorSigner;
+use libra_types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
 use logger::prelude::*;
+use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use std::{sync::Arc, time::Duration};
 use tokio::runtime::{Runtime, TaskExecutor};
 
@@ -63,38 +65,29 @@ impl ChainedBftSMRConfig {
 /// driver. ChainedBftSMR implements the StateMachineReplication, it is going to be used by
 /// ConsensusProvider for the e2e flow.
 pub struct ChainedBftSMR<T> {
-    signer: Option<ValidatorSigner>,
-    proposers: Vec<Author>,
+    initial_setup: Option<InitialSetup>,
     runtime: Option<Runtime>,
     block_store: Option<Arc<BlockStore<T>>>,
-    network: ConsensusNetworkImpl,
     config: ChainedBftSMRConfig,
     storage: Arc<dyn PersistentStorage<T>>,
     initial_data: Option<RecoveryData<T>>,
-    epoch_mgr: Arc<EpochManager>,
 }
 
 impl<T: Payload> ChainedBftSMR<T> {
     pub fn new(
-        signer: ValidatorSigner,
-        proposers: Vec<Author>,
-        network: ConsensusNetworkImpl,
+        initial_setup: InitialSetup,
         runtime: Runtime,
         config: ChainedBftSMRConfig,
         storage: Arc<dyn PersistentStorage<T>>,
         initial_data: RecoveryData<T>,
-        epoch_mgr: Arc<EpochManager>,
     ) -> Self {
         Self {
-            signer: Some(signer),
-            proposers,
+            initial_setup: Some(initial_setup),
             runtime: Some(runtime),
             block_store: None,
-            network,
             config,
             storage,
             initial_data: Some(initial_data),
-            epoch_mgr,
         }
     }
 
@@ -127,27 +120,37 @@ impl<T: Payload> ChainedBftSMR<T> {
     }
 
     /// Create a proposer election handler based on proposers
-    fn create_proposer_election(&self) -> Box<dyn ProposerElection<T> + Send + Sync> {
-        assert!(!self.proposers.is_empty());
+    fn create_proposer_election(
+        &self,
+        validators: &ValidatorVerifier,
+    ) -> Box<dyn ProposerElection<T> + Send + Sync> {
+        let proposers = validators.get_ordered_account_addresses();
         match self.config.proposer_type {
             ConsensusProposerType::MultipleOrderedProposers => {
-                Box::new(MultiProposer::new(self.proposers.clone(), 2))
+                Box::new(MultiProposer::new(proposers, 2))
             }
-            // We don't really have a fixed proposer!
-            _ => Box::new(RotatingProposer::new(
-                self.proposers.clone(),
+            ConsensusProposerType::RotatingProposer => Box::new(RotatingProposer::new(
+                proposers,
                 self.config.contiguous_rounds,
             )),
+            // We don't really have a fixed proposer!
+            ConsensusProposerType::FixedProposer => {
+                let proposer = choose_leader(proposers);
+                Box::new(RotatingProposer::new(
+                    vec![proposer],
+                    self.config.contiguous_rounds,
+                ))
+            }
         }
     }
 
     fn start_event_processing(
-        &mut self,
         executor: TaskExecutor,
         mut event_processor: EventProcessor<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
-        mut network_receivers: NetworkReceivers<T>,
+        mut network: ConsensusNetworkImpl,
     ) {
+        let mut network_receivers = network.start(&executor);
         let fut = async move {
             event_processor.start().await;
             loop {
@@ -178,42 +181,34 @@ impl<T: Payload> ChainedBftSMR<T> {
         };
         executor.spawn(fut);
     }
-}
 
-impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
-    type Payload = T;
-
-    fn start(
+    fn start_epoch(
         &mut self,
-        txn_manager: Arc<dyn TxnManager<Payload = Self::Payload>>,
-        state_computer: Arc<dyn StateComputer<Payload = Self::Payload>>,
-    ) -> Result<()> {
+        epoch_mgr: Arc<EpochManager>,
+        network_sender: ConsensusNetworkSender,
+        network_events: ConsensusNetworkEvents,
+        signer: ValidatorSigner,
+        initial_data: RecoveryData<T>,
+        txn_manager: Arc<dyn TxnManager<Payload = T>>,
+        state_computer: Arc<dyn StateComputer<Payload = T>>,
+    ) {
         let executor = self
             .runtime
             .as_mut()
             .expect("Consensus start: No valid runtime found!")
             .executor();
-        // Start network receivers before blocking on state synchronizer to unblock delivery of
-        // network events.
-        let network_receivers = self.network.start(&executor);
         let time_service = Arc::new(ClockTimeService::new(executor.clone()));
-        let initial_data = self
-            .initial_data
-            .take()
-            .expect("already started, initial data is None");
-        let consensus_state = initial_data.state();
+        let network = ConsensusNetworkImpl::new(
+            signer.author(),
+            network_sender.clone(),
+            network_events,
+            Arc::clone(&epoch_mgr),
+        );
+
         let highest_timeout_certificates = initial_data.highest_timeout_certificates().clone();
         let last_vote = initial_data.last_vote();
-        if initial_data.need_sync() {
-            // make sure we sync to the root state in case we're not
-            state_computer.sync_to_or_bail(initial_data.root_ledger_info());
-        }
+        let safety_rules = SafetyRules::new(initial_data.state());
 
-        // the signer is only stored in the SMR to be provided here
-        let signer = self
-            .signer
-            .take()
-            .expect("start called twice on the same Chained BFT SMR!");
         let block_store = Arc::new(block_on(BlockStore::new(
             Arc::clone(&self.storage),
             initial_data,
@@ -235,8 +230,6 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             true,
         );
 
-        let safety_rules = SafetyRules::new(consensus_state);
-
         let (timeout_sender, timeout_receiver) =
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let pacemaker = self.create_pacemaker(
@@ -246,7 +239,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             highest_timeout_certificates,
         );
 
-        let proposer_election = self.create_proposer_election();
+        let proposer_election = self.create_proposer_election(epoch_mgr.validators().as_ref());
         let event_processor = EventProcessor::new(
             Arc::clone(&block_store),
             last_vote,
@@ -256,20 +249,60 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             safety_rules,
             state_computer,
             txn_manager,
-            self.network.clone(),
+            network.clone(),
             Arc::clone(&self.storage),
             time_service.clone(),
             true,
-            Arc::clone(&self.epoch_mgr),
+            epoch_mgr.validators(),
         );
 
-        self.start_event_processing(
-            executor,
-            event_processor,
-            timeout_receiver,
-            network_receivers,
-        );
+        Self::start_event_processing(executor, event_processor, timeout_receiver, network);
+    }
+}
 
+impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
+    type Payload = T;
+
+    /// We're following the steps to start
+    /// 1. Align initial data with libradb (sync if necessary) (We need initial trusting peers to connect to)
+    /// 2. Construct the EpochManager from the latest libradb state
+    /// 3. Construct per-epoch component with the fixed Validators provided by EpochManager including
+    /// ProposerElection, Pacemaker, SafetyRules, Network(Populate with known validators), EventProcessor
+    fn start(
+        &mut self,
+        txn_manager: Arc<dyn TxnManager<Payload = Self::Payload>>,
+        state_computer: Arc<dyn StateComputer<Payload = Self::Payload>>,
+    ) -> Result<()> {
+        let initial_setup = self
+            .initial_setup
+            .take()
+            .expect("already started, initial setup is None");
+        let initial_data = self
+            .initial_data
+            .take()
+            .expect("already started, initial data is None");
+        // Step 1
+        if initial_data.need_sync() {
+            // make sure we sync to the root state in case we're not
+            state_computer.sync_to_or_bail(initial_data.root_ledger_info());
+        }
+
+        // Step 2 TODO: read from libradb instead of config
+        let epoch_mgr = Arc::new(EpochManager::new(
+            initial_setup.epoch,
+            initial_setup.validator.clone(),
+        ));
+
+        // Step 3
+        self.start_epoch(
+            epoch_mgr,
+            initial_setup.network_sender,
+            initial_setup.network_events,
+            initial_setup.signer,
+            initial_data,
+            txn_manager,
+            state_computer,
+        );
         debug!("Chained BFT SMR started.");
         Ok(())
     }

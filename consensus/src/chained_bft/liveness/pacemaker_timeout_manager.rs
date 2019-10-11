@@ -9,7 +9,7 @@ use consensus_types::{
 use libra_types::crypto_proxies::ValidatorVerifier;
 use logger::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt, sync::Arc};
+use std::{collections::HashMap, fmt};
 
 #[cfg(test)]
 #[path = "pacemaker_timeout_manager_test.rs"]
@@ -118,7 +118,7 @@ impl PacemakerTimeoutManager {
     /// PacemakerTimeoutCertificate with round=2.
     fn generate_timeout_certificate(
         author_to_received_timeouts: &HashMap<Author, PacemakerTimeout>,
-        validator_verifier: Arc<ValidatorVerifier>,
+        validator_verifier: &ValidatorVerifier,
     ) -> Option<PacemakerTimeoutCertificate> {
         // Sort the timeouts by round, highest to lowest and then, in order, aggregate
         // enough voting power to assemble a PacemakerTimeoutCertificate if possible.
@@ -155,7 +155,7 @@ impl PacemakerTimeoutManager {
     pub fn update_received_timeout(
         &mut self,
         pacemaker_timeout: PacemakerTimeout,
-        validator_verifier: Arc<ValidatorVerifier>,
+        validator_verifier: &ValidatorVerifier,
     ) -> bool {
         let author = pacemaker_timeout.author();
         let prev_timeout = self.author_to_received_timeouts.get(&author).cloned();

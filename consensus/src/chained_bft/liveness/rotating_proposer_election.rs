@@ -18,6 +18,14 @@ pub struct RotatingProposer {
     contiguous_rounds: u32,
 }
 
+/// Choose a proposer that is going to be the single leader (relevant for a mock fixed proposer
+/// election only).
+pub fn choose_leader(peers: Vec<Author>) -> Author {
+    // As it is just a tmp hack function, pick the min PeerId to be a proposer.
+    // TODO: VRF will be integrated later.
+    peers.into_iter().min().expect("No trusted peers found!")
+}
+
 impl RotatingProposer {
     /// With only one proposer in the vector, it behaves the same as a fixed proposer strategy.
     pub fn new(proposers: Vec<Author>, contiguous_rounds: u32) -> Self {

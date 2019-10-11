@@ -8,12 +8,12 @@ use std::sync::{Arc, RwLock};
 /// verification.
 pub struct EpochManager {
     #[allow(dead_code)]
-    epoch: usize,
+    epoch: u64,
     validators: RwLock<Arc<ValidatorVerifier>>,
 }
 
 impl EpochManager {
-    pub fn new(epoch: usize, validators: ValidatorVerifier) -> Self {
+    pub fn new(epoch: u64, validators: ValidatorVerifier) -> Self {
         Self {
             epoch,
             validators: RwLock::new(Arc::new(validators)),
