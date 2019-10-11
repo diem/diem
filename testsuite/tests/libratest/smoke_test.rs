@@ -545,9 +545,11 @@ fn test_full_node_basic_flow() {
     // read state from full node client
     let mut validator_ac_client = env.get_validator_ac_client(1);
     let mut full_node_client = env.get_full_node_ac_client(1);
-    for idx in 0..2 {
+    let mut full_node_client_2 = env.get_full_node_ac_client(0);
+    for idx in 0..3 {
         validator_ac_client.create_next_account(false).unwrap();
         full_node_client.create_next_account(false).unwrap();
+        full_node_client_2.create_next_account(false).unwrap();
         assert_eq!(
             validator_ac_client
                 .get_balance(&["b", &idx.to_string()])
@@ -558,10 +560,83 @@ fn test_full_node_basic_flow() {
         );
     }
 
-    let mint_result = full_node_client.mint_coins(&["mintb", "0", "10"], true);
+    let sender_account = &format!(
+        "{}",
+        validator_ac_client.faucet_account.clone().unwrap().address
+    );
+    // mint from full node and check both validator and full node have correct balance
+    validator_ac_client.create_next_account(false).unwrap();
+    full_node_client.create_next_account(false).unwrap();
+    full_node_client_2.create_next_account(false).unwrap();
+
+    let mint_result = full_node_client.mint_coins(&["mintb", "3", "10"], true);
     assert!(mint_result.is_ok());
     assert_eq!(
-        Decimal::from_f64(17.0),
-        Decimal::from_str(&full_node_client.get_balance(&["b", "0"]).unwrap()).ok()
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&full_node_client.get_balance(&["b", "3"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&validator_ac_client.get_balance(&["b", "3"]).unwrap()).ok()
+    );
+
+    // reset sequence number for sender account
+    validator_ac_client
+        .get_sequence_number(&["sequence", sender_account, "true"])
+        .unwrap();
+    full_node_client
+        .get_sequence_number(&["sequence", sender_account, "true"])
+        .unwrap();
+
+    // mint from validator and check both nodes have correct balance
+    validator_ac_client.create_next_account(false).unwrap();
+    full_node_client.create_next_account(false).unwrap();
+    full_node_client_2.create_next_account(false).unwrap();
+
+    validator_ac_client
+        .mint_coins(&["mintb", "4", "10"], true)
+        .unwrap();
+    let sequence = validator_ac_client
+        .get_sequence_number(&["sequence", sender_account, "true"])
+        .unwrap();
+    full_node_client.wait_for_transaction(
+        validator_ac_client.faucet_account.clone().unwrap().address,
+        sequence,
+    );
+
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&validator_ac_client.get_balance(&["b", "4"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&full_node_client.get_balance(&["b", "4"]).unwrap()).ok()
+    );
+
+    // minting again on validator doesn't cause error since client sequence has been updated
+    validator_ac_client
+        .mint_coins(&["mintb", "4", "10"], true)
+        .unwrap();
+
+    // test transferring balance from 0 to 1 through full node proxy
+    full_node_client
+        .transfer_coins(&["tb", "3", "4", "10"], true)
+        .unwrap();
+
+    assert_eq!(
+        Decimal::from_f64(0.0),
+        Decimal::from_str(&full_node_client.get_balance(&["b", "3"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(30.0),
+        Decimal::from_str(&validator_ac_client.get_balance(&["b", "4"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(0.0),
+        Decimal::from_str(&full_node_client_2.get_balance(&["b", "3"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(30.0),
+        Decimal::from_str(&full_node_client_2.get_balance(&["b", "4"]).unwrap()).ok()
     );
 }

@@ -268,6 +268,12 @@ impl ClientProxy {
             false
         };
         if reset_sequence_number {
+            if let Some(faucet_account) = &mut self.faucet_account {
+                if faucet_account.address == address {
+                    faucet_account.sequence_number = sequence_number;
+                    return Ok(sequence_number);
+                }
+            }
             let mut account = self.mut_account_from_parameter(space_delim_strings[1])?;
             // Set sequence_number to latest one.
             account.sequence_number = sequence_number;
