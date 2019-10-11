@@ -11,7 +11,7 @@ use libra_types::{
     contract_event::ContractEvent,
     crypto_proxies::LedgerInfoWithSignatures,
     proof::accumulator::Accumulator,
-    transaction::{SignedTransaction, TransactionStatus},
+    transaction::{Transaction, TransactionStatus},
 };
 use logger::prelude::*;
 use scratchpad::SparseMerkleTree;
@@ -36,7 +36,7 @@ pub struct TransactionBlock {
     children: HashSet<HashValue>,
 
     /// The transactions themselves.
-    transactions: Vec<SignedTransaction>,
+    transactions: Vec<Transaction>,
 
     /// The result of processing VM's output.
     output: Option<ProcessedVMOutput>,
@@ -59,7 +59,7 @@ impl TransactionBlock {
     /// Constructs a new block. A `TransactionBlock` is constructed as soon as consensus gives us a
     /// new block. It has not been executed yet so output is `None`.
     pub fn new(
-        transactions: Vec<SignedTransaction>,
+        transactions: Vec<Transaction>,
         parent_id: HashValue,
         id: HashValue,
         execute_response_sender: oneshot::Sender<Result<StateComputeResult>>,
@@ -79,7 +79,7 @@ impl TransactionBlock {
     }
 
     /// Returns the list of transactions.
-    pub fn transactions(&self) -> &[SignedTransaction] {
+    pub fn transactions(&self) -> &[Transaction] {
         &self.transactions
     }
 

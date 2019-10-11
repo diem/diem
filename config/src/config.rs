@@ -14,7 +14,7 @@ use crate::{
 use crypto::ValidKey;
 use failure::prelude::*;
 use libra_types::{
-    transaction::{SignedTransaction, SCRIPT_HASH_LENGTH},
+    transaction::{SignedTransaction, Transaction, SCRIPT_HASH_LENGTH},
     PeerId,
 };
 use parity_multiaddr::Multiaddr;
@@ -581,7 +581,7 @@ impl NodeConfig {
         }
     }
 
-    pub fn get_genesis_transaction(&self) -> Result<SignedTransaction> {
+    pub fn get_genesis_transaction(&self) -> Result<Transaction> {
         let file_path = self.get_genesis_transaction_file();
         let mut file: File = File::open(&file_path).unwrap_or_else(|err| {
             panic!(
@@ -592,9 +592,10 @@ impl NodeConfig {
         });
         let mut buffer = vec![];
         file.read_to_end(&mut buffer)?;
-        SignedTransaction::try_from(libra_types::proto::types::SignedTransaction::decode(
-            &buffer,
-        )?)
+        // TODO: update to use `Transaction::WriteSet` variant when ready.
+        Ok(Transaction::UserTransaction(SignedTransaction::try_from(
+            libra_types::proto::types::SignedTransaction::decode(&buffer)?,
+        )?))
     }
 
     pub fn get_storage_dir(&self) -> PathBuf {

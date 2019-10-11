@@ -18,9 +18,7 @@ use libra_types::{
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{
-        Script, SignedTransaction, SignedTransactionWithProof, TransactionListWithProof,
-    },
+    transaction::{Script, SignedTransactionWithProof, Transaction, TransactionListWithProof},
 };
 use rand::SeedableRng;
 use std::{collections::BTreeMap, sync::Arc};
@@ -81,8 +79,14 @@ fn get_test_signed_transaction(
     private_key: Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     program: Option<Script>,
-) -> SignedTransaction {
-    get_test_signed_txn(sender, sequence_number, private_key, public_key, program)
+) -> Transaction {
+    Transaction::UserTransaction(get_test_signed_txn(
+        sender,
+        sequence_number,
+        private_key,
+        public_key,
+        program,
+    ))
 }
 
 #[test]
@@ -579,13 +583,12 @@ where
 
 fn verify_transactions(
     txn_list_with_proof: &TransactionListWithProof,
-    expected_txns: &[SignedTransaction],
+    expected_txns: &[Transaction],
 ) -> Result<()> {
     let txns = txn_list_with_proof
         .transaction_and_infos
         .iter()
-        .map(|(txn, _)| txn)
-        .cloned()
+        .map(|(txn, _)| Transaction::UserTransaction(txn.clone()))
         .collect::<Vec<_>>();
     ensure!(
         expected_txns == &txns[..],
@@ -598,14 +601,14 @@ fn verify_transactions(
 
 fn verify_committed_txn_status(
     signed_txn_with_proof: Option<&SignedTransactionWithProof>,
-    expected_txn: &SignedTransaction,
+    expected_txn: &Transaction,
 ) -> Result<()> {
     let signed_txn = &signed_txn_with_proof
         .ok_or_else(|| format_err!("Transaction is not committed."))?
         .signed_transaction;
 
     ensure!(
-        expected_txn == signed_txn,
+        *expected_txn == Transaction::UserTransaction(signed_txn.clone()),
         "The two transactions do not match. Expected txn: {:?}, returned txn: {:?}",
         expected_txn,
         signed_txn,
