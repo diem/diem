@@ -98,6 +98,24 @@ fn main() {
         validator_set_file,
         faucet_key_file_path,
     );
+    let node_address_list = validator_swarm
+        .config
+        .configs
+        .iter()
+        .map(|config| {
+            let port = NodeConfig::load(config)
+                .unwrap()
+                .admission_control
+                .admission_control_service_port;
+            format!("localhost:{}", port)
+        })
+        .collect::<Vec<String>>()
+        .join(",");
+    println!("To run transaction generator run:");
+    println!(
+        "\tcargo run --bin cluster-test -- --mint-file {:?} --swarm --peers {:?}  --emit-tx",
+        faucet_key_file_path, node_address_list,
+    );
     if let Some(ref swarm) = full_node_swarm {
         let full_node_config = NodeConfig::load(&swarm.config.configs[0]).unwrap();
         println!("To connect to the full nodes you just spawned, use this command:");

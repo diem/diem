@@ -37,10 +37,16 @@ const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 #[derive(StructOpt, Debug)]
 #[structopt(group = ArgGroup::with_name("action").required(true))]
 struct Args {
-    #[structopt(short = "w", long)]
-    workplace: String,
+    #[structopt(short = "w", long, conflicts_with = "swarm")]
+    workplace: Option<String>,
     #[structopt(short = "p", long, use_delimiter = true, conflicts_with = "prune-logs")]
     peers: Vec<String>,
+
+    #[structopt(
+        long,
+        help = "If set, tries to connect to a libra-swarm instead of aws"
+    )]
+    swarm: bool,
 
     #[structopt(long, group = "action")]
     wipe_all_db: bool,
@@ -74,6 +80,8 @@ struct Args {
     wait_millis: u64,
     #[structopt(long)]
     burst: bool,
+    #[structopt(long, default_value = "mint.key")]
+    mint_file: String,
 
     //stop_experiment options
     #[structopt(long, default_value = "10")]
@@ -85,18 +93,28 @@ pub fn main() {
 
     let args = Args::from_args();
 
+    if args.swarm && !args.emit_tx {
+        panic!("Can only use --emit-tx option in --swarm mode");
+    }
+
     if args.prune_logs {
         let util = ClusterUtil::setup(&args);
         util.prune_logs();
         return;
     } else if args.emit_tx {
-        let util = ClusterUtil::setup(&args);
         let thread_params = EmitThreadParams {
             wait_millis: args.wait_millis,
             wait_committed: !args.burst,
         };
-        util.emit_tx(args.accounts_per_client, thread_params);
-        return;
+        if args.swarm {
+            let util = BasicSwarmUtil::setup(&args);
+            util.emit_tx(args.accounts_per_client, thread_params);
+            return;
+        } else {
+            let util = ClusterUtil::setup(&args);
+            util.emit_tx(args.accounts_per_client, thread_params);
+            return;
+        }
     } else if args.stop_experiment {
         let util = ClusterUtil::setup(&args);
         util.stop_experiment(args.max_stopped);
@@ -142,6 +160,10 @@ fn setup_log() {
     std::mem::forget(logger_guard);
 }
 
+struct BasicSwarmUtil {
+    cluster: Cluster,
+}
+
 struct ClusterUtil {
     cluster: Cluster,
     aws: Aws,
@@ -158,16 +180,62 @@ struct ClusterTestRunner {
     thread_pool: threadpool::ThreadPool,
 }
 
+fn parse_host_port(s: &str) -> failure::Result<(String, u32)> {
+    let v = s.split(':').collect::<Vec<&str>>();
+    if v.len() != 2 {
+        return Err(format_err!("Failed to parse {:?} in host:port format", s));
+    }
+    let host = v[0].to_string();
+    let port = v[1].parse::<u32>()?;
+    Ok((host, port))
+}
+
+impl BasicSwarmUtil {
+    pub fn setup(args: &Args) -> Self {
+        if args.peers.is_empty() {
+            panic!("Peers not set in args");
+        }
+        let parsed_peers: Vec<_> = args
+            .peers
+            .iter()
+            .map(|peer| parse_host_port(peer).unwrap())
+            .collect();
+        Self {
+            cluster: Cluster::from_host_port(parsed_peers, &args.mint_file),
+        }
+    }
+
+    pub fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
+        let mut emitter = TxEmitter::new(&self.cluster);
+        let _job = emitter.start_job(EmitJobRequest {
+            instances: self.cluster.instances().to_vec(),
+            accounts_per_client,
+            thread_params,
+        });
+        thread::park();
+    }
+}
+
 impl ClusterUtil {
     pub fn setup(args: &Args) -> Self {
-        let aws = Aws::new(args.workplace.clone());
-        let cluster = Cluster::discover(&aws).expect("Failed to discover cluster");
+        let aws = Aws::new(
+            args.workplace
+                .as_ref()
+                .expect("--workplace not set")
+                .clone(),
+        );
+        let cluster = Cluster::discover(&aws, &args.mint_file).expect("Failed to discover cluster");
         let cluster = if args.peers.is_empty() {
             cluster
         } else {
             cluster.sub_cluster(args.peers.clone())
         };
-        let prometheus = Prometheus::new(cluster.prometheus_ip());
+        let prometheus = Prometheus::new(
+            cluster
+                .prometheus_ip()
+                .as_ref()
+                .expect("Failed to discover prometheus ip in aws"),
+        );
         info!("Discovered {} peers", cluster.instances().len());
         Self {
             cluster,
