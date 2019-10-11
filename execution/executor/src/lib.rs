@@ -27,7 +27,7 @@ use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo,
     proof::accumulator::Accumulator,
-    transaction::{SignedTransaction, TransactionListWithProof, TransactionStatus, Version},
+    transaction::{Transaction, TransactionListWithProof, TransactionStatus, Version},
     validator_set::ValidatorSet,
 };
 use logger::prelude::*;
@@ -207,7 +207,7 @@ where
 
     /// This is used when we start for the first time and the DB is completely empty. It will write
     /// necessary information to DB by committing the genesis transaction.
-    fn init_genesis(&self, genesis_txn: SignedTransaction) {
+    fn init_genesis(&self, genesis_txn: Transaction) {
         // Create a block with genesis_txn being the only transaction. Execute it then commit it
         // immediately.
         // We create `PRE_GENESIS_BLOCK_ID` as the parent of the genesis block.
@@ -239,7 +239,7 @@ where
     /// Executes a block.
     pub fn execute_block(
         &self,
-        transactions: Vec<SignedTransaction>,
+        transactions: Vec<Transaction>,
         parent_id: HashValue,
         id: HashValue,
     ) -> oneshot::Receiver<Result<StateComputeResult>> {
@@ -355,7 +355,7 @@ impl<V> Drop for Executor<V> {
 #[derive(Debug)]
 enum Command {
     ExecuteBlock {
-        transactions: Vec<SignedTransaction>,
+        transactions: Vec<Transaction>,
         parent_id: HashValue,
         id: HashValue,
         resp_sender: oneshot::Sender<Result<StateComputeResult>>,

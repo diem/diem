@@ -6,7 +6,10 @@ use crypto::HashValue;
 use executor::{Executor, StateComputeResult};
 use failure::Result;
 use futures::{Future, FutureExt};
-use libra_types::{crypto_proxies::LedgerInfoWithSignatures, transaction::SignedTransaction};
+use libra_types::{
+    crypto_proxies::LedgerInfoWithSignatures,
+    transaction::{SignedTransaction, Transaction},
+};
 use logger::prelude::*;
 use state_synchronizer::StateSyncClient;
 use std::{
@@ -46,9 +49,14 @@ impl StateComputer for ExecutionProxy {
         transactions: &Self::Payload,
     ) -> Pin<Box<dyn Future<Output = Result<StateComputeResult>> + Send>> {
         let pre_execution_instant = Instant::now();
-        let execute_future =
-            self.executor
-                .execute_block(transactions.clone(), parent_block_id, block_id);
+        let execute_future = self.executor.execute_block(
+            transactions
+                .iter()
+                .map(|txn| Transaction::UserTransaction(txn.clone()))
+                .collect(),
+            parent_block_id,
+            block_id,
+        );
         async move {
             match execute_future.await {
                 Ok(Ok(state_compute_result)) => {

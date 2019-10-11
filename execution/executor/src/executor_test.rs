@@ -15,7 +15,7 @@ use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo,
-    transaction::{SignedTransaction, TransactionListWithProof, Version},
+    transaction::{SignedTransaction, Transaction, TransactionListWithProof, Version},
 };
 use proptest::prelude::*;
 use prost_ext::MessageExt;
@@ -30,6 +30,11 @@ use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceC
 use storage_proto::proto::storage::create_storage;
 use storage_service::StorageService;
 use vm_genesis::{encode_genesis_transaction, GENESIS_KEYPAIR};
+
+// TODO: remove once we use `Transaction` everywhere
+fn wrap_user_txn(txn: SignedTransaction) -> Transaction {
+    Transaction::UserTransaction(txn)
+}
 
 fn get_config() -> NodeConfig {
     let config = NodeConfigHelpers::get_single_node_test_config(true);
@@ -80,7 +85,7 @@ fn create_executor(config: &NodeConfig) -> Executor<MockVM> {
 }
 
 fn execute_and_commit_block(executor: &TestExecutor, txn_index: u64) {
-    let txn = encode_mint_transaction(gen_address(txn_index), 100);
+    let txn = wrap_user_txn(encode_mint_transaction(gen_address(txn_index), 100));
     let parent_block_id = match txn_index {
         0 => *GENESIS_BLOCK_ID,
         x => gen_block_id(x),
@@ -179,9 +184,13 @@ fn gen_ledger_info(
 fn test_executor_status() {
     let executor = TestExecutor::new();
 
-    let txn0 = encode_mint_transaction(gen_address(0), 100);
-    let txn1 = encode_mint_transaction(gen_address(1), 100);
-    let txn2 = encode_transfer_transaction(gen_address(0), gen_address(1), 500);
+    let txn0 = wrap_user_txn(encode_mint_transaction(gen_address(0), 100));
+    let txn1 = wrap_user_txn(encode_mint_transaction(gen_address(1), 100));
+    let txn2 = wrap_user_txn(encode_transfer_transaction(
+        gen_address(0),
+        gen_address(1),
+        500,
+    ));
 
     let parent_block_id = *GENESIS_BLOCK_ID;
     let block_id = gen_block_id(1);
@@ -210,7 +219,7 @@ fn test_executor_one_block() {
     let version = 100;
 
     let txns = (0..version)
-        .map(|i| encode_mint_transaction(gen_address(i), 100))
+        .map(|i| wrap_user_txn(encode_mint_transaction(gen_address(i), 100)))
         .collect();
     let execute_block_future = executor.execute_block(txns, parent_block_id, block_id);
     let execute_block_response = block_on(execute_block_future).unwrap().unwrap();
@@ -237,7 +246,7 @@ fn test_executor_execute_same_block_multiple_times() {
     let version = 100;
 
     let txns: Vec<_> = (0..version)
-        .map(|i| encode_mint_transaction(gen_address(i), 100))
+        .map(|i| wrap_user_txn(encode_mint_transaction(gen_address(i), 100)))
         .collect();
 
     {
@@ -302,7 +311,7 @@ fn create_transaction_chunks(
 
     let mut txns = vec![];
     for i in 1..chunk_ranges.last().unwrap().end {
-        let txn = encode_mint_transaction(gen_address(i), 100);
+        let txn = wrap_user_txn(encode_mint_transaction(gen_address(i), 100));
         txns.push(txn);
     }
     let id = gen_block_id(1);
@@ -468,7 +477,7 @@ fn test_executor_execute_chunk_restart() {
 }
 
 struct TestBlock {
-    txns: Vec<SignedTransaction>,
+    txns: Vec<Transaction>,
     parent_id: HashValue,
     id: HashValue,
 }
@@ -482,7 +491,12 @@ impl TestBlock {
     ) -> Self {
         TestBlock {
             txns: addr_index
-                .map(|index| encode_mint_transaction(gen_address(index), u64::from(amount)))
+                .map(|index| {
+                    wrap_user_txn(encode_mint_transaction(
+                        gen_address(index),
+                        u64::from(amount),
+                    ))
+                })
                 .collect(),
             parent_id,
             id,
@@ -492,7 +506,7 @@ impl TestBlock {
 
 // Executes a list of transactions by executing and immediately commtting one at a time. Returns
 // the root hash after all transactions are committed.
-fn run_transactions_naive(transactions: Vec<SignedTransaction>) -> HashValue {
+fn run_transactions_naive(transactions: Vec<Transaction>) -> HashValue {
     let executor = TestExecutor::new();
     let mut iter = transactions.into_iter();
     let first_txn = iter.next();

@@ -269,9 +269,8 @@ fn get_mock_txn_data(
     let mut txns = vec![];
     let mut infos = vec![];
     for i in start_seq..=end_seq {
-        let signed_txn =
-            get_test_signed_txn(address, i, priv_key.clone(), pub_key.clone(), None).into();
-        txns.push(signed_txn);
+        let txn = get_test_signed_txn(address, i, priv_key.clone(), pub_key.clone(), None);
+        txns.push(txn.into());
 
         let info = get_transaction_info().into();
         infos.push(info);

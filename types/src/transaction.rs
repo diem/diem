@@ -918,10 +918,7 @@ impl TransactionToCommit {
     }
 
     pub fn as_signed_user_txn(&self) -> Result<&SignedTransaction> {
-        match &self.transaction {
-            Transaction::UserTransaction(txn) => Ok(txn),
-            _ => Err(format_err!("Not a user transaction.")),
-        }
+        self.transaction.as_signed_user_txn()
     }
 
     pub fn account_states(&self) -> &HashMap<AccountAddress, AccountStateBlob> {
@@ -1215,6 +1212,15 @@ pub enum Transaction {
 
     /// Transaction to update the block metadata resource at the beginning of a block.
     BlockMetadata(BlockMetadata),
+}
+
+impl Transaction {
+    pub fn as_signed_user_txn(&self) -> Result<&SignedTransaction> {
+        match self {
+            Transaction::UserTransaction(txn) => Ok(txn),
+            _ => Err(format_err!("Not a user transaction.")),
+        }
+    }
 }
 
 #[derive(IntoPrimitive, TryFromPrimitive)]
