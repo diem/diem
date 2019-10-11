@@ -32,6 +32,7 @@ pub enum Entry {
     DisableStages(Vec<Stage>),
     Sender(String),
     Arguments(Vec<Argument>),
+    MaxGas(u64),
 }
 
 impl FromStr for Entry {
@@ -70,6 +71,9 @@ impl FromStr for Entry {
                 .collect();
             return Ok(Entry::DisableStages(res?));
         }
+        if s.starts_with("max-gas:") {
+            return Ok(Entry::MaxGas(s[8..].parse::<u64>()?));
+        }
         Err(ErrorKind::Other(format!(
             "failed to parse '{}' as transaction config entry",
             s
@@ -104,6 +108,7 @@ pub struct Config {
     pub disabled_stages: BTreeSet<Stage>,
     pub sender: String,
     pub args: Vec<TransactionArgument>,
+    pub max_gas: Option<u64>,
 }
 
 impl Config {
@@ -112,6 +117,7 @@ impl Config {
         let mut disabled_stages = BTreeSet::new();
         let mut sender = None;
         let mut args = None;
+        let mut max_gas = None;
 
         for entry in entries {
             match entry {
@@ -170,6 +176,14 @@ impl Config {
                         }
                     }
                 }
+                Entry::MaxGas(n) => match max_gas {
+                    None => max_gas = Some(*n),
+                    Some(_) => {
+                        return Err(
+                            ErrorKind::Other("max gas amount already set".to_string()).into()
+                        )
+                    }
+                },
             }
         }
 
@@ -177,6 +191,7 @@ impl Config {
             disabled_stages,
             sender: sender.unwrap_or_else(|| "default".to_string()),
             args: args.unwrap_or_else(|| vec![]),
+            max_gas,
         })
     }
 

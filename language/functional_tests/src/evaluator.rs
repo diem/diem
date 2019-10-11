@@ -18,7 +18,7 @@ use language_e2e_tests::{account::Account, executor::FakeExecutor};
 use libra_types::{
     transaction::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
-        SignedTransaction, TransactionArgument, TransactionOutput, TransactionStatus,
+        SignedTransaction, TransactionOutput, TransactionStatus,
     },
     vm_error::StatusCode,
 };
@@ -188,22 +188,24 @@ fn do_verify_module(module: CompiledModule, deps: &[VerifiedModule]) -> Result<V
 fn make_script_transaction(
     exec: &FakeExecutor,
     account: &Account,
+    config: &TransactionConfig,
     script: CompiledScript,
-    args: Vec<TransactionArgument>,
 ) -> Result<SignedTransaction> {
     let mut blob = vec![];
     script.serialize(&mut blob)?;
-    let script = TransactionScript::new(blob, args);
+    let script = TransactionScript::new(blob, config.args.clone());
 
     let account_resource = exec.read_account_resource(&account).unwrap();
     Ok(RawTransaction::new_script(
         *account.address(),
         account_resource.sequence_number(),
         script,
-        std::cmp::min(
-            MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
-            account_resource.balance(),
-        ),
+        config.max_gas.unwrap_or_else(|| {
+            std::cmp::min(
+                MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+                account_resource.balance(),
+            )
+        }),
         1,
         Duration::from_secs(u64::max_value()),
     )
@@ -215,6 +217,7 @@ fn make_script_transaction(
 fn make_module_transaction(
     exec: &FakeExecutor,
     account: &Account,
+    config: &TransactionConfig,
     module: CompiledModule,
 ) -> Result<SignedTransaction> {
     let mut blob = vec![];
@@ -226,10 +229,12 @@ fn make_module_transaction(
         *account.address(),
         account_resource.sequence_number(),
         module,
-        std::cmp::min(
-            MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
-            account_resource.balance(),
-        ),
+        config.max_gas.unwrap_or_else(|| {
+            std::cmp::min(
+                MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+                account_resource.balance(),
+            )
+        }),
         1,
         Duration::from_secs(u64::max_value()),
     )
@@ -367,12 +372,8 @@ fn eval_transaction(
                 return Ok(Status::Success);
             }
             log.append(EvaluationOutput::Stage(Stage::Runtime));
-            let script_transaction = make_script_transaction(
-                &exec,
-                account,
-                compiled_script,
-                transaction.config.args.clone(),
-            )?;
+            let script_transaction =
+                make_script_transaction(&exec, account, &transaction.config, compiled_script)?;
             let txn_output = unwrap_or_abort!(run_transaction(exec, script_transaction), log);
             log.append(EvaluationOutput::Output(Box::new(
                 OutputType::TransactionOutput(txn_output),
@@ -416,7 +417,8 @@ fn eval_transaction(
                 return Ok(Status::Success);
             }
             log.append(EvaluationOutput::Stage(Stage::Runtime));
-            let module_transaction = make_module_transaction(&exec, account, compiled_module)?;
+            let module_transaction =
+                make_module_transaction(&exec, account, &transaction.config, compiled_module)?;
             let txn_output = unwrap_or_abort!(run_transaction(exec, module_transaction), log);
             log.append(EvaluationOutput::Output(Box::new(
                 OutputType::TransactionOutput(txn_output),

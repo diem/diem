@@ -1,0 +1,18 @@
+//! account: default, 10000, 0
+
+//! max-gas: 5000
+main() {
+    return;
+}
+
+
+//! new-transaction
+import 0x0.LibraAccount;
+
+main() {
+    // Ensures that the account was deducted for the gas fee.
+    assert(LibraAccount.balance(get_txn_sender()) < 10000, 42);
+    // Ensures that we are not just charging max_gas for the transaction.
+    assert(LibraAccount.balance(get_txn_sender()) >= 5000, 42);
+    return;
+}

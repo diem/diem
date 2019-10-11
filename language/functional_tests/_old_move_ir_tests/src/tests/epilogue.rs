@@ -468,60 +468,6 @@ main(recipient: address, original_balance: u64, gas_deposit_amount: u64) {
     ))
 }
 
-#[test]
-fn recursion_out_of_gas_charges_max_gas() {
-    let mut test_env = TestEnvironment::default();
-    let sender = test_env.accounts.get_account(0).addr;
-
-    let program = format!(
-        "
-modules:
-module Looper {{
-  public run_loop(n: u64) {{
-    while (true) {{
-
-    }}
-    return;
-  }}
-
-}}
-
-script:
-import 0x{0}.Looper;
-main() {{
-    Looper.run_loop(5);
-    return;
-}}
-",
-        hex::encode(sender)
-    );
-
-    let gas_amount = 423;
-    assert_error_type!(
-        test_env.run_with_max_gas_amount(gas_amount, to_standalone_script(program.as_bytes())),
-        ErrorKind::OutOfGas
-    );
-
-    let verify_script = b"
-    import 0x0.LibraAccount;
-    main(initial_balance: u64, gas_fees: u64) {
-      let sender;
-      let sender_balance;
-      sender = get_txn_sender();
-      sender_balance = LibraAccount.balance(copy(sender));
-      assert(move(initial_balance) - move(gas_fees) == move(sender_balance), 101);
-      return;
-    }";
-    let gas_fee = gas_amount * TestEnvironment::DEFAULT_GAS_COST;
-    assert_no_error!(test_env.run_with_arguments(
-        vec![
-            TransactionArgument::U64(TestEnvironment::INITIAL_BALANCE),
-            TransactionArgument::U64(gas_fee)
-        ],
-        to_script(verify_script, vec![])
-    ));
-}
-
 // TODO don't increment sequence number after:
 // bad signature
 // bad auth key
@@ -532,3 +478,5 @@ main() {{
 // module publish error
 // bytecode verification error
 // non-assert runtime error
+
+// TODO: recursion out of gas
