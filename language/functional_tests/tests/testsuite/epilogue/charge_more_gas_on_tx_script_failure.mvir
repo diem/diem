@@ -1,0 +1,33 @@
+//! account: alice, 10000
+//! account: bob, 10000
+
+//! sender: alice
+//! args: 0
+main(abrt: u64) {
+    assert(move(abrt) == 0, 77);
+    return;
+}
+
+// check: EXECUTED
+
+
+//! new-transaction
+//! sender: bob
+//! args: 1
+main(abrt: u64) {
+    assert(move(abrt) == 0, 78);
+    return;
+}
+
+// check: ABORTED
+// check: 78
+
+//! new-transaction
+import 0x0.LibraAccount;
+
+main() {
+    assert(LibraAccount.balance({{bob}}) < LibraAccount.balance({{alice}}), 79);
+    return;
+}
+
+// check: EXECUTED
