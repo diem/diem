@@ -61,6 +61,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     convert::{TryFrom, TryInto},
     fmt,
+    ops::Index,
     slice::Iter,
 };
 
@@ -543,7 +544,7 @@ impl fmt::Debug for AccessPath {
 }
 
 impl fmt::Display for AccessPath {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.path.len() < 1 + HashValue::LENGTH {
             write!(f, "{:?}", self)
         } else {
