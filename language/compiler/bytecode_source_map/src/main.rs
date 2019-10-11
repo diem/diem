@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bytecode_source_map::mapping::{SourceMapping, SourceMappingOptions};
+use bytecode_source_map::disassembler::{Disassembler, DisassemblerOptions};
+use bytecode_source_map::mapping::SourceMapping;
 use bytecode_source_map::utils::module_source_map_from_file;
 use ir_to_bytecode_syntax::ast::Loc;
 use libra_types::transaction::Module;
@@ -60,39 +61,40 @@ fn main() {
     let module_bytes: Module = serde_json::from_str(bytecode_source.as_str())
         .expect("Unable to deserialize bytecode file");
 
-    let ir_source =
-        fs::read_to_string(Path::new(&args.bytecode_file_path).with_extension(mvir_extension)).ok();
+    let ir_source_path = Path::new(&args.bytecode_file_path).with_extension(mvir_extension);
+    let ir_source = fs::read_to_string(&ir_source_path).ok();
     let source_map = module_source_map_from_file::<Loc>(
         &Path::new(&args.bytecode_file_path).with_extension(source_map_extension),
     );
 
-    let mut mapping_options = SourceMappingOptions::new();
+    let mut disassembler_options = DisassemblerOptions::new();
 
     if args.print_code {
-        mapping_options.print_code();
+        disassembler_options.print_code();
     }
 
     if args.only_public {
-        mapping_options.only_public();
+        disassembler_options.only_public();
     }
 
     let mut source_mapping = if args.is_script {
         let compiled_script = CompiledScript::deserialize(module_bytes.code())
             .expect("Script blob can't be deserialized");
-        SourceMapping::new_from_script(source_map, compiled_script, mapping_options)
+        SourceMapping::new_from_script(source_map, compiled_script)
     } else {
         let compiled_module = CompiledModule::deserialize(module_bytes.code())
             .expect("Module blob can't be deserialized");
-        SourceMapping::new(source_map, compiled_module, mapping_options)
+        SourceMapping::new(source_map, compiled_module)
     };
 
     if let Some(source_code) = ir_source {
-        source_mapping.with_source_code(source_code);
+        source_mapping
+            .with_source_code((ir_source_path.to_str().unwrap().to_string(), source_code));
     }
 
-    let dissassemble_string = source_mapping
-        .disassemble()
-        .expect("Unable to dissassemble");
+    let disassembler = Disassembler::new(source_mapping, disassembler_options);
+
+    let dissassemble_string = disassembler.disassemble().expect("Unable to dissassemble");
 
     println!("{}", dissassemble_string);
 }
