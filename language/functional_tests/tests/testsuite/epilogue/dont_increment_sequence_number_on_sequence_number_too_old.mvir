@@ -1,0 +1,17 @@
+// Set initial sequence number to 10.
+//! account: default, 1000000, 10
+
+
+//! sequence-number: 9
+main() {
+    return;
+}
+// check: SEQUENCE_NUMBER_TOO_OLD
+
+
+//! new-transaction
+//! sequence-number: 10
+main() {
+    return;
+}
+// check: EXECUTED

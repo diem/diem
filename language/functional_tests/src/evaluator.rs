@@ -198,7 +198,9 @@ fn make_script_transaction(
     let account_resource = exec.read_account_resource(&account).unwrap();
     Ok(RawTransaction::new_script(
         *account.address(),
-        account_resource.sequence_number(),
+        config
+            .sequence_number
+            .unwrap_or_else(|| account_resource.sequence_number()),
         script,
         config.max_gas.unwrap_or_else(|| {
             std::cmp::min(
@@ -227,7 +229,9 @@ fn make_module_transaction(
     let account_resource = exec.read_account_resource(&account).unwrap();
     Ok(RawTransaction::new_module(
         *account.address(),
-        account_resource.sequence_number(),
+        config
+            .sequence_number
+            .unwrap_or_else(|| account_resource.sequence_number()),
         module,
         config.max_gas.unwrap_or_else(|| {
             std::cmp::min(
