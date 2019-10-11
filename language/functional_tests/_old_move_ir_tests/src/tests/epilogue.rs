@@ -136,55 +136,6 @@ fn charge_more_gas_on_tx_script_failure2() {
     );
 }
 
-#[test]
-fn dont_increment_sequence_number_on_sequence_number_too_new() {
-    let mut test_env = TestEnvironment::default();
-
-    let sequence_number = 7;
-    assert_error_type!(
-        test_env.run_with_sequence_number(
-            sequence_number,
-            to_script(
-                b"
-main() {
-  assert(false, 77);
-  return;
-}
-",
-                vec![]
-            )
-        ),
-        ErrorKind::AssertError(ESEQUENCE_NUMBER_TOO_NEW, _)
-    );
-
-    // running with 0 should succeed because sequence number wasn't bumped
-    let sequence_number = 0;
-    assert_no_error!(test_env
-        .run_with_sequence_number(sequence_number, to_script(b"main() { return; }", vec![]),))
-}
-
-#[test]
-fn dont_increment_sequence_number_on_sequence_number_too_old() {
-    let mut test_env = TestEnvironment::default();
-
-    let sequence_number = 0;
-    assert_no_error!(test_env
-        .run_with_sequence_number(sequence_number, to_script(b"main() { return; }", vec![]),));
-
-    // running with 0 should fail
-    let sequence_number = 0;
-    assert_error_type!(
-        test_env
-            .run_with_sequence_number(sequence_number, to_script(b"main() { return; }", vec![])),
-        ErrorKind::AssertError(ESEQUENCE_NUMBER_TOO_OLD, _)
-    );
-
-    // but running with 1 should succeed
-    let sequence_number = 1;
-    assert_no_error!(test_env
-        .run_with_sequence_number(sequence_number, to_script(b"main() { return; }", vec![]),))
-}
-
 // You can call your own epilogue if you want to, but your sequence number will only be bumped once
 #[test]
 fn calling_own_epilogue_bumps_sequence_number_once() {
