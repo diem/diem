@@ -21,12 +21,14 @@ use failure::prelude::*;
 use proptest::{arbitrary::Arbitrary, prelude::*};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, convert::TryFrom, fmt};
+use std::{
+    collections::BTreeMap,
+    convert::{TryFrom, TryInto},
+    fmt,
+};
 
-#[derive(Clone, Eq, PartialEq, FromProto, IntoProto, Serialize, Deserialize)]
-#[ProtoType(crate::proto::account_state_blob::AccountStateBlob)]
+#[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct AccountStateBlob {
     blob: Vec<u8>,
 }
@@ -74,6 +76,20 @@ impl TryFrom<&BTreeMap<Vec<u8>, Vec<u8>>> for AccountStateBlob {
         Ok(Self {
             blob: SimpleSerializer::serialize(map)?,
         })
+    }
+}
+
+impl TryFrom<crate::proto::types::AccountStateBlob> for AccountStateBlob {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::AccountStateBlob) -> Result<Self> {
+        Ok(proto.blob.into())
+    }
+}
+
+impl From<AccountStateBlob> for crate::proto::types::AccountStateBlob {
+    fn from(blob: AccountStateBlob) -> Self {
+        Self { blob: blob.blob }
     }
 }
 
@@ -176,33 +192,32 @@ impl AccountStateWithProof {
     }
 }
 
-impl FromProto for AccountStateWithProof {
-    type ProtoType = crate::proto::account_state_blob::AccountStateWithProof;
+impl TryFrom<crate::proto::types::AccountStateWithProof> for AccountStateWithProof {
+    type Error = Error;
 
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        Ok(AccountStateWithProof {
-            version: object.get_version(),
-            blob: object
+    fn try_from(mut proto: crate::proto::types::AccountStateWithProof) -> Result<Self> {
+        Ok(Self::new(
+            proto.version,
+            proto
                 .blob
                 .take()
-                .map(AccountStateBlob::from_proto)
+                .map(AccountStateBlob::try_from)
                 .transpose()?,
-            proof: AccountStateProof::from_proto(object.take_proof())?,
-        })
+            proto
+                .proof
+                .ok_or_else(|| format_err!("Missing proof"))?
+                .try_into()?,
+        ))
     }
 }
 
-impl IntoProto for AccountStateWithProof {
-    type ProtoType = crate::proto::account_state_blob::AccountStateWithProof;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut out = Self::ProtoType::new();
-        out.set_version(self.version);
-        if let Some(blob) = self.blob {
-            out.set_blob(blob.into_proto());
+impl From<AccountStateWithProof> for crate::proto::types::AccountStateWithProof {
+    fn from(account: AccountStateWithProof) -> Self {
+        Self {
+            version: account.version,
+            blob: account.blob.map(Into::into),
+            proof: Some(account.proof.into()),
         }
-        out.set_proof(self.proof.into_proto());
-        out
     }
 }
 

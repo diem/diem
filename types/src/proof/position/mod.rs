@@ -23,6 +23,7 @@
 //! Note2: The level of tree counts from leaf level, start from 0
 //! Note3: The leaf index starting from left-most leaf, starts from 0
 
+use crate::proof::definition::{LeafCount, MAX_ACCUMULATOR_LEAVES, MAX_ACCUMULATOR_PROOF_DEPTH};
 use std::fmt;
 
 #[cfg(test)]
@@ -50,7 +51,8 @@ impl Position {
 
     /// What position is the node within the level? i.e. how many nodes
     /// are to the left of this node at the same level
-    pub fn pos_counting_from_left(self) -> u64 {
+    #[cfg(test)]
+    fn pos_counting_from_left(self) -> u64 {
         self.0 >> (self.level() + 1)
     }
 
@@ -95,7 +97,7 @@ impl Position {
         Self::child(self, NodeDirection::Right)
     }
 
-    pub fn child(self, dir: NodeDirection) -> Self {
+    fn child(self, dir: NodeDirection) -> Self {
         assert!(!self.is_leaf());
 
         let direction_bit = match dir {
@@ -105,29 +107,15 @@ impl Position {
         Self((self.0 | direction_bit) & !(isolate_rightmost_zero_bit(self.0) >> 1))
     }
 
-    /// Whether this position is a left child of its parent.
+    /// Whether this position is a left child of its parent.  The observation is that,
+    /// after stripping out all right-most 1 bits, a left child will have a bit pattern
+    /// of xxx00(11..), while a right child will be represented by xxx10(11..)
     pub fn is_left_child(self) -> bool {
-        match self.direction_from_parent() {
-            NodeDirection::Left => true,
-            NodeDirection::Right => false,
-        }
+        self.0 & (isolate_rightmost_zero_bit(self.0) << 1) == 0
     }
 
-    /// This method takes in a node position and return NodeDirection based on if it's left or right
-    /// child Similar to sibling. The observation is that,
-    /// after strip out the right-most common bits,
-    /// if next right-most bits is 0, it is left child. Otherwise, right child
-    pub fn direction_from_parent(self) -> NodeDirection {
-        match self.0 & (isolate_rightmost_zero_bit(self.0) << 1) {
-            0 => NodeDirection::Left,
-            _ => NodeDirection::Right,
-        }
-    }
-
-    // Given the position, return the leaf index counting from the left
-    pub fn to_leaf_index(self) -> u64 {
-        assert!(self.is_leaf());
-        self.pos_counting_from_left()
+    pub fn is_right_child(self) -> bool {
+        !self.is_left_child()
     }
 
     // Opposite of get_left_node_count_from_position.
@@ -143,22 +131,6 @@ impl Position {
     /// because they are corresponding to level's indicator. Then remove next zero right after.
     pub fn sibling(self) -> Self {
         Self(self.0 ^ (isolate_rightmost_zero_bit(self.0) << 1))
-    }
-
-    /// Given a position, returns the position next to it on the right on the same level. For
-    /// example, given input 5 this function should return 9.
-    ///
-    /// ```text
-    ///       3
-    ///    /     \
-    ///   1       5       9
-    ///  / \     / \     / \
-    /// 0   2   4   6   8   10
-    /// ```
-    pub fn get_next_sibling(self) -> Self {
-        let level = self.level();
-        let pos = self.pos_counting_from_left();
-        Self::from_level_and_pos(level, pos + 1)
     }
 
     // Given a leaf index, calculate the position of a minimum root which contains this leaf
@@ -177,9 +149,15 @@ impl Position {
         Self(smear_ones_for_u64(leaf.0) >> 1)
     }
 
-    pub fn root_from_leaf_count(leaf_count: u64) -> Self {
-        let leaf = Self::from_leaf_index(leaf_count - 1);
-        Self(smear_ones_for_u64(leaf.0) >> 1)
+    pub fn root_from_leaf_count(leaf_count: LeafCount) -> Self {
+        assert!(leaf_count > 0);
+        Self::root_from_leaf_index((leaf_count - 1) as u64)
+    }
+
+    pub fn root_level_from_leaf_count(leaf_count: LeafCount) -> u32 {
+        assert!(leaf_count > 0);
+        let index = (leaf_count - 1) as u64;
+        MAX_ACCUMULATOR_PROOF_DEPTH as u32 + 1 - index.leading_zeros()
     }
 
     /// Given a node, find its right most child in its subtree.
@@ -349,7 +327,7 @@ pub struct FrozenSubTreeIterator {
 }
 
 impl FrozenSubTreeIterator {
-    pub fn new(num_leaves: u64) -> Self {
+    pub fn new(num_leaves: LeafCount) -> Self {
         Self {
             bitmap: num_leaves,
             seen_leaves: 0,
@@ -389,19 +367,20 @@ impl Iterator for FrozenSubTreeIterator {
 /// positions of required subtrees if we want to append these subtrees to the existing accumulator
 /// to generate a bigger one of size `new_num_leaves`.
 ///
-/// See [`crate::proof::accumulator::Accumulator`] for more details.
+/// See [`crate::proof::accumulator::Accumulator::append_subtrees`] for more details.
 pub struct FrozenSubtreeSiblingIterator {
-    current_num_leaves: u64,
-    remaining_new_leaves: u64,
+    current_num_leaves: LeafCount,
+    remaining_new_leaves: LeafCount,
 }
 
 impl FrozenSubtreeSiblingIterator {
     /// Constructs a new `FrozenSubtreeSiblingIterator` given the size of current accumulator and
     /// the size of the bigger accumulator.
-    pub fn new(current_num_leaves: u64, new_num_leaves: u64) -> Self {
+    pub fn new(current_num_leaves: LeafCount, new_num_leaves: LeafCount) -> Self {
         assert!(
-            new_num_leaves <= 1 << 63,
-            "An accumulator can have at most 2^63 leaves. Provided num_leaves: {}.",
+            new_num_leaves <= MAX_ACCUMULATOR_LEAVES,
+            "An accumulator can have at most 2^{} leaves. Provided num_leaves: {}.",
+            MAX_ACCUMULATOR_PROOF_DEPTH,
             new_num_leaves,
         );
         assert!(
@@ -415,6 +394,14 @@ impl FrozenSubtreeSiblingIterator {
             current_num_leaves,
             remaining_new_leaves: new_num_leaves - current_num_leaves,
         }
+    }
+
+    /// Helper function to return the next set of leaves that form a complete subtree.  For
+    /// example, if there are 5 leaves (..0101), 2 ^ (63 - 61 leading zeros) = 4 leaves should be
+    /// taken next.
+    fn next_new_leaf_batch(&self) -> LeafCount {
+        let zeros = self.remaining_new_leaves.leading_zeros();
+        1 << (MAX_ACCUMULATOR_PROOF_DEPTH - zeros as usize)
     }
 }
 
@@ -430,26 +417,26 @@ impl Iterator for FrozenSubtreeSiblingIterator {
         // may combine it with a subtree of the same size, or append a smaller one on the right. In
         // case self.current_num_leaves is zero and there is no rightmost frozen subtree, the
         // largest possible one is appended.
-        let next_subtree_size = if self.current_num_leaves > 0 {
-            let rightmost_frozen_subtree_size = 1 << self.current_num_leaves.trailing_zeros();
-            if self.remaining_new_leaves >= rightmost_frozen_subtree_size {
-                rightmost_frozen_subtree_size
+        let next_subtree_leaves = if self.current_num_leaves > 0 {
+            let rightmost_frozen_subtree_leaves = 1 << self.current_num_leaves.trailing_zeros();
+            if self.remaining_new_leaves >= rightmost_frozen_subtree_leaves {
+                rightmost_frozen_subtree_leaves
             } else {
-                1 << (63 - self.remaining_new_leaves.leading_zeros())
+                self.next_new_leaf_batch()
             }
         } else {
-            1 << (63 - self.remaining_new_leaves.leading_zeros())
+            self.next_new_leaf_batch()
         };
 
         // Now that the size of the next subtree is known, we compute the leftmost and rightmost
         // leaves in this subtree. The root of the subtree is then the middle of these two leaves.
         let first_leaf_index = self.current_num_leaves;
-        let last_leaf_index = first_leaf_index + next_subtree_size - 1;
-        self.current_num_leaves += next_subtree_size;
-        self.remaining_new_leaves -= next_subtree_size;
+        let last_leaf_index = first_leaf_index + next_subtree_leaves - 1;
+        self.current_num_leaves += next_subtree_leaves;
+        self.remaining_new_leaves -= next_subtree_leaves;
 
         Some(Position::from_inorder_index(
-            first_leaf_index + last_leaf_index,
+            (first_leaf_index + last_leaf_index) as u64,
         ))
     }
 }

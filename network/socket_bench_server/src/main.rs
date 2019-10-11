@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![feature(async_await)]
-
 //! Standalone server for socket_muxer_bench
 //! ========================================
 //!
@@ -16,7 +14,6 @@
 //!
 //! `TCP_ADDR=/ip6/::1/tcp/12345 cargo bench -p network remote_tcp`
 
-use futures_01::future::Future as Future01;
 use logger::{prelude::*, set_default_global_logger};
 use netcore::transport::tcp::TcpTransport;
 use socket_bench_server::{
@@ -53,5 +50,5 @@ fn main() {
         info!("bench: tcp+noise+muxer: listening on: {}", addr);
     }
 
-    rt.shutdown_on_idle().wait().unwrap();
+    rt.shutdown_on_idle();
 }

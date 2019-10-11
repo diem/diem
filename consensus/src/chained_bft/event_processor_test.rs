@@ -4,16 +4,6 @@
 use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
-        common::Author,
-        consensus_types::{
-            block::Block,
-            proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
-            quorum_cert::QuorumCert,
-            sync_info::SyncInfo,
-            timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
-            vote_data::VoteData,
-            vote_msg::VoteMsg,
-        },
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
         liveness::{
@@ -28,27 +18,39 @@ use crate::{
         persistent_storage::{PersistentStorage, RecoveryData},
         safety::safety_rules::{ConsensusState, SafetyRules},
         test_utils::{
-            consensus_runtime, placeholder_certificate_for_block, placeholder_ledger_info,
+            self, consensus_runtime, placeholder_certificate_for_block, placeholder_ledger_info,
             MockStateComputer, MockStorage, MockTransactionManager, TestPayload, TreeInserter,
         },
     },
+    state_replication::StateComputer,
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
+use consensus_types::{
+    block::Block,
+    common::Author,
+    proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
+    quorum_cert::QuorumCert,
+    sync_info::SyncInfo,
+    timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate, TimeoutMsg},
+    vote_data::VoteData,
+    vote_msg::VoteMsg,
+};
 use crypto::HashValue;
 use futures::{
     channel::{mpsc, oneshot},
-    compat::Future01CompatExt,
     executor::block_on,
 };
+use libra_types::crypto_proxies::{
+    random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
+};
 use network::{
-    proto::BlockRetrievalStatus,
+    proto::{BlockRetrievalStatus, ConsensusMsg_oneof},
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
-use proto_conv::FromProto;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::convert::TryFrom;
+use std::{sync::Arc, time::Duration};
 use tokio::runtime::TaskExecutor;
-use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 
 /// Auxiliary struct that is setting up node environment for the test.
 pub struct NodeSetup {
@@ -65,15 +67,14 @@ impl NodeSetup {
     fn build_empty_store(
         signer: ValidatorSigner,
         storage: Arc<dyn PersistentStorage<TestPayload>>,
+        state_computer: Arc<dyn StateComputer<Payload = TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
     ) -> Arc<BlockStore<TestPayload>> {
-        let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
-
         Arc::new(block_on(BlockStore::new(
             storage,
             initial_data,
             signer,
-            Arc::new(MockStateComputer::new(commit_cb_sender)),
+            state_computer,
             true,
             10, // max pruned blocks in mem
         )))
@@ -105,16 +106,9 @@ impl NodeSetup {
         executor: TaskExecutor,
         num_nodes: usize,
     ) -> Vec<NodeSetup> {
-        let mut signers = vec![];
-        let mut author_to_public_keys = HashMap::new();
-        for i in 0..num_nodes {
-            let signer = ValidatorSigner::random([i as u8; 32]);
-            author_to_public_keys.insert(signer.author(), signer.public_key());
-            signers.push(signer);
-        }
+        let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
         let proposer_author = signers[0].author();
-        let validators = ValidatorVerifier::new(author_to_public_keys);
-        let epoch_mgr = Arc::new(EpochManager::new(0, validators));
+        let epoch_mgr = Arc::new(EpochManager::new(0, validator_verifier));
         let mut nodes = vec![];
         for signer in signers.iter().take(num_nodes) {
             let (storage, initial_data) = MockStorage::<TestPayload>::start_for_testing();
@@ -155,8 +149,19 @@ impl NodeSetup {
             Arc::clone(&epoch_mgr),
         );
         let consensus_state = initial_data.state();
+        let last_vote_sent = initial_data.last_vote();
+        let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
+        let state_computer = Arc::new(MockStateComputer::new(
+            commit_cb_sender,
+            Arc::clone(&storage),
+        ));
 
-        let block_store = Self::build_empty_store(signer.clone(), storage.clone(), initial_data);
+        let block_store = Self::build_empty_store(
+            signer.clone(),
+            storage.clone(),
+            state_computer.clone(),
+            initial_data,
+        );
         let time_service = Arc::new(ClockTimeService::new(executor.clone()));
         let proposal_generator = ProposalGenerator::new(
             block_store.clone(),
@@ -170,15 +175,14 @@ impl NodeSetup {
         let pacemaker = Self::create_pacemaker(time_service.clone());
 
         let proposer_election = Self::create_proposer_election(proposer_author);
-        let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let mut event_processor = EventProcessor::new(
-            author,
             Arc::clone(&block_store),
+            last_vote_sent,
             pacemaker,
             proposer_election,
             proposal_generator,
             safety_rules,
-            Arc::new(MockStateComputer::new(commit_cb_sender)),
+            state_computer,
             Arc::new(MockTransactionManager::new()),
             network,
             storage.clone(),
@@ -223,8 +227,7 @@ fn basic_new_rank_event_test() {
     let node = &nodes[0];
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new(node.block_store.clone());
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
     block_on(async move {
         let new_round = 1;
         node.event_processor
@@ -239,11 +242,13 @@ fn basic_new_rank_event_test() {
             .await;
         let pending_proposals: Vec<ProposalMsg<TestPayload>> = pending_messages
             .into_iter()
-            .filter(|m| m.1.has_proposal())
-            .map(|mut m| {
-                ProposalUncheckedSignatures::<TestPayload>::from_proto(m.1.take_proposal())
-                    .unwrap()
-                    .into()
+            .filter_map(|m| match m.1.message {
+                Some(ConsensusMsg_oneof::Proposal(proposal)) => Some(
+                    ProposalUncheckedSignatures::<TestPayload>::try_from(proposal)
+                        .unwrap()
+                        .into(),
+                ),
+                _ => None,
             })
             .collect::<Vec<_>>();
         assert_eq!(pending_proposals.len(), 1);
@@ -270,14 +275,18 @@ fn basic_new_rank_event_test() {
                 a1.round(),
                 a1.quorum_cert().parent_block_id(),
                 a1.quorum_cert().parent_block_round(),
-                a1.quorum_cert().grandparent_block_id(),
-                a1.quorum_cert().grandparent_block_round(),
             ),
             node.block_store.signer().author(),
             placeholder_ledger_info(),
             node.block_store.signer(),
+            test_utils::placeholder_sync_info(),
         );
-        node.block_store.insert_vote_and_qc(vote_msg, 0);
+        let validator_verifier = Arc::new(ValidatorVerifier::new_single(
+            node.block_store.signer().author(),
+            node.block_store.signer().public_key(),
+        ));
+        node.block_store
+            .insert_vote_and_qc(vote_msg, validator_verifier);
         node.event_processor
             .process_new_round_event(NewRoundEvent {
                 round: 2,
@@ -290,17 +299,18 @@ fn basic_new_rank_event_test() {
             .await;
         let pending_proposals: Vec<ProposalMsg<TestPayload>> = pending_messages
             .into_iter()
-            .filter(|m| m.1.has_proposal())
-            .map(|mut m| {
-                ProposalUncheckedSignatures::<TestPayload>::from_proto(m.1.take_proposal())
-                    .unwrap()
-                    .into()
+            .filter_map(|m| match m.1.message {
+                Some(ConsensusMsg_oneof::Proposal(proposal)) => Some(
+                    ProposalUncheckedSignatures::<TestPayload>::try_from(proposal)
+                        .unwrap()
+                        .into(),
+                ),
+                _ => None,
             })
             .collect::<Vec<_>>();
         assert_eq!(pending_proposals.len(), 1);
         assert_eq!(pending_proposals[0].proposal().round(), 2);
         assert_eq!(pending_proposals[0].proposal().parent_id(), a1.id());
-        assert_eq!(pending_proposals[0].proposal().height(), 2);
         assert_eq!(
             pending_proposals[0]
                 .proposal()
@@ -325,7 +335,7 @@ fn process_successful_proposal_test() {
     let genesis_qc = QuorumCert::certificate_for_genesis();
     block_on(async move {
         let proposal = Block::make_block(
-            genesis.as_ref(),
+            genesis.block(),
             vec![1],
             1,
             1,
@@ -339,12 +349,20 @@ fn process_successful_proposal_test() {
             .await;
         let pending_for_proposer = pending_messages
             .into_iter()
-            .filter(|m| m.1.has_vote() && m.0 == node.author)
-            .map(|mut m| VoteMsg::from_proto(m.1.take_vote()).unwrap())
+            .filter_map(|m| {
+                if m.0 != node.author {
+                    return None;
+                }
+
+                match m.1.message {
+                    Some(ConsensusMsg_oneof::Vote(vote)) => Some(VoteMsg::try_from(vote).unwrap()),
+                    _ => None,
+                }
+            })
             .collect::<Vec<_>>();
         assert_eq!(pending_for_proposer.len(), 1);
         assert_eq!(pending_for_proposer[0].author(), node.author);
-        assert_eq!(pending_for_proposer[0].block_id(), proposal_id);
+        assert_eq!(pending_for_proposer[0].vote_data().block_id(), proposal_id);
         assert_eq!(
             *node.storage.shared_storage.state.lock().unwrap(),
             ConsensusState::new(1, 0),
@@ -365,7 +383,7 @@ fn process_old_proposal_test() {
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let new_block = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         1,
@@ -374,7 +392,7 @@ fn process_old_proposal_test() {
     );
     let new_block_id = new_block.id();
     let old_block = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         2,
@@ -390,12 +408,20 @@ fn process_old_proposal_test() {
             .await;
         let pending_for_me = pending_messages
             .into_iter()
-            .filter(|m| m.1.has_vote() && m.0 == node.author)
-            .map(|mut m| VoteMsg::from_proto(m.1.take_vote()).unwrap())
+            .filter_map(|m| {
+                if m.0 != node.author {
+                    return None;
+                }
+
+                match m.1.message {
+                    Some(ConsensusMsg_oneof::Vote(vote)) => Some(VoteMsg::try_from(vote).unwrap()),
+                    _ => None,
+                }
+            })
             .collect::<Vec<_>>();
         // just the new one
         assert_eq!(pending_for_me.len(), 1);
-        assert_eq!(pending_for_me[0].block_id(), new_block_id);
+        assert_eq!(pending_for_me[0].vote_data().block_id(), new_block_id);
         assert!(node.block_store.get_block(old_block_id).is_some());
     });
 }
@@ -416,7 +442,7 @@ fn process_round_mismatch_test() {
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let correct_block = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         1,
@@ -424,7 +450,7 @@ fn process_round_mismatch_test() {
         node.block_store.signer(),
     );
     let block_skip_round = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         2,
         2,
@@ -468,7 +494,7 @@ fn process_new_round_msg_test() {
     let genesis = non_proposer.block_store.root();
     let block_0 = non_proposer
         .block_store
-        .create_block(&genesis, vec![1], 1, 1);
+        .create_block(genesis.block(), vec![1], 1, 1);
     let block_0_id = block_0.id();
     block_on(
         non_proposer
@@ -490,8 +516,6 @@ fn process_new_round_msg_test() {
         1,
         block_0.quorum_cert().certified_block_id(),
         block_0.quorum_cert().certified_block_round(),
-        block_0.quorum_cert().parent_block_id(),
-        block_0.quorum_cert().parent_block_round(),
     );
     non_proposer
         .block_store
@@ -549,7 +573,7 @@ fn process_proposer_mismatch_test() {
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let correct_block = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         1,
@@ -557,7 +581,7 @@ fn process_proposer_mismatch_test() {
         node.block_store.signer(),
     );
     let block_incorrect_proposer = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         1,
@@ -602,7 +626,7 @@ fn process_timeout_certificate_test() {
     let genesis = node.block_store.root();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let correct_block = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         1,
@@ -610,7 +634,7 @@ fn process_timeout_certificate_test() {
         node.block_store.signer(),
     );
     let block_skip_round = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         2,
         2,
@@ -654,8 +678,7 @@ fn process_votes_basic_test() {
         .unwrap();
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new(node.block_store.clone());
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
     let vote_data = VoteData::new(
         a1.id(),
         node.block_store
@@ -666,14 +689,13 @@ fn process_votes_basic_test() {
         a1.round(),
         a1.quorum_cert().parent_block_id(),
         a1.quorum_cert().parent_block_round(),
-        a1.quorum_cert().grandparent_block_id(),
-        a1.quorum_cert().parent_block_round(),
     );
     let vote_msg = VoteMsg::new(
         vote_data,
         node.block_store.signer().author(),
         placeholder_ledger_info(),
         node.block_store.signer(),
+        test_utils::placeholder_sync_info(),
     );
     block_on(async move {
         node.event_processor.process_vote(vote_msg).await;
@@ -683,7 +705,7 @@ fn process_votes_basic_test() {
             a1.id()
         );
     });
-    block_on(runtime.shutdown_now().compat()).unwrap();
+    runtime.shutdown_now();
 }
 
 #[test]
@@ -698,7 +720,7 @@ fn process_block_retrieval() {
     let genesis_qc = QuorumCert::certificate_for_genesis();
 
     let block = Block::make_block(
-        genesis.as_ref(),
+        genesis.block(),
         vec![1],
         1,
         1,
@@ -725,7 +747,7 @@ fn process_block_retrieval() {
             .await;
         match rx1.await {
             Ok(BlockRetrievalResponse { status, blocks }) => {
-                assert_eq!(status, BlockRetrievalStatus::SUCCEEDED);
+                assert_eq!(status, BlockRetrievalStatus::Succeeded);
                 assert_eq!(block_id, blocks.get(0).unwrap().id());
             }
             _ => panic!("block retrieval failure"),
@@ -743,7 +765,7 @@ fn process_block_retrieval() {
             .await;
         match rx2.await {
             Ok(BlockRetrievalResponse { status, blocks }) => {
-                assert_eq!(status, BlockRetrievalStatus::ID_NOT_FOUND);
+                assert_eq!(status, BlockRetrievalStatus::IdNotFound);
                 assert!(blocks.is_empty());
             }
             _ => panic!("block retrieval failure"),
@@ -761,7 +783,7 @@ fn process_block_retrieval() {
             .await;
         match rx3.await {
             Ok(BlockRetrievalResponse { status, blocks }) => {
-                assert_eq!(status, BlockRetrievalStatus::NOT_ENOUGH_BLOCKS);
+                assert_eq!(status, BlockRetrievalStatus::NotEnoughBlocks);
                 assert_eq!(block_id, blocks.get(0).unwrap().id());
                 assert_eq!(node.block_store.root().id(), blocks.get(1).unwrap().id());
             }
@@ -785,12 +807,11 @@ fn basic_restart_test() {
     let mut proposals = Vec::new();
     let num_proposals = 100;
     // insert a few successful proposals
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
     proposals.push(a1);
     for i in 2..=num_proposals {
         let parent = proposals.last().unwrap();
-        let proposal = inserter.insert_block(parent, i);
+        let proposal = inserter.insert_block(&parent, i);
         proposals.push(proposal);
     }
     for proposal in &proposals {
@@ -802,7 +823,7 @@ fn basic_restart_test() {
         block_on(
             node_mut
                 .event_processor
-                .process_proposed_block(Block::clone(proposal)),
+                .process_proposed_block(proposal.block().clone()),
         );
     }
     // verify after restart we recover the data
@@ -829,17 +850,17 @@ fn nil_vote_on_timeout() {
         // Process the outgoing timeout and verify that the TimeoutMsg contains a NIL vote that
         // extends genesis
         node.event_processor.process_local_timeout(1).await;
-        let timeout_msg = TimeoutMsg::from_proto(
+        let timeout_msg = TimeoutMsg::try_from(
             playground
                 .wait_for_messages(1, NetworkPlayground::timeout_msg_only)
                 .await[0]
                 .1
-                .take_timeout_msg(),
+                .clone(),
         )
         .unwrap();
         assert_eq!(timeout_msg.pacemaker_timeout().round(), 1);
         let vote_msg = timeout_msg.pacemaker_timeout().vote_msg().unwrap().clone();
-        assert_eq!(vote_msg.block_round(), 1);
-        assert_eq!(vote_msg.parent_block_id(), genesis_id);
+        assert_eq!(vote_msg.vote_data().block_round(), 1);
+        assert_eq!(vote_msg.vote_data().parent_block_id(), genesis_id);
     });
 }

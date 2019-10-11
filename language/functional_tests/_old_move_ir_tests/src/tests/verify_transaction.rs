@@ -5,7 +5,7 @@ use crate::*;
 use move_ir::assert_no_error;
 use proptest::prelude::*;
 use std::time::Duration;
-use types::transaction::{RawTransaction, SignedTransaction, TransactionPayload, Script};
+use libra_types::transaction::{RawTransaction, SignedTransaction, TransactionPayload, Script};
 
 #[test]
 fn verify_txn_accepts_good_sequence_number() {

@@ -7,12 +7,12 @@ use crate::parser::ast::{
 };
 
 use failure::*;
-use std::{clone::Clone, collections::HashMap, hash::Hash};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     identifier::{IdentStr, Identifier},
 };
+use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,
     file_format::{
@@ -576,10 +576,9 @@ impl<'a> Context<'a> {
             }
             SignatureToken::Struct(orig_sh_idx, inners) => {
                 let dep_info = self.dependency(&dep)?;
-                let (mident, sname) = match dep_info.source_struct_info(orig_sh_idx) {
-                    None => bail!("Malformed dependency"),
-                    Some(res) => res,
-                };
+                let (mident, sname) = dep_info
+                    .source_struct_info(orig_sh_idx)
+                    .ok_or_else(|| format_err!("Malformed dependency"))?;
                 let module_name = self.module_alias(&mident)?.clone();
                 let sident = QualifiedStructIdent {
                     module: module_name,

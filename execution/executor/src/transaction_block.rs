@@ -1,24 +1,23 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{block_tree::Block, ExecutedTrees};
+use crate::{block_tree::Block, ExecutedTrees, StateComputeResult};
 use crypto::{hash::EventAccumulatorHasher, HashValue};
-use execution_proto::{CommitBlockResponse, ExecuteBlockResponse};
 use failure::{format_err, Result};
 use futures::channel::oneshot;
-use logger::prelude::*;
-use scratchpad::SparseMerkleTree;
-use std::{
-    collections::{HashMap, HashSet},
-    rc::Rc,
-};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     crypto_proxies::LedgerInfoWithSignatures,
     proof::accumulator::Accumulator,
     transaction::{SignedTransaction, TransactionStatus},
+};
+use logger::prelude::*;
+use scratchpad::SparseMerkleTree;
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
 };
 
 /// `TransactionBlock` holds everything about the block of transactions.
@@ -46,14 +45,14 @@ pub struct TransactionBlock {
     /// blocks are committed at once.
     ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
 
-    /// The response for `execute_block` request.
-    execute_response: Option<ExecuteBlockResponse>,
+    /// The result for `execute_block` request.
+    execute_response: Option<StateComputeResult>,
 
     /// The senders associated with this block. These senders are like the promises associated with
     /// the futures returned by `execute_block` and `commit_block` APIs, which are fulfilled when
     /// the responses are ready.
-    execute_response_senders: Vec<oneshot::Sender<Result<ExecuteBlockResponse>>>,
-    commit_response_sender: Option<oneshot::Sender<Result<CommitBlockResponse>>>,
+    execute_response_senders: Vec<oneshot::Sender<Result<StateComputeResult>>>,
+    commit_response_sender: Option<oneshot::Sender<Result<()>>>,
 }
 
 impl TransactionBlock {
@@ -63,7 +62,7 @@ impl TransactionBlock {
         transactions: Vec<SignedTransaction>,
         parent_id: HashValue,
         id: HashValue,
-        execute_response_sender: oneshot::Sender<Result<ExecuteBlockResponse>>,
+        execute_response_sender: oneshot::Sender<Result<StateComputeResult>>,
     ) -> Self {
         TransactionBlock {
             committed: false,
@@ -95,7 +94,7 @@ impl TransactionBlock {
     }
 
     /// Saves the response in the block. If there are any queued senders, send the response.
-    pub fn set_execute_block_response(&mut self, response: ExecuteBlockResponse) {
+    pub fn set_execute_block_response(&mut self, response: StateComputeResult) {
         assert!(self.execute_response.is_none(), "Response is already set.");
         self.execute_response = Some(response.clone());
         // Send the response since it's now available.
@@ -106,7 +105,7 @@ impl TransactionBlock {
     /// (possibly as soon as the function is called if the response if already available).
     pub fn queue_execute_block_response_sender(
         &mut self,
-        sender: oneshot::Sender<Result<ExecuteBlockResponse>>,
+        sender: oneshot::Sender<Result<StateComputeResult>>,
     ) {
         // If the response is already available, just send it. Otherwise store the sender for later
         // use.
@@ -121,7 +120,7 @@ impl TransactionBlock {
     }
 
     /// Sends finished `ExecuteBlockResponse` to consensus. This removes all the existing senders.
-    pub fn send_execute_block_response(&mut self, response: Result<ExecuteBlockResponse>) {
+    pub fn send_execute_block_response(&mut self, response: Result<StateComputeResult>) {
         while let Some(sender) = self.execute_response_senders.pop() {
             // We need to send the result multiple times, but the error is not cloneable, thus the
             // result is not cloneable. This is a bit workaround.
@@ -142,7 +141,7 @@ impl TransactionBlock {
     /// the response.
     pub fn set_commit_response_sender(
         &mut self,
-        commit_response_sender: oneshot::Sender<Result<CommitBlockResponse>>,
+        commit_response_sender: oneshot::Sender<Result<()>>,
     ) {
         assert!(
             self.commit_response_sender.is_none(),
@@ -152,12 +151,12 @@ impl TransactionBlock {
     }
 
     /// Sends finished `CommitBlockResponse` to consensus.
-    pub fn send_commit_block_response(&mut self, response: Result<CommitBlockResponse>) {
+    pub fn send_commit_block_response(&mut self) {
         let sender = self
             .commit_response_sender
             .take()
             .expect("CommitBlockResponse sender should exist.");
-        if let Err(_err) = sender.send(response) {
+        if let Err(_err) = sender.send(Ok(())) {
             warn!("Failed to send commit block response:.");
         }
     }

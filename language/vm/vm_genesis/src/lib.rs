@@ -1,33 +1,22 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::{VMConfig, VMPublishingOption};
-use crypto::{ed25519::*, HashValue};
+use crypto::{ed25519::*, traits::ValidKey};
 use failure::prelude::*;
-use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
-use rand::{rngs::StdRng, SeedableRng};
-use state_view::StateView;
-use std::{collections::HashSet, iter::FromIterator, time::Duration};
-use stdlib::{
-    stdlib_modules,
-    transaction_scripts::{
-        CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY, PEER_TO_PEER_TRANSFER_TXN_BODY,
-        ROTATE_AUTHENTICATION_KEY_TXN_BODY,
-    },
-};
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
     byte_array::ByteArray,
     identifier::Identifier,
-    transaction::{
-        RawTransaction, Script, SignatureCheckedTransaction, TransactionArgument,
-        SCRIPT_HASH_LENGTH,
-    },
-    validator_public_keys::ValidatorPublicKeys,
+    transaction::{RawTransaction, Script, SignatureCheckedTransaction, TransactionArgument},
+    validator_set::ValidatorSet,
 };
+use rand::{rngs::StdRng, SeedableRng};
+use state_view::StateView;
+use std::time::Duration;
+use stdlib::stdlib_modules;
 use vm::{access::ModuleAccess, transaction_metadata::TransactionMetadata};
 use vm_cache_map::Arena;
 use vm_runtime::{
@@ -37,7 +26,8 @@ use vm_runtime::{
     },
     data_cache::BlockDataCache,
     txn_executor::{
-        TransactionExecutor, ACCOUNT_MODULE, BLOCK_MODULE, COIN_MODULE, VALIDATOR_SET_MODULE,
+        TransactionExecutor, ACCOUNT_MODULE, BLOCK_MODULE, COIN_MODULE, VALIDATOR_CONFIG_MODULE,
+        VALIDATOR_SET_MODULE,
     },
 };
 use vm_runtime_types::value::Value;
@@ -49,6 +39,11 @@ lazy_static! {
     pub static ref GENESIS_KEYPAIR: (Ed25519PrivateKey, Ed25519PublicKey) = {
         let mut rng = StdRng::from_seed(GENESIS_SEED);
         compat::generate_keypair(&mut rng)
+    };
+    static ref GENESIS_ACCOUNT: Accounts = {
+        let mut account = Accounts::empty();
+        account.new_account();
+        account
     };
 }
 
@@ -62,6 +57,7 @@ lazy_static! {
     static ref ADD_VALIDATOR: Identifier = Identifier::new("add_validator").unwrap();
     static ref INITIALIZE: Identifier = Identifier::new("initialize").unwrap();
     static ref MINT_TO_ADDRESS: Identifier = Identifier::new("mint_to_address").unwrap();
+    static ref RECONFIGURE: Identifier = Identifier::new("reconfigure").unwrap();
     static ref REGISTER_CANDIDATE_VALIDATOR: Identifier =
         Identifier::new("register_candidate_validator").unwrap();
     static ref ROTATE_AUTHENTICATION_KEY: Identifier =
@@ -170,111 +166,6 @@ impl Accounts {
     }
 }
 
-lazy_static! {
-    static ref PEER_TO_PEER_TXN: Vec<u8> = { compile_script(&PEER_TO_PEER_TRANSFER_TXN_BODY) };
-    static ref CREATE_ACCOUNT_TXN: Vec<u8> = { compile_script(&CREATE_ACCOUNT_TXN_BODY) };
-    static ref ROTATE_AUTHENTICATION_KEY_TXN: Vec<u8> =
-        { compile_script(&ROTATE_AUTHENTICATION_KEY_TXN_BODY) };
-    static ref MINT_TXN: Vec<u8> = { compile_script(&MINT_TXN_BODY) };
-    static ref GENESIS_ACCOUNT: Accounts = {
-        let mut account = Accounts::empty();
-        account.new_account();
-        account
-    };
-}
-
-fn compile_script(body: &ast::Program) -> Vec<u8> {
-    let compiled_program =
-        compile_program(AccountAddress::default(), body.clone(), stdlib_modules()).unwrap();
-    let mut script_bytes = vec![];
-    compiled_program
-        .script
-        .serialize(&mut script_bytes)
-        .unwrap();
-    script_bytes
-}
-
-/// Encode a program transferring `amount` coins from `sender` to `recipient`. Fails if there is no
-/// account at the recipient address or if the sender's balance is lower than `amount`.
-pub fn encode_transfer_script(recipient: &AccountAddress, amount: u64) -> Script {
-    Script::new(
-        PEER_TO_PEER_TXN.clone(),
-        vec![
-            TransactionArgument::Address(*recipient),
-            TransactionArgument::U64(amount),
-        ],
-    )
-}
-
-/// Encode a program creating a fresh account at `account_address` with `initial_balance` coins
-/// transferred from the sender's account balance. Fails if there is already an account at
-/// `account_address` or if the sender's balance is lower than `initial_balance`.
-pub fn encode_create_account_script(
-    account_address: &AccountAddress,
-    initial_balance: u64,
-) -> Script {
-    Script::new(
-        CREATE_ACCOUNT_TXN.clone(),
-        vec![
-            TransactionArgument::Address(*account_address),
-            TransactionArgument::U64(initial_balance),
-        ],
-    )
-}
-
-/// Encode a program that rotates the sender's authentication key to `new_key`.
-pub fn rotate_authentication_key_script(new_key: AccountAddress) -> Script {
-    Script::new(
-        ROTATE_AUTHENTICATION_KEY_TXN.clone(),
-        vec![TransactionArgument::ByteArray(ByteArray::new(
-            new_key.as_ref().to_vec(),
-        ))],
-    )
-}
-
-// TODO: this should go away once we are no longer using it in tests
-/// Encode a program creating `amount` coins for sender
-pub fn encode_mint_script(sender: &AccountAddress, amount: u64) -> Script {
-    Script::new(
-        MINT_TXN.clone(),
-        vec![
-            TransactionArgument::Address(*sender),
-            TransactionArgument::U64(amount),
-        ],
-    )
-}
-
-/// Returns a user friendly mnemonic for the transaction type if the transaction is
-/// for a known, white listed, transaction.
-pub fn get_transaction_name(code: &[u8]) -> String {
-    if code == &PEER_TO_PEER_TXN[..] {
-        return "peer_to_peer_transaction".to_string();
-    } else if code == &CREATE_ACCOUNT_TXN[..] {
-        return "create_account_transaction".to_string();
-    } else if code == &MINT_TXN[..] {
-        return "mint_transaction".to_string();
-    } else if code == &ROTATE_AUTHENTICATION_KEY_TXN[..] {
-        return "rotate_authentication_key_transaction".to_string();
-    }
-    "<unknown transaction>".to_string()
-}
-
-pub fn allowing_script_hashes() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
-    vec![
-        MINT_TXN.clone(),
-        PEER_TO_PEER_TXN.clone(),
-        ROTATE_AUTHENTICATION_KEY_TXN.clone(),
-        CREATE_ACCOUNT_TXN.clone(),
-    ]
-    .into_iter()
-    .map(|s| *HashValue::from_sha3_256(&s).as_ref())
-    .collect()
-}
-
-pub fn default_config() -> VMConfig {
-    VMConfig::default()
-}
-
 struct FakeStateView;
 
 impl StateView for FakeStateView {
@@ -295,13 +186,13 @@ pub fn encode_genesis_transaction(
     private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
 ) -> SignatureCheckedTransaction {
-    encode_genesis_transaction_with_validator(private_key, public_key, vec![])
+    encode_genesis_transaction_with_validator(private_key, public_key, ValidatorSet::new(vec![]))
 }
 
 pub fn encode_genesis_transaction_with_validator(
     private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
-    _validator_set: Vec<ValidatorPublicKeys>,
+    validator_set: ValidatorSet,
 ) -> SignatureCheckedTransaction {
     const INIT_BALANCE: u64 = 1_000_000_000;
 
@@ -369,6 +260,55 @@ pub fn encode_genesis_transaction_with_validator(
                     vec![],
                 )
                 .unwrap();
+            for validator_keys in validator_set.payload() {
+                // First, add a ValidatorConfig resource under each account
+                let validator_address = *validator_keys.account_address();
+                txn_executor.create_account(validator_address).unwrap();
+                txn_executor
+                    .execute_function_with_sender_FOR_GENESIS_ONLY(
+                        validator_address,
+                        &VALIDATOR_CONFIG_MODULE,
+                        &REGISTER_CANDIDATE_VALIDATOR,
+                        vec![
+                            Value::byte_array(ByteArray::new(
+                                validator_keys
+                                    .network_signing_public_key()
+                                    .to_bytes()
+                                    .to_vec(),
+                            )),
+                            Value::byte_array(ByteArray::new(
+                                validator_keys
+                                    .network_identity_public_key()
+                                    .to_bytes()
+                                    .to_vec(),
+                            )),
+                            Value::byte_array(ByteArray::new(
+                                validator_keys.consensus_public_key().to_bytes().to_vec(),
+                            )),
+                        ],
+                    )
+                    .unwrap();
+                // Then, add the account to the validator set
+                txn_executor
+                    .execute_function(
+                        &VALIDATOR_SET_MODULE,
+                        &ADD_VALIDATOR,
+                        vec![Value::address(validator_address)],
+                    )
+                    .unwrap()
+            }
+            // Finally, trigger a reconfiguration. This emits an event that will be passed along
+            // to the storage layer.
+            // TODO: Direct write set transactions cannot specify emitted events, so this currently
+            // will not work.
+            txn_executor
+                .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    account_config::validator_set_address(),
+                    &VALIDATOR_SET_MODULE,
+                    &RECONFIGURE,
+                    vec![],
+                )
+                .unwrap();
 
             let stdlib_modules = modules
                 .iter()
@@ -379,12 +319,42 @@ pub fn encode_genesis_transaction_with_validator(
                 })
                 .collect();
 
-            txn_executor
-                .make_write_set(stdlib_modules, Ok(()))
-                .unwrap()
-                .write_set()
-                .clone()
-                .into_mut()
+            let txn_output = txn_executor.make_write_set(stdlib_modules, Ok(())).unwrap();
+            // Sanity checks on emitted events:
+            // (1) The genesis tx should emit 3 events: a pair of payment sent/received events for
+            // minting to the genesis address, and a ValidatorSet.ChangeEvent
+            assert_eq!(
+                txn_output.events().len(),
+                3,
+                "Genesis transaction should emit three events, but found {} events: {:?}",
+                txn_output.events().len(),
+                txn_output.events()
+            );
+            // (2) The last event should be the validator set change event
+            let validator_set_change_event = &txn_output.events()[2];
+            assert_eq!(
+                *validator_set_change_event.key(),
+                ValidatorSet::change_event_key(),
+                "Key of emitted event {:?} does not match change event key {:?}",
+                *validator_set_change_event.key(),
+                ValidatorSet::change_event_key()
+            );
+            // (3) This should be the first validator set change event
+            assert_eq!(
+                validator_set_change_event.sequence_number(),
+                0,
+                "Expected sequence number 0 for validator set change event but got {}",
+                validator_set_change_event.sequence_number()
+            );
+
+            // (4) It should emit the validator set we fed into the genesis tx
+            assert_eq!(
+                ValidatorSet::from_bytes(validator_set_change_event.event_data()).unwrap(),
+                validator_set,
+                "Validator set in emitted event does not match validator set fed into genesis transaction"
+            );
+
+            txn_output.write_set().clone().into_mut()
         }
     };
     let transaction =

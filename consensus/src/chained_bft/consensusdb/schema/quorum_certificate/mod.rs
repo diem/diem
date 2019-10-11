@@ -10,14 +10,16 @@
 //! ```
 
 use super::QC_CF_NAME;
-use crate::chained_bft::consensus_types::quorum_cert::QuorumCert;
+use consensus_types::quorum_cert::QuorumCert;
 use crypto::HashValue;
 use failure::prelude::*;
-use proto_conv::{FromProtoBytes, IntoProtoBytes};
+use prost::Message;
+use prost_ext::MessageExt;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
 };
+use std::convert::TryInto;
 
 define_schema!(QCSchema, HashValue, QuorumCert, QC_CF_NAME);
 
@@ -33,11 +35,12 @@ impl KeyCodec<QCSchema> for HashValue {
 
 impl ValueCodec<QCSchema> for QuorumCert {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        self.clone().into_proto_bytes()
+        let cert: network::proto::QuorumCert = self.clone().into();
+        Ok(cert.to_vec()?)
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
-        Self::from_proto_bytes(data)
+        network::proto::QuorumCert::decode(data)?.try_into()
     }
 }
 

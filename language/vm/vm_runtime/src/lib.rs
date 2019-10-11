@@ -106,12 +106,13 @@ extern crate lazy_static;
 extern crate rental;
 #[macro_use]
 extern crate mirai_annotations;
+#[macro_use]
+mod counters;
 
 #[cfg(feature = "mirai-contracts")]
 pub mod foreign_contracts;
 
 mod block_processor;
-mod counters;
 mod frame;
 mod gas_meter;
 mod move_vm;
@@ -136,11 +137,11 @@ pub use process_txn::verify::static_verify_program;
 pub use txn_executor::execute_function;
 
 use config::config::VMConfig;
-use state_view::StateView;
-use types::{
+use libra_types::{
     transaction::{SignedTransaction, TransactionOutput},
     vm_error::VMStatus,
 };
+use state_view::StateView;
 use vm::IndexKind;
 
 /// This trait describes the VM's verification interfaces.

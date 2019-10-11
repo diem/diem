@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::PeerId;
+use crate::{counters, PeerId};
 use logger::prelude::*;
 use network::validator_network::StateSynchronizerSender;
 use rand::{
@@ -9,8 +9,8 @@ use rand::{
     thread_rng,
 };
 use std::{
-    collections::{HashMap, HashSet},
-    time::{Duration, SystemTime},
+    collections::{BTreeMap, HashMap, HashSet},
+    time::SystemTime,
 };
 
 const MAX_SCORE: f64 = 100.0;
@@ -44,7 +44,7 @@ pub struct PeerManager {
     peers: HashMap<PeerId, PeerInfo>,
     network_senders: HashMap<PeerId, StateSynchronizerSender>,
     // Latest requested block versions from a peer
-    requests: HashMap<u64, (PeerId, SystemTime)>,
+    requests: BTreeMap<u64, (PeerId, SystemTime)>,
     weighted_index: Option<WeightedIndex<f64>>,
 }
 
@@ -57,7 +57,7 @@ impl PeerManager {
         Self {
             peers,
             network_senders: HashMap::new(),
-            requests: HashMap::new(),
+            requests: BTreeMap::new(),
             weighted_index: None,
         }
     }
@@ -127,6 +127,8 @@ impl PeerManager {
 
     fn compute_weighted_index(&mut self) {
         let active_peers = self.get_active_upstream_peers();
+        counters::ACTIVE_UPSTREAM_PEERS.set(active_peers.len() as i64);
+
         if !active_peers.is_empty() {
             let weights: Vec<_> = active_peers
                 .iter()
@@ -179,6 +181,10 @@ impl PeerManager {
         self.requests.insert(version, (peer_id, SystemTime::now()));
     }
 
+    pub fn get_request_time(&self, version: u64) -> Option<SystemTime> {
+        self.requests.get(&version).map(|(_, tst)| tst).cloned()
+    }
+
     pub fn process_response(&mut self, version: u64, peer_id: PeerId) {
         if let Some((id, _)) = self.requests.get(&version) {
             if *id == peer_id {
@@ -194,16 +200,14 @@ impl PeerManager {
         false
     }
 
-    pub fn process_timeout(&mut self, current_requested_version: u64, timeout: u64) {
-        let request = self.requests.get(&current_requested_version).cloned();
-        if let Some((peer_id, request_time)) = request {
-            if let Some(timeout_threshold) =
-                request_time.checked_add(Duration::from_millis(timeout))
-            {
-                if SystemTime::now().duration_since(timeout_threshold).is_ok() {
-                    self.update_score(&peer_id, PeerScoreUpdateType::TimeOut);
-                    self.requests.remove(&current_requested_version);
-                }
+    pub fn remove_requests(&mut self, version: u64) {
+        self.requests = self.requests.split_off(&(version + 1));
+    }
+
+    pub fn process_timeout(&mut self, version: u64, penalize: bool) {
+        if let Some((peer_id, _)) = self.requests.remove(&version) {
+            if penalize {
+                self.update_score(&peer_id, PeerScoreUpdateType::TimeOut);
             }
         }
     }

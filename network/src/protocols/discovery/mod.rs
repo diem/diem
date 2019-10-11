@@ -38,9 +38,9 @@ use crate::{
     error::{NetworkError, NetworkErrorKind},
     peer_manager::{PeerManagerNotification, PeerManagerRequestSender},
     proto::{DiscoveryMsg, FullNodePayload, Note, PeerInfo, SignedFullNodePayload, SignedPeerInfo},
-    utils, NetworkPublicKeys, ProtocolId,
+    utils::{self, MessageExt},
+    NetworkPublicKeys, ProtocolId,
 };
-use bytes::Bytes;
 use channel;
 use crypto::{
     ed25519::*,
@@ -49,15 +49,20 @@ use crypto::{
 };
 use failure::{format_err, Fail};
 use futures::{
-    compat::{Future01CompatExt, Sink01CompatExt},
     future::{Future, FutureExt, TryFutureExt},
-    io::{AsyncRead, AsyncReadExt, AsyncWrite},
+    io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
+use libra_types::{
+    crypto_proxies::{ValidatorSigner as Signer, ValidatorVerifier as SignatureValidator},
+    validator_verifier::ValidatorInfo as SignatureInfo,
+    PeerId,
+};
 use logger::prelude::*;
+use netcore::compat::IoCompat;
 use parity_multiaddr::Multiaddr;
-use protobuf::{self, Message};
+use prost::Message;
 use rand::{rngs::SmallRng, FromEntropy, Rng};
 use std::{
     collections::HashMap,
@@ -67,12 +72,10 @@ use std::{
     sync::{Arc, RwLock},
     time::{Duration, SystemTime},
 };
-use tokio::{codec::Framed, prelude::FutureExt as _};
-use types::{
-    crypto_proxies::{ValidatorSigner as Signer, ValidatorVerifier as SignatureValidator},
-    PeerId,
+use tokio::{
+    codec::{Framed, LengthDelimitedCodec},
+    future::FutureExt as _,
 };
-use unsigned_varint::codec::UviBytes;
 
 #[cfg(test)]
 mod test;
@@ -158,7 +161,7 @@ where
     async fn connect_to_seed_peers(&mut self) {
         debug!("Connecting to seed peers");
         let self_peer_id =
-            PeerId::try_from(self.self_note.get_peer_id()).expect("PeerId parsing failed");
+            PeerId::try_from(self.self_note.peer_id.clone()).expect("PeerId parsing failed");
         for (peer_id, peer_info) in self
             .seed_peers
             .iter()
@@ -168,7 +171,7 @@ where
                 .send(ConnectivityRequest::UpdateAddresses(
                     *peer_id,
                     peer_info
-                        .get_addrs()
+                        .addrs
                         .iter()
                         .cloned()
                         .map(|addr| Multiaddr::try_from(addr).expect("Multiaddr parsing failed"))
@@ -235,13 +238,7 @@ where
             let msg = self.compose_discovery_msg();
             let timeout = self.msg_timeout;
             let fut = async move {
-                if let Err(err) = push_state_to_peer(sender, peer, msg)
-                    .boxed()
-                    .compat()
-                    .timeout(timeout)
-                    .compat()
-                    .await
-                {
+                if let Err(err) = push_state_to_peer(sender, peer, msg).timeout(timeout).await {
                     warn!(
                         "Failed to send discovery msg to {}; error: {:?}",
                         peer.short_str(),
@@ -310,10 +307,9 @@ where
 
     // Creates DiscoveryMsg to be sent to some remote peer.
     fn compose_discovery_msg(&self) -> DiscoveryMsg {
-        let mut msg = DiscoveryMsg::new();
-        let notes = msg.mut_notes();
+        let mut msg = DiscoveryMsg::default();
         for (_, note) in self.known_peers.values() {
-            notes.push(note.clone());
+            msg.notes.push(note.clone());
         }
         msg
     }
@@ -324,20 +320,17 @@ where
         // If a peer is previously unknown, or has a newer epoch number, we update its
         // corresponding entry in the map.
         let self_peer_id =
-            PeerId::try_from(self.self_note.get_peer_id()).expect("PeerId parsing fails");
+            PeerId::try_from(self.self_note.peer_id.clone()).expect("PeerId parsing fails");
         for note in remote_notes {
-            let peer_id = PeerId::try_from(note.get_peer_id()).expect("PeerId parsing fails");
-            let peer_info_bytes = note.get_signed_peer_info().get_peer_info();
-            let peer_info: PeerInfo =
-                protobuf::parse_from_bytes(peer_info_bytes).expect("PeerInfo parsing fails");
+            let peer_id = PeerId::try_from(note.peer_id.clone()).expect("PeerId parsing fails");
+            let peer_info_bytes = &note.signed_peer_info.as_ref().unwrap().peer_info;
+            let peer_info = PeerInfo::decode(peer_info_bytes).expect("PeerInfo parsing fails");
 
             match self.known_peers.get_mut(&peer_id) {
                 // If we know about this peer, and receive the same or an older epoch, we do
                 // nothing.
-                Some((ref curr_peer_info, _))
-                    if peer_info.get_epoch() <= curr_peer_info.get_epoch() =>
-                {
-                    if peer_info.get_epoch() < curr_peer_info.get_epoch() {
+                Some((ref curr_peer_info, _)) if peer_info.epoch <= curr_peer_info.epoch => {
+                    if peer_info.epoch < curr_peer_info.epoch {
                         debug!(
                             "Received stale note for peer: {} from peer: {}",
                             peer_id.short_str(),
@@ -360,7 +353,7 @@ where
 
                     // The multiaddrs in the peer's discovery Note.
                     let mut peer_addrs: Vec<Multiaddr> = peer_info
-                        .get_addrs()
+                        .addrs
                         .iter()
                         .cloned()
                         .map(|addr| Multiaddr::try_from(addr).expect("Multiaddr parsing fails"))
@@ -369,7 +362,7 @@ where
                     // Append the addrs in the seed PeerInfo if this peer is
                     // configured as one of our seed peers.
                     if let Some(seed_info) = self.seed_peers.get(&peer_id) {
-                        let seed_addrs_iter = seed_info.get_addrs().iter().cloned().map(|addr| {
+                        let seed_addrs_iter = seed_info.addrs.iter().cloned().map(|addr| {
                             Multiaddr::try_from(addr).expect("Multiaddr parsing fails")
                         });
                         peer_addrs.extend(seed_addrs_iter);
@@ -387,7 +380,7 @@ where
 
 // Creates a PeerInfo combining the given addresses with the current unix timestamp as epoch.
 fn create_peer_info(addrs: Vec<Multiaddr>) -> PeerInfo {
-    let mut peer_info = PeerInfo::new();
+    let mut peer_info = PeerInfo::default();
     // TODO: Currently, SystemTime::now() in Rust is not guaranteed to use a monotonic clock.
     // At the moment, it's unclear how to do this in a platform-agnostic way. For Linux, we
     // could use something like the [timerfd trait](https://docs.rs/crate/timerfd/1.0.0).
@@ -395,13 +388,13 @@ fn create_peer_info(addrs: Vec<Multiaddr>) -> PeerInfo {
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("System clock reset to before unix epoch")
         .as_millis() as u64;
-    peer_info.set_epoch(time_since_epoch);
-    peer_info.set_addrs(addrs.into_iter().map(|addr| addr.as_ref().into()).collect());
+    peer_info.epoch = time_since_epoch;
+    peer_info.addrs = addrs.into_iter().map(|addr| addr.as_ref().into()).collect();
     peer_info
 }
 
 fn create_full_node_payload(dns_seed_addr: &[u8]) -> FullNodePayload {
-    let mut full_node_payload = FullNodePayload::new();
+    let mut full_node_payload = FullNodePayload::default();
     // TODO: Currently, SystemTime::now() in Rust is not guaranteed to use a monotonic clock.
     // At the moment, it's unclear how to do this in a platform-agnostic way. For Linux, we
     // could use something like the [timerfd trait](https://docs.rs/crate/timerfd/1.0.0).
@@ -409,8 +402,8 @@ fn create_full_node_payload(dns_seed_addr: &[u8]) -> FullNodePayload {
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("System clock reset to before unix epoch")
         .as_millis() as u64;
-    full_node_payload.set_epoch(time_since_epoch);
-    full_node_payload.set_dns_seed_addr(dns_seed_addr.into());
+    full_node_payload.epoch = time_since_epoch;
+    full_node_payload.dns_seed_addr = dns_seed_addr.into();
     full_node_payload
 }
 
@@ -422,28 +415,26 @@ fn create_note(
     peer_info: PeerInfo,
     full_node_payload: FullNodePayload,
 ) -> Note {
-    let peer_info_bytes = peer_info
-        .write_to_bytes()
-        .expect("Protobuf serialization fails");
+    let peer_info_bytes = peer_info.to_bytes().expect("Protobuf serialization fails");
     let peer_info_signature = sign(&signer, &peer_info_bytes);
 
-    let mut signed_peer_info = SignedPeerInfo::new();
-    signed_peer_info.set_peer_info(peer_info_bytes.into());
-    signed_peer_info.set_signature(peer_info_signature.into());
+    let mut signed_peer_info = SignedPeerInfo::default();
+    signed_peer_info.peer_info = peer_info_bytes.to_vec();
+    signed_peer_info.signature = peer_info_signature;
 
     let payload_bytes = full_node_payload
-        .write_to_bytes()
+        .to_bytes()
         .expect("Protobuf serialization fails");
     let payload_signature = sign(&signer, &payload_bytes);
 
-    let mut signed_full_node_payload = SignedFullNodePayload::new();
-    signed_full_node_payload.set_payload(payload_bytes.into());
-    signed_full_node_payload.set_signature(payload_signature.into());
+    let mut signed_full_node_payload = SignedFullNodePayload::default();
+    signed_full_node_payload.payload = payload_bytes.to_vec();
+    signed_full_node_payload.signature = payload_signature;
 
-    let mut note = Note::new();
-    note.set_peer_id(peer_id.into());
-    note.set_signed_peer_info(signed_peer_info);
-    note.set_signed_full_node_payload(signed_full_node_payload);
+    let mut note = Note::default();
+    note.peer_id = peer_id.into();
+    note.signed_peer_info = Some(signed_peer_info);
+    note.signed_full_node_payload = Some(signed_full_node_payload);
     note
 }
 
@@ -461,17 +452,19 @@ where
 {
     // Read the `DiscoveryMsg` from the remote
     let res_msg = recv_msg(substream.substream)
-        .boxed()
-        .compat()
         .timeout(timeout)
-        .compat()
         .map_err(Into::<NetworkError>::into)
+        .map(|r| match r {
+            Ok(Ok(msg)) => Ok(msg),
+            Ok(Err(e)) => Err(e),
+            Err(e) => Err(e),
+        })
         .await;
 
     // Check that all received `Note`s are valid -- reject the whole message
     // if any `Note` is invalid.
-    let res_notes = res_msg.and_then(|mut msg| {
-        msg.get_notes().iter().try_for_each(|note| {
+    let res_notes = res_msg.and_then(|msg| {
+        msg.notes.iter().try_for_each(|note| {
             is_valid(&note, &trusted_peers).map_err(|err| {
                 security_log(SecurityEvent::InvalidDiscoveryMsg)
                     .error(&err)
@@ -482,7 +475,7 @@ where
                 err
             })
         })?;
-        Ok(msg.take_notes().into_vec())
+        Ok(msg.notes)
     });
 
     (peer_id, res_notes)
@@ -499,38 +492,42 @@ fn is_valid(
 ) -> Result<(), NetworkError> {
     // validate PeerId
 
-    let peer_id = PeerId::try_from(note.get_peer_id())
+    let peer_id = PeerId::try_from(note.peer_id.clone())
         .map_err(|err| err.context(NetworkErrorKind::ParsingError))?;
 
     // validate PeerInfo
 
-    if !note.has_signed_peer_info() {
-        return Err(format_err!("Discovery Note missing signed_peer_info field")
+    let signed_peer_info = note.signed_peer_info.as_ref().ok_or_else(|| {
+        format_err!("Discovery Note missing signed_peer_info field")
             .context(NetworkErrorKind::ParsingError)
-            .into());
-    }
-    let signed_peer_info = note.get_signed_peer_info();
+    })?;
 
-    let peer_info_bytes = signed_peer_info.get_peer_info();
-    let peer_info_signature = signed_peer_info.get_signature();
-    verify_signature(trusted_peers, peer_id, peer_info_signature, peer_info_bytes)?;
+    let peer_info_bytes = &signed_peer_info.peer_info;
+    let peer_info_signature = &signed_peer_info.signature;
+    verify_signature(
+        trusted_peers,
+        peer_id,
+        &peer_info_signature,
+        &peer_info_bytes,
+    )?;
 
-    let peer_info: PeerInfo = protobuf::parse_from_bytes(peer_info_bytes)?;
-    for addr in peer_info.get_addrs() {
+    let peer_info = PeerInfo::decode(peer_info_bytes)?;
+    for addr in peer_info.addrs {
         let _: Multiaddr = Multiaddr::try_from(addr.clone())?;
     }
 
     // validate FullNodePayload (optional)
     // TODO(philiphayes): actually use the FullNodePayload
 
-    if note.has_signed_full_node_payload() {
-        let signed_full_node_payload = note.get_signed_full_node_payload();
+    if let Some(signed_full_node_payload) = &note.signed_full_node_payload {
+        verify_signature(
+            trusted_peers,
+            peer_id,
+            &signed_full_node_payload.signature,
+            &signed_full_node_payload.payload,
+        )?;
 
-        let payload_bytes = signed_full_node_payload.get_payload();
-        let payload_signature = signed_full_node_payload.get_signature();
-        verify_signature(trusted_peers, peer_id, payload_signature, payload_bytes)?;
-
-        let _: FullNodePayload = protobuf::parse_from_bytes(payload_bytes)?;
+        let _ = FullNodePayload::decode(&signed_full_node_payload.payload)?;
 
         // TODO(philiphayes): validate internal fields
     }
@@ -550,13 +547,16 @@ fn verify_signature(
     signature: &[u8],
     msg: &[u8],
 ) -> Result<(), NetworkError> {
-    let verifier = SignatureValidator::new_with_quorum_size(
+    let verifier = SignatureValidator::new_with_quorum_voting_power(
         trusted_peers
             .read()
             .unwrap()
             .iter()
             .map(|(peer_id, network_public_keys)| {
-                (*peer_id, network_public_keys.signing_public_key.clone())
+                (
+                    *peer_id,
+                    SignatureInfo::new(network_public_keys.signing_public_key.clone(), 1),
+                )
             })
             .collect(),
         1, /* quorum size */
@@ -593,12 +593,12 @@ where
         .open_substream(peer_id, ProtocolId::from_static(DISCOVERY_PROTOCOL_NAME))
         .await?;
     // Messages are length-prefixed. Wrap in a framed stream.
-    let mut substream = Framed::new(substream.compat(), UviBytes::default()).sink_compat();
+    let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
     // Send serialized message to peer.
     let bytes = msg
-        .write_to_bytes()
+        .to_bytes()
         .expect("writing protobuf failed; should never happen");
-    substream.send(Bytes::from(bytes)).await?;
+    substream.send(bytes).await?;
     Ok(())
 }
 
@@ -607,7 +607,7 @@ where
     TSubstream: AsyncRead + AsyncWrite + Unpin,
 {
     // Messages are length-prefixed. Wrap in a framed stream.
-    let mut substream = Framed::new(substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+    let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
     // Read the message.
     utils::read_proto(&mut substream).await
 }

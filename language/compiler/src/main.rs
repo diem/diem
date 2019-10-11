@@ -7,28 +7,26 @@ use bytecode_verifier::{
 };
 use compiler::{util, Compiler};
 use ir_to_bytecode::parser::{parse_module, parse_script};
-use serde_json;
-use std::{convert::TryFrom, fs, io::Write, path::PathBuf};
-use stdlib::stdlib_modules;
-use structopt::StructOpt;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     transaction::{Module, Script},
     vm_error::VMStatus,
 };
+use serde_json;
+use std::{
+    convert::TryFrom,
+    fs,
+    io::Write,
+    path::{Path, PathBuf},
+};
+use stdlib::stdlib_modules;
+use structopt::StructOpt;
 use vm::file_format::CompiledModule;
 
 #[derive(Debug, StructOpt)]
-#[structopt(
-    name = "IR Compiler",
-    author = "Libra",
-    about = "Move IR to bytecode compiler."
-)]
+#[structopt(name = "IR Compiler", about = "Move IR to bytecode compiler.")]
 struct Args {
-    /// Serialize and write the compiled output to this file
-    #[structopt(short = "o", long = "output")]
-    pub output_path: Option<String>,
     /// Treat input file as a module (default is to treat file as a program)
     #[structopt(short = "m", long = "module")]
     pub module_input: bool,
@@ -45,7 +43,7 @@ struct Args {
     #[structopt(parse(from_os_str))]
     pub source_path: PathBuf,
     /// Instead of compiling the source, emit a dependency list of the compiled source
-    #[structopt(short = "-l", long = "list_dependencies")]
+    #[structopt(short = "-l", long = "list-dependencies")]
     pub list_dependencies: bool,
     /// Path to the list of modules that we want to link with
     #[structopt(long = "deps")]
@@ -61,10 +59,8 @@ fn print_errors_and_exit(verification_errors: &[VMStatus]) -> ! {
 }
 
 fn do_verify_module(module: CompiledModule, dependencies: &[VerifiedModule]) -> VerifiedModule {
-    let verified_module = match VerifiedModule::new(module) {
-        Ok(module) => module,
-        Err((_, errors)) => print_errors_and_exit(&errors),
-    };
+    let verified_module =
+        VerifiedModule::new(module).unwrap_or_else(|(_, errors)| print_errors_and_exit(&errors));
     let errors = verify_module_dependencies(&verified_module, dependencies);
     if !errors.is_empty() {
         print_errors_and_exit(&errors);
@@ -72,11 +68,11 @@ fn do_verify_module(module: CompiledModule, dependencies: &[VerifiedModule]) -> 
     verified_module
 }
 
-fn write_output(path: &str, buf: &[u8]) {
+fn write_output(path: &PathBuf, buf: &[u8]) {
     let mut f = fs::File::create(path)
-        .unwrap_or_else(|err| panic!("Unable to open output file {}: {}", path, err));
+        .unwrap_or_else(|err| panic!("Unable to open output file {:?}: {}", path, err));
     f.write_all(&buf)
-        .unwrap_or_else(|err| panic!("Unable to write to output file {}: {}", path, err));
+        .unwrap_or_else(|err| panic!("Unable to write to output file {:?}: {}", path, err));
 }
 
 fn main() {
@@ -86,9 +82,22 @@ fn main() {
         .address
         .map(|a| AccountAddress::try_from(a).unwrap())
         .unwrap_or_else(AccountAddress::default);
+    let source_path = Path::new(&args.source_path);
+    let mvir_extension = "mvir";
+    let mv_extension = "mv";
+    let extension = source_path
+        .extension()
+        .expect("Missing file extension for input source file");
+    if extension != mvir_extension {
+        println!(
+            "Bad source file extension {:?}; expected {}",
+            extension, mvir_extension
+        );
+        std::process::exit(1);
+    }
 
     if args.list_dependencies {
-        let source = fs::read_to_string(args.source_path).expect("Unable to read file");
+        let source = fs::read_to_string(args.source_path.clone()).expect("Unable to read file");
         let dependency_list: Vec<AccessPath> = if args.module_input {
             let module = parse_module(&source).expect("Unable to parse module");
             module.get_external_deps()
@@ -99,17 +108,10 @@ fn main() {
         .into_iter()
         .map(|m| AccessPath::code_access_path(&m))
         .collect();
-        match args.output_path {
-            Some(path) => {
-                let deps_bytes =
-                    serde_json::to_vec(&dependency_list).expect("Unable to serialize dependencies");
-                write_output(&path, &deps_bytes);
-            }
-            None => println!(
-                "{}",
-                serde_json::to_string(&dependency_list).expect("Unable to serialize dependencies")
-            ),
-        }
+        println!(
+            "{}",
+            serde_json::to_string(&dependency_list).expect("Unable to serialize dependencies")
+        );
         return;
     }
 
@@ -136,16 +138,15 @@ fn main() {
     };
 
     if !args.module_input {
-        let source = fs::read_to_string(args.source_path).expect("Unable to read file");
+        let source = fs::read_to_string(args.source_path.clone()).expect("Unable to read file");
         let compiler = Compiler {
             address,
-            code: &source,
             skip_stdlib_deps: args.no_stdlib,
             extra_deps: deps,
             ..Compiler::default()
         };
         let (compiled_program, dependencies) = compiler
-            .into_compiled_program_and_deps()
+            .into_compiled_program_and_deps(&source)
             .expect("Failed to compile program");
 
         let compiled_program = if !args.no_verify {
@@ -156,22 +157,14 @@ fn main() {
             compiled_program
         };
 
-        match args.output_path {
-            Some(path) => {
-                let mut script = vec![];
-                compiled_program
-                    .script
-                    .serialize(&mut script)
-                    .expect("Unable to serialize script");
-                let payload = Script::new(script, vec![]);
-                let payload_bytes =
-                    serde_json::to_vec(&payload).expect("Unable to serialize program");
-                write_output(&path, &payload_bytes);
-            }
-            None => {
-                println!("{}", compiled_program);
-            }
-        }
+        let mut script = vec![];
+        compiled_program
+            .script
+            .serialize(&mut script)
+            .expect("Unable to serialize script");
+        let payload = Script::new(script, vec![]);
+        let payload_bytes = serde_json::to_vec(&payload).expect("Unable to serialize program");
+        write_output(&source_path.with_extension(mv_extension), &payload_bytes);
     } else {
         let compiled_module = util::do_compile_module(&args.source_path, address, &deps);
         let compiled_module = if !args.no_verify {
@@ -180,20 +173,12 @@ fn main() {
         } else {
             compiled_module
         };
-        match args.output_path {
-            Some(path) => {
-                let mut module = vec![];
-                compiled_module
-                    .serialize(&mut module)
-                    .expect("Unable to serialize module");
-                let payload = Module::new(module);
-                let payload_bytes =
-                    serde_json::to_vec(&payload).expect("Unable to serialize program");
-                write_output(&path, &payload_bytes);
-            }
-            None => {
-                println!("{}", compiled_module);
-            }
-        }
+        let mut module = vec![];
+        compiled_module
+            .serialize(&mut module)
+            .expect("Unable to serialize module");
+        let payload = Module::new(module);
+        let payload_bytes = serde_json::to_vec(&payload).expect("Unable to serialize program");
+        write_output(&source_path.with_extension(mv_extension), &payload_bytes);
     }
 }

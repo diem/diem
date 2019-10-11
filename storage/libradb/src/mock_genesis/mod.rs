@@ -11,20 +11,20 @@ use crypto::{
 };
 use failure::Result;
 use lazy_static::lazy_static;
-use rand::{
-    rngs::{OsRng, StdRng},
-    Rng, SeedableRng,
-};
-use std::collections::HashMap;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo,
     proof::SparseMerkleLeafNode,
-    transaction::{RawTransaction, Script, TransactionInfo, TransactionToCommit},
+    transaction::{RawTransaction, Script, Transaction, TransactionInfo, TransactionToCommit},
     vm_error::StatusCode,
 };
+use rand::{
+    rngs::{OsRng, StdRng},
+    Rng, SeedableRng,
+};
+use std::collections::{BTreeMap, HashMap};
 
 fn gen_mock_genesis() -> (
     TransactionInfo,
@@ -56,7 +56,7 @@ fn gen_mock_genesis() -> (
         .collect::<HashMap<_, _>>();
 
     let txn_to_commit = TransactionToCommit::new(
-        signed_txn,
+        Transaction::UserTransaction(signed_txn),
         account_states.clone(),
         vec![], /* events */
         0,      /* gas_used */
@@ -83,7 +83,7 @@ fn gen_mock_genesis() -> (
         None,
     );
     let ledger_info_with_sigs =
-        LedgerInfoWithSignatures::new(ledger_info, HashMap::new() /* signatures */);
+        LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new() /* signatures */);
 
     (txn_info, ledger_info_with_sigs, txn_to_commit)
 }

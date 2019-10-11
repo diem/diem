@@ -25,10 +25,10 @@ use crate::{
 };
 use std::collections::BTreeSet;
 
-use types::language_storage::ModuleId;
+use libra_types::language_storage::ModuleId;
 
+use libra_types::identifier::IdentStr;
 use std::collections::BTreeMap;
-use types::identifier::IdentStr;
 
 /// Represents a lazily evaluated abstraction over a module.
 ///
@@ -531,54 +531,9 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
         self.token.signature_token_kind()
     }
 
-    /// Returns the kind of the signature token in the given context (module, function/struct).
-    /// The context is needed to determine the kinds of structs & type variables.
-    // TODO: refactor views so that we get the type formals from self.
+    // TODO: rework views to make the interfaces here cleaner.
     pub fn kind(&self, type_formals: &[Kind]) -> Kind {
-        use SignatureToken::*;
-
-        match self.token {
-            // These primitive types have kind unrestricted.
-            Bool | U64 | String | ByteArray | Address | Reference(_) | MutableReference(_) => {
-                Kind::Unrestricted
-            }
-
-            // To get the kind of a type parameter, we lookup its definition in the formals.
-            TypeParameter(idx) => type_formals[*idx as usize],
-
-            Struct(idx, tys) => {
-                // Get the struct handle at idx. Note the index could be out of bounds.
-                let sh = self.module().struct_handle_at(*idx);
-
-                if sh.is_nominal_resource {
-                    return Kind::Resource;
-                }
-
-                // Gather the kinds of the type actuals.
-                let kinds = tys
-                    .iter()
-                    .map(|ty| Self::new(self.module(), ty).kind(type_formals))
-                    .collect::<Vec<_>>();
-
-                // Derive the kind of the struct.
-                //   - If any of the type actuals has kind `all`, then the struct has kind `all`.
-                //     - `all` means some part of the type can be either `resource` or
-                //       `unrestricted`.
-                //     - Therefore it is also impossible to determine the kind of the type as a
-                //       whole, and thus `all`.
-                //   - If none of the type actuals has kind `all`, then the struct is a resource if
-                //     and only if one of the type actuals has kind `resource`.
-                kinds
-                    .iter()
-                    .fold(Kind::Unrestricted, |acc_kind, next_kind| {
-                        match (acc_kind, next_kind) {
-                            (Kind::All, _) | (_, Kind::All) => Kind::All,
-                            (Kind::Resource, _) | (_, Kind::Resource) => Kind::Resource,
-                            (Kind::Unrestricted, Kind::Unrestricted) => Kind::Unrestricted,
-                        }
-                    })
-            }
-        }
+        SignatureToken::kind((self.module.struct_handles(), type_formals), self.token)
     }
 
     /// Determines if the given signature token contains a nominal resource.

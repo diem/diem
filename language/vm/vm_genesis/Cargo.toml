@@ -3,18 +3,21 @@ name = "vm_genesis"
 version = "0.1.0"
 edition = "2018"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra vm genesis"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 
 [dependencies]
 config = { path = "../../../config" }
 failure = { path = "../../../common/failure_ext", package = "failure_ext" }
-ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
+transaction_builder = { path = "../../transaction_builder"}
 crypto = { path = "../../../crypto/crypto" }
 stdlib = { path = "../../stdlib" }
-proto_conv = { path = "../../../common/proto_conv", features = ["derive"] }
+prost-ext = { path = "../../../common/prost-ext" }
 state_view = { path = "../../../storage/state_view" }
-types = { path = "../../../types" }
+libra-types = { path = "../../../types" }
 vm = { path = "../" }
 vm_cache_map = { path = "../vm_runtime/vm_cache_map" }
 vm_runtime = { path = "../vm_runtime" }
@@ -23,9 +26,9 @@ lazy_static = "1.3.0"
 rand = "0.6.5"
 
 [dev-dependencies]
-canonical_serialization = { path = "../../../common/canonical_serialization" }
+canonical-serialization = { path = "../../../common/canonical-serialization" }
 crypto = { path = "../../../crypto/crypto", features = ["testing"]}
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
 proptest_helpers = { path = "../../../common/proptest_helpers" }
-types = { path = "../../../types", features = ["testing"] }
+libra-types = { path = "../../../types", features = ["testing"] }

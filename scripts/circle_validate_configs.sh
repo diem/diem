@@ -19,11 +19,11 @@ cd terraform/validator-sets
 # Notice: This is not comparing all configs yet.
 
 # Cleanup files we do compare yet
-git checkout -- '**/seed_peers.config.toml'
+git checkout -- '**/seed_peers.config.toml' '**/genesis.blob'
 git update-index --refresh
 
 echo "--- Compare configs ---"
-changes=$(git diff-index HEAD -- '**/genesis.blob' '**/consensus_peers.config.toml' '**/node.consensus.keys.toml' '**/network_peers.config.toml' '**/node.network.keys.toml')
+changes=$(git diff-index HEAD -- '**/consensus_peers.config.toml' '**/node.consensus.keys.toml' '**/network_peers.config.toml' '**/node.network.keys.toml')
 if [ -z "$changes" ];
 then
 	# nothing to do

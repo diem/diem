@@ -1,17 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::transaction::Transaction;
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::AccountResource,
     account_state_blob::AccountStateBlob,
+    block_metadata::BlockMetadata,
     byte_array::ByteArray,
     contract_event::ContractEvent,
     event::{EventHandle, EventKey},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    proof::AccumulatorProof,
+    proof::{AccumulatorConsistencyProof, AccumulatorProof},
     transaction::{
         Module, Program, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction,
         TransactionArgument, TransactionInfo, TransactionListWithProof, TransactionPayload,
@@ -574,9 +576,14 @@ prop_compose! {
         response_items in vec(any::<ResponseItem>(), 0..10),
         ledger_info_with_sigs in any::<LedgerInfoWithSignatures<Ed25519Signature>>(),
         validator_change_events in vec(any::<ValidatorChangeEventWithProof<Ed25519Signature>>(), 0..10),
+        ledger_consistency_proof in any::<AccumulatorConsistencyProof>(),
     ) -> UpdateToLatestLedgerResponse<Ed25519Signature> {
         UpdateToLatestLedgerResponse::new(
-            response_items, ledger_info_with_sigs, validator_change_events)
+            response_items,
+            ledger_info_with_sigs,
+            validator_change_events,
+            ledger_consistency_proof,
+        )
     }
 }
 
@@ -618,6 +625,7 @@ impl ContractEventGen {
 #[derive(Arbitrary, Debug)]
 struct AccountResourceGen {
     balance: u64,
+    delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
 }
 
@@ -633,6 +641,7 @@ impl AccountResourceGen {
             self.balance,
             account_info.sequence_number,
             ByteArray::new(account_info.public_key.to_bytes().to_vec()),
+            self.delegated_key_rotation_capability,
             self.delegated_withdrawal_capability,
             account_info.sent_event_handle.clone(),
             account_info.received_event_handle.clone(),
@@ -757,7 +766,7 @@ impl TransactionToCommitGen {
             .collect();
 
         TransactionToCommit::new(
-            signed_txn,
+            Transaction::UserTransaction(signed_txn),
             account_states,
             events,
             self.gas_used,
@@ -877,6 +886,29 @@ impl Arbitrary for TransactionListWithProof {
     type Parameters = ();
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         arb_transaction_list_with_proof().boxed()
+    }
+
+    type Strategy = BoxedStrategy<Self>;
+}
+
+impl Arbitrary for BlockMetadata {
+    type Parameters = SizeRange;
+    fn arbitrary_with(num_validators_range: Self::Parameters) -> Self::Strategy {
+        let signature_strategy = (any::<HashValue>(), Just(num_validators_range)).prop_flat_map(
+            |(hash, num_validators_range)| {
+                prop::collection::vec(arb_validator_signature_for_hash(hash), num_validators_range)
+            },
+        );
+        (
+            any::<HashValue>(),
+            any::<u64>(),
+            signature_strategy,
+            any::<AccountAddress>(),
+        )
+            .prop_map(|(id, timestamp, signatures, proposer)| {
+                BlockMetadata::new(id, timestamp, signatures.into_iter().collect(), proposer)
+            })
+            .boxed()
     }
 
     type Strategy = BoxedStrategy<Self>;

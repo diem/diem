@@ -103,7 +103,10 @@ impl<T> Sender<T> {
     }
 }
 
-impl<T> FusedStream for Receiver<T> {
+impl<T> FusedStream for Receiver<T>
+where
+    T: std::fmt::Debug,
+{
     fn is_terminated(&self) -> bool {
         self.inner.is_terminated()
     }

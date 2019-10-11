@@ -11,10 +11,11 @@ use crate::{
         AccountCurrent, AccountPairGen, AccountPickStyle, AccountUniverse, AccountUniverseGen,
         RotateKeyGen,
     },
-    executor::FakeExecutor,
+    executor::{test_all_genesis_impl, FakeExecutor},
     transaction_status_eq,
 };
 use proptest::{collection::vec, prelude::*};
+use std::sync::Arc;
 
 proptest! {
     // These tests are pretty slow but quite comprehensive, so run a smaller number of them.
@@ -87,72 +88,76 @@ proptest! {
 fn all_transactions_strategy(
     min: u64,
     max: u64,
-) -> impl Strategy<Value = Box<dyn AUTransactionGen + 'static>> {
+) -> impl Strategy<Value = Arc<dyn AUTransactionGen + 'static>> {
     prop_oneof![
         // Most transactions should be p2p payments.
         8 => peer_to_peer::p2p_strategy(min, max),
         1 => create_account::create_account_strategy(min, max),
-        1 => any::<RotateKeyGen>().prop_map(RotateKeyGen::boxed),
+        1 => any::<RotateKeyGen>().prop_map(RotateKeyGen::arced),
     ]
 }
 
 /// Run these transactions and make sure that they all cost the same amount of gas.
 pub(crate) fn run_and_assert_gas_cost_stability(
     universe: AccountUniverseGen,
-    transaction_gens: Vec<impl AUTransactionGen>,
+    transaction_gens: Vec<impl AUTransactionGen + Clone>,
     gas_cost: u64,
 ) -> Result<(), TestCaseError> {
-    let mut executor = FakeExecutor::from_genesis_file();
-    let mut universe = universe.setup_gas_cost_stability(&mut executor);
-    let (transactions, expected_statuses): (Vec<_>, Vec<_>) = transaction_gens
-        .into_iter()
-        .map(|transaction_gen| transaction_gen.apply(&mut universe))
-        .unzip();
-    let outputs = executor.execute_block(transactions);
+    test_all_genesis_impl({
+        |mut executor| {
+            let mut universe = universe.clone().setup_gas_cost_stability(&mut executor);
+            let (transactions, expected_statuses): (Vec<_>, Vec<_>) = transaction_gens
+                .iter()
+                .map(|transaction_gen| transaction_gen.clone().apply(&mut universe))
+                .unzip();
+            let outputs = executor.execute_block(transactions);
 
-    for (idx, (output, expected)) in outputs.iter().zip(&expected_statuses).enumerate() {
-        prop_assert!(
-            transaction_status_eq(output.status(), expected),
-            "unexpected status for transaction {}",
-            idx
-        );
-        prop_assert_eq!(
-            output.gas_used(),
-            gas_cost,
-            "transaction at idx {} did not have expected gas cost",
-            idx,
-        );
-    }
-
-    Ok(())
+            for (idx, (output, expected)) in outputs.iter().zip(&expected_statuses).enumerate() {
+                prop_assert!(
+                    transaction_status_eq(output.status(), expected),
+                    "unexpected status for transaction {}",
+                    idx
+                );
+                prop_assert_eq!(
+                    output.gas_used(),
+                    gas_cost,
+                    "transaction at idx {} did not have expected gas cost",
+                    idx,
+                );
+            }
+            Ok(())
+        }
+    })
 }
 
 /// Run these transactions and verify the expected output.
 pub(crate) fn run_and_assert_universe(
     universe: AccountUniverseGen,
-    transaction_gens: Vec<impl AUTransactionGen>,
+    transaction_gens: Vec<impl AUTransactionGen + Clone>,
 ) -> Result<(), TestCaseError> {
-    let mut executor = FakeExecutor::from_genesis_file();
-    let mut universe = universe.setup(&mut executor);
-    let (transactions, expected_statuses): (Vec<_>, Vec<_>) = transaction_gens
-        .into_iter()
-        .map(|transaction_gen| transaction_gen.apply(&mut universe))
-        .unzip();
-    let outputs = executor.execute_block(transactions);
+    test_all_genesis_impl({
+        |mut executor| {
+            let mut universe = universe.clone().setup(&mut executor);
+            let (transactions, expected_statuses): (Vec<_>, Vec<_>) = transaction_gens
+                .iter()
+                .map(|transaction_gen| transaction_gen.clone().apply(&mut universe))
+                .unzip();
+            let outputs = executor.execute_block(transactions);
 
-    prop_assert_eq!(outputs.len(), expected_statuses.len());
+            prop_assert_eq!(outputs.len(), expected_statuses.len());
 
-    for (idx, (output, expected)) in outputs.iter().zip(&expected_statuses).enumerate() {
-        prop_assert!(
-            transaction_status_eq(&output.status(), &expected),
-            "unexpected status for transaction {}",
-            idx
-        );
-        executor.apply_write_set(output.write_set());
-    }
+            for (idx, (output, expected)) in outputs.iter().zip(&expected_statuses).enumerate() {
+                prop_assert!(
+                    transaction_status_eq(&output.status(), &expected),
+                    "unexpected status for transaction {}",
+                    idx
+                );
+                executor.apply_write_set(output.write_set());
+            }
 
-    assert_accounts_match(&universe, &executor)?;
-    Ok(())
+            assert_accounts_match(&universe, &executor)
+        }
+    })
 }
 
 /// Verify that the account information in the universe matches the information in the executor.

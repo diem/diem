@@ -1,10 +1,10 @@
 use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
+use libra_types::account_address::AccountAddress;
 use stackless_bytecode_generator::{
     stackless_bytecode::StacklessBytecode::{self, *},
     stackless_bytecode_generator::StacklessProgramGenerator,
 };
 use stdlib::stdlib_modules;
-use types::account_address::AccountAddress;
 use vm::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, FieldDefinitionIndex, FunctionHandleIndex,
     SignatureToken, StructDefinitionIndex, StructHandleIndex,

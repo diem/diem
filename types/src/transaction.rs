@@ -4,13 +4,13 @@
 use crate::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
+    block_metadata::BlockMetadata,
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
     proof::{
         get_accumulator_root_hash, verify_signed_transaction, verify_transaction_list,
         AccumulatorProof, SignedTransactionProof,
     },
-    proto::events::{EventsForVersions, EventsList},
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
@@ -28,11 +28,16 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, convert::TryFrom, fmt, time::Duration};
+use std::{
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    fmt,
+    time::Duration,
+};
 
 mod channel_transaction_payload;
 mod module;
@@ -45,7 +50,6 @@ mod unit_tests;
 
 pub use module::Module;
 pub use program::Program;
-use protobuf::well_known_types::UInt64Value;
 pub use script::{Script, SCRIPT_HASH_LENGTH};
 
 pub use channel_transaction_payload::{ChannelScriptPayload, ChannelWriteSetPayload};
@@ -684,32 +688,25 @@ impl CryptoHash for SignedTransaction {
     }
 }
 
-impl FromProto for SignedTransaction {
-    type ProtoType = crate::proto::transaction::SignedTransaction;
+impl TryFrom<crate::proto::types::SignedTransaction> for SignedTransaction {
+    type Error = Error;
 
-    fn from_proto(mut txn: Self::ProtoType) -> Result<Self> {
-        let signed_txn = SimpleDeserializer::deserialize(&txn.take_signed_txn())?;
-        Ok(signed_txn)
+    fn try_from(txn: crate::proto::types::SignedTransaction) -> Result<Self> {
+        SimpleDeserializer::deserialize(&txn.signed_txn)
     }
 }
 
-impl IntoProto for SignedTransaction {
-    type ProtoType = crate::proto::transaction::SignedTransaction;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let signed_txn = SimpleSerializer::<Vec<u8>>::serialize(&self)
+impl From<SignedTransaction> for crate::proto::types::SignedTransaction {
+    fn from(txn: SignedTransaction) -> Self {
+        let signed_txn = SimpleSerializer::<Vec<u8>>::serialize(&txn)
             .expect("Unable to serialize SignedTransaction");
-        let mut transaction = Self::ProtoType::new();
-        transaction.set_signed_txn(signed_txn);
-        transaction
+        Self { signed_txn }
     }
 }
 
-impl IntoProto for SignatureCheckedTransaction {
-    type ProtoType = crate::proto::transaction::SignedTransaction;
-
-    fn into_proto(self) -> Self::ProtoType {
-        self.0.into_proto()
+impl From<SignatureCheckedTransaction> for crate::proto::types::SignedTransaction {
+    fn from(txn: SignatureCheckedTransaction) -> Self {
+        txn.0.into()
     }
 }
 
@@ -771,20 +768,26 @@ impl SignedTransactionWithProof {
     }
 }
 
-impl FromProto for SignedTransactionWithProof {
-    type ProtoType = crate::proto::transaction::SignedTransactionWithProof;
+impl TryFrom<crate::proto::types::SignedTransactionWithProof> for SignedTransactionWithProof {
+    type Error = Error;
 
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let version = object.get_version();
-        let signed_transaction = SignedTransaction::from_proto(object.take_signed_transaction())?;
-        let proof = SignedTransactionProof::from_proto(object.take_proof())?;
-        let events = object
+    fn try_from(mut proto: crate::proto::types::SignedTransactionWithProof) -> Result<Self> {
+        let version = proto.version;
+        let signed_transaction = proto
+            .signed_transaction
+            .ok_or_else(|| format_err!("Missing signed_transaction"))?
+            .try_into()?;
+        let proof = proto
+            .proof
+            .ok_or_else(|| format_err!("Missing proof"))?
+            .try_into()?;
+        let events = proto
             .events
             .take()
-            .map(|mut list| {
-                list.take_events()
+            .map(|list| {
+                list.events
                     .into_iter()
-                    .map(ContractEvent::from_proto)
+                    .map(ContractEvent::try_from)
                     .collect::<Result<Vec<_>>>()
             })
             .transpose()?;
@@ -798,23 +801,19 @@ impl FromProto for SignedTransactionWithProof {
     }
 }
 
-impl IntoProto for SignedTransactionWithProof {
-    type ProtoType = crate::proto::transaction::SignedTransactionWithProof;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_version(self.version);
-        proto.set_signed_transaction(self.signed_transaction.into_proto());
-        proto.set_proof(self.proof.into_proto());
-        if let Some(events) = self.events {
-            let mut events_list = EventsList::new();
-            events_list.set_events(protobuf::RepeatedField::from_vec(
-                events.into_iter().map(ContractEvent::into_proto).collect(),
-            ));
-            proto.set_events(events_list);
+impl From<SignedTransactionWithProof> for crate::proto::types::SignedTransactionWithProof {
+    fn from(mut txn: SignedTransactionWithProof) -> Self {
+        Self {
+            version: txn.version,
+            signed_transaction: Some(txn.signed_transaction.into()),
+            proof: Some(txn.proof.into()),
+            events: txn
+                .events
+                .take()
+                .map(|list| crate::proto::types::EventsList {
+                    events: list.into_iter().map(ContractEvent::into).collect(),
+                }),
         }
-
-        proto
     }
 }
 
@@ -822,20 +821,10 @@ impl CanonicalSerialize for SignedTransaction {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         serializer
             .encode_struct(&self.raw_txn)?
-            .encode_bytes(&self.public_key.to_bytes())?
-            .encode_bytes(&self.signature.to_bytes())?
-            .encode_optional(
-                &self
-                    .receiver_public_key
-                    .as_ref()
-                    .and_then(|public_key| Some(public_key.to_bytes().to_vec())),
-            )?
-            .encode_optional(
-                &self
-                    .receiver_signature
-                    .as_ref()
-                    .and_then(|signature| Some(signature.to_bytes().to_vec())),
-            )?;
+            .encode_struct(&self.public_key)?
+            .encode_struct(&self.signature)?
+            .encode_optional(&self.receiver_public_key)?
+            .encode_optional(&self.receiver_signature)?;
         Ok(())
     }
 }
@@ -846,32 +835,16 @@ impl CanonicalDeserialize for SignedTransaction {
         Self: Sized,
     {
         let raw_txn: RawTransaction = deserializer.decode_struct()?;
-        let public_key_bytes = deserializer.decode_bytes()?;
-        let signature_bytes = deserializer.decode_bytes()?;
+        let public_key: Ed25519PublicKey = deserializer.decode_struct()?;
+        let signature: Ed25519Signature = deserializer.decode_struct()?;
 
-        let receiver_public_key =
-            deserializer
-                .decode_optional::<Vec<u8>>()
-                .and_then(|opt_bytes| match opt_bytes {
-                    Some(public_key_bytes) => {
-                        Ok(Some(Ed25519PublicKey::try_from(&public_key_bytes[..])?))
-                    }
-                    None => Ok(None),
-                })?;
-        let receiver_signature =
-            deserializer
-                .decode_optional::<Vec<u8>>()
-                .and_then(|opt_bytes| match opt_bytes {
-                    Some(signature_bytes) => {
-                        Ok(Some(Ed25519Signature::try_from(&signature_bytes[..])?))
-                    }
-                    None => Ok(None),
-                })?;
+        let receiver_public_key = deserializer.decode_optional()?;
+        let receiver_signature = deserializer.decode_optional()?;
 
         Ok(SignedTransaction::new_with_receiver(
             raw_txn,
-            Ed25519PublicKey::try_from(&public_key_bytes[..])?,
-            Ed25519Signature::try_from(&signature_bytes[..])?,
+            public_key,
+            signature,
             receiver_public_key,
             receiver_signature,
         ))
@@ -1002,14 +975,16 @@ impl fmt::Display for TransactionOutput {
     }
 }
 
-impl FromProto for TransactionInfo {
-    type ProtoType = crate::proto::transaction_info::TransactionInfo;
-    fn from_proto(mut proto_txn_info: Self::ProtoType) -> Result<Self> {
-        let signed_txn_hash = HashValue::from_proto(proto_txn_info.take_signed_transaction_hash())?;
-        let state_root_hash = HashValue::from_proto(proto_txn_info.take_state_root_hash())?;
-        let event_root_hash = HashValue::from_proto(proto_txn_info.take_event_root_hash())?;
-        let gas_used = proto_txn_info.get_gas_used();
-        let major_status = StatusCode::from_proto(proto_txn_info.get_major_status())?;
+impl TryFrom<crate::proto::types::TransactionInfo> for TransactionInfo {
+    type Error = Error;
+
+    fn try_from(proto_txn_info: crate::proto::types::TransactionInfo) -> Result<Self> {
+        let signed_txn_hash = HashValue::from_slice(&proto_txn_info.signed_transaction_hash)?;
+        let state_root_hash = HashValue::from_slice(&proto_txn_info.state_root_hash)?;
+        let event_root_hash = HashValue::from_slice(&proto_txn_info.event_root_hash)?;
+        let gas_used = proto_txn_info.gas_used;
+        let major_status =
+            StatusCode::try_from(proto_txn_info.major_status).unwrap_or(StatusCode::UNKNOWN_STATUS);
         Ok(TransactionInfo::new(
             signed_txn_hash,
             state_root_hash,
@@ -1020,11 +995,22 @@ impl FromProto for TransactionInfo {
     }
 }
 
+impl From<TransactionInfo> for crate::proto::types::TransactionInfo {
+    fn from(txn_info: TransactionInfo) -> Self {
+        Self {
+            signed_transaction_hash: txn_info.signed_transaction_hash.to_vec(),
+            state_root_hash: txn_info.state_root_hash.to_vec(),
+            event_root_hash: txn_info.event_root_hash.to_vec(),
+            gas_used: txn_info.gas_used,
+            major_status: txn_info.major_status.into(),
+        }
+    }
+}
+
 /// `TransactionInfo` is the object we store in the transaction accumulator. It consists of the
 /// transaction as well as the execution result of this transaction.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, IntoProto)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[ProtoType(crate::proto::transaction_info::TransactionInfo)]
 pub struct TransactionInfo {
     /// The hash of this transaction.
     signed_transaction_hash: HashValue,
@@ -1117,7 +1103,7 @@ impl CryptoHash for TransactionInfo {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TransactionToCommit {
-    signed_txn: SignedTransaction,
+    transaction: Transaction,
     account_states: HashMap<AccountAddress, AccountStateBlob>,
     events: Vec<ContractEvent>,
     gas_used: u64,
@@ -1126,14 +1112,14 @@ pub struct TransactionToCommit {
 
 impl TransactionToCommit {
     pub fn new(
-        signed_txn: SignedTransaction,
+        transaction: Transaction,
         account_states: HashMap<AccountAddress, AccountStateBlob>,
         events: Vec<ContractEvent>,
         gas_used: u64,
         major_status: StatusCode,
     ) -> Self {
         TransactionToCommit {
-            signed_txn,
+            transaction,
             account_states,
             events,
             gas_used,
@@ -1141,8 +1127,15 @@ impl TransactionToCommit {
         }
     }
 
-    pub fn signed_txn(&self) -> &SignedTransaction {
-        &self.signed_txn
+    pub fn transaction(&self) -> &Transaction {
+        &self.transaction
+    }
+
+    pub fn as_signed_user_txn(&self) -> Result<&SignedTransaction> {
+        match &self.transaction {
+            Transaction::UserTransaction(txn) => Ok(txn),
+            _ => Err(format_err!("Not a user transaction.")),
+        }
     }
 
     pub fn account_states(&self) -> &HashMap<AccountAddress, AccountStateBlob> {
@@ -1162,19 +1155,22 @@ impl TransactionToCommit {
     }
 }
 
-impl FromProto for TransactionToCommit {
-    type ProtoType = crate::proto::transaction::TransactionToCommit;
+impl TryFrom<crate::proto::types::TransactionToCommit> for TransactionToCommit {
+    type Error = Error;
 
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let signed_txn = SignedTransaction::from_proto(object.take_signed_txn())?;
-        let account_states_proto = object.take_account_states();
-        let num_account_states = account_states_proto.len();
-        let account_states = account_states_proto
+    fn try_from(proto: crate::proto::types::TransactionToCommit) -> Result<Self> {
+        let transaction = proto
+            .transaction
+            .ok_or_else(|| format_err!("Missing signed_transaction"))?
+            .try_into()?;
+        let num_account_states = proto.account_states.len();
+        let account_states = proto
+            .account_states
             .into_iter()
-            .map(|mut x| {
+            .map(|x| {
                 Ok((
-                    AccountAddress::from_proto(x.take_address())?,
-                    AccountStateBlob::from(x.take_blob()),
+                    AccountAddress::try_from(x.address)?,
+                    AccountStateBlob::from(x.blob),
                 ))
             })
             .collect::<Result<HashMap<_, _>>>()?;
@@ -1182,16 +1178,17 @@ impl FromProto for TransactionToCommit {
             account_states.len() == num_account_states,
             "account_states should have no duplication."
         );
-        let events = object
-            .take_events()
+        let events = proto
+            .events
             .into_iter()
-            .map(ContractEvent::from_proto)
+            .map(ContractEvent::try_from)
             .collect::<Result<Vec<_>>>()?;
-        let gas_used = object.get_gas_used();
-        let major_status = StatusCode::from_proto(object.get_major_status())?;
+        let gas_used = proto.gas_used;
+        let major_status =
+            StatusCode::try_from(proto.major_status).unwrap_or(StatusCode::UNKNOWN_STATUS);
 
         Ok(TransactionToCommit {
-            signed_txn,
+            transaction,
             account_states,
             events,
             gas_used,
@@ -1200,32 +1197,22 @@ impl FromProto for TransactionToCommit {
     }
 }
 
-impl IntoProto for TransactionToCommit {
-    type ProtoType = crate::proto::transaction::TransactionToCommit;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto = Self::ProtoType::new();
-        proto.set_signed_txn(self.signed_txn.into_proto());
-        proto.set_account_states(protobuf::RepeatedField::from_vec(
-            self.account_states
+impl From<TransactionToCommit> for crate::proto::types::TransactionToCommit {
+    fn from(txn: TransactionToCommit) -> Self {
+        Self {
+            transaction: Some(txn.transaction.into()),
+            account_states: txn
+                .account_states
                 .into_iter()
-                .map(|(address, blob)| {
-                    let mut account_state = crate::proto::transaction::AccountState::new();
-                    account_state.set_address(address.as_ref().to_vec());
-                    account_state.set_blob(blob.into());
-                    account_state
+                .map(|(address, blob)| crate::proto::types::AccountState {
+                    address: address.as_ref().to_vec(),
+                    blob: blob.into(),
                 })
-                .collect::<Vec<_>>(),
-        ));
-        proto.set_events(protobuf::RepeatedField::from_vec(
-            self.events
-                .into_iter()
-                .map(ContractEvent::into_proto)
-                .collect::<Vec<_>>(),
-        ));
-        proto.set_gas_used(self.gas_used);
-        proto.set_major_status(self.major_status.into_proto());
-        proto
+                .collect(),
+            events: txn.events.into_iter().map(Into::into).collect(),
+            gas_used: txn.gas_used,
+            major_status: txn.major_status.into(),
+        }
     }
 }
 
@@ -1288,6 +1275,14 @@ impl TransactionListWithProof {
         verify_transaction_list(ledger_info, self)
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.transaction_and_infos.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.transaction_and_infos.len()
+    }
+
     fn display_option_version(version: Option<Version>) -> String {
         match version {
             Some(v) => format!("{}", v),
@@ -1296,12 +1291,12 @@ impl TransactionListWithProof {
     }
 }
 
-impl FromProto for TransactionListWithProof {
-    type ProtoType = crate::proto::transaction::TransactionListWithProof;
+impl TryFrom<crate::proto::types::TransactionListWithProof> for TransactionListWithProof {
+    type Error = Error;
 
-    fn from_proto(mut object: Self::ProtoType) -> Result<Self> {
-        let num_txns = object.get_transactions().len();
-        let num_infos = object.get_infos().len();
+    fn try_from(mut proto: crate::proto::types::TransactionListWithProof) -> Result<Self> {
+        let num_txns = proto.transactions.len();
+        let num_infos = proto.infos.len();
         ensure!(
             num_txns == num_infos,
             "Number of transactions ({}) does not match the number of transaction infos ({}).",
@@ -1309,9 +1304,9 @@ impl FromProto for TransactionListWithProof {
             num_infos
         );
         let (has_first, has_last, has_first_version) = (
-            object.has_proof_of_first_transaction(),
-            object.has_proof_of_last_transaction(),
-            object.has_first_transaction_version(),
+            proto.proof_of_first_transaction.is_some(),
+            proto.proof_of_last_transaction.is_some(),
+            proto.first_transaction_version.is_some(),
         );
         match num_txns {
             0 => ensure!(
@@ -1328,100 +1323,170 @@ impl FromProto for TransactionListWithProof {
             ),
         }
 
-        let events = object
+        let events = proto
             .events_for_versions
             .take() // Option<EventsForVersions>
-            .map(|mut events_for_versions| {
+            .map(|events_for_versions| {
                 // EventsForVersion
                 events_for_versions
-                    .take_events_for_version()
+                    .events_for_version
                     .into_iter()
-                    .map(|mut events_for_version| {
+                    .map(|events_for_version| {
                         events_for_version
-                            .take_events()
+                            .events
                             .into_iter()
-                            .map(ContractEvent::from_proto)
+                            .map(ContractEvent::try_from)
                             .collect::<Result<Vec<_>>>()
                     })
                     .collect::<Result<Vec<_>>>()
             })
             .transpose()?;
 
-        let transaction_and_infos = itertools::zip_eq(
-            object.take_transactions().into_iter(),
-            object.take_infos().into_iter(),
-        )
-        .map(|(txn, info)| {
-            Ok((
-                SignedTransaction::from_proto(txn)?,
-                TransactionInfo::from_proto(info)?,
-            ))
-        })
-        .collect::<Result<Vec<_>>>()?;
+        let transaction_and_infos =
+            itertools::zip_eq(proto.transactions.into_iter(), proto.infos.into_iter())
+                .map(|(txn, info)| {
+                    Ok((
+                        SignedTransaction::try_from(txn)?,
+                        TransactionInfo::try_from(info)?,
+                    ))
+                })
+                .collect::<Result<Vec<_>>>()?;
 
         Ok(TransactionListWithProof {
             transaction_and_infos,
             events,
-            proof_of_first_transaction: object
+            proof_of_first_transaction: proto
                 .proof_of_first_transaction
                 .take()
-                .map(AccumulatorProof::from_proto)
+                .map(AccumulatorProof::try_from)
                 .transpose()?,
-            proof_of_last_transaction: object
+            proof_of_last_transaction: proto
                 .proof_of_last_transaction
                 .take()
-                .map(AccumulatorProof::from_proto)
+                .map(AccumulatorProof::try_from)
                 .transpose()?,
-            first_transaction_version: object
-                .first_transaction_version
-                .take()
-                .map(|v| v.get_value()),
+            first_transaction_version: proto.first_transaction_version,
         })
     }
 }
 
-impl IntoProto for TransactionListWithProof {
-    type ProtoType = crate::proto::transaction::TransactionListWithProof;
-
-    fn into_proto(self) -> Self::ProtoType {
-        let (transactions, infos) = self
+impl From<TransactionListWithProof> for crate::proto::types::TransactionListWithProof {
+    fn from(txn: TransactionListWithProof) -> Self {
+        let (transactions, infos) = txn
             .transaction_and_infos
             .into_iter()
-            .map(|(txn, info)| (txn.into_proto(), info.into_proto()))
+            .map(|(txn, info)| (txn.into(), info.into()))
             .unzip();
 
-        let mut out = Self::ProtoType::new();
-        out.set_transactions(protobuf::RepeatedField::from_vec(transactions));
-        out.set_infos(protobuf::RepeatedField::from_vec(infos));
-
-        if let Some(all_events) = self.events {
-            let mut events_for_versions = EventsForVersions::new();
-            for events_for_version in all_events {
-                let mut events_this_version = EventsList::new();
-                events_this_version.set_events(protobuf::RepeatedField::from_vec(
-                    events_for_version
+        let events_for_versions =
+            txn.events
+                .map(|all_events| crate::proto::types::EventsForVersions {
+                    events_for_version: all_events
                         .into_iter()
-                        .map(ContractEvent::into_proto)
-                        .collect(),
-                ));
-                events_for_versions
-                    .events_for_version
-                    .push(events_this_version);
-            }
-            out.set_events_for_versions(events_for_versions);
-        }
+                        .map(|events_for_version| crate::proto::types::EventsList {
+                            events: events_for_version
+                                .into_iter()
+                                .map(ContractEvent::into)
+                                .collect::<Vec<_>>(),
+                        })
+                        .collect::<Vec<_>>(),
+                });
 
-        if let Some(first_transaction_version) = self.first_transaction_version {
-            let mut ver = UInt64Value::new();
-            ver.set_value(first_transaction_version);
-            out.set_first_transaction_version(ver);
+        let first_transaction_version = txn.first_transaction_version;
+
+        let proof_of_first_transaction = txn.proof_of_first_transaction.map(Into::into);
+        let proof_of_last_transaction = txn.proof_of_last_transaction.map(Into::into);
+
+        Self {
+            transactions,
+            infos,
+            events_for_versions,
+            first_transaction_version,
+            proof_of_first_transaction,
+            proof_of_last_transaction,
         }
-        if let Some(proof_of_first_transaction) = self.proof_of_first_transaction {
-            out.set_proof_of_first_transaction(proof_of_first_transaction.into_proto());
-        }
-        if let Some(proof_of_last_transaction) = self.proof_of_last_transaction {
-            out.set_proof_of_last_transaction(proof_of_last_transaction.into_proto());
-        }
-        out
+    }
+}
+
+/// `Transaction` will be the transaction type used internally in the libra node to represent the
+/// transaction to be processed and persisted.
+///
+/// We suppress the clippy warning here as we would expect most of the transaction to be user
+/// transaction.
+#[allow(clippy::large_enum_variant)]
+#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Transaction {
+    /// Transaction submitted by the user. e.g: P2P payment transaction, publishing module
+    /// transaction, etc.
+    /// TODO: We need to rename SignedTransaction to SignedUserTransaction, as well as all the other
+    ///       transaction types we had in our codebase.
+    UserTransaction(SignedTransaction),
+
+    /// Transaction that applies a WriteSet to the current storage. This should be used for ONLY for
+    /// genesis right now.
+    WriteSet(WriteSet),
+
+    /// Transaction to update the block metadata resource at the beginning of a block.
+    BlockMetadata(BlockMetadata),
+}
+
+#[derive(IntoPrimitive, TryFromPrimitive)]
+#[repr(u8)]
+enum TransactionVariantTag {
+    UserTransaction = 0,
+    WriteSet = 1,
+    BlockMetadata = 2,
+}
+
+impl CanonicalSerialize for Transaction {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        match self {
+            Transaction::UserTransaction(txn) => {
+                serializer.encode_u8(TransactionVariantTag::UserTransaction.into())?;
+                serializer.encode_struct(txn)?;
+            }
+            Transaction::WriteSet(write_set) => {
+                serializer.encode_u8(TransactionVariantTag::WriteSet.into())?;
+                serializer.encode_struct(write_set)?;
+            }
+            Transaction::BlockMetadata(block_metadata) => {
+                serializer.encode_u8(TransactionVariantTag::BlockMetadata.into())?;
+                serializer.encode_struct(block_metadata)?;
+            }
+        };
+
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for Transaction {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
+        let tag = TransactionVariantTag::try_from(deserializer.decode_u8()?)?;
+        let transaction = match tag {
+            TransactionVariantTag::UserTransaction => {
+                Transaction::UserTransaction(deserializer.decode_struct()?)
+            }
+            TransactionVariantTag::WriteSet => Transaction::WriteSet(deserializer.decode_struct()?),
+            TransactionVariantTag::BlockMetadata => {
+                Transaction::BlockMetadata(deserializer.decode_struct()?)
+            }
+        };
+        Ok(transaction)
+    }
+}
+
+impl TryFrom<crate::proto::types::Transaction> for Transaction {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::Transaction) -> Result<Self> {
+        SimpleDeserializer::deserialize(&proto.transaction)
+    }
+}
+
+impl From<Transaction> for crate::proto::types::Transaction {
+    fn from(txn: Transaction) -> Self {
+        let bytes = SimpleSerializer::serialize(&txn).expect("Serialization should not fail.");
+        Self { transaction: bytes }
     }
 }

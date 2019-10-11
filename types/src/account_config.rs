@@ -86,6 +86,7 @@ pub struct AccountResource {
     balance: u64,
     sequence_number: u64,
     authentication_key: ByteArray,
+    delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
     sent_events: EventHandle,
     received_events: EventHandle,
@@ -97,6 +98,7 @@ impl AccountResource {
         balance: u64,
         sequence_number: u64,
         authentication_key: ByteArray,
+        delegated_key_rotation_capability: bool,
         delegated_withdrawal_capability: bool,
         sent_events: EventHandle,
         received_events: EventHandle,
@@ -105,6 +107,7 @@ impl AccountResource {
             balance,
             sequence_number,
             authentication_key,
+            delegated_key_rotation_capability,
             delegated_withdrawal_capability,
             sent_events,
             received_events,
@@ -145,6 +148,11 @@ impl AccountResource {
         &self.received_events
     }
 
+    /// Return the delegated_key_rotation_capability field for the given AccountResource
+    pub fn delegated_key_rotation_capability(&self) -> bool {
+        self.delegated_key_rotation_capability
+    }
+
     /// Return the delegated_withdrawal_capability field for the given AccountResource
     pub fn delegated_withdrawal_capability(&self) -> bool {
         self.delegated_withdrawal_capability
@@ -168,6 +176,7 @@ impl CanonicalSerialize for AccountResource {
         serializer
             .encode_struct(&self.authentication_key)?
             .encode_u64(self.balance)?
+            .encode_bool(self.delegated_key_rotation_capability)?
             .encode_bool(self.delegated_withdrawal_capability)?
             .encode_struct(&self.received_events)?
             .encode_struct(&self.sent_events)?
@@ -180,6 +189,7 @@ impl CanonicalDeserialize for AccountResource {
     fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
         let authentication_key = deserializer.decode_struct()?;
         let balance = deserializer.decode_u64()?;
+        let delegated_key_rotation_capability = deserializer.decode_bool()?;
         let delegated_withdrawal_capability = deserializer.decode_bool()?;
         let received_events = deserializer.decode_struct()?;
         let sent_events = deserializer.decode_struct()?;
@@ -189,6 +199,7 @@ impl CanonicalDeserialize for AccountResource {
             balance,
             sequence_number,
             authentication_key,
+            delegated_key_rotation_capability,
             delegated_withdrawal_capability,
             sent_events,
             received_events,

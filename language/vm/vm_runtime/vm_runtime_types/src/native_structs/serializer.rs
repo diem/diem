@@ -6,12 +6,12 @@ use crate::{
 };
 use canonical_serialization::*;
 use failure::prelude::*;
-use types::vm_error::StatusCode;
+use libra_types::vm_error::StatusCode;
 use vm::errors::*;
 
 impl CanonicalSerialize for NativeVector {
     fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_u64(self.0.len() as u64)?;
+        serializer.encode_u32(self.0.len() as u32)?;
         for elem in self.0.iter() {
             elem.serialize(serializer)?
         }
@@ -23,7 +23,7 @@ pub(crate) fn deserialize_vector(
     deserializer: &mut SimpleDeserializer,
     ty: &NativeStructType,
 ) -> VMResult<NativeVector> {
-    let vec_length = if let Ok(len) = deserializer.decode_u64() {
+    let vec_length = if let Ok(len) = deserializer.decode_u32() {
         len
     } else {
         return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));

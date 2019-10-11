@@ -10,6 +10,7 @@ use crate::{
     tests::account_universe::{run_and_assert_gas_cost_stability, run_and_assert_universe},
 };
 use proptest::{collection::vec, prelude::*};
+use std::sync::Arc;
 
 proptest! {
     // These tests are pretty slow but quite comprehensive, so run a smaller number of them.
@@ -97,9 +98,9 @@ proptest! {
 pub(super) fn p2p_strategy(
     min: u64,
     max: u64,
-) -> impl Strategy<Value = Box<dyn AUTransactionGen + 'static>> {
+) -> impl Strategy<Value = Arc<dyn AUTransactionGen + 'static>> {
     prop_oneof![
-        3 => any_with::<P2PTransferGen>((min, max)).prop_map(P2PTransferGen::boxed),
-        1 => any_with::<P2PNewReceiverGen>((min, max)).prop_map(P2PNewReceiverGen::boxed),
+        3 => any_with::<P2PTransferGen>((min, max)).prop_map(P2PTransferGen::arced),
+        1 => any_with::<P2PNewReceiverGen>((min, max)).prop_map(P2PNewReceiverGen::arced),
     ]
 }

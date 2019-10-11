@@ -3,8 +3,6 @@
 
 use crate::{
     chained_bft::{
-        common::Round,
-        consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
         liveness::pacemaker_timeout_manager::{
             HighestTimeoutCertificates, PacemakerTimeoutManager,
         },
@@ -14,6 +12,11 @@ use crate::{
     util::time_service::{SendTask, TimeService},
 };
 use channel;
+use consensus_types::{
+    common::Round,
+    timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
+};
+use libra_types::crypto_proxies::ValidatorVerifier;
 use logger::prelude::*;
 use std::{
     fmt,
@@ -224,7 +227,14 @@ impl Pacemaker {
         let timeout = self
             .time_interval
             .get_round_duration(round_index_after_committed_round);
-        self.current_round_deadline = Instant::now() + timeout;
+        let now = Instant::now();
+        debug!(
+            "{:?} passed since the previous deadline.",
+            now.checked_duration_since(self.current_round_deadline)
+                .map_or("0 ms".to_string(), |v| format!("{:?}", v))
+        );
+        debug!("Set round deadline to {:?} from now", timeout);
+        self.current_round_deadline = now + timeout;
         timeout
     }
 
@@ -328,11 +338,11 @@ impl Pacemaker {
     pub fn process_remote_timeout(
         &mut self,
         pacemaker_timeout: PacemakerTimeout,
-        quorum_size: usize,
+        validator_verifier: Arc<ValidatorVerifier>,
     ) -> Option<NewRoundEvent> {
         if self
             .pacemaker_timeout_manager
-            .update_received_timeout(pacemaker_timeout, quorum_size)
+            .update_received_timeout(pacemaker_timeout, validator_verifier)
         {
             self.update_current_round()
         } else {

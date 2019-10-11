@@ -2,6 +2,9 @@
 name = "vm_runtime"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra vm runtime"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -13,32 +16,28 @@ proptest = "0.9"
 rayon = "1.1"
 rental = "0.5.4"
 mirai-annotations = "1.4.0"
+prometheus = { version = "0.7.0", default-features = false }
 
-bytecode_verifier = { path = "../../bytecode_verifier" }
-canonical_serialization = { path = "../../../common/canonical_serialization" }
+bytecode-verifier = { path = "../../bytecode-verifier" }
+canonical-serialization = { path = "../../../common/canonical-serialization" }
 config = { path = "../../../config" }
 crypto = { path = "../../../crypto/crypto" }
 logger = { path = "../../../common/logger" }
 metrics = { path = "../../../common/metrics" }
 state_view = { path = "../../../storage/state_view" }
-types = { path = "../../../types" }
+libra-types = { path = "../../../types" }
 vm = { path = "../" }
 vm_cache_map = { path = "vm_cache_map" }
 vm_runtime_types = { path = "vm_runtime_types" }
 
-[dependencies.prometheus]
-version  = "0.7.0"
-default-features = false
-features = ["protobuf"]
-
 [dev-dependencies]
 compiler = { path = "../../compiler" }
 
-types = { path = "../../../types", features = ["testing"] }
+libra-types = { path = "../../../types", features = ["testing"] }
 vm = { path = "../", features = ["testing"]}
 
 [features]
 default = []
 instruction_synthesis = []
-testing = ["types/testing"]
+testing = ["libra-types/testing"]
 mirai-contracts = []

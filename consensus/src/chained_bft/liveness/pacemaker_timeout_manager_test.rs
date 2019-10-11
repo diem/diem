@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
     liveness::pacemaker_timeout_manager::{HighestTimeoutCertificates, PacemakerTimeoutManager},
     persistent_storage::PersistentStorage,
     test_utils::{MockStorage, TestPayload},
 };
-use types::validator_signer::ValidatorSigner;
+use consensus_types::timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate};
+use libra_types::{crypto_proxies::random_validator_verifier, validator_signer::ValidatorSigner};
+use std::sync::Arc;
 
 #[test]
 fn test_basic() {
-    let quorum_size = 2;
     let mut timeout_manager = PacemakerTimeoutManager::new(
         HighestTimeoutCertificates::new(None, None),
         MockStorage::<TestPayload>::start_for_testing()
@@ -19,27 +19,29 @@ fn test_basic() {
             .persistent_liveness_storage(),
     );
     assert_eq!(timeout_manager.highest_timeout_certificate(), None);
-    let validator_signer1 = ValidatorSigner::random([0u8; 32]);
-    let validator_signer2 = ValidatorSigner::random([1u8; 32]);
-
+    let (validator_signers, validator_verifier) = random_validator_verifier(2, None, false);
+    let validator_verifier = Arc::new(validator_verifier);
     // No timeout certificate generated on adding 2 timeouts from the same author
-    let timeout_signer1_round1 = PacemakerTimeout::new(1, &validator_signer1, None);
+    let timeout_signer1_round1 = PacemakerTimeout::new(1, &validator_signers[0], None);
     assert_eq!(
-        timeout_manager.update_received_timeout(timeout_signer1_round1, quorum_size),
+        timeout_manager
+            .update_received_timeout(timeout_signer1_round1, Arc::clone(&validator_verifier)),
         false
     );
     assert_eq!(timeout_manager.highest_timeout_certificate(), None);
-    let timeout_signer1_round2 = PacemakerTimeout::new(2, &validator_signer1, None);
+    let timeout_signer1_round2 = PacemakerTimeout::new(2, &validator_signers[0], None);
     assert_eq!(
-        timeout_manager.update_received_timeout(timeout_signer1_round2, quorum_size),
+        timeout_manager
+            .update_received_timeout(timeout_signer1_round2, Arc::clone(&validator_verifier)),
         false
     );
     assert_eq!(timeout_manager.highest_timeout_certificate(), None);
 
     // Timeout certificate generated on adding a timeout from signer2
-    let timeout_signer2_round1 = PacemakerTimeout::new(1, &validator_signer2, None);
+    let timeout_signer2_round1 = PacemakerTimeout::new(1, &validator_signers[1], None);
     assert_eq!(
-        timeout_manager.update_received_timeout(timeout_signer2_round1, quorum_size),
+        timeout_manager
+            .update_received_timeout(timeout_signer2_round1, Arc::clone(&validator_verifier)),
         true
     );
     assert_eq!(
@@ -51,9 +53,10 @@ fn test_basic() {
     );
 
     // Timeout certificate increased when incrementing the round from signer 2
-    let timeout_signer2_round2 = PacemakerTimeout::new(2, &validator_signer2, None);
+    let timeout_signer2_round2 = PacemakerTimeout::new(2, &validator_signers[1], None);
     assert_eq!(
-        timeout_manager.update_received_timeout(timeout_signer2_round2, quorum_size),
+        timeout_manager
+            .update_received_timeout(timeout_signer2_round2, Arc::clone(&validator_verifier)),
         true
     );
     assert_eq!(
@@ -65,9 +68,10 @@ fn test_basic() {
     );
 
     // No timeout certificate generated since signer 1 is still on round 2
-    let timeout_signer2_round3 = PacemakerTimeout::new(3, &validator_signer2, None);
+    let timeout_signer2_round3 = PacemakerTimeout::new(3, &validator_signers[1], None);
     assert_eq!(
-        timeout_manager.update_received_timeout(timeout_signer2_round3, quorum_size),
+        timeout_manager
+            .update_received_timeout(timeout_signer2_round3, Arc::clone(&validator_verifier)),
         false
     );
     assert_eq!(
@@ -82,8 +86,8 @@ fn test_basic() {
     let received_timeout_certificate = PacemakerTimeoutCertificate::new(
         10,
         vec![
-            PacemakerTimeout::new(10, &validator_signer1, None),
-            PacemakerTimeout::new(11, &validator_signer2, None),
+            PacemakerTimeout::new(10, &validator_signers[0], None),
+            PacemakerTimeout::new(11, &validator_signers[1], None),
         ],
     );
     assert_eq!(

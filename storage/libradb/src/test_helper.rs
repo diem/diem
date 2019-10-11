@@ -6,13 +6,13 @@
 use super::*;
 use crate::mock_genesis::{db_with_mock_genesis, GENESIS_INFO};
 use crypto::hash::CryptoHash;
-use proptest::{collection::vec, prelude::*};
-use tools::tempdir::TempPath;
-use types::{
+use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo,
     proptest_types::{AccountInfoUniverse, TransactionToCommitGen},
 };
+use proptest::{collection::vec, prelude::*};
+use tools::tempdir::TempPath;
 
 fn to_blocks_to_commit(
     partial_blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
@@ -33,7 +33,7 @@ fn to_blocks_to_commit(
                 cur_ver += 1;
                 let mut cs = ChangeSet::new();
 
-                let txn_hash = txn_to_commit.signed_txn().hash();
+                let txn_hash = txn_to_commit.as_signed_user_txn()?.hash();
                 let state_root_hash = db.state_store.put_account_state_sets(
                     vec![txn_to_commit.account_states().clone()],
                     cur_ver,

@@ -4,7 +4,7 @@
 use crate::{
     block_tree::{Block, BlockTree},
     transaction_block::{ProcessedVMOutput, TransactionBlock, TransactionData},
-    Command, ExecutedTrees, OP_COUNTERS,
+    Command, ExecutedState, ExecutedTrees, StateComputeResult, OP_COUNTERS,
 };
 use backoff::{ExponentialBackoff, Operation};
 use config::config::VMConfig;
@@ -12,9 +12,19 @@ use crypto::{
     hash::{CryptoHash, EventAccumulatorHasher},
     HashValue,
 };
-use execution_proto::{CommitBlockResponse, ExecuteBlockResponse, ExecuteChunkResponse};
 use failure::prelude::*;
 use futures::channel::oneshot;
+use libra_types::{
+    account_address::AccountAddress,
+    account_state_blob::AccountStateBlob,
+    crypto_proxies::LedgerInfoWithSignatures,
+    proof::{accumulator::Accumulator, definition::LeafCount, SparseMerkleProof},
+    transaction::{
+        SignedTransaction, Transaction, TransactionInfo, TransactionListWithProof,
+        TransactionOutput, TransactionPayload, TransactionStatus, TransactionToCommit, Version,
+    },
+    write_set::{WriteOp, WriteSet},
+};
 use logger::prelude::*;
 use scratchpad::{ProofRead, SparseMerkleTree};
 use std::{
@@ -25,17 +35,6 @@ use std::{
     sync::{mpsc, Arc},
 };
 use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
-use types::{
-    account_address::AccountAddress,
-    account_state_blob::AccountStateBlob,
-    crypto_proxies::LedgerInfoWithSignatures,
-    proof::{accumulator::Accumulator, SparseMerkleProof},
-    transaction::{
-        SignedTransaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
-        TransactionPayload, TransactionStatus, TransactionToCommit, Version,
-    },
-    write_set::{WriteOp, WriteSet},
-};
 use vm_runtime::VMExecutor;
 
 #[derive(Debug)]
@@ -86,7 +85,7 @@ where
         committed_timestamp_usecs: u64,
         previous_state_root_hash: HashValue,
         previous_frozen_subtrees_in_accumulator: Vec<HashValue>,
-        previous_num_leaves_in_accumulator: u64,
+        previous_num_leaves_in_accumulator: LeafCount,
         last_committed_block_id: HashValue,
         storage_read_client: Arc<dyn StorageRead>,
         storage_write_client: Arc<dyn StorageWrite>,
@@ -258,7 +257,7 @@ where
                         e
                     });
                 resp_sender
-                    .send(res.map(|_| ExecuteChunkResponse {}))
+                    .send(res)
                     .expect("Failed to send execute chunk response.");
             }
         }
@@ -363,7 +362,7 @@ where
                 i,
             );
             txns_to_commit.push(TransactionToCommit::new(
-                txn,
+                Transaction::UserTransaction(txn),
                 txn_data.account_blobs().clone(),
                 txn_data.events().to_vec(),
                 txn_data.gas_used(),
@@ -374,7 +373,7 @@ where
         // If this is the last chunk corresponding to this ledger info, send the ledger info to
         // storage.
         let ledger_info_to_commit = if self.committed_trees.txn_accumulator().num_leaves()
-            + txns_to_commit.len() as u64
+            + txns_to_commit.len() as LeafCount
             == ledger_info_with_sigs.ledger_info().version() + 1
         {
             // We have constructed the transaction accumulator root and checked that it matches the
@@ -425,7 +424,7 @@ where
         &self,
         txn_list_with_proof: &TransactionListWithProof,
         ledger_info_with_sigs: &LedgerInfoWithSignatures,
-    ) -> Result<(u64, Version)> {
+    ) -> Result<(LeafCount, Version)> {
         txn_list_with_proof.verify(
             ledger_info_with_sigs.ledger_info(),
             txn_list_with_proof.first_transaction_version,
@@ -433,12 +432,13 @@ where
 
         let num_committed_txns = self.committed_trees.txn_accumulator().num_leaves();
         if txn_list_with_proof.transaction_and_infos.is_empty() {
-            return Ok((0, num_committed_txns /* first_version */));
+            return Ok((0, num_committed_txns as Version /* first_version */));
         }
 
         let first_txn_version = txn_list_with_proof
             .first_transaction_version
-            .expect("first_transaction_version should exist.");
+            .expect("first_transaction_version should exist.")
+            as Version;
 
         ensure!(
             first_txn_version <= num_committed_txns,
@@ -446,7 +446,10 @@ where
             num_committed_txns,
             first_txn_version
         );
-        Ok((num_committed_txns - first_txn_version, num_committed_txns))
+        Ok((
+            num_committed_txns - first_txn_version,
+            num_committed_txns as Version,
+        ))
     }
 
     /// If `save_blocks_to_storage` below fails, we retry based on this setting.
@@ -496,7 +499,7 @@ where
             ) {
                 if let TransactionStatus::Keep(_) = txn_data.status() {
                     txns_to_commit.push(TransactionToCommit::new(
-                        txn.clone(),
+                        Transaction::UserTransaction(txn.clone()),
                         txn_data.account_blobs().clone(),
                         txn_data.events().to_vec(),
                         txn_data.gas_used(),
@@ -522,7 +525,7 @@ where
         let num_txns_in_accumulator = last_block.executed_trees().txn_accumulator().num_leaves();
         assert_eq!(
             version + 1,
-            num_txns_in_accumulator,
+            num_txns_in_accumulator as Version,
             "Number of transactions in ledger info ({}) does not match number of transactions \
              in accumulator ({}).",
             version + 1,
@@ -549,7 +552,7 @@ where
         // in-memory state.
         self.committed_timestamp_usecs = ledger_info_with_sigs.ledger_info().timestamp_usecs();
         self.committed_trees = last_block.executed_trees().clone();
-        last_block.send_commit_block_response(Ok(CommitBlockResponse::Succeeded));
+        last_block.send_commit_block_response();
 
         let num_saved = block_batch.len();
         for _i in 0..num_saved {
@@ -628,16 +631,23 @@ where
         ) {
             Ok(output) => {
                 let accu_root_hash = output.executed_trees().txn_accumulator().root_hash();
-                let version = output.executed_trees().txn_accumulator().num_leaves() - 1;
+                let version =
+                    (output.executed_trees().txn_accumulator().num_leaves() - 1) as Version;
                 block_to_execute.set_output(output);
 
                 // Now that we have the root hash and execution status we can send the response to
                 // consensus.
                 // TODO: The VM will support a special transaction to set the validators for the
                 // next epoch that is part of a block execution.
-                let execute_block_response =
-                    ExecuteBlockResponse::new(accu_root_hash, status, version, None);
-                block_to_execute.set_execute_block_response(execute_block_response);
+                let state_compute_result = StateComputeResult {
+                    executed_state: ExecutedState {
+                        state_id: accu_root_hash,
+                        version,
+                        validators: None,
+                    },
+                    compute_status: status,
+                };
+                block_to_execute.set_execute_block_response(state_compute_result);
             }
             Err(err) => {
                 block_to_execute.send_execute_block_response(Err(format_err!(

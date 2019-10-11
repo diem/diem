@@ -32,7 +32,8 @@ use crypto::{
     ed25519::*,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
-use futures::{compat::Compat01As03, FutureExt, StreamExt, TryFutureExt};
+use futures::StreamExt;
+use libra_types::{validator_signer::ValidatorSigner, PeerId};
 use logger::prelude::*;
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
 use parity_multiaddr::Multiaddr;
@@ -42,9 +43,8 @@ use std::{
     time::Duration,
 };
 use tokio::runtime::TaskExecutor;
+use tokio::timer::Interval;
 use tokio_retry::strategy::ExponentialBackoff;
-use tokio_timer::Interval;
-use types::{validator_signer::ValidatorSigner, PeerId};
 
 pub const NETWORK_CHANNEL_SIZE: usize = 1024;
 pub const DISCOVERY_INTERVAL_MS: u64 = 1000;
@@ -173,14 +173,12 @@ impl NetworkBuilder {
         self.seed_peers = seed_peers
             .into_iter()
             .map(|(peer_id, seed_addrs)| {
-                let mut peer_info = PeerInfo::new();
-                peer_info.set_epoch(0);
-                peer_info.set_addrs(
-                    seed_addrs
-                        .into_iter()
-                        .map(|addr| addr.as_ref().into())
-                        .collect(),
-                );
+                let mut peer_info = PeerInfo::default();
+                peer_info.epoch = 0;
+                peer_info.addrs = seed_addrs
+                    .into_iter()
+                    .map(|addr| addr.as_ref().into())
+                    .collect();
                 (peer_id, peer_info)
             })
             .collect();
@@ -380,8 +378,7 @@ impl NetworkBuilder {
             pm_ds_notifs_rx,
             PeerManagerRequestSender::new(pm_reqs_tx.clone()),
         );
-        self.executor
-            .spawn(ds.start().boxed().unit_error().compat());
+        self.executor.spawn(ds.start());
         debug!("Started direct send actor");
 
         // Initialize and start RPC actor.
@@ -408,8 +405,7 @@ impl NetworkBuilder {
             self.max_concurrent_outbound_rpcs,
             self.max_concurrent_inbound_rpcs,
         );
-        self.executor
-            .spawn(rpc.start().boxed().unit_error().compat());
+        self.executor.spawn(rpc.start());
         debug!("Started RPC actor");
 
         // Initialize and start HealthChecker.
@@ -423,17 +419,13 @@ impl NetworkBuilder {
         );
         peer_event_handlers.push(pm_ping_notifs_tx);
         let health_checker = HealthChecker::new(
-            Compat01As03::new(Interval::new_interval(Duration::from_millis(
-                self.ping_interval_ms,
-            )))
-            .fuse(),
+            Interval::new_interval(Duration::from_millis(self.ping_interval_ms)).fuse(),
             PeerManagerRequestSender::new(pm_reqs_tx.clone()),
             pm_ping_notifs_rx,
             Duration::from_millis(self.ping_timeout_ms),
             self.ping_failures_tolerated,
         );
-        self.executor
-            .spawn(health_checker.start().boxed().unit_error().compat());
+        self.executor.spawn(health_checker.start());
         debug!("Started health checker");
 
         let mut net_conn_mgr_reqs_tx = None;
@@ -454,18 +446,15 @@ impl NetworkBuilder {
             peer_event_handlers.push(pm_conn_mgr_notifs_tx);
             let conn_mgr = ConnectivityManager::new(
                 self.trusted_peers.clone(),
-                Compat01As03::new(Interval::new_interval(Duration::from_millis(
-                    self.connectivity_check_interval_ms,
-                )))
-                .fuse(),
+                Interval::new_interval(Duration::from_millis(self.connectivity_check_interval_ms))
+                    .fuse(),
                 PeerManagerRequestSender::new(pm_reqs_tx.clone()),
                 pm_conn_mgr_notifs_rx,
                 conn_mgr_reqs_rx,
                 ExponentialBackoff::from_millis(2).factor(1000 /* seconds */),
                 self.max_connection_delay_ms,
             );
-            self.executor
-                .spawn(conn_mgr.start().boxed().unit_error().compat());
+            self.executor.spawn(conn_mgr.start());
             debug!("Started connection manager");
 
             // Initialize and start Discovery actor.
@@ -491,17 +480,13 @@ impl NetworkBuilder {
                 signer,
                 self.seed_peers.clone(),
                 self.trusted_peers.clone(),
-                Compat01As03::new(Interval::new_interval(Duration::from_millis(
-                    self.discovery_interval_ms,
-                )))
-                .fuse(),
+                Interval::new_interval(Duration::from_millis(self.discovery_interval_ms)).fuse(),
                 PeerManagerRequestSender::new(pm_reqs_tx.clone()),
                 pm_discovery_notifs_rx,
                 conn_mgr_reqs_tx.clone(),
                 Duration::from_millis(self.discovery_msg_timeout_ms),
             );
-            self.executor
-                .spawn(discovery.start().boxed().unit_error().compat());
+            self.executor.spawn(discovery.start());
             debug!("Started discovery protocol actor");
         }
 
@@ -520,8 +505,7 @@ impl NetworkBuilder {
             peer_event_handlers,
         );
         let listen_addr = peer_mgr.listen_addr().clone();
-        self.executor
-            .spawn(peer_mgr.start().boxed().unit_error().compat());
+        self.executor.spawn(peer_mgr.start());
         debug!("Started peer manager");
 
         // Setup communication channels.

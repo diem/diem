@@ -24,7 +24,9 @@ use crate::{
     ledger_info::LedgerInfoWithSignatures as RawLedgerInfoWithSignatures,
     validator_change::ValidatorChangeEventWithProof as RawValidatorChangeEventWithProof,
     validator_signer::ValidatorSigner as RawValidatorSigner,
-    validator_verifier::{ValidatorVerifier as RawValidatorVerifier, VerifyError},
+    validator_verifier::{
+        ValidatorInfo as RawValidatorInfo, ValidatorVerifier as RawValidatorVerifier, VerifyError,
+    },
 };
 use crypto::{hash::HashValue, traits::Signature as RawSignature};
 use serde::{Deserialize, Serialize};
@@ -77,6 +79,7 @@ impl<Sig: RawSignature> From<Sig> for SignatureWrapper<Sig> {
 // below is banned.
 
 use crypto::ed25519::*;
+use std::collections::BTreeMap;
 
 // used in chained_bft::consensus_types::block_test
 #[cfg(any(test, feature = "testing"))]
@@ -84,6 +87,42 @@ pub type SecretKey = Ed25519PrivateKey;
 
 pub type Signature = SignatureWrapper<Ed25519Signature>;
 pub type LedgerInfoWithSignatures = RawLedgerInfoWithSignatures<Ed25519Signature>;
+pub type ValidatorInfo = RawValidatorInfo<Ed25519PublicKey>;
 pub type ValidatorVerifier = RawValidatorVerifier<Ed25519PublicKey>;
 pub type ValidatorSigner = RawValidatorSigner<Ed25519PrivateKey>;
 pub type ValidatorChangeEventWithProof = RawValidatorChangeEventWithProof<Ed25519Signature>;
+
+/// Helper function to get random validator signers and a corresponding validator verifier for
+/// testing.  If custom_voting_power_quorum is not None, set a custom voting power quorum amount.
+/// With pseudo_random_account_address enabled, logs show 0 -> [0000], 1 -> [1000]
+pub fn random_validator_verifier(
+    count: usize,
+    custom_voting_power_quorum: Option<u64>,
+    pseudo_random_account_address: bool,
+) -> (Vec<ValidatorSigner>, ValidatorVerifier) {
+    let mut signers = Vec::new();
+    let mut account_address_to_validator_info = BTreeMap::new();
+    for i in 0..count {
+        let random_signer = if pseudo_random_account_address {
+            ValidatorSigner::from_int(i as u8)
+        } else {
+            ValidatorSigner::random([i as u8; 32])
+        };
+        account_address_to_validator_info.insert(
+            random_signer.author(),
+            ValidatorInfo::new(random_signer.public_key(), 1),
+        );
+        signers.push(random_signer);
+    }
+    (
+        signers,
+        match custom_voting_power_quorum {
+            Some(custom_voting_power_quorum) => ValidatorVerifier::new_with_quorum_voting_power(
+                account_address_to_validator_info,
+                custom_voting_power_quorum,
+            )
+            .expect("Unable to create testing validator verifier"),
+            None => ValidatorVerifier::new(account_address_to_validator_info),
+        },
+    )
+}

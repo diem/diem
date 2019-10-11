@@ -1,24 +1,24 @@
 module ValidatorSet {
+    import 0x0.Event;
     import 0x0.LibraAccount;
+    import 0x0.ValidatorConfig;
     import 0x0.Vector;
 
     struct ValidatorInfo {
         addr: address,
+        consensus_pubkey: bytearray,
+        consensus_voting_power: u64,
         network_signing_pubkey: bytearray,
         network_identity_pubkey: bytearray,
-        consensus_pubkey: bytearray,
-        // TODO: voting power
     }
 
-    // A current or prospective validator should publish one of these under their address
-    resource ValidatorConfig {
-        network_signing_pubkey: bytearray,
-        network_identity_pubkey: bytearray,
-        consensus_pubkey: bytearray,
+    struct ChangeEvent {
+        new_validator_set: Vector.T<Self.ValidatorInfo>,
     }
 
     resource T {
         validators: Vector.T<Self.ValidatorInfo>,
+        change_events: Event.Handle<Self.ChangeEvent>,
     }
 
     // This can only be invoked by the special validator set address, and only a single time.
@@ -27,65 +27,97 @@ module ValidatorSet {
         // Only callable by the validator set address
         assert(get_txn_sender() == 0x1D8, 1);
 
-        move_to_sender<T>(T { validators: Vector.empty<Self.ValidatorInfo>() });
+        move_to_sender<T>(T {
+            validators: Vector.empty<Self.ValidatorInfo>(),
+            change_events: Event.new_event_handle<Self.ChangeEvent>(),
+        });
 
         return;
     }
 
-    // Register the transaction sender as a candidate validator by creating a ValidatorConfig
-    // resource under their account
-    public register_candidate_validator(
-        network_signing_pubkey: bytearray,
-        network_identity_pubkey: bytearray,
-        consensus_pubkey: bytearray) {
+    // Return the size of the current validator set
+    public size(): u64 acquires T {
+        let validator_set_ref: &Self.T;
 
-        move_to_sender<ValidatorConfig>(
-            ValidatorConfig {
-                network_signing_pubkey: move(network_signing_pubkey),
-                network_identity_pubkey: move(network_identity_pubkey),
-                consensus_pubkey: move(consensus_pubkey),
-            });
-
-        return;
+        validator_set_ref = borrow_global<T>(0x1D8);
+        return Vector.length<Self.ValidatorInfo>(&move(validator_set_ref).validators);
     }
 
-    // Get the consensus public key for the validator candidate at the given address
-    public get_consensus_pubkey(addr: address): bytearray acquires ValidatorConfig {
-        let config_ref: &Self.ValidatorConfig;
+    // Return true if addr is a current validator
+    public is_validator(addr: address): bool acquires T {
+        let size: u64;
+        let i: u64;
+        let vector_ref: &Vector.T<Self.ValidatorInfo>;
+        let info_ref: &Self.ValidatorInfo;
 
-        config_ref = borrow_global<ValidatorConfig>(move(addr));
-        return *&move(config_ref).consensus_pubkey;
-    }
+        vector_ref = &borrow_global<T>(0x1D8).validators;
+        size = Vector.length<Self.ValidatorInfo>(copy(vector_ref));
+        if (copy(size) == 0) {
+            return false;
+        }
 
-    // Rotate a validator candidate's consensus public key. The change will not take effect until
-    // the next reconfiguration.
-    public rotate_consensus_pubkey(consensus_pubkey: bytearray) acquires ValidatorConfig {
-        let config_ref: &mut Self.ValidatorConfig;
+        i = 0;
+        info_ref = Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i));
+        while (copy(i) < copy(size)) {
+            if (*&copy(info_ref).addr == copy(addr)) {
+            // TODO: below doesn't work, looks like a compiler bug
+            //if (*(&Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i)).addr) == copy(addr)) {
+                return true;
+            }
+            info_ref = Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i));
+            i = copy(i) + 1;
+        }
 
-        config_ref = borrow_global_mut<ValidatorConfig>(get_txn_sender());
-        *(&mut move(config_ref).consensus_pubkey) = move(consensus_pubkey);
-
-        return;
+        return false;
     }
 
     // TODO: Decide on access control policy. For now, we ensure that this is only callable from the
     // genesis txn. Obviously, we'll need a different policy once we support reconfiguration.
-    add_validator(account_address: address) acquires T, ValidatorConfig {
-        let config_ref: &Self.ValidatorConfig;
+    add_validator(account_address: address) acquires T {
+        let config: ValidatorConfig.Config;
+        let config_ref: &ValidatorConfig.Config;
         let validator_set_ref: &mut Self.T;
         let vector_ref: &mut Vector.T<Self.ValidatorInfo>;
 
         // A prospective validator must have an account
         assert(LibraAccount.exists(copy(account_address)), 17);
 
-        config_ref = borrow_global<ValidatorConfig>(copy(account_address));
-        // TODO: check for LIT, compute voting power based on LIT + stake
+        config = ValidatorConfig.config(copy(account_address));
+        config_ref = &config;
+
         validator_set_ref = borrow_global_mut<T>(0x1D8);
-        // TODO: Vector.push_back is not yet implemented
-        //Vector.push_back<Self.ValidatorInfo>(
-        //    &mut move(validator_set_ref).validators,
-        //    ValidatorInfo { addr: move(account_address), validator_keys: *&move(config_ref).keys }
-        //);
+
+        Vector.push_back<Self.ValidatorInfo>(
+            &mut move(validator_set_ref).validators,
+            ValidatorInfo {
+                addr: move(account_address),
+                consensus_pubkey: ValidatorConfig.consensus_pubkey(copy(config_ref)),
+                // TODO: check for LIT, compute voting power based on LIT + stake
+                consensus_voting_power: 1,
+                network_signing_pubkey: ValidatorConfig.network_signing_pubkey(copy(config_ref)),
+                network_identity_pubkey: ValidatorConfig.network_identity_pubkey(move(config_ref)),
+            }
+        );
+
+        return;
+    }
+
+    // Trigger a reconfiguation the Libra system by:
+    // (1) Computing a new validator set and storing it on chain
+    // (2) Emitting an event containing new validator set, which will be passed to the executor
+    reconfigure() acquires T {
+        let validator_set_ref: &mut Self.T;
+        let vector_ref: &Vector.T<Self.ValidatorInfo>;
+
+        // TODO: for now, we just emit the current validator set. Eventually, we'll compute the new
+        // validator set from a larger list of candidate validators sorted by stake.
+        validator_set_ref = borrow_global_mut<T>(0x1D8);
+        Event.emit_event<Self.ChangeEvent>(
+            &mut copy(validator_set_ref).change_events,
+            ChangeEvent {
+                new_validator_set: *&move(validator_set_ref).validators,
+            },
+        );
 
         return;
     }

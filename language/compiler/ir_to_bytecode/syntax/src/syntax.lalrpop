@@ -1,16 +1,16 @@
 use std::str::FromStr;
 use codespan::{ByteIndex, Span};
 
-use crate::ast::{ModuleDefinition, StructDefinition, Script, Program, ScriptOrModule};
 use crate::ast::{
+    ModuleDefinition, StructDefinition, Script, Program, ScriptOrModule,
     FunctionBody, FunctionVisibility, ImportDefinition, ModuleName,
     Block, Cmd, CopyableVal, Spanned, Kind, TypeVar,
     Cmd_, Exp_, Exp, Var,  Var_, FunctionCall,
     FunctionName, Builtin, Statement, IfElse, While, Loop, Type, Field, Fields,
     StructName, QualifiedStructIdent, Function, BinOp, ModuleIdent, QualifiedModuleIdent, UnaryOp,
-    LValue, LValue_, parse_field,
+    LValue, LValue_, parse_field, Field_, TypeVar_, Function_, StructDefinition_,
 };
-use types::{account_address::AccountAddress, byte_array::ByteArray};
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 use hex;
 
 grammar();
@@ -51,9 +51,13 @@ Var: Var = {
     <n:Name> =>? Var::parse(n),
 };
 
+Var_ = Sp<Var>;
+
 Field: Field = {
     <n:Name> =>? parse_field(n),
 };
+
+Field_ = Sp<Field>;
 
 CopyableVal: CopyableVal = {
     AccountAddress => CopyableVal::Address(<>),
@@ -156,16 +160,16 @@ UnaryExp : Exp = {
 }
 
 Call: Exp = {
-    <f: QualifiedFunctionName> <exp: Sp<CallOrTerm>> => Exp::FunctionCall(f, Box::new(exp)),
+    <f: Sp<QualifiedFunctionName>> <exp: Sp<CallOrTerm>> => Exp::FunctionCall(f, Box::new(exp)),
 }
 
 CallOrTerm: Exp = {
-    <f: QualifiedFunctionName> <exp: Sp<CallOrTerm>> => Exp::FunctionCall(f, Box::new(exp)),
+    <f: Sp<QualifiedFunctionName>> <exp: Sp<CallOrTerm>> => Exp::FunctionCall(f, Box::new(exp)),
     Term,
 }
 
-FieldExp: (Field, Exp_) = {
-    <f: Field> ":" <e: Sp<Exp>> => (f, e)
+FieldExp: (Field_, Exp_) = {
+    <f: Sp<Field>> ":" <e: Sp<Exp>> => (f, e)
 }
 
 Term: Exp = {
@@ -286,9 +290,9 @@ LValues: Vec<LValue_> = {
     }
 }
 
-FieldBindings: (Field, Var_) = {
-    <f: Field> ":" <v: Sp<Var>> => (f, v),
-    <f: Sp<Field>> => (f.value.clone(), Spanned { span: f.span, value: Var::new(f.value.name().into()) }),
+FieldBindings: (Field_, Var_) = {
+    <f: Sp<Field>> ":" <v: Sp<Var>> => (f, v),
+    <f: Sp<Field>> => (f.clone(), Spanned { span: f.span, value: Var::new(f.value.name().into()) }),
 }
 
 pub Cmd : Cmd = {
@@ -390,35 +394,6 @@ Kind: Kind = {
     "unrestricted" => Kind::Unrestricted,
 }
 
-TypeFormal: (TypeVar, Kind) = {
-    <n: Name> <k: (":" <Kind>)?> =>? {
-        let type_var = TypeVar::parse(n)?;
-        match k {
-            Some(k) => Ok((type_var, k)),
-            None => Ok((type_var, Kind::All)),
-        }
-    }
-}
-
-TypeActuals: Vec<Type> = {
-    <tys: ("<" <Comma<Type>> ">")?> => {
-        match tys {
-            Some(tys) => tys,
-            None => vec![],
-        }
-    }
-}
-
-NameAndTypeFormals: (String, Vec<(TypeVar, Kind)>) = {
-    <n: NameBeginTy> <k: Comma<TypeFormal>> ">" => (n, k),
-    <n: Name> => (n, vec![]),
-}
-
-NameAndTypeActuals: (String, Vec<Type>) = {
-    <n: NameBeginTy> <tys: Comma<Type>> ">" => (n, tys),
-    <n: Name> => (n, vec![]),
-}
-
 Type: Type = {
     "address" => Type::Address,
     "u64" => Type::U64,
@@ -430,8 +405,39 @@ Type: Type = {
     <n: Name> =>? Ok(Type::TypeParameter(TypeVar::parse(n)?)),
 }
 
-ArgDecl : (Var, Type) = {
-    <v: Var> ":" <t: Type> ","? => (v, t)
+TypeVar: TypeVar = {
+    <n: Name> =>? TypeVar::parse(n),
+}
+
+TypeVar_ = Sp<TypeVar>;
+
+TypeFormal: (TypeVar_, Kind) = {
+    <type_var: Sp<TypeVar>> <k: (":" <Kind>)?> =>? {
+        match k {
+            Some(k) => Ok((type_var, k)),
+            None => Ok((type_var, Kind::All)),
+        }
+    }
+}
+
+TypeActuals: Vec<Type> = {
+    <tys: ("<" <Comma<Type>> ">")?> => {
+        tys.unwrap_or(vec![])
+    }
+}
+
+NameAndTypeFormals: (String, Vec<(TypeVar_, Kind)>) = {
+    <n: NameBeginTy> <k: Comma<TypeFormal>> ">" => (n, k),
+    <n: Name> => (n, vec![]),
+}
+
+NameAndTypeActuals: (String, Vec<Type>) = {
+    <n: NameBeginTy> <tys: Comma<Type>> ">" => (n, tys),
+    <n: Name> => (n, vec![]),
+}
+
+ArgDecl : (Var_, Type) = {
+    <v: Sp<Var>> ":" <t: Type> ","? => (v, t)
 }
 
 NativeTag: () = {
@@ -458,9 +464,9 @@ AcquireList: Vec<StructName> = {
     }
 }
 
-FunctionDecl : (FunctionName, Function) = {
-  <f: MoveFunctionDecl> => (f.0, f.1),
-  <f: NativeFunctionDecl> => (f.0, f.1),
+FunctionDecl : (FunctionName, Function_) = {
+  <f: Sp<MoveFunctionDecl>> => (f.value.0, Spanned { span: f.span, value: f.value.1 }),
+  <f: Sp<NativeFunctionDecl>> => (f.value.0, Spanned { span: f.span, value: f.value.1 }),
 }
 
 MoveFunctionDecl : (FunctionName, Function) = {
@@ -496,8 +502,8 @@ NativeFunctionDecl: (FunctionName, Function) = {
     }
 }
 
-FieldDecl : (Field, Type) = {
-    <f: Field> ":" <t: Type> ","? => (f, t)
+FieldDecl : (Field_, Type) = {
+    <f: Sp<Field>> ":" <t: Type> ","? => (f, t)
 }
 
 StructKind: bool = {
@@ -511,10 +517,7 @@ Modules: Vec<ModuleDefinition> = {
 
 pub Program : Program = {
     <m: Modules?> <s: Script> => {
-        let modules = match m {
-            Some(modules) => modules,
-            None => vec![],
-        };
+        let modules = m.unwrap_or(vec![]);
         Program::new(modules, s)
     },
     <m: Module> => {
@@ -536,13 +539,13 @@ pub Program : Program = {
                     code: Block::new(vec![return_stmt]),
                 },
             );
-        Program::new(vec![m], Script::new(vec![], main))
+        Program::new(vec![m], Script::new(vec![], Spanned::no_loc(main)))
     }
 }
 
 pub Script : Script = {
-    <imports: (ImportDecl)*>
-    "main" "(" <args: (ArgDecl)*> ")" <locals_body: FunctionBlock> => {
+    <l: @L> <imports: (ImportDecl)*>
+    "main" "(" <args: (ArgDecl)*> ")" <locals_body: FunctionBlock> <r: @R> => {
         let (locals, body) = locals_body;
         let main =
             Function::new(
@@ -553,22 +556,29 @@ pub Script : Script = {
                 vec![],
                 FunctionBody::Move{ locals: locals, code: body },
             );
+        let main = Spanned{ span: Span::new(ByteIndex(l as u32), ByteIndex(r as u32)), value: main };
         Script::new(imports, main)
     }
 }
 
-StructDecl: StructDefinition = {
-    <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> "{" <data: (FieldDecl)*> "}" =>? {
+StructDecl: StructDefinition_ = {
+    <l: @L> <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> "{" <data: (FieldDecl)*> "}" <r: @R> =>? {
         let (name, type_formals) = name_and_type_formals;
         let mut fields = Fields::new();
         for (field, type_) in data.into_iter() {
             fields.push((field, type_));
         }
-        StructDefinition::move_declared(is_nominal_resource, name, type_formals, fields)
+        Ok(Spanned {
+            span: Span::new(ByteIndex(l as u32), ByteIndex(r as u32)),
+            value: StructDefinition::move_declared(is_nominal_resource, name, type_formals, fields)?,
+        })
     },
-    <native: NativeTag> <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> ";" =>? {
+    <l: @L> <native: NativeTag> <is_nominal_resource: StructKind> <name_and_type_formals: NameAndTypeFormals> ";" <r: @R> =>? {
         let (name, type_formals) = name_and_type_formals;
-        StructDefinition::native(is_nominal_resource, name, type_formals)
+        Ok(Spanned {
+            span: Span::new(ByteIndex(l as u32), ByteIndex(r as u32)),
+            value: StructDefinition::native(is_nominal_resource, name, type_formals)?,
+        })
     }
 }
 

@@ -1,14 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::executor::FakeExecutor;
 use crate::{
     account::{Account, AccountData},
     common_transactions::mint_txn,
-    executor::FakeExecutor,
     gas_costs::TXN_RESERVED,
     transaction_status_eq,
 };
-use types::{
+use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
@@ -16,6 +16,8 @@ use types::{
 #[test]
 fn mint_to_existing() {
     // create a FakeExecutor with a genesis from file
+    // We can't run mint test on terraform genesis as we don't have the private key to sign the
+    // mint transaction.
     let mut executor = FakeExecutor::from_genesis_file();
     let genesis_account = Account::new_association();
 
@@ -57,6 +59,9 @@ fn mint_to_existing() {
 #[test]
 fn mint_to_new_account() {
     // create a FakeExecutor with a genesis from file
+    // We can't run mint test on terraform genesis as we don't have the private key to sign the
+    // mint transaction.
+
     let mut executor = FakeExecutor::from_genesis_file();
     let genesis_account = Account::new_association();
 

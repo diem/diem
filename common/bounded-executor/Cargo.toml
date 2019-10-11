@@ -2,11 +2,14 @@
 name = "bounded-executor"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra bounded executor"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
 futures-semaphore = { path = "../futures-semaphore" }
-futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["async-await", "nightly", "compat"] }
-tokio = "0.1.22"
+futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["async-await"] }
+tokio = "0.2.0-alpha.6"

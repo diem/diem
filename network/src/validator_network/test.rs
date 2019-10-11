@@ -4,7 +4,8 @@
 //! Integration tests for validator_network.
 use crate::{
     common::NetworkPublicKeys,
-    proto::{ConsensusMsg, MempoolSyncMsg, RequestBlock, RespondBlock, SignedTransaction},
+    proto::{ConsensusMsg, ConsensusMsg_oneof, MempoolSyncMsg, RequestBlock, RespondBlock},
+    utils::MessageExt,
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
         Event, CONSENSUS_RPC_PROTOCOL, MEMPOOL_DIRECT_SEND_PROTOCOL,
@@ -13,21 +14,21 @@ use crate::{
 };
 use config::config::RoleType;
 use crypto::{ed25519::compat, test_utils::TEST_SEED, traits::ValidKey, x25519};
-use futures::{
-    executor::block_on,
-    future::{join, FutureExt, TryFutureExt},
-    StreamExt,
-};
-use parity_multiaddr::Multiaddr;
-use protobuf::Message as proto_msg;
-use rand::{rngs::StdRng, SeedableRng};
-use std::{collections::HashMap, convert::TryFrom, time::Duration};
-use tokio::runtime::Runtime;
-use types::{
+use futures::{executor::block_on, future::join, StreamExt};
+use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
+    proto::types::SignedTransaction,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     PeerId,
 };
+use parity_multiaddr::Multiaddr;
+use rand::{rngs::StdRng, SeedableRng};
+use std::{
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    time::Duration,
+};
+use tokio::runtime::Runtime;
 
 #[test]
 fn test_network_builder() {
@@ -69,9 +70,7 @@ fn test_network_builder() {
         network_provider.add_consensus(vec![consensus_get_blocks_protocol.clone()]);
     let (_state_sync_network_sender, _state_sync_network_events) =
         network_provider.add_state_synchronizer(vec![synchronizer_get_chunks_protocol.clone()]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 }
 
 #[test]
@@ -130,9 +129,7 @@ fn test_mempool_sync() {
     .build();
     let (_, mut listener_mp_net_events) =
         network_provider.add_mempool(vec![mempool_sync_protocol.clone()]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     // Set up the dialer network
     let dialer_addr: Multiaddr = "/memory/0".parse().unwrap();
@@ -156,17 +153,17 @@ fn test_mempool_sync() {
     .build();
     let (mut dialer_mp_net_sender, mut dialer_mp_net_events) =
         network_provider.add_mempool(vec![mempool_sync_protocol.clone()]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     // The dialer dials the listener and sends a mempool sync message
-    let mut mempool_msg = MempoolSyncMsg::new();
-    mempool_msg.set_peer_id(dialer_peer_id.into());
+    let mut mempool_msg = MempoolSyncMsg::default();
+    mempool_msg.peer_id = dialer_peer_id.into();
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
     let keypair = compat::generate_keypair(&mut rng);
-    let txn = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None);
-    mempool_msg.set_transactions(::protobuf::RepeatedField::from_vec(vec![txn.clone()]));
+    let txn: SignedTransaction = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None)
+        .try_into()
+        .unwrap();
+    mempool_msg.transactions.push(txn.clone());
 
     let f_dialer = async move {
         // Wait until dialing finished and NewPeer event received
@@ -200,7 +197,7 @@ fn test_mempool_sync() {
                 assert_eq!(peer_id, dialer_peer_id);
                 let dialer_peer_id_bytes = Vec::from(&dialer_peer_id);
                 assert_eq!(msg.peer_id, dialer_peer_id_bytes);
-                let transactions: Vec<SignedTransaction> = msg.transactions.into();
+                let transactions: Vec<SignedTransaction> = msg.transactions;
                 assert_eq!(transactions, vec![txn]);
             }
             event => panic!("Unexpected event {:?}", event),
@@ -270,9 +267,7 @@ fn test_permissionless_mempool_sync() {
     .build();
     let (_, mut listener_mp_net_events) =
         network_provider.add_mempool(vec![mempool_sync_protocol.clone()]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     // Set up the dialer network
     let dialer_addr: Multiaddr = "/memory/0".parse().unwrap();
@@ -299,17 +294,17 @@ fn test_permissionless_mempool_sync() {
     .build();
     let (mut dialer_mp_net_sender, mut dialer_mp_net_events) =
         network_provider.add_mempool(vec![mempool_sync_protocol.clone()]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     // The dialer dials the listener and sends a mempool sync message
-    let mut mempool_msg = MempoolSyncMsg::new();
-    mempool_msg.set_peer_id(dialer_peer_id.into());
+    let mut mempool_msg = MempoolSyncMsg::default();
+    mempool_msg.peer_id = dialer_peer_id.into();
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
     let keypair = compat::generate_keypair(&mut rng);
-    let txn = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None);
-    mempool_msg.set_transactions(::protobuf::RepeatedField::from_vec(vec![txn.clone()]));
+    let txn: SignedTransaction = get_test_signed_txn(sender, 0, keypair.0, keypair.1, None)
+        .try_into()
+        .unwrap();
+    mempool_msg.transactions.push(txn.clone());
 
     let f_dialer = async move {
         // Wait until dialing finished and NewPeer event received
@@ -343,7 +338,7 @@ fn test_permissionless_mempool_sync() {
                 assert_eq!(peer_id, dialer_peer_id);
                 let dialer_peer_id_bytes = Vec::from(&dialer_peer_id);
                 assert_eq!(msg.peer_id, dialer_peer_id_bytes);
-                let transactions: Vec<SignedTransaction> = msg.transactions.into();
+                let transactions: Vec<SignedTransaction> = msg.transactions;
                 assert_eq!(transactions, vec![txn]);
             }
             event => panic!("Unexpected event {:?}", event),
@@ -409,9 +404,7 @@ fn test_consensus_rpc() {
     .build();
     let (_, mut listener_con_net_events) =
         network_provider.add_consensus(vec![rpc_protocol.clone()]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     // Set up the dialer network
     let dialer_addr: Multiaddr = "/memory/0".parse().unwrap();
@@ -435,15 +428,13 @@ fn test_consensus_rpc() {
     .build();
     let (mut dialer_con_net_sender, mut dialer_con_net_events) =
         network_provider.add_consensus(vec![rpc_protocol.clone()]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     let block_id = vec![0_u8; 32];
-    let mut req_block_msg = RequestBlock::new();
-    req_block_msg.set_block_id(block_id.into());
+    let mut req_block_msg = RequestBlock::default();
+    req_block_msg.block_id = block_id;
 
-    let res_block_msg = RespondBlock::new();
+    let res_block_msg = RespondBlock::default();
 
     // The dialer dials the listener and sends a RequestBlock rpc request
     let req_block_msg_clone = req_block_msg.clone();
@@ -484,18 +475,20 @@ fn test_consensus_rpc() {
 
         // The listener then handles the RequestBlock rpc request.
         match listener_con_net_events.next().await.unwrap().unwrap() {
-            Event::RpcRequest((peer_id, mut req_msg, res_tx)) => {
+            Event::RpcRequest((peer_id, req_msg, res_tx)) => {
                 assert_eq!(peer_id, dialer_peer_id);
 
                 // Check the request
-                assert!(req_msg.has_request_block());
-                let req_block_msg = req_msg.take_request_block();
-                assert_eq!(req_block_msg, req_block_msg_clone);
+                assert_eq!(
+                    req_msg.message,
+                    Some(ConsensusMsg_oneof::RequestBlock(req_block_msg_clone))
+                );
 
                 // Send the serialized response back.
-                let mut res_msg = ConsensusMsg::new();
-                res_msg.set_respond_block(res_block_msg_clone);
-                let res_data = res_msg.write_to_bytes().unwrap().into();
+                let res_msg = ConsensusMsg {
+                    message: Some(ConsensusMsg_oneof::RespondBlock(res_block_msg_clone)),
+                };
+                let res_data = res_msg.to_bytes().unwrap();
                 res_tx.send(Ok(res_data)).unwrap();
             }
             event => panic!("Unexpected event {:?}", event),

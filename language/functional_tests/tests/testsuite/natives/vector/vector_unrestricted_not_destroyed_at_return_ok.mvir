@@ -1,0 +1,9 @@
+module M {
+    import 0x0.Vector;
+
+    f() {
+        let v: Vector.T<u64>;
+        v = Vector.empty<u64>();
+        return;
+    }
+}

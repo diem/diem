@@ -1,0 +1,11 @@
+module M {
+    f<T>() {
+        Self.g<T>();
+        return;
+    }
+
+    g<T>() {
+        Self.f<T>();
+        return;
+    }
+}

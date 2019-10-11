@@ -9,8 +9,8 @@
 
 use crate::{file_format::*, file_format_common::*, vm_string::VMString};
 use failure::*;
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
 use std::ops::Deref;
-use types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
 
 impl CompiledScript {
     /// Serializes a `CompiledScript` into a binary. The mutable `Vec<u8>` will contain the

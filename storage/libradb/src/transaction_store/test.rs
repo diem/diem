@@ -3,10 +3,10 @@
 
 use super::*;
 use crate::LibraDB;
+use libra_types::proptest_types::{AccountInfoUniverse, SignatureCheckedTransactionGen};
 use proptest::{collection::vec, prelude::*};
 use proptest_helpers::Index;
 use tools::tempdir::TempPath;
-use types::proptest_types::{AccountInfoUniverse, SignatureCheckedTransactionGen};
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
@@ -33,7 +33,7 @@ proptest! {
         let mut cs = ChangeSet::new();
         for (ver, txn) in txns.iter().enumerate() {
             store
-                .put_transaction(ver as Version, &txn, &mut cs)
+                .put_transaction(ver as Version, &Transaction::UserTransaction(txn.clone()), &mut cs)
                 .unwrap();
         }
         store.db.write_schemas(cs.batch).unwrap();

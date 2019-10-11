@@ -6,8 +6,8 @@ use vm::{
         SignatureToken,
     },
     views::{
-        FieldDefinitionView, FunctionDefinitionView, FunctionSignatureView, LocalsSignatureView,
-        StructDefinitionView, ViewInternals,
+        FieldDefinitionView, FunctionDefinitionView, FunctionSignatureView, StructDefinitionView,
+        ViewInternals,
     },
 };
 
@@ -24,7 +24,6 @@ pub struct StacklessProgram {
 struct StacklessBytecodeGenerator<'a> {
     module: &'a CompiledModule,
     function_definition_view: FunctionDefinitionView<'a, CompiledModule>,
-    locals_signature_view: LocalsSignatureView<'a, CompiledModule>,
     temp_count: usize,
     temp_stack: Vec<usize>,
     local_types: Vec<SignatureToken>,
@@ -79,18 +78,21 @@ impl<'a> StacklessModuleGenerator<'a> {
 impl<'a> StacklessBytecodeGenerator<'a> {
     pub fn new(module: &'a CompiledModule, function_definition: &'a FunctionDefinition) -> Self {
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
-        let locals_signature_view = function_definition_view.locals_signature();
+        let mut temp_count = 0;
         let mut local_types = vec![];
-        for (_, arg_type_view) in locals_signature_view.tokens().enumerate() {
-            local_types.push(arg_type_view.as_inner().clone());
+        if !function_definition_view.is_native() {
+            let locals_signature_view = function_definition_view.locals_signature();
+            temp_count = locals_signature_view.len();
+            for (_, arg_type_view) in locals_signature_view.tokens().enumerate() {
+                local_types.push(arg_type_view.as_inner().clone());
+            }
         }
         StacklessBytecodeGenerator {
             module,
             function_definition_view,
-            temp_count: locals_signature_view.len(),
+            temp_count,
             temp_stack: vec![],
             local_types,
-            locals_signature_view,
             code: vec![],
         }
     }
@@ -265,7 +267,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             }
 
             Bytecode::CopyLoc(idx) => {
-                let signature = self.locals_signature_view.token_at(*idx).as_inner().clone();
+                let locals_signature_view = self.function_definition_view.locals_signature();
+                let signature = locals_signature_view.token_at(*idx).as_inner().clone();
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(signature); // same type as the value copied
@@ -274,7 +277,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             }
 
             Bytecode::MoveLoc(idx) => {
-                let signature = self.locals_signature_view.token_at(*idx).as_inner().clone();
+                let locals_signature_view = self.function_definition_view.locals_signature();
+                let signature = locals_signature_view.token_at(*idx).as_inner().clone();
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(signature); // same type as the value copied
@@ -283,7 +287,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             }
 
             Bytecode::MutBorrowLoc(idx) => {
-                let signature = self.locals_signature_view.token_at(*idx).as_inner().clone();
+                let locals_signature_view = self.function_definition_view.locals_signature();
+                let signature = locals_signature_view.token_at(*idx).as_inner().clone();
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types
@@ -294,7 +299,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             }
 
             Bytecode::ImmBorrowLoc(idx) => {
-                let signature = self.locals_signature_view.token_at(*idx).as_inner().clone();
+                let locals_signature_view = self.function_definition_view.locals_signature();
+                let signature = locals_signature_view.token_at(*idx).as_inner().clone();
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types

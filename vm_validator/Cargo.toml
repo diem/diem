@@ -2,6 +2,9 @@
 name = "vm_validator"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra vm validator"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -10,22 +13,21 @@ edition = "2018"
 config = { path = "../config" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 futures = "0.1.28"
-proto_conv = { path = "../common/proto_conv" }
 scratchpad = { path = "../storage/scratchpad" }
 state_view = { path = "../storage/state_view" }
 storage_client = { path = "../storage/storage_client" }
-types = { path = "../types" }
+libra-types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }
 
 [dev-dependencies]
-grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
+grpcio = { version = "=0.5.0-alpha.4", default-features = false }
 rand = "0.6.5"
 
-execution_proto = { path = "../execution/execution_proto" }
-execution_service = { path = "../execution/execution_service" }
-grpc_helpers = { path = "../common/grpc_helpers" }
+config-builder = { path = "../config/config-builder" }
 crypto = { path = "../crypto/crypto", features = ["testing"] }
-storage_service = { path = "../storage/storage_service" }
-types = { path = "../types", features = ["testing"] }
-vm_genesis = { path = "../language/vm/vm_genesis" }
-config_builder = { path = "../config/config_builder" }
+executor = { path = "../execution/executor" }
+grpc_helpers = { path = "../common/grpc_helpers" }
+storage-service = { path = "../storage/storage-service" }
+libra-types = { path = "../types", features = ["testing"] }
+vm_runtime = { path = "../language/vm/vm_runtime" }
+transaction_builder = { path = "../language/transaction_builder" }

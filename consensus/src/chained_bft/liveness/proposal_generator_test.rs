@@ -4,15 +4,16 @@
 use crate::{
     chained_bft::{
         block_storage::BlockReader,
-        consensus_types::{quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsg},
-        liveness::proposal_generator::{ProposalGenerationError, ProposalGenerator},
+        liveness::proposal_generator::ProposalGenerator,
         test_utils::{
-            build_empty_tree, placeholder_ledger_info, MockTransactionManager, TreeInserter,
+            self, build_empty_tree, placeholder_ledger_info, MockTransactionManager, TreeInserter,
         },
     },
     util::mock_time_service::SimulatedTimeService,
 };
+use consensus_types::{quorum_cert::QuorumCert, vote_data::VoteData, vote_msg::VoteMsg};
 use futures::executor::block_on;
+use libra_types::crypto_proxies::ValidatorVerifier;
 use std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -38,15 +39,11 @@ fn test_proposal_generation_empty_tree() {
     let proposal = block_on(proposal_generator.generate_proposal(1, minute_from_now())).unwrap();
     assert_eq!(proposal.parent_id(), genesis.id());
     assert_eq!(proposal.round(), 1);
-    assert_eq!(proposal.height(), 1);
     assert_eq!(proposal.quorum_cert().certified_block_id(), genesis.id());
 
     // Duplicate proposals on the same round are not allowed
     let proposal_err = block_on(proposal_generator.generate_proposal(1, minute_from_now())).err();
-    assert_eq!(
-        proposal_err.unwrap(),
-        ProposalGenerationError::AlreadyProposed(1)
-    );
+    assert!(proposal_err.is_some());
 }
 
 #[test]
@@ -61,10 +58,8 @@ fn test_proposal_generation_parent() {
         true,
     );
     let genesis = block_store.root();
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
-    let b1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 2);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let b1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 2);
 
     // With no certifications the parent is genesis
     // generate proposals for an empty tree.
@@ -87,19 +82,21 @@ fn test_proposal_generation_parent() {
             a1.round(),
             a1.quorum_cert().parent_block_id(),
             a1.quorum_cert().parent_block_round(),
-            a1.quorum_cert().grandparent_block_id(),
-            a1.quorum_cert().grandparent_block_round(),
         ),
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
+        test_utils::placeholder_sync_info(),
     );
-    block_store.insert_vote_and_qc(vote_msg_a1, 1);
+    let validator_verifier = Arc::new(ValidatorVerifier::new_single(
+        block_store.signer().author(),
+        block_store.signer().public_key(),
+    ));
+    block_store.insert_vote_and_qc(vote_msg_a1, validator_verifier);
     let a1_child_res =
         block_on(proposal_generator.generate_proposal(11, minute_from_now())).unwrap();
     assert_eq!(a1_child_res.parent_id(), a1.id());
     assert_eq!(a1_child_res.round(), 11);
-    assert_eq!(a1_child_res.height(), 2);
     assert_eq!(a1_child_res.quorum_cert().certified_block_id(), a1.id());
 
     // Once b1 is certified, it should be the one to choose from
@@ -114,20 +111,21 @@ fn test_proposal_generation_parent() {
             b1.round(),
             b1.quorum_cert().parent_block_id(),
             b1.quorum_cert().parent_block_round(),
-            b1.quorum_cert().grandparent_block_id(),
-            b1.quorum_cert().grandparent_block_round(),
         ),
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
+        test_utils::placeholder_sync_info(),
     );
-
-    block_store.insert_vote_and_qc(vote_msg_b1, 1);
+    let validator_verifier = Arc::new(ValidatorVerifier::new_single(
+        block_store.signer().author(),
+        block_store.signer().public_key(),
+    ));
+    block_store.insert_vote_and_qc(vote_msg_b1, validator_verifier);
     let b1_child_res =
         block_on(proposal_generator.generate_proposal(12, minute_from_now())).unwrap();
     assert_eq!(b1_child_res.parent_id(), b1.id());
     assert_eq!(b1_child_res.round(), 12);
-    assert_eq!(b1_child_res.height(), 2);
     assert_eq!(b1_child_res.quorum_cert().certified_block_id(), b1.id());
 }
 
@@ -143,8 +141,7 @@ fn test_old_proposal_generation() {
         true,
     );
     let genesis = block_store.root();
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), genesis.as_ref(), 1);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
     let vote_msg_a1 = VoteMsg::new(
         VoteData::new(
             a1.id(),
@@ -156,18 +153,18 @@ fn test_old_proposal_generation() {
             a1.round(),
             a1.quorum_cert().parent_block_id(),
             a1.quorum_cert().parent_block_round(),
-            a1.quorum_cert().grandparent_block_id(),
-            a1.quorum_cert().grandparent_block_round(),
         ),
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
+        test_utils::placeholder_sync_info(),
     );
-    block_store.insert_vote_and_qc(vote_msg_a1, 1);
+    let validator_verifier = Arc::new(ValidatorVerifier::new_single(
+        block_store.signer().author(),
+        block_store.signer().public_key(),
+    ));
+    block_store.insert_vote_and_qc(vote_msg_a1, validator_verifier);
 
     let proposal_err = block_on(proposal_generator.generate_proposal(1, minute_from_now())).err();
-    assert_eq!(
-        proposal_err.unwrap(),
-        ProposalGenerationError::GivenRoundTooLow(1)
-    );
+    assert!(proposal_err.is_some());
 }

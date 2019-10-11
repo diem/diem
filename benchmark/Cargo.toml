@@ -2,40 +2,42 @@
 name = "benchmark"
 version = "0.1.0"
 authors = ["Libra <oncall+libra@xmail.facebook.com>"]
+description = "Libra benchmark"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
-clap = "2.33.0"
 futures = "0.1.28"
-grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
+grpcio = { version = "=0.5.0-alpha.4", default-features = false }
 lazy_static = "1.2.0"
-protobuf = "~2.7"
+prost = "0.5.0"
 rand = "0.6.5"
 regex = { version = "1.3.0", default-features = false, features = ["std", "perf"] }
-structopt = "0.2.15"
+structopt = "0.3.2"
 num_cpus = "1.10.1"
+walkdir = "2.2.9"
 
-admission_control_proto = { path = "../admission_control/admission_control_proto" }
+admission-control-proto = { path = "../admission_control/admission-control-proto" }
 client = { path = "../client" }
 config = { path = "../config" }
-config_builder = { path = "../config/config_builder" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
-generate_keypair = { path = "../config/generate_keypair" }
+generate-keypair = { path = "../config/generate-keypair" }
 libra_wallet = { path = "../client/libra_wallet" }
-libra_swarm = { path = "../libra_swarm" }
+libra-swarm = { path = "../libra-swarm" }
 logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 crypto = { path = "../crypto/crypto" }
-proto_conv = { path = "../common/proto_conv" }
 rusty-fork = "0.2.1"
 tools = { path = "../common/tools" }
-types = { path = "../types" }
-vm_genesis = { path = "../language/vm/vm_genesis" }
+libra-types = { path = "../types" }
+transaction_builder = { path = "../language/transaction_builder" }
 
 [dev-dependencies]
 crypto = { path = "../crypto/crypto", features = ["testing"] }
 
 [features]
 default = []
-testing = ["crypto/testing", "libra_swarm/testing"]
+testing = ["crypto/testing", "libra-swarm/testing"]

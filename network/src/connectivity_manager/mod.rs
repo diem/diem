@@ -20,10 +20,10 @@ use crate::{
 use channel;
 use futures::{
     channel::oneshot,
-    compat::Future01CompatExt,
     future::{BoxFuture, FutureExt},
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
+use libra_types::PeerId;
 use logger::prelude::*;
 use parity_multiaddr::Multiaddr;
 use std::{
@@ -34,7 +34,6 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::timer;
-use types::PeerId;
 
 #[cfg(test)]
 mod test;
@@ -261,8 +260,7 @@ where
             // the next dial attempt for this peer.
             let now = Instant::now();
             let dial_delay = dial_state.next_backoff_delay(max_delay);
-            let dial_time = now.checked_add(dial_delay).unwrap_or_else(Instant::now);
-            let f_delay = timer::Delay::new(dial_time);
+            let f_delay = timer::delay_for(dial_delay);
 
             let (cancel_tx, cancel_rx) = oneshot::channel();
 
@@ -285,7 +283,7 @@ where
                 // We dial after a delay. The dial can be cancelled by sending to or dropping
                 // `cancel_rx`.
                 let dial_result = ::futures::select! {
-                    _ = f_delay.compat().fuse() => {
+                    _ = f_delay.fuse() => {
                         info!("Dialing peer: {}, at addr: {}", peer_id.short_str(), addr);
                         match peer_mgr_reqs_tx.dial_peer(peer_id, addr.clone()).await {
                             Ok(_) => DialResult::Success,

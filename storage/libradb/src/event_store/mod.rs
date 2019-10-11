@@ -21,15 +21,15 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
-use schemadb::{schema::ValueCodec, ReadOptions, DB};
-use std::{convert::TryFrom, sync::Arc};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     contract_event::ContractEvent,
     event::EventKey,
     proof::{position::Position, AccumulatorProof, EventProof},
     transaction::Version,
 };
+use schemadb::{schema::ValueCodec, ReadOptions, DB};
+use std::{convert::TryFrom, sync::Arc};
 
 pub(crate) struct EventStore {
     db: Arc<DB>,
@@ -75,7 +75,7 @@ impl EventStore {
         let mut iter = self.db.iter::<EventSchema>(ReadOptions::default())?;
         iter.seek_for_prev(&(version + 1))?;
         let num_events = match iter.next().transpose()? {
-            Some(((ver, index), _)) if ver == version => index + 1,
+            Some(((ver, index), _)) if ver == version => (index + 1),
             _ => unreachable!(), // since we've already got at least one event above
         };
 

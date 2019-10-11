@@ -30,6 +30,9 @@
 //! testing purposes. Production code should find an alternate means for secure key generation.
 
 use crate::{traits::*, HashValue};
+use canonical_serialization::{
+    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
+};
 use core::convert::TryFrom;
 use crypto_derive::{SilentDebug, SilentDisplay};
 use ed25519_dalek;
@@ -374,6 +377,19 @@ impl PartialEq for Ed25519Signature {
 
 impl Eq for Ed25519Signature {}
 
+/// Check if S < L to capture invalid signatures.
+fn check_s_lt_l(s: &[u8]) -> bool {
+    for i in (0..32).rev() {
+        if s[i] < L[i] {
+            return true;
+        } else if s[i] > L[i] {
+            return false;
+        }
+    }
+    // As this stage S == L which implies a non canonical S.
+    false
+}
+
 //////////////////////////
 // Compatibility Traits //
 //////////////////////////
@@ -452,6 +468,44 @@ pub mod compat {
 }
 
 //////////////////////////////
+// Canonical Serialization  //
+//////////////////////////////
+
+impl CanonicalSerialize for Ed25519PublicKey {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer.encode_bytes(&self.to_bytes())?;
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for Ed25519PublicKey {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let public_key_bytes = deserializer.decode_bytes()?;
+        Ok(Ed25519PublicKey::try_from(&public_key_bytes[..])?)
+    }
+}
+
+impl CanonicalSerialize for Ed25519Signature {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer.encode_bytes(&self.to_bytes())?;
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for Ed25519Signature {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let signature_bytes = deserializer.decode_bytes()?;
+        Ok(Ed25519Signature::try_from(&signature_bytes[..])?)
+    }
+}
+
+//////////////////////////////
 // Compact Serialization    //
 //////////////////////////////
 
@@ -483,9 +537,7 @@ impl ser::Serialize for Ed25519Signature {
 }
 
 struct Ed25519PrivateKeyVisitor;
-
 struct Ed25519PublicKeyVisitor;
-
 struct Ed25519SignatureVisitor;
 
 impl<'de> de::Visitor<'de> for Ed25519PrivateKeyVisitor {
@@ -499,10 +551,7 @@ impl<'de> de::Visitor<'de> for Ed25519PrivateKeyVisitor {
     where
         E: de::Error,
     {
-        match Ed25519PrivateKey::try_from(value) {
-            Ok(key) => Ok(key),
-            Err(error) => Err(E::custom(error)),
-        }
+        Ed25519PrivateKey::try_from(value).map_err(E::custom)
     }
 }
 
@@ -517,10 +566,7 @@ impl<'de> de::Visitor<'de> for Ed25519PublicKeyVisitor {
     where
         E: de::Error,
     {
-        match Ed25519PublicKey::try_from(value) {
-            Ok(key) => Ok(key),
-            Err(error) => Err(E::custom(error)),
-        }
+        Ed25519PublicKey::try_from(value).map_err(E::custom)
     }
 }
 
@@ -535,10 +581,7 @@ impl<'de> de::Visitor<'de> for Ed25519SignatureVisitor {
     where
         E: de::Error,
     {
-        match Ed25519Signature::try_from(value) {
-            Ok(key) => Ok(key),
-            Err(error) => Err(E::custom(error)),
-        }
+        Ed25519Signature::try_from(value).map_err(E::custom)
     }
 }
 
@@ -567,17 +610,4 @@ impl<'de> de::Deserialize<'de> for Ed25519Signature {
     {
         deserializer.deserialize_bytes(Ed25519SignatureVisitor {})
     }
-}
-
-/// Check if S < L to capture invalid signatures.
-fn check_s_lt_l(s: &[u8]) -> bool {
-    for i in (0..32).rev() {
-        if s[i] < L[i] {
-            return true;
-        } else if s[i] > L[i] {
-            return false;
-        }
-    }
-    // As this stage S == L which implies a non canonical S.
-    false
 }

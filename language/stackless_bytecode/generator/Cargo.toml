@@ -2,6 +2,9 @@
 name = "stackless_bytecode_generator"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra stackless bytecode generator"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -12,6 +15,6 @@ ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
 stdlib = { path = "../../stdlib" }
 #
 [dev-dependencies]
-# invalid_mutations = { path = "invalid_mutations" }
+# invalid-mutations = { path = "invalid-mutations" }
 proptest = "0.9"
-types = { path = "../../../types", features = ["testing"]}
+libra-types = { path = "../../../types", features = ["testing"]}

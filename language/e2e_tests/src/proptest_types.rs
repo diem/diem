@@ -40,6 +40,7 @@ impl AccountData {
                         sent_events_count,
                         received_events_count,
                         false, // TODO: vary withdrawal capability param?
+                        false, // TODO: vary rotation capability param?
                     )
                 },
             )

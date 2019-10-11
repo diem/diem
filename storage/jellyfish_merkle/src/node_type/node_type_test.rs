@@ -6,9 +6,9 @@ use crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
+use libra_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
 use proptest::prelude::*;
 use std::{panic, rc::Rc};
-use types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
 
 fn hash_internal(left: HashValue, right: HashValue) -> HashValue {
     SparseMerkleInternalNode::new(left, right).hash()
@@ -79,6 +79,22 @@ fn test_encode_decode() {
             e.downcast::<NodeDecodeError>().unwrap(),
             NodeDecodeError::UnknownTag { unknown_tag: 100 }
         );
+    }
+}
+
+proptest! {
+    #[test]
+    fn test_u64_varint_roundtrip(input in any::<u64>()) {
+        let mut vec = vec![];
+        serialize_u64_varint(input, &mut vec);
+        assert_eq!(deserialize_u64_varint(&mut Cursor::new(vec)).unwrap(), input);
+    }
+
+    #[test]
+    fn test_internal_node_roundtrip(input in any::<InternalNode>()) {
+        let mut vec = vec![];
+        input.serialize(&mut vec).unwrap();
+        assert_eq!(InternalNode::deserialize(&vec).unwrap(), input);
     }
 }
 

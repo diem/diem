@@ -1,0 +1,8 @@
+module M {
+    struct S<T> {}
+
+    foo<T>() {
+        let x: Self.S<T>;
+        return;
+    }
+}

@@ -9,7 +9,6 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use proptest::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 
@@ -203,66 +202,49 @@ impl VMStatus {
 //***********************************
 // Decoding/Encoding to Protobuffers
 //***********************************
+impl TryFrom<crate::proto::types::VmStatus> for VMStatus {
+    type Error = Error;
 
-impl IntoProto for VMStatus {
-    type ProtoType = crate::proto::vm_errors::VMStatus;
-    fn into_proto(self) -> Self::ProtoType {
-        let mut proto_status = Self::ProtoType::new();
+    fn try_from(proto: crate::proto::types::VmStatus) -> Result<Self> {
+        let mut status = VMStatus::new(
+            StatusCode::try_from(proto.major_status).unwrap_or(StatusCode::UNKNOWN_STATUS),
+        );
 
-        proto_status.set_has_sub_status(false);
-        proto_status.set_has_message(false);
-
-        // Set major status
-        proto_status.set_major_status(self.major_status.into_proto());
-
-        // Set minor status if there is one
-        if let Some(sub_status) = self.sub_status {
-            proto_status.set_has_sub_status(true);
-            proto_status.set_sub_status(sub_status);
+        if proto.has_sub_status {
+            status.set_sub_status(proto.sub_status);
         }
 
-        // Set info string
-        if let Some(string) = self.message {
-            proto_status.set_has_message(true);
-            proto_status.set_message(string);
-        }
-
-        proto_status
-    }
-}
-
-impl FromProto for VMStatus {
-    type ProtoType = crate::proto::vm_errors::VMStatus;
-
-    fn from_proto(mut proto_status: Self::ProtoType) -> Result<Self> {
-        let mut status = VMStatus::new(StatusCode::from_proto(proto_status.get_major_status())?);
-
-        if proto_status.get_has_sub_status() {
-            status.set_sub_status(proto_status.get_sub_status());
-        }
-
-        if proto_status.get_has_message() {
-            status.set_message(proto_status.take_message());
+        if proto.has_message {
+            status.set_message(proto.message);
         }
 
         Ok(status)
     }
 }
 
-impl IntoProto for StatusCode {
-    type ProtoType = u64;
-    fn into_proto(self) -> Self::ProtoType {
-        self.into()
-    }
-}
+impl From<VMStatus> for crate::proto::types::VmStatus {
+    fn from(status: VMStatus) -> Self {
+        let mut proto_status = Self::default();
 
-impl FromProto for StatusCode {
-    type ProtoType = u64;
-    fn from_proto(proto_code: Self::ProtoType) -> Result<Self> {
-        match StatusCode::try_from(proto_code) {
-            Ok(status) => Ok(status),
-            Err(_) => Ok(StatusCode::UNKNOWN_STATUS),
+        proto_status.has_sub_status = false;
+        proto_status.has_message = false;
+
+        // Set major status
+        proto_status.major_status = status.major_status.into();
+
+        // Set minor status if there is one
+        if let Some(sub_status) = status.sub_status {
+            proto_status.has_sub_status = true;
+            proto_status.sub_status = sub_status;
         }
+
+        // Set info string
+        if let Some(string) = status.message {
+            proto_status.has_message = true;
+            proto_status.message = string;
+        }
+
+        proto_status
     }
 }
 
@@ -335,7 +317,7 @@ pub enum StatusCode {
     INDEX_OUT_OF_BOUNDS = 1001,
     RANGE_OUT_OF_BOUNDS = 1002,
     INVALID_SIGNATURE_TOKEN = 1003,
-    INVALID_FIELD_DEF_REFERENCE = 1004,
+    INVALID_FIELD_DEF = 1004,
     RECURSIVE_STRUCT_DEFINITION = 1005,
     INVALID_RESOURCE_FIELD = 1006,
     INVALID_FALL_THROUGH = 1007,
@@ -347,7 +329,7 @@ pub enum StatusCode {
     INVALID_MODULE_HANDLE = 1013,
     UNIMPLEMENTED_HANDLE = 1014,
     INCONSISTENT_FIELDS = 1015,
-    UNUSED_FIELDS = 1016,
+    UNUSED_FIELD = 1016,
     LOOKUP_FAILED = 1017,
     VISIBILITY_MISMATCH = 1018,
     TYPE_RESOLUTION_FAILURE = 1019,
@@ -410,6 +392,9 @@ pub enum StatusCode {
     GLOBAL_REFERENCE_ERROR = 1073,
     CONTRAINT_KIND_MISMATCH = 1074,
     NUMBER_OF_TYPE_ACTUALS_MISMATCH = 1075,
+    LOOP_IN_INSTANTIATION_GRAPH = 1076,
+    UNUSED_LOCALS_SIGNATURE = 1077,
+    UNUSED_TYPE_SIGNATURE = 1078,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

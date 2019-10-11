@@ -31,17 +31,17 @@ use crate::{
     IndexKind, SignatureTokenKind,
 };
 use lazy_static::lazy_static;
-#[cfg(any(test, feature = "testing"))]
-use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
-#[cfg(any(test, feature = "testing"))]
-use proptest_derive::Arbitrary;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
+#[cfg(any(test, feature = "testing"))]
+use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
+#[cfg(any(test, feature = "testing"))]
+use proptest_derive::Arbitrary;
 
 /// Generic index into one of the tables in the binary format.
 pub type TableIndex = u16;
@@ -476,6 +476,16 @@ impl Kind {
             _ => false,
         }
     }
+
+    /// Helper function to determine the kind of a struct instance by taking the kind of a type
+    /// actual and join it with the existing partial result.
+    pub fn join(self, other: &Kind) -> Kind {
+        match (self, other) {
+            (Kind::All, _) | (_, Kind::All) => Kind::All,
+            (Kind::Resource, _) | (_, Kind::Resource) => Kind::Resource,
+            (Kind::Unrestricted, Kind::Unrestricted) => Kind::Unrestricted,
+        }
+    }
 }
 
 /// A `SignatureToken` is a type declaration for a location.
@@ -704,6 +714,50 @@ impl SignatureToken {
             Reference(ty) => Reference(Box::new(ty.substitute(tys))),
             MutableReference(ty) => MutableReference(Box::new(ty.substitute(tys))),
             TypeParameter(idx) => tys[*idx as usize].clone(),
+        }
+    }
+
+    /// Returns the kind of the signature token in the given context (module, function/struct).
+    /// The context is needed to determine the kinds of structs & type variables.
+    pub fn kind(
+        (struct_handles, type_formals): (&[StructHandle], &[Kind]),
+        ty: &SignatureToken,
+    ) -> Kind {
+        use SignatureToken::*;
+
+        match ty {
+            // The primitive types & references have kind unrestricted.
+            Bool | U64 | String | ByteArray | Address | Reference(_) | MutableReference(_) => {
+                Kind::Unrestricted
+            }
+
+            // To get the kind of a type parameter, we lookup its constraint in the formals.
+            TypeParameter(idx) => type_formals[*idx as usize],
+
+            Struct(idx, tys) => {
+                // Get the struct handle at idx. Note the index could be out of bounds.
+                let sh = &struct_handles[idx.0 as usize];
+
+                if sh.is_nominal_resource {
+                    return Kind::Resource;
+                }
+
+                // Gather the kinds of the type actuals.
+                let kinds = tys
+                    .iter()
+                    .map(|ty| Self::kind((struct_handles, type_formals), ty))
+                    .collect::<Vec<_>>();
+
+                // Derive the kind of the struct.
+                //   - If any of the type actuals has kind `all`, then the struct has kind `all`.
+                //     - `all` means some part of the type can be either `resource` or
+                //       `unrestricted`.
+                //     - Therefore it is also impossible to determine the kind of the type as a
+                //       whole, and thus `all`.
+                //   - If none of the type actuals has kind `all`, then the struct is a resource if
+                //     and only if one of the type actuals has kind `resource`.
+                kinds.iter().fold(Kind::Unrestricted, Kind::join)
+            }
         }
     }
 }
@@ -1689,6 +1743,71 @@ pub fn empty_module() -> CompiledModuleMut {
         locals_signatures: vec![LocalsSignature(vec![])],
         byte_array_pool: vec![],
     }
+}
+
+/// Create the following module which is convenient in tests:
+/// // module <SELF> {
+/// //     struct Bar { x: u64 }
+/// //
+/// //     foo() {
+/// //     }
+/// // }
+pub fn basic_test_module() -> CompiledModuleMut {
+    let mut m = empty_module();
+
+    m.function_signatures.push(FunctionSignature {
+        return_types: vec![],
+        arg_types: vec![],
+        type_formals: vec![],
+    });
+
+    m.function_handles.push(FunctionHandle {
+        module: ModuleHandleIndex::new(0),
+        name: IdentifierIndex::new(m.identifiers.len() as u16),
+        signature: FunctionSignatureIndex::new(0),
+    });
+    m.identifiers
+        .push(Identifier::new("foo".to_string()).unwrap());
+
+    m.function_defs.push(FunctionDefinition {
+        function: FunctionHandleIndex::new(0),
+        flags: 0,
+        acquires_global_resources: vec![],
+        code: CodeUnit {
+            max_stack_size: 0,
+            locals: LocalsSignatureIndex::new(0),
+            code: vec![],
+        },
+    });
+
+    m.struct_handles.push(StructHandle {
+        module: ModuleHandleIndex::new(0),
+        name: IdentifierIndex::new(m.identifiers.len() as u16),
+        is_nominal_resource: false,
+        type_formals: vec![],
+    });
+    m.identifiers
+        .push(Identifier::new("Bar".to_string()).unwrap());
+
+    m.struct_defs.push(StructDefinition {
+        struct_handle: StructHandleIndex::new(0),
+        field_information: StructFieldInformation::Declared {
+            field_count: 1,
+            fields: FieldDefinitionIndex::new(0),
+        },
+    });
+
+    m.field_defs.push(FieldDefinition {
+        struct_: StructHandleIndex::new(0),
+        name: IdentifierIndex::new(m.identifiers.len() as u16),
+        signature: TypeSignatureIndex::new(0),
+    });
+    m.identifiers
+        .push(Identifier::new("x".to_string()).unwrap());
+
+    m.type_signatures.push(TypeSignature(SignatureToken::U64));
+
+    m
 }
 
 /// Create a dummy module to wrap the bytecode program in local@code

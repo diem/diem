@@ -6,13 +6,13 @@ use crate::{
     native_structs::{dispatch::dispatch_native_struct, vector::NativeVector},
     value::Value,
 };
-use std::collections::{HashMap, VecDeque};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     account_config,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
 };
+use std::collections::{HashMap, VecDeque};
 use vm::file_format::{FunctionSignature, Kind, SignatureToken};
 
 /// Enum representing the result of running a native function
@@ -196,6 +196,22 @@ lazy_static! {
             vec![Kind::All],
             vec![MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)])))],
             vec![TypeParameter(0)]
+        );
+        add!(m, addr, "Vector", "destroy_empty",
+            NativeVector::native_destroy_empty,
+            vec![Kind::All],
+            vec![tstruct(addr, "Vector", "T", vec![TypeParameter(0)])],
+            vec![]
+        );
+        add!(m, addr, "Vector", "swap",
+            NativeVector::native_swap,
+            vec![Kind::All],
+            vec![
+                MutableReference(Box::new(tstruct(addr, "Vector", "T", vec![TypeParameter(0)]))),
+                U64,
+                U64,
+            ],
+            vec![]
         );
         // Event
         add!(m, addr, "Event", "write_to_event_store",

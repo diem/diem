@@ -3,6 +3,7 @@
 
 use super::Accumulator;
 use crate::proof::{
+    definition::LeafCount,
     position::{FrozenSubtreeSiblingIterator, Position},
     TestAccumulatorInternalNode,
 };
@@ -102,7 +103,7 @@ fn test_accumulator_append() {
         itertools::zip_eq(leaves.into_iter(), expected_root_hashes.into_iter()).enumerate()
     {
         assert_eq!(accumulator.root_hash(), expected_root_hash);
-        assert_eq!(accumulator.num_leaves(), i as u64);
+        assert_eq!(accumulator.num_leaves(), i as LeafCount);
         accumulator = accumulator.append(vec![leaf]);
     }
 }
@@ -123,11 +124,11 @@ proptest! {
         let position_to_hash = compute_hashes_for_all_positions(&all_hashes);
 
         let subtree_hashes: Vec<_> =
-            FrozenSubtreeSiblingIterator::new(hashes1.len() as u64, all_hashes.len() as u64)
+            FrozenSubtreeSiblingIterator::new(hashes1.len() as LeafCount, all_hashes.len() as LeafCount)
                 .filter_map(|pos| position_to_hash.get(&pos).cloned())
                 .collect();
         let new_accumulator = accumulator
-            .append_subtrees(&subtree_hashes, hashes2.len() as u64)
+            .append_subtrees(&subtree_hashes, hashes2.len() as LeafCount)
             .unwrap();
         prop_assert_eq!(
             new_accumulator.root_hash(),

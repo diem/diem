@@ -3,8 +3,6 @@
 
 use crate::{
     chained_bft::{
-        common::Round,
-        consensus_types::timeout_msg::PacemakerTimeout,
         liveness::{
             pacemaker::{
                 ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker,
@@ -18,9 +16,10 @@ use crate::{
     util::mock_time_service::SimulatedTimeService,
 };
 use channel;
+use consensus_types::{common::Round, timeout_msg::PacemakerTimeout};
 use futures::{executor::block_on, StreamExt};
+use libra_types::crypto_proxies::random_validator_verifier;
 use std::{sync::Arc, time::Duration, u64};
-use types::crypto_proxies::ValidatorSigner;
 
 #[test]
 fn test_pacemaker_time_interval() {
@@ -55,20 +54,17 @@ fn test_basic_timeout() {
 /// Verify that Pacemaker forms a timeout certificate on receiving sufficient timeout messages
 fn test_timeout_certificate() {
     let rounds: Round = 5;
-    let mut signers: Vec<ValidatorSigner> = vec![];
-    for round in 1..rounds {
-        let signer = ValidatorSigner::random([round as u8; 32]);
-        signers.push(signer);
-    }
+    let (signers, validator_verifier) =
+        random_validator_verifier((rounds - 1) as usize, None, false);
+    let validator_verifier = Arc::new(validator_verifier);
     let (mut pm, _) = make_pacemaker();
-    let quorum_size = 3;
 
     // Send timeout for rounds 1..5, each from a different author, so that they can be
     // accumulated into single timeout certificate
     for round in 1..rounds {
         let signer = &signers[(round - 1) as usize];
         let pacemaker_timeout = PacemakerTimeout::new(round, signer, None);
-        let result = pm.process_remote_timeout(pacemaker_timeout, quorum_size);
+        let result = pm.process_remote_timeout(pacemaker_timeout, Arc::clone(&validator_verifier));
         // quorum size is 3 in make_pacemaker
         if round >= 3 {
             // Then timeout quorum for previous round (1,2,3) generates new round event for

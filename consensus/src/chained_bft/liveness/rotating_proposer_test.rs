@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
-    consensus_types::{block::Block, quorum_cert::QuorumCert},
-    liveness::{proposer_election::ProposerElection, rotating_proposer_election::RotatingProposer},
+use crate::chained_bft::liveness::{
+    proposer_election::ProposerElection, rotating_proposer_election::RotatingProposer,
 };
-use types::validator_signer::ValidatorSigner;
+use consensus_types::{block::Block, quorum_cert::QuorumCert};
+use libra_types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_rotating_proposer() {

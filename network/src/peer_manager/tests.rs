@@ -13,12 +13,12 @@ use channel;
 use config::config::RoleType;
 use futures::{
     channel::oneshot,
-    compat::Compat01As03,
     executor::block_on,
-    future::{join, FutureExt, TryFutureExt},
+    future::join,
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
     stream::StreamExt,
 };
+use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::{
     multiplexing::{
@@ -31,7 +31,6 @@ use netcore::{
 use parity_multiaddr::Multiaddr;
 use std::{collections::HashMap, io, time::Duration};
 use tokio::{runtime::TaskExecutor, timer::Timeout};
-use types::PeerId;
 
 const HELLO_PROTOCOL: &[u8] = b"/hello-world/1.0.0";
 
@@ -167,7 +166,7 @@ fn peer_open_substream() {
 // we won't deadlock.
 #[test]
 fn peer_open_substream_simultaneous() {
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
     let (
         (peer_a, mut peer_handle_a, mut internal_event_rx_a),
         (peer_b, mut peer_handle_b, mut internal_event_rx_b),
@@ -186,14 +185,8 @@ fn peer_open_substream_simultaneous() {
             .await;
 
         // These both should complete, but in the event they deadlock wrap them in a timeout
-        let timeout_a = Compat01As03::new(Timeout::new(
-            substream_rx_a.boxed().compat(),
-            Duration::from_secs(10),
-        ));
-        let timeout_b = Compat01As03::new(Timeout::new(
-            substream_rx_b.boxed().compat(),
-            Duration::from_secs(10),
-        ));
+        let timeout_a = Timeout::new(substream_rx_a, Duration::from_secs(10));
+        let timeout_b = Timeout::new(substream_rx_b, Duration::from_secs(10));
         let _ = timeout_a.await.unwrap().unwrap();
         let _ = timeout_b.await.unwrap().unwrap();
 
@@ -219,12 +212,11 @@ fn peer_open_substream_simultaneous() {
         .await;
     };
 
-    runtime.spawn(peer_a.start().boxed().unit_error().compat());
-    runtime.spawn(peer_b.start().boxed().unit_error().compat());
+    runtime.spawn(peer_a.start());
+    runtime.spawn(peer_b.start());
 
-    runtime
-        .block_on_all(test.boxed().unit_error().compat())
-        .unwrap();
+    runtime.block_on(test);
+    runtime.shutdown_on_idle();
 }
 
 #[test]
@@ -393,7 +385,7 @@ async fn check_correct_connection_is_live<TMuxer: StreamMultiplexer>(
 
 #[test]
 fn peer_manager_simultaneous_dial_two_inbound() {
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -434,14 +426,12 @@ fn peer_manager_simultaneous_dial_two_inbound() {
         .await;
     };
 
-    runtime
-        .block_on(test.boxed().unit_error().compat())
-        .unwrap();
+    runtime.block_on(test);
 }
 
 #[test]
 fn peer_manager_simultaneous_dial_inbound_outbout_remote_id_larger() {
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -483,14 +473,12 @@ fn peer_manager_simultaneous_dial_inbound_outbout_remote_id_larger() {
         .await;
     };
 
-    runtime
-        .block_on(test.boxed().unit_error().compat())
-        .unwrap();
+    runtime.block_on(test);
 }
 
 #[test]
 fn peer_manager_simultaneous_dial_inbound_outbout_own_id_larger() {
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -532,14 +520,12 @@ fn peer_manager_simultaneous_dial_inbound_outbout_own_id_larger() {
         .await;
     };
 
-    runtime
-        .block_on(test.boxed().unit_error().compat())
-        .unwrap();
+    runtime.block_on(test);
 }
 
 #[test]
 fn peer_manager_simultaneous_dial_outbound_inbound_remote_id_larger() {
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -581,14 +567,12 @@ fn peer_manager_simultaneous_dial_outbound_inbound_remote_id_larger() {
         .await;
     };
 
-    runtime
-        .block_on(test.boxed().unit_error().compat())
-        .unwrap();
+    runtime.block_on(test);
 }
 
 #[test]
 fn peer_manager_simultaneous_dial_outbound_inbound_own_id_larger() {
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -630,14 +614,12 @@ fn peer_manager_simultaneous_dial_outbound_inbound_own_id_larger() {
         .await;
     };
 
-    runtime
-        .block_on(test.boxed().unit_error().compat())
-        .unwrap();
+    runtime.block_on(test);
 }
 
 #[test]
 fn peer_manager_simultaneous_dial_two_outbound() {
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -678,14 +660,12 @@ fn peer_manager_simultaneous_dial_two_outbound() {
         .await;
     };
 
-    runtime
-        .block_on(test.boxed().unit_error().compat())
-        .unwrap();
+    runtime.block_on(test);
 }
 
 #[test]
 fn peer_manager_simultaneous_dial_disconnect_event() {
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -716,7 +696,5 @@ fn peer_manager_simultaneous_dial_disconnect_event() {
         assert!(peer_manager.active_peers.contains_key(&ids[0]));
     };
 
-    runtime
-        .block_on(test.boxed().unit_error().compat())
-        .unwrap();
+    runtime.block_on(test);
 }

@@ -7,14 +7,14 @@ use crate::{
     test_helper::arb_blocks_to_commit,
 };
 use crypto::hash::CryptoHash;
+use libra_types::{
+    account_config::get_account_resource_or_default, contract_event::ContractEvent,
+    ledger_info::LedgerInfo,
+};
 use proptest::prelude::*;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::collections::HashMap;
 use tools::tempdir::TempPath;
-use types::{
-    account_config::get_account_resource_or_default, contract_event::ContractEvent,
-    ledger_info::LedgerInfo,
-};
 
 fn test_save_blocks_impl(
     input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
@@ -307,11 +307,11 @@ fn verify_committed_transactions(
         // Verify transaction hash.
         assert_eq!(
             txn_info.signed_transaction_hash(),
-            txn_to_commit.signed_txn().hash()
+            txn_to_commit.as_signed_user_txn()?.hash()
         );
 
         // Fetch and verify transaction itself.
-        let txn = txn_to_commit.signed_txn();
+        let txn = txn_to_commit.as_signed_user_txn()?;
         let txn_with_proof = db.get_transaction_with_proof(cur_ver, ledger_version, true)?;
         txn_with_proof.verify(ledger_info, cur_ver, txn.sender(), txn.sequence_number())?;
 

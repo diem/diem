@@ -51,9 +51,6 @@
 //! 6. Sends the serialized response message to the dialer.
 //! 7. Half-closes their output side to complete the substream close.
 //!
-//! Note: negotiated substreams are currently framed with the
-//! [muiltiformats unsigned varint length-prefix](https://github.com/multiformats/unsigned-varint)
-//!
 //! [muxers]: ../../../netcore/multiplexing/index.html
 //! [substream negotiation]: ../../../netcore/negotiate/index.html
 //! [`protocol-select`]: ../../../netcore/negotiate/index.html
@@ -70,24 +67,32 @@ use channel;
 use error::RpcError;
 use futures::{
     channel::oneshot,
-    compat::{Future01CompatExt, Sink01CompatExt},
     future::{self, FutureExt, TryFutureExt},
-    io::{AsyncRead, AsyncReadExt, AsyncWrite},
+    io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
     stream::StreamExt,
     task::Context,
 };
+use libra_types::PeerId;
 use logger::prelude::*;
+use netcore::compat::IoCompat;
 use std::{fmt::Debug, io, time::Duration};
-use tokio::{codec::Framed, prelude::FutureExt as Future01Ext, runtime::TaskExecutor};
-use types::PeerId;
-use unsigned_varint::codec::UviBytes;
+use tokio::{
+    codec::{Framed, LengthDelimitedCodec},
+    future::FutureExt as _,
+    runtime::TaskExecutor,
+};
 
 pub mod error;
 pub mod utils;
 
 #[cfg(test)]
 mod test;
+
+#[cfg(any(feature = "fuzzing", test))]
+#[path = "fuzzing.rs"]
+/// fuzzing module for the rpc protocol
+pub mod fuzzing;
 
 /// A wrapper struct for an inbound rpc request and its associated context.
 #[derive(Debug)]
@@ -297,12 +302,15 @@ async fn handle_outbound_rpc<TSubstream>(
 
             // Future to run the actual outbound rpc protocol and get the results.
             let mut f_rpc_res = handle_outbound_rpc_inner(peer_mgr_tx, peer_id, protocol, req_data)
-                .boxed()
-                .compat()
                 .timeout(timeout)
-                .compat()
-                // Convert tokio timeout::Error to RpcError
-                .map_err(Into::<RpcError>::into);
+                .map_err(Into::<RpcError>::into)
+                .map(|r| match r {
+                    Ok(Ok(x)) => Ok(x),
+                    Ok(Err(e)) => Err(e),
+                    Err(e) => Err(e),
+                })
+                .boxed()
+                .fuse();
 
             // If the rpc client drops their oneshot receiver, this future should
             // cancel the request.
@@ -349,7 +357,7 @@ where
     // Request a new substream with the peer.
     let substream = peer_mgr_tx.open_substream(peer_id, protocol).await?;
     // Rpc messages are length-prefixed.
-    let mut substream = Framed::new(substream.compat(), UviBytes::default()).sink_compat();
+    let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
     // Send the rpc request data.
     let req_len = req_data.len();
     substream.buffered_send(req_data).await?;
@@ -392,14 +400,14 @@ async fn handle_inbound_substream<TSubstream>(
                 substream.protocol,
                 substream.substream,
             )
-            .boxed()
-            .compat()
             .timeout(timeout)
-            .compat()
+            .map_err(Into::<RpcError>::into)
+            .map(|r| match r {
+                Ok(Ok(x)) => Ok(x),
+                Ok(Err(e)) => Err(e),
+                Err(e) => Err(e),
+            })
             .await;
-
-            // Convert tokio timeout::Error to RpcError
-            let res = res.map_err(Into::<RpcError>::into);
 
             // Log any errors.
             if let Err(err) = res {
@@ -429,7 +437,7 @@ where
     TSubstream: AsyncRead + AsyncWrite + Send + Unpin,
 {
     // Rpc messages are length-prefixed.
-    let mut substream = Framed::new(substream.compat(), UviBytes::default()).sink_compat();
+    let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
     // Read the rpc request data.
     let req_data = match substream.next().await {
         Some(req_data) => req_data?.freeze(),

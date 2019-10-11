@@ -6,11 +6,11 @@ use codespan_reporting::{emit, termcolor::Buffer, Diagnostic, Label, Severity};
 use failure::*;
 use ir_to_bytecode_syntax::syntax;
 use lalrpop_util::ParseError;
+use libra_types::account_address::AccountAddress;
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
-use types::account_address::AccountAddress;
 
 // Re-export this to make it convenient for other crates.
 pub use ir_to_bytecode_syntax::ast;
@@ -85,10 +85,9 @@ fn strip_comments_and_verify(string: &str) -> Result<String> {
 pub fn parse_script_or_module(s: &str) -> Result<ast::ScriptOrModule> {
     let stripped_string = &strip_comments(s);
     let parser = syntax::ScriptOrModuleParser::new();
-    match parser.parse(stripped_string) {
-        Ok(result) => Ok(result),
-        Err(e) => handle_error(e, s),
-    }
+    parser
+        .parse(stripped_string)
+        .or_else(|e| handle_error(e, s))
 }
 
 /// Given the raw input of a file, creates a `Program` struct
@@ -96,10 +95,9 @@ pub fn parse_script_or_module(s: &str) -> Result<ast::ScriptOrModule> {
 pub fn parse_program(program_str: &str) -> Result<ast::Program> {
     let stripped_string = &strip_comments_and_verify(program_str)?;
     let parser = syntax::ProgramParser::new();
-    match parser.parse(stripped_string) {
-        Ok(program) => Ok(program),
-        Err(e) => handle_error(e, stripped_string),
-    }
+    parser
+        .parse(stripped_string)
+        .or_else(|e| handle_error(e, stripped_string))
 }
 
 /// Given the raw input of a file, creates a `Script` struct
@@ -107,10 +105,9 @@ pub fn parse_program(program_str: &str) -> Result<ast::Program> {
 pub fn parse_script(script_str: &str) -> Result<ast::Script> {
     let stripped_string = &strip_comments_and_verify(script_str)?;
     let parser = syntax::ScriptParser::new();
-    match parser.parse(stripped_string) {
-        Ok(script) => Ok(script),
-        Err(e) => handle_error(e, stripped_string),
-    }
+    parser
+        .parse(stripped_string)
+        .or_else(|e| handle_error(e, stripped_string))
 }
 
 /// Given the raw input of a file, creates a single `ModuleDefinition` struct
@@ -118,10 +115,9 @@ pub fn parse_script(script_str: &str) -> Result<ast::Script> {
 pub fn parse_module(modules_str: &str) -> Result<ast::ModuleDefinition> {
     let stripped_string = &strip_comments_and_verify(modules_str)?;
     let parser = syntax::ModuleParser::new();
-    match parser.parse(stripped_string) {
-        Ok(module) => Ok(module),
-        Err(e) => handle_error(e, stripped_string),
-    }
+    parser
+        .parse(stripped_string)
+        .or_else(|e| handle_error(e, stripped_string))
 }
 
 /// Given the raw input of a file, creates a single `Cmd` struct
@@ -129,10 +125,9 @@ pub fn parse_module(modules_str: &str) -> Result<ast::ModuleDefinition> {
 pub fn parse_cmd(cmd_str: &str, _sender_address: AccountAddress) -> Result<ast::Cmd> {
     let stripped_string = &strip_comments_and_verify(cmd_str)?;
     let parser = syntax::CmdParser::new();
-    match parser.parse(stripped_string) {
-        Ok(cmd) => Ok(cmd),
-        Err(e) => handle_error(e, stripped_string),
-    }
+    parser
+        .parse(stripped_string)
+        .or_else(|e| handle_error(e, stripped_string))
 }
 
 fn handle_error<'input, T, Token>(
@@ -157,7 +152,7 @@ where
             std::str::from_utf8(buffer.as_slice()).unwrap().to_string()
         }
         ParseError::UnrecognizedToken {
-            token: Some((l, tok, r)),
+            token: (l, tok, r),
             expected,
         } => {
             let error = Diagnostic::new(Severity::Error, format!("Unrecognized Token: {}", tok))

@@ -7,21 +7,21 @@ use crate::{
         module_cache::{BlockModuleCache, ModuleCache, VMModuleCache},
         script_cache::ScriptCache,
     },
-    counters::{report_block_count, report_execution_status},
-    data_cache::{BlockDataCache, RemoteCache, WriteSetDataCache},
+    counters::*,
+    data_cache::BlockDataCache,
     process_txn::{execute::ExecutedTransaction, validate::ValidationMode, ProcessTransaction},
 };
-use config::config::{VMMode, VMPublishingOption};
-use logger::prelude::*;
-use rayon::prelude::*;
-use state_view::StateView;
-use types::{
+use config::config::{VMPublishingOption, VMMode};
+use libra_types::{
     transaction::{
         SignatureCheckedTransaction, SignedTransaction, TransactionOutput, TransactionStatus,
     },
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
+use logger::prelude::*;
+use rayon::prelude::*;
+use state_view::StateView;
 use vm_cache_map::Arena;
 
 pub fn execute_block<'alloc>(
@@ -63,36 +63,38 @@ pub fn execute_block<'alloc>(
 
     let signature_verified_block: Vec<Result<SignatureCheckedTransaction, VMStatus>> = txn_block
         .into_par_iter()
-        .map(|txn| match txn.check_signature() {
-            Ok(t) => Ok(t),
-            Err(_) => Err(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
+        .map(|txn| {
+            txn.check_signature()
+                .map_err(|_| VMStatus::new(StatusCode::INVALID_SIGNATURE))
         })
         .collect();
 
     for transaction in signature_verified_block {
-        let output = match transaction {
-            Ok(t) => {
-                let txn_cache =
+        record_stats! {time_hist | TXN_TOTAL_TIME_TAKEN | {
+                let output = match transaction {
+                    Ok(t) => {
+                    let txn_cache =
                     WriteSetDataCache::new_with_txn_payload(t.payload().clone(), &data_cache);
-                transaction_flow(
-                    t,
-                    &module_cache,
-                    script_cache,
-                    &txn_cache,
-                    mode,
-                    publishing_option,
-                    vm_mode,
-                )
-            }
-            Err(vm_status) => ExecutedTransaction::discard_error_output(vm_status),
-        };
-        report_execution_status(output.status());
-        data_cache.push_write_set(&output.write_set());
+                    transaction_flow(
+                        t,
+                        &module_cache,
+                        script_cache,
+                        &txn_cache,
+                        mode,
+                        publishing_option,
+                    )},
+                    Err(vm_status) => ExecutedTransaction::discard_error_output(vm_status),
+                };
+                report_execution_status(output.status());
+                data_cache.push_write_set(&output.write_set());
 
-        // `result` is initally empty, a single element is pushed per loop iteration and
-        // the number of iterations is bound to the max size of `signature_verified_block`
-        assume!(result.len() < usize::max_value());
-        result.push(output);
+                // `result` is initally empty, a single element is pushed per loop iteration and
+                // the number of iterations is bound to the max size of `signature_verified_block`
+                assume!(result.len() < usize::max_value());
+                result.push(output);
+
+            }
+        }
     }
     trace!("[VM] Execute block finished");
     result
@@ -127,19 +129,30 @@ where
 
     let process_txn = ProcessTransaction::new(txn, &module_cache, data_cache, &arena);
 
-    let validated_txn = match process_txn.validate(mode, publishing_option, vm_mode) {
+    let validated_txn = record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
+    match process_txn.validate(mode, publishing_option, vm_mode) {
         Ok(validated_txn) => validated_txn,
         Err(vm_status) => {
             return ExecutedTransaction::discard_error_output(vm_status);
         }
+    }
+    }
     };
-    let verified_txn = match validated_txn.verify(script_cache) {
+
+    let verified_txn = record_stats! {time_hist | TXN_VERIFICATION_TIME_TAKEN | {
+     match validated_txn.verify(script_cache) {
         Ok(verified_txn) => verified_txn,
         Err(vm_status) => {
             return ExecutedTransaction::discard_error_output(vm_status);
         }
+    }
+    }
     };
-    let executed_txn = verified_txn.execute();
+
+    let executed_txn = record_stats! {time_hist | TXN_EXECUTION_TIME_TAKEN | {
+        verified_txn.execute()
+        }
+    };
 
     // On success, publish the modules into the cache so that future transactions can refer to them
     // directly.

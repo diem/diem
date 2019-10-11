@@ -10,6 +10,7 @@ use crate::{
     tests::account_universe::{run_and_assert_gas_cost_stability, run_and_assert_universe},
 };
 use proptest::{collection::vec, prelude::*};
+use std::sync::Arc;
 
 proptest! {
     // These tests are pretty slow but quite comprehensive, so run a smaller number of them.
@@ -86,11 +87,11 @@ proptest! {
 pub(super) fn create_account_strategy(
     min: u64,
     max: u64,
-) -> impl Strategy<Value = Box<dyn AUTransactionGen + 'static>> {
+) -> impl Strategy<Value = Arc<dyn AUTransactionGen + 'static>> {
     prop_oneof![
-        3 => any_with::<CreateAccountGen>((min, max)).prop_map(CreateAccountGen::boxed),
+        3 => any_with::<CreateAccountGen>((min, max)).prop_map(CreateAccountGen::arced),
         1 => any_with::<CreateExistingAccountGen>((min, max)).prop_map(
-            CreateExistingAccountGen::boxed,
+            CreateExistingAccountGen::arced,
         ),
     ]
 }

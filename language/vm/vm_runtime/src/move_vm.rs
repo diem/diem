@@ -1,13 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{loaded_data::loaded_module::LoadedModule, runtime::VMRuntime, VMExecutor, VMVerifier};
-use state_view::StateView;
-use std::sync::Arc;
-use types::{
+use crate::{
+    counters::*, loaded_data::loaded_module::LoadedModule, runtime::VMRuntime, VMExecutor,
+    VMVerifier,
+};
+use libra_types::{
     transaction::{SignedTransaction, TransactionOutput},
     vm_error::VMStatus,
 };
+use state_view::StateView;
+use std::sync::Arc;
 use vm_cache_map::Arena;
 
 rental! {
@@ -49,8 +52,11 @@ impl VMVerifier for MoveVM {
         state_view: &dyn StateView,
     ) -> Option<VMStatus> {
         // TODO: This should be implemented as an async function.
-        self.inner
-            .rent(move |runtime| runtime.verify_transaction(transaction, state_view))
+        record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
+            self.inner
+                .rent(move |runtime| runtime.verify_transaction(transaction, state_view))
+            }
+        }
     }
 }
 

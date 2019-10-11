@@ -21,13 +21,13 @@ pub use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
 };
-use rand::{rngs::EntropyRng, Rng};
-use std::{collections::HashMap, path::Path};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     transaction::{RawTransaction, SignedTransaction},
     transaction_helpers::TransactionSigner,
 };
+use rand::{rngs::EntropyRng, Rng};
+use std::{collections::HashMap, path::Path};
 
 /// WalletLibrary contains all the information needed to recreate a particular wallet
 pub struct WalletLibrary {
@@ -112,13 +112,14 @@ impl WalletLibrary {
     pub fn new_address(&mut self) -> Result<(AccountAddress, ChildNumber)> {
         let child = self.key_factory.private_child(self.key_leaf)?;
         let address = child.get_address()?;
-        let child = self.key_leaf;
+        let old_key_leaf = self.key_leaf;
         self.key_leaf.increment();
-        match self.addr_map.insert(address, child) {
-            Some(_) => Err(WalletError::LibraWalletGeneric(
+        if self.addr_map.insert(address, old_key_leaf).is_none() {
+            Ok((address, old_key_leaf))
+        } else {
+            Err(WalletError::LibraWalletGeneric(
                 "This address is already in your wallet".to_string(),
-            )),
-            None => Ok((address, child)),
+            ))
         }
     }
 

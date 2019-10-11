@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{client_proxy::ClientProxy, commands::*};
-use types::account_config::get_account_resource_or_default;
-use vm_genesis::get_transaction_name;
+use libra_types::account_config::get_account_resource_or_default;
+use transaction_builder::get_transaction_name;
 
 /// Major command for query operations.
 pub struct QueryCommand {}
@@ -181,8 +181,7 @@ impl Command for QueryCommandGetTxnByRange {
                         cur_version,
                         txn.format_for_client(get_transaction_name)
                     );
-                    if opt_events.is_some() {
-                        let events = opt_events.unwrap();
+                    if let Some(events) = opt_events {
                         if events.is_empty() {
                             println!("No events returned");
                         } else {

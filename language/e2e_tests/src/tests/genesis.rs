@@ -5,7 +5,7 @@ use crate::{
     assert_prologue_parity, assert_status_eq, executor::FakeExecutor, transaction_status_eq,
 };
 use crypto::ed25519::*;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_config,
     test_helpers::transaction_test_helpers,

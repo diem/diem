@@ -21,10 +21,9 @@ resource "aws_iam_role_policy_attachment" "ecsInstanceRole" {
 
 data "aws_iam_policy_document" "ecs_extra" {
   statement {
-    actions   = ["s3:GetObject"]
+    actions = ["s3:GetObject"]
     resources = [
-      "arn:aws:s3:::${aws_s3_bucket.config.id}/${aws_s3_bucket_object.network_peers.id}",
-      "arn:aws:s3:::${aws_s3_bucket.config.id}/${aws_s3_bucket_object.consensus_peers.id}"
+      "arn:aws:s3:::${aws_s3_bucket.config.id}/*",
     ]
   }
 }
@@ -67,12 +66,12 @@ resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole" {
 
 locals {
   consensus_secrets_arn = split(":", aws_secretsmanager_secret.validator_network[0].arn)
-  network_secrets_arn = split(":", aws_secretsmanager_secret.validator_consensus[0].arn)
+  network_secrets_arn   = split(":", aws_secretsmanager_secret.validator_consensus[0].arn)
 }
 
 data "aws_iam_policy_document" "validator" {
   statement {
-    actions   = ["secretsmanager:GetSecretValue"]
+    actions = ["secretsmanager:GetSecretValue"]
     resources = [
       "${join(":", slice(local.consensus_secrets_arn, 0, length(local.consensus_secrets_arn) - 1), )}:*",
       "${join(":", slice(local.network_secrets_arn, 0, length(local.network_secrets_arn) - 1), )}:*"

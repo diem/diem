@@ -15,12 +15,12 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use core::convert::TryFrom;
 use crypto::ed25519::{Ed25519PublicKey, ED25519_PUBLIC_KEY_LENGTH};
 use failure::prelude::*;
+use libra_types::transaction::Version;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
 };
 use std::{io::Write, mem::size_of};
-use types::transaction::Version;
 
 define_schema!(ValidatorSchema, Key, (), VALIDATOR_CF_NAME);
 

@@ -16,7 +16,7 @@ use crate::{
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use compiler::Compiler;
 use hex;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     language_storage::ModuleId,
     vm_error::{StatusCode, StatusType},
@@ -68,7 +68,7 @@ fn test_module(name: &'static str) -> VerifiedModule {
                 acquires_global_resources: vec![],
                 code: CodeUnit {
                     max_stack_size: 10,
-                    locals: LocalsSignatureIndex::new(0),
+                    locals: LocalsSignatureIndex::new(1),
                     code: vec![Bytecode::Ret],
                 },
             },
@@ -86,7 +86,10 @@ fn test_module(name: &'static str) -> VerifiedModule {
                 type_formals: vec![],
             },
         ],
-        locals_signatures: vec![LocalsSignature(vec![])],
+        locals_signatures: vec![
+            LocalsSignature(vec![]),
+            LocalsSignature(vec![SignatureToken::U64]),
+        ],
         identifiers: idents(vec![name, "func1", "func2"]),
         user_strings: vec![],
         byte_array_pool: vec![],
@@ -492,12 +495,11 @@ fn test_multi_level_cache_write_back() {
 
 fn parse_and_compile_modules(s: impl AsRef<str>) -> Vec<CompiledModule> {
     let compiler = Compiler {
-        code: s.as_ref(),
         skip_stdlib_deps: true,
         ..Compiler::default()
     };
     compiler
-        .into_compiled_program()
+        .into_compiled_program(s.as_ref())
         .expect("Failed to compile program")
         .modules
 }

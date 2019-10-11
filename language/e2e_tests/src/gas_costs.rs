@@ -10,7 +10,7 @@ use crate::{
 };
 use crypto::ed25519::compat;
 use lazy_static::lazy_static;
-use types::{account_address::AccountAddress, transaction::SignedTransaction};
+use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 
 /// The gas each transaction is configured to reserve. If the gas available in the account,
 /// converted to microlibra, falls below this threshold, transactions are expected to fail with

@@ -5,24 +5,16 @@
 fn main() {
     let proto_files = [
         "src/proto/consensus.proto",
-        "src/proto/network.proto",
         "src/proto/mempool.proto",
+        "src/proto/network.proto",
         "src/proto/state_synchronizer.proto",
     ];
 
-    for file in &proto_files {
-        println!("cargo:rerun-if-changed={}", file);
-    }
+    let includes = [
+        "../types/src/proto",
+        "src/proto",
+        "../admission_control/admission-control-proto/src/proto",
+    ];
 
-    protoc_rust::run(protoc_rust::Args {
-        out_dir: "src/proto",
-        input: &proto_files,
-        includes: &["../types/src/proto", "src/proto"],
-        customize: protoc_rust::Customize {
-            carllerche_bytes_for_bytes: Some(true),
-            carllerche_bytes_for_string: Some(true),
-            ..Default::default()
-        },
-    })
-    .expect("protoc");
+    prost_build::compile_protos(&proto_files, &includes).unwrap();
 }

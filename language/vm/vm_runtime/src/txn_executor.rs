@@ -4,6 +4,7 @@
 
 use crate::{
     code_cache::module_cache::{ModuleCache, VMModuleCache},
+    counters::*,
     data_cache::{RemoteCache, TransactionDataCache},
     execution_stack::ExecutionStack,
     gas_meter::GasMeter,
@@ -14,9 +15,7 @@ use crate::{
     },
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
-use config::config::VMMode;
-use std::{collections::VecDeque, convert::TryFrom};
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
@@ -31,6 +30,7 @@ use types::{
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
+use std::{collections::VecDeque, convert::TryFrom};
 use vm::{
     access::ModuleAccess,
     errors::*,
@@ -59,7 +59,9 @@ lazy_static! {
     /// The ModuleId for the Event
     pub static ref EVENT_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("Event").unwrap()) };
-
+    /// The ModuleId for the validator config
+    pub static ref VALIDATOR_CONFIG_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), Identifier::new("ValidatorConfig").unwrap()) };
     /// The ModuleId for the validator set
     pub static ref VALIDATOR_SET_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("ValidatorSet").unwrap()) };
@@ -300,10 +302,8 @@ where
                         let module_id = module.self_id();
                         let function_name = callee_function_ref.name();
                         let native_function =
-                            match dispatch_native_function(&module_id, function_name) {
-                                None => return Err(VMStatus::new(StatusCode::LINKER_ERROR)),
-                                Some(native_function) => native_function,
-                            };
+                            dispatch_native_function(&module_id, function_name)
+                                .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
                         if module_id == *EVENT_MODULE
                             && function_name == EMIT_EVENT_NAME.as_ident_str()
                         {
@@ -824,35 +824,41 @@ where
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_prologue(&mut self) -> VMResult<()> {
-        self.gas_meter.disable_metering();
-        let result = self
-            .execute_function(&ACCOUNT_MODULE, &PROLOGUE_NAME, vec![])
-            .and_then(|_| {
-                if self.txn_data.is_channel_txn() {
-                    self.execute_function(&CHANNEL_ACCOUNT_MODULE, &PROLOGUE_NAME, vec![])
-                } else {
-                    Ok(())
-                }
-            });
-        self.gas_meter.enable_metering();
-        result
+        record_stats! {time_hist | TXN_PROLOGUE_TIME_TAKEN | {
+                self.gas_meter.disable_metering();
+                let result = self
+                    .execute_function(&ACCOUNT_MODULE, &PROLOGUE_NAME, vec![])
+                    .and_then(|_| {
+                        if self.txn_data.is_channel_txn() {
+                            self.execute_function(&CHANNEL_ACCOUNT_MODULE, &PROLOGUE_NAME, vec![])
+                        } else {
+                            Ok(())
+                        }
+                    });
+                self.gas_meter.enable_metering();
+                result
+            }
+        }
     }
 
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_epilogue(&mut self) -> VMResult<()> {
-        self.gas_meter.disable_metering();
-        let result = self
-            .execute_function(&ACCOUNT_MODULE, &EPILOGUE_NAME, vec![])
-            .and_then(|_| {
-                if self.txn_data.is_channel_txn() {
-                    self.execute_function(&CHANNEL_ACCOUNT_MODULE, &EPILOGUE_NAME, vec![])
-                } else {
-                    Ok(())
-                }
-            });
-        self.gas_meter.enable_metering();
-        result
+        record_stats! {time_hist | TXN_EPILOGUE_TIME_TAKEN | {
+                self.gas_meter.disable_metering();
+                let result = self
+                    .execute_function(&ACCOUNT_MODULE, &EPILOGUE_NAME, vec![])
+                    .and_then(|_| {
+                        if self.txn_data.is_channel_txn() {
+                            self.execute_function(&CHANNEL_ACCOUNT_MODULE, &EPILOGUE_NAME, vec![])
+                        } else {
+                            Ok(())
+                        }
+                    });
+                self.gas_meter.enable_metering();
+                result
+            }
+        }
     }
 
     /// Generate the TransactionOutput on failure. There can be two possibilities:
@@ -903,16 +909,27 @@ where
         }
     }
 
-    /// Execute a function given a FunctionRef.
-    pub(crate) fn execute_function_impl(&mut self, func: FunctionRef<'txn>) -> VMResult<()> {
+    /// Entrypoint into the interpreter. All external calls need to be routed through this
+    /// function.
+    pub(crate) fn interpeter_entrypoint(&mut self, func: FunctionRef<'txn>) -> VMResult<()> {
         // We charge an intrinsic amount of gas based upon the size of the transaction submitted
         // (in raw bytes).
         let txn_size = self.txn_data.transaction_size;
         // The callers of this function verify the transaction before executing it. Transaction
         // verification ensures the following condition.
         assume!(txn_size.get() <= (MAX_TRANSACTION_SIZE_IN_BYTES as u64));
+        // We count the intrinsic cost of the transaction here, since that needs to also cover the
+        // setup of the function.
+        let starting_gas = self.gas_meter.remaining_gas().get();
         self.gas_meter
             .charge_transaction_gas(txn_size, &self.execution_stack)?;
+        let ret = self.execute_function_impl(func);
+        record_stats!(observe | TXN_EXECUTION_GAS_USAGE | starting_gas);
+        ret
+    }
+
+    /// Execute a function given a FunctionRef.
+    fn execute_function_impl(&mut self, func: FunctionRef<'txn>) -> VMResult<()> {
         let beginning_height = self.execution_stack.call_stack_height();
         self.execution_stack.push_call(func)?;
         // We always start execution from the first instruction.
@@ -945,14 +962,11 @@ where
         function_name: &IdentStr,
         args: Vec<Value>,
     ) -> VMResult<()> {
-        let loaded_module = match self
+        let loaded_module = self
             .execution_stack
             .module_cache
             .get_loaded_module(module)?
-        {
-            Some(module) => module,
-            None => return Err(VMStatus::new(StatusCode::LINKER_ERROR)),
-        };
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         let func_idx = loaded_module
             .function_defs_table
             .get(function_name)
@@ -998,7 +1012,7 @@ where
     ) -> VMResult<TransactionOutput> {
         // This should only be used for bookkeeping. The gas is already deducted from the sender's
         // account in the account module's epilogue.
-        let gas: u64 = match self.vm_mode {
+        let gas_used: u64 = match self.vm_mode {
             VMMode::Onchain => self
                 .txn_data
                 .max_gas_amount
@@ -1010,10 +1024,12 @@ where
 
         let write_set = self.data_view.make_write_set(to_be_published_modules)?;
 
+        record_stats!(observe | TXN_TOTAL_GAS_USAGE | gas_used);
+
         Ok(TransactionOutput::new(
             write_set,
             self.event_data.clone(),
-            gas,
+            gas_used,
             match result {
                 Ok(()) => TransactionStatus::from(VMStatus::new(StatusCode::EXECUTED)),
                 Err(err) => TransactionStatus::from(err),

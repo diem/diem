@@ -1,7 +1,6 @@
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
-        consensus_types::proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
         epoch_manager::EpochManager,
         event_processor::EventProcessor,
         liveness::{
@@ -17,17 +16,19 @@ use crate::{
     },
     util::mock_time_service::SimulatedTimeService,
 };
+use consensus_types::proposal_msg::{ProposalMsg, ProposalUncheckedSignatures};
 use futures::{channel::mpsc, executor::block_on};
 use lazy_static::lazy_static;
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 use network::{
     proto::Proposal,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
-use proto_conv::{FromProto, IntoProto};
-use protobuf::Message as Message_imported_for_functions;
+use prost::Message as _;
+use prost_ext::MessageExt;
+use std::convert::TryFrom;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
-use types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 
 // This generates a proposal for round 1
 pub fn generate_corpus_proposal() -> Vec<u8> {
@@ -42,7 +43,7 @@ pub fn generate_corpus_proposal() -> Vec<u8> {
             .await;
         // serialize and return proposal
         let proposal = proposal.unwrap();
-        proposal.into_proto().write_to_bytes().unwrap()
+        Proposal::from(proposal).to_bytes().unwrap().to_vec()
     })
 }
 
@@ -146,8 +147,8 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
 
     // event processor
     EventProcessor::new(
-        signer.author(),
         Arc::clone(&block_store),
+        None,
         pacemaker,
         proposer_election,
         proposal_generator,
@@ -167,7 +168,7 @@ pub fn fuzz_proposal(data: &[u8]) {
     // create node
     let mut event_processor = create_node_for_fuzzing();
 
-    let proposal: Proposal = match protobuf::parse_from_bytes(data) {
+    let proposal = match Proposal::decode(data) {
         Ok(xx) => xx,
         Err(_) => {
             if cfg!(test) {
@@ -177,7 +178,7 @@ pub fn fuzz_proposal(data: &[u8]) {
         }
     };
 
-    let proposal = match ProposalUncheckedSignatures::<TestPayload>::from_proto(proposal) {
+    let proposal = match ProposalUncheckedSignatures::<TestPayload>::try_from(proposal) {
         Ok(xx) => xx,
         Err(_) => {
             if cfg!(test) {

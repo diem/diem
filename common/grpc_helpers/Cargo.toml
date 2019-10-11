@@ -2,13 +2,16 @@
 name = "grpc_helpers"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra grpc helpers"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
-grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
-futures = { version = "0.3.0-alpha.17", package = "futures-preview", features = ["compat"] }
+grpcio = { version = "=0.5.0-alpha.4", default-features = false }
+futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["compat"] }
 futures_01 = { version = "0.1.28", package = "futures" }
 
 failure = { package = "failure_ext", path = "../failure_ext" }

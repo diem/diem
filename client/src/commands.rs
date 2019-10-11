@@ -7,9 +7,9 @@ use crate::{
 };
 
 use failure::prelude::*;
+use libra_types::account_address::ADDRESS_LENGTH;
 use metrics::counters::*;
 use std::{collections::HashMap, sync::Arc};
-use types::account_address::ADDRESS_LENGTH;
 
 /// Print the error and bump up error counter.
 pub fn report_error(msg: &str, e: Error) {
@@ -20,13 +20,12 @@ pub fn report_error(msg: &str, e: Error) {
 fn pretty_format_error(e: Error) -> String {
     if let Some(grpc_error) = e.downcast_ref::<grpcio::Error>() {
         if let grpcio::Error::RpcFailure(grpc_rpc_failure) = grpc_error {
-            match grpc_rpc_failure.status {
-                grpcio::RpcStatusCode::Unavailable | grpcio::RpcStatusCode::DeadlineExceeded => {
-                    return "Server unavailable, please retry and/or check \
-                            if host passed to the client is running"
-                        .to_string();
-                }
-                _ => {}
+            if grpc_rpc_failure.status == grpcio::RpcStatusCode::UNAVAILABLE
+                || grpc_rpc_failure.status == grpcio::RpcStatusCode::DEADLINE_EXCEEDED
+            {
+                return "Server unavailable, please retry and/or check \
+                        if host passed to the client is running"
+                    .to_string();
             }
         }
     }

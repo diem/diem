@@ -1,0 +1,28 @@
+[package]
+name = "config-builder"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra config builder"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+hex = { version = "0.3.2", default-features = false }
+parity-multiaddr = { version = "0.5.0", default-features = false }
+rand = "0.6.5"
+structopt = "0.3.2"
+
+config = { path = ".." }
+crypto = { path = "../../crypto/crypto" }
+failure = { path = "../../common/failure_ext", package = "failure_ext" }
+generate-keypair = { path = "../generate-keypair" }
+logger = { path = "../../common/logger" }
+prost-ext = { path = "../../common/prost-ext" }
+libra-types = { path = "../../types" }
+vm_genesis = { path = "../../language/vm/vm_genesis" }
+
+[dev-dependencies]
+libra-types = { path = "../../types", features = ["testing"]}

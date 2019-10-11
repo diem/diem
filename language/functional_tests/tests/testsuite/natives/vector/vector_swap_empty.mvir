@@ -1,0 +1,14 @@
+import 0x0.Vector;
+
+main() {
+  let vec: Vector.T<u64>;
+  vec = Vector.empty<u64>();
+
+  // Swapping on an empty
+  Vector.swap<u64>(&mut vec, 0, 0);
+
+  return;
+}
+
+// check: NATIVE_FUNCTION_ERROR
+// check: 1

@@ -16,11 +16,10 @@ use crypto::{
 use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
+use std::convert::{TryFrom, TryInto};
 
 /// Entry produced via a call to the `emit_event` builtin.
-#[derive(Clone, Default, Eq, PartialEq, FromProto, IntoProto)]
-#[ProtoType(crate::proto::events::Event)]
+#[derive(Clone, Default, Eq, PartialEq)]
 pub struct ContractEvent {
     /// The unique key that the event was emitted to
     key: EventKey,
@@ -98,11 +97,31 @@ impl CryptoHash for ContractEvent {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, FromProto, IntoProto)]
+impl TryFrom<crate::proto::types::Event> for ContractEvent {
+    type Error = Error;
+
+    fn try_from(event: crate::proto::types::Event) -> Result<Self> {
+        let key = EventKey::try_from(event.key.as_ref())?;
+        let sequence_number = event.sequence_number;
+        let event_data = event.event_data;
+        Ok(Self::new(key, sequence_number, event_data))
+    }
+}
+
+impl From<ContractEvent> for crate::proto::types::Event {
+    fn from(event: ContractEvent) -> Self {
+        Self {
+            key: event.key.to_vec(),
+            sequence_number: event.sequence_number,
+            event_data: event.event_data,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[ProtoType(crate::proto::events::EventWithProof)]
 pub struct EventWithProof {
-    pub transaction_version: u64, // Should be `Version`, but FromProto derive won't work that way.
+    pub transaction_version: u64, // Should be `Version`
     pub event_index: u64,
     pub event: ContractEvent,
     pub proof: EventProof,
@@ -186,5 +205,35 @@ impl EventWithProof {
         )?;
 
         Ok(())
+    }
+}
+
+impl TryFrom<crate::proto::types::EventWithProof> for EventWithProof {
+    type Error = Error;
+
+    fn try_from(event: crate::proto::types::EventWithProof) -> Result<Self> {
+        Ok(Self::new(
+            event.transaction_version,
+            event.event_index,
+            event
+                .event
+                .ok_or_else(|| format_err!("Missing event"))?
+                .try_into()?,
+            event
+                .proof
+                .ok_or_else(|| format_err!("Missing proof"))?
+                .try_into()?,
+        ))
+    }
+}
+
+impl From<EventWithProof> for crate::proto::types::EventWithProof {
+    fn from(event: EventWithProof) -> Self {
+        Self {
+            transaction_version: event.transaction_version,
+            event_index: event.event_index,
+            event: Some(event.event.into()),
+            proof: Some(event.proof.into()),
+        }
     }
 }

@@ -11,8 +11,10 @@ message ValidatorPublicKeys {
   bytes account_address = 1;
   // Consensus public key
   bytes consensus_public_key = 2;
+  // Validator voting power for consensus
+  uint64 consensus_voting_power = 3;
   // Network signing publick key
-  bytes network_signing_public_key = 3;
+  bytes network_signing_public_key = 4;
   /// Network identity publick key
-  bytes network_identity_public_key = 4;
+  bytes network_identity_public_key = 5;
 }

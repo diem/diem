@@ -32,7 +32,6 @@ struct SwitchBoard(HashMap<NonZeroU16, UnboundedSender<MemorySocket>>, u16);
 /// # Examples
 ///
 /// ```rust,no_run
-/// #![feature(async_await)]
 /// use std::io::Result;
 ///
 /// use memsocket::{MemoryListener, MemorySocket};
@@ -103,10 +102,7 @@ impl MemoryListener {
             port
         } else {
             loop {
-                let port = match NonZeroU16::new(switchboard.1) {
-                    Some(p) => p,
-                    None => unreachable!(),
-                };
+                let port = NonZeroU16::new(switchboard.1).unwrap_or_else(|| unreachable!());
 
                 // The switchboard is full and all ports are in use
                 if switchboard.0.len() == (std::u16::MAX - 1) as usize {
@@ -165,7 +161,6 @@ impl MemoryListener {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// #![feature(async_await)]
     /// use futures::prelude::*;
     /// use memsocket::MemoryListener;
     ///
@@ -227,7 +222,6 @@ impl<'a> Stream for Incoming<'a> {
 /// # Examples
 ///
 /// ```rust, no_run
-/// #![feature(async_await)]
 /// use futures::prelude::*;
 /// use memsocket::MemorySocket;
 ///
@@ -304,17 +298,12 @@ impl MemorySocket {
         let mut switchboard = (&*SWITCHBOARD).lock().unwrap();
 
         // Find port to connect to
-        let port = if let Some(port) = NonZeroU16::new(port) {
-            port
-        } else {
-            return Err(ErrorKind::AddrNotAvailable.into());
-        };
+        let port = NonZeroU16::new(port).ok_or_else(|| ErrorKind::AddrNotAvailable)?;
 
-        let sender = if let Some(s) = switchboard.0.get_mut(&port) {
-            s
-        } else {
-            return Err(ErrorKind::AddrNotAvailable.into());
-        };
+        let sender = switchboard
+            .0
+            .get_mut(&port)
+            .ok_or_else(|| ErrorKind::AddrNotAvailable)?;
 
         let (socket_a, socket_b) = Self::new_pair();
         // Send the socket to the listener

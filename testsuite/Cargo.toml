@@ -2,6 +2,9 @@
 name = "testsuite"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra testsuite"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -19,11 +22,10 @@ rusty-fork = "0.2.1"
 # should have their crates listed as dev-dependencies.
 benchmark = { path = "../benchmark" }
 cli = { path = "../client", package="client" }
-canonical_serialization = { path = "../common/canonical_serialization", package="canonical_serialization" }
-generate_keypair = { path = "../config/generate_keypair" }
-libra_swarm = { path = "../libra_swarm", features = ["testing"]}
+canonical-serialization = { path = "../common/canonical-serialization", package="canonical-serialization" }
+generate-keypair = { path = "../config/generate-keypair" }
+libra-swarm = { path = "../libra-swarm", features = ["testing"]}
 logger = { path = "../common/logger" }
 config = { path = "../config" }
-config_builder = { path = "../config/config_builder" }
 tools = { path = "../common/tools" }
 crypto = { path = "../crypto/crypto" }

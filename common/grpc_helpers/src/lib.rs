@@ -23,7 +23,7 @@ pub fn default_reply_error_logger<T: std::fmt::Debug>(e: T) {
 pub fn create_grpc_invalid_arg_status(method: &str, err: ::failure::Error) -> ::grpcio::RpcStatus {
     let msg = format!("Request failed {}", err);
     error!("{} failed with {}", method, &msg);
-    ::grpcio::RpcStatus::new(::grpcio::RpcStatusCode::InvalidArgument, Some(msg))
+    ::grpcio::RpcStatus::new(::grpcio::RpcStatusCode::INVALID_ARGUMENT, Some(msg))
 }
 
 /// This is a helper method to return a response to the GRPC context

@@ -1,0 +1,11 @@
+module M {
+    struct S<T: unrestricted> {}
+    resource R {}
+
+    foo() {
+        let x: Self.S<Self.R>;
+        return;
+    }
+}
+
+// check: CONTRAINT_KIND_MISMATCH

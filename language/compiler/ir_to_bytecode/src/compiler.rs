@@ -5,16 +5,17 @@ use crate::{
     context::{Context, MaterializedPools},
     errors::*,
     parser::ast::{
-        self, BinOp, Block, Builtin, Cmd, Cmd_, CopyableVal, Exp, Exp_, Function, FunctionBody,
-        FunctionCall, FunctionName, FunctionSignature as AstFunctionSignature, FunctionVisibility,
-        IfElse, ImportDefinition, LValue, LValue_, Loop, ModuleDefinition, ModuleIdent, ModuleName,
-        Program, QualifiedModuleIdent, QualifiedStructIdent, Script, Statement,
-        StructDefinition as MoveStruct, StructDefinitionFields, Type, TypeVar, UnaryOp, Var, Var_,
-        While,
+        self, BinOp, Block, Builtin, Cmd, Cmd_, CopyableVal, Exp, Exp_, FunctionBody, FunctionCall,
+        FunctionCall_, FunctionName, FunctionSignature as AstFunctionSignature, FunctionVisibility,
+        Function_, IfElse, ImportDefinition, LValue, LValue_, Loop, ModuleDefinition, ModuleIdent,
+        ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent, Script, Statement,
+        StructDefinitionFields, StructDefinition_ as MoveStruct_, Type, TypeVar, TypeVar_, UnaryOp,
+        Var, Var_, While,
     },
 };
 
 use failure::*;
+use libra_types::{account_address::AccountAddress, identifier::Identifier};
 use std::{
     clone::Clone,
     collections::{
@@ -22,7 +23,6 @@ use std::{
         HashMap, VecDeque,
     },
 };
-use types::{account_address::AccountAddress, identifier::Identifier};
 use vm::{
     access::ModuleAccess,
     file_format::{
@@ -398,11 +398,11 @@ fn compile_imports(
     Ok(())
 }
 
-fn type_formals(ast_tys: &[(TypeVar, ast::Kind)]) -> Result<(HashMap<TypeVar, usize>, Vec<Kind>)> {
+fn type_formals(ast_tys: &[(TypeVar_, ast::Kind)]) -> Result<(HashMap<TypeVar, usize>, Vec<Kind>)> {
     let mut m = HashMap::new();
     let mut tys = vec![];
     for (idx, (ty_var, k)) in ast_tys.iter().enumerate() {
-        let old = m.insert(ty_var.clone(), idx);
+        let old = m.insert(ty_var.value.clone(), idx);
         if old.is_some() {
             bail!("Type formal '{}'' already bound", ty_var)
         }
@@ -474,7 +474,7 @@ fn function_signature(
 fn compile_structs(
     context: &mut Context,
     self_name: &ModuleName,
-    structs: Vec<MoveStruct>,
+    structs: Vec<MoveStruct_>,
 ) -> Result<(Vec<StructDefinition>, Vec<FieldDefinition>)> {
     let mut struct_defs = vec![];
     let mut field_defs = vec![];
@@ -486,8 +486,8 @@ fn compile_structs(
         let sh_idx = context.struct_handle_index(sident.clone())?;
         let (map, _) = type_formals(&s.type_formals)?;
         context.bind_type_formals(map)?;
-        let field_information = compile_fields(context, &mut field_defs, sh_idx, s.fields)?;
-        context.declare_struct_definition_index(s.name)?;
+        let field_information = compile_fields(context, &mut field_defs, sh_idx, s.value.fields)?;
+        context.declare_struct_definition_index(s.value.name)?;
         struct_defs.push(StructDefinition {
             struct_handle: sh_idx,
             field_information,
@@ -517,7 +517,7 @@ fn compile_fields(
                 let name = context.identifier_index(f.name())?;
                 let sig_token = compile_type(context, &ty)?;
                 let signature = context.type_signature_index(sig_token.clone())?;
-                context.declare_field(sh_idx, f, sig_token, decl_order)?;
+                context.declare_field(sh_idx, f.value, sig_token, decl_order)?;
                 field_pool.push(FieldDefinition {
                     struct_: sh_idx,
                     name,
@@ -532,7 +532,7 @@ fn compile_fields(
 fn compile_functions(
     context: &mut Context,
     self_name: &ModuleName,
-    functions: Vec<(FunctionName, Function)>,
+    functions: Vec<(FunctionName, Function_)>,
 ) -> Result<Vec<FunctionDefinition>> {
     functions
         .into_iter()
@@ -544,9 +544,11 @@ fn compile_function(
     context: &mut Context,
     self_name: &ModuleName,
     name: FunctionName,
-    ast_function: Function,
+    ast_function: Function_,
 ) -> Result<FunctionDefinition> {
     let fh_idx = context.function_handle(self_name.clone(), name)?.1;
+
+    let ast_function = ast_function.value;
 
     let flags = match ast_function.visibility {
         FunctionVisibility::Internal => 0,
@@ -579,7 +581,7 @@ fn compile_function(
 
 fn compile_function_body(
     context: &mut Context,
-    formals: Vec<(Var, Type)>,
+    formals: Vec<(Var_, Type)>,
     locals: Vec<(Var_, Type)>,
     block: Block,
 ) -> Result<CodeUnit> {
@@ -939,7 +941,7 @@ fn compile_expression(
             let num_fields = fields.len();
             for (field_order, (field, e)) in fields.into_iter().enumerate() {
                 // Check that the fields are specified in order matching the definition.
-                let (_, _, decl_order) = context.field(sh_idx, field.clone())?;
+                let (_, _, decl_order) = context.field(sh_idx, field.value.clone())?;
                 if field_order != decl_order {
                     bail!("Field {} defined out of order for struct {}", field, name);
                 }
@@ -1050,10 +1052,8 @@ fn compile_expression(
             field,
         } => {
             let loc_type_opt = compile_expression(context, function_frame, code, *exp)?.pop_front();
-            let loc_type = match loc_type_opt {
-                Some(t) => t,
-                None => bail!("Impossible no expression to borrow"),
-            };
+            let loc_type =
+                loc_type_opt.ok_or_else(|| format_err!("Impossible no expression to borrow"))?;
             let sh_idx = loc_type.get_struct_handle()?;
             let (fd_idx, field_type, _) = context.field(sh_idx, field)?;
             function_frame.pop()?;
@@ -1089,10 +1089,10 @@ fn compile_call(
     context: &mut Context,
     function_frame: &mut FunctionFrame,
     code: &mut Vec<Bytecode>,
-    call: FunctionCall,
+    call: FunctionCall_,
     mut argument_types: VecDeque<InferredType>,
 ) -> Result<VecDeque<InferredType>> {
-    Ok(match call {
+    Ok(match call.value {
         FunctionCall::Builtin(function) => {
             match function {
                 Builtin::GetTxnGasUnitPrice => {

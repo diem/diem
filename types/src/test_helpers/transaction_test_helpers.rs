@@ -3,12 +3,10 @@
 
 use crate::{
     account_address::AccountAddress,
-    proto::transaction::SignedTransaction as ProtoSignedTransaction,
     transaction::{Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction},
     write_set::WriteSet,
 };
 use crypto::{ed25519::*, hash::CryptoHash, traits::*};
-use proto_conv::IntoProto;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 static PLACEHOLDER_SCRIPT: &[u8] = include_bytes!("fixtures/scripts/placeholder_script.mvbin");
@@ -23,7 +21,7 @@ pub fn get_test_signed_module_publishing_transaction(
     private_key: Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     module: Module,
-) -> ProtoSignedTransaction {
+) -> SignedTransaction {
     let expiration_time = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
@@ -40,7 +38,7 @@ pub fn get_test_signed_module_publishing_transaction(
 
     let signature = private_key.sign_message(&raw_txn.hash());
 
-    SignedTransaction::new(raw_txn, public_key, signature).into_proto()
+    SignedTransaction::new(raw_txn, public_key, signature)
 }
 
 // Test helper for transaction creation
@@ -53,7 +51,7 @@ pub fn get_test_signed_transaction(
     expiration_time: u64,
     gas_unit_price: u64,
     max_gas_amount: Option<u64>,
-) -> ProtoSignedTransaction {
+) -> SignedTransaction {
     let raw_txn = RawTransaction::new_script(
         sender,
         sequence_number,
@@ -65,7 +63,7 @@ pub fn get_test_signed_transaction(
 
     let signature = private_key.sign_message(&raw_txn.hash());
 
-    SignedTransaction::new(raw_txn, public_key, signature).into_proto()
+    SignedTransaction::new(raw_txn, public_key, signature)
 }
 
 // Test helper for creating transactions for which the signature hasn't been checked.
@@ -101,7 +99,7 @@ pub fn get_test_signed_txn(
     private_key: Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     script: Option<Script>,
-) -> ProtoSignedTransaction {
+) -> SignedTransaction {
     let expiration_time = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()

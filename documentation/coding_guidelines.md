@@ -121,6 +121,18 @@ Refer to the Libra Project License [LINK].
 
 A good example of README.md is `libra/network/README.md` that describes the networking crate.
 
+## Binary, Argument, and Crate Naming
+
+Most tools that we use everyday (rustc, cargo, git, rg, etc.) use dashes `-` as
+a separator for binary names and arguments and the [GNU software
+manual](https://www.gnu.org/software/libc/manual/html_node/Argument-Syntax.html)
+dictates that long options should "consist of `--` followed by a name made of
+alphanumeric characters and dashes". As such dashes `-` should be used as
+separators in both binary names and command line arguments.
+
+In addition, it is generally accepted by many in the Rust community that dashes
+`-` should be used as separators in crate names, i.e. `x25519-dalek`.
+
 ## Code suggestions
 
 In the following sections, we have suggested some best practices for a uniform codebase. We will investigate and identify the practices that can be enforced using Clippy. This information will evolve and improve over time.

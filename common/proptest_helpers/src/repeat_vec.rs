@@ -172,10 +172,7 @@ impl<T> RepeatVec<T> {
             while let Some((current_logical_idx_old, current_elem)) = items.next() {
                 let current_logical_idx_new = current_logical_idx_old - decrease;
 
-                let next_logical_idx_old = match items.peek() {
-                    Some(&(idx, _)) => idx,
-                    None => self.len,
-                };
+                let next_logical_idx_old = items.peek().map_or(self.len, |&(idx, _)| idx);
 
                 // Remove all indexes until the next logical index or sorted_indexes runs out.
                 while let Some(remove_idx) = logical_indexes.get(decrease) {

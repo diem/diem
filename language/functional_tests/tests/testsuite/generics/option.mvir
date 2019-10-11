@@ -1,0 +1,31 @@
+module Option {
+    import 0x0.Vector;
+
+    struct T<E> {
+        v: Vector.T<E>
+    }
+
+    public none<E>(): Self.T<E> {
+        return T<E> { v: Vector.empty<E>() };
+    }
+
+    public some<E>(e: E): Self.T<E> {
+        let v: Vector.T<E>;
+        v = Vector.empty<E>();
+        Vector.push_back<E>(&mut v, move(e));
+        return T<E> { v: move(v) };
+    }
+
+    public unwrap_or<E: unrestricted>(x: Self.T<E>, e: E): E {
+        let v: Vector.T<E>;
+        T<E> { v: v } = move(x);
+        if (Vector.is_empty<E>(&v)) {
+            return move(e);
+        }
+        return Vector.pop_back<E>(&mut v);
+    }
+
+    public really_none<E: unrestricted>(): Self.T<E> {
+        return Self.unwrap_or<Self.T<E>>(Self.none<Self.T<E>>(), Self.none<E>());
+    }
+}

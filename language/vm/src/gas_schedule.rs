@@ -14,12 +14,12 @@ use crate::{
     serializer::serialize_instruction,
 };
 use lazy_static::lazy_static;
+use libra_types::transaction::MAX_TRANSACTION_SIZE_IN_BYTES;
 use std::{
     collections::HashMap,
     ops::{Add, Div, Mul, Sub},
     u64,
 };
-use types::transaction::MAX_TRANSACTION_SIZE_IN_BYTES;
 
 /// The underlying carrier for gas-related units and costs. Data with this type should not be
 /// manipulated directly, but instead be manipulated using the newtype wrappers defined around

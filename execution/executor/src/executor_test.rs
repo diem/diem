@@ -11,40 +11,39 @@ use config::config::{NodeConfig, NodeConfigHelpers};
 use crypto::{hash::GENESIS_BLOCK_ID, HashValue};
 use futures::executor::block_on;
 use grpcio::{EnvBuilder, ServerBuilder};
-use proptest::prelude::*;
-use proto_conv::IntoProtoBytes;
-use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
-use std::{
-    collections::HashMap,
-    fs::File,
-    io::Write,
-    sync::{mpsc, Arc},
-};
-use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
-use storage_proto::proto::storage_grpc::create_storage;
-use storage_service::StorageService;
-use types::{
+use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo,
     transaction::{SignedTransaction, TransactionListWithProof, Version},
 };
+use proptest::prelude::*;
+use prost_ext::MessageExt;
+use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
+use std::{
+    collections::BTreeMap,
+    fs::File,
+    io::Write,
+    sync::{mpsc, Arc},
+};
+use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
+use storage_proto::proto::storage::create_storage;
+use storage_service::StorageService;
 use vm_genesis::{encode_genesis_transaction, GENESIS_KEYPAIR};
 
 fn get_config() -> NodeConfig {
     let config = NodeConfigHelpers::get_single_node_test_config(true);
     // Write out the genesis blob to the correct location.
     // XXX Should this logic live in NodeConfigHelpers?
-    let genesis_txn = encode_genesis_transaction(&GENESIS_KEYPAIR.0, GENESIS_KEYPAIR.1.clone());
-    let mut file = File::create(&config.execution.genesis_file_location).unwrap();
-    file.write_all(&genesis_txn.into_proto_bytes().unwrap())
-        .unwrap();
-
+    let genesis_txn: libra_types::proto::types::SignedTransaction =
+        encode_genesis_transaction(&GENESIS_KEYPAIR.0, GENESIS_KEYPAIR.1.clone()).into();
+    let mut file = File::create(config.get_genesis_transaction_file()).unwrap();
+    file.write_all(&genesis_txn.to_vec().unwrap()).unwrap();
     config
 }
 
 fn create_storage_server(config: &mut NodeConfig) -> (grpcio::Server, mpsc::Receiver<()>) {
-    let (service, shutdown_receiver) = StorageService::new(&config.storage.get_dir());
+    let (service, shutdown_receiver) = StorageService::new(&config.get_storage_dir());
     let mut server = ServerBuilder::new(Arc::new(EnvBuilder::new().build()))
         .register_service(create_storage(service))
         .bind("localhost", 0)
@@ -88,12 +87,17 @@ fn execute_and_commit_block(executor: &TestExecutor, txn_index: u64) {
     };
     let id = gen_block_id(txn_index + 1);
 
-    let response = block_on(executor.execute_block(vec![txn], parent_block_id, id))
+    let state_compute_result = block_on(executor.execute_block(vec![txn], parent_block_id, id))
         .unwrap()
         .unwrap();
-    assert_eq!(response.version(), txn_index + 1);
+    assert_eq!(state_compute_result.version(), txn_index + 1);
 
-    let ledger_info = gen_ledger_info(txn_index + 1, response.root_hash(), id, txn_index + 1);
+    let ledger_info = gen_ledger_info(
+        txn_index + 1,
+        state_compute_result.root_hash(),
+        id,
+        txn_index + 1,
+    );
     block_on(executor.commit_block(ledger_info))
         .unwrap()
         .unwrap();
@@ -168,7 +172,7 @@ fn gen_ledger_info(
         timestamp_usecs,
         None,
     );
-    LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ HashMap::new())
+    LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
 }
 
 #[test]
@@ -193,7 +197,7 @@ fn test_executor_status() {
             KEEP_STATUS.clone(),
             DISCARD_STATUS.clone()
         ],
-        response.status()
+        *response.status()
     );
 }
 
@@ -214,7 +218,7 @@ fn test_executor_one_block() {
 
     let ledger_info = gen_ledger_info(version, execute_block_response.root_hash(), block_id, 1);
     let commit_block_future = executor.commit_block(ledger_info);
-    let _commit_block_response = block_on(commit_block_future).unwrap().unwrap();
+    block_on(commit_block_future).unwrap().unwrap();
 }
 
 #[test]
@@ -370,7 +374,7 @@ fn test_executor_execute_chunk() {
     block_on(executor.execute_chunk(chunks[0].clone(), ledger_info.clone()))
         .unwrap()
         .unwrap();
-    let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
     assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
 
@@ -378,7 +382,7 @@ fn test_executor_execute_chunk() {
     block_on(executor.execute_chunk(chunks[1].clone(), ledger_info.clone()))
         .unwrap()
         .unwrap();
-    let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
     assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
 
@@ -386,7 +390,7 @@ fn test_executor_execute_chunk() {
     block_on(executor.execute_chunk(TransactionListWithProof::new_empty(), ledger_info.clone()))
         .unwrap()
         .unwrap();
-    let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
     assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
 
@@ -394,7 +398,7 @@ fn test_executor_execute_chunk() {
     block_on(executor.execute_chunk(chunks[1].clone(), ledger_info.clone()))
         .unwrap()
         .unwrap();
-    let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
     assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
 
@@ -402,7 +406,7 @@ fn test_executor_execute_chunk() {
     block_on(executor.execute_chunk(chunks[2].clone(), ledger_info.clone()))
         .unwrap()
         .unwrap();
-    let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+    let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li, ledger_info);
 
     drop(storage_server);
@@ -438,7 +442,7 @@ fn test_executor_execute_chunk_restart() {
         block_on(executor.execute_chunk(chunks[0].clone(), ledger_info.clone()))
             .unwrap()
             .unwrap();
-        let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+        let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
         assert_eq!(li.ledger_info().version(), 0);
         assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
     }
@@ -455,7 +459,7 @@ fn test_executor_execute_chunk_restart() {
         block_on(executor.execute_chunk(chunks[1].clone(), ledger_info.clone()))
             .unwrap()
             .unwrap();
-        let (_, li, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
+        let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
         assert_eq!(li, ledger_info);
     }
 
@@ -493,10 +497,7 @@ fn run_transactions_naive(transactions: Vec<SignedTransaction>) -> HashValue {
     let mut iter = transactions.into_iter();
     let first_txn = iter.next();
     let response = block_on(executor.execute_block(
-        match first_txn {
-            None => vec![],
-            Some(txn) => vec![txn],
-        },
+        first_txn.map_or(vec![], |txn| vec![txn]),
         *GENESIS_BLOCK_ID,
         gen_block_id(1),
     ))

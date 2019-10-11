@@ -6,5 +6,6 @@ use schemadb::schema::assert_encode_decode;
 
 #[test]
 fn test_encode_decode() {
-    assert_encode_decode::<BlockSchema<i64>>(&HashValue::random(), &Block::make_genesis_block());
+    let genesis_block = SchemaBlock::<i64>::from_block(Block::make_genesis_block());
+    assert_encode_decode::<BlockSchema<i64>>(&HashValue::random(), &genesis_block);
 }

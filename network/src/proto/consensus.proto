@@ -3,7 +3,7 @@
 
 syntax = "proto3";
 
-package network;
+package consensus;
 
 import "ledger_info.proto";
 import "transaction.proto";
@@ -62,29 +62,33 @@ message PacemakerTimeoutCertificate {
   repeated PacemakerTimeout timeouts = 2;
 }
 
+message TimeoutCertificate {
+  // Round certified by this timeout certificate.
+  uint64 round = 1;
+  // List of signatures certifying the timeout.
+  repeated types.ValidatorSignature signatures = 2;
+}
+
 message Block {
   // This block's id as a hash value
   bytes id = 1;
-  // Parent block id of this block as a hash value (all zeros to indicate the
-  // genesis block)
-  bytes parent_id = 2;
   // Payload of the block (e.g. one or more transaction(s)
-  bytes payload = 3;
+  bytes payload = 2;
+  // Epoch number corresponds to the set of validators that are active for this block.
+  uint64 epoch = 3;
   // The round of the block (internal monotonically increasing counter).
   uint64 round = 4;
-  // The height of the block (position in the chain).
-  uint64 height = 5;
   // The approximate physical microseconds since the epoch when the block was proposed
-  uint64 timestamp_usecs = 6;
+  uint64 timestamp_usecs = 5;
   // Contains the quorum certified ancestor and whether the quorum certified
   // ancestor was voted on successfully
-  QuorumCert quorum_cert = 7;
+  QuorumCert quorum_cert = 6;
   // Author of the block that can be validated by the author's public key and
   // the signature
-  bytes author = 8;
+  bytes author = 7;
   // Signature that the hash of this block has been authored by the owner of the
   // private key
-  bytes signature = 9;
+  bytes signature = 8;
 }
 
 message QuorumCert {
@@ -106,10 +110,6 @@ message VoteData {
   bytes parent_block_id = 4;
   // The round of the parent block
   uint64 parent_block_round = 5;
-  // The id of the grandparent block
-  bytes grandparent_block_id = 6;
-  // The round of the grandparent block
-  uint64 grandparent_block_round = 7;
 }
 
 message Vote {
@@ -122,6 +122,10 @@ message Vote {
   types.LedgerInfo ledger_info = 3;
   // Signature of the ledger info.
   bytes signature = 4;
+  // The round signatures can be aggregated into the timeout certificate.
+  bytes round_signature = 5;
+  // Sync info for exchanging information about highest QC, TC and LedgerInfo
+  SyncInfo sync_info = 6;
 }
 
 message RequestBlock {

@@ -8,20 +8,20 @@ use crate::{
     interface::{NetworkNotification, NetworkRequest},
     proto::MempoolSyncMsg,
     protocols::direct_send::Message,
+    utils::MessageExt,
     validator_network::Event,
     ProtocolId,
 };
-use bytes::Bytes;
 use channel;
 use futures::{
     stream::Map,
     task::{Context, Poll},
     SinkExt, Stream, StreamExt,
 };
-use pin_utils::unsafe_pinned;
-use protobuf::Message as proto_msg;
+use libra_types::PeerId;
+use pin_project::pin_project;
+use prost::Message as proto_msg;
 use std::pin::Pin;
-use types::PeerId;
 
 /// Protocol id for mempool direct-send calls
 pub const MEMPOOL_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/mempool/direct-send/0.1.0";
@@ -32,8 +32,10 @@ pub const MEMPOOL_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/mempool/direct-send/0.1
 /// raw `Bytes` direct-send and rpc messages are deserialized into
 /// `MempoolMessage` types. `MempoolNetworkEvents` is a thin wrapper around an
 /// `channel::Receiver<NetworkNotification>`.
+#[pin_project]
 pub struct MempoolNetworkEvents {
     // TODO(philiphayes): remove pub
+    #[pin]
     pub inner: Map<
         channel::Receiver<NetworkNotification>,
         fn(NetworkNotification) -> Result<Event<MempoolSyncMsg>, NetworkError>,
@@ -41,18 +43,6 @@ pub struct MempoolNetworkEvents {
 }
 
 impl MempoolNetworkEvents {
-    // This use of `unsafe_pinned` is safe because:
-    //   1. This struct does not implement [`Drop`]
-    //   2. This struct does not implement [`Unpin`]
-    //   3. This struct is not `#[repr(packed)]`
-    unsafe_pinned!(
-        inner:
-            Map<
-                channel::Receiver<NetworkNotification>,
-                fn(NetworkNotification) -> Result<Event<MempoolSyncMsg>, NetworkError>,
-            >
-    );
-
     pub fn new(receiver: channel::Receiver<NetworkNotification>) -> Self {
         let inner = receiver
             // TODO(philiphayes): filter_map might be better, so we can drop
@@ -64,7 +54,7 @@ impl MempoolNetworkEvents {
                     unimplemented!("Mempool does not currently use RPC");
                 }
                 NetworkNotification::RecvMessage(peer_id, msg) => {
-                    let msg = ::protobuf::parse_from_bytes(msg.mdata.as_ref())?;
+                    let msg = MempoolSyncMsg::decode(msg.mdata.as_ref())?;
                     Ok(Event::Message((peer_id, msg)))
                 }
             });
@@ -77,7 +67,7 @@ impl Stream for MempoolNetworkEvents {
     type Item = Result<Event<MempoolSyncMsg>, NetworkError>;
 
     fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
-        self.inner().poll_next(context)
+        self.project().inner.poll_next(context)
     }
 }
 
@@ -115,7 +105,7 @@ impl MempoolNetworkSender {
                 recipient,
                 Message {
                     protocol: ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
-                    mdata: Bytes::from(message.write_to_bytes().unwrap()),
+                    mdata: message.to_bytes().unwrap(),
                 },
             ))
             .await?;
@@ -129,9 +119,8 @@ mod tests {
     use futures::executor::block_on;
 
     fn new_test_sync_msg(peer_id: PeerId) -> MempoolSyncMsg {
-        let mut mempool_msg = MempoolSyncMsg::new();
-        mempool_msg.set_peer_id(peer_id.into());
-        mempool_msg.set_transactions(::protobuf::RepeatedField::from_vec(vec![]));
+        let mut mempool_msg = MempoolSyncMsg::default();
+        mempool_msg.peer_id = peer_id.into();
         mempool_msg
     }
 
@@ -146,7 +135,7 @@ mod tests {
         let mempool_msg = new_test_sync_msg(peer_id);
         let network_msg = Message {
             protocol: ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
-            mdata: mempool_msg.write_to_bytes().unwrap().into(),
+            mdata: mempool_msg.clone().to_bytes().unwrap(),
         };
 
         block_on(mempool_tx.send(NetworkNotification::RecvMessage(peer_id, network_msg))).unwrap();
@@ -168,7 +157,7 @@ mod tests {
         let mempool_msg = new_test_sync_msg(peer_id);
         let expected_network_msg = Message {
             protocol: ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
-            mdata: mempool_msg.clone().write_to_bytes().unwrap().into(),
+            mdata: mempool_msg.clone().to_bytes().unwrap(),
         };
 
         // Send the message to network layer

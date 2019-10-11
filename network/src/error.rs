@@ -2,15 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::peer_manager::PeerManagerError;
-use failure::{err_msg, Backtrace, Context, Fail};
+use failure::{Backtrace, Context, Fail};
 use futures::channel::mpsc;
-use protobuf::error::ProtobufError;
+use libra_types::validator_verifier::VerifyError;
 use std::{
     fmt::{self, Display},
     io,
 };
 use tokio::timer;
-use types::validator_verifier::VerifyError;
 
 /// Errors propagated from the network module.
 #[derive(Debug)]
@@ -50,7 +49,7 @@ pub enum NetworkErrorKind {
     #[fail(display = "Parsing error")]
     ParsingError,
 
-    #[fail(display = "Failed to connect to peer")]
+    #[fail(display = "Peer not connected")]
     NotConnected,
 }
 
@@ -102,8 +101,14 @@ impl From<VerifyError> for NetworkError {
     }
 }
 
-impl From<ProtobufError> for NetworkError {
-    fn from(err: ProtobufError) -> NetworkError {
+impl From<prost::EncodeError> for NetworkError {
+    fn from(err: prost::EncodeError) -> NetworkError {
+        err.context(NetworkErrorKind::ProtobufParseError).into()
+    }
+}
+
+impl From<prost::DecodeError> for NetworkError {
+    fn from(err: prost::DecodeError) -> NetworkError {
         err.context(NetworkErrorKind::ProtobufParseError).into()
     }
 }
@@ -130,22 +135,9 @@ impl From<PeerManagerError> for NetworkError {
     }
 }
 
-impl From<timer::timeout::Error<NetworkError>> for NetworkError {
-    fn from(err: timer::timeout::Error<NetworkError>) -> NetworkError {
-        if err.is_elapsed() {
-            Context::new(NetworkErrorKind::TimedOut).into()
-        } else if err.is_timer() {
-            err.into_timer()
-                .unwrap()
-                .context(NetworkErrorKind::TimerError)
-                .into()
-        } else if err.is_inner() {
-            err.into_inner().unwrap()
-        } else {
-            err_msg(err)
-                .context(NetworkErrorKind::UnknownTimerError)
-                .into()
-        }
+impl From<timer::timeout::Elapsed> for NetworkError {
+    fn from(_err: timer::timeout::Elapsed) -> NetworkError {
+        Context::new(NetworkErrorKind::TimedOut).into()
     }
 }
 

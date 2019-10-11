@@ -2,6 +2,9 @@
 name = "network"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra network"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 build = "build.rs"
 publish = false
@@ -9,37 +12,42 @@ edition = "2018"
 
 [dependencies]
 bytes = "0.4.12"
-futures = { version = "=0.3.0-alpha.17", package = "futures-preview", features = ["async-await", "nightly", "io-compat", "compat"] }
+futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["async-await"] }
 lazy_static = "1.3.0"
 parity-multiaddr = "0.5.0"
-pin-utils = "=0.1.0-alpha.4"
-protobuf = { version = "~2.7", features = ["with-bytes"] }
+pin-project = "0.4.2"
+prost = "0.5.0"
 rand = "0.6.5"
-tokio = "0.1.22"
-tokio-timer = "0.2.10"
+tokio = "=0.2.0-alpha.6"
 tokio-retry = "0.2.0"
-unsigned-varint = { version = "0.2.2", features = ["codec"] }
 
+admission-control-proto = { path = "../admission_control/admission-control-proto" }
 bounded-executor = { path = "../common/bounded-executor" }
 channel = { path = "../common/channel" }
 config = { path = "../config" }
 crypto = { path = "../crypto/crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
+libra-types = { path = "../types" }
 logger = { path = "../common/logger" }
 memsocket = { path = "memsocket" }
 metrics = { path = "../common/metrics" }
 netcore = { path = "netcore" }
 noise = { path = "noise" }
-socket_bench_server = { path = "socket_bench_server" }
-types = { path = "../types" }
+prost-ext = { path = "../common/prost-ext" }
+
+proptest = { version = "0.9.4", default-features = false, optional = true }
+proptest_helpers = { path = "../common/proptest_helpers", optional = true }
 
 [dev-dependencies]
 criterion = "0.2.11"
+socket_bench_server = { path = "socket_bench_server" }
 crypto = { path = "../crypto/crypto", features = ["testing"] }
-types = { path = "../types", features = ["testing"]}
+libra-types = { path = "../types", features = ["testing"]}
+proptest = { version = "0.9.4", default-features = false }
+proptest_helpers = { path = "../common/proptest_helpers" }
 
 [build-dependencies]
-protoc-rust = "2.5.0"
+prost-build = "0.5.0"
 
 [[bench]]
 name = "socket_muxer_bench"
@@ -48,3 +56,7 @@ harness = false
 [[bench]]
 name = "network_bench"
 harness = false
+
+[features]
+default = []
+fuzzing = ["proptest", "proptest_helpers"]

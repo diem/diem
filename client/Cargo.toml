@@ -2,42 +2,45 @@
 name = "client"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra client"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
 bincode = "1.1.1"
+chrono = "0.4.7"
 futures = "0.1.28"
-grpcio = { version = "0.4.4", default-features = false, features = ["protobuf-codec"] }
+grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 hex = "0.3.2"
 itertools = "0.8.0"
 proptest = "0.9.2"
-rustyline = "4.1.0"
+rustyline = "5.0.3"
 rust_decimal = "1.0.2"
 num-traits = "0.2"
 reqwest = { version = "0.9.19", default-features = false }
 serde = { version = "1.0.96", features = ["derive"] }
 serde_json = "1.0.40"
-structopt = "0.2.15"
+structopt = "0.3.2"
 
-admission_control_proto = { version = "0.1.0", path = "../admission_control/admission_control_proto" }
+admission-control-proto = { version = "0.1.0", path = "../admission_control/admission-control-proto" }
 config = { path = "../config" }
-crash_handler = { path = "../common/crash_handler" }
+crash-handler = { path = "../common/crash-handler" }
 crypto = { path = "../crypto/crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 libra_wallet = { path = "./libra_wallet" }
 logger =  { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
-proto_conv = { path = "../common/proto_conv" }
-types = { path = "../types" }
+libra-types = { path = "../types" }
 tools = { path = "../common/tools/" }
-vm_genesis = { path = "../language/vm/vm_genesis" }
+transaction_builder = { path = "../language/transaction_builder" }
 
 [dev-dependencies]
 crypto = { path = "../crypto/crypto", features = ["testing"] }
-types = { path = "../types", features = ["testing"]}
+libra-types = { path = "../types", features = ["testing"]}
 
 [features]
 default = []
-testing = ["types/testing", "crypto/testing"]
+testing = ["libra-types/testing", "crypto/testing"]

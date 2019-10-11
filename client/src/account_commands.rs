@@ -132,6 +132,7 @@ impl Command for AccountCommandMint {
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         if params.len() != 3 {
             println!("Invalid number of arguments for mint");
+            return;
         }
         println!(">> Minting coins");
         let is_blocking = blocking_cmd(params[0]);

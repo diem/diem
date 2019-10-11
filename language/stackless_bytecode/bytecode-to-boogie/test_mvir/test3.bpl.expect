@@ -1,0 +1,5419 @@
+type TypeName;
+type FieldName;
+type LocalName;
+type Address = int;
+type ByteArray;
+type String;
+type CreationTime = int;
+
+type {:datatype} Edge;
+function {:constructor} Field(f: FieldName): Edge;
+function {:constructor} Index(i: int): Edge;
+function {:constructor} String(s: String): Edge;
+
+type {:datatype} Path;
+function {:constructor} Nil(): Path;
+function {:constructor} Cons(p: Path, e: Edge): Path;
+
+type {:datatype} Value;
+function {:constructor} Boolean(b: bool): Value;
+function {:constructor} Integer(i: int): Value;
+function {:constructor} Address(a: Address): Value;
+function {:constructor} ByteArray(b: ByteArray): Value;
+function {:constructor} Str(a: String): Value;
+function {:constructor} Map(m: [Edge]Value): Value;
+
+const DefaultMap: [Edge]Value;
+
+type {:datatype} Reference;
+function {:constructor} Reference(rt: RefType, p: Path, v: Value): Reference;
+
+type {:datatype} RefType;
+function {:constructor} Global(a: Address, t: TypeName): RefType;
+function {:constructor} Local(c: CreationTime, l: LocalName): RefType;
+
+type {:datatype} ResourceStore;
+function {:constructor} ResourceStore(domain: [Address]bool, contents: [Address]Value): ResourceStore;
+
+var senderAddress: Value;
+
+procedure {:inline 1} DeepUpdateReference(src: Reference, dst: Reference) returns (dst': Reference)
+{
+    var isPrefix: bool;
+    var v': Value;
+    dst' := dst;
+    if (rt#Reference(src) == rt#Reference(dst)) {
+        call isPrefix := IsPrefixMax(p#Reference(dst), p#Reference(src));
+        if (isPrefix) {
+            call v' := UpdateValueMax(p#Reference(src), v#Reference(src), p#Reference(dst), v#Reference(dst));
+            dst' := Reference(rt#Reference(dst), p#Reference(dst), v');
+        }
+    }
+}
+
+procedure {:inline 1} DeepUpdateLocal(c: CreationTime, l: LocalName, src: Reference, dst: Value) returns (dst': Value)
+{
+    var v': Value;
+    dst' := dst;
+    if (is#Local(rt#Reference(src)) && c == c#Local(rt#Reference(src)) && l == l#Local(rt#Reference(src))) {
+        call dst' := UpdateValueMax(p#Reference(src), v#Reference(src), Nil(), dst);
+    }
+}
+
+procedure {:inline 1} DeepUpdateGlobal(t: TypeName, src: Reference, dst: ResourceStore) returns (dst': ResourceStore)
+{
+    var v': Value;
+    var a: Address;
+    dst' := dst;
+    if (is#Global(rt#Reference(src)) && t == t#Global(rt#Reference(src))) {
+        a := a#Global(rt#Reference(src));
+        call v' := UpdateValueMax(p#Reference(src), v#Reference(src), Nil(), contents#ResourceStore(dst)[a]);
+        dst' := ResourceStore(domain#ResourceStore(dst), contents#ResourceStore(dst)[a := v']);
+    }
+}
+
+procedure {:inline 1} Exists(address: Value, rs: ResourceStore) returns (dst: Value)
+{
+    assert is#Address(address);
+    dst := Boolean(domain#ResourceStore(rs)[a#Address(address)]);
+}
+
+procedure {:inline 1} MoveToSender(rs: ResourceStore, v: Value) returns (rs': ResourceStore)
+{
+    var a: Address;
+    a := sender#Transaction_cons(txn);
+    if (domain#ResourceStore(rs)[a]) {
+        // sender already has the resource
+        abort_flag := true;
+    }
+    rs' := ResourceStore(domain#ResourceStore(rs)[a := true], contents#ResourceStore(rs)[a := v]);
+}
+
+procedure {:inline 1} MoveFrom(address: Value, rs: ResourceStore) returns (dst: Value, rs': ResourceStore)
+{
+    var a: Address;
+    assert is#Address(address);
+    a := a#Address(address);
+    assert domain#ResourceStore(rs)[a];
+    dst := contents#ResourceStore(rs)[a];
+    rs' := ResourceStore(domain#ResourceStore(rs)[a := false], contents#ResourceStore(rs));
+}
+
+procedure {:inline 1} BorrowGlobal(address: Value, t: TypeName, rs: ResourceStore) returns (dst: Reference)
+{
+    var a: Address;
+    var v: Value;
+    a := a#Address(address);
+    if (!domain#ResourceStore(rs)[a]) {
+        abort_flag := true;
+    }
+    v := contents#ResourceStore(rs)[a];
+    dst := Reference(Global(a, t), Nil(), v);
+}
+
+procedure {:inline 1} BorrowLoc(c: CreationTime, l: LocalName, local: Value) returns (dst: Reference)
+{
+    dst := Reference(Local(c, l), Nil(), local);
+}
+
+procedure {:inline 1} BorrowField(src: Reference, f: FieldName) returns (dst: Reference)
+{
+    assert is#Map(v#Reference(src));
+    dst := Reference(rt#Reference(src), Cons(p#Reference(src), Field(f)), m#Map(v#Reference(src))[Field(f)]);
+}
+
+procedure {:inline 1} WriteRef(to: Reference, v: Value) returns (to': Reference)
+{
+    to' := Reference(rt#Reference(to), p#Reference(to), v);
+}
+
+procedure {:inline 1} ReadRef(from: Reference) returns (v: Value)
+{
+    v := v#Reference(from);
+}
+
+procedure {:inline 1} CopyOrMoveRef(local: Reference) returns (dst: Reference)
+{
+    dst := local;
+}
+
+procedure {:inline 1} CopyOrMoveValue(local: Value) returns (dst: Value)
+{
+    dst := local;
+}
+
+procedure {:inline 1} FreezeRef(src: Reference) returns (dest: Reference)
+{
+    dest := src;
+}
+
+// Eq, Pack, and Unpack are auto-generated for each type T
+const MAX_U64: int;
+axiom MAX_U64 == 9223372036854775807;
+var abort_flag: bool;
+
+procedure {:inline 1} Add(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src1) + i#Integer(src2) > MAX_U64) {
+        abort_flag := true;
+    }
+    dst := Integer(i#Integer(src1) + i#Integer(src2));
+}
+
+procedure {:inline 1} Sub(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src1) < i#Integer(src2)) {
+        abort_flag := true;
+    }
+    dst := Integer(i#Integer(src1) - i#Integer(src2));
+}
+
+procedure {:inline 1} Mul(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src1) * i#Integer(src2) > MAX_U64) {
+        abort_flag := true;
+    }
+    dst := Integer(i#Integer(src1) * i#Integer(src2));
+}
+
+procedure {:inline 1} Div(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src2) == 0) {
+        abort_flag := true;
+    }
+    dst := Integer(i#Integer(src1) div i#Integer(src2));
+}
+
+procedure {:inline 1} Mod(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Integer(src1) && is#Integer(src2);
+    if (i#Integer(src2) == 0) {
+        abort_flag := true;
+    }
+    dst := Integer(i#Integer(src1) mod i#Integer(src2));
+}
+
+procedure {:inline 1} Lt(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Integer(src1) && is#Integer(src2);
+    dst := Boolean(i#Integer(src1) < i#Integer(src2));
+}
+
+procedure {:inline 1} Gt(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Integer(src1) && is#Integer(src2);
+    dst := Boolean(i#Integer(src1) > i#Integer(src2));
+}
+
+procedure {:inline 1} Le(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Integer(src1) && is#Integer(src2);
+    dst := Boolean(i#Integer(src1) <= i#Integer(src2));
+}
+
+procedure {:inline 1} Ge(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Integer(src1) && is#Integer(src2);
+    dst := Boolean(i#Integer(src1) >= i#Integer(src2));
+}
+
+procedure {:inline 1} And(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Boolean(src1) && is#Boolean(src2);
+    dst := Boolean(b#Boolean(src1) && b#Boolean(src2));
+}
+
+procedure {:inline 1} Or(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Boolean(src1) && is#Boolean(src2);
+    dst := Boolean(b#Boolean(src1) || b#Boolean(src2));
+}
+
+procedure {:inline 1} Not(src: Value) returns (dst: Value)
+{
+    assert is#Boolean(src);
+    dst := Boolean(!b#Boolean(src));
+}
+
+procedure {:inline 1} Eq_int(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Integer(src1) && is#Integer(src2);
+    dst := Boolean(i#Integer(src1) == i#Integer(src2));
+}
+
+procedure {:inline 1} Neq_int(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Integer(src1) && is#Integer(src2);
+    dst := Boolean(i#Integer(src1) != i#Integer(src2));
+}
+
+procedure {:inline 1} Eq_bool(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Boolean(src1) && is#Boolean(src2);
+    dst := Boolean(b#Boolean(src1) == b#Boolean(src2));
+}
+
+procedure {:inline 1} Neq_bool(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Boolean(src1) && is#Boolean(src2);
+    dst := Boolean(b#Boolean(src1) != b#Boolean(src2));
+}
+
+procedure {:inline 1} Eq_address(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Address(src1) && is#Address(src2);
+    dst := Boolean(a#Address(src1) == a#Address(src2));
+}
+
+procedure {:inline 1} Neq_address(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#Address(src1) && is#Address(src2);
+    dst := Boolean(a#Address(src1) != a#Address(src2));
+}
+
+procedure {:inline 1} Eq_bytearray(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#ByteArray(src1) && is#ByteArray(src2);
+    dst := Boolean(b#ByteArray(src1) == b#ByteArray(src2));
+}
+
+procedure {:inline 1} Neq_bytearray(src1: Value, src2: Value) returns (dst: Value)
+{
+    assert is#ByteArray(src1) && is#ByteArray(src2);
+    dst := Boolean(b#ByteArray(src1) != b#ByteArray(src2));
+}
+
+procedure {:inline 1} LdConst(val: int) returns (ret: Value)
+{
+    ret := Integer(val);
+}
+
+procedure {:inline 1} LdAddr(val: Address) returns (ret: Value)
+{
+    ret := Address(val);
+}
+
+procedure {:inline 1} LdByteArray(val: ByteArray) returns (ret: Value)
+{
+    ret := ByteArray(val);
+}
+
+procedure {:inline 1} LdStr(val: String) returns (ret: Value)
+{
+    ret := Str(val);
+}
+
+procedure {:inline 1} LdTrue() returns (ret: Value)
+{
+    ret := Boolean(true);
+}
+
+procedure {:inline 1} LdFalse() returns (ret: Value)
+{
+    ret := Boolean(false);
+}
+
+// Transaction builtin instructions
+type {:datatype} Transaction;
+var txn: Transaction;
+function {:constructor} Transaction_cons(
+  gas_unit_price: int, max_gas_units: int, public_key: ByteArray,
+  sender: Address, sequence_number: int, gas_remaining: int) : Transaction;
+
+procedure {:inline 1} GetGasRemaining() returns (ret_gas_remaining: Value)
+{
+  ret_gas_remaining := Integer(gas_remaining#Transaction_cons(txn));
+}
+
+procedure {:inline 1} GetTxnSequenceNumber() returns (ret_sequence_number: Value)
+{
+  ret_sequence_number := Integer(sequence_number#Transaction_cons(txn));
+}
+
+procedure {:inline 1} GetTxnPublicKey() returns (ret_public_key: Value)
+{
+  ret_public_key := ByteArray(public_key#Transaction_cons(txn));
+}
+
+procedure {:inline 1} GetTxnSenderAddress() returns (ret_sender: Value)
+{
+  ret_sender := Address(sender#Transaction_cons(txn));
+}
+
+procedure {:inline 1} GetTxnMaxGasUnits() returns (ret_max_gas_units: Value)
+{
+  ret_max_gas_units := Integer(max_gas_units#Transaction_cons(txn));
+}
+
+procedure {:inline 1} GetTxnGasUnitPrice() returns (ret_gas_unit_price: Value)
+{
+  ret_gas_unit_price := Integer(gas_unit_price#Transaction_cons(txn));
+}
+
+// Special instruction
+var Address_Exists: [Address]bool;
+procedure {:inline 1} CreateAccount(addr_val: Value, addr_exists: [Address]bool)
+returns (addr_exists': [Address]bool)
+{
+  var a: Address;
+  a := a#Address(addr_val);
+  if (domain#ResourceStore(rs_LibraAccount_T)[a]) {
+      abort_flag := true;
+  }
+  rs_LibraAccount_T := ResourceStore(domain#ResourceStore(rs_LibraAccount_T)[a := true], contents#ResourceStore(rs_LibraAccount_T)[a := Map(DefaultMap[Field(LibraAccount_T_balance) := Map(DefaultMap[Field(LibraCoin_T_value) := Integer(0)])])]);
+  assert domain#ResourceStore(rs_LibraAccount_T)[a];
+ }
+
+
+// everything below is auto generated
+
+const unique Block_T: TypeName;
+var rs_Block_T: ResourceStore;
+const unique Block_T_height: FieldName;
+
+procedure {:inline 1} Pack_Block_T(v0: Value) returns (v: Value)
+{
+    assert is#Integer(v0);
+    v := Map(DefaultMap[Field(Block_T_height) := v0]);
+}
+
+procedure {:inline 1} Unpack_Block_T(v: Value) returns (v0: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(Block_T_height)];
+}
+
+procedure {:inline 1} Eq_Block_T(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_int(m#Map(v1)[Field(Block_T_height)], m#Map(v2)[Field(Block_T_height)]);
+    res := Boolean(true && b#Boolean(b0));
+}
+
+procedure {:inline 1} Neq_Block_T(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_Block_T(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique LibraCoin_T: TypeName;
+var rs_LibraCoin_T: ResourceStore;
+const unique LibraCoin_T_value: FieldName;
+
+procedure {:inline 1} Pack_LibraCoin_T(v0: Value) returns (v: Value)
+{
+    assert is#Integer(v0);
+    v := Map(DefaultMap[Field(LibraCoin_T_value) := v0]);
+}
+
+procedure {:inline 1} Unpack_LibraCoin_T(v: Value) returns (v0: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(LibraCoin_T_value)];
+}
+
+procedure {:inline 1} Eq_LibraCoin_T(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_int(m#Map(v1)[Field(LibraCoin_T_value)], m#Map(v2)[Field(LibraCoin_T_value)]);
+    res := Boolean(true && b#Boolean(b0));
+}
+
+procedure {:inline 1} Neq_LibraCoin_T(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_LibraCoin_T(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique LibraCoin_MintCapability: TypeName;
+var rs_LibraCoin_MintCapability: ResourceStore;
+
+procedure {:inline 1} Pack_LibraCoin_MintCapability() returns (v: Value)
+{
+    v := Map(DefaultMap);
+}
+
+procedure {:inline 1} Unpack_LibraCoin_MintCapability(v: Value) returns ()
+{
+    assert is#Map(v);
+}
+
+procedure {:inline 1} Eq_LibraCoin_MintCapability(v1: Value, v2: Value) returns (res: Value)
+{
+    assert is#Map(v1) && is#Map(v2);
+    res := Boolean(true);
+}
+
+procedure {:inline 1} Neq_LibraCoin_MintCapability(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_LibraCoin_MintCapability(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique LibraCoin_MarketCap: TypeName;
+var rs_LibraCoin_MarketCap: ResourceStore;
+const unique LibraCoin_MarketCap_total_value: FieldName;
+
+procedure {:inline 1} Pack_LibraCoin_MarketCap(v0: Value) returns (v: Value)
+{
+    assert is#Integer(v0);
+    v := Map(DefaultMap[Field(LibraCoin_MarketCap_total_value) := v0]);
+}
+
+procedure {:inline 1} Unpack_LibraCoin_MarketCap(v: Value) returns (v0: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(LibraCoin_MarketCap_total_value)];
+}
+
+procedure {:inline 1} Eq_LibraCoin_MarketCap(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_int(m#Map(v1)[Field(LibraCoin_MarketCap_total_value)], m#Map(v2)[Field(LibraCoin_MarketCap_total_value)]);
+    res := Boolean(true && b#Boolean(b0));
+}
+
+procedure {:inline 1} Neq_LibraCoin_MarketCap(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_LibraCoin_MarketCap(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique Vector_T: TypeName;
+var rs_Vector_T: ResourceStore;
+const unique Event_HandleIdGenerator: TypeName;
+var rs_Event_HandleIdGenerator: ResourceStore;
+const unique Event_HandleIdGenerator_counter: FieldName;
+
+procedure {:inline 1} Pack_Event_HandleIdGenerator(v0: Value) returns (v: Value)
+{
+    assert is#Integer(v0);
+    v := Map(DefaultMap[Field(Event_HandleIdGenerator_counter) := v0]);
+}
+
+procedure {:inline 1} Unpack_Event_HandleIdGenerator(v: Value) returns (v0: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(Event_HandleIdGenerator_counter)];
+}
+
+procedure {:inline 1} Eq_Event_HandleIdGenerator(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_int(m#Map(v1)[Field(Event_HandleIdGenerator_counter)], m#Map(v2)[Field(Event_HandleIdGenerator_counter)]);
+    res := Boolean(true && b#Boolean(b0));
+}
+
+procedure {:inline 1} Neq_Event_HandleIdGenerator(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_Event_HandleIdGenerator(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique Event_Handle: TypeName;
+var rs_Event_Handle: ResourceStore;
+const unique Event_Handle_counter: FieldName;
+const unique Event_Handle_guid: FieldName;
+
+procedure {:inline 1} Pack_Event_Handle(v0: Value, v1: Value) returns (v: Value)
+{
+    assert is#Integer(v0);
+    assert is#ByteArray(v1);
+    v := Map(DefaultMap[Field(Event_Handle_counter) := v0][Field(Event_Handle_guid) := v1]);
+}
+
+procedure {:inline 1} Unpack_Event_Handle(v: Value) returns (v0: Value, v1: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(Event_Handle_counter)];
+    v1 := m#Map(v)[Field(Event_Handle_guid)];
+}
+
+procedure {:inline 1} Eq_Event_Handle(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    var b1: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_int(m#Map(v1)[Field(Event_Handle_counter)], m#Map(v2)[Field(Event_Handle_counter)]);
+    call b1 := Eq_bytearray(m#Map(v1)[Field(Event_Handle_guid)], m#Map(v2)[Field(Event_Handle_guid)]);
+    res := Boolean(true && b#Boolean(b0) && b#Boolean(b1));
+}
+
+procedure {:inline 1} Neq_Event_Handle(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_Event_Handle(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique LibraAccount_T: TypeName;
+var rs_LibraAccount_T: ResourceStore;
+const unique LibraAccount_T_authentication_key: FieldName;
+const unique LibraAccount_T_balance: FieldName;
+const unique LibraAccount_T_delegated_key_rotation_capability: FieldName;
+const unique LibraAccount_T_delegated_withdrawal_capability: FieldName;
+const unique LibraAccount_T_received_events: FieldName;
+const unique LibraAccount_T_sent_events: FieldName;
+const unique LibraAccount_T_sequence_number: FieldName;
+
+procedure {:inline 1} Pack_LibraAccount_T(v0: Value, v1: Value, v2: Value, v3: Value, v4: Value, v5: Value, v6: Value) returns (v: Value)
+{
+    assert is#ByteArray(v0);
+    assert is#Map(v1);
+    assert is#Boolean(v2);
+    assert is#Boolean(v3);
+    assert is#Map(v4);
+    assert is#Map(v5);
+    assert is#Integer(v6);
+    v := Map(DefaultMap[Field(LibraAccount_T_authentication_key) := v0][Field(LibraAccount_T_balance) := v1][Field(LibraAccount_T_delegated_key_rotation_capability) := v2][Field(LibraAccount_T_delegated_withdrawal_capability) := v3][Field(LibraAccount_T_received_events) := v4][Field(LibraAccount_T_sent_events) := v5][Field(LibraAccount_T_sequence_number) := v6]);
+}
+
+procedure {:inline 1} Unpack_LibraAccount_T(v: Value) returns (v0: Value, v1: Value, v2: Value, v3: Value, v4: Value, v5: Value, v6: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(LibraAccount_T_authentication_key)];
+    v1 := m#Map(v)[Field(LibraAccount_T_balance)];
+    v2 := m#Map(v)[Field(LibraAccount_T_delegated_key_rotation_capability)];
+    v3 := m#Map(v)[Field(LibraAccount_T_delegated_withdrawal_capability)];
+    v4 := m#Map(v)[Field(LibraAccount_T_received_events)];
+    v5 := m#Map(v)[Field(LibraAccount_T_sent_events)];
+    v6 := m#Map(v)[Field(LibraAccount_T_sequence_number)];
+}
+
+procedure {:inline 1} Eq_LibraAccount_T(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    var b1: Value;
+    var b2: Value;
+    var b3: Value;
+    var b4: Value;
+    var b5: Value;
+    var b6: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_bytearray(m#Map(v1)[Field(LibraAccount_T_authentication_key)], m#Map(v2)[Field(LibraAccount_T_authentication_key)]);
+    call b1 := Eq_LibraCoin_T(m#Map(v1)[Field(LibraAccount_T_balance)], m#Map(v2)[Field(LibraAccount_T_balance)]);
+    call b2 := Eq_bool(m#Map(v1)[Field(LibraAccount_T_delegated_key_rotation_capability)], m#Map(v2)[Field(LibraAccount_T_delegated_key_rotation_capability)]);
+    call b3 := Eq_bool(m#Map(v1)[Field(LibraAccount_T_delegated_withdrawal_capability)], m#Map(v2)[Field(LibraAccount_T_delegated_withdrawal_capability)]);
+    call b4 := Eq_Event_Handle(m#Map(v1)[Field(LibraAccount_T_received_events)], m#Map(v2)[Field(LibraAccount_T_received_events)]);
+    call b5 := Eq_Event_Handle(m#Map(v1)[Field(LibraAccount_T_sent_events)], m#Map(v2)[Field(LibraAccount_T_sent_events)]);
+    call b6 := Eq_int(m#Map(v1)[Field(LibraAccount_T_sequence_number)], m#Map(v2)[Field(LibraAccount_T_sequence_number)]);
+    res := Boolean(true && b#Boolean(b0) && b#Boolean(b1) && b#Boolean(b2) && b#Boolean(b3) && b#Boolean(b4) && b#Boolean(b5) && b#Boolean(b6));
+}
+
+procedure {:inline 1} Neq_LibraAccount_T(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_LibraAccount_T(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique LibraAccount_WithdrawalCapability: TypeName;
+var rs_LibraAccount_WithdrawalCapability: ResourceStore;
+const unique LibraAccount_WithdrawalCapability_account_address: FieldName;
+
+procedure {:inline 1} Pack_LibraAccount_WithdrawalCapability(v0: Value) returns (v: Value)
+{
+    assert is#Address(v0);
+    v := Map(DefaultMap[Field(LibraAccount_WithdrawalCapability_account_address) := v0]);
+}
+
+procedure {:inline 1} Unpack_LibraAccount_WithdrawalCapability(v: Value) returns (v0: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(LibraAccount_WithdrawalCapability_account_address)];
+}
+
+procedure {:inline 1} Eq_LibraAccount_WithdrawalCapability(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_address(m#Map(v1)[Field(LibraAccount_WithdrawalCapability_account_address)], m#Map(v2)[Field(LibraAccount_WithdrawalCapability_account_address)]);
+    res := Boolean(true && b#Boolean(b0));
+}
+
+procedure {:inline 1} Neq_LibraAccount_WithdrawalCapability(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_LibraAccount_WithdrawalCapability(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique LibraAccount_KeyRotationCapability: TypeName;
+var rs_LibraAccount_KeyRotationCapability: ResourceStore;
+const unique LibraAccount_KeyRotationCapability_account_address: FieldName;
+
+procedure {:inline 1} Pack_LibraAccount_KeyRotationCapability(v0: Value) returns (v: Value)
+{
+    assert is#Address(v0);
+    v := Map(DefaultMap[Field(LibraAccount_KeyRotationCapability_account_address) := v0]);
+}
+
+procedure {:inline 1} Unpack_LibraAccount_KeyRotationCapability(v: Value) returns (v0: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(LibraAccount_KeyRotationCapability_account_address)];
+}
+
+procedure {:inline 1} Eq_LibraAccount_KeyRotationCapability(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_address(m#Map(v1)[Field(LibraAccount_KeyRotationCapability_account_address)], m#Map(v2)[Field(LibraAccount_KeyRotationCapability_account_address)]);
+    res := Boolean(true && b#Boolean(b0));
+}
+
+procedure {:inline 1} Neq_LibraAccount_KeyRotationCapability(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_LibraAccount_KeyRotationCapability(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique LibraAccount_SentPaymentEvent: TypeName;
+var rs_LibraAccount_SentPaymentEvent: ResourceStore;
+const unique LibraAccount_SentPaymentEvent_amount: FieldName;
+const unique LibraAccount_SentPaymentEvent_payee: FieldName;
+
+procedure {:inline 1} Pack_LibraAccount_SentPaymentEvent(v0: Value, v1: Value) returns (v: Value)
+{
+    assert is#Integer(v0);
+    assert is#Address(v1);
+    v := Map(DefaultMap[Field(LibraAccount_SentPaymentEvent_amount) := v0][Field(LibraAccount_SentPaymentEvent_payee) := v1]);
+}
+
+procedure {:inline 1} Unpack_LibraAccount_SentPaymentEvent(v: Value) returns (v0: Value, v1: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(LibraAccount_SentPaymentEvent_amount)];
+    v1 := m#Map(v)[Field(LibraAccount_SentPaymentEvent_payee)];
+}
+
+procedure {:inline 1} Eq_LibraAccount_SentPaymentEvent(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    var b1: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_int(m#Map(v1)[Field(LibraAccount_SentPaymentEvent_amount)], m#Map(v2)[Field(LibraAccount_SentPaymentEvent_amount)]);
+    call b1 := Eq_address(m#Map(v1)[Field(LibraAccount_SentPaymentEvent_payee)], m#Map(v2)[Field(LibraAccount_SentPaymentEvent_payee)]);
+    res := Boolean(true && b#Boolean(b0) && b#Boolean(b1));
+}
+
+procedure {:inline 1} Neq_LibraAccount_SentPaymentEvent(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_LibraAccount_SentPaymentEvent(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique LibraAccount_ReceivedPaymentEvent: TypeName;
+var rs_LibraAccount_ReceivedPaymentEvent: ResourceStore;
+const unique LibraAccount_ReceivedPaymentEvent_amount: FieldName;
+const unique LibraAccount_ReceivedPaymentEvent_payer: FieldName;
+
+procedure {:inline 1} Pack_LibraAccount_ReceivedPaymentEvent(v0: Value, v1: Value) returns (v: Value)
+{
+    assert is#Integer(v0);
+    assert is#Address(v1);
+    v := Map(DefaultMap[Field(LibraAccount_ReceivedPaymentEvent_amount) := v0][Field(LibraAccount_ReceivedPaymentEvent_payer) := v1]);
+}
+
+procedure {:inline 1} Unpack_LibraAccount_ReceivedPaymentEvent(v: Value) returns (v0: Value, v1: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(LibraAccount_ReceivedPaymentEvent_amount)];
+    v1 := m#Map(v)[Field(LibraAccount_ReceivedPaymentEvent_payer)];
+}
+
+procedure {:inline 1} Eq_LibraAccount_ReceivedPaymentEvent(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    var b1: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_int(m#Map(v1)[Field(LibraAccount_ReceivedPaymentEvent_amount)], m#Map(v2)[Field(LibraAccount_ReceivedPaymentEvent_amount)]);
+    call b1 := Eq_address(m#Map(v1)[Field(LibraAccount_ReceivedPaymentEvent_payer)], m#Map(v2)[Field(LibraAccount_ReceivedPaymentEvent_payer)]);
+    res := Boolean(true && b#Boolean(b0) && b#Boolean(b1));
+}
+
+procedure {:inline 1} Neq_LibraAccount_ReceivedPaymentEvent(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_LibraAccount_ReceivedPaymentEvent(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique ValidatorSet_ValidatorInfo: TypeName;
+var rs_ValidatorSet_ValidatorInfo: ResourceStore;
+const unique ValidatorSet_ValidatorInfo_addr: FieldName;
+const unique ValidatorSet_ValidatorInfo_consensus_pubkey: FieldName;
+const unique ValidatorSet_ValidatorInfo_network_identity_pubkey: FieldName;
+const unique ValidatorSet_ValidatorInfo_network_signing_pubkey: FieldName;
+
+procedure {:inline 1} Pack_ValidatorSet_ValidatorInfo(v0: Value, v1: Value, v2: Value, v3: Value) returns (v: Value)
+{
+    assert is#Address(v0);
+    assert is#ByteArray(v1);
+    assert is#ByteArray(v2);
+    assert is#ByteArray(v3);
+    v := Map(DefaultMap[Field(ValidatorSet_ValidatorInfo_addr) := v0][Field(ValidatorSet_ValidatorInfo_consensus_pubkey) := v1][Field(ValidatorSet_ValidatorInfo_network_identity_pubkey) := v2][Field(ValidatorSet_ValidatorInfo_network_signing_pubkey) := v3]);
+}
+
+procedure {:inline 1} Unpack_ValidatorSet_ValidatorInfo(v: Value) returns (v0: Value, v1: Value, v2: Value, v3: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(ValidatorSet_ValidatorInfo_addr)];
+    v1 := m#Map(v)[Field(ValidatorSet_ValidatorInfo_consensus_pubkey)];
+    v2 := m#Map(v)[Field(ValidatorSet_ValidatorInfo_network_identity_pubkey)];
+    v3 := m#Map(v)[Field(ValidatorSet_ValidatorInfo_network_signing_pubkey)];
+}
+
+procedure {:inline 1} Eq_ValidatorSet_ValidatorInfo(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    var b1: Value;
+    var b2: Value;
+    var b3: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_address(m#Map(v1)[Field(ValidatorSet_ValidatorInfo_addr)], m#Map(v2)[Field(ValidatorSet_ValidatorInfo_addr)]);
+    call b1 := Eq_bytearray(m#Map(v1)[Field(ValidatorSet_ValidatorInfo_consensus_pubkey)], m#Map(v2)[Field(ValidatorSet_ValidatorInfo_consensus_pubkey)]);
+    call b2 := Eq_bytearray(m#Map(v1)[Field(ValidatorSet_ValidatorInfo_network_identity_pubkey)], m#Map(v2)[Field(ValidatorSet_ValidatorInfo_network_identity_pubkey)]);
+    call b3 := Eq_bytearray(m#Map(v1)[Field(ValidatorSet_ValidatorInfo_network_signing_pubkey)], m#Map(v2)[Field(ValidatorSet_ValidatorInfo_network_signing_pubkey)]);
+    res := Boolean(true && b#Boolean(b0) && b#Boolean(b1) && b#Boolean(b2) && b#Boolean(b3));
+}
+
+procedure {:inline 1} Neq_ValidatorSet_ValidatorInfo(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_ValidatorSet_ValidatorInfo(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique ValidatorSet_ValidatorConfig: TypeName;
+var rs_ValidatorSet_ValidatorConfig: ResourceStore;
+const unique ValidatorSet_ValidatorConfig_consensus_pubkey: FieldName;
+const unique ValidatorSet_ValidatorConfig_network_identity_pubkey: FieldName;
+const unique ValidatorSet_ValidatorConfig_network_signing_pubkey: FieldName;
+
+procedure {:inline 1} Pack_ValidatorSet_ValidatorConfig(v0: Value, v1: Value, v2: Value) returns (v: Value)
+{
+    assert is#ByteArray(v0);
+    assert is#ByteArray(v1);
+    assert is#ByteArray(v2);
+    v := Map(DefaultMap[Field(ValidatorSet_ValidatorConfig_consensus_pubkey) := v0][Field(ValidatorSet_ValidatorConfig_network_identity_pubkey) := v1][Field(ValidatorSet_ValidatorConfig_network_signing_pubkey) := v2]);
+}
+
+procedure {:inline 1} Unpack_ValidatorSet_ValidatorConfig(v: Value) returns (v0: Value, v1: Value, v2: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(ValidatorSet_ValidatorConfig_consensus_pubkey)];
+    v1 := m#Map(v)[Field(ValidatorSet_ValidatorConfig_network_identity_pubkey)];
+    v2 := m#Map(v)[Field(ValidatorSet_ValidatorConfig_network_signing_pubkey)];
+}
+
+procedure {:inline 1} Eq_ValidatorSet_ValidatorConfig(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    var b1: Value;
+    var b2: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_bytearray(m#Map(v1)[Field(ValidatorSet_ValidatorConfig_consensus_pubkey)], m#Map(v2)[Field(ValidatorSet_ValidatorConfig_consensus_pubkey)]);
+    call b1 := Eq_bytearray(m#Map(v1)[Field(ValidatorSet_ValidatorConfig_network_identity_pubkey)], m#Map(v2)[Field(ValidatorSet_ValidatorConfig_network_identity_pubkey)]);
+    call b2 := Eq_bytearray(m#Map(v1)[Field(ValidatorSet_ValidatorConfig_network_signing_pubkey)], m#Map(v2)[Field(ValidatorSet_ValidatorConfig_network_signing_pubkey)]);
+    res := Boolean(true && b#Boolean(b0) && b#Boolean(b1) && b#Boolean(b2));
+}
+
+procedure {:inline 1} Neq_ValidatorSet_ValidatorConfig(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_ValidatorSet_ValidatorConfig(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique ValidatorSet_T: TypeName;
+var rs_ValidatorSet_T: ResourceStore;
+const unique ValidatorSet_T_validators: FieldName;
+
+procedure {:inline 1} Pack_ValidatorSet_T(v0: Value) returns (v: Value)
+{
+    assert is#Map(v0);
+    v := Map(DefaultMap[Field(ValidatorSet_T_validators) := v0]);
+}
+
+procedure {:inline 1} Unpack_ValidatorSet_T(v: Value) returns (v0: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(ValidatorSet_T_validators)];
+}
+
+procedure {:inline 1} Eq_ValidatorSet_T(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_Vector_T(m#Map(v1)[Field(ValidatorSet_T_validators)], m#Map(v2)[Field(ValidatorSet_T_validators)]);
+    res := Boolean(true && b#Boolean(b0));
+}
+
+procedure {:inline 1} Neq_ValidatorSet_T(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_ValidatorSet_T(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique Test3_T: TypeName;
+var rs_Test3_T: ResourceStore;
+const unique Test3_T_f: FieldName;
+const unique Test3_T_g: FieldName;
+
+procedure {:inline 1} Pack_Test3_T(v0: Value, v1: Value) returns (v: Value)
+{
+    assert is#Integer(v0);
+    assert is#Integer(v1);
+    v := Map(DefaultMap[Field(Test3_T_f) := v0][Field(Test3_T_g) := v1]);
+}
+
+procedure {:inline 1} Unpack_Test3_T(v: Value) returns (v0: Value, v1: Value)
+{
+    assert is#Map(v);
+    v0 := m#Map(v)[Field(Test3_T_f)];
+    v1 := m#Map(v)[Field(Test3_T_g)];
+}
+
+procedure {:inline 1} Eq_Test3_T(v1: Value, v2: Value) returns (res: Value)
+{
+    var b0: Value;
+    var b1: Value;
+    assert is#Map(v1) && is#Map(v2);
+    call b0 := Eq_int(m#Map(v1)[Field(Test3_T_f)], m#Map(v2)[Field(Test3_T_f)]);
+    call b1 := Eq_int(m#Map(v1)[Field(Test3_T_g)], m#Map(v2)[Field(Test3_T_g)]);
+    res := Boolean(true && b#Boolean(b0) && b#Boolean(b1));
+}
+
+procedure {:inline 1} Neq_Test3_T(v1: Value, v2: Value) returns (res: Value)
+{
+    var res_val: Value;
+    var res_bool: bool;
+    assert is#Map(v1) && is#Map(v2);
+    call res_val := Eq_Test3_T(v1, v2);
+    res := Boolean(!b#Boolean(res_val));
+}
+
+const unique t0_LocalName: LocalName;
+const unique t1_LocalName: LocalName;
+const unique t2_LocalName: LocalName;
+const unique t3_LocalName: LocalName;
+const unique t4_LocalName: LocalName;
+const unique t5_LocalName: LocalName;
+const unique t6_LocalName: LocalName;
+const unique t7_LocalName: LocalName;
+const unique t8_LocalName: LocalName;
+const unique t9_LocalName: LocalName;
+const unique t10_LocalName: LocalName;
+const unique t11_LocalName: LocalName;
+const unique t12_LocalName: LocalName;
+const unique t13_LocalName: LocalName;
+const unique t14_LocalName: LocalName;
+const unique t15_LocalName: LocalName;
+const unique t16_LocalName: LocalName;
+const unique t17_LocalName: LocalName;
+const unique t18_LocalName: LocalName;
+const unique t19_LocalName: LocalName;
+const unique t20_LocalName: LocalName;
+const unique t21_LocalName: LocalName;
+const unique t22_LocalName: LocalName;
+const unique t23_LocalName: LocalName;
+const unique t24_LocalName: LocalName;
+const unique t25_LocalName: LocalName;
+const unique t26_LocalName: LocalName;
+const unique t27_LocalName: LocalName;
+const unique t28_LocalName: LocalName;
+const unique t29_LocalName: LocalName;
+const unique t30_LocalName: LocalName;
+const unique t31_LocalName: LocalName;
+const unique t32_LocalName: LocalName;
+const unique t33_LocalName: LocalName;
+const unique t34_LocalName: LocalName;
+const unique t35_LocalName: LocalName;
+const unique t36_LocalName: LocalName;
+const unique t37_LocalName: LocalName;
+const unique t38_LocalName: LocalName;
+const unique t39_LocalName: LocalName;
+const unique t40_LocalName: LocalName;
+const unique t41_LocalName: LocalName;
+const unique t42_LocalName: LocalName;
+const unique t43_LocalName: LocalName;
+const unique t44_LocalName: LocalName;
+const unique t45_LocalName: LocalName;
+const unique t46_LocalName: LocalName;
+const unique t47_LocalName: LocalName;
+const unique t48_LocalName: LocalName;
+const unique t49_LocalName: LocalName;
+const unique t50_LocalName: LocalName;
+const unique t51_LocalName: LocalName;
+const unique t52_LocalName: LocalName;
+const unique t53_LocalName: LocalName;
+const unique t54_LocalName: LocalName;
+const unique t55_LocalName: LocalName;
+const unique t56_LocalName: LocalName;
+const unique t57_LocalName: LocalName;
+
+procedure {:inline 1} IsPrefix0(dstPath: Path, srcPath: Path) returns (isPrefix: bool)
+{
+    if (srcPath == dstPath) {
+        isPrefix := true;
+    } else if (srcPath == Nil()) {
+        isPrefix := false;
+    } else {
+        isPrefix := false;
+    }
+}
+
+procedure {:inline 1} IsPrefix1(dstPath: Path, srcPath: Path) returns (isPrefix: bool)
+{
+    if (srcPath == dstPath) {
+        isPrefix := true;
+    } else if (srcPath == Nil()) {
+        isPrefix := false;
+    } else {
+        call isPrefix := IsPrefix0(dstPath, p#Cons(srcPath));
+    }
+}
+
+procedure {:inline 1} IsPrefixMax(dstPath: Path, srcPath: Path) returns (isPrefix: bool)
+{
+    if (srcPath == dstPath) {
+        isPrefix := true;
+    } else if (srcPath == Nil()) {
+        isPrefix := false;
+    } else {
+        call isPrefix := IsPrefix1(dstPath, p#Cons(srcPath));
+    }
+}
+
+procedure {:inline 1} UpdateValue0(srcPath: Path, srcValue: Value, dstPath: Path, dstValue: Value) returns (dstValue': Value)
+{
+    var e: Edge;
+    var v': Value;
+    if (srcPath == dstPath) {
+        dstValue' := srcValue;
+    } else {
+        assume false;
+    }
+}
+
+procedure {:inline 1} UpdateValue1(srcPath: Path, srcValue: Value, dstPath: Path, dstValue: Value) returns (dstValue': Value)
+{
+    var e: Edge;
+    var v': Value;
+    if (srcPath == dstPath) {
+        dstValue' := srcValue;
+    } else {
+        call v' := UpdateValue0(srcPath, srcValue, Cons(dstPath, e), m#Map(dstValue)[e]);
+        dstValue' := Map(m#Map(dstValue)[e := v']);
+    }
+}
+
+procedure {:inline 1} UpdateValueMax(srcPath: Path, srcValue: Value, dstPath: Path, dstValue: Value) returns (dstValue': Value)
+{
+    var e: Edge;
+    var v': Value;
+    if (srcPath == dstPath) {
+        dstValue' := srcValue;
+    } else {
+        call v' := UpdateValue1(srcPath, srcValue, Cons(dstPath, e), m#Map(dstValue)[e]);
+        dstValue' := Map(m#Map(dstValue)[e := v']);
+    }
+}
+
+procedure AddressUtil_address_to_bytes (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value);
+procedure Block_initialize (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // address
+    var t2: Value; // bool
+    var t3: Value; // bool
+    var t4: Value; // int
+    var t5: Value; // int
+    var t6: Value; // Block_T
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t0 := GetTxnSenderAddress();
+
+    call t1 := LdAddr(173345816);
+
+    call t2 := Eq_address(t0, t1);
+
+    call t3 := Not(t2);
+
+    if (!b#Boolean(t3)) { goto Label_7; }
+
+    call t4 := LdConst(1);
+
+    abort_flag := true;
+
+Label_7:
+    call t5 := LdConst(0);
+
+    assume is#Integer(t5);
+
+    call t6 := Pack_Block_T(t5);
+
+    call rs_Block_T := MoveToSender(rs_Block_T, t6);
+
+    return;
+
+}
+procedure Block_prologue (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // int
+    var t1: Reference; // int_ref
+    var t2: Value; // int
+    var t3: Value; // address
+    var t4: Reference; // Block_T_ref
+    var t5: Reference; // int_ref
+    var t6: Reference; // int_ref
+    var t7: Value; // int
+    var t8: Value; // int
+    var t9: Value; // int
+    var t10: Value; // int
+    var t11: Value; // int
+    var t12: Value; // bool
+    var t13: Value; // int
+    var t14: Value; // int
+    var t15: Value; // int
+    var t16: Reference; // int_ref
+    var t17: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Integer(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t3 := LdAddr(173345816);
+
+    call t4 := BorrowGlobal(t3, Block_T, rs_Block_T);
+    assume is#Global(rt#Reference(t4));
+    assume is#Map(v#Reference(t4));
+
+    call t5 := BorrowField(t4, Block_T_height);
+    assume is#Integer(v#Reference(t5));
+
+
+    call t1 := CopyOrMoveRef(t5);
+
+    call t6 := CopyOrMoveRef(t1);
+
+    call t7 := ReadRef(t6);
+
+    call t2 := CopyOrMoveValue(t7);
+
+    call t8 := CopyOrMoveValue(t0);
+
+    call t9 := CopyOrMoveValue(t2);
+
+    call t10 := LdConst(1);
+
+    call t11 := Add(t9, t10);
+
+    call t12 := Eq_int(t8, t11);
+
+    if (!b#Boolean(t12)) { goto Label_19; }
+
+    call t13 := CopyOrMoveValue(t2);
+
+    call t14 := LdConst(1);
+
+    call t15 := Add(t13, t14);
+
+    call t16 := CopyOrMoveRef(t1);
+
+    call t16 := WriteRef(t16, t15);
+
+    call t1 := DeepUpdateReference(t16, t1);
+    call t4 := DeepUpdateReference(t16, t4);
+    call t5 := DeepUpdateReference(t16, t5);
+    call t6 := DeepUpdateReference(t16, t6);
+    call rs_Block_T := DeepUpdateGlobal(Block_T, t16, rs_Block_T);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t16, t0);
+    call t2 := DeepUpdateLocal(c, t2_LocalName, t16, t2);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t16, t3);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t16, t7);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t16, t8);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t16, t9);
+    call t10 := DeepUpdateLocal(c, t10_LocalName, t16, t10);
+    call t11 := DeepUpdateLocal(c, t11_LocalName, t16, t11);
+    call t12 := DeepUpdateLocal(c, t12_LocalName, t16, t12);
+    call t13 := DeepUpdateLocal(c, t13_LocalName, t16, t13);
+    call t14 := DeepUpdateLocal(c, t14_LocalName, t16, t14);
+    call t17 := DeepUpdateLocal(c, t17_LocalName, t16, t17);
+
+    return;
+
+Label_19:
+    call t17 := LdConst(99);
+
+    abort_flag := true;
+
+}
+procedure Block_get_current_height (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Reference; // Block_T_ref
+    var t2: Reference; // int_ref
+    var t3: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t0 := LdAddr(173345816);
+
+    call t1 := BorrowGlobal(t0, Block_T, rs_Block_T);
+    assume is#Global(rt#Reference(t1));
+    assume is#Map(v#Reference(t1));
+
+    call t2 := BorrowField(t1, Block_T_height);
+    assume is#Integer(v#Reference(t2));
+
+
+    call t3 := ReadRef(t2);
+
+    ret0 := t3;
+    return;
+
+}
+procedure BytearrayUtil_bytearray_concat (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value) returns (addr_exists': [Address]bool, ret0: Value);
+procedure LibraCoin_mint_with_default_capability (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // int
+    var t1: Value; // int
+    var t2: Value; // address
+    var t3: Reference; // LibraCoin_MintCapability_ref
+    var t4: Value; // LibraCoin_T
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Integer(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t1 := CopyOrMoveValue(t0);
+
+    call t2 := GetTxnSenderAddress();
+
+    call t3 := BorrowGlobal(t2, LibraCoin_MintCapability, rs_LibraCoin_MintCapability);
+    assume is#Global(rt#Reference(t3));
+    assume is#Map(v#Reference(t3));
+
+    call addr_exists', t4 := LibraCoin_mint(c', addr_exists', t1, t3);
+    assume is#Map(t4);
+
+
+    call rs_LibraCoin_MarketCap := DeepUpdateGlobal(LibraCoin_MarketCap, t3, rs_LibraCoin_MarketCap);
+    call rs_LibraCoin_MintCapability := DeepUpdateGlobal(LibraCoin_MintCapability, t3, rs_LibraCoin_MintCapability);
+    call rs_LibraCoin_T := DeepUpdateGlobal(LibraCoin_T, t3, rs_LibraCoin_T);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t3, t0);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t3, t1);
+    call t2 := DeepUpdateLocal(c, t2_LocalName, t3, t2);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t3, t4);
+
+    ret0 := t4;
+    return;
+
+}
+procedure LibraCoin_mint (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Reference) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // int
+    var t1: Reference; // LibraCoin_MintCapability_ref
+    var t2: Reference; // LibraCoin_MarketCap_ref
+    var t3: Value; // int
+    var t4: Reference; // LibraCoin_MintCapability_ref
+    var t5: Value; // int
+    var t6: Value; // int
+    var t7: Value; // int
+    var t8: Value; // int
+    var t9: Value; // bool
+    var t10: Value; // bool
+    var t11: Value; // int
+    var t12: Value; // address
+    var t13: Reference; // LibraCoin_MarketCap_ref
+    var t14: Reference; // LibraCoin_MarketCap_ref
+    var t15: Reference; // int_ref
+    var t16: Value; // int
+    var t17: Value; // int
+    var t18: Value; // int
+    var t19: Value; // int
+    var t20: Reference; // LibraCoin_MarketCap_ref
+    var t21: Reference; // int_ref
+    var t22: Value; // int
+    var t23: Value; // LibraCoin_T
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Integer(arg0);
+    assume is#Map(v#Reference(arg1));
+    if (is#Local(rt#Reference(arg1))) {
+        assume c#Local(rt#Reference(arg1)) < c;
+    }
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t4 := CopyOrMoveRef(t1);
+
+    // unimplemented instruction
+
+    call t5 := CopyOrMoveValue(t0);
+
+    call t6 := LdConst(1000000000);
+
+    call t7 := LdConst(1000000);
+
+    call t8 := Mul(t6, t7);
+
+    call t9 := Le(t5, t8);
+
+    call t10 := Not(t9);
+
+    if (!b#Boolean(t10)) { goto Label_11; }
+
+    call t11 := LdConst(11);
+
+    abort_flag := true;
+
+Label_11:
+    call t12 := LdAddr(173345816);
+
+    call t13 := BorrowGlobal(t12, LibraCoin_MarketCap, rs_LibraCoin_MarketCap);
+    assume is#Global(rt#Reference(t13));
+    assume is#Map(v#Reference(t13));
+
+    call t2 := CopyOrMoveRef(t13);
+
+    call t14 := CopyOrMoveRef(t2);
+
+    call t15 := BorrowField(t14, LibraCoin_MarketCap_total_value);
+    assume is#Integer(v#Reference(t15));
+
+
+    call t16 := ReadRef(t15);
+
+    call t3 := CopyOrMoveValue(t16);
+
+    call t17 := CopyOrMoveValue(t3);
+
+    call t18 := CopyOrMoveValue(t0);
+
+    call t19 := Add(t17, t18);
+
+    call t20 := CopyOrMoveRef(t2);
+
+    call t21 := BorrowField(t20, LibraCoin_MarketCap_total_value);
+    assume is#Integer(v#Reference(t21));
+
+
+    call t21 := WriteRef(t21, t19);
+
+    call t1 := DeepUpdateReference(t21, t1);
+    call t2 := DeepUpdateReference(t21, t2);
+    call t4 := DeepUpdateReference(t21, t4);
+    call t13 := DeepUpdateReference(t21, t13);
+    call t14 := DeepUpdateReference(t21, t14);
+    call t15 := DeepUpdateReference(t21, t15);
+    call t20 := DeepUpdateReference(t21, t20);
+    call rs_LibraCoin_MarketCap := DeepUpdateGlobal(LibraCoin_MarketCap, t21, rs_LibraCoin_MarketCap);
+    call rs_LibraCoin_MintCapability := DeepUpdateGlobal(LibraCoin_MintCapability, t21, rs_LibraCoin_MintCapability);
+    call rs_LibraCoin_T := DeepUpdateGlobal(LibraCoin_T, t21, rs_LibraCoin_T);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t21, t0);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t21, t3);
+    call t5 := DeepUpdateLocal(c, t5_LocalName, t21, t5);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t21, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t21, t7);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t21, t8);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t21, t9);
+    call t10 := DeepUpdateLocal(c, t10_LocalName, t21, t10);
+    call t11 := DeepUpdateLocal(c, t11_LocalName, t21, t11);
+    call t12 := DeepUpdateLocal(c, t12_LocalName, t21, t12);
+    call t16 := DeepUpdateLocal(c, t16_LocalName, t21, t16);
+    call t17 := DeepUpdateLocal(c, t17_LocalName, t21, t17);
+    call t18 := DeepUpdateLocal(c, t18_LocalName, t21, t18);
+    call t22 := DeepUpdateLocal(c, t22_LocalName, t21, t22);
+    call t23 := DeepUpdateLocal(c, t23_LocalName, t21, t23);
+
+    call t22 := CopyOrMoveValue(t0);
+
+    assume is#Integer(t22);
+
+    call t23 := Pack_LibraCoin_T(t22);
+
+    ret0 := t23;
+    return;
+
+}
+procedure LibraCoin_TODO_REMOVE_burn_gas_fee (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // LibraCoin_T
+    var t1: Value; // int
+    var t2: Reference; // LibraCoin_MarketCap_ref
+    var t3: Value; // int
+    var t4: Value; // LibraCoin_T
+    var t5: Value; // int
+    var t6: Value; // address
+    var t7: Reference; // LibraCoin_MarketCap_ref
+    var t8: Reference; // LibraCoin_MarketCap_ref
+    var t9: Reference; // int_ref
+    var t10: Value; // int
+    var t11: Value; // int
+    var t12: Value; // int
+    var t13: Value; // int
+    var t14: Reference; // LibraCoin_MarketCap_ref
+    var t15: Reference; // int_ref
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t4 := CopyOrMoveValue(t0);
+
+    call t5 := Unpack_LibraCoin_T(t4);
+    assume is#Integer(t5);
+
+
+    call t1 := CopyOrMoveValue(t5);
+
+    call t6 := LdAddr(173345816);
+
+    call t7 := BorrowGlobal(t6, LibraCoin_MarketCap, rs_LibraCoin_MarketCap);
+    assume is#Global(rt#Reference(t7));
+    assume is#Map(v#Reference(t7));
+
+    call t2 := CopyOrMoveRef(t7);
+
+    call t8 := CopyOrMoveRef(t2);
+
+    call t9 := BorrowField(t8, LibraCoin_MarketCap_total_value);
+    assume is#Integer(v#Reference(t9));
+
+
+    call t10 := ReadRef(t9);
+
+    call t3 := CopyOrMoveValue(t10);
+
+    call t11 := CopyOrMoveValue(t3);
+
+    call t12 := CopyOrMoveValue(t1);
+
+    call t13 := Sub(t11, t12);
+
+    call t14 := CopyOrMoveRef(t2);
+
+    call t15 := BorrowField(t14, LibraCoin_MarketCap_total_value);
+    assume is#Integer(v#Reference(t15));
+
+
+    call t15 := WriteRef(t15, t13);
+
+    call t2 := DeepUpdateReference(t15, t2);
+    call t7 := DeepUpdateReference(t15, t7);
+    call t8 := DeepUpdateReference(t15, t8);
+    call t9 := DeepUpdateReference(t15, t9);
+    call t14 := DeepUpdateReference(t15, t14);
+    call rs_LibraCoin_MarketCap := DeepUpdateGlobal(LibraCoin_MarketCap, t15, rs_LibraCoin_MarketCap);
+    call rs_LibraCoin_MintCapability := DeepUpdateGlobal(LibraCoin_MintCapability, t15, rs_LibraCoin_MintCapability);
+    call rs_LibraCoin_T := DeepUpdateGlobal(LibraCoin_T, t15, rs_LibraCoin_T);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t15, t0);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t15, t1);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t15, t3);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t15, t4);
+    call t5 := DeepUpdateLocal(c, t5_LocalName, t15, t5);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t15, t6);
+    call t10 := DeepUpdateLocal(c, t10_LocalName, t15, t10);
+    call t11 := DeepUpdateLocal(c, t11_LocalName, t15, t11);
+    call t12 := DeepUpdateLocal(c, t12_LocalName, t15, t12);
+
+    return;
+
+}
+procedure LibraCoin_initialize (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // address
+    var t2: Value; // bool
+    var t3: Value; // bool
+    var t4: Value; // int
+    var t5: Value; // LibraCoin_MintCapability
+    var t6: Value; // int
+    var t7: Value; // LibraCoin_MarketCap
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t0 := GetTxnSenderAddress();
+
+    call t1 := LdAddr(173345816);
+
+    call t2 := Eq_address(t0, t1);
+
+    call t3 := Not(t2);
+
+    if (!b#Boolean(t3)) { goto Label_7; }
+
+    call t4 := LdConst(1);
+
+    abort_flag := true;
+
+Label_7:
+    call t5 := Pack_LibraCoin_MintCapability();
+
+    call rs_LibraCoin_MintCapability := MoveToSender(rs_LibraCoin_MintCapability, t5);
+
+    call t6 := LdConst(0);
+
+    assume is#Integer(t6);
+
+    call t7 := Pack_LibraCoin_MarketCap(t6);
+
+    call rs_LibraCoin_MarketCap := MoveToSender(rs_LibraCoin_MarketCap, t7);
+
+    return;
+
+}
+procedure LibraCoin_market_cap (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Reference; // LibraCoin_MarketCap_ref
+    var t2: Reference; // int_ref
+    var t3: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t0 := LdAddr(173345816);
+
+    call t1 := BorrowGlobal(t0, LibraCoin_MarketCap, rs_LibraCoin_MarketCap);
+    assume is#Global(rt#Reference(t1));
+    assume is#Map(v#Reference(t1));
+
+    call t2 := BorrowField(t1, LibraCoin_MarketCap_total_value);
+    assume is#Integer(v#Reference(t2));
+
+
+    call t3 := ReadRef(t2);
+
+    ret0 := t3;
+    return;
+
+}
+procedure LibraCoin_zero (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // int
+    var t1: Value; // LibraCoin_T
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t0 := LdConst(0);
+
+    assume is#Integer(t0);
+
+    call t1 := Pack_LibraCoin_T(t0);
+
+    ret0 := t1;
+    return;
+
+}
+procedure LibraCoin_value (c: CreationTime, addr_exists: [Address]bool, arg0: Reference) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Reference; // LibraCoin_T_ref
+    var t1: Reference; // LibraCoin_T_ref
+    var t2: Reference; // int_ref
+    var t3: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(v#Reference(arg0));
+    if (is#Local(rt#Reference(arg0))) {
+        assume c#Local(rt#Reference(arg0)) < c;
+    }
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t1 := CopyOrMoveRef(t0);
+
+    call t2 := BorrowField(t1, LibraCoin_T_value);
+    assume is#Integer(v#Reference(t2));
+
+
+    call t3 := ReadRef(t2);
+
+    ret0 := t3;
+    return;
+
+}
+procedure LibraCoin_split (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value) returns (addr_exists': [Address]bool, ret0: Value, ret1: Value)
+{
+    // declare local variables
+    var t0: Value; // LibraCoin_T
+    var t1: Value; // int
+    var t2: Value; // LibraCoin_T
+    var t3: Reference; // LibraCoin_T_ref
+    var t4: Value; // int
+    var t5: Value; // LibraCoin_T
+    var t6: Value; // LibraCoin_T
+    var t7: Value; // LibraCoin_T
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(arg0);
+    assume is#Integer(arg1);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t3 := BorrowLoc(c, t0_LocalName, t0);
+
+    call t4 := CopyOrMoveValue(t1);
+
+    call addr_exists', t3, t5 := LibraCoin_withdraw(c', addr_exists', t3, t4);
+    assume is#Map(v#Reference(t3));
+
+    assume is#Map(t5);
+
+
+    call rs_LibraCoin_MarketCap := DeepUpdateGlobal(LibraCoin_MarketCap, t3, rs_LibraCoin_MarketCap);
+    call rs_LibraCoin_MintCapability := DeepUpdateGlobal(LibraCoin_MintCapability, t3, rs_LibraCoin_MintCapability);
+    call rs_LibraCoin_T := DeepUpdateGlobal(LibraCoin_T, t3, rs_LibraCoin_T);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t3, t0);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t3, t1);
+    call t2 := DeepUpdateLocal(c, t2_LocalName, t3, t2);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t3, t4);
+    call t5 := DeepUpdateLocal(c, t5_LocalName, t3, t5);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t3, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t3, t7);
+
+    call t2 := CopyOrMoveValue(t5);
+
+    call t6 := CopyOrMoveValue(t0);
+
+    call t7 := CopyOrMoveValue(t2);
+
+    ret0 := t6;
+    ret1 := t7;
+    return;
+
+}
+procedure LibraCoin_withdraw (c: CreationTime, addr_exists: [Address]bool, arg0: Reference, arg1: Value) returns (addr_exists': [Address]bool, t0: Reference, ret0: Value)
+{
+    // declare local variables
+    var t1: Value; // int
+    var t2: Value; // int
+    var t3: Reference; // LibraCoin_T_ref
+    var t4: Reference; // int_ref
+    var t5: Value; // int
+    var t6: Value; // int
+    var t7: Value; // int
+    var t8: Value; // bool
+    var t9: Value; // bool
+    var t10: Value; // int
+    var t11: Value; // int
+    var t12: Value; // int
+    var t13: Value; // int
+    var t14: Reference; // LibraCoin_T_ref
+    var t15: Reference; // int_ref
+    var t16: Value; // int
+    var t17: Value; // LibraCoin_T
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(v#Reference(arg0));
+    if (is#Local(rt#Reference(arg0))) {
+        assume c#Local(rt#Reference(arg0)) < c;
+    }
+    assume is#Integer(arg1);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t3 := CopyOrMoveRef(t0);
+
+    call t4 := BorrowField(t3, LibraCoin_T_value);
+    assume is#Integer(v#Reference(t4));
+
+
+    call t5 := ReadRef(t4);
+
+    call t2 := CopyOrMoveValue(t5);
+
+    call t6 := CopyOrMoveValue(t2);
+
+    call t7 := CopyOrMoveValue(t1);
+
+    call t8 := Ge(t6, t7);
+
+    call t9 := Not(t8);
+
+    if (!b#Boolean(t9)) { goto Label_11; }
+
+    call t10 := LdConst(10);
+
+    abort_flag := true;
+
+Label_11:
+    call t11 := CopyOrMoveValue(t2);
+
+    call t12 := CopyOrMoveValue(t1);
+
+    call t13 := Sub(t11, t12);
+
+    call t14 := CopyOrMoveRef(t0);
+
+    call t15 := BorrowField(t14, LibraCoin_T_value);
+    assume is#Integer(v#Reference(t15));
+
+
+    call t15 := WriteRef(t15, t13);
+
+    call t0 := DeepUpdateReference(t15, t0);
+    call t3 := DeepUpdateReference(t15, t3);
+    call t4 := DeepUpdateReference(t15, t4);
+    call t14 := DeepUpdateReference(t15, t14);
+    call rs_LibraCoin_MarketCap := DeepUpdateGlobal(LibraCoin_MarketCap, t15, rs_LibraCoin_MarketCap);
+    call rs_LibraCoin_MintCapability := DeepUpdateGlobal(LibraCoin_MintCapability, t15, rs_LibraCoin_MintCapability);
+    call rs_LibraCoin_T := DeepUpdateGlobal(LibraCoin_T, t15, rs_LibraCoin_T);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t15, t1);
+    call t2 := DeepUpdateLocal(c, t2_LocalName, t15, t2);
+    call t5 := DeepUpdateLocal(c, t5_LocalName, t15, t5);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t15, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t15, t7);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t15, t8);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t15, t9);
+    call t10 := DeepUpdateLocal(c, t10_LocalName, t15, t10);
+    call t11 := DeepUpdateLocal(c, t11_LocalName, t15, t11);
+    call t12 := DeepUpdateLocal(c, t12_LocalName, t15, t12);
+    call t16 := DeepUpdateLocal(c, t16_LocalName, t15, t16);
+    call t17 := DeepUpdateLocal(c, t17_LocalName, t15, t17);
+
+    call t16 := CopyOrMoveValue(t1);
+
+    assume is#Integer(t16);
+
+    call t17 := Pack_LibraCoin_T(t16);
+
+    ret0 := t17;
+    return;
+
+}
+procedure LibraCoin_join (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // LibraCoin_T
+    var t1: Value; // LibraCoin_T
+    var t2: Reference; // LibraCoin_T_ref
+    var t3: Value; // LibraCoin_T
+    var t4: Value; // LibraCoin_T
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(arg0);
+    assume is#Map(arg1);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := BorrowLoc(c, t0_LocalName, t0);
+
+    call t3 := CopyOrMoveValue(t1);
+
+    call addr_exists', t2 := LibraCoin_deposit(c', addr_exists', t2, t3);
+    assume is#Map(v#Reference(t2));
+
+
+    call rs_LibraCoin_MarketCap := DeepUpdateGlobal(LibraCoin_MarketCap, t2, rs_LibraCoin_MarketCap);
+    call rs_LibraCoin_MintCapability := DeepUpdateGlobal(LibraCoin_MintCapability, t2, rs_LibraCoin_MintCapability);
+    call rs_LibraCoin_T := DeepUpdateGlobal(LibraCoin_T, t2, rs_LibraCoin_T);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t2, t0);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t2, t1);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t2, t3);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t2, t4);
+
+    call t4 := CopyOrMoveValue(t0);
+
+    ret0 := t4;
+    return;
+
+}
+procedure LibraCoin_deposit (c: CreationTime, addr_exists: [Address]bool, arg0: Reference, arg1: Value) returns (addr_exists': [Address]bool, t0: Reference)
+{
+    // declare local variables
+    var t1: Value; // LibraCoin_T
+    var t2: Value; // int
+    var t3: Value; // int
+    var t4: Reference; // LibraCoin_T_ref
+    var t5: Reference; // int_ref
+    var t6: Value; // int
+    var t7: Value; // LibraCoin_T
+    var t8: Value; // int
+    var t9: Value; // int
+    var t10: Value; // int
+    var t11: Value; // int
+    var t12: Reference; // LibraCoin_T_ref
+    var t13: Reference; // int_ref
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(v#Reference(arg0));
+    if (is#Local(rt#Reference(arg0))) {
+        assume c#Local(rt#Reference(arg0)) < c;
+    }
+    assume is#Map(arg1);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t4 := CopyOrMoveRef(t0);
+
+    call t5 := BorrowField(t4, LibraCoin_T_value);
+    assume is#Integer(v#Reference(t5));
+
+
+    call t6 := ReadRef(t5);
+
+    call t2 := CopyOrMoveValue(t6);
+
+    call t7 := CopyOrMoveValue(t1);
+
+    call t8 := Unpack_LibraCoin_T(t7);
+    assume is#Integer(t8);
+
+
+    call t3 := CopyOrMoveValue(t8);
+
+    call t9 := CopyOrMoveValue(t2);
+
+    call t10 := CopyOrMoveValue(t3);
+
+    call t11 := Add(t9, t10);
+
+    call t12 := CopyOrMoveRef(t0);
+
+    call t13 := BorrowField(t12, LibraCoin_T_value);
+    assume is#Integer(v#Reference(t13));
+
+
+    call t13 := WriteRef(t13, t11);
+
+    call t0 := DeepUpdateReference(t13, t0);
+    call t4 := DeepUpdateReference(t13, t4);
+    call t5 := DeepUpdateReference(t13, t5);
+    call t12 := DeepUpdateReference(t13, t12);
+    call rs_LibraCoin_MarketCap := DeepUpdateGlobal(LibraCoin_MarketCap, t13, rs_LibraCoin_MarketCap);
+    call rs_LibraCoin_MintCapability := DeepUpdateGlobal(LibraCoin_MintCapability, t13, rs_LibraCoin_MintCapability);
+    call rs_LibraCoin_T := DeepUpdateGlobal(LibraCoin_T, t13, rs_LibraCoin_T);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t13, t1);
+    call t2 := DeepUpdateLocal(c, t2_LocalName, t13, t2);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t13, t3);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t13, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t13, t7);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t13, t8);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t13, t9);
+    call t10 := DeepUpdateLocal(c, t10_LocalName, t13, t10);
+
+    return;
+
+}
+procedure LibraCoin_destroy_zero (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // LibraCoin_T
+    var t1: Value; // int
+    var t2: Value; // LibraCoin_T
+    var t3: Value; // int
+    var t4: Value; // int
+    var t5: Value; // int
+    var t6: Value; // bool
+    var t7: Value; // bool
+    var t8: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := CopyOrMoveValue(t0);
+
+    call t3 := Unpack_LibraCoin_T(t2);
+    assume is#Integer(t3);
+
+
+    call t1 := CopyOrMoveValue(t3);
+
+    call t4 := CopyOrMoveValue(t1);
+
+    call t5 := LdConst(0);
+
+    call t6 := Eq_int(t4, t5);
+
+    call t7 := Not(t6);
+
+    if (!b#Boolean(t7)) { goto Label_10; }
+
+    call t8 := LdConst(11);
+
+    abort_flag := true;
+
+Label_10:
+    return;
+
+}
+procedure Hash_sha2_256 (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value);
+procedure Hash_sha3_256 (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value);
+procedure Signature_ed25519_verify (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value, arg2: Value) returns (addr_exists': [Address]bool, ret0: Value);
+procedure Signature_ed25519_threshold_verify (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value, arg2: Value, arg3: Value) returns (addr_exists': [Address]bool, ret0: Value);
+procedure U64Util_u64_to_bytes (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value);
+procedure Vector_empty (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool, ret0: Value);
+procedure Vector_length (c: CreationTime, addr_exists: [Address]bool, arg0: Reference) returns (addr_exists': [Address]bool, ret0: Value);
+procedure Vector_borrow (c: CreationTime, addr_exists: [Address]bool, arg0: Reference, arg1: Value) returns (addr_exists': [Address]bool, ret0: Reference);
+procedure Vector_push_back (c: CreationTime, addr_exists: [Address]bool, arg0: Reference, arg1: Value) returns (addr_exists': [Address]bool, t0: Reference);
+procedure Vector_borrow_mut (c: CreationTime, addr_exists: [Address]bool, arg0: Reference, arg1: Value) returns (addr_exists': [Address]bool, t0: Reference, ret0: Reference);
+procedure Vector_pop_back (c: CreationTime, addr_exists: [Address]bool, arg0: Reference) returns (addr_exists': [Address]bool, t0: Reference, ret0: Value);
+procedure Vector_is_empty (c: CreationTime, addr_exists: [Address]bool, arg0: Reference) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Reference; // Vector_T_ref
+    var t1: Reference; // Vector_T_ref
+    var t2: Value; // int
+    var t3: Value; // int
+    var t4: Value; // bool
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(v#Reference(arg0));
+    if (is#Local(rt#Reference(arg0))) {
+        assume c#Local(rt#Reference(arg0)) < c;
+    }
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t1 := CopyOrMoveRef(t0);
+
+    call addr_exists', t2 := Vector_length(c', addr_exists', t1);
+    assume is#Integer(t2);
+
+
+    call t3 := LdConst(0);
+
+    call t4 := Eq_int(t2, t3);
+
+    ret0 := t4;
+    return;
+
+}
+procedure Event_fresh_guid (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // bool
+    var t1: Value; // address
+    var t2: Reference; // Event_HandleIdGenerator_ref
+    var t3: Reference; // int_ref
+    var t4: Value; // bytearray
+    var t5: Value; // bytearray
+    var t6: Value; // bytearray
+    var t7: Value; // address
+    var t8: Value; // address
+    var t9: Value; // bool
+    var t10: Value; // bool
+    var t11: Value; // bool
+    var t12: Value; // int
+    var t13: Value; // Event_HandleIdGenerator
+    var t14: Value; // address
+    var t15: Reference; // Event_HandleIdGenerator_ref
+    var t16: Reference; // Event_HandleIdGenerator_ref
+    var t17: Reference; // int_ref
+    var t18: Value; // address
+    var t19: Value; // bytearray
+    var t20: Reference; // int_ref
+    var t21: Value; // int
+    var t22: Value; // bytearray
+    var t23: Reference; // int_ref
+    var t24: Value; // int
+    var t25: Value; // int
+    var t26: Value; // int
+    var t27: Reference; // int_ref
+    var t28: Value; // bytearray
+    var t29: Value; // bytearray
+    var t30: Value; // bytearray
+    var t31: Value; // bytearray
+    var t32: Value; // bytearray
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t7 := GetTxnSenderAddress();
+
+    call t1 := CopyOrMoveValue(t7);
+
+    call t8 := CopyOrMoveValue(t1);
+
+    call t9 := Exists(t8, rs_Event_HandleIdGenerator);
+
+    call t0 := CopyOrMoveValue(t9);
+
+    call t10 := CopyOrMoveValue(t0);
+
+    call t11 := Not(t10);
+
+    if (!b#Boolean(t11)) { goto Label_11; }
+
+    call t12 := LdConst(0);
+
+    assume is#Integer(t12);
+
+    call t13 := Pack_Event_HandleIdGenerator(t12);
+
+    call rs_Event_HandleIdGenerator := MoveToSender(rs_Event_HandleIdGenerator, t13);
+
+Label_11:
+    call t14 := CopyOrMoveValue(t1);
+
+    call t15 := BorrowGlobal(t14, Event_HandleIdGenerator, rs_Event_HandleIdGenerator);
+    assume is#Global(rt#Reference(t15));
+    assume is#Map(v#Reference(t15));
+
+    call t2 := CopyOrMoveRef(t15);
+
+    call t16 := CopyOrMoveRef(t2);
+
+    call t17 := BorrowField(t16, Event_HandleIdGenerator_counter);
+    assume is#Integer(v#Reference(t17));
+
+
+    call t3 := CopyOrMoveRef(t17);
+
+    call t18 := CopyOrMoveValue(t1);
+
+    call addr_exists', t19 := AddressUtil_address_to_bytes(c', addr_exists', t18);
+    assume is#ByteArray(t19);
+
+
+    call t4 := CopyOrMoveValue(t19);
+
+    call t20 := CopyOrMoveRef(t3);
+
+    call t21 := ReadRef(t20);
+
+    call addr_exists', t22 := U64Util_u64_to_bytes(c', addr_exists', t21);
+    assume is#ByteArray(t22);
+
+
+    call t5 := CopyOrMoveValue(t22);
+
+    call t23 := CopyOrMoveRef(t3);
+
+    call t24 := ReadRef(t23);
+
+    call t25 := LdConst(1);
+
+    call t26 := Add(t24, t25);
+
+    call t27 := CopyOrMoveRef(t3);
+
+    call t27 := WriteRef(t27, t26);
+
+    call t2 := DeepUpdateReference(t27, t2);
+    call t3 := DeepUpdateReference(t27, t3);
+    call t15 := DeepUpdateReference(t27, t15);
+    call t16 := DeepUpdateReference(t27, t16);
+    call t17 := DeepUpdateReference(t27, t17);
+    call t20 := DeepUpdateReference(t27, t20);
+    call t23 := DeepUpdateReference(t27, t23);
+    call rs_Event_Handle := DeepUpdateGlobal(Event_Handle, t27, rs_Event_Handle);
+    call rs_Event_HandleIdGenerator := DeepUpdateGlobal(Event_HandleIdGenerator, t27, rs_Event_HandleIdGenerator);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t27, t0);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t27, t1);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t27, t4);
+    call t5 := DeepUpdateLocal(c, t5_LocalName, t27, t5);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t27, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t27, t7);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t27, t8);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t27, t9);
+    call t10 := DeepUpdateLocal(c, t10_LocalName, t27, t10);
+    call t11 := DeepUpdateLocal(c, t11_LocalName, t27, t11);
+    call t12 := DeepUpdateLocal(c, t12_LocalName, t27, t12);
+    call t13 := DeepUpdateLocal(c, t13_LocalName, t27, t13);
+    call t14 := DeepUpdateLocal(c, t14_LocalName, t27, t14);
+    call t18 := DeepUpdateLocal(c, t18_LocalName, t27, t18);
+    call t19 := DeepUpdateLocal(c, t19_LocalName, t27, t19);
+    call t21 := DeepUpdateLocal(c, t21_LocalName, t27, t21);
+    call t22 := DeepUpdateLocal(c, t22_LocalName, t27, t22);
+    call t24 := DeepUpdateLocal(c, t24_LocalName, t27, t24);
+    call t25 := DeepUpdateLocal(c, t25_LocalName, t27, t25);
+    call t28 := DeepUpdateLocal(c, t28_LocalName, t27, t28);
+    call t29 := DeepUpdateLocal(c, t29_LocalName, t27, t29);
+    call t30 := DeepUpdateLocal(c, t30_LocalName, t27, t30);
+    call t31 := DeepUpdateLocal(c, t31_LocalName, t27, t31);
+    call t32 := DeepUpdateLocal(c, t32_LocalName, t27, t32);
+
+    call t28 := CopyOrMoveValue(t5);
+
+    call t29 := CopyOrMoveValue(t4);
+
+    call addr_exists', t30 := BytearrayUtil_bytearray_concat(c', addr_exists', t28, t29);
+    assume is#ByteArray(t30);
+
+
+    call t6 := CopyOrMoveValue(t30);
+
+    call t31 := CopyOrMoveValue(t6);
+
+    call addr_exists', t32 := Hash_sha3_256(c', addr_exists', t31);
+    assume is#ByteArray(t32);
+
+
+    ret0 := t32;
+    return;
+
+}
+procedure Event_new_event_handle (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // int
+    var t1: Value; // bytearray
+    var t2: Value; // Event_Handle
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t0 := LdConst(0);
+
+    call addr_exists', t1 := Event_fresh_guid(c', addr_exists');
+    assume is#ByteArray(t1);
+
+
+    assume is#Integer(t0);
+
+    assume is#ByteArray(t1);
+
+    call t2 := Pack_Event_Handle(t0, t1);
+
+    ret0 := t2;
+    return;
+
+}
+procedure Event_emit_event (c: CreationTime, addr_exists: [Address]bool, arg0: Reference, arg1: Value) returns (addr_exists': [Address]bool, t0: Reference)
+{
+    // declare local variables
+    var t1: Value; // unsupported
+    var t2: Reference; // int_ref
+    var t3: Value; // bytearray
+    var t4: Reference; // Event_Handle_ref
+    var t5: Reference; // bytearray_ref
+    var t6: Value; // bytearray
+    var t7: Reference; // Event_Handle_ref
+    var t8: Reference; // int_ref
+    var t9: Value; // bytearray
+    var t10: Reference; // int_ref
+    var t11: Value; // int
+    var t12: Value; // unsupported
+    var t13: Reference; // int_ref
+    var t14: Value; // int
+    var t15: Value; // int
+    var t16: Value; // int
+    var t17: Reference; // int_ref
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(v#Reference(arg0));
+    if (is#Local(rt#Reference(arg0))) {
+        assume c#Local(rt#Reference(arg0)) < c;
+    }
+    assume is#unsupported(arg1);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t4 := CopyOrMoveRef(t0);
+
+    call t5 := BorrowField(t4, Event_Handle_guid);
+    assume is#ByteArray(v#Reference(t5));
+
+
+    call t6 := ReadRef(t5);
+
+    call t3 := CopyOrMoveValue(t6);
+
+    call t7 := CopyOrMoveRef(t0);
+
+    call t8 := BorrowField(t7, Event_Handle_counter);
+    assume is#Integer(v#Reference(t8));
+
+
+    call t2 := CopyOrMoveRef(t8);
+
+    call t9 := CopyOrMoveValue(t3);
+
+    call t10 := CopyOrMoveRef(t2);
+
+    call t11 := ReadRef(t10);
+
+    call t12 := CopyOrMoveValue(t1);
+
+    call addr_exists' := Event_write_to_event_store(c', addr_exists', t9, t11, t12);
+
+    call t13 := CopyOrMoveRef(t2);
+
+    call t14 := ReadRef(t13);
+
+    call t15 := LdConst(1);
+
+    call t16 := Add(t14, t15);
+
+    call t17 := CopyOrMoveRef(t2);
+
+    call t17 := WriteRef(t17, t16);
+
+    call t0 := DeepUpdateReference(t17, t0);
+    call t2 := DeepUpdateReference(t17, t2);
+    call t4 := DeepUpdateReference(t17, t4);
+    call t5 := DeepUpdateReference(t17, t5);
+    call t7 := DeepUpdateReference(t17, t7);
+    call t8 := DeepUpdateReference(t17, t8);
+    call t10 := DeepUpdateReference(t17, t10);
+    call t13 := DeepUpdateReference(t17, t13);
+    call rs_Event_Handle := DeepUpdateGlobal(Event_Handle, t17, rs_Event_Handle);
+    call rs_Event_HandleIdGenerator := DeepUpdateGlobal(Event_HandleIdGenerator, t17, rs_Event_HandleIdGenerator);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t17, t1);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t17, t3);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t17, t6);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t17, t9);
+    call t11 := DeepUpdateLocal(c, t11_LocalName, t17, t11);
+    call t12 := DeepUpdateLocal(c, t12_LocalName, t17, t12);
+    call t14 := DeepUpdateLocal(c, t14_LocalName, t17, t14);
+    call t15 := DeepUpdateLocal(c, t15_LocalName, t17, t15);
+
+    return;
+
+}
+procedure Event_write_to_event_store (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value, arg2: Value) returns (addr_exists': [Address]bool);
+procedure Event_destroy (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // Event_Handle
+    var t1: Value; // bytearray
+    var t2: Value; // int
+    var t3: Value; // Event_Handle
+    var t4: Value; // int
+    var t5: Value; // bytearray
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t3 := CopyOrMoveValue(t0);
+
+    call t4, t5 := Unpack_Event_Handle(t3);
+    assume is#Integer(t4);
+
+    assume is#ByteArray(t5);
+
+
+    call t1 := CopyOrMoveValue(t5);
+
+    call t2 := CopyOrMoveValue(t4);
+
+    return;
+
+}
+procedure LibraAccount_make (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // bytearray
+    var t1: Value; // LibraCoin_T
+    var t2: Value; // Event_Handle
+    var t3: Value; // Event_Handle
+    var t4: Value; // Event_Handle
+    var t5: Value; // Event_Handle
+    var t6: Value; // LibraCoin_T
+    var t7: Value; // bytearray
+    var t8: Value; // LibraCoin_T
+    var t9: Value; // bool
+    var t10: Value; // bool
+    var t11: Value; // Event_Handle
+    var t12: Value; // Event_Handle
+    var t13: Value; // int
+    var t14: Value; // LibraAccount_T
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#ByteArray(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call addr_exists', t4 := Event_new_event_handle(c', addr_exists');
+    assume is#Map(t4);
+
+
+    call t2 := CopyOrMoveValue(t4);
+
+    call addr_exists', t5 := Event_new_event_handle(c', addr_exists');
+    assume is#Map(t5);
+
+
+    call t3 := CopyOrMoveValue(t5);
+
+    call addr_exists', t6 := LibraCoin_zero(c', addr_exists');
+    assume is#Map(t6);
+
+
+    call t1 := CopyOrMoveValue(t6);
+
+    call t7 := CopyOrMoveValue(t0);
+
+    call t8 := CopyOrMoveValue(t1);
+
+    call t9 := LdFalse();
+
+    call t10 := LdFalse();
+
+    call t11 := CopyOrMoveValue(t3);
+
+    call t12 := CopyOrMoveValue(t2);
+
+    call t13 := LdConst(0);
+
+    assume is#ByteArray(t7);
+
+    assume is#Map(t8);
+
+    assume is#Boolean(t9);
+
+    assume is#Boolean(t10);
+
+    assume is#Map(t11);
+
+    assume is#Map(t12);
+
+    assume is#Integer(t13);
+
+    call t14 := Pack_LibraAccount_T(t7, t8, t9, t10, t11, t12, t13);
+
+    ret0 := t14;
+    return;
+
+}
+procedure LibraAccount_deposit (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // LibraCoin_T
+    var t2: Value; // int
+    var t3: Reference; // LibraAccount_T_ref
+    var t4: Value; // address
+    var t5: Reference; // LibraAccount_T_ref
+    var t6: Value; // LibraAccount_SentPaymentEvent
+    var t7: Value; // LibraAccount_ReceivedPaymentEvent
+    var t8: Value; // bytearray
+    var t9: Value; // bytearray
+    var t10: Reference; // LibraCoin_T_ref
+    var t11: Value; // int
+    var t12: Value; // int
+    var t13: Value; // int
+    var t14: Value; // bool
+    var t15: Value; // bool
+    var t16: Value; // int
+    var t17: Value; // address
+    var t18: Value; // address
+    var t19: Reference; // LibraAccount_T_ref
+    var t20: Value; // int
+    var t21: Value; // address
+    var t22: Value; // LibraAccount_SentPaymentEvent
+    var t23: Reference; // LibraAccount_T_ref
+    var t24: Reference; // Event_Handle_ref
+    var t25: Value; // LibraAccount_SentPaymentEvent
+    var t26: Value; // address
+    var t27: Reference; // LibraAccount_T_ref
+    var t28: Reference; // LibraAccount_T_ref
+    var t29: Reference; // LibraCoin_T_ref
+    var t30: Value; // LibraCoin_T
+    var t31: Value; // int
+    var t32: Value; // address
+    var t33: Value; // LibraAccount_ReceivedPaymentEvent
+    var t34: Reference; // LibraAccount_T_ref
+    var t35: Reference; // Event_Handle_ref
+    var t36: Value; // LibraAccount_ReceivedPaymentEvent
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Address(arg0);
+    assume is#Map(arg1);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t10 := BorrowLoc(c, t1_LocalName, t1);
+
+    call addr_exists', t11 := LibraCoin_value(c', addr_exists', t10);
+    assume is#Integer(t11);
+
+
+    call t2 := CopyOrMoveValue(t11);
+
+    call t12 := CopyOrMoveValue(t2);
+
+    call t13 := LdConst(0);
+
+    call t14 := Gt(t12, t13);
+
+    call t15 := Not(t14);
+
+    if (!b#Boolean(t15)) { goto Label_10; }
+
+    call t16 := LdConst(7);
+
+    abort_flag := true;
+
+Label_10:
+    call t17 := GetTxnSenderAddress();
+
+    call t4 := CopyOrMoveValue(t17);
+
+    call t18 := CopyOrMoveValue(t4);
+
+    call t19 := BorrowGlobal(t18, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t19));
+    assume is#Map(v#Reference(t19));
+
+    call t5 := CopyOrMoveRef(t19);
+
+    call t20 := CopyOrMoveValue(t2);
+
+    call t21 := CopyOrMoveValue(t0);
+
+    assume is#Integer(t20);
+
+    assume is#Address(t21);
+
+    call t22 := Pack_LibraAccount_SentPaymentEvent(t20, t21);
+
+    call t6 := CopyOrMoveValue(t22);
+
+    call t23 := CopyOrMoveRef(t5);
+
+    call t24 := BorrowField(t23, LibraAccount_T_sent_events);
+    assume is#Map(v#Reference(t24));
+
+
+    call t25 := CopyOrMoveValue(t6);
+
+    call addr_exists', t24 := Event_emit_event(c', addr_exists', t24, t25);
+    assume is#Map(v#Reference(t24));
+
+
+    call t3 := DeepUpdateReference(t24, t3);
+    call t5 := DeepUpdateReference(t24, t5);
+    call t10 := DeepUpdateReference(t24, t10);
+    call t19 := DeepUpdateReference(t24, t19);
+    call t23 := DeepUpdateReference(t24, t23);
+    call t27 := DeepUpdateReference(t24, t27);
+    call t28 := DeepUpdateReference(t24, t28);
+    call t29 := DeepUpdateReference(t24, t29);
+    call t34 := DeepUpdateReference(t24, t34);
+    call t35 := DeepUpdateReference(t24, t35);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t24, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t24, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t24, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t24, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t24, rs_LibraAccount_WithdrawalCapability);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t24, t0);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t24, t1);
+    call t2 := DeepUpdateLocal(c, t2_LocalName, t24, t2);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t24, t4);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t24, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t24, t7);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t24, t8);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t24, t9);
+    call t11 := DeepUpdateLocal(c, t11_LocalName, t24, t11);
+    call t12 := DeepUpdateLocal(c, t12_LocalName, t24, t12);
+    call t13 := DeepUpdateLocal(c, t13_LocalName, t24, t13);
+    call t14 := DeepUpdateLocal(c, t14_LocalName, t24, t14);
+    call t15 := DeepUpdateLocal(c, t15_LocalName, t24, t15);
+    call t16 := DeepUpdateLocal(c, t16_LocalName, t24, t16);
+    call t17 := DeepUpdateLocal(c, t17_LocalName, t24, t17);
+    call t18 := DeepUpdateLocal(c, t18_LocalName, t24, t18);
+    call t20 := DeepUpdateLocal(c, t20_LocalName, t24, t20);
+    call t21 := DeepUpdateLocal(c, t21_LocalName, t24, t21);
+    call t22 := DeepUpdateLocal(c, t22_LocalName, t24, t22);
+    call t25 := DeepUpdateLocal(c, t25_LocalName, t24, t25);
+    call t26 := DeepUpdateLocal(c, t26_LocalName, t24, t26);
+    call t30 := DeepUpdateLocal(c, t30_LocalName, t24, t30);
+    call t31 := DeepUpdateLocal(c, t31_LocalName, t24, t31);
+    call t32 := DeepUpdateLocal(c, t32_LocalName, t24, t32);
+    call t33 := DeepUpdateLocal(c, t33_LocalName, t24, t33);
+    call t36 := DeepUpdateLocal(c, t36_LocalName, t24, t36);
+
+    call t26 := CopyOrMoveValue(t0);
+
+    call t27 := BorrowGlobal(t26, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t27));
+    assume is#Map(v#Reference(t27));
+
+    call t3 := CopyOrMoveRef(t27);
+
+    call t28 := CopyOrMoveRef(t3);
+
+    call t29 := BorrowField(t28, LibraAccount_T_balance);
+    assume is#Map(v#Reference(t29));
+
+
+    call t30 := CopyOrMoveValue(t1);
+
+    call addr_exists', t29 := LibraCoin_deposit(c', addr_exists', t29, t30);
+    assume is#Map(v#Reference(t29));
+
+
+    call t3 := DeepUpdateReference(t29, t3);
+    call t5 := DeepUpdateReference(t29, t5);
+    call t10 := DeepUpdateReference(t29, t10);
+    call t19 := DeepUpdateReference(t29, t19);
+    call t23 := DeepUpdateReference(t29, t23);
+    call t24 := DeepUpdateReference(t29, t24);
+    call t27 := DeepUpdateReference(t29, t27);
+    call t28 := DeepUpdateReference(t29, t28);
+    call t34 := DeepUpdateReference(t29, t34);
+    call t35 := DeepUpdateReference(t29, t35);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t29, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t29, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t29, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t29, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t29, rs_LibraAccount_WithdrawalCapability);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t29, t0);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t29, t1);
+    call t2 := DeepUpdateLocal(c, t2_LocalName, t29, t2);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t29, t4);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t29, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t29, t7);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t29, t8);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t29, t9);
+    call t11 := DeepUpdateLocal(c, t11_LocalName, t29, t11);
+    call t12 := DeepUpdateLocal(c, t12_LocalName, t29, t12);
+    call t13 := DeepUpdateLocal(c, t13_LocalName, t29, t13);
+    call t14 := DeepUpdateLocal(c, t14_LocalName, t29, t14);
+    call t15 := DeepUpdateLocal(c, t15_LocalName, t29, t15);
+    call t16 := DeepUpdateLocal(c, t16_LocalName, t29, t16);
+    call t17 := DeepUpdateLocal(c, t17_LocalName, t29, t17);
+    call t18 := DeepUpdateLocal(c, t18_LocalName, t29, t18);
+    call t20 := DeepUpdateLocal(c, t20_LocalName, t29, t20);
+    call t21 := DeepUpdateLocal(c, t21_LocalName, t29, t21);
+    call t22 := DeepUpdateLocal(c, t22_LocalName, t29, t22);
+    call t25 := DeepUpdateLocal(c, t25_LocalName, t29, t25);
+    call t26 := DeepUpdateLocal(c, t26_LocalName, t29, t26);
+    call t30 := DeepUpdateLocal(c, t30_LocalName, t29, t30);
+    call t31 := DeepUpdateLocal(c, t31_LocalName, t29, t31);
+    call t32 := DeepUpdateLocal(c, t32_LocalName, t29, t32);
+    call t33 := DeepUpdateLocal(c, t33_LocalName, t29, t33);
+    call t36 := DeepUpdateLocal(c, t36_LocalName, t29, t36);
+
+    call t31 := CopyOrMoveValue(t2);
+
+    call t32 := CopyOrMoveValue(t4);
+
+    assume is#Integer(t31);
+
+    assume is#Address(t32);
+
+    call t33 := Pack_LibraAccount_ReceivedPaymentEvent(t31, t32);
+
+    call t7 := CopyOrMoveValue(t33);
+
+    call t34 := CopyOrMoveRef(t3);
+
+    call t35 := BorrowField(t34, LibraAccount_T_received_events);
+    assume is#Map(v#Reference(t35));
+
+
+    call t36 := CopyOrMoveValue(t7);
+
+    call addr_exists', t35 := Event_emit_event(c', addr_exists', t35, t36);
+    assume is#Map(v#Reference(t35));
+
+
+    call t3 := DeepUpdateReference(t35, t3);
+    call t5 := DeepUpdateReference(t35, t5);
+    call t10 := DeepUpdateReference(t35, t10);
+    call t19 := DeepUpdateReference(t35, t19);
+    call t23 := DeepUpdateReference(t35, t23);
+    call t24 := DeepUpdateReference(t35, t24);
+    call t27 := DeepUpdateReference(t35, t27);
+    call t28 := DeepUpdateReference(t35, t28);
+    call t29 := DeepUpdateReference(t35, t29);
+    call t34 := DeepUpdateReference(t35, t34);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t35, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t35, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t35, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t35, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t35, rs_LibraAccount_WithdrawalCapability);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t35, t0);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t35, t1);
+    call t2 := DeepUpdateLocal(c, t2_LocalName, t35, t2);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t35, t4);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t35, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t35, t7);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t35, t8);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t35, t9);
+    call t11 := DeepUpdateLocal(c, t11_LocalName, t35, t11);
+    call t12 := DeepUpdateLocal(c, t12_LocalName, t35, t12);
+    call t13 := DeepUpdateLocal(c, t13_LocalName, t35, t13);
+    call t14 := DeepUpdateLocal(c, t14_LocalName, t35, t14);
+    call t15 := DeepUpdateLocal(c, t15_LocalName, t35, t15);
+    call t16 := DeepUpdateLocal(c, t16_LocalName, t35, t16);
+    call t17 := DeepUpdateLocal(c, t17_LocalName, t35, t17);
+    call t18 := DeepUpdateLocal(c, t18_LocalName, t35, t18);
+    call t20 := DeepUpdateLocal(c, t20_LocalName, t35, t20);
+    call t21 := DeepUpdateLocal(c, t21_LocalName, t35, t21);
+    call t22 := DeepUpdateLocal(c, t22_LocalName, t35, t22);
+    call t25 := DeepUpdateLocal(c, t25_LocalName, t35, t25);
+    call t26 := DeepUpdateLocal(c, t26_LocalName, t35, t26);
+    call t30 := DeepUpdateLocal(c, t30_LocalName, t35, t30);
+    call t31 := DeepUpdateLocal(c, t31_LocalName, t35, t31);
+    call t32 := DeepUpdateLocal(c, t32_LocalName, t35, t32);
+    call t33 := DeepUpdateLocal(c, t33_LocalName, t35, t33);
+    call t36 := DeepUpdateLocal(c, t36_LocalName, t35, t36);
+
+    return;
+
+}
+procedure LibraAccount_mint_to_address (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // int
+    var t2: Value; // address
+    var t3: Value; // bool
+    var t4: Value; // bool
+    var t5: Value; // address
+    var t6: Value; // int
+    var t7: Value; // address
+    var t8: Value; // int
+    var t9: Value; // LibraCoin_T
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Address(arg0);
+    assume is#Integer(arg1);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := CopyOrMoveValue(t0);
+
+    call t3 := Exists(t2, rs_LibraAccount_T);
+
+    call t4 := Not(t3);
+
+    if (!b#Boolean(t4)) { goto Label_7; }
+
+    call t5 := CopyOrMoveValue(t0);
+
+    call t6 := LdConst(0);
+
+    call addr_exists' := LibraAccount_create_new_account(c', addr_exists', t5, t6);
+
+Label_7:
+    call t7 := CopyOrMoveValue(t0);
+
+    call t8 := CopyOrMoveValue(t1);
+
+    call addr_exists', t9 := LibraCoin_mint_with_default_capability(c', addr_exists', t8);
+    assume is#Map(t9);
+
+
+    call addr_exists' := LibraAccount_deposit(c', addr_exists', t7, t9);
+
+    return;
+
+}
+procedure LibraAccount_withdraw_from_account (c: CreationTime, addr_exists: [Address]bool, arg0: Reference, arg1: Value) returns (addr_exists': [Address]bool, t0: Reference, ret0: Value)
+{
+    // declare local variables
+    var t1: Value; // int
+    var t2: Value; // LibraCoin_T
+    var t3: Reference; // LibraAccount_T_ref
+    var t4: Reference; // LibraCoin_T_ref
+    var t5: Value; // int
+    var t6: Value; // LibraCoin_T
+    var t7: Value; // LibraCoin_T
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(v#Reference(arg0));
+    if (is#Local(rt#Reference(arg0))) {
+        assume c#Local(rt#Reference(arg0)) < c;
+    }
+    assume is#Integer(arg1);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t3 := CopyOrMoveRef(t0);
+
+    call t4 := BorrowField(t3, LibraAccount_T_balance);
+    assume is#Map(v#Reference(t4));
+
+
+    call t5 := CopyOrMoveValue(t1);
+
+    call addr_exists', t4, t6 := LibraCoin_withdraw(c', addr_exists', t4, t5);
+    assume is#Map(v#Reference(t4));
+
+    assume is#Map(t6);
+
+
+    call t0 := DeepUpdateReference(t4, t0);
+    call t3 := DeepUpdateReference(t4, t3);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t4, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t4, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t4, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t4, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t4, rs_LibraAccount_WithdrawalCapability);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t4, t1);
+    call t2 := DeepUpdateLocal(c, t2_LocalName, t4, t2);
+    call t5 := DeepUpdateLocal(c, t5_LocalName, t4, t5);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t4, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t4, t7);
+
+    call t2 := CopyOrMoveValue(t6);
+
+    call t7 := CopyOrMoveValue(t2);
+
+    ret0 := t7;
+    return;
+
+}
+procedure LibraAccount_withdraw_from_sender (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // int
+    var t1: Reference; // LibraAccount_T_ref
+    var t2: Value; // address
+    var t3: Reference; // LibraAccount_T_ref
+    var t4: Reference; // LibraAccount_T_ref
+    var t5: Reference; // bool_ref
+    var t6: Value; // bool
+    var t7: Value; // int
+    var t8: Reference; // LibraAccount_T_ref
+    var t9: Value; // int
+    var t10: Value; // LibraCoin_T
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Integer(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := GetTxnSenderAddress();
+
+    call t3 := BorrowGlobal(t2, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t3));
+    assume is#Map(v#Reference(t3));
+
+    call t1 := CopyOrMoveRef(t3);
+
+    call t4 := CopyOrMoveRef(t1);
+
+    call t5 := BorrowField(t4, LibraAccount_T_delegated_withdrawal_capability);
+    assume is#Boolean(v#Reference(t5));
+
+
+    call t6 := ReadRef(t5);
+
+    if (!b#Boolean(t6)) { goto Label_9; }
+
+    call t7 := LdConst(11);
+
+    abort_flag := true;
+
+Label_9:
+    call t8 := CopyOrMoveRef(t1);
+
+    call t9 := CopyOrMoveValue(t0);
+
+    call addr_exists', t8, t10 := LibraAccount_withdraw_from_account(c', addr_exists', t8, t9);
+    assume is#Map(v#Reference(t8));
+
+    assume is#Map(t10);
+
+
+    call t1 := DeepUpdateReference(t8, t1);
+    call t3 := DeepUpdateReference(t8, t3);
+    call t4 := DeepUpdateReference(t8, t4);
+    call t5 := DeepUpdateReference(t8, t5);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t8, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t8, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t8, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t8, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t8, rs_LibraAccount_WithdrawalCapability);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t8, t0);
+    call t2 := DeepUpdateLocal(c, t2_LocalName, t8, t2);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t8, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t8, t7);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t8, t9);
+    call t10 := DeepUpdateLocal(c, t10_LocalName, t8, t10);
+
+    ret0 := t10;
+    return;
+
+}
+procedure LibraAccount_withdraw_with_capability (c: CreationTime, addr_exists: [Address]bool, arg0: Reference, arg1: Value) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Reference; // LibraAccount_WithdrawalCapability_ref
+    var t1: Value; // int
+    var t2: Reference; // LibraAccount_T_ref
+    var t3: Reference; // LibraAccount_WithdrawalCapability_ref
+    var t4: Reference; // address_ref
+    var t5: Value; // address
+    var t6: Reference; // LibraAccount_T_ref
+    var t7: Reference; // LibraAccount_T_ref
+    var t8: Value; // int
+    var t9: Value; // LibraCoin_T
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(v#Reference(arg0));
+    if (is#Local(rt#Reference(arg0))) {
+        assume c#Local(rt#Reference(arg0)) < c;
+    }
+    assume is#Integer(arg1);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t3 := CopyOrMoveRef(t0);
+
+    call t4 := BorrowField(t3, LibraAccount_WithdrawalCapability_account_address);
+    assume is#Address(v#Reference(t4));
+
+
+    call t5 := ReadRef(t4);
+
+    call t6 := BorrowGlobal(t5, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t6));
+    assume is#Map(v#Reference(t6));
+
+    call t2 := CopyOrMoveRef(t6);
+
+    call t7 := CopyOrMoveRef(t2);
+
+    call t8 := CopyOrMoveValue(t1);
+
+    call addr_exists', t7, t9 := LibraAccount_withdraw_from_account(c', addr_exists', t7, t8);
+    assume is#Map(v#Reference(t7));
+
+    assume is#Map(t9);
+
+
+    call t0 := DeepUpdateReference(t7, t0);
+    call t2 := DeepUpdateReference(t7, t2);
+    call t3 := DeepUpdateReference(t7, t3);
+    call t4 := DeepUpdateReference(t7, t4);
+    call t6 := DeepUpdateReference(t7, t6);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t7, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t7, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t7, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t7, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t7, rs_LibraAccount_WithdrawalCapability);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t7, t1);
+    call t5 := DeepUpdateLocal(c, t5_LocalName, t7, t5);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t7, t8);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t7, t9);
+
+    ret0 := t9;
+    return;
+
+}
+procedure LibraAccount_extract_sender_withdrawal_capability (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Reference; // LibraAccount_T_ref
+    var t2: Reference; // bool_ref
+    var t3: Value; // address
+    var t4: Value; // address
+    var t5: Reference; // LibraAccount_T_ref
+    var t6: Reference; // LibraAccount_T_ref
+    var t7: Reference; // bool_ref
+    var t8: Reference; // bool_ref
+    var t9: Value; // bool
+    var t10: Value; // int
+    var t11: Value; // bool
+    var t12: Reference; // bool_ref
+    var t13: Value; // address
+    var t14: Value; // LibraAccount_WithdrawalCapability
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t3 := GetTxnSenderAddress();
+
+    call t0 := CopyOrMoveValue(t3);
+
+    call t4 := CopyOrMoveValue(t0);
+
+    call t5 := BorrowGlobal(t4, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t5));
+    assume is#Map(v#Reference(t5));
+
+    call t1 := CopyOrMoveRef(t5);
+
+    call t6 := CopyOrMoveRef(t1);
+
+    call t7 := BorrowField(t6, LibraAccount_T_delegated_withdrawal_capability);
+    assume is#Boolean(v#Reference(t7));
+
+
+    call t2 := CopyOrMoveRef(t7);
+
+    call t8 := CopyOrMoveRef(t2);
+
+    call t9 := ReadRef(t8);
+
+    if (!b#Boolean(t9)) { goto Label_13; }
+
+    call t10 := LdConst(11);
+
+    abort_flag := true;
+
+Label_13:
+    call t11 := LdTrue();
+
+    call t12 := CopyOrMoveRef(t2);
+
+    call t12 := WriteRef(t12, t11);
+
+    call t1 := DeepUpdateReference(t12, t1);
+    call t2 := DeepUpdateReference(t12, t2);
+    call t5 := DeepUpdateReference(t12, t5);
+    call t6 := DeepUpdateReference(t12, t6);
+    call t7 := DeepUpdateReference(t12, t7);
+    call t8 := DeepUpdateReference(t12, t8);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t12, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t12, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t12, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t12, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t12, rs_LibraAccount_WithdrawalCapability);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t12, t0);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t12, t3);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t12, t4);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t12, t9);
+    call t10 := DeepUpdateLocal(c, t10_LocalName, t12, t10);
+    call t13 := DeepUpdateLocal(c, t13_LocalName, t12, t13);
+    call t14 := DeepUpdateLocal(c, t14_LocalName, t12, t14);
+
+    call t13 := CopyOrMoveValue(t0);
+
+    assume is#Address(t13);
+
+    call t14 := Pack_LibraAccount_WithdrawalCapability(t13);
+
+    ret0 := t14;
+    return;
+
+}
+procedure LibraAccount_restore_withdrawal_capability (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // LibraAccount_WithdrawalCapability
+    var t1: Value; // address
+    var t2: Reference; // LibraAccount_T_ref
+    var t3: Value; // LibraAccount_WithdrawalCapability
+    var t4: Value; // address
+    var t5: Value; // address
+    var t6: Reference; // LibraAccount_T_ref
+    var t7: Value; // bool
+    var t8: Reference; // LibraAccount_T_ref
+    var t9: Reference; // bool_ref
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t3 := CopyOrMoveValue(t0);
+
+    call t4 := Unpack_LibraAccount_WithdrawalCapability(t3);
+    assume is#Address(t4);
+
+
+    call t1 := CopyOrMoveValue(t4);
+
+    call t5 := CopyOrMoveValue(t1);
+
+    call t6 := BorrowGlobal(t5, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t6));
+    assume is#Map(v#Reference(t6));
+
+    call t2 := CopyOrMoveRef(t6);
+
+    call t7 := LdFalse();
+
+    call t8 := CopyOrMoveRef(t2);
+
+    call t9 := BorrowField(t8, LibraAccount_T_delegated_withdrawal_capability);
+    assume is#Boolean(v#Reference(t9));
+
+
+    call t9 := WriteRef(t9, t7);
+
+    call t2 := DeepUpdateReference(t9, t2);
+    call t6 := DeepUpdateReference(t9, t6);
+    call t8 := DeepUpdateReference(t9, t8);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t9, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t9, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t9, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t9, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t9, rs_LibraAccount_WithdrawalCapability);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t9, t0);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t9, t1);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t9, t3);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t9, t4);
+    call t5 := DeepUpdateLocal(c, t5_LocalName, t9, t5);
+
+    return;
+
+}
+procedure LibraAccount_pay_from_sender (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // int
+    var t2: Value; // LibraCoin_T
+    var t3: Value; // address
+    var t4: Value; // bool
+    var t5: Value; // int
+    var t6: Value; // LibraCoin_T
+    var t7: Value; // address
+    var t8: Value; // LibraCoin_T
+    var t9: Value; // address
+    var t10: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Address(arg0);
+    assume is#Integer(arg1);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t3 := CopyOrMoveValue(t0);
+
+    call t4 := Exists(t3, rs_LibraAccount_T);
+
+    if (!b#Boolean(t4)) { goto Label_10; }
+
+    call t5 := CopyOrMoveValue(t1);
+
+    call addr_exists', t6 := LibraAccount_withdraw_from_sender(c', addr_exists', t5);
+    assume is#Map(t6);
+
+
+    call t2 := CopyOrMoveValue(t6);
+
+    call t7 := CopyOrMoveValue(t0);
+
+    call t8 := CopyOrMoveValue(t2);
+
+    call addr_exists' := LibraAccount_deposit(c', addr_exists', t7, t8);
+
+    goto Label_13;
+
+Label_10:
+    call t9 := CopyOrMoveValue(t0);
+
+    call t10 := CopyOrMoveValue(t1);
+
+    call addr_exists' := LibraAccount_create_new_account(c', addr_exists', t9, t10);
+
+Label_13:
+    return;
+
+}
+procedure LibraAccount_rotate_authentication_key_for_account (c: CreationTime, addr_exists: [Address]bool, arg0: Reference, arg1: Value) returns (addr_exists': [Address]bool, t0: Reference)
+{
+    // declare local variables
+    var t1: Value; // bytearray
+    var t2: Value; // bytearray
+    var t3: Reference; // LibraAccount_T_ref
+    var t4: Reference; // bytearray_ref
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(v#Reference(arg0));
+    if (is#Local(rt#Reference(arg0))) {
+        assume c#Local(rt#Reference(arg0)) < c;
+    }
+    assume is#ByteArray(arg1);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := CopyOrMoveValue(t1);
+
+    call t3 := CopyOrMoveRef(t0);
+
+    call t4 := BorrowField(t3, LibraAccount_T_authentication_key);
+    assume is#ByteArray(v#Reference(t4));
+
+
+    call t4 := WriteRef(t4, t2);
+
+    call t0 := DeepUpdateReference(t4, t0);
+    call t3 := DeepUpdateReference(t4, t3);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t4, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t4, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t4, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t4, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t4, rs_LibraAccount_WithdrawalCapability);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t4, t1);
+
+    return;
+
+}
+procedure LibraAccount_rotate_authentication_key (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // bytearray
+    var t1: Reference; // LibraAccount_T_ref
+    var t2: Value; // address
+    var t3: Reference; // LibraAccount_T_ref
+    var t4: Reference; // LibraAccount_T_ref
+    var t5: Reference; // bool_ref
+    var t6: Value; // bool
+    var t7: Value; // int
+    var t8: Reference; // LibraAccount_T_ref
+    var t9: Value; // bytearray
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#ByteArray(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := GetTxnSenderAddress();
+
+    call t3 := BorrowGlobal(t2, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t3));
+    assume is#Map(v#Reference(t3));
+
+    call t1 := CopyOrMoveRef(t3);
+
+    call t4 := CopyOrMoveRef(t1);
+
+    call t5 := BorrowField(t4, LibraAccount_T_delegated_key_rotation_capability);
+    assume is#Boolean(v#Reference(t5));
+
+
+    call t6 := ReadRef(t5);
+
+    if (!b#Boolean(t6)) { goto Label_9; }
+
+    call t7 := LdConst(11);
+
+    abort_flag := true;
+
+Label_9:
+    call t8 := CopyOrMoveRef(t1);
+
+    call t9 := CopyOrMoveValue(t0);
+
+    call addr_exists', t8 := LibraAccount_rotate_authentication_key_for_account(c', addr_exists', t8, t9);
+    assume is#Map(v#Reference(t8));
+
+
+    call t1 := DeepUpdateReference(t8, t1);
+    call t3 := DeepUpdateReference(t8, t3);
+    call t4 := DeepUpdateReference(t8, t4);
+    call t5 := DeepUpdateReference(t8, t5);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t8, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t8, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t8, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t8, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t8, rs_LibraAccount_WithdrawalCapability);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t8, t0);
+    call t2 := DeepUpdateLocal(c, t2_LocalName, t8, t2);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t8, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t8, t7);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t8, t9);
+
+    return;
+
+}
+procedure LibraAccount_rotate_authentication_key_with_capability (c: CreationTime, addr_exists: [Address]bool, arg0: Reference, arg1: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Reference; // LibraAccount_KeyRotationCapability_ref
+    var t1: Value; // bytearray
+    var t2: Reference; // LibraAccount_KeyRotationCapability_ref
+    var t3: Reference; // address_ref
+    var t4: Value; // address
+    var t5: Reference; // LibraAccount_T_ref
+    var t6: Value; // bytearray
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(v#Reference(arg0));
+    if (is#Local(rt#Reference(arg0))) {
+        assume c#Local(rt#Reference(arg0)) < c;
+    }
+    assume is#ByteArray(arg1);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := CopyOrMoveRef(t0);
+
+    call t3 := BorrowField(t2, LibraAccount_KeyRotationCapability_account_address);
+    assume is#Address(v#Reference(t3));
+
+
+    call t4 := ReadRef(t3);
+
+    call t5 := BorrowGlobal(t4, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t5));
+    assume is#Map(v#Reference(t5));
+
+    call t6 := CopyOrMoveValue(t1);
+
+    call addr_exists', t5 := LibraAccount_rotate_authentication_key_for_account(c', addr_exists', t5, t6);
+    assume is#Map(v#Reference(t5));
+
+
+    call t0 := DeepUpdateReference(t5, t0);
+    call t2 := DeepUpdateReference(t5, t2);
+    call t3 := DeepUpdateReference(t5, t3);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t5, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t5, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t5, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t5, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t5, rs_LibraAccount_WithdrawalCapability);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t5, t1);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t5, t4);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t5, t6);
+
+    return;
+
+}
+procedure LibraAccount_extract_sender_key_rotation_capability (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Reference; // bool_ref
+    var t2: Value; // address
+    var t3: Value; // address
+    var t4: Reference; // LibraAccount_T_ref
+    var t5: Reference; // bool_ref
+    var t6: Reference; // bool_ref
+    var t7: Value; // bool
+    var t8: Value; // int
+    var t9: Value; // bool
+    var t10: Reference; // bool_ref
+    var t11: Value; // address
+    var t12: Value; // LibraAccount_KeyRotationCapability
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := GetTxnSenderAddress();
+
+    call t0 := CopyOrMoveValue(t2);
+
+    call t3 := CopyOrMoveValue(t0);
+
+    call t4 := BorrowGlobal(t3, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t4));
+    assume is#Map(v#Reference(t4));
+
+    call t5 := BorrowField(t4, LibraAccount_T_delegated_key_rotation_capability);
+    assume is#Boolean(v#Reference(t5));
+
+
+    call t1 := CopyOrMoveRef(t5);
+
+    call t6 := CopyOrMoveRef(t1);
+
+    call t7 := ReadRef(t6);
+
+    if (!b#Boolean(t7)) { goto Label_11; }
+
+    call t8 := LdConst(11);
+
+    abort_flag := true;
+
+Label_11:
+    call t9 := LdTrue();
+
+    call t10 := CopyOrMoveRef(t1);
+
+    call t10 := WriteRef(t10, t9);
+
+    call t1 := DeepUpdateReference(t10, t1);
+    call t4 := DeepUpdateReference(t10, t4);
+    call t5 := DeepUpdateReference(t10, t5);
+    call t6 := DeepUpdateReference(t10, t6);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t10, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t10, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t10, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t10, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t10, rs_LibraAccount_WithdrawalCapability);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t10, t0);
+    call t2 := DeepUpdateLocal(c, t2_LocalName, t10, t2);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t10, t3);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t10, t7);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t10, t8);
+    call t11 := DeepUpdateLocal(c, t11_LocalName, t10, t11);
+    call t12 := DeepUpdateLocal(c, t12_LocalName, t10, t12);
+
+    call t11 := CopyOrMoveValue(t0);
+
+    assume is#Address(t11);
+
+    call t12 := Pack_LibraAccount_KeyRotationCapability(t11);
+
+    ret0 := t12;
+    return;
+
+}
+procedure LibraAccount_restore_key_rotation_capability (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // LibraAccount_KeyRotationCapability
+    var t1: Value; // address
+    var t2: Reference; // LibraAccount_T_ref
+    var t3: Value; // LibraAccount_KeyRotationCapability
+    var t4: Value; // address
+    var t5: Value; // address
+    var t6: Reference; // LibraAccount_T_ref
+    var t7: Value; // bool
+    var t8: Reference; // LibraAccount_T_ref
+    var t9: Reference; // bool_ref
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t3 := CopyOrMoveValue(t0);
+
+    call t4 := Unpack_LibraAccount_KeyRotationCapability(t3);
+    assume is#Address(t4);
+
+
+    call t1 := CopyOrMoveValue(t4);
+
+    call t5 := CopyOrMoveValue(t1);
+
+    call t6 := BorrowGlobal(t5, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t6));
+    assume is#Map(v#Reference(t6));
+
+    call t2 := CopyOrMoveRef(t6);
+
+    call t7 := LdFalse();
+
+    call t8 := CopyOrMoveRef(t2);
+
+    call t9 := BorrowField(t8, LibraAccount_T_delegated_key_rotation_capability);
+    assume is#Boolean(v#Reference(t9));
+
+
+    call t9 := WriteRef(t9, t7);
+
+    call t2 := DeepUpdateReference(t9, t2);
+    call t6 := DeepUpdateReference(t9, t6);
+    call t8 := DeepUpdateReference(t9, t8);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t9, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t9, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t9, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t9, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t9, rs_LibraAccount_WithdrawalCapability);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t9, t0);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t9, t1);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t9, t3);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t9, t4);
+    call t5 := DeepUpdateLocal(c, t5_LocalName, t9, t5);
+
+    return;
+
+}
+procedure LibraAccount_create_new_account (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // int
+    var t2: Value; // address
+    var t3: Value; // int
+    var t4: Value; // int
+    var t5: Value; // bool
+    var t6: Value; // address
+    var t7: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Address(arg0);
+    assume is#Integer(arg1);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := CopyOrMoveValue(t0);
+
+    call addr_exists' := CreateAccount(t2, addr_exists');
+
+    call t3 := CopyOrMoveValue(t1);
+
+    call t4 := LdConst(0);
+
+    call t5 := Gt(t3, t4);
+
+    if (!b#Boolean(t5)) { goto Label_9; }
+
+    call t6 := CopyOrMoveValue(t0);
+
+    call t7 := CopyOrMoveValue(t1);
+
+    call addr_exists' := LibraAccount_pay_from_sender(c', addr_exists', t6, t7);
+
+Label_9:
+    return;
+
+}
+procedure LibraAccount_balance_for_account (c: CreationTime, addr_exists: [Address]bool, arg0: Reference) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Reference; // LibraAccount_T_ref
+    var t1: Value; // int
+    var t2: Reference; // LibraAccount_T_ref
+    var t3: Reference; // LibraCoin_T_ref
+    var t4: Value; // int
+    var t5: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(v#Reference(arg0));
+    if (is#Local(rt#Reference(arg0))) {
+        assume c#Local(rt#Reference(arg0)) < c;
+    }
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := CopyOrMoveRef(t0);
+
+    call t3 := BorrowField(t2, LibraAccount_T_balance);
+    assume is#Map(v#Reference(t3));
+
+
+    call addr_exists', t4 := LibraCoin_value(c', addr_exists', t3);
+    assume is#Integer(t4);
+
+
+    call t1 := CopyOrMoveValue(t4);
+
+    call t5 := CopyOrMoveValue(t1);
+
+    ret0 := t5;
+    return;
+
+}
+procedure LibraAccount_balance (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // address
+    var t2: Reference; // LibraAccount_T_ref
+    var t3: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Address(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t1 := CopyOrMoveValue(t0);
+
+    call t2 := BorrowGlobal(t1, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t2));
+    assume is#Map(v#Reference(t2));
+
+    call addr_exists', t3 := LibraAccount_balance_for_account(c', addr_exists', t2);
+    assume is#Integer(t3);
+
+
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t2, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t2, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t2, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t2, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t2, rs_LibraAccount_WithdrawalCapability);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t2, t0);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t2, t1);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t2, t3);
+
+    ret0 := t3;
+    return;
+
+}
+procedure LibraAccount_sequence_number_for_account (c: CreationTime, addr_exists: [Address]bool, arg0: Reference) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Reference; // LibraAccount_T_ref
+    var t1: Reference; // LibraAccount_T_ref
+    var t2: Reference; // int_ref
+    var t3: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(v#Reference(arg0));
+    if (is#Local(rt#Reference(arg0))) {
+        assume c#Local(rt#Reference(arg0)) < c;
+    }
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t1 := CopyOrMoveRef(t0);
+
+    call t2 := BorrowField(t1, LibraAccount_T_sequence_number);
+    assume is#Integer(v#Reference(t2));
+
+
+    call t3 := ReadRef(t2);
+
+    ret0 := t3;
+    return;
+
+}
+procedure LibraAccount_sequence_number (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // address
+    var t2: Reference; // LibraAccount_T_ref
+    var t3: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Address(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t1 := CopyOrMoveValue(t0);
+
+    call t2 := BorrowGlobal(t1, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t2));
+    assume is#Map(v#Reference(t2));
+
+    call addr_exists', t3 := LibraAccount_sequence_number_for_account(c', addr_exists', t2);
+    assume is#Integer(t3);
+
+
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t2, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t2, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t2, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t2, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t2, rs_LibraAccount_WithdrawalCapability);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t2, t0);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t2, t1);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t2, t3);
+
+    ret0 := t3;
+    return;
+
+}
+procedure LibraAccount_delegated_key_rotation_capability (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // address
+    var t2: Reference; // LibraAccount_T_ref
+    var t3: Reference; // bool_ref
+    var t4: Value; // bool
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Address(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t1 := CopyOrMoveValue(t0);
+
+    call t2 := BorrowGlobal(t1, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t2));
+    assume is#Map(v#Reference(t2));
+
+    call t3 := BorrowField(t2, LibraAccount_T_delegated_key_rotation_capability);
+    assume is#Boolean(v#Reference(t3));
+
+
+    call t4 := ReadRef(t3);
+
+    ret0 := t4;
+    return;
+
+}
+procedure LibraAccount_delegated_withdrawal_capability (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // address
+    var t2: Reference; // LibraAccount_T_ref
+    var t3: Reference; // bool_ref
+    var t4: Value; // bool
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Address(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t1 := CopyOrMoveValue(t0);
+
+    call t2 := BorrowGlobal(t1, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t2));
+    assume is#Map(v#Reference(t2));
+
+    call t3 := BorrowField(t2, LibraAccount_T_delegated_withdrawal_capability);
+    assume is#Boolean(v#Reference(t3));
+
+
+    call t4 := ReadRef(t3);
+
+    ret0 := t4;
+    return;
+
+}
+procedure LibraAccount_withdrawal_capability_address (c: CreationTime, addr_exists: [Address]bool, arg0: Reference) returns (addr_exists': [Address]bool, ret0: Reference)
+{
+    // declare local variables
+    var t0: Reference; // LibraAccount_WithdrawalCapability_ref
+    var t1: Reference; // LibraAccount_WithdrawalCapability_ref
+    var t2: Reference; // address_ref
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(v#Reference(arg0));
+    if (is#Local(rt#Reference(arg0))) {
+        assume c#Local(rt#Reference(arg0)) < c;
+    }
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t1 := CopyOrMoveRef(t0);
+
+    call t2 := BorrowField(t1, LibraAccount_WithdrawalCapability_account_address);
+    assume is#Address(v#Reference(t2));
+
+
+    ret0 := t2;
+    return;
+
+}
+procedure LibraAccount_key_rotation_capability_address (c: CreationTime, addr_exists: [Address]bool, arg0: Reference) returns (addr_exists': [Address]bool, ret0: Reference)
+{
+    // declare local variables
+    var t0: Reference; // LibraAccount_KeyRotationCapability_ref
+    var t1: Reference; // LibraAccount_KeyRotationCapability_ref
+    var t2: Reference; // address_ref
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Map(v#Reference(arg0));
+    if (is#Local(rt#Reference(arg0))) {
+        assume c#Local(rt#Reference(arg0)) < c;
+    }
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t1 := CopyOrMoveRef(t0);
+
+    call t2 := BorrowField(t1, LibraAccount_KeyRotationCapability_account_address);
+    assume is#Address(v#Reference(t2));
+
+
+    ret0 := t2;
+    return;
+
+}
+procedure LibraAccount_exists (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // address
+    var t2: Value; // bool
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Address(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t1 := CopyOrMoveValue(t0);
+
+    call t2 := Exists(t1, rs_LibraAccount_T);
+
+    ret0 := t2;
+    return;
+
+}
+procedure LibraAccount_prologue (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // bool
+    var t2: Reference; // LibraAccount_T_ref
+    var t3: Reference; // LibraAccount_T_ref
+    var t4: Value; // bytearray
+    var t5: Value; // bytearray
+    var t6: Value; // int
+    var t7: Value; // int
+    var t8: Value; // int
+    var t9: Value; // int
+    var t10: Value; // int
+    var t11: Value; // int
+    var t12: Value; // address
+    var t13: Value; // address
+    var t14: Value; // bool
+    var t15: Value; // bool
+    var t16: Value; // bool
+    var t17: Value; // int
+    var t18: Value; // address
+    var t19: Reference; // LibraAccount_T_ref
+    var t20: Value; // bytearray
+    var t21: Value; // bytearray
+    var t22: Value; // bytearray
+    var t23: Value; // bytearray
+    var t24: Reference; // LibraAccount_T_ref
+    var t25: Reference; // bytearray_ref
+    var t26: Value; // bytearray
+    var t27: Value; // bool
+    var t28: Value; // bool
+    var t29: Value; // int
+    var t30: Value; // int
+    var t31: Value; // int
+    var t32: Value; // int
+    var t33: Value; // int
+    var t34: Value; // int
+    var t35: Reference; // LibraAccount_T_ref
+    var t36: Reference; // LibraAccount_T_ref
+    var t37: Reference; // LibraAccount_T_ref
+    var t38: Value; // int
+    var t39: Value; // int
+    var t40: Value; // int
+    var t41: Value; // bool
+    var t42: Value; // bool
+    var t43: Value; // int
+    var t44: Reference; // LibraAccount_T_ref
+    var t45: Reference; // int_ref
+    var t46: Value; // int
+    var t47: Value; // int
+    var t48: Value; // int
+    var t49: Value; // int
+    var t50: Value; // bool
+    var t51: Value; // bool
+    var t52: Value; // int
+    var t53: Value; // int
+    var t54: Value; // int
+    var t55: Value; // bool
+    var t56: Value; // bool
+    var t57: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t12 := GetTxnSenderAddress();
+
+    call t0 := CopyOrMoveValue(t12);
+
+    call t13 := CopyOrMoveValue(t0);
+
+    call t14 := Exists(t13, rs_LibraAccount_T);
+
+    call t1 := CopyOrMoveValue(t14);
+
+    call t15 := CopyOrMoveValue(t1);
+
+    call t16 := Not(t15);
+
+    if (!b#Boolean(t16)) { goto Label_10; }
+
+    call t17 := LdConst(5);
+
+    abort_flag := true;
+
+Label_10:
+    call t18 := CopyOrMoveValue(t0);
+
+    call t19 := BorrowGlobal(t18, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t19));
+    assume is#Map(v#Reference(t19));
+
+    call t2 := CopyOrMoveRef(t19);
+
+    call t20 := GetTxnPublicKey();
+
+    call t4 := CopyOrMoveValue(t20);
+
+    call t21 := CopyOrMoveValue(t4);
+
+    call addr_exists', t22 := Hash_sha3_256(c', addr_exists', t21);
+    assume is#ByteArray(t22);
+
+
+    call t5 := CopyOrMoveValue(t22);
+
+    call t23 := CopyOrMoveValue(t5);
+
+    call t24 := CopyOrMoveRef(t2);
+
+    call t25 := BorrowField(t24, LibraAccount_T_authentication_key);
+    assume is#ByteArray(v#Reference(t25));
+
+
+    call t26 := ReadRef(t25);
+
+    call t27 := Eq_bytearray(t23, t26);
+
+    call t28 := Not(t27);
+
+    if (!b#Boolean(t28)) { goto Label_27; }
+
+    call t29 := LdConst(2);
+
+    abort_flag := true;
+
+Label_27:
+    call t30 := GetTxnGasUnitPrice();
+
+    call t6 := CopyOrMoveValue(t30);
+
+    call t31 := GetTxnMaxGasUnits();
+
+    call t7 := CopyOrMoveValue(t31);
+
+    call t32 := CopyOrMoveValue(t6);
+
+    call t33 := CopyOrMoveValue(t7);
+
+    call t34 := Mul(t32, t33);
+
+    call t8 := CopyOrMoveValue(t34);
+
+    call t35 := CopyOrMoveRef(t2);
+
+    call t36 := FreezeRef(t35);
+
+    call t3 := CopyOrMoveRef(t36);
+
+    call t37 := CopyOrMoveRef(t3);
+
+    call addr_exists', t38 := LibraAccount_balance_for_account(c', addr_exists', t37);
+    assume is#Integer(t38);
+
+
+    call t9 := CopyOrMoveValue(t38);
+
+    call t39 := CopyOrMoveValue(t9);
+
+    call t40 := CopyOrMoveValue(t8);
+
+    call t41 := Ge(t39, t40);
+
+    call t42 := Not(t41);
+
+    if (!b#Boolean(t42)) { goto Label_48; }
+
+    call t43 := LdConst(6);
+
+    abort_flag := true;
+
+Label_48:
+    call t44 := CopyOrMoveRef(t2);
+
+    call t45 := BorrowField(t44, LibraAccount_T_sequence_number);
+    assume is#Integer(v#Reference(t45));
+
+
+    call t46 := ReadRef(t45);
+
+    call t10 := CopyOrMoveValue(t46);
+
+    call t47 := GetTxnSequenceNumber();
+
+    call t11 := CopyOrMoveValue(t47);
+
+    call t48 := CopyOrMoveValue(t11);
+
+    call t49 := CopyOrMoveValue(t10);
+
+    call t50 := Ge(t48, t49);
+
+    call t51 := Not(t50);
+
+    if (!b#Boolean(t51)) { goto Label_61; }
+
+    call t52 := LdConst(3);
+
+    abort_flag := true;
+
+Label_61:
+    call t53 := CopyOrMoveValue(t11);
+
+    call t54 := CopyOrMoveValue(t10);
+
+    call t55 := Eq_int(t53, t54);
+
+    call t56 := Not(t55);
+
+    if (!b#Boolean(t56)) { goto Label_68; }
+
+    call t57 := LdConst(4);
+
+    abort_flag := true;
+
+Label_68:
+    return;
+
+}
+procedure LibraAccount_epilogue (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Reference; // LibraAccount_T_ref
+    var t2: Reference; // LibraAccount_T_ref
+    var t3: Value; // int
+    var t4: Value; // int
+    var t5: Value; // int
+    var t6: Value; // int
+    var t7: Value; // int
+    var t8: Value; // LibraCoin_T
+    var t9: Value; // int
+    var t10: Value; // address
+    var t11: Value; // address
+    var t12: Reference; // LibraAccount_T_ref
+    var t13: Value; // int
+    var t14: Value; // int
+    var t15: Value; // int
+    var t16: Value; // int
+    var t17: Value; // int
+    var t18: Value; // int
+    var t19: Value; // int
+    var t20: Value; // int
+    var t21: Reference; // LibraAccount_T_ref
+    var t22: Reference; // LibraAccount_T_ref
+    var t23: Reference; // LibraAccount_T_ref
+    var t24: Value; // int
+    var t25: Value; // int
+    var t26: Value; // int
+    var t27: Value; // bool
+    var t28: Value; // bool
+    var t29: Value; // int
+    var t30: Reference; // LibraAccount_T_ref
+    var t31: Value; // int
+    var t32: Value; // LibraCoin_T
+    var t33: Value; // LibraCoin_T
+    var t34: Value; // int
+    var t35: Value; // int
+    var t36: Value; // int
+    var t37: Value; // int
+    var t38: Reference; // LibraAccount_T_ref
+    var t39: Reference; // int_ref
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t10 := GetTxnSenderAddress();
+
+    call t0 := CopyOrMoveValue(t10);
+
+    call t11 := CopyOrMoveValue(t0);
+
+    call t12 := BorrowGlobal(t11, LibraAccount_T, rs_LibraAccount_T);
+    assume is#Global(rt#Reference(t12));
+    assume is#Map(v#Reference(t12));
+
+    call t1 := CopyOrMoveRef(t12);
+
+    call t13 := GetTxnGasUnitPrice();
+
+    call t3 := CopyOrMoveValue(t13);
+
+    call t14 := GetTxnMaxGasUnits();
+
+    call t5 := CopyOrMoveValue(t14);
+
+    call t15 := GetGasRemaining();
+
+    call t4 := CopyOrMoveValue(t15);
+
+    call t16 := CopyOrMoveValue(t3);
+
+    call t17 := CopyOrMoveValue(t5);
+
+    call t18 := CopyOrMoveValue(t4);
+
+    call t19 := Sub(t17, t18);
+
+    call t20 := Mul(t16, t19);
+
+    call t6 := CopyOrMoveValue(t20);
+
+    call t21 := CopyOrMoveRef(t1);
+
+    call t22 := FreezeRef(t21);
+
+    call t2 := CopyOrMoveRef(t22);
+
+    call t23 := CopyOrMoveRef(t2);
+
+    call addr_exists', t24 := LibraAccount_balance_for_account(c', addr_exists', t23);
+    assume is#Integer(t24);
+
+
+    call t7 := CopyOrMoveValue(t24);
+
+    call t25 := CopyOrMoveValue(t7);
+
+    call t26 := CopyOrMoveValue(t6);
+
+    call t27 := Ge(t25, t26);
+
+    call t28 := Not(t27);
+
+    if (!b#Boolean(t28)) { goto Label_30; }
+
+    call t29 := LdConst(6);
+
+    abort_flag := true;
+
+Label_30:
+    call t30 := CopyOrMoveRef(t1);
+
+    call t31 := CopyOrMoveValue(t6);
+
+    call addr_exists', t30, t32 := LibraAccount_withdraw_from_account(c', addr_exists', t30, t31);
+    assume is#Map(v#Reference(t30));
+
+    assume is#Map(t32);
+
+
+    call t1 := DeepUpdateReference(t30, t1);
+    call t2 := DeepUpdateReference(t30, t2);
+    call t12 := DeepUpdateReference(t30, t12);
+    call t21 := DeepUpdateReference(t30, t21);
+    call t22 := DeepUpdateReference(t30, t22);
+    call t23 := DeepUpdateReference(t30, t23);
+    call t38 := DeepUpdateReference(t30, t38);
+    call t39 := DeepUpdateReference(t30, t39);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t30, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t30, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t30, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t30, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t30, rs_LibraAccount_WithdrawalCapability);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t30, t0);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t30, t3);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t30, t4);
+    call t5 := DeepUpdateLocal(c, t5_LocalName, t30, t5);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t30, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t30, t7);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t30, t8);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t30, t9);
+    call t10 := DeepUpdateLocal(c, t10_LocalName, t30, t10);
+    call t11 := DeepUpdateLocal(c, t11_LocalName, t30, t11);
+    call t13 := DeepUpdateLocal(c, t13_LocalName, t30, t13);
+    call t14 := DeepUpdateLocal(c, t14_LocalName, t30, t14);
+    call t15 := DeepUpdateLocal(c, t15_LocalName, t30, t15);
+    call t16 := DeepUpdateLocal(c, t16_LocalName, t30, t16);
+    call t17 := DeepUpdateLocal(c, t17_LocalName, t30, t17);
+    call t18 := DeepUpdateLocal(c, t18_LocalName, t30, t18);
+    call t19 := DeepUpdateLocal(c, t19_LocalName, t30, t19);
+    call t20 := DeepUpdateLocal(c, t20_LocalName, t30, t20);
+    call t24 := DeepUpdateLocal(c, t24_LocalName, t30, t24);
+    call t25 := DeepUpdateLocal(c, t25_LocalName, t30, t25);
+    call t26 := DeepUpdateLocal(c, t26_LocalName, t30, t26);
+    call t27 := DeepUpdateLocal(c, t27_LocalName, t30, t27);
+    call t28 := DeepUpdateLocal(c, t28_LocalName, t30, t28);
+    call t29 := DeepUpdateLocal(c, t29_LocalName, t30, t29);
+    call t31 := DeepUpdateLocal(c, t31_LocalName, t30, t31);
+    call t32 := DeepUpdateLocal(c, t32_LocalName, t30, t32);
+    call t33 := DeepUpdateLocal(c, t33_LocalName, t30, t33);
+    call t34 := DeepUpdateLocal(c, t34_LocalName, t30, t34);
+    call t35 := DeepUpdateLocal(c, t35_LocalName, t30, t35);
+    call t36 := DeepUpdateLocal(c, t36_LocalName, t30, t36);
+    call t37 := DeepUpdateLocal(c, t37_LocalName, t30, t37);
+
+    call t8 := CopyOrMoveValue(t32);
+
+    call t33 := CopyOrMoveValue(t8);
+
+    call addr_exists' := LibraCoin_TODO_REMOVE_burn_gas_fee(c', addr_exists', t33);
+
+    call t34 := GetTxnSequenceNumber();
+
+    call t9 := CopyOrMoveValue(t34);
+
+    call t35 := CopyOrMoveValue(t9);
+
+    call t36 := LdConst(1);
+
+    call t37 := Add(t35, t36);
+
+    call t38 := CopyOrMoveRef(t1);
+
+    call t39 := BorrowField(t38, LibraAccount_T_sequence_number);
+    assume is#Integer(v#Reference(t39));
+
+
+    call t39 := WriteRef(t39, t37);
+
+    call t1 := DeepUpdateReference(t39, t1);
+    call t2 := DeepUpdateReference(t39, t2);
+    call t12 := DeepUpdateReference(t39, t12);
+    call t21 := DeepUpdateReference(t39, t21);
+    call t22 := DeepUpdateReference(t39, t22);
+    call t23 := DeepUpdateReference(t39, t23);
+    call t30 := DeepUpdateReference(t39, t30);
+    call t38 := DeepUpdateReference(t39, t38);
+    call rs_LibraAccount_KeyRotationCapability := DeepUpdateGlobal(LibraAccount_KeyRotationCapability, t39, rs_LibraAccount_KeyRotationCapability);
+    call rs_LibraAccount_ReceivedPaymentEvent := DeepUpdateGlobal(LibraAccount_ReceivedPaymentEvent, t39, rs_LibraAccount_ReceivedPaymentEvent);
+    call rs_LibraAccount_SentPaymentEvent := DeepUpdateGlobal(LibraAccount_SentPaymentEvent, t39, rs_LibraAccount_SentPaymentEvent);
+    call rs_LibraAccount_T := DeepUpdateGlobal(LibraAccount_T, t39, rs_LibraAccount_T);
+    call rs_LibraAccount_WithdrawalCapability := DeepUpdateGlobal(LibraAccount_WithdrawalCapability, t39, rs_LibraAccount_WithdrawalCapability);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t39, t0);
+    call t3 := DeepUpdateLocal(c, t3_LocalName, t39, t3);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t39, t4);
+    call t5 := DeepUpdateLocal(c, t5_LocalName, t39, t5);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t39, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t39, t7);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t39, t8);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t39, t9);
+    call t10 := DeepUpdateLocal(c, t10_LocalName, t39, t10);
+    call t11 := DeepUpdateLocal(c, t11_LocalName, t39, t11);
+    call t13 := DeepUpdateLocal(c, t13_LocalName, t39, t13);
+    call t14 := DeepUpdateLocal(c, t14_LocalName, t39, t14);
+    call t15 := DeepUpdateLocal(c, t15_LocalName, t39, t15);
+    call t16 := DeepUpdateLocal(c, t16_LocalName, t39, t16);
+    call t17 := DeepUpdateLocal(c, t17_LocalName, t39, t17);
+    call t18 := DeepUpdateLocal(c, t18_LocalName, t39, t18);
+    call t19 := DeepUpdateLocal(c, t19_LocalName, t39, t19);
+    call t20 := DeepUpdateLocal(c, t20_LocalName, t39, t20);
+    call t24 := DeepUpdateLocal(c, t24_LocalName, t39, t24);
+    call t25 := DeepUpdateLocal(c, t25_LocalName, t39, t25);
+    call t26 := DeepUpdateLocal(c, t26_LocalName, t39, t26);
+    call t27 := DeepUpdateLocal(c, t27_LocalName, t39, t27);
+    call t28 := DeepUpdateLocal(c, t28_LocalName, t39, t28);
+    call t29 := DeepUpdateLocal(c, t29_LocalName, t39, t29);
+    call t31 := DeepUpdateLocal(c, t31_LocalName, t39, t31);
+    call t32 := DeepUpdateLocal(c, t32_LocalName, t39, t32);
+    call t33 := DeepUpdateLocal(c, t33_LocalName, t39, t33);
+    call t34 := DeepUpdateLocal(c, t34_LocalName, t39, t34);
+    call t35 := DeepUpdateLocal(c, t35_LocalName, t39, t35);
+    call t36 := DeepUpdateLocal(c, t36_LocalName, t39, t36);
+
+    return;
+
+}
+procedure ValidatorSet_initialize (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // address
+    var t2: Value; // bool
+    var t3: Value; // bool
+    var t4: Value; // int
+    var t5: Value; // Vector_T
+    var t6: Value; // ValidatorSet_T
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t0 := GetTxnSenderAddress();
+
+    call t1 := LdAddr(472);
+
+    call t2 := Eq_address(t0, t1);
+
+    call t3 := Not(t2);
+
+    if (!b#Boolean(t3)) { goto Label_7; }
+
+    call t4 := LdConst(1);
+
+    abort_flag := true;
+
+Label_7:
+    call addr_exists', t5 := Vector_empty(c', addr_exists');
+    assume is#Map(t5);
+
+
+    assume is#Map(t5);
+
+    call t6 := Pack_ValidatorSet_T(t5);
+
+    call rs_ValidatorSet_T := MoveToSender(rs_ValidatorSet_T, t6);
+
+    return;
+
+}
+procedure ValidatorSet_size (c: CreationTime, addr_exists: [Address]bool) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Reference; // ValidatorSet_T_ref
+    var t1: Value; // address
+    var t2: Reference; // ValidatorSet_T_ref
+    var t3: Reference; // ValidatorSet_T_ref
+    var t4: Reference; // Vector_T_ref
+    var t5: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    // assign arguments to locals so they can be modified
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t1 := LdAddr(472);
+
+    call t2 := BorrowGlobal(t1, ValidatorSet_T, rs_ValidatorSet_T);
+    assume is#Global(rt#Reference(t2));
+    assume is#Map(v#Reference(t2));
+
+    call t0 := CopyOrMoveRef(t2);
+
+    call t3 := CopyOrMoveRef(t0);
+
+    call t4 := BorrowField(t3, ValidatorSet_T_validators);
+    assume is#Map(v#Reference(t4));
+
+
+    call addr_exists', t5 := Vector_length(c', addr_exists', t4);
+    assume is#Integer(t5);
+
+
+    ret0 := t5;
+    return;
+
+}
+procedure ValidatorSet_is_validator (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Value; // int
+    var t2: Value; // int
+    var t3: Reference; // Vector_T_ref
+    var t4: Reference; // ValidatorSet_ValidatorInfo_ref
+    var t5: Value; // address
+    var t6: Reference; // ValidatorSet_T_ref
+    var t7: Reference; // Vector_T_ref
+    var t8: Reference; // Vector_T_ref
+    var t9: Value; // int
+    var t10: Value; // int
+    var t11: Value; // int
+    var t12: Value; // bool
+    var t13: Value; // bool
+    var t14: Value; // int
+    var t15: Reference; // Vector_T_ref
+    var t16: Value; // int
+    var t17: Reference; // unsupported_ref
+    var t18: Value; // int
+    var t19: Value; // int
+    var t20: Value; // bool
+    var t21: Reference; // ValidatorSet_ValidatorInfo_ref
+    var t22: Reference; // address_ref
+    var t23: Value; // address
+    var t24: Value; // address
+    var t25: Value; // bool
+    var t26: Value; // bool
+    var t27: Reference; // Vector_T_ref
+    var t28: Value; // int
+    var t29: Reference; // unsupported_ref
+    var t30: Value; // int
+    var t31: Value; // int
+    var t32: Value; // int
+    var t33: Value; // bool
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Address(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t5 := LdAddr(472);
+
+    call t6 := BorrowGlobal(t5, ValidatorSet_T, rs_ValidatorSet_T);
+    assume is#Global(rt#Reference(t6));
+    assume is#Map(v#Reference(t6));
+
+    call t7 := BorrowField(t6, ValidatorSet_T_validators);
+    assume is#Map(v#Reference(t7));
+
+
+    call t3 := CopyOrMoveRef(t7);
+
+    call t8 := CopyOrMoveRef(t3);
+
+    call addr_exists', t9 := Vector_length(c', addr_exists', t8);
+    assume is#Integer(t9);
+
+
+    call t1 := CopyOrMoveValue(t9);
+
+    call t10 := CopyOrMoveValue(t1);
+
+    call t11 := LdConst(0);
+
+    call t12 := Eq_int(t10, t11);
+
+    if (!b#Boolean(t12)) { goto Label_13; }
+
+    call t13 := LdFalse();
+
+    ret0 := t13;
+    return;
+
+Label_13:
+    call t14 := LdConst(0);
+
+    call t2 := CopyOrMoveValue(t14);
+
+    call t15 := CopyOrMoveRef(t3);
+
+    call t16 := CopyOrMoveValue(t2);
+
+    call addr_exists', t17 := Vector_borrow(c', addr_exists', t15, t16);
+    assume is#unsupported(v#Reference(t17));
+
+
+    call t4 := CopyOrMoveRef(t17);
+
+Label_19:
+    call t18 := CopyOrMoveValue(t2);
+
+    call t19 := CopyOrMoveValue(t1);
+
+    call t20 := Lt(t18, t19);
+
+    if (!b#Boolean(t20)) { goto Label_40; }
+
+    call t21 := CopyOrMoveRef(t4);
+
+    call t22 := BorrowField(t21, ValidatorSet_ValidatorInfo_addr);
+    assume is#Address(v#Reference(t22));
+
+
+    call t23 := ReadRef(t22);
+
+    call t24 := CopyOrMoveValue(t0);
+
+    call t25 := Eq_address(t23, t24);
+
+    if (!b#Boolean(t25)) { goto Label_31; }
+
+    call t26 := LdTrue();
+
+    ret0 := t26;
+    return;
+
+Label_31:
+    call t27 := CopyOrMoveRef(t3);
+
+    call t28 := CopyOrMoveValue(t2);
+
+    call addr_exists', t29 := Vector_borrow(c', addr_exists', t27, t28);
+    assume is#unsupported(v#Reference(t29));
+
+
+    call t4 := CopyOrMoveRef(t29);
+
+    call t30 := CopyOrMoveValue(t2);
+
+    call t31 := LdConst(1);
+
+    call t32 := Add(t30, t31);
+
+    call t2 := CopyOrMoveValue(t32);
+
+    goto Label_19;
+
+Label_40:
+    call t33 := LdFalse();
+
+    ret0 := t33;
+    return;
+
+}
+procedure ValidatorSet_register_candidate_validator (c: CreationTime, addr_exists: [Address]bool, arg0: Value, arg1: Value, arg2: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // bytearray
+    var t1: Value; // bytearray
+    var t2: Value; // bytearray
+    var t3: Value; // bytearray
+    var t4: Value; // bytearray
+    var t5: Value; // bytearray
+    var t6: Value; // ValidatorSet_ValidatorConfig
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#ByteArray(arg0);
+    assume is#ByteArray(arg1);
+    assume is#ByteArray(arg2);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+    t1 := arg1;
+    t2 := arg2;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t3 := CopyOrMoveValue(t0);
+
+    call t4 := CopyOrMoveValue(t1);
+
+    call t5 := CopyOrMoveValue(t2);
+
+    assume is#ByteArray(t3);
+
+    assume is#ByteArray(t4);
+
+    assume is#ByteArray(t5);
+
+    call t6 := Pack_ValidatorSet_ValidatorConfig(t3, t4, t5);
+
+    call rs_ValidatorSet_ValidatorConfig := MoveToSender(rs_ValidatorSet_ValidatorConfig, t6);
+
+    return;
+
+}
+procedure ValidatorSet_get_consensus_pubkey (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool, ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Reference; // ValidatorSet_ValidatorConfig_ref
+    var t2: Value; // address
+    var t3: Reference; // ValidatorSet_ValidatorConfig_ref
+    var t4: Reference; // ValidatorSet_ValidatorConfig_ref
+    var t5: Reference; // bytearray_ref
+    var t6: Value; // bytearray
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Address(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := CopyOrMoveValue(t0);
+
+    call t3 := BorrowGlobal(t2, ValidatorSet_ValidatorConfig, rs_ValidatorSet_ValidatorConfig);
+    assume is#Global(rt#Reference(t3));
+    assume is#Map(v#Reference(t3));
+
+    call t1 := CopyOrMoveRef(t3);
+
+    call t4 := CopyOrMoveRef(t1);
+
+    call t5 := BorrowField(t4, ValidatorSet_ValidatorConfig_consensus_pubkey);
+    assume is#ByteArray(v#Reference(t5));
+
+
+    call t6 := ReadRef(t5);
+
+    ret0 := t6;
+    return;
+
+}
+procedure ValidatorSet_rotate_consensus_pubkey (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // bytearray
+    var t1: Reference; // ValidatorSet_ValidatorConfig_ref
+    var t2: Value; // address
+    var t3: Reference; // ValidatorSet_ValidatorConfig_ref
+    var t4: Value; // bytearray
+    var t5: Reference; // ValidatorSet_ValidatorConfig_ref
+    var t6: Reference; // bytearray_ref
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#ByteArray(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t2 := GetTxnSenderAddress();
+
+    call t3 := BorrowGlobal(t2, ValidatorSet_ValidatorConfig, rs_ValidatorSet_ValidatorConfig);
+    assume is#Global(rt#Reference(t3));
+    assume is#Map(v#Reference(t3));
+
+    call t1 := CopyOrMoveRef(t3);
+
+    call t4 := CopyOrMoveValue(t0);
+
+    call t5 := CopyOrMoveRef(t1);
+
+    call t6 := BorrowField(t5, ValidatorSet_ValidatorConfig_consensus_pubkey);
+    assume is#ByteArray(v#Reference(t6));
+
+
+    call t6 := WriteRef(t6, t4);
+
+    call t1 := DeepUpdateReference(t6, t1);
+    call t3 := DeepUpdateReference(t6, t3);
+    call t5 := DeepUpdateReference(t6, t5);
+    call rs_ValidatorSet_T := DeepUpdateGlobal(ValidatorSet_T, t6, rs_ValidatorSet_T);
+    call rs_ValidatorSet_ValidatorConfig := DeepUpdateGlobal(ValidatorSet_ValidatorConfig, t6, rs_ValidatorSet_ValidatorConfig);
+    call rs_ValidatorSet_ValidatorInfo := DeepUpdateGlobal(ValidatorSet_ValidatorInfo, t6, rs_ValidatorSet_ValidatorInfo);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t6, t0);
+    call t2 := DeepUpdateLocal(c, t2_LocalName, t6, t2);
+
+    return;
+
+}
+procedure ValidatorSet_add_validator (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // address
+    var t1: Reference; // ValidatorSet_ValidatorConfig_ref
+    var t2: Reference; // ValidatorSet_T_ref
+    var t3: Reference; // Vector_T_ref
+    var t4: Value; // address
+    var t5: Value; // bool
+    var t6: Value; // bool
+    var t7: Value; // int
+    var t8: Value; // address
+    var t9: Reference; // ValidatorSet_ValidatorConfig_ref
+    var t10: Value; // address
+    var t11: Reference; // ValidatorSet_T_ref
+    var t12: Reference; // ValidatorSet_T_ref
+    var t13: Reference; // Vector_T_ref
+    var t14: Value; // address
+    var t15: Reference; // ValidatorSet_ValidatorConfig_ref
+    var t16: Reference; // bytearray_ref
+    var t17: Value; // bytearray
+    var t18: Reference; // ValidatorSet_ValidatorConfig_ref
+    var t19: Reference; // bytearray_ref
+    var t20: Value; // bytearray
+    var t21: Reference; // ValidatorSet_ValidatorConfig_ref
+    var t22: Reference; // bytearray_ref
+    var t23: Value; // bytearray
+    var t24: Value; // ValidatorSet_ValidatorInfo
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Address(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t4 := CopyOrMoveValue(t0);
+
+    call addr_exists', t5 := LibraAccount_exists(c', addr_exists', t4);
+    assume is#Boolean(t5);
+
+
+    call t6 := Not(t5);
+
+    if (!b#Boolean(t6)) { goto Label_6; }
+
+    call t7 := LdConst(17);
+
+    abort_flag := true;
+
+Label_6:
+    call t8 := CopyOrMoveValue(t0);
+
+    call t9 := BorrowGlobal(t8, ValidatorSet_ValidatorConfig, rs_ValidatorSet_ValidatorConfig);
+    assume is#Global(rt#Reference(t9));
+    assume is#Map(v#Reference(t9));
+
+    call t1 := CopyOrMoveRef(t9);
+
+    call t10 := LdAddr(472);
+
+    call t11 := BorrowGlobal(t10, ValidatorSet_T, rs_ValidatorSet_T);
+    assume is#Global(rt#Reference(t11));
+    assume is#Map(v#Reference(t11));
+
+    call t2 := CopyOrMoveRef(t11);
+
+    call t12 := CopyOrMoveRef(t2);
+
+    call t13 := BorrowField(t12, ValidatorSet_T_validators);
+    assume is#Map(v#Reference(t13));
+
+
+    call t14 := CopyOrMoveValue(t0);
+
+    call t15 := CopyOrMoveRef(t1);
+
+    call t16 := BorrowField(t15, ValidatorSet_ValidatorConfig_network_signing_pubkey);
+    assume is#ByteArray(v#Reference(t16));
+
+
+    call t17 := ReadRef(t16);
+
+    call t18 := CopyOrMoveRef(t1);
+
+    call t19 := BorrowField(t18, ValidatorSet_ValidatorConfig_network_identity_pubkey);
+    assume is#ByteArray(v#Reference(t19));
+
+
+    call t20 := ReadRef(t19);
+
+    call t21 := CopyOrMoveRef(t1);
+
+    call t22 := BorrowField(t21, ValidatorSet_ValidatorConfig_consensus_pubkey);
+    assume is#ByteArray(v#Reference(t22));
+
+
+    call t23 := ReadRef(t22);
+
+    assume is#Address(t14);
+
+    assume is#ByteArray(t17);
+
+    assume is#ByteArray(t20);
+
+    assume is#ByteArray(t23);
+
+    call t24 := Pack_ValidatorSet_ValidatorInfo(t14, t17, t20, t23);
+
+    call addr_exists', t13 := Vector_push_back(c', addr_exists', t13, t24);
+    assume is#Map(v#Reference(t13));
+
+
+    call t1 := DeepUpdateReference(t13, t1);
+    call t2 := DeepUpdateReference(t13, t2);
+    call t3 := DeepUpdateReference(t13, t3);
+    call t9 := DeepUpdateReference(t13, t9);
+    call t11 := DeepUpdateReference(t13, t11);
+    call t12 := DeepUpdateReference(t13, t12);
+    call t15 := DeepUpdateReference(t13, t15);
+    call t16 := DeepUpdateReference(t13, t16);
+    call t18 := DeepUpdateReference(t13, t18);
+    call t19 := DeepUpdateReference(t13, t19);
+    call t21 := DeepUpdateReference(t13, t21);
+    call t22 := DeepUpdateReference(t13, t22);
+    call rs_ValidatorSet_T := DeepUpdateGlobal(ValidatorSet_T, t13, rs_ValidatorSet_T);
+    call rs_ValidatorSet_ValidatorConfig := DeepUpdateGlobal(ValidatorSet_ValidatorConfig, t13, rs_ValidatorSet_ValidatorConfig);
+    call rs_ValidatorSet_ValidatorInfo := DeepUpdateGlobal(ValidatorSet_ValidatorInfo, t13, rs_ValidatorSet_ValidatorInfo);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t13, t0);
+    call t4 := DeepUpdateLocal(c, t4_LocalName, t13, t4);
+    call t5 := DeepUpdateLocal(c, t5_LocalName, t13, t5);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t13, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t13, t7);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t13, t8);
+    call t10 := DeepUpdateLocal(c, t10_LocalName, t13, t10);
+    call t14 := DeepUpdateLocal(c, t14_LocalName, t13, t14);
+    call t17 := DeepUpdateLocal(c, t17_LocalName, t13, t17);
+    call t20 := DeepUpdateLocal(c, t20_LocalName, t13, t20);
+    call t23 := DeepUpdateLocal(c, t23_LocalName, t13, t23);
+    call t24 := DeepUpdateLocal(c, t24_LocalName, t13, t24);
+
+    return;
+
+}
+procedure Test3_test3 (c: CreationTime, addr_exists: [Address]bool, arg0: Value) returns (addr_exists': [Address]bool)
+{
+    // declare local variables
+    var t0: Value; // bool
+    var t1: Value; // Test3_T
+    var t2: Reference; // Test3_T_ref
+    var t3: Reference; // int_ref
+    var t4: Reference; // int_ref
+    var t5: Reference; // int_ref
+    var t6: Value; // int
+    var t7: Value; // int
+    var t8: Value; // int
+    var t9: Value; // int
+    var t10: Value; // Test3_T
+    var t11: Reference; // Test3_T_ref
+    var t12: Value; // bool
+    var t13: Reference; // Test3_T_ref
+    var t14: Reference; // int_ref
+    var t15: Reference; // Test3_T_ref
+    var t16: Reference; // int_ref
+    var t17: Value; // int
+    var t18: Reference; // int_ref
+    var t19: Reference; // Test3_T_ref
+    var t20: Reference; // int_ref
+    var t21: Reference; // Test3_T_ref
+    var t22: Reference; // int_ref
+    var t23: Reference; // int_ref
+    var t24: Value; // int
+    var t25: Reference; // int_ref
+    var t26: Value; // int
+    var t27: Value; // bool
+    var t28: Value; // int
+    var t29: Value; // int
+    var t30: Value; // bool
+    var t31: Value; // bool
+    var t32: Value; // int
+    var t33: Value; // int
+    var t34: Value; // int
+    var t35: Value; // bool
+    var t36: Value; // bool
+    var t37: Value; // int
+    var t38: Value; // int
+    var t39: Value; // int
+    var t40: Value; // bool
+    var t41: Value; // bool
+    var t42: Value; // int
+    var t43: Value; // int
+    var t44: Value; // int
+    var t45: Value; // bool
+    var t46: Value; // bool
+    var t47: Value; // int
+
+    // declare a new creation time for calls inside this function
+    var c': CreationTime;
+    assume c' > c;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume is#Boolean(arg0);
+
+    // assign arguments to locals so they can be modified
+    t0 := arg0;
+
+    // assign ResourceStores to locals so they can be modified
+    addr_exists' := addr_exists;
+
+    // bytecode translation starts here
+    call t8 := LdConst(0);
+
+    call t9 := LdConst(0);
+
+    assume is#Integer(t8);
+
+    assume is#Integer(t9);
+
+    call t10 := Pack_Test3_T(t8, t9);
+
+    call t1 := CopyOrMoveValue(t10);
+
+    call t11 := BorrowLoc(c, t1_LocalName, t1);
+
+    call t2 := CopyOrMoveRef(t11);
+
+    call t12 := CopyOrMoveValue(t0);
+
+    if (!b#Boolean(t12)) { goto Label_12; }
+
+    call t13 := CopyOrMoveRef(t2);
+
+    call t14 := BorrowField(t13, Test3_T_f);
+    assume is#Integer(v#Reference(t14));
+
+
+    call t3 := CopyOrMoveRef(t14);
+
+    goto Label_15;
+
+Label_12:
+    call t15 := CopyOrMoveRef(t2);
+
+    call t16 := BorrowField(t15, Test3_T_g);
+    assume is#Integer(v#Reference(t16));
+
+
+    call t3 := CopyOrMoveRef(t16);
+
+Label_15:
+    call t17 := LdConst(10);
+
+    call t18 := CopyOrMoveRef(t3);
+
+    call t18 := WriteRef(t18, t17);
+
+    call t2 := DeepUpdateReference(t18, t2);
+    call t3 := DeepUpdateReference(t18, t3);
+    call t4 := DeepUpdateReference(t18, t4);
+    call t5 := DeepUpdateReference(t18, t5);
+    call t11 := DeepUpdateReference(t18, t11);
+    call t13 := DeepUpdateReference(t18, t13);
+    call t14 := DeepUpdateReference(t18, t14);
+    call t15 := DeepUpdateReference(t18, t15);
+    call t16 := DeepUpdateReference(t18, t16);
+    call t19 := DeepUpdateReference(t18, t19);
+    call t20 := DeepUpdateReference(t18, t20);
+    call t21 := DeepUpdateReference(t18, t21);
+    call t22 := DeepUpdateReference(t18, t22);
+    call t23 := DeepUpdateReference(t18, t23);
+    call t25 := DeepUpdateReference(t18, t25);
+    call rs_Test3_T := DeepUpdateGlobal(Test3_T, t18, rs_Test3_T);
+    call t0 := DeepUpdateLocal(c, t0_LocalName, t18, t0);
+    call t1 := DeepUpdateLocal(c, t1_LocalName, t18, t1);
+    call t6 := DeepUpdateLocal(c, t6_LocalName, t18, t6);
+    call t7 := DeepUpdateLocal(c, t7_LocalName, t18, t7);
+    call t8 := DeepUpdateLocal(c, t8_LocalName, t18, t8);
+    call t9 := DeepUpdateLocal(c, t9_LocalName, t18, t9);
+    call t10 := DeepUpdateLocal(c, t10_LocalName, t18, t10);
+    call t12 := DeepUpdateLocal(c, t12_LocalName, t18, t12);
+    call t24 := DeepUpdateLocal(c, t24_LocalName, t18, t24);
+    call t26 := DeepUpdateLocal(c, t26_LocalName, t18, t26);
+    call t27 := DeepUpdateLocal(c, t27_LocalName, t18, t27);
+    call t28 := DeepUpdateLocal(c, t28_LocalName, t18, t28);
+    call t29 := DeepUpdateLocal(c, t29_LocalName, t18, t29);
+    call t30 := DeepUpdateLocal(c, t30_LocalName, t18, t30);
+    call t31 := DeepUpdateLocal(c, t31_LocalName, t18, t31);
+    call t32 := DeepUpdateLocal(c, t32_LocalName, t18, t32);
+    call t33 := DeepUpdateLocal(c, t33_LocalName, t18, t33);
+    call t34 := DeepUpdateLocal(c, t34_LocalName, t18, t34);
+    call t35 := DeepUpdateLocal(c, t35_LocalName, t18, t35);
+    call t36 := DeepUpdateLocal(c, t36_LocalName, t18, t36);
+    call t37 := DeepUpdateLocal(c, t37_LocalName, t18, t37);
+    call t38 := DeepUpdateLocal(c, t38_LocalName, t18, t38);
+    call t39 := DeepUpdateLocal(c, t39_LocalName, t18, t39);
+    call t40 := DeepUpdateLocal(c, t40_LocalName, t18, t40);
+    call t41 := DeepUpdateLocal(c, t41_LocalName, t18, t41);
+    call t42 := DeepUpdateLocal(c, t42_LocalName, t18, t42);
+    call t43 := DeepUpdateLocal(c, t43_LocalName, t18, t43);
+    call t44 := DeepUpdateLocal(c, t44_LocalName, t18, t44);
+    call t45 := DeepUpdateLocal(c, t45_LocalName, t18, t45);
+    call t46 := DeepUpdateLocal(c, t46_LocalName, t18, t46);
+    call t47 := DeepUpdateLocal(c, t47_LocalName, t18, t47);
+
+    call t19 := CopyOrMoveRef(t2);
+
+    call t20 := BorrowField(t19, Test3_T_f);
+    assume is#Integer(v#Reference(t20));
+
+
+    call t4 := CopyOrMoveRef(t20);
+
+    call t21 := CopyOrMoveRef(t2);
+
+    call t22 := BorrowField(t21, Test3_T_g);
+    assume is#Integer(v#Reference(t22));
+
+
+    call t5 := CopyOrMoveRef(t22);
+
+    call t23 := CopyOrMoveRef(t4);
+
+    call t24 := ReadRef(t23);
+
+    call t6 := CopyOrMoveValue(t24);
+
+    call t25 := CopyOrMoveRef(t5);
+
+    call t26 := ReadRef(t25);
+
+    call t7 := CopyOrMoveValue(t26);
+
+    call t27 := CopyOrMoveValue(t0);
+
+    if (!b#Boolean(t27)) { goto Label_47; }
+
+    call t28 := CopyOrMoveValue(t6);
+
+    call t29 := LdConst(10);
+
+    call t30 := Eq_int(t28, t29);
+
+    call t31 := Not(t30);
+
+    if (!b#Boolean(t31)) { goto Label_39; }
+
+    call t32 := LdConst(42);
+
+    abort_flag := true;
+
+Label_39:
+    call t33 := CopyOrMoveValue(t7);
+
+    call t34 := LdConst(0);
+
+    call t35 := Eq_int(t33, t34);
+
+    call t36 := Not(t35);
+
+    if (!b#Boolean(t36)) { goto Label_46; }
+
+    call t37 := LdConst(42);
+
+    abort_flag := true;
+
+Label_46:
+    goto Label_61;
+
+Label_47:
+    call t38 := CopyOrMoveValue(t6);
+
+    call t39 := LdConst(0);
+
+    call t40 := Eq_int(t38, t39);
+
+    call t41 := Not(t40);
+
+    if (!b#Boolean(t41)) { goto Label_54; }
+
+    call t42 := LdConst(42);
+
+    abort_flag := true;
+
+Label_54:
+    call t43 := CopyOrMoveValue(t7);
+
+    call t44 := LdConst(10);
+
+    call t45 := Eq_int(t43, t44);
+
+    call t46 := Not(t45);
+
+    if (!b#Boolean(t46)) { goto Label_61; }
+
+    call t47 := LdConst(42);
+
+    abort_flag := true;
+
+Label_61:
+    return;
+
+}

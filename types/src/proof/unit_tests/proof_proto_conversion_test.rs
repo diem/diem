@@ -11,7 +11,8 @@ use crypto::{
     HashValue,
 };
 use proptest::{collection::vec, prelude::*};
-use proto_conv::{test_helper::assert_protobuf_encode_decode, FromProto, IntoProto};
+use prost_ext::test_helpers::assert_protobuf_encode_decode;
+use std::convert::TryFrom;
 
 fn accumulator_bitmap_iterator_test(bitmap_value: u64, expected_bits: Vec<bool>) {
     let bitmap = AccumulatorBitmap::new(bitmap_value);
@@ -69,13 +70,13 @@ fn accumulator_proof_protobuf_conversion_test(
     expected_num_non_default_siblings: usize,
 ) {
     let proof = AccumulatorProof::new(siblings);
-    let compressed_proof = proof.clone().into_proto();
-    assert_eq!(compressed_proof.get_bitmap(), expected_bitmap);
+    let compressed_proof: crate::proto::types::AccumulatorProof = proof.clone().into();
+    assert_eq!(compressed_proof.bitmap, expected_bitmap);
     assert_eq!(
-        compressed_proof.get_non_default_siblings().len(),
+        compressed_proof.non_default_siblings.len(),
         expected_num_non_default_siblings
     );
-    let decompressed_proof = AccumulatorProof::from_proto(compressed_proof).unwrap();
+    let decompressed_proof = AccumulatorProof::try_from(compressed_proof).unwrap();
     assert_eq!(decompressed_proof, proof);
 }
 
@@ -117,15 +118,15 @@ fn test_convert_accumulator_proof_wrong_number_of_siblings() {
     let sibling0 = b"0".test_only_hash();
     let sibling1 = b"1".test_only_hash();
 
-    let mut compressed_proof = crate::proto::proof::AccumulatorProof::new();
-    compressed_proof.set_bitmap(0b100);
+    let mut compressed_proof = crate::proto::types::AccumulatorProof::default();
+    compressed_proof.bitmap = 0b100;
     compressed_proof
-        .mut_non_default_siblings()
+        .non_default_siblings
         .push(sibling0.to_vec());
     compressed_proof
-        .mut_non_default_siblings()
+        .non_default_siblings
         .push(sibling1.to_vec());
-    assert!(AccumulatorProof::from_proto(compressed_proof).is_err());
+    assert!(AccumulatorProof::try_from(compressed_proof).is_err());
 }
 
 #[test]
@@ -133,10 +134,10 @@ fn test_convert_accumulator_proof_malformed_hashes() {
     let mut sibling0 = b"0".test_only_hash().to_vec();
     sibling0.push(1);
 
-    let mut compressed_proof = crate::proto::proof::AccumulatorProof::new();
-    compressed_proof.set_bitmap(0b100);
-    compressed_proof.mut_non_default_siblings().push(sibling0);
-    assert!(AccumulatorProof::from_proto(compressed_proof).is_err());
+    let mut compressed_proof = crate::proto::types::AccumulatorProof::default();
+    compressed_proof.bitmap = 0b100;
+    compressed_proof.non_default_siblings.push(sibling0);
+    assert!(AccumulatorProof::try_from(compressed_proof).is_err());
 }
 
 fn sparse_merkle_proof_protobuf_conversion_test(
@@ -146,13 +147,13 @@ fn sparse_merkle_proof_protobuf_conversion_test(
     expected_num_non_default_siblings: usize,
 ) {
     let proof = SparseMerkleProof::new(leaf, siblings);
-    let compressed_proof = proof.clone().into_proto();
-    assert_eq!(expected_bitmap, compressed_proof.get_bitmap());
+    let compressed_proof: crate::proto::types::SparseMerkleProof = proof.clone().into();
+    assert_eq!(expected_bitmap, compressed_proof.bitmap);
     assert_eq!(
-        compressed_proof.get_non_default_siblings().len(),
+        compressed_proof.non_default_siblings.len(),
         expected_num_non_default_siblings
     );
-    let decompressed_proof = SparseMerkleProof::from_proto(compressed_proof).unwrap();
+    let decompressed_proof = SparseMerkleProof::try_from(compressed_proof).unwrap();
     assert_eq!(decompressed_proof, proof);
 }
 
@@ -235,15 +236,15 @@ fn test_convert_sparse_merkle_proof_wrong_number_of_siblings() {
     let sibling0 = b"0".test_only_hash();
     let sibling1 = b"1".test_only_hash();
 
-    let mut compressed_proof = crate::proto::proof::SparseMerkleProof::new();
-    compressed_proof.mut_bitmap().push(0b1000_0000);
+    let mut compressed_proof = crate::proto::types::SparseMerkleProof::default();
+    compressed_proof.bitmap.push(0b1000_0000);
     compressed_proof
-        .mut_non_default_siblings()
+        .non_default_siblings
         .push(sibling0.to_vec());
     compressed_proof
-        .mut_non_default_siblings()
+        .non_default_siblings
         .push(sibling1.to_vec());
-    assert!(SparseMerkleProof::from_proto(compressed_proof).is_err());
+    assert!(SparseMerkleProof::try_from(compressed_proof).is_err());
 }
 
 #[test]
@@ -251,21 +252,21 @@ fn test_convert_sparse_merkle_proof_malformed_hashes() {
     let mut sibling0 = b"0".test_only_hash().to_vec();
     sibling0.push(1);
 
-    let mut compressed_proof = crate::proto::proof::SparseMerkleProof::new();
-    compressed_proof.mut_bitmap().push(0b1000_0000);
-    compressed_proof.mut_non_default_siblings().push(sibling0);
-    assert!(SparseMerkleProof::from_proto(compressed_proof).is_err());
+    let mut compressed_proof = crate::proto::types::SparseMerkleProof::default();
+    compressed_proof.bitmap.push(0b1000_0000);
+    compressed_proof.non_default_siblings.push(sibling0);
+    assert!(SparseMerkleProof::try_from(compressed_proof).is_err());
 }
 
 #[test]
 fn test_convert_sparse_merkle_proof_malformed_leaf() {
     let sibling0 = b"0".test_only_hash().to_vec();
 
-    let mut compressed_proof = crate::proto::proof::SparseMerkleProof::new();
-    compressed_proof.set_leaf(vec![1, 2, 3]);
-    compressed_proof.mut_bitmap().push(0b1000_0000);
-    compressed_proof.mut_non_default_siblings().push(sibling0);
-    assert!(SparseMerkleProof::from_proto(compressed_proof).is_err());
+    let mut compressed_proof = crate::proto::types::SparseMerkleProof::default();
+    compressed_proof.leaf = vec![1, 2, 3];
+    compressed_proof.bitmap.push(0b1000_0000);
+    compressed_proof.non_default_siblings.push(sibling0);
+    assert!(SparseMerkleProof::try_from(compressed_proof).is_err());
 }
 
 proptest! {
@@ -306,33 +307,33 @@ proptest! {
 
     #[test]
     fn test_accumulator_protobuf_conversion_roundtrip(proof in any::<AccumulatorProof>()) {
-        assert_protobuf_encode_decode(&proof);
+        assert_protobuf_encode_decode::<crate::proto::types::AccumulatorProof, AccumulatorProof>(&proof);
     }
 
     #[test]
     fn test_sparse_merkle_protobuf_conversion_roundtrip(proof in any::<SparseMerkleProof>()) {
-        assert_protobuf_encode_decode(&proof);
+        assert_protobuf_encode_decode::<crate::proto::types::SparseMerkleProof, SparseMerkleProof>(&proof);
     }
 
     #[test]
     fn test_accumulator_consistency_protobuf_conversion_roundtrip(
         proof in any::<AccumulatorConsistencyProof>(),
     ) {
-        assert_protobuf_encode_decode(&proof);
+        assert_protobuf_encode_decode::<crate::proto::types::AccumulatorConsistencyProof, AccumulatorConsistencyProof>(&proof);
     }
 
     #[test]
     fn test_signed_transaction_proof_protobuf_conversion_roundtrip(proof in any::<SignedTransactionProof>()) {
-        assert_protobuf_encode_decode(&proof);
+        assert_protobuf_encode_decode::<crate::proto::types::SignedTransactionProof, SignedTransactionProof>(&proof);
     }
 
     #[test]
     fn test_account_state_proof_protobuf_conversion_roundtrip(proof in any::<AccountStateProof>()) {
-        assert_protobuf_encode_decode(&proof);
+        assert_protobuf_encode_decode::<crate::proto::types::AccountStateProof, AccountStateProof>(&proof);
     }
 
     #[test]
     fn test_event_proof_protobuf_conversion_roundtrip(proof in any::<EventProof>()) {
-        assert_protobuf_encode_decode(&proof);
+        assert_protobuf_encode_decode::<crate::proto::types::EventProof, EventProof>(&proof);
     }
 }

@@ -9,6 +9,7 @@ use crypto::{
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
     ValidKey,
 };
+use libra_types::PeerId;
 use logger::prelude::*;
 use netcore::{
     multiplexing::{yamux::Yamux, StreamMultiplexer},
@@ -22,7 +23,6 @@ use std::{
     sync::{Arc, RwLock},
     time::Duration,
 };
-use types::PeerId;
 
 /// A timeout for the connection to open and complete all of the upgrade steps.
 const TRANSPORT_TIMEOUT: Duration = Duration::from_secs(30);

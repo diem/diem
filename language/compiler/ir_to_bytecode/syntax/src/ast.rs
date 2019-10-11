@@ -4,16 +4,16 @@
 use codespan::{ByteIndex, Span};
 use lalrpop_util::ParseError;
 use lazy_static::lazy_static;
-use std::{
-    collections::{HashSet, VecDeque},
-    fmt,
-    ops::Deref,
-};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
+};
+use std::{
+    collections::{HashSet, VecDeque},
+    fmt,
+    ops::Deref,
 };
 
 /// Generic wrapper that keeps file locations for any ast-node
@@ -64,7 +64,7 @@ pub struct Script {
     /// The dependencies of `main`, i.e. of the transaction script
     pub imports: Vec<ImportDefinition>,
     /// The transaction script's `main` procedure
-    pub main: Function,
+    pub main: Function_,
 }
 
 //**************************************************************************************************
@@ -93,9 +93,9 @@ pub struct ModuleDefinition {
     /// the module's dependencies
     pub imports: Vec<ImportDefinition>,
     /// the structs (including resources) that the module defines
-    pub structs: Vec<StructDefinition>,
+    pub structs: Vec<StructDefinition_>,
     /// the procedure that the module defines
-    pub functions: Vec<(FunctionName, Function)>,
+    pub functions: Vec<(FunctionName, Function_)>,
 }
 
 /// Either a qualified module name like `addr.m` or `Transaction.m`, which refers to a module in
@@ -135,6 +135,9 @@ pub type Var_ = Spanned<Var>;
 /// New type that represents a type variable. Used to declare type formals & reference them.
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct TypeVar(Identifier);
+
+/// The type of a type variable with a location.
+pub type TypeVar_ = Spanned<TypeVar>;
 
 //**************************************************************************************************
 // Kinds
@@ -193,10 +196,14 @@ pub struct QualifiedStructIdent {
     pub name: StructName,
 }
 
-/// The file newtype
-pub type Field = types::access_path::Field;
+/// The field newtype
+pub type Field = libra_types::access_path::Field;
+
+/// A field coupled with source location information
+pub type Field_ = Spanned<Field>;
+
 /// A field map
-pub type Fields<T> = Vec<(Field, T)>;
+pub type Fields<T> = Vec<(Field_, T)>;
 
 /// Newtype for the name of a struct
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -211,10 +218,13 @@ pub struct StructDefinition {
     /// Human-readable name for the struct that also serves as a nominal type
     pub name: StructName,
     /// Kind constraints of the type parameters
-    pub type_formals: Vec<(TypeVar, Kind)>,
+    pub type_formals: Vec<(TypeVar_, Kind)>,
     /// the fields each instance has
     pub fields: StructDefinitionFields,
 }
+
+/// The type of a StructDefinition along with its source location information
+pub type StructDefinition_ = Spanned<StructDefinition>;
 
 /// The fields of a Move struct definition
 #[derive(Clone, Debug, PartialEq)]
@@ -237,11 +247,11 @@ pub struct FunctionName(Identifier);
 #[derive(PartialEq, Debug, Clone)]
 pub struct FunctionSignature {
     /// Possibly-empty list of (formal name, formal type) pairs. Names are unique.
-    pub formals: Vec<(Var, Type)>,
+    pub formals: Vec<(Var_, Type)>,
     /// Optional return types
     pub return_type: Vec<Type>,
     /// Possibly-empty list of (TypeVar, Kind) pairs.s.
-    pub type_formals: Vec<(TypeVar, Kind)>,
+    pub type_formals: Vec<(TypeVar_, Kind)>,
 }
 
 /// Public or internal modifier for a procedure
@@ -284,6 +294,9 @@ pub struct Function {
     /// The code for the procedure
     pub body: FunctionBody,
 }
+
+/// The type of a Function coupled with its source location information.
+pub type Function_ = Spanned<Function>;
 
 //**************************************************************************************************
 // Statements
@@ -558,7 +571,7 @@ pub enum Exp {
     /// `&x` or `&mut x`
     BorrowLocal(bool, Var_),
     /// `f(e)` or `f(e_1, e_2, ..., e_j)`
-    FunctionCall(FunctionCall, Box<Exp_>),
+    FunctionCall(FunctionCall_, Box<Exp_>),
     /// (e_1, e_2, e_3, ..., e_j)
     ExprList(Vec<Exp_>),
 }
@@ -589,7 +602,7 @@ impl Program {
 
 impl Script {
     /// Create a new `Script` from the imports and the main function
-    pub fn new(imports: Vec<ImportDefinition>, main: Function) -> Self {
+    pub fn new(imports: Vec<ImportDefinition>, main: Function_) -> Self {
         Script { imports, main }
     }
 
@@ -678,8 +691,8 @@ impl ModuleDefinition {
     pub fn new<L, T>(
         name: impl Into<Box<str>>,
         imports: Vec<ImportDefinition>,
-        structs: Vec<StructDefinition>,
-        functions: Vec<(FunctionName, Function)>,
+        structs: Vec<StructDefinition_>,
+        functions: Vec<(FunctionName, Function_)>,
     ) -> Result<Self, ParseError<L, T, failure::Error>> {
         Ok(ModuleDefinition {
             name: ModuleName::parse(name.into())?,
@@ -787,7 +800,7 @@ impl StructDefinition {
     pub fn move_declared<L, T>(
         is_nominal_resource: bool,
         name: impl Into<Box<str>>,
-        type_formals: Vec<(TypeVar, Kind)>,
+        type_formals: Vec<(TypeVar_, Kind)>,
         fields: Fields<Type>,
     ) -> Result<Self, ParseError<L, T, failure::Error>> {
         Ok(StructDefinition {
@@ -804,7 +817,7 @@ impl StructDefinition {
     pub fn native<L, T>(
         is_nominal_resource: bool,
         name: impl Into<Box<str>>,
-        type_formals: Vec<(TypeVar, Kind)>,
+        type_formals: Vec<(TypeVar_, Kind)>,
     ) -> Result<Self, ParseError<L, T, failure::Error>> {
         Ok(StructDefinition {
             is_nominal_resource,
@@ -840,9 +853,9 @@ impl FunctionName {
 impl FunctionSignature {
     /// Creates a new function signature from the parameters and the return types
     pub fn new(
-        formals: Vec<(Var, Type)>,
+        formals: Vec<(Var_, Type)>,
         return_type: Vec<Type>,
-        type_formals: Vec<(TypeVar, Kind)>,
+        type_formals: Vec<(TypeVar_, Kind)>,
     ) -> Self {
         FunctionSignature {
             formals,
@@ -857,9 +870,9 @@ impl Function {
     /// See the declaration of the struct `Function` for more details
     pub fn new(
         visibility: FunctionVisibility,
-        formals: Vec<(Var, Type)>,
+        formals: Vec<(Var_, Type)>,
         return_type: Vec<Type>,
-        type_formals: Vec<(TypeVar, Kind)>,
+        type_formals: Vec<(TypeVar_, Kind)>,
         acquires: Vec<StructName>,
         body: FunctionBody,
     ) -> Self {
@@ -1064,7 +1077,7 @@ impl Exp {
     }
 
     /// Creates a new function call `Exp` with no location information
-    pub fn function_call(f: FunctionCall, e: Exp_) -> Exp_ {
+    pub fn function_call(f: FunctionCall_, e: Exp_) -> Exp_ {
         Spanned::no_loc(Exp::FunctionCall(f, Box::new(e)))
     }
 
@@ -1092,7 +1105,7 @@ impl Iterator for Script {
     type Item = Statement;
 
     fn next(&mut self) -> Option<Statement> {
-        match self.main.body {
+        match self.main.value.body {
             FunctionBody::Move { ref mut code, .. } => code.stmts.pop_front(),
             FunctionBody::Native => panic!("main() cannot be native code"),
         }
@@ -1290,9 +1303,9 @@ fn intersperse<T: fmt::Display>(items: &[T], join: &str) -> String {
     })
 }
 
-fn format_fields<T: fmt::Display>(fields: &[(Field, T)]) -> String {
+fn format_fields<T: fmt::Display>(fields: &[(Field_, T)]) -> String {
     fields.iter().fold(String::new(), |acc, (field, val)| {
-        format!("{} {}: {},", acc, field, val)
+        format!("{} {}: {},", acc, field.value, val)
     })
 }
 
@@ -1322,13 +1335,13 @@ fn format_type_actuals(tys: &[Type]) -> String {
     }
 }
 
-fn format_type_formals(formals: &[(TypeVar, Kind)]) -> String {
+fn format_type_formals(formals: &[(TypeVar_, Kind)]) -> String {
     if formals.is_empty() {
         "".to_string()
     } else {
         let formatted = formals
             .iter()
-            .map(|(tv, k)| format!("{}: {}", tv, k))
+            .map(|(tv, k)| format!("{}: {}", tv.value, k))
             .collect::<Vec<_>>();
         format!("<{}>", intersperse(&formatted, ", "))
     }

@@ -2,6 +2,9 @@
 name = "config"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra config"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -14,18 +17,18 @@ parity-multiaddr = { version = "0.5.0", default-features = false }
 rand = "0.6.5"
 serde = { version = "1.0.99", default-features = false }
 toml = { version = "0.5.3", default-features = false }
+prost = "0.5.0"
 
 crypto = { path = "../crypto/crypto" }
-proto_conv = { path = "../common/proto_conv" }
 logger = { path = "../common/logger" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 tools = { path = "../common/tools" }
-types = { path = "../types" }
+libra-types = { path = "../types" }
 
 [dev-dependencies]
-types = { path = "../types", features = ["testing"] }
+libra-types = { path = "../types", features = ["testing"] }
 crypto = { path = "../crypto/crypto", features = ["testing"] }
 
 [features]
 default = []
-testing = ["crypto/testing", "types/testing"]
+testing = ["crypto/testing", "libra-types/testing"]

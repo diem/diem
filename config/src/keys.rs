@@ -183,6 +183,13 @@ impl ConsensusKeyPair {
     pub fn take_consensus_private(&mut self) -> Option<Ed25519PrivateKey> {
         self.consensus_private_key.take()
     }
+
+    pub fn is_present(&self) -> bool {
+        match self.consensus_private_key {
+            PrivateKeyContainer::Present(_) => true,
+            _ => false,
+        }
+    }
 }
 
 pub fn serialize_opt_key<S, K>(opt_key: &Option<K>, serializer: S) -> Result<S::Ok, S::Error>

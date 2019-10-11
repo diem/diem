@@ -3,16 +3,16 @@
 
 use crate::{errors::*, file_format::*, file_format_common::*, vm_string::VMString};
 use byteorder::{LittleEndian, ReadBytesExt};
-use std::{
-    collections::HashSet,
-    convert::TryInto,
-    io::{Cursor, Read},
-};
-use types::{
+use libra_types::{
     account_address::ADDRESS_LENGTH,
     byte_array::ByteArray,
     identifier::Identifier,
     vm_error::{StatusCode, VMStatus},
+};
+use std::{
+    collections::HashSet,
+    convert::TryInto,
+    io::{Cursor, Read},
 };
 
 impl CompiledScript {
@@ -123,11 +123,9 @@ fn check_binary(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u8> {
     } else {
         return Err(VMStatus::new(StatusCode::MALFORMED));
     }
-    if let Ok(count) = cursor.read_u8() {
-        Ok(count)
-    } else {
-        Err(VMStatus::new(StatusCode::MALFORMED))
-    }
+    cursor
+        .read_u8()
+        .map_err(|_| VMStatus::new(StatusCode::MALFORMED))
 }
 
 /// Reads all the table headers.
@@ -545,10 +543,8 @@ fn load_identifiers(
             if count != size {
                 return Err(VMStatus::new(StatusCode::MALFORMED));
             }
-            let s = match Identifier::from_utf8(buffer) {
-                Ok(bytes) => bytes,
-                Err(_) => return Err(VMStatus::new(StatusCode::MALFORMED)),
-            };
+            let s =
+                Identifier::from_utf8(buffer).map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
 
             identifiers.push(s);
         }
@@ -575,10 +571,8 @@ fn load_user_strings(
             if count != size {
                 return Err(VMStatus::new(StatusCode::MALFORMED));
             }
-            let us = match VMString::from_utf8(buffer) {
-                Ok(bytes) => bytes,
-                Err(_) => return Err(VMStatus::new(StatusCode::MALFORMED)),
-            };
+            let us =
+                VMString::from_utf8(buffer).map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
 
             user_strings.push(us);
         }

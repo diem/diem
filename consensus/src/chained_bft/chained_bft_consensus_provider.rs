@@ -3,8 +3,10 @@
 
 use crate::{
     chained_bft::{
-        chained_bft_smr::ChainedBftSMR, network::ConsensusNetworkImpl,
-        persistent_storage::PersistentStorage,
+        chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
+        epoch_manager::EpochManager,
+        network::ConsensusNetworkImpl,
+        persistent_storage::{PersistentStorage, StorageWriteProxy},
     },
     consensus_provider::ConsensusProvider,
     counters,
@@ -12,25 +14,22 @@ use crate::{
     state_replication::StateMachineReplication,
     txn_manager::MempoolProxy,
 };
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
-
-use crate::chained_bft::{
-    chained_bft_smr::ChainedBftSMRConfig, common::Author, epoch_manager::EpochManager,
-    persistent_storage::StorageWriteProxy,
-};
 use config::config::{ConsensusProposerType::FixedProposer, NodeConfig};
-use execution_proto::proto::execution_grpc::ExecutionClient;
+use consensus_types::common::Author;
+use executor::Executor;
 use failure::prelude::*;
-use logger::prelude::*;
-use mempool::proto::mempool_grpc::MempoolClient;
-use state_synchronizer::StateSyncClient;
-use std::{convert::TryFrom, sync::Arc};
-use tokio::runtime;
-use types::{
+use libra_mempool::proto::mempool::MempoolClient;
+use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::{ValidatorSigner, ValidatorVerifier},
     transaction::SignedTransaction,
 };
+use logger::prelude::*;
+use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
+use state_synchronizer::StateSyncClient;
+use std::{convert::TryFrom, sync::Arc};
+use tokio::runtime;
+use vm_runtime::MoveVM;
 
 struct InitialSetup {
     author: Author,
@@ -42,7 +41,7 @@ struct InitialSetup {
 pub struct ChainedBftProvider {
     smr: ChainedBftSMR<Vec<SignedTransaction>>,
     mempool_client: Arc<MempoolClient>,
-    execution_client: Arc<ExecutionClient>,
+    executor: Arc<Executor<MoveVM>>,
     synchronizer_client: Arc<StateSyncClient>,
 }
 
@@ -52,7 +51,7 @@ impl ChainedBftProvider {
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
         mempool_client: Arc<MempoolClient>,
-        execution_client: Arc<ExecutionClient>,
+        executor: Arc<Executor<MoveVM>>,
         synchronizer_client: Arc<StateSyncClient>,
     ) -> Self {
         let runtime = runtime::Builder::new()
@@ -81,12 +80,12 @@ impl ChainedBftProvider {
         let config = ChainedBftSMRConfig::from_node_config(&node_config.consensus);
         let (storage, initial_data) = StorageWriteProxy::start(node_config);
         info!(
-            "Starting up the consensus state machine with recovery data - {:?}, {:?}",
+            "Starting up the consensus state machine with recovery data - [consensus state {:?}], [last_vote {}], [highest timeout certificates: {}]",
             initial_data.state(),
+            initial_data.last_vote().map_or("None".to_string(), |v| format!("{}", v)),
             initial_data.highest_timeout_certificates()
         );
         let smr = ChainedBftSMR::new(
-            initial_setup.author,
             initial_setup.signer,
             proposer,
             network,
@@ -99,7 +98,7 @@ impl ChainedBftProvider {
         Self {
             smr,
             mempool_client,
-            execution_client,
+            executor,
             synchronizer_client,
         }
     }
@@ -124,12 +123,17 @@ impl ChainedBftProvider {
         let signer = ValidatorSigner::new(author, private_key);
         // Keeping the initial set of validators in a node config is embarrassing and we should
         // all feel bad about it.
-        let peers_with_public_keys = node_config.consensus.get_consensus_peers();
-        let validator = ValidatorVerifier::new(peers_with_public_keys);
+        let validator = node_config
+            .consensus
+            .consensus_peers
+            .get_validator_verifier();
         counters::EPOCH_NUM.set(0); // No reconfiguration yet, so it is always zero
         counters::CURRENT_EPOCH_NUM_VALIDATORS.set(validator.len() as i64);
-        counters::CURRENT_EPOCH_QUORUM_SIZE.set(validator.quorum_size() as i64);
-        debug!("[Consensus]: quorum_size = {:?}", validator.quorum_size());
+        counters::CURRENT_EPOCH_QUORUM_SIZE.set(validator.quorum_voting_power() as i64);
+        debug!(
+            "[Consensus]: quorum_size = {:?}",
+            validator.quorum_voting_power()
+        );
         InitialSetup {
             author,
             signer,
@@ -150,7 +154,7 @@ impl ConsensusProvider for ChainedBftProvider {
     fn start(&mut self) -> Result<()> {
         let txn_manager = Arc::new(MempoolProxy::new(self.mempool_client.clone()));
         let state_computer = Arc::new(ExecutionProxy::new(
-            self.execution_client.clone(),
+            Arc::clone(&self.executor),
             self.synchronizer_client.clone(),
         ));
         debug!("Starting consensus provider.");

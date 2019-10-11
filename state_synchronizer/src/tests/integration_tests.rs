@@ -7,12 +7,16 @@ use crate::{
 use config::config::RoleType;
 use config_builder::util::get_test_config;
 use crypto::{ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, HashValue, SigningKey};
-use execution_proto::proto::execution::{ExecuteChunkRequest, ExecuteChunkResponse};
 use failure::{prelude::*, Result};
-use futures::{
-    executor::block_on,
-    future::{FutureExt, TryFutureExt},
-    Future,
+use futures::{executor::block_on, future::FutureExt, Future};
+use libra_types::{
+    account_address::AccountAddress,
+    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfo as TypesLedgerInfo,
+    proof::AccumulatorProof,
+    test_helpers::transaction_test_helpers::get_test_signed_txn,
+    transaction::{TransactionInfo, TransactionListWithProof},
+    vm_error::StatusCode,
 };
 use network::{
     proto::GetChunkResponse,
@@ -23,10 +27,9 @@ use network::{
     NetworkPublicKeys, ProtocolId,
 };
 use parity_multiaddr::Multiaddr;
-use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     pin::Pin,
     sync::{
         atomic::{AtomicU64, AtomicUsize, Ordering},
@@ -34,16 +37,8 @@ use std::{
     },
 };
 use tokio::runtime::{Builder, Runtime};
-use types::{
-    account_address::AccountAddress,
-    crypto_proxies::LedgerInfoWithSignatures,
-    ledger_info::LedgerInfo as TypesLedgerInfo,
-    proof::AccumulatorProof,
-    test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{SignedTransaction, TransactionInfo, TransactionListWithProof},
-    vm_error::StatusCode,
-};
-use vm_genesis::{encode_transfer_script, GENESIS_KEYPAIR};
+use transaction_builder::encode_transfer_script;
+use vm_genesis::GENESIS_KEYPAIR;
 
 type MockRpcHandler =
     Box<dyn Fn(GetChunkResponse) -> Result<GetChunkResponse> + Send + Sync + 'static>;
@@ -73,7 +68,7 @@ impl MockExecutorProxy {
             0,
             None,
         );
-        let mut signatures = HashMap::new();
+        let mut signatures = BTreeMap::new();
         let private_key = Ed25519PrivateKey::genesis();
         let signature = private_key.sign_message(&HashValue::zero());
         signatures.insert(peer_id, signature);
@@ -103,20 +98,17 @@ impl MockExecutorProxy {
         );
         let accumulator_proof = AccumulatorProof::new(vec![]);
         let txns = TransactionListWithProof::new(
-            vec![(
-                SignedTransaction::from_proto(transaction).unwrap(),
-                txn_info,
-            )],
+            vec![(transaction, txn_info)],
             None,
             Some(version + 1),
             Some(accumulator_proof),
             None,
         );
 
-        let mut resp = GetChunkResponse::new();
-        resp.set_txn_list_with_proof(txns.into_proto());
-        resp.set_ledger_info_with_sigs(target.into_proto());
-        resp
+        GetChunkResponse {
+            txn_list_with_proof: Some(txns.into()),
+            ledger_info_with_sigs: Some(target.into()),
+        }
     }
 }
 
@@ -134,14 +126,12 @@ impl ExecutorProxyTrait for MockExecutorProxy {
 
     fn execute_chunk(
         &self,
-        request: ExecuteChunkRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<ExecuteChunkResponse>> + Send>> {
-        let version = request
-            .get_ledger_info_with_sigs()
-            .get_ledger_info()
-            .version;
+        _txn_list_with_proof: TransactionListWithProof,
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+        let version = ledger_info_with_sigs.ledger_info().version();
         self.version.store(version, Ordering::Relaxed);
-        async move { Ok(ExecuteChunkResponse::new()) }.boxed()
+        async move { Ok(()) }.boxed()
     }
 
     fn get_chunk(
@@ -216,9 +206,7 @@ impl SynchronizerEnv {
         .direct_send_protocols(protocols.clone())
         .build();
         let (sender_b, events_b) = network_provider.add_state_synchronizer(protocols.clone());
-        runtime
-            .executor()
-            .spawn(network_provider.start().unit_error().compat());
+        runtime.executor().spawn(network_provider.start());
 
         let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
             runtime.executor(),
@@ -233,9 +221,7 @@ impl SynchronizerEnv {
         .direct_send_protocols(protocols.clone())
         .build();
         let (sender_a, events_a) = network_provider.add_state_synchronizer(protocols);
-        runtime
-            .executor()
-            .spawn(network_provider.start().unit_error().compat());
+        runtime.executor().spawn(network_provider.start());
 
         // create synchronizers
         let mut config = get_test_config().0;

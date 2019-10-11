@@ -8,8 +8,7 @@ use crate::{
     txn_executor::TransactionExecutor,
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
-use logger::prelude::*;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     transaction::{
         Module, Program, Script, SignatureCheckedTransaction, TransactionArgument,
@@ -17,6 +16,7 @@ use types::{
     },
     vm_error::{StatusCode, VMStatus},
 };
+use logger::prelude::*;
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, VMResult},
@@ -117,10 +117,7 @@ where
         script_cache: &'txn ScriptCache<'alloc>,
     ) -> VMResult<(FunctionRef<'alloc>, Vec<VerifiedModule>)> {
         // Ensure the script can correctly be resolved into main.
-        let main = match script_cache.cache_script(&program.code()) {
-            Ok(main) => main,
-            Err(err) => return Err(err),
-        };
+        let main = script_cache.cache_script(&program.code())?;
 
         if !verify_actuals(main.signature(), program.args()) {
             return Err(VMStatus::new(StatusCode::TYPE_MISMATCH)

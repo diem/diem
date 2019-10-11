@@ -8,23 +8,21 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::{
     core_mempool::{
         index::TxnPointer,
-        transaction::{MempoolAddTransactionStatus, MempoolTransaction, TimelineState},
+        transaction::{MempoolTransaction, TimelineState},
         transaction_store::TransactionStore,
     },
-    proto::shared::mempool_status::MempoolAddTransactionStatusCode,
     OP_COUNTERS,
 };
 use chrono::Utc;
 use config::config::NodeConfig;
+use libra_mempool_shared_proto::{
+    proto::mempool_status::MempoolAddTransactionStatusCode, MempoolAddTransactionStatus,
+};
+use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use logger::prelude::*;
 use lru_cache::LruCache;
-use std::{
-    cmp::{max, min},
-    collections::HashSet,
-    convert::TryFrom,
-};
+use std::{cmp::max, collections::HashSet, convert::TryFrom};
 use ttl_cache::TtlCache;
-use types::{account_address::AccountAddress, transaction::SignedTransaction};
 /// TODO doc
 pub struct Mempool {
     // stores metadata of all transactions in mempool (of all states)
@@ -44,7 +42,7 @@ impl Mempool {
     pub(crate) fn new(config: &NodeConfig) -> Self {
         Mempool {
             transactions: TransactionStore::new(&config.mempool),
-            sequence_number_cache: LruCache::new(config.mempool.sequence_cache_capacity),
+            sequence_number_cache: LruCache::new(config.mempool.capacity),
             metrics_cache: TtlCache::new(config.mempool.capacity),
             system_transaction_timeout: Duration::from_secs(
                 config.mempool.system_transaction_timeout_secs,
@@ -60,28 +58,32 @@ impl Mempool {
         is_rejected: bool,
     ) {
         debug!(
-            "[Mempool] Removing transaction from mempool: {}:{}",
-            sender, sequence_number
+            "[Mempool] Removing transaction from mempool: {}:{}:{}",
+            sender, sequence_number, is_rejected
         );
         self.log_latency(sender.clone(), sequence_number, "e2e.latency");
         self.metrics_cache.remove(&(*sender, sequence_number));
+        OP_COUNTERS.inc(&format!("remove_transaction.{}", is_rejected));
 
-        // update current cached sequence number for account
-        let cached_value = self
-            .sequence_number_cache
-            .remove(sender)
-            .unwrap_or_default();
-
-        let new_sequence_number = if is_rejected {
-            min(sequence_number, cached_value)
+        if is_rejected {
+            debug!(
+                "[Mempool] transaction is rejected: {}:{}",
+                sender, sequence_number
+            );
+            self.transactions
+                .reject_transaction(&sender, sequence_number);
         } else {
-            max(cached_value, sequence_number + 1)
-        };
-        self.sequence_number_cache
-            .insert(sender.clone(), new_sequence_number);
-
-        self.transactions
-            .commit_transaction(&sender, sequence_number);
+            // update current cached sequence number for account
+            let current_seq_number = self
+                .sequence_number_cache
+                .remove(&sender)
+                .unwrap_or_default();
+            let new_seq_number = max(current_seq_number, sequence_number + 1);
+            self.sequence_number_cache
+                .insert(sender.clone(), new_seq_number);
+            self.transactions
+                .commit_transaction(&sender, new_seq_number);
+        }
     }
 
     fn log_latency(&mut self, account: AccountAddress, sequence_number: u64, metric: &str) {
@@ -108,9 +110,10 @@ impl Mempool {
         timeline_state: TimelineState,
     ) -> MempoolAddTransactionStatus {
         debug!(
-            "[Mempool] Adding transaction to mempool: {}:{}",
+            "[Mempool] Adding transaction to mempool: {}:{}:{}",
             &txn.sender(),
-            db_sequence_number
+            txn.sequence_number(),
+            db_sequence_number,
         );
 
         let required_balance = self.get_required_balance(&txn, gas_amount);
@@ -125,10 +128,8 @@ impl Mempool {
         }
 
         let cached_value = self.sequence_number_cache.get_mut(&txn.sender());
-        let sequence_number = match cached_value {
-            Some(value) => max(*value, db_sequence_number),
-            None => db_sequence_number,
-        };
+        let sequence_number =
+            cached_value.map_or(db_sequence_number, |value| max(*value, db_sequence_number));
         self.sequence_number_cache
             .insert(txn.sender(), sequence_number);
 

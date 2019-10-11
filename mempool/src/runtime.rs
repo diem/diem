@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::CoreMempool, mempool_service::MempoolService, proto::mempool_grpc,
+    core_mempool::CoreMempool, mempool_service::MempoolService, proto::mempool,
     shared_mempool::start_shared_mempool,
 };
 use config::config::NodeConfig;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
-use grpcio_sys;
 use network::validator_network::{MempoolNetworkEvents, MempoolNetworkSender};
 use std::{
     cmp::max,
@@ -39,13 +38,13 @@ impl MempoolRuntime {
         let env = Arc::new(
             EnvBuilder::new()
                 .name_prefix("grpc-mempool-")
-                .cq_count(unsafe { max(grpcio_sys::gpr_cpu_num_cores() as usize / 2, 2) })
+                .cq_count(max(num_cpus::get() / 2, 2))
                 .build(),
         );
         let handle = MempoolService {
             core_mempool: Arc::clone(&mempool),
         };
-        let service = mempool_grpc::create_mempool(handle);
+        let service = mempool::create_mempool(handle);
         let grpc_server = ::grpcio::ServerBuilder::new(env)
             .register_service(service)
             .bind(

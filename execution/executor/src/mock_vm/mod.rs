@@ -7,9 +7,7 @@ mod mock_vm_test;
 use config::config::VMConfig;
 use crypto::ed25519::compat;
 use lazy_static::lazy_static;
-use state_view::StateView;
-use std::collections::HashMap;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
     contract_event::ContractEvent,
@@ -21,6 +19,8 @@ use types::{
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
+use state_view::StateView;
+use std::collections::HashMap;
 use vm_runtime::VMExecutor;
 
 #[derive(Debug)]
@@ -170,13 +170,10 @@ fn read_seqnum_from_storage(state_view: &dyn StateView, seqnum_access_path: &Acc
 }
 
 fn read_u64_from_storage(state_view: &dyn StateView, access_path: &AccessPath) -> u64 {
-    match state_view
+    state_view
         .get(&access_path)
         .expect("Failed to query storage.")
-    {
-        Some(bytes) => decode_bytes(&bytes),
-        None => 0,
-    }
+        .map_or(0, |bytes| decode_bytes(&bytes))
 }
 
 fn decode_bytes(bytes: &[u8]) -> u64 {

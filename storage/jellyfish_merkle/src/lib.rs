@@ -64,18 +64,21 @@ pub mod iterator;
 mod jellyfish_merkle_test;
 #[cfg(test)]
 mod mock_tree_store;
-mod nibble;
+mod nibble_path;
 pub mod node_type;
+pub mod restore;
 mod tree_cache;
 
 use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
-use nibble::{skip_common_prefix, NibbleIterator, NibblePath};
+use libra_types::{
+    account_state_blob::AccountStateBlob, proof::SparseMerkleProof, transaction::Version,
+};
+use nibble_path::{skip_common_prefix, NibbleIterator, NibblePath};
 use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey};
 use proptest_derive::Arbitrary;
 use std::collections::{BTreeMap, BTreeSet};
 use tree_cache::TreeCache;
-use types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof, transaction::Version};
 
 /// The hardcoded maximum height of a [`JellyfishMerkleTree`] in nibbles.
 const ROOT_NIBBLE_HEIGHT: usize = HashValue::LENGTH * 2;
@@ -91,6 +94,15 @@ pub trait TreeReader {
 
     /// Gets node given a node key. Returns `None` if the node does not exist.
     fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>>;
+
+    /// Gets the rightmost leaf. Note that this assumes we are in the process of restoring the tree
+    /// and all nodes are at the same version.
+    fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>>;
+}
+
+pub trait TreeWriter {
+    /// Writes a node batch into storage.
+    fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()>;
 }
 
 /// Node batch that will be written into db atomically with other batches.
@@ -483,11 +495,9 @@ where
             let next_node = self.reader.get_node(&next_node_key)?;
             match next_node {
                 Node::Internal(internal_node) => {
-                    let queried_child_index = match nibble_iter.next() {
-                        Some(nibble) => nibble,
-                        // Shouldn't happen
-                        None => bail!("ran out of nibbles"),
-                    };
+                    let queried_child_index = nibble_iter
+                        .next()
+                        .ok_or_else(|| format_err!("ran out of nibbles"))?;
                     let (child_node_key, mut siblings_in_internal) =
                         internal_node.get_child_with_siblings(&next_node_key, queried_child_index);
                     siblings.append(&mut siblings_in_internal);
@@ -527,5 +537,12 @@ where
     #[cfg(test)]
     pub fn get(&self, key: HashValue, version: Version) -> Result<Option<AccountStateBlob>> {
         Ok(self.get_with_proof(key, version)?.0)
+    }
+
+    #[cfg(test)]
+    pub fn get_root_hash(&self, version: Version) -> Result<HashValue> {
+        let root_node_key = NodeKey::new_empty_path(version);
+        let root_node = self.reader.get_node(&root_node_key)?;
+        Ok(root_node.hash())
     }
 }

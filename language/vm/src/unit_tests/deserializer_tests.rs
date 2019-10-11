@@ -5,7 +5,7 @@ use crate::{
     file_format::{CompiledModule, CompiledScript},
     file_format_common::*,
 };
-use types::vm_error::StatusCode;
+use libra_types::vm_error::StatusCode;
 
 #[test]
 fn malformed_simple() {

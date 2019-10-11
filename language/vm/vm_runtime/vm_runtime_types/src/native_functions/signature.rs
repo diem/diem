@@ -9,8 +9,8 @@ use crypto::{
     traits::*,
     HashValue,
 };
+use libra_types::byte_array::ByteArray;
 use std::{collections::VecDeque, convert::TryFrom};
-use types::byte_array::ByteArray;
 
 // TODO: Talk to Crypto to determine these costs
 const ED25519_COST: u64 = 35;
@@ -68,10 +68,7 @@ pub fn native_ed25519_signature_verification(mut arguments: VecDeque<Value>) -> 
         }
     };
 
-    let bool_value = match sig.verify_arbitrary_msg(msg.as_bytes(), &pk) {
-        Ok(()) => true,
-        Err(_) => false,
-    };
+    let bool_value = sig.verify_arbitrary_msg(msg.as_bytes(), &pk).is_ok();
     let return_values = vec![Value::bool(bool_value)];
     NativeReturnStatus::Success {
         cost,

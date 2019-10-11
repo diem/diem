@@ -1,0 +1,19 @@
+[package]
+name = "invalid-mutations"
+version = "0.1.0"
+edition = "2018"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra invalid mutations"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+proptest = "0.9"
+proptest_helpers = { path = "../../../common/proptest_helpers" }
+vm = { path = "../../vm" }
+libra-types = { path = "../../../types" }
+
+[dev-dependencies]
+vm = { path = "../../vm", features = ["testing"] }

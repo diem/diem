@@ -45,12 +45,7 @@ use crypto::hash::{CryptoHash, HashValue};
 use failure::prelude::*;
 use itertools::{izip, zip_eq};
 use lazy_static::lazy_static;
-use logger::prelude::*;
-use metrics::OpMetrics;
-use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
-use std::{convert::TryInto, iter::Iterator, path::Path, sync::Arc, time::Instant};
-use storage_proto::StartupInfo;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::AccountResource,
@@ -58,12 +53,20 @@ use types::{
     contract_event::EventWithProof,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     get_with_proof::{RequestItem, ResponseItem},
-    proof::{AccountStateProof, EventProof, SignedTransactionProof, SparseMerkleProof},
+    proof::{
+        AccountStateProof, AccumulatorConsistencyProof, EventProof, SignedTransactionProof,
+        SparseMerkleProof,
+    },
     transaction::{
         SignedTransactionWithProof, TransactionInfo, TransactionListWithProof, TransactionToCommit,
         Version,
     },
 };
+use logger::prelude::*;
+use metrics::OpMetrics;
+use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
+use std::{convert::TryInto, iter::Iterator, path::Path, sync::Arc, time::Instant};
+use storage_proto::StartupInfo;
 
 lazy_static! {
     static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("storage");
@@ -112,7 +115,7 @@ impl LibraDB {
             ),
             (LEDGER_COUNTERS_CF_NAME, ColumnFamilyOptions::default()),
             (STALE_NODE_INDEX_CF_NAME, ColumnFamilyOptions::default()),
-            (SIGNED_TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
+            (TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
             (
                 TRANSACTION_ACCUMULATOR_CF_NAME,
                 ColumnFamilyOptions::default(),
@@ -418,7 +421,7 @@ impl LibraDB {
         zip_eq(first_version..=last_version, txns_to_commit)
             .map(|(ver, txn_to_commit)| {
                 self.transaction_store
-                    .put_transaction(ver, txn_to_commit.signed_txn(), &mut cs)
+                    .put_transaction(ver, txn_to_commit.transaction(), &mut cs)
             })
             .collect::<Result<()>>()?;
 
@@ -426,9 +429,15 @@ impl LibraDB {
 
         let txn_infos = izip!(txns_to_commit, state_root_hashes, event_root_hashes)
             .map(|(t, s, e)| {
-                TransactionInfo::new(t.signed_txn().hash(), s, e, t.gas_used(), t.major_status())
+                Ok(TransactionInfo::new(
+                    t.as_signed_user_txn()?.hash(),
+                    s,
+                    e,
+                    t.gas_used(),
+                    t.major_status(),
+                ))
             })
-            .collect::<Vec<_>>();
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(txn_infos.len(), txns_to_commit.len());
 
         let new_root_hash =
@@ -443,12 +452,13 @@ impl LibraDB {
     /// ledger info.
     pub fn update_to_latest_ledger(
         &self,
-        _client_known_version: u64,
+        client_known_version: Version,
         request_items: Vec<RequestItem>,
     ) -> Result<(
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
         Vec<ValidatorChangeEventWithProof>,
+        AccumulatorConsistencyProof,
     )> {
         error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
 
@@ -528,10 +538,15 @@ impl LibraDB {
             })
             .collect::<Result<Vec<_>>>()?;
 
+        let ledger_consistency_proof = self
+            .ledger_store
+            .get_consistency_proof(client_known_version, ledger_version)?;
+
         Ok((
             response_items,
             ledger_info_with_sigs,
             vec![], /* TODO: validator_change_events */
+            ledger_consistency_proof,
         ))
     }
 

@@ -1,12 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{
-        common::{Payload, Round},
-        consensus_types::{block::Block, quorum_cert::QuorumCert},
-    },
-    counters,
+use crate::counters;
+
+use consensus_types::{
+    block::Block,
+    common::{Payload, Round},
+    quorum_cert::QuorumCert,
 };
 
 use crypto::HashValue;
@@ -38,10 +38,6 @@ pub struct VoteInfo {
     parent_block_id: HashValue,
     /// The round of the parent block of the proposal
     parent_block_round: Round,
-    /// The id of the grandparent block of the proposal
-    grandparent_block_id: HashValue,
-    /// The round of the grandparent block of the proposal
-    grandparent_block_round: Round,
 }
 
 impl VoteInfo {
@@ -63,14 +59,6 @@ impl VoteInfo {
 
     pub fn parent_block_round(&self) -> Round {
         self.parent_block_round
-    }
-
-    pub fn grandparent_block_id(&self) -> HashValue {
-        self.grandparent_block_id
-    }
-
-    pub fn grandparent_block_round(&self) -> Round {
-        self.grandparent_block_round
     }
 }
 
@@ -218,13 +206,6 @@ impl SafetyRules {
         None
     }
 
-    /// Return the new state if the voting round was increased, otherwise ignore.  Increasing the
-    /// last vote round is always safe, but can affect liveness and must be increasing
-    /// to protect safety.
-    pub fn increase_last_vote_round(&mut self, round: Round) -> Option<ConsensusState> {
-        self.state.set_last_vote_round(round)
-    }
-
     /// Clones the up-to-date state of consensus (for monitoring / debugging purposes)
     pub fn consensus_state(&self) -> ConsensusState {
         self.state.clone()
@@ -267,8 +248,6 @@ impl SafetyRules {
                 potential_commit_id,
                 parent_block_id: proposed_block.quorum_cert().certified_block_id(),
                 parent_block_round: proposed_block.quorum_cert().certified_block_round(),
-                grandparent_block_id: proposed_block.quorum_cert().parent_block_id(),
-                grandparent_block_round: proposed_block.quorum_cert().parent_block_round(),
             })
         } else {
             Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {

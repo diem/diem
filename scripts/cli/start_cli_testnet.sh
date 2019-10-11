@@ -12,17 +12,28 @@ source "$HOME/.cargo/env"
 SCRIPT_PATH="$(dirname $0)"
 
 RUN_PARAMS="--host ac.testnet.libra.org --port 8000 -s $SCRIPT_PATH/consensus_peers.config.toml"
+RELEASE=""
 
-case $1 in
-    -h | --help)
-        print_help;exit 0;;
-    -r | --release)
-        echo "Building and running client in release mode."
-        cargo run -p client --release -- $RUN_PARAMS
-        ;;
-    '')
-        echo "Building and running client in debug mode."
-        cargo run -p client -- $RUN_PARAMS
-        ;;
-    *) echo "Invalid option"; print_help; exit 0;
-esac
+while [[ ! -z "$1" ]]; do
+	case "$1" in
+		-h | --help)
+			print_help;exit 0;;
+		-r | --release)
+			RELEASE="--release"
+			;;
+		--)
+			shift
+			break
+			;;
+		*) echo "Invalid option"; print_help; exit 0;
+	esac
+	shift
+done
+
+if [ -z "$RELEASE" ]; then
+	echo "Building and running client in debug mode."
+else
+	echo "Building and running client in release mode."
+fi
+
+cargo run -p client $RELEASE -- $RUN_PARAMS "$@"

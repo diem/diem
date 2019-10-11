@@ -3,7 +3,7 @@
 
 use crate::value::{Struct, Value};
 use canonical_serialization::SimpleDeserializer;
-use types::{
+use libra_types::{
     account_address::AccountAddress, account_config::AccountResource, byte_array::ByteArray,
 };
 
@@ -23,6 +23,7 @@ fn account_type() {
     let mut coin_fields: Vec<Value> = Vec::new();
     coin_fields.push(Value::u64(balance));
     account_fields.push(Value::struct_(Struct::new(coin_fields)));
+    account_fields.push(Value::bool(false));
     account_fields.push(Value::bool(false));
     account_fields.push(Value::struct_(Struct::new(vec![
         Value::u64(received_events_count),

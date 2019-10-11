@@ -154,10 +154,7 @@ impl SecurityLog {
     }
 
     pub(crate) fn to_string(&self) -> String {
-        match serde_json::to_string(&self) {
-            Ok(s) => s,
-            Err(e) => e.to_string(),
-        }
+        serde_json::to_string(&self).unwrap_or_else(|e| e.to_string())
     }
 
     /// Prints the `SecurityEvent` struct.
@@ -195,5 +192,4 @@ mod tests {
             r#"{"event":"TestError","error":"Error","data":["SampleData { i: 255, s: [144, 205, 128] }","\"second_payload\""],"backtrace":null}"#,
         );
     }
-
 }

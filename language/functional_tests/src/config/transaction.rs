@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{config::global::Config as GlobalConfig, errors::*, evaluator::Stage};
+use libra_types::transaction::{parse_as_transaction_argument, TransactionArgument};
 use std::{collections::BTreeSet, str::FromStr};
-use types::transaction::{parse_as_transaction_argument, TransactionArgument};
 
 /// A partially parsed transaction argument.
 #[derive(Debug)]
@@ -127,7 +127,9 @@ impl Config {
             match entry {
                 Entry::Sender(name) => match sender {
                     None => {
-                        if config.accounts.contains_key(name) {
+                        if config.accounts.contains_key(name)
+                            || config.genesis_accounts.contains_key(name)
+                        {
                             sender = Some(name.to_string())
                         } else {
                             return Err(ErrorKind::Other(format!(

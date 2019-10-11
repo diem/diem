@@ -5,12 +5,11 @@
 
 use crate::{
     account::{Account, AccountData},
-    data_store::{FakeDataStore, GENESIS_WRITE_SET},
+    data_store::{FakeDataStore, GENESIS_WRITE_SET, TESTNET_GENESIS},
 };
 use canonical_serialization::SimpleDeserializer;
 use config::config::{NodeConfig, NodeConfigHelpers, VMPublishingOption};
-use state_view::StateView;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_config::AccountResource,
     language_storage::ModuleId,
@@ -18,6 +17,7 @@ use types::{
     vm_error::VMStatus,
     write_set::WriteSet,
 };
+use state_view::StateView;
 use vm::CompiledModule;
 use vm_runtime::{MoveVM, VMExecutor, VMVerifier};
 
@@ -28,6 +28,26 @@ use vm_runtime::{MoveVM, VMExecutor, VMVerifier};
 pub struct FakeExecutor {
     config: NodeConfig,
     data_store: FakeDataStore,
+}
+
+pub fn test_all_genesis_impl<T, F>(test_fn: F) -> Result<(), T>
+where
+    F: Fn(FakeExecutor) -> Result<(), T>,
+{
+    let mut genesis: Vec<&WriteSet> = TESTNET_GENESIS.iter().collect();
+    genesis.push(&GENESIS_WRITE_SET);
+    genesis
+        .iter()
+        .map(|ws| test_fn(FakeExecutor::from_genesis(ws, None)))
+        .collect()
+}
+
+pub fn test_all_genesis(test_fn: fn(FakeExecutor) -> ()) {
+    let result: Result<(), ()> = test_all_genesis_impl(|executor| {
+        test_fn(executor);
+        Ok(())
+    });
+    result.unwrap()
 }
 
 impl FakeExecutor {

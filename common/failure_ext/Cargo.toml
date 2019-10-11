@@ -2,6 +2,9 @@
 name = "failure_ext"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra failure ext"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"

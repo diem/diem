@@ -4,15 +4,18 @@
 // Timeout Transport
 
 use crate::transport::Transport;
-use futures::{compat::Compat01As03, future::Future, stream::Stream};
+use futures::{future::Future, stream::Stream};
 use parity_multiaddr::Multiaddr;
-use pin_utils::{unsafe_pinned, unsafe_unpinned};
+use pin_project::pin_project;
 use std::{
     pin::Pin,
     task::{Context, Poll},
-    time::{Duration, Instant},
+    time::Duration,
 };
-use tokio::{executor::Executor, timer::Delay};
+use tokio::{
+    executor::Executor,
+    timer::{delay_for, Delay},
+};
 
 /// A [`TimeoutTransport`] is a transport which wraps another transport with a timeout on all
 /// inbound and outbound connection setup.
@@ -58,9 +61,11 @@ where
 }
 
 /// Listener stream returned by [listen_on](Transport::listen_on) on a TimeoutTransport.
+#[pin_project]
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct TimeoutStream<St> {
+    #[pin]
     inner: St,
     timeout: Duration,
 }
@@ -69,12 +74,6 @@ impl<St> TimeoutStream<St>
 where
     St: Stream,
 {
-    // This use of `unsafe_pinned` is safe because:
-    //   1. This struct does not implement [`Drop`]
-    //   2. This struct does not implement [`Unpin`]
-    //   3. This struct is not `#[repr(packed)]`
-    unsafe_pinned!(inner: St);
-
     fn new(stream: St, timeout: Duration) -> Self {
         Self {
             inner: stream,
@@ -92,7 +91,7 @@ where
     type Item = Result<(TimeoutFuture<Fut>, Multiaddr), TimeoutTransportError<E>>;
 
     fn poll_next(mut self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
-        match self.as_mut().inner().poll_next(context) {
+        match self.as_mut().project().inner.poll_next(context) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(None) => Poll::Ready(None),
             Poll::Ready(Some(Err(e))) => {
@@ -107,33 +106,23 @@ where
 }
 
 /// Future which wraps an inner Future with a timeout.
+#[pin_project]
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
 pub struct TimeoutFuture<F> {
+    #[pin]
     future: F,
-    timeout: Compat01As03<Delay>,
+    timeout: Delay,
 }
 
 impl<F> TimeoutFuture<F>
 where
     F: Future,
 {
-    // This use of `unsafe_pinned` is safe because:
-    //   1. This struct does not implement [`Drop`]
-    //   2. This struct does not implement [`Unpin`]
-    //   3. This struct is not `#[repr(packed)]`
-    unsafe_pinned!(future: F);
-
-    // This use of `unsafe_unpinned` is safe because:
-    //   1. `timeout` implements `Unpin`
-    //   2. We only use the generated `timeout()` getter to construct a Pin with Pin::new.
-    unsafe_unpinned!(timeout: Compat01As03<Delay>);
-
     fn new(future: F, timeout: Duration) -> Self {
-        let deadline = Instant::now() + timeout;
         Self {
             future,
-            timeout: Compat01As03::new(Delay::new(deadline)),
+            timeout: delay_for(timeout),
         }
     }
 }
@@ -151,7 +140,7 @@ where
         assert!(tokio::executor::DefaultExecutor::current().status().is_ok());
 
         // Try polling the inner future first
-        match self.as_mut().future().poll(&mut context) {
+        match self.as_mut().project().future.poll(&mut context) {
             Poll::Pending => {}
             Poll::Ready(Err(e)) => {
                 return Poll::Ready(Err(TimeoutTransportError::TransportError(e)))
@@ -160,10 +149,9 @@ where
         }
 
         // Now check to see if we've overshot the timeout
-        match Pin::new(self.as_mut().timeout()).poll(&mut context) {
+        match Pin::new(self.as_mut().project().timeout).poll(&mut context) {
             Poll::Pending => Poll::Pending,
-            Poll::Ready(Err(err)) => Poll::Ready(Err(TimeoutTransportError::TimerError(err))),
-            Poll::Ready(Ok(())) => Poll::Ready(Err(TimeoutTransportError::Timeout)),
+            Poll::Ready(()) => Poll::Ready(Err(TimeoutTransportError::Timeout)),
         }
     }
 }

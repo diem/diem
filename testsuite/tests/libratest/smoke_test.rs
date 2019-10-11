@@ -4,63 +4,149 @@
 use cli::{
     client_proxy::ClientProxy, AccountAddress, CryptoHash, TransactionArgument, TransactionPayload,
 };
-use config::config::RoleType;
-use crypto::{ed25519::*, SigningKey};
+use config::config::{NodeConfig, RoleType};
+use crypto::{ed25519::*, test_utils::KeyPair, SigningKey};
 use libra_swarm::{swarm::LibraSwarm, utils};
+use logger::prelude::*;
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
+use std::fs;
 use std::str::FromStr;
+use tools::tempdir::TempPath;
 
-fn setup_env(
-    num_nodes: usize,
-    client_port_index: usize,
-    template_path: Option<String>,
-    role: RoleType,
-) -> (LibraSwarm, ClientProxy) {
-    ::logger::init_for_e2e_testing();
+struct TestEnvironment {
+    validator_swarm: LibraSwarm,
+    full_node_swarm: Option<LibraSwarm>,
+    faucet_key: (
+        KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+        String,
+        Option<TempPath>,
+    ),
+    mnemonic_file: TempPath,
+}
 
-    let (faucet_account_keypair, faucet_key_file_path, _temp_dir) =
-        generate_keypair::load_faucet_key_or_create_default(None);
+impl TestEnvironment {
+    fn new(num_validators: usize) -> Self {
+        ::logger::init_for_e2e_testing();
+        let faucet_key = generate_keypair::load_faucet_key_or_create_default(None);
+        let validator_swarm = LibraSwarm::configure_swarm(
+            num_validators,
+            RoleType::Validator,
+            faucet_key.0.clone(),
+            None,
+            None,
+            None,
+        )
+        .unwrap();
 
-    let swarm = LibraSwarm::launch_swarm(
-        num_nodes, /* num nodes */
-        false,     /* disable_logging */
-        faucet_account_keypair,
-        None, /* config_dir */
-        template_path,
-    );
-    let port = swarm.get_ac_port(client_port_index, role);
-    let tmp_mnemonic_file = tools::tempdir::TempPath::new();
-    tmp_mnemonic_file
-        .create_as_file()
-        .expect("could not create temporary mnemonic_file_path");
-    let client_proxy = ClientProxy::new(
-        "localhost",
-        port.to_string().as_str(),
-        &swarm.get_trusted_peers_config_path(),
-        &faucet_key_file_path,
-        false,
-        /* faucet server */ None,
-        Some(
-            tmp_mnemonic_file
-                .path()
-                .to_path_buf()
-                .canonicalize()
-                .expect("Unable to get canonical path of mnemonic_file_path")
-                .to_str()
-                .unwrap()
-                .to_string(),
-        ),
-    )
-    .unwrap();
-    (swarm, client_proxy)
+        let mnemonic_file = tools::tempdir::TempPath::new();
+        mnemonic_file
+            .create_as_file()
+            .expect("could not create temporary mnemonic_file_path");
+        Self {
+            validator_swarm,
+            full_node_swarm: None,
+            faucet_key,
+            mnemonic_file,
+        }
+    }
+
+    fn setup_full_node_swarm(&mut self, num_full_nodes: usize) {
+        self.full_node_swarm = Some(
+            LibraSwarm::configure_swarm(
+                num_full_nodes,
+                RoleType::FullNode,
+                self.faucet_key.0.clone(),
+                None,
+                None,
+                Some(String::from(
+                    self.validator_swarm
+                        .dir
+                        .as_ref()
+                        .join("0")
+                        .to_str()
+                        .expect("Failed to convert std::fs::Path to String"),
+                )),
+            )
+            .unwrap(),
+        );
+    }
+
+    fn launch_swarm(&mut self, role: RoleType) {
+        let mut swarm = match role {
+            RoleType::Validator => &mut self.validator_swarm,
+            RoleType::FullNode => self.full_node_swarm.as_mut().unwrap(),
+        };
+        let num_attempts = 5;
+        for _ in 0..num_attempts {
+            match swarm.launch_attempt(false) {
+                Ok(_) => {
+                    return;
+                }
+                Err(err) => {
+                    error!("Error launching swarm: {}", err);
+                }
+            }
+        }
+        panic!("Max out {} attempts to launch test swarm", num_attempts);
+    }
+
+    fn get_ac_client(&self, port: u16) -> ClientProxy {
+        let config = NodeConfig::load(&self.validator_swarm.config.configs[0]).unwrap();
+        let validator_set_file = self
+            .validator_swarm
+            .dir
+            .as_ref()
+            .join("0")
+            .join(&config.consensus.consensus_peers_file);
+        let mnemonic_file_path = self
+            .mnemonic_file
+            .path()
+            .to_path_buf()
+            .canonicalize()
+            .expect("Unable to get canonical path of mnemonic_file_path")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        ClientProxy::new(
+            "localhost",
+            port,
+            validator_set_file.to_str().unwrap(),
+            &self.faucet_key.1,
+            false,
+            /* faucet server */ None,
+            Some(mnemonic_file_path),
+        )
+        .unwrap()
+    }
+
+    fn get_validator_ac_client(&self, node_index: usize) -> ClientProxy {
+        let port = self.validator_swarm.get_ac_port(node_index);
+        self.get_ac_client(port)
+    }
+
+    fn get_full_node_ac_client(&self, node_index: usize) -> ClientProxy {
+        match &self.full_node_swarm {
+            Some(swarm) => {
+                let port = swarm.get_ac_port(node_index);
+                self.get_ac_client(port)
+            }
+            None => {
+                panic!("Full Node swarm is not initialized");
+            }
+        }
+    }
 }
 
 fn setup_swarm_and_client_proxy(
     num_nodes: usize,
     client_port_index: usize,
-) -> (LibraSwarm, ClientProxy) {
-    setup_env(num_nodes, client_port_index, None, RoleType::Validator)
+) -> (TestEnvironment, ClientProxy) {
+    let mut env = TestEnvironment::new(num_nodes);
+    env.launch_swarm(RoleType::Validator);
+    let ac_client = env.get_validator_ac_client(client_port_index);
+    (env, ac_client)
 }
 
 fn test_smoke_script(mut client_proxy: ClientProxy) {
@@ -188,18 +274,16 @@ fn test_concurrent_transfers_single_node() {
 #[test]
 fn test_basic_fault_tolerance() {
     // A configuration with 4 validators should tolerate single node failure.
-    let (mut swarm, mut client_proxy) = setup_swarm_and_client_proxy(4, 1);
-    let validators = swarm.get_validators_ids();
+    let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(4, 1);
     // kill the first validator
-    swarm.kill_node(validators.get(0).unwrap());
-
+    env.validator_swarm.kill_node(0);
     // run the script for the smoke test by submitting requests to the second validator
     test_smoke_script(client_proxy);
 }
 
 #[test]
 fn test_basic_restartability() {
-    let (mut swarm, mut client_proxy) = setup_swarm_and_client_proxy(4, 0);
+    let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(4, 0);
     client_proxy.create_next_account(false).unwrap();
     client_proxy.create_next_account(false).unwrap();
     client_proxy.mint_coins(&["mb", "0", "100"], true).unwrap();
@@ -214,10 +298,68 @@ fn test_basic_restartability() {
         Decimal::from_f64(10.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
-    let peer_to_restart = swarm.get_validators_ids()[0].clone();
+    let peer_to_restart = 0;
     // restart node
-    swarm.kill_node(&peer_to_restart);
-    assert!(swarm.add_node(peer_to_restart, false).is_ok());
+    env.validator_swarm.kill_node(peer_to_restart);
+    assert!(env.validator_swarm.add_node(peer_to_restart, false).is_ok());
+    assert_eq!(
+        Decimal::from_f64(90.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+    client_proxy
+        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(80.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(20.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+}
+
+#[test]
+fn test_startup_sync_state() {
+    let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(4, 0);
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy.mint_coins(&["mb", "0", "100"], true).unwrap();
+    client_proxy
+        .transfer_coins(&["tb", "0", "1", "10"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(90.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
+    );
+    let peer_to_stop = 0;
+    env.validator_swarm.kill_node(peer_to_stop);
+    let node_config = NodeConfig::load(
+        env.validator_swarm
+            .config
+            .configs
+            .get(peer_to_stop)
+            .unwrap(),
+    )
+    .unwrap();
+    // TODO Remove hardcoded path to state db
+    let state_db_path = node_config.get_storage_dir().join("libradb");
+    // Verify that state_db_path exists and
+    // we are not deleting a non-existent directory
+    assert!(state_db_path.as_path().exists());
+    // Delete the state db to simulate state db lagging
+    // behind consensus db and forcing a state sync
+    // during a node startup
+    fs::remove_dir_all(state_db_path).unwrap();
+    assert!(env.validator_swarm.add_node(peer_to_stop, false).is_ok());
     assert_eq!(
         Decimal::from_f64(90.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
@@ -247,7 +389,7 @@ fn test_basic_state_synchronization() {
     // - Restart the node
     // - Wait for all the nodes to catch up
     // - Verify that the restarted node has synced up with the submitted transactions.
-    let (mut swarm, mut client_proxy) = setup_swarm_and_client_proxy(5, 1);
+    let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(5, 1);
     client_proxy.create_next_account(false).unwrap();
     client_proxy.create_next_account(false).unwrap();
     client_proxy.mint_coins(&["mb", "0", "100"], true).unwrap();
@@ -262,9 +404,8 @@ fn test_basic_state_synchronization() {
         Decimal::from_f64(10.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
     );
-    let node_to_restart = swarm.get_validators_ids().get(0).unwrap().clone();
-
-    swarm.kill_node(&node_to_restart);
+    let node_to_restart = 0;
+    env.validator_swarm.kill_node(node_to_restart);
     // All these are executed while one node is down
     assert_eq!(
         Decimal::from_f64(90.0),
@@ -281,36 +422,13 @@ fn test_basic_state_synchronization() {
     }
 
     // Reconnect and synchronize the state
-    assert!(swarm.add_node(node_to_restart.clone(), false).is_ok());
+    assert!(env.validator_swarm.add_node(node_to_restart, false).is_ok());
 
     // Wait for all the nodes to catch up
-    assert!(swarm.wait_for_all_nodes_to_catchup());
+    assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
 
     // Connect to the newly recovered node and verify its state
-    let tmp_mnemonic_file = tools::tempdir::TempPath::new();
-    tmp_mnemonic_file
-        .create_as_file()
-        .expect("could not create temporary mnemonic_file_path");
-    let ac_port = swarm.get_validator(&node_to_restart).unwrap().ac_port();
-    let mut client_proxy2 = ClientProxy::new(
-        "localhost",
-        ac_port.to_string().as_str(),
-        &swarm.get_trusted_peers_config_path(),
-        "",
-        false,
-        /* faucet server */ None,
-        Some(
-            tmp_mnemonic_file
-                .path()
-                .to_path_buf()
-                .canonicalize()
-                .expect("Unable to get canonical path of mnemonic_file_path")
-                .to_str()
-                .unwrap()
-                .to_string(),
-        ),
-    )
-    .unwrap();
+    let mut client_proxy2 = env.get_validator_ac_client(node_to_restart);
     client_proxy2.set_accounts(client_proxy.copy_all_accounts());
     assert_eq!(
         Decimal::from_f64(85.0),
@@ -411,4 +529,36 @@ fn test_external_transaction_signer() {
         },
         _ => panic!("Signed transaction payload expected to be of struct Script"),
     }
+}
+
+#[test]
+fn test_full_node_basic_flow() {
+    // launch environment of 4 validator nodes and 2 full nodes
+    let mut env = TestEnvironment::new(4);
+    env.setup_full_node_swarm(2);
+    env.launch_swarm(RoleType::Validator);
+    env.launch_swarm(RoleType::FullNode);
+
+    // execute smoke script
+    test_smoke_script(env.get_validator_ac_client(0));
+
+    // read state from full node client
+    let mut validator_ac_client = env.get_validator_ac_client(1);
+    let mut full_node_client = env.get_full_node_ac_client(1);
+    for idx in 0..2 {
+        validator_ac_client.create_next_account(false).unwrap();
+        full_node_client.create_next_account(false).unwrap();
+        assert_eq!(
+            validator_ac_client
+                .get_balance(&["b", &idx.to_string()])
+                .unwrap(),
+            full_node_client
+                .get_balance(&["b", &idx.to_string()])
+                .unwrap(),
+        );
+    }
+
+    // writes through full node AC are disabled for now
+    let mint_result = full_node_client.mint_coins(&["mintb", "0", "1"], true);
+    assert!(mint_result.is_err());
 }

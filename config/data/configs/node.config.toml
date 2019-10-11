@@ -9,9 +9,6 @@ role = "validator"
 consensus_keypair_file = "" # For direct validation of this file
 consensus_peers_file = ""  # For direct validation of this file
 
-[execution]
-genesis_file_location = "<USE_TEMP_DIR>"
-
 [vm_config]
   [vm_config.publishing_options]
   type = "Locked"

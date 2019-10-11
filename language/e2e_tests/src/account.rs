@@ -5,9 +5,7 @@
 
 use crypto::ed25519::*;
 use lazy_static::lazy_static;
-use rand::{Rng, SeedableRng};
-use std::time::Duration;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
@@ -17,6 +15,8 @@ use types::{
         RawTransaction, Script, SignedTransaction, TransactionArgument, TransactionPayload,
     },
 };
+use rand::{Rng, SeedableRng};
+use std::time::Duration;
 use vm_genesis::GENESIS_KEYPAIR;
 use vm_runtime::identifier::create_access_path;
 use vm_runtime_types::value::{Struct, Value};
@@ -71,16 +71,24 @@ impl Account {
         }
     }
 
+    /// Creates a new account in memory representing an account created in the genesis transaction.
+    ///
+    /// The address will be [`address`], which should be an address for a genesis account and
+    /// the account will use [`GENESIS_KEYPAIR`][struct@GENESIS_KEYPAIR] as its keypair.
+    pub fn new_genesis_account(address: AccountAddress) -> Self {
+        Account {
+            addr: address,
+            pubkey: GENESIS_KEYPAIR.1.clone(),
+            privkey: GENESIS_KEYPAIR.0.clone(),
+        }
+    }
+
     /// Creates a new account representing the association in memory.
     ///
     /// The address will be [`association_address`][account_config::association_address], and
     /// the account will use [`GENESIS_KEYPAIR`][struct@GENESIS_KEYPAIR] as its keypair.
     pub fn new_association() -> Self {
-        Account {
-            addr: account_config::association_address(),
-            pubkey: GENESIS_KEYPAIR.1.clone(),
-            privkey: GENESIS_KEYPAIR.0.clone(),
-        }
+        Self::new_genesis_account(account_config::association_address())
     }
 
     /// Returns the address of the account. This is a hash of the public key the account was created
@@ -267,6 +275,7 @@ pub struct AccountData {
     account: Account,
     balance: u64,
     sequence_number: u64,
+    delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
     sent_events: EventHandle,
     received_events: EventHandle,
@@ -286,7 +295,7 @@ impl AccountData {
 
     /// Creates a new `AccountData` with the provided account.
     pub fn with_account(account: Account, balance: u64, sequence_number: u64) -> Self {
-        Self::with_account_and_event_counts(account, balance, sequence_number, 0, 0, false)
+        Self::with_account_and_event_counts(account, balance, sequence_number, 0, 0, false, false)
     }
 
     /// Creates a new `AccountData` with custom parameters.
@@ -296,12 +305,14 @@ impl AccountData {
         sequence_number: u64,
         sent_events_count: u64,
         received_events_count: u64,
+        delegated_key_rotation_capability: bool,
         delegated_withdrawal_capability: bool,
     ) -> Self {
         Self {
             account,
             balance,
             sequence_number,
+            delegated_key_rotation_capability,
             delegated_withdrawal_capability,
             sent_events: new_event_handle(sent_events_count),
             received_events: new_event_handle(received_events_count),
@@ -322,6 +333,7 @@ impl AccountData {
                 AccountAddress::from_public_key(&self.account.pubkey).to_vec(),
             )),
             coin,
+            Value::bool(self.delegated_key_rotation_capability),
             Value::bool(self.delegated_withdrawal_capability),
             Value::struct_(Struct::new(vec![
                 Value::u64(self.received_events.count()),

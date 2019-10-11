@@ -6,7 +6,6 @@ use bech32::Bech32;
 use crypto::{hash::CryptoHash, HashValue};
 use hex::FromHex;
 use proptest::prelude::*;
-use proto_conv::{FromProto, IntoProto};
 use std::convert::{AsRef, TryFrom};
 
 #[test]
@@ -95,7 +94,7 @@ fn test_bech32() {
 #[test]
 fn test_address_from_proto_invalid_length() {
     let bytes = vec![1; 123];
-    assert!(AccountAddress::from_proto(bytes).is_err());
+    assert!(AccountAddress::try_from(&bytes[..]).is_err());
 }
 
 proptest! {
@@ -115,9 +114,9 @@ proptest! {
 
     #[test]
     fn test_address_protobuf_roundtrip(addr in any::<AccountAddress>()) {
-        let bytes = addr.into_proto();
+        let bytes = addr.to_vec();
         prop_assert_eq!(bytes.clone(), addr.as_ref());
-        let addr2 = AccountAddress::from_proto(bytes).unwrap();
+        let addr2 = AccountAddress::try_from(&bytes[..]).unwrap();
         prop_assert_eq!(addr, addr2);
     }
 }

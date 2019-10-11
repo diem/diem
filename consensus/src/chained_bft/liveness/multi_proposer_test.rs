@@ -1,15 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
-    consensus_types::{block::Block, quorum_cert::QuorumCert},
-    liveness::{
-        multi_proposer_election::{self, MultiProposer},
-        proposer_election::ProposerElection,
-    },
+use crate::chained_bft::liveness::{
+    multi_proposer_election::{self, MultiProposer},
+    proposer_election::ProposerElection,
 };
+use consensus_types::{block::Block, quorum_cert::QuorumCert};
 use crypto::ed25519::*;
-use types::validator_signer::ValidatorSigner;
+use libra_types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_multi_proposer() {

@@ -1,3 +1,6 @@
 .git/
 **/.terraform/
+terraform/
+docker/validator/
+docker/client/
 target/

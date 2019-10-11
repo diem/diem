@@ -1,0 +1,23 @@
+[package]
+name = "bytecode-to-boogie"
+version = "0.1.0"
+authors = ["Libra <oncall+libra@xmail.facebook.com>"]
+description = "Libra bytecode to boogie"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+bytecode-verifier = { path = "../../bytecode-verifier" }
+vm = { path = "../../vm" }
+libra-types = { path = "../../../types" }
+ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
+stackless_bytecode_generator = { path = "../generator"}
+stdlib = { path = "../../stdlib" }
+num = "0.2.0"
+
+[dev-dependencies]
+proptest = "0.9"
+libra-types = { path = "../../../types", features = ["testing"]}

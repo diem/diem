@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::IndexKind;
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     transaction::TransactionStatus,
     vm_error::{StatusCode, VMStatus},

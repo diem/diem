@@ -1,0 +1,27 @@
+[package]
+name = "admission-control-proto"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra admission control proto"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+bytes = "0.4.12"
+futures = "0.1.28"
+grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
+prost = "0.5.0"
+
+failure = { package = "failure_ext", path = "../../common/failure_ext" }
+logger = { path = "../../common/logger" }
+libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto" }
+libra-types = { path = "../../types" }
+
+[dev-dependencies]
+libra-types = { path = "../../types", features = ["testing"]}
+
+[build-dependencies]
+grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }

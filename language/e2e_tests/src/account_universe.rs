@@ -26,12 +26,12 @@ use crate::{
 };
 use crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use lazy_static::lazy_static;
-use proptest::{prelude::*, strategy::Union};
-use std::fmt;
-use types::{
+use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
+use proptest::{prelude::*, strategy::Union};
+use std::{fmt, sync::Arc};
 
 lazy_static! {
     static ref UNIVERSE_SIZE: usize = {
@@ -82,16 +82,16 @@ pub trait AUTransactionGen: fmt::Debug {
     /// necessary. Returns a signed transaction that can be run on the VM and the expected output.
     fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus);
 
-    /// Creates a boxed version of this transaction, suitable for dynamic dispatch.
-    fn boxed(self) -> Box<dyn AUTransactionGen>
+    /// Creates an arced version of this transaction, suitable for dynamic dispatch.
+    fn arced(self) -> Arc<dyn AUTransactionGen>
     where
         Self: 'static + Sized,
     {
-        Box::new(self)
+        Arc::new(self)
     }
 }
 
-impl AUTransactionGen for Box<dyn AUTransactionGen> {
+impl AUTransactionGen for Arc<dyn AUTransactionGen> {
     fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus) {
         (**self).apply(universe)
     }

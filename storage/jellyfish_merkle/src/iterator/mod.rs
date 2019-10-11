@@ -10,13 +10,14 @@
 mod iterator_test;
 
 use crate::{
-    nibble::{Nibble, NibblePath},
+    nibble_path::NibblePath,
     node_type::{InternalNode, Node, NodeKey},
     TreeReader,
 };
 use crypto::HashValue;
 use failure::prelude::*;
-use types::{account_state_blob::AccountStateBlob, transaction::Version};
+use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
+use nibble::Nibble;
 
 /// `NodeVisitInfo` keeps track of the status of an internal node during the iteration process. It
 /// indicates which ones of its children have been visited.

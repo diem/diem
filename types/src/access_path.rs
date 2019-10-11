@@ -56,13 +56,11 @@ use hex;
 use lazy_static::lazy_static;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use radix_trie::TrieKey;
 use serde::{Deserialize, Serialize};
 use std::{
-    convert::TryFrom,
-    fmt::{self, Formatter},
-    ops::Index,
+    convert::{TryFrom, TryInto},
+    fmt,
     slice::Iter,
 };
 
@@ -402,21 +400,9 @@ impl From<DataPath> for Vec<u8> {
         Self::from(&path)
     }
 }
-#[derive(
-    Clone,
-    Eq,
-    PartialEq,
-    Default,
-    Hash,
-    Serialize,
-    Deserialize,
-    Ord,
-    PartialOrd,
-    FromProto,
-    IntoProto,
-)]
+
+#[derive(Clone, Eq, PartialEq, Default, Hash, Serialize, Deserialize, Ord, PartialOrd)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[ProtoType(crate::proto::access_path::AccessPath)]
 pub struct AccessPath {
     pub address: AccountAddress,
     pub path: Vec<u8>,
@@ -598,5 +584,22 @@ impl CanonicalDeserialize for AccessPath {
         let path = deserializer.decode_bytes()?;
 
         Ok(Self { address, path })
+    }
+}
+
+impl TryFrom<crate::proto::types::AccessPath> for AccessPath {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::AccessPath) -> Result<Self> {
+        Ok(AccessPath::new(proto.address.try_into()?, proto.path))
+    }
+}
+
+impl From<AccessPath> for crate::proto::types::AccessPath {
+    fn from(path: AccessPath) -> Self {
+        Self {
+            address: path.address.to_vec(),
+            path: path.path,
+        }
     }
 }

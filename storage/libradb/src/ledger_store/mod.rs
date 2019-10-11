@@ -20,16 +20,13 @@ use crypto::{
 };
 use failure::prelude::*;
 use itertools::Itertools;
-use schemadb::{ReadOptions, DB};
-use std::{ops::Deref, sync::Arc};
-use types::{
+use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
-    proof::{
-        position::{FrozenSubTreeIterator, Position},
-        AccumulatorProof,
-    },
+    proof::{position::Position, AccumulatorConsistencyProof, AccumulatorProof},
     transaction::{TransactionInfo, Version},
 };
+use schemadb::{ReadOptions, DB};
+use std::{ops::Deref, sync::Arc};
 
 pub(crate) struct LedgerStore {
     db: Arc<DB>,
@@ -132,6 +129,16 @@ impl LedgerStore {
         Accumulator::get_proof(self, ledger_version + 1 /* num_leaves */, version)
     }
 
+    /// Gets proof that shows the ledger at `ledger_version` is consistent with the ledger at
+    /// `client_known_version`.
+    pub fn get_consistency_proof(
+        &self,
+        client_known_version: Version,
+        ledger_version: Version,
+    ) -> Result<AccumulatorConsistencyProof> {
+        Accumulator::get_consistency_proof(self, ledger_version + 1, client_known_version + 1)
+    }
+
     /// Write `txn_infos` to `batch`. Assigned `first_version` to the the version number of the
     /// first transaction, and so on.
     pub fn put_transaction_infos(
@@ -174,19 +181,7 @@ impl LedgerStore {
 
     /// From left to right, get frozen subtree root hashes of the transaction accumulator.
     pub fn get_ledger_frozen_subtree_hashes(&self, version: Version) -> Result<Vec<HashValue>> {
-        FrozenSubTreeIterator::new(version + 1)
-            .map(|pos| {
-                self.db
-                    .get::<TransactionAccumulatorSchema>(&pos)?
-                    .ok_or_else(|| {
-                        LibraDbError::NotFound(format!(
-                            "Txn Accumulator node at pos {}",
-                            pos.to_inorder_index()
-                        ))
-                        .into()
-                    })
-            })
-            .collect::<Result<Vec<_>>>()
+        Accumulator::get_frozen_subtree_hashes(self, version + 1)
     }
 }
 

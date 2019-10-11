@@ -57,7 +57,11 @@
 //! ```
 
 use crate::{hkdf::Hkdf, traits::*};
+use canonical_serialization::{
+    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
+};
 use crypto_derive::{Deref, SilentDebug, SilentDisplay};
+use failure::prelude::*;
 use rand::{rngs::EntropyRng, RngCore};
 use serde::{de, export, ser};
 use sha2::Sha256;
@@ -290,6 +294,27 @@ impl ValidKey for X25519StaticPublicKey {
 //////////////////////
 
 //////////////////////////////
+// Canonical Serialization  //
+//////////////////////////////
+
+impl CanonicalSerialize for X25519StaticPublicKey {
+    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+        serializer.encode_bytes(&self.to_bytes())?;
+        Ok(())
+    }
+}
+
+impl CanonicalDeserialize for X25519StaticPublicKey {
+    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let public_key_bytes = deserializer.decode_bytes()?;
+        Ok(X25519StaticPublicKey::try_from(&public_key_bytes[..])?)
+    }
+}
+
+//////////////////////////////
 // Compact Serialization    //
 //////////////////////////////
 
@@ -312,7 +337,6 @@ impl ser::Serialize for X25519StaticPublicKey {
 }
 
 struct X25519StaticPrivateKeyVisitor;
-
 struct X25519StaticPublicKeyVisitor;
 
 impl<'de> de::Visitor<'de> for X25519StaticPrivateKeyVisitor {
@@ -326,10 +350,7 @@ impl<'de> de::Visitor<'de> for X25519StaticPrivateKeyVisitor {
     where
         E: de::Error,
     {
-        match X25519StaticPrivateKey::try_from(value) {
-            Ok(key) => Ok(key),
-            Err(error) => Err(E::custom(error)),
-        }
+        X25519StaticPrivateKey::try_from(value).map_err(E::custom)
     }
 }
 
@@ -344,10 +365,7 @@ impl<'de> de::Visitor<'de> for X25519StaticPublicKeyVisitor {
     where
         E: de::Error,
     {
-        match X25519StaticPublicKey::try_from(value) {
-            Ok(key) => Ok(key),
-            Err(error) => Err(E::custom(error)),
-        }
+        X25519StaticPublicKey::try_from(value).map_err(E::custom)
     }
 }
 

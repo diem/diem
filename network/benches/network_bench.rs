@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![feature(async_await)]
 // Allow KiB, MiB consts
 #![allow(non_upper_case_globals, non_snake_case)]
 // Allow fns to take &usize, since criterion only passes parameters by ref
@@ -9,7 +8,6 @@
 // Allow writing 1 * KiB or 1 * MiB
 #![allow(clippy::identity_op)]
 
-use bytes::Bytes;
 use config::config::RoleType;
 use core::str::FromStr;
 use criterion::{
@@ -19,14 +17,12 @@ use criterion::{
 use crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use futures::{
     channel::mpsc,
-    compat::Future01CompatExt,
     executor::block_on,
-    future::{FutureExt, TryFutureExt},
     sink::SinkExt,
     stream::{FuturesUnordered, StreamExt},
 };
 use network::{
-    proto::{Block, ConsensusMsg, RequestBlock, RespondBlock},
+    proto::{Block, ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock},
     protocols::rpc::error::RpcError,
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
@@ -35,11 +31,12 @@ use network::{
     NetworkPublicKeys, ProtocolId,
 };
 use parity_multiaddr::Multiaddr;
-use protobuf::Message;
+use prost_ext::MessageExt;
+
+use libra_types::PeerId;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashMap, time::Duration};
 use tokio::runtime::Runtime;
-use types::PeerId;
 
 const KiB: usize = 1 << 10;
 const MiB: usize = 1 << 20;
@@ -48,7 +45,7 @@ const TOLERANCE: u32 = 5;
 const HOUR_IN_MS: u64 = 60 * 60 * 1000;
 
 fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let (dialer_peer_id, dialer_addr) = (
         PeerId::random(),
         Multiaddr::from_str("/ip4/127.0.0.1/tcp/0").unwrap(),
@@ -113,9 +110,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
         network_provider.add_consensus(vec![ProtocolId::from_static(
             CONSENSUS_DIRECT_SEND_PROTOCOL,
         )]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     // Set up the dialer network
     let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
@@ -145,9 +140,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
         network_provider.add_consensus(vec![ProtocolId::from_static(
             CONSENSUS_DIRECT_SEND_PROTOCOL,
         )]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
@@ -173,7 +166,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
             }
         }
     };
-    runtime.spawn(f_listener.boxed().unit_error().compat());
+    runtime.spawn(f_listener);
 
     // The dialer side keeps sending messages. In each iteration of the benchmark, it sends
     // NUM_MSGS messages and wait until the listener side sends signal back.
@@ -183,19 +176,21 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
         }
         block_on(rx.next()).unwrap();
     });
-    block_on(runtime.shutdown_now().compat()).unwrap();
+    runtime.shutdown_now();
 }
 
 fn compose_proposal(msg_len: usize) -> ConsensusMsg {
-    let mut msg = ConsensusMsg::new();
-    let proposal = msg.mut_proposal();
-    let block = proposal.mut_proposed_block();
-    block.set_payload(vec![0u8; msg_len].into());
+    let mut msg = ConsensusMsg::default();
+    let mut proposal = Proposal::default();
+    let mut block = Block::default();
+    block.payload = vec![0u8; msg_len];
+    proposal.proposed_block = Some(block);
+    msg.message = Some(ConsensusMsg_oneof::Proposal(proposal));
     msg
 }
 
 fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let (dialer_peer_id, dialer_addr) = (
         PeerId::random(),
         Multiaddr::from_str("/ip4/127.0.0.1/tcp/0").unwrap(),
@@ -256,9 +251,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     .build();
     let (_listener_sender, mut listener_events) =
         network_provider.add_consensus(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     // Set up the dialer network
     let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
@@ -284,9 +277,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     .build();
     let (dialer_sender, mut dialer_events) =
         network_provider.add_consensus(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
-    runtime
-        .executor()
-        .spawn(network_provider.start().unit_error().compat());
+    runtime.executor().spawn(network_provider.start());
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
@@ -303,17 +294,13 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
         while let Some(Ok(event)) = listener_events.next().await {
             match event {
                 Event::RpcRequest((_, _, res_tx)) => res_tx
-                    .send(Ok(Bytes::from(
-                        res.clone()
-                            .write_to_bytes()
-                            .expect("fail to serialize proto"),
-                    )))
+                    .send(Ok(res.clone().to_bytes().expect("fail to serialize proto")))
                     .expect("fail to send rpc response to network"),
                 event => panic!("Unexpected event: {:?}", event),
             }
         }
     };
-    runtime.spawn(f_listener.boxed().unit_error().compat());
+    runtime.spawn(f_listener);
 
     // The dialer side keeps sending RPC requests. In each iteration of the benchmark, it sends
     // NUM_MSGS requests and blocks on getting the responses.
@@ -330,7 +317,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
             let _ = res.unwrap();
         }
     });
-    block_on(runtime.shutdown_now().compat()).unwrap();
+    runtime.shutdown_now();
 }
 
 async fn request_block(
@@ -344,17 +331,18 @@ async fn request_block(
 }
 
 fn compose_request_block() -> RequestBlock {
-    let mut req = RequestBlock::new();
-    req.set_block_id(vec![0u8; 32].into());
+    let mut req = RequestBlock::default();
+    req.block_id = vec![0u8; 32];
     req
 }
 
 fn compose_respond_block(msg_len: usize) -> ConsensusMsg {
-    let mut msg = ConsensusMsg::new();
-    let res = msg.mut_respond_block();
-    let mut block = Block::new();
-    block.set_payload(vec![0u8; msg_len].into());
-    res.mut_blocks().push(block);
+    let mut msg = ConsensusMsg::default();
+    let mut res = RespondBlock::default();
+    let mut block = Block::default();
+    block.payload = vec![0u8; msg_len];
+    res.blocks.push(block);
+    msg.message = Some(ConsensusMsg_oneof::RespondBlock(res));
     msg
 }
 

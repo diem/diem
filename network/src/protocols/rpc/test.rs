@@ -116,10 +116,7 @@ fn upgrades() {
         f_listener_network,
         f_listener_upgrade,
     );
-    Runtime::new()
-        .unwrap()
-        .block_on(f.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f);
 }
 
 // An outbound rpc request should fail if the listener drops the connection after
@@ -161,8 +158,11 @@ fn listener_close_before_response() {
     // Listener reads the request but then drops the connection
     let f_listener = async move {
         // rpc messages are length-prefixed
-        let mut substream =
-            Framed::new(listener_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut substream = Framed::new(
+            IoCompat::new(listener_substream),
+            LengthDelimitedCodec::new(),
+        );
+
         // read the rpc request data
         let data = match substream.next().await {
             Some(data) => data.unwrap().freeze(),
@@ -175,10 +175,7 @@ fn listener_close_before_response() {
     };
 
     let f = join3(f_dialer_peer_mgr, f_dialer_upgrade, f_listener);
-    Runtime::new()
-        .unwrap()
-        .block_on(f.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f);
 }
 
 // An outbound rpc request should fail if the listener drops the connection after
@@ -221,10 +218,7 @@ fn listener_close_before_dialer_send() {
     };
 
     let f = join(f_dialer_peer_mgr, f_dialer_upgrade);
-    Runtime::new()
-        .unwrap()
-        .block_on(f.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f);
 }
 
 // An inbound rpc request should fail if the dialer drops the connection after
@@ -261,10 +255,7 @@ fn dialer_close_before_listener_recv() {
         };
     };
 
-    Runtime::new()
-        .unwrap()
-        .block_on(f_listener_upgrade.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f_listener_upgrade);
 }
 
 // An inbound rpc request should fail if the dialer drops the connection before
@@ -316,7 +307,7 @@ fn dialer_close_before_listener_send() {
     let f_dialer_upgrade = async move {
         // Rpc messages are length-prefixed.
         let mut substream =
-            Framed::new(dialer_substream.compat(), UviBytes::default()).sink_compat();
+            Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         // Send the rpc request data.
         substream
             .buffered_send(Bytes::from_static(req_data))
@@ -327,10 +318,7 @@ fn dialer_close_before_listener_send() {
     };
 
     let f = join3(f_listener_network, f_listener_upgrade, f_dialer_upgrade);
-    Runtime::new()
-        .unwrap()
-        .block_on(f.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f);
 }
 
 // Sending two requests should fail
@@ -367,7 +355,7 @@ fn dialer_sends_two_requests_err() {
     let f_dialer_upgrade = async move {
         // Rpc messages are length-prefixed.
         let mut substream =
-            Framed::new(dialer_substream.compat(), UviBytes::default()).sink_compat();
+            Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         // Send the rpc request data.
         substream
             .buffered_send(Bytes::from_static(req_data))
@@ -388,10 +376,7 @@ fn dialer_sends_two_requests_err() {
 
     let f = join(f_listener_upgrade, f_dialer_upgrade);
 
-    Runtime::new()
-        .unwrap()
-        .block_on(f.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f);
 }
 
 // Test that outbound rpc calls will timeout.
@@ -431,10 +416,7 @@ fn outbound_rpc_timeout() {
     };
 
     let f = join(f_dialer_peer_mgr, f_dialer_upgrade);
-    Runtime::new()
-        .unwrap()
-        .block_on(f.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f);
 }
 
 // Test that inbound rpc calls will timeout.
@@ -463,10 +445,7 @@ fn inbound_rpc_timeout() {
 
     // The listener future should complete (with a timeout) despite the dialer
     // hanging.
-    Runtime::new()
-        .unwrap()
-        .block_on(f_listener_upgrade.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f_listener_upgrade);
 }
 
 // Test that outbound rpcs can be canceled before sending
@@ -499,10 +478,7 @@ fn outbound_cancellation_before_send() {
 
     // the rpc request should finish (from the cancellation) even though there is
     // no remote peer
-    Runtime::new()
-        .unwrap()
-        .block_on(f_rpc.boxed().unit_error().compat())
-        .unwrap();
+    Runtime::new().unwrap().block_on(f_rpc);
 }
 
 // Test that outbound rpcs can be canceled while receiving response data.
@@ -510,7 +486,7 @@ fn outbound_cancellation_before_send() {
 fn outbound_cancellation_recv() {
     ::logger::try_init_for_testing();
 
-    let mut rt = Runtime::new().unwrap();
+    let rt = Runtime::new().unwrap();
     let executor = rt.executor();
 
     let listener_peer_id = PeerId::random();
@@ -545,7 +521,7 @@ fn outbound_cancellation_recv() {
         let rpc_req = RpcRequest::SendRpc(listener_peer_id, outbound_req);
         let (f_rpc, f_rpc_done) =
             handle_outbound_rpc(dialer_peer_mgr_reqs_tx, rpc_req).remote_handle();
-        executor.spawn(f_rpc.unit_error().boxed().compat());
+        executor.spawn(f_rpc);
 
         futures::select! {
             res = res_rx => panic!("dialer: expected cancellation signal, rpc call finished unexpectedly: {:?}", res),
@@ -565,8 +541,10 @@ fn outbound_cancellation_recv() {
     // Listener reads the request but then fails to send because the dialer canceled
     let f_listener = async move {
         // rpc messages are length-prefixed
-        let mut substream =
-            Framed::new(listener_substream.compat(), UviBytes::<Bytes>::default()).sink_compat();
+        let mut substream = Framed::new(
+            IoCompat::new(listener_substream),
+            LengthDelimitedCodec::new(),
+        );
         // read the rpc request data
         let data = match substream.next().await {
             Some(data) => data.unwrap().freeze(),
@@ -593,7 +571,7 @@ fn outbound_cancellation_recv() {
     };
 
     let f = join3(f_dialer_peer_mgr, f_dialer_upgrade, f_listener);
-    rt.block_on(f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(f);
 }
 
 // Test the full rpc protocol actor.
@@ -607,7 +585,7 @@ fn rpc_protocol() {
     let req_data = b"hello";
     let res_data = b"goodbye";
 
-    let mut rt = Runtime::new().unwrap();
+    let rt = Runtime::new().unwrap();
 
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
 
@@ -711,5 +689,5 @@ fn rpc_protocol() {
         f_dialer_network,
         dialer_rpc.start(),
     );
-    rt.block_on(f.boxed().unit_error().compat()).unwrap();
+    rt.block_on(f);
 }

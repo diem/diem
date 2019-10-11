@@ -3,7 +3,8 @@
 
 #![allow(bare_trait_objects)]
 
-use types::proto::{account_state_blob, get_with_proof, ledger_info, proof, transaction};
+use ::libra_types::proto::types;
 
-pub mod storage;
-pub mod storage_grpc;
+pub mod storage {
+    include!(concat!(env!("OUT_DIR"), "/storage.rs"));
+}

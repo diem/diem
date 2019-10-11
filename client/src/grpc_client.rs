@@ -3,11 +3,9 @@
 
 use crate::AccountData;
 use admission_control_proto::{
-    proto::{
-        admission_control::{
-            SubmitTransactionRequest, SubmitTransactionResponse as ProtoSubmitTransactionResponse,
-        },
-        admission_control_grpc::AdmissionControlClient,
+    proto::admission_control::{
+        AdmissionControlClient, SubmitTransactionRequest,
+        SubmitTransactionResponse as ProtoSubmitTransactionResponse,
     },
     AdmissionControlStatus, SubmitTransactionResponse,
 };
@@ -15,10 +13,7 @@ use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::Future;
 use grpcio::{CallOption, ChannelBuilder, EnvBuilder};
-use logger::prelude::*;
-use proto_conv::{FromProto, IntoProto};
-use std::sync::Arc;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::get_account_resource_or_default,
@@ -31,6 +26,9 @@ use types::{
     transaction::{SignedTransaction, Version},
     vm_error::StatusCode,
 };
+use logger::prelude::*;
+use std::convert::TryFrom;
+use std::sync::Arc;
 
 const MAX_GRPC_RETRY_COUNT: u64 = 1;
 
@@ -42,7 +40,7 @@ pub struct GRPCClient {
 
 impl GRPCClient {
     /// Construct a new Client instance.
-    pub fn new(host: &str, port: &str, validator_verifier: Arc<ValidatorVerifier>) -> Result<Self> {
+    pub fn new(host: &str, port: u16, validator_verifier: Arc<ValidatorVerifier>) -> Result<Self> {
         let conn_addr = format!("{}:{}", host, port);
 
         // Create a GRPC client
@@ -70,7 +68,7 @@ impl GRPCClient {
             resp = self.submit_transaction_opt(&req);
         }
 
-        let completed_resp = SubmitTransactionResponse::from_proto(resp?)?;
+        let completed_resp = SubmitTransactionResponse::try_from(resp?)?;
 
         if let Some(ac_status) = completed_resp.ac_status {
             if ac_status == AdmissionControlStatus::Accepted {
@@ -116,7 +114,7 @@ impl GRPCClient {
             .client
             .submit_transaction_async_opt(&req, Self::get_default_grpc_call_option())?
             .then(|proto_resp| {
-                let ret = SubmitTransactionResponse::from_proto(proto_resp?)?;
+                let ret = SubmitTransactionResponse::try_from(proto_resp?)?;
                 Ok(ret)
             });
         Ok(resp)
@@ -139,7 +137,7 @@ impl GRPCClient {
     > {
         let req = UpdateToLatestLedgerRequest::new(0, requested_items.clone());
         debug!("get_with_proof with request: {:?}", req);
-        let proto_req = req.clone().into_proto();
+        let proto_req = req.clone().into();
         let validator_verifier = Arc::clone(&self.validator_verifier);
         let ret = self
             .client
@@ -148,7 +146,7 @@ impl GRPCClient {
                 // TODO: Cache/persist client_known_version to work with validator set change when
                 // the feature is available.
 
-                let resp = UpdateToLatestLedgerResponse::from_proto(get_with_proof_resp?)?;
+                let resp = UpdateToLatestLedgerResponse::try_from(get_with_proof_resp?)?;
                 resp.verify(validator_verifier, &req)?;
                 Ok(resp)
             });
@@ -163,7 +161,7 @@ impl GRPCClient {
                     if let grpcio::Error::RpcFailure(grpc_rpc_failure) = grpc_error {
                         // Only retry when the connection is down to make sure we won't
                         // send one txn twice.
-                        return grpc_rpc_failure.status == grpcio::RpcStatusCode::Unavailable;
+                        return grpc_rpc_failure.status == grpcio::RpcStatusCode::UNAVAILABLE;
                     }
                 }
             }

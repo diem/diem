@@ -1,24 +1,25 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{
-        block_storage::BlockStore,
-        common::Round,
-        consensus_types::{block::Block, quorum_cert::QuorumCert, vote_data::VoteData},
-    },
-    state_replication::ExecutedState,
+use crate::chained_bft::block_storage::BlockStore;
+use consensus_types::{
+    block::{Block, ExecutedBlock},
+    common::Round,
+    quorum_cert::QuorumCert,
+    sync_info::SyncInfo,
+    vote_data::VoteData,
 };
 use crypto::{hash::CryptoHash, HashValue};
-use futures::{channel::mpsc, executor::block_on};
-use logger::{set_simple_logger, set_simple_logger_prefix};
-use std::{collections::HashMap, sync::Arc};
-use termion::color::*;
-use tokio::runtime;
-use types::{
+use executor::ExecutedState;
+use futures::executor::block_on;
+use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner},
     ledger_info::LedgerInfo,
 };
+use logger::{set_simple_logger, set_simple_logger_prefix};
+use std::{collections::BTreeMap, sync::Arc};
+use termion::color::*;
+use tokio::runtime;
 
 mod mock_state_computer;
 mod mock_storage;
@@ -38,13 +39,12 @@ pub fn build_empty_tree() -> Arc<BlockStore<Vec<usize>>> {
 pub fn build_empty_tree_with_custom_signing(
     my_signer: ValidatorSigner,
 ) -> Arc<BlockStore<Vec<usize>>> {
-    let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
     let (storage, initial_data) = EmptyStorage::start_for_testing();
     Arc::new(block_on(BlockStore::new(
         storage,
         initial_data,
         my_signer,
-        Arc::new(MockStateComputer::new(commit_cb_sender)),
+        Arc::new(EmptyStateComputer),
         true,
         10, // max pruned blocks in mem
     )))
@@ -68,9 +68,9 @@ impl TreeInserter {
     /// `insert_block_with_qc`.
     pub fn insert_block(
         &mut self,
-        parent: &Block<Vec<usize>>,
+        parent: &ExecutedBlock<Vec<usize>>,
         round: Round,
-    ) -> Arc<Block<Vec<usize>>> {
+    ) -> Arc<ExecutedBlock<Vec<usize>>> {
         // Node must carry a QC to its parent
         let parent_qc = placeholder_certificate_for_block(
             vec![self.block_store.signer()],
@@ -78,8 +78,6 @@ impl TreeInserter {
             parent.round(),
             parent.quorum_cert().certified_block_id(),
             parent.quorum_cert().certified_block_round(),
-            parent.quorum_cert().parent_block_id(),
-            parent.quorum_cert().parent_block_round(),
         );
 
         self.insert_block_with_qc(parent_qc, parent, round)
@@ -88,12 +86,12 @@ impl TreeInserter {
     pub fn insert_block_with_qc(
         &mut self,
         parent_qc: QuorumCert,
-        parent: &Block<Vec<usize>>,
+        parent: &ExecutedBlock<Vec<usize>>,
         round: Round,
-    ) -> Arc<Block<Vec<usize>>> {
+    ) -> Arc<ExecutedBlock<Vec<usize>>> {
         self.payload_val += 1;
         block_on(self.block_store.insert_block_with_qc(Block::make_block(
-            parent,
+            parent.block(),
             vec![self.payload_val],
             round,
             parent.timestamp_usecs() + 1,
@@ -108,7 +106,7 @@ impl TreeInserter {
         block: Block<Vec<usize>>,
         block_signer: &ValidatorSigner,
         qc_signers: Vec<&ValidatorSigner>,
-    ) -> Arc<Block<Vec<usize>>> {
+    ) -> Arc<ExecutedBlock<Vec<usize>>> {
         self.payload_val += 1;
         let new_round = if block.round() > 0 {
             block.round() - 1
@@ -125,16 +123,13 @@ impl TreeInserter {
                 new_round,
                 block.quorum_cert().parent_block_id(),
                 block.quorum_cert().parent_block_round(),
-                block.quorum_cert().grandparent_block_id(),
-                block.quorum_cert().grandparent_block_round(),
             )
         };
 
         let new_block = Block::new_internal(
-            block.get_payload().clone(),
-            block.parent_id(),
+            block.payload().unwrap().clone(),
+            block.epoch(),
             block.round(),
-            block.height(),
             block.timestamp_usecs(),
             parent_qc,
             block_signer,
@@ -161,8 +156,6 @@ pub fn placeholder_certificate_for_block(
     certified_block_round: u64,
     certified_parent_block_id: HashValue,
     certified_parent_block_round: u64,
-    certified_grandparent_block_id: HashValue,
-    certified_grandparent_block_round: u64,
 ) -> QuorumCert {
     // Assuming executed state to be Genesis state.
     let certified_block_state = ExecutedState::state_for_genesis();
@@ -172,8 +165,6 @@ pub fn placeholder_certificate_for_block(
         certified_block_round,
         certified_parent_block_id,
         certified_parent_block_round,
-        certified_grandparent_block_id,
-        certified_grandparent_block_round,
     );
 
     // This ledger info doesn't carry any meaningful information: it is all zeros except for
@@ -181,7 +172,7 @@ pub fn placeholder_certificate_for_block(
     let mut ledger_info_placeholder = placeholder_ledger_info();
     ledger_info_placeholder.set_consensus_data_hash(consensus_data_hash);
 
-    let mut signatures = HashMap::new();
+    let mut signatures = BTreeMap::new();
     for signer in signers {
         let li_sig = signer
             .sign_message(ledger_info_placeholder.hash())
@@ -196,10 +187,16 @@ pub fn placeholder_certificate_for_block(
             certified_block_round,
             certified_parent_block_id,
             certified_parent_block_round,
-            certified_grandparent_block_id,
-            certified_grandparent_block_round,
         ),
         LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures),
+    )
+}
+
+pub fn placeholder_sync_info() -> SyncInfo {
+    SyncInfo::new(
+        QuorumCert::certificate_for_genesis(),
+        QuorumCert::certificate_for_genesis(),
+        None,
     )
 }
 

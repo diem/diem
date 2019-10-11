@@ -5,29 +5,25 @@ use crate::vm_validator::{TransactionValidation, VMValidator};
 use config::config::NodeConfig;
 use config_builder::util::get_test_config;
 use crypto::ed25519::*;
-use execution_proto::proto::execution_grpc;
-use execution_service::ExecutionService;
+use executor::Executor;
 use futures::future::Future;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
-use proto_conv::FromProto;
+use libra_types::{
+    account_address, account_config,
+    test_helpers::transaction_test_helpers,
+    transaction::{Module, Script, TransactionArgument, MAX_TRANSACTION_SIZE_IN_BYTES},
+    vm_error::StatusCode,
+};
 use rand::SeedableRng;
 use std::{sync::Arc, u64};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
-use types::{
-    account_address, account_config,
-    test_helpers::transaction_test_helpers,
-    transaction::{
-        Module, Script, SignedTransaction, TransactionArgument, MAX_TRANSACTION_SIZE_IN_BYTES,
-    },
-    vm_error::StatusCode,
-};
-use vm_genesis::encode_transfer_script;
+use transaction_builder::encode_transfer_script;
+use vm_runtime::MoveVM;
 
 struct TestValidator {
     _storage: ServerHandle,
-    _execution: grpcio::Server,
     vm_validator: VMValidator,
 }
 
@@ -49,23 +45,18 @@ impl TestValidator {
             None,
         ));
 
-        let handle = ExecutionService::new(
-            Arc::clone(&storage_read_client),
+        // Create executor to initialize genesis state. Otherwise gprc will report error when
+        // fetching data from storage.
+        let _executor = Executor::<MoveVM>::new(
+            Arc::clone(&storage_read_client) as Arc<dyn StorageRead>,
             storage_write_client,
             config,
         );
-        let service = execution_grpc::create_execution(handle);
-        let execution = ::grpcio::ServerBuilder::new(Arc::new(EnvBuilder::new().build()))
-            .register_service(service)
-            .bind(config.execution.address.clone(), config.execution.port)
-            .build()
-            .expect("Unable to create grpc server");
 
         let vm_validator = VMValidator::new(config, storage_read_client);
 
         TestValidator {
             _storage: storage,
-            _execution: execution,
             vm_validator,
         }
     }
@@ -110,7 +101,7 @@ fn test_validate_transaction() {
         Some(program),
     );
     let ret = vm_validator
-        .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
+        .validate_transaction(signed_txn)
         .wait()
         .unwrap();
     assert_eq!(ret, None);
@@ -160,7 +151,6 @@ fn test_validate_known_script_too_large_args() {
         0, /* max gas price */
         None,
     );
-    let txn = SignedTransaction::from_proto(txn).unwrap();
     let ret = vm_validator.validate_transaction(txn).wait().unwrap();
     assert_eq!(
         ret.unwrap().major_status,
@@ -184,10 +174,7 @@ fn test_validate_max_gas_units_above_max() {
         0,              /* max gas price */
         Some(u64::MAX), // Max gas units
     );
-    let ret = vm_validator
-        .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
-        .wait()
-        .unwrap();
+    let ret = vm_validator.validate_transaction(txn).wait().unwrap();
     assert_eq!(
         ret.unwrap().major_status,
         StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND
@@ -210,10 +197,7 @@ fn test_validate_max_gas_units_below_min() {
         0,       /* max gas price */
         Some(1), // Max gas units
     );
-    let ret = vm_validator
-        .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
-        .wait()
-        .unwrap();
+    let ret = vm_validator.validate_transaction(txn).wait().unwrap();
     assert_eq!(
         ret.unwrap().major_status,
         StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS
@@ -236,10 +220,7 @@ fn test_validate_max_gas_price_above_bounds() {
         u64::MAX, /* max gas price */
         None,
     );
-    let ret = vm_validator
-        .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
-        .wait()
-        .unwrap();
+    let ret = vm_validator.validate_transaction(txn).wait().unwrap();
     assert_eq!(
         ret.unwrap().major_status,
         StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND
@@ -266,10 +247,7 @@ fn test_validate_max_gas_price_below_bounds() {
         0, /* max gas price */
         None,
     );
-    let ret = vm_validator
-        .validate_transaction(SignedTransaction::from_proto(txn).unwrap())
-        .wait()
-        .unwrap();
+    let ret = vm_validator.validate_transaction(txn).wait().unwrap();
     assert_eq!(ret, None);
     //assert_eq!(
     //    ret.unwrap().major_status,
@@ -292,7 +270,7 @@ fn test_validate_unknown_script() {
         None,
     );
     let ret = vm_validator
-        .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
+        .validate_transaction(signed_txn)
         .wait()
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::UNKNOWN_SCRIPT);
@@ -315,7 +293,7 @@ fn test_validate_module_publishing() {
         Module::new(vec![]),
     );
     let ret = vm_validator
-        .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
+        .validate_transaction(signed_txn)
         .wait()
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::UNKNOWN_MODULE);
@@ -340,7 +318,7 @@ fn test_validate_invalid_auth_key() {
         Some(program),
     );
     let ret = vm_validator
-        .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
+        .validate_transaction(signed_txn)
         .wait()
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::INVALID_AUTH_KEY);
@@ -366,7 +344,7 @@ fn test_validate_balance_below_gas_fee() {
         Some(1_000_000),
     );
     let ret = vm_validator
-        .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
+        .validate_transaction(signed_txn)
         .wait()
         .unwrap();
     assert_eq!(
@@ -394,7 +372,7 @@ fn test_validate_account_doesnt_exist() {
         None,
     );
     let ret = vm_validator
-        .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
+        .validate_transaction(signed_txn)
         .wait()
         .unwrap();
     assert_eq!(
@@ -418,7 +396,7 @@ fn test_validate_sequence_number_too_new() {
         Some(program),
     );
     let ret = vm_validator
-        .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
+        .validate_transaction(signed_txn)
         .wait()
         .unwrap();
     assert_eq!(ret, None);
@@ -440,7 +418,7 @@ fn test_validate_invalid_arguments() {
         Some(program),
     );
     let ret = vm_validator
-        .validate_transaction(SignedTransaction::from_proto(signed_txn).unwrap())
+        .validate_transaction(signed_txn)
         .wait()
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::TYPE_MISMATCH);

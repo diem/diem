@@ -7,19 +7,22 @@ use crate::{
             AccountTransactions, ParkingLotIndex, PriorityIndex, PriorityQueueIter, TTLIndex,
             TimelineIndex,
         },
-        transaction::{MempoolAddTransactionStatus, MempoolTransaction, TimelineState},
+        transaction::{MempoolTransaction, TimelineState},
     },
-    proto::shared::mempool_status::MempoolAddTransactionStatusCode,
     OP_COUNTERS,
 };
 use config::config::MempoolConfig;
 use failure::prelude::*;
+use libra_mempool_shared_proto::{
+    proto::mempool_status::MempoolAddTransactionStatusCode, MempoolAddTransactionStatus,
+};
+use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
+use logger::prelude::*;
 use std::{
     collections::HashMap,
     ops::Bound,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use types::{account_address::AccountAddress, transaction::SignedTransaction};
 
 /// TransactionStore is in-memory storage for all transactions in mempool
 pub struct TransactionStore {
@@ -70,10 +73,12 @@ impl TransactionStore {
         address: &AccountAddress,
         sequence_number: u64,
     ) -> Option<SignedTransaction> {
-        if let Some(txns) = self.transactions.get(&address) {
-            if let Some(txn) = txns.get(&sequence_number) {
-                return Some(txn.txn.clone());
-            }
+        if let Some(txn) = self
+            .transactions
+            .get(&address)
+            .and_then(|txns| txns.get(&sequence_number))
+        {
+            return Some(txn.txn.clone());
         }
         None
     }
@@ -127,10 +132,16 @@ impl TransactionStore {
             self.system_ttl_index.insert(&txn);
             self.expiration_time_index.insert(&txn);
             txns.insert(sequence_number, txn);
-            OP_COUNTERS.set("txn.system_ttl_index", self.system_ttl_index.size());
+            self.track_indices();
         }
         self.process_ready_transactions(&address, current_sequence_number);
         MempoolAddTransactionStatus::new(MempoolAddTransactionStatusCode::Valid, "".to_string())
+    }
+
+    fn track_indices(&self) {
+        OP_COUNTERS.set("txn.system_ttl_index", self.system_ttl_index.size());
+        OP_COUNTERS.set("txn.parking_lot_index", self.parking_lot_index.size());
+        OP_COUNTERS.set("txn.priority_index", self.priority_index.size());
     }
 
     /// Check if mempool can handle new insertion requests
@@ -144,10 +155,12 @@ impl TransactionStore {
         if self.system_ttl_index.size() >= self.capacity {
             // try to free some space in Mempool from ParkingLot
             if let Some((address, sequence_number)) = self.parking_lot_index.pop() {
-                if let Some(txns) = self.transactions.get_mut(&address) {
-                    if let Some(txn) = txns.remove(&sequence_number) {
-                        self.index_remove(&txn);
-                    }
+                if let Some(txn) = self
+                    .transactions
+                    .get_mut(&address)
+                    .and_then(|txns| txns.remove(&sequence_number))
+                {
+                    self.index_remove(&txn);
                 }
             }
         }
@@ -198,27 +211,37 @@ impl TransactionStore {
                 }
                 sequence_number += 1;
             }
+
+            let mut parking_lot_txns = 0;
             for (_, txn) in txns.range_mut((Bound::Excluded(sequence_number), Bound::Unbounded)) {
                 match txn.timeline_state {
                     TimelineState::Ready(_) => {}
                     _ => {
                         self.parking_lot_index.insert(&txn);
+                        parking_lot_txns += 1;
                     }
                 }
             }
+            debug!("[Mempool] txns for account {:?}. Current sequence_number: {}, length: {}, parking lot: {}",
+                address, current_sequence_number, txns.len(), parking_lot_txns,
+            );
         }
     }
 
     /// handles transaction commit
-    /// it includes deletion of all transactions with sequence number <= `sequence_number`
+    /// it includes deletion of all transactions with sequence number <= `account_sequence_number`
     /// and potential promotion of sequential txns to PriorityIndex/TimelineIndex
-    pub(crate) fn commit_transaction(&mut self, account: &AccountAddress, sequence_number: u64) {
+    pub(crate) fn commit_transaction(
+        &mut self,
+        account: &AccountAddress,
+        account_sequence_number: u64,
+    ) {
         if let Some(txns) = self.transactions.get_mut(&account) {
             // remove all previous seq number transactions for this account
             // This can happen if transactions are sent to multiple nodes and one of
             // nodes has sent the transaction to consensus but this node still has the
             // transaction sitting in mempool
-            let mut active = txns.split_off(&(sequence_number + 1));
+            let mut active = txns.split_off(&account_sequence_number);
             let txns_for_removal = txns.clone();
             txns.clear();
             txns.append(&mut active);
@@ -227,7 +250,15 @@ impl TransactionStore {
                 self.index_remove(transaction);
             }
         }
-        self.process_ready_transactions(account, sequence_number + 1);
+        self.process_ready_transactions(account, account_sequence_number);
+    }
+
+    pub(crate) fn reject_transaction(&mut self, account: &AccountAddress, _sequence_number: u64) {
+        if let Some(txns) = self.transactions.remove(&account) {
+            for transaction in txns.values() {
+                self.index_remove(&transaction);
+            }
+        }
     }
 
     /// removes transaction from all indexes
@@ -237,17 +268,16 @@ impl TransactionStore {
         self.priority_index.remove(&txn);
         self.timeline_index.remove(&txn);
         self.parking_lot_index.remove(&txn);
-        OP_COUNTERS.set("txn.system_ttl_index", self.system_ttl_index.size());
+        self.track_indices();
     }
 
     /// returns gas amount required to process all transactions for given account
     pub(crate) fn get_required_balance(&mut self, address: &AccountAddress) -> u64 {
-        match self.transactions.get_mut(&address) {
-            Some(txns) => txns.iter().fold(0, |acc, (_, txn)| {
+        self.transactions.get_mut(&address).map_or(0, |txns| {
+            txns.iter().fold(0, |acc, (_, txn)| {
                 acc + txn.txn.gas_unit_price() * txn.gas_amount
-            }),
-            None => 0,
-        }
+            })
+        })
     }
 
     /// Read `count` transactions from timeline since `timeline_id`
@@ -260,12 +290,14 @@ impl TransactionStore {
         let mut batch = vec![];
         let mut last_timeline_id = timeline_id;
         for (address, sequence_number) in self.timeline_index.read_timeline(timeline_id, count) {
-            if let Some(txns) = self.transactions.get_mut(&address) {
-                if let Some(txn) = txns.get(&sequence_number) {
-                    batch.push(txn.txn.clone());
-                    if let TimelineState::Ready(timeline_id) = txn.timeline_state {
-                        last_timeline_id = timeline_id;
-                    }
+            if let Some(txn) = self
+                .transactions
+                .get_mut(&address)
+                .and_then(|txns| txns.get(&sequence_number))
+            {
+                batch.push(txn.txn.clone());
+                if let TimelineState::Ready(timeline_id) = txn.timeline_state {
+                    last_timeline_id = timeline_id;
                 }
             }
         }
@@ -310,7 +342,7 @@ impl TransactionStore {
                 }
             }
         }
-        OP_COUNTERS.set("txn.system_ttl_index", self.system_ttl_index.size());
+        self.track_indices();
     }
 
     pub(crate) fn iter_queue(&self) -> PriorityQueueIter {

@@ -5,15 +5,12 @@
 mod consensusdb_test;
 mod schema;
 
-use crate::chained_bft::{
-    common::Payload,
-    consensus_types::{block::Block, quorum_cert::QuorumCert},
-    consensusdb::schema::{
-        block::BlockSchema,
-        quorum_certificate::QCSchema,
-        single_entry::{SingleEntryKey, SingleEntrySchema},
-    },
+use crate::chained_bft::consensusdb::schema::{
+    block::{BlockSchema, SchemaBlock},
+    quorum_certificate::QCSchema,
+    single_entry::{SingleEntryKey, SingleEntrySchema},
 };
+use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert};
 use crypto::HashValue;
 use failure::prelude::*;
 use logger::prelude::*;
@@ -25,6 +22,7 @@ use std::{collections::HashMap, iter::Iterator, path::Path, time::Instant};
 
 type HighestTimeoutCertificates = Vec<u8>;
 type ConsensusStateData = Vec<u8>;
+type VoteMsgData = Vec<u8>;
 
 pub struct ConsensusDB {
     db: DB,
@@ -64,11 +62,13 @@ impl ConsensusDB {
         &self,
     ) -> Result<(
         Option<ConsensusStateData>,
+        Option<VoteMsgData>,
         Option<HighestTimeoutCertificates>,
         Vec<Block<T>>,
         Vec<QuorumCert>,
     )> {
         let consensus_state = self.get_state()?;
+        let last_vote_msg_data = self.get_last_vote_msg_data()?;
         let highest_timeout_certificates = self.get_highest_timeout_certificates()?;
         let consensus_blocks = self
             .get_blocks()?
@@ -82,6 +82,7 @@ impl ConsensusDB {
             .collect::<Vec<_>>();
         Ok((
             consensus_state,
+            last_vote_msg_data,
             highest_timeout_certificates,
             consensus_blocks,
             consensus_qcs,
@@ -100,9 +101,10 @@ impl ConsensusDB {
         self.commit(batch)
     }
 
-    pub fn save_state(&self, state: ConsensusStateData) -> Result<()> {
+    pub fn save_state(&self, state: ConsensusStateData, last_vote: VoteMsgData) -> Result<()> {
         let mut batch = SchemaBatch::new();
         batch.put::<SingleEntrySchema>(&SingleEntryKey::ConsensusState, &state)?;
+        batch.put::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg, &last_vote)?;
         self.commit(batch)
     }
 
@@ -118,7 +120,12 @@ impl ConsensusDB {
         let mut batch = SchemaBatch::new();
         block_data
             .iter()
-            .map(|block| batch.put::<BlockSchema<T>>(&block.id(), block))
+            .map(|block| {
+                batch.put::<BlockSchema<T>>(
+                    &block.id(),
+                    &SchemaBlock::<T>::from_block(block.clone()),
+                )
+            })
             .collect::<Result<()>>()?;
         qc_data
             .iter()
@@ -161,11 +168,21 @@ impl ConsensusDB {
             .get::<SingleEntrySchema>(&SingleEntryKey::ConsensusState)
     }
 
+    /// Get latest vote message data (if available)
+    fn get_last_vote_msg_data(&self) -> Result<Option<Vec<u8>>> {
+        self.db
+            .get::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg)
+    }
+
     /// Get all consensus blocks.
     fn get_blocks<T: Payload>(&self) -> Result<HashMap<HashValue, Block<T>>> {
         let mut iter = self.db.iter::<BlockSchema<T>>(ReadOptions::default())?;
         iter.seek_to_first();
-        iter.collect::<Result<HashMap<HashValue, Block<T>>>>()
+        iter.map(|value| match value {
+            Ok((k, v)) => Ok((k, v.borrow_into_block().clone())),
+            Err(err) => Err(err),
+        })
+        .collect::<Result<HashMap<HashValue, Block<T>>>>()
     }
 
     /// Get all consensus QCs.

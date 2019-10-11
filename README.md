@@ -5,7 +5,7 @@
 ---
 
 [![CircleCI](https://circleci.com/gh/libra/libra.svg?style=shield)](https://circleci.com/gh/libra/libra)
-[![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE.md)
+[![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE)
 
 Libra Core implements a decentralized, programmable database which provides a financial infrastructure that can empower billions of people.
 
@@ -56,6 +56,7 @@ Read our [Contributing guide](https://developers.libra.org/docs/community/contri
 ## Community
 
 * Join us on the [Libra Discourse](https://community.libra.org).
+* Ask a question on [Stack Overflow](https://stackoverflow.com/questions/tagged/libra).
 * Get the latest updates to our project by signing up for our [newsletter](https://developers.libra.org/newsletter_form).
 
 ## License

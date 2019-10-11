@@ -13,27 +13,26 @@ use failure::prelude::*;
 use futures::{compat::Future01CompatExt, executor::block_on, prelude::*};
 use futures_01::future::Future as Future01;
 use grpcio::{ChannelBuilder, Environment};
-use metrics::counters::SVC_COUNTERS;
-use proto_conv::{FromProto, IntoProto};
-use protobuf::Message;
-use rand::Rng;
-use std::{pin::Pin, sync::Arc};
-use storage_proto::{
-    proto::{storage::GetStartupInfoRequest, storage_grpc},
-    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
-    GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
-    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    SaveTransactionsRequest, StartupInfo,
-};
-use types::{
+use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
+    proof::AccumulatorConsistencyProof,
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
+};
+use rand::Rng;
+use std::convert::TryFrom;
+use std::{pin::Pin, sync::Arc};
+use storage_proto::{
+    proto::storage::{GetStartupInfoRequest, StorageClient},
+    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
+    GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
+    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
+    SaveTransactionsRequest, StartupInfo,
 };
 
 pub use crate::state_view::VerifiedStateView;
@@ -50,7 +49,7 @@ fn make_clients(
     port: u16,
     client_type: &str,
     max_receive_len: Option<i32>,
-) -> Vec<storage_grpc::StorageClient> {
+) -> Vec<StorageClient> {
     let num_clients = env.completion_queues().len();
     (0..num_clients)
         .map(|i| {
@@ -60,9 +59,9 @@ fn make_clients(
                 builder = builder.max_receive_message_len(m);
             }
             let channel = builder.connect(&format!("{}:{}", host, port));
-            storage_grpc::StorageClient::new(channel)
+            StorageClient::new(channel)
         })
-        .collect::<Vec<storage_grpc::StorageClient>>()
+        .collect::<Vec<StorageClient>>()
 }
 
 fn convert_grpc_response<T>(
@@ -73,16 +72,10 @@ fn convert_grpc_response<T>(
         .and_then(|x| x.map_err(convert_grpc_err))
 }
 
-fn log_and_convert<M: Message, P: IntoProto<ProtoType = M>>(message: P) -> M {
-    let proto_message = message.into_proto();
-    SVC_COUNTERS.message(&proto_message);
-    proto_message
-}
-
 /// This provides storage read interfaces backed by real storage service.
 #[derive(Clone)]
 pub struct StorageReadServiceClient {
-    clients: Vec<storage_grpc::StorageClient>,
+    clients: Vec<StorageClient>,
 }
 
 impl StorageReadServiceClient {
@@ -92,7 +85,7 @@ impl StorageReadServiceClient {
         StorageReadServiceClient { clients }
     }
 
-    fn client(&self) -> &storage_grpc::StorageClient {
+    fn client(&self) -> &StorageClient {
         pick(&self.clients)
     }
 }
@@ -106,6 +99,7 @@ impl StorageRead for StorageReadServiceClient {
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
         Vec<ValidatorChangeEventWithProof>,
+        AccumulatorConsistencyProof,
     )> {
         block_on(self.update_to_latest_ledger_async(client_known_version, requested_items))
     }
@@ -121,6 +115,7 @@ impl StorageRead for StorageReadServiceClient {
                         Vec<ResponseItem>,
                         LedgerInfoWithSignatures,
                         Vec<ValidatorChangeEventWithProof>,
+                        AccumulatorConsistencyProof,
                     )>,
                 > + Send,
         >,
@@ -129,19 +124,17 @@ impl StorageRead for StorageReadServiceClient {
             client_known_version,
             requested_items,
         };
-        convert_grpc_response(
-            self.client()
-                .update_to_latest_ledger_async(&log_and_convert(req)),
-        )
-        .map(|resp| {
-            let rust_resp = UpdateToLatestLedgerResponse::from_proto(resp?)?;
-            Ok((
-                rust_resp.response_items,
-                rust_resp.ledger_info_with_sigs,
-                rust_resp.validator_change_events,
-            ))
-        })
-        .boxed()
+        convert_grpc_response(self.client().update_to_latest_ledger_async(&req.into()))
+            .map(|resp| {
+                let rust_resp = UpdateToLatestLedgerResponse::try_from(resp?)?;
+                Ok((
+                    rust_resp.response_items,
+                    rust_resp.ledger_info_with_sigs,
+                    rust_resp.validator_change_events,
+                    rust_resp.ledger_consistency_proof,
+                ))
+            })
+            .boxed()
     }
 
     fn get_transactions(
@@ -168,9 +161,9 @@ impl StorageRead for StorageReadServiceClient {
     ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
         let req =
             GetTransactionsRequest::new(start_version, batch_size, ledger_version, fetch_events);
-        convert_grpc_response(self.client().get_transactions_async(&log_and_convert(req)))
+        convert_grpc_response(self.client().get_transactions_async(&req.into()))
             .map(|resp| {
-                let rust_resp = GetTransactionsResponse::from_proto(resp?)?;
+                let rust_resp = GetTransactionsResponse::try_from(resp?)?;
                 Ok(rust_resp.txn_list_with_proof)
             })
             .boxed()
@@ -193,10 +186,10 @@ impl StorageRead for StorageReadServiceClient {
         let req = GetAccountStateWithProofByVersionRequest::new(address, version);
         convert_grpc_response(
             self.client()
-                .get_account_state_with_proof_by_version_async(&log_and_convert(req)),
+                .get_account_state_with_proof_by_version_async(&req.into()),
         )
         .map(|resp| {
-            let resp = GetAccountStateWithProofByVersionResponse::from_proto(resp?)?;
+            let resp = GetAccountStateWithProofByVersionResponse::try_from(resp?)?;
             Ok(resp.into())
         })
         .boxed()
@@ -209,10 +202,10 @@ impl StorageRead for StorageReadServiceClient {
     fn get_startup_info_async(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>> {
-        let proto_req = GetStartupInfoRequest::new();
+        let proto_req = GetStartupInfoRequest::default();
         convert_grpc_response(self.client().get_startup_info_async(&proto_req))
             .map(|resp| {
-                let resp = GetStartupInfoResponse::from_proto(resp?)?;
+                let resp = GetStartupInfoResponse::try_from(resp?)?;
                 Ok(resp.info)
             })
             .boxed()
@@ -232,10 +225,10 @@ impl StorageRead for StorageReadServiceClient {
         let proto_req = GetLatestLedgerInfosPerEpochRequest::new(start_epoch);
         convert_grpc_response(
             self.client()
-                .get_latest_ledger_infos_per_epoch_async(&log_and_convert(proto_req)),
+                .get_latest_ledger_infos_per_epoch_async(&proto_req.into()),
         )
         .map(|resp| {
-            let resp = GetLatestLedgerInfosPerEpochResponse::from_proto(resp?)?;
+            let resp = GetLatestLedgerInfosPerEpochResponse::try_from(resp?)?;
             Ok(resp.into())
         })
         .boxed()
@@ -245,7 +238,7 @@ impl StorageRead for StorageReadServiceClient {
 /// This provides storage write interfaces backed by real storage service.
 #[derive(Clone)]
 pub struct StorageWriteServiceClient {
-    clients: Vec<storage_grpc::StorageClient>,
+    clients: Vec<StorageClient>,
 }
 
 impl StorageWriteServiceClient {
@@ -260,7 +253,7 @@ impl StorageWriteServiceClient {
         StorageWriteServiceClient { clients }
     }
 
-    fn client(&self) -> &storage_grpc::StorageClient {
+    fn client(&self) -> &StorageClient {
         pick(&self.clients)
     }
 }
@@ -283,7 +276,7 @@ impl StorageWrite for StorageWriteServiceClient {
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         let req =
             SaveTransactionsRequest::new(txns_to_commit, first_version, ledger_info_with_sigs);
-        convert_grpc_response(self.client().save_transactions_async(&log_and_convert(req)))
+        convert_grpc_response(self.client().save_transactions_async(&req.into()))
             .map_ok(|_| ())
             .boxed()
     }
@@ -307,6 +300,7 @@ pub trait StorageRead: Send + Sync {
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
         Vec<ValidatorChangeEventWithProof>,
+        AccumulatorConsistencyProof,
     )>;
 
     /// See [`LibraDB::update_to_latest_ledger`].
@@ -324,6 +318,7 @@ pub trait StorageRead: Send + Sync {
                         Vec<ResponseItem>,
                         LedgerInfoWithSignatures,
                         Vec<ValidatorChangeEventWithProof>,
+                        AccumulatorConsistencyProof,
                     )>,
                 > + Send,
         >,

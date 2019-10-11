@@ -79,38 +79,24 @@ fn test_position_level() {
 }
 
 #[test]
-fn test_position_get_next_sibling() {
-    for i in 0..1000 {
-        let left_position = Position::from_inorder_index(i);
-        let position = left_position.get_next_sibling();
-        assert_eq!(left_position.level(), position.level());
-        assert_eq!(
-            left_position.pos_counting_from_left() + 1,
-            position.pos_counting_from_left()
-        );
-    }
-}
-
-#[test]
 fn test_position_is_left_child() {
-    assert!(!Position::from_inorder_index(5).is_left_child());
-    assert!(!Position::from_inorder_index(6).is_left_child());
-    assert!(!Position::from_inorder_index(2).is_left_child());
-    assert!(!Position::from_inorder_index(11).is_left_child());
-    assert!(!Position::from_inorder_index(13).is_left_child());
-    assert!(!Position::from_inorder_index(14).is_left_child());
-    assert!(!Position::from_inorder_index(10).is_left_child());
-
     assert!(Position::from_inorder_index(1).is_left_child());
     assert!(Position::from_inorder_index(0).is_left_child());
     assert!(Position::from_inorder_index(3).is_left_child());
+    assert!(Position::from_inorder_index(7).is_left_child());
     assert!(Position::from_inorder_index(8).is_left_child());
     assert!(Position::from_inorder_index(12).is_left_child());
 }
 
 #[test]
-fn test_position_is_left_child_from_root() {
-    assert!(Position::from_inorder_index(7).is_left_child());
+fn test_position_is_right_child() {
+    assert!(Position::from_inorder_index(5).is_right_child());
+    assert!(Position::from_inorder_index(6).is_right_child());
+    assert!(Position::from_inorder_index(2).is_right_child());
+    assert!(Position::from_inorder_index(11).is_right_child());
+    assert!(Position::from_inorder_index(13).is_right_child());
+    assert!(Position::from_inorder_index(14).is_right_child());
+    assert!(Position::from_inorder_index(10).is_right_child());
 }
 
 #[test]
@@ -123,6 +109,20 @@ fn test_position_root_from_leaf_index() {
 
     let target = Position::root_from_leaf_index(3);
     assert_eq!(target, Position::from_inorder_index(3));
+}
+
+#[test]
+fn test_root_level_from_leaf_count() {
+    assert_eq!(Position::root_level_from_leaf_count(1), 0);
+    assert_eq!(Position::root_level_from_leaf_count(2), 1);
+    assert_eq!(Position::root_level_from_leaf_count(3), 2);
+    assert_eq!(Position::root_level_from_leaf_count(4), 2);
+    for i in 1..100 {
+        assert_eq!(
+            Position::root_level_from_leaf_count(i),
+            Position::root_from_leaf_count(i).level()
+        );
+    }
 }
 
 #[test]
@@ -259,7 +259,7 @@ fn slow_get_frozen_subtree_roots_impl(root: Position, max_leaf_index: u64) -> Ve
     }
 }
 
-fn slow_get_frozen_subtree_roots(num_leaves: u64) -> Vec<Position> {
+fn slow_get_frozen_subtree_roots(num_leaves: LeafCount) -> Vec<Position> {
     if num_leaves == 0 {
         Vec::new()
     } else {
@@ -279,7 +279,7 @@ fn test_frozen_subtree_iterator() {
     }
 }
 
-fn collect_all_positions(num_leaves: u64, num_new_leaves: u64) -> Vec<u64> {
+fn collect_all_positions(num_leaves: LeafCount, num_new_leaves: LeafCount) -> Vec<u64> {
     FrozenSubtreeSiblingIterator::new(num_leaves, num_new_leaves)
         .map(Position::to_inorder_index)
         .collect()
@@ -411,7 +411,6 @@ fn test_basic_invariants() {
 
     test_invariant_non_leaf(|pos| pos.right_child() == pos.child(NodeDirection::Right));
     test_invariant_non_leaf(|pos| pos.left_child() == pos.child(NodeDirection::Left));
-    test_invariant(|pos| pos == pos.parent().child(pos.direction_from_parent()));
 }
 
 #[test]

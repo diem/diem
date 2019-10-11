@@ -14,6 +14,9 @@ module LibraAccount {
         authentication_key: bytearray,
         // The coins stored in this account
         balance: LibraCoin.T,
+        // If true, the authority to rotate the authentication key of this account resides elsewhere
+        delegated_key_rotation_capability: bool,
+        // If true, the authority to withdraw funds from this account resides elsewhere
         delegated_withdrawal_capability: bool,
         // Event handle for received event
         received_events: Event.Handle<Self.ReceivedPaymentEvent>,
@@ -28,6 +31,13 @@ module LibraAccount {
     // account_address/LibraAccount.T/balance.
     // There is at most one WithdrawalCapability in existence for a given address.
     resource WithdrawalCapability {
+        account_address: address,
+    }
+
+    // The holder of KeyRotationCapability for account_address can rotate the authentication key for
+    // account_address (i.e., write to account_address/LibraAccount.T/authentication_key).
+    // There is at most one KeyRotationCapability in existence for a given address.
+    resource KeyRotationCapability {
         account_address: address,
     }
 
@@ -61,6 +71,7 @@ module LibraAccount {
         return T {
             authentication_key: move(auth_key),
             balance: move(zero_balance),
+            delegated_key_rotation_capability: false,
             delegated_withdrawal_capability: false,
             received_events: move(received_handle),
             sent_events: move(sent_handle),
@@ -196,12 +207,71 @@ module LibraAccount {
         return;
     }
 
+    rotate_authentication_key_for_account(account: &mut Self.T, new_authentication_key: bytearray) {
+        *(&mut move(account).authentication_key) = move(new_authentication_key);
+        return;
+    }
+
     // Rotate the transaction sender's authentication key
     // The new key will be used for signing future transactions
     public rotate_authentication_key(new_authentication_key: bytearray) acquires T {
         let sender_account: &mut Self.T;
+
         sender_account = borrow_global_mut<T>(get_txn_sender());
-        *(&mut move(sender_account).authentication_key) = move(new_authentication_key);
+        if (*&copy(sender_account).delegated_key_rotation_capability) {
+            // The sender has delegated the privilege to rotate her key elsewhere--abort
+            abort(11);
+        } else {
+            // The sender has retained her key rotation privileges--proceed.
+            Self.rotate_authentication_key_for_account(
+                move(sender_account),
+                move(new_authentication_key)
+            );
+            return;
+        }
+    }
+
+    // Rotate the authentication key for the account under cap.account_address
+    public rotate_authentication_key_with_capability(
+        cap: &Self.KeyRotationCapability,
+        new_authentication_key: bytearray,
+    ) acquires T  {
+        Self.rotate_authentication_key_for_account(
+            borrow_global_mut<T>(*&move(cap).account_address),
+            move(new_authentication_key)
+        );
+        return;
+    }
+
+    // Return a unique capability granting permission to rotate the sender's authentication key
+    public extract_sender_key_rotation_capability(): Self.KeyRotationCapability acquires T {
+        let sender: address;
+        let delegated_ref: &mut bool;
+
+        sender = get_txn_sender();
+        delegated_ref = &mut borrow_global_mut<T>(copy(sender)).delegated_key_rotation_capability;
+        if (*copy(delegated_ref)) {
+            // We already extracted the unique key rotation capability for this account.
+            abort(11);
+        } else {
+            *move(delegated_ref) = true; // ensure uniqueness of the capability
+            return KeyRotationCapability { account_address: move(sender) };
+        }
+    }
+
+    // Return the key rotation capability to the account it originally came from
+    public restore_key_rotation_capability(cap: Self.KeyRotationCapability) acquires T {
+        let account_address: address;
+        let account: &mut Self.T;
+
+        // Destroy the capability
+        KeyRotationCapability { account_address } = move(cap);
+        account = borrow_global_mut<T>(move(account_address));
+        // Update the flag for `account_address` to indicate that the capability has been restored.
+        // The account owner will now be able to call rotate_authentication_key and
+        // extract_sender_key_rotation_capability again
+        *(&mut move(account).delegated_key_rotation_capability) = false;
+
         return;
     }
 
@@ -237,9 +307,25 @@ module LibraAccount {
         return Self.sequence_number_for_account(borrow_global<T>(move(addr)));
     }
 
+   // Return true if the account at `addr` has delegated its key rotation capability
+    public delegated_key_rotation_capability(addr: address): bool acquires T {
+        return *&(borrow_global<T>(move(addr))).delegated_key_rotation_capability;
+    }
+
     // Return true if the account at `addr` has delegated its withdrawal capability
     public delegated_withdrawal_capability(addr: address): bool acquires T {
         return *&(borrow_global<T>(move(addr))).delegated_withdrawal_capability;
+    }
+
+
+    // Return a reference to the address associated with the given withdrawal capability
+    public withdrawal_capability_address(cap: &Self.WithdrawalCapability): &address {
+        return &move(cap).account_address;
+    }
+
+    // Return a reference to the address associated with the given key rotation capability
+    public key_rotation_capability_address(cap: &Self.KeyRotationCapability): &address {
+        return &move(cap).account_address;
     }
 
     // Checks if an account exists at `check_addr`

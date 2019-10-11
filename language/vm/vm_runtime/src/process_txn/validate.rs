@@ -1,12 +1,11 @@
 use config::config::{VMMode, VMPublishingOption};
 use crypto::HashValue;
-use logger::prelude::*;
-use types::{
-    account_address::AccountAddress,
+use libra_types::{
     transaction::{SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES},
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
+use logger::prelude::*;
 use vm::{
     errors::convert_prologue_runtime_error,
     gas_schedule::{self, AbstractMemorySize, GasAlgebra, GasCarrier},
@@ -130,7 +129,7 @@ where
                 )?)
             }
             TransactionPayload::Module(module) => {
-                println!("validate module {:?}", module);
+                debug!("validate module {:?}", module);
                 Some(ValidatedTransaction::validate(
                     &txn,
                     module_cache,

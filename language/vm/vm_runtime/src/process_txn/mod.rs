@@ -2,9 +2,9 @@ use crate::{
     code_cache::module_cache::ModuleCache, data_cache::RemoteCache,
     loaded_data::loaded_module::LoadedModule,
 };
-use config::config::{VMMode, VMPublishingOption};
+use config::config::{VMPublishingOption, VMMode};
+use libra_types::transaction::SignatureCheckedTransaction;
 use std::marker::PhantomData;
-use types::transaction::SignatureCheckedTransaction;
 use vm::errors::VMResult;
 use vm_cache_map::Arena;
 

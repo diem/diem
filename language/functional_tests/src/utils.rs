@@ -12,24 +12,23 @@ use crate::{
     errors::*,
     evaluator::Transaction,
 };
-use language_e2e_tests::account::AccountData;
 use regex::{Captures, Regex};
-use std::collections::BTreeMap;
 
 /// Substitutes the placeholders (account names in double curly brackets) with addresses.
-pub fn substitute_addresses(accounts: &BTreeMap<String, AccountData>, text: &str) -> String {
+pub fn substitute_addresses(config: &GlobalConfig, text: &str) -> String {
     lazy_static! {
         static ref PAT: Regex = Regex::new(r"\{\{([A-Za-z][A-Za-z0-9]*)\}\}").unwrap();
     }
     PAT.replace_all(text, |caps: &Captures| {
         let name = &caps[1];
-        match accounts.get(name) {
-            Some(data) => format!("0x{}", data.address()),
-            // TODO: find a way to return an error instead of panicking
-            None => panic!(
+
+        if let Some(account) = config.get_account_for_name(name) {
+            format!("0x{}", account.address())
+        } else {
+            panic!(
                 "account '{}' does not exist, cannot substitute address",
                 name
-            ),
+            )
         }
     })
     .to_string()
@@ -103,7 +102,7 @@ pub fn parse_input(s: &str) -> Result<(GlobalConfig, Vec<Directive>, Vec<Transac
             let config = TransactionConfig::build(&global_config, &config)?;
             Ok(Transaction {
                 config,
-                input: substitute_addresses(&global_config.accounts, &text.join("\n")),
+                input: substitute_addresses(&global_config, &text.join("\n")),
             })
         })
         .collect::<Result<Vec<_>>>()?;

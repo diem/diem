@@ -1,0 +1,29 @@
+[package]
+name = "bytecode-verifier"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra bytecode verifier"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+mirai-annotations = "1.4.0"
+petgraph = "0.4"
+
+failure = { path = "../../common/failure_ext", package = "failure_ext" }
+vm = { path = "../vm" }
+libra-types = { path = "../../types" }
+vm_runtime_types = { path = "../vm/vm_runtime/vm_runtime_types" }
+
+
+[dev-dependencies]
+invalid-mutations = { path = "invalid-mutations" }
+libra-types = { path = "../../types", features = ["testing"]}
+vm = { path = "../vm", features = ["testing"]}
+
+[features]
+default = []
+testing = ["vm/testing", "libra-types/testing"]

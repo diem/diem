@@ -6,9 +6,9 @@ use crate::{
 };
 use crypto::HashValue;
 use failure::prelude::*;
+use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 use rand::{rngs::StdRng, SeedableRng};
 use std::collections::BTreeMap;
-use types::{account_state_blob::AccountStateBlob, transaction::Version};
 
 #[test]
 fn test_iterator_same_version() {

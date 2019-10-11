@@ -1,10 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::chained_bft::epoch_manager::EpochManager;
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
-        common::{Payload, Round},
         event_processor::EventProcessor,
         liveness::{
             multi_proposer_election::MultiProposer,
@@ -23,21 +23,14 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
-use failure::prelude::*;
-use futures::{
-    compat::Future01CompatExt,
-    executor::block_on,
-    future::{FutureExt, TryFutureExt},
-    select,
-    stream::StreamExt,
-};
-
-use crate::chained_bft::{common::Author, epoch_manager::EpochManager};
 use config::config::{ConsensusConfig, ConsensusProposerType};
+use consensus_types::common::{Author, Payload, Round};
+use failure::prelude::*;
+use futures::{executor::block_on, select, stream::StreamExt};
+use libra_types::crypto_proxies::ValidatorSigner;
 use logger::prelude::*;
 use std::{sync::Arc, time::Duration};
 use tokio::runtime::{Runtime, TaskExecutor};
-use types::crypto_proxies::ValidatorSigner;
 
 /// Consensus configuration derived from ConsensusConfig
 pub struct ChainedBftSMRConfig {
@@ -70,7 +63,6 @@ impl ChainedBftSMRConfig {
 /// driver. ChainedBftSMR implements the StateMachineReplication, it is going to be used by
 /// ConsensusProvider for the e2e flow.
 pub struct ChainedBftSMR<T> {
-    author: Author,
     signer: Option<ValidatorSigner>,
     proposers: Vec<Author>,
     runtime: Option<Runtime>,
@@ -84,7 +76,6 @@ pub struct ChainedBftSMR<T> {
 
 impl<T: Payload> ChainedBftSMR<T> {
     pub fn new(
-        author: Author,
         signer: ValidatorSigner,
         proposers: Vec<Author>,
         network: ConsensusNetworkImpl,
@@ -95,7 +86,6 @@ impl<T: Payload> ChainedBftSMR<T> {
         epoch_mgr: Arc<EpochManager>,
     ) -> Self {
         Self {
-            author,
             signer: Some(signer),
             proposers,
             runtime: Some(runtime),
@@ -186,7 +176,7 @@ impl<T: Payload> ChainedBftSMR<T> {
                 }
             }
         };
-        executor.spawn(fut.boxed().unit_error().compat());
+        executor.spawn(fut);
     }
 }
 
@@ -213,25 +203,10 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             .expect("already started, initial data is None");
         let consensus_state = initial_data.state();
         let highest_timeout_certificates = initial_data.highest_timeout_certificates().clone();
+        let last_vote = initial_data.last_vote();
         if initial_data.need_sync() {
-            loop {
-                // make sure we sync to the root state in case we're not
-                let status = block_on(state_computer.sync_to(initial_data.root_ledger_info()));
-                match status {
-                    Ok(true) => break,
-                    Ok(false) => panic!(
-                    "state synchronizer failure, this validator will be killed as it can not \
-                 recover from this error.  After the validator is restarted, synchronization will \
-                 be retried.",
-                ),
-                    Err(e) => panic!(
-                    "state synchronizer failure: {:?}, this validator will be killed as it can not \
-                 recover from this error.  After the validator is restarted, synchronization will \
-                 be retried.",
-                    e
-                ),
-                }
-            }
+            // make sure we sync to the root state in case we're not
+            state_computer.sync_to_or_bail(initial_data.root_ledger_info());
         }
 
         // the signer is only stored in the SMR to be provided here
@@ -273,8 +248,8 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
 
         let proposer_election = self.create_proposer_election();
         let event_processor = EventProcessor::new(
-            self.author,
             Arc::clone(&block_store),
+            last_vote,
             pacemaker,
             proposer_election,
             proposal_generator,
@@ -302,7 +277,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
     /// Stop is synchronous: waits for all the worker threads to terminate.
     fn stop(&mut self) {
         if let Some(rt) = self.runtime.take() {
-            block_on(rt.shutdown_now().compat()).unwrap();
+            rt.shutdown_now();
             debug!("Chained BFT SMR stopped.")
         }
     }

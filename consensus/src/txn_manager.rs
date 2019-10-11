@@ -1,22 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    counters,
-    state_replication::{StateComputeResult, TxnManager},
-};
+use crate::{counters, state_replication::TxnManager};
+use executor::StateComputeResult;
 use failure::Result;
 use futures::{compat::Future01CompatExt, future, Future, FutureExt};
-use logger::prelude::*;
-use mempool::proto::{
-    mempool::{
-        CommitTransactionsRequest, CommittedTransaction, GetBlockRequest, TransactionExclusion,
-    },
-    mempool_grpc::MempoolClient,
+use libra_mempool::proto::mempool::{
+    CommitTransactionsRequest, CommittedTransaction, GetBlockRequest, MempoolClient,
+    TransactionExclusion,
 };
-use proto_conv::FromProto;
-use std::{pin::Pin, sync::Arc};
-use types::transaction::SignedTransaction;
+use libra_types::transaction::{SignedTransaction, TransactionStatus};
+use logger::prelude::*;
+use std::{convert::TryFrom, pin::Pin, sync::Arc};
 
 /// Proxy interface to mempool
 pub struct MempoolProxy {
@@ -38,22 +33,25 @@ impl MempoolProxy {
     ) -> CommitTransactionsRequest {
         let mut all_updates = Vec::new();
         assert_eq!(txns.len(), compute_result.compute_status.len());
-        for (txn, success) in txns.iter().zip(compute_result.compute_status.iter()) {
-            let mut transaction = CommittedTransaction::new();
-            transaction.set_sender(txn.sender().as_ref().to_vec());
-            transaction.set_sequence_number(txn.sequence_number());
-            if *success {
-                counters::SUCCESS_TXNS_COUNT.inc();
-                transaction.set_is_rejected(false);
-            } else {
-                counters::FAILED_TXNS_COUNT.inc();
-                transaction.set_is_rejected(true);
-            }
+        for (txn, status) in txns.iter().zip(compute_result.compute_status.iter()) {
+            let mut transaction = CommittedTransaction::default();
+            transaction.sender = txn.sender().as_ref().to_vec();
+            transaction.sequence_number = txn.sequence_number();
+            match status {
+                TransactionStatus::Keep(_) => {
+                    counters::SUCCESS_TXNS_COUNT.inc();
+                    transaction.is_rejected = false;
+                }
+                TransactionStatus::Discard(_) => {
+                    counters::FAILED_TXNS_COUNT.inc();
+                    transaction.is_rejected = true;
+                }
+            };
             all_updates.push(transaction);
         }
-        let mut req = CommitTransactionsRequest::new();
-        req.set_transactions(::protobuf::RepeatedField::from_vec(all_updates));
-        req.set_block_timestamp_usecs(timestamp_usecs);
+        let mut req = CommitTransactionsRequest::default();
+        req.transactions = all_updates;
+        req.block_timestamp_usecs = timestamp_usecs;
         req
     }
 
@@ -87,24 +85,25 @@ impl TxnManager for MempoolProxy {
         let mut exclude_txns = vec![];
         for payload in exclude_payloads {
             for signed_txn in payload {
-                let mut txn_meta = TransactionExclusion::new();
-                txn_meta.set_sender(signed_txn.sender().into());
-                txn_meta.set_sequence_number(signed_txn.sequence_number());
+                let mut txn_meta = TransactionExclusion::default();
+                txn_meta.sender = signed_txn.sender().into();
+                txn_meta.sequence_number = signed_txn.sequence_number();
                 exclude_txns.push(txn_meta);
             }
         }
-        let mut get_block_request = GetBlockRequest::new();
-        get_block_request.set_max_block_size(max_size);
-        get_block_request.set_transactions(::protobuf::RepeatedField::from_vec(exclude_txns));
+        let mut get_block_request = GetBlockRequest::default();
+        get_block_request.max_block_size = max_size;
+        get_block_request.transactions = exclude_txns;
         match self.mempool.get_block_async(&get_block_request) {
             Ok(receiver) => async move {
                 match receiver.compat().await {
-                    Ok(mut response) => Ok(response
-                        .take_block()
-                        .take_transactions()
+                    Ok(response) => Ok(response
+                        .block
+                        .unwrap_or_else(Default::default)
+                        .transactions
                         .into_iter()
                         .filter_map(|proto_txn| {
-                            match SignedTransaction::from_proto(proto_txn.clone()) {
+                            match SignedTransaction::try_from(proto_txn.clone()) {
                                 Ok(t) => Some(t),
                                 Err(e) => {
                                     security_log(SecurityEvent::InvalidTransactionConsensus)

@@ -14,7 +14,6 @@ use failure::prelude::*;
 use hex;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use proto_conv::{FromProto, IntoProto};
 use rand::{rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt, str::FromStr};
@@ -32,7 +31,7 @@ const LIBRA_NETWORK_ID_SHORT: &str = "lb";
 pub struct AccountAddress([u8; ADDRESS_LENGTH]);
 
 impl AccountAddress {
-    pub fn new(address: [u8; ADDRESS_LENGTH]) -> Self {
+    pub const fn new(address: [u8; ADDRESS_LENGTH]) -> Self {
         AccountAddress(address)
     }
 
@@ -170,22 +169,6 @@ impl TryFrom<Bytes> for AccountAddress {
 impl From<AccountAddress> for Bytes {
     fn from(addr: AccountAddress) -> Bytes {
         addr.0.as_ref().into()
-    }
-}
-
-impl FromProto for AccountAddress {
-    type ProtoType = Vec<u8>;
-
-    fn from_proto(addr: Self::ProtoType) -> Result<Self> {
-        AccountAddress::try_from(&addr[..])
-    }
-}
-
-impl IntoProto for AccountAddress {
-    type ProtoType = Vec<u8>;
-
-    fn into_proto(self) -> Self::ProtoType {
-        self.0.to_vec()
     }
 }
 

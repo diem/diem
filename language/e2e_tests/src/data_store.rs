@@ -6,18 +6,19 @@
 use crate::account::AccountData;
 use failure::prelude::*;
 use lazy_static::lazy_static;
-use proto_conv::FromProto;
-use protobuf::parse_from_bytes;
-use state_view::StateView;
-use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
-use types::{
+use libra_types::{
     access_path::AccessPath,
     language_storage::ModuleId,
     transaction::{SignedTransaction, TransactionPayload},
     write_set::{WriteOp, WriteSet},
 };
+use prost::Message;
+use state_view::StateView;
+use std::convert::TryFrom;
+use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
 use vm::{errors::*, CompiledModule};
 use vm_runtime::data_cache::RemoteCache;
+use walkdir::WalkDir;
 
 lazy_static! {
     /// The write set encoded in the genesis transaction.
@@ -26,15 +27,39 @@ lazy_static! {
         path.pop();
         path.push("vm/vm_genesis/genesis/genesis.blob");
 
-        let mut f = File::open(&path).unwrap();
-        let mut bytes = vec![];
-        f.read_to_end(&mut bytes).unwrap();
-        let txn = SignedTransaction::from_proto(parse_from_bytes(&bytes).unwrap()).unwrap();
-        match txn.payload() {
-            TransactionPayload::WriteSet(ws) => ws.clone(),
-            _ => panic!("Expected writeset txn in genesis txn"),
-        }
+        load_genesis(path)
     };
+
+    pub static ref TESTNET_GENESIS: Vec<WriteSet> = {
+        let mut base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        base_path.pop();
+        base_path.pop();
+        base_path.push("terraform/validator-sets/");
+
+        let files = WalkDir::new(base_path)
+            .into_iter()
+            .filter_map(|f| f.ok())
+            .filter(|f| f.path().ends_with("genesis.blob"))
+            .map(|f| load_genesis(f.path().to_path_buf()))
+            .collect::<Vec<_>>();
+
+        assert!(!files.is_empty());
+        files
+    };
+}
+
+fn load_genesis(path: PathBuf) -> WriteSet {
+    let mut f = File::open(&path).unwrap();
+    let mut bytes = vec![];
+    f.read_to_end(&mut bytes).unwrap();
+    let txn = SignedTransaction::try_from(
+        libra_types::proto::types::SignedTransaction::decode(&bytes).unwrap(),
+    )
+    .unwrap();
+    match txn.payload() {
+        TransactionPayload::WriteSet(ws) => ws.clone(),
+        _ => panic!("Expected writeset txn in genesis txn"),
+    }
 }
 
 /// An in-memory implementation of [`StateView`] and [`RemoteCache`] for the VM.
@@ -108,10 +133,7 @@ impl FakeDataStore {
 impl StateView for FakeDataStore {
     fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>> {
         // Since the data is in-memory, it can't fail.
-        match self.data.get(access_path) {
-            None => Ok(None),
-            Some(blob) => Ok(Some(blob.clone())),
-        }
+        Ok(self.data.get(access_path).cloned())
     }
 
     fn multi_get(&self, _access_paths: &[AccessPath]) -> Result<Vec<Option<Vec<u8>>>> {
