@@ -44,6 +44,7 @@ use vm_runtime_types::{
     native_functions::dispatch::{dispatch_native_function, NativeReturnStatus},
     value::{ReferenceValue, Struct, Value},
 };
+use config::config::VMMode;
 
 // Metadata needed for resolving the account module.
 lazy_static! {

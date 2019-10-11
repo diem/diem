@@ -284,5 +284,9 @@ pub fn call_details(op: &Bytecode) -> Vec<CallDetails> {
         Bytecode::CreateAccount => type_transition! { simple_addrs(1) => empty() },
         Bytecode::GetTxnPublicKey => type_transition! { empty() => byte_arrays(1) },
         Bytecode::FreezeRef => type_transition! { ref_values(1) => ref_values(1) },
+        _ => {
+            //TODO support channel's Bytecode.
+            unimplemented!()
+        }
     }
 }

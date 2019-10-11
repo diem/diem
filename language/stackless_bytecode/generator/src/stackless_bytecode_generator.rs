@@ -688,6 +688,10 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_stack.pop().unwrap();
                 self.code.push(StacklessBytecode::CreateAccount(temp_index));
             }
+            _ => {
+                //TODO support channel's Bytecode
+                unimplemented!()
+            }
         }
     }
 }

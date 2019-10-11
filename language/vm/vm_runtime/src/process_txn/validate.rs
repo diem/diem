@@ -1,6 +1,7 @@
 use config::config::{VMMode, VMPublishingOption};
 use crypto::HashValue;
 use libra_types::{
+    account_address::AccountAddress,
     transaction::{SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES},
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,

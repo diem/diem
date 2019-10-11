@@ -28,6 +28,8 @@ use std::{fmt, str::FromStr, time::Duration};
 use stdlib::stdlib_modules;
 use vm::file_format::{CompiledModule, CompiledScript};
 use vm::gas_schedule::{GasAlgebra, MAXIMUM_NUMBER_OF_GAS_UNITS};
+use libra_types::access_path::AccessPath;
+use libra_types::channel_account::{channel_account_struct_tag, ChannelAccountResource};
 
 /// A transaction to be evaluated by the testing infra.
 /// Contains code and a transaction config.
@@ -192,7 +194,7 @@ fn make_script_transaction(
     account: &Account,
     script: CompiledScript,
     args: Vec<TransactionArgument>,
-    receiver: Option<(&AccountData, u64)>,
+    receiver: Option<(&Account, u64)>,
 ) -> Result<SignedTransaction> {
     let mut blob = vec![];
     script.serialize(&mut blob)?;
@@ -209,7 +211,7 @@ fn make_script_transaction(
                 script,
             );
             let mut txn = RawTransaction::new_channel_script(
-                *data.address(),
+                *account.address(),
                 account_resource.sequence_number(),
                 payload,
                 std::cmp::min(
@@ -222,13 +224,13 @@ fn make_script_transaction(
             .sign(&account.privkey, account.pubkey.clone())?
             .into_inner();
             txn.sign_by_receiver(
-                &receiver.account().privkey,
-                receiver.account().pubkey.clone(),
+                &receiver.privkey,
+                receiver.pubkey.clone(),
             )?;
             txn
         }
         None => RawTransaction::new_script(
-            *data.address(),
+            *account.address(),
             account_resource.sequence_number(),
             script,
             std::cmp::min(
@@ -360,7 +362,7 @@ fn eval_transaction(
         .and_then(|receiver| config.accounts.get(receiver))
         .and_then(|receiver_account| {
             let access_path = AccessPath::channel_resource_access_path(
-                *data.address(),
+                *account.address(),
                 *receiver_account.address(),
                 channel_account_struct_tag(),
             );
@@ -372,7 +374,7 @@ fn eval_transaction(
                         .channel_sequence_number()
                 })
                 .unwrap_or(0);
-            Some((receiver_account, channel_sequence_number))
+            Some((receiver_account.account(), channel_sequence_number))
         });
 
     // start processing a new transaction

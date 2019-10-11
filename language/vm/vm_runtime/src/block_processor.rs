@@ -8,7 +8,7 @@ use crate::{
         script_cache::ScriptCache,
     },
     counters::*,
-    data_cache::BlockDataCache,
+    data_cache::{BlockDataCache, WriteSetDataCache},
     process_txn::{execute::ExecutedTransaction, validate::ValidationMode, ProcessTransaction},
 };
 use config::config::{VMPublishingOption, VMMode};
@@ -23,6 +23,7 @@ use logger::prelude::*;
 use rayon::prelude::*;
 use state_view::StateView;
 use vm_cache_map::Arena;
+use crate::data_cache::RemoteCache;
 
 pub fn execute_block<'alloc>(
     txn_block: Vec<SignedTransaction>,
@@ -82,6 +83,7 @@ pub fn execute_block<'alloc>(
                         &txn_cache,
                         mode,
                         publishing_option,
+                        vm_mode,
                     )},
                     Err(vm_status) => ExecutedTransaction::discard_error_output(vm_status),
                 };

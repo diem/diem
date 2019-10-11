@@ -1436,6 +1436,7 @@ version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
  "config 0.1.0",
+ "crypto 0.1.0",
  "datatest-stable 0.1.0",
  "failure_ext 0.1.0",
  "filecheck 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",

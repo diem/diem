@@ -1,6 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-use config::config::{VMConfig, VMPublishingOption};
+use config::config::{VMConfig, VMPublishingOption, VMMode};
 use crypto::HashValue;
 use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
@@ -158,5 +158,6 @@ pub fn default_config() -> VMConfig {
         publishing_options: VMPublishingOption::Locked(HashSet::from_iter(
             allowing_script_hashes().into_iter(),
         )),
+        mode: VMMode::Onchain,
     }
 }

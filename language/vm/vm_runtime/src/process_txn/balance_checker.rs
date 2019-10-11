@@ -5,7 +5,7 @@ use std::{
 };
 
 use logger::prelude::*;
-use types::{
+use libra_types::{
     access_path::AccessPath,
     account_config::coin_struct_tag,
     language_storage::{ModuleId, StructTag},
