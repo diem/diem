@@ -478,8 +478,11 @@ impl ClusterTestRunner {
         experiment: Box<dyn Experiment>,
     ) -> failure::Result<()> {
         let events = self.logs.recv_all();
-        if !self.health_check_runner.run(&events).is_empty() {
-            bail!("Some validators are unhealthy before experiment started");
+        if let Err(s) = self.health_check_runner.run(&events, &HashSet::new(), true) {
+            bail!(
+                "Some validators are unhealthy before experiment started : {}",
+                s
+            );
         }
 
         info!(
@@ -511,14 +514,11 @@ impl ClusterTestRunner {
             // This assumes so far that event propagation time is << 1s, this need to be refined
             // in future to account for actual event propagation delay
             let events = self.logs.recv_all_until_deadline(deadline);
-            let failed_validators = self.health_check_runner.run(&events);
-            for failed in failed_validators {
-                if !affected_validators.contains(&failed) {
-                    bail!(
-                        "Validator {} failed, not expected for this experiment",
-                        failed
-                    );
-                }
+            if let Err(s) = self
+                .health_check_runner
+                .run(&events, &affected_validators, true)
+            {
+                bail!("Validators which were not under experiment failed : {}", s);
             }
             match exp_result_recv.try_recv() {
                 Ok(result) => {
@@ -553,18 +553,16 @@ impl ClusterTestRunner {
             // This assumes so far that event propagation time is << 1s, this need to be refined
             // in future to account for actual event propagation delay
             let events = self.logs.recv_all_until_deadline(deadline);
-            let failed_validators = self.health_check_runner.run(&events);
-            let mut still_affected_validator = HashSet::new();
-            for failed in failed_validators {
-                if !affected_validators.contains(&failed) {
-                    bail!(
-                        "Validator {} failed, not expected for this experiment",
-                        failed
-                    );
-                }
-                still_affected_validator.insert(failed);
+
+            let unhealthy_validators;
+            match self
+                .health_check_runner
+                .run(&events, &affected_validators, true)
+            {
+                Err(s) => bail!("Validators which were not under experiment failed : {}", s),
+                Ok(r) => unhealthy_validators = r,
             }
-            if still_affected_validator.is_empty() {
+            if unhealthy_validators.is_empty() {
                 break;
             }
         }
@@ -580,7 +578,9 @@ impl ClusterTestRunner {
             // This assumes so far that event propagation time is << 1s, this need to be refined
             // in future to account for actual event propagation delay
             let events = self.logs.recv_all_until_deadline(deadline);
-            self.health_check_runner.run(&events);
+            let _ignore = self
+                .health_check_runner
+                .run(&events, &HashSet::new(), false);
         }
     }
 
@@ -596,7 +596,11 @@ impl ClusterTestRunner {
             }
             let deadline = now + HEALTH_POLL_INTERVAL;
             let events = self.logs.recv_all_until_deadline(deadline);
-            if self.health_check_runner.run(&events).is_empty() {
+            if self
+                .health_check_runner
+                .run(&events, &HashSet::new(), true)
+                .is_err()
+            {
                 break;
             }
         }
