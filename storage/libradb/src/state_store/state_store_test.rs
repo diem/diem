@@ -7,7 +7,6 @@ use crypto::hash::CryptoHash;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,
-    proof::verify_sparse_merkle_element,
 };
 use tools::tempdir::TempPath;
 
@@ -75,7 +74,7 @@ fn verify_state_in_store(
         .get_account_state_with_proof_by_version(address, version)
         .unwrap();
     assert_eq!(value.as_ref(), expected_value);
-    verify_sparse_merkle_element(root, address.hash(), &value, &proof).unwrap();
+    proof.verify(root, address.hash(), &value).unwrap();
 }
 
 #[test]

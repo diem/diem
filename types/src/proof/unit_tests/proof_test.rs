@@ -7,9 +7,9 @@ use crate::{
     ledger_info::LedgerInfo,
     proof::{
         definition::MAX_ACCUMULATOR_PROOF_DEPTH, verify_account_state, verify_event,
-        verify_signed_transaction, verify_sparse_merkle_element, AccountStateProof,
-        EventAccumulatorInternalNode, EventAccumulatorProof, EventProof, MerkleTreeInternalNode,
-        SignedTransactionProof, SparseMerkleInternalNode, SparseMerkleLeafNode, SparseMerkleProof,
+        verify_signed_transaction, AccountStateProof, EventAccumulatorInternalNode,
+        EventAccumulatorProof, EventProof, MerkleTreeInternalNode, SignedTransactionProof,
+        SparseMerkleInternalNode, SparseMerkleLeafNode, SparseMerkleProof,
         TestAccumulatorInternalNode, TestAccumulatorProof, TransactionAccumulatorInternalNode,
         TransactionAccumulatorProof,
     },
@@ -149,9 +149,9 @@ fn test_verify_empty_sparse_merkle() {
     let proof = SparseMerkleProof::new(None, vec![]);
 
     // Trying to show that this key doesn't exist.
-    assert!(verify_sparse_merkle_element(root_hash, key, &None, &proof).is_ok());
+    assert!(proof.verify(root_hash, key, &None).is_ok());
     // Trying to show that this key exists.
-    assert!(verify_sparse_merkle_element(root_hash, key, &Some(blob), &proof).is_err());
+    assert!(proof.verify(root_hash, key, &Some(blob)).is_err());
 }
 
 #[test]
@@ -164,20 +164,20 @@ fn test_verify_single_element_sparse_merkle() {
     let proof = SparseMerkleProof::new(Some((key, blob_hash)), vec![]);
 
     // Trying to show this exact key exists with its value.
-    assert!(verify_sparse_merkle_element(root_hash, key, &blob, &proof).is_ok());
+    assert!(proof.verify(root_hash, key, &blob).is_ok());
     // Trying to show this exact key exists with another value.
-    assert!(
-        verify_sparse_merkle_element(root_hash, key, &Some(non_existing_blob), &proof).is_err()
-    );
+    assert!(proof
+        .verify(root_hash, key, &Some(non_existing_blob))
+        .is_err());
     // Trying to show this key doesn't exist.
-    assert!(verify_sparse_merkle_element(root_hash, key, &None, &proof).is_err());
+    assert!(proof.verify(root_hash, key, &None).is_err());
 
     let non_existing_key = b"HELLO".test_only_hash();
 
     // The proof can be used to show non_existing_key doesn't exist.
-    assert!(verify_sparse_merkle_element(root_hash, non_existing_key, &None, &proof).is_ok());
+    assert!(proof.verify(root_hash, non_existing_key, &None).is_ok());
     // The proof can't be used to non_existing_key exists.
-    assert!(verify_sparse_merkle_element(root_hash, non_existing_key, &blob, &proof).is_err());
+    assert!(proof.verify(root_hash, non_existing_key, &blob).is_err());
 }
 
 #[test]
@@ -221,21 +221,21 @@ fn test_verify_three_element_sparse_merkle() {
         );
 
         // The exact key value exists.
-        assert!(verify_sparse_merkle_element(root_hash, key1, &(blob1), &proof).is_ok());
+        assert!(proof.verify(root_hash, key1, &(blob1)).is_ok());
         // Trying to show that this key has another value.
-        assert!(verify_sparse_merkle_element(root_hash, key1, &(blob2), &proof).is_err());
+        assert!(proof.verify(root_hash, key1, &(blob2)).is_err());
         // Trying to show that this key doesn't exist.
-        assert!(verify_sparse_merkle_element(root_hash, key1, &None, &proof).is_err());
+        assert!(proof.verify(root_hash, key1, &None).is_err());
         // This proof can't be used to show anything about key2.
-        assert!(verify_sparse_merkle_element(root_hash, key2, &None, &proof).is_err());
-        assert!(verify_sparse_merkle_element(root_hash, key2, &(blob1), &proof).is_err());
-        assert!(verify_sparse_merkle_element(root_hash, key2, &(blob2), &proof).is_err());
+        assert!(proof.verify(root_hash, key2, &None).is_err());
+        assert!(proof.verify(root_hash, key2, &(blob1)).is_err());
+        assert!(proof.verify(root_hash, key2, &(blob2)).is_err());
 
         // This proof can be used to show that non_existing_key1 indeed doesn't exist.
-        assert!(verify_sparse_merkle_element(root_hash, non_existing_key1, &None, &proof).is_ok());
+        assert!(proof.verify(root_hash, non_existing_key1, &None).is_ok());
         // This proof can't be used to show that non_existing_key2 doesn't exist because it lives
         // in a different subtree.
-        assert!(verify_sparse_merkle_element(root_hash, non_existing_key2, &None, &proof).is_err());
+        assert!(proof.verify(root_hash, non_existing_key2, &None).is_err());
     }
 
     {
@@ -243,9 +243,9 @@ fn test_verify_three_element_sparse_merkle() {
         let proof = SparseMerkleProof::new(None, vec![internal_a_hash]);
 
         // This proof can't be used to show that a key starting with 0 doesn't exist.
-        assert!(verify_sparse_merkle_element(root_hash, non_existing_key1, &None, &proof).is_err());
+        assert!(proof.verify(root_hash, non_existing_key1, &None).is_err());
         // This proof can be used to show that a key starting with 1 doesn't exist.
-        assert!(verify_sparse_merkle_element(root_hash, non_existing_key2, &None, &proof).is_ok());
+        assert!(proof.verify(root_hash, non_existing_key2, &None).is_ok());
     }
 }
 
