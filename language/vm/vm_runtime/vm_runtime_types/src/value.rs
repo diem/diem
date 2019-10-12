@@ -5,17 +5,15 @@ use crate::{
     loaded_data::{struct_def::StructDef, types::Type},
     native_structs::{serializer::deserialize_native, NativeStructValue},
 };
-use canonical_serialization::*;
-use failure::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
     byte_array::ByteArray,
     vm_error::{StatusCode, VMStatus},
 };
+use serde::{Deserialize, Serialize};
 use std::{
     cell::{Ref, RefCell},
-    convert::TryFrom,
     mem::replace,
     ops::Add,
     rc::Rc,
@@ -84,7 +82,7 @@ pub struct Value(ValueImpl);
 
 /// Internal representation for a reference or a mutable value.
 /// This is quite a core type for the mechanics of references.
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, Serialize)]
 pub(crate) struct MutVal(Rc<RefCell<ValueImpl>>);
 
 /// A struct in Move.
@@ -942,38 +940,30 @@ impl Locals {
 impl Value {
     /// Serialize this value using `SimpleSerializer`.
     pub fn simple_serialize(&self) -> Option<Vec<u8>> {
-        SimpleSerializer::<Vec<u8>>::serialize(&self.0).ok()
+        lcs::to_bytes(&self.0).ok()
     }
 
-    /// Deserialize this value using `SimpleDeserializer` and a provided struct definition.
+    /// Deserialize this value using `lcs::Deserializer` and a provided struct definition.
     pub fn simple_deserialize(blob: &[u8], resource: StructDef) -> VMResult<Value> {
-        let mut deserializer = SimpleDeserializer::new(blob);
-        deserialize_struct(&mut deserializer, &resource)
+        let mut deserializer = lcs::Deserializer::new(blob);
+        let s = deserialize_struct(&mut deserializer, &resource)?;
+        deserializer
+            .end()
+            .map(move |_| s)
+            .map_err(|_| vm_error(Location::new(), StatusCode::INVALID_DATA))
     }
 }
 
 pub(crate) fn deserialize_value(
-    deserializer: &mut SimpleDeserializer,
+    deserializer: &mut lcs::Deserializer<'_>,
     ty: &Type,
 ) -> VMResult<Value> {
     match ty {
-        Type::Bool => deserializer.decode_bool().map(Value::bool),
-        Type::U64 => deserializer.decode_u64().map(Value::u64),
-        Type::String => {
-            if let Ok(bytes) = deserializer.decode_bytes() {
-                if let Ok(s) = VMString::from_utf8(bytes) {
-                    return Ok(Value::string(s));
-                }
-            }
-            return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
-        }
-        Type::ByteArray => deserializer
-            .decode_bytes()
-            .map(|bytes| Value::byte_array(ByteArray::new(bytes))),
-        Type::Address => deserializer
-            .decode_bytes()
-            .and_then(AccountAddress::try_from)
-            .map(Value::address),
+        Type::Bool => bool::deserialize(deserializer).map(Value::bool),
+        Type::U64 => u64::deserialize(deserializer).map(Value::u64),
+        Type::String => VMString::deserialize(deserializer).map(Value::string),
+        Type::ByteArray => ByteArray::deserialize(deserializer).map(Value::byte_array),
+        Type::Address => AccountAddress::deserialize(deserializer).map(Value::address),
         Type::Struct(s_fields) => Ok(deserialize_struct(deserializer, s_fields)?),
         Type::Reference(_) | Type::MutableReference(_) | Type::TypeVariable(_) => {
             // Case TypeVariable is not possible as all type variable has to be materialized before
@@ -985,7 +975,7 @@ pub(crate) fn deserialize_value(
 }
 
 fn deserialize_struct(
-    deserializer: &mut SimpleDeserializer,
+    deserializer: &mut lcs::Deserializer<'_>,
     struct_def: &StructDef,
 ) -> VMResult<Value> {
     match struct_def {
@@ -1000,44 +990,36 @@ fn deserialize_struct(
     }
 }
 
-impl CanonicalSerialize for ValueImpl {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
+// TODO(#1307)
+impl Serialize for ValueImpl {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeTuple;
         match self {
-            ValueImpl::U64(val) => {
-                serializer.encode_u64(*val)?;
-            }
+            ValueImpl::U64(val) => serializer.serialize_u64(*val),
             ValueImpl::Address(addr) => {
                 // TODO: this is serializing as a vector but we want just raw bytes
                 // however the AccountAddress story is a bit difficult to work with right now
-                serializer.encode_bytes(addr.as_ref())?;
+                addr.serialize(serializer)
             }
-            ValueImpl::Bool(b) => {
-                serializer.encode_bool(*b)?;
-            }
+            ValueImpl::Bool(b) => serializer.serialize_bool(*b),
             ValueImpl::String(s) => {
                 // TODO: must define an api for canonical serializations of string.
                 // Right now we are just using Rust to serialize the string
-                serializer.encode_bytes(s.as_bytes())?;
+                serializer.serialize_bytes(s.as_bytes())
             }
             ValueImpl::Struct(vals) => {
+                let mut t = serializer.serialize_tuple(vals.0.len())?;
                 for mut_val in &vals.0 {
-                    mut_val.peek().serialize(serializer)?;
+                    t.serialize_element(&mut_val)?;
                 }
+                t.end()
             }
-            ValueImpl::ByteArray(bytearray) => {
-                serializer.encode_bytes(bytearray.as_bytes())?;
-            }
-            ValueImpl::NativeStruct(v) => {
-                serializer.encode_struct(v)?;
-            }
+            ValueImpl::ByteArray(bytearray) => bytearray.serialize(serializer),
+            ValueImpl::NativeStruct(v) => v.serialize(serializer),
             _ => unreachable!("invalid type to serialize"),
         }
-        Ok(())
-    }
-}
-
-impl CanonicalSerialize for MutVal {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        self.peek().serialize(serializer)
     }
 }

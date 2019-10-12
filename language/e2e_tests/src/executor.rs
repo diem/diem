@@ -7,7 +7,6 @@ use crate::{
     account::{Account, AccountData},
     data_store::{FakeDataStore, GENESIS_WRITE_SET, TESTNET_GENESIS},
 };
-use canonical_serialization::SimpleDeserializer;
 use config::config::{NodeConfig, NodeConfigHelpers, VMPublishingOption};
 use libra_types::{
     access_path::AccessPath,
@@ -125,7 +124,7 @@ impl FakeExecutor {
         let data_blob = StateView::get(&self.data_store, &ap)
             .expect("account must exist in data store")
             .expect("data must exist in data store");
-        SimpleDeserializer::deserialize(data_blob.as_slice()).ok()
+        lcs::from_bytes(data_blob.as_slice()).ok()
     }
 
     /// Executes the given block of transactions.

@@ -2,13 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //use crate::errors::*;
-use crate::{
-    account_address::AccountAddress, byte_array::ByteArray,
-    proto::types::transaction_argument::ArgType as TransactionArgument_ArgType,
-};
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
+use crate::{account_address::AccountAddress, byte_array::ByteArray};
 use failure::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
@@ -17,8 +11,8 @@ use std::{convert::TryFrom, fmt};
 pub enum TransactionArgument {
     U64(u64),
     Address(AccountAddress),
-    ByteArray(ByteArray),
     String(String),
+    ByteArray(ByteArray),
 }
 
 impl fmt::Debug for TransactionArgument {
@@ -165,56 +159,6 @@ mod test_transaction_argument {
 
         for s in &["garbage", ""] {
             parse_as_transaction_argument(s).unwrap_err();
-        }
-    }
-}
-
-impl CanonicalSerialize for TransactionArgument {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        match self {
-            TransactionArgument::U64(value) => {
-                serializer.encode_u32(TransactionArgument_ArgType::U64 as u32)?;
-                serializer.encode_u64(*value)?;
-            }
-            TransactionArgument::Address(address) => {
-                serializer.encode_u32(TransactionArgument_ArgType::Address as u32)?;
-                serializer.encode_struct(address)?;
-            }
-            TransactionArgument::String(string) => {
-                serializer.encode_u32(TransactionArgument_ArgType::String as u32)?;
-                serializer.encode_string(string)?;
-            }
-            TransactionArgument::ByteArray(byte_array) => {
-                serializer.encode_u32(TransactionArgument_ArgType::Bytearray as u32)?;
-                serializer.encode_struct(byte_array)?;
-            }
-        }
-
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for TransactionArgument {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let decoded_value = deserializer.decode_u32()? as i32;
-        let arg_type = TransactionArgument_ArgType::from_i32(decoded_value);
-        match arg_type {
-            Some(TransactionArgument_ArgType::U64) => {
-                Ok(TransactionArgument::U64(deserializer.decode_u64()?))
-            }
-            Some(TransactionArgument_ArgType::Address) => {
-                Ok(TransactionArgument::Address(deserializer.decode_struct()?))
-            }
-            Some(TransactionArgument_ArgType::String) => {
-                Ok(TransactionArgument::String(deserializer.decode_string()?))
-            }
-            Some(TransactionArgument_ArgType::Bytearray) => Ok(TransactionArgument::ByteArray(
-                deserializer.decode_struct()?,
-            )),
-            None => Err(format_err!(
-                "ParseError: Unable to decode TransactionArgument_ArgType, found {}",
-                decoded_value
-            )),
         }
     }
 }

@@ -1,39 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This test verifies the behavior of the Canonical Serializer against the test vectors
-//! provided in the Canonical Serializer document.
-//! See: common/canonical_serializer/README.md
-//!
-//! Test data was generated as follows:
-//! - AccountAddress: AccountAddress::random()
-//! - u64: rand::thread_rng().gen::<u64>()
-//!
-//! To retrieve the binary output, the types were then passed to the following function:
-//!
-//! fn serialize<T>(input: T)
-//!     where T: CanonicalSerialize + std::fmt::Debug
-//! {
-//!     let mut serializer = SimpleSerializer::<Vec<u8>>::new();
-//!     serializer.encode_struct(&input).unwrap();
-//!     let output = serializer.get_output();
-//!     println!("{:?} = {:?}", input, hex::encode_upper(output));
-//! }
-//!
-//! Both input represented as hex arrays, specifically AccountAddress and path, and the
-//! serialized output were passed to the following formatting script to make Rust arrays:
-//!
-//! #!/usr/bin/env python3
-//!
-//! import fileinput
-//!
-//! indata = fileinput.input().readline().strip()
-//! outdata = ""
-//!
-//! for idx in range(0, len(indata), 2):
-//!     outdata += "0x{}{}, ".format(indata[idx], indata[idx+1])
-//!
-//! print(outdata[:-2])
+//! These tests verify the behavior of LCS against some known test vectors with various types.
 
 use crate::{
     access_path::AccessPath,
@@ -42,7 +10,7 @@ use crate::{
     transaction::{RawTransaction, Script, TransactionArgument, TransactionPayload},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use canonical_serialization::SimpleSerializer;
+use lcs::to_bytes;
 use std::time::Duration;
 
 #[test]
@@ -69,7 +37,7 @@ fn test_access_path_canonical_serialization_example() {
         0x3C, 0xF2, 0x66, 0x47, 0xC7, 0x8D, 0xF0, 0x0B, 0x37, 0x1B, 0x25, 0xCC, 0x97,
     ];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 
@@ -87,7 +55,7 @@ fn test_account_address_canonical_serialization_example() {
         0x86, 0x21, 0x52, 0x9E, 0xAE, 0x19,
     ];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 
@@ -102,7 +70,7 @@ fn test_program_canonical_serialization_example() {
         0x64,
     ];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 
@@ -132,7 +100,7 @@ fn test_raw_transaction_with_a_program_canonical_serialization_example() {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x51, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
     ];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 
@@ -166,7 +134,7 @@ fn test_raw_transaction_with_a_write_set_canonical_serialization_example() {
         0xFF, 0xFF, 0xFF, 0xFF,
     ];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 
@@ -184,7 +152,7 @@ fn test_transaction_argument_address_canonical_serialization_example() {
         0x1D, 0xB2, 0xB0, 0xBF, 0x5D, 0x19, 0x24, 0xC6, 0x93, 0xED,
     ];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 
@@ -196,7 +164,7 @@ fn test_transaction_argument_byte_array_canonical_serialization_example() {
         0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xCA, 0xFE, 0xD0, 0x0D,
     ];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 
@@ -208,7 +176,7 @@ fn test_transaction_argument_string_canonical_serialization_example() {
         0x57, 0x6F, 0x72, 0x6C, 0x64, 0x21,
     ];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 
@@ -219,7 +187,7 @@ fn test_transaction_argument_u64_canonical_serialization_example() {
         0x00, 0x00, 0x00, 0x00, 0x7C, 0xC9, 0xBD, 0xA4, 0x50, 0x89, 0xDD, 0x7F,
     ];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 
@@ -234,7 +202,7 @@ fn test_transaction_payload_with_a_program_canonical_serialization_example() {
         0x20, 0x64, 0x30, 0x30, 0x64,
     ];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 
@@ -255,7 +223,7 @@ fn test_transaction_payload_with_a_write_set_canonical_serialization_example() {
         0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xCA, 0xFE, 0xD0, 0x0D,
     ];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 
@@ -264,7 +232,7 @@ fn test_write_op_delete_canonical_serialization_example() {
     let input = WriteOp::Deletion;
     let expected_output = vec![0x00, 0x00, 0x00, 0x00];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 
@@ -275,7 +243,7 @@ fn test_write_op_value_canonical_serialization_example() {
         0x01, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xCA, 0xFE, 0xD0, 0x0D,
     ];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 
@@ -296,7 +264,7 @@ fn test_write_set_canonical_serialization_example() {
         0x00, 0x00, 0x00, 0xCA, 0xFE, 0xD0, 0x0D,
     ];
 
-    let actual_output = SimpleSerializer::<Vec<u8>>::serialize(&input).unwrap();
+    let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);
 }
 

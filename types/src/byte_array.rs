@@ -1,10 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
-use failure::Result;
 use hex;
 use serde::{Deserialize, Serialize};
 
@@ -52,20 +48,6 @@ impl std::ops::Index<usize> for ByteArray {
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
         std::ops::Index::index(&*self.0, index)
-    }
-}
-
-impl CanonicalSerialize for ByteArray {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_bytes(&self.0)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for ByteArray {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let bytes = deserializer.decode_bytes()?;
-        Ok(ByteArray(bytes))
     }
 }
 

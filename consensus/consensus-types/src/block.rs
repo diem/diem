@@ -6,15 +6,12 @@ use crate::{
     quorum_cert::QuorumCert,
     vote_data::VoteData,
 };
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalSerialize, CanonicalSerializer, SimpleSerializer,
-};
 use crypto::{
     hash::{BlockHasher, CryptoHash, CryptoHasher},
     HashValue,
 };
 use executor::StateComputeResult;
-use failure::{ensure, format_err, Result};
+use failure::{ensure, format_err};
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
@@ -190,7 +187,7 @@ impl<T> Block<T> {
 
 impl<T> Block<T>
 where
-    T: Serialize + Default + CanonicalSerialize + PartialEq,
+    T: Serialize + Default + PartialEq,
 {
     #[cfg(any(test, feature = "testing"))]
     pub fn make_genesis_block() -> Self {
@@ -392,7 +389,7 @@ impl<T> ExecutedBlock<T> {
 
 impl<T> ExecutedBlock<T>
 where
-    T: Serialize + Default + CanonicalSerialize + PartialEq,
+    T: Serialize + Default + PartialEq,
 {
     pub fn payload(&self) -> Option<&T> {
         self.block().payload()
@@ -425,7 +422,7 @@ where
 
 impl<T> CryptoHash for Block<T>
 where
-    T: canonical_serialization::CanonicalSerialize,
+    T: Serialize,
 {
     type Hasher = BlockHasher;
 
@@ -449,50 +446,34 @@ where
 
 // Internal use only. Contains all the fields in Block that contribute to the computation of
 // Block Id
+#[derive(Serialize)]
 struct BlockSerializer<'a, T> {
-    payload: Option<&'a T>,
+    timestamp_usecs: u64,
     epoch: u64,
     round: Round,
-    timestamp_usecs: u64,
+    payload: Option<&'a T>,
     quorum_cert: &'a QuorumCert,
     author: Option<Author>,
 }
 
 impl<'a, T> CryptoHash for BlockSerializer<'a, T>
 where
-    T: CanonicalSerialize,
+    T: Serialize,
 {
     type Hasher = BlockHasher;
 
     fn hash(&self) -> HashValue {
-        let bytes =
-            SimpleSerializer::<Vec<u8>>::serialize(self).expect("block serialization failed");
+        let bytes = lcs::to_bytes(self).expect("block serialization failed");
         let mut state = Self::Hasher::default();
         state.write(bytes.as_ref());
         state.finish()
     }
 }
 
-impl<'a, T> CanonicalSerialize for BlockSerializer<'a, T>
-where
-    T: CanonicalSerialize,
-{
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_u64(self.timestamp_usecs)?
-            .encode_u64(self.epoch)?
-            .encode_u64(self.round)?
-            .encode_optional(&self.payload)?
-            .encode_struct(self.quorum_cert)?
-            .encode_optional(&self.author)?;
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 impl<T> Block<T>
 where
-    T: Default + Serialize + CanonicalSerialize,
+    T: Default + Serialize,
 {
     // Is this block a parent of the parameter block?
     pub fn is_parent_of(&self, block: &Self) -> bool {
@@ -502,7 +483,7 @@ where
 
 impl<T> TryFrom<network::proto::Block> for Block<T>
 where
-    T: DeserializeOwned + CanonicalDeserialize + CanonicalSerialize,
+    T: DeserializeOwned + Serialize,
 {
     type Error = failure::Error;
 
@@ -554,7 +535,7 @@ where
 
 impl<T> From<Block<T>> for network::proto::Block
 where
-    T: Serialize + Default + CanonicalSerialize + PartialEq,
+    T: Serialize + Default + PartialEq,
 {
     fn from(block: Block<T>) -> Self {
         let (payload, signature, author) = if let BlockType::Proposal {

@@ -74,7 +74,7 @@ use lazy_static::lazy_static;
 use nibble::Nibble;
 use proptest_derive::Arbitrary;
 use rand::{rngs::EntropyRng, Rng};
-use serde::{Deserialize, Serialize};
+use serde::{de, ser};
 use std::{self, convert::AsRef, fmt};
 use tiny_keccak::Keccak;
 
@@ -87,7 +87,7 @@ mod hash_test;
 const SHORT_STRING_LENGTH: usize = 4;
 
 /// Output value of our hash function. Intentionally opaque for safety and modularity.
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, PartialOrd, Ord, Arbitrary)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Ord, Arbitrary)]
 pub struct HashValue {
     hash: [u8; HashValue::LENGTH],
 }
@@ -209,6 +209,41 @@ impl HashValue {
     /// Returns first SHORT_STRING_LENGTH bytes as String in hex
     pub fn short_str(&self) -> String {
         hex::encode(&self.hash[0..SHORT_STRING_LENGTH]).to_string()
+    }
+}
+
+// TODO(#1307)
+impl ser::Serialize for HashValue {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        serializer.serialize_bytes(&self.hash[..])
+    }
+}
+
+impl<'de> de::Deserialize<'de> for HashValue {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct HashValueVisitor;
+        impl<'de> de::Visitor<'de> for HashValueVisitor {
+            type Value = HashValue;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("HashValue in bytes")
+            }
+
+            fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<HashValue, E>
+            where
+                E: de::Error,
+            {
+                HashValue::from_slice(value).map_err(E::custom)
+            }
+        }
+
+        deserializer.deserialize_bytes(HashValueVisitor)
     }
 }
 
@@ -607,7 +642,7 @@ pub trait TestOnlyHash {
     fn test_only_hash(&self) -> HashValue;
 }
 
-impl<T: Serialize + ?Sized> TestOnlyHash for T {
+impl<T: ser::Serialize + ?Sized> TestOnlyHash for T {
     fn test_only_hash(&self) -> HashValue {
         let bytes = ::bincode::serialize(self).expect("serialize failed during hash.");
         let mut hasher = TestOnlyHasher::default();

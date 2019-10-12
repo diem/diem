@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_string::{VMStr, VMString};
-use canonical_serialization::test_helper::assert_canonical_encode_decode;
 use proptest::prelude::*;
 use serde_json;
 use std::borrow::Borrow;
@@ -45,7 +44,9 @@ proptest! {
 
     #[test]
     fn vm_string_canonical_serialization(set in any::<VMString>()) {
-        assert_canonical_encode_decode(&set);
+        let bytes = lcs::to_bytes(&set).unwrap();
+        let s: VMString = lcs::from_bytes(&bytes).unwrap();
+        assert_eq!(set, s);
     }
 }
 

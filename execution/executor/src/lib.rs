@@ -11,7 +11,6 @@ mod executor_test;
 mod mock_vm;
 
 use crate::block_processor::BlockProcessor;
-use canonical_serialization::{CanonicalSerialize, CanonicalSerializer};
 use config::config::NodeConfig;
 use crypto::{
     hash::{
@@ -102,16 +101,6 @@ impl ExecutedState {
     }
 }
 
-impl CanonicalSerialize for ExecutedState {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_bytes(self.state_id.as_ref())?;
-        serializer.encode_u64(self.version)?;
-        if let Some(validators) = &self.validators {
-            serializer.encode_struct(validators)?;
-        }
-        Ok(())
-    }
-}
 /// `Executor` implements all functionalities the execution module needs to provide.
 pub struct Executor<V> {
     /// A thread that keeps processing blocks.

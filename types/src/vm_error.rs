@@ -9,7 +9,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use proptest::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use serde::{Deserialize, Serialize};
+use serde::{de, ser};
 use std::{convert::TryFrom, fmt};
 
 /// The minimum status code for validation statuses
@@ -250,18 +250,7 @@ impl From<VMStatus> for crate::proto::types::VmStatus {
 
 #[allow(non_camel_case_types)]
 #[derive(
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Hash,
-    PartialEq,
-    PartialOrd,
-    Ord,
-    IntoPrimitive,
-    TryFromPrimitive,
-    Serialize,
-    Deserialize,
+    Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, IntoPrimitive, TryFromPrimitive,
 )]
 #[repr(u64)]
 /// We don't derive Arbitrary on this enum because it is too large and breaks proptest. It is
@@ -461,6 +450,41 @@ pub enum StatusCode {
 
     // A reserved status to represent an unknown vm status.
     UNKNOWN_STATUS = std::u64::MAX,
+}
+
+// TODO(#1307)
+impl ser::Serialize for StatusCode {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        serializer.serialize_u64((*self).into())
+    }
+}
+
+impl<'de> de::Deserialize<'de> for StatusCode {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct StatusCodeVisitor;
+        impl<'de> de::Visitor<'de> for StatusCodeVisitor {
+            type Value = StatusCode;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("StatusCode as u64")
+            }
+
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<StatusCode, E>
+            where
+                E: de::Error,
+            {
+                Ok(StatusCode::try_from(v).unwrap_or(StatusCode::UNKNOWN_STATUS))
+            }
+        }
+
+        deserializer.deserialize_u64(StatusCodeVisitor)
+    }
 }
 
 pub mod sub_status {

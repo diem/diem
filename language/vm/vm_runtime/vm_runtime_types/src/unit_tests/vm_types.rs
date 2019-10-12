@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::value::{Struct, Value};
-use canonical_serialization::SimpleDeserializer;
 use libra_types::{
     account_address::AccountAddress, account_config::AccountResource, byte_array::ByteArray,
 };
@@ -38,8 +37,7 @@ fn account_type() {
     let account = Value::struct_(Struct::new(account_fields));
     let blob = &account.simple_serialize().expect("blob must serialize");
 
-    let account_resource: AccountResource =
-        SimpleDeserializer::deserialize(blob).expect("must deserialize");
+    let account_resource: AccountResource = lcs::from_bytes(&blob).expect("must deserialize");
     assert_eq!(*account_resource.authentication_key(), authentication_key);
     assert_eq!(account_resource.balance(), balance);
     assert_eq!(

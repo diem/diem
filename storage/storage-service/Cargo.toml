@@ -14,7 +14,7 @@ futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features =
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 structopt = "0.3.2"
 
-canonical-serialization = { path = "../../common/canonical-serialization" }
+lcs = { path = "../../common/lcs", package = "libra-canonical-serialization" }
 config = { path = "../../config" }
 crypto = { path = "../../crypto/crypto" }
 debug-interface = { path = "../../common/debug-interface" }

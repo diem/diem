@@ -3,9 +3,6 @@
 
 use bech32::{Bech32, FromBase32, ToBase32};
 use bytes::Bytes;
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
 use crypto::{
     hash::{AccountAddressHasher, CryptoHash, CryptoHasher},
     HashValue, VerifyingKey,
@@ -15,7 +12,7 @@ use hex;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
-use serde::{Deserialize, Serialize};
+use serde::{de, ser};
 use std::{convert::TryFrom, fmt, str::FromStr};
 
 pub const ADDRESS_LENGTH: usize = 32;
@@ -26,7 +23,7 @@ const LIBRA_NETWORK_ID_SHORT: &str = "lb";
 
 /// A struct that represents an account address.
 /// Currently Public Key is used.
-#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Serialize, Deserialize, Copy)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Copy)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct AccountAddress([u8; ADDRESS_LENGTH]);
 
@@ -217,16 +214,51 @@ impl TryFrom<AccountAddress> for Bech32 {
     }
 }
 
-impl CanonicalSerialize for AccountAddress {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_bytes(&self.0)?;
-        Ok(())
+// TODO(#1307)
+impl ser::Serialize for AccountAddress {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        serializer.serialize_bytes(&self.0)
     }
 }
 
-impl CanonicalDeserialize for AccountAddress {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let bytes = deserializer.decode_bytes()?;
-        Self::try_from(bytes)
+impl<'de> de::Deserialize<'de> for AccountAddress {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct AccountAddressVisitor;
+
+        impl<'de> de::Visitor<'de> for AccountAddressVisitor {
+            type Value = AccountAddress;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("AccountAddress in bytes")
+            }
+
+            fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                AccountAddress::try_from(value).map_err(E::custom)
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> std::result::Result<Self::Value, A::Error>
+            where
+                A: de::SeqAccess<'de>,
+            {
+                use de::Error;
+
+                let mut bytes: Vec<u8> = Vec::new();
+                while let Some(byte) = seq.next_element()? {
+                    bytes.push(byte);
+                }
+                AccountAddress::try_from(bytes).map_err(A::Error::custom)
+            }
+        }
+
+        deserializer.deserialize_bytes(AccountAddressVisitor)
     }
 }

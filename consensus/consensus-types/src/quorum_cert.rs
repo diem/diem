@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{common::Round, vote_data::VoteData};
-use canonical_serialization::{CanonicalSerialize, CanonicalSerializer};
 use crypto::{
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
@@ -34,15 +33,6 @@ impl Display for QuorumCert {
             "QuorumCert: [{}, {}]",
             self.vote_data, self.signed_ledger_info
         )
-    }
-}
-
-impl CanonicalSerialize for QuorumCert {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_struct(&self.vote_data)?
-            .encode_struct(&self.signed_ledger_info)?;
-        Ok(())
     }
 }
 

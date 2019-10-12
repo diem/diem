@@ -10,8 +10,6 @@ use crate::{
     proof::{verify_account_state, AccountStateProof},
     transaction::Version,
 };
-
-use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
 use crypto::{
     hash::{AccountStateBlobHasher, CryptoHash, CryptoHasher},
     HashValue,
@@ -74,7 +72,7 @@ impl TryFrom<&BTreeMap<Vec<u8>, Vec<u8>>> for AccountStateBlob {
 
     fn try_from(map: &BTreeMap<Vec<u8>, Vec<u8>>) -> Result<Self> {
         Ok(Self {
-            blob: SimpleSerializer::serialize(map)?,
+            blob: lcs::to_bytes(map)?,
         })
     }
 }
@@ -99,7 +97,7 @@ impl From<AccountResource> for AccountStateBlob {
         let mut account_state: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
         account_state.insert(
             account_resource_path(),
-            SimpleSerializer::<Vec<u8>>::serialize(&account_resource).unwrap(),
+            lcs::to_bytes(&account_resource).unwrap(),
         );
         AccountStateBlob::try_from(&account_state).unwrap()
     }
@@ -109,7 +107,7 @@ impl TryFrom<&AccountStateBlob> for BTreeMap<Vec<u8>, Vec<u8>> {
     type Error = failure::Error;
 
     fn try_from(account_state_blob: &AccountStateBlob) -> Result<Self> {
-        SimpleDeserializer::deserialize(&account_state_blob.blob)
+        lcs::from_bytes(&account_state_blob.blob).map_err(Into::into)
     }
 }
 

@@ -14,10 +14,6 @@ use crate::{
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-    SimpleDeserializer, SimpleSerializer,
-};
 use crypto::{
     ed25519::*,
     hash::{
@@ -28,10 +24,9 @@ use crypto::{
     HashValue,
 };
 use failure::prelude::*;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use serde::{Deserialize, Serialize};
+use serde::{de, ser, Deserialize, Serialize};
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
@@ -78,7 +73,40 @@ pub struct RawTransaction {
     // never be included.
     // A transaction that doesn't expire is represented by a very large value like
     // u64::max_value().
+    #[serde(serialize_with = "serialize_duration")]
+    #[serde(deserialize_with = "deserialize_duration")]
     expiration_time: Duration,
+}
+
+// TODO(#1307)
+fn serialize_duration<S>(d: &Duration, serializer: S) -> std::result::Result<S::Ok, S::Error>
+where
+    S: ser::Serializer,
+{
+    serializer.serialize_u64(d.as_secs())
+}
+
+fn deserialize_duration<'de, D>(deserializer: D) -> std::result::Result<Duration, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    struct DurationVisitor;
+    impl<'de> de::Visitor<'de> for DurationVisitor {
+        type Value = Duration;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("Duration as u64")
+        }
+
+        fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(Duration::from_secs(v))
+        }
+    }
+
+    deserializer.deserialize_u64(DurationVisitor)
 }
 
 impl RawTransaction {
@@ -233,43 +261,11 @@ impl CryptoHash for RawTransaction {
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
         state.write(
-            SimpleSerializer::<Vec<u8>>::serialize(self)
+            lcs::to_bytes(self)
                 .expect("Failed to serialize RawTransaction")
                 .as_slice(),
         );
         state.finish()
-    }
-}
-
-impl CanonicalSerialize for RawTransaction {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_struct(&self.sender)?;
-        serializer.encode_u64(self.sequence_number)?;
-        serializer.encode_struct(&self.payload)?;
-        serializer.encode_u64(self.max_gas_amount)?;
-        serializer.encode_u64(self.gas_unit_price)?;
-        serializer.encode_u64(self.expiration_time.as_secs())?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for RawTransaction {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let sender = deserializer.decode_struct()?;
-        let sequence_number = deserializer.decode_u64()?;
-        let payload = deserializer.decode_struct()?;
-        let max_gas_amount = deserializer.decode_u64()?;
-        let gas_unit_price = deserializer.decode_u64()?;
-        let expiration_time = Duration::from_secs(deserializer.decode_u64()?);
-
-        Ok(RawTransaction {
-            sender,
-            sequence_number,
-            payload,
-            max_gas_amount,
-            gas_unit_price,
-            expiration_time,
-        })
     }
 }
 
@@ -278,82 +274,11 @@ pub enum TransactionPayload {
     /// A regular programmatic transaction that is executed by the VM.
     Program(Program),
     WriteSet(WriteSet),
-    /// A transaction that publishes code.
-    Module(Module),
     /// A transaction that executes code.
     Script(Script),
+    /// A transaction that publishes code.
+    Module(Module),
 }
-
-impl CanonicalSerialize for TransactionPayload {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        match self {
-            TransactionPayload::Program(program) => {
-                serializer.encode_u32(TransactionPayloadType::Program as u32)?;
-                serializer.encode_struct(program)?;
-            }
-            TransactionPayload::WriteSet(write_set) => {
-                serializer.encode_u32(TransactionPayloadType::WriteSet as u32)?;
-                serializer.encode_struct(write_set)?;
-            }
-            TransactionPayload::Script(script) => {
-                serializer.encode_u32(TransactionPayloadType::Script as u32)?;
-                serializer.encode_struct(script)?;
-            }
-            TransactionPayload::Module(module) => {
-                serializer.encode_u32(TransactionPayloadType::Module as u32)?;
-                serializer.encode_struct(module)?;
-            }
-        };
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for TransactionPayload {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let decoded_payload_type = deserializer.decode_u32()?;
-        let payload_type = TransactionPayloadType::from_u32(decoded_payload_type);
-        match payload_type {
-            Some(TransactionPayloadType::Program) => {
-                Ok(TransactionPayload::Program(deserializer.decode_struct()?))
-            }
-            Some(TransactionPayloadType::WriteSet) => {
-                Ok(TransactionPayload::WriteSet(deserializer.decode_struct()?))
-            }
-            Some(TransactionPayloadType::Script) => {
-                Ok(TransactionPayload::Script(deserializer.decode_struct()?))
-            }
-            Some(TransactionPayloadType::Module) => {
-                Ok(TransactionPayload::Module(deserializer.decode_struct()?))
-            }
-            None => Err(format_err!(
-                "ParseError: Unable to decode TransactionPayloadType, found {}",
-                decoded_payload_type
-            )),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-enum TransactionPayloadType {
-    Program = 0,
-    WriteSet = 1,
-    Script = 2,
-    Module = 3,
-}
-
-impl TransactionPayloadType {
-    fn from_u32(value: u32) -> Option<TransactionPayloadType> {
-        match value {
-            0 => Some(TransactionPayloadType::Program),
-            1 => Some(TransactionPayloadType::WriteSet),
-            2 => Some(TransactionPayloadType::Script),
-            3 => Some(TransactionPayloadType::Module),
-            _ => None,
-        }
-    }
-}
-
-impl ::std::marker::Copy for TransactionPayloadType {}
 
 /// A transaction that has been signed.
 ///
@@ -374,9 +299,6 @@ pub struct SignedTransaction {
 
     /// Signature of the transaction that correspond to the public key
     signature: Ed25519Signature,
-
-    /// The transaction length is used by the VM to limit the size of transactions
-    transaction_length: usize,
 }
 
 /// A transaction for which the signature has been verified. Created by
@@ -425,15 +347,10 @@ impl SignedTransaction {
         public_key: Ed25519PublicKey,
         signature: Ed25519Signature,
     ) -> SignedTransaction {
-        let transaction_length = SimpleSerializer::<Vec<u8>>::serialize(&raw_txn)
-            .expect("Unable to serialize RawTransaction")
-            .len();
-
         SignedTransaction {
-            raw_txn: raw_txn.clone(),
+            raw_txn,
             public_key,
             signature,
-            transaction_length,
         }
     }
 
@@ -474,7 +391,9 @@ impl SignedTransaction {
     }
 
     pub fn raw_txn_bytes_len(&self) -> usize {
-        self.transaction_length
+        lcs::to_bytes(&self.raw_txn)
+            .expect("Unable to serialize RawTransaction")
+            .len()
     }
 
     /// Checks that the signature of given transaction. Returns `Ok(SignatureCheckedTransaction)` if
@@ -504,7 +423,7 @@ impl CryptoHash for SignedTransaction {
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(&SimpleSerializer::<Vec<u8>>::serialize(self).expect("serialization failed"));
+        state.write(&lcs::to_bytes(self).expect("serialization failed"));
         state.finish()
     }
 }
@@ -513,14 +432,13 @@ impl TryFrom<crate::proto::types::SignedTransaction> for SignedTransaction {
     type Error = Error;
 
     fn try_from(txn: crate::proto::types::SignedTransaction) -> Result<Self> {
-        SimpleDeserializer::deserialize(&txn.signed_txn)
+        lcs::from_bytes(&txn.signed_txn).map_err(Into::into)
     }
 }
 
 impl From<SignedTransaction> for crate::proto::types::SignedTransaction {
     fn from(txn: SignedTransaction) -> Self {
-        let signed_txn = SimpleSerializer::<Vec<u8>>::serialize(&txn)
-            .expect("Unable to serialize SignedTransaction");
+        let signed_txn = lcs::to_bytes(&txn).expect("Unable to serialize SignedTransaction");
         Self { signed_txn }
     }
 }
@@ -635,29 +553,6 @@ impl From<SignedTransactionWithProof> for crate::proto::types::SignedTransaction
                     events: list.into_iter().map(ContractEvent::into).collect(),
                 }),
         }
-    }
-}
-
-impl CanonicalSerialize for SignedTransaction {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_struct(&self.raw_txn)?
-            .encode_struct(&self.public_key)?
-            .encode_struct(&self.signature)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for SignedTransaction {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let raw_txn: RawTransaction = deserializer.decode_struct()?;
-        let public_key: Ed25519PublicKey = deserializer.decode_struct()?;
-        let signature: Ed25519Signature = deserializer.decode_struct()?;
-
-        Ok(SignedTransaction::new(raw_txn, public_key, signature))
     }
 }
 
@@ -863,26 +758,12 @@ impl TransactionInfo {
     }
 }
 
-impl CanonicalSerialize for TransactionInfo {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_bytes(self.signed_transaction_hash.as_ref())?
-            .encode_bytes(self.state_root_hash.as_ref())?
-            .encode_bytes(self.event_root_hash.as_ref())?
-            .encode_u64(self.gas_used)?
-            .encode_u64(self.major_status.into())?;
-        Ok(())
-    }
-}
-
 impl CryptoHash for TransactionInfo {
     type Hasher = TransactionInfoHasher;
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(
-            &SimpleSerializer::<Vec<u8>>::serialize(self).expect("Serialization should work."),
-        );
+        state.write(&lcs::to_bytes(self).expect("Serialization should work."));
         state.finish()
     }
 }
@@ -1223,48 +1104,84 @@ impl Transaction {
     }
 }
 
-#[derive(IntoPrimitive, TryFromPrimitive)]
-#[repr(u8)]
-enum TransactionVariantTag {
-    UserTransaction = 0,
-    WriteSet = 1,
-    BlockMetadata = 2,
-}
+// TODO(#1307)
+impl ser::Serialize for Transaction {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        use ser::SerializeTuple;
 
-impl CanonicalSerialize for Transaction {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
         match self {
             Transaction::UserTransaction(txn) => {
-                serializer.encode_u8(TransactionVariantTag::UserTransaction.into())?;
-                serializer.encode_struct(txn)?;
+                let mut t = serializer.serialize_tuple(2)?;
+                t.serialize_element(&0u8)?;
+                t.serialize_element(txn)?;
+                t.end()
             }
             Transaction::WriteSet(write_set) => {
-                serializer.encode_u8(TransactionVariantTag::WriteSet.into())?;
-                serializer.encode_struct(write_set)?;
+                let mut t = serializer.serialize_tuple(2)?;
+                t.serialize_element(&1u8)?;
+                t.serialize_element(write_set)?;
+                t.end()
             }
             Transaction::BlockMetadata(block_metadata) => {
-                serializer.encode_u8(TransactionVariantTag::BlockMetadata.into())?;
-                serializer.encode_struct(block_metadata)?;
+                let mut t = serializer.serialize_tuple(2)?;
+                t.serialize_element(&2u8)?;
+                t.serialize_element(block_metadata)?;
+                t.end()
             }
-        };
-
-        Ok(())
+        }
     }
 }
 
-impl CanonicalDeserialize for Transaction {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let tag = TransactionVariantTag::try_from(deserializer.decode_u8()?)?;
-        let transaction = match tag {
-            TransactionVariantTag::UserTransaction => {
-                Transaction::UserTransaction(deserializer.decode_struct()?)
+impl<'de> de::Deserialize<'de> for Transaction {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct TransactionVisitor;
+        impl<'de> de::Visitor<'de> for TransactionVisitor {
+            type Value = Transaction;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("Transaction")
             }
-            TransactionVariantTag::WriteSet => Transaction::WriteSet(deserializer.decode_struct()?),
-            TransactionVariantTag::BlockMetadata => {
-                Transaction::BlockMetadata(deserializer.decode_struct()?)
+
+            fn visit_seq<A>(self, mut seq: A) -> std::result::Result<Self::Value, A::Error>
+            where
+                A: de::SeqAccess<'de>,
+            {
+                use serde::de::Error;
+
+                let variant: u8 = seq
+                    .next_element()?
+                    .ok_or_else(|| A::Error::custom("expected u8"))?;
+                match variant {
+                    0 => {
+                        let txn: SignedTransaction = seq
+                            .next_element()?
+                            .ok_or_else(|| A::Error::custom("expected txn"))?;
+                        Ok(Transaction::UserTransaction(txn))
+                    }
+                    1 => {
+                        let write_set: WriteSet = seq
+                            .next_element()?
+                            .ok_or_else(|| A::Error::custom("expected write_set"))?;
+                        Ok(Transaction::WriteSet(write_set))
+                    }
+                    2 => {
+                        let block_metadata: BlockMetadata = seq
+                            .next_element()?
+                            .ok_or_else(|| A::Error::custom("expected block_metadata"))?;
+                        Ok(Transaction::BlockMetadata(block_metadata))
+                    }
+                    _ => Err(A::Error::custom("invalid variant")),
+                }
             }
-        };
-        Ok(transaction)
+        }
+
+        deserializer.deserialize_tuple(2, TransactionVisitor)
     }
 }
 
@@ -1272,13 +1189,13 @@ impl TryFrom<crate::proto::types::Transaction> for Transaction {
     type Error = Error;
 
     fn try_from(proto: crate::proto::types::Transaction) -> Result<Self> {
-        SimpleDeserializer::deserialize(&proto.transaction)
+        lcs::from_bytes(&proto.transaction).map_err(Into::into)
     }
 }
 
 impl From<Transaction> for crate::proto::types::Transaction {
     fn from(txn: Transaction) -> Self {
-        let bytes = SimpleSerializer::serialize(&txn).expect("Serialization should not fail.");
+        let bytes = lcs::to_bytes(&txn).expect("Serialization should not fail.");
         Self { transaction: bytes }
     }
 }
