@@ -1,12 +1,13 @@
 use crate::{aws::Aws, cluster::Cluster};
 use failure::prelude::{bail, format_err};
+use retry::{delay::Fixed, retry};
 use rusoto_core::RusotoError;
 use rusoto_ecr::{
     BatchGetImageRequest, DescribeImagesRequest, Ecr, ImageIdentifier, PutImageError,
     PutImageRequest,
 };
 use rusoto_ecs::{Ecs, UpdateServiceRequest};
-use slog_scope::info;
+use slog_scope::{info, warn};
 use std::{fs, io::ErrorKind, thread, time::Duration};
 
 #[derive(Clone)]
@@ -129,12 +130,28 @@ impl DeploymentManager {
             image_digest: Some(hash.clone()),
             image_tag: None,
         }];
-        let response = self
-            .aws
-            .ecr()
-            .batch_get_image(get_request)
-            .sync()
-            .map_err(|e| format_err!("Failed to get image {}: {:?}", hash, e))?;
+        // Retry upto 10 times, waiting 10 sec between retries
+        let response = retry(Fixed::from_millis(10_000).take(10), || {
+            self.aws
+                .ecr()
+                .batch_get_image(get_request.clone())
+                .sync()
+                .map_err(|e| {
+                    warn!(
+                        "Failed to get image from repository: {:?}. Retrying...",
+                        get_request.repository_name
+                    );
+                    e
+                })
+        })
+        .map_err(|e| {
+            format_err!(
+                "Failed to get image from repository: {:?} after 10 tries {}: {:?}",
+                get_request.repository_name,
+                hash,
+                e
+            )
+        })?;
         let images = response
             .images
             .expect("No images in batch_get_image response");
