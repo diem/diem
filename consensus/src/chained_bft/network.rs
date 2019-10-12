@@ -223,6 +223,7 @@ impl ConsensusNetworkImpl {
     }
 
     async fn broadcast(&mut self, msg: ConsensusMsg) {
+        let msg_raw = msg.to_bytes().unwrap();
         for peer in self.epoch_mgr.validators().get_ordered_account_addresses() {
             if self.author == peer {
                 let self_msg = Event::Message((self.author, msg.clone()));
@@ -231,7 +232,7 @@ impl ConsensusNetworkImpl {
                 }
                 continue;
             }
-            if let Err(err) = self.network_sender.send_to(peer, msg.clone()).await {
+            if let Err(err) = self.network_sender.send_bytes(peer, msg_raw.clone()).await {
                 error!(
                     "Error broadcasting proposal to peer: {:?}, error: {:?}, msg: {:?}",
                     peer, err, msg
