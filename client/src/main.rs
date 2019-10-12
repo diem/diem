@@ -22,11 +22,8 @@ struct Args {
     #[structopt(short = "a", long)]
     pub host: String,
     /// Path to the generated keypair for the faucet account. The faucet account can be used to
-    /// mint coins. If not passed, a new keypair will be generated for
-    /// you and placed in a temporary directory.
-    /// To manually generate a keypair, use generate-keypair:
-    /// `cargo run -p generate-keypair -- -o <output_file_path>`
-    #[structopt(short = "m", long = "faucet-key-file-path")]
+    /// mint coins. If not passed, faucet_server will be used.
+    #[structopt(short = "m", long)]
     pub faucet_account_file: Option<String>,
     /// Host that operates a faucet service
     /// If not passed, will be derived from host parameter
