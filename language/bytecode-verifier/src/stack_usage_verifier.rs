@@ -181,10 +181,12 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::GetTxnReceiverPublicKey
             | Bytecode::GetTxnChannelSequenceNumber => (0, 1),
 
-            Bytecode::ExistSenderChannel(_, _) | Bytecode::ExistReceiverChannel(_, _) => (0,1),
-            Bytecode::BorrowSenderChannel(_, _) | Bytecode::BorrowReceiverChannel(_, _) => (0,1),
-            Bytecode::MoveFromSenderChannel(_, _) | Bytecode::MoveFromReceiverChannel(_, _) => (0,1),
-            Bytecode::MoveToSenderChannel(_, _) | Bytecode::MoveToReceiverChannel(_, _) => (1,0),
+            Bytecode::ExistSenderChannel(_, _) | Bytecode::ExistReceiverChannel(_, _) => (0, 1),
+            Bytecode::BorrowSenderChannel(_, _) | Bytecode::BorrowReceiverChannel(_, _) => (0, 1),
+            Bytecode::MoveFromSenderChannel(_, _) | Bytecode::MoveFromReceiverChannel(_, _) => {
+                (0, 1)
+            }
+            Bytecode::MoveToSenderChannel(_, _) | Bytecode::MoveToReceiverChannel(_, _) => (1, 0),
         }
     }
 }

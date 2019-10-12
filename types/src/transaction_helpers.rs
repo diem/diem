@@ -4,7 +4,10 @@
 use crate::{
     account_address::AccountAddress,
     proto::types::SignedTransaction as ProtoSignedTransaction,
-    transaction::{RawTransaction, SignedTransaction, TransactionPayload, ChannelScriptPayload, ChannelWriteSetPayload},
+    transaction::{
+        ChannelScriptPayload, ChannelWriteSetPayload, RawTransaction, SignedTransaction,
+        TransactionPayload,
+    },
 };
 use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
 use chrono::Utc;

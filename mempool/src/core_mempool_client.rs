@@ -12,6 +12,11 @@ use crate::{
 use config::config::NodeConfig;
 use core::borrow::BorrowMut;
 use futures::Future;
+use libra_types::{
+    account_address::AccountAddress, proto::types::SignedTransactionsBlock,
+    transaction::SignedTransaction,
+};
+use std::convert::TryInto;
 use std::{
     cmp,
     collections::HashSet,
@@ -19,11 +24,6 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-use libra_types::{
-    account_address::AccountAddress, proto::types::SignedTransactionsBlock,
-    transaction::SignedTransaction,
-};
-use std::convert::TryInto;
 
 /// Client for CoreMemPool
 #[derive(Clone)]
@@ -43,7 +43,12 @@ impl CoreMemPoolClient {
         let exclude_transactions: HashSet<TxnPointer> = req
             .transactions
             .iter()
-            .map(|t| (AccountAddress::try_from(t.sender.clone()), t.sequence_number))
+            .map(|t| {
+                (
+                    AccountAddress::try_from(t.sender.clone()),
+                    t.sequence_number,
+                )
+            })
             .filter(|(address, _)| address.is_ok())
             .map(|(address, seq)| (address.unwrap(), seq))
             .collect();
@@ -74,58 +79,57 @@ impl MempoolClientTrait for CoreMemPoolClient {
                 req.account_balance,
                 TimelineState::NotReady,
             );
-        let mut response =
-            crate::proto::mempool::AddTransactionWithValidationResponse::default();
+        let mut response = crate::proto::mempool::AddTransactionWithValidationResponse::default();
         response.status = Some(insertion_result.into());
         Ok(response)
     }
 
-//    fn get_block(&self, req: &GetBlockRequest) -> ::grpcio::Result<GetBlockResponse> {
-//        let block_size = cmp::max(req.get_max_block_size(), 1);
-//        let exclude_transactions: HashSet<TxnPointer> = req
-//            .get_transactions()
-//            .iter()
-//            .map(|t| (AccountAddress::try_from(t.get_sender()), t.sequence_number))
-//            .filter(|(address, _)| address.is_ok())
-//            .map(|(address, seq)| (address.unwrap(), seq))
-//            .collect();
-//
-//        let mut txns = self
-//            .core_mempool
-//            .lock()
-//            .expect("[get_block] acquire mempool lock")
-//            .get_block(block_size, exclude_transactions);
-//
-//        let transactions = txns.drain(..).map(SignedTransaction::into_proto).collect();
-//
-//        let mut block = SignedTransactionsBlock::new();
-//        block.set_transactions(::protobuf::RepeatedField::from_vec(transactions));
-//        let mut response = GetBlockResponse::new();
-//        response.set_block(block);
-//        Ok(response)
-//    }
-//
-//    fn commit_transactions(
-//        &self,
-//        req: &CommitTransactionsRequest,
-//    ) -> ::grpcio::Result<CommitTransactionsResponse> {
-//        let mut pool = self
-//            .core_mempool
-//            .lock()
-//            .expect("[update status] acquire mempool lock");
-//        for transaction in req.get_transactions() {
-//            if let Ok(address) = AccountAddress::try_from(transaction.get_sender()) {
-//                let sequence_number = transaction.get_sequence_number();
-//                pool.remove_transaction(&address, sequence_number, transaction.get_is_rejected());
-//            }
-//        }
-//        let block_timestamp_usecs = req.get_block_timestamp_usecs();
-//        if block_timestamp_usecs > 0 {
-//            pool.gc_by_expiration_time(Duration::from_micros(block_timestamp_usecs));
-//        }
-//        let response = CommitTransactionsResponse::new();
-//        Ok(response)
-//    }
+    //    fn get_block(&self, req: &GetBlockRequest) -> ::grpcio::Result<GetBlockResponse> {
+    //        let block_size = cmp::max(req.get_max_block_size(), 1);
+    //        let exclude_transactions: HashSet<TxnPointer> = req
+    //            .get_transactions()
+    //            .iter()
+    //            .map(|t| (AccountAddress::try_from(t.get_sender()), t.sequence_number))
+    //            .filter(|(address, _)| address.is_ok())
+    //            .map(|(address, seq)| (address.unwrap(), seq))
+    //            .collect();
+    //
+    //        let mut txns = self
+    //            .core_mempool
+    //            .lock()
+    //            .expect("[get_block] acquire mempool lock")
+    //            .get_block(block_size, exclude_transactions);
+    //
+    //        let transactions = txns.drain(..).map(SignedTransaction::into_proto).collect();
+    //
+    //        let mut block = SignedTransactionsBlock::new();
+    //        block.set_transactions(::protobuf::RepeatedField::from_vec(transactions));
+    //        let mut response = GetBlockResponse::new();
+    //        response.set_block(block);
+    //        Ok(response)
+    //    }
+    //
+    //    fn commit_transactions(
+    //        &self,
+    //        req: &CommitTransactionsRequest,
+    //    ) -> ::grpcio::Result<CommitTransactionsResponse> {
+    //        let mut pool = self
+    //            .core_mempool
+    //            .lock()
+    //            .expect("[update status] acquire mempool lock");
+    //        for transaction in req.get_transactions() {
+    //            if let Ok(address) = AccountAddress::try_from(transaction.get_sender()) {
+    //                let sequence_number = transaction.get_sequence_number();
+    //                pool.remove_transaction(&address, sequence_number, transaction.get_is_rejected());
+    //            }
+    //        }
+    //        let block_timestamp_usecs = req.get_block_timestamp_usecs();
+    //        if block_timestamp_usecs > 0 {
+    //            pool.gc_by_expiration_time(Duration::from_micros(block_timestamp_usecs));
+    //        }
+    //        let response = CommitTransactionsResponse::new();
+    //        Ok(response)
+    //    }
 
     fn health_check(&self, req: &HealthCheckRequest) -> ::grpcio::Result<HealthCheckResponse> {
         let pool = self

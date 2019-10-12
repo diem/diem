@@ -536,8 +536,11 @@ impl BoundsCheck<(&CompiledModuleMut, &FunctionSignature)> for CodeUnit {
                     | GetTxnSequenceNumber | GetTxnPublicKey => vec![],
 
                     //TODO merge to above.
-                    IsOffchain | GetTxnReceiverAddress | IsChannelTxn
-                    | GetTxnReceiverPublicKey | GetTxnChannelSequenceNumber => vec![],
+                    IsOffchain
+                    | GetTxnReceiverAddress
+                    | IsChannelTxn
+                    | GetTxnReceiverPublicKey
+                    | GetTxnChannelSequenceNumber => vec![],
                 }
             })
             .collect()

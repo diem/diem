@@ -4,7 +4,6 @@ use std::{
     fmt::{Display, Formatter},
 };
 
-use logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_config::coin_struct_tag,
@@ -12,6 +11,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet},
 };
+use logger::prelude::*;
 use vm::{
     access::ModuleAccess,
     errors::VMResult,

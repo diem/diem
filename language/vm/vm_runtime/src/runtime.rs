@@ -13,7 +13,7 @@ use crate::{
     loaded_data::loaded_module::LoadedModule,
     process_txn::{validate::ValidationMode, ProcessTransaction},
 };
-use config::config::{VMConfig, VMPublishingOption, VMMode};
+use config::config::{VMConfig, VMMode, VMPublishingOption};
 use libra_types::{
     transaction::{SignedTransaction, TransactionOutput},
     vm_error::{StatusCode, VMStatus},

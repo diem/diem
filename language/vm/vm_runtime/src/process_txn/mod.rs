@@ -2,7 +2,7 @@ use crate::{
     code_cache::module_cache::ModuleCache, data_cache::RemoteCache,
     loaded_data::loaded_module::LoadedModule,
 };
-use config::config::{VMPublishingOption, VMMode};
+use config::config::{VMMode, VMPublishingOption};
 use libra_types::transaction::SignatureCheckedTransaction;
 use std::marker::PhantomData;
 use vm::errors::VMResult;

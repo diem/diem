@@ -5,26 +5,30 @@ use crypto::ed25519::Ed25519Signature;
 use failure::prelude::*;
 use futures::{compat::Future01CompatExt, executor::block_on, prelude::*};
 use grpc_helpers::{spawn_service_thread_with_drop_closure, ServerHandle};
-use std::{pin::Pin, sync::Arc, convert::{TryFrom, TryInto},};
+use libra_types::proof::AccumulatorConsistencyProof;
+use libra_types::{
+    account_address::AccountAddress,
+    account_state_blob::AccountStateBlob,
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
+    get_with_proof::{
+        RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
+    },
+    proof::SparseMerkleProof,
+    transaction::{TransactionListWithProof, TransactionToCommit, Version},
+};
+use std::{
+    convert::{TryFrom, TryInto},
+    pin::Pin,
+    sync::Arc,
+};
 use storage_client::{StorageRead, StorageWrite};
 use storage_proto::proto::storage::{
     create_storage, GetAccountStateWithProofByVersionRequest,
     GetAccountStateWithProofByVersionResponse, GetLatestLedgerInfosPerEpochRequest,
     GetLatestLedgerInfosPerEpochResponse, GetStartupInfoRequest, GetStartupInfoResponse,
     GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
-    SaveTransactionsResponse, Storage, StartupInfo,
+    SaveTransactionsResponse, StartupInfo, Storage,
 };
-use libra_types::{
-    account_address::AccountAddress,
-    account_state_blob::AccountStateBlob,
-    get_with_proof::{
-        RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
-    },
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
-    proof::SparseMerkleProof,
-    transaction::{TransactionListWithProof, TransactionToCommit, Version},
-};
-use libra_types::proof::AccumulatorConsistencyProof;
 
 pub fn start_storage_service_and_return_service(
     config: &NodeConfig,
@@ -90,7 +94,7 @@ impl StorageRead for StorageService {
                 rust_resp.response_items,
                 rust_resp.ledger_info_with_sigs,
                 rust_resp.validator_change_events,
-                rust_resp.ledger_consistency_proof
+                rust_resp.ledger_consistency_proof,
             ))
         }
             .boxed()
@@ -118,15 +122,23 @@ impl StorageRead for StorageService {
         ledger_version: Version,
         fetch_events: bool,
     ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
-        let req = storage_proto::GetTransactionsRequest::new(start_version, batch_size, ledger_version, fetch_events);
+        let req = storage_proto::GetTransactionsRequest::new(
+            start_version,
+            batch_size,
+            ledger_version,
+            fetch_events,
+        );
         //TODO fix unwrap, call inner in async.
         let resp = self
             .get_transactions_inner(req.try_into().unwrap())
             .expect("get_transactions_inner response err.");
         async {
-            let storage_proto::GetTransactionsResponse{ txn_list_with_proof } = storage_proto::GetTransactionsResponse::try_from(resp)?;
+            let storage_proto::GetTransactionsResponse {
+                txn_list_with_proof,
+            } = storage_proto::GetTransactionsResponse::try_from(resp)?;
             Ok(txn_list_with_proof)
-        }.boxed()
+        }
+            .boxed()
     }
 
     fn get_account_state_with_proof_by_version(
@@ -143,7 +155,7 @@ impl StorageRead for StorageService {
         version: Version,
     ) -> Pin<Box<dyn Future<Output = Result<(Option<AccountStateBlob>, SparseMerkleProof)>> + Send>>
     {
-        let req = GetAccountStateWithProofByVersionRequest{
+        let req = GetAccountStateWithProofByVersionRequest {
             version,
             address: address.try_into().unwrap(),
         };
@@ -151,7 +163,8 @@ impl StorageRead for StorageService {
             .get_account_state_with_proof_by_version_inner(req)
             .expect("get_account_state_with_proof_by_version_inner response err.");
         async {
-            let response = storage_proto::GetAccountStateWithProofByVersionResponse::try_from(resp)?;
+            let response =
+                storage_proto::GetAccountStateWithProofByVersionResponse::try_from(resp)?;
             Ok(response.into())
         }
             .boxed()
@@ -164,10 +177,11 @@ impl StorageRead for StorageService {
     fn get_startup_info_async(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Option<storage_proto::StartupInfo>>> + Send>> {
-        let info = self.get_startup_info_inner().and_then(|resp|storage_proto::GetStartupInfoResponse::try_from(resp)).unwrap();
-        async {
-            Ok(info.info)
-        }.boxed()
+        let info = self
+            .get_startup_info_inner()
+            .and_then(|resp| storage_proto::GetStartupInfoResponse::try_from(resp))
+            .unwrap();
+        async { Ok(info.info) }.boxed()
     }
 
     fn get_latest_ledger_infos_per_epoch(
@@ -180,8 +194,7 @@ impl StorageRead for StorageService {
     fn get_latest_ledger_infos_per_epoch_async(
         &self,
         start_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>>
-    {
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>> {
         let req = storage_proto::GetLatestLedgerInfosPerEpochRequest::new(start_epoch);
         let resp = self
             .get_latest_ledger_infos_per_epoch_inner(req.try_into().unwrap())
@@ -189,7 +202,8 @@ impl StorageRead for StorageService {
         async {
             let response = storage_proto::GetLatestLedgerInfosPerEpochResponse::try_from(resp)?;
             Ok(response.into())
-        }.boxed()
+        }
+            .boxed()
     }
 }
 
@@ -209,7 +223,11 @@ impl StorageWrite for StorageService {
         first_version: Version,
         ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
-        let req = storage_proto::SaveTransactionsRequest::new( txns_to_commit,first_version, ledger_info_with_sigs);
+        let req = storage_proto::SaveTransactionsRequest::new(
+            txns_to_commit,
+            first_version,
+            ledger_info_with_sigs,
+        );
 
         let resp = self.save_transactions_inner(req.try_into().unwrap());
         async {

@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::data_cache::RemoteCache;
 use crate::{
     code_cache::{
         module_adapter::ModuleFetcherImpl,
@@ -11,7 +12,7 @@ use crate::{
     data_cache::{BlockDataCache, WriteSetDataCache},
     process_txn::{execute::ExecutedTransaction, validate::ValidationMode, ProcessTransaction},
 };
-use config::config::{VMPublishingOption, VMMode};
+use config::config::{VMMode, VMPublishingOption};
 use libra_types::{
     transaction::{
         SignatureCheckedTransaction, SignedTransaction, TransactionOutput, TransactionStatus,
@@ -23,7 +24,6 @@ use logger::prelude::*;
 use rayon::prelude::*;
 use state_view::StateView;
 use vm_cache_map::Arena;
-use crate::data_cache::RemoteCache;
 
 pub fn execute_block<'alloc>(
     txn_block: Vec<SignedTransaction>,

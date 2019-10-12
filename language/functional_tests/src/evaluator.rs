@@ -15,6 +15,8 @@ use ir_to_bytecode::{
 };
 use ir_to_bytecode_syntax::ast::ScriptOrModule;
 use language_e2e_tests::{account::Account, executor::FakeExecutor};
+use libra_types::access_path::AccessPath;
+use libra_types::channel_account::{channel_account_struct_tag, ChannelAccountResource};
 use libra_types::{
     transaction::{
         ChannelScriptPayload, Module as TransactionModule, RawTransaction,
@@ -28,8 +30,6 @@ use std::{fmt, str::FromStr, time::Duration};
 use stdlib::stdlib_modules;
 use vm::file_format::{CompiledModule, CompiledScript};
 use vm::gas_schedule::{GasAlgebra, MAXIMUM_NUMBER_OF_GAS_UNITS};
-use libra_types::access_path::AccessPath;
-use libra_types::channel_account::{channel_account_struct_tag, ChannelAccountResource};
 
 /// A transaction to be evaluated by the testing infra.
 /// Contains code and a transaction config.
@@ -223,10 +223,7 @@ fn make_script_transaction(
             )
             .sign(&account.privkey, account.pubkey.clone())?
             .into_inner();
-            txn.sign_by_receiver(
-                &receiver.privkey,
-                receiver.pubkey.clone(),
-            )?;
+            txn.sign_by_receiver(&receiver.privkey, receiver.pubkey.clone())?;
             txn
         }
         None => RawTransaction::new_script(

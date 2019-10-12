@@ -1,5 +1,5 @@
 use crate::{
-    access_path::{DataPath},
+    access_path::DataPath,
     account_address::AccountAddress,
     account_config::core_code_address,
     identifier::{IdentStr, Identifier},
