@@ -10,14 +10,11 @@ use crate::{
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-    SimpleDeserializer,
-};
 use failure::prelude::*;
 use lazy_static::lazy_static;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryInto};
 
 lazy_static! {
@@ -76,16 +73,16 @@ pub fn account_struct_tag() -> StructTag {
 
 /// A Rust representation of an Account resource.
 /// This is not how the Account is represented in the VM but it's a convenient representation.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct AccountResource {
-    balance: u64,
-    sequence_number: u64,
     authentication_key: ByteArray,
+    balance: u64,
     delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
-    sent_events: EventHandle,
     received_events: EventHandle,
+    sent_events: EventHandle,
+    sequence_number: u64,
 }
 
 impl AccountResource {
@@ -114,7 +111,7 @@ impl AccountResource {
     pub fn make_from(account_map: &BTreeMap<Vec<u8>, Vec<u8>>) -> Result<Self> {
         let ap = account_resource_path();
         match account_map.get(&ap) {
-            Some(bytes) => SimpleDeserializer::deserialize(bytes),
+            Some(bytes) => lcs::from_bytes(bytes).map_err(Into::into),
             None => bail!("No data for {:?}", ap),
         }
     }
@@ -165,44 +162,6 @@ impl AccountResource {
     }
 }
 
-impl CanonicalSerialize for AccountResource {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        // TODO(drussi): the order in which these fields are serialized depends on some
-        // implementation details in the VM.
-        serializer
-            .encode_struct(&self.authentication_key)?
-            .encode_u64(self.balance)?
-            .encode_bool(self.delegated_key_rotation_capability)?
-            .encode_bool(self.delegated_withdrawal_capability)?
-            .encode_struct(&self.received_events)?
-            .encode_struct(&self.sent_events)?
-            .encode_u64(self.sequence_number)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for AccountResource {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let authentication_key = deserializer.decode_struct()?;
-        let balance = deserializer.decode_u64()?;
-        let delegated_key_rotation_capability = deserializer.decode_bool()?;
-        let delegated_withdrawal_capability = deserializer.decode_bool()?;
-        let received_events = deserializer.decode_struct()?;
-        let sent_events = deserializer.decode_struct()?;
-        let sequence_number = deserializer.decode_u64()?;
-
-        Ok(AccountResource {
-            balance,
-            sequence_number,
-            authentication_key,
-            delegated_key_rotation_capability,
-            delegated_withdrawal_capability,
-            sent_events,
-            received_events,
-        })
-    }
-}
-
 pub fn get_account_resource_or_default(
     account_state: &Option<AccountStateBlob>,
 ) -> Result<AccountResource> {
@@ -242,18 +201,15 @@ lazy_static! {
 /// Generic struct that represents an Account event.
 /// Both SentPaymentEvent and ReceivedPaymentEvent are representable with this struct.
 /// They have an AccountAddress for the sender or receiver and the amount transferred.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct AccountEvent {
-    account: AccountAddress,
     amount: u64,
+    account: AccountAddress,
 }
 
 impl AccountEvent {
     pub fn try_from(bytes: &[u8]) -> Result<AccountEvent> {
-        let mut deserializer = SimpleDeserializer::new(bytes);
-        let amount = deserializer.decode_u64()?;
-        let account = deserializer.decode_struct()?;
-        Ok(Self { account, amount })
+        lcs::from_bytes(bytes).map_err(Into::into)
     }
 
     /// Get the account related to the event

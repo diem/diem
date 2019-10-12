@@ -6,8 +6,6 @@ use crate::{
     chained_bft::block_storage::VoteReceptionResult, counters,
     util::time_service::duration_since_epoch,
 };
-
-use canonical_serialization::CanonicalSerialize;
 use consensus_types::{
     block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
     vote_msg::VoteMsg,
@@ -61,7 +59,7 @@ impl<T> LinkableBlock<T> {
 
 impl<T> LinkableBlock<T>
 where
-    T: Serialize + Default + CanonicalSerialize + PartialEq,
+    T: Serialize + Default + PartialEq,
 {
     pub fn id(&self) -> HashValue {
         self.executed_block().id()
@@ -97,7 +95,7 @@ pub struct BlockTree<T> {
 
 impl<T> BlockTree<T>
 where
-    T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,
+    T: Serialize + Default + Debug + PartialEq,
 {
     pub(super) fn new(
         root: ExecutedBlock<T>,
@@ -423,7 +421,7 @@ where
 #[cfg(any(test, feature = "fuzzing"))]
 impl<T> BlockTree<T>
 where
-    T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,
+    T: Serialize + Default + Debug + PartialEq,
 {
     /// Returns the number of blocks in the tree
     pub(super) fn len(&self) -> usize {

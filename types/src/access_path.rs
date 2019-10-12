@@ -45,9 +45,6 @@ use crate::{
     language_storage::{ModuleId, ResourceKey, StructTag},
     validator_set::validator_set_path,
 };
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
 use crypto::hash::{CryptoHash, HashValue};
 use failure::prelude::*;
 use hex;
@@ -324,24 +321,6 @@ impl fmt::Display for AccessPath {
                 String::from_utf8_lossy(&self.path[1 + HashValue::LENGTH..])
             )
         }
-    }
-}
-
-impl CanonicalSerialize for AccessPath {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_struct(&self.address)?
-            .encode_bytes(&self.path)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for AccessPath {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let address = deserializer.decode_struct::<AccountAddress>()?;
-        let path = deserializer.decode_bytes()?;
-
-        Ok(Self { address, path })
     }
 }
 

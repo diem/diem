@@ -8,7 +8,6 @@ use crate::{
     proof::{verify_event, EventProof},
     transaction::Version,
 };
-use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
     hash::{ContractEventHasher, CryptoHash, CryptoHasher},
     HashValue,
@@ -16,10 +15,11 @@ use crypto::{
 use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
+use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 
 /// Entry produced via a call to the `emit_event` builtin.
-#[derive(Clone, Default, Eq, PartialEq)]
+#[derive(Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ContractEvent {
     /// The unique key that the event was emitted to
     key: EventKey,
@@ -77,22 +77,12 @@ impl std::fmt::Display for ContractEvent {
     }
 }
 
-impl CanonicalSerialize for ContractEvent {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_struct(&self.key)?
-            .encode_u64(self.sequence_number)?
-            .encode_bytes(&self.event_data)?;
-        Ok(())
-    }
-}
-
 impl CryptoHash for ContractEvent {
     type Hasher = ContractEventHasher;
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(&SimpleSerializer::<Vec<u8>>::serialize(self).expect("Failed to serialize."));
+        state.write(&lcs::to_bytes(self).expect("Failed to serialize."));
         state.finish()
     }
 }

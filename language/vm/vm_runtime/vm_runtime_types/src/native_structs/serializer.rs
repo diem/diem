@@ -4,54 +4,31 @@ use crate::{
     },
     value::{deserialize_value, MutVal},
 };
-use canonical_serialization::*;
-use failure::prelude::*;
 use libra_types::vm_error::StatusCode;
+use serde::Deserialize;
 use vm::errors::*;
 
-impl CanonicalSerialize for NativeVector {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_u32(self.0.len() as u32)?;
-        for elem in self.0.iter() {
-            elem.serialize(serializer)?
-        }
-        Ok(())
-    }
-}
-
 pub(crate) fn deserialize_vector(
-    deserializer: &mut SimpleDeserializer,
+    deserializer: &mut lcs::Deserializer<'_>,
     ty: &NativeStructType,
 ) -> VMResult<NativeVector> {
-    let vec_length = if let Ok(len) = deserializer.decode_u32() {
-        len
-    } else {
-        return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
-    };
-    let mut val = vec![];
+    //TODO investigate if we can use `deserialize_seq` instead of reading the length explicitly
+    let len = u32::deserialize(&mut *deserializer)
+        .map_err(|_| vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR))?
+        as usize;
+    let mut val = Vec::with_capacity(len);
     if ty.type_actuals().len() != 1 {
         return Err(vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR));
     };
     let elem_type = &ty.type_actuals()[0];
-    for _i in 0..vec_length {
+    for _i in 0..len {
         val.push(MutVal::new(deserialize_value(deserializer, elem_type)?));
     }
     Ok(NativeVector(val))
 }
 
-impl CanonicalSerialize for NativeStructValue {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        match self {
-            NativeStructValue::Vector(v) => {
-                serializer.encode_struct(v)?;
-            }
-        }
-        Ok(())
-    }
-}
-
 pub(crate) fn deserialize_native(
-    deserializer: &mut SimpleDeserializer,
+    deserializer: &mut lcs::Deserializer<'_>,
     ty: &NativeStructType,
 ) -> VMResult<NativeStructValue> {
     match &ty.tag {

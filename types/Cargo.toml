@@ -26,7 +26,7 @@ rand = "0.6.5"
 serde = { version = "1.0.99", default-features = false }
 tiny-keccak = { version = "1.5.0", default-features = false }
 
-canonical-serialization = { path = "../common/canonical-serialization" }
+lcs = { path = "../common/lcs", package = "libra-canonical-serialization" }
 crypto = { path = "../crypto/crypto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 proptest-helpers = { path = "../common/proptest-helpers" }

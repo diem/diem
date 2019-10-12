@@ -7,7 +7,6 @@ use crate::{
     validator_set::ValidatorSet,
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
-use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
     hash::{CryptoHash, CryptoHasher, LedgerInfoHasher, ACCUMULATOR_PLACEHOLDER_HASH},
     HashValue, *,
@@ -206,28 +205,12 @@ impl From<LedgerInfo> for crate::proto::types::LedgerInfo {
     }
 }
 
-impl CanonicalSerialize for LedgerInfo {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_u64(self.version)?
-            .encode_bytes(self.transaction_accumulator_hash.as_ref())?
-            .encode_bytes(self.consensus_data_hash.as_ref())?
-            .encode_bytes(self.consensus_block_id.as_ref())?
-            .encode_u64(self.epoch_num)?
-            .encode_u64(self.timestamp_usecs)?
-            .encode_optional(&self.next_validator_set)?;
-        Ok(())
-    }
-}
-
 impl CryptoHash for LedgerInfo {
     type Hasher = LedgerInfoHasher;
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(
-            &SimpleSerializer::<Vec<u8>>::serialize(self).expect("Serialization should work."),
-        );
+        state.write(&lcs::to_bytes(self).expect("Serialization should work."));
         state.finish()
     }
 }
@@ -243,15 +226,6 @@ pub struct LedgerInfoWithSignatures<Sig> {
     /// The validator is identified by its account address: in order to verify a signature
     /// one needs to retrieve the public key of the validator for the given epoch.
     signatures: BTreeMap<AccountAddress, Sig>,
-}
-
-impl<Sig: CanonicalSerialize> CanonicalSerialize for LedgerInfoWithSignatures<Sig> {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_struct(&self.ledger_info)?
-            .encode_btreemap(&self.signatures)?;
-        Ok(())
-    }
 }
 
 impl<Sig> Display for LedgerInfoWithSignatures<Sig> {
@@ -358,7 +332,6 @@ impl<Sig: Signature> From<LedgerInfoWithSignatures<Sig>>
 mod tests {
     use crate::ledger_info::{LedgerInfo, LedgerInfoWithSignatures};
     use crate::validator_signer::ValidatorSigner;
-    use canonical_serialization::SimpleSerializer;
     use crypto::{ed25519::*, HashValue};
     use std::collections::BTreeMap;
 
@@ -404,10 +377,9 @@ mod tests {
             LedgerInfoWithSignatures::new(ledger_info.clone(), author_to_signature_map);
 
         let ledger_info_with_signatures_bytes =
-            SimpleSerializer::<Vec<u8>>::serialize(&ledger_info_with_signatures)
-                .expect("block serialization failed");
+            lcs::to_bytes(&ledger_info_with_signatures).expect("block serialization failed");
         let ledger_info_with_signatures_reversed_bytes =
-            SimpleSerializer::<Vec<u8>>::serialize(&ledger_info_with_signatures_reversed)
+            lcs::to_bytes(&ledger_info_with_signatures_reversed)
                 .expect("block serialization failed");
 
         assert_eq!(

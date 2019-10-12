@@ -57,13 +57,9 @@
 //! ```
 
 use crate::{hkdf::Hkdf, traits::*};
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
 use crypto_derive::{Deref, SilentDebug, SilentDisplay};
-use failure::prelude::*;
 use rand::{rngs::EntropyRng, RngCore};
-use serde::{de, export, ser};
+use serde::{de, ser};
 use sha2::Sha256;
 use std::{convert::TryFrom, fmt, ops::Deref};
 use x25519_dalek;
@@ -212,7 +208,7 @@ impl ExchangeKey for X25519StaticPrivateKey {
 
 impl TryFrom<&[u8]> for X25519StaticPrivateKey {
     type Error = CryptoMaterialError;
-    fn try_from(bytes: &[u8]) -> std::result::Result<X25519StaticPrivateKey, CryptoMaterialError> {
+    fn try_from(bytes: &[u8]) -> Result<X25519StaticPrivateKey, CryptoMaterialError> {
         if bytes.len() != X25519_PRIVATE_KEY_LENGTH {
             return Err(CryptoMaterialError::DeserializationError);
         }
@@ -271,7 +267,7 @@ impl PublicKey for X25519StaticPublicKey {
 
 impl TryFrom<&[u8]> for X25519StaticPublicKey {
     type Error = CryptoMaterialError;
-    fn try_from(bytes: &[u8]) -> std::result::Result<X25519StaticPublicKey, CryptoMaterialError> {
+    fn try_from(bytes: &[u8]) -> Result<X25519StaticPublicKey, CryptoMaterialError> {
         if bytes.len() != X25519_PUBLIC_KEY_LENGTH {
             return Err(CryptoMaterialError::DeserializationError);
         }
@@ -294,32 +290,11 @@ impl ValidKey for X25519StaticPublicKey {
 //////////////////////
 
 //////////////////////////////
-// Canonical Serialization  //
-//////////////////////////////
-
-impl CanonicalSerialize for X25519StaticPublicKey {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_bytes(&self.to_bytes())?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for X25519StaticPublicKey {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let public_key_bytes = deserializer.decode_bytes()?;
-        Ok(X25519StaticPublicKey::try_from(&public_key_bytes[..])?)
-    }
-}
-
-//////////////////////////////
 // Compact Serialization    //
 //////////////////////////////
 
 impl ser::Serialize for X25519StaticPrivateKey {
-    fn serialize<S>(&self, serializer: S) -> export::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
     {
@@ -328,7 +303,7 @@ impl ser::Serialize for X25519StaticPrivateKey {
 }
 
 impl ser::Serialize for X25519StaticPublicKey {
-    fn serialize<S>(&self, serializer: S) -> export::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
     {
@@ -346,7 +321,7 @@ impl<'de> de::Visitor<'de> for X25519StaticPrivateKeyVisitor {
         formatter.write_str("x25519_dalek static key in bytes")
     }
 
-    fn visit_bytes<E>(self, value: &[u8]) -> export::Result<X25519StaticPrivateKey, E>
+    fn visit_bytes<E>(self, value: &[u8]) -> Result<X25519StaticPrivateKey, E>
     where
         E: de::Error,
     {
@@ -361,7 +336,7 @@ impl<'de> de::Visitor<'de> for X25519StaticPublicKeyVisitor {
         formatter.write_str("x25519_dalek public key in bytes")
     }
 
-    fn visit_bytes<E>(self, value: &[u8]) -> export::Result<X25519StaticPublicKey, E>
+    fn visit_bytes<E>(self, value: &[u8]) -> Result<X25519StaticPublicKey, E>
     where
         E: de::Error,
     {
@@ -370,7 +345,7 @@ impl<'de> de::Visitor<'de> for X25519StaticPublicKeyVisitor {
 }
 
 impl<'de> de::Deserialize<'de> for X25519StaticPrivateKey {
-    fn deserialize<D>(deserializer: D) -> export::Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
     {
@@ -379,7 +354,7 @@ impl<'de> de::Deserialize<'de> for X25519StaticPrivateKey {
 }
 
 impl<'de> de::Deserialize<'de> for X25519StaticPublicKey {
-    fn deserialize<D>(deserializer: D) -> export::Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
     {

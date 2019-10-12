@@ -1,14 +1,11 @@
 use crate::OP_COUNTER;
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
-use failure::prelude::*;
 use num_derive::ToPrimitive;
 use num_traits::ToPrimitive;
 #[cfg(any(test, feature = "testing"))]
 use proptest::{collection::hash_map, prelude::*};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter};
@@ -27,7 +24,7 @@ pub(crate) enum LedgerCounter {
     StaleStateNodes = 302,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 struct InnerLedgerCounters {
     counters: BTreeMap<u16, usize>,
 }
@@ -96,7 +93,7 @@ impl LedgerCounterBumps {
 }
 
 /// Represents ledger counter values at a certain version.
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub(crate) struct LedgerCounters {
     counters: InnerLedgerCounters,
 }
@@ -128,23 +125,6 @@ impl LedgerCounters {
     /// Get the value of `counter`.
     pub fn get(&self, counter: LedgerCounter) -> usize {
         self.counters.get(counter)
-    }
-}
-
-impl CanonicalSerialize for LedgerCounters {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_btreemap(&self.counters.counters)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for LedgerCounters {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let counters = deserializer.decode_btreemap::<u16, usize>()?;
-
-        Ok(Self {
-            counters: InnerLedgerCounters { counters },
-        })
     }
 }
 

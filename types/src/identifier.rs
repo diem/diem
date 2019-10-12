@@ -9,9 +9,6 @@
 
 // TODO: restrict identifiers to a subset of ASCII
 
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
 use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest::prelude::*;
@@ -158,29 +155,5 @@ impl Arbitrary for Identifier {
     fn arbitrary_with((): ()) -> Self::Strategy {
         // TODO: restrict identifiers to a subset of ASCII
         ".*".prop_map(|s| Identifier::new(s).unwrap()).boxed()
-    }
-}
-
-/// LCS does not define any sort of extra annotation for identifiers -- they're serialized exactly
-/// the same way regular strings are, and are represented only within the type system for now.
-impl CanonicalSerialize for Identifier {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_string(&self.0)?;
-        Ok(())
-    }
-}
-
-/// LCS does not define any sort of extra annotation for user strings -- they're serialized exactly
-/// the same way regular strings are, and are represented only within the type system for now.
-impl CanonicalSerialize for IdentStr {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_string(&self.0)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for Identifier {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        Identifier::new(deserializer.decode_string()?)
     }
 }

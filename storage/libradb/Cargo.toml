@@ -23,9 +23,10 @@ rand = "0.6.5"
 rusty-fork = "0.2.1"
 strum = "0.15.0"
 strum_macros = "0.15.0"
+serde = "1.0.96"
 
 accumulator = { path = "../accumulator" }
-canonical-serialization = { path = "../../common/canonical-serialization" }
+lcs = { path = "../../common/lcs", package = "libra-canonical-serialization" }
 crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 jellyfish-merkle = { path = "../jellyfish-merkle" }

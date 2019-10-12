@@ -9,10 +9,6 @@ use crate::{
     language_storage::StructTag,
     validator_public_keys::ValidatorPublicKeys,
 };
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-    SimpleDeserializer,
-};
 use failure::prelude::*;
 use lazy_static::lazy_static;
 #[cfg(any(test, feature = "testing"))]
@@ -78,30 +74,7 @@ impl ValidatorSet {
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        SimpleDeserializer::deserialize(bytes)
-    }
-}
-
-impl CanonicalSerialize for ValidatorSet {
-    fn serialize(&self, mut serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        // TODO: We do not use encode_vec and decode_vec because the VM serializes these
-        // differently. This will be fixed once collections are supported in the language.
-        serializer = serializer.encode_u32(self.0.len() as u32)?;
-        for validator_public_keys in &self.0 {
-            serializer = serializer.encode_struct(validator_public_keys)?;
-        }
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for ValidatorSet {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let size = deserializer.decode_u32()?;
-        let mut payload = vec![];
-        for _i in 0..size {
-            payload.push(deserializer.decode_struct::<ValidatorPublicKeys>()?);
-        }
-        Ok(ValidatorSet::new(payload))
+        lcs::from_bytes(bytes).map_err(Into::into)
     }
 }
 

@@ -6,10 +6,6 @@ use crate::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
 };
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-    SimpleSerializer,
-};
 use crypto::hash::{AccessPathHasher, CryptoHash, CryptoHasher, HashValue};
 use failure::Result;
 #[cfg(any(test, feature = "testing"))]
@@ -99,57 +95,13 @@ impl<'a> From<&'a ModuleId> for AccessPath {
     }
 }
 
-impl CanonicalSerialize for ModuleId {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_struct(&self.address)?
-            .encode_struct(&self.name)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for ModuleId {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let address = deserializer.decode_struct::<AccountAddress>()?;
-        let name = deserializer.decode_struct::<Identifier>()?;
-
-        Ok(Self { address, name })
-    }
-}
-
 impl CryptoHash for ModuleId {
     type Hasher = AccessPathHasher;
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(&SimpleSerializer::<Vec<u8>>::serialize(self).unwrap());
+        state.write(&lcs::to_bytes(self).unwrap());
         state.finish()
-    }
-}
-
-impl CanonicalSerialize for StructTag {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_struct(&self.address)?
-            .encode_struct(&self.module)?
-            .encode_struct(&self.name)?
-            .encode_vec(&self.type_params)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for StructTag {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let address = deserializer.decode_struct::<AccountAddress>()?;
-        let module = deserializer.decode_struct::<Identifier>()?;
-        let name = deserializer.decode_struct::<Identifier>()?;
-        let type_params = deserializer.decode_vec::<StructTag>()?;
-        Ok(Self {
-            address,
-            name,
-            module,
-            type_params,
-        })
     }
 }
 
@@ -158,7 +110,7 @@ impl CryptoHash for StructTag {
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.write(&SimpleSerializer::<Vec<u8>>::serialize(self).unwrap());
+        state.write(&lcs::to_bytes(self).unwrap());
         state.finish()
     }
 }

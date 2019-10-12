@@ -5,10 +5,11 @@ use crate::{
     value::{MutVal, ReferenceValue, Value},
 };
 use libra_types::vm_error::sub_status::NFE_VECTOR_ERROR_BASE;
+use serde::Serialize;
 use std::{collections::VecDeque, ops::Add};
 use vm::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, STRUCT_SIZE};
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize)]
 pub struct NativeVector(pub(crate) Vec<MutVal>);
 
 const BORROW_COST: u64 = 30; // TODO: determine experimentally

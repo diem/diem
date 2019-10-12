@@ -6,7 +6,6 @@ use crate::{
     proto::types::SignedTransaction as ProtoSignedTransaction,
     transaction::{RawTransaction, SignedTransaction, TransactionPayload},
 };
-use canonical_serialization::SimpleDeserializer;
 use chrono::Utc;
 use crypto::{
     ed25519::*,
@@ -22,9 +21,8 @@ use failure::prelude::*;
 pub fn get_signed_transactions_digest(signed_txns: &[ProtoSignedTransaction]) -> HashValue {
     let mut signatures = vec![];
     for transaction in signed_txns {
-        let signed_txn: SignedTransaction =
-            SimpleDeserializer::deserialize(&transaction.signed_txn)
-                .expect("Unable to deserialize SignedTransaction");
+        let signed_txn: SignedTransaction = lcs::from_bytes(&transaction.signed_txn)
+            .expect("Unable to deserialize SignedTransaction");
         signatures.extend_from_slice(&signed_txn.signature().to_bytes());
     }
     signatures.test_only_hash()

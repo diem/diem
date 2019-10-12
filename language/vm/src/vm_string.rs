@@ -8,10 +8,6 @@
 //! mixing with other sorts of strings. For example, it is not possible to use one as an
 //! identifier for name resolution.
 
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
-use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -163,29 +159,5 @@ impl ToOwned for VMStr {
 impl fmt::Display for VMStr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", &self.0)
-    }
-}
-
-/// LCS does not define any sort of extra annotation for VM strings -- they're serialized exactly
-/// the same way regular strings are, and are represented only within the type system for now.
-impl CanonicalSerialize for VMString {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_string(&self.0)?;
-        Ok(())
-    }
-}
-
-/// LCS does not define any sort of extra annotation for VM strings -- they're serialized exactly
-/// the same way regular strings are, and are represented only within the type system for now.
-impl CanonicalSerialize for VMStr {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_string(&self.0)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for VMString {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        Ok(VMString::new(deserializer.decode_string()?))
     }
 }

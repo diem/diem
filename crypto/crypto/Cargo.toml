@@ -33,7 +33,6 @@ x25519-dalek = { git = "https://github.com/calibra/x25519-dalek.git", branch = "
 crypto_derive = { path = "../crypto_derive" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 nibble = { path = "../../common/nibble" }
-canonical-serialization = { path = "../../common/canonical-serialization" }
 
 [dev-dependencies]
 bitvec = "0.10.1"

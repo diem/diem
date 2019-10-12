@@ -2,16 +2,15 @@ use crate::{
     loaded_data::{struct_def::StructDef, types::Type},
     native_structs::vector::NativeVector,
 };
-use canonical_serialization::*;
-use failure::prelude::*;
+use serde::{ser, Deserialize, Serialize};
 use vm::gas_schedule::{AbstractMemorySize, GasCarrier};
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum NativeStructTag {
     Vector = 0,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct NativeStructType {
     pub tag: NativeStructTag,
     type_actuals: Vec<Type>,
@@ -20,6 +19,18 @@ pub struct NativeStructType {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum NativeStructValue {
     Vector(NativeVector),
+}
+
+// TODO(#1307)
+impl ser::Serialize for NativeStructValue {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        match self {
+            NativeStructValue::Vector(v) => v.serialize(serializer),
+        }
+    }
 }
 
 impl NativeStructType {
@@ -57,43 +68,5 @@ impl NativeStructValue {
                     .unwrap_or(Type::Bool),
             )),
         }
-    }
-}
-
-impl CanonicalSerialize for NativeStructTag {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        match self {
-            NativeStructTag::Vector => serializer.encode_u8(0x0)?,
-        };
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for NativeStructTag {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        Ok(match deserializer.decode_u8()? {
-            0x0 => NativeStructTag::Vector,
-            other => bail!(
-                "Error while deserializing native type: found unexpected tag {:#x}",
-                other
-            ),
-        })
-    }
-}
-
-impl CanonicalSerialize for NativeStructType {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_struct(&self.tag)?;
-        serializer.encode_vec(&self.type_actuals)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for NativeStructType {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        Ok(NativeStructType {
-            tag: deserializer.decode_struct()?,
-            type_actuals: deserializer.decode_vec()?,
-        })
     }
 }

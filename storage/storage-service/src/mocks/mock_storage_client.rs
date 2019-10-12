@@ -3,7 +3,6 @@
 
 //! This module provides mock storage clients for tests.
 
-use canonical_serialization::SimpleSerializer;
 use crypto::{ed25519::*, HashValue};
 use failure::prelude::*;
 use futures::prelude::*;
@@ -193,12 +192,10 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                 );
                 version_data.insert(
                     libra_types::account_config::account_resource_path(),
-                    SimpleSerializer::serialize(&account_resource)?,
+                    lcs::to_bytes(&account_resource)?,
                 );
                 let mut account_state_with_proof = AccountStateWithProof::default();
-                let blob =
-                    AccountStateBlob::from(SimpleSerializer::<Vec<u8>>::serialize(&version_data)?)
-                        .into();
+                let blob = AccountStateBlob::from(lcs::to_bytes(&version_data)?).into();
                 let proof = {
                     let ledger_info_to_transaction_info_proof =
                         libra_types::proof::AccumulatorProof::new(vec![]);

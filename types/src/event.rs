@@ -1,22 +1,17 @@
 use crate::account_address::AccountAddress;
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
 use crypto::HashValue;
 use failure::prelude::*;
 use hex;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
-use serde::{Deserialize, Serialize};
+use serde::{de, ser, Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 
 /// Size of an event key.
 pub const EVENT_KEY_LENGTH: usize = 32;
 
 /// A struct that represents a globally unique id for an Event stream that a user can listen to.
-#[derive(
-    Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, Clone, Serialize, Deserialize, Copy,
-)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, Clone, Copy)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 pub struct EventKey([u8; EVENT_KEY_LENGTH]);
 
@@ -50,6 +45,42 @@ impl EventKey {
     }
 }
 
+// TODO(#1307)
+impl ser::Serialize for EventKey {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        serializer.serialize_bytes(&self.0)
+    }
+}
+
+impl<'de> de::Deserialize<'de> for EventKey {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct EventKeyVisitor;
+
+        impl<'de> de::Visitor<'de> for EventKeyVisitor {
+            type Value = EventKey;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("EventKey in bytes")
+            }
+
+            fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                EventKey::try_from(value).map_err(E::custom)
+            }
+        }
+
+        deserializer.deserialize_bytes(EventKeyVisitor)
+    }
+}
+
 impl TryFrom<&[u8]> for EventKey {
     type Error = failure::Error;
 
@@ -67,12 +98,12 @@ impl TryFrom<&[u8]> for EventKey {
 }
 
 /// A Rust representation of an Event Handle Resource.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EventHandle {
-    /// The associated globally unique key that is used as the key to the EventStore.
-    key: EventKey,
     /// Number of events in the event stream.
     count: u64,
+    /// The associated globally unique key that is used as the key to the EventStore.
+    key: EventKey,
 }
 
 impl EventHandle {
@@ -124,36 +155,5 @@ impl fmt::Display for EventKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         // Forward to the LowerHex impl with a "0x" prepended (the # flag).
         write!(f, "{:#x}", self)
-    }
-}
-
-impl CanonicalSerialize for EventKey {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_bytes(&self.0)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for EventKey {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let bytes = deserializer.decode_bytes()?;
-        Self::try_from(bytes.as_slice())
-    }
-}
-
-impl CanonicalSerialize for EventHandle {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_u64(self.count)?
-            .encode_struct(&self.key)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for EventHandle {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let count = deserializer.decode_u64()?;
-        let key = deserializer.decode_struct()?;
-        Ok(EventHandle { count, key })
     }
 }

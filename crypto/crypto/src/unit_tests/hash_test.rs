@@ -6,6 +6,7 @@ use bitvec::BitVec;
 use byteorder::{LittleEndian, WriteBytesExt};
 use proptest::{collection::vec, prelude::*};
 use rand::{rngs::StdRng, SeedableRng};
+use serde::Serialize;
 
 #[derive(Serialize)]
 struct Foo(u32);
