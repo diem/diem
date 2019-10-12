@@ -608,10 +608,16 @@ impl<T: Payload> EventProcessor<T> {
 
     /// Generate sync info that can be attached to an outgoing message
     fn gen_sync_info(&self) -> SyncInfo {
+        let hqc = self.block_store.highest_quorum_cert().as_ref().clone();
+        // No need to include HTC if it's lower than HQC
+        let htc = self
+            .pacemaker
+            .highest_timeout_certificate()
+            .filter(|tc| tc.round() > hqc.certified_block_round());
         SyncInfo::new(
-            self.block_store.highest_quorum_cert().as_ref().clone(),
+            hqc,
             self.block_store.highest_ledger_info().as_ref().clone(),
-            self.pacemaker.highest_timeout_certificate(),
+            htc,
         )
     }
 
