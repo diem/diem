@@ -592,6 +592,7 @@ impl NodeConfig {
         });
         let mut buffer = vec![];
         file.read_to_end(&mut buffer)?;
+        // TODO: update to use `Transaction::WriteSet` variant when ready.
         Ok(Transaction::UserTransaction(SignedTransaction::try_from(
             libra_types::proto::types::SignedTransaction::decode(&buffer)?,
         )?))
