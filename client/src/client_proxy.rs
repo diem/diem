@@ -17,7 +17,7 @@ use libra_types::{
     contract_event::{ContractEvent, EventWithProof},
     transaction::{
         parse_as_transaction_argument, RawTransaction, Script, SignedTransaction,
-        TransactionPayload, Version,
+        TransactionArgument, TransactionPayload, Version,
     },
     transaction_helpers::{create_signed_txn, create_unsigned_txn, TransactionSigner},
 };
@@ -580,7 +580,7 @@ impl ClientProxy {
         let (script_bytes, _) = script.into_inner();
         let arguments: Vec<_> = space_delim_strings[3..]
             .iter()
-            .filter_map(|arg| parse_as_transaction_argument(arg).ok())
+            .filter_map(|arg| parse_as_transaction_argument_for_client(arg).ok())
             .collect();
         self.submit_program(
             space_delim_strings,
@@ -1052,6 +1052,14 @@ impl ClientProxy {
             .ok_or_else(|| format_err!("Unable to find account by ref id: {}", account_ref_id))?;
         Ok(account_data)
     }
+}
+
+fn parse_as_transaction_argument_for_client(s: &str) -> Result<TransactionArgument> {
+    if is_address(s) {
+        let account_address = ClientProxy::address_from_strings(s)?;
+        return Ok(TransactionArgument::Address(account_address));
+    }
+    parse_as_transaction_argument(s)
 }
 
 fn format_parse_data_error<T: std::fmt::Debug>(
