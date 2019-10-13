@@ -33,7 +33,7 @@ use storage_proto::proto::storage::{
 pub fn start_storage_service_and_return_service(
     config: &NodeConfig,
 ) -> (ServerHandle, Arc<StorageService>) {
-    let (storage_service, shutdown_receiver) = StorageService::new(&config.storage.dir);
+    let (storage_service, shutdown_receiver) = StorageService::new(&config.get_storage_dir());
     (
         spawn_service_thread_with_drop_closure(
             create_storage(storage_service.clone()),
