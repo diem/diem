@@ -21,7 +21,7 @@ else
   docker run --name libra-node-builder-container -d -i -t -v $DIR/../..:/libra libra-node-builder bash
 fi
 
-docker exec -i -t libra-node-builder-container bash -c 'source /root/.cargo/env; cargo build -p libra-node --target-dir /target && /bin/cp /target/debug/libra-node target/libra-node-builder/'
+docker exec -i -t libra-node-builder-container bash -c 'source /root/.cargo/env; cargo build --release -p libra-node --target-dir /target && /bin/cp /target/release/libra-node target/libra-node-builder/'
 
 ln target/libra-node-builder/libra-node libra-node-from-docker
 docker build -f $DIR/validator.Dockerfile $DIR/../.. --tag libra_e2e --build-arg GIT_REV="$(git rev-parse HEAD)" --build-arg GIT_UPSTREAM="$(git merge-base HEAD origin/master)" --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" $PROXY
