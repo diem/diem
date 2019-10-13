@@ -1,3 +1,20 @@
+use std::{
+    cmp,
+    collections::HashSet,
+    convert::TryFrom,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
+use std::convert::TryInto;
+
+use futures::Future;
+
+use config::config::NodeConfig;
+use libra_types::{
+    account_address::AccountAddress, proto::types::SignedTransactionsBlock,
+    transaction::SignedTransaction,
+};
+
 use crate::{
     core_mempool::{CoreMempool, TimelineState, TxnPointer},
     proto::{
@@ -8,21 +25,6 @@ use crate::{
         },
         mempool_client::MempoolClientTrait,
     },
-};
-use config::config::NodeConfig;
-use core::borrow::BorrowMut;
-use futures::Future;
-use libra_types::{
-    account_address::AccountAddress, proto::types::SignedTransactionsBlock,
-    transaction::SignedTransaction,
-};
-use std::convert::TryInto;
-use std::{
-    cmp,
-    collections::HashSet,
-    convert::TryFrom,
-    sync::{Arc, Mutex},
-    time::Duration,
 };
 
 /// Client for CoreMemPool
@@ -39,24 +41,19 @@ impl CoreMemPoolClient {
     }
 
     /// remove txn from mock chain
-    pub fn remove_txn(&self, req: &GetBlockRequest) {
-        let exclude_transactions: HashSet<TxnPointer> = req
-            .transactions
-            .iter()
-            .map(|t| {
-                (
-                    AccountAddress::try_from(t.sender.clone()),
-                    t.sequence_number,
-                )
-            })
-            .filter(|(address, _)| address.is_ok())
-            .map(|(address, seq)| (address.unwrap(), seq))
-            .collect();
-
+    pub fn remove_txn(&self, exclude_transactions: HashSet<((AccountAddress, u64))> ) {
         let mut lock = self.core_mempool.lock().expect("get lock err.");
         exclude_transactions
             .iter()
             .for_each(|(addr, seq_num)| lock.remove_transaction(addr, seq_num.clone(), true));
+    }
+    ///TODO doc
+    pub fn get_block(&self, batch_size: u64, seen: HashSet<TxnPointer>) -> Vec<SignedTransaction> {
+        self
+            .core_mempool
+            .lock()
+            .expect("[get_block] acquire mempool lock")
+            .get_block(batch_size, seen)
     }
 }
 
@@ -84,30 +81,7 @@ impl MempoolClientTrait for CoreMemPoolClient {
         Ok(response)
     }
 
-    //    fn get_block(&self, req: &GetBlockRequest) -> ::grpcio::Result<GetBlockResponse> {
-    //        let block_size = cmp::max(req.get_max_block_size(), 1);
-    //        let exclude_transactions: HashSet<TxnPointer> = req
-    //            .get_transactions()
-    //            .iter()
-    //            .map(|t| (AccountAddress::try_from(t.get_sender()), t.sequence_number))
-    //            .filter(|(address, _)| address.is_ok())
-    //            .map(|(address, seq)| (address.unwrap(), seq))
-    //            .collect();
-    //
-    //        let mut txns = self
-    //            .core_mempool
-    //            .lock()
-    //            .expect("[get_block] acquire mempool lock")
-    //            .get_block(block_size, exclude_transactions);
-    //
-    //        let transactions = txns.drain(..).map(SignedTransaction::into_proto).collect();
-    //
-    //        let mut block = SignedTransactionsBlock::new();
-    //        block.set_transactions(::protobuf::RepeatedField::from_vec(transactions));
-    //        let mut response = GetBlockResponse::new();
-    //        response.set_block(block);
-    //        Ok(response)
-    //    }
+
     //
     //    fn commit_transactions(
     //        &self,
