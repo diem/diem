@@ -565,7 +565,10 @@ fn test_full_node_basic_flow() {
         validator_ac_client.faucet_account.clone().unwrap().address
     );
     // mint from full node and check both validator and full node have correct balance
-    validator_ac_client.create_next_account(false).unwrap();
+    let account3 = validator_ac_client
+        .create_next_account(false)
+        .unwrap()
+        .address;
     full_node_client.create_next_account(false).unwrap();
     full_node_client_2.create_next_account(false).unwrap();
 
@@ -631,6 +634,11 @@ fn test_full_node_basic_flow() {
         Decimal::from_f64(30.0),
         Decimal::from_str(&validator_ac_client.get_balance(&["b", "4"]).unwrap()).ok()
     );
+
+    let sequence = validator_ac_client
+        .get_sequence_number(&["sequence", &format!("{}", account3), "true"])
+        .unwrap();
+    full_node_client_2.wait_for_transaction(account3, sequence);
     assert_eq!(
         Decimal::from_f64(0.0),
         Decimal::from_str(&full_node_client_2.get_balance(&["b", "3"]).unwrap()).ok()
