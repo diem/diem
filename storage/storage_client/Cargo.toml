@@ -16,7 +16,6 @@ grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["pr
 rand = "0.6.5"
 crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
-metrics = { path = "../../common/metrics" }
 scratchpad = { path = "../scratchpad" }
 state_view = { path = "../state_view" }
 storage_proto = { path = "../storage_proto" }
