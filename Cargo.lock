@@ -63,7 +63,6 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-service 0.1.0",
  "storage_client 0.1.0",
- "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm_validator 0.1.0",
 ]
@@ -404,7 +403,6 @@ dependencies = [
 name = "bytecode_source_map"
 version = "0.1.0"
 dependencies = [
- "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure_ext 0.1.0",
  "ir_to_bytecode_syntax 0.1.0",
@@ -710,7 +708,6 @@ dependencies = [
  "get_if_addrs 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
- "logger 0.1.0",
  "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -790,9 +787,7 @@ dependencies = [
 name = "consensus-types"
 version = "0.1.0"
 dependencies = [
- "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "canonical-serialization 0.1.0",
- "config 0.1.0",
  "crypto 0.1.0",
  "executor 0.1.0",
  "failure_ext 0.1.0",
@@ -2164,7 +2159,6 @@ dependencies = [
  "logger 0.1.0",
  "metrics 0.1.0",
  "network 0.1.0",
- "num_cpus 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal-hook 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2174,7 +2168,6 @@ dependencies = [
  "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm_runtime 0.1.0",
- "vm_validator 0.1.0",
 ]
 
 [[package]]
@@ -4313,7 +4306,6 @@ dependencies = [
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
- "metrics 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
  "state_view 0.1.0",

@@ -7,7 +7,6 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bytes = "0.4.12"
 mirai-annotations = { version = "1.4.0", default-features = false }
 proptest = { version = "0.9.4", optional = true }
 rand = { version = "0.6.5", default-features = false }
@@ -15,7 +14,6 @@ rmp-serde = { version = "0.13.7", default-features = false }
 serde = { version = "1.0.99", default-features = false }
 
 canonical-serialization = { path = "../../common/canonical-serialization" }
-config = { path = "../../config" }
 crypto = { path = "../../crypto/crypto" }
 executor = { path = "../../execution/executor" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
