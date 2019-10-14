@@ -82,6 +82,36 @@ message VoteData {
   uint64 parent_block_round = 5;
 }
 
+/// This data structure stores the output of storage after executing a given
+/// block or set of transactions.
+message BlockInfo {
+  // Epoch number corresponds to the set of validators that are active for this
+  // ledger info. This can be used to ascertain the current set of validators,
+  // which then can be used to identify the necessary keys to verify the authenticity
+  // of this LedgerInfo. The very first epoch is 0. Without epoch number a potential
+  //attack could reuse the signatures from the validators in one epoch in order to sign
+  // the wrong info belonging to another epoch, in which these validators do not form a
+  // quorum.
+  uint64 epoch_num = 1;
+
+  // The consensus protocol executes proposals (blocks) in rounds, which monotically increase per epoch.
+  uint64 round = 2;
+
+  // The identifier (hash) of the block.
+  bytes id = 3;
+
+  // The accumulator root hash after executing this block.
+  bytes executed_state_id = 4;
+
+  // The version of the latest transaction in the ledger
+  uint64 version = 5;
+
+  // The timestamp this block was proposed by a proposer. This is strictly increasing with
+  // every block. If a client reads a timestamp > the one they specified for transaction
+  // expiration time, they can be certain that their transaction will never be included in a
+  // block in the future (assuming that their transaction has not yet been included)
+  uint64 timestamp_usecs = 6;
+}
 message Vote {
   // The actual vote information.
   VoteData vote_data = 1;
