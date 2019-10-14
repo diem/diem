@@ -1347,7 +1347,7 @@ dependencies = [
  "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
- "state_view 0.1.0",
+ "state-view 0.1.0",
  "storage-service 0.1.0",
  "storage_client 0.1.0",
  "storage_proto 0.1.0",
@@ -2034,7 +2034,7 @@ dependencies = [
  "proptest-helpers 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "state_view 0.1.0",
+ "state-view 0.1.0",
  "stdlib 0.1.0",
  "transaction_builder 0.1.0",
  "vm 0.1.0",
@@ -4233,7 +4233,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "state_view"
+name = "state-view"
 version = "0.1.0"
 dependencies = [
  "failure_ext 0.1.0",
@@ -4308,7 +4308,7 @@ dependencies = [
  "libra-types 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
- "state_view 0.1.0",
+ "state-view 0.1.0",
  "storage_proto 0.1.0",
 ]
 
@@ -5229,7 +5229,7 @@ dependencies = [
  "proptest-helpers 0.1.0",
  "prost-ext 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "state_view 0.1.0",
+ "state-view 0.1.0",
  "stdlib 0.1.0",
  "transaction_builder 0.1.0",
  "vm 0.1.0",
@@ -5257,7 +5257,7 @@ dependencies = [
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rental 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "state_view 0.1.0",
+ "state-view 0.1.0",
  "vm 0.1.0",
  "vm_cache_map 0.1.0",
  "vm_runtime_types 0.1.0",
@@ -5293,7 +5293,7 @@ dependencies = [
  "libra-types 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
- "state_view 0.1.0",
+ "state-view 0.1.0",
  "storage-service 0.1.0",
  "storage_client 0.1.0",
  "transaction_builder 0.1.0",

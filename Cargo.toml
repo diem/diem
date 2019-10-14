@@ -64,7 +64,7 @@ members = [
     "storage/schemadb",
     "storage/scratchpad",
     "storage/storage_client",
-    "storage/state_view",
+    "storage/state-view",
     "storage/storage_proto",
     "storage/storage-service",
     "testsuite",
