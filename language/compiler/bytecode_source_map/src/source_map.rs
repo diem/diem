@@ -2,14 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use failure::prelude::*;
-use ir_to_bytecode_syntax::ast::QualifiedModuleIdent;
+use ir_to_bytecode_syntax::ast::{ModuleName, QualifiedModuleIdent};
 use libra_types::account_address::AccountAddress;
 use libra_types::identifier::Identifier;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::ops::Bound;
+use vm::access::*;
 use vm::file_format::{
-    CodeOffset, FieldDefinitionIndex, FunctionDefinitionIndex, StructDefinitionIndex, TableIndex,
+    AddressPoolIndex, CodeOffset, CompiledModule, CompiledScript, FieldDefinitionIndex,
+    FunctionDefinition, FunctionDefinitionIndex, IdentifierIndex, StructDefinition,
+    StructDefinitionIndex, TableIndex,
 };
 use vm::internals::ModuleIndex;
 
@@ -21,7 +24,7 @@ pub type SourceMap<Location> = Vec<ModuleSourceMap<Location>>;
 pub type SourceName<Location> = (Identifier, Location);
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct StructSourceMap<Location: Clone + Eq> {
+pub struct StructSourceMap<Location: Clone + Eq + Default> {
     /// The source declaration location of the struct
     pub decl_location: Location,
 
@@ -34,7 +37,7 @@ pub struct StructSourceMap<Location: Clone + Eq> {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct FunctionSourceMap<Location: Clone + Eq> {
+pub struct FunctionSourceMap<Location: Clone + Eq + Default> {
     /// The source location for the definition of this entire function. Note that in certain
     /// instances this will have no valid source location e.g. the "main" function for modules that
     /// are treated as programs are synthesized and therefore have no valid source location.
@@ -52,7 +55,7 @@ pub struct FunctionSourceMap<Location: Clone + Eq> {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ModuleSourceMap<Location: Clone + Eq> {
+pub struct ModuleSourceMap<Location: Clone + Eq + Default> {
     /// The name <address.module_name> for module that this source map is for
     pub module_name: (AccountAddress, Identifier),
 
@@ -63,7 +66,7 @@ pub struct ModuleSourceMap<Location: Clone + Eq> {
     function_map: BTreeMap<TableIndex, FunctionSourceMap<Location>>,
 }
 
-impl<Location: Clone + Eq> StructSourceMap<Location> {
+impl<Location: Clone + Eq + Default> StructSourceMap<Location> {
     pub fn new(decl_location: Location) -> Self {
         Self {
             decl_location,
@@ -90,9 +93,29 @@ impl<Location: Clone + Eq> StructSourceMap<Location> {
     pub fn get_field_location(&self, field_index: FieldDefinitionIndex) -> Option<Location> {
         self.fields.get(field_index.into_index()).cloned()
     }
+
+    pub fn dummy_struct_map(
+        &mut self,
+        module: &CompiledModule,
+        struct_def: &StructDefinition,
+    ) -> Result<()> {
+        let struct_handle = module.struct_handle_at(struct_def.struct_handle);
+
+        // Add dummy locations for the fields
+        match struct_def.declared_field_count() {
+            Err(_) => (),
+            Ok(count) => (0..count).for_each(|_| self.fields.push(Location::default())),
+        }
+
+        for i in 0..struct_handle.type_formals.len() {
+            let name = format!("Ty{}", i);
+            self.add_type_parameter((Identifier::new(name)?, Location::default()));
+        }
+        Ok(())
+    }
 }
 
-impl<Location: Clone + Eq> FunctionSourceMap<Location> {
+impl<Location: Clone + Eq + Default> FunctionSourceMap<Location> {
     pub fn new(decl_location: Location) -> Self {
         Self {
             decl_location,
@@ -148,9 +171,38 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
     pub fn get_local_name(&self, local_index: u64) -> Option<SourceName<Location>> {
         self.locals.get(local_index as usize).cloned()
     }
+
+    pub fn dummy_function_map(
+        &mut self,
+        module: &CompiledModule,
+        function_def: &FunctionDefinition,
+    ) -> Result<()> {
+        let function_handle = module.function_handle_at(function_def.function);
+        let function_signature = module.function_signature_at(function_handle.signature);
+        let function_code = &function_def.code;
+        let locals = module.locals_signature_at(function_code.locals);
+
+        // Generate names for each type parameter
+        for i in 0..function_signature.type_formals.len() {
+            let name = format!("Ty{}", i);
+            self.add_type_parameter((Identifier::new(name)?, Location::default()));
+        }
+
+        // Generate names for each local of the function
+        for i in 0..locals.0.len() {
+            let name = format!("loc{}", i);
+            self.add_local_mapping((Identifier::new(name)?, Location::default()));
+        }
+
+        // We just need to insert the code map at the 0'th index since we represent this with a
+        // segment map
+        self.add_code_mapping(0, Location::default());
+
+        Ok(())
+    }
 }
 
-impl<Location: Clone + Eq> ModuleSourceMap<Location> {
+impl<Location: Clone + Eq + Default> ModuleSourceMap<Location> {
     pub fn new(module_name: QualifiedModuleIdent) -> Self {
         Self {
             module_name: (module_name.address, module_name.name.into_inner()),
@@ -325,5 +377,45 @@ impl<Location: Clone + Eq> ModuleSourceMap<Location> {
         self.struct_map
             .get(&fdef_idx.0)
             .ok_or_else(|| format_err!("Unable to get struct source map"))
+    }
+
+    /// Create a 'dummy' source map for a compiled module. This is useful for e.g. disassembling
+    /// with generated or real names depending upon if the source map is available or not.
+    pub fn dummy_from_module(module: &CompiledModule) -> Result<Self> {
+        let module_name = ModuleName::new(module.identifier_at(IdentifierIndex::new(0)).to_owned());
+        let module_ident =
+            QualifiedModuleIdent::new(module_name, *module.address_at(AddressPoolIndex::new(0)));
+
+        let mut empty_source_map = Self::new(module_ident);
+
+        for (function_idx, function_def) in module.function_defs().iter().enumerate() {
+            empty_source_map.add_top_level_function_mapping(
+                FunctionDefinitionIndex(function_idx as TableIndex),
+                Location::default(),
+            )?;
+            empty_source_map
+                .function_map
+                .get_mut(&(function_idx as TableIndex))
+                .ok_or_else(|| format_err!("Unable to get function map while generating dummy"))?
+                .dummy_function_map(&module, &function_def)?;
+        }
+
+        for (struct_idx, struct_def) in module.struct_defs().iter().enumerate() {
+            empty_source_map.add_top_level_struct_mapping(
+                StructDefinitionIndex(struct_idx as TableIndex),
+                Location::default(),
+            )?;
+            empty_source_map
+                .struct_map
+                .get_mut(&(struct_idx as TableIndex))
+                .ok_or_else(|| format_err!("Unable to get struct map while generating dummy"))?
+                .dummy_struct_map(&module, &struct_def)?;
+        }
+
+        Ok(empty_source_map)
+    }
+
+    pub fn dummy_from_script(script: &CompiledScript) -> Result<Self> {
+        Self::dummy_from_module(&script.clone().into_module())
     }
 }

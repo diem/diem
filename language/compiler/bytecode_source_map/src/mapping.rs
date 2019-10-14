@@ -7,7 +7,7 @@ use vm::file_format::{CompiledModule, CompiledScript};
 
 /// An object that associates source code with compiled bytecode and source map.
 #[derive(Debug)]
-pub struct SourceMapping<Location: Clone + Eq> {
+pub struct SourceMapping<Location: Clone + Eq + Default> {
     // The resulting bytecode from compiling the source map
     pub bytecode: CompiledModule,
 
@@ -24,7 +24,7 @@ pub struct SourceMapping<Location: Clone + Eq> {
     pub marks: Option<MarkedSourceMapping>,
 }
 
-impl<Location: Clone + Eq> SourceMapping<Location> {
+impl<Location: Clone + Eq + Default> SourceMapping<Location> {
     pub fn new(source_map: ModuleSourceMap<Location>, bytecode: CompiledModule) -> Self {
         Self {
             source_map,
