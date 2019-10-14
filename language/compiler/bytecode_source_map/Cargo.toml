@@ -11,6 +11,7 @@ failure = { path = "../../../common/failure_ext", package = "failure_ext" }
 ir_to_bytecode_syntax = { path = "../ir_to_bytecode/syntax" }
 libra-types = { path = "../../../types" }
 vm = { path = "../../vm" }
+codespan = { version = "0.2.1" }
 codespan-reporting = "0.2.1"
 structopt = "0.3.2"
 serde = { version = "1", features = ["derive"] }

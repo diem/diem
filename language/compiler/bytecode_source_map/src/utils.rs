@@ -18,20 +18,24 @@ use std::path::Path;
 pub type Error = (Loc, String);
 pub type Errors = Vec<Error>;
 
-pub fn module_source_map_from_file<Location>(file_path: &Path) -> ModuleSourceMap<Location>
+pub fn module_source_map_from_file<Location>(file_path: &Path) -> Result<ModuleSourceMap<Location>>
 where
-    Location: Clone + Eq + DeserializeOwned,
+    Location: Clone + Eq + Default + DeserializeOwned,
 {
-    let file = File::open(file_path).expect("Failed to open source map file");
-    serde_json::from_reader(file).expect("Error while reading in source map information")
+    File::open(file_path)
+        .ok()
+        .and_then(|file| serde_json::from_reader(file).ok())
+        .ok_or_else(|| format_err!("Error while reading in source map information"))
 }
 
-pub fn source_map_from_file<Location>(file_path: &Path) -> SourceMap<Location>
+pub fn source_map_from_file<Location>(file_path: &Path) -> Result<SourceMap<Location>>
 where
-    Location: Clone + Eq + DeserializeOwned,
+    Location: Clone + Eq + Default + DeserializeOwned,
 {
-    let file = File::open(file_path).expect("Failed to open source map file");
-    serde_json::from_reader(file).expect("Error while reading in source map information")
+    File::open(file_path)
+        .ok()
+        .and_then(|file| serde_json::from_reader(file).ok())
+        .ok_or_else(|| format_err!("Error while reading in source map information"))
 }
 
 pub fn render_errors(source_mapper: &SourceMapping<Loc>, errors: Errors) -> Result<()> {

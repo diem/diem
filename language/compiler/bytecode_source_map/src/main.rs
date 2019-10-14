@@ -3,6 +3,7 @@
 
 use bytecode_source_map::disassembler::{Disassembler, DisassemblerOptions};
 use bytecode_source_map::mapping::SourceMapping;
+use bytecode_source_map::source_map::ModuleSourceMap;
 use bytecode_source_map::utils::module_source_map_from_file;
 use ir_to_bytecode_syntax::ast::Loc;
 use libra_types::transaction::Module;
@@ -68,23 +69,23 @@ fn main() {
     );
 
     let mut disassembler_options = DisassemblerOptions::new();
-
-    if args.print_code {
-        disassembler_options.print_code();
-    }
-
-    if args.only_public {
-        disassembler_options.only_public();
-    }
+    disassembler_options.print_code = args.print_code;
+    disassembler_options.only_public = args.only_public;
 
     let mut source_mapping = if args.is_script {
         let compiled_script = CompiledScript::deserialize(module_bytes.code())
             .expect("Script blob can't be deserialized");
-        SourceMapping::new_from_script(source_map, compiled_script)
+        source_map
+            .or_else(|_| ModuleSourceMap::dummy_from_script(&compiled_script))
+            .and_then(|source_map| Ok(SourceMapping::new_from_script(source_map, compiled_script)))
+            .expect("Unable to build source mapping for compiled script")
     } else {
         let compiled_module = CompiledModule::deserialize(module_bytes.code())
             .expect("Module blob can't be deserialized");
-        SourceMapping::new(source_map, compiled_module)
+        source_map
+            .or_else(|_| ModuleSourceMap::dummy_from_module(&compiled_module))
+            .and_then(|source_map| Ok(SourceMapping::new(source_map, compiled_module)))
+            .expect("Unable to build source mapping for compiled module")
     };
 
     if let Some(source_code) = ir_source {

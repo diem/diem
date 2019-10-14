@@ -403,6 +403,7 @@ dependencies = [
 name = "bytecode_source_map"
 version = "0.1.0"
 dependencies = [
+ "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure_ext 0.1.0",
  "ir_to_bytecode_syntax 0.1.0",

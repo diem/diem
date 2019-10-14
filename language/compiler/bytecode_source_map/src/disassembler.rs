@@ -29,23 +29,15 @@ impl DisassemblerOptions {
             print_code: false,
         }
     }
-
-    pub fn only_public(&mut self) {
-        self.only_public = true;
-    }
-
-    pub fn print_code(&mut self) {
-        self.print_code = true;
-    }
 }
 
-pub struct Disassembler<Location: Clone + Eq> {
+pub struct Disassembler<Location: Clone + Eq + Default> {
     source_mapper: SourceMapping<Location>,
     // The various options that we can set for disassembly.
     options: DisassemblerOptions,
 }
 
-impl<Location: Clone + Eq> Disassembler<Location> {
+impl<Location: Clone + Eq + Default> Disassembler<Location> {
     pub fn new(source_mapper: SourceMapping<Location>, options: DisassemblerOptions) -> Self {
         Self {
             source_mapper,
