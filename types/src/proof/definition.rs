@@ -268,11 +268,12 @@ impl SparseMerkleProof {
                 );
                 let hash = blob.hash();
                 ensure!(
-                hash == proof_value_hash,
-                "Value hashes do not match. Value hash in proof: {:x}. Expected value hash: {:x}",
-                proof_value_hash,
-                hash,
-            );
+                    hash == proof_value_hash,
+                    "Value hashes do not match. Value hash in proof: {:x}. \
+                     Expected value hash: {:x}",
+                    proof_value_hash,
+                    hash,
+                );
             }
             (Some(_blob), None) => bail!("Expected inclusion proof. Found non-inclusion proof."),
             (None, Some((proof_key, _))) => {
