@@ -16,7 +16,7 @@ members = [
     "common/futures-semaphore",
     "common/logger",
     "common/metrics",
-    "common/proptest_helpers",
+    "common/proptest-helpers",
     "common/prost-ext",
     "config",
     "config/config-builder",

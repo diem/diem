@@ -38,7 +38,7 @@ tools = { path = "../../common/tools" }
 libra-types = { path = "../../types" }
 
 [dev-dependencies]
-proptest_helpers = { path = "../../common/proptest_helpers" }
+proptest-helpers = { path = "../../common/proptest-helpers" }
 libra-types = { path = "../../types", features = ["testing"]}
 
 [features]

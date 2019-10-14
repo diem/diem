@@ -33,7 +33,7 @@ use std::iter;
 /// The data structure doesn't care about whether the inserted items are equal or not.
 ///
 /// ```
-/// use proptest_helpers::RepeatVec;
+/// use proptest-helpers::RepeatVec;
 ///
 /// let mut repeat_vec = RepeatVec::new();
 /// repeat_vec.extend("a", 10); // logically, insert "a" 10 times

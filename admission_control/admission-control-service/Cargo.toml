@@ -38,16 +38,16 @@ prost-ext = { path = "../../common/prost-ext" }
 network = { path = "../../network" }
 
 storage-service = { path = "../../storage/storage-service", optional = true }
-proptest_helpers = { path = "../../common/proptest_helpers", optional = true }
+proptest-helpers = { path = "../../common/proptest-helpers", optional = true }
 proptest = { version = "0.9.4", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.3.0"
 storage-service = { path = "../../storage/storage-service" }
 libra-types = { path = "../../types", features = ["testing"] }
-proptest_helpers = { path = "../../common/proptest_helpers" }
+proptest-helpers = { path = "../../common/proptest-helpers" }
 proptest = "0.9.4"
 
 [features]
 default = []
-fuzzing = ["storage-service", "proptest_helpers", "proptest"]
+fuzzing = ["storage-service", "proptest-helpers", "proptest"]
