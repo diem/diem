@@ -31,7 +31,7 @@ logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
 crypto = { path = "../crypto/crypto" }
-storage_client = { path = "../storage/storage_client" }
+storage-client = { path = "../storage/storage-client" }
 libra-types = { path = "../types" }
 vm_validator = { path = "../vm_validator" }
 

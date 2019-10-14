@@ -23,7 +23,7 @@ failure = { path = "../common/failure_ext", package = "failure_ext" }
 logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
-storage_client = { path = "../storage/storage_client" }
+storage-client = { path = "../storage/storage-client" }
 libra-types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }
 

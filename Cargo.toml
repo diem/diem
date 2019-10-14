@@ -63,7 +63,7 @@ members = [
     "storage/jellyfish-merkle",
     "storage/schemadb",
     "storage/scratchpad",
-    "storage/storage_client",
+    "storage/storage-client",
     "storage/state-view",
     "storage/storage_proto",
     "storage/storage-service",

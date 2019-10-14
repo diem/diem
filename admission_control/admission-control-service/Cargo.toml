@@ -31,7 +31,7 @@ logger = { path = "../../common/logger" }
 libra-mempool = { path = "../../mempool" }
 libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto" }
 metrics = { path = "../../common/metrics" }
-storage_client = { path = "../../storage/storage_client" }
+storage-client = { path = "../../storage/storage-client" }
 libra-types = { path = "../../types" }
 vm_validator = { path = "../../vm_validator" }
 prost-ext = { path = "../../common/prost-ext" }

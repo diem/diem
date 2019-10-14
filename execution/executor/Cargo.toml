@@ -27,7 +27,7 @@ metrics = { path = "../../common/metrics" }
 prost-ext = { path = "../../common/prost-ext" }
 scratchpad = { path = "../../storage/scratchpad" }
 state-view = { path = "../../storage/state-view" }
-storage_client = { path = "../../storage/storage_client" }
+storage-client = { path = "../../storage/storage-client" }
 libra-types = { path = "../../types" }
 vm_runtime = { path = "../../language/vm/vm_runtime" }
 
