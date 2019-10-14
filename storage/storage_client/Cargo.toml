@@ -17,7 +17,7 @@ rand = "0.6.5"
 crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 scratchpad = { path = "../scratchpad" }
-state_view = { path = "../state_view" }
+state-view = { path = "../state-view" }
 storage_proto = { path = "../storage_proto" }
 libra-types = { path = "../../types" }
 

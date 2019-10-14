@@ -24,7 +24,7 @@ config = { path = "../../../config" }
 crypto = { path = "../../../crypto/crypto" }
 logger = { path = "../../../common/logger" }
 metrics = { path = "../../../common/metrics" }
-state_view = { path = "../../../storage/state_view" }
+state-view = { path = "../../../storage/state-view" }
 libra-types = { path = "../../../types" }
 vm = { path = "../" }
 vm_cache_map = { path = "vm_cache_map" }

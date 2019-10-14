@@ -1,5 +1,5 @@
 [package]
-name = "state_view"
+name = "state-view"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra state view"
