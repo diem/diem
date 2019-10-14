@@ -57,7 +57,7 @@ members = [
     "network/socket-bench-server",
     "mempool",
     "mempool/mempool-shared-proto",
-    "state_synchronizer",
+    "state-synchronizer",
     "storage/accumulator",
     "storage/libradb",
     "storage/jellyfish-merkle",
