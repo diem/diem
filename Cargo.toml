@@ -60,7 +60,7 @@ members = [
     "state_synchronizer",
     "storage/accumulator",
     "storage/libradb",
-    "storage/jellyfish_merkle",
+    "storage/jellyfish-merkle",
     "storage/schemadb",
     "storage/scratchpad",
     "storage/storage_client",

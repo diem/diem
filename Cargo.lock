@@ -1916,7 +1916,7 @@ version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "jellyfish_merkle"
+name = "jellyfish-merkle"
 version = "0.1.0"
 dependencies = [
  "bincode 1.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2248,7 +2248,7 @@ dependencies = [
  "crypto 0.1.0",
  "failure_ext 0.1.0",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "jellyfish_merkle 0.1.0",
+ "jellyfish-merkle 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
  "logger 0.1.0",
