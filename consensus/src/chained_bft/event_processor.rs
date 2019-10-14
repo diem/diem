@@ -38,7 +38,9 @@ use mirai_annotations::{
     debug_checked_verify_eq,
 };
 use network::proto::BlockRetrievalStatus;
-use safety_rules::{ConsensusState, ProposalReject, SafetyRules, VoteInfo};
+#[cfg(test)]
+use safety_rules::ConsensusState;
+use safety_rules::SafetyRules;
 use std::time::Instant;
 use std::{sync::Arc, time::Duration};
 use termion::color::*;
@@ -51,39 +53,6 @@ mod event_processor_test;
 #[path = "event_processor_fuzzing.rs"]
 pub mod event_processor_fuzzing;
 
-struct SafetyRulesWrapper(SafetyRules);
-
-impl SafetyRulesWrapper {
-    pub fn consensus_state(&self) -> ConsensusState {
-        self.0.consensus_state()
-    }
-
-    pub fn update(&mut self, qc: &QuorumCert) {
-        let state_before = self.consensus_state();
-        self.0.update(qc);
-        let state_after = self.consensus_state();
-
-        if state_after.preferred_block_round() > state_before.preferred_block_round() {
-            counters::PREFERRED_BLOCK_ROUND.set(state_after.preferred_block_round() as i64);
-        }
-    }
-
-    pub fn voting_rule<T: Payload>(
-        &mut self,
-        proposed_block: &Block<T>,
-    ) -> Result<VoteInfo, ProposalReject> {
-        let state_before = self.consensus_state();
-        let result = self.0.voting_rule(proposed_block);
-        let state_after = self.consensus_state();
-
-        if state_after.last_vote_round() > state_before.last_vote_round() {
-            counters::LAST_VOTE_ROUND.set(state_after.last_vote_round() as i64);
-        }
-
-        result
-    }
-}
-
 /// Consensus SMR is working in an event based fashion: EventProcessor is responsible for
 /// processing the individual events (e.g., process_new_round, process_proposal, process_vote,
 /// etc.). It is exposing the async processing functions for each event type.
@@ -95,7 +64,7 @@ pub struct EventProcessor<T> {
     pacemaker: Pacemaker,
     proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
     proposal_generator: ProposalGenerator<T>,
-    safety_rules: SafetyRulesWrapper,
+    safety_rules: SafetyRules,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
     txn_manager: Arc<dyn TxnManager<Payload = T>>,
     network: ConsensusNetworkImpl,
@@ -141,7 +110,7 @@ impl<T: Payload> EventProcessor<T> {
             pacemaker,
             proposer_election,
             proposal_generator,
-            safety_rules: SafetyRulesWrapper(safety_rules),
+            safety_rules,
             state_computer,
             txn_manager,
             network,
@@ -484,6 +453,8 @@ impl<T: Payload> EventProcessor<T> {
         tc: Option<&PacemakerTimeoutCertificate>,
     ) {
         self.safety_rules.update(qc);
+        let consensus_state = self.safety_rules.consensus_state();
+        counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_block_round() as i64);
 
         let mut highest_committed_proposal_round = None;
         if let Some(block) = qc
@@ -682,6 +653,8 @@ impl<T: Payload> EventProcessor<T> {
             .safety_rules
             .voting_rule(block)
             .with_context(|e| format!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e))?;
+        let consensus_state = self.safety_rules.consensus_state();
+        counters::LAST_VOTE_ROUND.set(consensus_state.last_vote_round() as i64);
 
         let proposal_id = vote_info.proposal_id();
         let executed_state_id = self
