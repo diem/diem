@@ -33,7 +33,7 @@ libra-mempool = { path = "../mempool" }
 metrics = { path = "../common/metrics" }
 crypto = { path = "../crypto/crypto" }
 network = { path = "../network" }
-state_synchronizer = { path = "../state_synchronizer" }
+state-synchronizer = { path = "../state-synchronizer" }
 storage_client = { path = "../storage/storage_client" }
 storage-service = { path = "../storage/storage-service" }
 libra-types = { path = "../types" }

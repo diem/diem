@@ -60,4 +60,4 @@ All consensus messages are signed by their creators and verified by their receiv
     │       ├── liveness               # Pacemaker, proposer, and other liveness related code
     │       ├── safety                 # Safety (voting) rules
     │       └── test_utils             # Mock implementations that are used for testing only
-    └── state_synchronizer             # Synchronization between validators to catch up on committed state
+    └── state-synchronizer             # Synchronization between validators to catch up on committed state

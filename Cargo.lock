@@ -773,7 +773,7 @@ dependencies = [
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "siphasher 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "state_synchronizer 0.1.0",
+ "state-synchronizer 0.1.0",
  "storage_client 0.1.0",
  "termion 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2162,7 +2162,7 @@ dependencies = [
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal-hook 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "state_synchronizer 0.1.0",
+ "state-synchronizer 0.1.0",
  "storage-service 0.1.0",
  "storage_client 0.1.0",
  "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4205,7 +4205,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "state_synchronizer"
+name = "state-synchronizer"
 version = "0.1.0"
 dependencies = [
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
