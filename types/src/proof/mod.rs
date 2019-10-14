@@ -81,7 +81,7 @@ pub fn verify_account_state(
     ledger_info: &LedgerInfo,
     state_version: Version,
     account_address_hash: HashValue,
-    account_state_blob: &Option<AccountStateBlob>,
+    account_state_blob: Option<&AccountStateBlob>,
     account_state_proof: &AccountStateProof,
 ) -> Result<()> {
     let transaction_info = account_state_proof.transaction_info();

@@ -186,7 +186,7 @@ impl AccountStateWithProof {
             ledger_info,
             version,
             address.hash(),
-            &self.blob,
+            self.blob.as_ref(),
             &self.proof,
         )
     }

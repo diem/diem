@@ -149,35 +149,37 @@ fn test_verify_empty_sparse_merkle() {
     let proof = SparseMerkleProof::new(None, vec![]);
 
     // Trying to show that this key doesn't exist.
-    assert!(proof.verify(root_hash, key, &None).is_ok());
+    assert!(proof.verify(root_hash, key, None).is_ok());
     // Trying to show that this key exists.
-    assert!(proof.verify(root_hash, key, &Some(blob)).is_err());
+    assert!(proof.verify(root_hash, key, Some(&blob)).is_err());
 }
 
 #[test]
 fn test_verify_single_element_sparse_merkle() {
     let key = b"hello".test_only_hash();
-    let blob: Option<AccountStateBlob> = Some((b"world".to_vec()).into());
-    let blob_hash = blob.as_ref().unwrap().hash();
+    let blob: AccountStateBlob = b"world".to_vec().into();
+    let blob_hash = blob.hash();
     let non_existing_blob = b"world?".to_vec().into();
     let root_hash = SparseMerkleLeafNode::new(key, blob_hash).hash();
     let proof = SparseMerkleProof::new(Some((key, blob_hash)), vec![]);
 
     // Trying to show this exact key exists with its value.
-    assert!(proof.verify(root_hash, key, &blob).is_ok());
+    assert!(proof.verify(root_hash, key, Some(&blob)).is_ok());
     // Trying to show this exact key exists with another value.
     assert!(proof
-        .verify(root_hash, key, &Some(non_existing_blob))
+        .verify(root_hash, key, Some(&non_existing_blob))
         .is_err());
     // Trying to show this key doesn't exist.
-    assert!(proof.verify(root_hash, key, &None).is_err());
+    assert!(proof.verify(root_hash, key, None).is_err());
 
     let non_existing_key = b"HELLO".test_only_hash();
 
     // The proof can be used to show non_existing_key doesn't exist.
-    assert!(proof.verify(root_hash, non_existing_key, &None).is_ok());
+    assert!(proof.verify(root_hash, non_existing_key, None).is_ok());
     // The proof can't be used to non_existing_key exists.
-    assert!(proof.verify(root_hash, non_existing_key, &blob).is_err());
+    assert!(proof
+        .verify(root_hash, non_existing_key, Some(&blob))
+        .is_err());
 }
 
 #[test]
@@ -196,13 +198,13 @@ fn test_verify_three_element_sparse_merkle() {
     assert_eq!(key2[0], 0b0100_0010);
     assert_eq!(key3[0], 0b0110_1001);
 
-    let blob1 = Some(AccountStateBlob::from(b"1".to_vec()));
-    let blob2 = Some(AccountStateBlob::from(b"2".to_vec()));
-    let blob3 = Some(AccountStateBlob::from(b"3".to_vec()));
+    let blob1 = AccountStateBlob::from(b"1".to_vec());
+    let blob2 = AccountStateBlob::from(b"2".to_vec());
+    let blob3 = AccountStateBlob::from(b"3".to_vec());
 
-    let leaf1_hash = SparseMerkleLeafNode::new(key1, blob1.as_ref().unwrap().hash()).hash();
-    let leaf2_hash = SparseMerkleLeafNode::new(key2, blob2.as_ref().unwrap().hash()).hash();
-    let leaf3_hash = SparseMerkleLeafNode::new(key3, blob3.as_ref().unwrap().hash()).hash();
+    let leaf1_hash = SparseMerkleLeafNode::new(key1, blob1.hash()).hash();
+    let leaf2_hash = SparseMerkleLeafNode::new(key2, blob2.hash()).hash();
+    let leaf3_hash = SparseMerkleLeafNode::new(key3, blob3.hash()).hash();
     let internal_b_hash = SparseMerkleInternalNode::new(leaf2_hash, leaf3_hash).hash();
     let internal_a_hash = SparseMerkleInternalNode::new(leaf1_hash, internal_b_hash).hash();
     let root_hash =
@@ -216,26 +218,26 @@ fn test_verify_three_element_sparse_merkle() {
     {
         // Construct a proof of key1.
         let proof = SparseMerkleProof::new(
-            Some((key1, blob1.as_ref().unwrap().hash())),
+            Some((key1, blob1.hash())),
             vec![*SPARSE_MERKLE_PLACEHOLDER_HASH, internal_b_hash],
         );
 
         // The exact key value exists.
-        assert!(proof.verify(root_hash, key1, &(blob1)).is_ok());
+        assert!(proof.verify(root_hash, key1, Some(&blob1)).is_ok());
         // Trying to show that this key has another value.
-        assert!(proof.verify(root_hash, key1, &(blob2)).is_err());
+        assert!(proof.verify(root_hash, key1, Some(&blob2)).is_err());
         // Trying to show that this key doesn't exist.
-        assert!(proof.verify(root_hash, key1, &None).is_err());
+        assert!(proof.verify(root_hash, key1, None).is_err());
         // This proof can't be used to show anything about key2.
-        assert!(proof.verify(root_hash, key2, &None).is_err());
-        assert!(proof.verify(root_hash, key2, &(blob1)).is_err());
-        assert!(proof.verify(root_hash, key2, &(blob2)).is_err());
+        assert!(proof.verify(root_hash, key2, None).is_err());
+        assert!(proof.verify(root_hash, key2, Some(&blob1)).is_err());
+        assert!(proof.verify(root_hash, key2, Some(&blob2)).is_err());
 
         // This proof can be used to show that non_existing_key1 indeed doesn't exist.
-        assert!(proof.verify(root_hash, non_existing_key1, &None).is_ok());
+        assert!(proof.verify(root_hash, non_existing_key1, None).is_ok());
         // This proof can't be used to show that non_existing_key2 doesn't exist because it lives
         // in a different subtree.
-        assert!(proof.verify(root_hash, non_existing_key2, &None).is_err());
+        assert!(proof.verify(root_hash, non_existing_key2, None).is_err());
     }
 
     {
@@ -243,9 +245,9 @@ fn test_verify_three_element_sparse_merkle() {
         let proof = SparseMerkleProof::new(None, vec![internal_a_hash]);
 
         // This proof can't be used to show that a key starting with 0 doesn't exist.
-        assert!(proof.verify(root_hash, non_existing_key1, &None).is_err());
+        assert!(proof.verify(root_hash, non_existing_key1, None).is_err());
         // This proof can be used to show that a key starting with 1 doesn't exist.
-        assert!(proof.verify(root_hash, non_existing_key2, &None).is_ok());
+        assert!(proof.verify(root_hash, non_existing_key2, None).is_ok());
     }
 }
 
@@ -409,7 +411,7 @@ fn test_verify_account_state_and_event() {
         &ledger_info,
         /* state_version = */ 2,
         key2,
-        &Some(blob2),
+        Some(&blob2),
         &account_state_proof,
     )
     .is_ok());
@@ -418,7 +420,7 @@ fn test_verify_account_state_and_event() {
         &ledger_info,
         /* state_version = */ 2,
         non_existing_key,
-        &None,
+        None,
         &account_state_proof,
     )
     .is_ok());
@@ -428,7 +430,7 @@ fn test_verify_account_state_and_event() {
         &ledger_info,
         /* state_version = */ 2,
         key2,
-        &Some(bad_blob2),
+        Some(&bad_blob2),
         &account_state_proof,
     )
     .is_err());

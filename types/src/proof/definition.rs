@@ -246,7 +246,7 @@ impl SparseMerkleProof {
         &self,
         expected_root_hash: HashValue,
         element_key: HashValue,
-        element_blob: &Option<AccountStateBlob>,
+        element_blob: Option<&AccountStateBlob>,
     ) -> Result<()> {
         ensure!(
             self.siblings.len() <= HashValue::LENGTH_IN_BITS,

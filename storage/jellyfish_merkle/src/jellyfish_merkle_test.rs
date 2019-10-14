@@ -419,21 +419,21 @@ fn test_non_existence() {
         let non_existing_key = update_nibble(&key1, 0, 1);
         let (value, proof) = tree.get_with_proof(non_existing_key, 0).unwrap();
         assert_eq!(value, None);
-        assert!(proof.verify(root, non_existing_key, &None).is_ok());
+        assert!(proof.verify(root, non_existing_key, None).is_ok());
     }
     // 2. Non-existing node at non-root internal node
     {
         let non_existing_key = update_nibble(&key1, 1, 15);
         let (value, proof) = tree.get_with_proof(non_existing_key, 0).unwrap();
         assert_eq!(value, None);
-        assert!(proof.verify(root, non_existing_key, &None).is_ok());
+        assert!(proof.verify(root, non_existing_key, None).is_ok());
     }
     // 3. Non-existing node at leaf node
     {
         let non_existing_key = update_nibble(&key1, 2, 4);
         let (value, proof) = tree.get_with_proof(non_existing_key, 0).unwrap();
         assert_eq!(value, None);
-        assert!(proof.verify(root, non_existing_key, &None).is_ok());
+        assert!(proof.verify(root, non_existing_key, None).is_ok());
     }
 }
 
@@ -511,7 +511,7 @@ fn many_keys_get_proof_and_verify_tree_root(seed: &[u8], num_keys: usize) {
     for (k, v) in &kvs {
         let (value, proof) = tree.get_with_proof(*k, 0).unwrap();
         assert_eq!(value.unwrap(), *v);
-        assert!(proof.verify(root, *k, &Some(v.clone())).is_ok());
+        assert!(proof.verify(root, *k, Some(v)).is_ok());
     }
 }
 
@@ -562,18 +562,14 @@ fn many_versions_get_proof_and_verify_tree_root(seed: &[u8], num_versions: usize
         let random_version = rng.gen_range(i, i + num_versions);
         let (value, proof) = tree.get_with_proof(*k, random_version as Version).unwrap();
         assert_eq!(value.unwrap(), *v);
-        assert!(proof
-            .verify(roots[random_version], *k, &Some(v.clone()))
-            .is_ok());
+        assert!(proof.verify(roots[random_version], *k, Some(v)).is_ok());
     }
 
     for (i, (k, _, v)) in kvs.iter().enumerate() {
         let random_version = rng.gen_range(i + num_versions, 2 * num_versions);
         let (value, proof) = tree.get_with_proof(*k, random_version as Version).unwrap();
         assert_eq!(value.unwrap(), *v);
-        assert!(proof
-            .verify(roots[random_version], *k, &Some(v.clone()))
-            .is_ok());
+        assert!(proof.verify(roots[random_version], *k, Some(v)).is_ok());
     }
 }
 
