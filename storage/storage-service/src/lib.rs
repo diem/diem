@@ -4,7 +4,7 @@
 //! This crate implements the storage [GRPC](http://grpc.io) service.
 //!
 //! The user of storage service is supposed to use it via client lib provided in
-//! [`storage_client`](../storage_client/index.html) instead of via
+//! [`storage-client`](../storage-client/index.html) instead of via
 //! [`StorageClient`](../storage_proto/proto/storage_grpc/struct.StorageClient.html) directly.
 
 pub mod mocks;

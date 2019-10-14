@@ -34,7 +34,7 @@ metrics = { path = "../common/metrics" }
 crypto = { path = "../crypto/crypto" }
 network = { path = "../network" }
 state-synchronizer = { path = "../state-synchronizer" }
-storage_client = { path = "../storage/storage_client" }
+storage-client = { path = "../storage/storage-client" }
 storage-service = { path = "../storage/storage-service" }
 libra-types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }

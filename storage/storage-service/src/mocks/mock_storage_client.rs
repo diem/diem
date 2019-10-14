@@ -37,7 +37,7 @@ use storage_proto::StartupInfo;
 /// This is a mock of the storage read client used in tests.
 ///
 /// See the real
-/// [`StorageReadServiceClient`](../../../storage_client/struct.StorageReadServiceClient.html).
+/// [`StorageReadServiceClient`](../../../storage-client/struct.StorageReadServiceClient.html).
 #[derive(Clone)]
 pub struct MockStorageReadClient;
 
