@@ -57,7 +57,7 @@ dependencies = [
  "network 0.1.0",
  "num_cpus 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-ext 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1860,7 +1860,7 @@ version = "0.1.0"
 dependencies = [
  "libra-types 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "vm 0.1.0",
 ]
 
@@ -2013,7 +2013,7 @@ dependencies = [
  "language_e2e_tests 0.1.0",
  "libra-types 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
 ]
 
 [[package]]
@@ -2031,7 +2031,7 @@ dependencies = [
  "logger 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "state_view 0.1.0",
@@ -2082,7 +2082,7 @@ dependencies = [
  "libra-types 0.1.0",
  "network 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-ext 0.1.0",
  "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2206,7 +2206,7 @@ dependencies = [
  "num_enum 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-build 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-ext 0.1.0",
@@ -2257,7 +2257,7 @@ dependencies = [
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-ext 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2585,7 +2585,7 @@ dependencies = [
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pin-project 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-build 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-ext 0.1.0",
@@ -3121,7 +3121,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "proptest_helpers"
+name = "proptest-helpers"
 version = "0.1.0"
 dependencies = [
  "crossbeam 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5198,7 +5198,7 @@ dependencies = [
  "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -5226,7 +5226,7 @@ dependencies = [
  "libra-types 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost-ext 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "state_view 0.1.0",

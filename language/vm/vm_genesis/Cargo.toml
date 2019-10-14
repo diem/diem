@@ -30,5 +30,5 @@ canonical-serialization = { path = "../../../common/canonical-serialization" }
 crypto = { path = "../../../crypto/crypto", features = ["testing"]}
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
-proptest_helpers = { path = "../../../common/proptest_helpers" }
+proptest-helpers = { path = "../../../common/proptest-helpers" }
 libra-types = { path = "../../../types", features = ["testing"] }
