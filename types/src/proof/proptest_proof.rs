@@ -55,7 +55,7 @@ where
                 } else {
                     (
                         arb_non_placeholder_accumulator_sibling(),
-                        vec(arb_accumulator_sibling(), 0..len),
+                        vec(arb_accumulator_sibling(), len - 1),
                     )
                         .prop_map(|(first_sibling, other_siblings)| {
                             let mut siblings = vec![first_sibling];
@@ -82,7 +82,7 @@ impl Arbitrary for SparseMerkleProof {
                     Just(vec![]).boxed()
                 } else {
                     (
-                        vec(arb_sparse_merkle_sibling(), 0..len),
+                        vec(arb_sparse_merkle_sibling(), len - 1),
                         arb_non_placeholder_sparse_merkle_sibling(),
                     )
                         .prop_map(|(other_siblings, last_sibling)| {
