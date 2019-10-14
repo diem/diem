@@ -7,7 +7,7 @@
 //! You can run `socket_muxer_bench` across a real network by running this bench
 //! server remotely. For example,
 //!
-//! `TCP_ADDR=/ip6/::1/tcp/12345 cargo run --release --bin socket_bench_server`
+//! `TCP_ADDR=/ip6/::1/tcp/12345 cargo run --release --bin socket-bench-server`
 //!
 //! will run the socket bench server handling the remote_tcp benchmark. A
 //! corresponding client would exercise this benchmark using

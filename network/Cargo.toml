@@ -40,7 +40,7 @@ proptest-helpers = { path = "../common/proptest-helpers", optional = true }
 
 [dev-dependencies]
 criterion = "0.2.11"
-socket_bench_server = { path = "socket_bench_server" }
+socket-bench-server = { path = "socket-bench-server" }
 crypto = { path = "../crypto/crypto", features = ["testing"] }
 libra-types = { path = "../types", features = ["testing"]}
 proptest = { version = "0.9.4", default-features = false }
