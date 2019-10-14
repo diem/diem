@@ -74,7 +74,7 @@ fn verify_state_in_store(
         .get_account_state_with_proof_by_version(address, version)
         .unwrap();
     assert_eq!(value.as_ref(), expected_value);
-    proof.verify(root, address.hash(), &value).unwrap();
+    proof.verify(root, address.hash(), value.as_ref()).unwrap();
 }
 
 #[test]
