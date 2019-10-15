@@ -52,7 +52,7 @@ impl<'alloc, 'txn> StructFieldScanner<'alloc, 'txn> {
         if predicate(tag, value) {
             resources.push((tag.clone(), value.clone()));
         } else {
-            self.scan_struct_feild(tag, value, &mut resources, predicate)?;
+            self.scan_struct_field(tag, value, &mut resources, predicate)?;
         }
         Ok(resources)
     }
@@ -63,7 +63,7 @@ impl<'alloc, 'txn> StructFieldScanner<'alloc, 'txn> {
             .ok_or(VMStatus::new(StatusCode::MISSING_DATA))
     }
 
-    fn scan_struct_feild(
+    fn scan_struct_field(
         &self,
         tag: &StructTag,
         value: &Struct,
@@ -99,10 +99,13 @@ impl<'alloc, 'txn> StructFieldScanner<'alloc, 'txn> {
                                 .module_cache
                                 .get_loaded_module(&field_type_module_id)?
                                 .ok_or(VMStatus::new(StatusCode::MISSING_DATA))?;
-                            //let field_off_set = module.get_field_offset(*fields + idx)?;
-                            //let value = value.get_field_value(field_off_set as usize)?;
-                            let struct_value: Struct =
-                                field_value.value_as().expect("value must be struct");
+                            let struct_value: Struct = match field_value.into(){
+                                Some(s) => s,
+                                None => {
+                                    //TODO(jole) support native struct, such as Vector.
+                                    return Ok(())
+                                }
+                            };
 
                             let field_struct_tag = StructTag {
                                 name: struct_name.to_owned(),
@@ -113,7 +116,7 @@ impl<'alloc, 'txn> StructFieldScanner<'alloc, 'txn> {
                             if predicate(&field_struct_tag, &struct_value) {
                                 resources.push((field_struct_tag, struct_value))
                             } else {
-                                self.scan_struct_feild(
+                                self.scan_struct_field(
                                     &field_struct_tag,
                                     &struct_value,
                                     resources,
