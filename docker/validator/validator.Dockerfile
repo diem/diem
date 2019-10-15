@@ -1,8 +1,30 @@
-FROM debian:stretch
+FROM debian:stretch AS toolchain
+
+# To use http/https proxy while building, use:
+# docker build --build-arg https_proxy=http://fwdproxy:8080 --build-arg http_proxy=http://fwdproxy:8080
+
+RUN echo "deb http://deb.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list \
+    && apt-get update && apt-get install -y protobuf-compiler/stretch-backports cmake curl clang \
+    && apt-get clean && rm -r /var/lib/apt/lists/*
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+ENV PATH "$PATH:/root/.cargo/bin"
+
+WORKDIR /libra
+COPY rust-toolchain /libra/rust-toolchain
+RUN rustup install $(cat rust-toolchain)
+
+FROM toolchain AS builder
+
+COPY . /libra
+RUN cargo build --release -p libra-node -p client -p benchmark && cd target/release && rm -r build deps incremental
+
+### Production Image ###
+FROM debian:stretch AS prod
 
 RUN mkdir -p /opt/libra/bin /opt/libra/etc
 COPY docker/install-tools.sh /root
-COPY libra-node-from-docker /opt/libra/bin/libra-node
+COPY --from=builder /libra/target/release/libra-node /opt/libra/bin
 
 # Admission control
 EXPOSE 8000

@@ -5,3 +5,4 @@ terraform/
 docker/validator/
 docker/client/
 target/
+!target/libra-node-builder/libra-node
