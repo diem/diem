@@ -4,11 +4,8 @@
 #[cfg(any(test, feature = "testing"))]
 use crate::account_config::{account_resource_path, AccountResource};
 use crate::{
-    account_address::AccountAddress,
-    account_config::get_account_resource_or_default,
-    ledger_info::LedgerInfo,
-    proof::{verify_account_state, AccountStateProof},
-    transaction::Version,
+    account_address::AccountAddress, account_config::get_account_resource_or_default,
+    ledger_info::LedgerInfo, proof::AccountStateProof, transaction::Version,
 };
 use crypto::{
     hash::{AccountStateBlobHasher, CryptoHash, CryptoHasher},
@@ -180,13 +177,8 @@ impl AccountStateWithProof {
             version,
         );
 
-        verify_account_state(
-            ledger_info,
-            version,
-            address.hash(),
-            self.blob.as_ref(),
-            &self.proof,
-        )
+        self.proof
+            .verify(ledger_info, version, address.hash(), self.blob.as_ref())
     }
 }
 
