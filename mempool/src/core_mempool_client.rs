@@ -1,17 +1,11 @@
 use std::{
-    cmp,
     collections::HashSet,
     convert::TryFrom,
     sync::{Arc, Mutex},
-    time::Duration,
 };
-use std::convert::TryInto;
-
-use futures::Future;
-
 use config::config::NodeConfig;
 use libra_types::{
-    account_address::AccountAddress, proto::types::SignedTransactionsBlock,
+    account_address::AccountAddress,
     transaction::SignedTransaction,
 };
 
@@ -20,8 +14,7 @@ use crate::{
     proto::{
         mempool::{
             AddTransactionWithValidationRequest, AddTransactionWithValidationResponse,
-            CommitTransactionsRequest, CommitTransactionsResponse, GetBlockRequest,
-            GetBlockResponse, HealthCheckRequest, HealthCheckResponse,
+            HealthCheckRequest, HealthCheckResponse,
         },
         mempool_client::MempoolClientTrait,
     },
@@ -81,31 +74,7 @@ impl MempoolClientTrait for CoreMemPoolClient {
         Ok(response)
     }
 
-
-    //
-    //    fn commit_transactions(
-    //        &self,
-    //        req: &CommitTransactionsRequest,
-    //    ) -> ::grpcio::Result<CommitTransactionsResponse> {
-    //        let mut pool = self
-    //            .core_mempool
-    //            .lock()
-    //            .expect("[update status] acquire mempool lock");
-    //        for transaction in req.get_transactions() {
-    //            if let Ok(address) = AccountAddress::try_from(transaction.get_sender()) {
-    //                let sequence_number = transaction.get_sequence_number();
-    //                pool.remove_transaction(&address, sequence_number, transaction.get_is_rejected());
-    //            }
-    //        }
-    //        let block_timestamp_usecs = req.get_block_timestamp_usecs();
-    //        if block_timestamp_usecs > 0 {
-    //            pool.gc_by_expiration_time(Duration::from_micros(block_timestamp_usecs));
-    //        }
-    //        let response = CommitTransactionsResponse::new();
-    //        Ok(response)
-    //    }
-
-    fn health_check(&self, req: &HealthCheckRequest) -> ::grpcio::Result<HealthCheckResponse> {
+    fn health_check(&self, _req: &HealthCheckRequest) -> ::grpcio::Result<HealthCheckResponse> {
         let pool = self
             .core_mempool
             .lock()

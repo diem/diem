@@ -194,7 +194,6 @@ fn make_script_transaction(
     account: &Account,
     config: &TransactionConfig,
     script: CompiledScript,
-    args: Vec<TransactionArgument>,
     receiver: Option<(&Account, u64)>,
 ) -> Result<SignedTransaction> {
     let mut blob = vec![];

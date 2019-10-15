@@ -1,12 +1,10 @@
 use crate::admission_control_service::AdmissionControlService;
 use admission_control_proto::proto::{
-    admission_control::{SubmitTransactionRequest, SubmitTransactionResponse, AdmissionControl},
+    admission_control::{SubmitTransactionRequest, SubmitTransactionResponse},
 };
-use futures::Future;
-use libra_mempool::proto::mempool_client::MempoolClientTrait;
 use std::sync::Arc;
 use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
-use vm_validator::vm_validator::{TransactionValidation, VMValidator};
+use vm_validator::vm_validator::{VMValidator};
 use libra_mempool::core_mempool_client::CoreMemPoolClient;
 
 /// AdmissionControlClient

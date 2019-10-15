@@ -1,9 +1,7 @@
 use crate::StorageService;
 use config::config::NodeConfig;
-use core::borrow::{Borrow, BorrowMut};
-use crypto::ed25519::Ed25519Signature;
 use failure::prelude::*;
-use futures::{compat::Future01CompatExt, executor::block_on, prelude::*};
+use futures::{executor::block_on, prelude::*};
 use grpc_helpers::{spawn_service_thread_with_drop_closure, ServerHandle};
 use libra_types::proof::AccumulatorConsistencyProof;
 use libra_types::{
@@ -24,10 +22,6 @@ use std::{
 use storage_client::{StorageRead, StorageWrite};
 use storage_proto::proto::storage::{
     create_storage, GetAccountStateWithProofByVersionRequest,
-    GetAccountStateWithProofByVersionResponse, GetLatestLedgerInfosPerEpochRequest,
-    GetLatestLedgerInfosPerEpochResponse, GetStartupInfoRequest, GetStartupInfoResponse,
-    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
-    SaveTransactionsResponse, StartupInfo, Storage,
 };
 
 pub fn start_storage_service_and_return_service(
