@@ -35,32 +35,6 @@ pub use self::definition::{
 #[cfg(any(test, feature = "testing"))]
 pub use self::definition::TestAccumulatorProof;
 
-/// Verifies that a given event is correct using provided proof.
-pub(crate) fn verify_event(
-    ledger_info: &LedgerInfo,
-    event_hash: HashValue,
-    transaction_version: Version,
-    event_version_within_transaction: Version,
-    event_proof: &EventProof,
-) -> Result<()> {
-    let transaction_info = event_proof.transaction_info();
-
-    event_proof.transaction_info_to_event_proof().verify(
-        transaction_info.event_root_hash(),
-        event_hash,
-        event_version_within_transaction,
-    )?;
-
-    verify_transaction_info(
-        ledger_info,
-        transaction_version,
-        transaction_info,
-        event_proof.ledger_info_to_transaction_info_proof(),
-    )?;
-
-    Ok(())
-}
-
 pub(crate) fn verify_transaction_list(
     ledger_info: &LedgerInfo,
     transaction_list_with_proof: &TransactionListWithProof,
