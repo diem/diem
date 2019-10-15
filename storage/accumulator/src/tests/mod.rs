@@ -10,7 +10,7 @@ use libra_types::proof::definition::LeafCount;
 use proptest::{collection::vec, prelude::*};
 use std::collections::HashMap;
 
-type InMemoryAccumulator = libra_types::proof::accumulator::Accumulator<TestOnlyHasher>;
+type InMemoryAccumulator = libra_types::proof::accumulator::InMemoryAccumulator<TestOnlyHasher>;
 type TestAccumulator = MerkleAccumulator<MockHashStore, TestOnlyHasher>;
 
 struct MockHashStore {

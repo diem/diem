@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::Accumulator;
+use super::InMemoryAccumulator;
 use crate::proof::{
     definition::LeafCount,
     position::{FrozenSubtreeSiblingIterator, Position},
@@ -97,7 +97,7 @@ fn test_accumulator_append() {
         .collect();
 
     let leaves = create_leaves(0..100);
-    let mut accumulator = Accumulator::<TestOnlyHasher>::default();
+    let mut accumulator = InMemoryAccumulator::<TestOnlyHasher>::default();
     // Append the leaves one at a time and check the root hashes match.
     for (i, (leaf, expected_root_hash)) in
         itertools::zip_eq(leaves.into_iter(), expected_root_hashes.into_iter()).enumerate()
@@ -115,7 +115,7 @@ proptest! {
         hashes2 in vec(any::<HashValue>(), 0..100),
     ) {
         // Construct an accumulator with hashes1.
-        let accumulator = Accumulator::<TestOnlyHasher>::default().append(hashes1.clone());
+        let accumulator = InMemoryAccumulator::<TestOnlyHasher>::default().append(hashes1.clone());
 
         // Compute all the internal nodes in a bigger accumulator with combination of hashes1 and
         // hashes2.

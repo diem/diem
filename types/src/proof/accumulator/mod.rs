@@ -23,7 +23,7 @@ use failure::prelude::*;
 use std::marker::PhantomData;
 
 /// The Accumulator implementation.
-pub struct Accumulator<H> {
+pub struct InMemoryAccumulator<H> {
     /// Represents the roots of all the full subtrees from left to right in this accumulator. For
     /// example, if we have the following accumulator, this vector will have two hashes that
     /// correspond to `X` and `e`.
@@ -50,7 +50,7 @@ pub struct Accumulator<H> {
     phantom: PhantomData<H>,
 }
 
-impl<H> Accumulator<H>
+impl<H> InMemoryAccumulator<H>
 where
     H: CryptoHasher,
 {
@@ -268,7 +268,7 @@ where
 }
 
 // We manually implement Debug because H (CryptoHasher) does not implement Debug.
-impl<H> std::fmt::Debug for Accumulator<H> {
+impl<H> std::fmt::Debug for InMemoryAccumulator<H> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
@@ -278,11 +278,11 @@ impl<H> std::fmt::Debug for Accumulator<H> {
     }
 }
 
-impl<H> Default for Accumulator<H>
+impl<H> Default for InMemoryAccumulator<H>
 where
     H: CryptoHasher,
 {
     fn default() -> Self {
-        Accumulator::new(vec![], 0).expect("Constructing empty accumulator should work.")
+        Self::new(vec![], 0).expect("Constructing empty accumulator should work.")
     }
 }
