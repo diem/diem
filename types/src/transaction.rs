@@ -8,8 +8,8 @@ use crate::{
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
     proof::{
-        get_accumulator_root_hash, verify_signed_transaction, verify_transaction_list,
-        SignedTransactionProof, TransactionAccumulatorProof,
+        get_accumulator_root_hash, verify_transaction_list, SignedTransactionProof,
+        TransactionAccumulatorProof,
     },
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
@@ -497,12 +497,11 @@ impl SignedTransactionWithProof {
             let event_hashes: Vec<_> = events.iter().map(ContractEvent::hash).collect();
             get_accumulator_root_hash::<EventAccumulatorHasher>(&event_hashes)
         });
-        verify_signed_transaction(
+        self.proof.verify(
             ledger_info,
             self.signed_transaction.hash(),
             events_root_hash,
             version,
-            &self.proof,
         )
     }
 }
