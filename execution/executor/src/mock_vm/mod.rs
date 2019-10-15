@@ -13,8 +13,8 @@ use libra_types::{
     contract_event::ContractEvent,
     event::EventKey,
     transaction::{
-        RawTransaction, Script, SignedTransaction, TransactionArgument, TransactionOutput,
-        TransactionPayload, TransactionStatus,
+        RawTransaction, Script, SignedTransaction, Transaction as ExecutorTransaction,
+        TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
     },
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
@@ -49,7 +49,7 @@ pub struct MockVM;
 
 impl VMExecutor for MockVM {
     fn execute_block(
-        transactions: Vec<SignedTransaction>,
+        transactions: Vec<ExecutorTransaction>,
         _config: &VMConfig,
         state_view: &dyn StateView,
     ) -> Vec<TransactionOutput> {
@@ -70,65 +70,68 @@ impl VMExecutor for MockVM {
         let mut outputs = vec![];
 
         for txn in transactions {
-            match decode_transaction(&txn) {
-                Transaction::Mint { sender, amount } => {
-                    let old_balance = read_balance(&output_cache, state_view, sender);
-                    let new_balance = old_balance + amount;
-                    let old_seqnum = read_seqnum(&output_cache, state_view, sender);
-                    let new_seqnum = old_seqnum + 1;
+            if let ExecutorTransaction::UserTransaction(user_txn) = txn {
+                match decode_transaction(&user_txn) {
+                    Transaction::Mint { sender, amount } => {
+                        let old_balance = read_balance(&output_cache, state_view, sender);
+                        let new_balance = old_balance + amount;
+                        let old_seqnum = read_seqnum(&output_cache, state_view, sender);
+                        let new_seqnum = old_seqnum + 1;
 
-                    output_cache.insert(balance_ap(sender), new_balance);
-                    output_cache.insert(seqnum_ap(sender), new_seqnum);
+                        output_cache.insert(balance_ap(sender), new_balance);
+                        output_cache.insert(seqnum_ap(sender), new_seqnum);
 
-                    let write_set = gen_mint_writeset(sender, new_balance, new_seqnum);
-                    let events = gen_events(sender);
-                    outputs.push(TransactionOutput::new(
-                        write_set,
-                        events,
-                        0,
-                        KEEP_STATUS.clone(),
-                    ));
-                }
-                Transaction::Payment {
-                    sender,
-                    recipient,
-                    amount,
-                } => {
-                    let sender_old_balance = read_balance(&output_cache, state_view, sender);
-                    let recipient_old_balance = read_balance(&output_cache, state_view, recipient);
-                    if sender_old_balance < amount {
+                        let write_set = gen_mint_writeset(sender, new_balance, new_seqnum);
+                        let events = gen_events(sender);
                         outputs.push(TransactionOutput::new(
-                            WriteSet::default(),
-                            vec![],
+                            write_set,
+                            events,
                             0,
-                            DISCARD_STATUS.clone(),
+                            KEEP_STATUS.clone(),
                         ));
-                        continue;
                     }
-
-                    let sender_old_seqnum = read_seqnum(&output_cache, state_view, sender);
-                    let sender_new_seqnum = sender_old_seqnum + 1;
-                    let sender_new_balance = sender_old_balance - amount;
-                    let recipient_new_balance = recipient_old_balance + amount;
-
-                    output_cache.insert(balance_ap(sender), sender_new_balance);
-                    output_cache.insert(seqnum_ap(sender), sender_new_seqnum);
-                    output_cache.insert(balance_ap(recipient), recipient_new_balance);
-
-                    let write_set = gen_payment_writeset(
+                    Transaction::Payment {
                         sender,
-                        sender_new_balance,
-                        sender_new_seqnum,
                         recipient,
-                        recipient_new_balance,
-                    );
-                    let events = gen_events(sender);
-                    outputs.push(TransactionOutput::new(
-                        write_set,
-                        events,
-                        0,
-                        TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
-                    ));
+                        amount,
+                    } => {
+                        let sender_old_balance = read_balance(&output_cache, state_view, sender);
+                        let recipient_old_balance =
+                            read_balance(&output_cache, state_view, recipient);
+                        if sender_old_balance < amount {
+                            outputs.push(TransactionOutput::new(
+                                WriteSet::default(),
+                                vec![],
+                                0,
+                                DISCARD_STATUS.clone(),
+                            ));
+                            continue;
+                        }
+
+                        let sender_old_seqnum = read_seqnum(&output_cache, state_view, sender);
+                        let sender_new_seqnum = sender_old_seqnum + 1;
+                        let sender_new_balance = sender_old_balance - amount;
+                        let recipient_new_balance = recipient_old_balance + amount;
+
+                        output_cache.insert(balance_ap(sender), sender_new_balance);
+                        output_cache.insert(seqnum_ap(sender), sender_new_seqnum);
+                        output_cache.insert(balance_ap(recipient), recipient_new_balance);
+
+                        let write_set = gen_payment_writeset(
+                            sender,
+                            sender_new_balance,
+                            sender_new_seqnum,
+                            recipient,
+                            recipient_new_balance,
+                        );
+                        let events = gen_events(sender);
+                        outputs.push(TransactionOutput::new(
+                            write_set,
+                            events,
+                            0,
+                            TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
+                        ));
+                    }
                 }
             }
         }

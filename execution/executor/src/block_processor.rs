@@ -319,7 +319,14 @@ where
         );
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
-            V::execute_block(transactions.clone(), &self.vm_config, &state_view)
+            V::execute_block(
+                transactions
+                    .iter()
+                    .map(|txn| Transaction::UserTransaction(txn.clone()))
+                    .collect(),
+                &self.vm_config,
+                &state_view,
+            )
         };
 
         // Since other validators have committed these transactions, their status should all be
@@ -615,10 +622,12 @@ where
                     .transactions()
                     .iter()
                     .map(|txn| {
-                        txn.as_signed_user_txn()
-                            .expect("All should be user transactions for now.")
+                        Transaction::UserTransaction(
+                            txn.as_signed_user_txn()
+                                .expect("All should be user transactions for now.")
+                                .clone(),
+                        )
                     })
-                    .cloned()
                     .collect(),
                 &self.vm_config,
                 &state_view,

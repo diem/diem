@@ -7,6 +7,7 @@ use failure::Result;
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
+    transaction::Transaction,
     write_set::WriteOp,
 };
 use state_view::StateView;
@@ -41,7 +42,9 @@ fn test_mock_vm_different_senders() {
     }
 
     let outputs = MockVM::execute_block(
-        txns.clone(),
+        txns.iter()
+            .map(|txn| Transaction::UserTransaction(txn.clone()))
+            .collect(),
         &VMConfig::empty_whitelist_FOR_TESTING(),
         &MockStateView,
     );
@@ -70,7 +73,9 @@ fn test_mock_vm_same_sender() {
     let sender = gen_address(1);
     let mut txns = vec![];
     for _i in 0..10 {
-        txns.push(encode_mint_transaction(sender, amount));
+        txns.push(Transaction::UserTransaction(encode_mint_transaction(
+            sender, amount,
+        )));
     }
 
     let outputs = MockVM::execute_block(
@@ -108,7 +113,7 @@ fn test_mock_vm_payment() {
     ));
 
     let output = MockVM::execute_block(
-        txns,
+        txns.into_iter().map(Transaction::UserTransaction).collect(),
         &VMConfig::empty_whitelist_FOR_TESTING(),
         &MockStateView,
     );

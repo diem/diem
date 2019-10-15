@@ -13,7 +13,7 @@ use libra_types::{
     access_path::AccessPath,
     account_config::AccountResource,
     language_storage::ModuleId,
-    transaction::{SignedTransaction, TransactionOutput},
+    transaction::{SignedTransaction, Transaction, TransactionOutput},
     vm_error::VMStatus,
     write_set::WriteSet,
 };
@@ -133,7 +133,14 @@ impl FakeExecutor {
     /// Typical tests will call this method and check that the output matches what was expected.
     /// However, this doesn't apply the results of successful transactions to the data store.
     pub fn execute_block(&self, txn_block: Vec<SignedTransaction>) -> Vec<TransactionOutput> {
-        MoveVM::execute_block(txn_block, &self.config.vm_config, &self.data_store)
+        MoveVM::execute_block(
+            txn_block
+                .into_iter()
+                .map(Transaction::UserTransaction)
+                .collect(),
+            &self.config.vm_config,
+            &self.data_store,
+        )
     }
 
     pub fn execute_transaction(&self, txn: SignedTransaction) -> TransactionOutput {

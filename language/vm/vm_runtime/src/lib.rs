@@ -138,7 +138,7 @@ pub use txn_executor::execute_function;
 
 use config::config::VMConfig;
 use libra_types::{
-    transaction::{SignedTransaction, TransactionOutput},
+    transaction::{SignedTransaction, Transaction, TransactionOutput},
     vm_error::VMStatus,
 };
 use state_view::StateView;
@@ -165,7 +165,7 @@ pub trait VMExecutor {
 
     /// Executes a block of transactions and returns output for each one of them.
     fn execute_block(
-        transactions: Vec<SignedTransaction>,
+        transactions: Vec<Transaction>,
         config: &VMConfig,
         state_view: &dyn StateView,
     ) -> Vec<TransactionOutput>;
