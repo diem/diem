@@ -117,7 +117,7 @@ impl<'alloc> VMRuntime<'alloc> {
             .into_iter()
             .map(|txn| {
                 SignedTransaction::try_from(txn)
-                    .expect("All transaction should be user transaction")
+                    .expect("All transactions should be user transaction")
             })
             .collect();
         execute_block(

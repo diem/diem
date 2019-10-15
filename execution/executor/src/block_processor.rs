@@ -618,7 +618,7 @@ where
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_block_time_s");
             V::execute_block(
-                block_to_execute.transactions().iter().cloned().collect(),
+                block_to_execute.transactions().to_vec(),
                 &self.vm_config,
                 &state_view,
             )
