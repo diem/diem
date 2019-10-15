@@ -12,27 +12,6 @@ use std::{
     fmt::{Display, Formatter},
 };
 
-// Internal use only. Contains all the fields in VoteDataSerializer that contributes to the
-// computation of its hash.
-#[derive(Serialize, Deserialize)]
-struct VoteDataSerializer {
-    block_id: HashValue,
-    executed_state_id: HashValue,
-    round: Round,
-    parent_block_id: HashValue,
-    parent_block_round: Round,
-}
-
-impl CryptoHash for VoteDataSerializer {
-    type Hasher = VoteDataHasher;
-
-    fn hash(&self) -> HashValue {
-        let mut state = Self::Hasher::default();
-        state.write(lcs::to_bytes(self).expect("Should serialize.").as_ref());
-        state.finish()
-    }
-}
-
 /// VoteData keeps the information about the block, and its parent.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct VoteData {
@@ -100,34 +79,15 @@ impl VoteData {
     pub fn parent_block_round(&self) -> Round {
         self.parent_block_round
     }
+}
 
-    /// Return the hash of this struct
-    pub fn hash(&self) -> HashValue {
-        Self::vote_digest(
-            self.block_id,
-            self.executed_state_id,
-            self.round,
-            self.parent_block_id,
-            self.parent_block_round,
-        )
-    }
+impl CryptoHash for VoteData {
+    type Hasher = VoteDataHasher;
 
-    /// Return a digest of the vote
-    pub fn vote_digest(
-        block_id: HashValue,
-        executed_state_id: HashValue,
-        round: Round,
-        parent_block_id: HashValue,
-        parent_block_round: Round,
-    ) -> HashValue {
-        VoteDataSerializer {
-            block_id,
-            executed_state_id,
-            round,
-            parent_block_id,
-            parent_block_round,
-        }
-        .hash()
+    fn hash(&self) -> HashValue {
+        let mut state = Self::Hasher::default();
+        state.write(lcs::to_bytes(self).expect("Should serialize.").as_ref());
+        state.finish()
     }
 }
 

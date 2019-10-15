@@ -31,13 +31,14 @@ pub fn placeholder_certificate_for_block(
 ) -> QuorumCert {
     // Assuming executed state to be Genesis state.
     let certified_block_state = ExecutedState::state_for_genesis();
-    let consensus_data_hash = VoteData::vote_digest(
+    let consensus_data_hash = VoteData::new(
         certified_block_id,
         certified_block_state.state_id,
         certified_block_round,
         certified_parent_block_id,
         certified_parent_block_round,
-    );
+    )
+    .hash();
 
     // This ledger info doesn't carry any meaningful information: it is all zeros except for
     // the consensus data hash that carries the actual vote.
