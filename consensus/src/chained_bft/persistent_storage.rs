@@ -20,6 +20,10 @@ use std::{
     sync::Arc,
 };
 
+#[cfg(test)]
+#[path = "persistent_storage_test.rs"]
+mod persistent_storage_test;
+
 /// Persistent storage for liveness data
 pub trait PersistentLivenessStorage: Send + Sync {
     /// Persist the highest timeout certificate for improved liveness - proof for other replicas

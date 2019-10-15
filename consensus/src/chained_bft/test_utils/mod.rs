@@ -1,13 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::block_storage::BlockStore;
+use crate::chained_bft::block_storage::{BlockStore, BlockReader};
 use consensus_types::{
     block::{Block, ExecutedBlock},
     common::Round,
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
     vote_data::VoteData,
+    test_utils::placeholder_certificate_for_block,
 };
 use crypto::{hash::CryptoHash, HashValue};
 use executor::ExecutedState;
@@ -30,6 +31,54 @@ pub use mock_storage::{EmptyStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;
 
 pub type TestPayload = Vec<usize>;
+
+pub fn build_simple_tree() -> (
+    Vec<Arc<ExecutedBlock<Vec<usize>>>>,
+    Arc<BlockStore<Vec<usize>>>,
+) {
+    let block_store = build_empty_tree();
+    let genesis = block_store.root();
+    let genesis_block_id = genesis.id();
+    let genesis_block = block_store
+        .get_block(genesis_block_id)
+        .expect("genesis block must exist");
+    assert_eq!(block_store.len(), 1);
+    assert_eq!(block_store.child_links(), block_store.len() - 1);
+    assert_eq!(block_store.block_exists(genesis_block.id()), true);
+
+    //       ╭--> A1--> A2--> A3
+    // Genesis--> B1--> B2
+    //             ╰--> C1
+    let mut inserter = TreeInserter::new(block_store.clone());
+    let a1 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis_block, 1);
+    let a2 = inserter.insert_guaranteed_block(&a1, 2);
+    let a3 = inserter.insert_guaranteed_block(&a2, 3);
+    let b1 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis_block, 4);
+    let b2 = inserter.insert_guaranteed_block(&b1, 5);
+    let c1 = inserter.insert_guaranteed_block(&b1, 6);
+
+    assert_eq!(block_store.len(), 7);
+    assert_eq!(block_store.child_links(), block_store.len() - 1);
+
+    (vec![genesis_block, a1, a2, a3, b1, b2, c1], block_store)
+}
+
+pub fn build_chain() -> (Vec<Arc<ExecutedBlock<Vec<usize>>>>, Arc<BlockStore<Vec<usize>>>) {
+    let block_store = build_empty_tree(); // this seems to call `find_root` -- is this ok?
+    let mut inserter = TreeInserter::new(block_store.clone());
+    let genesis = block_store.root();
+    let a1 =
+        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a2 = inserter.insert_guaranteed_block(&a1, 2);
+    let a3 = inserter.insert_guaranteed_block(&a2, 3);
+    let a4 = inserter.insert_guaranteed_block(&a3, 4);
+    let a5 = inserter.insert_guaranteed_block(&a4, 5);
+    let a6 = inserter.insert_guaranteed_block(&a5, 6);
+    let a7 = inserter.insert_guaranteed_block(&a6, 7);
+    (vec![genesis, a1, a2, a3, a4, a5, a6, a7], block_store)
+}
 
 pub fn build_empty_tree() -> Arc<BlockStore<Vec<usize>>> {
     let signer = ValidatorSigner::random(None);
@@ -78,8 +127,27 @@ impl TreeInserter {
             parent.round(),
             parent.quorum_cert().certified_block_id(),
             parent.quorum_cert().certified_block_round(),
+            false,
         );
+        self.insert_block_with_qc(parent_qc, parent, round)
+    }
 
+    // Insert a block that is guaranteed to be committed.
+    // This function is only to be used for testing other components, given that the block will commit.
+    pub fn insert_guaranteed_block(
+        &mut self,
+        parent: &ExecutedBlock<Vec<usize>>,
+        round: Round,
+    ) -> Arc<ExecutedBlock<Vec<usize>>> {
+        // Node must carry a QC to its parent
+        let parent_qc = placeholder_certificate_for_block(
+            vec![self.block_store.signer()],
+            parent.id(),
+            parent.round(),
+            parent.quorum_cert().certified_block_id(),
+            parent.quorum_cert().certified_block_round(),
+            true,
+        );
         self.insert_block_with_qc(parent_qc, parent, round)
     }
 
@@ -102,6 +170,18 @@ impl TreeInserter {
     }
 }
 
+pub fn placeholder_ledger_info_for_consensus_block_id(consensus_block_id: HashValue) -> LedgerInfo {
+    LedgerInfo::new(
+        0,
+        HashValue::zero(),
+        HashValue::zero(),
+        consensus_block_id,
+        0,
+        0,
+        None,
+    )
+}
+
 pub fn placeholder_ledger_info() -> LedgerInfo {
     LedgerInfo::new(
         0,
@@ -111,48 +191,6 @@ pub fn placeholder_ledger_info() -> LedgerInfo {
         0,
         0,
         None,
-    )
-}
-
-pub fn placeholder_certificate_for_block(
-    signers: Vec<&ValidatorSigner>,
-    certified_block_id: HashValue,
-    certified_block_round: u64,
-    certified_parent_block_id: HashValue,
-    certified_parent_block_round: u64,
-) -> QuorumCert {
-    // Assuming executed state to be Genesis state.
-    let certified_block_state = ExecutedState::state_for_genesis();
-    let consensus_data_hash = VoteData::vote_digest(
-        certified_block_id,
-        certified_block_state.state_id,
-        certified_block_round,
-        certified_parent_block_id,
-        certified_parent_block_round,
-    );
-
-    // This ledger info doesn't carry any meaningful information: it is all zeros except for
-    // the consensus data hash that carries the actual vote.
-    let mut ledger_info_placeholder = placeholder_ledger_info();
-    ledger_info_placeholder.set_consensus_data_hash(consensus_data_hash);
-
-    let mut signatures = BTreeMap::new();
-    for signer in signers {
-        let li_sig = signer
-            .sign_message(ledger_info_placeholder.hash())
-            .expect("Failed to sign LedgerInfo");
-        signatures.insert(signer.author(), li_sig);
-    }
-
-    QuorumCert::new(
-        VoteData::new(
-            certified_block_id,
-            certified_block_state.state_id,
-            certified_block_round,
-            certified_parent_block_id,
-            certified_parent_block_round,
-        ),
-        LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures),
     )
 }
 

@@ -16,7 +16,7 @@ use crate::{
         network_tests::NetworkPlayground,
         persistent_storage::{PersistentStorage, RecoveryData},
         test_utils::{
-            self, consensus_runtime, placeholder_certificate_for_block, placeholder_ledger_info,
+            self, consensus_runtime, placeholder_ledger_info,
             MockStateComputer, MockStorage, MockTransactionManager, TestPayload, TreeInserter,
         },
     },
@@ -33,6 +33,7 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate,
     vote_data::VoteData,
     vote_msg::VoteMsg,
+    test_utils::placeholder_certificate_for_block,
 };
 use crypto::HashValue;
 use futures::{
@@ -507,6 +508,7 @@ fn process_vote_timeout_msg_test() {
         1,
         block_0.quorum_cert().certified_block_id(),
         block_0.quorum_cert().certified_block_round(),
+        false
     );
     non_proposer
         .block_store
