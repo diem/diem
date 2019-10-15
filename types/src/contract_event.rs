@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_config::AccountEvent,
-    event::EventKey,
-    ledger_info::LedgerInfo,
-    proof::{verify_event, EventProof},
+    account_config::AccountEvent, event::EventKey, ledger_info::LedgerInfo, proof::EventProof,
     transaction::Version,
 };
 use crypto::{
@@ -186,12 +183,11 @@ impl EventWithProof {
             event_index,
         );
 
-        verify_event(
+        self.proof.verify(
             ledger_info,
             self.event.hash(),
             transaction_version,
             event_index,
-            &self.proof,
         )?;
 
         Ok(())

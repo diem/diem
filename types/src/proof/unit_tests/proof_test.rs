@@ -6,9 +6,9 @@ use crate::{
     account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfo,
     proof::{
-        definition::MAX_ACCUMULATOR_PROOF_DEPTH, verify_event, AccountStateProof,
-        EventAccumulatorInternalNode, EventAccumulatorProof, EventProof, MerkleTreeInternalNode,
-        SignedTransactionProof, SparseMerkleInternalNode, SparseMerkleLeafNode, SparseMerkleProof,
+        definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccountStateProof, EventAccumulatorInternalNode,
+        EventAccumulatorProof, EventProof, MerkleTreeInternalNode, SignedTransactionProof,
+        SparseMerkleInternalNode, SparseMerkleLeafNode, SparseMerkleProof,
         TestAccumulatorInternalNode, TestAccumulatorProof, TransactionAccumulatorInternalNode,
         TransactionAccumulatorProof,
     },
@@ -444,24 +444,24 @@ fn test_verify_account_state_and_event() {
     );
 
     // Prove that the first event within transaction 2 is `event0`.
-    assert!(verify_event(
-        &ledger_info,
-        event0_hash,
-        /* transaction_version = */ 2,
-        /* event_version_within_transaction = */ 0,
-        &event_proof,
-    )
-    .is_ok());
+    assert!(event_proof
+        .verify(
+            &ledger_info,
+            event0_hash,
+            /* transaction_version = */ 2,
+            /* event_version_within_transaction = */ 0,
+        )
+        .is_ok());
 
     let bad_event0_hash = b"event1".test_only_hash();
-    assert!(verify_event(
-        &ledger_info,
-        bad_event0_hash,
-        /* transaction_version = */ 2,
-        /* event_version_within_transaction = */ 0,
-        &event_proof,
-    )
-    .is_err());
+    assert!(event_proof
+        .verify(
+            &ledger_info,
+            bad_event0_hash,
+            /* transaction_version = */ 2,
+            /* event_version_within_transaction = */ 0,
+        )
+        .is_err());
 }
 
 // Return a variable length of transaction_and_info list with a random range within [0,

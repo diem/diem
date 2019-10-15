@@ -732,6 +732,30 @@ impl EventProof {
     pub fn transaction_info_to_event_proof(&self) -> &EventAccumulatorProof {
         &self.transaction_info_to_event_proof
     }
+
+    /// Verifies that a given event is correct using provided proof.
+    pub fn verify(
+        &self,
+        ledger_info: &LedgerInfo,
+        event_hash: HashValue,
+        transaction_version: Version,
+        event_version_within_transaction: Version,
+    ) -> Result<()> {
+        self.transaction_info_to_event_proof.verify(
+            self.transaction_info.event_root_hash(),
+            event_hash,
+            event_version_within_transaction,
+        )?;
+
+        verify_transaction_info(
+            ledger_info,
+            transaction_version,
+            &self.transaction_info,
+            &self.ledger_info_to_transaction_info_proof,
+        )?;
+
+        Ok(())
+    }
 }
 
 impl TryFrom<crate::proto::types::EventProof> for EventProof {
