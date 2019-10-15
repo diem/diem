@@ -20,6 +20,7 @@ use libra_types::{
 };
 use logger::prelude::*;
 use state_view::StateView;
+use std::convert::TryFrom;
 use vm_cache_map::Arena;
 
 /// An instantiation of the MoveVM.
@@ -112,14 +113,13 @@ impl<'alloc> VMRuntime<'alloc> {
         txn_block: Vec<Transaction>,
         data_view: &dyn StateView,
     ) -> Vec<TransactionOutput> {
-        let mut txns = vec![];
-        for txn in txn_block {
-            match txn {
-                Transaction::UserTransaction(user_txn) => txns.push(user_txn),
-                // TODO: Refactor the logic for writeset transaction.
-                _ => return Vec::new(),
-            }
-        }
+        let txns = txn_block
+            .into_iter()
+            .map(|txn| {
+                SignedTransaction::try_from(txn)
+                    .expect("All transaction should be user transaction")
+            })
+            .collect();
         execute_block(
             txns,
             &self.code_cache,

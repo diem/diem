@@ -618,17 +618,7 @@ where
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_block_time_s");
             V::execute_block(
-                block_to_execute
-                    .transactions()
-                    .iter()
-                    .map(|txn| {
-                        Transaction::UserTransaction(
-                            txn.as_signed_user_txn()
-                                .expect("All should be user transactions for now.")
-                                .clone(),
-                        )
-                    })
-                    .collect(),
+                block_to_execute.transactions().iter().cloned().collect(),
                 &self.vm_config,
                 &state_view,
             )
