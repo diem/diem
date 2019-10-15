@@ -87,27 +87,27 @@ impl QuorumCert {
         }
     }
 
-    /// QuorumCert for the genesis block:
-    /// - the ID of the block is predetermined by the `GENESIS_BLOCK_ID` constant.
-    /// - the accumulator root hash of the LedgerInfo is set to `ACCUMULATOR_PLACEHOLDER_HASH`
-    ///   constant.
-    /// - the map of signatures is empty because genesis block is implicitly agreed.
+    #[cfg(any(test, feature = "testing"))]
     pub fn certificate_for_genesis() -> QuorumCert {
-        let genesis_digest = VoteData::vote_digest(
-            *GENESIS_BLOCK_ID,
-            *ACCUMULATOR_PLACEHOLDER_HASH,
-            0,
-            *GENESIS_BLOCK_ID,
-            0,
-        );
+        Self::certificate_for_genesis_from_ledger_info(&LedgerInfo::genesis())
+    }
+
+    /// QuorumCert for the genesis block deterministically generated from end-epoch LedgerInfo:
+    /// - the ID of the block is determined by the generated genesis block.
+    /// - the accumulator root hash of the LedgerInfo is set to the last executed state of previous
+    ///   epoch.
+    /// - the map of signatures is empty because genesis block is implicitly agreed.
+    pub fn certificate_for_genesis_from_ledger_info(ledger_info: &LedgerInfo) -> QuorumCert {
+        let state_id = ledger_info.transaction_accumulator_hash();
+        let vote_data = VoteData::new(*GENESIS_BLOCK_ID, state_id, 0, *GENESIS_BLOCK_ID, 0);
         let signer = ValidatorSigner::genesis();
         let li = LedgerInfo::new(
-            0,
-            *ACCUMULATOR_PLACEHOLDER_HASH,
-            genesis_digest,
+            ledger_info.version(),
+            state_id,
+            vote_data.hash(),
             *GENESIS_BLOCK_ID,
-            0,
-            0,
+            ledger_info.epoch_num() + 1,
+            ledger_info.timestamp_usecs(),
             None,
         );
         let signature = signer
@@ -115,16 +115,7 @@ impl QuorumCert {
             .expect("Fail to sign genesis ledger info");
         let mut signatures = BTreeMap::new();
         signatures.insert(signer.author(), signature);
-        QuorumCert::new(
-            VoteData::new(
-                *GENESIS_BLOCK_ID,
-                *ACCUMULATOR_PLACEHOLDER_HASH,
-                0,
-                *GENESIS_BLOCK_ID,
-                0,
-            ),
-            LedgerInfoWithSignatures::new(li, signatures),
-        )
+        QuorumCert::new(vote_data, LedgerInfoWithSignatures::new(li, signatures))
     }
 
     pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {

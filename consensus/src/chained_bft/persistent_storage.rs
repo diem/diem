@@ -354,8 +354,14 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         let mut quorum_certs: Vec<_> = initial_data.4;
         // bootstrap the empty store with genesis block and qc.
         if blocks.is_empty() && quorum_certs.is_empty() {
-            blocks.push(Block::make_genesis_block());
-            quorum_certs.push(QuorumCert::certificate_for_genesis());
+            // TODO: remove once we execute and commit the genesis txn.
+            let genesis_ledger_info = LedgerInfo::genesis();
+            blocks.push(Block::make_genesis_block_from_ledger_info(
+                &genesis_ledger_info,
+            ));
+            quorum_certs.push(QuorumCert::certificate_for_genesis_from_ledger_info(
+                &genesis_ledger_info,
+            ));
             proxy
                 .save_tree(vec![blocks[0].clone()], vec![quorum_certs[0].clone()])
                 .expect("unable to bootstrap the storage with genesis block");
