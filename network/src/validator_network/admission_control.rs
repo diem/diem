@@ -94,7 +94,7 @@ impl AdmissionControlNetworkSender {
     /// The rpc request can be canceled at any point by dropping the returned
     /// future.
     pub async fn send_transaction_upstream(
-        &mut self,
+        &self,
         recipient: PeerId,
         req_msg: SubmitTransactionRequest,
         timeout: Duration,
@@ -169,7 +169,7 @@ mod tests {
     #[test]
     fn test_admission_control_outbound_rpc() {
         let (network_reqs_tx, mut network_reqs_rx) = channel::new_test(8);
-        let mut sender = AdmissionControlNetworkSender::new(network_reqs_tx);
+        let sender = AdmissionControlNetworkSender::new(network_reqs_tx);
 
         // make submit_transaction_request rpc request
         let peer_id = PeerId::random();
