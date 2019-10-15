@@ -48,6 +48,9 @@ struct Args {
     /// Path to the list of modules that we want to link with
     #[structopt(long = "deps")]
     pub deps_path: Option<String>,
+
+    #[structopt(long = "src-map")]
+    pub output_source_maps: bool,
 }
 
 fn print_errors_and_exit(verification_errors: &[VMStatus]) -> ! {
@@ -85,6 +88,7 @@ fn main() {
     let source_path = Path::new(&args.source_path);
     let mvir_extension = "mvir";
     let mv_extension = "mv";
+    let source_map_extension = "mvsm";
     let extension = source_path
         .extension()
         .expect("Missing file extension for input source file");
@@ -145,8 +149,8 @@ fn main() {
             extra_deps: deps,
             ..Compiler::default()
         };
-        let (compiled_program, dependencies) = compiler
-            .into_compiled_program_and_deps(&source)
+        let (compiled_program, source_map, dependencies) = compiler
+            .into_compiled_program_and_source_maps_deps(&source)
             .expect("Failed to compile program");
 
         let compiled_program = if !args.no_verify {
@@ -157,6 +161,15 @@ fn main() {
             compiled_program
         };
 
+        if args.output_source_maps {
+            let source_map_bytes = serde_json::to_vec(&source_map)
+                .expect("Unable to serialize source maps for program");
+            write_output(
+                &source_path.with_extension(source_map_extension),
+                &source_map_bytes,
+            );
+        }
+
         let mut script = vec![];
         compiled_program
             .script
@@ -166,13 +179,24 @@ fn main() {
         let payload_bytes = serde_json::to_vec(&payload).expect("Unable to serialize program");
         write_output(&source_path.with_extension(mv_extension), &payload_bytes);
     } else {
-        let compiled_module = util::do_compile_module(&args.source_path, address, &deps);
+        let (compiled_module, source_map) =
+            util::do_compile_module(&args.source_path, address, &deps);
         let compiled_module = if !args.no_verify {
             let verified_module = do_verify_module(compiled_module, &deps);
             verified_module.into_inner()
         } else {
             compiled_module
         };
+
+        if args.output_source_maps {
+            let source_map_bytes = serde_json::to_vec(&source_map)
+                .expect("Unable to serialize source maps for program");
+            write_output(
+                &source_path.with_extension(source_map_extension),
+                &source_map_bytes,
+            );
+        }
+
         let mut module = vec![];
         compiled_module
             .serialize(&mut module)

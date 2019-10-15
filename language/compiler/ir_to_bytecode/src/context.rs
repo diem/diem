@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::parser::ast::{
-    Field, FunctionName, ModuleName, QualifiedModuleIdent, QualifiedStructIdent, StructName,
+    Field, FunctionName, Loc, ModuleName, QualifiedModuleIdent, QualifiedStructIdent, StructName,
     TypeVar,
 };
 
+use bytecode_source_map::source_map::ModuleSourceMap;
 use failure::*;
 use libra_types::{
     account_address::AccountAddress,
@@ -16,11 +17,11 @@ use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, FieldDefinitionIndex, FunctionHandle,
-        FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex, IdentifierIndex, Kind,
-        LocalsSignature, LocalsSignatureIndex, ModuleHandle, ModuleHandleIndex, SignatureToken,
-        StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
-        TypeSignatureIndex,
+        AddressPoolIndex, ByteArrayPoolIndex, FieldDefinitionIndex, FunctionDefinitionIndex,
+        FunctionHandle, FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex,
+        IdentifierIndex, Kind, LocalsSignature, LocalsSignatureIndex, ModuleHandle,
+        ModuleHandleIndex, SignatureToken, StructDefinitionIndex, StructHandle, StructHandleIndex,
+        TableIndex, TypeSignature, TypeSignatureIndex,
     },
     vm_string::VMString,
 };
@@ -189,6 +190,12 @@ pub struct Context<'a> {
 
     // Current generic/type formal context
     type_formals: TypeFormalMap,
+
+    // The current function index that we are on
+    current_function_index: FunctionDefinitionIndex,
+
+    // Source location mapping for this module
+    pub source_map: ModuleSourceMap<Loc>,
 }
 
 impl<'a> Context<'a> {
@@ -227,6 +234,8 @@ impl<'a> Context<'a> {
             byte_array_pool: HashMap::new(),
             address_pool: HashMap::new(),
             type_formals: HashMap::new(),
+            current_function_index: FunctionDefinitionIndex(0),
+            source_map: ModuleSourceMap::new(current_module.clone()),
         };
         let self_name = ModuleName::new(ModuleName::self_name().into());
         context.declare_import(current_module, self_name)?;
@@ -251,7 +260,7 @@ impl<'a> Context<'a> {
     }
 
     /// Finish compilation, and materialize the pools for file format.
-    pub fn materialize_pools(self) -> MaterializedPools {
+    pub fn materialize_pools(self) -> (MaterializedPools, ModuleSourceMap<Loc>) {
         let num_functions = self.function_handles.len();
         assert!(num_functions == self.function_signatures.len());
         let function_handles = Self::materialize_pool(
@@ -260,7 +269,7 @@ impl<'a> Context<'a> {
                 .into_iter()
                 .map(|(_, (t, idx))| (t, idx.0)),
         );
-        MaterializedPools {
+        let materialized_pools = MaterializedPools {
             function_handles,
             function_signatures: Self::materialize_map(self.function_signature_pool),
             module_handles: Self::materialize_map(self.module_handles),
@@ -272,7 +281,8 @@ impl<'a> Context<'a> {
             user_strings: vec![],
             byte_array_pool: Self::materialize_map(self.byte_array_pool),
             address_pool: Self::materialize_map(self.address_pool),
-        }
+        };
+        (materialized_pools, self.source_map)
     }
 
     /// Bind the type formals into a "pool" for the current context.
@@ -398,6 +408,19 @@ impl<'a> Context<'a> {
         )?))
     }
 
+    pub fn set_function_index(&mut self, index: TableIndex) {
+        self.current_function_index = FunctionDefinitionIndex(index);
+    }
+
+    pub fn current_function_definition_index(&self) -> FunctionDefinitionIndex {
+        self.current_function_index
+    }
+
+    pub fn current_struct_definition_index(&self) -> StructDefinitionIndex {
+        let idx = self.struct_defs.len();
+        StructDefinitionIndex(idx as TableIndex)
+    }
+
     //**********************************************************************************************
     // Declarations
     //**********************************************************************************************
@@ -454,6 +477,7 @@ impl<'a> Context<'a> {
         if idx > TABLE_MAX_SIZE {
             bail!("too many struct definitions {}", s)
         }
+        // TODO: Add the decl of the struct definition name here
         // need to handle duplicates
         Ok(StructDefinitionIndex(
             *self.struct_defs.entry(s).or_insert(idx as TableIndex),

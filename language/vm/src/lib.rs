@@ -59,6 +59,7 @@ impl IndexKind {
 
         // XXX ensure this list stays up to date!
         &[
+            ByteArrayPool,
             ModuleHandle,
             StructHandle,
             FunctionHandle,

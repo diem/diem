@@ -420,9 +420,9 @@ pub struct IfElse {
     /// the if's condition
     pub cond: Exp_,
     /// the block taken if the condition is `true`
-    pub if_block: Block,
+    pub if_block: Block_,
     /// the block taken if the condition is `false`
-    pub else_block: Option<Block>,
+    pub else_block: Option<Block_>,
 }
 
 /// Struct defining a while statement
@@ -431,14 +431,14 @@ pub struct While {
     /// The condition for a while statement
     pub cond: Exp_,
     /// The block taken if the condition is `true`
-    pub block: Block,
+    pub block: Block_,
 }
 
 /// Struct defining a loop statement
 #[derive(Debug, PartialEq, Clone)]
 pub struct Loop {
     /// The body of the loop
-    pub block: Block,
+    pub block: Block_,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -462,6 +462,9 @@ pub struct Block {
     /// The statements that make up the block
     pub stmts: VecDeque<Statement>,
 }
+
+/// The type of a Block coupled with source location information.
+pub type Block_ = Spanned<Block>;
 
 //**************************************************************************************************
 // Expressions
@@ -955,7 +958,7 @@ impl Cmd {
 
 impl IfElse {
     /// Creates an if-statement with no else branch
-    pub fn if_block(cond: Exp_, if_block: Block) -> Self {
+    pub fn if_block(cond: Exp_, if_block: Block_) -> Self {
         IfElse {
             cond,
             if_block,
@@ -964,7 +967,7 @@ impl IfElse {
     }
 
     /// Creates an if-statement with an else branch
-    pub fn if_else(cond: Exp_, if_block: Block, else_block: Block) -> Self {
+    pub fn if_else(cond: Exp_, if_block: Block_, else_block: Block_) -> Self {
         IfElse {
             cond,
             if_block,
@@ -980,12 +983,12 @@ impl Statement {
     }
 
     /// Creates an `Statement::IfElseStatement` variant with no else branch
-    pub fn if_block(cond: Exp_, if_block: Block) -> Self {
+    pub fn if_block(cond: Exp_, if_block: Block_) -> Self {
         Statement::IfElseStatement(IfElse::if_block(cond, if_block))
     }
 
     /// Creates an `Statement::IfElseStatement` variant with an else branch
-    pub fn if_else(cond: Exp_, if_block: Block, else_block: Block) -> Self {
+    pub fn if_else(cond: Exp_, if_block: Block_, else_block: Block_) -> Self {
         Statement::IfElseStatement(IfElse::if_else(cond, if_block, else_block))
     }
 }

@@ -16,7 +16,7 @@ transaction_builder = { path = "../../transaction_builder"}
 crypto = { path = "../../../crypto/crypto" }
 stdlib = { path = "../../stdlib" }
 prost-ext = { path = "../../../common/prost-ext" }
-state_view = { path = "../../../storage/state_view" }
+state-view = { path = "../../../storage/state-view" }
 libra-types = { path = "../../../types" }
 vm = { path = "../" }
 vm_cache_map = { path = "../vm_runtime/vm_cache_map" }
@@ -30,5 +30,5 @@ canonical-serialization = { path = "../../../common/canonical-serialization" }
 crypto = { path = "../../../crypto/crypto", features = ["testing"]}
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
-proptest_helpers = { path = "../../../common/proptest_helpers" }
+proptest-helpers = { path = "../../../common/proptest-helpers" }
 libra-types = { path = "../../../types", features = ["testing"] }

@@ -293,7 +293,7 @@ impl<T: Payload> BlockStore<T> {
     pub fn insert_vote(
         &self,
         vote_msg: VoteMsg,
-        validator_verifier: Arc<ValidatorVerifier>,
+        validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
         self.inner
             .write()
@@ -492,7 +492,7 @@ impl<T: Payload> BlockStore<T> {
     pub fn insert_vote_and_qc(
         &self,
         vote_msg: VoteMsg,
-        validator_verifier: Arc<ValidatorVerifier>,
+        validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
         let r = self.insert_vote(vote_msg, validator_verifier);
         if let VoteReceptionResult::NewQuorumCertificate(ref qc) = r {

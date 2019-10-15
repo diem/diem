@@ -6,11 +6,12 @@ pub mod util;
 #[cfg(test)]
 mod unit_tests;
 
+use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
 use bytecode_verifier::VerifiedModule;
 use failure::prelude::*;
 use ir_to_bytecode::{
     compiler::{compile_module, compile_program},
-    parser::parse_program,
+    parser::{ast::Loc, parse_program},
 };
 use libra_types::{
     account_address::AccountAddress,
@@ -50,12 +51,28 @@ impl Compiler {
         Ok(self.compile_impl(code)?.0)
     }
 
+    pub fn into_compiled_program_and_source_maps(
+        mut self,
+        code: &str,
+    ) -> Result<(CompiledProgram, SourceMap<Loc>)> {
+        let (compiled_program, source_maps, _) = self.compile_impl(code)?;
+        Ok((compiled_program, source_maps))
+    }
+
+    pub fn into_compiled_program_and_source_maps_deps(
+        mut self,
+        code: &str,
+    ) -> Result<(CompiledProgram, SourceMap<Loc>, Vec<VerifiedModule>)> {
+        Ok(self.compile_impl(code)?)
+    }
+
     /// Compiles into a `CompiledProgram` and also returns the dependencies.
     pub fn into_compiled_program_and_deps(
         mut self,
         code: &str,
     ) -> Result<(CompiledProgram, Vec<VerifiedModule>)> {
-        self.compile_impl(code)
+        let (compiled_program, _, deps) = self.compile_impl(code)?;
+        Ok((compiled_program, deps))
     }
 
     /// Compiles into a `CompiledScript`.
@@ -92,21 +109,27 @@ impl Compiler {
         Ok(Script::new(self.into_script_blob(code)?, args))
     }
 
-    fn compile_impl(&mut self, code: &str) -> Result<(CompiledProgram, Vec<VerifiedModule>)> {
+    fn compile_impl(
+        &mut self,
+        code: &str,
+    ) -> Result<(CompiledProgram, SourceMap<Loc>, Vec<VerifiedModule>)> {
         let parsed_program = parse_program(code)?;
         let deps = self.deps();
-        let compiled_program = compile_program(self.address, parsed_program, &deps)?;
-        Ok((compiled_program, deps))
+        let (compiled_program, source_maps) = compile_program(self.address, parsed_program, &deps)?;
+        Ok((compiled_program, source_maps, deps))
     }
 
-    fn compile_mod(&mut self, code: &str) -> Result<(CompiledModule, Vec<VerifiedModule>)> {
+    fn compile_mod(
+        &mut self,
+        code: &str,
+    ) -> Result<(CompiledModule, ModuleSourceMap<Loc>, Vec<VerifiedModule>)> {
         let parsed_program = parse_program(code)?;
         let deps = self.deps();
         let mut modules = parsed_program.modules;
         assert_eq!(modules.len(), 1, "Must have single module");
         let module = modules.pop().expect("Module must exist");
-        let compiled_module = compile_module(self.address, module, &deps)?;
-        Ok((compiled_module, deps))
+        let (compiled_module, source_map) = compile_module(self.address, module, &deps)?;
+        Ok((compiled_module, source_map, deps))
     }
 
     fn deps(&mut self) -> Vec<VerifiedModule> {

@@ -7,13 +7,14 @@ use crate::{
     parser::ast::{
         self, BinOp, Block, Builtin, Cmd, Cmd_, CopyableVal, Exp, Exp_, FunctionBody, FunctionCall,
         FunctionCall_, FunctionName, FunctionSignature as AstFunctionSignature, FunctionVisibility,
-        Function_, IfElse, ImportDefinition, LValue, LValue_, Loop, ModuleDefinition, ModuleIdent,
-        ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent, Script, Statement,
-        StructDefinitionFields, StructDefinition_ as MoveStruct_, Type, TypeVar, TypeVar_, UnaryOp,
-        Var, Var_, While,
+        Function_, IfElse, ImportDefinition, LValue, LValue_, Loc, Loop, ModuleDefinition,
+        ModuleIdent, ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent, Script,
+        Statement, StructDefinitionFields, StructDefinition_ as MoveStruct_, Type, TypeVar,
+        TypeVar_, UnaryOp, Var, Var_, While,
     },
 };
 
+use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
 use failure::*;
 use libra_types::{account_address::AccountAddress, identifier::Identifier};
 use std::{
@@ -26,12 +27,72 @@ use std::{
 use vm::{
     access::ModuleAccess,
     file_format::{
-        self, Bytecode, CodeUnit, CompiledModule, CompiledModuleMut, CompiledProgram,
+        self, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut, CompiledProgram,
         CompiledScript, CompiledScriptMut, FieldDefinition, FieldDefinitionIndex,
         FunctionDefinition, FunctionSignature, Kind, LocalsSignature, MemberCount, SignatureToken,
         StructDefinition, StructFieldInformation, StructHandleIndex, TableIndex,
     },
 };
+
+macro_rules! record_src_loc {
+    (local: $context:expr, $var:expr) => {{
+        let source_name = (Identifier::from($var.name()), $var.span);
+        $context
+            .source_map
+            .add_local_mapping($context.current_function_definition_index(), source_name)?;
+    }};
+    (field: $context:expr, $field:expr) => {{
+        $context
+            .source_map
+            .add_struct_field_mapping($context.current_struct_definition_index(), $field.span)?;
+    }};
+    (function_type_formals: $context:expr, $var:expr) => {
+        for (ty_var, _) in $var.iter() {
+            let source_name = (Identifier::from(ty_var.name()), ty_var.span);
+            $context.source_map.add_function_type_parameter_mapping(
+                $context.current_function_definition_index(),
+                source_name,
+            )?;
+        }
+    };
+    (function_decl: $context:expr, $location:expr, $function_index:expr) => {{
+        $context.set_function_index($function_index as TableIndex);
+        $context.source_map.add_top_level_function_mapping(
+            $context.current_function_definition_index(),
+            $location,
+        )?;
+    }};
+    (struct_type_formals: $context:expr, $var:expr) => {
+        for (ty_var, _) in $var.iter() {
+            let source_name = (Identifier::from(ty_var.name()), ty_var.span);
+            $context.source_map.add_struct_type_parameter_mapping(
+                $context.current_struct_definition_index(),
+                source_name,
+            )?;
+        }
+    };
+    (struct_decl: $context:expr, $location:expr) => {
+        $context
+            .source_map
+            .add_top_level_struct_mapping($context.current_struct_definition_index(), $location)?;
+    };
+}
+
+macro_rules! make_push_instr {
+    ($context:ident, $code:ident) => {
+        macro_rules! push_instr {
+            ($loc:expr, $instr:expr) => {{
+                let code_offset = $code.len() as CodeOffset;
+                $context.source_map.add_code_mapping(
+                    $context.current_function_definition_index(),
+                    code_offset,
+                    $loc,
+                )?;
+                $code.push($instr);
+            }};
+        }
+    };
+}
 
 #[derive(Debug, Default)]
 struct LoopInfo {
@@ -244,24 +305,27 @@ pub fn compile_program<'a, T: 'a + ModuleAccess>(
     address: AccountAddress,
     program: Program,
     deps: impl IntoIterator<Item = &'a T>,
-) -> Result<CompiledProgram> {
+) -> Result<(CompiledProgram, SourceMap<Loc>)> {
     let deps = deps
         .into_iter()
         .map(|dep| dep.as_module())
         .collect::<Vec<_>>();
     // This is separate to avoid unnecessary code gen due to monomorphization.
     let mut modules = vec![];
+    let mut source_maps = vec![];
     for m in program.modules {
-        let module = {
+        let (module, source_map) = {
             let deps = deps.iter().copied().chain(&modules);
             compile_module(address, m, deps)?
         };
         modules.push(module);
+        source_maps.push(source_map);
     }
 
     let deps = deps.into_iter().chain(modules.iter());
-    let script = compile_script(address, program.script, deps)?;
-    Ok(CompiledProgram { modules, script })
+    let (script, source_map) = compile_script(address, program.script, deps)?;
+    source_maps.push(source_map);
+    Ok((CompiledProgram { modules, script }, source_maps))
 }
 
 /// Compile a transaction script.
@@ -269,7 +333,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
     address: AccountAddress,
     script: Script,
     dependencies: impl IntoIterator<Item = &'a T>,
-) -> Result<CompiledScript> {
+) -> Result<(CompiledScript, ModuleSourceMap<Loc>)> {
     let current_module = QualifiedModuleIdent {
         address,
         name: ModuleName::new(file_format::self_module_name().to_owned()),
@@ -283,20 +347,23 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
 
     let sig = function_signature(&mut context, &function.signature)?;
     context.declare_function(self_name.clone(), main_name.clone(), sig)?;
-    let main = compile_function(&mut context, &self_name, main_name, function)?;
+    let main = compile_function(&mut context, &self_name, main_name, function, 0)?;
 
-    let MaterializedPools {
-        module_handles,
-        struct_handles,
-        function_handles,
-        type_signatures,
-        function_signatures,
-        locals_signatures,
-        identifiers,
-        user_strings,
-        byte_array_pool,
-        address_pool,
-    } = context.materialize_pools();
+    let (
+        MaterializedPools {
+            module_handles,
+            struct_handles,
+            function_handles,
+            type_signatures,
+            function_signatures,
+            locals_signatures,
+            identifiers,
+            user_strings,
+            byte_array_pool,
+            address_pool,
+        },
+        source_map,
+    ) = context.materialize_pools();
     let compiled_script = CompiledScriptMut {
         module_handles,
         struct_handles,
@@ -313,6 +380,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
     compiled_script
         .freeze()
         .map_err(|errs| InternalCompilerError::BoundsCheckErrors(errs).into())
+        .map(|frozen_script| (frozen_script, source_map))
 }
 
 /// Compile a module.
@@ -320,7 +388,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
     address: AccountAddress,
     module: ModuleDefinition,
     dependencies: impl IntoIterator<Item = &'a T>,
-) -> Result<CompiledModule> {
+) -> Result<(CompiledModule, ModuleSourceMap<Loc>)> {
     let current_module = QualifiedModuleIdent {
         address,
         name: module.name,
@@ -351,18 +419,21 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
 
     let function_defs = compile_functions(&mut context, &self_name, module.functions)?;
 
-    let MaterializedPools {
-        module_handles,
-        struct_handles,
-        function_handles,
-        type_signatures,
-        function_signatures,
-        locals_signatures,
-        identifiers,
-        user_strings,
-        byte_array_pool,
-        address_pool,
-    } = context.materialize_pools();
+    let (
+        MaterializedPools {
+            module_handles,
+            struct_handles,
+            function_handles,
+            type_signatures,
+            function_signatures,
+            locals_signatures,
+            identifiers,
+            user_strings,
+            byte_array_pool,
+            address_pool,
+        },
+        source_map,
+    ) = context.materialize_pools();
     let compiled_module = CompiledModuleMut {
         module_handles,
         struct_handles,
@@ -381,6 +452,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
     compiled_module
         .freeze()
         .map_err(|errs| InternalCompilerError::BoundsCheckErrors(errs).into())
+        .map(|frozen_module| (frozen_module, source_map))
 }
 
 fn compile_imports(
@@ -484,6 +556,8 @@ fn compile_structs(
             name: s.name.clone(),
         };
         let sh_idx = context.struct_handle_index(sident.clone())?;
+        record_src_loc!(struct_decl: context, s.span);
+        record_src_loc!(struct_type_formals: context, &s.type_formals);
         let (map, _) = type_formals(&s.type_formals)?;
         context.bind_type_formals(map)?;
         let field_information = compile_fields(context, &mut field_defs, sh_idx, s.value.fields)?;
@@ -515,6 +589,7 @@ fn compile_fields(
 
             for (decl_order, (f, ty)) in fields.into_iter().enumerate() {
                 let name = context.identifier_index(f.name())?;
+                record_src_loc!(field: context, f);
                 let sig_token = compile_type(context, &ty)?;
                 let signature = context.type_signature_index(sig_token.clone())?;
                 context.declare_field(sh_idx, f.value, sig_token, decl_order)?;
@@ -536,7 +611,10 @@ fn compile_functions(
 ) -> Result<Vec<FunctionDefinition>> {
     functions
         .into_iter()
-        .map(|(name, ast_function)| compile_function(context, self_name, name, ast_function))
+        .enumerate()
+        .map(|(func_index, (name, ast_function))| {
+            compile_function(context, self_name, name, ast_function, func_index)
+        })
         .collect()
 }
 
@@ -545,7 +623,13 @@ fn compile_function(
     self_name: &ModuleName,
     name: FunctionName,
     ast_function: Function_,
+    function_index: usize,
 ) -> Result<FunctionDefinition> {
+    record_src_loc!(function_decl: context, ast_function.span, function_index);
+    record_src_loc!(
+        function_type_formals: context,
+        &ast_function.signature.type_formals
+    );
     let fh_idx = context.function_handle(self_name.clone(), name)?.1;
 
     let ast_function = ast_function.value;
@@ -569,7 +653,12 @@ fn compile_function(
             context.bind_type_formals(m)?;
             compile_function_body(context, ast_function.signature.formals, locals, code)?
         }
-        FunctionBody::Native => CodeUnit::default(),
+        FunctionBody::Native => {
+            for (var, _) in ast_function.signature.formals.into_iter() {
+                record_src_loc!(local: context, var)
+            }
+            CodeUnit::default()
+        }
     };
     Ok(FunctionDefinition {
         function: fh_idx,
@@ -591,11 +680,13 @@ fn compile_function_body(
         let sig = compile_type(context, &t)?;
         function_frame.define_local(&var, sig.clone())?;
         locals_signature.0.push(sig);
+        record_src_loc!(local: context, var);
     }
     for (var_, t) in locals {
         let sig = compile_type(context, &t)?;
         function_frame.define_local(&var_.value, sig.clone())?;
         locals_signature.0.push(sig);
+        record_src_loc!(local: context, var_);
     }
     let sig_idx = context.locals_signature_index(locals_signature)?;
 
@@ -651,12 +742,15 @@ fn compile_if_else(
     code: &mut Vec<Bytecode>,
     if_else: IfElse,
 ) -> Result<ControlFlowInfo> {
+    make_push_instr!(context, code);
+    let cond_span = if_else.cond.span;
     compile_expression(context, function_frame, code, if_else.cond)?;
 
     let brfalse_ins_loc = code.len();
-    code.push(Bytecode::BrFalse(0)); // placeholder, final branch target replaced later
+    // placeholder, final branch target replaced later
+    push_instr!(cond_span, Bytecode::BrFalse(0));
     function_frame.pop()?;
-    let if_cf_info = compile_block(context, function_frame, code, if_else.if_block)?;
+    let if_cf_info = compile_block(context, function_frame, code, if_else.if_block.value)?;
 
     let mut else_block_location = code.len();
 
@@ -668,10 +762,11 @@ fn compile_if_else(
         Some(else_block) => {
             let branch_ins_loc = code.len();
             if !if_cf_info.terminal_node {
-                code.push(Bytecode::Branch(0)); // placeholder, final branch target replaced later
+                // placeholder, final branch target replaced later
+                push_instr!(else_block.span, Bytecode::Branch(0));
                 else_block_location += 1;
             }
-            let else_cf_info = compile_block(context, function_frame, code, else_block)?;
+            let else_cf_info = compile_block(context, function_frame, code, else_block.value)?;
             if !if_cf_info.terminal_node {
                 code[branch_ins_loc] = Bytecode::Branch(code.len() as u16);
             }
@@ -691,16 +786,20 @@ fn compile_while(
     code: &mut Vec<Bytecode>,
     while_: While,
 ) -> Result<ControlFlowInfo> {
+    make_push_instr!(context, code);
+    let cond_span = while_.cond.span;
     let loop_start_loc = code.len();
     function_frame.push_loop(loop_start_loc)?;
     compile_expression(context, function_frame, code, while_.cond)?;
 
     let brfalse_loc = code.len();
-    code.push(Bytecode::BrFalse(0)); // placeholder, final branch target replaced later
+
+    // placeholder, final branch target replaced later
+    push_instr!(cond_span, Bytecode::BrFalse(0));
     function_frame.pop()?;
 
-    compile_block(context, function_frame, code, while_.block)?;
-    code.push(Bytecode::Branch(loop_start_loc as u16));
+    compile_block(context, function_frame, code, while_.block.value)?;
+    push_instr!(while_.block.span, Bytecode::Branch(loop_start_loc as u16));
 
     let loop_end_loc = code.len() as u16;
     code[brfalse_loc] = Bytecode::BrFalse(loop_end_loc);
@@ -730,11 +829,12 @@ fn compile_loop(
     code: &mut Vec<Bytecode>,
     loop_: Loop,
 ) -> Result<ControlFlowInfo> {
+    make_push_instr!(context, code);
     let loop_start_loc = code.len();
     function_frame.push_loop(loop_start_loc)?;
 
-    let body_cf_info = compile_block(context, function_frame, code, loop_.block)?;
-    code.push(Bytecode::Branch(loop_start_loc as u16));
+    let body_cf_info = compile_block(context, function_frame, code, loop_.block.value)?;
+    push_instr!(loop_.block.span, Bytecode::Branch(loop_start_loc as u16));
 
     let loop_end_loc = code.len() as u16;
     let breaks = function_frame.get_loop_breaks()?;
@@ -761,6 +861,7 @@ fn compile_command(
     code: &mut Vec<Bytecode>,
     cmd: Cmd_,
 ) -> Result<ControlFlowInfo> {
+    make_push_instr!(context, code);
     let (reachable_break, terminal_node) = match &cmd.value {
             // If we are in a loop, `continue` makes a terminal node
             // Conceptually we treat
@@ -777,13 +878,13 @@ fn compile_command(
     match cmd.value {
         Cmd::Return(exps) => {
             compile_expression(context, function_frame, code, *exps)?;
-            code.push(Bytecode::Ret);
+            push_instr!(cmd.span, Bytecode::Ret);
         }
         Cmd::Abort(exp_opt) => {
             if let Some(exp) = exp_opt {
                 compile_expression(context, function_frame, code, *exp)?;
             }
-            code.push(Bytecode::Abort);
+            push_instr!(cmd.span, Bytecode::Abort);
             function_frame.pop()?;
         }
         Cmd::Assign(lvalues, rhs_expressions) => {
@@ -797,23 +898,23 @@ fn compile_command(
             compile_expression(context, function_frame, code, *e)?;
 
             let def_idx = context.struct_definition_index(&name)?;
-            code.push(Bytecode::Unpack(def_idx, type_actuals_id));
+            push_instr!(cmd.span, Bytecode::Unpack(def_idx, type_actuals_id));
             function_frame.pop()?;
 
-            for (_, lhs_variable) in bindings.iter().rev() {
+            for (field_, lhs_variable) in bindings.iter().rev() {
                 let loc_idx = function_frame.get_local(&lhs_variable.value)?;
                 let st_loc = Bytecode::StLoc(loc_idx);
-                code.push(st_loc);
+                push_instr!(field_.span, st_loc);
             }
         }
         Cmd::Continue => {
             let loc = function_frame.get_loop_start()?;
-            code.push(Bytecode::Branch(loc as u16));
+            push_instr!(cmd.span, Bytecode::Branch(loc as u16));
         }
         Cmd::Break => {
             function_frame.push_loop_break(code.len())?;
             // placeholder, to be replaced when the enclosing while is compiled
-            code.push(Bytecode::Branch(0));
+            push_instr!(cmd.span, Bytecode::Branch(0));
         }
         Cmd::Exp(e) => {
             compile_expression(context, function_frame, code, *e)?;
@@ -831,22 +932,22 @@ fn compile_lvalues(
     code: &mut Vec<Bytecode>,
     lvalues: Vec<LValue_>,
 ) -> Result<()> {
+    make_push_instr!(context, code);
     for lvalue_ in lvalues.into_iter().rev() {
         match lvalue_.value {
             LValue::Var(v) => {
                 let loc_idx = function_frame.get_local(&v.value)?;
-                code.push(Bytecode::StLoc(loc_idx));
+                push_instr!(lvalue_.span, Bytecode::StLoc(loc_idx));
                 function_frame.pop()?;
             }
             LValue::Mutate(e) => {
                 compile_expression(context, function_frame, code, e)?;
-                code.push(Bytecode::WriteRef);
+                push_instr!(lvalue_.span, Bytecode::WriteRef);
                 function_frame.pop()?;
                 function_frame.pop()?;
             }
             LValue::Pop => {
-                code.push(Bytecode::Pop);
-
+                push_instr!(lvalue_.span, Bytecode::Pop);
                 function_frame.pop()?;
             }
         }
@@ -866,11 +967,12 @@ fn compile_expression(
     code: &mut Vec<Bytecode>,
     exp: Exp_,
 ) -> Result<VecDeque<InferredType>> {
+    make_push_instr!(context, code);
     Ok(match exp.value {
         Exp::Move(v) => {
             let loc_idx = function_frame.get_local(&v.value)?;
             let load_loc = Bytecode::MoveLoc(loc_idx);
-            code.push(load_loc);
+            push_instr!(exp.span, load_loc);
             function_frame.push()?;
             let loc_type = function_frame.get_local_type(loc_idx)?;
             vec_deque![InferredType::from_signature_token(loc_type)]
@@ -878,7 +980,7 @@ fn compile_expression(
         Exp::Copy(v) => {
             let loc_idx = function_frame.get_local(&v.value)?;
             let load_loc = Bytecode::CopyLoc(loc_idx);
-            code.push(load_loc);
+            push_instr!(exp.span, load_loc);
             function_frame.push()?;
             let loc_type = function_frame.get_local_type(loc_idx)?;
             vec_deque![InferredType::from_signature_token(loc_type)]
@@ -888,11 +990,11 @@ fn compile_expression(
             let loc_type = function_frame.get_local_type(loc_idx)?;
             let inner_token = Box::new(InferredType::from_signature_token(loc_type));
             if is_mutable {
-                code.push(Bytecode::MutBorrowLoc(loc_idx));
+                push_instr!(exp.span, Bytecode::MutBorrowLoc(loc_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::MutableReference(inner_token)]
             } else {
-                code.push(Bytecode::ImmBorrowLoc(loc_idx));
+                push_instr!(exp.span, Bytecode::ImmBorrowLoc(loc_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::Reference(inner_token)]
             }
@@ -900,27 +1002,29 @@ fn compile_expression(
         Exp::Value(cv) => match cv.value {
             CopyableVal::Address(address) => {
                 let addr_idx = context.address_index(address)?;
-                code.push(Bytecode::LdAddr(addr_idx));
+                push_instr!(exp.span, Bytecode::LdAddr(addr_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::Address]
             }
             CopyableVal::U64(i) => {
-                code.push(Bytecode::LdConst(i));
+                push_instr!(exp.span, Bytecode::LdConst(i));
                 function_frame.push()?;
                 vec_deque![InferredType::U64]
             }
             CopyableVal::ByteArray(buf) => {
                 let buf_idx = context.byte_array_index(&buf)?;
-                code.push(Bytecode::LdByteArray(buf_idx));
+                push_instr!(exp.span, Bytecode::LdByteArray(buf_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::ByteArray]
             }
             CopyableVal::Bool(b) => {
-                code.push(if b {
-                    Bytecode::LdTrue
-                } else {
-                    Bytecode::LdFalse
-                });
+                push_instr! {exp.span,
+                    if b {
+                        Bytecode::LdTrue
+                    } else {
+                        Bytecode::LdFalse
+                    }
+                };
                 function_frame.push()?;
                 vec_deque![InferredType::Bool]
             }
@@ -948,7 +1052,7 @@ fn compile_expression(
 
                 compile_expression(context, function_frame, code, e)?;
             }
-            code.push(Bytecode::Pack(def_idx, type_actuals_id));
+            push_instr!(exp.span, Bytecode::Pack(def_idx, type_actuals_id));
             for _ in 0..num_fields {
                 function_frame.pop()?;
             }
@@ -960,7 +1064,7 @@ fn compile_expression(
             compile_expression(context, function_frame, code, *e)?;
             match op {
                 UnaryOp::Not => {
-                    code.push(Bytecode::Not);
+                    push_instr!(exp.span, Bytecode::Not);
                     vec_deque![InferredType::Bool]
                 }
             }
@@ -971,75 +1075,74 @@ fn compile_expression(
             function_frame.pop()?;
             match op {
                 BinOp::Add => {
-                    code.push(Bytecode::Add);
+                    push_instr!(exp.span, Bytecode::Add);
                     vec_deque![InferredType::U64]
                 }
                 BinOp::Sub => {
-                    code.push(Bytecode::Sub);
+                    push_instr!(exp.span, Bytecode::Sub);
                     vec_deque![InferredType::U64]
                 }
                 BinOp::Mul => {
-                    code.push(Bytecode::Mul);
+                    push_instr!(exp.span, Bytecode::Mul);
                     vec_deque![InferredType::U64]
                 }
                 BinOp::Mod => {
-                    code.push(Bytecode::Mod);
+                    push_instr!(exp.span, Bytecode::Mod);
                     vec_deque![InferredType::U64]
                 }
                 BinOp::Div => {
-                    code.push(Bytecode::Div);
+                    push_instr!(exp.span, Bytecode::Div);
                     vec_deque![InferredType::U64]
                 }
                 BinOp::BitOr => {
-                    code.push(Bytecode::BitOr);
+                    push_instr!(exp.span, Bytecode::BitOr);
                     vec_deque![InferredType::U64]
                 }
                 BinOp::BitAnd => {
-                    code.push(Bytecode::BitAnd);
+                    push_instr!(exp.span, Bytecode::BitAnd);
                     vec_deque![InferredType::U64]
                 }
                 BinOp::Xor => {
-                    code.push(Bytecode::Xor);
+                    push_instr!(exp.span, Bytecode::Xor);
                     vec_deque![InferredType::U64]
                 }
                 BinOp::Or => {
-                    code.push(Bytecode::Or);
+                    push_instr!(exp.span, Bytecode::Or);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::And => {
-                    code.push(Bytecode::And);
+                    push_instr!(exp.span, Bytecode::And);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::Eq => {
-                    code.push(Bytecode::Eq);
+                    push_instr!(exp.span, Bytecode::Eq);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::Neq => {
-                    code.push(Bytecode::Neq);
+                    push_instr!(exp.span, Bytecode::Neq);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::Lt => {
-                    code.push(Bytecode::Lt);
+                    push_instr!(exp.span, Bytecode::Lt);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::Gt => {
-                    code.push(Bytecode::Gt);
+                    push_instr!(exp.span, Bytecode::Gt);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::Le => {
-                    code.push(Bytecode::Le);
+                    push_instr!(exp.span, Bytecode::Le);
                     vec_deque![InferredType::Bool]
                 }
                 BinOp::Ge => {
-                    code.push(Bytecode::Ge);
+                    push_instr!(exp.span, Bytecode::Ge);
                     vec_deque![InferredType::Bool]
                 }
             }
         }
         Exp::Dereference(e) => {
             let loc_type = compile_expression(context, function_frame, code, *e)?.pop_front();
-
-            code.push(Bytecode::ReadRef);
+            push_instr!(exp.span, Bytecode::ReadRef);
             match loc_type {
                 Some(InferredType::MutableReference(sig_ref_token)) => vec_deque![*sig_ref_token],
                 Some(InferredType::Reference(sig_ref_token)) => vec_deque![*sig_ref_token],
@@ -1048,10 +1151,11 @@ fn compile_expression(
         }
         Exp::Borrow {
             is_mutable,
-            exp,
+            exp: inner_exp,
             field,
         } => {
-            let loc_type_opt = compile_expression(context, function_frame, code, *exp)?.pop_front();
+            let loc_type_opt =
+                compile_expression(context, function_frame, code, *inner_exp)?.pop_front();
             let loc_type =
                 loc_type_opt.ok_or_else(|| format_err!("Impossible no expression to borrow"))?;
             let sh_idx = loc_type.get_struct_handle()?;
@@ -1059,11 +1163,11 @@ fn compile_expression(
             function_frame.pop()?;
             let inner_token = Box::new(InferredType::from_signature_token(&field_type));
             if is_mutable {
-                code.push(Bytecode::MutBorrowField(fd_idx));
+                push_instr!(exp.span, Bytecode::MutBorrowField(fd_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::MutableReference(inner_token)]
             } else {
-                code.push(Bytecode::ImmBorrowField(fd_idx));
+                push_instr!(exp.span, Bytecode::ImmBorrowField(fd_idx));
                 function_frame.push()?;
                 vec_deque![InferredType::Reference(inner_token)]
             }
@@ -1092,26 +1196,27 @@ fn compile_call(
     call: FunctionCall_,
     mut argument_types: VecDeque<InferredType>,
 ) -> Result<VecDeque<InferredType>> {
+    make_push_instr!(context, code);
     Ok(match call.value {
         FunctionCall::Builtin(function) => {
             match function {
                 Builtin::GetTxnGasUnitPrice => {
-                    code.push(Bytecode::GetTxnGasUnitPrice);
+                    push_instr!(call.span, Bytecode::GetTxnGasUnitPrice);
                     function_frame.push()?;
                     vec_deque![InferredType::U64]
                 }
                 Builtin::GetTxnMaxGasUnits => {
-                    code.push(Bytecode::GetTxnMaxGasUnits);
+                    push_instr!(call.span, Bytecode::GetTxnMaxGasUnits);
                     function_frame.push()?;
                     vec_deque![InferredType::U64]
                 }
                 Builtin::GetGasRemaining => {
-                    code.push(Bytecode::GetGasRemaining);
+                    push_instr!(call.span, Bytecode::GetGasRemaining);
                     function_frame.push()?;
                     vec_deque![InferredType::U64]
                 }
                 Builtin::GetTxnSender => {
-                    code.push(Bytecode::GetTxnSenderAddress);
+                    push_instr!(call.span, Bytecode::GetTxnSenderAddress);
                     function_frame.push()?;
                     vec_deque![InferredType::Address]
                 }
@@ -1119,7 +1224,7 @@ fn compile_call(
                     let tokens = LocalsSignature(compile_types(context, &tys)?);
                     let type_actuals_id = context.locals_signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-                    code.push(Bytecode::Exists(def_idx, type_actuals_id));
+                    push_instr!(call.span, Bytecode::Exists(def_idx, type_actuals_id));
                     function_frame.pop()?;
                     function_frame.push()?;
                     vec_deque![InferredType::Bool]
@@ -1128,11 +1233,13 @@ fn compile_call(
                     let tokens = LocalsSignature(compile_types(context, &tys)?);
                     let type_actuals_id = context.locals_signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-                    code.push(if mut_ {
-                        Bytecode::MutBorrowGlobal(def_idx, type_actuals_id)
-                    } else {
-                        Bytecode::ImmBorrowGlobal(def_idx, type_actuals_id)
-                    });
+                    push_instr! {call.span,
+                        if mut_ {
+                            Bytecode::MutBorrowGlobal(def_idx, type_actuals_id)
+                        } else {
+                            Bytecode::ImmBorrowGlobal(def_idx, type_actuals_id)
+                        }
+                    };
                     function_frame.pop()?;
                     function_frame.push()?;
 
@@ -1150,7 +1257,7 @@ fn compile_call(
                     }]
                 }
                 Builtin::CreateAccount => {
-                    code.push(Bytecode::CreateAccount);
+                    push_instr!(call.span, Bytecode::CreateAccount);
                     function_frame.pop()?;
                     function_frame.push()?;
                     vec_deque![]
@@ -1159,7 +1266,7 @@ fn compile_call(
                     let tokens = LocalsSignature(compile_types(context, &tys)?);
                     let type_actuals_id = context.locals_signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
-                    code.push(Bytecode::MoveFrom(def_idx, type_actuals_id));
+                    push_instr!(call.span, Bytecode::MoveFrom(def_idx, type_actuals_id));
                     function_frame.pop()?; // pop the address
                     function_frame.push()?; // push the return value
 
@@ -1176,22 +1283,22 @@ fn compile_call(
                     let type_actuals_id = context.locals_signature_index(tokens)?;
                     let def_idx = context.struct_definition_index(&name)?;
 
-                    code.push(Bytecode::MoveToSender(def_idx, type_actuals_id));
+                    push_instr!(call.span, Bytecode::MoveToSender(def_idx, type_actuals_id));
                     function_frame.push()?;
                     vec_deque![]
                 }
                 Builtin::GetTxnSequenceNumber => {
-                    code.push(Bytecode::GetTxnSequenceNumber);
+                    push_instr!(call.span, Bytecode::GetTxnSequenceNumber);
                     function_frame.push()?;
                     vec_deque![InferredType::U64]
                 }
                 Builtin::GetTxnPublicKey => {
-                    code.push(Bytecode::GetTxnPublicKey);
+                    push_instr!(call.span, Bytecode::GetTxnPublicKey);
                     function_frame.push()?;
                     vec_deque![InferredType::ByteArray]
                 }
                 Builtin::Freeze => {
-                    code.push(Bytecode::FreezeRef);
+                    push_instr!(call.span, Bytecode::FreezeRef);
                     function_frame.pop()?; // pop mut ref
                     function_frame.push()?; // push imm ref
                     let inner_token = match argument_types.pop_front() {
@@ -1345,8 +1452,8 @@ fn compile_call(
             let tokens = LocalsSignature(compile_types(context, &type_actuals)?);
             let type_actuals_id = context.locals_signature_index(tokens)?;
             let fh_idx = context.function_handle(module.clone(), name.clone())?.1;
-            let call = Bytecode::Call(fh_idx, type_actuals_id);
-            code.push(call);
+            let fcall = Bytecode::Call(fh_idx, type_actuals_id);
+            push_instr!(call.span, fcall);
             for _ in 0..argument_types.len() {
                 function_frame.pop()?;
             }

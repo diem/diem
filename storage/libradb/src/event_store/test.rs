@@ -9,7 +9,6 @@ use libra_types::{
     account_address::AccountAddress,
     contract_event::ContractEvent,
     event::EventKey,
-    proof::verify_event_accumulator_element,
     proptest_types::{AccountInfoUniverse, ContractEventGen},
 };
 use proptest::{
@@ -74,7 +73,7 @@ proptest! {
                 .get_event_with_proof_by_version_and_index(100, idx as u64)
                 .unwrap();
             prop_assert_eq!(&event, expected_event);
-            verify_event_accumulator_element(root_hash, event.hash(),  idx as u64, &proof).unwrap();
+            proof.verify(root_hash, event.hash(), idx as u64).unwrap();
         }
         // error on index >= num_events
         prop_assert!(store

@@ -23,7 +23,7 @@ use pin_project::pin_project;
 use prost::Message as _;
 use std::pin::Pin;
 
-pub const STATE_SYNCHRONIZER_MSG_PROTOCOL: &[u8] = b"/libra/state_synchronizer/direct-send/0.1.0";
+pub const STATE_SYNCHRONIZER_MSG_PROTOCOL: &[u8] = b"/libra/state-synchronizer/direct-send/0.1.0";
 
 #[pin_project]
 pub struct StateSynchronizerEvents {

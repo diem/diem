@@ -1,0 +1,25 @@
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+
+main() {
+    let sender_balance: u64;
+    let all_coins: LibraCoin.T;
+    let one_coin: LibraCoin.T;
+    let addr: address;
+
+    addr = get_txn_sender();
+    sender_balance = LibraAccount.balance(copy(addr));
+    all_coins = LibraAccount.withdraw_from_sender(move(sender_balance));
+
+    assert(LibraAccount.balance(copy(addr)) == 0, 42);
+
+    one_coin = LibraAccount.withdraw_from_sender(1);
+
+    LibraAccount.deposit(copy(addr), move(all_coins));
+    LibraAccount.deposit(copy(addr), move(one_coin));
+
+    return;
+}
+
+// check: ABORTED
+// check: 10

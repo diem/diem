@@ -37,7 +37,7 @@ use storage_proto::StartupInfo;
 /// This is a mock of the storage read client used in tests.
 ///
 /// See the real
-/// [`StorageReadServiceClient`](../../../storage_client/struct.StorageReadServiceClient.html).
+/// [`StorageReadServiceClient`](../../../storage-client/struct.StorageReadServiceClient.html).
 #[derive(Clone)]
 pub struct MockStorageReadClient;
 
@@ -269,9 +269,8 @@ fn get_mock_txn_data(
     let mut txns = vec![];
     let mut infos = vec![];
     for i in start_seq..=end_seq {
-        let signed_txn =
-            get_test_signed_txn(address, i, priv_key.clone(), pub_key.clone(), None).into();
-        txns.push(signed_txn);
+        let txn = get_test_signed_txn(address, i, priv_key.clone(), pub_key.clone(), None);
+        txns.push(txn.into());
 
         let info = get_transaction_info().into();
         infos.push(info);
@@ -280,7 +279,7 @@ fn get_mock_txn_data(
 }
 
 fn get_accumulator_proof() -> AccumulatorProof {
-    libra_types::proof::AccumulatorProof::new(vec![]).into()
+    libra_types::proof::TransactionAccumulatorProof::new(vec![]).into()
 }
 
 fn get_transaction_info() -> libra_types::transaction::TransactionInfo {

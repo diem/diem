@@ -14,8 +14,8 @@ config = { path = "../config" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 futures = "0.1.28"
 scratchpad = { path = "../storage/scratchpad" }
-state_view = { path = "../storage/state_view" }
-storage_client = { path = "../storage/storage_client" }
+state-view = { path = "../storage/state-view" }
+storage-client = { path = "../storage/storage-client" }
 libra-types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }
 

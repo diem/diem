@@ -1,0 +1,20 @@
+[package]
+name = "bytecode_source_map"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+failure = { path = "../../../common/failure_ext", package = "failure_ext" }
+ir_to_bytecode_syntax = { path = "../ir_to_bytecode/syntax" }
+libra-types = { path = "../../../types" }
+vm = { path = "../../vm" }
+codespan-reporting = "0.2.1"
+structopt = "0.3.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+libra-types = { path = "../../../types", features = ["testing"] }

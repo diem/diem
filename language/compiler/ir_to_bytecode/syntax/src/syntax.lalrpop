@@ -333,14 +333,17 @@ Statement : Statement = {
                 span
             }
         };
+        let span = err.span;
         let stmt = {
-            let span = err.span;
             Statement::CommandStatement(Spanned {
                 value: Cmd::Abort(Some(Box::new(err))),
                 span,
             })
         };
-        Statement::IfElseStatement(IfElse::if_block(cond, Block::new(vec![stmt])))
+        Statement::IfElseStatement(IfElse::if_block(cond, Spanned {
+            value: Block::new(vec![stmt]),
+            span
+        }))
     },
     <IfStatement>,
     <WhileStatement>,
@@ -349,22 +352,22 @@ Statement : Statement = {
 }
 
 IfStatement : Statement = {
-    "if" "(" <cond: Sp<Exp>> ")" <block: Block> => {
+    "if" "(" <cond: Sp<Exp>> ")" <block: Sp<Block>> => {
         Statement::IfElseStatement(IfElse::if_block(cond, block))
     },
-    "if" "(" <cond: Sp<Exp>> ")" <if_block: Block> "else" <else_block: Block> => {
+    "if" "(" <cond: Sp<Exp>> ")" <if_block: Sp<Block>> "else" <else_block: Sp<Block>> => {
         Statement::IfElseStatement(IfElse::if_else(cond, if_block, else_block))
     },
 }
 
 WhileStatement : Statement = {
-    "while" "(" <cond: Sp<Exp>> ")" <block: Block> => {
+    "while" "(" <cond: Sp<Exp>> ")" <block: Sp<Block>> => {
         Statement::WhileStatement(While {cond, block})
     }
 }
 
 LoopStatement : Statement = {
-    "loop" <block: Block> => {
+    "loop" <block: Sp<Block>> => {
         Statement::LoopStatement(Loop {block})
     }
 }

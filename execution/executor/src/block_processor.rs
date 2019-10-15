@@ -20,8 +20,8 @@ use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     proof::{accumulator::Accumulator, definition::LeafCount, SparseMerkleProof},
     transaction::{
-        SignedTransaction, Transaction, TransactionInfo, TransactionListWithProof,
-        TransactionOutput, TransactionPayload, TransactionStatus, TransactionToCommit, Version,
+        Transaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
+        TransactionPayload, TransactionStatus, TransactionToCommit, Version,
     },
     write_set::{WriteOp, WriteSet},
 };
@@ -331,6 +331,11 @@ where
         }
 
         let (account_to_btree, account_to_proof) = state_view.into();
+        // TODO: Remove once `TransactionListWithProof` carries `enum Transaction`
+        let transactions = transactions
+            .into_iter()
+            .map(Transaction::UserTransaction)
+            .collect::<Vec<_>>();
         let output = Self::process_vm_outputs(
             account_to_btree,
             account_to_proof,
@@ -362,7 +367,7 @@ where
                 i,
             );
             txns_to_commit.push(TransactionToCommit::new(
-                Transaction::UserTransaction(txn),
+                txn,
                 txn_data.account_blobs().clone(),
                 txn_data.events().to_vec(),
                 txn_data.gas_used(),
@@ -499,7 +504,7 @@ where
             ) {
                 if let TransactionStatus::Keep(_) = txn_data.status() {
                     txns_to_commit.push(TransactionToCommit::new(
-                        Transaction::UserTransaction(txn.clone()),
+                        txn.clone(),
                         txn_data.account_blobs().clone(),
                         txn_data.events().to_vec(),
                         txn_data.gas_used(),
@@ -606,7 +611,15 @@ where
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_block_time_s");
             V::execute_block(
-                block_to_execute.transactions().to_vec(),
+                block_to_execute
+                    .transactions()
+                    .iter()
+                    .map(|txn| {
+                        txn.as_signed_user_txn()
+                            .expect("All should be user transactions for now.")
+                    })
+                    .cloned()
+                    .collect(),
                 &self.vm_config,
                 &state_view,
             )
@@ -679,7 +692,7 @@ where
     fn process_vm_outputs(
         mut account_to_btree: HashMap<AccountAddress, BTreeMap<Vec<u8>, Vec<u8>>>,
         account_to_proof: HashMap<HashValue, SparseMerkleProof>,
-        transactions: &[SignedTransaction],
+        transactions: &[Transaction],
         vm_outputs: Vec<TransactionOutput>,
         parent_trees: &ExecutedTrees,
     ) -> Result<ProcessedVMOutput> {
@@ -694,11 +707,9 @@ where
         let mut txn_info_hashes = vec![];
 
         let proof_reader = ProofReader::new(account_to_proof);
-        for (vm_output, signed_txn) in
-            itertools::zip_eq(vm_outputs.into_iter(), transactions.iter())
-        {
+        for (vm_output, txn) in itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()) {
             let (blobs, state_tree, num_accounts_created) = Self::process_write_set(
-                signed_txn,
+                txn,
                 &mut account_to_btree,
                 &proof_reader,
                 vm_output.write_set().clone(),
@@ -717,7 +728,7 @@ where
                     // Compute hash for the TransactionInfo object. We need the hash of the
                     // transaction itself, the state root hash as well as the event root hash.
                     let txn_info = TransactionInfo::new(
-                        signed_txn.hash(),
+                        txn.as_signed_user_txn()?.hash(),
                         state_tree.root_hash(),
                         event_tree.root_hash(),
                         vm_output.gas_used(),
@@ -764,7 +775,7 @@ where
     /// on the write set. Returns the blob value of all these accounts as well as the newly
     /// constructed state tree.
     fn process_write_set(
-        transaction: &SignedTransaction,
+        transaction: &Transaction,
         account_to_btree: &mut HashMap<AccountAddress, BTreeMap<Vec<u8>, Vec<u8>>>,
         proof_reader: &ProofReader,
         write_set: WriteSet,
@@ -796,7 +807,7 @@ where
                     // Before writing to an account, VM should always read that account. So we
                     // should not reach this code path. The exception is genesis transaction (and
                     // maybe other FTVM transactions).
-                    match transaction.payload() {
+                    match transaction.as_signed_user_txn()?.payload() {
                         TransactionPayload::Program(_)
                         | TransactionPayload::Module(_)
                         | TransactionPayload::Script(_)

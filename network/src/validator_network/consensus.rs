@@ -15,6 +15,7 @@ use crate::{
     validator_network::Event,
     NetworkPublicKeys, ProtocolId,
 };
+use bytes::Bytes;
 use channel;
 use futures::{
     stream::Map,
@@ -101,12 +102,21 @@ impl ConsensusNetworkSender {
         recipient: PeerId,
         message: ConsensusMsg,
     ) -> Result<(), NetworkError> {
+        self.send_bytes(recipient, message.to_bytes().unwrap())
+            .await
+    }
+
+    pub async fn send_bytes(
+        &mut self,
+        recipient: PeerId,
+        message_bytes: Bytes,
+    ) -> Result<(), NetworkError> {
         self.inner
             .send(NetworkRequest::SendMessage(
                 recipient,
                 Message {
                     protocol: ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
-                    mdata: message.to_bytes().unwrap(),
+                    mdata: message_bytes,
                 },
             ))
             .await?;

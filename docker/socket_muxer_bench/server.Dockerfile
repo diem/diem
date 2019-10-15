@@ -11,7 +11,7 @@ COPY rust-toolchain /libra/rust-toolchain
 RUN rustup install $(cat rust-toolchain)
 
 COPY . /libra
-RUN cargo build --release --bin socket_bench_server
+RUN cargo build --release --bin socket-bench-server
 
 ### Production Image ###
 FROM debian:stretch
@@ -19,7 +19,7 @@ FROM debian:stretch
 RUN mkdir -p /opt/libra/bin /opt/libra/etc
 
 # Hack to match bench binary since it doesn't output without the build hash
-COPY --from=builder /libra/target/release/socket_bench_server /opt/libra/bin
+COPY --from=builder /libra/target/release/socket-bench-server /opt/libra/bin
 
 # tcp_send
 EXPOSE 52720
@@ -35,7 +35,7 @@ ENV TCP_NOISE_ADDR /ip4/0.0.0.0/tcp/52721
 ENV TCP_MUXER_ADDR /ip4/0.0.0.0/tcp/52722
 ENV TCP_NOISE_MUXER_ADDR /ip4/0.0.0.0/tcp/52723
 
-CMD exec /opt/libra/bin/socket_bench_server
+CMD exec /opt/libra/bin/socket-bench-server
 
 ARG BUILD_DATE
 ARG GIT_REV

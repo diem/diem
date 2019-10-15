@@ -15,24 +15,26 @@ use crate::{
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
-    proof::definition::MAX_ACCUMULATOR_PROOF_DEPTH,
     transaction::{TransactionInfo, TransactionListWithProof, Version},
 };
 use crypto::{
     hash::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, SparseMerkleInternalHasher,
         SparseMerkleLeafHasher, TestOnlyHasher, TransactionAccumulatorHasher,
-        ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH,
+        ACCUMULATOR_PLACEHOLDER_HASH,
     },
     HashValue,
 };
 use failure::prelude::*;
 use std::{collections::VecDeque, marker::PhantomData};
 
-pub use crate::proof::definition::{
-    AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, EventProof,
-    SignedTransactionProof, SparseMerkleProof,
+pub use self::definition::{
+    AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, EventAccumulatorProof,
+    EventProof, SignedTransactionProof, SparseMerkleProof, TransactionAccumulatorProof,
 };
+
+#[cfg(any(test, feature = "testing"))]
+pub use self::definition::TestAccumulatorProof;
 
 /// Verifies that a `SignedTransaction` with hash value of `signed_transaction_hash`
 /// is the version `transaction_version` transaction in the ledger using the provided proof.
@@ -79,17 +81,18 @@ pub fn verify_account_state(
     ledger_info: &LedgerInfo,
     state_version: Version,
     account_address_hash: HashValue,
-    account_state_blob: &Option<AccountStateBlob>,
+    account_state_blob: Option<&AccountStateBlob>,
     account_state_proof: &AccountStateProof,
 ) -> Result<()> {
     let transaction_info = account_state_proof.transaction_info();
 
-    verify_sparse_merkle_element(
-        transaction_info.state_root_hash(),
-        account_address_hash,
-        account_state_blob,
-        account_state_proof.transaction_info_to_account_proof(),
-    )?;
+    account_state_proof
+        .transaction_info_to_account_proof()
+        .verify(
+            transaction_info.state_root_hash(),
+            account_address_hash,
+            account_state_blob,
+        )?;
 
     verify_transaction_info(
         ledger_info,
@@ -110,11 +113,10 @@ pub(crate) fn verify_event(
 ) -> Result<()> {
     let transaction_info = event_proof.transaction_info();
 
-    verify_event_accumulator_element(
+    event_proof.transaction_info_to_event_proof().verify(
         transaction_info.event_root_hash(),
         event_hash,
         event_version_within_transaction,
-        event_proof.transaction_info_to_event_proof(),
     )?;
 
     verify_transaction_info(
@@ -290,7 +292,7 @@ fn verify_transaction_info(
     ledger_info: &LedgerInfo,
     transaction_version: Version,
     transaction_info: &TransactionInfo,
-    ledger_info_to_transaction_info_proof: &AccumulatorProof,
+    ledger_info_to_transaction_info_proof: &TransactionAccumulatorProof,
 ) -> Result<()> {
     ensure!(
         transaction_version <= ledger_info.version(),
@@ -300,59 +302,11 @@ fn verify_transaction_info(
     );
 
     let transaction_info_hash = transaction_info.hash();
-    verify_transaction_accumulator_element(
+    ledger_info_to_transaction_info_proof.verify(
         ledger_info.transaction_accumulator_hash(),
         transaction_info_hash,
         transaction_version,
-        ledger_info_to_transaction_info_proof,
     )?;
-
-    Ok(())
-}
-
-/// Verifies an element whose hash is `element_hash` and version is `element_version` exists in the
-/// accumulator whose root hash is `expected_root_hash` using the provided proof.
-fn verify_accumulator_element<H: Clone + CryptoHasher>(
-    expected_root_hash: HashValue,
-    element_hash: HashValue,
-    element_index: u64,
-    accumulator_proof: &AccumulatorProof,
-) -> Result<()> {
-    let siblings = accumulator_proof.siblings();
-    ensure!(
-        siblings.len() <= MAX_ACCUMULATOR_PROOF_DEPTH,
-        "Accumulator proof has more than {} ({}) siblings.",
-        MAX_ACCUMULATOR_PROOF_DEPTH,
-        siblings.len()
-    );
-
-    let actual_root_hash = siblings
-        .iter()
-        .rev()
-        .fold(
-            (element_hash, element_index),
-            // `index` denotes the index of the ancestor of the element at the current level.
-            |(hash, index), sibling_hash| {
-                (
-                    if index % 2 == 0 {
-                        // the current node is a left child.
-                        MerkleTreeInternalNode::<H>::new(hash, *sibling_hash).hash()
-                    } else {
-                        // the current node is a right child.
-                        MerkleTreeInternalNode::<H>::new(*sibling_hash, hash).hash()
-                    },
-                    // The index of the parent at its level.
-                    index / 2,
-                )
-            },
-        )
-        .0;
-    ensure!(
-        actual_root_hash == expected_root_hash,
-        "Root hashes do not match. Actual root hash: {:x}. Expected root hash: {:x}.",
-        actual_root_hash,
-        expected_root_hash
-    );
 
     Ok(())
 }
@@ -383,117 +337,6 @@ pub(crate) fn get_accumulator_root_hash<H: Clone + CryptoHasher>(
     }
 
     current_level[0]
-}
-
-type AccumulatorElementVerifier = fn(
-    expected_root_hash: HashValue,
-    element_hash: HashValue,
-    element_version: Version,
-    accumulator_proof: &AccumulatorProof,
-) -> Result<()>;
-
-#[allow(non_upper_case_globals)]
-pub const verify_event_accumulator_element: AccumulatorElementVerifier =
-    verify_accumulator_element::<EventAccumulatorHasher>;
-
-#[allow(non_upper_case_globals)]
-pub const verify_transaction_accumulator_element: AccumulatorElementVerifier =
-    verify_accumulator_element::<TransactionAccumulatorHasher>;
-
-#[allow(non_upper_case_globals)]
-pub const verify_test_accumulator_element: AccumulatorElementVerifier =
-    verify_accumulator_element::<TestOnlyHasher>;
-
-/// If `element_blob` is present, verifies an element whose key is `element_key` and value
-/// is `element_blob` exists in the Sparse Merkle Tree using the provided proof.
-/// Otherwise verifies the proof is a valid non-inclusion proof that shows this key doesn't exist
-/// in the tree.
-pub fn verify_sparse_merkle_element(
-    expected_root_hash: HashValue,
-    element_key: HashValue,
-    element_blob: &Option<AccountStateBlob>,
-    sparse_merkle_proof: &SparseMerkleProof,
-) -> Result<()> {
-    let siblings = sparse_merkle_proof.siblings();
-    ensure!(
-        siblings.len() <= HashValue::LENGTH_IN_BITS,
-        "Sparse Merkle Tree proof has more than {} ({}) siblings.",
-        HashValue::LENGTH_IN_BITS,
-        siblings.len()
-    );
-
-    match (element_blob, sparse_merkle_proof.leaf()) {
-        (Some(blob), Some((proof_key, proof_value_hash))) => {
-            // This is an inclusion proof, so the key and value hash provided in the proof should
-            // match element_key and element_value_hash.
-            // `siblings` should prove the route from the leaf node to the root.
-            ensure!(
-                element_key == proof_key,
-                "Keys do not match. Key in proof: {:x}. Expected key: {:x}.",
-                proof_key,
-                element_key
-            );
-            let hash = blob.hash();
-            ensure!(
-                hash == proof_value_hash,
-                "Value hashes do not match. Value hash in proof: {:x}. Expected value hash: {:x}",
-                proof_value_hash,
-                hash,
-            );
-        }
-        (Some(_blob), None) => bail!("Expected inclusion proof. Found non-inclusion proof."),
-        (None, Some((proof_key, _))) => {
-            // This is a non-inclusion proof.
-            // The proof intends to show that if a leaf node representing `element_key` is inserted,
-            // it will break a currently existing leaf node represented by `proof_key` into a
-            // branch.
-            // `siblings` should prove the route from that leaf node to the root.
-            ensure!(
-                element_key != proof_key,
-                "Expected non-inclusion proof, but key exists in proof."
-            );
-            ensure!(
-                element_key.common_prefix_bits_len(proof_key) >= siblings.len(),
-                "Key would not have ended up in the subtree where the provided key in proof is \
-                 the only existing key, if it existed. So this is not a valid non-inclusion proof."
-            );
-        }
-        (None, None) => {
-            // This is a non-inclusion proof.
-            // The proof intends to show that if a leaf node representing `element_key` is inserted,
-            // it will show up at a currently empty position.
-            // `sibling` should prove the route from this empty position to the root.
-        }
-    }
-
-    let current_hash = match sparse_merkle_proof.leaf() {
-        Some((key, value_hash)) => SparseMerkleLeafNode::new(key, value_hash).hash(),
-        None => *SPARSE_MERKLE_PLACEHOLDER_HASH,
-    };
-    let actual_root_hash = siblings
-        .iter()
-        .rev()
-        .zip(
-            element_key
-                .iter_bits()
-                .rev()
-                .skip(HashValue::LENGTH_IN_BITS - siblings.len()),
-        )
-        .fold(current_hash, |hash, (sibling_hash, bit)| {
-            if bit {
-                SparseMerkleInternalNode::new(*sibling_hash, hash).hash()
-            } else {
-                SparseMerkleInternalNode::new(hash, *sibling_hash).hash()
-            }
-        });
-    ensure!(
-        actual_root_hash == expected_root_hash,
-        "Root hashes do not match. Actual root hash: {:x}. Expected root hash: {:x}.",
-        actual_root_hash,
-        expected_root_hash
-    );
-
-    Ok(())
 }
 
 pub struct MerkleTreeInternalNode<H> {

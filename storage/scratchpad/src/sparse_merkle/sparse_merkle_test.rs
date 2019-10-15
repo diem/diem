@@ -9,10 +9,7 @@ use crypto::{
     hash::{CryptoHash, TestOnlyHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use libra_types::{
-    account_state_blob::AccountStateBlob,
-    proof::{verify_sparse_merkle_element, SparseMerkleProof},
-};
+use libra_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
 use std::{collections::HashMap, sync::Arc};
 
 fn hash_internal(left_child: HashValue, right_child: HashValue) -> HashValue {
@@ -354,9 +351,9 @@ fn test_update_256_siblings_in_proof() {
         .fold(leaf1_hash, |previous_hash, hash| {
             hash_internal(previous_hash, *hash)
         });
-    assert!(
-        verify_sparse_merkle_element(old_root_hash, key1, &Some(blob1), &proof_of_key1).is_ok()
-    );
+    assert!(proof_of_key1
+        .verify(old_root_hash, key1, Some(&blob1))
+        .is_ok());
 
     let new_blob1 = AccountStateBlob::from(b"value1111111111111".to_vec());
     let proof_reader = ProofReader::new(vec![(key1, proof_of_key1)]);
@@ -432,7 +429,7 @@ fn test_update() {
     let y_hash = hash_internal(x_hash, *SPARSE_MERKLE_PLACEHOLDER_HASH);
     let old_root_hash = hash_internal(y_hash, leaf3_hash);
     let proof = SparseMerkleProof::new(None, vec![leaf3_hash, x_hash]);
-    assert!(verify_sparse_merkle_element(old_root_hash, key4, &None, &proof).is_ok());
+    assert!(proof.verify(old_root_hash, key4, None).is_ok());
 
     // Create the old tree and update the tree with new value and proof.
     let proof_reader = ProofReader::new(vec![(key4, proof)]);
@@ -471,7 +468,7 @@ fn test_update() {
         Some((key1, value1_hash)),
         vec![leaf3_hash, *SPARSE_MERKLE_PLACEHOLDER_HASH, leaf2_hash],
     );
-    assert!(verify_sparse_merkle_element(old_root_hash, key1, &Some(value1), &proof).is_ok());
+    assert!(proof.verify(old_root_hash, key1, Some(&value1)).is_ok());
 
     let value1 = AccountStateBlob::from(b"value11111".to_vec());
     let proof_reader = ProofReader::new(vec![(key1, proof)]);

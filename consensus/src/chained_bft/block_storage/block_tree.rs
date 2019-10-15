@@ -281,7 +281,7 @@ where
     pub(super) fn insert_vote(
         &mut self,
         vote_msg: &VoteMsg,
-        validator_verifier: Arc<ValidatorVerifier>,
+        validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
         let block_id = vote_msg.vote_data().block_id();
         if let Some(old_qc) = self.id_to_quorum_cert.get(&block_id) {

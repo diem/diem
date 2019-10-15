@@ -43,9 +43,9 @@ libra-mempool = { path = "../mempool" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
 prost-ext = { path = "../common/prost-ext" }
-state_synchronizer = { path = "../state_synchronizer" }
+state-synchronizer = { path = "../state-synchronizer" }
 schemadb = { path = "../storage/schemadb" }
-storage_client = { path = "../storage/storage_client" }
+storage-client = { path = "../storage/storage-client" }
 tools = { path = "../common/tools" }
 libra-types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }

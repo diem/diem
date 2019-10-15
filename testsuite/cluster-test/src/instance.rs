@@ -9,11 +9,16 @@ use std::{
 pub struct Instance {
     short_hash: String,
     ip: String,
+    ac_port: u32,
 }
 
 impl Instance {
-    pub fn new(short_hash: String, ip: String) -> Instance {
-        Instance { short_hash, ip }
+    pub fn new(short_hash: String, ip: String, ac_port: u32) -> Instance {
+        Instance {
+            short_hash,
+            ip,
+            ac_port,
+        }
     }
 
     pub fn run_cmd_tee_err<I, S>(&self, args: I) -> failure::Result<()>
@@ -64,6 +69,10 @@ impl Instance {
 
     pub fn ip(&self) -> &String {
         &self.ip
+    }
+
+    pub fn ac_port(&self) -> u32 {
+        self.ac_port
     }
 }
 

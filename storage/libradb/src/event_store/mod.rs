@@ -25,7 +25,7 @@ use libra_types::{
     account_address::AccountAddress,
     contract_event::ContractEvent,
     event::EventKey,
-    proof::{position::Position, AccumulatorProof, EventProof},
+    proof::{position::Position, EventAccumulatorProof, EventProof},
     transaction::Version,
 };
 use schemadb::{schema::ValueCodec, ReadOptions, DB};
@@ -64,7 +64,7 @@ impl EventStore {
         &self,
         version: Version,
         index: u64,
-    ) -> Result<(ContractEvent, AccumulatorProof)> {
+    ) -> Result<(ContractEvent, EventAccumulatorProof)> {
         // Get event content.
         let event = self
             .db

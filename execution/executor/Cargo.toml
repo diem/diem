@@ -26,8 +26,8 @@ logger = { path = "../../common/logger" }
 metrics = { path = "../../common/metrics" }
 prost-ext = { path = "../../common/prost-ext" }
 scratchpad = { path = "../../storage/scratchpad" }
-state_view = { path = "../../storage/state_view" }
-storage_client = { path = "../../storage/storage_client" }
+state-view = { path = "../../storage/state-view" }
+storage-client = { path = "../../storage/storage-client" }
 libra-types = { path = "../../types" }
 vm_runtime = { path = "../../language/vm/vm_runtime" }
 

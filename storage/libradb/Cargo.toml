@@ -28,7 +28,7 @@ accumulator = { path = "../accumulator" }
 canonical-serialization = { path = "../../common/canonical-serialization" }
 crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
-jellyfish_merkle = { path = "../jellyfish_merkle" }
+jellyfish-merkle = { path = "../jellyfish-merkle" }
 logger = { path = "../../common/logger" }
 metrics = { path = "../../common/metrics" }
 prost-ext = { path = "../../common/prost-ext" }
@@ -38,7 +38,7 @@ tools = { path = "../../common/tools" }
 libra-types = { path = "../../types" }
 
 [dev-dependencies]
-proptest_helpers = { path = "../../common/proptest_helpers" }
+proptest-helpers = { path = "../../common/proptest-helpers" }
 libra-types = { path = "../../types", features = ["testing"]}
 
 [features]

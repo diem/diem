@@ -24,7 +24,7 @@ grpc_helpers = { path = "../../common/grpc_helpers" }
 libradb = { path = "../libradb" }
 logger = { path = "../../common/logger" }
 metrics = { path = "../../common/metrics" }
-storage_client = { path = "../storage_client" }
+storage-client = { path = "../storage-client" }
 storage_proto = { path = "../storage_proto" }
 libra-types = { path = "../../types" }
 rand = "0.6.5"

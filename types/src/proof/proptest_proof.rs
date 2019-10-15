@@ -9,11 +9,10 @@ use crate::proof::{
     SparseMerkleProof,
 };
 use crypto::{
-    hash::{ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
+    hash::{CryptoHasher, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
 use proptest::{collection::vec, prelude::*};
-use rand::{seq::SliceRandom, thread_rng};
 
 fn arb_non_placeholder_accumulator_sibling() -> impl Strategy<Value = HashValue> {
     any::<HashValue>().prop_filter("Filter out placeholder sibling.", |x| {
@@ -28,60 +27,88 @@ fn arb_accumulator_sibling() -> impl Strategy<Value = HashValue> {
     ]
 }
 
-prop_compose! {
-    fn arb_accumulator_proof()(
-        first_sibling in arb_non_placeholder_accumulator_sibling(),
-        other_siblings in vec(arb_accumulator_sibling(), 0..MAX_ACCUMULATOR_PROOF_DEPTH - 1),
-    ) -> AccumulatorProof {
-        let mut siblings = vec![first_sibling];
-        siblings.extend(other_siblings.into_iter());
-        AccumulatorProof::new(siblings)
+fn arb_non_placeholder_sparse_merkle_sibling() -> impl Strategy<Value = HashValue> {
+    any::<HashValue>().prop_filter("Filter out placeholder sibling.", |x| {
+        *x != *SPARSE_MERKLE_PLACEHOLDER_HASH
+    })
+}
+
+fn arb_sparse_merkle_sibling() -> impl Strategy<Value = HashValue> {
+    prop_oneof![
+        arb_non_placeholder_sparse_merkle_sibling(),
+        Just(*SPARSE_MERKLE_PLACEHOLDER_HASH),
+    ]
+}
+
+impl<H> Arbitrary for AccumulatorProof<H>
+where
+    H: CryptoHasher + 'static,
+{
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (0..=MAX_ACCUMULATOR_PROOF_DEPTH)
+            .prop_flat_map(|len| {
+                if len == 0 {
+                    Just(vec![]).boxed()
+                } else {
+                    (
+                        arb_non_placeholder_accumulator_sibling(),
+                        vec(arb_accumulator_sibling(), len - 1),
+                    )
+                        .prop_map(|(first_sibling, other_siblings)| {
+                            let mut siblings = vec![first_sibling];
+                            siblings.extend(other_siblings.into_iter());
+                            siblings
+                        })
+                        .boxed()
+                }
+            })
+            .prop_map(AccumulatorProof::<H>::new)
+            .boxed()
     }
 }
 
-prop_compose! {
-    fn arb_sparse_merkle_proof()(
-        leaf in any::<Option<(HashValue, HashValue)>>(),
-        non_default_siblings in vec(any::<HashValue>(), 0..256usize),
-        total_num_siblings in 0..257usize,
-    ) -> SparseMerkleProof {
-        let mut siblings = non_default_siblings;
-        if !siblings.is_empty() {
-            let total_num_siblings = std::cmp::max(siblings.len(), total_num_siblings);
-            for _ in siblings.len()..total_num_siblings {
-                siblings.insert(0, SPARSE_MERKLE_PLACEHOLDER_HASH.clone());
-            }
-            assert_eq!(siblings.len(), total_num_siblings);
-            (&mut siblings[0..total_num_siblings-1]).shuffle(&mut thread_rng());
-        }
-        SparseMerkleProof::new(leaf, siblings)
+impl Arbitrary for SparseMerkleProof {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (
+            any::<Option<(HashValue, HashValue)>>(),
+            (0..=256usize).prop_flat_map(|len| {
+                if len == 0 {
+                    Just(vec![]).boxed()
+                } else {
+                    (
+                        vec(arb_sparse_merkle_sibling(), len - 1),
+                        arb_non_placeholder_sparse_merkle_sibling(),
+                    )
+                        .prop_map(|(other_siblings, last_sibling)| {
+                            let mut siblings = other_siblings;
+                            siblings.push(last_sibling);
+                            siblings
+                        })
+                        .boxed()
+                }
+            }),
+        )
+            .prop_map(|(leaf, siblings)| SparseMerkleProof::new(leaf, siblings))
+            .boxed()
     }
 }
 
-prop_compose! {
-    fn arb_accumulator_consistency_proof()(
-        subtrees in vec(any::<HashValue>(), 0..=MAX_ACCUMULATOR_PROOF_DEPTH),
-    ) -> AccumulatorConsistencyProof {
-        AccumulatorConsistencyProof::new(subtrees)
+impl Arbitrary for AccumulatorConsistencyProof {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        vec(
+            arb_non_placeholder_accumulator_sibling(),
+            0..=MAX_ACCUMULATOR_PROOF_DEPTH,
+        )
+        .prop_map(AccumulatorConsistencyProof::new)
+        .boxed()
     }
 }
-
-macro_rules! impl_arbitrary_for_proof {
-    ($proof_type: ident, $arb_func: ident) => {
-        impl Arbitrary for $proof_type {
-            type Parameters = ();
-            type Strategy = BoxedStrategy<Self>;
-
-            fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-                $arb_func().boxed()
-            }
-        }
-    };
-}
-
-impl_arbitrary_for_proof!(AccumulatorProof, arb_accumulator_proof);
-impl_arbitrary_for_proof!(SparseMerkleProof, arb_sparse_merkle_proof);
-impl_arbitrary_for_proof!(
-    AccumulatorConsistencyProof,
-    arb_accumulator_consistency_proof
-);

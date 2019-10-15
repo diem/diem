@@ -36,15 +36,15 @@ noise = { path = "noise" }
 prost-ext = { path = "../common/prost-ext" }
 
 proptest = { version = "0.9.4", default-features = false, optional = true }
-proptest_helpers = { path = "../common/proptest_helpers", optional = true }
+proptest-helpers = { path = "../common/proptest-helpers", optional = true }
 
 [dev-dependencies]
 criterion = "0.2.11"
-socket_bench_server = { path = "socket_bench_server" }
+socket-bench-server = { path = "socket-bench-server" }
 crypto = { path = "../crypto/crypto", features = ["testing"] }
 libra-types = { path = "../types", features = ["testing"]}
 proptest = { version = "0.9.4", default-features = false }
-proptest_helpers = { path = "../common/proptest_helpers" }
+proptest-helpers = { path = "../common/proptest-helpers" }
 
 [build-dependencies]
 prost-build = "0.5.0"
@@ -59,4 +59,4 @@ harness = false
 
 [features]
 default = []
-fuzzing = ["proptest", "proptest_helpers"]
+fuzzing = ["proptest", "proptest-helpers"]

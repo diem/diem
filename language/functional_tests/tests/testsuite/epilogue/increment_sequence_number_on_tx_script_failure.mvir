@@ -1,4 +1,6 @@
 //! account: default, 1000000, 0
+
+// When a transaction aborts, the sequence number should still be bumped up.
 main() {
     assert(false, 77);
     return;

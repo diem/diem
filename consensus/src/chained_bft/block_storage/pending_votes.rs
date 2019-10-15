@@ -62,12 +62,12 @@ impl PendingVotes {
     pub fn insert_vote(
         &mut self,
         vote_msg: &VoteMsg,
-        validator_verifier: Arc<ValidatorVerifier>,
+        validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
         if let Err(e) = self.replace_prev_vote(vote_msg) {
             return e;
         }
-        let vote_aggr_res = self.aggregate_qc(vote_msg, &validator_verifier);
+        let vote_aggr_res = self.aggregate_qc(vote_msg, validator_verifier);
         if let VoteReceptionResult::NewQuorumCertificate(_) = vote_aggr_res {
             return vote_aggr_res;
         }
@@ -83,7 +83,7 @@ impl PendingVotes {
     fn aggregate_qc(
         &mut self,
         vote_msg: &VoteMsg,
-        validator_verifier: &Arc<ValidatorVerifier>,
+        validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
         // Note that the digest covers the ledger info information, which is also indirectly
         // covering vote data hash (in its `consensus_data_hash` field).
@@ -115,7 +115,7 @@ impl PendingVotes {
     fn aggregate_tc(
         &mut self,
         vote_msg: &VoteMsg,
-        validator_verifier: &Arc<ValidatorVerifier>,
+        validator_verifier: &ValidatorVerifier,
     ) -> Option<VoteReceptionResult> {
         let round_signature = vote_msg.round_signature().cloned()?;
         let round = vote_msg.vote_data().block_round();

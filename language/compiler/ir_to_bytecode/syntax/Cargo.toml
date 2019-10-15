@@ -11,7 +11,7 @@ edition = "2018"
 build = "build.rs"
 
 [dependencies]
-codespan = "0.2.1"
+codespan = { version = "0.2.1", features = ["serialization"] }
 failure = { path = "../../../../common/failure_ext", package = "failure_ext" }
 hex = "0.3.2"
 lazy_static = "1.4.0"

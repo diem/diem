@@ -4,7 +4,7 @@
 use crate::transport::{ConnectionOrigin, Transport};
 use futures::{future::Future, stream::Stream};
 use parity_multiaddr::Multiaddr;
-use pin_project::pin_project;
+use pin_project::{pin_project, project};
 use std::{
     pin::Pin,
     task::{Context, Poll},
@@ -102,10 +102,11 @@ where
     }
 }
 
+#[pin_project]
 #[derive(Debug)]
 enum AndThenChain<Fut1, Fut2, F> {
-    First(Fut1, Option<(F, ConnectionOrigin)>),
-    Second(Fut2),
+    First(#[pin] Fut1, Option<(F, ConnectionOrigin)>),
+    Second(#[pin] Fut2),
     Empty,
 }
 
@@ -113,18 +114,11 @@ enum AndThenChain<Fut1, Fut2, F> {
 ///
 /// Takes a future (Fut1) generated from an underlying transport, runs it to completion and applies
 /// a closure (F) to the result to create another future (Fut2) which is then run to completion.
-// Ideally we'd want to use `pin` to get a pinned version of the `AndThenChain`, unfortunately
-// a Pin<&mut AndThenChain> doesn't let us construct Pin<&mut Fut> pins for the interior
-// futures stored in the enum variants; as such we leave it unpinned and instead proceed  with
-// great caution:
-//
-//   1. We take care to never move `chain` or its interior Futures
-//   2. When transitioning from First to Second state we first ensure that the `drop` method is
-//      called on the future stored in First prior to advancing to Second.
 #[pin_project]
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
 pub struct AndThenFuture<Fut1, Fut2, F> {
+    #[pin]
     chain: AndThenChain<Fut1, Fut2, F>,
 }
 
@@ -152,35 +146,28 @@ where
 {
     type Output = Result<O2, E>;
 
-    fn poll(mut self: Pin<&mut Self>, mut context: &mut Context) -> Poll<Self::Output> {
+    #[project]
+    fn poll(self: Pin<&mut Self>, mut context: &mut Context) -> Poll<Self::Output> {
+        let mut this = self.project();
         loop {
-            let (output, (f, origin)) = match self.as_mut().project().chain {
+            #[project]
+            let (output, (f, origin)) = match this.chain.as_mut().project() {
                 // Step 1: Drive Fut1 to completion
-                AndThenChain::First(fut1, data) => {
-                    // Safe to construct a Pin of the interior future because
-                    // `self` is pinned (and therefor `chain` is pinned).
-                    match unsafe { Pin::new_unchecked(fut1) }.poll(&mut context) {
-                        Poll::Pending => return Poll::Pending,
-                        Poll::Ready(Err(e)) => return Poll::Ready(Err(e)),
-                        Poll::Ready(Ok(output)) => {
-                            (output, data.take().expect("must be initialized"))
-                        }
-                    }
-                }
+                AndThenChain::First(fut1, data) => match fut1.poll(&mut context) {
+                    Poll::Pending => return Poll::Pending,
+                    Poll::Ready(Err(e)) => return Poll::Ready(Err(e)),
+                    Poll::Ready(Ok(output)) => (output, data.take().expect("must be initialized")),
+                },
                 // Step 4: Drive Fut2 to completion
-                AndThenChain::Second(fut2) => {
-                    // Safe to construct a Pin of the interior future because
-                    // `self` is pinned (and therefor `chain` is pinned).
-                    return unsafe { Pin::new_unchecked(fut2) }.poll(&mut context);
-                }
+                AndThenChain::Second(fut2) => return fut2.poll(&mut context),
                 AndThenChain::Empty => unreachable!(),
             };
 
             // Step 2: Ensure that Fut1 is dropped
-            *self.as_mut().project().chain = AndThenChain::Empty;
+            this.chain.set(AndThenChain::Empty);
             // Step 3: Run F on the output of Fut1 to create Fut2
             let fut2 = f(output, origin);
-            *self.as_mut().project().chain = AndThenChain::Second(fut2)
+            this.chain.set(AndThenChain::Second(fut2));
         }
     }
 }

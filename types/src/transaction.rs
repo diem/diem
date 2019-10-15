@@ -9,7 +9,7 @@ use crate::{
     ledger_info::LedgerInfo,
     proof::{
         get_accumulator_root_hash, verify_signed_transaction, verify_transaction_list,
-        AccumulatorProof, SignedTransactionProof,
+        SignedTransactionProof, TransactionAccumulatorProof,
     },
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
@@ -1132,10 +1132,7 @@ impl TransactionToCommit {
     }
 
     pub fn as_signed_user_txn(&self) -> Result<&SignedTransaction> {
-        match &self.transaction {
-            Transaction::UserTransaction(txn) => Ok(txn),
-            _ => Err(format_err!("Not a user transaction.")),
-        }
+        self.transaction.as_signed_user_txn()
     }
 
     pub fn account_states(&self) -> &HashMap<AccountAddress, AccountStateBlob> {
@@ -1226,8 +1223,8 @@ pub struct TransactionListWithProof {
     pub transaction_and_infos: Vec<(SignedTransaction, TransactionInfo)>,
     pub events: Option<Vec<Vec<ContractEvent>>>,
     pub first_transaction_version: Option<Version>,
-    pub proof_of_first_transaction: Option<AccumulatorProof>,
-    pub proof_of_last_transaction: Option<AccumulatorProof>,
+    pub proof_of_first_transaction: Option<TransactionAccumulatorProof>,
+    pub proof_of_last_transaction: Option<TransactionAccumulatorProof>,
 }
 
 impl TransactionListWithProof {
@@ -1236,8 +1233,8 @@ impl TransactionListWithProof {
         transaction_and_infos: Vec<(SignedTransaction, TransactionInfo)>,
         events: Option<Vec<Vec<ContractEvent>>>,
         first_transaction_version: Option<Version>,
-        proof_of_first_transaction: Option<AccumulatorProof>,
-        proof_of_last_transaction: Option<AccumulatorProof>,
+        proof_of_first_transaction: Option<TransactionAccumulatorProof>,
+        proof_of_last_transaction: Option<TransactionAccumulatorProof>,
     ) -> Self {
         Self {
             transaction_and_infos,
@@ -1358,12 +1355,12 @@ impl TryFrom<crate::proto::types::TransactionListWithProof> for TransactionListW
             proof_of_first_transaction: proto
                 .proof_of_first_transaction
                 .take()
-                .map(AccumulatorProof::try_from)
+                .map(TransactionAccumulatorProof::try_from)
                 .transpose()?,
             proof_of_last_transaction: proto
                 .proof_of_last_transaction
                 .take()
-                .map(AccumulatorProof::try_from)
+                .map(TransactionAccumulatorProof::try_from)
                 .transpose()?,
             first_transaction_version: proto.first_transaction_version,
         })
@@ -1429,6 +1426,15 @@ pub enum Transaction {
 
     /// Transaction to update the block metadata resource at the beginning of a block.
     BlockMetadata(BlockMetadata),
+}
+
+impl Transaction {
+    pub fn as_signed_user_txn(&self) -> Result<&SignedTransaction> {
+        match self {
+            Transaction::UserTransaction(txn) => Ok(txn),
+            _ => Err(format_err!("Not a user transaction.")),
+        }
+    }
 }
 
 #[derive(IntoPrimitive, TryFromPrimitive)]

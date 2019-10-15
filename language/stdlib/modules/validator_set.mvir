@@ -122,4 +122,19 @@ module ValidatorSet {
         return;
     }
 
+  // Get the address of the i'th validator.
+  public get_ith_validator_address(i: u64): address acquires T {
+      let len: u64;
+      let validator_set: &Self.T;
+      let addr: address;
+      let peer: &Self.ValidatorInfo;
+
+      validator_set = borrow_global<T>(0x1D8);
+      len = Vector.length<Self.ValidatorInfo>(&copy(validator_set).validators);
+      assert(copy(i) < move(len), 3);
+      peer = Vector.borrow<Self.ValidatorInfo>(&move(validator_set).validators, move(i));
+      addr = *(&move(peer).addr);
+
+      return move(addr);
+  }
 }

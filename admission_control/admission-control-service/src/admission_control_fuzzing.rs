@@ -6,6 +6,7 @@ use crate::{
     admission_control_service::SubmitTransactionRequest,
     mocks::local_mock_mempool::LocalMockMempool,
 };
+use futures::channel::mpsc;
 use libra_types::transaction::SignedTransaction;
 use proptest;
 use proptest_helpers::ValueGenerator;
@@ -47,6 +48,7 @@ pub fn fuzzer(data: &[u8]) {
             return;
         }
     };
+    let (upstream_proxy_sender, _) = mpsc::unbounded();
 
     // create service to receive it
     let ac_service = AdmissionControlService::new(
@@ -54,6 +56,7 @@ pub fn fuzzer(data: &[u8]) {
         Arc::new(MockStorageReadClient),
         Arc::new(MockVMValidator),
         false,
+        upstream_proxy_sender,
     );
 
     // process the request

@@ -19,9 +19,9 @@ use libra_types::access_path::AccessPath;
 use libra_types::channel_account::{channel_account_struct_tag, ChannelAccountResource};
 use libra_types::{
     transaction::{
-        ChannelScriptPayload, Module as TransactionModule, RawTransaction,
-        Script as TransactionScript, SignedTransaction, TransactionArgument, TransactionOutput,
-        TransactionStatus,
+        Module as TransactionModule, RawTransaction, Script as TransactionScript,
+        SignedTransaction, TransactionOutput, TransactionStatus,
+        ChannelScriptPayload,
     },
     vm_error::StatusCode,
     write_set::WriteSet,
@@ -192,13 +192,14 @@ fn do_verify_module(module: CompiledModule, deps: &[VerifiedModule]) -> Result<V
 fn make_script_transaction(
     exec: &FakeExecutor,
     account: &Account,
+    config: &TransactionConfig,
     script: CompiledScript,
     args: Vec<TransactionArgument>,
     receiver: Option<(&Account, u64)>,
 ) -> Result<SignedTransaction> {
     let mut blob = vec![];
     script.serialize(&mut blob)?;
-    let script = TransactionScript::new(blob, args);
+    let script = TransactionScript::new(blob, config.args.clone());
 
     let account_resource = exec.read_account_resource(&account).unwrap();
     let txn = match receiver {
@@ -228,12 +229,16 @@ fn make_script_transaction(
         }
         None => RawTransaction::new_script(
             *account.address(),
-            account_resource.sequence_number(),
+            config
+                .sequence_number
+                .unwrap_or_else(|| account_resource.sequence_number()),
             script,
-            std::cmp::min(
-                MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
-                account_resource.balance(),
-            ),
+            config.max_gas.unwrap_or_else(|| {
+                std::cmp::min(
+                    MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+                    account_resource.balance(),
+                )
+            }),
             1,
             Duration::from_secs(u64::max_value()),
         )
@@ -247,6 +252,7 @@ fn make_script_transaction(
 fn make_module_transaction(
     exec: &FakeExecutor,
     account: &Account,
+    config: &TransactionConfig,
     module: CompiledModule,
 ) -> Result<SignedTransaction> {
     let mut blob = vec![];
@@ -256,12 +262,16 @@ fn make_module_transaction(
     let account_resource = exec.read_account_resource(&account).unwrap();
     Ok(RawTransaction::new_module(
         *account.address(),
-        account_resource.sequence_number(),
+        config
+            .sequence_number
+            .unwrap_or_else(|| account_resource.sequence_number()),
         module,
-        std::cmp::min(
-            MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
-            account_resource.balance(),
-        ),
+        config.max_gas.unwrap_or_else(|| {
+            std::cmp::min(
+                MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+                account_resource.balance(),
+            )
+        }),
         1,
         Duration::from_secs(u64::max_value()),
     )
@@ -397,7 +407,7 @@ fn eval_transaction(
             log.append(EvaluationOutput::Stage(Stage::Compiler));
 
             let compiled_script =
-                unwrap_or_abort!(compile_script(*addr, parsed_script, &*deps), log);
+                unwrap_or_abort!(compile_script(*addr, parsed_script, &*deps), log).0;
             log.append(EvaluationOutput::Output(Box::new(
                 OutputType::CompiledScript(compiled_script.clone()),
             )));
@@ -421,13 +431,8 @@ fn eval_transaction(
                 return Ok(Status::Success);
             }
             log.append(EvaluationOutput::Stage(Stage::Runtime));
-            let script_transaction = make_script_transaction(
-                &exec,
-                account,
-                compiled_script,
-                transaction.config.args.clone(),
-                receiver,
-            )?;
+            let script_transaction =
+                make_script_transaction(&exec, account, &transaction.config, compiled_script, receiver)?;
             let txn_output = unwrap_or_abort!(run_transaction(exec, script_transaction), log);
             log.append(EvaluationOutput::Output(Box::new(
                 OutputType::TransactionOutput(txn_output),
@@ -441,7 +446,7 @@ fn eval_transaction(
             log.append(EvaluationOutput::Stage(Stage::Compiler));
 
             let compiled_module =
-                unwrap_or_abort!(compile_module(*addr, parsed_module, &*deps), log);
+                unwrap_or_abort!(compile_module(*addr, parsed_module, &*deps), log).0;
             log.append(EvaluationOutput::Output(Box::new(
                 OutputType::CompiledModule(compiled_module.clone()),
             )));
@@ -471,7 +476,8 @@ fn eval_transaction(
                 return Ok(Status::Success);
             }
             log.append(EvaluationOutput::Stage(Stage::Runtime));
-            let module_transaction = make_module_transaction(&exec, account, compiled_module)?;
+            let module_transaction =
+                make_module_transaction(&exec, account, &transaction.config, compiled_module)?;
             let txn_output = unwrap_or_abort!(run_transaction(exec, module_transaction), log);
             log.append(EvaluationOutput::Output(Box::new(
                 OutputType::TransactionOutput(txn_output),

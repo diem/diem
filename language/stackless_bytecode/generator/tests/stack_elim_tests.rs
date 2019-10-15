@@ -556,7 +556,7 @@ fn generate_code_from_string(code: String) -> (Vec<StacklessBytecode>, Vec<Signa
     let address = AccountAddress::default();
     let program = parse_program(&code).unwrap();
     let deps = stdlib_modules();
-    let compiled_program = compile_program(address, program, deps).unwrap();
+    let compiled_program = compile_program(address, program, deps).unwrap().0;
     println!("{:?}", compiled_program);
     let res = StacklessProgramGenerator::new(compiled_program).generate_program();
     let code = res.module_functions[0][0].code.clone();

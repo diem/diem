@@ -81,7 +81,7 @@ pub struct EmitJobRequest {
 impl TxEmitter {
     pub fn new(cluster: &Cluster) -> Self {
         let mint_client = Self::make_client(&cluster.instances()[0]);
-        let faucet_account = load_faucet_account(&mint_client, "mint.key");
+        let faucet_account = load_faucet_account(&mint_client, cluster.mint_file());
         Self {
             accounts: vec![],
             mint_client,
@@ -147,7 +147,7 @@ impl TxEmitter {
     }
 
     fn make_client(instance: &Instance) -> AdmissionControlClient {
-        let address = format!("{}:8000", instance.ip());
+        let address = format!("{}:{}", instance.ip(), instance.ac_port());
         let env_builder = Arc::new(EnvBuilder::new().name_prefix("ac-grpc-").build());
         let ch = ChannelBuilder::new(env_builder).connect(&address);
         AdmissionControlClient::new(ch)

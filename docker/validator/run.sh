@@ -6,8 +6,9 @@ CONFIGDIR="$(dirname "$0")/../../terraform/validator-sets/dev/"
 
 SEED_PEERS="$(sed 's,SEED_IP,172.18.0.10,' $CONFIGDIR/seed_peers.config.toml)"
 GENESIS_BLOB="$PWD/$CONFIGDIR/genesis.blob"
-NETWORK_PEERS="$PWD/$CONFIGDIR/network_peers.config.toml"
 CONSENSUS_PEERS="$PWD/$CONFIGDIR/consensus_peers.config.toml"
+CONFIGDIR="$CONFIGDIR/val"
+NETWORK_PEERS="$PWD/$CONFIGDIR/network_peers.config.toml"
 docker network create --subnet 172.18.0.0/24 testnet || true
 
 docker run -e NODE_CONFIG="$(sed 's,\${self_ip},172.18.0.10,;s,\${peer_id},8deeeaed65f0cd7484a9e4e5ac51fbac548f2f71299a05e000156031ca78fb9f,' $CONFIGDIR/node.config.toml)" -e SEED_PEERS="$SEED_PEERS" -v "$NETWORK_PEERS:/opt/libra/etc/network_peers.config.toml" -v "$CONSENSUS_PEERS:/opt/libra/etc/consensus_peers.config.toml" -v "$GENESIS_BLOB:/opt/libra/etc/genesis.blob" -e NETWORK_KEYPAIRS="$(cat $CONFIGDIR/8deeeaed65f0cd7484a9e4e5ac51fbac548f2f71299a05e000156031ca78fb9f.node.network.keys.toml)" -e CONSENSUS_KEYPAIR="$(cat $CONFIGDIR/8deeeaed65f0cd7484a9e4e5ac51fbac548f2f71299a05e000156031ca78fb9f.node.consensus.keys.toml)" --ip 172.18.0.10 --network testnet --detach "$IMAGE"

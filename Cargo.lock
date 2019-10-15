@@ -29,6 +29,7 @@ dependencies = [
  "libra-types 0.1.0",
  "logger 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-build 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -53,13 +54,16 @@ dependencies = [
  "libra-types 0.1.0",
  "logger 0.1.0",
  "metrics 0.1.0",
+ "network 0.1.0",
+ "num_cpus 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost-ext 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "storage-client 0.1.0",
  "storage-service 0.1.0",
- "storage_client 0.1.0",
- "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm_validator 0.1.0",
 ]
 
@@ -396,6 +400,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "bytecode_source_map"
+version = "0.1.0"
+dependencies = [
+ "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure_ext 0.1.0",
+ "ir_to_bytecode_syntax 0.1.0",
+ "libra-types 0.1.0",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vm 0.1.0",
+]
+
+[[package]]
 name = "bytecode_verifier_tests"
 version = "0.1.0"
 dependencies = [
@@ -653,6 +671,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.99 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -669,6 +689,7 @@ name = "compiler"
 version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
+ "bytecode_source_map 0.1.0",
  "failure_ext 0.1.0",
  "ir_to_bytecode 0.1.0",
  "libra-types 0.1.0",
@@ -687,7 +708,6 @@ dependencies = [
  "get_if_addrs 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
- "logger 0.1.0",
  "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -753,8 +773,8 @@ dependencies = [
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "siphasher 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "state_synchronizer 0.1.0",
- "storage_client 0.1.0",
+ "state-synchronizer 0.1.0",
+ "storage-client 0.1.0",
  "termion 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "tools 0.1.0",
@@ -767,9 +787,7 @@ dependencies = [
 name = "consensus-types"
 version = "0.1.0"
 dependencies = [
- "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "canonical-serialization 0.1.0",
- "config 0.1.0",
  "crypto 0.1.0",
  "executor 0.1.0",
  "failure_ext 0.1.0",
@@ -1012,7 +1030,6 @@ dependencies = [
 name = "crypto_derive"
 version = "0.1.0"
 dependencies = [
- "crypto 0.1.0",
  "failure_ext 0.1.0",
  "proc-macro2 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1330,9 +1347,9 @@ dependencies = [
  "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
- "state_view 0.1.0",
+ "state-view 0.1.0",
+ "storage-client 0.1.0",
  "storage-service 0.1.0",
- "storage_client 0.1.0",
  "storage_proto 0.1.0",
  "transaction_builder 0.1.0",
  "vm_genesis 0.1.0",
@@ -1652,6 +1669,7 @@ dependencies = [
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protobuf 2.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1843,7 +1861,7 @@ version = "0.1.0"
 dependencies = [
  "libra-types 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "vm 0.1.0",
 ]
 
@@ -1860,6 +1878,7 @@ dependencies = [
 name = "ir_to_bytecode"
 version = "0.1.0"
 dependencies = [
+ "bytecode_source_map 0.1.0",
  "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure_ext 0.1.0",
@@ -1898,7 +1917,7 @@ version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "jellyfish_merkle"
+name = "jellyfish-merkle"
 version = "0.1.0"
 dependencies = [
  "bincode 1.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1995,7 +2014,7 @@ dependencies = [
  "language_e2e_tests 0.1.0",
  "libra-types 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
 ]
 
 [[package]]
@@ -2013,10 +2032,10 @@ dependencies = [
  "logger 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "state_view 0.1.0",
+ "state-view 0.1.0",
  "stdlib 0.1.0",
  "transaction_builder 0.1.0",
  "vm 0.1.0",
@@ -2056,6 +2075,7 @@ dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "canonical-serialization 0.1.0",
  "consensus 0.1.0",
+ "consensus-types 0.1.0",
  "datatest-stable 0.1.0",
  "failure_ext 0.1.0",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2063,7 +2083,7 @@ dependencies = [
  "libra-types 0.1.0",
  "network 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-ext 0.1.0",
  "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2100,8 +2120,8 @@ dependencies = [
  "num_cpus 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "storage-client 0.1.0",
  "storage-service 0.1.0",
- "storage_client 0.1.0",
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "ttl_cache 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm_validator 0.1.0",
@@ -2140,17 +2160,15 @@ dependencies = [
  "logger 0.1.0",
  "metrics 0.1.0",
  "network 0.1.0",
- "num_cpus 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal-hook 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "state_synchronizer 0.1.0",
+ "state-synchronizer 0.1.0",
+ "storage-client 0.1.0",
  "storage-service 0.1.0",
- "storage_client 0.1.0",
  "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm_runtime 0.1.0",
- "vm_validator 0.1.0",
 ]
 
 [[package]]
@@ -2189,7 +2207,7 @@ dependencies = [
  "num_enum 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-build 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-ext 0.1.0",
@@ -2231,7 +2249,7 @@ dependencies = [
  "crypto 0.1.0",
  "failure_ext 0.1.0",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "jellyfish_merkle 0.1.0",
+ "jellyfish-merkle 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
  "logger 0.1.0",
@@ -2240,7 +2258,7 @@ dependencies = [
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-ext 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2568,12 +2586,12 @@ dependencies = [
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pin-project 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-build 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-ext 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "socket_bench_server 0.1.0",
+ "socket-bench-server 0.1.0",
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-retry 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -3104,7 +3122,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "proptest_helpers"
+name = "proptest-helpers"
 version = "0.1.0"
 dependencies = [
  "crossbeam 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4141,18 +4159,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "socket2"
-version = "0.3.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
- "redox_syscall 0.1.56 (registry+https://github.com/rust-lang/crates.io-index)",
- "winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "socket_bench_server"
+name = "socket-bench-server"
 version = "0.1.0"
 dependencies = [
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4164,6 +4171,17 @@ dependencies = [
  "noise 0.1.0",
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "socket2"
+version = "0.3.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
+ "redox_syscall 0.1.56 (registry+https://github.com/rust-lang/crates.io-index)",
+ "winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4188,7 +4206,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "state_synchronizer"
+name = "state-synchronizer"
 version = "0.1.0"
 dependencies = [
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4208,7 +4226,7 @@ dependencies = [
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prometheus 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "storage_client 0.1.0",
+ "storage-client 0.1.0",
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction_builder 0.1.0",
  "vm_genesis 0.1.0",
@@ -4216,7 +4234,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "state_view"
+name = "state-view"
 version = "0.1.0"
 dependencies = [
  "failure_ext 0.1.0",
@@ -4247,9 +4265,26 @@ name = "stdlib"
 version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
+ "bytecode_source_map 0.1.0",
  "ir_to_bytecode 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
+]
+
+[[package]]
+name = "storage-client"
+version = "0.1.0"
+dependencies = [
+ "crypto 0.1.0",
+ "failure_ext 0.1.0",
+ "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-types 0.1.0",
+ "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "scratchpad 0.1.0",
+ "state-view 0.1.0",
+ "storage_proto 0.1.0",
 ]
 
 [[package]]
@@ -4272,27 +4307,10 @@ dependencies = [
  "metrics 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "storage_client 0.1.0",
+ "storage-client 0.1.0",
  "storage_proto 0.1.0",
  "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tools 0.1.0",
-]
-
-[[package]]
-name = "storage_client"
-version = "0.1.0"
-dependencies = [
- "crypto 0.1.0",
- "failure_ext 0.1.0",
- "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "libra-types 0.1.0",
- "metrics 0.1.0",
- "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "scratchpad 0.1.0",
- "state_view 0.1.0",
- "storage_proto 0.1.0",
 ]
 
 [[package]]
@@ -5181,7 +5199,7 @@ dependencies = [
  "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -5209,10 +5227,10 @@ dependencies = [
  "libra-types 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest_helpers 0.1.0",
+ "proptest-helpers 0.1.0",
  "prost-ext 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "state_view 0.1.0",
+ "state-view 0.1.0",
  "stdlib 0.1.0",
  "transaction_builder 0.1.0",
  "vm 0.1.0",
@@ -5240,7 +5258,7 @@ dependencies = [
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rental 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "state_view 0.1.0",
+ "state-view 0.1.0",
  "vm 0.1.0",
  "vm_cache_map 0.1.0",
  "vm_runtime_types 0.1.0",
@@ -5276,9 +5294,9 @@ dependencies = [
  "libra-types 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
- "state_view 0.1.0",
+ "state-view 0.1.0",
+ "storage-client 0.1.0",
  "storage-service 0.1.0",
- "storage_client 0.1.0",
  "transaction_builder 0.1.0",
  "vm_runtime 0.1.0",
 ]

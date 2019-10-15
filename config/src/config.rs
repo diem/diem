@@ -14,7 +14,7 @@ use crate::{
 use crypto::ValidKey;
 use failure::prelude::*;
 use libra_types::{
-    transaction::{SignedTransaction, SCRIPT_HASH_LENGTH},
+    transaction::{SignedTransaction, Transaction, SCRIPT_HASH_LENGTH},
     PeerId,
 };
 use parity_multiaddr::Multiaddr;
@@ -26,7 +26,9 @@ use std::{
     fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
+    str::FromStr,
     string::ToString,
+    time::Duration,
 };
 use toml;
 use tools::tempdir::TempPath;
@@ -232,6 +234,7 @@ pub struct AdmissionControlConfig {
     pub address: String,
     pub admission_control_service_port: u16,
     pub need_to_check_mempool_before_validation: bool,
+    pub upstream_proxy_timeout: Duration,
 }
 
 impl Default for AdmissionControlConfig {
@@ -240,6 +243,7 @@ impl Default for AdmissionControlConfig {
             address: "0.0.0.0".to_string(),
             admission_control_service_port: 8000,
             need_to_check_mempool_before_validation: false,
+            upstream_proxy_timeout: Duration::from_secs(1),
         }
     }
 }
@@ -564,6 +568,15 @@ impl NodeConfig {
             .any(|network| RoleType::Validator == (&network.role).into())
     }
 
+    /// Returns true if the node config is for a validator. Otherwise returns false.
+    pub fn get_role(&self) -> RoleType {
+        if self.is_validator() {
+            RoleType::Validator
+        } else {
+            RoleType::FullNode
+        }
+    }
+
     /// Returns the validator network config for this node.
     pub fn get_validator_network_config(&self) -> Option<&NetworkConfig> {
         self.networks
@@ -581,7 +594,7 @@ impl NodeConfig {
         }
     }
 
-    pub fn get_genesis_transaction(&self) -> Result<SignedTransaction> {
+    pub fn get_genesis_transaction(&self) -> Result<Transaction> {
         let file_path = self.get_genesis_transaction_file();
         let mut file: File = File::open(&file_path).unwrap_or_else(|err| {
             panic!(
@@ -592,9 +605,10 @@ impl NodeConfig {
         });
         let mut buffer = vec![];
         file.read_to_end(&mut buffer)?;
-        SignedTransaction::try_from(libra_types::proto::types::SignedTransaction::decode(
-            &buffer,
-        )?)
+        // TODO: update to use `Transaction::WriteSet` variant when ready.
+        Ok(Transaction::UserTransaction(SignedTransaction::try_from(
+            libra_types::proto::types::SignedTransaction::decode(&buffer)?,
+        )?))
     }
 
     pub fn get_storage_dir(&self) -> PathBuf {
@@ -613,6 +627,28 @@ impl NodeConfig {
         } else {
             path
         }
+    }
+
+    /// Returns true if network_config is for an upstream network
+    pub fn is_upstream_network(&self, network_config: &NetworkConfig) -> bool {
+        self.state_sync
+            .upstream_peers
+            .upstream_peers
+            .iter()
+            .any(|peer_id| network_config.network_peers.peers.contains_key(peer_id))
+    }
+
+    pub fn get_upstream_peer_ids(&self) -> Vec<PeerId> {
+        self.state_sync
+            .upstream_peers
+            .upstream_peers
+            .iter()
+            .map(|peer_id_str| {
+                (PeerId::from_str(peer_id_str).unwrap_or_else(|_| {
+                    panic!("Failed to parse peer_id from string: {}", peer_id_str)
+                }))
+            })
+            .collect()
     }
 }
 

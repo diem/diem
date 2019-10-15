@@ -95,6 +95,10 @@ impl PacemakerTimeout {
         self.vote.as_ref()
     }
 
+    fn drop_vote_msg(&mut self) {
+        self.vote.take();
+    }
+
     /// Verifies that this message has valid signature
     pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
         self.signature
@@ -310,7 +314,11 @@ impl fmt::Display for PacemakerTimeoutCertificate {
 
 impl PacemakerTimeoutCertificate {
     /// Creates new PacemakerTimeoutCertificate
-    pub fn new(round: Round, timeouts: Vec<PacemakerTimeout>) -> PacemakerTimeoutCertificate {
+    pub fn new(round: Round, mut timeouts: Vec<PacemakerTimeout>) -> PacemakerTimeoutCertificate {
+        // The timeouts aggregated by the TC don't need to carry the vote messages: they're not used
+        for t in &mut timeouts {
+            t.drop_vote_msg();
+        }
         PacemakerTimeoutCertificate { round, timeouts }
     }
 

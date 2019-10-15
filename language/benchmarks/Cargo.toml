@@ -14,7 +14,7 @@ criterion = "0.2.11"
 proptest = "0.9.4"
 
 language_e2e_tests = { path = "../e2e_tests" }
-proptest_helpers = { path = "../../common/proptest_helpers" }
+proptest-helpers = { path = "../../common/proptest-helpers" }
 libra-types = { path = "../../types" }
 
 [dev-dependencies]
