@@ -11,6 +11,7 @@ use consensus_types::{
     block::Block,
     common::{Payload, Round},
 };
+use failure::ResultExt;
 use logger::prelude::*;
 use std::{
     sync::{Arc, Mutex},
@@ -199,19 +200,21 @@ impl<T: Payload> ProposalGenerator<T> {
             }
         };
 
-        let block_store = Arc::clone(&self.block_store);
-        match self
-            .txn_manager
-            .pull_txns(self.max_block_size, exclude_payload)
-            .await
-        {
-            Ok(txns) => Ok(block_store.create_block(
-                hqc_block.block(),
-                txns,
-                round,
-                block_timestamp.as_micros() as u64,
-            )),
-            Err(e) => bail!("Fail to retrieve txn: {:?}", e),
-        }
+        // Reconfiguration rule - we propose empty blocks after reconfiguration until it's committed
+        let txns = if hqc_block.compute_result().has_reconfiguration() {
+            T::default()
+        } else {
+            self.txn_manager
+                .pull_txns(self.max_block_size, exclude_payload)
+                .await
+                .with_context(|e| format!("Fail to retrieve txn: {}", e))?
+        };
+
+        Ok(self.block_store.create_block(
+            hqc_block.block(),
+            txns,
+            round,
+            block_timestamp.as_micros() as u64,
+        ))
     }
 }

@@ -21,6 +21,7 @@ use logger::prelude::*;
 use crate::chained_bft::persistent_storage::RecoveryData;
 use consensus_types::timeout_certificate::TimeoutCertificate;
 use executor::StateComputeResult;
+use libra_types::validator_set::ValidatorSet;
 use libra_types::{
     crypto_proxies::{ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
@@ -199,7 +200,15 @@ impl<T: Payload> BlockStore<T> {
         if let Some(existing_block) = self.get_block(block.id()) {
             return Ok(existing_block);
         }
-        let parent_id = match self.verify_and_get_parent_id(&block) {
+        let executed_block = self.execute_block(block).await?;
+        self.storage
+            .save_tree(vec![executed_block.block().clone()], vec![])
+            .with_context(|e| format!("Insert block failed with {:?} when saving block", e))?;
+        self.inner.write().unwrap().insert_block(executed_block)
+    }
+
+    async fn execute_block(&self, block: Block<T>) -> failure::Result<ExecutedBlock<T>> {
+        let parent_block = match self.verify_and_get_parent(&block) {
             Ok(t) => t,
             Err(e) => {
                 security_log(SecurityEvent::InvalidBlock)
@@ -209,21 +218,31 @@ impl<T: Payload> BlockStore<T> {
                 return Err(e);
             }
         };
-        let compute_res = self
-            .state_computer
-            .compute(
-                parent_id,
-                block.id(),
-                block.payload().unwrap_or(&T::default()),
-            )
-            .await
-            .with_context(|e| format!("Execution failure for block {}: {:?}", block, e))?;
-
-        self.storage
-            .save_tree(vec![block.clone()], vec![])
-            .with_context(|e| format!("Insert block failed with {:?} when saving block", e))?;
-        let new_block = ExecutedBlock::new(block, compute_res);
-        self.inner.write().unwrap().insert_block(new_block)
+        // Reconfiguration rule - if a block is a child of reconfiguration, it needs to be empty
+        // So we roll over the executed state until it's committed and we start new epoch.
+        let parent_state = parent_block.compute_result();
+        let compute_res = if parent_state.has_reconfiguration() {
+            ensure!(
+                block.payload().filter(|p| **p != T::default()).is_none(),
+                "Reconfiguration suffix should not carry payload"
+            );
+            StateComputeResult {
+                executed_state: parent_state.executed_state.clone(),
+                compute_status: vec![],
+            }
+        } else {
+            // Although NIL blocks don't have payload, we still send a T::default() to compute
+            // because we may inject a block prologue transaction.
+            self.state_computer
+                .compute(
+                    parent_block.id(),
+                    block.id(),
+                    block.payload().unwrap_or(&T::default()),
+                )
+                .await
+                .with_context(|e| format!("Execution failure for block {}: {:?}", block, e))?
+        };
+        Ok(ExecutedBlock::new(block, compute_res))
     }
 
     /// Check if we're far away from this ledger info and need to sync.
@@ -409,7 +428,7 @@ impl<T: Payload> BlockStore<T> {
         )
     }
 
-    fn verify_and_get_parent_id(&self, block: &Block<T>) -> failure::Result<HashValue> {
+    fn verify_and_get_parent(&self, block: &Block<T>) -> failure::Result<Arc<ExecutedBlock<T>>> {
         ensure!(
             self.inner.read().unwrap().root().round() < block.round(),
             "Block with old round"
@@ -425,7 +444,7 @@ impl<T: Payload> BlockStore<T> {
             "Block with non-increasing timestamp"
         );
 
-        Ok(parent.id())
+        Ok(parent)
     }
 }
 
@@ -539,5 +558,24 @@ impl<T: Payload> BlockStore<T> {
     ) -> failure::Result<Arc<ExecutedBlock<T>>> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
         Ok(self.execute_and_insert_block(block).await?)
+    }
+
+    /// Helper function to insert a reconfiguration block
+    pub async fn insert_reconfiguration_block(
+        &self,
+        block: Block<T>,
+    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
+        self.insert_single_quorum_cert(block.quorum_cert().clone())?;
+        let executed_block = self.execute_block(block).await?;
+        let mut compute_result = executed_block.compute_result().as_ref().clone();
+        compute_result.executed_state.validators = Some(ValidatorSet::new(vec![]));
+        Ok(self
+            .inner
+            .write()
+            .unwrap()
+            .insert_block(ExecutedBlock::new(
+                executed_block.block().clone(),
+                compute_result,
+            ))?)
     }
 }

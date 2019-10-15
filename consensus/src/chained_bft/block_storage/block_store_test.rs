@@ -518,3 +518,32 @@ fn test_need_sync_for_qc() {
         false
     );
 }
+
+#[test]
+fn test_empty_reconfiguration_suffix() {
+    let block_tree = build_empty_tree();
+    let mut inserter = TreeInserter::new(block_tree.clone());
+    let genesis = block_tree.root();
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a2 = inserter.insert_block(&a1, 2);
+    let a3 = inserter.insert_reconfiguration_block(&a2, 3);
+    let a4 = inserter.create_block_with_qc(
+        inserter.create_qc_for_block(a3.as_ref()),
+        a3.as_ref(),
+        4,
+        vec![42],
+    );
+    // Child of reconfiguration carries a payload will fail to insert
+    assert!(block_on(block_tree.execute_and_insert_block(a4)).is_err());
+    let a5 = inserter.create_block_with_qc(
+        inserter.create_qc_for_block(a3.as_ref()),
+        a3.as_ref(),
+        4,
+        vec![],
+    );
+    // Child of reconfiguration doesn't carry payload will succeed and roll over the validator set
+    let a5 = block_on(block_tree.execute_and_insert_block(a5)).unwrap();
+    assert!(a5.compute_result().has_reconfiguration());
+    // Block continues another branch can carry payload
+    inserter.insert_block(&a2, 4);
+}
