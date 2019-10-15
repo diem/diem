@@ -131,6 +131,10 @@ impl LedgerInfo {
         self.consensus_data_hash = consensus_data_hash;
     }
 
+    pub fn set_consensus_block_id(&mut self, consensus_block_id: HashValue) {
+        self.consensus_block_id = consensus_block_id;
+    }
+
     pub fn epoch(&self) -> u64 {
         self.epoch
     }

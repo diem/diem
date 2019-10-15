@@ -525,12 +525,12 @@ impl<T: Payload> BlockReader for BlockStore<T> {
 #[cfg(any(test, feature = "fuzzing"))]
 impl<T: Payload> BlockStore<T> {
     /// Returns the number of blocks in the tree
-    fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.inner.read().unwrap().len()
     }
 
     /// Returns the number of child links in the tree
-    fn child_links(&self) -> usize {
+    pub(crate) fn child_links(&self) -> usize {
         self.inner.read().unwrap().child_links()
     }
 
