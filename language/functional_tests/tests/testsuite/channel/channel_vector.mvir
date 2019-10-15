@@ -1,0 +1,49 @@
+//! account: bob
+//! account: alice
+
+//! new-transaction
+module VecTest{
+    import 0x0.Vector;
+
+    resource VecBox {
+        grid: Vector.T<bool>,
+    }
+
+    public test_move_vec_resource() {
+        let t: Self.VecBox;
+        let grid: Vector.T<bool>;
+
+        grid = Vector.empty<bool>();
+
+        t = VecBox {
+            grid: move(grid),
+        };
+
+        move_to_sender_channel<VecBox>(move(t));
+
+        return;
+    }
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+//! args: 100000, 50000
+
+import 0x0.ChannelAccount;
+//open channel
+main(sender_amount:u64, receiver_amount:u64) {
+    ChannelAccount.open(move(sender_amount), move(receiver_amount));
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+import {{default}}.VecTest;
+
+main() {
+    VecTest.test_move_vec_resource();
+    return;
+}
