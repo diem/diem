@@ -8,8 +8,14 @@
 mod proof_proto_conversion_test;
 
 use self::bitmap::{AccumulatorBitmap, SparseMerkleBitmap};
-use super::{MerkleTreeInternalNode, SparseMerkleInternalNode, SparseMerkleLeafNode};
-use crate::{account_state_blob::AccountStateBlob, transaction::TransactionInfo};
+use super::{
+    verify_transaction_info, MerkleTreeInternalNode, SparseMerkleInternalNode, SparseMerkleLeafNode,
+};
+use crate::{
+    account_state_blob::AccountStateBlob,
+    ledger_info::LedgerInfo,
+    transaction::{TransactionInfo, Version},
+};
 #[cfg(any(test, feature = "testing"))]
 use crypto::hash::TestOnlyHasher;
 use crypto::{
@@ -500,6 +506,42 @@ impl SignedTransactionProof {
     /// Returns the `transaction_info` object in this proof.
     pub fn transaction_info(&self) -> &TransactionInfo {
         &self.transaction_info
+    }
+
+    /// Verifies that a `SignedTransaction` with hash value of `signed_transaction_hash`
+    /// is the version `transaction_version` transaction in the ledger using the provided proof.
+    /// If event_root_hash is provided, it's also verified against the proof.
+    pub fn verify(
+        &self,
+        ledger_info: &LedgerInfo,
+        signed_transaction_hash: HashValue,
+        event_root_hash: Option<HashValue>,
+        transaction_version: Version,
+    ) -> Result<()> {
+        ensure!(
+            signed_transaction_hash == self.transaction_info.signed_transaction_hash(),
+            "The hash of signed transaction does not match the transaction info in proof. \
+             Transaction hash: {:x}. Transaction hash provided by proof: {:x}.",
+            signed_transaction_hash,
+            self.transaction_info.signed_transaction_hash()
+        );
+
+        if let Some(event_root_hash) = event_root_hash {
+            ensure!(
+                event_root_hash == self.transaction_info.event_root_hash(),
+                "Event root hash ({}) doesn't match that in the transaction info ({}).",
+                event_root_hash,
+                self.transaction_info.event_root_hash(),
+            );
+        }
+
+        verify_transaction_info(
+            ledger_info,
+            transaction_version,
+            &self.transaction_info,
+            &self.ledger_info_to_transaction_info_proof,
+        )?;
+        Ok(())
     }
 }
 

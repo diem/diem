@@ -7,11 +7,10 @@ use crate::{
     ledger_info::LedgerInfo,
     proof::{
         definition::MAX_ACCUMULATOR_PROOF_DEPTH, verify_account_state, verify_event,
-        verify_signed_transaction, AccountStateProof, EventAccumulatorInternalNode,
-        EventAccumulatorProof, EventProof, MerkleTreeInternalNode, SignedTransactionProof,
-        SparseMerkleInternalNode, SparseMerkleLeafNode, SparseMerkleProof,
-        TestAccumulatorInternalNode, TestAccumulatorProof, TransactionAccumulatorInternalNode,
-        TransactionAccumulatorProof,
+        AccountStateProof, EventAccumulatorInternalNode, EventAccumulatorProof, EventProof,
+        MerkleTreeInternalNode, SignedTransactionProof, SparseMerkleInternalNode,
+        SparseMerkleLeafNode, SparseMerkleProof, TestAccumulatorInternalNode, TestAccumulatorProof,
+        TransactionAccumulatorInternalNode, TransactionAccumulatorProof,
     },
     transaction::{
         RawTransaction, Script, SignedTransaction, TransactionInfo, TransactionListWithProof,
@@ -297,11 +296,13 @@ fn test_verify_signed_transaction() {
     let proof = SignedTransactionProof::new(ledger_info_to_transaction_info_proof, txn_info1);
 
     // The proof can be used to verify txn1.
-    assert!(verify_signed_transaction(&ledger_info, txn1_hash, None, 1, &proof).is_ok());
+    assert!(proof.verify(&ledger_info, txn1_hash, None, 1).is_ok());
     // Replacing txn1 with some other txn should cause the verification to fail.
-    assert!(verify_signed_transaction(&ledger_info, HashValue::random(), None, 1, &proof).is_err());
+    assert!(proof
+        .verify(&ledger_info, HashValue::random(), None, 1)
+        .is_err());
     // Trying to show that txn1 is at version 2.
-    assert!(verify_signed_transaction(&ledger_info, txn1_hash, None, 2, &proof).is_err());
+    assert!(proof.verify(&ledger_info, txn1_hash, None, 2).is_err());
 }
 
 #[test]

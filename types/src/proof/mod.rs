@@ -36,44 +36,6 @@ pub use self::definition::{
 #[cfg(any(test, feature = "testing"))]
 pub use self::definition::TestAccumulatorProof;
 
-/// Verifies that a `SignedTransaction` with hash value of `signed_transaction_hash`
-/// is the version `transaction_version` transaction in the ledger using the provided proof.
-/// If event_root_hash is provided, it's also verified against the proof.
-pub fn verify_signed_transaction(
-    ledger_info: &LedgerInfo,
-    signed_transaction_hash: HashValue,
-    event_root_hash: Option<HashValue>,
-    transaction_version: Version,
-    signed_transaction_proof: &SignedTransactionProof,
-) -> Result<()> {
-    let transaction_info = signed_transaction_proof.transaction_info();
-
-    ensure!(
-        signed_transaction_hash == transaction_info.signed_transaction_hash(),
-        "The hash of signed transaction does not match the transaction info in proof. \
-         Transaction hash: {:x}. Transaction hash provided by proof: {:x}.",
-        signed_transaction_hash,
-        transaction_info.signed_transaction_hash()
-    );
-
-    if let Some(event_root_hash) = event_root_hash {
-        ensure!(
-            event_root_hash == transaction_info.event_root_hash(),
-            "Event root hash ({}) doesn't match that in the transaction info ({}).",
-            event_root_hash,
-            transaction_info.event_root_hash(),
-        );
-    }
-
-    verify_transaction_info(
-        ledger_info,
-        transaction_version,
-        transaction_info,
-        signed_transaction_proof.ledger_info_to_transaction_info_proof(),
-    )?;
-    Ok(())
-}
-
 /// Verifies that the state of an account at version `state_version` is correct using the provided
 /// proof.  If `account_state_blob` is present, we expect the account to exist, otherwise we
 /// expect the account to not exist.
