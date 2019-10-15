@@ -12,7 +12,6 @@ pub mod proptest_proof;
 mod proof_test;
 
 use crate::{
-    account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
     transaction::{TransactionInfo, TransactionListWithProof, Version},
@@ -35,35 +34,6 @@ pub use self::definition::{
 
 #[cfg(any(test, feature = "testing"))]
 pub use self::definition::TestAccumulatorProof;
-
-/// Verifies that the state of an account at version `state_version` is correct using the provided
-/// proof.  If `account_state_blob` is present, we expect the account to exist, otherwise we
-/// expect the account to not exist.
-pub fn verify_account_state(
-    ledger_info: &LedgerInfo,
-    state_version: Version,
-    account_address_hash: HashValue,
-    account_state_blob: Option<&AccountStateBlob>,
-    account_state_proof: &AccountStateProof,
-) -> Result<()> {
-    let transaction_info = account_state_proof.transaction_info();
-
-    account_state_proof
-        .transaction_info_to_account_proof()
-        .verify(
-            transaction_info.state_root_hash(),
-            account_address_hash,
-            account_state_blob,
-        )?;
-
-    verify_transaction_info(
-        ledger_info,
-        state_version,
-        transaction_info,
-        account_state_proof.ledger_info_to_transaction_info_proof(),
-    )?;
-    Ok(())
-}
 
 /// Verifies that a given event is correct using provided proof.
 pub(crate) fn verify_event(

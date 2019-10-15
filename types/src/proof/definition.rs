@@ -622,6 +622,31 @@ impl AccountStateProof {
     pub fn transaction_info_to_account_proof(&self) -> &SparseMerkleProof {
         &self.transaction_info_to_account_proof
     }
+
+    /// Verifies that the state of an account at version `state_version` is correct using the
+    /// provided proof. If `account_state_blob` is present, we expect the account to exist,
+    /// otherwise we expect the account to not exist.
+    pub fn verify(
+        &self,
+        ledger_info: &LedgerInfo,
+        state_version: Version,
+        account_address_hash: HashValue,
+        account_state_blob: Option<&AccountStateBlob>,
+    ) -> Result<()> {
+        self.transaction_info_to_account_proof.verify(
+            self.transaction_info.state_root_hash(),
+            account_address_hash,
+            account_state_blob,
+        )?;
+
+        verify_transaction_info(
+            ledger_info,
+            state_version,
+            &self.transaction_info,
+            &self.ledger_info_to_transaction_info_proof,
+        )?;
+        Ok(())
+    }
 }
 
 impl TryFrom<crate::proto::types::AccountStateProof> for AccountStateProof {

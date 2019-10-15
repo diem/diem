@@ -6,11 +6,11 @@ use crate::{
     account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfo,
     proof::{
-        definition::MAX_ACCUMULATOR_PROOF_DEPTH, verify_account_state, verify_event,
-        AccountStateProof, EventAccumulatorInternalNode, EventAccumulatorProof, EventProof,
-        MerkleTreeInternalNode, SignedTransactionProof, SparseMerkleInternalNode,
-        SparseMerkleLeafNode, SparseMerkleProof, TestAccumulatorInternalNode, TestAccumulatorProof,
-        TransactionAccumulatorInternalNode, TransactionAccumulatorProof,
+        definition::MAX_ACCUMULATOR_PROOF_DEPTH, verify_event, AccountStateProof,
+        EventAccumulatorInternalNode, EventAccumulatorProof, EventProof, MerkleTreeInternalNode,
+        SignedTransactionProof, SparseMerkleInternalNode, SparseMerkleLeafNode, SparseMerkleProof,
+        TestAccumulatorInternalNode, TestAccumulatorProof, TransactionAccumulatorInternalNode,
+        TransactionAccumulatorProof,
     },
     transaction::{
         RawTransaction, Script, SignedTransaction, TransactionInfo, TransactionListWithProof,
@@ -408,33 +408,33 @@ fn test_verify_account_state_and_event() {
     );
 
     // Prove that account at `key2` has value `value2`.
-    assert!(verify_account_state(
-        &ledger_info,
-        /* state_version = */ 2,
-        key2,
-        Some(&blob2),
-        &account_state_proof,
-    )
-    .is_ok());
+    assert!(account_state_proof
+        .verify(
+            &ledger_info,
+            /* state_version = */ 2,
+            key2,
+            Some(&blob2),
+        )
+        .is_ok());
     // Use the same proof to prove that `non_existing_key` doesn't exist.
-    assert!(verify_account_state(
-        &ledger_info,
-        /* state_version = */ 2,
-        non_existing_key,
-        None,
-        &account_state_proof,
-    )
-    .is_ok());
+    assert!(account_state_proof
+        .verify(
+            &ledger_info,
+            /* state_version = */ 2,
+            non_existing_key,
+            None,
+        )
+        .is_ok());
 
     let bad_blob2 = b"3".to_vec().into();
-    assert!(verify_account_state(
-        &ledger_info,
-        /* state_version = */ 2,
-        key2,
-        Some(&bad_blob2),
-        &account_state_proof,
-    )
-    .is_err());
+    assert!(account_state_proof
+        .verify(
+            &ledger_info,
+            /* state_version = */ 2,
+            key2,
+            Some(&bad_blob2),
+        )
+        .is_err());
 
     let transaction_info_to_event_proof = EventAccumulatorProof::new(vec![event1_hash]);
     let event_proof = EventProof::new(
