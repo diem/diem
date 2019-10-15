@@ -38,7 +38,7 @@
 use crate::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_config::{
-        account_resource_path, account_struct_tag, association_address,
+        account_struct_tag, association_address,
         ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
     },
     channel_account::channel_account_struct_tag,
@@ -50,7 +50,7 @@ use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
     SimpleDeserializer, SimpleSerializer,
 };
-use crypto::hash::{CryptoHash, HashValue};
+use crypto::hash::{HashValue};
 use failure::prelude::*;
 use hex;
 use lazy_static::lazy_static;
