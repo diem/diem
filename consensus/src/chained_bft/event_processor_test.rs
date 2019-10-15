@@ -515,6 +515,7 @@ fn process_vote_timeout_msg_test() {
         1,
         block_0.quorum_cert().certified_block().id(),
         block_0.quorum_cert().certified_block().round(),
+        None,
     );
     non_proposer
         .block_store
@@ -833,7 +834,7 @@ fn basic_restart_test() {
     proposals.push(a1);
     for i in 2..=num_proposals {
         let parent = proposals.last().unwrap();
-        let proposal = inserter.insert_block(&parent, i);
+        let proposal = inserter.insert_block(&parent, i, None);
         proposals.push(proposal);
     }
     for proposal in &proposals {

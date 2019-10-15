@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::block::block_test_utils::placeholder_certificate_for_block;
 use crate::{
     block::{block_test_utils::*, Block},
     quorum_cert::QuorumCert,
@@ -50,6 +51,7 @@ fn test_nil_block() {
         nil_block.round(),
         nil_block.quorum_cert().certified_block().id(),
         nil_block.quorum_cert().certified_block().round(),
+        None,
     );
     println!(
         "{:?} {:?}",
@@ -119,6 +121,7 @@ fn test_block_qc() {
         a1.round(),
         a1.quorum_cert().certified_block().id(),
         a1.quorum_cert().certified_block().round(),
+        None,
     );
 
     let result = panic::catch_unwind(|| {
