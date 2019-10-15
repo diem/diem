@@ -10,10 +10,10 @@ use canonical_serialization::{
     CanonicalDeserialize, CanonicalSerialize, CanonicalSerializer, SimpleSerializer,
 };
 use crypto::{
-    hash::{BlockHasher, CryptoHash, CryptoHasher, GENESIS_BLOCK_ID},
+    hash::{BlockHasher, CryptoHash, CryptoHasher},
     HashValue,
 };
-use executor::{ExecutedState, StateComputeResult};
+use executor::StateComputeResult;
 use failure::{ensure, format_err, Result};
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
@@ -192,17 +192,24 @@ impl<T> Block<T>
 where
     T: Serialize + Default + CanonicalSerialize + PartialEq,
 {
-    // Make an empty genesis block
+    #[cfg(any(test, feature = "testing"))]
     pub fn make_genesis_block() -> Self {
+        Self::make_genesis_block_from_ledger_info(&LedgerInfo::genesis())
+    }
+
+    /// Construct new genesis block for next epoch deterministically from the end-epoch LedgerInfo
+    /// We carry over a few fields - executed_state_id, timestamps, epoch number
+    pub fn make_genesis_block_from_ledger_info(ledger_info: &LedgerInfo) -> Self {
+        assert!(ledger_info.next_validator_set().is_some());
         let ancestor_id = HashValue::zero();
-        let state_id = ExecutedState::state_for_genesis().state_id;
+        let state_id = ledger_info.transaction_accumulator_hash();
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
-        // carrying information about version `0`.
+        // carrying information about version from the last LedgerInfo of previous epoch.
         let genesis_quorum_cert = QuorumCert::new(
             VoteData::new(ancestor_id, state_id, 0, ancestor_id, 0),
             LedgerInfoWithSignatures::new(
                 LedgerInfo::new(
-                    0,
+                    ledger_info.version(),
                     state_id,
                     HashValue::zero(),
                     HashValue::zero(),
@@ -213,12 +220,20 @@ where
                 BTreeMap::new(),
             ),
         );
+        let block_internal = BlockSerializer::<T> {
+            payload: None,
+            epoch: ledger_info.epoch_num() + 1,
+            round: 0,
+            timestamp_usecs: ledger_info.timestamp_usecs(),
+            quorum_cert: &genesis_quorum_cert,
+            author: None,
+        };
 
         Block {
-            id: *GENESIS_BLOCK_ID,
-            epoch: 0,
+            id: block_internal.hash(),
+            epoch: ledger_info.epoch_num() + 1,
             round: 0,
-            timestamp_usecs: 0, // The beginning of UNIX TIME
+            timestamp_usecs: ledger_info.timestamp_usecs(),
             quorum_cert: genesis_quorum_cert,
             block_type: BlockType::Genesis,
         }

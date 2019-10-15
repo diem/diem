@@ -9,7 +9,7 @@ use crate::{
 };
 use canonical_serialization::{CanonicalSerialize, CanonicalSerializer, SimpleSerializer};
 use crypto::{
-    hash::{CryptoHash, CryptoHasher, LedgerInfoHasher},
+    hash::{CryptoHash, CryptoHasher, LedgerInfoHasher, ACCUMULATOR_PLACEHOLDER_HASH},
     HashValue, *,
 };
 use failure::prelude::*;
@@ -147,6 +147,19 @@ impl LedgerInfo {
 
     pub fn next_validator_set(&self) -> Option<&ValidatorSet> {
         self.next_validator_set.as_ref()
+    }
+
+    /// To bootstrap the system until we execute and commit the genesis txn before start.
+    pub fn genesis() -> Self {
+        Self::new(
+            0,
+            *ACCUMULATOR_PLACEHOLDER_HASH,
+            HashValue::zero(),
+            HashValue::zero(),
+            0,
+            0,
+            Some(ValidatorSet::new(vec![])),
+        )
     }
 }
 
