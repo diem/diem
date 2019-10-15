@@ -75,6 +75,11 @@ where
         })
     }
 
+    /// Constructs a new accumulator with given leaves.
+    pub fn from_leaves(leaves: &[HashValue]) -> Self {
+        Self::default().append(leaves)
+    }
+
     /// Appends a list of new leaves to an existing accumulator. Since the accumulator is
     /// immutable, the existing one remains unchanged and a new one representing the result is
     /// returned.

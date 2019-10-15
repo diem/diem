@@ -718,7 +718,7 @@ where
             let event_tree = {
                 let event_hashes: Vec<_> =
                     vm_output.events().iter().map(CryptoHash::hash).collect();
-                InMemoryAccumulator::<EventAccumulatorHasher>::default().append(&event_hashes)
+                InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes)
             };
 
             match vm_output.status() {
