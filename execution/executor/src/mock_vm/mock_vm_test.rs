@@ -7,6 +7,7 @@ use failure::Result;
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
+    transaction::Transaction,
     write_set::WriteOp,
 };
 use state_view::StateView;
@@ -37,7 +38,10 @@ fn test_mock_vm_different_senders() {
     let amount = 100;
     let mut txns = vec![];
     for i in 0..10 {
-        txns.push(encode_mint_transaction(gen_address(i), amount));
+        txns.push(Transaction::UserTransaction(encode_mint_transaction(
+            gen_address(i),
+            amount,
+        )));
     }
 
     let outputs = MockVM::execute_block(
@@ -47,7 +51,7 @@ fn test_mock_vm_different_senders() {
     );
 
     for (output, txn) in itertools::zip_eq(outputs.iter(), txns.iter()) {
-        let sender = txn.sender();
+        let sender = txn.as_signed_user_txn().unwrap().sender();
         assert_eq!(
             output.write_set().iter().cloned().collect::<Vec<_>>(),
             vec![
@@ -70,7 +74,9 @@ fn test_mock_vm_same_sender() {
     let sender = gen_address(1);
     let mut txns = vec![];
     for _i in 0..10 {
-        txns.push(encode_mint_transaction(sender, amount));
+        txns.push(Transaction::UserTransaction(encode_mint_transaction(
+            sender, amount,
+        )));
     }
 
     let outputs = MockVM::execute_block(
@@ -108,7 +114,7 @@ fn test_mock_vm_payment() {
     ));
 
     let output = MockVM::execute_block(
-        txns,
+        txns.into_iter().map(Transaction::UserTransaction).collect(),
         &VMConfig::empty_whitelist_FOR_TESTING(),
         &MockStateView,
     );

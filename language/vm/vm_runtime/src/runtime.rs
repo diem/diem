@@ -15,11 +15,12 @@ use crate::{
 };
 use config::config::{VMConfig, VMPublishingOption};
 use libra_types::{
-    transaction::{SignedTransaction, TransactionOutput},
+    transaction::{SignedTransaction, Transaction, TransactionOutput},
     vm_error::{StatusCode, VMStatus},
 };
 use logger::prelude::*;
 use state_view::StateView;
+use std::convert::TryFrom;
 use vm_cache_map::Arena;
 
 /// An instantiation of the MoveVM.
@@ -109,11 +110,18 @@ impl<'alloc> VMRuntime<'alloc> {
     /// transaction output.
     pub fn execute_block_transactions(
         &self,
-        txn_block: Vec<SignedTransaction>,
+        txn_block: Vec<Transaction>,
         data_view: &dyn StateView,
     ) -> Vec<TransactionOutput> {
+        let txns = txn_block
+            .into_iter()
+            .map(|txn| {
+                SignedTransaction::try_from(txn)
+                    .expect("All transactions should be user transaction")
+            })
+            .collect();
         execute_block(
-            txn_block,
+            txns,
             &self.code_cache,
             &self.script_cache,
             data_view,

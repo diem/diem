@@ -13,8 +13,8 @@ use libra_types::{
     contract_event::ContractEvent,
     event::EventKey,
     transaction::{
-        RawTransaction, Script, SignedTransaction, TransactionArgument, TransactionOutput,
-        TransactionPayload, TransactionStatus,
+        RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument,
+        TransactionOutput, TransactionPayload, TransactionStatus,
     },
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
@@ -24,7 +24,7 @@ use std::collections::HashMap;
 use vm_runtime::VMExecutor;
 
 #[derive(Debug)]
-enum Transaction {
+enum MockVMTransaction {
     Mint {
         sender: AccountAddress,
         amount: u64,
@@ -49,7 +49,7 @@ pub struct MockVM;
 
 impl VMExecutor for MockVM {
     fn execute_block(
-        transactions: Vec<SignedTransaction>,
+        transactions: Vec<Transaction>,
         _config: &VMConfig,
         state_view: &dyn StateView,
     ) -> Vec<TransactionOutput> {
@@ -70,8 +70,8 @@ impl VMExecutor for MockVM {
         let mut outputs = vec![];
 
         for txn in transactions {
-            match decode_transaction(&txn) {
-                Transaction::Mint { sender, amount } => {
+            match decode_transaction(&txn.as_signed_user_txn().unwrap()) {
+                MockVMTransaction::Mint { sender, amount } => {
                     let old_balance = read_balance(&output_cache, state_view, sender);
                     let new_balance = old_balance + amount;
                     let old_seqnum = read_seqnum(&output_cache, state_view, sender);
@@ -89,7 +89,7 @@ impl VMExecutor for MockVM {
                         KEEP_STATUS.clone(),
                     ));
                 }
-                Transaction::Payment {
+                MockVMTransaction::Payment {
                     sender,
                     recipient,
                     amount,
@@ -283,21 +283,21 @@ fn encode_transaction(sender: AccountAddress, program: Script) -> SignedTransact
         .into_inner()
 }
 
-fn decode_transaction(txn: &SignedTransaction) -> Transaction {
+fn decode_transaction(txn: &SignedTransaction) -> MockVMTransaction {
     let sender = txn.sender();
     match txn.payload() {
         TransactionPayload::Script(script) => {
             assert!(script.code().is_empty(), "Code should be empty.");
             match script.args().len() {
                 1 => match script.args()[0] {
-                    TransactionArgument::U64(amount) => Transaction::Mint { sender, amount },
+                    TransactionArgument::U64(amount) => MockVMTransaction::Mint { sender, amount },
                     _ => unimplemented!(
                         "Only one integer argument is allowed for mint transactions."
                     ),
                 },
                 2 => match (&script.args()[0], &script.args()[1]) {
                     (TransactionArgument::Address(recipient), TransactionArgument::U64(amount)) => {
-                        Transaction::Payment {
+                        MockVMTransaction::Payment {
                             sender,
                             recipient: *recipient,
                             amount: *amount,

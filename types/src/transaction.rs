@@ -1199,3 +1199,14 @@ impl From<Transaction> for crate::proto::types::Transaction {
         Self { transaction: bytes }
     }
 }
+
+impl TryFrom<Transaction> for SignedTransaction {
+    type Error = Error;
+
+    fn try_from(txn: Transaction) -> Result<Self> {
+        match txn {
+            Transaction::UserTransaction(txn) => Ok(txn),
+            _ => Err(format_err!("Not a user transaction.")),
+        }
+    }
+}

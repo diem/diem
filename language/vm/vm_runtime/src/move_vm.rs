@@ -6,7 +6,7 @@ use crate::{
     VMVerifier,
 };
 use libra_types::{
-    transaction::{SignedTransaction, TransactionOutput},
+    transaction::{SignedTransaction, Transaction, TransactionOutput},
     vm_error::VMStatus,
 };
 use state_view::StateView;
@@ -62,7 +62,7 @@ impl VMVerifier for MoveVM {
 
 impl VMExecutor for MoveVM {
     fn execute_block(
-        transactions: Vec<SignedTransaction>,
+        transactions: Vec<Transaction>,
         config: &VMConfig,
         state_view: &dyn StateView,
     ) -> Vec<TransactionOutput> {
