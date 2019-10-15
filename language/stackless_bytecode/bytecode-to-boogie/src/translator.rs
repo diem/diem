@@ -203,7 +203,7 @@ impl<'a> ModuleTranslator<'a> {
         // generate function signature
         res.push_str(&self.generate_function_sig(idx, false, &None)); // no inline
                                                                       // generate function body
-        res.push_str(&self.generate_function_body(idx, false, &None));
+        res.push_str(&self.generate_verify_function_body(idx, &None));
         res
     }
 
@@ -472,6 +472,11 @@ impl<'a> ModuleTranslator<'a> {
         res
     }
 
+    // return a string for a boogie procedure header.
+    // if inline = true, add the inline attribute and use the plain function name
+    // for the procedure name.
+    // else, generate the function signature without the ":inlne" attribute, and
+    // append _verify to the function name.
     pub fn generate_function_sig(
         &self,
         idx: usize,
@@ -482,14 +487,17 @@ impl<'a> ModuleTranslator<'a> {
         let fun_name = self.function_name_from_definition_index(idx);
         let function_handle = self.module.function_handle_at(function_def.function);
         let function_signature = self.module.function_signature_at(function_handle.signature);
-        let mut args = String::new();
+        let mut arg_decls = String::new(); // vector of ", argname : type"
         let mut rets = String::new();
         for (i, arg_type) in function_signature.arg_types.iter().enumerate() {
-            args.push_str(&format!(
+            // "arg_decls" is substituted later in an arglist that already has a few entries,
+            // which is why there is a comma before first arg.
+            arg_decls.push_str(&format!(
                 ", {}: {}",
                 self.get_arg_name(i, arg_names),
                 self.format_value_or_ref(&arg_type)
             ));
+            // *** Some derivative of this code needs to go into the verify function call to inline function
             if arg_type.is_mutable_reference() {
                 rets.push_str(&format!(
                     ", {}: {}",
@@ -506,22 +514,62 @@ impl<'a> ModuleTranslator<'a> {
             ));
         }
         if inline {
+            // generates the "inlined" version of the procedure, which has the unadorned
+            // procedure name.
+            // FIXME: Can we make this more readable using backslash to linebreak the string?
             format!(
-                "procedure {{:inline 1}} {}_inline (c: CreationTime, addr_exists: [Address]bool{}) returns (addr_exists': [Address]bool{})",
-                fun_name, args, rets
+                "procedure {{:inline 1}} {} (c: CreationTime, addr_exists: [Address]bool{}) returns (addr_exists': [Address]bool{})",
+                fun_name, arg_decls, rets
             )
         } else {
+            // generates the "verify" version of the procedure, which just calls the "inlined"
+            // version.  "Verify" version will have specs integrated later.
+            // FIXME: function name is misleading.  Maybe just generate the real body in the "inline" case?
+            // FIXME: This is not going to work, because main.rs integrates the specs after the signature and before body.
+            // So, minimal change is to generate body separately.
             format!(
-                "procedure {} (c: CreationTime, addr_exists: [Address]bool{}) returns (addr_exists': [Address]bool{})",
-                fun_name, args, rets
+                "procedure {}_verify (c: CreationTime, addr_exists: [Address]bool{}) returns (addr_exists': [Address]bool{})",
+                fun_name, arg_decls, rets
             )
         }
     }
 
-    pub fn generate_function_body(
+    // return string for body of verify function, which is just a call to the
+    // inline version of the function.
+    pub fn generate_verify_function_body(
         &self,
         idx: usize,
-        inline: bool,
+        arg_names: &Option<Vec<String>>,
+    ) -> String {
+        let fun_name = self.function_name_from_definition_index(idx);
+        let function_def = &self.module.function_defs()[idx];
+        let function_handle = self.module.function_handle_at(function_def.function);
+        let function_signature = self.module.function_signature_at(function_handle.signature);
+        let mut args = String::new(); // vector of ", argname"
+        let mut rets = String::new(); // vector of ", argname"
+                                      // return values are: addr_exists' (always), <mutable references>, <actual returns>
+        for (i, arg_type) in function_signature.arg_types.iter().enumerate() {
+            args.push_str(&format!(", {}", self.get_arg_name(i, arg_names)));
+            // collect mutable reference return values
+            if arg_type.is_mutable_reference() {
+                rets.push_str(&format!(", {}", self.get_local_name(i, arg_names),));
+            }
+        }
+        // Next loop collects actual return values from Move function
+        for i in 0..function_signature.return_types.len() {
+            rets.push_str(&format!(", ret{}", i));
+        }
+        format!(
+            "\n{{\n    call addr_exists' {} := {}(c, addr_exists {});\n}}\n\n",
+            rets, fun_name, args
+        )
+    }
+
+    // This generates boogie code for everything after the function signature
+    // The function body is only generated for the "inline" version of the function.
+    pub fn generate_inline_function_body(
+        &self,
+        idx: usize,
         arg_names: &Option<Vec<String>>,
     ) -> String {
         let mut res = String::new();
@@ -579,9 +627,10 @@ impl<'a> ModuleTranslator<'a> {
 
         res.push_str("\n    // declare a new creation time for calls inside this function\n");
         res.push_str("    var c': CreationTime;\n    assume c' > c;\n");
-        if !inline {
-            res.push_str("    assume !abort_flag;\n");
-        }
+        // DD 10/8/2019: I think it's ok to assume !abort_flag even if function is inlined.
+        // if !inline {
+        res.push_str("    assume !abort_flag;\n");
+        // }
         res.push_str("\n    // assume arguments are of correct types\n");
         res.push_str(&arg_value_assumption_str);
         res.push_str("\n    // assign arguments to locals so they can be modified\n");
