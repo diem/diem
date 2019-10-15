@@ -78,11 +78,11 @@ where
     /// Appends a list of new leaves to an existing accumulator. Since the accumulator is
     /// immutable, the existing one remains unchanged and a new one representing the result is
     /// returned.
-    pub fn append(&self, leaves: Vec<HashValue>) -> Self {
+    pub fn append(&self, leaves: &[HashValue]) -> Self {
         let mut frozen_subtree_roots = self.frozen_subtree_roots.clone();
         let mut num_leaves = self.num_leaves;
         for leaf in leaves {
-            Self::append_one(&mut frozen_subtree_roots, num_leaves, leaf);
+            Self::append_one(&mut frozen_subtree_roots, num_leaves, *leaf);
             num_leaves += 1;
         }
 

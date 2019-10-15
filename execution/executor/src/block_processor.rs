@@ -715,8 +715,11 @@ where
                 &current_state_tree,
             )?;
 
-            let event_tree = InMemoryAccumulator::<EventAccumulatorHasher>::default()
-                .append(vm_output.events().iter().map(CryptoHash::hash).collect());
+            let event_tree = {
+                let event_hashes: Vec<_> =
+                    vm_output.events().iter().map(CryptoHash::hash).collect();
+                InMemoryAccumulator::<EventAccumulatorHasher>::default().append(&event_hashes)
+            };
 
             match vm_output.status() {
                 TransactionStatus::Keep(status) => {
@@ -759,8 +762,9 @@ where
             current_state_tree = state_tree;
         }
 
-        let current_transaction_accumulator =
-            parent_trees.transaction_accumulator.append(txn_info_hashes);
+        let current_transaction_accumulator = parent_trees
+            .transaction_accumulator
+            .append(&txn_info_hashes);
         Ok(ProcessedVMOutput::new(
             txn_data,
             ExecutedTrees {
