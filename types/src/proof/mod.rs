@@ -11,6 +11,7 @@ pub mod proptest_proof;
 #[path = "unit_tests/proof_test.rs"]
 mod proof_test;
 
+use self::accumulator::InMemoryAccumulator;
 use crate::{
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
@@ -20,7 +21,6 @@ use crypto::{
     hash::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, SparseMerkleInternalHasher,
         SparseMerkleLeafHasher, TestOnlyHasher, TransactionAccumulatorHasher,
-        ACCUMULATOR_PLACEHOLDER_HASH,
     },
     HashValue,
 };
@@ -99,15 +99,20 @@ pub(crate) fn verify_transaction_list(
 
     // Verify event root hashes match what is carried on the transaction infos.
     if let Some(event_lists) = event_lists {
-        itertools::zip_eq(event_lists, transaction_and_infos).map(|(events, (_txn, txn_info))| {
-            let event_hashes: Vec<_> = events.iter().map(ContractEvent::hash).collect();
-            let event_root_hash = get_accumulator_root_hash::<EventAccumulatorHasher>(&event_hashes);
-            ensure!(
-                event_root_hash == txn_info.event_root_hash(),
-                "Some event root hash calculated doesn't match that carried on the transaction info.",
-            );
-            Ok(())
-        }).collect::<Result<Vec<_>>>()?;
+        itertools::zip_eq(event_lists, transaction_and_infos)
+            .map(|(events, (_txn, txn_info))| {
+                let event_hashes: Vec<_> = events.iter().map(ContractEvent::hash).collect();
+                let event_root_hash =
+                    InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes)
+                        .root_hash();
+                ensure!(
+                    event_root_hash == txn_info.event_root_hash(),
+                    "Some event root hash calculated doesn't match that carried on the \
+                     transaction info.",
+                );
+                Ok(())
+            })
+            .collect::<Result<Vec<_>>>()?;
     }
 
     // Get the hashes of all nodes at the accumulator leaf level.
@@ -215,34 +220,6 @@ fn verify_transaction_info(
     )?;
 
     Ok(())
-}
-
-pub(crate) fn get_accumulator_root_hash<H: Clone + CryptoHasher>(
-    element_hashes: &[HashValue],
-) -> HashValue {
-    if element_hashes.is_empty() {
-        return *ACCUMULATOR_PLACEHOLDER_HASH;
-    }
-
-    let mut next_level: Vec<HashValue>;
-    let mut current_level: &[HashValue] = element_hashes;
-
-    while current_level.len() > 1 {
-        next_level = current_level
-            .chunks(2)
-            .map(|t| {
-                if t.len() == 2 {
-                    MerkleTreeInternalNode::<H>::new(t[0], t[1]).hash()
-                } else {
-                    MerkleTreeInternalNode::<H>::new(t[0], *ACCUMULATOR_PLACEHOLDER_HASH).hash()
-                }
-            })
-            .collect();
-
-        current_level = &next_level;
-    }
-
-    current_level[0]
 }
 
 pub struct MerkleTreeInternalNode<H> {
