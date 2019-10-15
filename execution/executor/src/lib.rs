@@ -25,7 +25,7 @@ use lazy_static::lazy_static;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo,
-    proof::accumulator::Accumulator,
+    proof::accumulator::InMemoryAccumulator,
     transaction::{Transaction, TransactionListWithProof, TransactionStatus, Version},
     validator_set::ValidatorSet,
 };
@@ -370,7 +370,7 @@ pub struct ExecutedTrees {
 
     /// The in-memory Merkle Accumulator representing a blockchain state consistent with the
     /// `state_tree`.
-    transaction_accumulator: Rc<Accumulator<TransactionAccumulatorHasher>>,
+    transaction_accumulator: Rc<InMemoryAccumulator<TransactionAccumulatorHasher>>,
 }
 
 impl ExecutedTrees {
@@ -378,7 +378,7 @@ impl ExecutedTrees {
         &self.state_tree
     }
 
-    pub fn txn_accumulator(&self) -> &Rc<Accumulator<TransactionAccumulatorHasher>> {
+    pub fn txn_accumulator(&self) -> &Rc<InMemoryAccumulator<TransactionAccumulatorHasher>> {
         &self.transaction_accumulator
     }
 

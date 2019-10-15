@@ -18,7 +18,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::LedgerInfoWithSignatures,
-    proof::{accumulator::Accumulator, definition::LeafCount, SparseMerkleProof},
+    proof::{accumulator::InMemoryAccumulator, definition::LeafCount, SparseMerkleProof},
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
         TransactionPayload, TransactionStatus, TransactionToCommit, Version,
@@ -97,7 +97,7 @@ where
             committed_trees: ExecutedTrees {
                 state_tree: Rc::new(SparseMerkleTree::new(previous_state_root_hash)),
                 transaction_accumulator: Rc::new(
-                    Accumulator::new(
+                    InMemoryAccumulator::new(
                         previous_frozen_subtrees_in_accumulator,
                         previous_num_leaves_in_accumulator,
                     )
@@ -715,7 +715,7 @@ where
                 &current_state_tree,
             )?;
 
-            let event_tree = Accumulator::<EventAccumulatorHasher>::default()
+            let event_tree = InMemoryAccumulator::<EventAccumulatorHasher>::default()
                 .append(vm_output.events().iter().map(CryptoHash::hash).collect());
 
             match vm_output.status() {

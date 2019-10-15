@@ -10,7 +10,7 @@ use libra_types::{
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     crypto_proxies::LedgerInfoWithSignatures,
-    proof::accumulator::Accumulator,
+    proof::accumulator::InMemoryAccumulator,
     transaction::{Transaction, TransactionStatus},
 };
 use logger::prelude::*;
@@ -252,7 +252,7 @@ pub struct TransactionData {
     state_tree: Rc<SparseMerkleTree>,
 
     /// The in-memory Merkle Accumulator that has all events emitted by this transaction.
-    event_tree: Rc<Accumulator<EventAccumulatorHasher>>,
+    event_tree: Rc<InMemoryAccumulator<EventAccumulatorHasher>>,
 
     /// The amount of gas used.
     gas_used: u64,
@@ -267,7 +267,7 @@ impl TransactionData {
         events: Vec<ContractEvent>,
         status: TransactionStatus,
         state_tree: Rc<SparseMerkleTree>,
-        event_tree: Rc<Accumulator<EventAccumulatorHasher>>,
+        event_tree: Rc<InMemoryAccumulator<EventAccumulatorHasher>>,
         gas_used: u64,
         num_account_created: usize,
     ) -> Self {
