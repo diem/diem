@@ -69,19 +69,6 @@ message QuorumCert {
   types.LedgerInfoWithSignatures signed_ledger_info = 2;
 }
 
-message VoteData {
-  // The id of the block being vote for.
-  bytes block_id = 1;
-  // The id and the version of the state after executing the block.
-  bytes executed_state_id = 2;
-  // The round of the block being voted for
-  uint64 round = 3;
-  // The id of the parent block
-  bytes parent_block_id = 4;
-  // The round of the parent block
-  uint64 parent_block_round = 5;
-}
-
 /// This data structure stores the output of storage after executing a given
 /// block or set of transactions.
 message BlockInfo {
@@ -112,6 +99,20 @@ message BlockInfo {
   // block in the future (assuming that their transaction has not yet been included)
   uint64 timestamp_usecs = 6;
 }
+
+message VoteData {
+  // The id of the block being vote for.
+  bytes block_id = 1;
+  // The id and the version of the state after executing the block.
+  bytes executed_state_id = 2;
+  // The round of the block being voted for
+  uint64 round = 3;
+  // The id of the parent block
+  bytes parent_block_id = 4;
+  // The round of the parent block
+  uint64 parent_block_round = 5;
+}
+
 message Vote {
   // The actual vote information.
   VoteData vote_data = 1;
