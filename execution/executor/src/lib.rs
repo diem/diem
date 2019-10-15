@@ -74,6 +74,10 @@ impl StateComputeResult {
     pub fn status(&self) -> &Vec<TransactionStatus> {
         &self.compute_status
     }
+
+    pub fn has_reconfiguration(&self) -> bool {
+        self.executed_state.validators.is_some()
+    }
 }
 
 /// Executed state derived from StateComputeResult that is maintained with every proposed block.

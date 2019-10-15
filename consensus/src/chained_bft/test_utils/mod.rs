@@ -72,13 +72,7 @@ impl TreeInserter {
         round: Round,
     ) -> Arc<ExecutedBlock<Vec<usize>>> {
         // Node must carry a QC to its parent
-        let parent_qc = placeholder_certificate_for_block(
-            vec![self.block_store.signer()],
-            parent.id(),
-            parent.round(),
-            parent.quorum_cert().certified_block_id(),
-            parent.quorum_cert().certified_block_round(),
-        );
+        let parent_qc = self.create_qc_for_block(parent);
 
         self.insert_block_with_qc(parent_qc, parent, round)
     }
@@ -90,14 +84,66 @@ impl TreeInserter {
         round: Round,
     ) -> Arc<ExecutedBlock<Vec<usize>>> {
         self.payload_val += 1;
-        block_on(self.block_store.insert_block_with_qc(Block::make_block(
+        block_on(
+            self.block_store
+                .insert_block_with_qc(self.create_block_with_qc(
+                    parent_qc,
+                    parent,
+                    round,
+                    vec![self.payload_val],
+                )),
+        )
+        .unwrap()
+    }
+
+    pub fn create_qc_for_block(&self, block: &ExecutedBlock<TestPayload>) -> QuorumCert {
+        placeholder_certificate_for_block(
+            vec![self.block_store.signer()],
+            block.id(),
+            block.round(),
+            block.quorum_cert().certified_block_id(),
+            block.quorum_cert().certified_block_round(),
+        )
+    }
+
+    pub fn insert_qc_for_block(&self, block: &ExecutedBlock<TestPayload>) {
+        self.block_store
+            .insert_single_quorum_cert(self.create_qc_for_block(block))
+            .unwrap()
+    }
+
+    pub fn create_block_with_qc(
+        &self,
+        parent_qc: QuorumCert,
+        parent: &ExecutedBlock<TestPayload>,
+        round: Round,
+        payload: TestPayload,
+    ) -> Block<TestPayload> {
+        Block::make_block(
             parent.block(),
-            vec![self.payload_val],
+            payload,
             round,
             parent.timestamp_usecs() + 1,
             parent_qc,
             self.block_store.signer(),
-        )))
+        )
+    }
+
+    pub fn insert_reconfiguration_block(
+        &mut self,
+        parent: &ExecutedBlock<TestPayload>,
+        round: Round,
+    ) -> Arc<ExecutedBlock<TestPayload>> {
+        self.payload_val += 1;
+        block_on(
+            self.block_store
+                .insert_reconfiguration_block(self.create_block_with_qc(
+                    self.create_qc_for_block(parent),
+                    parent,
+                    round,
+                    vec![self.payload_val],
+                )),
+        )
         .unwrap()
     }
 }
