@@ -692,7 +692,7 @@ fn process_votes_basic_test() {
 
     let vote_data = VoteData::new(
         BlockInfo::new(
-            a1.quorum_cert().vote_data().proposed().epoch_num(),
+            a1.quorum_cert().vote_data().proposed().epoch(),
             a1.round(),
             a1.id(),
             executed_state.state_id,

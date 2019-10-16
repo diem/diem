@@ -173,7 +173,7 @@ fn gen_ledger_info(
         root_hash,
         /* consensus_data_hash = */ HashValue::zero(),
         commit_block_id,
-        /* epoch_num = */ 0,
+        /* epoch = */ 0,
         timestamp_usecs,
         None,
     );

@@ -200,7 +200,7 @@ where
     pub fn make_genesis_block_from_ledger_info(ledger_info: &LedgerInfo) -> Self {
         assert!(ledger_info.next_validator_set().is_some());
         let ancestor = BlockInfo::new(
-            ledger_info.epoch_num(),
+            ledger_info.epoch(),
             0,
             HashValue::zero(),
             ledger_info.transaction_accumulator_hash(),
@@ -218,7 +218,7 @@ where
                     ledger_info.transaction_accumulator_hash(),
                     HashValue::zero(),
                     HashValue::zero(),
-                    ledger_info.epoch_num(),
+                    ledger_info.epoch(),
                     ledger_info.timestamp_usecs(),
                     None,
                 ),
@@ -228,7 +228,7 @@ where
 
         let block_internal = BlockSerializer::<T> {
             payload: None,
-            epoch: ledger_info.epoch_num() + 1,
+            epoch: ledger_info.epoch() + 1,
             round: 0,
             timestamp_usecs: ledger_info.timestamp_usecs(),
             quorum_cert: &genesis_quorum_cert,
@@ -237,7 +237,7 @@ where
 
         Block {
             id: block_internal.hash(),
-            epoch: ledger_info.epoch_num() + 1,
+            epoch: ledger_info.epoch() + 1,
             round: 0,
             timestamp_usecs: ledger_info.timestamp_usecs(),
             quorum_cert: genesis_quorum_cert,

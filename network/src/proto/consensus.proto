@@ -79,7 +79,7 @@ message BlockInfo {
   //attack could reuse the signatures from the validators in one epoch in order to sign
   // the wrong info belonging to another epoch, in which these validators do not form a
   // quorum.
-  uint64 epoch_num = 1;
+  uint64 epoch = 1;
 
   // The consensus protocol executes proposals (blocks) in rounds, which monotically increase per epoch.
   uint64 round = 2;

@@ -174,7 +174,7 @@ impl LedgerStore {
         cs: &mut ChangeSet,
     ) -> Result<()> {
         cs.batch.put::<LedgerInfoSchema>(
-            &ledger_info_with_sigs.ledger_info().epoch_num(),
+            &ledger_info_with_sigs.ledger_info().epoch(),
             ledger_info_with_sigs,
         )
     }

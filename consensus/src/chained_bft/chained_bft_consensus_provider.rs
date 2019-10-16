@@ -109,8 +109,8 @@ impl ChainedBftProvider {
             .consensus
             .consensus_peers
             .get_validator_verifier();
-        counters::EPOCH_NUM.set(0); // No reconfiguration yet, so it is always zero
-        counters::CURRENT_EPOCH_NUM_VALIDATORS.set(validator.len() as i64);
+        counters::EPOCH.set(0); // No reconfiguration yet, so it is always zero
+        counters::CURRENT_EPOCH_VALIDATORS.set(validator.len() as i64);
         counters::CURRENT_EPOCH_QUORUM_SIZE.set(validator.quorum_voting_power() as i64);
         debug!(
             "[Consensus]: quorum_size = {:?}",
