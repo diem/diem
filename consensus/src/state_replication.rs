@@ -3,7 +3,7 @@
 
 use consensus_types::block::Block;
 use consensus_types::quorum_cert::QuorumCert;
-use executor::{transaction_block::ProcessedVMOutput, ExecutedTrees, StateComputeResult};
+use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
 use failure::Result;
 use futures::Future;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;

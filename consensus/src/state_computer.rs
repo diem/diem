@@ -4,10 +4,7 @@
 use crate::{counters, state_replication::StateComputer};
 use consensus_types::block::Block;
 use consensus_types::quorum_cert::QuorumCert;
-use executor::{
-    transaction_block::ProcessedVMOutput, CommittableBlock, ExecutedTrees, Executor,
-    StateComputeResult,
-};
+use executor::{CommittableBlock, ExecutedTrees, Executor, ProcessedVMOutput, StateComputeResult};
 use failure::Result;
 use futures::{Future, FutureExt};
 use libra_types::{

@@ -16,7 +16,7 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use crypto::HashValue;
-use executor::{transaction_block::ProcessedVMOutput, StateComputeResult};
+use executor::{ProcessedVMOutput, StateComputeResult};
 use failure::ResultExt;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_types::validator_set::ValidatorSet;

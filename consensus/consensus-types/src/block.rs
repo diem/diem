@@ -11,7 +11,7 @@ use crypto::{
     hash::{BlockHasher, CryptoHash, CryptoHasher},
     HashValue,
 };
-use executor::{transaction_block::ProcessedVMOutput, ExecutedTrees, StateComputeResult};
+use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
 use failure::{ensure, format_err};
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},

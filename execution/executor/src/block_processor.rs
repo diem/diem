@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    transaction_block::{ProcessedVMOutput, TransactionData},
     Chunk, Command, CommittableBlockBatch, ExecutableBlock, ExecutedState, ExecutedTrees,
-    StateComputeResult, OP_COUNTERS,
+    ProcessedVMOutput, StateComputeResult, TransactionData, OP_COUNTERS,
 };
 use config::config::VMConfig;
 use crypto::{
