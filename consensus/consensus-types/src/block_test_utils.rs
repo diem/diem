@@ -3,16 +3,19 @@
 
 use crate::{
     block::{Block, BlockType},
+    block_info::BlockInfo,
     common::Round,
     quorum_cert::QuorumCert,
+    vote_data::VoteData,
 };
-
-use crypto::HashValue;
+use crypto::hash::{CryptoHash, HashValue};
 use libra_types::{
     crypto_proxies::{SecretKey, ValidatorSigner},
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     validator_signer::proptests,
 };
 use proptest::prelude::*;
+use std::collections::BTreeMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 type LinearizedBlockForest<T> = Vec<Block<T>>;
@@ -178,4 +181,63 @@ pub fn get_current_timestamp() -> Duration {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Timestamp generated is before the UNIX_EPOCH!")
+}
+
+pub fn placeholder_ledger_info() -> LedgerInfo {
+    LedgerInfo::new(
+        0,
+        HashValue::zero(),
+        HashValue::zero(),
+        HashValue::zero(),
+        0,
+        0,
+        None,
+    )
+}
+
+pub fn placeholder_certificate_for_block(
+    signers: Vec<&ValidatorSigner>,
+    certified_block_id: HashValue,
+    certified_block_round: u64,
+    certified_parent_block_id: HashValue,
+    certified_parent_block_round: u64,
+) -> QuorumCert {
+    // Assuming executed state to be Genesis state.
+    let genesis_ledger_info = LedgerInfo::genesis();
+    let vote_data = VoteData::new(
+        BlockInfo::new(
+            genesis_ledger_info.epoch_num(),
+            certified_block_round,
+            certified_block_id,
+            genesis_ledger_info.transaction_accumulator_hash(),
+            genesis_ledger_info.version(),
+            genesis_ledger_info.timestamp_usecs(),
+        ),
+        BlockInfo::new(
+            genesis_ledger_info.epoch_num(),
+            certified_parent_block_round,
+            certified_parent_block_id,
+            genesis_ledger_info.transaction_accumulator_hash(),
+            genesis_ledger_info.version(),
+            genesis_ledger_info.timestamp_usecs(),
+        ),
+    );
+
+    // This ledger info doesn't carry any meaningful information: it is all zeros except for
+    // the consensus data hash that carries the actual vote.
+    let mut ledger_info_placeholder = placeholder_ledger_info();
+    ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
+
+    let mut signatures = BTreeMap::new();
+    for signer in signers {
+        let li_sig = signer
+            .sign_message(ledger_info_placeholder.hash())
+            .expect("Failed to sign LedgerInfo");
+        signatures.insert(signer.author(), li_sig);
+    }
+
+    QuorumCert::new(
+        vote_data,
+        LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures),
+    )
 }

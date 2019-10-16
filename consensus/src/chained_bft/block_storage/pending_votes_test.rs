@@ -4,7 +4,9 @@
 use crate::chained_bft::block_storage::pending_votes::PendingVotes;
 use crate::chained_bft::{block_storage::VoteReceptionResult, test_utils};
 
-use consensus_types::{common::Round, vote_data::VoteData, vote_msg::VoteMsg};
+use consensus_types::{
+    block_info::BlockInfo, common::Round, vote_data::VoteData, vote_msg::VoteMsg,
+};
 use crypto::HashValue;
 use libra_types::crypto_proxies::random_validator_verifier;
 use libra_types::ledger_info::LedgerInfo;
@@ -23,13 +25,7 @@ fn random_ledger_info() -> LedgerInfo {
 
 fn random_vote_data(round: Round) -> VoteData {
     assert!(round >= 1);
-    VoteData::new(
-        HashValue::random(),
-        HashValue::random(),
-        round,
-        HashValue::random(),
-        round - 1,
-    )
+    VoteData::new(BlockInfo::random(round), BlockInfo::random(round - 1))
 }
 
 #[test]

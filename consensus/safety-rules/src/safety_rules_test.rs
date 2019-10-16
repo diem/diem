@@ -3,10 +3,10 @@
 
 use crate::{ConsensusState, ProposalReject, SafetyRules};
 use consensus_types::{
-    block::Block, common::Round, quorum_cert::QuorumCert, sync_info::SyncInfo, vote_data::VoteData,
-    vote_msg::VoteMsg,
+    block::Block, block_info::BlockInfo, common::Round, quorum_cert::QuorumCert,
+    sync_info::SyncInfo, vote_data::VoteData, vote_msg::VoteMsg,
 };
-use crypto::HashValue;
+use crypto::hash::{CryptoHash, HashValue};
 use libra_types::{
     crypto_proxies::ValidatorSigner,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -42,11 +42,8 @@ fn make_block_with_parent(
     highest_quorum_cert: &QuorumCert,
 ) -> Block<Round> {
     let vote_data = VoteData::new(
-        parent.id(),
-        HashValue::zero(),
-        parent.round(),
-        parent.quorum_cert().certified_block_id(),
-        parent.quorum_cert().certified_block_round(),
+        BlockInfo::from_block(parent, HashValue::zero(), 0),
+        parent.quorum_cert().vote_data().proposed().clone(),
     );
 
     let sync_info = SyncInfo::new(

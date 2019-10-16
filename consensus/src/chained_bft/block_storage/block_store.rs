@@ -21,6 +21,7 @@ use logger::prelude::*;
 use crate::chained_bft::persistent_storage::RecoveryData;
 use consensus_types::timeout_certificate::TimeoutCertificate;
 use executor::StateComputeResult;
+#[cfg(any(test, feature = "fuzzing"))]
 use libra_types::validator_set::ValidatorSet;
 use libra_types::{
     crypto_proxies::{ValidatorSigner, ValidatorVerifier},

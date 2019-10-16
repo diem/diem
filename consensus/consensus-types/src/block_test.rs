@@ -4,10 +4,8 @@
 use crate::{
     block::{block_test_utils::*, Block},
     quorum_cert::QuorumCert,
-    test_utils::placeholder_certificate_for_block,
-    vote_data::VoteData,
 };
-use crypto::{hash::CryptoHash, HashValue};
+use crypto::hash::{CryptoHash, HashValue};
 use libra_types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
 use std::{collections::BTreeMap, panic, sync::Arc};
 
@@ -52,6 +50,11 @@ fn test_nil_block() {
         nil_block.round(),
         nil_block.quorum_cert().certified_block_id(),
         nil_block.quorum_cert().certified_block_round(),
+    );
+    println!(
+        "{:?} {:?}",
+        nil_block.id(),
+        nil_block_qc.certified_block_id()
     );
     let nil_block_child = Block::make_block(
         &nil_block,
@@ -166,20 +169,14 @@ fn test_same_qc_different_authors() {
         .expect("Signing a hash should succeed");
     let mut ledger_info_altered = genesis_qc.ledger_info().clone();
     ledger_info_altered.add_signature(signer.author(), signature);
-    let vote_data = VoteData::new(
-        genesis_qc.certified_block_id(),
-        genesis_qc.certified_state_id(),
-        genesis_qc.certified_block_round(),
-        genesis_qc.parent_block_id(),
-        genesis_qc.parent_block_round(),
-    );
-    let genesis_qc_altered = QuorumCert::new(vote_data, ledger_info_altered);
+    let genesis_qc_altered = QuorumCert::new(genesis_qc.vote_data().clone(), ledger_info_altered);
+
     let block_round_1_altered = Block::make_block(
         &genesis_block,
         payload,
         round,
         current_timestamp,
-        genesis_qc_altered.clone(),
+        genesis_qc_altered,
         &signer,
     );
 
@@ -188,7 +185,7 @@ fn test_same_qc_different_authors() {
         payload,
         round,
         current_timestamp,
-        genesis_qc.clone(),
+        genesis_qc,
         &signer,
     );
 

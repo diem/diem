@@ -16,8 +16,8 @@ use crate::{
         network_tests::NetworkPlayground,
         persistent_storage::{PersistentStorage, RecoveryData},
         test_utils::{
-            self, consensus_runtime, placeholder_certificate_for_block, placeholder_ledger_info,
-            MockStateComputer, MockStorage, MockTransactionManager, TestPayload, TreeInserter,
+            self, consensus_runtime, MockStateComputer, MockStorage, MockTransactionManager,
+            TestPayload, TreeInserter,
         },
     },
     state_replication::StateComputer,
@@ -25,7 +25,11 @@ use crate::{
 };
 use channel;
 use consensus_types::{
-    block::Block,
+    block::{
+        block_test_utils::{placeholder_certificate_for_block, placeholder_ledger_info},
+        Block,
+    },
+    block_info::BlockInfo,
     common::Author,
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
     quorum_cert::QuorumCert,
@@ -253,19 +257,18 @@ fn basic_new_rank_event_test() {
         );
         assert_eq!(pending_proposals[0].proposer(), node.author);
 
+        let executed_state = &node
+            .block_store
+            .get_compute_result(a1.id())
+            .unwrap()
+            .executed_state;
+
         // Simulate a case with a1 receiving enough votes for a QC: a new proposal
         // should be a child of a1 and carry its QC.
         let vote_msg = VoteMsg::new(
             VoteData::new(
-                a1.id(),
-                node.block_store
-                    .get_compute_result(a1.id())
-                    .unwrap()
-                    .executed_state
-                    .state_id,
-                a1.round(),
-                a1.quorum_cert().parent_block_id(),
-                a1.quorum_cert().parent_block_round(),
+                BlockInfo::from_block(a1.block(), executed_state.state_id, executed_state.version),
+                a1.quorum_cert().vote_data().proposed().clone(),
             ),
             node.block_store.signer().author(),
             placeholder_ledger_info(),
@@ -353,7 +356,10 @@ fn process_successful_proposal_test() {
             .collect::<Vec<_>>();
         assert_eq!(pending_for_proposer.len(), 1);
         assert_eq!(pending_for_proposer[0].author(), node.author);
-        assert_eq!(pending_for_proposer[0].vote_data().block_id(), proposal_id);
+        assert_eq!(
+            pending_for_proposer[0].vote_data().proposed().id(),
+            proposal_id
+        );
         assert_eq!(
             *node.storage.shared_storage.state.lock().unwrap(),
             ConsensusState::new(1, 0),
@@ -412,7 +418,7 @@ fn process_old_proposal_test() {
             .collect::<Vec<_>>();
         // just the new one
         assert_eq!(pending_for_me.len(), 1);
-        assert_eq!(pending_for_me[0].vote_data().block_id(), new_block_id);
+        assert_eq!(pending_for_me[0].vote_data().proposed().id(), new_block_id);
         assert!(node.block_store.get_block(old_block_id).is_some());
     });
 }
@@ -530,11 +536,8 @@ fn process_vote_timeout_msg_test() {
     // As the static proposer processes the the vote message it should learn about the
     // block_0_quorum_cert at round 1.
     let dummy_vote_data = VoteData::new(
-        HashValue::random(),
-        HashValue::random(),
-        1,
-        HashValue::random(),
-        0,
+        BlockInfo::new(0, 1, HashValue::random(), HashValue::random(), 0, 0),
+        BlockInfo::new(0, 0, HashValue::random(), HashValue::random(), 0, 0),
     );
     let mut vote_msg_on_timeout = VoteMsg::new(
         dummy_vote_data,
@@ -681,17 +684,24 @@ fn process_votes_basic_test() {
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new(node.block_store.clone());
     let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let executed_state = &node
+        .block_store
+        .get_compute_result(a1.id())
+        .unwrap()
+        .executed_state;
+
     let vote_data = VoteData::new(
-        a1.id(),
-        node.block_store
-            .get_compute_result(a1.id())
-            .unwrap()
-            .executed_state
-            .state_id,
-        a1.round(),
-        a1.quorum_cert().parent_block_id(),
-        a1.quorum_cert().parent_block_round(),
+        BlockInfo::new(
+            a1.quorum_cert().vote_data().proposed().epoch_num(),
+            a1.round(),
+            a1.id(),
+            executed_state.state_id,
+            executed_state.version,
+            a1.timestamp_usecs(),
+        ),
+        a1.quorum_cert().vote_data().proposed().clone(),
     );
+
     let vote_msg = VoteMsg::new(
         vote_data,
         node.block_store.signer().author(),
@@ -699,6 +709,7 @@ fn process_votes_basic_test() {
         node.block_store.signer(),
         test_utils::placeholder_sync_info(),
     );
+
     block_on(async move {
         node.event_processor.process_vote(vote_msg).await;
         // The new QC is aggregated
@@ -862,9 +873,9 @@ fn nil_vote_on_timeout() {
         )
         .unwrap();
         assert!(vote_msg.is_timeout());
-        assert_eq!(vote_msg.vote_data().block_round(), 1);
+        assert_eq!(vote_msg.vote_data().proposed().round(), 1);
         assert_eq!(
-            vote_msg.vote_data().parent_block_id(),
+            vote_msg.vote_data().parent().id(),
             node.block_store.root().id()
         );
     });

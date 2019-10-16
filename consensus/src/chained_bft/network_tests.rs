@@ -8,11 +8,9 @@ use crate::chained_bft::{
 };
 use channel;
 use consensus_types::{
-    block::Block, common::Author, proposal_msg::ProposalMsg, quorum_cert::QuorumCert,
-    sync_info::SyncInfo, vote_data::VoteData, vote_msg::VoteMsg,
+    block::Block, block_info::BlockInfo, common::Author, proposal_msg::ProposalMsg,
+    quorum_cert::QuorumCert, sync_info::SyncInfo, vote_data::VoteData, vote_msg::VoteMsg,
 };
-use crypto::HashValue;
-use executor::ExecutedState;
 use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
@@ -349,13 +347,7 @@ fn test_network_api() {
         nodes.push(node);
     }
     let vote = VoteMsg::new(
-        VoteData::new(
-            HashValue::random(),
-            ExecutedState::state_for_genesis().state_id,
-            1,
-            HashValue::random(),
-            0,
-        ),
+        VoteData::new(BlockInfo::random(1), BlockInfo::random(0)),
         peers[0],
         placeholder_ledger_info(),
         &signers[0],

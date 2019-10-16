@@ -4,14 +4,13 @@
 use crate::chained_bft::test_utils::{self, placeholder_ledger_info};
 use consensus_types::{
     block::Block,
+    block_info::BlockInfo,
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
     vote_data::VoteData,
     vote_msg::VoteMsg,
 };
-use crypto::HashValue;
-use executor::ExecutedState;
 use libra_types::validator_signer::ValidatorSigner;
 use prost::Message;
 use prost_ext::MessageExt;
@@ -53,13 +52,7 @@ fn test_proto_convert_proposal() {
 fn test_proto_convert_vote() {
     let signer = ValidatorSigner::random(None);
     let vote = VoteMsg::new(
-        VoteData::new(
-            HashValue::random(),
-            ExecutedState::state_for_genesis().state_id,
-            1,
-            HashValue::random(),
-            0,
-        ),
+        VoteData::new(BlockInfo::random(1), BlockInfo::random(0)),
         signer.author(),
         placeholder_ledger_info(),
         &signer,
