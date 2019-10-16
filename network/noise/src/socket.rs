@@ -103,6 +103,13 @@ enum Session {
 }
 
 impl Session {
+    pub fn is_initiator(&self) -> bool {
+        match self {
+            Session::Handshake(ref session) => session.is_initiator(),
+            Session::Transport(ref session) => session.is_initiator(),
+        }
+    }
+
     pub fn read_message(
         &mut self,
         message: &[u8],
@@ -122,6 +129,18 @@ impl Session {
         match self {
             Session::Handshake(ref mut session) => session.write_message(message, payload),
             Session::Transport(ref mut session) => session.write_message(message, payload),
+        }
+    }
+
+    pub fn into_transport_mode(self) -> Result<snow::TransportState, io::Error> {
+        match self {
+            Session::Handshake(session) => session
+                .into_transport_mode()
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Noise error: {}", e))),
+            Session::Transport(_) => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Session not in handshake state".to_string(),
+            )),
         }
     }
 }
@@ -552,16 +571,7 @@ where
     /// (switched to transport mode) upon success.
     pub async fn handshake_1rt(mut self) -> io::Result<NoiseSocket<TSocket>> {
         // The Dialer
-        let initiator = if let Session::Handshake(ref session) = self.0.session {
-            session.is_initiator()
-        } else {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "Session not in handshake state".to_string(),
-            ));
-        };
-
-        if initiator {
+        if self.0.session.is_initiator() {
             // -> e, s
             self.send().await?;
             self.flush().await?;
@@ -603,22 +613,11 @@ where
     ///
     /// Converts the noise session into transport mode and returns the NoiseSocket.
     fn finish(self) -> io::Result<NoiseSocket<TSocket>> {
-        let session = self.0.session;
-        match session {
-            Session::Transport(_) => Err(io::Error::new(
-                io::ErrorKind::Other,
-                "Session not in handshake state".to_string(),
-            )),
-            Session::Handshake(sess) => {
-                let trans_sess = sess.into_transport_mode().map_err(|e| {
-                    io::Error::new(io::ErrorKind::Other, format!("Noise error: {}", e))
-                })?;
-                Ok(NoiseSocket {
-                    session: Session::Transport(Box::new(trans_sess)),
-                    ..self.0
-                })
-            }
-        }
+        let session = self.0.session.into_transport_mode()?;
+        Ok(NoiseSocket {
+            session: Session::Transport(Box::new(session)),
+            ..self.0
+        })
     }
 }
 
