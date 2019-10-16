@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Fetches code data from the blockchain.
 
+use libra_logger::prelude::*;
 use libra_types::language_storage::ModuleId;
-use logger::prelude::*;
 use state_view::StateView;
 use std::collections::HashMap;
 use vm::file_format::CompiledModule;

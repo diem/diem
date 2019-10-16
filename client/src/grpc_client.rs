@@ -13,6 +13,7 @@ use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::Future;
 use grpcio::{CallOption, ChannelBuilder, EnvBuilder};
+use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -26,7 +27,6 @@ use libra_types::{
     transaction::{SignedTransaction, Version},
     vm_error::StatusCode,
 };
-use logger::prelude::*;
 use std::convert::TryFrom;
 use std::sync::Arc;
 

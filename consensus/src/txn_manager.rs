@@ -5,12 +5,12 @@ use crate::{counters, state_replication::TxnManager};
 use executor::StateComputeResult;
 use failure::Result;
 use futures::{compat::Future01CompatExt, future, Future, FutureExt};
+use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::{
     CommitTransactionsRequest, CommittedTransaction, GetBlockRequest, MempoolClient,
     TransactionExclusion,
 };
 use libra_types::transaction::{SignedTransaction, TransactionStatus};
-use logger::prelude::*;
 use std::{convert::TryFrom, pin::Pin, sync::Arc};
 
 /// Proxy interface to mempool

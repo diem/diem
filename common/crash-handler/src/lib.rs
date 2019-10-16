@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use backtrace::Backtrace;
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use serde::Serialize;
 use std::{
     panic::{self, PanicInfo},

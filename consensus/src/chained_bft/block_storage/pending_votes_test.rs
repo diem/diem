@@ -31,7 +31,7 @@ fn random_vote_data(round: Round) -> VoteData {
 #[test]
 /// Verify that votes are properly aggregated to QC based on their LedgerInfo digest
 fn test_qc_aggregation() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let (signers, validator) = random_validator_verifier(4, Some(2), false);
     let mut pending_votes = PendingVotes::new();
 
@@ -106,7 +106,7 @@ fn test_qc_aggregation() {
 #[test]
 /// Verify that only the last votes are kept in the system for qc aggregation
 fn test_qc_aggregation_keep_last_only() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let (signers, validator) = random_validator_verifier(4, Some(2), false);
     let mut pending_votes = PendingVotes::new();
@@ -178,7 +178,7 @@ fn test_qc_aggregation_keep_last_only() {
 #[test]
 /// Verify that votes are properly aggregated to TC based on their rounds
 fn test_tc_aggregation() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let (signers, validator) = random_validator_verifier(4, Some(2), false);
     let mut pending_votes = PendingVotes::new();
@@ -231,7 +231,7 @@ fn test_tc_aggregation() {
 #[test]
 /// Verify that only the last votes are kept in the system for TC aggregation
 fn test_tc_aggregation_keep_last_only() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let (signers, validator) = random_validator_verifier(4, Some(2), false);
     let mut pending_votes = PendingVotes::new();

@@ -119,7 +119,7 @@ fn generate_network_pub_keys_and_signer(peer_id: PeerId) -> (NetworkPublicKeys, 
 #[test]
 // Test behavior on receipt of an inbound DiscoveryMsg.
 fn inbound() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self.
@@ -275,7 +275,7 @@ fn inbound() {
 #[test]
 // Test that discovery actor sends a DiscoveryMsg to a neighbor on receiving a clock tick.
 fn outbound() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self.
@@ -346,7 +346,7 @@ fn outbound() {
 
 #[test]
 fn addr_update_includes_seed_addrs() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self.

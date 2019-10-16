@@ -26,7 +26,7 @@ debug-interface = { path = "../../common/debug-interface" }
 executable-helpers = { path = "../../common/executable-helpers" }
 failure = { package = "failure_ext", path = "../../common/failure_ext" }
 grpc_helpers = { path = "../../common/grpc_helpers" }
-logger = { path = "../../common/logger" }
+libra-logger = { path = "../../common/logger" }
 
 [dev-dependencies]
 config = { path = "../../config", features = ["testing"]}

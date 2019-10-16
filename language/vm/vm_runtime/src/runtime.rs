@@ -14,11 +14,11 @@ use crate::{
     process_txn::{validate::ValidationMode, ProcessTransaction},
 };
 use config::config::{VMConfig, VMPublishingOption};
+use libra_logger::prelude::*;
 use libra_types::{
     transaction::{SignedTransaction, Transaction, TransactionOutput},
     vm_error::{StatusCode, VMStatus},
 };
-use logger::prelude::*;
 use state_view::StateView;
 use std::convert::TryFrom;
 use vm_cache_map::Arena;

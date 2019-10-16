@@ -12,7 +12,7 @@ use config::config::NodeConfig;
 use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use failure::prelude::*;
 use grpc_helpers::spawn_service_thread;
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use std::thread;
 
 #[cfg(test)]

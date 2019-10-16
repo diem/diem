@@ -20,6 +20,7 @@ use futures::{
 };
 use futures_01::future::Future;
 use grpc_helpers::provide_grpc_response;
+use libra_logger::prelude::*;
 use libra_mempool::proto::{
     mempool::{AddTransactionWithValidationRequest, HealthCheckRequest},
     mempool_client::MempoolClientTrait,
@@ -32,7 +33,6 @@ use libra_types::{
     proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
     transaction::SignedTransaction,
 };
-use logger::prelude::*;
 use metrics::counters::SVC_COUNTERS;
 use std::convert::TryFrom;
 use std::sync::Arc;

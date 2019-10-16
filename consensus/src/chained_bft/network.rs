@@ -14,8 +14,8 @@ use consensus_types::{
 use crypto::HashValue;
 use failure::{self, ResultExt};
 use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
+use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
-use logger::prelude::*;
 use network::{
     proto::{
         BlockRetrievalStatus, ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock,

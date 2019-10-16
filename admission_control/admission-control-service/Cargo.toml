@@ -27,7 +27,7 @@ debug-interface = { path = "../../common/debug-interface" }
 failure = { package = "failure_ext", path = "../../common/failure_ext" }
 executable-helpers = { path = "../../common/executable-helpers" }
 grpc_helpers = { path = "../../common/grpc_helpers" }
-logger = { path = "../../common/logger" }
+libra-logger = { path = "../../common/logger" }
 libra-mempool = { path = "../../mempool" }
 libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto" }
 metrics = { path = "../../common/metrics" }

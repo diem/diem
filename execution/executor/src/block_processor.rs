@@ -12,6 +12,7 @@ use crypto::{
 };
 use failure::prelude::*;
 use futures::channel::oneshot;
+use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -22,7 +23,6 @@ use libra_types::{
     },
     write_set::{WriteOp, WriteSet},
 };
-use logger::prelude::*;
 use scratchpad::{ProofRead, SparseMerkleTree};
 use std::{
     collections::{hash_map, BTreeMap, HashMap, HashSet, VecDeque},

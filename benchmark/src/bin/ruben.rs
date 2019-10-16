@@ -29,11 +29,11 @@ use benchmark::{
 ///
 /// By conforming to the LoadGenerator APIs,
 /// this flow is basically the same for different LoadGenerators/experiments.
-use logger::{self, prelude::*};
+use libra_logger::{self, prelude::*};
 use std::ops::DerefMut;
 
 fn main() {
-    let _g = logger::set_default_global_logger(false, Some(256));
+    let _g = libra_logger::set_default_global_logger(false, Some(256));
     let args = RubenOpt::new_from_args();
     info!("RuBen: the utility to (Ru)n (Ben)chmarker");
     info!("Parsed arguments: {:#?}", args);

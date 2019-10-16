@@ -4,7 +4,7 @@
 use crate::account_address::AccountAddress;
 use crypto::*;
 use failure::prelude::*;
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use std::collections::BTreeMap;
 
 /// Errors possible during signature verification.

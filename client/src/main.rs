@@ -3,7 +3,7 @@
 
 use chrono::prelude::{SecondsFormat, Utc};
 use client::{client_proxy::ClientProxy, commands::*};
-use logger::set_default_global_logger;
+use libra_logger::set_default_global_logger;
 use rustyline::{config::CompletionType, error::ReadlineError, Config, Editor};
 use std::num::NonZeroU16;
 use structopt::StructOpt;

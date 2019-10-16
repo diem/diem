@@ -12,6 +12,7 @@ use crate::{
     process_txn::{execute::ExecutedTransaction, validate::ValidationMode, ProcessTransaction},
 };
 use config::config::VMPublishingOption;
+use libra_logger::prelude::*;
 use libra_types::{
     transaction::{
         SignatureCheckedTransaction, SignedTransaction, TransactionOutput, TransactionStatus,
@@ -19,7 +20,6 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
-use logger::prelude::*;
 use rayon::prelude::*;
 use state_view::StateView;
 use vm_cache_map::Arena;

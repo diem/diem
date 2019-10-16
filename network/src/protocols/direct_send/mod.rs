@@ -56,8 +56,8 @@ use futures::{
     sink::SinkExt,
     stream::StreamExt,
 };
+use libra_logger::prelude::*;
 use libra_types::PeerId;
-use logger::prelude::*;
 use netcore::compat::IoCompat;
 use std::{
     collections::{hash_map::Entry, HashMap},

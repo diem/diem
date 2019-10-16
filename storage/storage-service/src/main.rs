@@ -6,7 +6,7 @@ use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_d
 use executable_helpers::helpers::setup_executable;
 use failure::prelude::*;
 use grpc_helpers::spawn_service_thread;
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use std::{path::PathBuf, thread};
 use structopt::StructOpt;
 

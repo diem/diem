@@ -18,13 +18,14 @@ use consensus_types::{
 use crypto::HashValue;
 use executor::{ProcessedVMOutput, StateComputeResult};
 use failure::ResultExt;
+use libra_logger::prelude::*;
+
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_types::validator_set::ValidatorSet;
 use libra_types::{
     crypto_proxies::{ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
 };
-use logger::prelude::*;
 use mirai_annotations::checked_precondition;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},

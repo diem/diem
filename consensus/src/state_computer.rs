@@ -7,11 +7,11 @@ use consensus_types::quorum_cert::QuorumCert;
 use executor::{CommittableBlock, ExecutedTrees, Executor, ProcessedVMOutput, StateComputeResult};
 use failure::Result;
 use futures::{Future, FutureExt};
+use libra_logger::prelude::*;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Transaction},
 };
-use logger::prelude::*;
 use state_synchronizer::StateSyncClient;
 use std::{
     convert::TryFrom,

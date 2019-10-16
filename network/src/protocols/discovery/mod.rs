@@ -54,12 +54,12 @@ use futures::{
     sink::SinkExt,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
+use libra_logger::prelude::*;
 use libra_types::{
     crypto_proxies::{ValidatorSigner as Signer, ValidatorVerifier as SignatureValidator},
     validator_verifier::ValidatorInfo as SignatureInfo,
     PeerId,
 };
-use logger::prelude::*;
 use netcore::compat::IoCompat;
 use parity_multiaddr::Multiaddr;
 use prost::Message;

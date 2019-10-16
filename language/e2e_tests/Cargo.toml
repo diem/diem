@@ -29,7 +29,7 @@ proptest-derive = "0.1.1"
 proptest-helpers = { path = "../../common/proptest-helpers" }
 prost = "0.5.0"
 config =  { path = "../../config" }
-logger = { path = "../../common/logger" }
+libra-logger = { path = "../../common/logger" }
 stdlib = { path = "../stdlib" }
 walkdir = "2.2.9"
 

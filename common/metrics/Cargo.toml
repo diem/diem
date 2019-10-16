@@ -18,7 +18,7 @@ serde_json = "1.0.40"
 prometheus = { version = "0.7.0", default-features = false }
 
 failure = { path = "../failure_ext", package = "failure_ext" }
-logger = { path = "../logger" }
+libra-logger = { path = "../logger" }
 
 [dev-dependencies]
 rusty-fork = "0.2.1"

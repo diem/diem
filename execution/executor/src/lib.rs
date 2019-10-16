@@ -22,6 +22,7 @@ use crypto::{
 use failure::{format_err, Result};
 use futures::{channel::oneshot, executor::block_on};
 use lazy_static::lazy_static;
+use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -32,7 +33,6 @@ use libra_types::{
     transaction::{Transaction, TransactionListWithProof, TransactionStatus, Version},
     validator_set::ValidatorSet,
 };
-use logger::prelude::*;
 use scratchpad::SparseMerkleTree;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

@@ -7,8 +7,8 @@ use config_builder::swarm_config::{SwarmConfig, SwarmConfigBuilder};
 use crypto::{ed25519::*, test_utils::KeyPair};
 use debug_interface::NodeDebugClient;
 use failure::prelude::*;
+use libra_logger::prelude::*;
 use libra_tools::tempdir::TempPath;
-use logger::prelude::*;
 use std::{
     collections::HashMap,
     env,

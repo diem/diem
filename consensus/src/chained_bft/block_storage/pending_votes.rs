@@ -9,11 +9,11 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use crypto::{hash::CryptoHash, HashValue};
+use libra_logger::prelude::*;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
     validator_verifier::VerifyError,
 };
-use logger::prelude::*;
 use std::collections::BTreeMap;
 use std::{collections::HashMap, sync::Arc};
 

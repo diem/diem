@@ -11,8 +11,8 @@ use crate::{
     OP_COUNTER,
 };
 use failure::prelude::*;
+use libra_logger::prelude::*;
 use libra_types::transaction::Version;
-use logger::prelude::*;
 use schemadb::{ReadOptions, SchemaBatch, SchemaIterator, DB};
 use std::{
     sync::{

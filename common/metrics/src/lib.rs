@@ -23,7 +23,7 @@ mod unit_tests;
 pub use prometheus::{Histogram, IntCounter, IntCounterVec, IntGauge, IntGaugeVec};
 
 use failure::Result;
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use prometheus::{
     core::{Collector, Metric},
     proto::MetricType,

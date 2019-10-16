@@ -313,7 +313,7 @@ fn test_outbound_multiple_protocols() {
 
 #[test]
 fn test_outbound_not_connected() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_mgr_notifs_tx, mut peer_mgr_reqs_rx) =
@@ -385,7 +385,7 @@ fn test_outbound_not_connected() {
 
 #[test]
 fn test_outbound_connection_closed() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_mgr_notifs_tx, mut peer_mgr_reqs_rx) =

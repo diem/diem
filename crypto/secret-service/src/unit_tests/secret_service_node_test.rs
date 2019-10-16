@@ -11,7 +11,7 @@ use crypto::hash::HashValue;
 use crypto::traits::Signature;
 use debug_interface::node_debug_helpers::{check_node_up, create_debug_client};
 use grpcio::{ChannelBuilder, EnvBuilder};
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use std::{sync::Arc, thread};
 
 /////////////////////////////////////////////////////////////////////////////////////

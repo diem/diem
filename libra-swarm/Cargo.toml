@@ -20,7 +20,7 @@ config-builder = { path = "../config/config-builder" }
 debug-interface = { path = "../common/debug-interface" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 generate-keypair = { path = "../config/generate-keypair" }
-logger = { path = "../common/logger" }
+libra-logger = { path = "../common/logger" }
 crypto = { path = "../crypto/crypto" }
 libra-tools = { path = "../common/tools" }
 

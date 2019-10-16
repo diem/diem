@@ -1,8 +1,8 @@
 [package]
-name = "logger"
+name = "libra-logger"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra logger"
+description = "Libra libra-logger"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"
@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 # Do NOT add any inter-project dependencies.
-# This is to avoid ever having a circular dependency with the logger crate.
+# This is to avoid ever having a circular dependency with the libra-logger crate.
 [dependencies]
 backtrace = { version = "0.3.37", features = ["serialize-serde"] }
 chrono = "0.4.7"

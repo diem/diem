@@ -329,7 +329,7 @@ fn test_path_from_root() {
 
 #[test]
 fn test_insert_vote() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     // Set up enough different authors to support different votes for the same block.
     let (signers, validator_verifier) = random_validator_verifier(11, Some(10), false);
     let my_signer = signers[10].clone();

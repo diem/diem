@@ -9,8 +9,8 @@ use crypto::{
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
     ValidKey,
 };
+use libra_logger::prelude::*;
 use libra_types::PeerId;
-use logger::prelude::*;
 use netcore::{
     multiplexing::{yamux::Yamux, StreamMultiplexer},
     transport::{boxed, memory, tcp, TransportExt},

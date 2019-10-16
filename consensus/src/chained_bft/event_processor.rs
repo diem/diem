@@ -32,8 +32,8 @@ use consensus_types::{
 };
 use crypto::HashValue;
 use failure::ResultExt;
+use libra_logger::prelude::*;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
-use logger::prelude::*;
 use mirai_annotations::{
     debug_checked_precondition, debug_checked_precondition_eq, debug_checked_verify,
     debug_checked_verify_eq,

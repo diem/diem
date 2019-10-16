@@ -5,7 +5,7 @@
 
 use crate::proto::{GetNodeDetailsRequest, NodeDebugInterfaceClient};
 use grpcio::{ChannelBuilder, EnvBuilder};
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use std::{sync::Arc, thread, time};
 
 pub fn create_debug_client(debug_port: u16) -> NodeDebugInterfaceClient {

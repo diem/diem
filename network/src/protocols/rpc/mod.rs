@@ -73,8 +73,8 @@ use futures::{
     stream::StreamExt,
     task::Context,
 };
+use libra_logger::prelude::*;
 use libra_types::PeerId;
-use logger::prelude::*;
 use netcore::compat::IoCompat;
 use std::{fmt::Debug, io, time::Duration};
 use tokio::{

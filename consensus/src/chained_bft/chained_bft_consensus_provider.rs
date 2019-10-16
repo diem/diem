@@ -17,13 +17,13 @@ use config::config::NodeConfig;
 use consensus_types::common::Author;
 use executor::Executor;
 use failure::prelude::*;
+use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
 use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::{ValidatorSigner, ValidatorVerifier},
     transaction::SignedTransaction,
 };
-use logger::prelude::*;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
 use std::{convert::TryFrom, sync::Arc};

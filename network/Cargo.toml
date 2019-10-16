@@ -28,7 +28,7 @@ config = { path = "../config" }
 crypto = { path = "../crypto/crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 libra-types = { path = "../types" }
-logger = { path = "../common/logger" }
+libra-logger = { path = "../common/logger" }
 memsocket = { path = "memsocket" }
 metrics = { path = "../common/metrics" }
 netcore = { path = "netcore" }

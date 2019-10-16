@@ -23,8 +23,8 @@ use futures::{
     future::{BoxFuture, FutureExt},
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
+use libra_logger::prelude::*;
 use libra_types::PeerId;
-use logger::prelude::*;
 use parity_multiaddr::Multiaddr;
 use std::{
     cmp::min,
