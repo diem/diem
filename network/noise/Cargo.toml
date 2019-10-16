@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 futures = { version = "=0.3.0-alpha.19", package = "futures-preview" }
-snow = { version = "0.5.2", features=["ring-accelerated"]}
+snow = { version = "0.6.1", features=["ring-accelerated"]}
 crypto = { path = "../../crypto/crypto" }
 netcore = { path = "../netcore" }
 logger = { path = "../../common/logger" }
