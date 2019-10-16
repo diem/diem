@@ -141,17 +141,19 @@ impl HealthCheckRunner {
         }
 
         let mut failed = vec![];
+        let mut validators_message = "".to_string();
         for (i, (node, healthy)) in node_health.into_iter().sorted().enumerate() {
             if healthy {
-                messages.push(format!("{}* {}{}   ", Fg(Green), node, Fg(Reset)));
+                validators_message.push_str(&format!("{}* {}{}   ", Fg(Green), node, Fg(Reset)));
             } else {
-                messages.push(format!("{}* {}{}   ", Fg(Red), node, Fg(Reset)));
+                validators_message.push_str(&format!("{}* {}{}   ", Fg(Red), node, Fg(Reset)));
                 failed.push(node);
             }
             if (i + 1) % 15 == 0 {
-                messages.push(format!(""));
+                validators_message.push_str("\n");
             }
         }
+        messages.push(validators_message);
         messages.push(format!(""));
         messages.push(format!(""));
 
