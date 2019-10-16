@@ -218,9 +218,11 @@ module ChannelAccount {
 
         // sequence_number 0 should be open channel txn.
         if(copy(transaction_channel_sequence_number_value) == 0){
-            assert(exist_sender_channel<T>()==false, 400);
-            assert(exist_receiver_channel<T>()==false, 401);
+            assert(!exist_sender_channel<T>(), 400);
+            assert(!exist_receiver_channel<T>(), 401);
         }else{
+            assert(exist_sender_channel<T>(), 400);
+            assert(exist_receiver_channel<T>(), 401);
             sender_sequence_number_value = Self.sender_sequence_number();
             receiver_sequence_number_value = Self.receiver_sequence_number();
             assert(copy(sender_sequence_number_value) == copy(receiver_sequence_number_value), 402);
