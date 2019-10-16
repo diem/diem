@@ -1,9 +1,9 @@
 use crate::{aws::Aws, cluster::Cluster};
-use failure::prelude::{bail, format_err};
+use failure::prelude::format_err;
 use retry::{delay::Fixed, retry};
 use rusoto_core::RusotoError;
 use rusoto_ecr::{
-    BatchGetImageRequest, DescribeImagesRequest, Ecr, ImageIdentifier, PutImageError,
+    BatchGetImageRequest, DescribeImagesRequest, Ecr, Image, ImageIdentifier, PutImageError,
     PutImageRequest,
 };
 use rusoto_ecs::{Ecs, UpdateServiceRequest};
@@ -19,7 +19,9 @@ pub struct DeploymentManager {
 }
 
 const LAST_DEPLOYED_FILE: &str = ".last_deployed_digest";
-const REPOSITORY_NAME: &str = "libra_e2e";
+const VALIDATOR_IMAGE_REPO: &str = "libra_e2e";
+const CLIENT_IMAGE_REPO: &str = "libra_client";
+const FAUCET_IMAGE_REPO: &str = "libra_faucet";
 pub const SOURCE_TAG: &str = "nightly";
 pub const RUNNING_TAG: &str = "cluster_test";
 pub const TESTED_TAG: &str = "nightly_tested";
@@ -62,7 +64,14 @@ impl DeploymentManager {
 
     pub fn redeploy(&mut self, hash: String) -> failure::Result<()> {
         info!("Will deploy with digest {}", hash);
-        self.tag_image(RUNNING_TAG.to_string(), hash)?;
+        self.tag_image(
+            VALIDATOR_IMAGE_REPO,
+            &ImageIdentifier {
+                image_digest: Some(hash),
+                image_tag: None,
+            },
+            RUNNING_TAG,
+        )?;
         let _ignore = fs::remove_file(LAST_DEPLOYED_FILE);
         self.update_all_services()?;
         Ok(())
@@ -91,7 +100,7 @@ impl DeploymentManager {
 
     fn latest_nightly_image_digest(&self) -> String {
         let mut request = DescribeImagesRequest::default();
-        request.repository_name = REPOSITORY_NAME.into();
+        request.repository_name = VALIDATOR_IMAGE_REPO.into();
         request.image_ids = Some(vec![Self::nightly_image_id()]);
         let result = self
             .aws
@@ -117,19 +126,60 @@ impl DeploymentManager {
     }
 
     pub fn tag_tested_image(&mut self, hash: String) -> failure::Result<()> {
-        self.tag_image(TESTED_TAG.to_string(), hash.clone())?;
+        let image_id = ImageIdentifier {
+            image_digest: Some(hash.clone()),
+            image_tag: None,
+        };
+        self.tag_image(VALIDATOR_IMAGE_REPO, &image_id, TESTED_TAG)?;
+        let upstream_tag = self.get_upstream_tag(&image_id)?;
+        self.tag_image(
+            CLIENT_IMAGE_REPO,
+            &ImageIdentifier {
+                image_digest: None,
+                image_tag: Some(upstream_tag.clone()),
+            },
+            TESTED_TAG,
+        )?;
+        self.tag_image(
+            FAUCET_IMAGE_REPO,
+            &ImageIdentifier {
+                image_digest: None,
+                image_tag: Some(upstream_tag),
+            },
+            TESTED_TAG,
+        )?;
+
         fs::write(LAST_DEPLOYED_FILE, &hash).expect("Failed to write .last_deployed_digest");
         self.last_deployed_digest = Some(hash);
         Ok(())
     }
 
-    fn tag_image(&self, tag: String, hash: String) -> failure::Result<()> {
+    fn get_upstream_tag(&self, image_id: &ImageIdentifier) -> failure::Result<String> {
+        let images = self.get_images(VALIDATOR_IMAGE_REPO, image_id)?;
+        for image in images {
+            let image_id = match image.image_id {
+                Some(image_id) => image_id,
+                None => continue,
+            };
+            let tag = match image_id.image_tag {
+                Some(tag) => tag,
+                None => continue,
+            };
+            if tag.starts_with("upstream_") {
+                return Ok(tag);
+            }
+        }
+        Err(format_err!("Failed to find upstream tag"))
+    }
+
+    fn get_images(
+        &self,
+        repository: &str,
+        image_id: &ImageIdentifier,
+    ) -> failure::Result<Vec<Image>> {
         let mut get_request = BatchGetImageRequest::default();
-        get_request.repository_name = REPOSITORY_NAME.to_string();
-        get_request.image_ids = vec![ImageIdentifier {
-            image_digest: Some(hash.clone()),
-            image_tag: None,
-        }];
+        get_request.repository_name = repository.to_string();
+        get_request.image_ids = vec![image_id.clone()];
         // Retry upto 10 times, waiting 10 sec between retries
         let response = retry(Fixed::from_millis(10_000).take(10), || {
             self.aws
@@ -146,30 +196,38 @@ impl DeploymentManager {
         })
         .map_err(|e| {
             format_err!(
-                "Failed to get image from repository: {:?} after 10 tries {}: {:?}",
+                "Failed to get image from repository: {:?} after 10 tries: {:?}",
                 get_request.repository_name,
-                hash,
                 e
             )
         })?;
-        let images = response
+        response
             .images
-            .expect("No images in batch_get_image response");
-        if images.is_empty() {
-            bail!("batch_get_image returned {} images", images.len());
-        }
-        let image = images.into_iter().next().unwrap();
+            .ok_or_else(|| format_err!("No images in batch_get_image response"))
+    }
+
+    fn tag_image(
+        &self,
+        repository: &str,
+        image_id: &ImageIdentifier,
+        new_tag: &str,
+    ) -> failure::Result<()> {
+        let images = self.get_images(repository, &image_id)?;
+        let image = images
+            .into_iter()
+            .next()
+            .ok_or_else(|| format_err!("get_images returned 0 images"))?;
         let manifest = image
             .image_manifest
-            .expect("no manifest in batch_get_image response");
+            .ok_or_else(|| format_err!("no manifest in batch_get_image response"))?;
         let mut put_request = PutImageRequest::default();
         put_request.image_manifest = manifest;
-        put_request.repository_name = REPOSITORY_NAME.to_string();
-        put_request.image_tag = Some(tag.clone());
+        put_request.repository_name = repository.to_string();
+        put_request.image_tag = Some(new_tag.to_string());
         let result = self.aws.ecr().put_image(put_request).sync();
         if let Err(e) = result {
             if let RusotoError::Service(PutImageError::ImageAlreadyExists(_)) = e {
-                info!("Tagging {} with {}: Image already exist", hash, tag);
+                info!("Tag for Image already exists {}:{}", repository, new_tag);
                 Ok(())
             } else {
                 Err(format_err!("Failed to tag image: {:?}", e))
