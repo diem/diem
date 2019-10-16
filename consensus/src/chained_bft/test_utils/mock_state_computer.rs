@@ -8,9 +8,7 @@ use crate::{
 use consensus_types::block::Block;
 use consensus_types::quorum_cert::QuorumCert;
 use crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
-use executor::{
-    transaction_block::ProcessedVMOutput, ExecutedState, ExecutedTrees, StateComputeResult,
-};
+use executor::{ExecutedState, ExecutedTrees, ProcessedVMOutput, StateComputeResult};
 use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
