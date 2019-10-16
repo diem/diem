@@ -15,7 +15,7 @@ struct Foo(u32);
 fn test_default_hasher() {
     assert_eq!(
         Foo(3).test_only_hash(),
-        HashValue::from_iter_sha3(vec![::bincode::serialize(&Foo(3)).unwrap().as_slice()]),
+        HashValue::from_iter_sha3(vec![lcs::to_bytes(&Foo(3)).unwrap().as_slice()]),
     );
     assert_eq!(
         format!("{:x}", b"hello".test_only_hash()),

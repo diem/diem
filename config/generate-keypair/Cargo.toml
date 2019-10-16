@@ -10,9 +10,9 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bincode = { version = "1.1.4", default-features = false }
 structopt = "0.3.2"
 
+lcs = { path = "../../common/lcs", package = "libra-canonical-serialization" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 crypto = { path = "../../crypto/crypto/"}
 libra-tools = { path = "../../common/tools" }

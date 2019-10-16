@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{traits::*, x25519::*};
-use bincode::{deserialize, serialize};
 use rand::{rngs::StdRng, SeedableRng};
 
 #[test]
@@ -70,8 +69,8 @@ fn test_serialize_deserialize() {
     let private_key = X25519StaticPrivateKey::generate_for_testing(&mut rng);
     let public_key: X25519StaticPublicKey = (&private_key).into();
 
-    let serialized = serialize(&private_key).unwrap();
-    let deserialized = deserialize::<X25519StaticPrivateKey>(&serialized).unwrap();
+    let serialized = lcs::to_bytes(&private_key).unwrap();
+    let deserialized: X25519StaticPrivateKey = lcs::from_bytes(&serialized).unwrap();
 
     assert_eq!(public_key, (&deserialized).into());
 }
