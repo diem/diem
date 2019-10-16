@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bincode::serialize;
 use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
 use libra_tools::tempdir::TempPath;
@@ -22,7 +21,7 @@ pub fn create_faucet_key_file(output_file: &str) -> KeyPair<Ed25519PrivateKey, E
     let keypair = KeyPair::from(private_key);
 
     // Write to disk
-    let encoded: Vec<u8> = serialize(&keypair).expect("Unable to serialize keys");
+    let encoded = lcs::to_bytes(&keypair).expect("Unable to serialize keys");
     let mut file =
         File::create(output_file_path).expect("Unable to create/truncate file at specified path");
     file.write_all(&encoded)
@@ -34,7 +33,7 @@ pub fn create_faucet_key_file(output_file: &str) -> KeyPair<Ed25519PrivateKey, E
 pub fn load_key_from_file<P: AsRef<Path>>(
     path: P,
 ) -> Result<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>> {
-    bincode::deserialize(&fs::read(path)?[..]).map_err(|b| b.into())
+    lcs::from_bytes(&fs::read(path)?[..]).map_err(Into::into)
 }
 
 /// Returns the generated or loaded keypair, the path to the file where this keypair is saved,

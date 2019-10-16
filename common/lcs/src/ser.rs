@@ -51,7 +51,7 @@ use std::collections::BTreeMap;
 /// ```
 pub fn to_bytes<T>(value: &T) -> Result<Vec<u8>>
 where
-    T: Serialize,
+    T: ?Sized + Serialize,
 {
     let mut serializer = Serializer::new();
     value.serialize(&mut serializer)?;

@@ -644,7 +644,7 @@ pub trait TestOnlyHash {
 
 impl<T: ser::Serialize + ?Sized> TestOnlyHash for T {
     fn test_only_hash(&self) -> HashValue {
-        let bytes = ::bincode::serialize(self).expect("serialize failed during hash.");
+        let bytes = lcs::to_bytes(self).expect("serialize failed during hash.");
         let mut hasher = TestOnlyHasher::default();
         hasher.write(&bytes);
         hasher.finish()

@@ -10,7 +10,6 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bincode = "1.1.1"
 chrono = "0.4.7"
 futures = "0.1.28"
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
@@ -30,6 +29,7 @@ config = { path = "../config" }
 crash-handler = { path = "../common/crash-handler" }
 crypto = { path = "../crypto/crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
+lcs = { path = "../common/lcs", package = "libra-canonical-serialization" }
 libra_wallet = { path = "./libra_wallet" }
 logger =  { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
