@@ -9,7 +9,7 @@
 //! | epoch_num | ledger_info_with_signatures bytes |
 //! ```
 //!
-//! `epoch_num` is serialized in big endian so that records in RocksDB will be in order of it's
+//! `epoch_num` is serialized in big endian so that records in RocksDB will be in order of their
 //! numeric value.
 
 use crate::schema::ensure_slice_len_eq;
