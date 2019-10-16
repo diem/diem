@@ -67,7 +67,7 @@ impl MempoolProxy {
                     Err(e) => Err(e.into()),
                 }
             }
-                .boxed(),
+            .boxed(),
             Err(e) => future::err(e.into()).boxed(),
         }
     }
@@ -118,7 +118,7 @@ impl TxnManager for MempoolProxy {
                     Err(e) => Err(e.into()),
                 }
             }
-                .boxed(),
+            .boxed(),
             Err(e) => future::err(e.into()).boxed(),
         }
     }

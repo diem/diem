@@ -75,7 +75,7 @@ fn convert_to_future<T: Send + 'static>(
             }
         }
     }
-        .boxed()
+    .boxed()
 }
 
 impl ExecutorProxyTrait for ExecutorProxy {
@@ -86,7 +86,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
             resp.map(|r| r.latest_version)
                 .ok_or_else(|| format_err!("failed to fetch startup info"))
         }
-            .boxed()
+        .boxed()
     }
 
     fn get_latest_ledger_info(&self) -> Pin<Box<dyn Future<Output = Result<LedgerInfo>> + Send>> {
@@ -132,7 +132,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
                 txn_list_with_proof: Some(transactions.into()),
             })
         }
-            .boxed()
+        .boxed()
     }
 
     fn validate_ledger_info(&self, target: &LedgerInfo) -> Result<()> {

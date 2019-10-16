@@ -82,6 +82,6 @@ impl TxnManager for MockTransactionManager {
                 .expect("Failed to notify about mempool commit");
             Ok(())
         }
-            .boxed()
+        .boxed()
     }
 }

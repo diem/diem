@@ -84,7 +84,7 @@ impl StateComputer for ExecutionProxy {
                 Err(e) => Err(e.into()),
             }
         }
-            .boxed()
+        .boxed()
     }
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
@@ -112,7 +112,7 @@ impl StateComputer for ExecutionProxy {
                 Err(e) => Err(e.into()),
             }
         }
-            .boxed()
+        .boxed()
     }
 
     /// Synchronize to a commit that not present locally.
