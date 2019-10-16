@@ -34,7 +34,7 @@ libra_wallet = { path = "./libra_wallet" }
 logger =  { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 libra-types = { path = "../types" }
-tools = { path = "../common/tools/" }
+libra-tools = { path = "../common/tools/" }
 transaction_builder = { path = "../language/transaction_builder" }
 
 [dev-dependencies]

@@ -19,7 +19,7 @@ use std::{
 };
 
 #[cfg(test)]
-use tools::tempdir::TempPath;
+use libra_tools::tempdir::TempPath;
 
 /// Mnemonic seed for deterministic key derivation based on [BIP39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki).
 /// The mnemonic must encode entropy in a multiple of 32 bits. With more entropy, security is

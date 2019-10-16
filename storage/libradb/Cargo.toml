@@ -35,7 +35,7 @@ metrics = { path = "../../common/metrics" }
 prost-ext = { path = "../../common/prost-ext" }
 schemadb = { path = "../schemadb" }
 storage_proto = { path = "../storage_proto" }
-tools = { path = "../../common/tools" }
+libra-tools = { path = "../../common/tools" }
 libra-types = { path = "../../types" }
 
 [dev-dependencies]

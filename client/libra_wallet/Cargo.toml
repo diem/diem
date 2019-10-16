@@ -25,4 +25,4 @@ libra-types = { path = "../../types" }
 
 [dev-dependencies]
 libra-types = { path = "../../types", features = ["testing"]}
-tools = { path = "../../common/tools"}
+libra-tools = { path = "../../common/tools"}

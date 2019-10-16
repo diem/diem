@@ -18,13 +18,13 @@ use storage_client::{
 fn start_test_storage_with_read_write_client(
     need_to_use_genesis: bool,
 ) -> (
-    tools::tempdir::TempPath,
+    libra_tools::tempdir::TempPath,
     ServerHandle,
     StorageReadServiceClient,
     StorageWriteServiceClient,
 ) {
     let mut config = NodeConfigHelpers::get_single_node_test_config(/* random_ports = */ true);
-    let tmp_dir = tools::tempdir::TempPath::new();
+    let tmp_dir = libra_tools::tempdir::TempPath::new();
     config.storage.dir = tmp_dir.path().to_path_buf();
 
     // initialize db with genesis info.

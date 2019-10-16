@@ -68,9 +68,9 @@ mod tests {
     use client::AccountData;
     use config::config::RoleType;
     use libra_swarm::swarm::LibraSwarm;
+    use libra_tools::tempdir::TempPath;
     use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
     use std::ops::Range;
-    use tools::tempdir::TempPath;
 
     /// Start libra-swarm and create a BenchOpt struct for testing.
     /// Must return the TempPath otherwise it will be freed somehow.

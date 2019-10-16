@@ -22,7 +22,7 @@ failure = { path = "../common/failure_ext", package = "failure_ext" }
 generate-keypair = { path = "../config/generate-keypair" }
 logger = { path = "../common/logger" }
 crypto = { path = "../crypto/crypto" }
-tools = { path = "../common/tools" }
+libra-tools = { path = "../common/tools" }
 
 [dev-dependencies]
 crypto = { path = "../crypto/crypto", features = ["testing"]}

@@ -46,7 +46,7 @@ safety-rules = { path = "safety-rules" }
 state-synchronizer = { path = "../state-synchronizer" }
 schemadb = { path = "../storage/schemadb" }
 storage-client = { path = "../storage/storage-client" }
-tools = { path = "../common/tools" }
+libra-tools = { path = "../common/tools" }
 libra-types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }
 
