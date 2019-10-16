@@ -300,10 +300,7 @@ impl<T: Payload> BlockStore<T> {
                     assert_eq!(
                         executed_block.compute_result().executed_state.state_id,
                         qc.certified_block().executed_state_id(),
-                        "We have inconsistent executed state with the executed state from the quorum \
-                     certificate for block {}, will kill this validator and rely on state \
-                     synchronization to try to achieve consistent state with the quorum \
-                     certificate.",
+                        "QC for block {} has a different execution result than the local computation. Restart and try again.",
                         qc.certified_block().id(),
                     );
                 }
