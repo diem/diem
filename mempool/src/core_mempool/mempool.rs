@@ -15,11 +15,11 @@ use crate::{
 };
 use chrono::Utc;
 use config::config::NodeConfig;
+use libra_logger::prelude::*;
 use libra_mempool_shared_proto::{
     proto::mempool_status::MempoolAddTransactionStatusCode, MempoolAddTransactionStatus,
 };
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
-use logger::prelude::*;
 use lru_cache::LruCache;
 use std::{cmp::max, collections::HashSet, convert::TryFrom};
 use ttl_cache::TtlCache;

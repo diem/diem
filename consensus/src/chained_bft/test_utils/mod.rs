@@ -10,8 +10,8 @@ use consensus_types::{
 };
 use crypto::HashValue;
 use futures::executor::block_on;
+use libra_logger::{set_simple_logger, set_simple_logger_prefix};
 use libra_types::{crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo};
-use logger::{set_simple_logger, set_simple_logger_prefix};
 use std::sync::Arc;
 use termion::color::*;
 use tokio::runtime;

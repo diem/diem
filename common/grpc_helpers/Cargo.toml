@@ -15,5 +15,5 @@ futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features =
 futures_01 = { version = "0.1.28", package = "futures" }
 
 failure = { package = "failure_ext", path = "../failure_ext" }
-logger = { path = "../logger" }
+libra-logger = { path = "../logger" }
 metrics = { path = "../metrics" }

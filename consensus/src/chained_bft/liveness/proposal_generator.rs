@@ -12,7 +12,7 @@ use consensus_types::{
     common::{Payload, Round},
 };
 use failure::ResultExt;
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use std::{
     sync::{Arc, Mutex},
     time::{Duration, Instant},

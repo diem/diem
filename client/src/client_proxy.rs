@@ -6,6 +6,7 @@ use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use config::{config::PersistableConfig, trusted_peers::ConsensusPeersConfig};
 use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
+use libra_logger::prelude::*;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
     access_path::AccessPath,
@@ -23,7 +24,6 @@ use libra_types::{
     transaction_helpers::{create_signed_txn, create_unsigned_txn, TransactionSigner},
 };
 use libra_wallet::{io_utils, wallet_library::WalletLibrary};
-use logger::prelude::*;
 use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,

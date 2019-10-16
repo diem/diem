@@ -6,9 +6,9 @@ use cli::{
 };
 use config::config::{NodeConfig, RoleType};
 use crypto::{ed25519::*, test_utils::KeyPair, SigningKey};
+use libra_logger::prelude::*;
 use libra_swarm::{swarm::LibraSwarm, utils};
 use libra_tools::tempdir::TempPath;
-use logger::prelude::*;
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::fs;
@@ -27,7 +27,7 @@ struct TestEnvironment {
 
 impl TestEnvironment {
     fn new(num_validators: usize) -> Self {
-        ::logger::init_for_e2e_testing();
+        ::libra_logger::init_for_e2e_testing();
         let faucet_key = generate_keypair::load_faucet_key_or_create_default(None);
         let validator_swarm = LibraSwarm::configure_swarm(
             num_validators,

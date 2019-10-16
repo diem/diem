@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use config::config::{NodeConfig, NodeConfigHelpers};
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use slog_scope::GlobalLoggerGuard;
 use std::path::Path;
 
@@ -62,7 +62,7 @@ fn set_default_global_logger(
         return None;
     }
 
-    Some(logger::set_default_global_logger(
+    Some(libra_logger::set_default_global_logger(
         true,      /* async */
         chan_size, /* chan_size */
     ))

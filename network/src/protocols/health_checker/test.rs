@@ -152,7 +152,7 @@ async fn expect_open_substream(
 
 #[test]
 fn outbound() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (mut peer_mgr_reqs_rx, mut peer_mgr_notifs_tx, mut ticker_tx) =
         setup_default_health_checker(&mut rt);
@@ -187,7 +187,7 @@ fn outbound() {
 
 #[test]
 fn inbound() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (_, mut peer_mgr_notifs_tx, _) = setup_default_health_checker(&mut rt);
 
@@ -205,7 +205,7 @@ fn inbound() {
 
 #[test]
 fn outbound_failure_permissive() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let ping_failures_tolerated = 10;
     let (mut peer_mgr_reqs_rx, mut peer_mgr_notifs_tx, mut ticker_tx) =
@@ -244,7 +244,7 @@ fn outbound_failure_permissive() {
 
 #[test]
 fn ping_success_resets_fail_counter() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let failures_triggered = 10;
     let ping_failures_tolerated = 2 * 10;
@@ -304,7 +304,7 @@ fn ping_success_resets_fail_counter() {
 
 #[test]
 fn outbound_failure_strict() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (mut peer_mgr_reqs_rx, mut peer_mgr_notifs_tx, mut ticker_tx) =
         setup_default_health_checker(&mut rt);
@@ -342,7 +342,7 @@ fn outbound_failure_strict() {
 
 #[test]
 fn ping_timeout() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (mut peer_mgr_reqs_rx, mut peer_mgr_notifs_tx, mut ticker_tx) =
         setup_default_health_checker(&mut rt);

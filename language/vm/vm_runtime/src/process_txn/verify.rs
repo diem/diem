@@ -8,6 +8,7 @@ use crate::{
     txn_executor::TransactionExecutor,
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
+use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     transaction::{
@@ -16,7 +17,6 @@ use libra_types::{
     },
     vm_error::{StatusCode, VMStatus},
 };
-use logger::prelude::*;
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, VMResult},

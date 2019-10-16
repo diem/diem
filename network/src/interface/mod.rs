@@ -29,8 +29,8 @@ use crate::{
 };
 use channel;
 use futures::{future::BoxFuture, FutureExt, SinkExt, StreamExt};
+use libra_logger::prelude::*;
 use libra_types::PeerId;
-use logger::prelude::*;
 use std::{collections::HashMap, fmt::Debug, time::Duration};
 
 pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute

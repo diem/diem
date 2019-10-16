@@ -18,8 +18,8 @@ use config::{
 };
 use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
+use libra_logger::prelude::*;
 use libra_types::PeerId;
-use logger::prelude::*;
 use parity_multiaddr::{Multiaddr, Protocol};
 use std::{
     collections::BTreeMap,

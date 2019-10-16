@@ -17,7 +17,7 @@ use std::time::Instant;
 
 #[test]
 fn single_peer_to_peer_with_event() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     // create a FakeExecutor with a genesis from file
     test_all_genesis(|mut executor| {
         // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
@@ -71,7 +71,7 @@ fn single_peer_to_peer_with_event() {
 
 #[test]
 fn single_peer_to_peer_with_padding() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::CustomScripts);
 

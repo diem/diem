@@ -31,7 +31,7 @@ crypto = { path = "../crypto/crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 lcs = { path = "../common/lcs", package = "libra-canonical-serialization" }
 libra_wallet = { path = "./libra_wallet" }
-logger =  { path = "../common/logger" }
+libra-logger =  { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 libra-types = { path = "../types" }
 libra-tools = { path = "../common/tools/" }

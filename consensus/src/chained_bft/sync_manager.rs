@@ -17,8 +17,8 @@ use consensus_types::{
     sync_info::SyncInfo,
 };
 use failure;
+use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
-use logger::prelude::*;
 use network::proto::BlockRetrievalStatus;
 use rand::{prelude::*, Rng};
 use std::{

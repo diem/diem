@@ -14,10 +14,10 @@ use futures::{
     stream::{futures_unordered::FuturesUnordered, select_all},
     StreamExt,
 };
+use libra_logger::prelude::*;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures, transaction::TransactionListWithProof,
 };
-use logger::prelude::*;
 use network::{
     proto::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg, StateSynchronizerMsg_oneof},
     validator_network::{Event, StateSynchronizerEvents, StateSynchronizerSender},

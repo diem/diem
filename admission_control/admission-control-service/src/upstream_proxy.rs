@@ -13,7 +13,7 @@ use futures::{
     channel::{mpsc, oneshot},
     stream::{select_all, StreamExt},
 };
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use network::validator_network::{
     AdmissionControlNetworkEvents, AdmissionControlNetworkSender, Event, RpcError,
 };

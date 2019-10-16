@@ -10,7 +10,7 @@ use futures::{
     stream::{FusedStream, Stream},
     task::{Context, Poll},
 };
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use metrics::IntGauge;
 use std::{
     pin::Pin,

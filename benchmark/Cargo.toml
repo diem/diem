@@ -27,7 +27,7 @@ failure = { package = "failure_ext", path = "../common/failure_ext" }
 generate-keypair = { path = "../config/generate-keypair" }
 libra_wallet = { path = "../client/libra_wallet" }
 libra-swarm = { path = "../libra-swarm" }
-logger = { path = "../common/logger" }
+libra-logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 crypto = { path = "../crypto/crypto" }
 rusty-fork = "0.2.1"

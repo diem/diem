@@ -9,7 +9,7 @@ use crate::{
 use admission_control_proto::proto::admission_control::AdmissionControlClient;
 use client::AccountData;
 use grpcio::{ChannelBuilder, EnvBuilder};
-use logger::{self, prelude::*};
+use libra_logger::{self, prelude::*};
 use metrics::metric_server::start_server;
 use std::{sync::Arc, time};
 

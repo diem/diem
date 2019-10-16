@@ -11,8 +11,8 @@ use consensus_types::{
 };
 use crypto::HashValue;
 use failure::{Result, ResultExt};
+use libra_logger::prelude::*;
 use libra_types::ledger_info::LedgerInfo;
-use logger::prelude::*;
 use rmp_serde::{from_slice, to_vec_named};
 use safety_rules::ConsensusState;
 use std::{

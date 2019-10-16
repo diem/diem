@@ -7,7 +7,7 @@ use crate::{
 };
 use channel;
 use consensus_types::common::Round;
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use std::{
     fmt,
     sync::Arc,

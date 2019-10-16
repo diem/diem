@@ -33,8 +33,8 @@ use crypto::{
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
 use futures::StreamExt;
+use libra_logger::prelude::*;
 use libra_types::{validator_signer::ValidatorSigner, PeerId};
-use logger::prelude::*;
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
 use parity_multiaddr::Multiaddr;
 use std::{

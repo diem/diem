@@ -13,7 +13,7 @@ use crate::chained_bft::consensusdb::schema::{
 use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert};
 use crypto::HashValue;
 use failure::prelude::*;
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
 use schemadb::{
     ColumnFamilyOptions, ColumnFamilyOptionsMap, ReadOptions, SchemaBatch, DB, DEFAULT_CF_NAME,

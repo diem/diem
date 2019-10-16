@@ -12,8 +12,8 @@ use consensus_types::{
 };
 use crypto::HashValue;
 use executor::StateComputeResult;
+use libra_logger::prelude::*;
 use libra_types::crypto_proxies::ValidatorVerifier;
-use logger::prelude::*;
 use mirai_annotations::{checked_verify_eq, precondition};
 use serde::Serialize;
 use std::{

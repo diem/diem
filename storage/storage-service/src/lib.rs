@@ -12,9 +12,9 @@ pub mod mocks;
 use config::config::NodeConfig;
 use failure::prelude::*;
 use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle};
+use libra_logger::prelude::*;
 use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
 use libradb::LibraDB;
-use logger::prelude::*;
 use metrics::counters::SVC_COUNTERS;
 use std::{
     convert::TryFrom,

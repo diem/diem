@@ -20,7 +20,7 @@ prometheus = { version = "0.7.0", default-features = false }
 config = { path = "../config" }
 executor = { path = "../execution/executor" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
-logger = { path = "../common/logger" }
+libra-logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 network = { path = "../network" }
 storage-client = { path = "../storage/storage-client" }

@@ -8,7 +8,7 @@ use futures::{
     io::{AsyncRead, AsyncWrite},
     ready,
 };
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use std::{
     convert::TryInto,
     io,

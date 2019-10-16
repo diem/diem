@@ -11,7 +11,7 @@ use crate::{
     },
 };
 use futures::Future;
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use metrics::counters::COUNTER_ADMISSION_CONTROL_CANNOT_SEND_REPLY;
 
 #[derive(Clone, Default)]

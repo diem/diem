@@ -9,9 +9,9 @@ use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_d
 use executor::Executor;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
+use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
 use libra_types::account_address::AccountAddress as PeerId;
-use logger::prelude::*;
 use metrics::metric_server;
 use network::{
     validator_network::{

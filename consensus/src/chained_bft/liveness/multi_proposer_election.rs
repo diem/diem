@@ -6,7 +6,7 @@ use consensus_types::{
     block::Block,
     common::{Author, Payload, Round},
 };
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use siphasher::sip::SipHasher24;
 use std::hash::{Hash, Hasher};
 
