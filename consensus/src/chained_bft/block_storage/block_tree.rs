@@ -121,7 +121,7 @@ where
         let root_quorum_cert = Arc::new(root_quorum_cert);
         let mut id_to_quorum_cert = HashMap::new();
         id_to_quorum_cert.insert(
-            root_quorum_cert.certified_block_id(),
+            root_quorum_cert.certified_block().id(),
             Arc::clone(&root_quorum_cert),
         );
 
@@ -242,7 +242,7 @@ where
     }
 
     pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> failure::Result<()> {
-        let block_id = qc.certified_block_id();
+        let block_id = qc.certified_block().id();
         let qc = Arc::new(qc);
 
         // Safety invariant: For any two quorum certificates qc1, qc2 in the block store,
@@ -250,11 +250,11 @@ where
         // The invariant is quadratic but can be maintained in linear time by the check
         // below.
         precondition!({
-            let qc_round = qc.certified_block_round();
+            let qc_round = qc.certified_block().round();
             self.id_to_quorum_cert.values().all(|x| {
                 (*(*x).ledger_info()).ledger_info().consensus_data_hash()
                     == (*(*qc).ledger_info()).ledger_info().consensus_data_hash()
-                    || x.certified_block_round() != qc_round
+                    || x.certified_block().round() != qc_round
             })
         });
 

@@ -252,7 +252,8 @@ fn basic_new_rank_event_test() {
             pending_proposals[0]
                 .proposal()
                 .quorum_cert()
-                .certified_block_id(),
+                .certified_block()
+                .id(),
             genesis.id()
         );
         assert_eq!(pending_proposals[0].proposer(), node.author);
@@ -268,7 +269,7 @@ fn basic_new_rank_event_test() {
         let vote_msg = VoteMsg::new(
             VoteData::new(
                 BlockInfo::from_block(a1.block(), executed_state.state_id, executed_state.version),
-                a1.quorum_cert().vote_data().proposed().clone(),
+                a1.quorum_cert().certified_block().clone(),
             ),
             node.block_store.signer().author(),
             placeholder_ledger_info(),
@@ -309,7 +310,8 @@ fn basic_new_rank_event_test() {
             pending_proposals[0]
                 .proposal()
                 .quorum_cert()
-                .certified_block_id(),
+                .certified_block()
+                .id(),
             a1.id()
         );
     });
@@ -511,8 +513,8 @@ fn process_vote_timeout_msg_test() {
         vec![&static_proposer.signer, &non_proposer.signer],
         block_0_id,
         1,
-        block_0.quorum_cert().certified_block_id(),
-        block_0.quorum_cert().certified_block_round(),
+        block_0.quorum_cert().certified_block().id(),
+        block_0.quorum_cert().certified_block().round(),
     );
     non_proposer
         .block_store
@@ -522,14 +524,16 @@ fn process_vote_timeout_msg_test() {
         static_proposer
             .block_store
             .highest_quorum_cert()
-            .certified_block_round(),
+            .certified_block()
+            .round(),
         0
     );
     assert_eq!(
         non_proposer
             .block_store
             .highest_quorum_cert()
-            .certified_block_round(),
+            .certified_block()
+            .round(),
         1
     );
 
@@ -560,7 +564,8 @@ fn process_vote_timeout_msg_test() {
         static_proposer
             .block_store
             .highest_quorum_cert()
-            .certified_block_round(),
+            .certified_block()
+            .round(),
         1
     );
 }
@@ -692,14 +697,14 @@ fn process_votes_basic_test() {
 
     let vote_data = VoteData::new(
         BlockInfo::new(
-            a1.quorum_cert().vote_data().proposed().epoch(),
+            a1.quorum_cert().certified_block().epoch(),
             a1.round(),
             a1.id(),
             executed_state.state_id,
             executed_state.version,
             a1.timestamp_usecs(),
         ),
-        a1.quorum_cert().vote_data().proposed().clone(),
+        a1.quorum_cert().certified_block().clone(),
     );
 
     let vote_msg = VoteMsg::new(
@@ -714,7 +719,10 @@ fn process_votes_basic_test() {
         node.event_processor.process_vote(vote_msg).await;
         // The new QC is aggregated
         assert_eq!(
-            node.block_store.highest_quorum_cert().certified_block_id(),
+            node.block_store
+                .highest_quorum_cert()
+                .certified_block()
+                .id(),
             a1.id()
         );
     });

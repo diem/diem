@@ -108,14 +108,15 @@ impl<T: Payload> ProposalMsg<T> {
             self.proposal,
         );
         ensure!(
-            self.proposal.parent_id() == self.sync_info.highest_quorum_cert().certified_block_id(),
+            self.proposal.parent_id()
+                == self.sync_info.highest_quorum_cert().certified_block().id(),
             "Proposal HQC in SyncInfo certifies {}, but block parent id is {}",
-            self.sync_info.highest_quorum_cert().certified_block_id(),
+            self.sync_info.highest_quorum_cert().certified_block().id(),
             self.proposal.parent_id(),
         );
         let previous_round = self.proposal.round() - 1;
         let highest_certified_round = std::cmp::max(
-            self.proposal.quorum_cert().certified_block_round(),
+            self.proposal.quorum_cert().certified_block().round(),
             self.sync_info
                 .highest_timeout_certificate()
                 .map_or(0, |tc| tc.round()),

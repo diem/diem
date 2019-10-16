@@ -143,7 +143,7 @@ where
         loop {
             if self
                 .block_store
-                .block_exists(retrieve_qc.certified_block_id())
+                .block_exists(retrieve_qc.certified_block().id())
             {
                 break;
             }
@@ -189,7 +189,7 @@ where
             "Start state sync with peer: {}, to block: {}, round: {} from {}",
             peer.short_str(),
             committed_block_id,
-            highest_ledger_info.certified_block_round() - 2,
+            highest_ledger_info.certified_block().round() - 2,
             self.block_store.root()
         );
         let network = self.network.clone();
@@ -258,7 +258,7 @@ impl BlockRetriever {
     where
         T: Payload,
     {
-        let block_id = qc.certified_block_id();
+        let block_id = qc.certified_block().id();
         let mut peers: Vec<&AccountAddress> = qc.ledger_info().signatures().keys().collect();
         let mut attempt = 0_u32;
         loop {

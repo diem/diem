@@ -25,7 +25,7 @@ fn test_nil_block() {
 
     let nil_block = Block::make_nil_block(&genesis_block, 1, quorum_cert);
     assert_eq!(
-        nil_block.quorum_cert().certified_block_id(),
+        nil_block.quorum_cert().certified_block().id(),
         genesis_block.id()
     );
     assert_eq!(nil_block.round(), 1);
@@ -48,13 +48,13 @@ fn test_nil_block() {
         vec![&signer],
         nil_block.id(),
         nil_block.round(),
-        nil_block.quorum_cert().certified_block_id(),
-        nil_block.quorum_cert().certified_block_round(),
+        nil_block.quorum_cert().certified_block().id(),
+        nil_block.quorum_cert().certified_block().round(),
     );
     println!(
         "{:?} {:?}",
         nil_block.id(),
-        nil_block_qc.certified_block_id()
+        nil_block_qc.certified_block().id()
     );
     let nil_block_child = Block::make_block(
         &nil_block,
@@ -87,7 +87,7 @@ fn test_block_relation() {
     assert_eq!(next_block.round(), 1);
     assert_eq!(genesis_block.is_parent_of(&next_block), true);
     assert_eq!(
-        next_block.quorum_cert().certified_block_id(),
+        next_block.quorum_cert().certified_block().id(),
         genesis_block.id()
     );
     assert_eq!(next_block.payload(), Some(&payload));
@@ -117,8 +117,8 @@ fn test_block_qc() {
         vec![&signer],
         a1.id(),
         a1.round(),
-        a1.quorum_cert().certified_block_id(),
-        a1.quorum_cert().certified_block_round(),
+        a1.quorum_cert().certified_block().id(),
+        a1.quorum_cert().certified_block().round(),
     );
 
     let result = panic::catch_unwind(|| {

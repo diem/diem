@@ -174,9 +174,9 @@ impl SafetyRules {
     /// The update function is invoked whenever a system learns about a potentially high QC.
     pub fn update(&mut self, qc: &QuorumCert) {
         // Preferred block rule: choose the highest 2-chain head.
-        if qc.parent_block_round() > self.state.preferred_block_round() {
+        if qc.parent_block().round() > self.state.preferred_block_round() {
             self.state
-                .set_preferred_block_round(qc.parent_block_round());
+                .set_preferred_block_round(qc.parent_block().round());
         }
     }
 
@@ -193,10 +193,10 @@ impl SafetyRules {
         // 2) round(B0) + 1 = round(B1), and
         // 3) round(B1) + 1 = round(B2).
 
-        if block_parent_qc.parent_block_round() + 1 == block_parent_qc.certified_block_round()
-            && block_parent_qc.certified_block_round() + 1 == block_round
+        if block_parent_qc.parent_block().round() + 1 == block_parent_qc.certified_block().round()
+            && block_parent_qc.certified_block().round() + 1 == block_round
         {
-            return Some(block_parent_qc.parent_block_id());
+            return Some(block_parent_qc.parent_block().id());
         }
         None
     }
@@ -223,7 +223,7 @@ impl SafetyRules {
             });
         }
 
-        let respects_preferred_block = proposed_block.quorum_cert().certified_block_round()
+        let respects_preferred_block = proposed_block.quorum_cert().certified_block().round()
             >= self.state.preferred_block_round();
         if respects_preferred_block {
             self.state.set_last_vote_round(proposed_block.round());
@@ -241,8 +241,8 @@ impl SafetyRules {
                 proposal_round: proposed_block.round(),
                 consensus_state: self.state.clone(),
                 potential_commit_id,
-                parent_block_id: proposed_block.quorum_cert().certified_block_id(),
-                parent_block_round: proposed_block.quorum_cert().certified_block_round(),
+                parent_block_id: proposed_block.quorum_cert().certified_block().id(),
+                parent_block_round: proposed_block.quorum_cert().certified_block().round(),
             })
         } else {
             Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {
