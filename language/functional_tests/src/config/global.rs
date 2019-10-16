@@ -4,8 +4,7 @@
 // The config holds the options that define the testing environment.
 // A config entry starts with "//!", differentiating it from a directive.
 
-use crate::errors::*;
-use crate::genesis_accounts::make_genesis_accounts;
+use crate::{config::strip, errors::*, genesis_accounts::make_genesis_accounts};
 use language_e2e_tests::account::{Account, AccountData};
 use std::{
     collections::{btree_map, BTreeMap},
@@ -37,15 +36,13 @@ impl FromStr for Entry {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let s1 = s.split_whitespace().collect::<String>();
-        if !s1.starts_with("//!") {
-            return Err(
-                ErrorKind::Other("global config entry must start with //!".to_string()).into(),
-            );
-        }
-        let s2 = s1[3..].trim_start();
-        if s2.starts_with("account:") {
-            let v: Vec<_> = s2[8..]
+        let s = s.split_whitespace().collect::<String>();
+        let s = strip(&s, "//!")
+            .ok_or_else(|| ErrorKind::Other("txn config entry must start with //!".to_string()))?
+            .trim_start();
+
+        if let Some(s) = strip(s, "account:") {
+            let v: Vec<_> = s
                 .split(|c: char| c == ',' || c.is_whitespace())
                 .filter(|s| !s.is_empty())
                 .collect();
@@ -112,10 +109,11 @@ impl Config {
         })
     }
 
-    pub fn get_account_for_name(&self, name: &str) -> Option<&Account> {
+    pub fn get_account_for_name(&self, name: &str) -> Result<&Account> {
         self.accounts
             .get(name)
             .map(|account_data| account_data.account())
             .or_else(|| self.genesis_accounts.get(name))
+            .ok_or_else(|| ErrorKind::Other(format!("account '{}' does not exist", name)).into())
     }
 }
