@@ -25,7 +25,7 @@ consensus = { path = "../consensus" }
 crash-handler = { path = "../common/crash-handler" }
 debug-interface = { path = "../common/debug-interface" }
 executable-helpers = { path = "../common/executable-helpers" }
-executor = { path = "../execution/executor" }
+executor = { path = "../executor" }
 futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["async-await", "io-compat", "compat"] }
 grpc_helpers = { path = "../common/grpc_helpers" }
 libra-logger = { path = "../common/logger" }

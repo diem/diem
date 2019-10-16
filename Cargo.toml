@@ -27,7 +27,7 @@ members = [
     "crypto/crypto",
     "crypto/crypto-derive",
     "crypto/secret-service",
-    "execution/executor",
+    "executor",
     "language/benchmarks",
     "language/bytecode-verifier",
     "language/bytecode-verifier/invalid-mutations",
