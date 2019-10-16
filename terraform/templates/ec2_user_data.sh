@@ -33,4 +33,8 @@ cat > /etc/cron.d/metric_collector <<"EOF"
 * * * * * root	 docker container ls -q --filter label=com.amazonaws.ecs.container-name | xargs docker inspect --format='{{$tags := .Config.Labels}}build_info{revision="{{index $tags "org.label-schema.vcs-ref"}}", upstream="{{index $tags "vcs-upstream"}}"} 1' > /var/lib/node_exporter/textfile_collector/build_info.prom
 EOF
 
+cat > /etc/profile.d/libra_prompt.sh <<EOF
+export PS1="[\u:validator@\h \w]$ "
+EOF
+
 yum -y install ngrep tcpdump perf gdb nmap-ncat strace htop sysstat
