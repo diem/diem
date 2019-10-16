@@ -16,8 +16,8 @@ use crate::{
 };
 use crypto::HashValue;
 use failure::prelude::*;
+use libra_nibble::Nibble;
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
-use nibble::Nibble;
 
 /// `NodeVisitInfo` keeps track of the status of an internal node during the iteration process. It
 /// indicates which ones of its children have been visited.

@@ -24,12 +24,12 @@ use crypto::{
     HashValue,
 };
 use failure::{Fail, Result, *};
+use libra_nibble::Nibble;
 use libra_types::{
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
     transaction::Version,
 };
-use nibble::Nibble;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::cast::FromPrimitive;
 use proptest::{collection::hash_map, prelude::*};
