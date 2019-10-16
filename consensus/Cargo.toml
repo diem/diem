@@ -35,7 +35,7 @@ config = { path = "../config" }
 consensus-types = { path = "consensus-types", default-features = false }
 crypto = { path = "../crypto/crypto" }
 debug-interface = { path = "../common/debug-interface" }
-executor = { path = "../execution/executor" }
+executor = { path = "../executor" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 libra-logger = { path = "../common/logger" }
 libra-mempool = { path = "../mempool" }

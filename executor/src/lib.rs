@@ -3,8 +3,6 @@
 #![allow(dead_code)]
 
 mod block_processor;
-mod block_tree;
-
 #[cfg(test)]
 mod executor_test;
 #[cfg(test)]

@@ -1,7 +1,7 @@
 ---
-id: execution
-title: Execution
-custom_edit_url: https://github.com/libra/libra/edit/master/execution/README.md
+id: executor
+title: Executor
+custom_edit_url: https://github.com/libra/libra/edit/master/executor/README.md
 ---
 
 # Execution
@@ -58,7 +58,7 @@ consensus algorithm, there are two possible operations on this tree:
    rules. Then we save all these blocks to permanent storage and also discard
    all the conflicting blocks at the same time.
 
-Therefore, the execution component provides two primary APIs - `execute_block`
+Therefore, the executor component provides two primary APIs - `execute_block`
 and `commit_block` - to support the above operations.
 
 ## Implementation Details
@@ -105,10 +105,9 @@ and `B`.
 
 ## How is this component organized?
 ```
-    execution
-            └── execution_client   # A Rust wrapper on top of GRPC clients.
-            └── execution_proto    # All interfaces provided by the execution component.
-            └── execution_service  # Execution component as a GRPC service.
-            └── execution_tests    # Tests for the execution service.
-            └── executor           # The main implementation of execution component.
+    executor
+      ├──src
+      │   ├── block_processor    # A processor thread that execute and commit block directly.
+      │   └── mock_vm            # Mock implementations that are used for testing only.
+      └── tests                  # Integration tests with storage, etc.
 ```
