@@ -34,10 +34,7 @@ fn test_block_store_create_block() {
     assert_eq!(a1.quorum_cert().certified_block().id(), genesis.id());
 
     let a1_ref = block_on(block_store.execute_and_insert_block(a1)).unwrap();
-    let executed_state = &block_store
-        .get_compute_result(a1_ref.id())
-        .unwrap()
-        .executed_state;
+    let executed_state = &a1_ref.compute_result().executed_state;
 
     // certify a1
     let vote = Vote::new(
@@ -307,10 +304,7 @@ fn test_insert_vote() {
 
     assert!(block_store.get_quorum_cert_for_block(block.id()).is_none());
     for (i, voter) in signers.iter().enumerate().take(10).skip(1) {
-        let executed_state = &block_store
-            .get_compute_result(block.id())
-            .unwrap()
-            .executed_state;
+        let executed_state = &block.compute_result().executed_state;
 
         let vote = Vote::new(
             VoteData::new(
@@ -339,10 +333,7 @@ fn test_insert_vote() {
     }
 
     // Add the final vote to form a QC
-    let executed_state = &block_store
-        .get_compute_result(block.id())
-        .unwrap()
-        .executed_state;
+    let executed_state = &block.compute_result().executed_state;
     let final_voter = &signers[0];
     let vote = Vote::new(
         VoteData::new(

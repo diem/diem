@@ -435,6 +435,10 @@ where
         self.block().round()
     }
 
+    pub fn epoch(&self) -> u64 {
+        self.block().epoch()
+    }
+
     pub fn timestamp_usecs(&self) -> u64 {
         self.block().timestamp_usecs()
     }

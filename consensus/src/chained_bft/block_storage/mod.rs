@@ -15,7 +15,6 @@ mod block_tree;
 mod pending_votes;
 
 pub use block_store::{BlockStore, NeedFetchResult};
-use executor::StateComputeResult;
 
 /// Result of the vote processing. The failure case (Verification error) is returned
 /// as the Error part of the result.
@@ -44,12 +43,6 @@ pub trait BlockReader: Send + Sync {
 
     /// Try to get a block with the block_id, return an Arc of it if found.
     fn get_block(&self, block_id: HashValue) -> Option<Arc<ExecutedBlock<Self::Payload>>>;
-
-    /// Try to get a compute result given the specified block id.
-    ///
-    /// Returns an option since all blocks should have a compute result or None for root block
-    /// since it has already been committed.
-    fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<StateComputeResult>>;
 
     /// Get the current root block of the BlockTree.
     fn root(&self) -> Arc<ExecutedBlock<Self::Payload>>;

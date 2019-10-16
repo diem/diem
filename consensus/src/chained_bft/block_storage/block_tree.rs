@@ -11,7 +11,6 @@ use consensus_types::{
     vote::Vote,
 };
 use crypto::HashValue;
-use executor::StateComputeResult;
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use mirai_annotations::{checked_verify_eq, precondition};
@@ -170,17 +169,6 @@ where
     pub(super) fn get_block(&self, block_id: &HashValue) -> Option<Arc<ExecutedBlock<T>>> {
         self.get_linkable_block(block_id)
             .map(|lb| Arc::clone(lb.executed_block()))
-    }
-
-    pub(super) fn get_compute_result(
-        &self,
-        block_id: &HashValue,
-    ) -> Option<Arc<StateComputeResult>> {
-        if self.root_id == *block_id {
-            None
-        } else {
-            self.get_block(block_id).map(|b| b.compute_result().clone())
-        }
     }
 
     pub(super) fn root(&self) -> Arc<ExecutedBlock<T>> {

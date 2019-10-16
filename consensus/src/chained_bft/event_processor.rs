@@ -626,16 +626,11 @@ impl<T: Payload> EventProcessor<T> {
         let consensus_state = self.safety_rules.consensus_state();
         counters::LAST_VOTE_ROUND.set(consensus_state.last_vote_round() as i64);
 
-        let proposal_id = vote_info.proposal_id();
-        let executed_state = &self
-            .block_store
-            .get_compute_result(proposal_id)
-            .expect("Block proposed_block: no execution state found for inserted block.")
-            .executed_state;
+        let executed_state = &executed_block.compute_result().executed_state;
 
         let ledger_info_placeholder = self
             .block_store
-            .ledger_info_placeholder(vote_info.potential_commit_id());
+            .ledger_info_placeholder(vote_info.potential_commit_id(), block.epoch());
 
         let vote = Vote::new(
             VoteData::new(
@@ -814,10 +809,7 @@ impl<T: Payload> EventProcessor<T> {
                 counters::CREATION_TO_COMMIT_S.observe_duration(time_to_commit);
             }
             if let Some(payload) = committed.payload() {
-                let compute_result = self
-                    .block_store
-                    .get_compute_result(committed.id())
-                    .expect("Compute result of a pending block is unknown");
+                let compute_result = committed.compute_result();
                 if let Err(e) = self
                     .txn_manager
                     .commit_txns(
