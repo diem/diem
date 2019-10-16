@@ -9,7 +9,7 @@ module VecTest{
         grid: Vector.T<bool>,
     }
 
-    public test_move_vec_resource() {
+    public test_move_vec_to_sender() {
         let t: Self.VecBox;
         let grid: Vector.T<bool>;
 
@@ -21,6 +21,41 @@ module VecTest{
 
         move_to_sender_channel<VecBox>(move(t));
 
+        return;
+    }
+
+    public test_move_vec_from_sender() {
+        let t: Self.VecBox;
+        let grid: Vector.T<bool>;
+
+        t = move_from_sender_channel<VecBox>();
+        VecBox{ grid } = move(t);
+        Vector.destroy_empty<bool>(move(grid));
+        return;
+    }
+
+    public test_move_vec_to_receiver() {
+        let t: Self.VecBox;
+        let grid: Vector.T<bool>;
+
+        grid = Vector.empty<bool>();
+
+        t = VecBox {
+            grid: move(grid),
+        };
+
+        move_to_receiver_channel<VecBox>(move(t));
+
+        return;
+    }
+
+    public test_move_vec_from_receiver() {
+        let t: Self.VecBox;
+        let grid: Vector.T<bool>;
+
+        t = move_from_receiver_channel<VecBox>();
+        VecBox{ grid } = move(t);
+        Vector.destroy_empty<bool>(move(grid));
         return;
     }
 }
@@ -44,6 +79,39 @@ main(sender_amount:u64, receiver_amount:u64) {
 import {{default}}.VecTest;
 
 main() {
-    VecTest.test_move_vec_resource();
+    VecTest.test_move_vec_to_sender();
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+import {{default}}.VecTest;
+
+main() {
+    VecTest.test_move_vec_from_sender();
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+import {{default}}.VecTest;
+
+main() {
+    VecTest.test_move_vec_to_receiver();
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+import {{default}}.VecTest;
+
+main() {
+    VecTest.test_move_vec_from_receiver();
     return;
 }
