@@ -13,6 +13,7 @@ use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::fs;
 use std::str::FromStr;
+use std::{thread, time};
 
 struct TestEnvironment {
     validator_swarm: LibraSwarm,
@@ -360,6 +361,20 @@ fn test_startup_sync_state() {
     // during a node startup
     fs::remove_dir_all(state_db_path).unwrap();
     assert!(env.validator_swarm.add_node(peer_to_stop, false).is_ok());
+    let max_tries = 60;
+    for retry in 0..max_tries {
+        if retry == max_tries - 1 {
+            panic!("Sync failed to complete");
+        }
+        let expected_balance = Decimal::from_f64(90.0);
+        let actual_balance =
+            Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok();
+        if actual_balance == expected_balance {
+            break;
+        }
+        println!("Sync not complete. Retrying...");
+        thread::sleep(time::Duration::from_secs(1));
+    }
     assert_eq!(
         Decimal::from_f64(90.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
