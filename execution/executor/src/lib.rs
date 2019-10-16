@@ -218,7 +218,7 @@ where
             root_hash,
             /* consensus_data_hash = */ HashValue::zero(),
             *GENESIS_BLOCK_ID,
-            /* epoch_num = */ 0,
+            /* epoch = */ 0,
             /* timestamp_usecs = */ 0,
             None,
         );

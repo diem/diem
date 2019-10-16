@@ -18,7 +18,7 @@ pub type Round = u64;
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct BlockInfo {
     /// Epoch number corresponds to the set of validators that are active for this block.
-    epoch_num: u64,
+    epoch: u64,
     /// The consensus protocol executes proposals (blocks) in rounds, which monotically increase per epoch.
     round: Round,
     /// The identifier (hash) of the block.
@@ -33,7 +33,7 @@ pub struct BlockInfo {
 
 impl BlockInfo {
     pub fn new(
-        epoch_num: u64,
+        epoch: u64,
         round: Round,
         id: HashValue,
         executed_state_id: HashValue,
@@ -41,7 +41,7 @@ impl BlockInfo {
         timestamp_usecs: u64,
     ) -> Self {
         Self {
-            epoch_num,
+            epoch,
             round,
             id,
             executed_state_id,
@@ -52,7 +52,7 @@ impl BlockInfo {
 
     pub fn empty() -> Self {
         Self {
-            epoch_num: 0,
+            epoch: 0,
             round: 0,
             id: HashValue::zero(),
             executed_state_id: HashValue::zero(),
@@ -63,7 +63,7 @@ impl BlockInfo {
 
     pub fn from_block<T>(block: &Block<T>, executed_state_id: HashValue, version: Version) -> Self {
         Self {
-            epoch_num: block.epoch(),
+            epoch: block.epoch(),
             round: block.round(),
             id: block.id(),
             executed_state_id,
@@ -74,7 +74,7 @@ impl BlockInfo {
 
     pub fn random(round: Round) -> Self {
         Self {
-            epoch_num: 0,
+            epoch: 0,
             round,
             id: HashValue::zero(),
             executed_state_id: HashValue::zero(),
@@ -83,8 +83,8 @@ impl BlockInfo {
         }
     }
 
-    pub fn epoch_num(&self) -> u64 {
-        self.epoch_num
+    pub fn epoch(&self) -> u64 {
+        self.epoch
     }
 
     pub fn executed_state_id(&self) -> HashValue {
@@ -111,7 +111,7 @@ impl BlockInfo {
 impl From<BlockInfo> for network::proto::BlockInfo {
     fn from(block_info: BlockInfo) -> Self {
         Self {
-            epoch_num: block_info.epoch_num(),
+            epoch: block_info.epoch(),
             round: block_info.round(),
             id: block_info.id().to_vec(),
             executed_state_id: block_info.executed_state_id().to_vec(),
@@ -126,7 +126,7 @@ impl TryFrom<network::proto::BlockInfo> for BlockInfo {
 
     fn try_from(proto: network::proto::BlockInfo) -> Result<Self> {
         Ok(BlockInfo::new(
-            proto.epoch_num,
+            proto.epoch,
             proto.round,
             HashValue::from_slice(&proto.id)?,
             HashValue::from_slice(&proto.executed_state_id)?,

@@ -67,7 +67,7 @@ fn to_blocks_to_commit(
                 partial_ledger_info_with_sigs
                     .ledger_info()
                     .consensus_block_id(),
-                partial_ledger_info_with_sigs.ledger_info().epoch_num(),
+                partial_ledger_info_with_sigs.ledger_info().epoch(),
                 partial_ledger_info_with_sigs
                     .ledger_info()
                     .timestamp_usecs(),

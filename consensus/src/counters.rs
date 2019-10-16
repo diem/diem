@@ -102,9 +102,9 @@ pub static ref SYNC_INFO_MSGS_RECEIVED_COUNT: IntCounter = OP_COUNTERS.counter("
 // RECONFIGURATION COUNTERS
 //////////////////////
 /// Current epoch num
-pub static ref EPOCH_NUM: IntGauge = OP_COUNTERS.gauge("epoch_num");
+pub static ref EPOCH: IntGauge = OP_COUNTERS.gauge("epoch");
 /// The number of validators in the current epoch
-pub static ref CURRENT_EPOCH_NUM_VALIDATORS: IntGauge = OP_COUNTERS.gauge("current_epoch_num_validators");
+pub static ref CURRENT_EPOCH_VALIDATORS: IntGauge = OP_COUNTERS.gauge("current_epoch_validators");
 /// Quorum size in the current epoch
 pub static ref CURRENT_EPOCH_QUORUM_SIZE: IntGauge = OP_COUNTERS.gauge("current_epoch_quorum_size");
 

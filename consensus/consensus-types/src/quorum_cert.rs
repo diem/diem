@@ -93,7 +93,7 @@ impl QuorumCert {
     /// - the map of signatures is empty because genesis block is implicitly agreed.
     pub fn certificate_for_genesis_from_ledger_info(ledger_info: &LedgerInfo) -> QuorumCert {
         let ancestor = BlockInfo::new(
-            ledger_info.epoch_num(),
+            ledger_info.epoch(),
             0,
             *GENESIS_BLOCK_ID,
             ledger_info.transaction_accumulator_hash(),
@@ -107,7 +107,7 @@ impl QuorumCert {
             ledger_info.transaction_accumulator_hash(),
             vote_data.hash(),
             *GENESIS_BLOCK_ID,
-            ledger_info.epoch_num() + 1,
+            ledger_info.epoch() + 1,
             ledger_info.timestamp_usecs(),
             None,
         );
