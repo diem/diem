@@ -293,16 +293,22 @@ impl<T: Payload> BlockStore<T> {
         // state and on restart, a new execution will agree with it.  A new execution will match
         // the QuorumCert's state on the next restart will work if there is a memory
         // corruption, for example.
-        if let Some(compute_result) = self.get_compute_result(qc.certified_block().id()) {
-            assert_eq!(
-                compute_result.executed_state.state_id,
-                qc.certified_block().executed_state_id(),
-                "We have inconsistent executed state with the executed state from the quorum \
-                 certificate for block {}, will kill this validator and rely on state \
-                 synchronization to try to achieve consistent state with the quorum \
-                 certificate.",
-                qc.certified_block().id(),
-            );
+        match self.get_block(qc.certified_block().id()) {
+            Some(executed_block) => {
+                // TODO: Once we fill in the root compute result, we should remove this
+                if self.root() != executed_block {
+                    assert_eq!(
+                        executed_block.compute_result().executed_state.state_id,
+                        qc.certified_block().executed_state_id(),
+                        "We have inconsistent executed state with the executed state from the quorum \
+                     certificate for block {}, will kill this validator and rely on state \
+                     synchronization to try to achieve consistent state with the quorum \
+                     certificate.",
+                        qc.certified_block().id(),
+                    );
+                }
+            }
+            None => bail!("Insert {} without having the block in store first", qc),
         }
 
         self.storage
@@ -385,47 +391,45 @@ impl<T: Payload> BlockStore<T> {
 
     /// If block id information is found, returns the ledger info placeholder, otherwise, return
     /// a placeholder with info of the genesis block.
-    pub fn ledger_info_placeholder(&self, id: Option<HashValue>) -> LedgerInfo {
-        let block_id = match id {
-            None => return Self::zero_ledger_info_placeholder(),
+    pub fn ledger_info_placeholder(
+        &self,
+        potential_commit_id: Option<HashValue>,
+        epoch_num: u64,
+    ) -> LedgerInfo {
+        let block_id = match potential_commit_id {
             Some(id) => id,
+            None => return Self::zero_ledger_info_placeholder(epoch_num),
         };
-        let block = match self.get_block(block_id) {
+        let block_to_commit = match self.get_block(block_id) {
             Some(b) => b,
             None => {
-                return Self::zero_ledger_info_placeholder();
+                return Self::zero_ledger_info_placeholder(epoch_num);
             }
         };
-        let (state_id, version) = match self.get_compute_result(block_id) {
-            Some(compute_state) => (
-                compute_state.executed_state.state_id,
-                compute_state.executed_state.version,
-            ),
-            None => {
-                return Self::zero_ledger_info_placeholder();
-            }
-        };
+        let compute_result = block_to_commit.compute_result();
+        // The block we vote for should be in the same epoch as the block we commit.
+        assert_eq!(epoch_num, block_to_commit.epoch());
         LedgerInfo::new(
-            version,
-            state_id,
+            compute_result.executed_state.version,
+            compute_result.executed_state.state_id,
             HashValue::zero(),
             block_id,
-            0, // TODO [Reconfiguration] use the real epoch number.
-            block.timestamp_usecs(),
-            None,
+            block_to_commit.epoch(),
+            block_to_commit.timestamp_usecs(),
+            compute_result.executed_state.validators.clone(),
         )
     }
 
     /// Used in case we're using a ledger info just as a placeholder for signing the votes / QCs
     /// and there is no real block committed.
     /// It's all pretty much zeroes.
-    fn zero_ledger_info_placeholder() -> LedgerInfo {
+    fn zero_ledger_info_placeholder(epoch_num: u64) -> LedgerInfo {
         LedgerInfo::new(
             0,
             HashValue::zero(),
             HashValue::zero(),
             HashValue::zero(),
-            0,
+            epoch_num,
             0,
             None,
         )
@@ -460,10 +464,6 @@ impl<T: Payload> BlockReader for BlockStore<T> {
 
     fn get_block(&self, block_id: HashValue) -> Option<Arc<ExecutedBlock<T>>> {
         self.inner.read().unwrap().get_block(&block_id)
-    }
-
-    fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<StateComputeResult>> {
-        self.inner.read().unwrap().get_compute_result(&block_id)
     }
 
     fn root(&self) -> Arc<ExecutedBlock<T>> {
