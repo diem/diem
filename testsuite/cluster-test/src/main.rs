@@ -596,12 +596,12 @@ impl ClusterTestRunner {
             }
             let deadline = now + HEALTH_POLL_INTERVAL;
             let events = self.logs.recv_all_until_deadline(deadline);
-            if self
-                .health_check_runner
-                .run(&events, &HashSet::new(), true)
-                .is_err()
+            if let Ok(failed_instances) =
+                self.health_check_runner.run(&events, &HashSet::new(), true)
             {
-                break;
+                if failed_instances.is_empty() {
+                    break;
+                }
             }
         }
         Ok(())
