@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::block_storage::{BlockStore, BlockReader};
+use crate::chained_bft::block_storage::{BlockReader, BlockStore};
 use consensus_types::{
     block::{Block, ExecutedBlock},
     common::Round,
@@ -11,10 +11,7 @@ use consensus_types::{
 };
 use crypto::HashValue;
 use futures::executor::block_on;
-use libra_types::{
-    crypto_proxies::ValidatorSigner,
-    ledger_info::LedgerInfo,
-};
+use libra_types::{crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo};
 use logger::{set_simple_logger, set_simple_logger_prefix};
 use std::sync::Arc;
 use termion::color::*;
@@ -67,8 +64,7 @@ pub fn build_chain() -> Vec<Arc<ExecutedBlock<TestPayload>>> {
     let block_store = build_empty_tree();
     let mut inserter = TreeInserter::new(block_store.clone());
     let genesis = block_store.root();
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
     let a2 = inserter.insert_block(&a1, 2, None);
     let a3 = inserter.insert_block(&a2, 3, Some(genesis.id()));
     let a4 = inserter.insert_block(&a3, 4, Some(a1.id()));

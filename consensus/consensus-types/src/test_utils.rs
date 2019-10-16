@@ -8,7 +8,7 @@ use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner},
     ledger_info::LedgerInfo,
 };
-use std::collections::BTreeMap;
+use std::collections::btree_map::BTreeMap;
 
 pub fn placeholder_ledger_info() -> LedgerInfo {
     LedgerInfo::new(
@@ -46,9 +46,8 @@ pub fn placeholder_certificate_for_block(
     let mut ledger_info_placeholder = placeholder_ledger_info();
     ledger_info_placeholder.set_consensus_data_hash(consensus_data_hash);
 
-    match consensus_block_id {
-        Some(bid) => ledger_info_placeholder.set_consensus_block_id(bid),
-        None => {},
+    if let Some(bid) = consensus_block_id {
+        ledger_info_placeholder.set_consensus_block_id(bid)
     }
 
     let mut signatures = BTreeMap::new();
