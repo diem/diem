@@ -12,6 +12,7 @@ use consensus_types::{
 };
 use crypto::HashValue;
 use std::sync::Arc;
+use futures::StreamExt;
 
 /// Partially obtain parameters for `RecoveryData::find_root()`.
 /// The parameter of `storage_ledger` will be manually defined, and will control the output of `find_root()`.
@@ -26,30 +27,11 @@ fn get_find_root_params(
         .iter()
         .map(|executed_block| executed_block.block().quorum_cert().clone())
         .collect();
-    // TODO
-    //    let (blocks, quorum_certs) = executed_blocks
-    //        .iter()
-    //        .map(|eb| (eb.block(), eb.block().quorum_cert()))
-    //        .cloned()
-    //        .unzip()
-    //        .collect();
     (blocks, quorum_certs)
 }
 
 /// Verify that the found root matches the expected root.
-fn is_correct_consensus_root(
-    blocks: &[Block<TestPayload>],
-    b_idx_end: usize,
-    found_root: (Block<TestPayload>, QuorumCert, QuorumCert),
-) -> bool {
-    let root = &blocks[b_idx_end - 3];
-    let qc = blocks[b_idx_end - 2].quorum_cert();
-    let li = blocks[b_idx_end].quorum_cert();
-    *root == found_root.0 && *qc == found_root.1 && *li == found_root.2
-}
-
-/// Verify that the found root matches the expected root.
-fn is_correct_storage_root(
+fn is_correct_root(
     blocks: &[Block<TestPayload>],
     committed_b_idx: usize,
     found_root: (Block<TestPayload>, QuorumCert, QuorumCert),
@@ -121,7 +103,7 @@ fn test_chain_restartability_root_from_consensusdb() {
                     .unwrap();
 
             // Verify that LI(C) is the root.
-            assert!(is_correct_consensus_root(&blocks, b_idx_end, found_root));
+            assert!(is_correct_root(&blocks, b_idx_end - 3, found_root));
         }
     }
 }
@@ -155,11 +137,7 @@ fn test_chain_restartability_root_from_storage() {
                     .unwrap();
 
             // Verify that LI(S) is the root.
-            assert!(is_correct_storage_root(
-                &blocks,
-                committed_b_idx,
-                found_root
-            ));
+            assert!(is_correct_root(&blocks, committed_b_idx, found_root));
         }
     }
 }
@@ -194,11 +172,7 @@ fn test_chain_restartability_same_root() {
                 .unwrap();
 
         // Verify that LI(S) is the root.
-        assert!(is_correct_storage_root(
-            &blocks,
-            committed_b_idx,
-            found_root
-        ));
+        assert!(is_correct_root(&blocks, committed_b_idx, found_root));
     }
 }
 
