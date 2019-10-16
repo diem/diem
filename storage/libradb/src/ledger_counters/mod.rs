@@ -17,7 +17,7 @@ use strum_macros::{AsRefStr, EnumIter};
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, ToPrimitive, EnumIter, AsRefStr)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
 #[strum(serialize_all = "snake_case")]
-pub(crate) enum LedgerCounter {
+pub enum LedgerCounter {
     EventsCreated = 101,
 
     NewStateLeaves = 201,
@@ -65,7 +65,7 @@ impl InnerLedgerCounters {
 }
 
 /// Represents `LedgerCounter` bumps yielded by saving a batch of transactions.
-pub(crate) struct LedgerCounterBumps {
+pub struct LedgerCounterBumps {
     bumps: InnerLedgerCounters,
 }
 
@@ -97,7 +97,7 @@ impl LedgerCounterBumps {
 
 /// Represents ledger counter values at a certain version.
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub(crate) struct LedgerCounters {
+pub struct LedgerCounters {
     counters: InnerLedgerCounters,
 }
 
