@@ -20,7 +20,7 @@ serde = { version = "1.0.89", features = ["derive"] }
 
 crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
-nibble = { path = "../../common/nibble" }
+libra-nibble = { path = "../../common/nibble" }
 libra-types = { path = "../../types" }
 
 [dev-dependencies]

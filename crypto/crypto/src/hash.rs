@@ -71,7 +71,7 @@
 use bytes::Bytes;
 use failure::prelude::*;
 use lazy_static::lazy_static;
-use nibble::Nibble;
+use libra_nibble::Nibble;
 use proptest_derive::Arbitrary;
 use rand::{rngs::EntropyRng, Rng};
 use serde::{de, ser};

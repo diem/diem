@@ -8,7 +8,7 @@
 mod nibble_path_test;
 
 use crate::ROOT_NIBBLE_HEIGHT;
-use nibble::Nibble;
+use libra_nibble::Nibble;
 use proptest::{collection::vec, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::{fmt, iter::FromIterator};
