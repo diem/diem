@@ -38,19 +38,20 @@ fn test_mock_vm_different_senders() {
     let amount = 100;
     let mut txns = vec![];
     for i in 0..10 {
-        txns.push(encode_mint_transaction(gen_address(i), amount));
+        txns.push(Transaction::UserTransaction(encode_mint_transaction(
+            gen_address(i),
+            amount,
+        )));
     }
 
     let outputs = MockVM::execute_block(
-        txns.iter()
-            .map(|txn| Transaction::UserTransaction(txn.clone()))
-            .collect(),
+        txns.clone(),
         &VMConfig::empty_whitelist_FOR_TESTING(),
         &MockStateView,
     );
 
     for (output, txn) in itertools::zip_eq(outputs.iter(), txns.iter()) {
-        let sender = txn.sender();
+        let sender = txn.as_signed_user_txn().unwrap().sender();
         assert_eq!(
             output.write_set().iter().cloned().collect::<Vec<_>>(),
             vec![
