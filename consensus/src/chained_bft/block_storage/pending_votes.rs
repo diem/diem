@@ -118,7 +118,7 @@ impl PendingVotes {
         validator_verifier: &ValidatorVerifier,
     ) -> Option<VoteReceptionResult> {
         let round_signature = vote_msg.round_signature().cloned()?;
-        let round = vote_msg.vote_data().block_round();
+        let round = vote_msg.vote_data().proposed().round();
         let tc = self
             .round_to_tc
             .entry(round)
@@ -138,7 +138,7 @@ impl PendingVotes {
     /// on some other result, prune the last vote and insert new one in map.
     fn replace_prev_vote(&mut self, vote_msg: &VoteMsg) -> Result<(), VoteReceptionResult> {
         let author = vote_msg.author();
-        let round = vote_msg.vote_data().block_round();
+        let round = vote_msg.vote_data().proposed().round();
         let li_digest = vote_msg.ledger_info().hash();
         let is_timeout = vote_msg.is_timeout();
         let vote_info = LastVoteInfo {

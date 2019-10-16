@@ -3,13 +3,14 @@
 
 use crate::chained_bft::{
     block_storage::{BlockReader, BlockStore, NeedFetchResult, VoteReceptionResult},
-    test_utils::{
-        self, build_empty_tree, build_empty_tree_with_custom_signing,
-        placeholder_certificate_for_block, placeholder_ledger_info, TreeInserter,
-    },
+    test_utils::{self, build_empty_tree, build_empty_tree_with_custom_signing, TreeInserter},
 };
 use consensus_types::{
-    block::{block_test_utils, Block, ExecutedBlock},
+    block::{
+        block_test_utils::{self, placeholder_certificate_for_block, placeholder_ledger_info},
+        Block, ExecutedBlock,
+    },
+    block_info::BlockInfo,
     common::Author,
     quorum_cert::QuorumCert,
     vote_data::VoteData,
@@ -65,19 +66,20 @@ fn test_block_store_create_block() {
     assert_eq!(a1.quorum_cert().certified_block_id(), genesis.id());
 
     let a1_ref = block_on(block_store.execute_and_insert_block(a1)).unwrap();
+    let executed_state = &block_store
+        .get_compute_result(a1_ref.id())
+        .unwrap()
+        .executed_state;
 
     // certify a1
     let vote_msg = VoteMsg::new(
         VoteData::new(
-            a1_ref.id(),
-            block_store
-                .get_compute_result(a1_ref.id())
-                .unwrap()
-                .executed_state
-                .state_id,
-            a1_ref.round(),
-            a1_ref.quorum_cert().parent_block_id(),
-            a1_ref.quorum_cert().parent_block_round(),
+            BlockInfo::from_block(
+                a1_ref.block(),
+                executed_state.state_id,
+                executed_state.version,
+            ),
+            a1_ref.quorum_cert().vote_data().proposed().clone(),
         ),
         block_store.signer().author(),
         placeholder_ledger_info(),
@@ -338,17 +340,19 @@ fn test_insert_vote() {
 
     assert!(block_store.get_quorum_cert_for_block(block.id()).is_none());
     for (i, voter) in signers.iter().enumerate().take(10).skip(1) {
+        let executed_state = &block_store
+            .get_compute_result(block.id())
+            .unwrap()
+            .executed_state;
+
         let vote_msg = VoteMsg::new(
             VoteData::new(
-                block.id(),
-                block_store
-                    .get_compute_result(block.id())
-                    .unwrap()
-                    .executed_state
-                    .state_id,
-                block.round(),
-                block.quorum_cert().parent_block_id(),
-                block.quorum_cert().parent_block_round(),
+                BlockInfo::from_block(
+                    block.block(),
+                    executed_state.state_id,
+                    executed_state.version,
+                ),
+                block.quorum_cert().vote_data().proposed().clone(),
             ),
             voter.author(),
             placeholder_ledger_info(),
@@ -369,18 +373,19 @@ fn test_insert_vote() {
     }
 
     // Add the final vote to form a QC
+    let executed_state = &block_store
+        .get_compute_result(block.id())
+        .unwrap()
+        .executed_state;
     let final_voter = &signers[0];
     let vote_msg = VoteMsg::new(
         VoteData::new(
-            block.id(),
-            block_store
-                .get_compute_result(block.id())
-                .unwrap()
-                .executed_state
-                .state_id,
-            block.round(),
-            block.quorum_cert().parent_block_id(),
-            block.quorum_cert().parent_block_round(),
+            BlockInfo::from_block(
+                block.block(),
+                executed_state.state_id,
+                executed_state.version,
+            ),
+            block.quorum_cert().vote_data().proposed().clone(),
         ),
         final_voter.author(),
         placeholder_ledger_info(),

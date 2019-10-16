@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{common::Round, vote_data::VoteData};
+use crate::{block_info::BlockInfo, common::Round, vote_data::VoteData};
 use crypto::{
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
@@ -45,23 +45,27 @@ impl QuorumCert {
     }
     /// All the vote data getters are just proxies for retrieving the values from the VoteData
     pub fn certified_block_id(&self) -> HashValue {
-        self.vote_data.block_id()
+        self.vote_data.proposed().id()
     }
 
     pub fn certified_state_id(&self) -> HashValue {
-        self.vote_data.executed_state_id()
+        self.vote_data.proposed().executed_state_id()
     }
 
     pub fn certified_block_round(&self) -> Round {
-        self.vote_data.block_round()
+        self.vote_data.proposed().round()
     }
 
     pub fn parent_block_id(&self) -> HashValue {
-        self.vote_data.parent_block_id()
+        self.vote_data.parent().id()
     }
 
     pub fn parent_block_round(&self) -> Round {
-        self.vote_data.parent_block_round()
+        self.vote_data.parent().round()
+    }
+
+    pub fn vote_data(&self) -> &VoteData {
+        &self.vote_data
     }
 
     pub fn ledger_info(&self) -> &LedgerInfoWithSignatures {
@@ -88,18 +92,27 @@ impl QuorumCert {
     ///   epoch.
     /// - the map of signatures is empty because genesis block is implicitly agreed.
     pub fn certificate_for_genesis_from_ledger_info(ledger_info: &LedgerInfo) -> QuorumCert {
-        let state_id = ledger_info.transaction_accumulator_hash();
-        let vote_data = VoteData::new(*GENESIS_BLOCK_ID, state_id, 0, *GENESIS_BLOCK_ID, 0);
-        let signer = ValidatorSigner::genesis();
+        let ancestor = BlockInfo::new(
+            ledger_info.epoch_num(),
+            0,
+            *GENESIS_BLOCK_ID,
+            ledger_info.transaction_accumulator_hash(),
+            ledger_info.version(),
+            ledger_info.timestamp_usecs(),
+        );
+        let vote_data = VoteData::new(ancestor.clone(), ancestor);
+
         let li = LedgerInfo::new(
             ledger_info.version(),
-            state_id,
+            ledger_info.transaction_accumulator_hash(),
             vote_data.hash(),
             *GENESIS_BLOCK_ID,
             ledger_info.epoch_num() + 1,
             ledger_info.timestamp_usecs(),
             None,
         );
+
+        let signer = ValidatorSigner::genesis();
         let signature = signer
             .sign_message(li.hash())
             .expect("Fail to sign genesis ledger info");
@@ -115,9 +128,9 @@ impl QuorumCert {
             "Quorum Cert's hash mismatch LedgerInfo"
         );
         // Genesis is implicitly agreed upon, it doesn't have real signatures.
-        if self.vote_data.block_round() == 0
-            && self.vote_data.block_id() == *GENESIS_BLOCK_ID
-            && self.vote_data.executed_state_id() == *ACCUMULATOR_PLACEHOLDER_HASH
+        if self.vote_data.proposed().round() == 0
+            && self.vote_data.proposed().id() == *GENESIS_BLOCK_ID
+            && self.vote_data.proposed().executed_state_id() == *ACCUMULATOR_PLACEHOLDER_HASH
         {
             return Ok(());
         }

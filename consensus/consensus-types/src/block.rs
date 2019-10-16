@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    block_info::BlockInfo,
     common::{Author, Round},
     quorum_cert::QuorumCert,
     vote_data::VoteData,
@@ -195,28 +196,36 @@ where
     }
 
     /// Construct new genesis block for next epoch deterministically from the end-epoch LedgerInfo
-    /// We carry over a few fields - executed_state_id, timestamps, epoch number
+    /// We carry over most fields except round and block id
     pub fn make_genesis_block_from_ledger_info(ledger_info: &LedgerInfo) -> Self {
         assert!(ledger_info.next_validator_set().is_some());
-        let ancestor_id = HashValue::zero();
-        let state_id = ledger_info.transaction_accumulator_hash();
+        let ancestor = BlockInfo::new(
+            ledger_info.epoch_num(),
+            0,
+            HashValue::zero(),
+            ledger_info.transaction_accumulator_hash(),
+            ledger_info.version(),
+            ledger_info.timestamp_usecs(),
+        );
+
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
         // carrying information about version from the last LedgerInfo of previous epoch.
         let genesis_quorum_cert = QuorumCert::new(
-            VoteData::new(ancestor_id, state_id, 0, ancestor_id, 0),
+            VoteData::new(ancestor.clone(), ancestor),
             LedgerInfoWithSignatures::new(
                 LedgerInfo::new(
                     ledger_info.version(),
-                    state_id,
+                    ledger_info.transaction_accumulator_hash(),
                     HashValue::zero(),
                     HashValue::zero(),
-                    0,
-                    0,
+                    ledger_info.epoch_num(),
+                    ledger_info.timestamp_usecs(),
                     None,
                 ),
                 BTreeMap::new(),
             ),
         );
+
         let block_internal = BlockSerializer::<T> {
             payload: None,
             epoch: ledger_info.epoch_num() + 1,

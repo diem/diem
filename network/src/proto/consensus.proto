@@ -101,16 +101,10 @@ message BlockInfo {
 }
 
 message VoteData {
-  // The id of the block being vote for.
-  bytes block_id = 1;
-  // The id and the version of the state after executing the block.
-  bytes executed_state_id = 2;
-  // The round of the block being voted for
-  uint64 round = 3;
-  // The id of the parent block
-  bytes parent_block_id = 4;
-  // The round of the parent block
-  uint64 parent_block_round = 5;
+  // Contains all the block information needed for voting for the proposed round.
+  BlockInfo proposed = 1;
+  // Contains all the block information for the parent for the proposed round.
+  BlockInfo parent = 2;
 }
 
 message Vote {

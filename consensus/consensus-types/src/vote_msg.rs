@@ -83,7 +83,7 @@ impl VoteMsg {
         }
         self.round_signature.replace(
             validator_signer
-                .sign_message(common::round_hash(self.vote_data().block_round()))
+                .sign_message(common::round_hash(self.vote_data().proposed().round()))
                 .expect("Failed to sign round")
                 .into(),
         );
@@ -113,7 +113,7 @@ impl VoteMsg {
         &self.sync_info
     }
 
-    /// Returns the signature for the vote_data.block_round() that can be aggregated for
+    /// Returns the signature for the vote_data.proposed().round() that can be aggregated for
     /// TimeoutCertificate.
     pub fn round_signature(&self) -> Option<&Signature> {
         self.round_signature.as_ref()
@@ -140,7 +140,7 @@ impl VoteMsg {
                 .verify(
                     validator,
                     self.author(),
-                    common::round_hash(self.vote_data().block_round()),
+                    common::round_hash(self.vote_data().proposed().round()),
                 )
                 .with_context(|e| format!("Fail to verify VoteMsg: {:?}", e))?;
         }

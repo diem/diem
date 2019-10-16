@@ -21,6 +21,7 @@ use crate::{
 };
 use consensus_types::{
     block::Block,
+    block_info::BlockInfo,
     common::{Author, Payload, Round},
     proposal_msg::ProposalMsg,
     quorum_cert::QuorumCert,
@@ -101,7 +102,7 @@ impl<T: Payload> EventProcessor<T> {
         );
         let author = block_store.signer().author();
         let last_vote_sent = last_vote.map(|v| {
-            let round = v.vote_data().block_round();
+            let round = v.vote_data().proposed().round();
             (v, round)
         });
         Self {
@@ -483,7 +484,7 @@ impl<T: Payload> EventProcessor<T> {
         };
 
         // Safety invariant: The vote being sent is for the proposal that was received.
-        debug_checked_verify_eq!(proposal_id, vote_msg.vote_data().block_id());
+        debug_checked_verify_eq!(proposal_id, vote_msg.vote_data().proposed().id());
         // Safety invariant: The last voted round is updated to be the same as the proposed block's
         // round. At this point, the replica has decided to vote for the proposed block.
         debug_checked_verify_eq!(
@@ -621,29 +622,27 @@ impl<T: Payload> EventProcessor<T> {
         counters::LAST_VOTE_ROUND.set(consensus_state.last_vote_round() as i64);
 
         let proposal_id = vote_info.proposal_id();
-        let executed_state_id = self
+        let executed_state = &self
             .block_store
             .get_compute_result(proposal_id)
             .expect("Block proposed_block: no execution state found for inserted block.")
-            .executed_state
-            .state_id;
+            .executed_state;
 
         let ledger_info_placeholder = self
             .block_store
             .ledger_info_placeholder(vote_info.potential_commit_id());
+
         let vote_msg = VoteMsg::new(
             VoteData::new(
-                proposal_id,
-                executed_state_id,
-                block.round(),
-                vote_info.parent_block_id(),
-                vote_info.parent_block_round(),
+                BlockInfo::from_block(block, executed_state.state_id, executed_state.version),
+                block.quorum_cert().vote_data().proposed().clone(),
             ),
             self.author,
             ledger_info_placeholder,
             self.block_store.signer(),
             self.gen_sync_info(),
         );
+
         self.storage
             .save_consensus_state(vote_info.consensus_state().clone(), vote_msg.clone())
             .with_context(|e| format!("Fail to persist consensus state: {:?}", e))?;
@@ -661,7 +660,7 @@ impl<T: Payload> EventProcessor<T> {
         // Check whether this validator is a valid recipient of the vote.
         if !vote_msg.is_timeout() {
             // Unlike timeout votes regular votes are sent to the leaders of the next round only.
-            let next_round = vote_msg.vote_data().block_round() + 1;
+            let next_round = vote_msg.vote_data().proposed().round() + 1;
             if self
                 .proposer_election
                 .is_valid_proposer(self.author, next_round)

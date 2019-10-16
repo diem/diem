@@ -3,21 +3,16 @@
 
 use crate::chained_bft::block_storage::BlockStore;
 use consensus_types::{
-    block::{Block, ExecutedBlock},
+    block::{block_test_utils::placeholder_certificate_for_block, Block, ExecutedBlock},
     common::Round,
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
-    vote_data::VoteData,
 };
-use crypto::{hash::CryptoHash, HashValue};
-use executor::ExecutedState;
+use crypto::HashValue;
 use futures::executor::block_on;
-use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner},
-    ledger_info::LedgerInfo,
-};
+use libra_types::{crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo};
 use logger::{set_simple_logger, set_simple_logger_prefix};
-use std::{collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 use termion::color::*;
 use tokio::runtime;
 
@@ -157,49 +152,6 @@ pub fn placeholder_ledger_info() -> LedgerInfo {
         0,
         0,
         None,
-    )
-}
-
-pub fn placeholder_certificate_for_block(
-    signers: Vec<&ValidatorSigner>,
-    certified_block_id: HashValue,
-    certified_block_round: u64,
-    certified_parent_block_id: HashValue,
-    certified_parent_block_round: u64,
-) -> QuorumCert {
-    // Assuming executed state to be Genesis state.
-    let certified_block_state = ExecutedState::state_for_genesis();
-    let consensus_data_hash = VoteData::new(
-        certified_block_id,
-        certified_block_state.state_id,
-        certified_block_round,
-        certified_parent_block_id,
-        certified_parent_block_round,
-    )
-    .hash();
-
-    // This ledger info doesn't carry any meaningful information: it is all zeros except for
-    // the consensus data hash that carries the actual vote.
-    let mut ledger_info_placeholder = placeholder_ledger_info();
-    ledger_info_placeholder.set_consensus_data_hash(consensus_data_hash);
-
-    let mut signatures = BTreeMap::new();
-    for signer in signers {
-        let li_sig = signer
-            .sign_message(ledger_info_placeholder.hash())
-            .expect("Failed to sign LedgerInfo");
-        signatures.insert(signer.author(), li_sig);
-    }
-
-    QuorumCert::new(
-        VoteData::new(
-            certified_block_id,
-            certified_block_state.state_id,
-            certified_block_round,
-            certified_parent_block_id,
-            certified_parent_block_round,
-        ),
-        LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures),
     )
 }
 
