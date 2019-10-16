@@ -28,26 +28,27 @@ pub fn placeholder_certificate_for_block(
     certified_block_round: u64,
     certified_parent_block_id: HashValue,
     certified_parent_block_round: u64,
-    is_commit_guaranteed: bool,
+    consensus_block_id: Option<HashValue>,
 ) -> QuorumCert {
     // Assuming executed state to be Genesis state.
     let certified_block_state = ExecutedState::state_for_genesis();
-    let consensus_data_hash = VoteData::vote_digest(
+    let vote_data = VoteData::new(
         certified_block_id,
         certified_block_state.state_id,
         certified_block_round,
         certified_parent_block_id,
         certified_parent_block_round,
     );
+    let consensus_data_hash = vote_data.hash();
 
     // This ledger info doesn't carry any meaningful information: it is all zeros except for
     // the consensus data hash that carries the actual vote.
     let mut ledger_info_placeholder = placeholder_ledger_info();
     ledger_info_placeholder.set_consensus_data_hash(consensus_data_hash);
 
-    if is_commit_guaranteed {
-        // Required to set consensus block id for the ledger info for testing restartability.
-        ledger_info_placeholder.set_consensus_block_id(certified_parent_block_id);
+    match consensus_block_id {
+        Some(bid) => ledger_info_placeholder.set_consensus_block_id(bid),
+        None => {},
     }
 
     let mut signatures = BTreeMap::new();
@@ -59,13 +60,7 @@ pub fn placeholder_certificate_for_block(
     }
 
     QuorumCert::new(
-        VoteData::new(
-            certified_block_id,
-            certified_block_state.state_id,
-            certified_block_round,
-            certified_parent_block_id,
-            certified_parent_block_round,
-        ),
+        vote_data,
         LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures),
     )
 }
