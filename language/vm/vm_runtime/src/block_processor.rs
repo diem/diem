@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::data_cache::RemoteCache;
 use crate::{
     code_cache::{
         module_adapter::ModuleFetcherImpl,
@@ -9,7 +8,7 @@ use crate::{
         script_cache::ScriptCache,
     },
     counters::*,
-    data_cache::{BlockDataCache, WriteSetDataCache},
+    data_cache::BlockDataCache,
     process_txn::{execute::ExecutedTransaction, validate::ValidationMode, ProcessTransaction},
 };
 use config::config::{VMMode, VMPublishingOption};
@@ -74,13 +73,11 @@ pub fn execute_block<'alloc>(
         record_stats! {time_hist | TXN_TOTAL_TIME_TAKEN | {
                 let output = match transaction {
                     Ok(t) => {
-                    let txn_cache =
-                    WriteSetDataCache::new_with_txn_payload(t.payload().clone(), &data_cache);
                     transaction_flow(
                         t,
                         &module_cache,
                         script_cache,
-                        &txn_cache,
+                        &data_cache,
                         mode,
                         publishing_option,
                         vm_mode,
@@ -119,7 +116,7 @@ fn transaction_flow<'alloc, P>(
     txn: SignatureCheckedTransaction,
     module_cache: P,
     script_cache: &ScriptCache<'alloc>,
-    data_cache: &dyn RemoteCache,
+    data_cache: &BlockDataCache<'_>,
     mode: ValidationMode,
     publishing_option: &VMPublishingOption,
     vm_mode: VMMode,

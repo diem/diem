@@ -60,7 +60,7 @@ impl<'alloc, 'txn> StructFieldScanner<'alloc, 'txn> {
     fn load_module_by_tag(&self, tag: &StructTag) -> VMResult<&LoadedModule> {
         self.module_cache
             .get_loaded_module(&ModuleId::new(tag.address, tag.module.clone()))?
-            .ok_or(VMStatus::new(StatusCode::MISSING_DATA))
+            .ok_or(VMStatus::new(StatusCode::MISSING_DATA).with_message(format!("load module by tag: {:?} fail.", tag)))
     }
 
     fn scan_struct_field(
@@ -98,7 +98,7 @@ impl<'alloc, 'txn> StructFieldScanner<'alloc, 'txn> {
                             let field_module = self
                                 .module_cache
                                 .get_loaded_module(&field_type_module_id)?
-                                .ok_or(VMStatus::new(StatusCode::MISSING_DATA))?;
+                                .ok_or(VMStatus::new(StatusCode::MISSING_DATA).with_message(format!("get module by id: {:?} fail.", field_type_module_id)))?;
                             let struct_value: Struct = match field_value.into(){
                                 Some(s) => s,
                                 None => {
@@ -247,7 +247,7 @@ impl<'alloc, 'txn> BalanceChecker<'alloc, 'txn> {
         self.scanner
             .module_cache()
             .resolve_struct_def(module, *struct_def_idx, &gas)?
-            .ok_or(VMStatus::new(StatusCode::MISSING_DATA))
+            .ok_or(VMStatus::new(StatusCode::MISSING_DATA).with_message(format!("resolve StructDef by tag: {:?} fail.", tag)))
     }
 
     pub fn check_balance(&self, write_set: &WriteSet) -> Result<(), VMStatus> {
@@ -261,10 +261,12 @@ impl<'alloc, 'txn> BalanceChecker<'alloc, 'txn> {
             match op {
                 WriteOp::Deletion => {
                     if !access_path.is_code() {
-                        old_resources.push(
-                            self.get_resource(access_path)?
-                                .ok_or(VMStatus::new(StatusCode::MISSING_DATA))?,
-                        );
+                        // if old resource not exist, it possible create at offchain.
+                        if let Some(old_resource) = self.get_resource(access_path)? {
+                            old_resources.push(old_resource);
+                        }else{
+                            debug!("Can not find old resource by access_path: {}", access_path);
+                        }
                     }
                 }
                 WriteOp::Value(value) => {

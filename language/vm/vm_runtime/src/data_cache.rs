@@ -5,7 +5,6 @@
 use libra_types::{
     access_path::AccessPath,
     language_storage::ModuleId,
-    transaction::TransactionPayload,
     vm_error::{sub_status, StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -82,26 +81,12 @@ impl<'block> RemoteCache for BlockDataCache<'block> {
 
 //TODO(jole) refactor this for channel transaction.
 pub struct WriteSetDataCache<'txn> {
-    write_set: WriteSet,
+    write_set: Option<WriteSet>,
     data_cache: &'txn dyn RemoteCache,
 }
 
 impl<'txn> WriteSetDataCache<'txn> {
-    pub fn new(write_set: WriteSet, data_cache: &'txn dyn RemoteCache) -> Self {
-        Self {
-            write_set,
-            data_cache,
-        }
-    }
-    //TODO optimize
-    pub fn new_with_txn_payload(
-        payload: TransactionPayload,
-        data_cache: &'txn dyn RemoteCache,
-    ) -> Self {
-        let write_set = match payload {
-            TransactionPayload::ChannelScript(channel_payload) => channel_payload.write_set,
-            _ => WriteSet::default(),
-        };
+    pub fn new(write_set: Option<WriteSet>, data_cache: &'txn dyn RemoteCache) -> Self {
         Self {
             write_set,
             data_cache,
@@ -111,7 +96,7 @@ impl<'txn> WriteSetDataCache<'txn> {
 
 impl<'txn> RemoteCache for WriteSetDataCache<'txn> {
     fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
-        match self.write_set.get(access_path) {
+        match self.write_set.as_ref().and_then(|ws|ws.get(access_path)) {
             Some(op) => match op {
                 WriteOp::Value(value) => Ok(Some(value.clone())),
                 WriteOp::Deletion => Ok(None),
@@ -131,13 +116,18 @@ pub struct TransactionDataCache<'txn> {
     // case moving forward, so we need to review this.
     // Also need to relate this to a ResourceKey.
     data_map: BTreeMap<AccessPath, GlobalRef>,
-    data_cache: &'txn dyn RemoteCache,
+    data_cache: WriteSetDataCache<'txn>,
 }
 
 impl<'txn> TransactionDataCache<'txn> {
     pub fn new(data_cache: &'txn dyn RemoteCache) -> Self {
+        Self::new_with_write_set(data_cache, None)
+    }
+
+    pub fn new_with_write_set(data_cache: &'txn dyn RemoteCache, pre_write_set: Option<WriteSet>) -> Self{
         TransactionDataCache {
-            data_cache,
+            //TODO(jole) optimize
+            data_cache: WriteSetDataCache::new(pre_write_set, data_cache),
             data_map: BTreeMap::new(),
         }
     }

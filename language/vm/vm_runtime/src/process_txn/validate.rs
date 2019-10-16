@@ -26,6 +26,7 @@ use crate::{
     },
     txn_executor::TransactionExecutor,
 };
+use libra_types::transaction::{ChannelWriteSetPayload, ChannelScriptPayload};
 
 pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8]) -> bool {
     match publishing_option {
@@ -365,22 +366,20 @@ where
         payload_check()?;
 
         // Check channel write_set asset balance, offchain channel transaction should keep asset
-        // balance
-        let channel_write_set = match txn.payload() {
-            TransactionPayload::ChannelWriteSet(channel_payload) => {
-                Some(channel_payload.write_set())
+        // balance, then cache the write_set to transaction cache for Move script to use.
+        let pre_cache_write_set = match txn.payload() {
+            TransactionPayload::ChannelWriteSet(ChannelWriteSetPayload{write_set, ..})
+            |TransactionPayload::ChannelScript(ChannelScriptPayload{write_set, ..})  => {
+                let balance_checker = BalanceChecker::new(data_cache, &module_cache);
+                balance_checker.check_balance(write_set)?;
+                Some(write_set.clone())
             }
-            TransactionPayload::ChannelScript(channel_payload) => Some(channel_payload.write_set()),
             _ => None,
         };
-        if let Some(write_set) = channel_write_set {
-            let balance_checker = BalanceChecker::new(data_cache, &module_cache);
-            balance_checker.check_balance(write_set)?;
-        }
 
         let metadata = TransactionMetadata::new(&txn);
         let mut txn_state =
-            ValidatedTransactionState::new(metadata, module_cache, data_cache, allocator, vm_mode);
+            ValidatedTransactionState::new(metadata, module_cache, data_cache, allocator, pre_cache_write_set, vm_mode);
 
         // Run the prologue to ensure that clients have enough gas and aren't tricking us by
         // sending us garbage.
@@ -430,12 +429,13 @@ where
         module_cache: P,
         data_cache: &'txn dyn RemoteCache,
         allocator: &'txn Arena<LoadedModule>,
+        pre_cache_write_set: Option<WriteSet>,
         vm_mode: VMMode,
     ) -> Self {
         // This temporary cache is used for modules published by a single transaction.
         let txn_module_cache = TransactionModuleCache::new(module_cache, allocator);
         let txn_executor =
-            TransactionExecutor::new_with_vm_mode(txn_module_cache, data_cache, metadata, vm_mode);
+            TransactionExecutor::new_with_vm_mode(txn_module_cache, data_cache, metadata, pre_cache_write_set, vm_mode);
         Self { txn_executor }
     }
 }

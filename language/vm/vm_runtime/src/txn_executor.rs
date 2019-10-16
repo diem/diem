@@ -157,6 +157,7 @@ where
         module_cache: P,
         data_cache: &'txn dyn RemoteCache,
         txn_data: TransactionMetadata,
+        pre_cache_write_set: Option<WriteSet>,
         vm_mode: VMMode,
     ) -> Self {
         TransactionExecutor {
@@ -164,7 +165,7 @@ where
             gas_meter: GasMeter::new(txn_data.max_gas_amount()),
             txn_data,
             event_data: Vec::new(),
-            data_view: TransactionDataCache::new(data_cache),
+            data_view: TransactionDataCache::new_with_write_set(data_cache, pre_cache_write_set),
             vm_mode,
         }
     }
