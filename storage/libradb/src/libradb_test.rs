@@ -7,6 +7,7 @@ use crate::{
     test_helper::arb_blocks_to_commit,
 };
 use crypto::hash::CryptoHash;
+use libra_tools::tempdir::TempPath;
 use libra_types::{
     account_config::get_account_resource_or_default, contract_event::ContractEvent,
     ledger_info::LedgerInfo,
@@ -14,7 +15,6 @@ use libra_types::{
 use proptest::prelude::*;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::collections::HashMap;
-use tools::tempdir::TempPath;
 
 fn test_save_blocks_impl(
     input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,

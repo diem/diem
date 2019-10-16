@@ -26,5 +26,5 @@ generate-keypair = { path = "../config/generate-keypair" }
 libra-swarm = { path = "../libra-swarm", features = ["testing"]}
 logger = { path = "../common/logger" }
 config = { path = "../config" }
-tools = { path = "../common/tools" }
+libra-tools = { path = "../common/tools" }
 crypto = { path = "../crypto/crypto" }

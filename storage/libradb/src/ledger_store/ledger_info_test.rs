@@ -3,9 +3,9 @@
 
 use super::*;
 use crate::{change_set::ChangeSet, LibraDB};
+use libra_tools::tempdir::TempPath;
 use libra_types::ledger_info::LedgerInfo;
 use proptest::{collection::vec, prelude::*};
-use tools::tempdir::TempPath;
 
 prop_compose! {
     fn arb_partial_ledger_info()(accu_hash in any::<HashValue>(),

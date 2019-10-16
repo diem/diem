@@ -6,6 +6,7 @@ use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use config::{config::PersistableConfig, trusted_peers::ConsensusPeersConfig};
 use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
+use libra_tools::tempdir::TempPath;
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -41,7 +42,6 @@ use std::{
     sync::Arc,
     thread, time,
 };
-use tools::tempdir::TempPath;
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
 const GAS_UNIT_PRICE: u64 = 0;
@@ -1086,9 +1086,9 @@ impl fmt::Display for AccountEntry {
 mod tests {
     use crate::client_proxy::{parse_bool, AddressAndIndex, ClientProxy};
     use config::{config::PersistableConfig, trusted_peers::ConfigHelpers};
+    use libra_tools::tempdir::TempPath;
     use libra_wallet::io_utils;
     use proptest::prelude::*;
-    use tools::tempdir::TempPath;
 
     fn generate_accounts_from_wallet(count: usize) -> (ClientProxy, Vec<AddressAndIndex>) {
         let mut accounts = Vec::new();

@@ -3,9 +3,9 @@
 
 use config::config::{NodeConfig, RoleType};
 use libra_swarm::{client, swarm::LibraSwarm};
+use libra_tools::tempdir::TempPath;
 use std::path::Path;
 use structopt::StructOpt;
-use tools::tempdir::TempPath;
 
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Libra swarm to start local nodes")]

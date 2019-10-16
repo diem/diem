@@ -7,12 +7,12 @@ use cli::{
 use config::config::{NodeConfig, RoleType};
 use crypto::{ed25519::*, test_utils::KeyPair, SigningKey};
 use libra_swarm::{swarm::LibraSwarm, utils};
+use libra_tools::tempdir::TempPath;
 use logger::prelude::*;
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::fs;
 use std::str::FromStr;
-use tools::tempdir::TempPath;
 
 struct TestEnvironment {
     validator_swarm: LibraSwarm,
@@ -39,7 +39,7 @@ impl TestEnvironment {
         )
         .unwrap();
 
-        let mnemonic_file = tools::tempdir::TempPath::new();
+        let mnemonic_file = libra_tools::tempdir::TempPath::new();
         mnemonic_file
             .create_as_file()
             .expect("could not create temporary mnemonic_file_path");

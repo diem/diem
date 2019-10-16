@@ -31,7 +31,7 @@ logger = { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 crypto = { path = "../crypto/crypto" }
 rusty-fork = "0.2.1"
-tools = { path = "../common/tools" }
+libra-tools = { path = "../common/tools" }
 libra-types = { path = "../types" }
 transaction_builder = { path = "../language/transaction_builder" }
 

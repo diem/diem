@@ -13,6 +13,7 @@ use crate::{
 };
 use crypto::ValidKey;
 use failure::prelude::*;
+use libra_tools::tempdir::TempPath;
 use libra_types::{
     transaction::{SignedTransaction, Transaction, SCRIPT_HASH_LENGTH},
     PeerId,
@@ -31,7 +32,6 @@ use std::{
     time::Duration,
 };
 use toml;
-use tools::tempdir::TempPath;
 
 #[cfg(test)]
 #[path = "unit_tests/config_test.rs"]

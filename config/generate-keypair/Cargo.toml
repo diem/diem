@@ -15,4 +15,4 @@ structopt = "0.3.2"
 
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 crypto = { path = "../../crypto/crypto/"}
-tools = { path = "../../common/tools" }
+libra-tools = { path = "../../common/tools" }

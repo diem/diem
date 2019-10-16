@@ -4,11 +4,11 @@
 use super::*;
 use crate::{pruner, LibraDB};
 use crypto::hash::CryptoHash;
+use libra_tools::tempdir::TempPath;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,
 };
-use tools::tempdir::TempPath;
 
 fn put_account_state_set(
     store: &StateStore,
