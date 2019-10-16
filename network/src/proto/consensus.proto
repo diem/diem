@@ -35,10 +35,11 @@ message SyncInfo {
 }
 
 message TimeoutCertificate {
+  uint64 epoch = 1;
   // Round certified by this timeout certificate.
-  uint64 round = 1;
+  uint64 round = 2;
   // List of signatures certifying the timeout.
-  repeated types.ValidatorSignature signatures = 2;
+  repeated types.ValidatorSignature signatures = 3;
 }
 
 message Block {
@@ -118,7 +119,7 @@ message Vote {
   // Signature of the ledger info.
   bytes signature = 4;
   // The round signatures can be aggregated into the timeout certificate.
-  bytes round_signature = 5;
+  bytes timeout_signature = 5;
 }
 
 message VoteMsg {

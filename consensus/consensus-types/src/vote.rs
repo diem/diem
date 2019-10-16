@@ -32,7 +32,7 @@ pub struct Vote {
     /// Signature of the LedgerInfo
     signature: Signature,
     /// The round signatures can be aggregated into a timeout certificate if present.
-    round_signature: Option<Signature>,
+    timeout_signature: Option<Signature>,
 }
 
 impl Display for Vote {
@@ -66,19 +66,22 @@ impl Vote {
             author,
             ledger_info: ledger_info_placeholder,
             signature: li_sig.into(),
-            round_signature: None,
+            timeout_signature: None,
         }
     }
 
     /// Generates a round signature, which can then be used for aggregating a timeout certificate.
     /// Typically called for generating vote messages that are sent upon timeouts.
-    pub fn add_round_signature(&mut self, validator_signer: &ValidatorSigner) {
-        if self.round_signature.is_some() {
+    pub fn add_timeout_signature(&mut self, validator_signer: &ValidatorSigner) {
+        if self.timeout_signature.is_some() {
             return; // round signature is already set
         }
-        self.round_signature.replace(
+        self.timeout_signature.replace(
             validator_signer
-                .sign_message(common::round_hash(self.vote_data().proposed().round()))
+                .sign_message(common::timeout_hash(
+                    self.vote_data().proposed().round(),
+                    self.vote_data().proposed().epoch(),
+                ))
                 .expect("Failed to sign round")
                 .into(),
         );
@@ -105,14 +108,14 @@ impl Vote {
 
     /// Returns the signature for the vote_data().proposed().round() that can be aggregated for
     /// TimeoutCertificate.
-    pub fn round_signature(&self) -> Option<&Signature> {
-        self.round_signature.as_ref()
+    pub fn timeout_signature(&self) -> Option<&Signature> {
+        self.timeout_signature.as_ref()
     }
 
     /// The vote message is considered a timeout vote message if it carries a signature on the
     /// round, which can then be used for aggregating it to the TimeoutCertificate.
     pub fn is_timeout(&self) -> bool {
-        self.round_signature.is_some()
+        self.timeout_signature.is_some()
     }
 
     /// Verifies that the consensus data hash of LedgerInfo corresponds to the vote info,
@@ -125,12 +128,15 @@ impl Vote {
         self.signature()
             .verify(validator, self.author(), self.ledger_info.hash())
             .with_context(|e| format!("Fail to verify Vote: {:?}", e))?;
-        if let Some(round_signature) = &self.round_signature {
-            round_signature
+        if let Some(timeout_signature) = &self.timeout_signature {
+            timeout_signature
                 .verify(
                     validator,
                     self.author(),
-                    common::round_hash(self.vote_data().proposed().round()),
+                    common::timeout_hash(
+                        self.vote_data().proposed().round(),
+                        self.vote_data.proposed().epoch(),
+                    ),
                 )
                 .with_context(|e| format!("Fail to verify Vote: {:?}", e))?;
         }
@@ -152,17 +158,17 @@ impl TryFrom<network::proto::Vote> for Vote {
             .ok_or_else(|| format_err!("Missing ledger_info"))?
             .try_into()?;
         let signature = Signature::try_from(&proto.signature)?;
-        let round_signature = if proto.round_signature.is_empty() {
+        let timeout_signature = if proto.timeout_signature.is_empty() {
             None
         } else {
-            Some(Signature::try_from(&proto.round_signature)?)
+            Some(Signature::try_from(&proto.timeout_signature)?)
         };
         Ok(Self {
             vote_data,
             author,
             ledger_info,
             signature,
-            round_signature,
+            timeout_signature,
         })
     }
 }
@@ -174,8 +180,8 @@ impl From<Vote> for network::proto::Vote {
             author: vote.author.into(),
             ledger_info: Some(vote.ledger_info.into()),
             signature: vote.signature.to_bytes(),
-            round_signature: vote
-                .round_signature
+            timeout_signature: vote
+                .timeout_signature
                 .map(|sig| sig.to_bytes())
                 .unwrap_or_else(Vec::new),
         }

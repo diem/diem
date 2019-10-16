@@ -555,7 +555,7 @@ fn process_vote_timeout_msg_test() {
         &non_proposer.signer,
     );
 
-    vote_on_timeout.add_round_signature(&non_proposer.signer);
+    vote_on_timeout.add_timeout_signature(&non_proposer.signer);
 
     let vote_msg_on_timeout = VoteMsg::new(
         vote_on_timeout,
@@ -565,7 +565,6 @@ fn process_vote_timeout_msg_test() {
             None,
         ),
     );
-
     block_on(
         static_proposer
             .event_processor
@@ -663,7 +662,7 @@ fn process_timeout_certificate_test() {
         genesis_qc.clone(),
         node.block_store.signer(),
     );
-    let tc = TimeoutCertificate::new(1, HashMap::new());
+    let tc = TimeoutCertificate::new(1, 1, HashMap::new());
 
     block_on(async move {
         let skip_round_proposal = ProposalMsg::<TestPayload>::new(

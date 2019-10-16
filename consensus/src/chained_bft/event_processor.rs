@@ -379,7 +379,7 @@ impl<T: Payload> EventProcessor<T> {
         };
 
         if !timeout_vote.is_timeout() {
-            timeout_vote.add_round_signature(self.block_store.signer());
+            timeout_vote.add_timeout_signature(self.block_store.signer());
         }
         let timeout_vote_msg = VoteMsg::new(timeout_vote, self.gen_sync_info());
         self.network.broadcast_vote(timeout_vote_msg).await

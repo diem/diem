@@ -36,8 +36,8 @@ impl<T> Payload for T where
 {
 }
 
-pub fn round_hash(round: Round) -> HashValue {
-    let digest = lcs::to_bytes(&round).expect("Should serialize");
+pub fn timeout_hash(round: Round, epoch: u64) -> HashValue {
+    let digest = lcs::to_bytes(&(round, epoch)).expect("Should serialize");
     let mut state = RoundHasher::default();
     state.write(digest.as_ref());
     state.finish()

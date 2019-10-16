@@ -13,35 +13,49 @@ use std::convert::TryFrom;
 use std::{collections::HashMap, fmt};
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
-/// TimeoutCertificate is a proof that 2f+1 participants have voted in round r and we can now move
-/// to round r+1.
+/// TimeoutCertificate is a proof that 2f+1 participants in epoch i
+/// have voted in round r and we can now move to round r+1.
 pub struct TimeoutCertificate {
+    epoch: u64,
     round: Round,
     signatures: HashMap<Author, Signature>,
 }
 
 impl fmt::Display for TimeoutCertificate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "TimeoutCertificate[round: {}]", self.round)
+        write!(
+            f,
+            "TimeoutCertificate[epoch: {}, round: {}]",
+            self.epoch, self.round
+        )
     }
 }
 
 impl TimeoutCertificate {
     /// Creates new TimeoutCertificate
-    pub fn new(round: Round, signatures: HashMap<Author, Signature>) -> Self {
-        Self { round, signatures }
+    pub fn new(epoch: u64, round: Round, signatures: HashMap<Author, Signature>) -> Self {
+        Self {
+            epoch,
+            round,
+            signatures,
+        }
     }
 
     /// Verifies the signatures for the round
     pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
         validator.check_voting_power(self.signatures().keys())?;
-        let round_digest = common::round_hash(self.round());
+        let round_digest = common::timeout_hash(self.round(), self.epoch());
         for (author, signature) in self.signatures() {
             signature
                 .verify(validator, *author, round_digest)
                 .with_context(|e| format!("Fail to verify TimeoutCertificate: {:?}", e))?;
         }
         Ok(())
+    }
+
+    /// Returns the epoch of the timeout certificate
+    pub fn epoch(&self) -> u64 {
+        self.epoch
     }
 
     /// Returns the round of the timeout certificate
@@ -67,6 +81,7 @@ impl TryFrom<network::proto::TimeoutCertificate> for TimeoutCertificate {
     type Error = failure::Error;
 
     fn try_from(proto: network::proto::TimeoutCertificate) -> failure::Result<Self> {
+        let epoch = proto.epoch;
         let round = proto.round;
         let signatures = proto
             .signatures
@@ -77,7 +92,7 @@ impl TryFrom<network::proto::TimeoutCertificate> for TimeoutCertificate {
                 Ok((author, signature))
             })
             .collect::<Result<HashMap<_, _>>>()?;
-        Ok(TimeoutCertificate::new(round, signatures))
+        Ok(TimeoutCertificate::new(epoch, round, signatures))
     }
 }
 
@@ -95,6 +110,7 @@ impl From<TimeoutCertificate> for network::proto::TimeoutCertificate {
             .collect();
 
         Self {
+            epoch: cert.epoch,
             round: cert.round,
             signatures,
         }

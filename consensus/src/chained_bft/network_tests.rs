@@ -260,7 +260,7 @@ impl NetworkPlayground {
     pub fn timeout_votes_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
         // Timeout votes carry non-empty round signatures.
         if let Some(ConsensusMsg_oneof::VoteMsg(vote_msg)) = &msg_copy.1.message {
-            !vote_msg.vote.as_ref().unwrap().round_signature.is_empty()
+            !vote_msg.vote.as_ref().unwrap().timeout_signature.is_empty()
         } else {
             false
         }
