@@ -68,7 +68,7 @@ fn test_proposal_generation_parent() {
     );
 
     // Once a1 is certified, it should be the one to choose from
-    inserter.insert_qc_for_block(a1.as_ref());
+    inserter.insert_qc_for_block(a1.as_ref(), None);
     let a1_child_res =
         block_on(proposal_generator.generate_proposal(11, minute_from_now())).unwrap();
     assert_eq!(a1_child_res.parent_id(), a1.id());
@@ -76,7 +76,7 @@ fn test_proposal_generation_parent() {
     assert_eq!(a1_child_res.quorum_cert().certified_block_id(), a1.id());
 
     // Once b1 is certified, it should be the one to choose from
-    inserter.insert_qc_for_block(b1.as_ref());
+    inserter.insert_qc_for_block(b1.as_ref(), None);
     let b1_child_res =
         block_on(proposal_generator.generate_proposal(12, minute_from_now())).unwrap();
     assert_eq!(b1_child_res.parent_id(), b1.id());
@@ -97,7 +97,7 @@ fn test_old_proposal_generation() {
     );
     let genesis = block_store.root();
     let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
-    inserter.insert_qc_for_block(a1.as_ref());
+    inserter.insert_qc_for_block(a1.as_ref(), None);
 
     let proposal_err = block_on(proposal_generator.generate_proposal(1, minute_from_now())).err();
     assert!(proposal_err.is_some());
@@ -121,20 +121,20 @@ fn test_empty_proposal_after_reconfiguration() {
         block_on(proposal_generator.generate_proposal(42, minute_from_now())).unwrap();
     assert!(!normal_proposal.payload().unwrap().is_empty());
     let a2 = inserter.insert_reconfiguration_block(&a1, 2);
-    inserter.insert_qc_for_block(a2.as_ref());
+    inserter.insert_qc_for_block(a2.as_ref(), None);
     // The direct child is empty
     let empty_proposal_1 =
         block_on(proposal_generator.generate_proposal(43, minute_from_now())).unwrap();
     assert!(empty_proposal_1.payload().unwrap().is_empty());
     // insert one more block after reconfiguration
     let a3 = inserter.create_block_with_qc(
-        inserter.create_qc_for_block(a2.as_ref()),
+        inserter.create_qc_for_block(a2.as_ref(), None),
         a2.as_ref(),
         4,
         vec![],
     );
     let a3 = block_on(block_store.execute_and_insert_block(a3)).unwrap();
-    inserter.insert_qc_for_block(a3.as_ref());
+    inserter.insert_qc_for_block(a3.as_ref(), None);
     // Indirect child is empty too
     let empty_proposal_2 =
         block_on(proposal_generator.generate_proposal(44, minute_from_now())).unwrap();

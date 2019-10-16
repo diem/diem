@@ -201,6 +201,7 @@ pub fn placeholder_certificate_for_block(
     certified_block_round: u64,
     certified_parent_block_id: HashValue,
     certified_parent_block_round: u64,
+    consensus_block_id: Option<HashValue>,
 ) -> QuorumCert {
     // Assuming executed state to be Genesis state.
     let genesis_ledger_info = LedgerInfo::genesis();
@@ -227,6 +228,10 @@ pub fn placeholder_certificate_for_block(
     // the consensus data hash that carries the actual vote.
     let mut ledger_info_placeholder = placeholder_ledger_info();
     ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
+
+    if let Some(bid) = consensus_block_id {
+        ledger_info_placeholder.set_consensus_block_id(bid)
+    }
 
     let mut signatures = BTreeMap::new();
     for signer in signers {
