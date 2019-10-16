@@ -124,7 +124,7 @@ impl<T: Payload> BlockStore<T> {
         );
         let quorum_certs = quorum_certs
             .into_iter()
-            .map(|qc| (qc.certified_block_id(), qc))
+            .map(|qc| (qc.certified_block().id(), qc))
             .collect::<HashMap<_, _>>();
         for block in blocks {
             assert!(!block.is_genesis_block());
@@ -140,7 +140,7 @@ impl<T: Payload> BlockStore<T> {
             // if this block is certified, ensure we agree with the certified state.
             if let Some(qc) = quorum_certs.get(&block.id()) {
                 assert_eq!(
-                    qc.certified_state_id(),
+                    qc.certified_block().executed_state_id(),
                     state_compute_result.executed_state.state_id,
                     "We have inconsistent executed state with Quorum Cert for block {}",
                     block.id()
@@ -264,22 +264,22 @@ impl<T: Payload> BlockStore<T> {
         // certified_block_round() - 2. In case root().round() is greater than that the committed
         // block carried by LI is older than my current commit.
         !(self.block_exists(committed_block_id)
-            || self.root().round() + 2 >= qc.certified_block_round())
+            || self.root().round() + 2 >= qc.certified_block().round())
     }
 
     /// Checks if quorum certificate can be inserted in block store without RPC
     /// Returns the enum to indicate the detailed status.
     pub fn need_fetch_for_quorum_cert(&self, qc: &QuorumCert) -> NeedFetchResult {
-        if qc.certified_block_round() < self.root().round() {
+        if qc.certified_block().round() < self.root().round() {
             return NeedFetchResult::QCRoundBeforeRoot;
         }
         if self
-            .get_quorum_cert_for_block(qc.certified_block_id())
+            .get_quorum_cert_for_block(qc.certified_block().id())
             .is_some()
         {
             return NeedFetchResult::QCAlreadyExist;
         }
-        if self.block_exists(qc.certified_block_id()) {
+        if self.block_exists(qc.certified_block().id()) {
             return NeedFetchResult::QCBlockExist;
         }
         NeedFetchResult::NeedFetch
@@ -292,15 +292,15 @@ impl<T: Payload> BlockStore<T> {
         // state and on restart, a new execution will agree with it.  A new execution will match
         // the QuorumCert's state on the next restart will work if there is a memory
         // corruption, for example.
-        if let Some(compute_result) = self.get_compute_result(qc.certified_block_id()) {
+        if let Some(compute_result) = self.get_compute_result(qc.certified_block().id()) {
             assert_eq!(
                 compute_result.executed_state.state_id,
-                qc.certified_state_id(),
+                qc.certified_block().executed_state_id(),
                 "We have inconsistent executed state with the executed state from the quorum \
                  certificate for block {}, will kill this validator and rely on state \
                  synchronization to try to achieve consistent state with the quorum \
                  certificate.",
-                qc.certified_block_id(),
+                qc.certified_block().id(),
             );
         }
 

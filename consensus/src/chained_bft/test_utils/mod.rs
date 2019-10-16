@@ -96,8 +96,8 @@ impl TreeInserter {
             vec![self.block_store.signer()],
             block.id(),
             block.round(),
-            block.quorum_cert().certified_block_id(),
-            block.quorum_cert().certified_block_round(),
+            block.quorum_cert().certified_block().id(),
+            block.quorum_cert().certified_block().round(),
         )
     }
 

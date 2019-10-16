@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{block_info::BlockInfo, common::Round, vote_data::VoteData};
+use crate::{block_info::BlockInfo, vote_data::VoteData};
 use crypto::{
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
@@ -43,29 +43,17 @@ impl QuorumCert {
             signed_ledger_info,
         }
     }
-    /// All the vote data getters are just proxies for retrieving the values from the VoteData
-    pub fn certified_block_id(&self) -> HashValue {
-        self.vote_data.proposed().id()
-    }
-
-    pub fn certified_state_id(&self) -> HashValue {
-        self.vote_data.proposed().executed_state_id()
-    }
-
-    pub fn certified_block_round(&self) -> Round {
-        self.vote_data.proposed().round()
-    }
-
-    pub fn parent_block_id(&self) -> HashValue {
-        self.vote_data.parent().id()
-    }
-
-    pub fn parent_block_round(&self) -> Round {
-        self.vote_data.parent().round()
-    }
 
     pub fn vote_data(&self) -> &VoteData {
         &self.vote_data
+    }
+
+    pub fn certified_block(&self) -> &BlockInfo {
+        self.vote_data().proposed()
+    }
+
+    pub fn parent_block(&self) -> &BlockInfo {
+        self.vote_data().parent()
     }
 
     pub fn ledger_info(&self) -> &LedgerInfoWithSignatures {
@@ -128,9 +116,9 @@ impl QuorumCert {
             "Quorum Cert's hash mismatch LedgerInfo"
         );
         // Genesis is implicitly agreed upon, it doesn't have real signatures.
-        if self.vote_data.proposed().round() == 0
-            && self.vote_data.proposed().id() == *GENESIS_BLOCK_ID
-            && self.vote_data.proposed().executed_state_id() == *ACCUMULATOR_PLACEHOLDER_HASH
+        if self.certified_block().round() == 0
+            && self.certified_block().id() == *GENESIS_BLOCK_ID
+            && self.certified_block().executed_state_id() == *ACCUMULATOR_PLACEHOLDER_HASH
         {
             return Ok(());
         }

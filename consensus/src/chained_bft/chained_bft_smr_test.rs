@@ -196,7 +196,11 @@ fn basic_start_test() {
                 .into();
         assert_eq!(first_proposal.proposal().parent_id(), genesis.id());
         assert_eq!(
-            first_proposal.proposal().quorum_cert().certified_block_id(),
+            first_proposal
+                .proposal()
+                .quorum_cert()
+                .certified_block()
+                .id(),
             genesis.id()
         );
     });
@@ -733,7 +737,8 @@ fn aggregate_timeout_votes() {
                 .block_store()
                 .unwrap()
                 .highest_quorum_cert()
-                .certified_block_round(),
+                .certified_block()
+                .round(),
             0
         );
         // Nodes 1 and 2 form a QC and move to the next round.
@@ -748,7 +753,8 @@ fn aggregate_timeout_votes() {
                 .block_store()
                 .unwrap()
                 .highest_quorum_cert()
-                .certified_block_id(),
+                .certified_block()
+                .id(),
             proposal_id
         );
         assert_eq!(
@@ -757,7 +763,8 @@ fn aggregate_timeout_votes() {
                 .block_store()
                 .unwrap()
                 .highest_quorum_cert()
-                .certified_block_id(),
+                .certified_block()
+                .id(),
             proposal_id
         );
     });
@@ -797,7 +804,8 @@ fn chain_with_nil_blocks() {
                 .block_store()
                 .unwrap()
                 .highest_quorum_cert()
-                .certified_block_round()
+                .certified_block()
+                .round()
                 >= 4
         );
 

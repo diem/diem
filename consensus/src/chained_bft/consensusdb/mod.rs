@@ -129,7 +129,7 @@ impl ConsensusDB {
             .collect::<Result<()>>()?;
         qc_data
             .iter()
-            .map(|qc| batch.put::<QCSchema>(&qc.certified_block_id(), qc))
+            .map(|qc| batch.put::<QCSchema>(&qc.certified_block().id(), qc))
             .collect::<Result<()>>()?;
         self.commit(batch)
     }

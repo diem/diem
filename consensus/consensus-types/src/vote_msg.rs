@@ -113,7 +113,7 @@ impl VoteMsg {
         &self.sync_info
     }
 
-    /// Returns the signature for the vote_data.proposed().round() that can be aggregated for
+    /// Returns the signature for the vote_data().proposed().round() that can be aggregated for
     /// TimeoutCertificate.
     pub fn round_signature(&self) -> Option<&Signature> {
         self.round_signature.as_ref()

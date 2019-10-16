@@ -255,7 +255,8 @@ impl<T: Payload> EventProcessor<T> {
                 < self
                     .block_store
                     .highest_quorum_cert()
-                    .certified_block_round()
+                    .certified_block()
+                    .round()
         {
             let sync_info = self.gen_sync_info();
 
@@ -289,7 +290,8 @@ impl<T: Payload> EventProcessor<T> {
         let current_hqc_round = self
             .block_store
             .highest_quorum_cert()
-            .certified_block_round();
+            .certified_block()
+            .round();
 
         if current_hqc_round < sync_info.hqc_round() {
             let deadline = self.pacemaker.current_round_deadline();
@@ -433,7 +435,7 @@ impl<T: Payload> EventProcessor<T> {
                 .with_context(|e| format!("Failed to process TC: {}", e))?;
         }
         if let Some(new_round_event) = self.pacemaker.process_certificates(
-            Some(qc.certified_block_round()),
+            Some(qc.certified_block().round()),
             tc_round,
             highest_committed_proposal_round,
         ) {
@@ -453,7 +455,7 @@ impl<T: Payload> EventProcessor<T> {
         // by its QC.
         debug_checked_precondition_eq!(
             proposal.parent_id(),
-            proposal.quorum_cert().certified_block_id()
+            proposal.quorum_cert().certified_block().id()
         );
         // Safety invariant: QC of the parent block is present in the block store
         // (Ensured by the call to pre-process proposal before this function is called).
@@ -473,7 +475,7 @@ impl<T: Payload> EventProcessor<T> {
         // Used in MIRAI annotation later.
         let proposal_id = proposal.id();
         let proposal_parent_id = proposal.parent_id();
-        let certified_parent_block_round = proposal.quorum_cert().parent_block_round();
+        let certified_parent_block_round = proposal.quorum_cert().parent_block().round();
 
         let vote_msg = match self.execute_and_vote(proposal).await {
             Err(e) => {
@@ -579,7 +581,7 @@ impl<T: Payload> EventProcessor<T> {
         let htc = self
             .block_store
             .highest_timeout_cert()
-            .filter(|tc| tc.round() > hqc.certified_block_round())
+            .filter(|tc| tc.round() > hqc.certified_block().round())
             .map(|tc| tc.as_ref().clone());
         SyncInfo::new(
             hqc,
@@ -635,7 +637,7 @@ impl<T: Payload> EventProcessor<T> {
         let vote_msg = VoteMsg::new(
             VoteData::new(
                 BlockInfo::from_block(block, executed_state.state_id, executed_state.version),
-                block.quorum_cert().vote_data().proposed().clone(),
+                block.quorum_cert().certified_block().clone(),
             ),
             self.author,
             ledger_info_placeholder,
@@ -876,7 +878,8 @@ impl<T: Payload> EventProcessor<T> {
         let hqc_round = Some(
             self.block_store
                 .highest_quorum_cert()
-                .certified_block_round(),
+                .certified_block()
+                .round(),
         );
         let htc_round = self.block_store.highest_timeout_cert().map(|tc| tc.round());
         let last_committed_round = Some(self.block_store.root().round());

@@ -68,7 +68,7 @@ impl SyncInfo {
     }
 
     pub fn hqc_round(&self) -> Round {
-        self.highest_quorum_cert.certified_block_round()
+        self.highest_quorum_cert.certified_block().round()
     }
 
     pub fn htc_round(&self) -> Round {

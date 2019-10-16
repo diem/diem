@@ -63,7 +63,7 @@ fn test_block_store_create_block() {
     let a1 = block_store.create_block(genesis.block(), vec![1], 1, 1);
     assert_eq!(a1.parent_id(), genesis.id());
     assert_eq!(a1.round(), 1);
-    assert_eq!(a1.quorum_cert().certified_block_id(), genesis.id());
+    assert_eq!(a1.quorum_cert().certified_block().id(), genesis.id());
 
     let a1_ref = block_on(block_store.execute_and_insert_block(a1)).unwrap();
     let executed_state = &block_store
@@ -79,7 +79,7 @@ fn test_block_store_create_block() {
                 executed_state.state_id,
                 executed_state.version,
             ),
-            a1_ref.quorum_cert().vote_data().proposed().clone(),
+            a1_ref.quorum_cert().certified_block().clone(),
         ),
         block_store.signer().author(),
         placeholder_ledger_info(),
@@ -95,7 +95,7 @@ fn test_block_store_create_block() {
     let b1 = block_store.create_block(a1_ref.block(), vec![2], 2, 2);
     assert_eq!(b1.parent_id(), a1_ref.id());
     assert_eq!(b1.round(), 2);
-    assert_eq!(b1.quorum_cert().certified_block_id(), a1_ref.id());
+    assert_eq!(b1.quorum_cert().certified_block().id(), a1_ref.id());
 }
 
 #[test]
@@ -159,15 +159,15 @@ fn test_qc_ancestry() {
     let block_a_2 = inserter.insert_block(&block_a_1, 2);
 
     assert_eq!(
-        block_store.get_block(genesis.quorum_cert().certified_block_id()),
+        block_store.get_block(genesis.quorum_cert().certified_block().id()),
         None
     );
     assert_eq!(
-        block_store.get_block(block_a_1.quorum_cert().certified_block_id()),
+        block_store.get_block(block_a_1.quorum_cert().certified_block().id()),
         Some(genesis)
     );
     assert_eq!(
-        block_store.get_block(block_a_2.quorum_cert().certified_block_id()),
+        block_store.get_block(block_a_2.quorum_cert().certified_block().id()),
         Some(block_a_1)
     );
 }
@@ -191,7 +191,7 @@ proptest! {
         for block in blocks {
             if block.round() > 0 && authors.contains(&block.author().unwrap()) {
                 let known_parent = block_store.block_exists(block.parent_id());
-                let certified_parent = block.quorum_cert().certified_block_id() == block.parent_id();
+                let certified_parent = block.quorum_cert().certified_block().id() == block.parent_id();
                 let verify_res = block.verify_well_formed();
                 let res = block_on(block_store.execute_and_insert_block(block.clone()));
                 if !certified_parent {
@@ -352,7 +352,7 @@ fn test_insert_vote() {
                     executed_state.state_id,
                     executed_state.version,
                 ),
-                block.quorum_cert().vote_data().proposed().clone(),
+                block.quorum_cert().certified_block().clone(),
             ),
             voter.author(),
             placeholder_ledger_info(),
@@ -385,7 +385,7 @@ fn test_insert_vote() {
                 executed_state.state_id,
                 executed_state.version,
             ),
-            block.quorum_cert().vote_data().proposed().clone(),
+            block.quorum_cert().certified_block().clone(),
         ),
         final_voter.author(),
         placeholder_ledger_info(),
@@ -394,7 +394,7 @@ fn test_insert_vote() {
     );
     match block_store.insert_vote_and_qc(vote_msg, &validator_verifier) {
         VoteReceptionResult::NewQuorumCertificate(qc) => {
-            assert_eq!(qc.certified_block_id(), block.id());
+            assert_eq!(qc.certified_block().id(), block.id());
         }
         _ => {
             panic!("QC not formed!");
@@ -402,7 +402,7 @@ fn test_insert_vote() {
     }
 
     let block_qc = block_store.get_quorum_cert_for_block(block.id()).unwrap();
-    assert_eq!(block_qc.certified_block_id(), block.id());
+    assert_eq!(block_qc.certified_block().id(), block.id());
 }
 
 #[test]

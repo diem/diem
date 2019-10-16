@@ -91,7 +91,7 @@ impl<T: Payload> RecoveryData<T> {
         let root =
             Self::find_root(&mut blocks, &mut quorum_certs, storage_ledger).with_context(|e| {
                 // for better readability
-                quorum_certs.sort_by_key(QuorumCert::certified_block_round);
+                quorum_certs.sort_by_key(|qc| qc.certified_block().round());
                 format!(
                     "Blocks in db: {}\nQuorum Certs in db: {}\nerror: {}",
                     blocks
@@ -239,7 +239,7 @@ impl<T: Payload> RecoveryData<T> {
         let root_block = blocks.remove(root_idx);
         let root_quorum_cert = quorum_certs
             .iter()
-            .find(|qc| qc.certified_block_id() == root_block.id())
+            .find(|qc| qc.certified_block().id() == root_block.id())
             .ok_or_else(|| format_err!("No QC found for root: {}", root_id))?
             .clone();
         let root_ledger_info = quorum_certs
@@ -280,7 +280,7 @@ impl<T: Payload> RecoveryData<T> {
                 false
             }
         });
-        quorum_certs.retain(|qc| tree.contains(&qc.certified_block_id()));
+        quorum_certs.retain(|qc| tree.contains(&qc.certified_block().id()));
         to_remove
     }
 }

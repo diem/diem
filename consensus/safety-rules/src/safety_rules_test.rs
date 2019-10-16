@@ -43,7 +43,7 @@ fn make_block_with_parent(
 ) -> Block<Round> {
     let vote_data = VoteData::new(
         BlockInfo::from_block(parent, HashValue::zero(), 0),
-        parent.quorum_cert().vote_data().proposed().clone(),
+        parent.quorum_cert().certified_block().clone(),
     );
 
     let sync_info = SyncInfo::new(

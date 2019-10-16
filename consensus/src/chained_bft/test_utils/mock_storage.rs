@@ -134,7 +134,7 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
                 .qc
                 .lock()
                 .unwrap()
-                .insert(qc.certified_block_id(), qc);
+                .insert(qc.certified_block().id(), qc);
         }
         if let Err(e) = self.verify_consistency() {
             panic!("invalid db after save tree: {}", e);

@@ -130,7 +130,7 @@ impl<T: PartialEq> Display for Block<T> {
             self.id,
             nil_marker,
             self.round,
-            self.quorum_cert.certified_block_id(),
+            self.quorum_cert.certified_block().id(),
         )
     }
 }
@@ -159,7 +159,7 @@ impl<T> Block<T> {
     }
 
     pub fn parent_id(&self) -> HashValue {
-        self.quorum_cert.certified_block_id()
+        self.quorum_cert.certified_block().id()
     }
 
     pub fn round(&self) -> Round {
@@ -302,7 +302,7 @@ where
         validator_signer: &ValidatorSigner,
     ) -> Self {
         // A block must carry a QC to its parent.
-        checked_precondition_eq!(quorum_cert.certified_block_id(), parent_block.id());
+        checked_precondition_eq!(quorum_cert.certified_block().id(), parent_block.id());
         checked_precondition!(round > parent_block.round());
 
         Block::new_internal(
@@ -318,7 +318,7 @@ where
     /// The NIL blocks are special: they're not carrying any real payload and are generated
     /// independently by different validators just to fill in the round with some QC.
     pub fn make_nil_block(parent_block: &Block<T>, round: Round, quorum_cert: QuorumCert) -> Self {
-        checked_precondition_eq!(quorum_cert.certified_block_id(), parent_block.id());
+        checked_precondition_eq!(quorum_cert.certified_block().id(), parent_block.id());
         checked_precondition!(round > parent_block.round());
 
         // We want all the NIL blocks to agree on the timestamps even though they're generated
@@ -374,7 +374,7 @@ where
         }
         debug_checked_verify_eq!(self.id(), self.hash(), "Block id mismatch the hash");
         ensure!(
-            self.quorum_cert().certified_block_round() < self.round(),
+            self.quorum_cert().certified_block().round() < self.round(),
             "Block has invalid round"
         );
         Ok(())
@@ -428,7 +428,7 @@ where
     }
 
     pub fn parent_id(&self) -> HashValue {
-        self.quorum_cert().certified_block_id()
+        self.quorum_cert().certified_block().id()
     }
 
     pub fn round(&self) -> Round {
