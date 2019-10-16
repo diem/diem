@@ -36,6 +36,14 @@ struct Args {
     /// The path to the bytecode file.
     #[structopt(short = "b", long = "bytecode")]
     pub bytecode_file_path: String,
+
+    /// Print basic blocks.
+    #[structopt(long = "basic-blocks")]
+    pub print_basic_blocks: bool,
+
+    /// Print locals within each function.
+    #[structopt(long = "locals")]
+    pub print_locals: bool,
 }
 
 fn main() {
@@ -69,8 +77,10 @@ fn main() {
     );
 
     let mut disassembler_options = DisassemblerOptions::new();
-    disassembler_options.print_code = args.print_code;
+    disassembler_options.print_code = args.print_code | args.print_basic_blocks;
     disassembler_options.only_public = args.only_public;
+    disassembler_options.print_basic_blocks = args.print_basic_blocks;
+    disassembler_options.print_locals = args.print_locals;
 
     let mut source_mapping = if args.is_script {
         let compiled_script = CompiledScript::deserialize(module_bytes.code())
