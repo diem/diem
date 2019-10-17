@@ -24,7 +24,7 @@ use libra_types::{
 use rayon::prelude::*;
 use vm_cache_map::Arena;
 
-pub fn execute_block<'alloc>(
+pub fn execute_user_transaction_block<'alloc>(
     txn_block: Vec<SignedTransaction>,
     code_cache: &VMModuleCache<'alloc>,
     script_cache: &ScriptCache<'alloc>,
