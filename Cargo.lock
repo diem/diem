@@ -1312,6 +1312,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "failure-macros"
+version = "0.1.0"
+
+[[package]]
 name = "failure_derive"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1327,12 +1331,8 @@ name = "failure_ext"
 version = "0.1.0"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "failure_macros 0.1.0",
+ "failure-macros 0.1.0",
 ]
-
-[[package]]
-name = "failure_macros"
-version = "0.1.0"
 
 [[package]]
 name = "fake-simd"
