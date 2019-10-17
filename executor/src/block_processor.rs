@@ -5,13 +5,13 @@ use crate::{
     Chunk, Command, CommittableBlockBatch, ExecutableBlock, ExecutedState, ExecutedTrees,
     ProcessedVMOutput, StateComputeResult, TransactionData, OP_COUNTERS,
 };
-use config::config::VMConfig;
 use crypto::{
     hash::{CryptoHash, EventAccumulatorHasher},
     HashValue,
 };
 use failure::prelude::*;
 use futures::channel::oneshot;
+use libra_config::config::VMConfig;
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,

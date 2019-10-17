@@ -136,8 +136,8 @@ pub use move_vm::MoveVM;
 pub use process_txn::verify::static_verify_program;
 pub use txn_executor::execute_function;
 
-use config::config::VMConfig;
 use failure::prelude::*;
+use libra_config::config::VMConfig;
 use libra_types::{
     transaction::{SignedTransaction, Transaction, TransactionOutput},
     vm_error::VMStatus,

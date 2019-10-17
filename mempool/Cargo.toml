@@ -24,7 +24,7 @@ ttl_cache = "0.4.2"
 
 libra-mempool-shared-proto = { path = "mempool-shared-proto" }
 bounded-executor = { path = "../common/bounded-executor" }
-config = { path = "../config" }
+libra-config = { path = "../config" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 grpc_helpers = { path = "../common/grpc_helpers" }
 libra-logger = { path = "../common/logger" }

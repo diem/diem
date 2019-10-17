@@ -8,8 +8,8 @@ use crate::{
     process_txn::{verify::VerifiedTransaction, ProcessTransaction},
     txn_executor::TransactionExecutor,
 };
-use config::config::VMPublishingOption;
 use crypto::HashValue;
+use libra_config::config::VMPublishingOption;
 use libra_logger::prelude::*;
 use libra_types::{
     transaction::{SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES},

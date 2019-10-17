@@ -20,7 +20,7 @@ prometheus = { version = "0.7.0", default-features = false }
 
 bytecode-verifier = { path = "../../bytecode-verifier" }
 lcs = { path = "../../../common/lcs", package = "libra-canonical-serialization" }
-config = { path = "../../../config" }
+libra-config = { path = "../../../config" }
 crypto = { path = "../../../crypto/crypto" }
 libra-logger = { path = "../../../common/logger" }
 libra-metrics = { path = "../../../common/metrics" }

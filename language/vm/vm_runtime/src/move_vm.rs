@@ -26,7 +26,7 @@ rental! {
     }
 }
 
-use config::config::VMConfig;
+use libra_config::config::VMConfig;
 pub use move_vm_definition::MoveVMImpl;
 
 /// A wrapper to make VMRuntime standalone and thread safe.

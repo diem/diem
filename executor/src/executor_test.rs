@@ -7,10 +7,10 @@ use crate::{
     },
     CommittableBlock, Executor, OP_COUNTERS,
 };
-use config::config::{NodeConfig, NodeConfigHelpers};
 use crypto::{hash::GENESIS_BLOCK_ID, HashValue};
 use futures::executor::block_on;
 use grpcio::{EnvBuilder, ServerBuilder};
+use libra_config::config::{NodeConfig, NodeConfigHelpers};
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     crypto_proxies::LedgerInfoWithSignatures,

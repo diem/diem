@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::NodeConfig;
 use failure::prelude::*;
 use futures::future::{err, ok, Future};
+use libra_config::config::NodeConfig;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_config::get_account_resource_or_default,

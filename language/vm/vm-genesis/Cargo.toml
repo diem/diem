@@ -10,7 +10,7 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
-config = { path = "../../../config" }
+libra-config = { path = "../../../config" }
 failure = { path = "../../../common/failure_ext", package = "failure_ext" }
 transaction-builder = { path = "../../transaction-builder"}
 crypto = { path = "../../../crypto/crypto" }

@@ -1,9 +1,9 @@
 use crate::LedgerInfo;
-use config::config::NodeConfig;
 use executor::Executor;
 use failure::prelude::*;
 use futures::{channel::oneshot, Future, FutureExt};
 use grpcio::EnvBuilder;
+use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},

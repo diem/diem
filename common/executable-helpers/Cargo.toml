@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 slog-scope = "4.0"
 
-config = { path = "../../config"}
+libra-config = { path = "../../config"}
 crash-handler = { path = "../crash-handler" }
 libra-logger =  { path = "../logger" }
 libra-metrics = { path = "../metrics" }

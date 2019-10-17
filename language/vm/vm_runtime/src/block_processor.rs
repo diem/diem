@@ -11,7 +11,7 @@ use crate::{
     data_cache::BlockDataCache,
     process_txn::{execute::ExecutedTransaction, validate::ValidationMode, ProcessTransaction},
 };
-use config::config::VMPublishingOption;
+use libra_config::config::VMPublishingOption;
 use libra_logger::prelude::*;
 use libra_types::{
     transaction::{

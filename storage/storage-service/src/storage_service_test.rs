@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use config::config::NodeConfigHelpers;
 use grpcio::EnvBuilder;
 use itertools::zip_eq;
+use libra_config::config::NodeConfigHelpers;
 use libra_types::get_with_proof::{RequestItem, ResponseItem};
 use libradb::mock_genesis::db_with_mock_genesis;
 #[cfg(any(test, feature = "testing"))]

@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use admission_control_service::runtime::AdmissionControlRuntime;
-use config::config::{NetworkConfig, NodeConfig, RoleType};
 use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
 use crypto::{ed25519::*, ValidKey};
 use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use executor::Executor;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
+use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
 use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
 use libra_metrics::metric_server;

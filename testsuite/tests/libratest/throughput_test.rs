@@ -7,7 +7,7 @@ use benchmark::{
     load_generator::PairwiseTransferTxnGenerator,
     Benchmarker,
 };
-use config::config::RoleType;
+use libra_config::config::RoleType;
 use libra_swarm::swarm::LibraSwarm;
 use num::traits::Float;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};

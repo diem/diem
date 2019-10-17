@@ -17,7 +17,7 @@ rand = "0.6.5"
 tokio = "=0.2.0-alpha.6"
 prometheus = { version = "0.7.0", default-features = false }
 
-config = { path = "../config" }
+libra-config = { path = "../config" }
 executor = { path = "../executor" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 libra-logger = { path = "../common/logger" }

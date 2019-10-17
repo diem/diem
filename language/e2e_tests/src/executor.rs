@@ -7,7 +7,7 @@ use crate::{
     account::{Account, AccountData},
     data_store::{FakeDataStore, GENESIS_WRITE_SET, TESTNET_GENESIS},
 };
-use config::config::{NodeConfig, NodeConfigHelpers, VMPublishingOption};
+use libra_config::config::{NodeConfig, NodeConfigHelpers, VMPublishingOption};
 use libra_types::{
     access_path::AccessPath,
     account_config::AccountResource,

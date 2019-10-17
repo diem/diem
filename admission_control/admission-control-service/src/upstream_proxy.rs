@@ -7,12 +7,12 @@ use admission_control_proto::proto::admission_control::{
     AdmissionControlMsg, SubmitTransactionRequest, SubmitTransactionResponse,
 };
 use bytes::Bytes;
-use config::config::{AdmissionControlConfig, NodeConfig, RoleType};
 use failure::format_err;
 use futures::{
     channel::{mpsc, oneshot},
     stream::{select_all, StreamExt},
 };
+use libra_config::config::{AdmissionControlConfig, NodeConfig, RoleType};
 use libra_logger::prelude::*;
 use network::validator_network::{
     AdmissionControlNetworkEvents, AdmissionControlNetworkSender, Event, RpcError,

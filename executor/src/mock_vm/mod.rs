@@ -4,10 +4,10 @@
 #[cfg(test)]
 mod mock_vm_test;
 
-use config::config::VMConfig;
 use crypto::ed25519::compat;
 use failure::Result;
 use lazy_static::lazy_static;
+use libra_config::config::VMConfig;
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},

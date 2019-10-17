@@ -8,7 +8,6 @@ use crate::{
 use bytecode_verifier::verifier::{
     verify_module_dependencies, verify_script_dependencies, VerifiedModule, VerifiedScript,
 };
-use config::config::VMPublishingOption;
 use crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
@@ -16,6 +15,7 @@ use ir_to_bytecode::{
 };
 use ir_to_bytecode_syntax::ast::ScriptOrModule;
 use language_e2e_tests::executor::FakeExecutor;
+use libra_config::config::VMPublishingOption;
 use libra_types::{
     account_address::AccountAddress,
     transaction::{

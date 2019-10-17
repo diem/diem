@@ -5,7 +5,6 @@ use crate::{
     coordinator::{CoordinatorMessage, SyncCoordinator},
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
 };
-use config::config::{NodeConfig, StateSyncConfig};
 use executor::Executor;
 use failure::prelude::*;
 use futures::{
@@ -13,6 +12,7 @@ use futures::{
     future::Future,
     SinkExt,
 };
+use libra_config::config::{NodeConfig, StateSyncConfig};
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::sync::Arc;

@@ -19,7 +19,7 @@ rand_chacha = "0.1.1"
 serde = { version = "1.0.96", features = ["derive"] }
 structopt = "0.3.2"
 
-config = { path = "../../config" }
+libra-config = { path = "../../config" }
 crypto = { path = "../crypto" }
 crypto-derive = { path = "../crypto-derive" }
 debug-interface = { path = "../../common/debug-interface" }
@@ -29,7 +29,7 @@ grpc_helpers = { path = "../../common/grpc_helpers" }
 libra-logger = { path = "../../common/logger" }
 
 [dev-dependencies]
-config = { path = "../../config", features = ["testing"]}
+libra-config = { path = "../../config", features = ["testing"]}
 
 [build-dependencies]
 grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }
