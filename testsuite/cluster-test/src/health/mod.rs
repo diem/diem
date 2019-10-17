@@ -157,13 +157,14 @@ impl HealthCheckRunner {
         messages.push(format!(""));
         messages.push(format!(""));
 
-        if !only_print_on_failure || !failed.is_empty() {
-            messages.iter().for_each(|m| println!("{}", m));
-        }
         let affected_validators_set_refs = HashSet::from_iter(affected_validators_set.iter());
         let failed_set: HashSet<&String> = HashSet::from_iter(failed.iter());
-        let only_affected_validators_failed = failed_set.is_subset(&affected_validators_set_refs);
-        if !only_affected_validators_failed {
+        let unexpected_failures = !failed_set.is_subset(&affected_validators_set_refs);
+        if !only_print_on_failure || unexpected_failures {
+            messages.iter().for_each(|m| println!("{}", m));
+        }
+
+        if unexpected_failures {
             let unexpected_failures = failed_set
                 .difference(&affected_validators_set_refs)
                 .join(",");
