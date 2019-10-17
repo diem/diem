@@ -21,7 +21,7 @@ state-view = { path = "../../storage/state-view" }
 libra-types = { path = "../../types" }
 transaction-builder = { path = "../transaction-builder", features = ["testing"]}
 vm = { path = "../vm" }
-vm_genesis = { path = "../vm/vm_genesis" }
+vm-genesis = { path = "../vm/vm-genesis" }
 vm_runtime = { path = "../vm/vm_runtime" }
 vm_runtime_types = { path = "../vm/vm_runtime/vm_runtime_types" }
 proptest = "0.9.3"

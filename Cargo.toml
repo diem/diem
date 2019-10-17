@@ -48,7 +48,7 @@ members = [
     "language/vm/vm_runtime",
     "language/vm/vm_runtime/vm-cache-map",
     "language/vm/vm_runtime/vm_runtime_types",
-    "language/vm/vm_genesis",
+    "language/vm/vm-genesis",
     "libra-node",
     "libra-swarm",
     "network",

@@ -59,7 +59,7 @@ rusty-fork = "0.2.2"
 consensus-types = { path = "consensus-types", features = ["fuzzing", "testing"]}
 crypto = { path = "../crypto/crypto", features = ["testing"]}
 libra-types = { path = "../types", features = ["testing"]}
-vm_genesis = { path = "../language/vm/vm_genesis" }
+vm-genesis = { path = "../language/vm/vm-genesis" }
 vm_validator = { path = "../vm_validator" }
 
 [features]

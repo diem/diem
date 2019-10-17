@@ -700,7 +700,7 @@ dependencies = [
  "prost-ext 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "vm_genesis 0.1.0",
+ "vm-genesis 0.1.0",
 ]
 
 [[package]]
@@ -746,7 +746,7 @@ dependencies = [
  "storage-client 0.1.0",
  "termion 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "vm_genesis 0.1.0",
+ "vm-genesis 0.1.0",
  "vm_runtime 0.1.0",
  "vm_validator 0.1.0",
 ]
@@ -1298,7 +1298,7 @@ dependencies = [
  "storage-proto 0.1.0",
  "storage-service 0.1.0",
  "transaction-builder 0.1.0",
- "vm_genesis 0.1.0",
+ "vm-genesis 0.1.0",
  "vm_runtime 0.1.0",
 ]
 
@@ -1975,7 +1975,7 @@ dependencies = [
  "stdlib 0.1.0",
  "transaction-builder 0.1.0",
  "vm 0.1.0",
- "vm_genesis 0.1.0",
+ "vm-genesis 0.1.0",
  "vm_runtime 0.1.0",
  "vm_runtime_types 0.1.0",
  "walkdir 2.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4193,7 +4193,7 @@ dependencies = [
  "storage-client 0.1.0",
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
- "vm_genesis 0.1.0",
+ "vm-genesis 0.1.0",
  "vm_runtime 0.1.0",
 ]
 
@@ -5168,7 +5168,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "vm_genesis"
+name = "vm-genesis"
 version = "0.1.0"
 dependencies = [
  "config 0.1.0",
