@@ -34,7 +34,7 @@ libra-logger = { path = "../../common/logger" }
 metrics = { path = "../../common/metrics" }
 prost-ext = { path = "../../common/prost-ext" }
 schemadb = { path = "../schemadb" }
-storage_proto = { path = "../storage_proto" }
+storage-proto = { path = "../storage-proto" }
 libra-tools = { path = "../../common/tools" }
 libra-types = { path = "../../types" }
 

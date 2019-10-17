@@ -25,7 +25,7 @@ libradb = { path = "../libradb" }
 libra-logger = { path = "../../common/logger" }
 metrics = { path = "../../common/metrics" }
 storage-client = { path = "../storage-client" }
-storage_proto = { path = "../storage_proto" }
+storage-proto = { path = "../storage-proto" }
 libra-types = { path = "../../types" }
 rand = "0.6.5"
 
