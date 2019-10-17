@@ -1,8 +1,8 @@
 [package]
-name = "transaction_builder"
+name = "transaction-builder"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra transaction_builder"
+description = "Libra transaction-builder"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"

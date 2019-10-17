@@ -12,7 +12,7 @@ publish = false
 [dependencies]
 config = { path = "../../../config" }
 failure = { path = "../../../common/failure_ext", package = "failure_ext" }
-transaction_builder = { path = "../../transaction_builder"}
+transaction-builder = { path = "../../transaction-builder"}
 crypto = { path = "../../../crypto/crypto" }
 stdlib = { path = "../../stdlib" }
 prost-ext = { path = "../../../common/prost-ext" }
