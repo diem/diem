@@ -17,6 +17,24 @@ pub fn hash(val: u64) -> u64 {
     hasher.finish()
 }
 
+// Takes a uniformly distributed input mod 2**64 and produces a uniformly distributed output mod bound
+pub fn hash_to_bound(input: u64, bound: u64) -> u64 {
+    if bound < 2 {
+        return 0;
+    }
+    let min = (1 + !bound) % bound; // = 2**64 mod bound
+    let mut output = input;
+    let mut i = 1;
+    while output < min {
+        output = hash(input + i);
+        i += 1
+    }
+    /* output is now clamped to a set whose size mod bound == 0
+     * the worst case (2**63+1) requires ~ 2 attempts */
+
+    output % bound
+}
+
 /// The MultiProposer maps a round to an ordered list of authors.
 /// The primary proposer is determined by an index of hash(round) % num_proposers.
 /// The secondary proposer is determined by hash(hash(round)) % (num_proposers - 1), etc.
@@ -71,7 +89,7 @@ impl<T> MultiProposer<T> {
         let mut cur_val = round;
         for _ in 0..self.num_proposers_per_round {
             cur_val = hash(cur_val);
-            let idx = (cur_val % candidates.len() as u64) as usize;
+            let idx = hash_to_bound(cur_val, candidates.len() as u64) as usize;
             res.push(candidates.swap_remove(idx));
         }
         res
