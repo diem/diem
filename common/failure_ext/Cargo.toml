@@ -12,4 +12,4 @@ edition = "2018"
 [dependencies]
 failure = "0.1.3"
 
-failure_macros = { path = "failure_macros" }
+failure-macros = { path = "failure-macros" }

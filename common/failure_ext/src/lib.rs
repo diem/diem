@@ -16,7 +16,7 @@ pub use failure::{
     Fail, ResultExt, SyncFailure,
 };
 
-// Custom error handling macros are placed in the failure_macros crate. Due to
+// Custom error handling macros are placed in the failure-macros crate. Due to
 // the way intra-crate macro exports currently work, macros can't be exported
 // from anywhere but the top level when they are defined in the same crate.
 pub use failure_macros::bail_err;
