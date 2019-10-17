@@ -813,7 +813,7 @@ dependencies = [
  "stdlib 0.1.0",
  "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
- "vm_cache_map 0.1.0",
+ "vm-cache-map 0.1.0",
  "vm_runtime 0.1.0",
  "vm_runtime_types 0.1.0",
 ]
@@ -4478,7 +4478,7 @@ dependencies = [
  "stdlib 0.1.0",
  "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
- "vm_cache_map 0.1.0",
+ "vm-cache-map 0.1.0",
  "vm_runtime 0.1.0",
  "vm_runtime_types 0.1.0",
 ]
@@ -5157,7 +5157,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "vm_cache_map"
+name = "vm-cache-map"
 version = "0.1.0"
 dependencies = [
  "chashmap 2.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5186,7 +5186,7 @@ dependencies = [
  "stdlib 0.1.0",
  "transaction-builder 0.1.0",
  "vm 0.1.0",
- "vm_cache_map 0.1.0",
+ "vm-cache-map 0.1.0",
  "vm_runtime 0.1.0",
  "vm_runtime_types 0.1.0",
 ]
@@ -5212,7 +5212,7 @@ dependencies = [
  "rental 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "state-view 0.1.0",
  "vm 0.1.0",
- "vm_cache_map 0.1.0",
+ "vm-cache-map 0.1.0",
  "vm_runtime_types 0.1.0",
 ]
 

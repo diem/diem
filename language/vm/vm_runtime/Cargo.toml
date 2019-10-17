@@ -27,7 +27,7 @@ metrics = { path = "../../../common/metrics" }
 state-view = { path = "../../../storage/state-view" }
 libra-types = { path = "../../../types" }
 vm = { path = "../" }
-vm_cache_map = { path = "vm_cache_map" }
+vm-cache-map = { path = "vm-cache-map" }
 vm_runtime_types = { path = "vm_runtime_types" }
 
 [dev-dependencies]

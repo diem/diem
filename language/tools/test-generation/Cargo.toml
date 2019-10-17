@@ -20,7 +20,7 @@ cost-synthesis = { path = "../cost-synthesis" }
 vm = { path = "../../vm" }
 vm_runtime = { path = "../../vm/vm_runtime" }
 vm_runtime_types = { path = "../../vm/vm_runtime/vm_runtime_types" }
-vm_cache_map = { path = "../../vm/vm_runtime/vm_cache_map" }
+vm-cache-map = { path = "../../vm/vm_runtime/vm-cache-map" }
 language_e2e_tests = { path = "../../e2e_tests" }
 stdlib = { path = "../../stdlib" }
 libra-types = { path = "../../../types", features = ["testing"] }

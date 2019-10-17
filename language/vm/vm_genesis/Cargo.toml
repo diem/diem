@@ -19,7 +19,7 @@ prost-ext = { path = "../../../common/prost-ext" }
 state-view = { path = "../../../storage/state-view" }
 libra-types = { path = "../../../types" }
 vm = { path = "../" }
-vm_cache_map = { path = "../vm_runtime/vm_cache_map" }
+vm-cache-map = { path = "../vm_runtime/vm-cache-map" }
 vm_runtime = { path = "../vm_runtime" }
 vm_runtime_types = { path = "../vm_runtime/vm_runtime_types" }
 lazy_static = "1.3.0"

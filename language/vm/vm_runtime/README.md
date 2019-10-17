@@ -90,7 +90,7 @@ visible to subsequent transactions within each block.
 │   ├── code_cache      # VM Runtime code cache
 │   ├── loaded_data     # VM Runtime loaded data types, runtime caches over code
 │   ├── unit_tests      # unit tests
-├── vm_cache_map        # abstractions for the code cache
+├── vm-cache-map        # abstractions for the code cache
 ```
 
 ## This Module Interacts With
