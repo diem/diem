@@ -1,5 +1,5 @@
 [package]
-name = "crypto_derive"
+name = "crypto-derive"
 version = "0.1.0"
 description = "Libra custom derives for `crypto`"
 repository = "https://github.com/libra/libra"
