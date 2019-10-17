@@ -21,7 +21,7 @@ const COMMIT_RATIO_THRESHOLD: f64 = 0.7;
 /// clients, even though all of them originate from the same benchmarker
 /// process. We add a unique user-agent to bypass some of gRPC default
 /// optimization that group connections from the same source onto
-/// a single completion queue (making requests sequntial).
+/// a single completion queue (making requests sequential).
 ///
 /// index: unique identifier for the channel, to uniquify clients
 fn create_ac_client(index: usize, conn_addr: &str) -> AdmissionControlClient {
@@ -32,7 +32,7 @@ fn create_ac_client(index: usize, conn_addr: &str) -> AdmissionControlClient {
     AdmissionControlClient::new(ch)
 }
 
-/// Creat a vector of AdmissionControlClient and connect them to validators.
+/// Create a vector of AdmissionControlClient and connect them to validators.
 pub fn create_ac_clients(
     num_clients: usize,
     validator_addresses: &[String],

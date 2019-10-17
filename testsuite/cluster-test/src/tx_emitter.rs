@@ -40,6 +40,7 @@ use rand::{
     Rng, SeedableRng,
 };
 use slog_scope::{debug, info};
+use std::env;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 
@@ -77,6 +78,8 @@ pub struct EmitJobRequest {
     pub thread_params: EmitThreadParams,
 }
 
+const MINT_AMOUNT_PER_ACCOUNT: u64 = 1_000_000;
+
 impl TxEmitter {
     pub fn new(cluster: &Cluster) -> Self {
         let mint_client = Self::make_client(&cluster.instances()[0]);
@@ -91,19 +94,69 @@ impl TxEmitter {
     pub fn start_job(&mut self, req: EmitJobRequest) -> EmitJob {
         let num_clients = req.instances.len();
         let num_accounts = req.accounts_per_client * num_clients;
+
         info!("Minting accounts");
-        while self.accounts.len() < num_accounts {
-            let mut accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
-            let mint_requests = gen_mint_txn_requests(&mut self.faucet_account, &accounts);
-            execute_and_wait_transactions(
-                &self.mint_client,
+        if env::var("PARALLEL_MINT").is_ok() {
+            // Generate a single batch of core accounts to mint on.
+            let mut core_accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
+            self.accounts.append(&mut core_accounts);
+
+            // Each core account is responsible for transferring coins to `num_accounts_per_core` accounts.
+            let num_accounts_per_core = num_accounts / MAX_TXN_BATCH_SIZE;
+
+            // Generate mint requests only on the core accounts.
+            // Remaining job will be handled through transfers between accounts.
+            let mint_requests = gen_mint_txn_requests(
                 &mut self.faucet_account,
-                mint_requests,
+                &core_accounts,
+                MINT_AMOUNT_PER_ACCOUNT * num_accounts_per_core as u64,
             );
-            self.accounts.append(&mut accounts);
+
+            // Handle all mint requests first.
+            execute_txn_requests(&self.mint_client, mint_requests);
+            wait_for_accounts_sequence(
+                &self.mint_client,
+                slice::from_mut(&mut self.faucet_account),
+            )
+            .expect("Mint transactions was not committed before expiration");
+
+            // All transfer requests will be handled together.
+            let mut transfer_txn_requests = Vec::with_capacity(num_accounts);
+            for mut core_account in core_accounts {
+                let mut transfer_receivers = gen_random_accounts(num_accounts_per_core);
+                self.accounts.append(&mut transfer_receivers);
+                for transfer_receiver in transfer_receivers {
+                    let req = gen_transfer_txn_request(
+                        &mut core_account,
+                        &transfer_receiver.address,
+                        MINT_AMOUNT_PER_ACCOUNT,
+                    );
+                    transfer_txn_requests.push(req);
+                }
+            }
+
+            // Execute all transfer transaction requests.
+            execute_txn_requests(&self.mint_client, transfer_txn_requests);
+        } else {
+            while self.accounts.len() < num_accounts {
+                let mut accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
+                let mint_requests = gen_mint_txn_requests(
+                    &mut self.faucet_account,
+                    &accounts,
+                    MINT_AMOUNT_PER_ACCOUNT,
+                );
+                execute_txn_requests(&self.mint_client, mint_requests);
+                wait_for_accounts_sequence(
+                    &self.mint_client,
+                    slice::from_mut(&mut self.faucet_account),
+                )
+                .expect("Mint transactions was not committed before expiration");
+                self.accounts.append(&mut accounts);
+            }
         }
         let all_accounts = self.accounts.split_off(self.accounts.len() - num_accounts);
         info!("Mint is done");
+
         let mut workers = vec![];
         let all_addresses: Vec<_> = all_accounts.iter().map(|d| d.address).collect();
         let all_addresses = Arc::new(all_addresses);
@@ -299,7 +352,7 @@ const GAS_UNIT_PRICE: u64 = 0;
 const TXN_EXPIRATION_SECONDS: i64 = 50;
 const TXN_MAX_WAIT: Duration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64 + 10);
 
-fn gen_submit_transaction_request(
+fn gen_submit_txn_request(
     script: Script,
     sender_account: &mut AccountData,
 ) -> SubmitTransactionRequest {
@@ -325,7 +378,7 @@ fn gen_transfer_txn_request(
     num_coins: u64,
 ) -> SubmitTransactionRequest {
     let script = transaction_builder::encode_transfer_script(&receiver, num_coins);
-    gen_submit_transaction_request(script, sender)
+    gen_submit_txn_request(script, sender)
 }
 
 fn gen_random_account(rng: &mut StdRng) -> AccountData {
@@ -348,27 +401,32 @@ fn gen_random_accounts(num_accounts: usize) -> Vec<AccountData> {
 fn gen_mint_txn_request(
     faucet_account: &mut AccountData,
     receiver: &AccountAddress,
+    mint_amount_per_account: u64,
 ) -> SubmitTransactionRequest {
-    let program = transaction_builder::encode_mint_script(receiver, 1_000_000);
-    gen_submit_transaction_request(program, faucet_account)
+    let program = transaction_builder::encode_mint_script(receiver, mint_amount_per_account);
+    gen_submit_txn_request(program, faucet_account)
 }
 
+/// Mint `mint_amount_per_account` to all accounts in `accounts`.
+/// Mint can only occur from the `faucet_account`.
 fn gen_mint_txn_requests(
     faucet_account: &mut AccountData,
     accounts: &[AccountData],
+    mint_amount_per_account: u64,
 ) -> Vec<SubmitTransactionRequest> {
     accounts
         .iter()
-        .map(|account| gen_mint_txn_request(faucet_account, &account.address))
+        .map(|account| {
+            gen_mint_txn_request(faucet_account, &account.address, mint_amount_per_account)
+        })
         .collect()
 }
 
-fn execute_and_wait_transactions(
+fn execute_txn_requests(
     client: &AdmissionControlClient,
-    account: &mut AccountData,
-    txn: Vec<SubmitTransactionRequest>,
+    txn_requests: Vec<SubmitTransactionRequest>,
 ) {
-    for request in txn {
+    for request in txn_requests {
         let resp = client.submit_transaction(&request);
         match resp {
             Err(e) => info!("Failed to submit request: {:?}", e),
@@ -381,8 +439,6 @@ fn execute_and_wait_transactions(
             }
         }
     }
-    wait_for_accounts_sequence(client, slice::from_mut(account))
-        .expect("Mint transactions was not committed before expiration");
 }
 
 fn load_faucet_account(client: &AdmissionControlClient, faucet_account_path: &str) -> AccountData {
