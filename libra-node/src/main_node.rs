@@ -41,13 +41,13 @@ use tokio::runtime::{Builder, Runtime};
 use vm_runtime::MoveVM;
 
 pub struct LibraHandle {
-    _ac: AdmissionControlRuntime,
-    _mempool: Option<MempoolRuntime>,
-    _state_synchronizer: StateSynchronizer,
-    _network_runtimes: Vec<Runtime>,
-    consensus: Option<Box<dyn ConsensusProvider>>,
-    _storage: ServerHandle,
-    _debug: ServerHandle,
+    pub _ac: AdmissionControlRuntime,
+    pub _mempool: Option<MempoolRuntime>,
+    pub _state_synchronizer: StateSynchronizer,
+    pub _network_runtimes: Vec<Runtime>,
+    pub consensus: Option<Box<dyn ConsensusProvider>>,
+    pub _storage: ServerHandle,
+    pub _debug: ServerHandle,
 }
 
 impl Drop for LibraHandle {
@@ -58,7 +58,7 @@ impl Drop for LibraHandle {
     }
 }
 
-fn setup_executor(config: &NodeConfig) -> Arc<Executor<MoveVM>> {
+pub fn setup_executor(config: &NodeConfig) -> Arc<Executor<MoveVM>> {
     let client_env = Arc::new(EnvBuilder::new().name_prefix("grpc-exe-sto-").build());
     let storage_read_client = Arc::new(StorageReadServiceClient::new(
         Arc::clone(&client_env),
@@ -79,7 +79,7 @@ fn setup_executor(config: &NodeConfig) -> Arc<Executor<MoveVM>> {
     ))
 }
 
-fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
+pub fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
     let env = Arc::new(EnvBuilder::new().name_prefix("grpc-debug-").build());
     // Start Debug interface
     let debug_service = create_node_debug_interface(NodeDebugService::new());

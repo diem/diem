@@ -16,6 +16,7 @@ message ConsensusMsg {
     RespondBlock respond_block = 4;
     TimeoutMsg timeout_msg = 5;
     SyncInfo sync_info = 6;
+    Block new_block = 7;
   }
 }
 

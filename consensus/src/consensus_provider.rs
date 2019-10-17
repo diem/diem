@@ -13,6 +13,7 @@ use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
 use vm_runtime::MoveVM;
+use crate::pow::pow_consensus_provider::PowConsensusProvider;
 
 /// Public interface to a consensus protocol.
 pub trait ConsensusProvider {
@@ -62,5 +63,23 @@ pub fn create_storage_read_client(config: &NodeConfig) -> Arc<dyn StorageRead> {
         env,
         &config.storage.address,
         config.storage.port,
+    ))
+}
+
+/// pow provider
+pub fn make_pow_consensus_provider(
+    node_config: &mut NodeConfig,
+    network_sender: ConsensusNetworkSender,
+    network_receiver: ConsensusNetworkEvents,
+    executor: Arc<Executor<MoveVM>>,
+    state_sync_client: Arc<StateSyncClient>,
+) -> Box<dyn ConsensusProvider> {
+    Box::new(PowConsensusProvider::new(
+        node_config,
+        network_sender,
+        network_receiver,
+        create_mempool_client(node_config),
+        executor,
+        state_sync_client,
     ))
 }

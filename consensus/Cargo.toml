@@ -49,6 +49,7 @@ storage-client = { path = "../storage/storage-client" }
 tools = { path = "../common/tools" }
 libra-types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }
+atomic_refcell = "0.1.3"
 
 [dev-dependencies]
 cached = "0.9.0"
