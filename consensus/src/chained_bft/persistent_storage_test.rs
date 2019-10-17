@@ -18,15 +18,10 @@ use std::sync::Arc;
 fn get_find_root_params(
     executed_blocks: Vec<Arc<ExecutedBlock<TestPayload>>>,
 ) -> (Vec<Block<TestPayload>>, Vec<QuorumCert>) {
-    let blocks: Vec<Block<Vec<usize>>> = executed_blocks
+    executed_blocks
         .iter()
-        .map(|executed_block| executed_block.block().clone())
-        .collect();
-    let quorum_certs: Vec<QuorumCert> = executed_blocks
-        .iter()
-        .map(|executed_block| executed_block.block().quorum_cert().clone())
-        .collect();
-    (blocks, quorum_certs)
+        .map(|eb| (eb.block().clone(), eb.block().quorum_cert().clone()))
+        .unzip()
 }
 
 /// Verify that the found root matches the expected root.
