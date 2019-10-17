@@ -557,6 +557,7 @@ where
         for arg in args.into_iter() {
             let push_result = self.execution_stack.push(match arg {
                 TransactionArgument::U64(i) => Value::u64(i),
+                TransactionArgument::Bool(b) => Value::bool(b),
                 TransactionArgument::Address(a) => Value::address(a),
                 TransactionArgument::ByteArray(b) => Value::byte_array(b),
                 TransactionArgument::String(s) => Value::string(VMString::new(s)),

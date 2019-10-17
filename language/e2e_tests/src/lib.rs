@@ -62,7 +62,7 @@ pub fn execute(
     execute_function(script, modules, args, &data_view)
 }
 
-fn verify(
+pub fn verify(
     sender_address: &AccountAddress,
     compiled_script: CompiledScript,
     modules: Vec<CompiledModule>,
