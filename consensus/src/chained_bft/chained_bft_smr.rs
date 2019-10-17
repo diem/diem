@@ -30,7 +30,10 @@ use libra_logger::prelude::*;
 use libra_types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use safety_rules::SafetyRules;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tokio::runtime::{Runtime, TaskExecutor};
 
 /// Consensus configuration derived from ConsensusConfig
@@ -145,26 +148,36 @@ impl<T: Payload> ChainedBftSMR<T> {
         let fut = async move {
             event_processor.start().await;
             loop {
+                let pre_select_instant = Instant::now();
+                let idle_duration;
                 select! {
                     proposal_msg = network_receivers.proposals.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
                         event_processor.process_proposal_msg(proposal_msg).await;
                     }
                     block_retrieval = network_receivers.block_retrieval.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
                         event_processor.process_block_retrieval(block_retrieval).await;
                     }
                     vote_msg = network_receivers.votes.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
                         event_processor.process_vote(vote_msg).await;
                     }
                     local_timeout_round = pacemaker_timeout_sender_rx.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
                         event_processor.process_local_timeout(local_timeout_round).await;
                     }
                     sync_info_msg = network_receivers.sync_info_msgs.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
                         event_processor.process_sync_info_msg(sync_info_msg.0, sync_info_msg.1).await;
                     }
                     complete => {
                         break;
                     }
                 }
+                counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
+                    .observe_duration(pre_select_instant.elapsed() - idle_duration);
+                counters::EVENT_PROCESSING_LOOP_IDLE_DURATION_S.observe_duration(idle_duration);
             }
         };
         executor.spawn(fut);
