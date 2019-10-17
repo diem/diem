@@ -66,7 +66,7 @@ members = [
     "storage/scratchpad",
     "storage/storage-client",
     "storage/state-view",
-    "storage/storage_proto",
+    "storage/storage-proto",
     "storage/storage-service",
     "testsuite",
     "testsuite/cluster-test",

@@ -18,7 +18,7 @@ crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 scratchpad = { path = "../scratchpad" }
 state-view = { path = "../state-view" }
-storage_proto = { path = "../storage_proto" }
+storage-proto = { path = "../storage-proto" }
 libra-types = { path = "../../types" }
 
 [dev-dependencies]

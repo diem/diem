@@ -5,7 +5,7 @@
 //!
 //! The user of storage service is supposed to use it via client lib provided in
 //! [`storage-client`](../storage-client/index.html) instead of via
-//! [`StorageClient`](../storage_proto/proto/storage_grpc/struct.StorageClient.html) directly.
+//! [`StorageClient`](../storage-proto/proto/storage_grpc/struct.StorageClient.html) directly.
 
 pub mod mocks;
 
@@ -49,7 +49,7 @@ pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
 
 /// The implementation of the storage [GRPC](http://grpc.io) service.
 ///
-/// It serves [`LibraDB`] APIs over the network. See API documentation in [`storage_proto`] and
+/// It serves [`LibraDB`] APIs over the network. See API documentation in [`storage-proto`] and
 /// [`LibraDB`].
 #[derive(Clone)]
 pub struct StorageService {
