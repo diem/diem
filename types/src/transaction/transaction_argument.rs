@@ -13,12 +13,14 @@ pub enum TransactionArgument {
     Address(AccountAddress),
     String(String),
     ByteArray(ByteArray),
+    Bool(bool),
 }
 
 impl fmt::Debug for TransactionArgument {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TransactionArgument::U64(value) => write!(f, "{{U64: {}}}", value),
+            TransactionArgument::Bool(boolean) => write!(f, "{{BOOL: {}}}", boolean),
             TransactionArgument::Address(address) => write!(f, "{{ADDRESS: {:?}}}", address),
             TransactionArgument::String(string) => write!(f, "{{STRING: {}}}", string),
             TransactionArgument::ByteArray(byte_array) => {
@@ -86,6 +88,11 @@ pub fn parse_as_u64(s: &str) -> Result<TransactionArgument> {
     Ok(TransactionArgument::U64(s.parse::<u64>()?))
 }
 
+/// Parses the given string as a bool.
+pub fn parse_as_bool(s: &str) -> Result<TransactionArgument> {
+    Ok(TransactionArgument::Bool(s.parse::<bool>()?))
+}
+
 macro_rules! return_if_ok {
     ($e: expr) => {{
         if let Ok(res) = $e {
@@ -98,6 +105,7 @@ macro_rules! return_if_ok {
 pub fn parse_as_transaction_argument(s: &str) -> Result<TransactionArgument> {
     return_if_ok!(parse_as_address(s));
     return_if_ok!(parse_as_u64(s));
+    return_if_ok!(parse_as_bool(s));
     return_if_ok!(parse_as_byte_array(s));
     Err(ErrorKind::ParseError(format!("cannot parse \"{}\" as transaction argument", s)).into())
 }
@@ -114,6 +122,12 @@ mod test_transaction_argument {
         for s in &["xx", "", "-3"] {
             parse_as_u64(s).unwrap_err();
         }
+    }
+
+    #[test]
+    fn parse_bool() {
+        parse_as_bool("true").unwrap();
+        parse_as_bool("false").unwrap();
     }
 
     #[test]
