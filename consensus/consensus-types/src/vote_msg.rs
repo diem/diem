@@ -148,10 +148,10 @@ impl VoteMsg {
     }
 }
 
-impl TryFrom<network::proto::Vote> for VoteMsg {
+impl TryFrom<network::proto::VoteMsg> for VoteMsg {
     type Error = failure::Error;
 
-    fn try_from(proto: network::proto::Vote) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::VoteMsg) -> failure::Result<Self> {
         let vote_data = proto
             .vote_data
             .ok_or_else(|| format_err!("Missing vote_data"))?
@@ -187,24 +187,24 @@ impl TryFrom<network::proto::ConsensusMsg> for VoteMsg {
 
     fn try_from(proto: network::proto::ConsensusMsg) -> failure::Result<Self> {
         match proto.message {
-            Some(network::proto::ConsensusMsg_oneof::Vote(vote)) => vote.try_into(),
+            Some(network::proto::ConsensusMsg_oneof::VoteMsg(vote_msg)) => vote_msg.try_into(),
             _ => bail!("Missing vote"),
         }
     }
 }
 
-impl From<VoteMsg> for network::proto::Vote {
-    fn from(vote: VoteMsg) -> Self {
+impl From<VoteMsg> for network::proto::VoteMsg {
+    fn from(vote_msg: VoteMsg) -> Self {
         Self {
-            vote_data: Some(vote.vote_data.into()),
-            author: vote.author.into(),
-            ledger_info: Some(vote.ledger_info.into()),
-            signature: vote.signature.to_bytes(),
-            round_signature: vote
+            vote_data: Some(vote_msg.vote_data.into()),
+            author: vote_msg.author.into(),
+            ledger_info: Some(vote_msg.ledger_info.into()),
+            signature: vote_msg.signature.to_bytes(),
+            round_signature: vote_msg
                 .round_signature
                 .map(|sig| sig.to_bytes())
                 .unwrap_or_else(Vec::new),
-            sync_info: Some(vote.sync_info.into()),
+            sync_info: Some(vote_msg.sync_info.into()),
         }
     }
 }

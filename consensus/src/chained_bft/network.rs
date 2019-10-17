@@ -19,7 +19,7 @@ use libra_types::account_address::AccountAddress;
 use network::{
     proto::{
         BlockRetrievalStatus, ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock,
-        RespondBlock, SyncInfo as SyncInfoProto, Vote,
+        RespondBlock, SyncInfo as SyncInfoProto, VoteMsg as VoteMsgProto,
     },
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
 };
@@ -247,7 +247,7 @@ impl ConsensusNetworkImpl {
         let mut network_sender = self.network_sender.clone();
         let mut self_sender = self.self_sender.clone();
         let msg = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::Vote(vote_msg.into())),
+            message: Some(ConsensusMsg_oneof::VoteMsg(vote_msg.into())),
         };
         for peer in recipients {
             if self.author == peer {
@@ -266,7 +266,7 @@ impl ConsensusNetworkImpl {
     /// Broadcasts vote message to all validators
     pub async fn broadcast_vote(&mut self, vote_msg: VoteMsg) {
         let msg = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::Vote(vote_msg.into())),
+            message: Some(ConsensusMsg_oneof::VoteMsg(vote_msg.into())),
         };
         self.broadcast(msg).await
     }
@@ -327,7 +327,7 @@ where
                                 .log();
                             e
                         }),
-                        Vote(vote) => self.process_vote(vote).await,
+                        VoteMsg(vote_msg) => self.process_vote(vote_msg).await,
                         SyncInfo(sync_info) => self.process_sync_info(sync_info, peer_id).await,
                         _ => {
                             warn!("Unexpected msg from {}: {:?}", peer_id, msg);
@@ -374,18 +374,19 @@ where
         Ok(())
     }
 
-    async fn process_vote(&mut self, vote: Vote) -> failure::Result<()> {
-        let vote = VoteMsg::try_from(vote)?;
-        debug!("Received {}", vote);
-        vote.verify(self.epoch_mgr.validators().as_ref())
+    async fn process_vote(&mut self, vote_msg: VoteMsgProto) -> failure::Result<()> {
+        let vote_msg = VoteMsg::try_from(vote_msg)?;
+        debug!("Received {}", vote_msg);
+        vote_msg
+            .verify(self.epoch_mgr.validators().as_ref())
             .map_err(|e| {
                 security_log(SecurityEvent::InvalidConsensusVote)
                     .error(&e)
-                    .data(&vote)
+                    .data(&vote_msg)
                     .log();
                 e
             })?;
-        if self.vote_tx.try_send(vote).is_err() {
+        if self.vote_tx.try_send(vote_msg).is_err() {
             counters::DROP_NETWORK_TO_CONSENSUS.inc();
         }
         Ok(())

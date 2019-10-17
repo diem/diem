@@ -370,7 +370,7 @@ fn basic_commit_and_restart() {
                 let msg = playground
                     .wait_for_messages(1, NetworkPlayground::exclude_timeout_msg)
                     .await;
-                if let Some(ConsensusMsg_oneof::Vote(_)) = msg[0].1.message {
+                if let Some(ConsensusMsg_oneof::VoteMsg(_)) = msg[0].1.message {
                     round += 1;
                     break;
                 }
