@@ -26,7 +26,7 @@ use crate::{
     },
     txn_executor::TransactionExecutor,
 };
-use libra_types::transaction::{ChannelWriteSetPayload, ChannelScriptPayload};
+use libra_types::transaction::{ChannelScriptPayload, ChannelWriteSetPayload};
 
 pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8]) -> bool {
     match publishing_option {
@@ -287,7 +287,10 @@ where
         // The submitted max gas units that the transaction can consume is greater than the
         // maximum number of gas units bound that we have set for any
         // transaction.
-        if txn.max_gas_amount() > gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() {
+        // Only Onchain vm limit max gas.
+        if vm_mode == VMMode::Onchain
+            && txn.max_gas_amount() > gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get()
+        {
             let error_str = format!(
                 "max gas units: {}, gas units submitted: {}",
                 gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
@@ -368,8 +371,8 @@ where
         // Check channel write_set asset balance, offchain channel transaction should keep asset
         // balance, then cache the write_set to transaction cache for Move script to use.
         let pre_cache_write_set = match txn.payload() {
-            TransactionPayload::ChannelWriteSet(ChannelWriteSetPayload{write_set, ..})
-            |TransactionPayload::ChannelScript(ChannelScriptPayload{write_set, ..})  => {
+            TransactionPayload::ChannelWriteSet(ChannelWriteSetPayload { write_set, .. })
+            | TransactionPayload::ChannelScript(ChannelScriptPayload { write_set, .. }) => {
                 let balance_checker = BalanceChecker::new(data_cache, &module_cache);
                 balance_checker.check_balance(write_set)?;
                 Some(write_set.clone())
@@ -378,8 +381,14 @@ where
         };
 
         let metadata = TransactionMetadata::new(&txn);
-        let mut txn_state =
-            ValidatedTransactionState::new(metadata, module_cache, data_cache, allocator, pre_cache_write_set, vm_mode);
+        let mut txn_state = ValidatedTransactionState::new(
+            metadata,
+            module_cache,
+            data_cache,
+            allocator,
+            pre_cache_write_set,
+            vm_mode,
+        );
 
         // Run the prologue to ensure that clients have enough gas and aren't tricking us by
         // sending us garbage.
@@ -434,8 +443,13 @@ where
     ) -> Self {
         // This temporary cache is used for modules published by a single transaction.
         let txn_module_cache = TransactionModuleCache::new(module_cache, allocator);
-        let txn_executor =
-            TransactionExecutor::new_with_vm_mode(txn_module_cache, data_cache, metadata, pre_cache_write_set, vm_mode);
+        let txn_executor = TransactionExecutor::new_with_vm_mode(
+            txn_module_cache,
+            data_cache,
+            metadata,
+            pre_cache_write_set,
+            vm_mode,
+        );
         Self { txn_executor }
     }
 }

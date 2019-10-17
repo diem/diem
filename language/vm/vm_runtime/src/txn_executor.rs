@@ -1018,15 +1018,12 @@ where
     ) -> VMResult<TransactionOutput> {
         // This should only be used for bookkeeping. The gas is already deducted from the sender's
         // account in the account module's epilogue.
-        let gas_used: u64 = match self.vm_mode {
-            VMMode::Onchain => self
-                .txn_data
-                .max_gas_amount
-                .sub(self.gas_meter.remaining_gas())
-                .mul(self.txn_data.gas_unit_price)
-                .get(),
-            VMMode::Offchain => 0,
-        };
+        let gas_used: u64 = self
+            .txn_data
+            .max_gas_amount
+            .sub(self.gas_meter.remaining_gas())
+            .mul(self.txn_data.gas_unit_price)
+            .get();
 
         let write_set = self.data_view.make_write_set(to_be_published_modules)?;
 
