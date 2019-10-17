@@ -256,6 +256,7 @@ pub struct DebugInterfaceConfig {
     pub storage_node_debug_port: u16,
     // This has similar use to the core-node-debug-server itself
     pub metrics_server_port: u16,
+    pub public_metrics_server_port: u16,
     pub address: String,
 }
 
@@ -266,6 +267,7 @@ impl Default for DebugInterfaceConfig {
             storage_node_debug_port: 6194,
             secret_service_node_debug_port: 6195,
             metrics_server_port: 9101,
+            public_metrics_server_port: 9102,
             address: "localhost".to_string(),
         }
     }
@@ -721,6 +723,7 @@ impl NodeConfigHelpers {
         config.admission_control.admission_control_service_port = get_available_port();
         config.debug_interface.admission_control_node_debug_port = get_available_port();
         config.debug_interface.metrics_server_port = get_available_port();
+        config.debug_interface.public_metrics_server_port = get_available_port();
         config.debug_interface.secret_service_node_debug_port = get_available_port();
         config.debug_interface.storage_node_debug_port = get_available_port();
         config.execution.port = get_available_port();

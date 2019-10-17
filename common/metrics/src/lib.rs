@@ -9,6 +9,7 @@ extern crate prometheus;
 pub mod counters;
 mod json_encoder;
 pub mod metric_server;
+mod public_metrics;
 
 mod service_metrics;
 pub use service_metrics::ServiceMetrics;

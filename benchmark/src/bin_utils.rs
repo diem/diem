@@ -62,7 +62,7 @@ pub fn try_start_metrics_server(args: &BenchOpt) {
     if let Some(metrics_server_address) = &args.metrics_server_address {
         let address = metrics_server_address.clone();
         std::thread::spawn(move || {
-            start_server(address);
+            start_server(address, 9101, false);
         });
     }
 }
