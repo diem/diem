@@ -30,7 +30,7 @@ futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features =
 grpc_helpers = { path = "../common/grpc_helpers" }
 libra-logger = { path = "../common/logger" }
 libra-mempool = { path = "../mempool" }
-metrics = { path = "../common/metrics" }
+libra-metrics = { path = "../common/metrics" }
 crypto = { path = "../crypto/crypto" }
 network = { path = "../network" }
 state-synchronizer = { path = "../state-synchronizer" }

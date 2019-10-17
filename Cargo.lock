@@ -52,8 +52,8 @@ dependencies = [
  "libra-logger 0.1.0",
  "libra-mempool 0.1.0",
  "libra-mempool-shared-proto 0.1.0",
+ "libra-metrics 0.1.0",
  "libra-types 0.1.0",
- "metrics 0.1.0",
  "network 0.1.0",
  "num_cpus 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -189,11 +189,11 @@ dependencies = [
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
+ "libra-metrics 0.1.0",
  "libra-swarm 0.1.0",
  "libra-tools 0.1.0",
  "libra-types 0.1.0",
  "libra_wallet 0.1.0",
- "metrics 0.1.0",
  "num_cpus 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -492,7 +492,7 @@ dependencies = [
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
- "metrics 0.1.0",
+ "libra-metrics 0.1.0",
  "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -565,10 +565,10 @@ dependencies = [
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-logger 0.1.0",
+ "libra-metrics 0.1.0",
  "libra-tools 0.1.0",
  "libra-types 0.1.0",
  "libra_wallet 0.1.0",
- "metrics 0.1.0",
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.9.22 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -722,9 +722,9 @@ dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
  "libra-mempool 0.1.0",
+ "libra-metrics 0.1.0",
  "libra-tools 0.1.0",
  "libra-types 0.1.0",
- "metrics 0.1.0",
  "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "network 0.1.0",
  "num-derive 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1084,7 +1084,7 @@ dependencies = [
  "grpcio-compiler 0.5.0-alpha.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
- "metrics 0.1.0",
+ "libra-metrics 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1266,7 +1266,7 @@ dependencies = [
  "config 0.1.0",
  "crash-handler 0.1.0",
  "libra-logger 0.1.0",
- "metrics 0.1.0",
+ "libra-metrics 0.1.0",
  "slog-scope 4.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1285,8 +1285,8 @@ dependencies = [
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
+ "libra-metrics 0.1.0",
  "libra-types 0.1.0",
- "metrics 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-ext 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1592,7 +1592,7 @@ dependencies = [
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
- "metrics 0.1.0",
+ "libra-metrics 0.1.0",
 ]
 
 [[package]]
@@ -2078,9 +2078,9 @@ dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
  "libra-mempool-shared-proto 0.1.0",
+ "libra-metrics 0.1.0",
  "libra-types 0.1.0",
  "lru-cache 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "metrics 0.1.0",
  "network 0.1.0",
  "num_cpus 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2100,6 +2100,22 @@ dependencies = [
  "failure_ext 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-build 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "libra-metrics"
+version = "0.1.0"
+dependencies = [
+ "assert_approx_eq 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure_ext 0.1.0",
+ "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hyper 0.12.34 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-logger 0.1.0",
+ "prometheus 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2130,8 +2146,8 @@ dependencies = [
  "jemallocator 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
  "libra-mempool 0.1.0",
+ "libra-metrics 0.1.0",
  "libra-types 0.1.0",
- "metrics 0.1.0",
  "network 0.1.0",
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2232,9 +2248,9 @@ dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-logger 0.1.0",
+ "libra-metrics 0.1.0",
  "libra-tools 0.1.0",
  "libra-types 0.1.0",
- "metrics 0.1.0",
  "num-derive 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2392,22 +2408,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "metrics"
-version = "0.1.0"
-dependencies = [
- "assert_approx_eq 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "failure_ext 0.1.0",
- "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "hyper 0.12.34 (registry+https://github.com/rust-lang/crates.io-index)",
- "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libra-logger 0.1.0",
- "prometheus 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "mime"
 version = "0.3.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2539,9 +2539,9 @@ dependencies = [
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
+ "libra-metrics 0.1.0",
  "libra-types 0.1.0",
  "memsocket 0.1.0",
- "metrics 0.1.0",
  "netcore 0.1.0",
  "noise 0.1.0",
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3831,8 +3831,8 @@ dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure_ext 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-metrics 0.1.0",
  "libra-tools 0.1.0",
- "metrics 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rocksdb 0.3.0 (git+https://github.com/pingcap/rust-rocksdb.git?rev=3cd18c44d160a3cdba586d6502d51b7cc67efc59)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4184,8 +4184,8 @@ dependencies = [
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
+ "libra-metrics 0.1.0",
  "libra-types 0.1.0",
- "metrics 0.1.0",
  "network 0.1.0",
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prometheus 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4278,10 +4278,10 @@ dependencies = [
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-logger 0.1.0",
+ "libra-metrics 0.1.0",
  "libra-tools 0.1.0",
  "libra-types 0.1.0",
  "libradb 0.1.0",
- "metrics 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-client 0.1.0",
@@ -5203,8 +5203,8 @@ dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-logger 0.1.0",
+ "libra-metrics 0.1.0",
  "libra-types 0.1.0",
- "metrics 0.1.0",
  "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prometheus 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",

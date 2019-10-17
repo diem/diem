@@ -15,4 +15,4 @@ slog-scope = "4.0"
 config = { path = "../../config"}
 crash-handler = { path = "../crash-handler" }
 libra-logger =  { path = "../logger" }
-metrics = { path = "../metrics" }
+libra-metrics = { path = "../metrics" }

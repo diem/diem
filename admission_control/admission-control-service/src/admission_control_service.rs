@@ -29,11 +29,11 @@ use libra_mempool_shared_proto::proto::mempool_status::{
     MempoolAddTransactionStatus,
     MempoolAddTransactionStatusCode::{self, MempoolIsFull},
 };
+use libra_metrics::counters::SVC_COUNTERS;
 use libra_types::{
     proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
     transaction::SignedTransaction,
 };
-use metrics::counters::SVC_COUNTERS;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use storage_client::StorageRead;

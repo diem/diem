@@ -17,7 +17,7 @@ pub mod schema;
 use crate::schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec};
 use failure::prelude::*;
 use lazy_static::lazy_static;
-use metrics::OpMetrics;
+use libra_metrics::OpMetrics;
 use rocksdb::{
     rocksdb_options::ColumnFamilyDescriptor, CFHandle, DBOptions, Writable, WriteOptions,
 };

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lazy_static;
-use metrics::{Histogram, IntCounter, IntGauge, OpMetrics};
+use libra_metrics::{Histogram, IntCounter, IntGauge, OpMetrics};
 
 lazy_static::lazy_static! {
     pub static ref OP_COUNTERS: OpMetrics = OpMetrics::new_and_registered("network");

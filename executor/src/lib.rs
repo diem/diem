@@ -43,7 +43,8 @@ use storage_client::{StorageRead, StorageWrite};
 use vm_runtime::VMExecutor;
 
 lazy_static! {
-    static ref OP_COUNTERS: metrics::OpMetrics = metrics::OpMetrics::new_and_registered("executor");
+    static ref OP_COUNTERS: libra_metrics::OpMetrics =
+        libra_metrics::OpMetrics::new_and_registered("executor");
 }
 
 /// A structure that specifies the result of the execution.

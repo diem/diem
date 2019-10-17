@@ -21,7 +21,7 @@ config = { path = "../config" }
 executor = { path = "../executor" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 libra-logger = { path = "../common/logger" }
-metrics = { path = "../common/metrics" }
+libra-metrics = { path = "../common/metrics" }
 network = { path = "../network" }
 storage-client = { path = "../storage/storage-client" }
 libra-types = { path = "../types" }

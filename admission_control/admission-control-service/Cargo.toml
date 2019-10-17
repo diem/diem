@@ -30,7 +30,7 @@ grpc_helpers = { path = "../../common/grpc_helpers" }
 libra-logger = { path = "../../common/logger" }
 libra-mempool = { path = "../../mempool" }
 libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto" }
-metrics = { path = "../../common/metrics" }
+libra-metrics = { path = "../../common/metrics" }
 storage-client = { path = "../../storage/storage-client" }
 libra-types = { path = "../../types" }
 vm_validator = { path = "../../vm_validator" }

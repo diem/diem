@@ -39,7 +39,7 @@ executor = { path = "../executor" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 libra-logger = { path = "../common/logger" }
 libra-mempool = { path = "../mempool" }
-metrics = { path = "../common/metrics" }
+libra-metrics = { path = "../common/metrics" }
 network = { path = "../network" }
 prost-ext = { path = "../common/prost-ext" }
 safety-rules = { path = "safety-rules" }

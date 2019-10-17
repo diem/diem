@@ -10,8 +10,8 @@ use crypto::{ed25519::*, test_utils::KeyPair};
 use generate_keypair::load_key_from_file;
 use lazy_static::lazy_static;
 use libra_logger::prelude::*;
+use libra_metrics::OpMetrics;
 use libra_types::{account_address::AccountAddress, account_config::association_address};
-use metrics::OpMetrics;
 use rand::Rng;
 use std::{collections::HashMap, convert::TryInto, sync::Arc, thread, time};
 

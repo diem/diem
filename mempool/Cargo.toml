@@ -28,7 +28,7 @@ config = { path = "../config" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 grpc_helpers = { path = "../common/grpc_helpers" }
 libra-logger = { path = "../common/logger" }
-metrics = { path = "../common/metrics" }
+libra-metrics = { path = "../common/metrics" }
 network = { path = "../network" }
 crypto = { path = "../crypto/crypto" }
 storage-client = { path = "../storage/storage-client" }

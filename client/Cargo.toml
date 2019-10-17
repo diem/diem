@@ -32,7 +32,7 @@ failure = { package = "failure_ext", path = "../common/failure_ext" }
 lcs = { path = "../common/lcs", package = "libra-canonical-serialization" }
 libra_wallet = { path = "./libra_wallet" }
 libra-logger =  { path = "../common/logger" }
-metrics = { path = "../common/metrics" }
+libra-metrics = { path = "../common/metrics" }
 libra-types = { path = "../types" }
 libra-tools = { path = "../common/tools/" }
 transaction-builder = { path = "../language/transaction-builder" }

@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lazy_static;
+use libra_metrics::OpMetrics;
 use libra_types::{
     transaction::TransactionStatus,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
-use metrics::OpMetrics;
 use prometheus::{IntCounter, IntGauge};
 use std::{convert::TryFrom, time::Instant};
 

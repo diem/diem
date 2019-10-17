@@ -45,6 +45,7 @@ use failure::prelude::*;
 use itertools::{izip, zip_eq};
 use lazy_static::lazy_static;
 use libra_logger::prelude::*;
+use libra_metrics::OpMetrics;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -62,7 +63,6 @@ use libra_types::{
         Version,
     },
 };
-use metrics::OpMetrics;
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{convert::TryInto, iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_proto::StartupInfo;

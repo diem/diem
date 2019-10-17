@@ -30,7 +30,7 @@ failure = { package = "failure_ext", path = "../common/failure_ext" }
 libra-types = { path = "../types" }
 libra-logger = { path = "../common/logger" }
 memsocket = { path = "memsocket" }
-metrics = { path = "../common/metrics" }
+libra-metrics = { path = "../common/metrics" }
 netcore = { path = "netcore" }
 noise = { path = "noise" }
 prost-ext = { path = "../common/prost-ext" }

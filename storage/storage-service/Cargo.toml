@@ -23,7 +23,7 @@ failure = { path = "../../common/failure_ext", package = "failure_ext" }
 grpc_helpers = { path = "../../common/grpc_helpers" }
 libradb = { path = "../libradb" }
 libra-logger = { path = "../../common/logger" }
-metrics = { path = "../../common/metrics" }
+libra-metrics = { path = "../../common/metrics" }
 storage-client = { path = "../storage-client" }
 storage-proto = { path = "../storage-proto" }
 libra-types = { path = "../../types" }

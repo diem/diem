@@ -29,7 +29,7 @@ fn serve_metrics(req: Request<Body>) -> impl Future<Item = Response<Body>, Error
             *resp.body_mut() = Body::from(buffer);
         }
         (&Method::GET, "/counters") => {
-            // Json encoded metrics;
+            // Json encoded libra_metrics;
             let encoder = JsonEncoder;
             let buffer = encode_metrics(encoder);
             *resp.body_mut() = Body::from(buffer);
