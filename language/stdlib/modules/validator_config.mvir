@@ -11,6 +11,11 @@ module ValidatorConfig {
         config: Self.Config,
     }
 
+    // Returns true if addr has a published ValidatorConfig.T resource
+    public has(addr: address): bool {
+        return exists<T>(move(addr));
+    }
+
     // The following are public accessors for retrieving config information about Validators
 
     // Retrieve a read-only instance of a specific accounts ValidatorConfig.T.config

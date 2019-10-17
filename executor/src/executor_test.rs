@@ -29,7 +29,7 @@ use std::{
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_proto::proto::storage::create_storage;
 use storage_service::StorageService;
-use vm_genesis::{encode_genesis_transaction, GENESIS_KEYPAIR};
+use vm_genesis::{encode_genesis_transaction_with_validator, GENESIS_KEYPAIR};
 
 // TODO: remove once we use `Transaction` everywhere
 fn wrap_user_txn(txn: SignedTransaction) -> Transaction {
@@ -41,7 +41,15 @@ fn get_config() -> NodeConfig {
     // Write out the genesis blob to the correct location.
     // XXX Should this logic live in NodeConfigHelpers?
     let genesis_txn: libra_types::proto::types::SignedTransaction =
-        encode_genesis_transaction(&GENESIS_KEYPAIR.0, GENESIS_KEYPAIR.1.clone()).into();
+        encode_genesis_transaction_with_validator(
+            &GENESIS_KEYPAIR.0,
+            GENESIS_KEYPAIR.1.clone(),
+            config
+                .consensus
+                .consensus_peers
+                .get_validator_set(&config.networks[0].network_peers),
+        )
+        .into();
     let mut file = File::create(config.get_genesis_transaction_file()).unwrap();
     file.write_all(&genesis_txn.to_vec().unwrap()).unwrap();
     config
