@@ -13,8 +13,10 @@ use libra_types::{
     account_address::AccountAddress,
     get_with_proof::{RequestItem, UpdateToLatestLedgerRequest},
     proto::types::UpdateToLatestLedgerRequest as ProtoUpdateToLatestLedgerRequest,
-    transaction::{Script, TransactionPayload},
-    transaction_helpers::{create_signed_txn, TransactionSigner},
+    transaction::{
+        helpers::{create_signed_txn, TransactionSigner},
+        Script, TransactionPayload,
+    },
 };
 use libra_wallet::wallet_library::WalletLibrary;
 

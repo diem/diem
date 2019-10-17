@@ -31,8 +31,7 @@ use libra_types::{
         request_item::RequestedItems, GetAccountStateRequest, RequestItem,
         UpdateToLatestLedgerRequest,
     },
-    transaction::{Script, TransactionPayload},
-    transaction_helpers::create_signed_txn,
+    transaction::{helpers::create_signed_txn, Script, TransactionPayload},
 };
 use rand::{
     prelude::ThreadRng,

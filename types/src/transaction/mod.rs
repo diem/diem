@@ -34,6 +34,7 @@ use std::{
     time::Duration,
 };
 
+pub mod helpers;
 mod module;
 mod program;
 mod script;
