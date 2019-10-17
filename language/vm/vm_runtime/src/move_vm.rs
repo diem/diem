@@ -5,6 +5,7 @@ use crate::{
     counters::*, loaded_data::loaded_module::LoadedModule, runtime::VMRuntime, VMExecutor,
     VMVerifier,
 };
+use failure::prelude::*;
 use libra_types::{
     transaction::{SignedTransaction, Transaction, TransactionOutput},
     vm_error::VMStatus,
@@ -65,7 +66,7 @@ impl VMExecutor for MoveVM {
         transactions: Vec<Transaction>,
         config: &VMConfig,
         state_view: &dyn StateView,
-    ) -> Vec<TransactionOutput> {
+    ) -> Result<Vec<TransactionOutput>> {
         let vm = MoveVMImpl::new(Box::new(Arena::new()), |arena| {
             // XXX This means that scripts and modules are NOT tested against the whitelist! This
             // needs to be fixed.

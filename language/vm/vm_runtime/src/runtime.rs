@@ -14,6 +14,7 @@ use crate::{
     process_txn::{validate::ValidationMode, ProcessTransaction},
 };
 use config::config::{VMConfig, VMPublishingOption};
+use failure::prelude::*;
 use libra_logger::prelude::*;
 use libra_types::{
     transaction::{SignedTransaction, Transaction, TransactionOutput},
@@ -112,7 +113,7 @@ impl<'alloc> VMRuntime<'alloc> {
         &self,
         txn_block: Vec<Transaction>,
         data_view: &dyn StateView,
-    ) -> Vec<TransactionOutput> {
+    ) -> Result<Vec<TransactionOutput>> {
         let txns = txn_block
             .into_iter()
             .map(|txn| {
@@ -120,12 +121,12 @@ impl<'alloc> VMRuntime<'alloc> {
                     .expect("All transactions should be user transaction")
             })
             .collect();
-        execute_block(
+        Ok(execute_block(
             txns,
             &self.code_cache,
             &self.script_cache,
             data_view,
             &self.publishing_option,
-        )
+        ))
     }
 }
