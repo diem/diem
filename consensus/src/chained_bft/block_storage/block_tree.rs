@@ -8,7 +8,7 @@ use crate::{
 };
 use consensus_types::{
     block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
-    vote_msg::VoteMsg,
+    vote::Vote,
 };
 use crypto::HashValue;
 use executor::StateComputeResult;
@@ -294,14 +294,14 @@ where
 
     pub(super) fn insert_vote(
         &mut self,
-        vote_msg: &VoteMsg,
+        vote: &Vote,
         validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
-        let block_id = vote_msg.vote_data().proposed().id();
+        let block_id = vote.vote_data().proposed().id();
         if let Some(old_qc) = self.id_to_quorum_cert.get(&block_id) {
             return VoteReceptionResult::OldQuorumCertificate(Arc::clone(old_qc));
         }
-        let res = self.pending_votes.insert_vote(vote_msg, validator_verifier);
+        let res = self.pending_votes.insert_vote(vote, validator_verifier);
         if let VoteReceptionResult::NewQuorumCertificate(_) = res {
             // Note that the block might not be present locally, in which case we cannot calculate
             // time between block creation and qc

@@ -9,7 +9,8 @@ use crate::chained_bft::{
 use channel;
 use consensus_types::{
     block::Block, block_info::BlockInfo, common::Author, proposal_msg::ProposalMsg,
-    quorum_cert::QuorumCert, sync_info::SyncInfo, vote_data::VoteData, vote_msg::VoteMsg,
+    quorum_cert::QuorumCert, sync_info::SyncInfo, vote::Vote, vote_data::VoteData,
+    vote_msg::VoteMsg,
 };
 use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};
 use network::{
@@ -259,7 +260,7 @@ impl NetworkPlayground {
     pub fn timeout_votes_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
         // Timeout votes carry non-empty round signatures.
         if let Some(ConsensusMsg_oneof::VoteMsg(vote_msg)) = &msg_copy.1.message {
-            !vote_msg.round_signature.is_empty()
+            !vote_msg.vote.as_ref().unwrap().round_signature.is_empty()
         } else {
             false
         }
@@ -347,10 +348,12 @@ fn test_network_api() {
         nodes.push(node);
     }
     let vote_msg = VoteMsg::new(
-        VoteData::new(BlockInfo::random(1), BlockInfo::random(0)),
-        peers[0],
-        placeholder_ledger_info(),
-        &signers[0],
+        Vote::new(
+            VoteData::new(BlockInfo::random(1), BlockInfo::random(0)),
+            peers[0],
+            placeholder_ledger_info(),
+            &signers[0],
+        ),
         test_utils::placeholder_sync_info(),
     );
     let previous_block = Block::make_genesis_block();

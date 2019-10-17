@@ -8,6 +8,7 @@ use consensus_types::{
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
+    vote::Vote,
     vote_data::VoteData,
     vote_msg::VoteMsg,
 };
@@ -52,10 +53,12 @@ fn test_proto_convert_proposal() {
 fn test_proto_convert_vote() {
     let signer = ValidatorSigner::random(None);
     let vote_msg = VoteMsg::new(
-        VoteData::new(BlockInfo::random(1), BlockInfo::random(0)),
-        signer.author(),
-        placeholder_ledger_info(),
-        &signer,
+        Vote::new(
+            VoteData::new(BlockInfo::random(1), BlockInfo::random(0)),
+            signer.author(),
+            placeholder_ledger_info(),
+            &signer,
+        ),
         test_utils::placeholder_sync_info(),
     );
     let vote_msg_proto = network::proto::VoteMsg::from(vote_msg.clone());

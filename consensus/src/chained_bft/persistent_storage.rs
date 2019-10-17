@@ -7,7 +7,7 @@ use crate::{
 use config::config::NodeConfig;
 use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
-    timeout_certificate::TimeoutCertificate, vote_msg::VoteMsg,
+    timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use crypto::HashValue;
 use failure::{Result, ResultExt};
@@ -49,7 +49,7 @@ pub trait PersistentStorage<T>: PersistentLivenessStorage + Send + Sync {
     fn prune_tree(&self, block_ids: Vec<HashValue>) -> Result<()>;
 
     /// Persist the consensus state.
-    fn save_consensus_state(&self, state: ConsensusState, vote_msg: VoteMsg) -> Result<()>;
+    fn save_consensus_state(&self, state: ConsensusState, vote: &Vote) -> Result<()>;
 
     /// When the node restart, construct the instance and returned the data read from db.
     /// This could guarantee we only read once during start, and we would panic if the
@@ -67,7 +67,7 @@ pub struct RecoveryData<T> {
     // Safety data
     state: ConsensusState,
     // The last vote message sent by this validator.
-    last_vote: Option<VoteMsg>,
+    last_vote: Option<Vote>,
     root: (Block<T>, QuorumCert, QuorumCert),
     // 1. the blocks guarantee the topological ordering - parent <- child.
     // 2. all blocks are children of the root.
@@ -86,7 +86,7 @@ pub struct RecoveryData<T> {
 impl<T: Payload> RecoveryData<T> {
     pub fn new(
         state: ConsensusState,
-        last_vote: Option<VoteMsg>,
+        last_vote: Option<Vote>,
         mut blocks: Vec<Block<T>>,
         mut quorum_certs: Vec<QuorumCert>,
         storage_ledger: &LedgerInfo,
@@ -135,7 +135,7 @@ impl<T: Payload> RecoveryData<T> {
         self.state.clone()
     }
 
-    pub fn last_vote(&self) -> Option<VoteMsg> {
+    pub fn last_vote(&self) -> Option<Vote> {
         self.last_vote.clone()
     }
 
@@ -326,9 +326,9 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         Ok(())
     }
 
-    fn save_consensus_state(&self, state: ConsensusState, vote_msg: VoteMsg) -> Result<()> {
+    fn save_consensus_state(&self, state: ConsensusState, vote: &Vote) -> Result<()> {
         self.db
-            .save_state(to_vec_named(&state)?, to_vec_named(&vote_msg)?)
+            .save_state(to_vec_named(&state)?, to_vec_named(vote)?)
     }
 
     fn start(config: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
@@ -342,11 +342,11 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         });
         debug!("Recovered consensus state: {}", consensus_state);
 
-        let last_vote_msg = initial_data.1.map(|vote_msg_data| {
-            from_slice(&vote_msg_data[..]).expect("unable to deserialize last vote msg")
+        let last_vote = initial_data.1.map(|vote_data| {
+            from_slice(&vote_data[..]).expect("unable to deserialize last vote msg")
         });
-        let last_vote_repr = match &last_vote_msg {
-            Some(vote_msg) => format!("{}", vote_msg),
+        let last_vote_repr = match &last_vote {
+            Some(vote) => format!("{}", vote),
             None => "None".to_string(),
         };
         debug!("Recovered last vote msg: {}", last_vote_repr);
@@ -390,7 +390,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             .expect("unable to read ledger info from storage");
         let mut initial_data = RecoveryData::new(
             consensus_state,
-            last_vote_msg,
+            last_vote,
             blocks,
             quorum_certs,
             ledger_info.ledger_info(),

@@ -4,7 +4,7 @@
 use crate::{ConsensusState, ProposalReject, SafetyRules};
 use consensus_types::{
     block::Block, block_info::BlockInfo, common::Round, quorum_cert::QuorumCert,
-    sync_info::SyncInfo, vote_data::VoteData, vote_msg::VoteMsg,
+    sync_info::SyncInfo, vote::Vote, vote_data::VoteData, vote_msg::VoteMsg,
 };
 use crypto::hash::{CryptoHash, HashValue};
 use libra_types::{
@@ -74,20 +74,23 @@ fn make_block_with_parent(
     };
 
     let vote_msg = VoteMsg::new(
-        vote_data.clone(),
-        validator_signer.author(),
-        ledger_info,
-        validator_signer,
+        Vote::new(
+            vote_data.clone(),
+            validator_signer.author(),
+            ledger_info,
+            validator_signer,
+        ),
         sync_info,
     );
 
     let mut ledger_info_with_signatures =
-        LedgerInfoWithSignatures::new(vote_msg.ledger_info().clone(), BTreeMap::new());
+        LedgerInfoWithSignatures::new(vote_msg.vote().ledger_info().clone(), BTreeMap::new());
 
     vote_msg
+        .vote()
         .signature()
         .clone()
-        .add_to_li(vote_msg.author(), &mut ledger_info_with_signatures);
+        .add_to_li(vote_msg.vote().author(), &mut ledger_info_with_signatures);
 
     let qc = QuorumCert::new(vote_data, ledger_info_with_signatures);
 

@@ -13,7 +13,7 @@ use consensus_types::{
     common::{Payload, Round},
     quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate,
-    vote_msg::VoteMsg,
+    vote::Vote,
 };
 use crypto::HashValue;
 use executor::{ProcessedVMOutput, StateComputeResult};
@@ -341,13 +341,13 @@ impl<T: Payload> BlockStore<T> {
     /// A and the votes for execution result B are aggregated separately).
     pub fn insert_vote(
         &self,
-        vote_msg: VoteMsg,
+        vote: &Vote,
         validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
         self.inner
             .write()
             .unwrap()
-            .insert_vote(&vote_msg, validator_verifier)
+            .insert_vote(vote, validator_verifier)
     }
 
     /// Prune the tree up to next_root_id (keep next_root_id's block).  Any branches not part of
@@ -544,10 +544,10 @@ impl<T: Payload> BlockStore<T> {
     /// Can't be used in production, because production insertion potentially requires state sync
     pub fn insert_vote_and_qc(
         &self,
-        vote_msg: VoteMsg,
+        vote: &Vote,
         validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
-        let r = self.insert_vote(vote_msg, validator_verifier);
+        let r = self.insert_vote(vote, validator_verifier);
         if let VoteReceptionResult::NewQuorumCertificate(ref qc) = r {
             self.insert_single_quorum_cert(qc.as_ref().clone()).unwrap();
         }

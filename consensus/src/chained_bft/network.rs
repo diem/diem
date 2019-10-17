@@ -378,6 +378,7 @@ where
         let vote_msg = VoteMsg::try_from(vote_msg)?;
         debug!("Received {}", vote_msg);
         vote_msg
+            .vote()
             .verify(self.epoch_mgr.validators().as_ref())
             .map_err(|e| {
                 security_log(SecurityEvent::InvalidConsensusVote)
