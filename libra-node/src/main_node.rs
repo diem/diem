@@ -245,7 +245,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     let metrics_port = node_config.debug_interface.metrics_server_port;
     let metric_host = node_config.debug_interface.address.clone();
-    thread::spawn(move || metric_server::start_server((metric_host.as_str(), metrics_port)));
+    thread::spawn(move || metric_server::start_server(metric_host, metrics_port, false));
+    let public_metrics_port = node_config.debug_interface.public_metrics_server_port;
+    let public_metric_host = node_config.debug_interface.address.clone();
+    thread::spawn(move || {
+        metric_server::start_server(public_metric_host, public_metrics_port, true)
+    });
 
     let state_synchronizer = StateSynchronizer::bootstrap(
         state_sync_network_handles,
