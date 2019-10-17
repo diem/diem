@@ -99,15 +99,17 @@ module LibraSystem {
         }
 
         i = 0;
+        // this is only needed to make the bytecode verifier happy
         info_ref = Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i));
-        while (copy(i) < copy(size)) {
+        loop {
             if (*&copy(info_ref).addr == copy(addr)) {
-            // TODO: below doesn't work, looks like a compiler bug
-            //if (*(&Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i)).addr) == copy(addr)) {
                 return true;
             }
-            info_ref = Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i));
             i = copy(i) + 1;
+            if (copy(i) >= copy(size)) {
+                break;
+            }
+            info_ref = Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i));
         }
 
         return false;
