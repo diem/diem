@@ -8,7 +8,7 @@ use crate::chained_bft::persistent_storage::{
 use config::config::{NodeConfig, NodeConfigHelpers};
 use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
-    timeout_certificate::TimeoutCertificate, vote_msg::VoteMsg,
+    timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use crypto::HashValue;
 use failure::Result;
@@ -24,7 +24,7 @@ pub struct MockSharedStorage<T> {
     pub block: Mutex<HashMap<HashValue, Block<T>>>,
     pub qc: Mutex<HashMap<HashValue, QuorumCert>>,
     pub state: Mutex<ConsensusState>,
-    pub last_vote: Mutex<Option<VoteMsg>>,
+    pub last_vote: Mutex<Option<Vote>>,
 
     // Liveness state
     pub highest_timeout_certificate: Mutex<Option<TimeoutCertificate>>,
@@ -153,13 +153,13 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
         Ok(())
     }
 
-    fn save_consensus_state(&self, state: ConsensusState, last_vote: VoteMsg) -> Result<()> {
+    fn save_consensus_state(&self, state: ConsensusState, last_vote: &Vote) -> Result<()> {
         *self.shared_storage.state.lock().unwrap() = state;
         self.shared_storage
             .last_vote
             .lock()
             .unwrap()
-            .replace(last_vote);
+            .replace(last_vote.clone());
         Ok(())
     }
 
@@ -215,7 +215,7 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
         Ok(())
     }
 
-    fn save_consensus_state(&self, _: ConsensusState, _: VoteMsg) -> Result<()> {
+    fn save_consensus_state(&self, _: ConsensusState, _: &Vote) -> Result<()> {
         Ok(())
     }
 

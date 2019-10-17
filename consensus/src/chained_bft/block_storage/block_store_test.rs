@@ -4,7 +4,7 @@
 use crate::chained_bft::test_utils::{build_empty_tree_with_custom_signing, build_simple_tree};
 use crate::chained_bft::{
     block_storage::{BlockReader, NeedFetchResult, VoteReceptionResult},
-    test_utils::{self, build_empty_tree, TreeInserter},
+    test_utils::{build_empty_tree, TreeInserter},
 };
 use consensus_types::{
     block::{
@@ -14,8 +14,8 @@ use consensus_types::{
     block_info::BlockInfo,
     common::Author,
     quorum_cert::QuorumCert,
+    vote::Vote,
     vote_data::VoteData,
-    vote_msg::VoteMsg,
 };
 use crypto::{HashValue, PrivateKey};
 use futures::executor::block_on;
@@ -40,7 +40,7 @@ fn test_block_store_create_block() {
         .executed_state;
 
     // certify a1
-    let vote_msg = VoteMsg::new(
+    let vote = Vote::new(
         VoteData::new(
             BlockInfo::from_block(
                 a1_ref.block(),
@@ -52,13 +52,12 @@ fn test_block_store_create_block() {
         block_store.signer().author(),
         placeholder_ledger_info(),
         block_store.signer(),
-        test_utils::placeholder_sync_info(),
     );
     let validator_verifier = ValidatorVerifier::new_single(
         block_store.signer().author(),
         block_store.signer().public_key(),
     );
-    block_store.insert_vote_and_qc(vote_msg, &validator_verifier);
+    block_store.insert_vote_and_qc(&vote, &validator_verifier);
 
     let b1 = block_store.create_block(a1_ref.block(), vec![2], 2, 2);
     assert_eq!(b1.parent_id(), a1_ref.id());
@@ -313,7 +312,7 @@ fn test_insert_vote() {
             .unwrap()
             .executed_state;
 
-        let vote_msg = VoteMsg::new(
+        let vote = Vote::new(
             VoteData::new(
                 BlockInfo::from_block(
                     block.block(),
@@ -325,15 +324,14 @@ fn test_insert_vote() {
             voter.author(),
             placeholder_ledger_info(),
             voter,
-            test_utils::placeholder_sync_info(),
         );
-        let vote_res = block_store.insert_vote_and_qc(vote_msg.clone(), &validator_verifier);
+        let vote_res = block_store.insert_vote_and_qc(&vote, &validator_verifier);
 
         // first vote of an author is accepted
         assert_eq!(vote_res, VoteReceptionResult::VoteAdded(i as u64));
         // filter out duplicates
         assert_eq!(
-            block_store.insert_vote_and_qc(vote_msg, &validator_verifier),
+            block_store.insert_vote_and_qc(&vote, &validator_verifier),
             VoteReceptionResult::DuplicateVote,
         );
         // qc is still not there
@@ -346,7 +344,7 @@ fn test_insert_vote() {
         .unwrap()
         .executed_state;
     let final_voter = &signers[0];
-    let vote_msg = VoteMsg::new(
+    let vote = Vote::new(
         VoteData::new(
             BlockInfo::from_block(
                 block.block(),
@@ -358,9 +356,8 @@ fn test_insert_vote() {
         final_voter.author(),
         placeholder_ledger_info(),
         final_voter,
-        test_utils::placeholder_sync_info(),
     );
-    match block_store.insert_vote_and_qc(vote_msg, &validator_verifier) {
+    match block_store.insert_vote_and_qc(&vote, &validator_verifier) {
         VoteReceptionResult::NewQuorumCertificate(qc) => {
             assert_eq!(qc.certified_block().id(), block.id());
         }

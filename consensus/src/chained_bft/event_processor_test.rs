@@ -35,6 +35,7 @@ use consensus_types::{
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
     timeout_certificate::TimeoutCertificate,
+    vote::Vote,
     vote_data::VoteData,
     vote_msg::VoteMsg,
 };
@@ -266,7 +267,7 @@ fn basic_new_rank_event_test() {
 
         // Simulate a case with a1 receiving enough votes for a QC: a new proposal
         // should be a child of a1 and carry its QC.
-        let vote_msg = VoteMsg::new(
+        let vote = Vote::new(
             VoteData::new(
                 BlockInfo::from_block(a1.block(), executed_state.state_id, executed_state.version),
                 a1.quorum_cert().certified_block().clone(),
@@ -274,14 +275,13 @@ fn basic_new_rank_event_test() {
             node.block_store.signer().author(),
             placeholder_ledger_info(),
             node.block_store.signer(),
-            test_utils::placeholder_sync_info(),
         );
         let validator_verifier = Arc::new(ValidatorVerifier::new_single(
             node.block_store.signer().author(),
             node.block_store.signer().public_key(),
         ));
         node.block_store
-            .insert_vote_and_qc(vote_msg, validator_verifier.as_ref());
+            .insert_vote_and_qc(&vote, &validator_verifier);
         node.event_processor
             .process_new_round_event(NewRoundEvent {
                 round: 2,
@@ -359,9 +359,9 @@ fn process_successful_proposal_test() {
             })
             .collect::<Vec<_>>();
         assert_eq!(pending_for_proposer.len(), 1);
-        assert_eq!(pending_for_proposer[0].author(), node.author);
+        assert_eq!(pending_for_proposer[0].vote().author(), node.author);
         assert_eq!(
-            pending_for_proposer[0].vote_data().proposed().id(),
+            pending_for_proposer[0].vote().vote_data().proposed().id(),
             proposal_id
         );
         assert_eq!(
@@ -424,7 +424,10 @@ fn process_old_proposal_test() {
             .collect::<Vec<_>>();
         // just the new one
         assert_eq!(pending_for_me.len(), 1);
-        assert_eq!(pending_for_me[0].vote_data().proposed().id(), new_block_id);
+        assert_eq!(
+            pending_for_me[0].vote().vote_data().proposed().id(),
+            new_block_id
+        );
         assert!(node.block_store.get_block(old_block_id).is_some());
     });
 }
@@ -548,23 +551,31 @@ fn process_vote_timeout_msg_test() {
         BlockInfo::new(0, 1, HashValue::random(), HashValue::random(), 0, 0),
         BlockInfo::new(0, 0, HashValue::random(), HashValue::random(), 0, 0),
     );
-    let mut vote_msg_on_timeout = VoteMsg::new(
+
+    let mut vote_on_timeout = Vote::new(
         dummy_vote_data,
         non_proposer.signer.author(),
         placeholder_ledger_info(),
         &non_proposer.signer,
+    );
+
+    vote_on_timeout.add_round_signature(&non_proposer.signer);
+
+    let vote_msg_on_timeout = VoteMsg::new(
+        vote_on_timeout,
         SyncInfo::new(
             block_0_quorum_cert,
             QuorumCert::certificate_for_genesis(),
             None,
         ),
     );
-    vote_msg_on_timeout.add_round_signature(&non_proposer.signer);
+
     block_on(
         static_proposer
             .event_processor
             .process_vote(vote_msg_on_timeout),
     );
+
     assert_eq!(
         static_proposer
             .block_store
@@ -713,10 +724,12 @@ fn process_votes_basic_test() {
     );
 
     let vote_msg = VoteMsg::new(
-        vote_data,
-        node.block_store.signer().author(),
-        placeholder_ledger_info(),
-        node.block_store.signer(),
+        Vote::new(
+            vote_data,
+            node.block_store.signer().author(),
+            placeholder_ledger_info(),
+            node.block_store.signer(),
+        ),
         test_utils::placeholder_sync_info(),
     );
 
@@ -885,11 +898,11 @@ fn nil_vote_on_timeout() {
                 .clone(),
         )
         .unwrap();
-        assert!(vote_msg.is_timeout());
-        assert_eq!(vote_msg.vote_data().proposed().round(), 1);
-        assert_eq!(
-            vote_msg.vote_data().parent().id(),
-            node.block_store.root().id()
-        );
+
+        let vote = vote_msg.vote();
+
+        assert!(vote.is_timeout());
+        assert_eq!(vote.vote_data().proposed().round(), 1);
+        assert_eq!(vote.vote_data().parent().id(), node.block_store.root().id());
     });
 }

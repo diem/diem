@@ -107,7 +107,7 @@ message VoteData {
   BlockInfo parent = 2;
 }
 
-message VoteMsg {
+message Vote {
   // The actual vote information.
   VoteData vote_data = 1;
   // Author of the vote.
@@ -119,8 +119,13 @@ message VoteMsg {
   bytes signature = 4;
   // The round signatures can be aggregated into the timeout certificate.
   bytes round_signature = 5;
+}
+
+message VoteMsg {
+  // The container of the vote material
+  Vote vote = 1;
   // Sync info for exchanging information about highest QC, TC and LedgerInfo
-  SyncInfo sync_info = 6;
+  SyncInfo sync_info = 2;
 }
 
 message RequestBlock {

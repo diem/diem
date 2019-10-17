@@ -27,6 +27,7 @@ use consensus_types::{
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
     timeout_certificate::TimeoutCertificate,
+    vote::Vote,
     vote_data::VoteData,
     vote_msg::VoteMsg,
 };
@@ -74,14 +75,14 @@ pub struct EventProcessor<T> {
     time_service: Arc<dyn TimeService>,
     enforce_increasing_timestamps: bool,
     // Cache of the last sent vote message.
-    last_vote_sent: Option<(VoteMsg, Round)>,
+    last_vote_sent: Option<(Vote, Round)>,
     validators: Arc<ValidatorVerifier>,
 }
 
 impl<T: Payload> EventProcessor<T> {
     pub fn new(
         block_store: Arc<BlockStore<T>>,
-        last_vote: Option<VoteMsg>,
+        last_vote: Option<Vote>,
         pacemaker: Pacemaker,
         proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
         proposal_generator: ProposalGenerator<T>,
@@ -362,13 +363,13 @@ impl<T: Payload> EventProcessor<T> {
             self.proposer_election.get_valid_proposers(round).iter().map(|p| p.short_str()).collect::<Vec<String>>(),
         );
 
-        let mut timeout_vote_msg = match self.last_vote_sent.as_ref() {
+        let mut timeout_vote = match self.last_vote_sent.as_ref() {
             Some((vote, vote_round)) if (*vote_round == round) => vote.clone(),
             _ => {
                 // Didn't vote in this round yet, generate a backup vote
                 let backup_vote_res = self.gen_backup_vote(round).await;
                 match backup_vote_res {
-                    Ok(backup_vote_msg) => backup_vote_msg,
+                    Ok(backup_vote) => backup_vote,
                     Err(e) => {
                         error!("Failed to generate a backup vote: {}", e);
                         return;
@@ -377,13 +378,14 @@ impl<T: Payload> EventProcessor<T> {
             }
         };
 
-        if !timeout_vote_msg.is_timeout() {
-            timeout_vote_msg.add_round_signature(self.block_store.signer());
+        if !timeout_vote.is_timeout() {
+            timeout_vote.add_round_signature(self.block_store.signer());
         }
+        let timeout_vote_msg = VoteMsg::new(timeout_vote, self.gen_sync_info());
         self.network.broadcast_vote(timeout_vote_msg).await
     }
 
-    async fn gen_backup_vote(&mut self, round: Round) -> failure::Result<VoteMsg> {
+    async fn gen_backup_vote(&mut self, round: Round) -> failure::Result<Vote> {
         // We generally assume that this function is called only if no votes have been sent in this
         // round, but having a duplicate proposal here would work ok because block store makes
         // sure the calls to `execute_and_insert_block` are idempotent.
@@ -477,16 +479,16 @@ impl<T: Payload> EventProcessor<T> {
         let proposal_parent_id = proposal.parent_id();
         let certified_parent_block_round = proposal.quorum_cert().parent_block().round();
 
-        let vote_msg = match self.execute_and_vote(proposal).await {
+        let vote = match self.execute_and_vote(proposal).await {
             Err(e) => {
                 warn!("{:?}", e);
                 return;
             }
-            Ok(vote_msg) => vote_msg,
+            Ok(vote) => vote,
         };
 
         // Safety invariant: The vote being sent is for the proposal that was received.
-        debug_checked_verify_eq!(proposal_id, vote_msg.vote_data().proposed().id());
+        debug_checked_verify_eq!(proposal_id, vote.vote_data().proposed().id());
         // Safety invariant: The last voted round is updated to be the same as the proposed block's
         // round. At this point, the replica has decided to vote for the proposed block.
         debug_checked_verify_eq!(
@@ -506,7 +508,7 @@ impl<T: Payload> EventProcessor<T> {
         let recipients = self
             .proposer_election
             .get_valid_proposers(proposal_round + 1);
-        debug!("{}Voted: {} {}", Fg(Green), Fg(Reset), vote_msg);
+        debug!("{}Voted: {} {}", Fg(Green), Fg(Reset), vote);
 
         // Safety invariant: The parent block must be present in the block store and the replica
         // only votes for blocks with round greater than the parent block's round.
@@ -514,6 +516,7 @@ impl<T: Payload> EventProcessor<T> {
             .block_store
             .get_block(proposal_parent_id)
             .map_or(false, |parent_block| parent_block.round() < proposal_round));
+        let vote_msg = VoteMsg::new(vote, self.gen_sync_info());
         self.network.send_vote(vote_msg, recipients).await;
     }
 
@@ -597,7 +600,7 @@ impl<T: Payload> EventProcessor<T> {
     /// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.
     ///
     /// This function assumes that it might be called from different tasks concurrently.
-    async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> failure::Result<VoteMsg> {
+    async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> failure::Result<Vote> {
         let executed_block = self
             .sync_manager
             .execute_and_insert_block(proposed_block)
@@ -634,7 +637,7 @@ impl<T: Payload> EventProcessor<T> {
             .block_store
             .ledger_info_placeholder(vote_info.potential_commit_id());
 
-        let vote_msg = VoteMsg::new(
+        let vote = Vote::new(
             VoteData::new(
                 BlockInfo::from_block(block, executed_state.state_id, executed_state.version),
                 block.quorum_cert().certified_block().clone(),
@@ -642,15 +645,13 @@ impl<T: Payload> EventProcessor<T> {
             self.author,
             ledger_info_placeholder,
             self.block_store.signer(),
-            self.gen_sync_info(),
         );
 
         self.storage
-            .save_consensus_state(vote_info.consensus_state().clone(), vote_msg.clone())
+            .save_consensus_state(vote_info.consensus_state().clone(), &vote)
             .with_context(|e| format!("Fail to persist consensus state: {:?}", e))?;
-        self.last_vote_sent
-            .replace((vote_msg.clone(), block.round()));
-        Ok(vote_msg)
+        self.last_vote_sent.replace((vote.clone(), block.round()));
+        Ok(vote)
     }
 
     /// Upon new vote:
@@ -660,9 +661,9 @@ impl<T: Payload> EventProcessor<T> {
     /// 3. Once the QC successfully formed, notify the Pacemaker.
     pub async fn process_vote(&mut self, vote_msg: VoteMsg) {
         // Check whether this validator is a valid recipient of the vote.
-        if !vote_msg.is_timeout() {
+        if !vote_msg.vote().is_timeout() {
             // Unlike timeout votes regular votes are sent to the leaders of the next round only.
-            let next_round = vote_msg.vote_data().proposed().round() + 1;
+            let next_round = vote_msg.vote().vote_data().proposed().round() + 1;
             if self
                 .proposer_election
                 .is_valid_proposer(self.author, next_round)
@@ -682,7 +683,7 @@ impl<T: Payload> EventProcessor<T> {
         } else {
             // Sync up for timeout votes only.
             if self
-                .sync_up(vote_msg.sync_info(), vote_msg.author(), true)
+                .sync_up(vote_msg.sync_info(), vote_msg.vote().author(), true)
                 .await
                 .is_err()
             {
@@ -690,7 +691,7 @@ impl<T: Payload> EventProcessor<T> {
                 return;
             };
         }
-        if let Err(e) = self.add_vote(vote_msg).await {
+        if let Err(e) = self.add_vote(vote_msg.vote()).await {
             error!("Error adding a new vote: {}", e);
         }
     }
@@ -699,12 +700,11 @@ impl<T: Payload> EventProcessor<T> {
     /// If a new QC / TC is formed then
     /// 1) fetch missing dependencies if required, and then
     /// 2) call process_certificates(), which will start a new round in return.
-    async fn add_vote(&mut self, vote: VoteMsg) -> failure::Result<()> {
-        let vote_author = vote.author();
+    async fn add_vote(&mut self, vote: &Vote) -> failure::Result<()> {
         // Add the vote and check whether it completes a new QC or a TC
         match self.block_store.insert_vote(vote, &self.validators) {
             VoteReceptionResult::NewQuorumCertificate(qc) => {
-                self.new_qc_aggregated(qc, vote_author).await
+                self.new_qc_aggregated(qc, vote.author()).await
             }
             VoteReceptionResult::NewTimeoutCertificate(tc) => self.new_tc_aggregated(tc).await,
             _ => Ok(()),
