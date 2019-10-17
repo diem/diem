@@ -140,6 +140,7 @@ impl FakeExecutor {
             &self.config.vm_config,
             &self.data_store,
         )
+        .expect("The VM should not fail to start")
     }
 
     pub fn execute_transaction(&self, txn: SignedTransaction) -> TransactionOutput {

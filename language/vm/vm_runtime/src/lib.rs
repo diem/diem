@@ -137,6 +137,7 @@ pub use process_txn::verify::static_verify_program;
 pub use txn_executor::execute_function;
 
 use config::config::VMConfig;
+use failure::prelude::*;
 use libra_types::{
     transaction::{SignedTransaction, Transaction, TransactionOutput},
     vm_error::VMStatus,
@@ -168,5 +169,5 @@ pub trait VMExecutor {
         transactions: Vec<Transaction>,
         config: &VMConfig,
         state_view: &dyn StateView,
-    ) -> Vec<TransactionOutput>;
+    ) -> Result<Vec<TransactionOutput>>;
 }

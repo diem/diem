@@ -5199,6 +5199,7 @@ dependencies = [
  "compiler 0.1.0",
  "config 0.1.0",
  "crypto 0.1.0",
+ "failure_ext 0.1.0",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",

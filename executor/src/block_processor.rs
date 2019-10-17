@@ -263,7 +263,7 @@ where
                     .collect(),
                 &self.vm_config,
                 &state_view,
-            )
+            )?
         };
 
         // Since other validators have committed these transactions, their status should all be
@@ -520,7 +520,7 @@ where
                 executable_block.transactions.clone(),
                 &self.vm_config,
                 &state_view,
-            )
+            )?
         };
 
         let status: Vec<_> = vm_outputs

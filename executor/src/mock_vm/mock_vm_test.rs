@@ -48,7 +48,8 @@ fn test_mock_vm_different_senders() {
         txns.clone(),
         &VMConfig::empty_whitelist_FOR_TESTING(),
         &MockStateView,
-    );
+    )
+    .expect("MockVM should not fail to start");
 
     for (output, txn) in itertools::zip_eq(outputs.iter(), txns.iter()) {
         let sender = txn.as_signed_user_txn().unwrap().sender();
@@ -83,7 +84,8 @@ fn test_mock_vm_same_sender() {
         txns,
         &VMConfig::empty_whitelist_FOR_TESTING(),
         &MockStateView,
-    );
+    )
+    .expect("MockVM should not fail to start");
 
     for (i, output) in outputs.iter().enumerate() {
         assert_eq!(
@@ -117,7 +119,8 @@ fn test_mock_vm_payment() {
         txns.into_iter().map(Transaction::UserTransaction).collect(),
         &VMConfig::empty_whitelist_FOR_TESTING(),
         &MockStateView,
-    );
+    )
+    .expect("MockVM should not fail to start");
 
     let mut output_iter = output.iter();
     output_iter.next();

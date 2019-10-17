@@ -6,6 +6,7 @@ mod mock_vm_test;
 
 use config::config::VMConfig;
 use crypto::ed25519::compat;
+use failure::Result;
 use lazy_static::lazy_static;
 use libra_types::{
     access_path::AccessPath,
@@ -52,7 +53,7 @@ impl VMExecutor for MockVM {
         transactions: Vec<Transaction>,
         _config: &VMConfig,
         state_view: &dyn StateView,
-    ) -> Vec<TransactionOutput> {
+    ) -> Result<Vec<TransactionOutput>> {
         if state_view.is_genesis() {
             assert_eq!(
                 transactions.len(),
@@ -61,7 +62,7 @@ impl VMExecutor for MockVM {
             );
             let output =
                 TransactionOutput::new(gen_genesis_writeset(), vec![], 0, KEEP_STATUS.clone());
-            return vec![output];
+            return Ok(vec![output]);
         }
 
         // output_cache is used to store the output of transactions so they are visible to later
@@ -133,7 +134,7 @@ impl VMExecutor for MockVM {
             }
         }
 
-        outputs
+        Ok(outputs)
     }
 }
 
