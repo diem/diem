@@ -21,7 +21,6 @@ pub mod proto;
 #[cfg(any(test, feature = "testing"))]
 pub mod test_helpers;
 pub mod transaction;
-pub mod transaction_helpers;
 pub mod validator_change;
 pub mod validator_public_keys;
 pub mod validator_set;
