@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    block_processor::execute_block,
+    block_processor::execute_user_transaction_block,
     code_cache::{
         module_adapter::ModuleFetcherImpl,
         module_cache::{BlockModuleCache, VMModuleCache},
@@ -18,8 +18,10 @@ use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
+    block_metadata::BlockMetadata,
     transaction::{SignedTransaction, Transaction, TransactionOutput},
     vm_error::{StatusCode, VMStatus},
+    write_set::WriteSet,
 };
 use std::convert::TryFrom;
 use vm_cache_map::Arena;
@@ -114,19 +116,60 @@ impl<'alloc> VMRuntime<'alloc> {
         txn_block: Vec<Transaction>,
         data_view: &dyn StateView,
     ) -> Result<Vec<TransactionOutput>> {
-        let txns = txn_block
-            .into_iter()
-            .map(|txn| {
-                SignedTransaction::try_from(txn)
-                    .expect("All transactions should be user transaction")
-            })
-            .collect();
-        Ok(execute_block(
-            txns,
-            &self.code_cache,
-            &self.script_cache,
-            data_view,
-            &self.publishing_option,
-        ))
+        let mut result = vec![];
+        let blocks = chunk_block_transactions(txn_block);
+        for block in blocks {
+            match block {
+                TransactionBlock::UserTransaction(txns) => {
+                    result.append(&mut execute_user_transaction_block(
+                        txns,
+                        &self.code_cache,
+                        &self.script_cache,
+                        data_view,
+                        &self.publishing_option,
+                    ))
+                }
+                // TODO: Implement the logic for processing system transactions.
+                TransactionBlock::BlockPrologue(_) => unimplemented!(""),
+                TransactionBlock::WriteSet(_) => unimplemented!(""),
+            }
+        }
+        Ok(result)
     }
+}
+
+pub(crate) enum TransactionBlock {
+    UserTransaction(Vec<SignedTransaction>),
+    WriteSet(WriteSet),
+    BlockPrologue(BlockMetadata),
+}
+
+pub(crate) fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock> {
+    let mut blocks = vec![];
+    let mut buf = vec![];
+    for txn in txns {
+        match txn {
+            Transaction::BlockMetadata(data) => {
+                if !buf.is_empty() {
+                    blocks.push(TransactionBlock::UserTransaction(buf));
+                    buf = vec![];
+                }
+                blocks.push(TransactionBlock::BlockPrologue(data));
+            }
+            Transaction::WriteSet(ws) => {
+                if !buf.is_empty() {
+                    blocks.push(TransactionBlock::UserTransaction(buf));
+                    buf = vec![];
+                }
+                blocks.push(TransactionBlock::WriteSet(ws));
+            }
+            Transaction::UserTransaction(txn) => {
+                buf.push(txn);
+            }
+        }
+    }
+    if !buf.is_empty() {
+        blocks.push(TransactionBlock::UserTransaction(buf));
+    }
+    blocks
 }
