@@ -24,7 +24,7 @@ pub use self::{
     consensus::{
         consensus_msg::Message as ConsensusMsg_oneof, Block, BlockInfo, BlockRetrievalStatus,
         ConsensusMsg, Proposal, QuorumCert, RequestBlock, RespondBlock, SyncInfo,
-        TimeoutCertificate, Vote, VoteData,
+        TimeoutCertificate, VoteData, VoteMsg,
     },
     mempool::MempoolSyncMsg,
     network::{

@@ -51,13 +51,13 @@ fn test_proto_convert_proposal() {
 #[test]
 fn test_proto_convert_vote() {
     let signer = ValidatorSigner::random(None);
-    let vote = VoteMsg::new(
+    let vote_msg = VoteMsg::new(
         VoteData::new(BlockInfo::random(1), BlockInfo::random(0)),
         signer.author(),
         placeholder_ledger_info(),
         &signer,
         test_utils::placeholder_sync_info(),
     );
-    let vote_proto = network::proto::Vote::from(vote.clone());
-    assert_eq!(vote, vote_proto.try_into().unwrap());
+    let vote_msg_proto = network::proto::VoteMsg::from(vote_msg.clone());
+    assert_eq!(vote_msg, vote_msg_proto.try_into().unwrap());
 }

@@ -11,7 +11,7 @@ import "transaction.proto";
 message ConsensusMsg {
   oneof message {
     Proposal proposal = 1;
-    Vote vote = 2;
+    VoteMsg vote_msg = 2;
     RequestBlock request_block = 3;
     RespondBlock respond_block = 4;
     SyncInfo sync_info = 6;
@@ -107,7 +107,7 @@ message VoteData {
   BlockInfo parent = 2;
 }
 
-message Vote {
+message VoteMsg {
   // The actual vote information.
   VoteData vote_data = 1;
   // Author of the vote.

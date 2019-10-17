@@ -248,7 +248,7 @@ impl NetworkPlayground {
 
     /// Returns true for vote messages only.
     pub fn votes_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
-        if let Some(ConsensusMsg_oneof::Vote(_)) = msg_copy.1.message {
+        if let Some(ConsensusMsg_oneof::VoteMsg(_)) = msg_copy.1.message {
             true
         } else {
             false
@@ -258,8 +258,8 @@ impl NetworkPlayground {
     /// Returns true for vote messages that carry round signatures only.
     pub fn timeout_votes_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
         // Timeout votes carry non-empty round signatures.
-        if let Some(ConsensusMsg_oneof::Vote(vote)) = &msg_copy.1.message {
-            !vote.round_signature.is_empty()
+        if let Some(ConsensusMsg_oneof::VoteMsg(vote_msg)) = &msg_copy.1.message {
+            !vote_msg.round_signature.is_empty()
         } else {
             false
         }
@@ -346,7 +346,7 @@ fn test_network_api() {
         receivers.push(node.start(&runtime.executor()));
         nodes.push(node);
     }
-    let vote = VoteMsg::new(
+    let vote_msg = VoteMsg::new(
         VoteData::new(BlockInfo::random(1), BlockInfo::random(0)),
         peers[0],
         placeholder_ledger_info(),
@@ -360,13 +360,15 @@ fn test_network_api() {
         SyncInfo::new(previous_qc.clone(), previous_qc.clone(), None),
     );
     block_on(async move {
-        nodes[0].send_vote(vote.clone(), peers[2..5].to_vec()).await;
+        nodes[0]
+            .send_vote(vote_msg.clone(), peers[2..5].to_vec())
+            .await;
         playground
             .wait_for_messages(3, NetworkPlayground::take_all)
             .await;
         for r in receivers.iter_mut().take(5).skip(2) {
             let v = r.votes.next().await.unwrap();
-            assert_eq!(v, vote);
+            assert_eq!(v, vote_msg);
         }
         nodes[4].broadcast_proposal(proposal.clone()).await;
         playground

@@ -351,7 +351,9 @@ fn process_successful_proposal_test() {
                 }
 
                 match m.1.message {
-                    Some(ConsensusMsg_oneof::Vote(vote)) => Some(VoteMsg::try_from(vote).unwrap()),
+                    Some(ConsensusMsg_oneof::VoteMsg(vote_msg)) => {
+                        Some(VoteMsg::try_from(vote_msg).unwrap())
+                    }
                     _ => None,
                 }
             })
@@ -413,7 +415,9 @@ fn process_old_proposal_test() {
                 }
 
                 match m.1.message {
-                    Some(ConsensusMsg_oneof::Vote(vote)) => Some(VoteMsg::try_from(vote).unwrap()),
+                    Some(ConsensusMsg_oneof::VoteMsg(vote_msg)) => {
+                        Some(VoteMsg::try_from(vote_msg).unwrap())
+                    }
                     _ => None,
                 }
             })
