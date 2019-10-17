@@ -35,7 +35,7 @@ libra-logger =  { path = "../common/logger" }
 metrics = { path = "../common/metrics" }
 libra-types = { path = "../types" }
 libra-tools = { path = "../common/tools/" }
-transaction_builder = { path = "../language/transaction_builder" }
+transaction-builder = { path = "../language/transaction-builder" }
 
 [dev-dependencies]
 crypto = { path = "../crypto/crypto", features = ["testing"] }

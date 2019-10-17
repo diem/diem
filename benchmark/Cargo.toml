@@ -33,7 +33,7 @@ crypto = { path = "../crypto/crypto" }
 rusty-fork = "0.2.1"
 libra-tools = { path = "../common/tools" }
 libra-types = { path = "../types" }
-transaction_builder = { path = "../language/transaction_builder" }
+transaction-builder = { path = "../language/transaction-builder" }
 
 [dev-dependencies]
 crypto = { path = "../crypto/crypto", features = ["testing"] }
