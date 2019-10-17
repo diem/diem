@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config_builder::util::get_test_config;
+use config_builder::util::{get_test_config, get_test_config_with_validators};
 use executor::{CommittableBlock, Executor};
 use failure::prelude::*;
 use futures::executor::block_on;
@@ -25,7 +25,8 @@ use std::{collections::BTreeMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use transaction_builder::{
-    encode_block_prologue_script, encode_create_account_script, encode_transfer_script,
+    encode_block_prologue_script, encode_create_account_script,
+    encode_rotate_consensus_pubkey_script, encode_transfer_script,
 };
 use vm_runtime::MoveVM;
 
@@ -96,30 +97,57 @@ fn test_reconfiguration() {
     // When executing a transaction emits a validator set change, storage should propagate the new
     // validator set
 
-    let (mut config, genesis_keypair) = get_test_config();
+    let (validators, consensus_peers, mut config, genesis_keypair) =
+        get_test_config_with_validators();
     config.vm_config = VMConfig {
         publishing_options: VMPublishingOption::CustomScripts,
     };
     let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
 
     let genesis_account = association_address();
-    // Create a dummy block prologue transaction that will emit a ValidatorSetChanged event
-    let txn = get_test_signed_transaction(
+    let validator_account = validators.keys().next().unwrap();
+    let (validator_privkey, _) = validators.get(validator_account).unwrap();
+    let validator_pubkey = &consensus_peers
+        .peers
+        .get(&validator_account.to_string())
+        .unwrap()
+        .consensus_pubkey;
+
+    // give the validator some money so they can send a tx
+    let txn1 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 1,
         genesis_keypair.private_key.clone(),
         genesis_keypair.public_key.clone(),
+        Some(encode_transfer_script(validator_account, 200_000)),
+    );
+    // rotate the validator's connsensus pubkey to trigger a reconfiguration
+    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
+    let (_, new_pubkey) = compat::generate_keypair(&mut rng);
+    let txn2 = get_test_signed_transaction(
+        *validator_account,
+        /* sequence_number = */ 0,
+        validator_privkey.consensus_private_key.clone(),
+        validator_pubkey.clone(),
+        Some(encode_rotate_consensus_pubkey_script(
+            new_pubkey.to_bytes().to_vec(),
+        )),
+    );
+    // Create a dummy block prologue transaction that will emit a ValidatorSetChanged event
+    let txn3 = get_test_signed_transaction(
+        genesis_account,
+        /* sequence_number = */ 2,
+        genesis_keypair.private_key.clone(),
+        genesis_keypair.public_key.clone(),
         Some(encode_block_prologue_script(/* block_height */ 1)),
     );
-
-    let txn_block = vec![txn];
-    let txn_block_id = gen_block_id(1);
-
+    let txn_block = vec![txn1, txn2, txn3];
+    let block1_id = gen_block_id(1);
     let (_vm_output, state_compute_result) = block_on(executor.execute_block(
         txn_block,
         executor.committed_trees().clone(),
         *GENESIS_BLOCK_ID,
-        txn_block_id,
+        block1_id,
     ))
     .unwrap()
     .unwrap();
@@ -129,6 +157,42 @@ fn test_reconfiguration() {
         state_compute_result.has_reconfiguration(),
         "StateComputeResult is missing the new validator set"
     );
+
+    // rotating to the same key should not trigger a reconfiguration
+    let txn4 = get_test_signed_transaction(
+        *validator_account,
+        /* sequence_number = */ 1,
+        validator_privkey.consensus_private_key.clone(),
+        validator_pubkey.clone(),
+        Some(encode_rotate_consensus_pubkey_script(
+            new_pubkey.to_bytes().to_vec(),
+        )),
+    );
+    let txn5 = get_test_signed_transaction(
+        genesis_account,
+        /* sequence_number = */ 3,
+        genesis_keypair.private_key.clone(),
+        genesis_keypair.public_key.clone(),
+        Some(encode_block_prologue_script(/* block_height */ 2)),
+    );
+    let txn_block = vec![txn4, txn5];
+    let block2_id = gen_block_id(2);
+    let (_vm_output, state_compute_result) = block_on(executor.execute_block(
+        txn_block,
+        executor.committed_trees().clone(),
+        block1_id,
+        block2_id,
+    ))
+    .unwrap()
+    .unwrap();
+
+    assert!(
+        !state_compute_result.has_reconfiguration(),
+        "StateComputeResult has a new validator set, but should not"
+    );
+
+    // TODO: test rotating to invalid key. Currently, this crashes the executor because the
+    // validator set fails to parse
 }
 
 #[test]

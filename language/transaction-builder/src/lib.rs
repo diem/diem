@@ -15,6 +15,7 @@ use stdlib::{
     transaction_scripts::{
         BLOCK_PROLOGUE_TXN_BODY, CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY,
         PEER_TO_PEER_TRANSFER_TXN_BODY, ROTATE_AUTHENTICATION_KEY_TXN_BODY,
+        ROTATE_CONSENSUS_PUBKEY_TXN_BODY,
     },
 };
 #[cfg(any(test, feature = "testing"))]
@@ -25,6 +26,8 @@ lazy_static! {
     static ref CREATE_ACCOUNT_TXN: Vec<u8> = { compile_script(&CREATE_ACCOUNT_TXN_BODY) };
     static ref ROTATE_AUTHENTICATION_KEY_TXN: Vec<u8> =
         { compile_script(&ROTATE_AUTHENTICATION_KEY_TXN_BODY) };
+    static ref ROTATE_CONSENSUS_PUBKEY_TXN: Vec<u8> =
+        { compile_script(&ROTATE_CONSENSUS_PUBKEY_TXN_BODY) };
     static ref MINT_TXN: Vec<u8> = { compile_script(&MINT_TXN_BODY) };
     static ref BLOCK_PROLOGUE_TXN: Vec<u8> = { compile_script(&BLOCK_PROLOGUE_TXN_BODY) };
 }
@@ -105,6 +108,14 @@ pub fn encode_create_account_script(
             TransactionArgument::Address(*account_address),
             TransactionArgument::U64(initial_balance),
         ],
+    )
+}
+
+/// Encode a program that rotates the sender's consensus public key to `new_key`.
+pub fn encode_rotate_consensus_pubkey_script(new_key: Vec<u8>) -> Script {
+    Script::new(
+        ROTATE_CONSENSUS_PUBKEY_TXN.clone(),
+        vec![TransactionArgument::ByteArray(ByteArray::new(new_key))],
     )
 }
 

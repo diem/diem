@@ -14,6 +14,11 @@ pub fn create_account() -> &'static str {
     include_str!("../transaction_scripts/create_account.mvir")
 }
 
+/// Returns the source code for the rotate-consensus-pubkey script.
+pub fn rotate_consensus_pubkey() -> &'static str {
+    include_str!("../transaction_scripts/rotate_consensus_pubkey.mvir")
+}
+
 /// Returns the source code for the rotate-key transaction script.
 pub fn rotate_key() -> &'static str {
     include_str!("../transaction_scripts/rotate_authentication_key.mvir")
@@ -36,6 +41,11 @@ lazy_static! {
 
 lazy_static! {
     pub static ref CREATE_ACCOUNT_TXN_BODY: Program = parse_program(create_account()).unwrap();
+}
+
+lazy_static! {
+    pub static ref ROTATE_CONSENSUS_PUBKEY_TXN_BODY: Program =
+        { parse_program(rotate_consensus_pubkey()).unwrap() };
 }
 
 lazy_static! {
