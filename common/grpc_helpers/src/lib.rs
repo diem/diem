@@ -6,7 +6,7 @@ use futures::{compat::Future01CompatExt, future::Future, prelude::*};
 use futures_01::future::Future as Future01;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
 use libra_logger::prelude::*;
-use metrics::counters::SVC_COUNTERS;
+use libra_metrics::counters::SVC_COUNTERS;
 use std::{
     str::from_utf8,
     sync::{

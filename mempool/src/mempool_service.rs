@@ -9,11 +9,11 @@ use crate::{
 use futures::Future;
 use grpc_helpers::{create_grpc_invalid_arg_status, default_reply_error_logger};
 use libra_logger::prelude::*;
+use libra_metrics::counters::SVC_COUNTERS;
 use libra_types::{
     account_address::AccountAddress, proto::types::SignedTransactionsBlock,
     transaction::SignedTransaction,
 };
-use metrics::counters::SVC_COUNTERS;
 use std::{
     cmp,
     collections::HashSet,

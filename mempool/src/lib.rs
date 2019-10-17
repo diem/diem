@@ -61,7 +61,7 @@ mod shared_mempool;
 
 // module op counters
 use lazy_static::lazy_static;
-use metrics::OpMetrics;
+use libra_metrics::OpMetrics;
 lazy_static! {
     static ref OP_COUNTERS: OpMetrics = OpMetrics::new_and_registered("mempool");
 }

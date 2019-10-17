@@ -11,8 +11,8 @@ use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
+use libra_metrics::metric_server;
 use libra_types::account_address::AccountAddress as PeerId;
-use metrics::metric_server;
 use network::{
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},

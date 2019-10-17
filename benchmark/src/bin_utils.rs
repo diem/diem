@@ -10,7 +10,7 @@ use admission_control_proto::proto::admission_control::AdmissionControlClient;
 use client::AccountData;
 use grpcio::{ChannelBuilder, EnvBuilder};
 use libra_logger::{self, prelude::*};
-use metrics::metric_server::start_server;
+use libra_metrics::metric_server::start_server;
 use std::{sync::Arc, time};
 
 const COMMIT_RATIO_THRESHOLD: f64 = 0.7;

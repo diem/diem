@@ -23,7 +23,7 @@ lcs = { path = "../../../common/lcs", package = "libra-canonical-serialization" 
 config = { path = "../../../config" }
 crypto = { path = "../../../crypto/crypto" }
 libra-logger = { path = "../../../common/logger" }
-metrics = { path = "../../../common/metrics" }
+libra-metrics = { path = "../../../common/metrics" }
 state-view = { path = "../../../storage/state-view" }
 libra-types = { path = "../../../types" }
 vm = { path = "../" }
