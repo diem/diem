@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_validator::{TransactionValidation, VMValidator};
-use config::config::NodeConfig;
 use config_builder::util::get_test_config;
 use crypto::ed25519::*;
 use executor::Executor;
 use futures::future::Future;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
+use libra_config::config::NodeConfig;
 use libra_types::{
     account_address, account_config,
     test_helpers::transaction_test_helpers,

@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-use config::config::{VMConfig, VMPublishingOption};
 use crypto::HashValue;
 use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
+use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,

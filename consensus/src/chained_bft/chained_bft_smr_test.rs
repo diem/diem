@@ -28,7 +28,7 @@ use crate::chained_bft::{
     persistent_storage::RecoveryData,
     test_utils::{consensus_runtime, with_smr_id},
 };
-use config::config::ConsensusProposerType::{
+use libra_config::config::ConsensusProposerType::{
     self, FixedProposer, MultipleOrderedProposers, RotatingProposer,
 };
 use libra_types::crypto_proxies::{

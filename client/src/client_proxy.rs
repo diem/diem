@@ -3,9 +3,9 @@
 
 use crate::{commands::*, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
-use config::{config::PersistableConfig, trusted_peers::ConsensusPeersConfig};
 use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
+use libra_config::{config::PersistableConfig, trusted_peers::ConsensusPeersConfig};
 use libra_logger::prelude::*;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
@@ -1093,7 +1093,7 @@ impl fmt::Display for AccountEntry {
 #[cfg(test)]
 mod tests {
     use crate::client_proxy::{parse_bool, AddressAndIndex, ClientProxy};
-    use config::{config::PersistableConfig, trusted_peers::ConfigHelpers};
+    use libra_config::{config::PersistableConfig, trusted_peers::ConfigHelpers};
     use libra_tools::tempdir::TempPath;
     use libra_wallet::io_utils;
     use proptest::prelude::*;

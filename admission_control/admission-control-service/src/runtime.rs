@@ -6,13 +6,13 @@ use admission_control_proto::proto::admission_control::{
     create_admission_control, AdmissionControlClient, SubmitTransactionRequest,
     SubmitTransactionResponse,
 };
-use config::config::NodeConfig;
 use futures::{
     channel::{mpsc, oneshot},
     future::{FutureExt, TryFutureExt},
 };
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
+use libra_config::config::NodeConfig;
 use libra_mempool::proto::mempool::MempoolClient;
 use network::validator_network::{AdmissionControlNetworkEvents, AdmissionControlNetworkSender};
 use std::{cmp::min, sync::Arc};

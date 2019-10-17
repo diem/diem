@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::{NodeConfig, NodeConfigHelpers};
+use libra_config::config::{NodeConfig, NodeConfigHelpers};
 use libra_logger::prelude::*;
 use slog_scope::GlobalLoggerGuard;
 use std::path::Path;

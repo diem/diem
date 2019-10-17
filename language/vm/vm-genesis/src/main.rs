@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::{config::PersistableConfig, trusted_peers::ConfigHelpers};
+use libra_config::{config::PersistableConfig, trusted_peers::ConfigHelpers};
 use prost_ext::MessageExt;
 use std::{fs::File, io::prelude::*};
 use transaction_builder::default_config;

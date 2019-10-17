@@ -9,7 +9,7 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-config = { path = "../../config" }
+libra-config = { path = "../../config" }
 crypto = { path = "../../crypto/crypto" }
 ir_to_bytecode = { path = "../compiler/ir_to_bytecode" }
 lazy_static = "1.3.0"

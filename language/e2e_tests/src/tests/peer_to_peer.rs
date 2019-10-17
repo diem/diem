@@ -7,7 +7,7 @@ use crate::{
     executor::{test_all_genesis, FakeExecutor},
     gas_costs, transaction_status_eq,
 };
-use config::config::VMPublishingOption;
+use libra_config::config::VMPublishingOption;
 use libra_types::{
     account_config::AccountEvent,
     transaction::{SignedTransaction, TransactionOutput, TransactionPayload, TransactionStatus},

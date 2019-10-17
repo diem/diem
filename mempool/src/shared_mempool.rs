@@ -6,9 +6,9 @@ use crate::{
     OP_COUNTERS,
 };
 use bounded_executor::BoundedExecutor;
-use config::config::{MempoolConfig, NodeConfig};
 use futures::sync::mpsc::UnboundedSender;
 use futures_preview::{compat::Future01CompatExt, future::join_all, Stream, StreamExt};
+use libra_config::config::{MempoolConfig, NodeConfig};
 use libra_logger::prelude::*;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{

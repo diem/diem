@@ -10,8 +10,8 @@ use crate::{
     utils::MessageExt,
     ProtocolId,
 };
-use config::config::RoleType;
 use futures::{sink::SinkExt, stream::StreamExt};
+use libra_config::config::RoleType;
 use libra_types::PeerId;
 use netcore::{
     compat::IoCompat,
@@ -150,8 +150,8 @@ mod tests {
         protocols::identity::{exchange_identity, Identity},
         ProtocolId,
     };
-    use config::config::RoleType;
     use futures::{executor::block_on, future::join};
+    use libra_config::config::RoleType;
     use libra_types::PeerId;
     use memsocket::MemorySocket;
     use netcore::{

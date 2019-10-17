@@ -5,9 +5,9 @@ use crate::{
     core_mempool::CoreMempool, mempool_service::MempoolService, proto::mempool,
     shared_mempool::start_shared_mempool,
 };
-use config::config::NodeConfig;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
+use libra_config::config::NodeConfig;
 use network::validator_network::{MempoolNetworkEvents, MempoolNetworkSender};
 use std::{
     cmp::max,

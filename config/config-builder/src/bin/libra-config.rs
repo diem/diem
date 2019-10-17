@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::RoleType;
 use config_builder::swarm_config::SwarmConfigBuilder;
+use libra_config::config::RoleType;
 use std::convert::TryInto;
 use std::path::PathBuf;
 use structopt::StructOpt;

@@ -66,7 +66,7 @@ mod tests {
         OP_COUNTER,
     };
     use client::AccountData;
-    use config::config::RoleType;
+    use libra_config::config::RoleType;
     use libra_swarm::swarm::LibraSwarm;
     use libra_tools::tempdir::TempPath;
     use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};

@@ -15,7 +15,7 @@ grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["pr
 structopt = "0.3.2"
 
 lcs = { path = "../../common/lcs", package = "libra-canonical-serialization" }
-config = { path = "../../config" }
+libra-config = { path = "../../config" }
 crypto = { path = "../../crypto/crypto" }
 debug-interface = { path = "../../common/debug-interface" }
 executable-helpers = { path = "../../common/executable-helpers" }

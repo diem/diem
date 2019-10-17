@@ -11,8 +11,8 @@ use crate::{
 };
 use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
-use config::config::{NodeConfigHelpers, VMPublishingOption};
 use crypto::{ed25519::*, HashValue};
+use libra_config::config::{NodeConfigHelpers, VMPublishingOption};
 use libra_types::{
     test_helpers::transaction_test_helpers,
     transaction::{

@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::NodeConfig;
 use failure::prelude::*;
+use libra_config::config::NodeConfig;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 
 use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;

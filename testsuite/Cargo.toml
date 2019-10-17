@@ -25,6 +25,6 @@ cli = { path = "../client", package="client" }
 generate-keypair = { path = "../config/generate-keypair" }
 libra-swarm = { path = "../libra-swarm", features = ["testing"]}
 libra-logger = { path = "../common/logger" }
-config = { path = "../config" }
+libra-config = { path = "../config" }
 libra-tools = { path = "../common/tools" }
 crypto = { path = "../crypto/crypto" }

@@ -31,7 +31,7 @@ tokio = "=0.2.0-alpha.6"
 prometheus = { version = "0.7.0", default-features = false }
 
 channel = { path = "../common/channel" }
-config = { path = "../config" }
+libra-config = { path = "../config" }
 consensus-types = { path = "consensus-types", default-features = false }
 crypto = { path = "../crypto/crypto" }
 debug-interface = { path = "../common/debug-interface" }

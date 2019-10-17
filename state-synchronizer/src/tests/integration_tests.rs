@@ -4,11 +4,11 @@
 use crate::{
     executor_proxy::ExecutorProxyTrait, LedgerInfo, PeerId, StateSyncClient, StateSynchronizer,
 };
-use config::config::RoleType;
 use config_builder::util::get_test_config;
 use crypto::{ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, HashValue, SigningKey};
 use failure::{prelude::*, Result};
 use futures::{executor::block_on, future::FutureExt, Future};
+use libra_config::config::RoleType;
 use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::LedgerInfoWithSignatures,

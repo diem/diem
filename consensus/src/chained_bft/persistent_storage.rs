@@ -4,13 +4,13 @@
 use crate::{
     chained_bft::consensusdb::ConsensusDB, consensus_provider::create_storage_read_client,
 };
-use config::config::NodeConfig;
 use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use crypto::HashValue;
 use failure::{Result, ResultExt};
+use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_types::ledger_info::LedgerInfo;
 use rmp_serde::{from_slice, to_vec_named};

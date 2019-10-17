@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-config = { path = "../config" }
+libra-config = { path = "../config" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 futures = "0.1.28"
 scratchpad = { path = "../storage/scratchpad" }

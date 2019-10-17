@@ -7,13 +7,13 @@ use crate::{
     peer_manager::{PeerManager, PeerScoreUpdateType},
     LedgerInfo, PeerId,
 };
-use config::config::StateSyncConfig;
 use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
     stream::{futures_unordered::FuturesUnordered, select_all},
     StreamExt,
 };
+use libra_config::config::StateSyncConfig;
 use libra_logger::prelude::*;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures, transaction::TransactionListWithProof,

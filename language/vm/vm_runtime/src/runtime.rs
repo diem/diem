@@ -13,8 +13,8 @@ use crate::{
     loaded_data::loaded_module::LoadedModule,
     process_txn::{validate::ValidationMode, ProcessTransaction},
 };
-use config::config::{VMConfig, VMPublishingOption};
 use failure::prelude::*;
+use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_logger::prelude::*;
 use libra_types::{
     transaction::{SignedTransaction, Transaction, TransactionOutput},

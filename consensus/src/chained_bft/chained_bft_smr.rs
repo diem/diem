@@ -22,10 +22,10 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
-use config::config::{ConsensusConfig, ConsensusProposerType};
 use consensus_types::common::{Payload, Round};
 use failure::prelude::*;
 use futures::{executor::block_on, select, stream::StreamExt};
+use libra_config::config::{ConsensusConfig, ConsensusProposerType};
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};

@@ -24,7 +24,7 @@ tokio-retry = "0.2.0"
 admission-control-proto = { path = "../admission_control/admission-control-proto" }
 bounded-executor = { path = "../common/bounded-executor" }
 channel = { path = "../common/channel" }
-config = { path = "../config" }
+libra-config = { path = "../config" }
 crypto = { path = "../crypto/crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 libra-types = { path = "../types" }

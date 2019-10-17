@@ -10,7 +10,6 @@ use crate::{
     ProtocolId,
 };
 use channel;
-use config::config::RoleType;
 use futures::{
     channel::oneshot,
     executor::block_on,
@@ -18,6 +17,7 @@ use futures::{
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
     stream::StreamExt,
 };
+use libra_config::config::RoleType;
 use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::{

@@ -14,7 +14,7 @@ use crate::{
     OP_COUNTERS,
 };
 use chrono::Utc;
-use config::config::NodeConfig;
+use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_mempool_shared_proto::{
     proto::mempool_status::MempoolAddTransactionStatusCode, MempoolAddTransactionStatus,

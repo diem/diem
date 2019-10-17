@@ -28,7 +28,7 @@ proptest = "0.9.3"
 proptest-derive = "0.1.1"
 proptest-helpers = { path = "../../common/proptest-helpers" }
 prost = "0.5.0"
-config =  { path = "../../config" }
+libra-config =  { path = "../../config" }
 libra-logger = { path = "../../common/logger" }
 stdlib = { path = "../stdlib" }
 walkdir = "2.2.9"
