@@ -278,6 +278,17 @@ impl AccountData {
         Self::with_account_and_event_counts(account, balance, sequence_number, 0, 0, false, false)
     }
 
+    /// Creates a new `AccountData` with the provided account.
+    pub fn with_keypair(
+        privkey: Ed25519PrivateKey,
+        pubkey: Ed25519PublicKey,
+        balance: u64,
+        sequence_number: u64,
+    ) -> Self {
+        let account = Account::with_keypair(privkey, pubkey);
+        Self::with_account(account, balance, sequence_number)
+    }
+
     /// Creates a new `AccountData` with custom parameters.
     pub fn with_account_and_event_counts(
         account: Account,

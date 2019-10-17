@@ -6,6 +6,8 @@
 
 use crate::{config::strip, errors::*, genesis_accounts::make_genesis_accounts};
 use language_e2e_tests::account::{Account, AccountData};
+use libra_config::trusted_peers::ConfigHelpers;
+use libra_types::validator_set::ValidatorSet;
 use std::{
     collections::{btree_map, BTreeMap},
     str::FromStr,
@@ -14,6 +16,12 @@ use std::{
 // unit: microlibra
 const DEFAULT_BALANCE: u64 = 1_000_000;
 
+#[derive(Debug)]
+pub enum Role {
+    /// Means that the account is a current validator; its address is in the on-chain validator set
+    Validator,
+}
+
 /// Struct that specifies the initial setup of an account.
 #[derive(Debug)]
 pub struct AccountDefinition {
@@ -21,8 +29,21 @@ pub struct AccountDefinition {
     pub name: String,
     /// The initial balance of the account.
     pub balance: Option<u64>,
-    /// The initial sequence number  of the account.
+    /// The initial sequence number of the account.
     pub sequence_number: Option<u64>,
+    /// Special role this account has in the system (if any)
+    pub role: Option<Role>,
+}
+
+impl FromStr for Role {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "validator" => Ok(Role::Validator),
+            other => Err(ErrorKind::Other(format!("Invalid account role {:?}", other)).into()),
+        }
+    }
 }
 
 /// A raw entry extracted from the input. Used to build the global config table.
@@ -30,6 +51,18 @@ pub struct AccountDefinition {
 pub enum Entry {
     /// Defines an account that can be used in tests.
     AccountDefinition(AccountDefinition),
+}
+
+impl Entry {
+    pub fn is_validator(&self) -> bool {
+        match self {
+            Entry::AccountDefinition(AccountDefinition {
+                role: Some(Role::Validator),
+                ..
+            }) => true,
+            _ => false,
+        }
+    }
 }
 
 impl FromStr for Entry {
@@ -46,18 +79,20 @@ impl FromStr for Entry {
                 .split(|c: char| c == ',' || c.is_whitespace())
                 .filter(|s| !s.is_empty())
                 .collect();
-            if v.is_empty() || v.len() > 3 {
+            if v.is_empty() || v.len() > 4 {
                 return Err(ErrorKind::Other(
-                    "config 'account' takes 1 to 3 parameters".to_string(),
+                    "config 'account' takes 1 to 4 parameters".to_string(),
                 )
                 .into());
             }
             let balance = v.get(1).and_then(|s| s.parse::<u64>().ok());
             let sequence_number = v.get(2).and_then(|s| s.parse::<u64>().ok());
+            let role = v.get(3).and_then(|s| s.parse::<Role>().ok());
             return Ok(Entry::AccountDefinition(AccountDefinition {
                 name: v[0].to_string(),
                 balance,
                 sequence_number,
+                role,
             }));
         }
         Err(ErrorKind::Other(format!("failed to parse '{}' as global config entry", s)).into())
@@ -70,18 +105,44 @@ pub struct Config {
     /// A map from account names to account data
     pub accounts: BTreeMap<String, AccountData>,
     pub genesis_accounts: BTreeMap<String, Account>,
+    /// The validator set after genesis
+    pub validator_set: ValidatorSet,
 }
 
 impl Config {
     pub fn build(entries: &[Entry]) -> Result<Self> {
         let mut accounts = BTreeMap::new();
+        let mut validator_accounts = entries.iter().filter(|entry| entry.is_validator()).count();
+
+        // generate a validator set with |validator_accounts| validators
+        let (validator_keys, consensus_config, network_config) =
+            ConfigHelpers::gen_validator_nodes(validator_accounts, None);
+        let validator_set = consensus_config.get_validator_set(&network_config);
+
+        // initialize the keys of validator entries with the validator set
+        // enhance type of config to contain a validator set, use it to initialize genesis
         for entry in entries {
             match entry {
                 Entry::AccountDefinition(def) => {
-                    let account_data = AccountData::new(
-                        def.balance.unwrap_or(DEFAULT_BALANCE),
-                        def.sequence_number.unwrap_or(0),
-                    );
+                    let account_data = if entry.is_validator() {
+                        validator_accounts -= 1;
+                        let validator_public_keys =
+                            validator_set.payload()[validator_accounts].clone();
+                        let validator_pubkey = validator_public_keys.consensus_public_key();
+                        let (validator_privkey, _) =
+                            &validator_keys[validator_public_keys.account_address()];
+                        AccountData::with_keypair(
+                            validator_privkey.consensus_private_key.clone(),
+                            validator_pubkey.clone(),
+                            def.balance.unwrap_or(DEFAULT_BALANCE),
+                            def.sequence_number.unwrap_or(0),
+                        )
+                    } else {
+                        AccountData::new(
+                            def.balance.unwrap_or(DEFAULT_BALANCE),
+                            def.sequence_number.unwrap_or(0),
+                        )
+                    };
                     let name = def.name.to_ascii_lowercase();
                     let entry = accounts.entry(name);
                     match entry {
@@ -101,11 +162,15 @@ impl Config {
         }
 
         if let btree_map::Entry::Vacant(entry) = accounts.entry("default".to_string()) {
-            entry.insert(AccountData::new(DEFAULT_BALANCE, 0));
+            entry.insert(AccountData::new(
+                DEFAULT_BALANCE,
+                /* sequence_number */ 0,
+            ));
         }
         Ok(Config {
             accounts,
             genesis_accounts: make_genesis_accounts(),
+            validator_set,
         })
     }
 

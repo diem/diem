@@ -20,6 +20,7 @@ fn parse_account_positive() {
         "//!    account     :bob,   0,  0",
         "//!\naccount\n:bob,\n0,\n0",
         "//!\taccount\t:bob,\t0,\t0",
+        "//! account: alice, 1000, 0, validator",
     ] {
         s.parse::<Entry>().unwrap();
     }
@@ -27,7 +28,11 @@ fn parse_account_positive() {
 
 #[test]
 fn parse_account_negative() {
-    for s in &["//! account:", "//! account", "//! account: alice, 1, 2, 3"] {
+    for s in &[
+        "//! account:",
+        "//! account",
+        "//! account: alice, 1, 2, validator, 4",
+    ] {
         s.parse::<Entry>().unwrap_err();
     }
 }

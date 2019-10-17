@@ -13,11 +13,13 @@ use libra_types::{
     access_path::AccessPath,
     account_config::AccountResource,
     language_storage::ModuleId,
-    transaction::{SignedTransaction, Transaction, TransactionOutput},
+    transaction::{SignedTransaction, Transaction, TransactionOutput, TransactionPayload},
+    validator_set::ValidatorSet,
     vm_error::VMStatus,
     write_set::WriteSet,
 };
 use vm::CompiledModule;
+use vm_genesis::GENESIS_KEYPAIR;
 use vm_runtime::{MoveVM, VMExecutor, VMVerifier};
 
 /// Provides an environment to run a VM instance.
@@ -79,6 +81,23 @@ impl FakeExecutor {
             panic!("Whitelisted transactions are not supported as a publishing option")
         }
         Self::from_genesis(&GENESIS_WRITE_SET, Some(publishing_options))
+    }
+
+    pub fn from_validator_set(
+        validator_set: ValidatorSet,
+        publishing_options: VMPublishingOption,
+    ) -> Self {
+        let genesis_write_set = match vm_genesis::encode_genesis_transaction_with_validator(
+            &GENESIS_KEYPAIR.0,
+            GENESIS_KEYPAIR.1.clone(),
+            validator_set,
+        )
+        .payload()
+        {
+            TransactionPayload::WriteSet(ws) => ws.clone(),
+            _ => panic!("Expected writeset txn in genesis txn"),
+        };
+        Self::from_genesis(&genesis_write_set, Some(publishing_options))
     }
 
     /// Creates an executor in which no genesis state has been applied yet.
