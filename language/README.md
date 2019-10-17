@@ -49,6 +49,6 @@ Libra Core components interact with the language component through the VM. Speci
     ├── cost-synthesis # Cost synthesis for bytecode instructions
     ├── src            # Bytecode language definitions, serializer, and deserializer
     ├── tests          # VM tests
-    ├── vm_genesis     # The genesis state creation, and blockchain genesis writeset
+    ├── vm-genesis     # The genesis state creation, and blockchain genesis writeset
     └── vm_runtime     # The bytecode interpreter
 ```

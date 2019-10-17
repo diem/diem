@@ -42,5 +42,5 @@ libra-types = { path = "../../types", features = ["testing"]}
 
 storage-proto = { path = "../../storage/storage-proto" }
 storage-service = { path = "../../storage/storage-service" }
-vm_genesis = { path = "../../language/vm/vm_genesis" }
+vm-genesis = { path = "../../language/vm/vm-genesis" }
 transaction-builder = { path = "../../language/transaction-builder" }

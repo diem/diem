@@ -22,7 +22,7 @@ generate-keypair = { path = "../generate-keypair" }
 libra-logger = { path = "../../common/logger" }
 prost-ext = { path = "../../common/prost-ext" }
 libra-types = { path = "../../types" }
-vm_genesis = { path = "../../language/vm/vm_genesis" }
+vm-genesis = { path = "../../language/vm/vm-genesis" }
 
 [dev-dependencies]
 libra-types = { path = "../../types", features = ["testing"]}
