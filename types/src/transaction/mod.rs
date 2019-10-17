@@ -1079,7 +1079,7 @@ impl From<TransactionListWithProof> for crate::proto::types::TransactionListWith
 /// transaction.
 #[allow(clippy::large_enum_variant)]
 #[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Transaction {
     /// Transaction submitted by the user. e.g: P2P payment transaction, publishing module
     /// transaction, etc.
@@ -1101,87 +1101,6 @@ impl Transaction {
             Transaction::UserTransaction(txn) => Ok(txn),
             _ => Err(format_err!("Not a user transaction.")),
         }
-    }
-}
-
-// TODO(#1307)
-impl ser::Serialize for Transaction {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        use ser::SerializeTuple;
-
-        match self {
-            Transaction::UserTransaction(txn) => {
-                let mut t = serializer.serialize_tuple(2)?;
-                t.serialize_element(&0u8)?;
-                t.serialize_element(txn)?;
-                t.end()
-            }
-            Transaction::WriteSet(write_set) => {
-                let mut t = serializer.serialize_tuple(2)?;
-                t.serialize_element(&1u8)?;
-                t.serialize_element(write_set)?;
-                t.end()
-            }
-            Transaction::BlockMetadata(block_metadata) => {
-                let mut t = serializer.serialize_tuple(2)?;
-                t.serialize_element(&2u8)?;
-                t.serialize_element(block_metadata)?;
-                t.end()
-            }
-        }
-    }
-}
-
-impl<'de> de::Deserialize<'de> for Transaction {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        struct TransactionVisitor;
-        impl<'de> de::Visitor<'de> for TransactionVisitor {
-            type Value = Transaction;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("Transaction")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> std::result::Result<Self::Value, A::Error>
-            where
-                A: de::SeqAccess<'de>,
-            {
-                use serde::de::Error;
-
-                let variant: u8 = seq
-                    .next_element()?
-                    .ok_or_else(|| A::Error::custom("expected u8"))?;
-                match variant {
-                    0 => {
-                        let txn: SignedTransaction = seq
-                            .next_element()?
-                            .ok_or_else(|| A::Error::custom("expected txn"))?;
-                        Ok(Transaction::UserTransaction(txn))
-                    }
-                    1 => {
-                        let write_set: WriteSet = seq
-                            .next_element()?
-                            .ok_or_else(|| A::Error::custom("expected write_set"))?;
-                        Ok(Transaction::WriteSet(write_set))
-                    }
-                    2 => {
-                        let block_metadata: BlockMetadata = seq
-                            .next_element()?
-                            .ok_or_else(|| A::Error::custom("expected block_metadata"))?;
-                        Ok(Transaction::BlockMetadata(block_metadata))
-                    }
-                    _ => Err(A::Error::custom("invalid variant")),
-                }
-            }
-        }
-
-        deserializer.deserialize_tuple(2, TransactionVisitor)
     }
 }
 
