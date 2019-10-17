@@ -1,4 +1,5 @@
 use cluster_test::experiments::PacketLossRandomValidators;
+use cluster_test::instance::Instance;
 use cluster_test::prometheus::Prometheus;
 use cluster_test::tx_emitter::{EmitJobRequest, EmitThreadParams};
 use cluster_test::util::unix_timestamp_now;
@@ -75,6 +76,8 @@ struct Args {
     stop_experiment: bool,
     #[structopt(long, group = "action")]
     packet_loss_experiment: bool,
+    #[structopt(long, group = "action")]
+    perf_run: bool,
 
     // emit_tx options
     #[structopt(long, default_value = "10")]
@@ -180,6 +183,8 @@ pub fn main() {
             &runner.cluster,
         );
         runner.run_single_experiment(Box::new(experiment)).unwrap();
+    } else if args.perf_run {
+        runner.perf_run();
     }
 }
 
@@ -214,6 +219,8 @@ struct ClusterTestRunner {
     experiment_interval: Duration,
     slack: Option<SlackClient>,
     thread_pool: threadpool::ThreadPool,
+    tx_emitter: TxEmitter,
+    prometheus: Prometheus,
 }
 
 fn parse_host_port(s: &str) -> failure::Result<(String, u32)> {
@@ -243,11 +250,13 @@ impl BasicSwarmUtil {
 
     pub fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
         let mut emitter = TxEmitter::new(&self.cluster);
-        let _job = emitter.start_job(EmitJobRequest {
-            instances: self.cluster.instances().to_vec(),
-            accounts_per_client,
-            thread_params,
-        });
+        emitter
+            .start_job(EmitJobRequest {
+                instances: self.cluster.instances().to_vec(),
+                accounts_per_client,
+                thread_params,
+            })
+            .expect("Failed to start emit job");
         thread::park();
     }
 }
@@ -269,7 +278,6 @@ impl ClusterUtil {
         let prometheus = Prometheus::new(
             cluster
                 .prometheus_ip()
-                .as_ref()
                 .expect("Failed to discover prometheus ip in aws"),
         );
         info!("Discovered {} peers", cluster.instances().len());
@@ -287,11 +295,13 @@ impl ClusterUtil {
 
     pub fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
         let mut emitter = TxEmitter::new(&self.cluster);
-        let _job = emitter.start_job(EmitJobRequest {
-            instances: self.cluster.instances().to_vec(),
-            accounts_per_client,
-            thread_params,
-        });
+        emitter
+            .start_job(EmitJobRequest {
+                instances: self.cluster.instances().to_vec(),
+                accounts_per_client,
+                thread_params,
+            })
+            .expect("Failed to start emit job");
         self.run_stat_loop();
     }
 
@@ -304,13 +314,15 @@ impl ClusterUtil {
         let mut results = vec![];
         let window = Duration::from_secs(60);
         loop {
-            let job = emitter.start_job(EmitJobRequest {
-                instances: instances.clone(),
-                accounts_per_client: 10,
-                thread_params: EmitThreadParams::default(),
-            });
+            let job = emitter
+                .start_job(EmitJobRequest {
+                    instances: instances.clone(),
+                    accounts_per_client: 10,
+                    thread_params: EmitThreadParams::default(),
+                })
+                .expect("Failed to start emit job");
             thread::sleep(Duration::from_secs(30) + window);
-            match self.print_stat(window) {
+            match print_stat(&self.prometheus, window) {
                 Err(e) => info!("Failed to get stats: {:?}", e),
                 Ok((tps, lat)) => results.push((stop_effects.len(), tps, lat)),
             }
@@ -348,40 +360,40 @@ impl ClusterUtil {
         thread::sleep(Duration::from_secs(30)); // warm up
         loop {
             thread::sleep(Duration::from_secs(10));
-            if let Err(err) = self.print_stat(window) {
+            if let Err(err) = print_stat(&self.prometheus, window) {
                 info!("Stat error: {:?}", err);
             }
         }
     }
+}
 
-    fn print_stat(&self, window: Duration) -> failure::Result<(f64, f64)> {
-        let step = 10;
-        let end = unix_timestamp_now();
-        let start = end - window;
-        let tps = self.prometheus.query_range(
-            "irate(consensus_gauge{op='last_committed_version'}[1m])".to_string(),
-            &start,
-            &end,
-            step,
-        )?;
-        let avg_tps = tps.avg().ok_or_else(|| format_err!("No tps data"))?;
-        let latency = self.prometheus.query_range(
-            "irate(mempool_duration_sum{op='e2e.latency'}[1m])/irate(mempool_duration_count{op='e2e.latency'}[1m])"
-                .to_string(),
-            &start,
-            &end,
-            step,
-        )?;
-        let avg_latency = latency
-            .avg()
-            .ok_or_else(|| format_err!("No latency data"))?;
-        info!(
-            "Tps: {:.0}, latency: {:.0} ms",
-            avg_tps,
-            avg_latency * 1000.
-        );
-        Ok((avg_tps, avg_latency))
-    }
+fn print_stat(prometheus: &Prometheus, window: Duration) -> failure::Result<(f64, f64)> {
+    let step = 10;
+    let end = unix_timestamp_now();
+    let start = end - window;
+    let tps = prometheus.query_range(
+        "irate(consensus_gauge{op='last_committed_version'}[1m])".to_string(),
+        &start,
+        &end,
+        step,
+    )?;
+    let avg_tps = tps.avg().ok_or_else(|| format_err!("No tps data"))?;
+    let latency = prometheus.query_range(
+        "irate(mempool_duration_sum{op='e2e.latency'}[1m])/irate(mempool_duration_count{op='e2e.latency'}[1m])"
+            .to_string(),
+        &start,
+        &end,
+        step,
+    )?;
+    let avg_latency = latency
+        .avg()
+        .ok_or_else(|| format_err!("No latency data"))?;
+    info!(
+        "Tps: {:.0}, latency: {:.0} ms",
+        avg_tps,
+        avg_latency * 1000.
+    );
+    Ok((avg_tps, avg_latency))
 }
 
 impl ClusterTestRunner {
@@ -409,6 +421,12 @@ impl ClusterTestRunner {
             .num_threads(10)
             .thread_name("ssh-pool".to_string())
             .build();
+        let tx_emitter = TxEmitter::new(&cluster);
+        let prometheus = Prometheus::new(
+            cluster
+                .prometheus_ip()
+                .expect("Failed to discover prometheus ip in aws"),
+        );
         Self {
             logs,
             cluster,
@@ -417,6 +435,8 @@ impl ClusterTestRunner {
             experiment_interval,
             slack,
             thread_pool,
+            tx_emitter,
+            prometheus,
         }
     }
 
@@ -457,9 +477,16 @@ impl ClusterTestRunner {
                     self.report_failure(format!("Failed to tag tested image: {}", e));
                     return;
                 }
+                let perf_msg = match self.measure_performance() {
+                    Ok(report) => format!(
+                        "Performance report:\n```\n{}\n```",
+                        report.to_slack_message()
+                    ),
+                    Err(err) => format!("No performance data:\n```\n{}\n```", err),
+                };
                 self.slack_message(format!(
-                    "Test suite passed. Tagged `{}` as `{}`",
-                    hash_to_tag, TESTED_TAG
+                    "Test suite passed. Tagged `{}` as `{}`\n{}",
+                    hash_to_tag, TESTED_TAG, perf_msg
                 ));
             }
             thread::sleep(self.experiment_interval);
@@ -506,6 +533,54 @@ impl ClusterTestRunner {
             "Suite completed in {:?}",
             Instant::now().duration_since(suite_started)
         );
+        Ok(())
+    }
+
+    pub fn perf_run(&mut self) {
+        let results = self.measure_performance().unwrap();
+        println!("{}", results.to_slack_message())
+    }
+
+    fn measure_performance(&mut self) -> failure::Result<SuiteReport> {
+        info!("Starting warm up job");
+        self.emit_txn_for(Duration::from_secs(60), self.cluster.instances().clone())?;
+        info!("Warm up done, measuring tps");
+        let window = Duration::from_secs(60);
+        self.emit_txn_for(
+            window + Duration::from_secs(30),
+            self.cluster.instances().clone(),
+        )?;
+        let stats_all_up = print_stat(&self.prometheus, window)
+            .map_err(|e| format_err!("Failed to query stats: {}", e))?;
+        let (stop, keep) = self.cluster.split_n_random(10);
+        let mut stop_effects: Vec<_> = stop
+            .into_instances()
+            .into_iter()
+            .map(StopContainer::new)
+            .collect();
+        self.activate_all(&mut stop_effects);
+        self.emit_txn_for(window + Duration::from_secs(30), keep.instances().clone())?;
+        let stats_10_down = print_stat(&self.prometheus, window)
+            .map_err(|e| format_err!("Failed to query stats: {}", e))?;
+        self.deactivate_all(&mut stop_effects);
+        Ok(SuiteReport {
+            stats_all_up,
+            stats_10_down,
+        })
+    }
+
+    fn emit_txn_for(
+        &mut self,
+        duration: Duration,
+        instances: Vec<Instance>,
+    ) -> failure::Result<()> {
+        let job = self.tx_emitter.start_job(EmitJobRequest {
+            instances,
+            accounts_per_client: 10,
+            thread_params: EmitThreadParams::default(),
+        })?;
+        thread::sleep(duration);
+        self.tx_emitter.stop_job(job);
         Ok(())
     }
 
@@ -785,5 +860,19 @@ impl ClusterTestRunner {
             result.push(r);
         }
         result
+    }
+}
+
+struct SuiteReport {
+    stats_all_up: (f64, f64),
+    stats_10_down: (f64, f64),
+}
+
+impl SuiteReport {
+    pub fn to_slack_message(&self) -> String {
+        format!(
+            "all up: {:.0} TPS, {:.1} s latency\n10% down: {:.0} TPS, {:.1} s latency",
+            self.stats_all_up.0, self.stats_all_up.1, self.stats_10_down.0, self.stats_10_down.1,
+        )
     }
 }

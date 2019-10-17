@@ -88,7 +88,7 @@ impl TxEmitter {
         }
     }
 
-    pub fn start_job(&mut self, req: EmitJobRequest) -> EmitJob {
+    pub fn start_job(&mut self, req: EmitJobRequest) -> failure::Result<EmitJob> {
         let num_clients = req.instances.len();
         let num_accounts = req.accounts_per_client * num_clients;
         info!("Minting accounts");
@@ -99,7 +99,7 @@ impl TxEmitter {
                 &self.mint_client,
                 &mut self.faucet_account,
                 mint_requests,
-            );
+            )?;
             self.accounts.append(&mut accounts);
         }
         let all_accounts = self.accounts.split_off(self.accounts.len() - num_accounts);
@@ -131,7 +131,7 @@ impl TxEmitter {
             workers.push(Worker { join_handle });
             thread::sleep(Duration::from_millis(10)); // Small stagger between starting threads
         }
-        EmitJob { workers, stop }
+        Ok(EmitJob { workers, stop })
     }
 
     pub fn stop_job(&mut self, job: EmitJob) {
@@ -367,7 +367,7 @@ fn execute_and_wait_transactions(
     client: &AdmissionControlClient,
     account: &mut AccountData,
     txn: Vec<SubmitTransactionRequest>,
-) {
+) -> failure::Result<()> {
     for request in txn {
         let resp = client.submit_transaction(&request);
         match resp {
@@ -382,7 +382,7 @@ fn execute_and_wait_transactions(
         }
     }
     wait_for_accounts_sequence(client, slice::from_mut(account))
-        .expect("Mint transactions was not committed before expiration");
+        .map_err(|_| format_err!("Mint transactions was not committed before expiration"))
 }
 
 fn load_faucet_account(client: &AdmissionControlClient, faucet_account_path: &str) -> AccountData {
