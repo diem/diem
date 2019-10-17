@@ -32,7 +32,7 @@
 //! ## Example
 //!
 //! ```ignore
-//! # #[macro_use] extern crate crypto_derive;
+//! # #[macro_use] extern crate crypto-derive;
 //! use crypto::{
 //!     hash::HashValue,
 //!     bls12381::{BLS12381PrivateKey, BLS12381PublicKey, BLS12381Signature},

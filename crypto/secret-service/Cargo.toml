@@ -21,7 +21,7 @@ structopt = "0.3.2"
 
 config = { path = "../../config" }
 crypto = { path = "../crypto" }
-crypto_derive = { path = "../crypto_derive" }
+crypto-derive = { path = "../crypto-derive" }
 debug-interface = { path = "../../common/debug-interface" }
 executable-helpers = { path = "../../common/executable-helpers" }
 failure = { package = "failure_ext", path = "../../common/failure_ext" }

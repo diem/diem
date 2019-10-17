@@ -25,7 +25,7 @@ members = [
     "consensus/consensus-types",
     "consensus/safety-rules",
     "crypto/crypto",
-    "crypto/crypto_derive",
+    "crypto/crypto-derive",
     "crypto/secret-service",
     "execution/executor",
     "language/benchmarks",
