@@ -87,7 +87,7 @@ module LibraCoin {
 
         // Check that `amount` is less than the coin's value
         value = *(&mut copy(coin_ref).value);
-        assert(copy(value) >= copy(amount), copy(value));
+        assert(copy(value) >= copy(amount), 10);
 
         // Split the coin
         *(&mut move(coin_ref).value) = move(value) - copy(amount);
@@ -124,72 +124,4 @@ module LibraCoin {
         return;
     }
 
-    public deposit_to_channel(to_deposit: Self.T, is_sender:bool) {
-        let coin_ref: &mut Self.T;
-        let coin_value: u64;
-        let to_deposit_value: u64;
-
-        if(copy(is_sender)){
-            if(!exist_sender_channel<T>()){
-                move_to_sender_channel<T>(move(to_deposit));
-                return;
-            }else{
-                coin_ref = borrow_sender_channel<T>();
-            }
-        }else{
-            if(!exist_receiver_channel<T>()){
-                move_to_receiver_channel<T>(move(to_deposit));
-                return;
-            }else{
-                coin_ref = borrow_receiver_channel<T>();
-            }
-        }
-
-        coin_value = *&copy(coin_ref).value;
-
-        T{ value: to_deposit_value } = move(to_deposit);
-
-        *(&mut move(coin_ref).value) = move(coin_value) + move(to_deposit_value);
-
-        return;
-    }
-
-    public withdraw_from_channel(amount: u64, is_sender:bool): Self.T {
-         let coin_ref: &mut Self.T;
-         let coin_value: u64;
-         let to_deposit_value: u64;
-
-         if(copy(is_sender)){
-            coin_ref = borrow_sender_channel<T>();
-         }else{
-            coin_ref = borrow_receiver_channel<T>();
-         }
-
-         coin_value = *&copy(coin_ref).value;
-         assert(copy(coin_value) >= copy(amount), 10);
-
-         *(&mut move(coin_ref).value) = move(coin_value) - copy(amount);
-
-         return T{ value: move(amount)};
-    }
-
-    public get_channel_balance(is_sender:bool): u64 {
-        let coin_ref: &mut Self.T;
-
-        if(copy(is_sender)){
-            if(!exist_sender_channel<T>()){
-               return 0;
-            }else{
-               coin_ref = borrow_sender_channel<T>();
-            }
-        }else{
-            if(!exist_receiver_channel<T>()){
-                return 0;
-            }else{
-                coin_ref = borrow_receiver_channel<T>();
-            }
-        }
-
-        return *&move(coin_ref).value;
-    }
 }
