@@ -697,10 +697,10 @@ impl<'a> ModuleTranslator<'a> {
             }
             if let Call(_, _, _, args) = bytecode {
                 // update everything that might be related to the updated reference
-                for dest in args {
-                    if !self.is_local_mutable_ref(*dest, idx) {
-                        continue;
-                    }
+                for dest in args
+                    .iter()
+                    .filter(|dest| self.is_local_mutable_ref(**dest, idx))
+                {
                     for s in &ref_vars {
                         if s == dest {
                             continue;
