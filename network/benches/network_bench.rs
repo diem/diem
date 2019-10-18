@@ -21,6 +21,7 @@ use futures::{
     stream::{FuturesUnordered, StreamExt},
 };
 use libra_config::config::RoleType;
+use libra_prost_ext::MessageExt;
 use network::{
     proto::{Block, ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock},
     protocols::rpc::error::RpcError,
@@ -31,7 +32,6 @@ use network::{
     NetworkPublicKeys, ProtocolId,
 };
 use parity_multiaddr::Multiaddr;
-use prost_ext::MessageExt;
 
 use libra_types::PeerId;
 use rand::{rngs::StdRng, SeedableRng};

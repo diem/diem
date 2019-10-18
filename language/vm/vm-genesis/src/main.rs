@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_config::{config::PersistableConfig, trusted_peers::ConfigHelpers};
-use prost_ext::MessageExt;
+use libra_prost_ext::MessageExt;
 use std::{fs::File, io::prelude::*};
 use transaction_builder::default_config;
 use vm_genesis::{encode_genesis_transaction_with_validator, GENESIS_KEYPAIR};

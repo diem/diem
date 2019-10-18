@@ -11,6 +11,7 @@ use crypto::{hash::GENESIS_BLOCK_ID, HashValue};
 use futures::executor::block_on;
 use grpcio::{EnvBuilder, ServerBuilder};
 use libra_config::config::{NodeConfig, NodeConfigHelpers};
+use libra_prost_ext::MessageExt;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     crypto_proxies::LedgerInfoWithSignatures,
@@ -18,7 +19,6 @@ use libra_types::{
     transaction::{SignedTransaction, Transaction, TransactionListWithProof, Version},
 };
 use proptest::prelude::*;
-use prost_ext::MessageExt;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::{
     collections::BTreeMap,

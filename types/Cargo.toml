@@ -36,7 +36,7 @@ num_enum = "0.4.1"
 prost-build = "0.5.0"
 
 [dev-dependencies]
-prost-ext = { path = "../common/prost-ext" }
+libra-prost-ext = { path = "../common/prost-ext" }
 serde_json = "1.0.40"
 crypto = { path = "../crypto/crypto", features = ["testing"] }
 

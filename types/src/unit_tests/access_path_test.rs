@@ -5,8 +5,8 @@ use crate::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
 };
+use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;
-use prost_ext::test_helpers::assert_protobuf_encode_decode;
 use std::convert::TryFrom;
 
 #[test]

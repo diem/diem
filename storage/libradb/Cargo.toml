@@ -32,7 +32,7 @@ failure = { path = "../../common/failure_ext", package = "failure_ext" }
 jellyfish-merkle = { path = "../jellyfish-merkle" }
 libra-logger = { path = "../../common/logger" }
 libra-metrics = { path = "../../common/metrics" }
-prost-ext = { path = "../../common/prost-ext" }
+libra-prost-ext = { path = "../../common/prost-ext" }
 schemadb = { path = "../schemadb" }
 storage-proto = { path = "../storage-proto" }
 libra-tools = { path = "../../common/tools" }

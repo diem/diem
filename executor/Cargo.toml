@@ -23,7 +23,7 @@ crypto = { path = "../crypto/crypto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 libra-logger = { path = "../common/logger" }
 libra-metrics = { path = "../common/metrics" }
-prost-ext = { path = "../common/prost-ext" }
+libra-prost-ext = { path = "../common/prost-ext" }
 scratchpad = { path = "../storage/scratchpad" }
 state-view = { path = "../storage/state-view" }
 storage-client = { path = "../storage/storage-client" }

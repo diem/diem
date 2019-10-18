@@ -12,9 +12,9 @@ use consensus_types::{
     vote_data::VoteData,
     vote_msg::VoteMsg,
 };
+use libra_prost_ext::MessageExt;
 use libra_types::validator_signer::ValidatorSigner;
 use prost::Message;
-use prost_ext::MessageExt;
 use std::convert::{TryFrom, TryInto};
 
 #[test]

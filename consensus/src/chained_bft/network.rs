@@ -15,6 +15,7 @@ use crypto::HashValue;
 use failure::{self, ResultExt};
 use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
 use libra_logger::prelude::*;
+use libra_prost_ext::MessageExt;
 use libra_types::account_address::AccountAddress;
 use network::{
     proto::{
@@ -23,7 +24,6 @@ use network::{
     },
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
 };
-use prost_ext::MessageExt;
 use std::{
     convert::TryFrom,
     sync::Arc,

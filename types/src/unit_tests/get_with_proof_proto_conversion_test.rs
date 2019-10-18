@@ -8,8 +8,8 @@ use crate::{
     proto,
 };
 use crypto::ed25519::*;
+use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;
-use prost_ext::test_helpers::assert_protobuf_encode_decode;
 use std::convert::TryFrom;
 
 proptest! {

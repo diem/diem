@@ -15,7 +15,7 @@ failure = { path = "../../../common/failure_ext", package = "failure_ext" }
 transaction-builder = { path = "../../transaction-builder"}
 crypto = { path = "../../../crypto/crypto" }
 stdlib = { path = "../../stdlib" }
-prost-ext = { path = "../../../common/prost-ext" }
+libra-prost-ext = { path = "../../../common/prost-ext" }
 state-view = { path = "../../../storage/state-view" }
 libra-types = { path = "../../../types" }
 vm = { path = "../" }

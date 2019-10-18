@@ -15,9 +15,9 @@
 use crate::schema::TRANSACTION_INFO_CF_NAME;
 use byteorder::{BigEndian, ReadBytesExt};
 use failure::prelude::*;
+use libra_prost_ext::MessageExt;
 use libra_types::transaction::{TransactionInfo, Version};
 use prost::Message;
-use prost_ext::MessageExt;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},

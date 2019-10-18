@@ -10,8 +10,8 @@ use crypto::{
     hash::{TestOnlyHash, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
+use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::{collection::vec, prelude::*};
-use prost_ext::test_helpers::assert_protobuf_encode_decode;
 use std::convert::TryFrom;
 
 fn accumulator_bitmap_iterator_test(bitmap_value: u64, expected_bits: Vec<bool>) {

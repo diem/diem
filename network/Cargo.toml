@@ -33,7 +33,7 @@ memsocket = { path = "memsocket" }
 libra-metrics = { path = "../common/metrics" }
 netcore = { path = "netcore" }
 noise = { path = "noise" }
-prost-ext = { path = "../common/prost-ext" }
+libra-prost-ext = { path = "../common/prost-ext" }
 
 proptest = { version = "0.9.4", default-features = false, optional = true }
 proptest-helpers = { path = "../common/proptest-helpers", optional = true }
