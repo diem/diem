@@ -40,6 +40,8 @@ use pairing::{
 };
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+#[cfg(not(any(test, feature = "testing")))]
+use static_assertions::assert_not_impl_any;
 
 /// The length of the BLS12381PrivateKey.
 pub const BLS12381_PRIVATE_KEY_LENGTH: usize = 32;
@@ -55,6 +57,9 @@ type ThresholdBLSPrivateKey =
 /// A BLS12-381 private key.
 #[derive(Serialize, Deserialize, Deref, SilentDisplay, SilentDebug)]
 pub struct BLS12381PrivateKey(ThresholdBLSPrivateKey);
+
+#[cfg(not(any(test, feature = "testing")))]
+assert_not_impl_any!(BLS12381PrivateKey: std::clone::Clone,);
 
 /// A BLS12-381 public key.
 #[derive(Clone, Hash, Serialize, Deserialize, Deref, Debug, PartialEq, Eq)]

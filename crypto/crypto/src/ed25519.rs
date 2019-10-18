@@ -35,6 +35,8 @@ use ed25519_dalek;
 use failure::prelude::*;
 use libra_crypto_derive::{SilentDebug, SilentDisplay};
 use serde::{de, ser};
+#[cfg(not(any(test, feature = "testing")))]
+use static_assertions::assert_not_impl_any;
 use std::fmt;
 
 /// The length of the Ed25519PrivateKey
@@ -53,6 +55,9 @@ const L: [u8; 32] = [
 /// An Ed25519 private key
 #[derive(SilentDisplay, SilentDebug)]
 pub struct Ed25519PrivateKey(ed25519_dalek::SecretKey);
+
+#[cfg(not(any(test, feature = "testing")))]
+assert_not_impl_any!(Ed25519PrivateKey: std::clone::Clone,);
 
 /// An Ed25519 public key
 #[derive(Clone, Debug)]
