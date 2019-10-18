@@ -37,7 +37,7 @@ libra-crypto = { path = "../crypto/crypto" }
 debug-interface = { path = "../common/debug-interface" }
 executor = { path = "../executor" }
 lcs = { path = "../common/lcs", package = "libra-canonical-serialization" }
-failure = { path = "../common/failure-ext", package = "failure-ext" }
+failure = { path = "../common/failure-ext", package = "libra-failure-ext" }
 libra-logger = { path = "../common/logger" }
 libra-mempool = { path = "../mempool" }
 libra-metrics = { path = "../common/metrics" }

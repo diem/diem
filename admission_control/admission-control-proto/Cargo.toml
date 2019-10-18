@@ -15,7 +15,7 @@ futures = "0.1.28"
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 prost = "0.5.0"
 
-failure = { package = "failure-ext", path = "../../common/failure-ext" }
+failure = { package = "libra-failure-ext", path = "../../common/failure-ext" }
 libra-logger = { path = "../../common/logger" }
 libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto" }
 libra-types = { path = "../../types" }

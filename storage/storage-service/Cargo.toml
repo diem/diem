@@ -19,7 +19,7 @@ libra-config = { path = "../../config" }
 libra-crypto = { path = "../../crypto/crypto" }
 debug-interface = { path = "../../common/debug-interface" }
 executable-helpers = { path = "../../common/executable-helpers" }
-failure = { path = "../../common/failure-ext", package = "failure-ext" }
+failure = { path = "../../common/failure-ext", package = "libra-failure-ext" }
 grpc_helpers = { path = "../../common/grpc_helpers" }
 libradb = { path = "../libradb" }
 libra-logger = { path = "../../common/logger" }

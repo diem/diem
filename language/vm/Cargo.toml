@@ -19,7 +19,7 @@ proptest-derive = "0.1.1"
 serde = { version = "1", features = ["derive"] }
 lcs = { path = "../../common/lcs", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure-ext", package = "failure-ext" }
+failure = { path = "../../common/failure-ext", package = "libra-failure-ext" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers" }
 libra-types = { path = "../../types" }
 

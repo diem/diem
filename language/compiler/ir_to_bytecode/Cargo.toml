@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-failure = { path = "../../../common/failure-ext", package = "failure-ext" }
+failure = { path = "../../../common/failure-ext", package = "libra-failure-ext" }
 ir_to_bytecode_syntax = { path = "syntax" }
 libra-types = { path = "../../../types" }
 vm = { path = "../../vm" }

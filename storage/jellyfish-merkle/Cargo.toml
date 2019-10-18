@@ -19,7 +19,7 @@ proptest-derive = "0.1.2"
 serde = { version = "1.0.89", features = ["derive"] }
 
 libra-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure-ext", package = "failure-ext" }
+failure = { path = "../../common/failure-ext", package = "libra-failure-ext" }
 libra-nibble = { path = "../../common/nibble" }
 libra-types = { path = "../../types" }
 
