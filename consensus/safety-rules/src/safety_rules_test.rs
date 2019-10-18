@@ -42,7 +42,7 @@ fn make_block_with_parent(
     highest_quorum_cert: &QuorumCert,
 ) -> Block<Round> {
     let vote_data = VoteData::new(
-        BlockInfo::from_block(parent, HashValue::zero(), 0),
+        BlockInfo::from_block(parent, HashValue::zero(), 0, None),
         parent.quorum_cert().certified_block().clone(),
     );
 

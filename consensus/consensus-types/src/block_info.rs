@@ -3,7 +3,7 @@
 
 use crate::block::Block;
 use libra_crypto::hash::HashValue;
-use libra_types::transaction::Version;
+use libra_types::{transaction::Version, validator_set::ValidatorSet};
 use serde::{Deserialize, Serialize};
 
 /// The round of a block is a consensus-internal counter, which starts with 0 and increases
@@ -27,6 +27,8 @@ pub struct BlockInfo {
     version: Version,
     /// The timestamp this block was proposed by a proposer.
     timestamp_usecs: u64,
+    /// An optional field containing the set of validators for the start of the next epoch
+    next_validator_set: Option<ValidatorSet>,
 }
 
 impl BlockInfo {
@@ -37,14 +39,16 @@ impl BlockInfo {
         executed_state_id: HashValue,
         version: Version,
         timestamp_usecs: u64,
+        next_validator_set: Option<ValidatorSet>,
     ) -> Self {
         Self {
             epoch,
             round,
             id,
             executed_state_id,
-            timestamp_usecs,
             version,
+            timestamp_usecs,
+            next_validator_set,
         }
     }
 
@@ -56,10 +60,16 @@ impl BlockInfo {
             executed_state_id: HashValue::zero(),
             version: 0,
             timestamp_usecs: 0,
+            next_validator_set: None,
         }
     }
 
-    pub fn from_block<T>(block: &Block<T>, executed_state_id: HashValue, version: Version) -> Self {
+    pub fn from_block<T>(
+        block: &Block<T>,
+        executed_state_id: HashValue,
+        version: Version,
+        next_validator_set: Option<ValidatorSet>,
+    ) -> Self {
         Self {
             epoch: block.epoch(),
             round: block.round(),
@@ -67,6 +77,7 @@ impl BlockInfo {
             executed_state_id,
             version,
             timestamp_usecs: block.timestamp_usecs(),
+            next_validator_set,
         }
     }
 
@@ -78,6 +89,7 @@ impl BlockInfo {
             executed_state_id: HashValue::zero(),
             version: 0,
             timestamp_usecs: 0,
+            next_validator_set: None,
         }
     }
 
@@ -91,6 +103,10 @@ impl BlockInfo {
 
     pub fn id(&self) -> HashValue {
         self.id
+    }
+
+    pub fn next_validator_set(&self) -> Option<&ValidatorSet> {
+        self.next_validator_set.as_ref()
     }
 
     pub fn round(&self) -> Round {

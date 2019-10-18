@@ -630,7 +630,12 @@ impl<T: Payload> EventProcessor<T> {
 
         let vote = Vote::new(
             VoteData::new(
-                BlockInfo::from_block(block, executed_state.state_id, executed_state.version),
+                BlockInfo::from_block(
+                    block,
+                    executed_state.state_id,
+                    executed_state.version,
+                    executed_state.validators.clone(),
+                ),
                 block.quorum_cert().certified_block().clone(),
             ),
             self.author,

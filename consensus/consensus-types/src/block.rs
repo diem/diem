@@ -216,6 +216,7 @@ where
             ledger_info.transaction_accumulator_hash(),
             ledger_info.version(),
             ledger_info.timestamp_usecs(),
+            ledger_info.next_validator_set().cloned(),
         );
 
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
