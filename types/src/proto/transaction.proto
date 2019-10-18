@@ -89,7 +89,7 @@ message TransactionToCommit {
 // verification will fail.
 message TransactionListWithProof {
     // The list of transactions.
-    repeated SignedTransaction transactions = 1;
+    repeated Transaction transactions = 1;
 
     // The list of corresponding TransactionInfo objects.
     repeated TransactionInfo infos = 2;

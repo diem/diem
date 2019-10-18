@@ -887,7 +887,7 @@ impl From<TransactionToCommit> for crate::proto::types::TransactionToCommit {
 /// 3. The list has 2+ transactions/transaction_infos. The both proofs must exist.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TransactionListWithProof {
-    pub transaction_and_infos: Vec<(SignedTransaction, TransactionInfo)>,
+    pub transaction_and_infos: Vec<(Transaction, TransactionInfo)>,
     pub events: Option<Vec<Vec<ContractEvent>>>,
     pub first_transaction_version: Option<Version>,
     pub proof_of_first_transaction: Option<TransactionAccumulatorProof>,
@@ -897,7 +897,7 @@ pub struct TransactionListWithProof {
 impl TransactionListWithProof {
     /// Constructor.
     pub fn new(
-        transaction_and_infos: Vec<(SignedTransaction, TransactionInfo)>,
+        transaction_and_infos: Vec<(Transaction, TransactionInfo)>,
         events: Option<Vec<Vec<ContractEvent>>>,
         first_transaction_version: Option<Version>,
         proof_of_first_transaction: Option<TransactionAccumulatorProof>,
@@ -1010,7 +1010,7 @@ impl TryFrom<crate::proto::types::TransactionListWithProof> for TransactionListW
             itertools::zip_eq(proto.transactions.into_iter(), proto.infos.into_iter())
                 .map(|(txn, info)| {
                     Ok((
-                        SignedTransaction::try_from(txn)?,
+                        Transaction::try_from(txn)?,
                         TransactionInfo::try_from(info)?,
                     ))
                 })
@@ -1100,6 +1100,18 @@ impl Transaction {
         match self {
             Transaction::UserTransaction(txn) => Ok(txn),
             _ => Err(format_err!("Not a user transaction.")),
+        }
+    }
+
+    pub fn format_for_client(&self, get_transaction_name: impl Fn(&[u8]) -> String) -> String {
+        match self {
+            Transaction::UserTransaction(user_txn) => {
+                user_txn.format_for_client(get_transaction_name)
+            }
+            // TODO: display proper information for client
+            Transaction::WriteSet(_write_set) => String::from("genesis"),
+            // TODO: display proper information for client
+            Transaction::BlockMetadata(_block_metadata) => String::from("block_metadata"),
         }
     }
 }

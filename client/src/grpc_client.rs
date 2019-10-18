@@ -24,7 +24,7 @@ use libra_types::{
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
-    transaction::{SignedTransaction, Version},
+    transaction::{SignedTransaction, Transaction, Version},
     vm_error::StatusCode,
 };
 use std::convert::TryFrom;
@@ -236,7 +236,7 @@ impl GRPCClient {
         start_version: u64,
         limit: u64,
         fetch_events: bool,
-    ) -> Result<Vec<(SignedTransaction, Option<Vec<ContractEvent>>)>> {
+    ) -> Result<Vec<(Transaction, Option<Vec<ContractEvent>>)>> {
         // Make the request.
         let req_item = RequestItem::GetTransactions {
             start_version,

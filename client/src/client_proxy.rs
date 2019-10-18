@@ -19,7 +19,7 @@ use libra_types::{
     contract_event::{ContractEvent, EventWithProof},
     transaction::{
         helpers::{create_signed_txn, create_unsigned_txn, TransactionSigner},
-        parse_as_transaction_argument, RawTransaction, Script, SignedTransaction,
+        parse_as_transaction_argument, RawTransaction, Script, SignedTransaction, Transaction,
         TransactionArgument, TransactionPayload, Version,
     },
 };
@@ -637,7 +637,7 @@ impl ClientProxy {
     pub fn get_committed_txn_by_range(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<Vec<(SignedTransaction, Option<Vec<ContractEvent>>)>> {
+    ) -> Result<Vec<(Transaction, Option<Vec<ContractEvent>>)>> {
         ensure!(
             space_delim_strings.len() == 4,
             "Invalid number of arguments to get transaction by range"

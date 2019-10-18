@@ -21,7 +21,9 @@ proptest! {
     ) {
         let txns = gens
             .into_iter()
-            .map(|(index, gen)| gen.materialize(index, &mut universe).into_inner())
+            .map(|(index, gen)| Transaction::UserTransaction(
+                gen.materialize(index, &mut universe).into_inner()
+            ))
             .collect::<Vec<_>>();
 
         let tmp_dir = TempPath::new();
@@ -33,7 +35,7 @@ proptest! {
         let mut cs = ChangeSet::new();
         for (ver, txn) in txns.iter().enumerate() {
             store
-                .put_transaction(ver as Version, &Transaction::UserTransaction(txn.clone()), &mut cs)
+                .put_transaction(ver as Version, &txn, &mut cs)
                 .unwrap();
         }
         store.db.write_schemas(cs.batch).unwrap();
@@ -41,11 +43,12 @@ proptest! {
         let ledger_version = txns.len() as Version - 1;
         for (ver, txn) in txns.iter().enumerate() {
             prop_assert_eq!(store.get_transaction(ver as Version).unwrap(), txn.clone());
+            let user_txn = txn.as_signed_user_txn().expect("All should be user transactions here.");
             prop_assert_eq!(
                 store
                     .lookup_transaction_by_account(
-                        txn.sender(),
-                        txn.sequence_number(),
+                        user_txn.sender(),
+                        user_txn.sequence_number(),
                         ledger_version
                     )
                     .unwrap(),

@@ -257,14 +257,7 @@ where
         );
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
-            V::execute_block(
-                transactions
-                    .iter()
-                    .map(|txn| Transaction::UserTransaction(txn.clone()))
-                    .collect(),
-                &self.vm_config,
-                &state_view,
-            )?
+            V::execute_block(transactions.to_vec(), &self.vm_config, &state_view)?
         };
 
         // Since other validators have committed these transactions, their status should all be
@@ -277,11 +270,6 @@ where
 
         let (account_to_btree, account_to_proof) = state_view.into();
 
-        // TODO: Remove once `TransactionListWithProof` carries `enum Transaction`
-        let transactions = transactions
-            .into_iter()
-            .map(Transaction::UserTransaction)
-            .collect::<Vec<_>>();
         let (output, _next_validator_set) = Self::process_vm_outputs(
             account_to_btree,
             account_to_proof,
