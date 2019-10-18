@@ -3,7 +3,7 @@
 
 use crate::chained_bft::test_utils::{build_empty_tree_with_custom_signing, build_simple_tree};
 use crate::chained_bft::{
-    block_storage::{BlockReader, NeedFetchResult, VoteReceptionResult},
+    block_storage::{block_store::sync_manager::NeedFetchResult, BlockReader, VoteReceptionResult},
     test_utils::{build_empty_tree, TreeInserter},
 };
 use consensus_types::{

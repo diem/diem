@@ -3,7 +3,7 @@
 
 use crate::{
     chained_bft::{
-        block_storage::{BlockReader, BlockStore, NeedFetchResult, VoteReceptionResult},
+        block_storage::{BlockReader, BlockRetriever, BlockStore, VoteReceptionResult},
         liveness::{
             pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
             proposal_generator::ProposalGenerator,
@@ -11,7 +11,6 @@ use crate::{
         },
         network::{BlockRetrievalRequest, BlockRetrievalResponse, ConsensusNetworkImpl},
         persistent_storage::PersistentStorage,
-        sync_manager::{SyncManager, SyncMgrContext},
     },
     counters,
     state_replication::{StateComputer, TxnManager},
@@ -71,7 +70,6 @@ pub struct EventProcessor<T> {
     txn_manager: Arc<dyn TxnManager<Payload = T>>,
     network: ConsensusNetworkImpl,
     storage: Arc<dyn PersistentStorage<T>>,
-    sync_manager: SyncManager<T>,
     time_service: Arc<dyn TimeService>,
     enforce_increasing_timestamps: bool,
     // Cache of the last sent vote message.
@@ -95,12 +93,8 @@ impl<T: Payload> EventProcessor<T> {
         enforce_increasing_timestamps: bool,
         validators: Arc<ValidatorVerifier>,
     ) -> Self {
-        let sync_manager = SyncManager::new(
-            Arc::clone(&block_store),
-            Arc::clone(&storage),
-            network.clone(),
-            Arc::clone(&state_computer),
-        );
+        counters::BLOCK_RETRIEVAL_COUNT.get();
+        counters::STATE_SYNC_COUNT.get();
         let author = block_store.signer().author();
         let last_vote_sent = last_vote.map(|v| {
             let round = v.vote_data().proposed().round();
@@ -117,12 +111,15 @@ impl<T: Payload> EventProcessor<T> {
             txn_manager,
             network,
             storage,
-            sync_manager,
             time_service,
             enforce_increasing_timestamps,
             last_vote_sent,
             validators,
         }
+    }
+
+    fn create_block_retriever(&self, deadline: Instant, author: Author) -> BlockRetriever {
+        BlockRetriever::new(self.network.clone(), deadline, author)
     }
 
     /// Leader:
@@ -311,9 +308,8 @@ impl<T: Payload> EventProcessor<T> {
                 sync_info.hqc_round(),
                 deadline_repr,
             );
-            let sync_mgr_context = SyncMgrContext::new(sync_info, author);
-            self.sync_manager
-                .sync_to(deadline, sync_mgr_context)
+            self.block_store
+                .sync_to(&sync_info, self.create_block_retriever(deadline, author))
                 .await
                 .map_err(|e| {
                     warn!(
@@ -602,7 +598,7 @@ impl<T: Payload> EventProcessor<T> {
     /// This function assumes that it might be called from different tasks concurrently.
     async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> failure::Result<Vote> {
         let executed_block = self
-            .sync_manager
+            .block_store
             .execute_and_insert_block(proposed_block)
             .await
             .with_context(|e| format!("Failed to execute_and_insert the block: {:?}", e))?;
@@ -711,33 +707,33 @@ impl<T: Payload> EventProcessor<T> {
         qc: Arc<QuorumCert>,
         preferred_peer: Author,
     ) -> failure::Result<()> {
-        if self.block_store.need_fetch_for_quorum_cert(&qc) == NeedFetchResult::NeedFetch {
-            let deadline = self.pacemaker.current_round_deadline();
-            self.sync_manager
-                .fetch_quorum_cert(qc.as_ref().clone(), preferred_peer, deadline)
-                .await
-                .with_context(|e| format!("Failed to process a newly aggregated QC: {}", e))?;
-        } else {
-            self.block_store
-                .insert_single_quorum_cert(qc.as_ref().clone())
-                .with_context(|e| format!("Failed to process a newly aggregated QC: {}", e))?;
-        }
+        let deadline = self.pacemaker.current_round_deadline();
+        // Process local highest ledger info should be no-op, this will sync us to the QC
+        self.block_store
+            .sync_to(
+                &SyncInfo::new(
+                    qc.as_ref().clone(),
+                    self.block_store.highest_ledger_info().as_ref().clone(),
+                    None,
+                ),
+                self.create_block_retriever(deadline, preferred_peer),
+            )
+            .await
+            .with_context(|e| format!("Failed to process a newly aggregated QC: {}", e))?;
         self.process_certificates(qc.as_ref(), None).await
     }
 
     async fn new_tc_aggregated(&mut self, tc: Arc<TimeoutCertificate>) -> failure::Result<()> {
-        let tc_round = tc.round();
         self.block_store
-            .insert_timeout_certificate(tc)
+            .insert_timeout_certificate(tc.clone())
             .with_context(|e| format!("Failed to process a newly aggregated TC: {}", e))?;
 
-        if let Some(new_round_event) =
-            self.pacemaker
-                .process_certificates(None, Some(tc_round), None)
-        {
-            self.process_new_round_event(new_round_event).await;
-        }
-        Ok(())
+        // Process local highest qc should be no-op
+        self.process_certificates(
+            self.block_store.highest_quorum_cert().as_ref(),
+            Some(tc.as_ref()),
+        )
+        .await
     }
 
     /// Upon (potentially) new commit:

@@ -3,148 +3,115 @@
 
 use crate::{
     chained_bft::{
-        block_storage::{BlockReader, BlockStore, NeedFetchResult},
+        block_storage::{BlockReader, BlockStore},
         network::ConsensusNetworkImpl,
-        persistent_storage::PersistentStorage,
     },
     counters,
-    state_replication::StateComputer,
 };
 use consensus_types::{
-    block::{Block, ExecutedBlock},
+    block::Block,
     common::{Author, Payload},
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
 };
+use crypto::HashValue;
 use failure;
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
+use mirai_annotations::checked_precondition;
 use network::proto::BlockRetrievalStatus;
 use rand::{prelude::*, Rng};
 use std::{
     clone::Clone,
-    sync::Arc,
     time::{Duration, Instant},
 };
 use termion::color::*;
 
-/// SyncManager is responsible for fetching dependencies and 'catching up' for given qc/ledger info
-pub struct SyncManager<T> {
-    block_store: Arc<BlockStore<T>>,
-    storage: Arc<dyn PersistentStorage<T>>,
-    network: ConsensusNetworkImpl,
-    state_computer: Arc<dyn StateComputer<Payload = T>>,
+#[derive(Debug, PartialEq)]
+/// Whether we need to do block retrieval if we want to insert a Quorum Cert.
+pub enum NeedFetchResult {
+    QCRoundBeforeRoot,
+    QCAlreadyExist,
+    QCBlockExist,
+    NeedFetch,
 }
 
-/// Keeps the necessary context for `SyncMgr` to bring the missing information.
-pub struct SyncMgrContext {
-    pub highest_ledger_info: QuorumCert,
-    pub highest_quorum_cert: QuorumCert,
-    /// Preferred peer: this is typically the peer that delivered the original QC and
-    /// thus has higher chances to be able to return the information than the other
-    /// peers that signed the QC.
-    /// If no preferred peer provided, random peers from the given QC are going to be queried.
-    pub preferred_peer: Author,
-}
+impl<T: Payload> BlockStore<T> {
+    /// Check if we're far away from this ledger info and need to sync.
+    /// Returns false if we have this block in the tree or the root's round is higher than the
+    /// block.
+    pub fn need_sync_for_quorum_cert(
+        &self,
+        committed_block_id: HashValue,
+        qc: &QuorumCert,
+    ) -> bool {
+        // This precondition ensures that the check in the following lines
+        // does not result in an addition overflow.
+        checked_precondition!(self.root().round() < std::u64::MAX - 1);
 
-impl SyncMgrContext {
-    pub fn new(sync_info: &SyncInfo, preferred_peer: Author) -> Self {
-        Self {
-            highest_ledger_info: sync_info.highest_ledger_info().clone(),
-            highest_quorum_cert: sync_info.highest_quorum_cert().clone(),
-            preferred_peer,
-        }
+        // LedgerInfo doesn't carry the information about the round of the committed block. However,
+        // the 3-chain safety rules specify that the round of the committed block must be
+        // certified_block_round() - 2. In case root().round() is greater than that the committed
+        // block carried by LI is older than my current commit.
+        !(self.block_exists(committed_block_id)
+            || self.root().round() + 2 >= qc.certified_block().round())
     }
-}
 
-impl<T> SyncManager<T>
-where
-    T: Payload,
-{
-    pub fn new(
-        block_store: Arc<BlockStore<T>>,
-        storage: Arc<dyn PersistentStorage<T>>,
-        network: ConsensusNetworkImpl,
-        state_computer: Arc<dyn StateComputer<Payload = T>>,
-    ) -> SyncManager<T> {
-        // Our counters are initialized via lazy_static, so they're not going to appear in
-        // Prometheus if some conditions never happen.  Invoking get() function enforces creation.
-        counters::BLOCK_RETRIEVAL_COUNT.get();
-        counters::STATE_SYNC_COUNT.get();
-        SyncManager {
-            block_store,
-            storage,
-            network,
-            state_computer,
+    /// Checks if quorum certificate can be inserted in block store without RPC
+    /// Returns the enum to indicate the detailed status.
+    pub fn need_fetch_for_quorum_cert(&self, qc: &QuorumCert) -> NeedFetchResult {
+        if qc.certified_block().round() < self.root().round() {
+            return NeedFetchResult::QCRoundBeforeRoot;
         }
+        if self
+            .get_quorum_cert_for_block(qc.certified_block().id())
+            .is_some()
+        {
+            return NeedFetchResult::QCAlreadyExist;
+        }
+        if self.block_exists(qc.certified_block().id()) {
+            return NeedFetchResult::QCBlockExist;
+        }
+        NeedFetchResult::NeedFetch
     }
 
     /// Fetches dependencies for given sync_info.quorum_cert
     /// If gap is large, performs state sync using process_highest_ledger_info
     /// Inserts sync_info.quorum_cert into block store as the last step
     pub async fn sync_to(
-        &mut self,
-        deadline: Instant,
-        sync_context: SyncMgrContext,
+        &self,
+        sync_info: &SyncInfo,
+        mut retriever: BlockRetriever,
     ) -> failure::Result<()> {
-        self.process_highest_ledger_info(
-            sync_context.highest_ledger_info.clone(),
-            sync_context.preferred_peer,
-            deadline,
-        )
-        .await?;
+        self.process_highest_ledger_info(sync_info.highest_ledger_info().clone(), &mut retriever)
+            .await?;
 
-        match self
-            .block_store
-            .need_fetch_for_quorum_cert(&sync_context.highest_quorum_cert)
-        {
+        match self.need_fetch_for_quorum_cert(sync_info.highest_quorum_cert()) {
             NeedFetchResult::NeedFetch => {
-                self.fetch_quorum_cert(
-                    sync_context.highest_quorum_cert.clone(),
-                    sync_context.preferred_peer,
-                    deadline,
-                )
-                .await?
+                self.fetch_quorum_cert(sync_info.highest_quorum_cert().clone(), retriever)
+                    .await?
             }
-            NeedFetchResult::QCBlockExist => self
-                .block_store
-                .insert_single_quorum_cert(sync_context.highest_quorum_cert)?,
+            NeedFetchResult::QCBlockExist => {
+                self.insert_single_quorum_cert(sync_info.highest_quorum_cert().clone())?
+            }
             _ => (),
         }
         Ok(())
-    }
-
-    pub async fn execute_and_insert_block(
-        &self,
-        block: Block<T>,
-    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
-        // execute_and_insert_block has shortcut to return block if it exists
-        self.block_store.execute_and_insert_block(block).await
     }
 
     /// Insert the quorum certificate separately from the block, used to split the processing of
     /// updating the consensus state(with qc) and deciding whether to vote(with block)
     /// The missing ancestors are going to be retrieved from the given peer. If a given peer
     /// fails to provide the missing ancestors, the qc is not going to be added.
-    pub async fn fetch_quorum_cert(
+    async fn fetch_quorum_cert(
         &self,
         qc: QuorumCert,
-        preferred_peer: Author,
-        deadline: Instant,
+        mut retriever: BlockRetriever,
     ) -> failure::Result<()> {
         let mut pending = vec![];
-        let network = self.network.clone();
-        let mut retriever = BlockRetriever {
-            network,
-            deadline,
-            preferred_peer,
-        };
         let mut retrieve_qc = qc.clone();
         loop {
-            if self
-                .block_store
-                .block_exists(retrieve_qc.certified_block().id())
-            {
+            if self.block_exists(retrieve_qc.certified_block().id()) {
                 break;
             }
             let mut blocks = retriever.retrieve_block_for_qc(&retrieve_qc, 1).await?;
@@ -156,10 +123,10 @@ where
         // insert the qc <- block pair
         while let Some(block) = pending.pop() {
             let block_qc = block.quorum_cert().clone();
-            self.block_store.insert_single_quorum_cert(block_qc)?;
-            self.block_store.execute_and_insert_block(block).await?;
+            self.insert_single_quorum_cert(block_qc)?;
+            self.execute_and_insert_block(block).await?;
         }
-        self.block_store.insert_single_quorum_cert(qc)
+        self.insert_single_quorum_cert(qc)
     }
 
     /// Check the highest ledger info sent by peer to see if we're behind and start a fast
@@ -173,31 +140,21 @@ where
     async fn process_highest_ledger_info(
         &self,
         highest_ledger_info: QuorumCert,
-        peer: Author,
-        deadline: Instant,
+        retriever: &mut BlockRetriever,
     ) -> failure::Result<()> {
         let committed_block_id = highest_ledger_info
             .committed_block_id()
             .ok_or_else(|| format_err!("highest ledger info has no committed block"))?;
-        if !self
-            .block_store
-            .need_sync_for_quorum_cert(committed_block_id, &highest_ledger_info)
-        {
+        if !self.need_sync_for_quorum_cert(committed_block_id, &highest_ledger_info) {
             return Ok(());
         }
         debug!(
             "Start state sync with peer: {}, to block: {}, round: {} from {}",
-            peer.short_str(),
+            retriever.preferred_peer.short_str(),
             committed_block_id,
             highest_ledger_info.certified_block().round() - 2,
-            self.block_store.root()
+            self.root()
         );
-        let network = self.network.clone();
-        let mut retriever = BlockRetriever {
-            network,
-            deadline,
-            preferred_peer: peer,
-        };
         let mut blocks = retriever
             .retrieve_block_for_qc(&highest_ledger_info, 3)
             .await?;
@@ -225,19 +182,26 @@ where
         debug!("{}Sync to{} {}", Fg(Blue), Fg(Reset), root.0);
         // ensure it's [b1, b2]
         blocks.reverse();
-        self.block_store.rebuild(root, blocks, quorum_certs).await;
+        self.rebuild(root, blocks, quorum_certs).await;
         Ok(())
     }
 }
 
 /// BlockRetriever is used internally to retrieve blocks
-struct BlockRetriever {
+pub struct BlockRetriever {
     network: ConsensusNetworkImpl,
     deadline: Instant,
     preferred_peer: Author,
 }
 
 impl BlockRetriever {
+    pub fn new(network: ConsensusNetworkImpl, deadline: Instant, preferred_peer: Author) -> Self {
+        Self {
+            network,
+            deadline,
+            preferred_peer,
+        }
+    }
     /// Retrieve chain of n blocks for given QC
     ///
     /// Returns Result with Vec that has a guaranteed size of num_blocks
@@ -250,7 +214,7 @@ impl BlockRetriever {
     /// leader to drive quorum certificate creation The other peers from the quorum certificate
     /// will be randomly tried next.  If all members of the quorum certificate are exhausted, an
     /// error is returned
-    pub async fn retrieve_block_for_qc<'a, T>(
+    async fn retrieve_block_for_qc<'a, T>(
         &'a mut self,
         qc: &'a QuorumCert,
         num_blocks: u64,
