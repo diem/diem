@@ -69,6 +69,7 @@ impl EventHandle {
     }
 
     async fn process_new_block_msg(chain: Arc<AtomicRefCell<Vec<HashValue>>>, db: Arc<ConsensusDB>, new_block: BlockProto) -> failure::Result<()> {
+        println!("-------11111-------");
         let block = Block::try_from(new_block).expect("parse block pb err.");
         let mut blocks: Vec<Block<Vec<SignedTransaction>>> = Vec::new();
         blocks.push(block.clone());
@@ -78,7 +79,10 @@ impl EventHandle {
         if len > 0 {
             let latest_root_hash = chain_lock.get(len - 1).expect("chain vec is empty.");
             if latest_root_hash.clone() == block.parent_id() {
+                println!("-------2222-------");
                 chain_lock.push(block.id());
+            } else {
+                println!("-------33333-------");
             }
         } else {
             //TODO:genesis
@@ -162,7 +166,6 @@ impl EventHandle {
                         let block_id = HashValue::random();
 
                         let len = mint_chain_vec.borrow().len();
-                        println!("------{}--{}----", txns.len(), len);
                         let parent_block_id = mint_chain_vec.borrow().get(len - 1).unwrap().clone();
 
                         let state_compute_result = block_on(mint_state_computer.compute(parent_block_id, block_id, &txns)).unwrap();
@@ -197,6 +200,7 @@ impl EventHandle {
 
                             let msg_raw = msg.to_bytes().unwrap();
                             for peer in mint_peers.get_validator_verifier().get_ordered_account_addresses() {
+                                println!("-------4444-------");
                                 if let Err(err) = mint_network_sender.send_bytes(peer, msg_raw.clone()).await {
                                     error!(
                                         "Error broadcasting proposal to peer: {:?}, error: {:?}, msg: {:?}",
