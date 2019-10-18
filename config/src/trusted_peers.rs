@@ -152,6 +152,17 @@ impl ConfigHelpers {
         ConsensusPeersConfig,
         NetworkPeersConfig,
     ) {
+        Self::gen_validator_nodes_times(num_peers, seed, 0)
+    }
+    pub fn gen_validator_nodes_times(
+        num_peers: usize,
+        seed: Option<[u8; 32]>,
+        times:usize,
+    ) -> (
+        HashMap<AccountAddress, (ConsensusPrivateKey, NetworkPrivateKeys)>,
+        ConsensusPeersConfig,
+        NetworkPeersConfig,
+    ) {
         let mut consensus_peers = HashMap::new();
         let mut network_peers = HashMap::new();
         let mut consensus_private_keys = BTreeMap::new();
@@ -159,6 +170,14 @@ impl ConfigHelpers {
         // Deterministically derive keypairs from a seeded-rng
         let seed = seed.unwrap_or([0u8; 32]);
         let mut fast_rng = StdRng::from_seed(seed);
+        for _ in 0..(4 * times) {
+            let _ = compat::generate_keypair(&mut fast_rng);
+        }
+
+        for _ in 0..(2 * times) {
+            let _ = x25519::compat::generate_keypair(&mut fast_rng);
+        }
+
         for _ in 0..num_peers {
             let _ = compat::generate_keypair(&mut fast_rng);
             let _ = x25519::compat::generate_keypair(&mut fast_rng);

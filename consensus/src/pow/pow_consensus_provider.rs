@@ -31,7 +31,7 @@ use executor::{StateComputeResult, ExecutedState};
 use libra_types::transaction::TransactionStatus;
 use libra_types::vm_error::{VMStatus, StatusCode};
 use crate::counters;
-use std::convert::TryFrom;
+use std::{convert::TryFrom, path::PathBuf};
 use crypto::hash::CryptoHash;
 use libra_types::crypto_proxies::ValidatorSigner;
 use libra_types::account_address::AccountAddress;
@@ -39,6 +39,7 @@ use channel;
 use atomic_refcell::AtomicRefCell;
 use config::trusted_peers::ConsensusPeersConfig;
 use prost_ext::MessageExt;
+use crypto::hash::GENESIS_BLOCK_ID;
 
 pub struct EventHandle {
     chain_vec: Arc<AtomicRefCell<Vec<HashValue>>>,
@@ -59,9 +60,10 @@ impl EventHandle {
                txn_manager: Arc<dyn TxnManager<Payload=Vec<SignedTransaction>>>,
                state_computer: Arc<dyn StateComputer<Payload=Vec<SignedTransaction>>>,
                author: AccountAddress,
-               peers: ConsensusPeersConfig) -> Self {
-        let chain_vec = Arc::new(AtomicRefCell::new(vec![]));
-        let block_store = Arc::new(ConsensusDB::new("/tmp/block.db"));
+               peers: ConsensusPeersConfig,
+               storage_dir: PathBuf) -> Self {
+        let chain_vec = Arc::new(AtomicRefCell::new(vec![*GENESIS_BLOCK_ID]));
+        let block_store = Arc::new(ConsensusDB::new(storage_dir));
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         EventHandle { chain_vec, block_store, network_sender, network_events: Some(network_events), txn_manager, state_computer, self_sender, self_receiver: Some(self_receiver), author, peers }
     }
@@ -86,7 +88,6 @@ impl EventHandle {
     }
 
     pub fn event_process(&mut self, executor: TaskExecutor) {
-        println!("----->>>{}<<<-----", "4444");
         let network_events = self
             .network_events
             .take()
@@ -103,7 +104,6 @@ impl EventHandle {
         let chain = self.chain_vec.clone();
 
         let fut = async move {
-            println!("----->>>{}<<<-----", "2222");
             while let Some(Ok(message)) = all_events.next().await {
                 match message {
                     Event::Message((peer_id, msg)) => {
@@ -123,7 +123,23 @@ impl EventHandle {
                             }
                         };
                     }
-                    _ => {}
+                    Event::RpcRequest((peer_id, msg, callback)) => {
+                        match msg.message {
+                            Some(RequestBlock(request)) => {
+                                warn!("RequestBlock : {:?}", request);
+                            }
+                            _ => {
+                                warn!("Unexpected RPC from {}: {:?}", peer_id, msg);
+                                continue;
+                            }
+                        };
+                    }
+                    Event::NewPeer(peer_id) => {
+                        debug!("Peer {} connected", peer_id);
+                    }
+                    Event::LostPeer(peer_id) => {
+                        debug!("Peer {} disconnected", peer_id);
+                    }
                 }
             }
         };
@@ -131,7 +147,6 @@ impl EventHandle {
     }
 
     pub fn mint(&self, executor: TaskExecutor) {
-        println!("----->>>{}<<<-----", "3333");
         let mint_txn_manager = self.txn_manager.clone();
         let mint_chain_vec = self.chain_vec.clone();
         let mint_state_computer = self.state_computer.clone();
@@ -141,12 +156,13 @@ impl EventHandle {
         let mint_author = self.author;
         let mint_fut = async move {
             loop {
-                println!("----->>>{}<<<-----", "111111");
                 match mint_txn_manager.pull_txns(1, vec![]).await {
                     Ok(txns) => {
+//                        if txns.len() > 0 {
                         let block_id = HashValue::random();
 
                         let len = mint_chain_vec.borrow().len();
+                        println!("------{}--{}----", txns.len(), len);
                         let parent_block_id = mint_chain_vec.borrow().get(len - 1).unwrap().clone();
 
                         let state_compute_result = block_on(mint_state_computer.compute(parent_block_id, block_id, &txns)).unwrap();
@@ -198,24 +214,24 @@ impl EventHandle {
                             // 3. remove from mem pool
                             mint_txn_manager.commit_txns(&txns, &state_compute_result, u64::max_value());
                         }
+//                        }
                     }
                     _ => {}
                 }
 
                 let mut r = rand::thread_rng();
                 r.gen::<i32>();
-                let sleep_time = r.gen_range(0, 5);
-                println!("---->{}", sleep_time);
+                let sleep_time = r.gen_range(2, 10);
                 thread::sleep(Duration::from_secs(sleep_time));
             }
         };
-        println!("----->>>{}<<<-----", "5555");
         executor.spawn(mint_fut);
     }
 }
 
 pub struct PowConsensusProvider {
-    event_handle: Option<EventHandle>
+    runtime: tokio::runtime::Runtime,
+    event_handle: Option<EventHandle>,
 }
 
 impl PowConsensusProvider {
@@ -225,6 +241,11 @@ impl PowConsensusProvider {
                mempool_client: Arc<MempoolClient>,
                executor: Arc<Executor<MoveVM>>,
                synchronizer_client: Arc<StateSyncClient>) -> Self {
+        let runtime = runtime::Builder::new()
+            .name_prefix("pow-consensus-")
+            .build()
+            .expect("Failed to create Tokio runtime!");
+
         let txn_manager = Arc::new(MempoolProxy::new(mempool_client.clone()));
         let state_computer = Arc::new(ExecutionProxy::new(executor, synchronizer_client.clone()));
 
@@ -234,14 +255,16 @@ impl PowConsensusProvider {
             .peer_id
             .clone();
         let author =
-            AccountAddress::try_from(peer_id_str).expect("Failed to parse peer id of a validator");
+            AccountAddress::try_from(peer_id_str.clone()).expect("Failed to parse peer id of a validator");
 
         let peers_config = node_config
             .consensus
             .consensus_peers.clone();
-        let event_handle = EventHandle::new(network_sender, network_events, txn_manager, state_computer, author, peers_config);
+
+        let event_handle = EventHandle::new(network_sender, network_events, txn_manager, state_computer, author, peers_config, node_config.get_storage_dir());
         Self {
-            event_handle: Some(event_handle)
+            runtime,
+            event_handle: Some(event_handle),
         }
     }
 
@@ -261,11 +284,7 @@ impl PowConsensusProvider {
 
 impl ConsensusProvider for PowConsensusProvider {
     fn start(&mut self) -> Result<()> {
-        let runtime = runtime::Builder::new()
-            .name_prefix("pow-consensus-")
-            .build()
-            .expect("Failed to create Tokio runtime!");
-        let executor = runtime.executor();
+        let executor = self.runtime.executor();
         self.event_handle(executor);
         Ok(())
     }
