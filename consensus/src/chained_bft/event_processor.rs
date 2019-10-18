@@ -759,11 +759,7 @@ impl<T: Payload> EventProcessor<T> {
                 let compute_result = committed.compute_result();
                 if let Err(e) = self
                     .txn_manager
-                    .commit_txns(
-                        payload,
-                        compute_result.as_ref(),
-                        committed.timestamp_usecs(),
-                    )
+                    .commit_txns(payload, &compute_result, committed.timestamp_usecs())
                     .await
                 {
                     error!("Failed to notify mempool: {:?}", e);

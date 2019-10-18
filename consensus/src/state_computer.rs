@@ -4,7 +4,7 @@
 use crate::{counters, state_replication::StateComputer};
 use consensus_types::block::Block;
 use consensus_types::quorum_cert::QuorumCert;
-use executor::{CommittableBlock, ExecutedTrees, Executor, ProcessedVMOutput, StateComputeResult};
+use executor::{CommittableBlock, ExecutedTrees, Executor, ProcessedVMOutput};
 use failure::Result;
 use futures::{Future, FutureExt};
 use libra_logger::prelude::*;
@@ -46,7 +46,7 @@ impl StateComputer for ExecutionProxy {
         block: &Block<Self::Payload>,
         // The executed trees after executing the parent block.
         parent_executed_trees: ExecutedTrees,
-    ) -> Pin<Box<dyn Future<Output = Result<(ProcessedVMOutput, StateComputeResult)>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<ProcessedVMOutput>> + Send>> {
         let pre_execution_instant = Instant::now();
         let execute_future = self.executor.execute_block(
             block
@@ -61,9 +61,9 @@ impl StateComputer for ExecutionProxy {
         );
         async move {
             match execute_future.await {
-                Ok(Ok((output, state_compute_result))) => {
+                Ok(Ok(output)) => {
                     let execution_duration = pre_execution_instant.elapsed();
-                    let num_txns = state_compute_result.compute_status.len();
+                    let num_txns = output.transaction_data().len();
                     if num_txns == 0 {
                         // no txns in that block
                         counters::EMPTY_BLOCK_EXECUTION_DURATION_S
@@ -79,7 +79,7 @@ impl StateComputer for ExecutionProxy {
                                 .observe_duration(Duration::from_nanos(nanos_per_txn));
                         }
                     }
-                    Ok((output, state_compute_result))
+                    Ok(output)
                 }
                 Ok(Err(e)) => Err(e),
                 Err(e) => Err(e.into()),

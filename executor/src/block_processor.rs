@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    Chunk, Command, CommittableBlockBatch, ExecutableBlock, ExecutedState, ExecutedTrees,
-    ProcessedVMOutput, StateComputeResult, TransactionData, OP_COUNTERS,
+    Chunk, Command, CommittableBlockBatch, ExecutableBlock, ExecutedTrees, ProcessedVMOutput,
+    TransactionData, OP_COUNTERS,
 };
 use failure::prelude::*;
 use futures::channel::oneshot;
@@ -56,10 +56,7 @@ pub(crate) struct BlockProcessor<V> {
     committed_trees: Arc<Mutex<ExecutedTrees>>,
 
     /// The cached executable blocks.
-    blocks_to_execute: VecDeque<(
-        ExecutableBlock,
-        oneshot::Sender<Result<(ProcessedVMOutput, StateComputeResult)>>,
-    )>,
+    blocks_to_execute: VecDeque<(ExecutableBlock, oneshot::Sender<Result<ProcessedVMOutput>>)>,
 
     /// The blocks that are ready to be sent to storage.
     block_batch_to_commit: Option<(CommittableBlockBatch, oneshot::Sender<Result<()>>)>,
@@ -252,7 +249,8 @@ where
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
-            committed_trees.version_and_state_root(),
+            committed_trees.version(),
+            committed_trees.state_root(),
             committed_trees.state_tree(),
         );
         let vm_outputs = {
@@ -270,7 +268,7 @@ where
 
         let (account_to_btree, account_to_proof) = state_view.into();
 
-        let (output, _next_validator_set) = Self::process_vm_outputs(
+        let output = Self::process_vm_outputs(
             account_to_btree,
             account_to_proof,
             &transactions,
@@ -491,19 +489,18 @@ where
         true
     }
 
-    fn execute_block(
-        &mut self,
-        executable_block: ExecutableBlock,
-    ) -> Result<(ProcessedVMOutput, StateComputeResult)> {
+    fn execute_block(&mut self, executable_block: ExecutableBlock) -> Result<ProcessedVMOutput> {
         // Construct a StateView and pass the transactions to VM.
-        let state_view = VerifiedStateView::new(
-            Arc::clone(&self.storage_read_client),
-            self.committed_trees
-                .lock()
-                .unwrap()
-                .version_and_state_root(),
-            executable_block.parent_trees.state_tree(),
-        );
+        let state_view = {
+            let committed_trees = self.committed_trees.lock().unwrap();
+            VerifiedStateView::new(
+                Arc::clone(&self.storage_read_client),
+                committed_trees.version(),
+                committed_trees.state_root(),
+                executable_block.parent_trees.state_tree(),
+            )
+        };
+
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_block_time_s");
             V::execute_block(
@@ -523,7 +520,7 @@ where
         }
 
         let (account_to_btree, account_to_proof) = state_view.into();
-        let (output, next_validator_set) = Self::process_vm_outputs(
+        let output = Self::process_vm_outputs(
             account_to_btree,
             account_to_proof,
             &executable_block.transactions,
@@ -532,22 +529,7 @@ where
         )
         .map_err(|err| format_err!("Failed to execute block: {}", err))?;
 
-        let accu_root_hash = output.executed_trees().txn_accumulator().root_hash();
-        let version = output.executed_trees().txn_accumulator().num_leaves() - 1;
-
-        // Now that we have the root hash and execution status we can send the response to
-        // consensus.
-        // TODO: The VM will support a special transaction to set the validators for the
-        // next epoch that is part of a block execution.
-        let state_compute_result = StateComputeResult {
-            executed_state: ExecutedState {
-                state_id: accu_root_hash,
-                version,
-                validators: next_validator_set,
-            },
-            compute_status: status,
-        };
-        Ok((output, state_compute_result))
+        Ok(output)
     }
 
     /// Post-processing of what the VM outputs. Returns the entire block's output.
@@ -557,7 +539,7 @@ where
         transactions: &[Transaction],
         vm_outputs: Vec<TransactionOutput>,
         parent_trees: &ExecutedTrees,
-    ) -> Result<(ProcessedVMOutput, Option<ValidatorSet>)> {
+    ) -> Result<ProcessedVMOutput> {
         // The data of each individual transaction. For convenience purpose, even for the
         // transactions that will be discarded, we will compute its in-memory Sparse Merkle Tree
         // (it will be identical to the previous one).
@@ -638,14 +620,12 @@ where
         let current_transaction_accumulator = parent_trees
             .transaction_accumulator
             .append(&txn_info_hashes);
-        Ok((
-            ProcessedVMOutput::new(
-                txn_data,
-                ExecutedTrees {
-                    state_tree: current_state_tree,
-                    transaction_accumulator: Arc::new(current_transaction_accumulator),
-                },
-            ),
+        Ok(ProcessedVMOutput::new(
+            txn_data,
+            ExecutedTrees {
+                state_tree: current_state_tree,
+                transaction_accumulator: Arc::new(current_transaction_accumulator),
+            },
             next_validator_set,
         ))
     }

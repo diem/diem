@@ -7,10 +7,9 @@ use crate::{
 };
 use consensus_types::block::Block;
 use consensus_types::quorum_cert::QuorumCert;
-use executor::{ExecutedState, ExecutedTrees, ProcessedVMOutput, StateComputeResult};
+use executor::{ExecutedTrees, ProcessedVMOutput};
 use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
-use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use std::{pin::Pin, sync::Arc};
@@ -39,17 +38,11 @@ impl StateComputer for MockStateComputer {
         &self,
         _block: &Block<Self::Payload>,
         _parent_executed_trees: ExecutedTrees,
-    ) -> Pin<Box<dyn Future<Output = Result<(ProcessedVMOutput, StateComputeResult)>> + Send>> {
-        future::ok((
-            ProcessedVMOutput::new(vec![], ExecutedTrees::new_empty()),
-            StateComputeResult {
-                executed_state: ExecutedState {
-                    state_id: *ACCUMULATOR_PLACEHOLDER_HASH,
-                    version: 0,
-                    validators: None,
-                },
-                compute_status: vec![],
-            },
+    ) -> Pin<Box<dyn Future<Output = Result<ProcessedVMOutput>> + Send>> {
+        future::ok(ProcessedVMOutput::new(
+            vec![],
+            ExecutedTrees::new_empty(),
+            None,
         ))
         .boxed()
     }
@@ -96,17 +89,11 @@ impl StateComputer for EmptyStateComputer {
         &self,
         _block: &Block<Self::Payload>,
         _parent_executed_trees: ExecutedTrees,
-    ) -> Pin<Box<dyn Future<Output = Result<(ProcessedVMOutput, StateComputeResult)>> + Send>> {
-        future::ok((
-            ProcessedVMOutput::new(vec![], ExecutedTrees::new_empty()),
-            StateComputeResult {
-                executed_state: ExecutedState {
-                    state_id: *ACCUMULATOR_PLACEHOLDER_HASH,
-                    version: 0,
-                    validators: None,
-                },
-                compute_status: vec![],
-            },
+    ) -> Pin<Box<dyn Future<Output = Result<ProcessedVMOutput>> + Send>> {
+        future::ok(ProcessedVMOutput::new(
+            vec![],
+            ExecutedTrees::new_empty(),
+            None,
         ))
         .boxed()
     }

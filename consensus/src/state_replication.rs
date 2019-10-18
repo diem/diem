@@ -48,7 +48,7 @@ pub trait StateComputer: Send + Sync {
         block: &Block<Self::Payload>,
         // The executed trees of parent block.
         executed_trees: ExecutedTrees,
-    ) -> Pin<Box<dyn Future<Output = Result<(ProcessedVMOutput, StateComputeResult)>> + Send>>;
+    ) -> Pin<Box<dyn Future<Output = Result<ProcessedVMOutput>> + Send>>;
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(

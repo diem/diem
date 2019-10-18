@@ -79,13 +79,14 @@ impl<'a> VerifiedStateView<'a> {
     /// on top of it represented by `speculative_state`.
     pub fn new(
         reader: Arc<dyn StorageRead>,
-        latest_persistent_version_and_state_root: (Option<Version>, HashValue),
+        latest_persistent_version: Option<Version>,
+        latest_persistent_state_root: HashValue,
         speculative_state: &'a SparseMerkleTree,
     ) -> Self {
         Self {
             reader,
-            latest_persistent_version: latest_persistent_version_and_state_root.0,
-            latest_persistent_state_root: latest_persistent_version_and_state_root.1,
+            latest_persistent_version,
+            latest_persistent_state_root,
             speculative_state,
             account_to_btree_cache: RefCell::new(HashMap::new()),
             account_to_proof_cache: RefCell::new(HashMap::new()),

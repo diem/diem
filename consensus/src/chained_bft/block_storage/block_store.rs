@@ -18,7 +18,7 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate,
     vote::Vote,
 };
-use executor::{ProcessedVMOutput, StateComputeResult};
+use executor::ProcessedVMOutput;
 use failure::ResultExt;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -110,11 +110,15 @@ impl<T: Payload> BlockStore<T> {
         max_pruned_blocks_in_mem: usize,
     ) -> BlockTree<T> {
         let (root_block, root_qc, root_li) = (root.0, root.1, root.2);
-        // root_compute_res will not used anywhere so use default value to simplify code.
-        let root_compute_res = StateComputeResult::default();
         // TODO: check root matches the committed_trees.
-        let root_output = ProcessedVMOutput::new(vec![], state_computer.committed_trees());
-        let executed_root_block = ExecutedBlock::new(root_block, root_output, root_compute_res);
+        let root_output = ProcessedVMOutput::new(vec![], state_computer.committed_trees(), None);
+        assert_eq!(
+            root_qc.certified_block().executed_state_id(),
+            root_output.accu_root(),
+            "We have inconsistent executed state with Quorum Cert for root block {}",
+            root_block.id()
+        );
+        let executed_root_block = ExecutedBlock::new(root_block, root_output);
         let mut tree = BlockTree::new(
             executed_root_block,
             root_qc,
@@ -133,7 +137,7 @@ impl<T: Payload> BlockStore<T> {
                 .expect("Parent block must exist")
                 .executed_trees()
                 .clone();
-            let (output, state_compute_result) = state_computer
+            let output = state_computer
                 .compute(&block, parent_trees)
                 .await
                 .expect("fail to rebuild scratchpad");
@@ -141,12 +145,12 @@ impl<T: Payload> BlockStore<T> {
             if let Some(qc) = quorum_certs.get(&block.id()) {
                 assert_eq!(
                     qc.certified_block().executed_state_id(),
-                    state_compute_result.executed_state.state_id,
+                    output.accu_root(),
                     "We have inconsistent executed state with Quorum Cert for block {}",
                     block.id()
                 );
             }
-            tree.insert_block(ExecutedBlock::new(block, output, state_compute_result))
+            tree.insert_block(ExecutedBlock::new(block, output))
                 .expect("Block insertion failed while build the tree");
         }
         quorum_certs.into_iter().for_each(|(_, qc)| {
@@ -276,29 +280,27 @@ impl<T: Payload> BlockStore<T> {
         // Reconfiguration rule - if a block is a child of pending reconfiguration, it needs to be empty
         // So we roll over the executed state until it's committed and we start new epoch.
         let parent_state = parent_block.compute_result();
-        let (output, state_compute_result) =
-            if self.root() != parent_block && parent_state.has_reconfiguration() {
-                ensure!(
-                    block.payload().filter(|p| **p != T::default()).is_none(),
-                    "Reconfiguration suffix should not carry payload"
-                );
-                (
-                    parent_block.output().as_ref().clone(),
-                    StateComputeResult {
-                        executed_state: parent_state.executed_state.clone(),
-                        compute_status: vec![],
-                    },
-                )
-            } else {
-                let parent_trees = parent_block.executed_trees().clone();
-                // Although NIL blocks don't have payload, we still send a T::default() to compute
-                // because we may inject a block prologue transaction.
-                self.state_computer
-                    .compute(&block, parent_trees)
-                    .await
-                    .with_context(|e| format!("Execution failure for block {}: {:?}", block, e))?
-            };
-        Ok(ExecutedBlock::new(block, output, state_compute_result))
+
+        let output = if self.root() != parent_block && parent_state.has_reconfiguration() {
+            ensure!(
+                block.payload().filter(|p| **p != T::default()).is_none(),
+                "Reconfiguration suffix should not carry payload"
+            );
+            ProcessedVMOutput::new(
+                vec![],
+                parent_block.output().executed_trees().clone(),
+                parent_block.output().validators().clone(),
+            )
+        } else {
+            let parent_trees = parent_block.executed_trees().clone();
+            // Although NIL blocks don't have payload, we still send a T::default() to compute
+            // because we may inject a block prologue transaction.
+            self.state_computer
+                .compute(&block, parent_trees)
+                .await
+                .with_context(|e| format!("Execution failure for block {}: {:?}", block, e))?
+        };
+        Ok(ExecutedBlock::new(block, output))
     }
 
     /// Validates quorum certificates and inserts it into block tree assuming dependencies exist.
@@ -310,15 +312,12 @@ impl<T: Payload> BlockStore<T> {
         // corruption, for example.
         match self.get_block(qc.certified_block().id()) {
             Some(executed_block) => {
-                // TODO: Once we fill in the root compute result, we should remove this
-                if self.root() != executed_block {
-                    assert_eq!(
+                assert_eq!(
                         executed_block.compute_result().executed_state.state_id,
                         qc.certified_block().executed_state_id(),
                         "QC for block {} has a different execution result than the local computation. Restart and try again.",
                         qc.certified_block().id(),
                     );
-                }
             }
             None => bail!("Insert {} without having the block in store first", qc),
         }
@@ -529,17 +528,12 @@ impl<T: Payload> BlockStore<T> {
     ) -> failure::Result<Arc<ExecutedBlock<T>>> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
         let executed_block = self.execute_block(block).await?;
-        let output = executed_block.output().as_ref().clone();
-        let mut compute_result = executed_block.compute_result().as_ref().clone();
-        compute_result.executed_state.validators = Some(ValidatorSet::new(vec![]));
+        let mut output = executed_block.output().as_ref().clone();
+        output.set_validators(ValidatorSet::new(vec![]));
         Ok(self
             .inner
             .write()
             .unwrap()
-            .insert_block(ExecutedBlock::new(
-                executed_block.block().clone(),
-                output,
-                compute_result,
-            ))?)
+            .insert_block(ExecutedBlock::new(executed_block.block().clone(), output))?)
     }
 }
