@@ -34,7 +34,7 @@ libra-metrics = { path = "../../common/metrics" }
 storage-client = { path = "../../storage/storage-client" }
 libra-types = { path = "../../types" }
 vm_validator = { path = "../../vm_validator" }
-prost-ext = { path = "../../common/prost-ext" }
+libra-prost-ext = { path = "../../common/prost-ext" }
 network = { path = "../../network" }
 
 storage-service = { path = "../../storage/storage-service", optional = true }

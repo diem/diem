@@ -6,8 +6,8 @@ use libra_config::{
     config::{NodeConfig, NodeConfigHelpers},
     trusted_peers::{ConfigHelpers, ConsensusPeersConfig, NetworkPeersConfig},
 };
+use libra_prost_ext::MessageExt;
 use libra_types::transaction::SignatureCheckedTransaction;
-use prost_ext::MessageExt;
 use rand::{Rng, SeedableRng};
 use std::{fs::File, io::prelude::*};
 use vm_genesis::encode_genesis_transaction_with_validator;

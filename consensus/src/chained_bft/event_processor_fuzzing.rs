@@ -17,13 +17,13 @@ use crate::{
 use consensus_types::proposal_msg::{ProposalMsg, ProposalUncheckedSignatures};
 use futures::{channel::mpsc, executor::block_on};
 use lazy_static::lazy_static;
+use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 use network::{
     proto::Proposal,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use prost::Message as _;
-use prost_ext::MessageExt;
 use safety_rules::SafetyRules;
 use std::convert::TryFrom;
 use std::sync::Arc;

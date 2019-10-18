@@ -26,4 +26,4 @@ grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, feature
 
 [dev-dependencies]
 libra-types = { path = "../../types", features = ["testing"]}
-prost-ext = { path = "../../common/prost-ext" }
+libra-prost-ext = { path = "../../common/prost-ext" }

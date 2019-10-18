@@ -15,9 +15,9 @@
 use crate::schema::ensure_slice_len_eq;
 use byteorder::{BigEndian, ReadBytesExt};
 use failure::prelude::*;
+use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use prost::Message;
-use prost_ext::MessageExt;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},

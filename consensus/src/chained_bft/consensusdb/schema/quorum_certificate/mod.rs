@@ -13,8 +13,8 @@ use super::QC_CF_NAME;
 use consensus_types::quorum_cert::QuorumCert;
 use crypto::HashValue;
 use failure::prelude::*;
+use libra_prost_ext::MessageExt;
 use prost::Message;
-use prost_ext::MessageExt;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},

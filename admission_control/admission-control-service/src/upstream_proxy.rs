@@ -14,10 +14,10 @@ use futures::{
 };
 use libra_config::config::{AdmissionControlConfig, NodeConfig, RoleType};
 use libra_logger::prelude::*;
+use libra_prost_ext::MessageExt;
 use network::validator_network::{
     AdmissionControlNetworkEvents, AdmissionControlNetworkSender, Event, RpcError,
 };
-use prost_ext::MessageExt;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
 

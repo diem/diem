@@ -1,7 +1,7 @@
 use crate::language_storage::ModuleId;
 use crate::test_helpers::assert_canonical_encode_decode;
+use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;
-use prost_ext::test_helpers::assert_protobuf_encode_decode;
 
 proptest! {
     #[test]
