@@ -638,10 +638,9 @@ where
         // Discard all the local writes, restart execution from a clean state.
         self.clear();
         match self.run_epilogue() {
-            Ok(_) => match self.make_write_set(vec![], result) {
-                Ok(trans_out) => trans_out,
-                Err(err) => error_output(err),
-            },
+            Ok(_) => self
+                .make_write_set(vec![], result)
+                .unwrap_or_else(error_output),
             // Running epilogue shouldn't fail here as we've already checked for enough balance in
             // the prologue
             Err(err) => error_output(err),

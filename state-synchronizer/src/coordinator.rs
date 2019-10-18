@@ -176,10 +176,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     }
 
     fn target_version(&self) -> u64 {
-        match &self.target {
-            Some(target) => target.ledger_info().version(),
-            None => 0,
-        }
+        self.target
+            .as_ref()
+            .map_or(0, |target| target.ledger_info().version())
     }
 
     async fn request_sync(&mut self, target: LedgerInfo, callback: oneshot::Sender<bool>) {
