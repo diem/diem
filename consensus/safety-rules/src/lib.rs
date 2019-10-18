@@ -3,62 +3,22 @@
 
 use consensus_types::{
     block::Block,
+    block_info::BlockInfo,
     common::{Payload, Round},
     quorum_cert::QuorumCert,
+    vote::Vote,
+    vote_data::VoteData,
+    vote_proposal::VoteProposal,
 };
 use failure::Fail;
 use libra_crypto::HashValue;
+use libra_types::{crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 #[cfg(test)]
 #[path = "safety_rules_test.rs"]
 mod safety_rules_test;
-
-/// Vote information is returned if a proposal passes the voting rules.
-/// The caller might need to persist some of the consensus state before sending out the actual
-/// vote message.
-/// Vote info also includes the block id that is going to be committed in case this vote gathers
-/// QC.
-#[derive(Debug, Eq, PartialEq)]
-pub struct VoteInfo {
-    /// Block id of the proposed block.
-    proposal_id: HashValue,
-    /// Round of the proposed block.
-    proposal_round: Round,
-    /// Consensus state after the voting (e.g., with the updated vote round)
-    consensus_state: ConsensusState,
-    /// The block that should be committed in case this vote gathers QC.
-    /// If no block is committed in case the vote gathers QC, return None.
-    potential_commit_id: Option<HashValue>,
-
-    /// The id of the parent block of the proposal
-    parent_block_id: HashValue,
-    /// The round of the parent block of the proposal
-    parent_block_round: Round,
-}
-
-impl VoteInfo {
-    pub fn proposal_id(&self) -> HashValue {
-        self.proposal_id
-    }
-
-    pub fn consensus_state(&self) -> &ConsensusState {
-        &self.consensus_state
-    }
-
-    pub fn potential_commit_id(&self) -> Option<HashValue> {
-        self.potential_commit_id
-    }
-
-    pub fn parent_block_id(&self) -> HashValue {
-        self.parent_block_id
-    }
-
-    pub fn parent_block_round(&self) -> Round {
-        self.parent_block_round
-    }
-}
 
 #[derive(Debug, Fail, Eq, PartialEq)]
 /// Different reasons for proposal rejection
@@ -157,12 +117,16 @@ impl ConsensusState {
 pub struct SafetyRules {
     // Keeps the state.
     state: ConsensusState,
+    validator_signer: ValidatorSigner,
 }
 
 impl SafetyRules {
     /// Constructs a new instance of SafetyRules given the BlockTree and ConsensusState.
-    pub fn new(state: ConsensusState) -> Self {
-        Self { state }
+    pub fn new(state: ConsensusState, validator_signer: ValidatorSigner) -> Self {
+        Self {
+            state,
+            validator_signer,
+        }
     }
 
     /// Learn about a new quorum certificate. Several things can happen as a result of that:
@@ -180,25 +144,46 @@ impl SafetyRules {
         }
     }
 
-    /// Check if a one-chain at round r+2 causes a commit at round r and return the committed
-    /// block id at round r if possible
-    fn commit_rule_for_certified_block(
-        &self,
-        block_parent_qc: &QuorumCert,
-        block_round: u64,
-    ) -> Option<HashValue> {
-        // We're using a so-called 3-chain commit rule: B0 (as well as its prefix)
-        // can be committed if there exist certified blocks B1 and B2 that satisfy:
-        // 1) B0 <- B1 <- B2 <--
-        // 2) round(B0) + 1 = round(B1), and
-        // 3) round(B1) + 1 = round(B2).
+    fn ledger_info_from_block_info(block_info: &BlockInfo) -> LedgerInfo {
+        LedgerInfo::new(
+            block_info.version(),
+            block_info.executed_state_id(),
+            HashValue::zero(),
+            block_info.id(),
+            block_info.epoch(),
+            block_info.timestamp_usecs(),
+            block_info.next_validator_set().cloned(),
+        )
+    }
 
-        if block_parent_qc.parent_block().round() + 1 == block_parent_qc.certified_block().round()
-            && block_parent_qc.certified_block().round() + 1 == block_round
-        {
-            return Some(block_parent_qc.parent_block().id());
+    fn empty_ledger_info() -> LedgerInfo {
+        LedgerInfo::new(
+            0,
+            HashValue::zero(),
+            HashValue::zero(),
+            HashValue::zero(),
+            0,
+            0,
+            None,
+        )
+    }
+
+    /// Produces a LedgerInfo that either commits a block based upon the 3-chain commit rule
+    /// or an empty LedgerInfo for no commit. The 3-chain commit rule is: B0 (as well as its
+    /// prefix) can be committed if there exist certified blocks B1 and B2 that satisfy:
+    /// 1) B0 <- B1 <- B2 <--
+    /// 2) round(B0) + 1 = round(B1), and
+    /// 3) round(B1) + 1 = round(B2).
+    fn construct_ledger_info<T: Payload>(&self, proposed_block: &Block<T>) -> LedgerInfo {
+        let block2 = proposed_block.round();
+        let block1 = proposed_block.quorum_cert().certified_block().round();
+        let block0 = proposed_block.quorum_cert().parent_block().round();
+
+        let commit = block0 + 1 == block1 && block1 + 1 == block2;
+        match commit {
+            true => Self::ledger_info_from_block_info(proposed_block.quorum_cert().parent_block()),
+            false => Self::empty_ledger_info(),
         }
-        None
     }
 
     /// Clones the up-to-date state of consensus (for monitoring / debugging purposes)
@@ -212,10 +197,12 @@ impl SafetyRules {
     /// sent).
     /// Requires that all the ancestors of the block are available for at least up to the last
     /// committed block, might panic otherwise.
-    pub fn voting_rule<T: Payload>(
+    pub fn construct_and_sign_vote<T: Payload>(
         &mut self,
-        proposed_block: &Block<T>,
-    ) -> Result<VoteInfo, ProposalReject> {
+        vote_proposal: &VoteProposal<T>,
+    ) -> Result<Vote, ProposalReject> {
+        let proposed_block = vote_proposal.block();
+
         if proposed_block.round() <= self.state.last_vote_round() {
             return Err(ProposalReject::OldProposal {
                 proposal_round: proposed_block.round(),
@@ -225,29 +212,28 @@ impl SafetyRules {
 
         let respects_preferred_block = proposed_block.quorum_cert().certified_block().round()
             >= self.state.preferred_block_round();
-        if respects_preferred_block {
-            self.state.set_last_vote_round(proposed_block.round());
 
-            // If the vote for the given proposal is gathered into QC, then this QC might eventually
-            // commit another block following the rules defined in
-            // `commit_rule_for_certified_block()` function.
-            let potential_commit_id = self.commit_rule_for_certified_block(
-                proposed_block.quorum_cert(),
-                proposed_block.round(),
-            );
-
-            Ok(VoteInfo {
-                proposal_id: proposed_block.id(),
-                proposal_round: proposed_block.round(),
-                consensus_state: self.state.clone(),
-                potential_commit_id,
-                parent_block_id: proposed_block.quorum_cert().certified_block().id(),
-                parent_block_round: proposed_block.quorum_cert().certified_block().round(),
-            })
-        } else {
-            Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {
+        if !respects_preferred_block {
+            return Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {
                 preferred_block_round: self.state.preferred_block_round(),
-            })
+            });
         }
+
+        self.state.set_last_vote_round(proposed_block.round());
+
+        Ok(Vote::new(
+            VoteData::new(
+                BlockInfo::from_block(
+                    proposed_block,
+                    vote_proposal.executed_state_id(),
+                    vote_proposal.version(),
+                    vote_proposal.next_validator_set().cloned(),
+                ),
+                proposed_block.quorum_cert().certified_block().clone(),
+            ),
+            self.validator_signer.author(),
+            self.construct_ledger_info(proposed_block),
+            &self.validator_signer,
+        ))
     }
 }

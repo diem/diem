@@ -3,8 +3,8 @@
 
 use crate::{ConsensusState, ProposalReject, SafetyRules};
 use consensus_types::{
-    block::Block, block_info::BlockInfo, common::Round, quorum_cert::QuorumCert,
-    sync_info::SyncInfo, vote::Vote, vote_data::VoteData, vote_msg::VoteMsg,
+    block::Block, block_info::BlockInfo, common::Round, quorum_cert::QuorumCert, vote::Vote,
+    vote_data::VoteData, vote_proposal::VoteProposal,
 };
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::{
@@ -16,50 +16,48 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-fn make_block_with_qc(
+fn make_proposal_with_qc(
     round: Round,
     qc: QuorumCert,
     validator_signer: &ValidatorSigner,
-) -> Block<Round> {
-    Block::<Round>::new_internal(
-        round,
+) -> VoteProposal<Round> {
+    VoteProposal::<Round>::new(
+        Block::<Round>::new_internal(
+            round,
+            0,
+            round,
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            qc,
+            validator_signer,
+        ),
+        HashValue::zero(),
         0,
-        round,
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs(),
-        qc,
-        validator_signer,
+        None,
     )
 }
 
-fn make_block_with_parent(
+fn make_proposal_with_parent(
     round: Round,
     parent: &Block<Round>,
-    committed: Option<&Block<Round>>,
+    committed: Option<&VoteProposal<Round>>,
     validator_signer: &ValidatorSigner,
-    highest_quorum_cert: &QuorumCert,
-) -> Block<Round> {
+) -> VoteProposal<Round> {
     let vote_data = VoteData::new(
         BlockInfo::from_block(parent, HashValue::zero(), 0, None),
         parent.quorum_cert().certified_block().clone(),
     );
 
-    let sync_info = SyncInfo::new(
-        highest_quorum_cert.clone(),
-        highest_quorum_cert.clone(),
-        None,
-    );
-
     let ledger_info = match committed {
         Some(committed) => LedgerInfo::new(
-            0,
-            HashValue::zero(),
+            committed.version(),
+            committed.executed_state_id(),
             vote_data.hash(),
-            committed.id(),
-            committed.epoch(),
-            committed.timestamp_usecs(),
+            committed.block().id(),
+            committed.block().epoch(),
+            committed.block().timestamp_usecs(),
             None,
         ),
         None => LedgerInfo::new(
@@ -73,36 +71,31 @@ fn make_block_with_parent(
         ),
     };
 
-    let vote_msg = VoteMsg::new(
-        Vote::new(
-            vote_data.clone(),
-            validator_signer.author(),
-            ledger_info,
-            validator_signer,
-        ),
-        sync_info,
+    let vote = Vote::new(
+        vote_data.clone(),
+        validator_signer.author(),
+        ledger_info,
+        validator_signer,
     );
 
     let mut ledger_info_with_signatures =
-        LedgerInfoWithSignatures::new(vote_msg.vote().ledger_info().clone(), BTreeMap::new());
+        LedgerInfoWithSignatures::new(vote.ledger_info().clone(), BTreeMap::new());
 
-    vote_msg
-        .vote()
-        .signature()
+    vote.signature()
         .clone()
-        .add_to_li(vote_msg.vote().author(), &mut ledger_info_with_signatures);
+        .add_to_li(vote.author(), &mut ledger_info_with_signatures);
 
     let qc = QuorumCert::new(vote_data, ledger_info_with_signatures);
 
-    make_block_with_qc(round, qc, validator_signer)
+    make_proposal_with_qc(round, qc, validator_signer)
 }
 
 #[test]
 fn test_initial_state() {
     // Start from scratch, verify the state
-    let block = Block::<u64>::make_genesis_block();
+    let block = Block::<Round>::make_genesis_block();
 
-    let safety_rules = SafetyRules::new(ConsensusState::default());
+    let safety_rules = SafetyRules::new(ConsensusState::default(), ValidatorSigner::from_int(0));
     let state = safety_rules.consensus_state();
     assert_eq!(state.last_vote_round(), block.round());
     assert_eq!(state.preferred_block_round(), block.round());
@@ -112,7 +105,7 @@ fn test_initial_state() {
 fn test_preferred_block_rule() {
     // Preferred block is the highest 2-chain head.
     let validator_signer = ValidatorSigner::from_int(0);
-    let mut safety_rules = SafetyRules::new(ConsensusState::default());
+    let mut safety_rules = SafetyRules::new(ConsensusState::default(), validator_signer.clone());
 
     // build a tree of the following form:
     //             _____    _____
@@ -125,54 +118,54 @@ fn test_preferred_block_rule() {
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let round = genesis_block.round();
 
-    let a1 = make_block_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
-    let b1 = make_block_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
-    let b2 = make_block_with_parent(round + 3, &a1, None, &validator_signer, &b1.quorum_cert());
-    let a2 = make_block_with_parent(round + 4, &b1, None, &validator_signer, &b2.quorum_cert());
-    let b3 = make_block_with_parent(round + 5, &b2, None, &validator_signer, &a2.quorum_cert());
-    let a3 = make_block_with_parent(round + 6, &a2, None, &validator_signer, &b3.quorum_cert());
-    let a4 = make_block_with_parent(round + 7, &a3, None, &validator_signer, &a3.quorum_cert());
+    let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
+    let b1 = make_proposal_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
+    let b2 = make_proposal_with_parent(round + 3, a1.block(), None, &validator_signer);
+    let a2 = make_proposal_with_parent(round + 4, b1.block(), None, &validator_signer);
+    let b3 = make_proposal_with_parent(round + 5, b2.block(), None, &validator_signer);
+    let a3 = make_proposal_with_parent(round + 6, a2.block(), None, &validator_signer);
+    let a4 = make_proposal_with_parent(round + 7, a3.block(), None, &validator_signer);
 
-    safety_rules.update(a1.quorum_cert());
+    safety_rules.update(a1.block().quorum_cert());
     assert_eq!(
         safety_rules.consensus_state().preferred_block_round(),
         genesis_block.round()
     );
 
-    safety_rules.update(b1.quorum_cert());
+    safety_rules.update(b1.block().quorum_cert());
     assert_eq!(
         safety_rules.consensus_state().preferred_block_round(),
         genesis_block.round()
     );
 
-    safety_rules.update(a2.quorum_cert());
+    safety_rules.update(a2.block().quorum_cert());
     assert_eq!(
         safety_rules.consensus_state().preferred_block_round(),
         genesis_block.round()
     );
 
-    safety_rules.update(b2.quorum_cert());
+    safety_rules.update(b2.block().quorum_cert());
     assert_eq!(
         safety_rules.consensus_state().preferred_block_round(),
         genesis_block.round()
     );
 
-    safety_rules.update(a3.quorum_cert());
+    safety_rules.update(a3.block().quorum_cert());
     assert_eq!(
         safety_rules.consensus_state().preferred_block_round(),
-        b1.round()
+        b1.block().round()
     );
 
-    safety_rules.update(b3.quorum_cert());
+    safety_rules.update(b3.block().quorum_cert());
     assert_eq!(
         safety_rules.consensus_state().preferred_block_round(),
-        b1.round()
+        b1.block().round()
     );
 
-    safety_rules.update(a4.quorum_cert());
+    safety_rules.update(a4.block().quorum_cert());
     assert_eq!(
         safety_rules.consensus_state().preferred_block_round(),
-        a2.round()
+        a2.block().round()
     );
 }
 
@@ -180,7 +173,7 @@ fn test_preferred_block_rule() {
 /// Test the potential ledger info that we're going to use in case of voting
 fn test_voting_potential_commit_id() {
     let validator_signer = ValidatorSigner::from_int(0);
-    let mut safety_rules = SafetyRules::new(ConsensusState::default());
+    let mut safety_rules = SafetyRules::new(ConsensusState::default(), validator_signer.clone());
 
     // build a tree of the following form:
     //            _____
@@ -194,48 +187,44 @@ fn test_voting_potential_commit_id() {
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let round = genesis_block.round();
 
-    let a1 = make_block_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
-    let b1 = make_block_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
-    let a2 = make_block_with_parent(round + 3, &a1, None, &validator_signer, &b1.quorum_cert());
-    let a3 = make_block_with_parent(round + 4, &a2, None, &validator_signer, &a2.quorum_cert());
-    let a4 = make_block_with_parent(
-        round + 5,
-        &a3,
-        Some(&a2),
-        &validator_signer,
-        &a3.quorum_cert(),
-    );
-    let a5 = make_block_with_parent(
-        round + 6,
-        &a4,
-        Some(&a3),
-        &validator_signer,
-        &a4.quorum_cert(),
-    );
+    let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
+    let b1 = make_proposal_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
+    let a2 = make_proposal_with_parent(round + 3, a1.block(), None, &validator_signer);
+    let a3 = make_proposal_with_parent(round + 4, a2.block(), None, &validator_signer);
+    let a4 = make_proposal_with_parent(round + 5, a3.block(), Some(&a2), &validator_signer);
+    let a5 = make_proposal_with_parent(round + 6, a4.block(), Some(&a3), &validator_signer);
 
     for b in &[&a1, &b1, &a2, &a3] {
-        safety_rules.update(b.quorum_cert());
-        let voting_info = safety_rules.voting_rule(b).unwrap();
-        assert_eq!(voting_info.potential_commit_id, None);
+        safety_rules.update(b.block().quorum_cert());
+        let vote = safety_rules.construct_and_sign_vote(b).unwrap();
+        assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
     }
 
-    safety_rules.update(a4.quorum_cert());
+    safety_rules.update(a4.block().quorum_cert());
     assert_eq!(
-        safety_rules.voting_rule(&a4).unwrap().potential_commit_id,
-        Some(a2.id())
+        safety_rules
+            .construct_and_sign_vote(&a4)
+            .unwrap()
+            .ledger_info()
+            .consensus_block_id(),
+        a2.block().id(),
     );
 
-    safety_rules.update(a5.quorum_cert());
+    safety_rules.update(a5.block().quorum_cert());
     assert_eq!(
-        safety_rules.voting_rule(&a5).unwrap().potential_commit_id,
-        Some(a3.id())
+        safety_rules
+            .construct_and_sign_vote(&a5)
+            .unwrap()
+            .ledger_info()
+            .consensus_block_id(),
+        a3.block().id(),
     );
 }
 
 #[test]
 fn test_voting() {
     let validator_signer = ValidatorSigner::from_int(0);
-    let mut safety_rules = SafetyRules::new(ConsensusState::default());
+    let mut safety_rules = SafetyRules::new(ConsensusState::default(), validator_signer.clone());
 
     // build a tree of the following form:
     //             _____    __________
@@ -259,59 +248,59 @@ fn test_voting() {
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let round = genesis_block.round();
 
-    let a1 = make_block_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
-    let b1 = make_block_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
-    let b2 = make_block_with_parent(round + 3, &a1, None, &validator_signer, &b1.quorum_cert());
-    let a2 = make_block_with_parent(round + 4, &b1, None, &validator_signer, &b2.quorum_cert());
-    let a3 = make_block_with_parent(round + 5, &a2, None, &validator_signer, &a2.quorum_cert());
-    let b3 = make_block_with_parent(round + 6, &b2, None, &validator_signer, &a3.quorum_cert());
-    let a4 = make_block_with_parent(round + 7, &a3, None, &validator_signer, &b3.quorum_cert());
-    let b4 = make_block_with_parent(round + 8, &b2, None, &validator_signer, &a4.quorum_cert());
+    let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
+    let b1 = make_proposal_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
+    let b2 = make_proposal_with_parent(round + 3, a1.block(), None, &validator_signer);
+    let a2 = make_proposal_with_parent(round + 4, b1.block(), None, &validator_signer);
+    let a3 = make_proposal_with_parent(round + 5, a2.block(), None, &validator_signer);
+    let b3 = make_proposal_with_parent(round + 6, b2.block(), None, &validator_signer);
+    let a4 = make_proposal_with_parent(round + 7, a3.block(), None, &validator_signer);
+    let b4 = make_proposal_with_parent(round + 8, b2.block(), None, &validator_signer);
 
-    safety_rules.update(a1.quorum_cert());
-    let mut voting_info = safety_rules.voting_rule(&a1).unwrap();
-    assert_eq!(voting_info.potential_commit_id, None);
+    safety_rules.update(a1.block().quorum_cert());
+    let mut vote = safety_rules.construct_and_sign_vote(&a1).unwrap();
+    assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(b1.quorum_cert());
-    voting_info = safety_rules.voting_rule(&b1).unwrap();
-    assert_eq!(voting_info.potential_commit_id, None);
+    safety_rules.update(b1.block().quorum_cert());
+    vote = safety_rules.construct_and_sign_vote(&b1).unwrap();
+    assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(a2.quorum_cert());
-    voting_info = safety_rules.voting_rule(&a2).unwrap();
-    assert_eq!(voting_info.potential_commit_id, None);
+    safety_rules.update(a2.block().quorum_cert());
+    vote = safety_rules.construct_and_sign_vote(&a2).unwrap();
+    assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(b2.quorum_cert());
+    safety_rules.update(b2.block().quorum_cert());
     assert_eq!(
-        safety_rules.voting_rule(&b2),
+        safety_rules.construct_and_sign_vote(&b2),
         Err(ProposalReject::OldProposal {
             last_vote_round: 4,
             proposal_round: 3,
         })
     );
 
-    safety_rules.update(a3.quorum_cert());
-    voting_info = safety_rules.voting_rule(&a3).unwrap();
-    assert_eq!(voting_info.potential_commit_id, None);
+    safety_rules.update(a3.block().quorum_cert());
+    vote = safety_rules.construct_and_sign_vote(&a3).unwrap();
+    assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(b3.quorum_cert());
-    voting_info = safety_rules.voting_rule(&b3).unwrap();
-    assert_eq!(voting_info.potential_commit_id, None);
+    safety_rules.update(b3.block().quorum_cert());
+    vote = safety_rules.construct_and_sign_vote(&b3).unwrap();
+    assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(a4.quorum_cert());
-    voting_info = safety_rules.voting_rule(&a4).unwrap();
-    assert_eq!(voting_info.potential_commit_id, None);
+    safety_rules.update(a4.block().quorum_cert());
+    vote = safety_rules.construct_and_sign_vote(&a4).unwrap();
+    assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(a4.quorum_cert());
+    safety_rules.update(a4.block().quorum_cert());
     assert_eq!(
-        safety_rules.voting_rule(&a4),
+        safety_rules.construct_and_sign_vote(&a4),
         Err(ProposalReject::OldProposal {
             last_vote_round: 7,
             proposal_round: 7,
         })
     );
-    safety_rules.update(b4.quorum_cert());
+    safety_rules.update(b4.block().quorum_cert());
     assert_eq!(
-        safety_rules.voting_rule(&b4),
+        safety_rules.construct_and_sign_vote(&b4),
         Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {
             preferred_block_round: 4,
         })
@@ -321,7 +310,7 @@ fn test_voting() {
 #[test]
 fn test_commit_rule_consecutive_rounds() {
     let validator_signer = ValidatorSigner::from_int(0);
-    let safety_rules = SafetyRules::new(ConsensusState::default());
+    let safety_rules = SafetyRules::new(ConsensusState::default(), validator_signer.clone());
 
     // build a tree of the following form:
     //             ___________
@@ -335,35 +324,47 @@ fn test_commit_rule_consecutive_rounds() {
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let round = genesis_block.round();
 
-    let a1 = make_block_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
-    let b1 = make_block_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
-    let b2 = make_block_with_parent(round + 3, &b1, None, &validator_signer, &b1.quorum_cert());
-    let a2 = make_block_with_parent(round + 4, &a1, None, &validator_signer, &b2.quorum_cert());
-    let a3 = make_block_with_parent(round + 5, &a2, None, &validator_signer, &a2.quorum_cert());
-    let a4 = make_block_with_parent(round + 6, &a3, None, &validator_signer, &a3.quorum_cert());
+    let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
+    let b1 = make_proposal_with_qc(round + 2, genesis_qc.clone(), &validator_signer);
+    let b2 = make_proposal_with_parent(round + 3, b1.block(), None, &validator_signer);
+    let a2 = make_proposal_with_parent(round + 4, a1.block(), None, &validator_signer);
+    let a3 = make_proposal_with_parent(round + 5, a2.block(), None, &validator_signer);
+    let a4 = make_proposal_with_parent(round + 6, a3.block(), None, &validator_signer);
 
     assert_eq!(
-        safety_rules.commit_rule_for_certified_block(a1.quorum_cert(), a1.round()),
-        None
+        safety_rules
+            .construct_ledger_info(a1.block())
+            .consensus_block_id(),
+        HashValue::zero(),
     );
     assert_eq!(
-        safety_rules.commit_rule_for_certified_block(b1.quorum_cert(), b1.round()),
-        None
+        safety_rules
+            .construct_ledger_info(b1.block())
+            .consensus_block_id(),
+        HashValue::zero(),
     );
     assert_eq!(
-        safety_rules.commit_rule_for_certified_block(b2.quorum_cert(), b2.round()),
-        None
+        safety_rules
+            .construct_ledger_info(b2.block())
+            .consensus_block_id(),
+        HashValue::zero(),
     );
     assert_eq!(
-        safety_rules.commit_rule_for_certified_block(a2.quorum_cert(), a2.round()),
-        None
+        safety_rules
+            .construct_ledger_info(a2.block())
+            .consensus_block_id(),
+        HashValue::zero(),
     );
     assert_eq!(
-        safety_rules.commit_rule_for_certified_block(a3.quorum_cert(), a3.round()),
-        None
+        safety_rules
+            .construct_ledger_info(a3.block())
+            .consensus_block_id(),
+        HashValue::zero(),
     );
     assert_eq!(
-        safety_rules.commit_rule_for_certified_block(a4.quorum_cert(), a4.round()),
-        Some(a2.id())
+        safety_rules
+            .construct_ledger_info(a4.block())
+            .consensus_block_id(),
+        a2.block().id(),
     );
 }

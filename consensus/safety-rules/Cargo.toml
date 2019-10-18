@@ -11,6 +11,7 @@ consensus-types = { path = "../consensus-types" }
 libra-crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 serde = { version = "1.0.99", default-features = false }
+libra-types = { path = "../../types" }
 
 [dev-dependencies]
 consensus-types = { path = "../consensus-types", features = ["testing"]}

@@ -23,7 +23,7 @@ pub struct BlockInfo {
     id: HashValue,
     /// The accumulator root hash after executing this block.
     executed_state_id: HashValue,
-    /// The version of the latest transaction in the ledger.
+    /// The version of the latest transaction after executing this block.
     version: Version,
     /// The timestamp this block was proposed by a proposer.
     timestamp_usecs: u64,
