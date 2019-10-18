@@ -183,7 +183,7 @@ fn compose_proposal(msg_len: usize) -> ConsensusMsg {
     let mut msg = ConsensusMsg::default();
     let mut proposal = Proposal::default();
     let mut block = Block::default();
-    block.payload = vec![0u8; msg_len];
+    block.bytes = vec![0u8; msg_len];
     proposal.proposed_block = Some(block);
     msg.message = Some(ConsensusMsg_oneof::Proposal(proposal));
     msg
@@ -340,7 +340,7 @@ fn compose_respond_block(msg_len: usize) -> ConsensusMsg {
     let mut msg = ConsensusMsg::default();
     let mut res = RespondBlock::default();
     let mut block = Block::default();
-    block.payload = vec![0u8; msg_len];
+    block.bytes = vec![0u8; msg_len];
     res.blocks.push(block);
     msg.message = Some(ConsensusMsg_oneof::RespondBlock(res));
     msg

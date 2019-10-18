@@ -42,7 +42,11 @@ pub fn generate_corpus_proposal() -> Vec<u8> {
             .await;
         // serialize and return proposal
         let proposal = proposal.unwrap();
-        Proposal::from(proposal).to_bytes().unwrap().to_vec()
+        Proposal::try_from(proposal)
+            .unwrap()
+            .to_bytes()
+            .unwrap()
+            .to_vec()
     })
 }
 

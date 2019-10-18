@@ -182,18 +182,12 @@ impl ConsensusNetworkSender {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        proto::{Vote, VoteData, VoteMsg},
-        protocols::rpc::InboundRpcRequest,
-    };
+    use crate::{proto::VoteMsg, protocols::rpc::InboundRpcRequest};
     use futures::{channel::oneshot, executor::block_on, future::try_join};
 
     fn new_test_vote() -> ConsensusMsg {
-        let vote_data = VoteData::default();
-        let mut vote = Vote::default();
         let mut vote_msg = VoteMsg::default();
-        vote.vote_data = Some(vote_data);
-        vote_msg.vote = Some(vote);
+        vote_msg.bytes = vec![];
 
         ConsensusMsg {
             message: Some(ConsensusMsg_oneof::VoteMsg(vote_msg)),

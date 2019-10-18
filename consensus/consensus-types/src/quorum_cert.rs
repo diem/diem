@@ -13,10 +13,7 @@ use libra_types::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::{
-    convert::{TryFrom, TryInto},
-    fmt::{Display, Formatter},
-};
+use std::fmt::{Display, Formatter};
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 pub struct QuorumCert {
@@ -126,34 +123,5 @@ impl QuorumCert {
             .verify(validator)
             .with_context(|e| format!("Fail to verify QuorumCert: {:?}", e))?;
         Ok(())
-    }
-}
-
-impl TryFrom<network::proto::QuorumCert> for QuorumCert {
-    type Error = failure::Error;
-
-    fn try_from(proto: network::proto::QuorumCert) -> failure::Result<Self> {
-        let vote_data = proto
-            .vote_data
-            .ok_or_else(|| format_err!("Missing vote_data"))?
-            .try_into()?;
-        let signed_ledger_info = proto
-            .signed_ledger_info
-            .ok_or_else(|| format_err!("Missing signed_ledger_info"))?
-            .try_into()?;
-
-        Ok(QuorumCert {
-            vote_data,
-            signed_ledger_info,
-        })
-    }
-}
-
-impl From<QuorumCert> for network::proto::QuorumCert {
-    fn from(cert: QuorumCert) -> Self {
-        Self {
-            vote_data: Some(cert.vote_data.into()),
-            signed_ledger_info: Some(cert.signed_ledger_info.into()),
-        }
     }
 }

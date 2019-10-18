@@ -8,7 +8,7 @@ use crate::{
     vote_data::VoteData,
 };
 use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
-use failure::{ensure, format_err};
+use failure::ensure;
 use libra_crypto::{
     hash::{BlockHasher, CryptoHash, CryptoHasher},
     HashValue,
@@ -20,11 +20,10 @@ use libra_types::{
 use mirai_annotations::{
     assumed_postcondition, checked_precondition, checked_precondition_eq, debug_checked_verify_eq,
 };
-use rmp_serde::{from_slice, to_vec_named};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
 use std::{
     collections::BTreeMap,
-    convert::{TryFrom, TryInto},
+    convert::TryFrom,
     fmt::{Display, Formatter},
     sync::Arc,
 };
@@ -57,11 +56,12 @@ pub enum BlockType<T> {
     Genesis,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 /// Block has the core data of a consensus block that should be persistent when necessary.
 /// Each block must know the id of its parent and keep the QuorurmCertificate to that parent.
 pub struct Block<T> {
     /// This block's id as a hash value
+    #[serde(skip)]
     id: HashValue,
     /// Epoch number corresponds to the set of validators that are active for this block.
     epoch: u64,
@@ -265,13 +265,14 @@ where
         quorum_cert: QuorumCert,
         validator_signer: &ValidatorSigner,
     ) -> Self {
+        let author = validator_signer.author();
         let block_internal = BlockSerializer {
             payload: Some(&payload),
             epoch,
             round,
             timestamp_usecs,
             quorum_cert: &quorum_cert,
-            author: Some(validator_signer.author()),
+            author: Some(&author),
         };
 
         let id = block_internal.hash();
@@ -287,7 +288,7 @@ where
             quorum_cert,
             block_type: BlockType::Proposal {
                 payload,
-                author: validator_signer.author(),
+                author,
                 signature: signature.into(),
             },
         }
@@ -464,7 +465,7 @@ where
 
     fn hash(&self) -> HashValue {
         // The author value used by NIL blocks for calculating the hash is genesis.
-        let author = match self.block_type {
+        let author = match &self.block_type {
             BlockType::Proposal { author, .. } => Some(author),
             BlockType::NilBlock | BlockType::Genesis => None,
         };
@@ -489,7 +490,7 @@ struct BlockSerializer<'a, T> {
     round: Round,
     payload: Option<&'a T>,
     quorum_cert: &'a QuorumCert,
-    author: Option<Author>,
+    author: Option<&'a Author>,
 }
 
 impl<'a, T> CryptoHash for BlockSerializer<'a, T>
@@ -507,10 +508,7 @@ where
 }
 
 #[cfg(test)]
-impl<T> Block<T>
-where
-    T: Default + Serialize,
-{
+impl<T> Block<T> {
     // Is this block a parent of the parameter block?
     pub fn is_parent_of(&self, block: &Self) -> bool {
         block.parent_id() == self.id
@@ -524,40 +522,59 @@ where
     type Error = failure::Error;
 
     fn try_from(proto: network::proto::Block) -> failure::Result<Self> {
-        let timestamp_usecs = proto.timestamp_usecs;
-        let epoch = proto.epoch;
-        let round = proto.round;
-        let quorum_cert = proto
-            .quorum_cert
-            .ok_or_else(|| format_err!("Missing quorum_cert"))?
-            .try_into()?;
-        let author = Author::try_from(proto.author);
-        let payload = from_slice(&proto.payload);
+        Ok(lcs::from_bytes(&proto.bytes)?)
+    }
+}
 
-        let id = {
-            let block_internal = BlockSerializer {
-                payload: payload.as_ref().ok(),
-                epoch,
-                round,
-                timestamp_usecs,
-                quorum_cert: &quorum_cert,
-                author: author.as_ref().ok().cloned(),
-            };
-            block_internal.hash()
+impl<T> TryFrom<Block<T>> for network::proto::Block
+where
+    T: Serialize + Default + PartialEq,
+{
+    type Error = failure::Error;
+
+    fn try_from(block: Block<T>) -> failure::Result<Self> {
+        Ok(Self {
+            bytes: lcs::to_bytes(&block)?,
+        })
+    }
+}
+
+impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for Block<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct BlockWithoutId<T> {
+            epoch: u64,
+            round: Round,
+            timestamp_usecs: u64,
+            quorum_cert: QuorumCert,
+            block_type: BlockType<T>,
         };
-        let block_type = if proto.round == 0 {
-            BlockType::Genesis
-        } else if let Ok(author) = author {
-            let signature = Signature::try_from(&proto.signature)?;
-            let payload = payload?;
+        let BlockWithoutId {
+            epoch,
+            round,
+            timestamp_usecs,
+            quorum_cert,
+            block_type,
+        } = BlockWithoutId::deserialize(deserializer)?;
+
+        let (payload, author) = match &block_type {
             BlockType::Proposal {
-                payload,
-                author,
-                signature,
-            }
-        } else {
-            BlockType::NilBlock
+                payload, author, ..
+            } => (Some(payload), Some(author)),
+            _ => (None, None),
         };
+        let id = BlockSerializer::<T> {
+            epoch,
+            round,
+            timestamp_usecs,
+            quorum_cert: &quorum_cert,
+            payload,
+            author,
+        }
+        .hash();
         Ok(Block {
             id,
             epoch,
@@ -566,37 +583,5 @@ where
             quorum_cert,
             block_type,
         })
-    }
-}
-
-impl<T> From<Block<T>> for network::proto::Block
-where
-    T: Serialize + Default + PartialEq,
-{
-    fn from(block: Block<T>) -> Self {
-        let (payload, signature, author) = if let BlockType::Proposal {
-            payload,
-            author,
-            signature,
-        } = block.block_type
-        {
-            (
-                to_vec_named(&payload).expect("fail to serialize payload"),
-                signature.to_bytes(),
-                author.into(),
-            )
-        } else {
-            (Vec::new(), Vec::new(), Vec::new())
-        };
-
-        Self {
-            payload,
-            epoch: block.epoch,
-            round: block.round,
-            timestamp_usecs: block.timestamp_usecs,
-            quorum_cert: Some(block.quorum_cert.into()),
-            signature,
-            author,
-        }
     }
 }

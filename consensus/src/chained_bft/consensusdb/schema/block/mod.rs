@@ -13,10 +13,7 @@ use super::BLOCK_CF_NAME;
 use consensus_types::{block::Block, common::Payload};
 use failure::prelude::*;
 use libra_crypto::HashValue;
-use libra_prost_ext::MessageExt;
-use prost::Message;
 use schemadb::schema::{KeyCodec, Schema, ValueCodec};
-use std::convert::TryInto;
 use std::{cmp, fmt, marker::PhantomData};
 
 pub struct BlockSchema<T: Payload> {
@@ -69,13 +66,11 @@ impl<T: Payload> fmt::Debug for SchemaBlock<T> {
 
 impl<T: Payload> ValueCodec<BlockSchema<T>> for SchemaBlock<T> {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        let block: network::proto::Block = self.borrow_into_block().clone().into();
-        Ok(block.to_vec()?)
+        Ok(lcs::to_bytes(&self.0)?)
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
-        let block: Block<T> = network::proto::Block::decode(data)?.try_into()?;
-        Ok(Self::from_block(block))
+        Ok(SchemaBlock(lcs::from_bytes(data)?))
     }
 }
 
