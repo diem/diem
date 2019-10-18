@@ -20,9 +20,7 @@ use std::{
     sync::Arc,
 };
 use storage_client::{StorageRead, StorageWrite};
-use storage_proto::proto::storage::{
-    create_storage, GetAccountStateWithProofByVersionRequest,
-};
+use storage_proto::proto::storage::{create_storage, GetAccountStateWithProofByVersionRequest};
 
 pub fn start_storage_service_and_return_service(
     config: &NodeConfig,

@@ -1,12 +1,9 @@
+use config::config::NodeConfig;
+use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use std::{
     collections::HashSet,
     convert::TryFrom,
     sync::{Arc, Mutex},
-};
-use config::config::NodeConfig;
-use libra_types::{
-    account_address::AccountAddress,
-    transaction::SignedTransaction,
 };
 
 use crate::{
@@ -34,7 +31,7 @@ impl CoreMemPoolClient {
     }
 
     /// remove txn from mock chain
-    pub fn remove_txn(&self, exclude_transactions: HashSet<((AccountAddress, u64))> ) {
+    pub fn remove_txn(&self, exclude_transactions: HashSet<((AccountAddress, u64))>) {
         let mut lock = self.core_mempool.lock().expect("get lock err.");
         exclude_transactions
             .iter()
@@ -42,8 +39,7 @@ impl CoreMemPoolClient {
     }
     ///TODO doc
     pub fn get_block(&self, batch_size: u64, seen: HashSet<TxnPointer>) -> Vec<SignedTransaction> {
-        self
-            .core_mempool
+        self.core_mempool
             .lock()
             .expect("[get_block] acquire mempool lock")
             .get_block(batch_size, seen)

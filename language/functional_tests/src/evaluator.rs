@@ -19,9 +19,8 @@ use libra_types::access_path::AccessPath;
 use libra_types::channel_account::{channel_account_struct_tag, ChannelAccountResource};
 use libra_types::{
     transaction::{
-        Module as TransactionModule, RawTransaction, Script as TransactionScript,
-        SignedTransaction, TransactionOutput, TransactionStatus,
-        ChannelScriptPayload,
+        ChannelScriptPayload, Module as TransactionModule, RawTransaction,
+        Script as TransactionScript, SignedTransaction, TransactionOutput, TransactionStatus,
     },
     vm_error::StatusCode,
     write_set::WriteSet,
@@ -430,8 +429,13 @@ fn eval_transaction(
                 return Ok(Status::Success);
             }
             log.append(EvaluationOutput::Stage(Stage::Runtime));
-            let script_transaction =
-                make_script_transaction(&exec, account, &transaction.config, compiled_script, receiver)?;
+            let script_transaction = make_script_transaction(
+                &exec,
+                account,
+                &transaction.config,
+                compiled_script,
+                receiver,
+            )?;
             let txn_output = unwrap_or_abort!(run_transaction(exec, script_transaction), log);
             log.append(EvaluationOutput::Output(Box::new(
                 OutputType::TransactionOutput(txn_output),

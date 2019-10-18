@@ -96,7 +96,7 @@ impl<'txn> WriteSetDataCache<'txn> {
 
 impl<'txn> RemoteCache for WriteSetDataCache<'txn> {
     fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
-        match self.write_set.as_ref().and_then(|ws|ws.get(access_path)) {
+        match self.write_set.as_ref().and_then(|ws| ws.get(access_path)) {
             Some(op) => match op {
                 WriteOp::Value(value) => Ok(Some(value.clone())),
                 WriteOp::Deletion => Ok(None),
@@ -124,7 +124,10 @@ impl<'txn> TransactionDataCache<'txn> {
         Self::new_with_write_set(data_cache, None)
     }
 
-    pub fn new_with_write_set(data_cache: &'txn dyn RemoteCache, pre_write_set: Option<WriteSet>) -> Self{
+    pub fn new_with_write_set(
+        data_cache: &'txn dyn RemoteCache,
+        pre_write_set: Option<WriteSet>,
+    ) -> Self {
         TransactionDataCache {
             //TODO(jole) optimize
             data_cache: WriteSetDataCache::new(pre_write_set, data_cache),
