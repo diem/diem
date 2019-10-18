@@ -24,7 +24,7 @@ grpcio = { version = "=0.5.0-alpha.4", default-features = false }
 rand = "0.6.5"
 
 config-builder = { path = "../config/config-builder" }
-crypto = { path = "../crypto/crypto", features = ["testing"] }
+libra-crypto = { path = "../crypto/crypto", features = ["testing"] }
 executor = { path = "../executor" }
 grpc_helpers = { path = "../common/grpc_helpers" }
 storage-service = { path = "../storage/storage-service" }

@@ -13,8 +13,8 @@
 use crate::schema::{ensure_slice_len_eq, VALIDATOR_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use core::convert::TryFrom;
-use crypto::ed25519::{Ed25519PublicKey, ED25519_PUBLIC_KEY_LENGTH};
 use failure::prelude::*;
+use libra_crypto::ed25519::{Ed25519PublicKey, ED25519_PUBLIC_KEY_LENGTH};
 use libra_types::transaction::Version;
 use schemadb::{
     define_schema,

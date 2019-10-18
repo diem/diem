@@ -7,10 +7,10 @@ use crate::{
     },
     CommittableBlock, Executor, OP_COUNTERS,
 };
-use crypto::{hash::GENESIS_BLOCK_ID, HashValue};
 use futures::executor::block_on;
 use grpcio::{EnvBuilder, ServerBuilder};
 use libra_config::config::{NodeConfig, NodeConfigHelpers};
+use libra_crypto::{hash::GENESIS_BLOCK_ID, HashValue};
 use libra_prost_ext::MessageExt;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},

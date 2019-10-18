@@ -3,8 +3,8 @@
 
 //! Test infrastructure for modeling Libra accounts.
 
-use crypto::ed25519::*;
 use lazy_static::lazy_static;
+use libra_crypto::ed25519::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,

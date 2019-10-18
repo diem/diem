@@ -17,7 +17,7 @@ use crate::{
     },
     vm_error::StatusCode,
 };
-use crypto::{
+use libra_crypto::{
     ed25519::*,
     hash::{
         CryptoHash, TestOnlyHash, TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH,

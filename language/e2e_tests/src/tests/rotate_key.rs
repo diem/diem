@@ -6,7 +6,7 @@ use crate::{
     common_transactions::{create_account_txn, rotate_key_txn},
     executor::test_all_genesis,
 };
-use crypto::ed25519::compat;
+use libra_crypto::ed25519::compat;
 use libra_types::{
     account_address::AccountAddress,
     transaction::TransactionStatus,

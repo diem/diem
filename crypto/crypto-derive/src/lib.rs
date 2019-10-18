@@ -5,7 +5,7 @@
 //! - the `SilentDebug` and SilentDisplay macros are meant to be used on private key types, and
 //!   elide their input for confidentiality.
 //! - the `Deref` macro helps derive the canonical instances on new types.
-//! - the derive macros for `crypto::traits`, namely `ValidKey`, `PublicKey`, `PrivateKey`,
+//! - the derive macros for `libra_crypto::traits`, namely `ValidKey`, `PublicKey`, `PrivateKey`,
 //!   `VerifyingKey`, `SigningKey` and `Signature` are meant to be derived on simple unions of types
 //!   implementing these traits.
 //!
@@ -33,12 +33,12 @@
 //!
 //! ```ignore
 //! # #[macro_use] extern crate crypto-derive;
-//! use crypto::{
+//! use libra_crypto::{
 //!     hash::HashValue,
 //!     bls12381::{BLS12381PrivateKey, BLS12381PublicKey, BLS12381Signature},
 //!     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
 //! };
-//! use crypto_derive::{
+//! use libra_crypto_derive::{
 //!     SilentDebug, PrivateKey, PublicKey, Signature, SigningKey, ValidKey, VerifyingKey,
 //! };
 //!
@@ -206,7 +206,7 @@ fn impl_enum_tryfrom(name: &Ident, variants: &DataEnum) -> proc_macro2::TokenStr
 
     quote! {
         impl core::convert::TryFrom<&[u8]> for #name {
-            type Error = crypto::CryptoMaterialError;
+            type Error = libra_crypto::CryptoMaterialError;
             fn try_from(bytes: &[u8]) -> std::result::Result<#name, Self::Error> {
                 #try_chain
             }
@@ -234,7 +234,7 @@ fn impl_enum_validkey(name: &Ident, variants: &DataEnum) -> TokenStream {
 
     try_from.extend(quote! {
 
-        impl crypto::ValidKey for #name {
+        impl libra_crypto::ValidKey for #name {
             fn to_bytes(&self) -> Vec<u8> {
                 match self {
                     #to_bytes_arms
@@ -313,7 +313,7 @@ fn impl_enum_publickey(
         }
     };
     res.extend(quote! {
-        impl crypto::PublicKey for #name {
+        impl libra_crypto::PublicKey for #name {
             type PrivateKeyMaterial = #pkt;
         }
     });
@@ -341,7 +341,7 @@ fn impl_enum_privatekey(
 ) -> TokenStream {
     let pkt: syn::Type = public_key_type.parse().unwrap();
     let res = quote! {
-        impl crypto::PrivateKey for #name {
+        impl libra_crypto::PrivateKey for #name {
             type PublicKeyMaterial = #pkt;
         }
     };
@@ -374,7 +374,7 @@ fn impl_enum_verifyingkey(
     let pkt: syn::Type = private_key_type.parse().unwrap();
     let st: syn::Type = signature_type.parse().unwrap();
     let res = quote! {
-        impl crypto::VerifyingKey for #name {
+        impl libra_crypto::VerifyingKey for #name {
             type SigningKeyMaterial = #pkt;
             type SignatureMaterial = #st;
         }
@@ -417,11 +417,11 @@ fn impl_enum_signingkey(
         });
     }
     let res = quote! {
-        impl crypto::SigningKey for #name {
+        impl libra_crypto::SigningKey for #name {
             type VerifyingKeyMaterial = #pkt;
             type SignatureMaterial = #st;
 
-            fn sign_message(&self, message: &crypto::HashValue) -> Self::SignatureMaterial {
+            fn sign_message(&self, message: &libra_crypto::HashValue) -> Self::SignatureMaterial {
                 match self {
                     #match_arms
                 }
@@ -472,7 +472,7 @@ fn impl_enum_signature(
 
     res.extend(quote! {
 
-        impl crypto::Signature for #name {
+        impl libra_crypto::Signature for #name {
             type VerifyingKeyMaterial = #pub_kt;
             type SigningKeyMaterial = #priv_kt;
 

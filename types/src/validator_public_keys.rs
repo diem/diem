@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
-use crypto::{ed25519::*, traits::ValidKey, x25519::X25519StaticPublicKey};
 use failure::Result;
+use libra_crypto::{ed25519::*, traits::ValidKey, x25519::X25519StaticPublicKey};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};

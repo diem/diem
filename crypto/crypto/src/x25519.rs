@@ -26,7 +26,7 @@
 //! # Examples
 //!
 //! ```
-//! use crypto::x25519::*;
+//! use libra_crypto::x25519::*;
 //! use rand::{rngs::StdRng, SeedableRng};
 //!
 //! // Derive an X25519 static key pair from seed using the extract-then-expand HKDF method from RFC 5869.
@@ -40,7 +40,7 @@
 //! assert_eq!(public_key1, public_key2);
 //!
 //! // Generate a random X25519 ephemeral key pair from an RNG (in this example a StdRng)
-//! use crypto::Uniform;
+//! use libra_crypto::Uniform;
 //! let seed = [1u8; 32];
 //! let mut rng: StdRng = SeedableRng::from_seed(seed);
 //! let private_key = X25519StaticPrivateKey::generate_for_testing(&mut rng);
@@ -57,7 +57,7 @@
 //! ```
 
 use crate::{hkdf::Hkdf, traits::*};
-use crypto_derive::{Deref, SilentDebug, SilentDisplay};
+use libra_crypto_derive::{Deref, SilentDebug, SilentDisplay};
 use rand::{rngs::EntropyRng, RngCore};
 use serde::{de, ser};
 use sha2::Sha256;

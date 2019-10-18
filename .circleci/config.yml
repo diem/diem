@@ -83,7 +83,7 @@ jobs:
       - run:
           name: Run Cryptography Unit Tests with the formally verified backend
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || RUST_BACKTRACE=1 cargo test -j 16 -p crypto -p secret-service --features='std fiat_u64_backend' --no-default-features
+            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || RUST_BACKTRACE=1 cargo test -j 16 -p libra-crypto -p secret-service --features='std fiat_u64_backend' --no-default-features
       - run:
           name: Run All End to End Tests
           command: |

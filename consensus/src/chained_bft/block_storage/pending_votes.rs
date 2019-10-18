@@ -8,7 +8,7 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate,
     vote::Vote,
 };
-use crypto::{hash::CryptoHash, HashValue};
+use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_logger::prelude::*;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},

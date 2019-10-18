@@ -16,11 +16,11 @@ use crate::{
     },
 };
 use accumulator::{HashReader, MerkleAccumulator};
-use crypto::{
+use failure::prelude::*;
+use libra_crypto::{
     hash::{CryptoHash, EventAccumulatorHasher},
     HashValue,
 };
-use failure::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     contract_event::ContractEvent,

@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::{change_set::ChangeSet, state_store::StateStore, LibraDB};
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},

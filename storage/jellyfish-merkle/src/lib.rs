@@ -69,8 +69,8 @@ pub mod node_type;
 pub mod restore;
 mod tree_cache;
 
-use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
+use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
     account_state_blob::AccountStateBlob, proof::SparseMerkleProof, transaction::Version,
 };

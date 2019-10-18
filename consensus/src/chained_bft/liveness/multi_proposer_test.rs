@@ -6,7 +6,7 @@ use crate::chained_bft::liveness::{
     proposer_election::ProposerElection,
 };
 use consensus_types::{block::Block, quorum_cert::QuorumCert};
-use crypto::ed25519::*;
+use libra_crypto::ed25519::*;
 use libra_types::validator_signer::ValidatorSigner;
 
 #[test]

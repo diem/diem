@@ -9,10 +9,10 @@ use admission_control_proto::{
     },
     AdmissionControlStatus, SubmitTransactionResponse,
 };
-use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::Future;
 use grpcio::{CallOption, ChannelBuilder, EnvBuilder};
+use libra_crypto::ed25519::*;
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,

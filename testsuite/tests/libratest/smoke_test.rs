@@ -4,8 +4,8 @@
 use cli::{
     client_proxy::ClientProxy, AccountAddress, CryptoHash, TransactionArgument, TransactionPayload,
 };
-use crypto::{ed25519::*, test_utils::KeyPair, SigningKey};
 use libra_config::config::{NodeConfig, RoleType};
+use libra_crypto::{ed25519::*, test_utils::KeyPair, SigningKey};
 use libra_logger::prelude::*;
 use libra_swarm::{swarm::LibraSwarm, utils};
 use libra_tools::tempdir::TempPath;

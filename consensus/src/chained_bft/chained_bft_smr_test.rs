@@ -15,8 +15,8 @@ use consensus_types::{
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
     vote_msg::VoteMsg,
 };
-use crypto::hash::CryptoHash;
 use futures::{channel::mpsc, executor::block_on, prelude::*};
+use libra_crypto::hash::CryptoHash;
 use network::proto::ConsensusMsg_oneof;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use std::convert::TryFrom;

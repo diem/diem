@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto::{
+use libra_crypto::{
     ed25519::{compat, *},
     traits::{ValidKey, ValidKeyStringExt},
     x25519::{self, X25519StaticPrivateKey, X25519StaticPublicKey},

@@ -6,7 +6,7 @@ use crate::{
     mock_genesis::{db_with_mock_genesis, GENESIS_INFO},
     test_helper::arb_blocks_to_commit,
 };
-use crypto::hash::CryptoHash;
+use libra_crypto::hash::CryptoHash;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
     account_config::get_account_resource_or_default, contract_event::ContractEvent,

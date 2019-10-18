@@ -25,8 +25,8 @@
 
 pub mod proto;
 
-use crypto::HashValue;
 use failure::prelude::*;
+use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,

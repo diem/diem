@@ -1,7 +1,7 @@
 use crate::account_address::AccountAddress;
-use crypto::HashValue;
 use failure::prelude::*;
 use hex;
+use libra_crypto::HashValue;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use serde::{de, ser, Deserialize, Serialize};

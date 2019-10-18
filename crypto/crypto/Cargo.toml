@@ -1,8 +1,8 @@
 [package]
-name = "crypto"
+name = "libra-crypto"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra crypto"
+description = "Libra libra-crypto"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"
@@ -29,7 +29,7 @@ threshold_crypto = "0.3"
 tiny-keccak = "1.5.0"
 x25519-dalek = { git = "https://github.com/calibra/x25519-dalek.git", branch = "fiat", default-features = false }
 
-crypto-derive = { path = "../crypto-derive" }
+libra-crypto-derive = { path = "../crypto-derive" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 lcs = { path = "../../common/lcs", package = "libra-canonical-serialization" }
 libra-nibble = { path = "../../common/nibble" }

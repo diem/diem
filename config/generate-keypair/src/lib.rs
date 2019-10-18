@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
+use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_tools::tempdir::TempPath;
 use std::{
     fs::{self, File},

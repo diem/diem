@@ -6,7 +6,7 @@ use crate::{
     common_transactions::rotate_key_txn,
     gas_costs,
 };
-use crypto::ed25519::{compat::keypair_strategy, *};
+use libra_crypto::ed25519::{compat::keypair_strategy, *};
 use libra_types::{
     account_address::AccountAddress,
     transaction::{SignedTransaction, TransactionStatus},

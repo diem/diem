@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::block_info::BlockInfo;
-use crypto::{
+use failure::prelude::format_err;
+use libra_crypto::{
     hash::{CryptoHash, CryptoHasher, VoteDataHasher},
     HashValue,
 };
-use failure::prelude::format_err;
 use serde::{Deserialize, Serialize};
 use std::{
     convert::{TryFrom, TryInto},

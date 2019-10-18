@@ -6,7 +6,7 @@ use crate::proof::{
     AccountStateProof, AccumulatorConsistencyProof, EventProof, SignedTransactionProof,
     SparseMerkleProof, TestAccumulatorProof,
 };
-use crypto::{
+use libra_crypto::{
     hash::{TestOnlyHash, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };

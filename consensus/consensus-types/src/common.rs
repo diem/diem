@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto::{
+use libra_crypto::{
     hash::{CryptoHasher, RoundHasher},
     HashValue,
 };

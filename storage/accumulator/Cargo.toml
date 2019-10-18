@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 proptest = "0.9.1"
 
-crypto = { path = "../../crypto/crypto" }
+libra-crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 libra-types = { path = "../../types" }
 

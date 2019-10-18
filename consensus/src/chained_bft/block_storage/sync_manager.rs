@@ -14,8 +14,8 @@ use consensus_types::{
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
 };
-use crypto::HashValue;
 use failure;
+use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
 use mirai_annotations::checked_precondition;

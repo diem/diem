@@ -13,7 +13,7 @@ publish = false
 libra-config = { path = "../../../config" }
 failure = { path = "../../../common/failure_ext", package = "failure_ext" }
 transaction-builder = { path = "../../transaction-builder"}
-crypto = { path = "../../../crypto/crypto" }
+libra-crypto = { path = "../../../crypto/crypto" }
 stdlib = { path = "../../stdlib" }
 libra-prost-ext = { path = "../../../common/prost-ext" }
 state-view = { path = "../../../storage/state-view" }
@@ -27,7 +27,7 @@ rand = "0.6.5"
 
 [dev-dependencies]
 lcs = { path = "../../../common/lcs", package = "libra-canonical-serialization" }
-crypto = { path = "../../../crypto/crypto", features = ["testing"]}
+libra-crypto = { path = "../../../crypto/crypto", features = ["testing"]}
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
 proptest-helpers = { path = "../../../common/proptest-helpers" }

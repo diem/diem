@@ -101,8 +101,8 @@
 //! |  ...  |   ...     |
 //! ```
 
-use crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
 use failure::prelude::*;
+use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
 use libra_types::proof::{
     definition::LeafCount,
     position::{FrozenSubTreeIterator, FrozenSubtreeSiblingIterator, Position},

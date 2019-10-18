@@ -68,7 +68,7 @@ mod node;
 mod sparse_merkle_test;
 
 use self::node::{LeafNode, LeafValue, Node, SparseMerkleNode};
-use crypto::{
+use libra_crypto::{
     hash::{HashValueBitIterator, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };

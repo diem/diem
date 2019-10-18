@@ -5,7 +5,7 @@ use crate::{
     common::NetworkPublicKeys,
     protocols::identity::{exchange_identity, Identity},
 };
-use crypto::{
+use libra_crypto::{
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
     ValidKey,
 };

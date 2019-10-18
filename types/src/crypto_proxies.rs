@@ -3,7 +3,7 @@
 
 //! This module defines a data structure made to contain a cryptographic
 //! signature, in the sense of an implementation of
-//! crypto::traits::Signature. The container is an opaque NewType that
+//! libra_crypto::traits::Signature. The container is an opaque NewType that
 //! intentionally does not allow access to the inner impl.
 //!
 //! It also proxies the four methods used in consensus on structures that
@@ -11,7 +11,7 @@
 //!
 //! The goal of this structure is two-fold:
 //! - help make sure that any consensus data that uses cryptographic material is defined generically
-//!   in terms of crypto::traits, rather than accessing the implementation details of a particular
+//!   in terms of libra_crypto::traits, rather than accessing the implementation details of a particular
 //!   scheme (a.k.a. encapsulation),
 //! - contribute to a single-location place for instantiations of these polymorphic types
 //!   (`crate::chained_bft::consensus_types`)
@@ -28,7 +28,7 @@ use crate::{
         ValidatorInfo as RawValidatorInfo, ValidatorVerifier as RawValidatorVerifier, VerifyError,
     },
 };
-use crypto::{hash::HashValue, traits::Signature as RawSignature};
+use libra_crypto::{hash::HashValue, traits::Signature as RawSignature};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
@@ -44,7 +44,7 @@ impl<Sig: RawSignature> SignatureWrapper<Sig> {
         validator_verifier.verify_signature(author, message, &self.0)
     }
 
-    pub fn try_from(bytes: &[u8]) -> Result<Self, crypto::traits::CryptoMaterialError> {
+    pub fn try_from(bytes: &[u8]) -> Result<Self, libra_crypto::traits::CryptoMaterialError> {
         Sig::try_from(bytes).map(SignatureWrapper)
     }
 
@@ -78,7 +78,7 @@ impl<Sig: RawSignature> From<Sig> for SignatureWrapper<Sig> {
 // types that do not go through the instantiated polymorphic structures
 // below is banned.
 
-use crypto::ed25519::*;
+use libra_crypto::ed25519::*;
 use std::collections::BTreeMap;
 
 // used in chained_bft::consensus_types::block_test

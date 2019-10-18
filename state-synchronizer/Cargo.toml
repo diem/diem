@@ -31,7 +31,7 @@ vm_runtime = { path = "../language/vm/vm_runtime" }
 bytes = "0.4.12"
 
 config-builder = { path = "../config/config-builder" }
-crypto = { path = "../crypto/crypto", features = ["testing"]}
+libra-crypto = { path = "../crypto/crypto", features = ["testing"]}
 parity-multiaddr = "0.5.0"
 libra-types = { path = "../types", features = ["testing"] }
 vm-genesis = { path = "../language/vm/vm-genesis" }

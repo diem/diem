@@ -8,11 +8,11 @@ edition = "2018"
 
 [dependencies]
 consensus-types = { path = "../consensus-types" }
-crypto = { path = "../../crypto/crypto" }
+libra-crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 serde = { version = "1.0.99", default-features = false }
 
 [dev-dependencies]
 consensus-types = { path = "../consensus-types", features = ["testing"]}
-crypto = { path = "../../crypto/crypto", features = ["testing"]}
+libra-crypto = { path = "../../crypto/crypto", features = ["testing"]}
 libra-types = { path = "../../types", features = ["testing"]}

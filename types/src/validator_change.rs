@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{contract_event::EventWithProof, ledger_info::LedgerInfoWithSignatures};
-use crypto::*;
 use failure::*;
+use libra_crypto::*;
 use std::convert::{TryFrom, TryInto};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -45,7 +45,7 @@ impl<Sig: Signature> From<ValidatorChangeEventWithProof<Sig>>
 }
 
 #[cfg(any(test, feature = "testing"))]
-use crypto::ed25519::*;
+use libra_crypto::ed25519::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest::prelude::*;
 

@@ -25,7 +25,7 @@
 //! # Examples
 //!
 //! ```
-//! use crypto::hash::{CryptoHasher, TestOnlyHasher};
+//! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
 //!
 //! let mut hasher = TestOnlyHasher::default();
 //! hasher.write("Test message".as_bytes());
@@ -48,7 +48,7 @@
 //!
 //! Then, the `CryptoHash` trait should be implemented:
 //! ```
-//! # use crypto::hash::*;
+//! # use libra_crypto::hash::*;
 //! # #[derive(Default)]
 //! # struct MyNewStructHasher;
 //! # impl CryptoHasher for MyNewStructHasher {
@@ -630,7 +630,7 @@ lazy_static! {
 ///
 /// # Example
 /// ```
-/// use crypto::hash::TestOnlyHash;
+/// use libra_crypto::hash::TestOnlyHash;
 ///
 /// b"hello world".test_only_hash();
 /// ```

@@ -3,9 +3,9 @@
 
 //! This module provides mock storage clients for tests.
 
-use crypto::{ed25519::*, HashValue};
 use failure::prelude::*;
 use futures::prelude::*;
+use libra_crypto::{ed25519::*, HashValue};
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,

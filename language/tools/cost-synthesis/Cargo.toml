@@ -22,7 +22,7 @@ vm_runtime = { path = "../../vm/vm_runtime" }
 vm_runtime_types = { path = "../../vm/vm_runtime/vm_runtime_types" }
 language_e2e_tests = { path = "../../e2e_tests" }
 vm-cache-map = { path = "../../vm/vm_runtime/vm-cache-map" }
-crypto = { path = "../../../crypto/crypto" }
+libra-crypto = { path = "../../../crypto/crypto" }
 structopt = "0.3.2"
 
 [dev-dependencies]

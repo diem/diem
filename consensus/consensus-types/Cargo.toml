@@ -14,7 +14,7 @@ rmp-serde = { version = "0.13.7", default-features = false }
 serde = { version = "1.0.99", default-features = false }
 
 lcs = { path = "../../common/lcs", package = "libra-canonical-serialization" }
-crypto = { path = "../../crypto/crypto" }
+libra-crypto = { path = "../../crypto/crypto" }
 executor = { path = "../../executor" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 network = { path = "../../network" }
@@ -23,7 +23,7 @@ libra-types = { path = "../../types" }
 [dev-dependencies]
 proptest = "0.9.4"
 
-crypto = { path = "../../crypto/crypto", features = ["testing"]}
+libra-crypto = { path = "../../crypto/crypto", features = ["testing"]}
 libra-types = { path = "../../types", features = ["testing"]}
 
 [features]

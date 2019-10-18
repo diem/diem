@@ -10,7 +10,7 @@ use consensus_types::{
     block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
     vote::Vote,
 };
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use mirai_annotations::{checked_verify_eq, precondition};

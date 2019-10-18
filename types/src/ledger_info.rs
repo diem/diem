@@ -7,11 +7,11 @@ use crate::{
     validator_set::ValidatorSet,
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
-use crypto::{
+use failure::prelude::*;
+use libra_crypto::{
     hash::{CryptoHash, CryptoHasher, LedgerInfoHasher, ACCUMULATOR_PLACEHOLDER_HASH},
     HashValue, *,
 };
-use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -336,7 +336,7 @@ impl<Sig: Signature> From<LedgerInfoWithSignatures<Sig>>
 mod tests {
     use crate::ledger_info::{LedgerInfo, LedgerInfoWithSignatures};
     use crate::validator_signer::ValidatorSigner;
-    use crypto::{ed25519::*, HashValue};
+    use libra_crypto::{ed25519::*, HashValue};
     use std::collections::BTreeMap;
 
     #[test]

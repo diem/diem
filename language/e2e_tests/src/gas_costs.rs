@@ -8,8 +8,8 @@ use crate::{
     common_transactions::{create_account_txn, peer_to_peer_txn, rotate_key_txn},
     executor::FakeExecutor,
 };
-use crypto::ed25519::compat;
 use lazy_static::lazy_static;
+use libra_crypto::ed25519::compat;
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 
 /// The gas each transaction is configured to reserve. If the gas available in the account,

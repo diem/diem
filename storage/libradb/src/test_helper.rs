@@ -5,7 +5,7 @@
 
 use super::*;
 use crate::mock_genesis::{db_with_mock_genesis, GENESIS_INFO};
-use crypto::hash::CryptoHash;
+use libra_crypto::hash::CryptoHash;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,

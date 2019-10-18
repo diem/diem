@@ -6,8 +6,8 @@ use consensus_types::{
     common::{Payload, Round},
     quorum_cert::QuorumCert,
 };
-use crypto::HashValue;
 use failure::Fail;
+use libra_crypto::HashValue;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 

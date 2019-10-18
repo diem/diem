@@ -10,7 +10,7 @@ edition = "2018"
 
 [dependencies]
 libra-config = { path = "../../config" }
-crypto = { path = "../../crypto/crypto" }
+libra-crypto = { path = "../../crypto/crypto" }
 ir_to_bytecode = { path = "../compiler/ir_to_bytecode" }
 lazy_static = "1.3.0"
 stdlib = { path = "../stdlib" }
@@ -21,4 +21,4 @@ vm = { path = "../vm" }
 libra-types = { path = "../../types", features = ["testing"]}
 
 [features]
-testing = ["libra-types/testing", "crypto/testing"]
+testing = ["libra-types/testing", "libra-crypto/testing"]

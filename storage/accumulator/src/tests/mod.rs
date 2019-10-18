@@ -5,7 +5,7 @@ mod proof_test;
 mod write_test;
 
 use super::*;
-use crypto::hash::TestOnlyHasher;
+use libra_crypto::hash::TestOnlyHasher;
 use libra_types::proof::definition::LeafCount;
 use proptest::{collection::vec, prelude::*};
 use std::collections::HashMap;

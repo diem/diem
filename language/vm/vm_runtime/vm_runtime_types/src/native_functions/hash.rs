@@ -3,7 +3,7 @@
 
 use super::dispatch::NativeReturnStatus;
 use crate::value::Value;
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use libra_types::byte_array::ByteArray;
 use sha2::{Digest, Sha256};
 use std::collections::VecDeque;

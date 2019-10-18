@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crypto::ed25519::compat;
 use itertools::Itertools;
+use libra_crypto::ed25519::compat;
 use libra_types::transaction::Version;
 use rand::{
     rngs::{OsRng, StdRng},

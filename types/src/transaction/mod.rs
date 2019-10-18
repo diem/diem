@@ -14,7 +14,8 @@ use crate::{
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
-use crypto::{
+use failure::prelude::*;
+use libra_crypto::{
     ed25519::*,
     hash::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, RawTransactionHasher,
@@ -23,7 +24,6 @@ use crypto::{
     traits::*,
     HashValue,
 };
-use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use serde::{de, ser, Deserialize, Serialize};

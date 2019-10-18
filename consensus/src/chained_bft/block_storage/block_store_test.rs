@@ -17,8 +17,8 @@ use consensus_types::{
     vote::Vote,
     vote_data::VoteData,
 };
-use crypto::{HashValue, PrivateKey};
 use futures::executor::block_on;
+use libra_crypto::{HashValue, PrivateKey};
 use libra_types::crypto_proxies::{random_validator_verifier, ValidatorVerifier};
 use libra_types::{account_address::AccountAddress, crypto_proxies::ValidatorSigner};
 use proptest::prelude::*;

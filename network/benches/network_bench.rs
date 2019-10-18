@@ -13,7 +13,6 @@ use criterion::{
     criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
     PlotConfiguration, Throughput,
 };
-use crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use futures::{
     channel::mpsc,
     executor::block_on,
@@ -21,6 +20,7 @@ use futures::{
     stream::{FuturesUnordered, StreamExt},
 };
 use libra_config::config::RoleType;
+use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use libra_prost_ext::MessageExt;
 use network::{
     proto::{Block, ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock},

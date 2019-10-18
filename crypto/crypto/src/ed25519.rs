@@ -9,8 +9,8 @@
 //! # Examples
 //!
 //! ```
-//! use crypto::hash::{CryptoHasher, TestOnlyHasher};
-//! use crypto::{
+//! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
+//! use libra_crypto::{
 //!     ed25519::*,
 //!     traits::{Signature, SigningKey, Uniform},
 //! };
@@ -31,9 +31,9 @@
 
 use crate::{traits::*, HashValue};
 use core::convert::TryFrom;
-use crypto_derive::{SilentDebug, SilentDisplay};
 use ed25519_dalek;
 use failure::prelude::*;
+use libra_crypto_derive::{SilentDebug, SilentDisplay};
 use serde::{de, ser};
 use std::fmt;
 

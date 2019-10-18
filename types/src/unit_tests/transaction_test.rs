@@ -6,7 +6,7 @@ use crate::{
     account_address::AccountAddress,
     transaction::{RawTransaction, Script, SignedTransaction, Transaction, TransactionPayload},
 };
-use crypto::ed25519::*;
+use libra_crypto::ed25519::*;
 use proptest::prelude::*;
 use std::convert::TryFrom;
 

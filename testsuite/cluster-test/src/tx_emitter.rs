@@ -12,17 +12,17 @@ use std::{
 };
 
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
-use crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::KeyPair,
-    traits::Uniform,
-};
 use failure::{
     self,
     prelude::{bail, format_err},
 };
 use generate_keypair::load_key_from_file;
 use itertools::zip;
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    test_utils::KeyPair,
+    traits::Uniform,
+};
 use libra_types::{
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},

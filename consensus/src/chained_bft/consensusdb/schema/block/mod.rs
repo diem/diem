@@ -11,8 +11,8 @@
 
 use super::BLOCK_CF_NAME;
 use consensus_types::{block::Block, common::Payload};
-use crypto::HashValue;
 use failure::prelude::*;
+use libra_crypto::HashValue;
 use libra_prost_ext::MessageExt;
 use prost::Message;
 use schemadb::schema::{KeyCodec, Schema, ValueCodec};

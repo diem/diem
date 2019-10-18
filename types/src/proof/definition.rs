@@ -16,16 +16,16 @@ use crate::{
     ledger_info::LedgerInfo,
     transaction::{TransactionInfo, Version},
 };
+use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
-use crypto::hash::TestOnlyHasher;
-use crypto::{
+use libra_crypto::hash::TestOnlyHasher;
+use libra_crypto::{
     hash::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, TransactionAccumulatorHasher,
         ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
-use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use std::convert::{TryFrom, TryInto};

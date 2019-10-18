@@ -11,8 +11,8 @@ use crate::chained_bft::consensusdb::schema::{
     single_entry::{SingleEntryKey, SingleEntrySchema},
 };
 use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert};
-use crypto::HashValue;
 use failure::prelude::*;
+use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
 use schemadb::{

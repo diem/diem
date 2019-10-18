@@ -42,17 +42,17 @@ use crate::{
     NetworkPublicKeys, ProtocolId,
 };
 use channel;
-use crypto::{
-    ed25519::*,
-    hash::{CryptoHasher, DiscoveryMsgHasher},
-    HashValue,
-};
 use failure::{format_err, Fail};
 use futures::{
     future::{Future, FutureExt, TryFutureExt},
     io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
+};
+use libra_crypto::{
+    ed25519::*,
+    hash::{CryptoHasher, DiscoveryMsgHasher},
+    HashValue,
 };
 use libra_logger::prelude::*;
 use libra_types::{

@@ -13,12 +13,12 @@ use crate::{
         jellyfish_merkle_node::JellyfishMerkleNodeSchema, stale_node_index::StaleNodeIndexSchema,
     },
 };
-use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
 use jellyfish_merkle::{
     node_type::{LeafNode, Node, NodeKey},
     JellyfishMerkleTree, TreeReader,
 };
+use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
     account_address::AccountAddress, account_state_blob::AccountStateBlob,
     proof::SparseMerkleProof, transaction::Version,

@@ -4,7 +4,7 @@
 use super::*;
 use crate::{peer_manager::PeerManagerRequest, proto::DiscoveryMsg};
 use core::str::FromStr;
-use crypto::{test_utils::TEST_SEED, *};
+use libra_crypto::{test_utils::TEST_SEED, *};
 use memsocket::MemorySocket;
 use rand::{rngs::StdRng, SeedableRng};
 use tokio::runtime::Runtime;
