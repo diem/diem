@@ -12,10 +12,10 @@ use schemadb::{
 define_schema!(TestSchema, TestKey, TestValue, "TestCF");
 
 #[derive(Debug, Eq, PartialEq)]
-struct TestKey(u32, u32, u32);
+pub struct TestKey(u32, u32, u32);
 
 #[derive(Debug, Eq, PartialEq)]
-struct TestValue(u32);
+pub struct TestValue(u32);
 
 impl KeyCodec<TestSchema> for TestKey {
     fn encode_key(&self) -> Result<Vec<u8>> {
