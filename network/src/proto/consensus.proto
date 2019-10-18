@@ -34,7 +34,6 @@ message Block {
   bytes bytes = 1;
 }
 
-
 message VoteMsg {
   bytes bytes = 1;
 }

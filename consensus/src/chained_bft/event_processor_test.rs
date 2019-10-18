@@ -265,7 +265,12 @@ fn basic_new_rank_event_test() {
         // should be a child of a1 and carry its QC.
         let vote = Vote::new(
             VoteData::new(
-                BlockInfo::from_block(a1.block(), executed_state.state_id, executed_state.version),
+                BlockInfo::from_block(
+                    a1.block(),
+                    executed_state.state_id,
+                    executed_state.version,
+                    executed_state.validators.clone(),
+                ),
                 a1.quorum_cert().certified_block().clone(),
             ),
             node.block_store.signer().author(),
@@ -543,10 +548,7 @@ fn process_vote_timeout_msg_test() {
 
     // As the static proposer processes the the vote message it should learn about the
     // block_0_quorum_cert at round 1.
-    let dummy_vote_data = VoteData::new(
-        BlockInfo::new(0, 1, HashValue::random(), HashValue::random(), 0, 0),
-        BlockInfo::new(0, 0, HashValue::random(), HashValue::random(), 0, 0),
-    );
+    let dummy_vote_data = VoteData::new(BlockInfo::random(1), BlockInfo::random(0));
 
     let mut vote_on_timeout = Vote::new(
         dummy_vote_data,
@@ -710,6 +712,7 @@ fn process_votes_basic_test() {
             executed_state.state_id,
             executed_state.version,
             a1.timestamp_usecs(),
+            executed_state.validators.clone(),
         ),
         a1.quorum_cert().certified_block().clone(),
     );

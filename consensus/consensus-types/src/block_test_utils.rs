@@ -213,6 +213,7 @@ pub fn placeholder_certificate_for_block(
             genesis_ledger_info.transaction_accumulator_hash(),
             genesis_ledger_info.version(),
             genesis_ledger_info.timestamp_usecs(),
+            genesis_ledger_info.next_validator_set().cloned(),
         ),
         BlockInfo::new(
             genesis_ledger_info.epoch(),
@@ -221,6 +222,7 @@ pub fn placeholder_certificate_for_block(
             genesis_ledger_info.transaction_accumulator_hash(),
             genesis_ledger_info.version(),
             genesis_ledger_info.timestamp_usecs(),
+            genesis_ledger_info.next_validator_set().cloned(),
         ),
     );
 
