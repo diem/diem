@@ -14,7 +14,7 @@ mod block_store;
 mod block_tree;
 mod pending_votes;
 
-pub use block_store::{BlockStore, NeedFetchResult};
+pub use block_store::{sync_manager::BlockRetriever, BlockStore};
 
 /// Result of the vote processing. The failure case (Verification error) is returned
 /// as the Error part of the result.

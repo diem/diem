@@ -10,7 +10,6 @@ mod network;
 
 pub mod epoch_manager;
 pub mod persistent_storage;
-mod sync_manager;
 
 #[cfg(test)]
 mod chained_bft_smr_test;

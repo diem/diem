@@ -36,14 +36,8 @@ use std::{
 #[path = "block_store_test.rs"]
 mod block_store_test;
 
-#[derive(Debug, PartialEq)]
-/// Whether we need to do block retrieval if we want to insert a Quorum Cert.
-pub enum NeedFetchResult {
-    QCRoundBeforeRoot,
-    QCAlreadyExist,
-    QCBlockExist,
-    NeedFetch,
-}
+#[path = "sync_manager.rs"]
+pub mod sync_manager;
 
 /// Responsible for maintaining all the blocks of payload and the dependencies of those blocks
 /// (parent and previous QC links).  It is expected to be accessed concurrently by multiple threads
@@ -246,44 +240,6 @@ impl<T: Payload> BlockStore<T> {
                 .with_context(|e| format!("Execution failure for block {}: {:?}", block, e))?
         };
         Ok(ExecutedBlock::new(block, output, state_compute_result))
-    }
-
-    /// Check if we're far away from this ledger info and need to sync.
-    /// Returns false if we have this block in the tree or the root's round is higher than the
-    /// block.
-    pub fn need_sync_for_quorum_cert(
-        &self,
-        committed_block_id: HashValue,
-        qc: &QuorumCert,
-    ) -> bool {
-        // This precondition ensures that the check in the following lines
-        // does not result in an addition overflow.
-        checked_precondition!(self.root().round() < std::u64::MAX - 1);
-
-        // LedgerInfo doesn't carry the information about the round of the committed block. However,
-        // the 3-chain safety rules specify that the round of the committed block must be
-        // certified_block_round() - 2. In case root().round() is greater than that the committed
-        // block carried by LI is older than my current commit.
-        !(self.block_exists(committed_block_id)
-            || self.root().round() + 2 >= qc.certified_block().round())
-    }
-
-    /// Checks if quorum certificate can be inserted in block store without RPC
-    /// Returns the enum to indicate the detailed status.
-    pub fn need_fetch_for_quorum_cert(&self, qc: &QuorumCert) -> NeedFetchResult {
-        if qc.certified_block().round() < self.root().round() {
-            return NeedFetchResult::QCRoundBeforeRoot;
-        }
-        if self
-            .get_quorum_cert_for_block(qc.certified_block().id())
-            .is_some()
-        {
-            return NeedFetchResult::QCAlreadyExist;
-        }
-        if self.block_exists(qc.certified_block().id()) {
-            return NeedFetchResult::QCBlockExist;
-        }
-        NeedFetchResult::NeedFetch
     }
 
     /// Validates quorum certificates and inserts it into block tree assuming dependencies exist.
