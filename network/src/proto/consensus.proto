@@ -7,6 +7,7 @@ package consensus;
 
 import "ledger_info.proto";
 import "transaction.proto";
+import "validator_set.proto";
 
 message ConsensusMsg {
   oneof message {
@@ -35,6 +36,10 @@ message Block {
 
 
 message VoteMsg {
+  bytes bytes = 1;
+}
+
+message VoteProposal {
   bytes bytes = 1;
 }
 

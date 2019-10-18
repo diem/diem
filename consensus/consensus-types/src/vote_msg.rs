@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{sync_info::SyncInfo, vote::Vote};
+#[cfg(any(test, feature = "fuzzing"))]
 use failure::bail;
 use serde::{Deserialize, Serialize};
+#[cfg(any(test, feature = "fuzzing"))]
+use std::convert::TryInto;
 use std::{
-    convert::{TryFrom, TryInto},
+    convert::TryFrom,
     fmt::{Display, Formatter},
 };
 
