@@ -13,6 +13,7 @@ use crate::{
 };
 use libra_config::config::VMPublishingOption;
 use libra_logger::prelude::*;
+use libra_state_view::StateView;
 use libra_types::{
     transaction::{
         SignatureCheckedTransaction, SignedTransaction, TransactionOutput, TransactionStatus,
@@ -21,7 +22,6 @@ use libra_types::{
     write_set::WriteSet,
 };
 use rayon::prelude::*;
-use state_view::StateView;
 use vm_cache_map::Arena;
 
 pub fn execute_block<'alloc>(

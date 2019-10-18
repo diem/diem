@@ -138,11 +138,11 @@ pub use txn_executor::execute_function;
 
 use failure::prelude::*;
 use libra_config::config::VMConfig;
+use libra_state_view::StateView;
 use libra_types::{
     transaction::{SignedTransaction, Transaction, TransactionOutput},
     vm_error::VMStatus,
 };
-use state_view::StateView;
 use vm::IndexKind;
 
 /// This trait describes the VM's verification interfaces.

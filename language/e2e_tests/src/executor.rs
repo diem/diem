@@ -8,6 +8,7 @@ use crate::{
     data_store::{FakeDataStore, GENESIS_WRITE_SET, TESTNET_GENESIS},
 };
 use libra_config::config::{NodeConfig, NodeConfigHelpers, VMPublishingOption};
+use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_config::AccountResource,
@@ -16,7 +17,6 @@ use libra_types::{
     vm_error::VMStatus,
     write_set::WriteSet,
 };
-use state_view::StateView;
 use vm::CompiledModule;
 use vm_runtime::{MoveVM, VMExecutor, VMVerifier};
 

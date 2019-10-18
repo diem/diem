@@ -4,6 +4,7 @@
 use failure::prelude::*;
 use lazy_static::lazy_static;
 use libra_crypto::{ed25519::*, traits::ValidKey};
+use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -14,7 +15,6 @@ use libra_types::{
     validator_set::ValidatorSet,
 };
 use rand::{rngs::StdRng, SeedableRng};
-use state_view::StateView;
 use std::time::Duration;
 use stdlib::stdlib_modules;
 use vm::{access::ModuleAccess, transaction_metadata::TransactionMetadata};

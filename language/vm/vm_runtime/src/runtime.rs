@@ -16,11 +16,11 @@ use crate::{
 use failure::prelude::*;
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_logger::prelude::*;
+use libra_state_view::StateView;
 use libra_types::{
     transaction::{SignedTransaction, Transaction, TransactionOutput},
     vm_error::{StatusCode, VMStatus},
 };
-use state_view::StateView;
 use std::convert::TryFrom;
 use vm_cache_map::Arena;
 
