@@ -28,7 +28,7 @@ admission-control-proto = { version = "0.1.0", path = "../admission_control/admi
 libra-config = { path = "../config" }
 crash-handler = { path = "../common/crash-handler" }
 libra-crypto = { path = "../crypto/crypto" }
-failure = { package = "failure_ext", path = "../common/failure_ext" }
+failure = { package = "failure-ext", path = "../common/failure-ext" }
 lcs = { path = "../common/lcs", package = "libra-canonical-serialization" }
 libra_wallet = { path = "./libra_wallet" }
 libra-logger =  { path = "../common/logger" }

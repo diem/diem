@@ -24,7 +24,7 @@ libra-crypto = { path = "../crypto" }
 libra-crypto-derive = { path = "../crypto-derive" }
 debug-interface = { path = "../../common/debug-interface" }
 executable-helpers = { path = "../../common/executable-helpers" }
-failure = { package = "failure_ext", path = "../../common/failure_ext" }
+failure = { package = "failure-ext", path = "../../common/failure-ext" }
 grpc_helpers = { path = "../../common/grpc_helpers" }
 libra-logger = { path = "../../common/logger" }
 

@@ -16,7 +16,7 @@ serde = { version = "1.0.99", default-features = false }
 lcs = { path = "../../common/lcs", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto" }
 executor = { path = "../../executor" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
+failure = { path = "../../common/failure-ext", package = "failure-ext" }
 network = { path = "../../network" }
 libra-types = { path = "../../types" }
 

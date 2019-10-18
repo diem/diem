@@ -23,7 +23,7 @@ walkdir = "2.2.9"
 admission-control-proto = { path = "../admission_control/admission-control-proto" }
 client = { path = "../client" }
 libra-config = { path = "../config" }
-failure = { package = "failure_ext", path = "../common/failure_ext" }
+failure = { package = "failure-ext", path = "../common/failure-ext" }
 generate-keypair = { path = "../config/generate-keypair" }
 libra_wallet = { path = "../client/libra_wallet" }
 libra-swarm = { path = "../libra-swarm" }

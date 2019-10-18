@@ -13,6 +13,6 @@ edition = "2018"
 structopt = "0.3.2"
 
 lcs = { path = "../../common/lcs", package = "libra-canonical-serialization" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
+failure = { path = "../../common/failure-ext", package = "failure-ext" }
 libra-crypto = { path = "../../crypto/crypto/"}
 libra-tools = { path = "../../common/tools" }
