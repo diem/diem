@@ -3,7 +3,7 @@
 
 use crate::FuzzTarget;
 use failure::prelude::*;
-use proptest_helpers::ValueGenerator;
+use libra_proptest_helpers::ValueGenerator;
 use sha1::{Digest, Sha1};
 use std::{
     env,

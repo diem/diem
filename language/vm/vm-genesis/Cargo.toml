@@ -30,5 +30,5 @@ lcs = { path = "../../../common/lcs", package = "libra-canonical-serialization" 
 libra-crypto = { path = "../../../crypto/crypto", features = ["testing"]}
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
-proptest-helpers = { path = "../../../common/proptest-helpers" }
+libra-proptest-helpers = { path = "../../../common/proptest-helpers" }
 libra-types = { path = "../../../types", features = ["testing"] }

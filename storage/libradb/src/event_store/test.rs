@@ -5,6 +5,7 @@ use super::*;
 use crate::LibraDB;
 use itertools::Itertools;
 use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
+use libra_proptest_helpers::Index;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
     account_address::AccountAddress,
@@ -17,7 +18,6 @@ use proptest::{
     prelude::*,
     strategy::Union,
 };
-use proptest_helpers::Index;
 use rand::Rng;
 use std::collections::HashMap;
 

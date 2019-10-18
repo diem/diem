@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::FuzzTargetImpl;
+use libra_proptest_helpers::ValueGenerator;
 use libra_types::transaction::SignedTransaction;
 use proptest::prelude::*;
-use proptest_helpers::ValueGenerator;
 
 #[derive(Clone, Debug, Default)]
 pub struct SignedTransactionTarget;

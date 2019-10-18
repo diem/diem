@@ -1,6 +1,6 @@
 use crate::FuzzTargetImpl;
 use admission_control_service::admission_control_service::fuzzing::{fuzzer, generate_corpus};
-use proptest_helpers::ValueGenerator;
+use libra_proptest_helpers::ValueGenerator;
 
 #[derive(Clone, Debug, Default)]
 pub struct AdmissionControlSubmitTransactionRequest;

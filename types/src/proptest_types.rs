@@ -29,13 +29,13 @@ use libra_crypto::{
     traits::*,
     HashValue,
 };
+use libra_proptest_helpers::Index;
 use proptest::{
     collection::{vec, SizeRange},
     option,
     prelude::*,
 };
 use proptest_derive::Arbitrary;
-use proptest_helpers::Index;
 use std::time::Duration;
 
 prop_compose! {

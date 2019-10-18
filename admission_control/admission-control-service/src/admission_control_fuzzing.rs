@@ -7,9 +7,9 @@ use crate::{
     mocks::local_mock_mempool::LocalMockMempool,
 };
 use futures::channel::mpsc;
+use libra_proptest_helpers::ValueGenerator;
 use libra_types::transaction::SignedTransaction;
 use proptest;
-use proptest_helpers::ValueGenerator;
 use prost::Message;
 use std::sync::Arc;
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;

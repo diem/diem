@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::FuzzTargetImpl;
+use libra_proptest_helpers::ValueGenerator;
 use network::protocols::rpc;
-use proptest_helpers::ValueGenerator;
 
 #[derive(Clone, Debug, Default)]
 pub struct RpcInboundRequest;

@@ -34,7 +34,7 @@ macro_rules! proto_fuzz_target {
             fn generate(
                 &self,
                 _idx: usize,
-                gen: &mut ::proptest_helpers::ValueGenerator,
+                gen: &mut ::libra_proptest_helpers::ValueGenerator,
             ) -> Option<Vec<u8>> {
                 use libra_prost_ext::MessageExt;
 
