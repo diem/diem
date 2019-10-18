@@ -454,11 +454,7 @@ where
     let res_msg = recv_msg(substream.substream)
         .timeout(timeout)
         .map_err(Into::<NetworkError>::into)
-        .map(|r| match r {
-            Ok(Ok(msg)) => Ok(msg),
-            Ok(Err(e)) => Err(e),
-            Err(e) => Err(e),
-        })
+        .map(|r| r.and_then(|x| x))
         .await;
 
     // Check that all received `Note`s are valid -- reject the whole message
