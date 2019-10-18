@@ -304,11 +304,7 @@ async fn handle_outbound_rpc<TSubstream>(
             let mut f_rpc_res = handle_outbound_rpc_inner(peer_mgr_tx, peer_id, protocol, req_data)
                 .timeout(timeout)
                 .map_err(Into::<RpcError>::into)
-                .map(|r| match r {
-                    Ok(Ok(x)) => Ok(x),
-                    Ok(Err(e)) => Err(e),
-                    Err(e) => Err(e),
-                })
+                .map(|r| r.and_then(|x| x))
                 .boxed()
                 .fuse();
 

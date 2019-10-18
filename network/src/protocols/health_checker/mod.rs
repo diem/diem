@@ -241,11 +241,7 @@ where
             ping_result
                 .timeout(ping_timeout)
                 .map_err(Into::<NetworkError>::into)
-                .map(|r| match r {
-                    Ok(Ok(())) => Ok(()),
-                    Ok(Err(e)) => Err(e),
-                    Err(e) => Err(e),
-                })
+                .map(|r| r.and_then(|x| x))
                 .await,
         )
     }
