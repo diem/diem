@@ -15,9 +15,9 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate,
     vote::Vote,
 };
-use crypto::HashValue;
 use executor::{ProcessedVMOutput, StateComputeResult};
 use failure::ResultExt;
+use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 
 #[cfg(any(test, feature = "fuzzing"))]

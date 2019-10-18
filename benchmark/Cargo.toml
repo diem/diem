@@ -29,15 +29,15 @@ libra_wallet = { path = "../client/libra_wallet" }
 libra-swarm = { path = "../libra-swarm" }
 libra-logger = { path = "../common/logger" }
 libra-metrics = { path = "../common/metrics" }
-crypto = { path = "../crypto/crypto" }
+libra-crypto = { path = "../crypto/crypto" }
 rusty-fork = "0.2.1"
 libra-tools = { path = "../common/tools" }
 libra-types = { path = "../types" }
 transaction-builder = { path = "../language/transaction-builder" }
 
 [dev-dependencies]
-crypto = { path = "../crypto/crypto", features = ["testing"] }
+libra-crypto = { path = "../crypto/crypto", features = ["testing"] }
 
 [features]
 default = []
-testing = ["crypto/testing", "libra-swarm/testing"]
+testing = ["libra-crypto/testing", "libra-swarm/testing"]

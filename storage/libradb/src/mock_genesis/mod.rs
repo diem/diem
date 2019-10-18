@@ -4,13 +4,13 @@
 //! This module provides helpers to initialize [`LibraDB`] with fake generic state in tests.
 
 use crate::LibraDB;
-use crypto::{
+use failure::Result;
+use lazy_static::lazy_static;
+use libra_crypto::{
     ed25519::*,
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
 };
-use failure::Result;
-use lazy_static::lazy_static;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,

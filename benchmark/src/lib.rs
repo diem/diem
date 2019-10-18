@@ -6,9 +6,9 @@ use admission_control_proto::proto::{
     admission_control::SubmitTransactionResponse as ProtoSubmitTransactionResponse,
 };
 use client::{AccountData, AccountStatus};
-use crypto::{ed25519::*, test_utils::KeyPair};
 use generate_keypair::load_key_from_file;
 use lazy_static::lazy_static;
+use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_logger::prelude::*;
 use libra_metrics::OpMetrics;
 use libra_types::{account_address::AccountAddress, account_config::association_address};

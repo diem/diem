@@ -8,7 +8,7 @@ use crate::{
     quorum_cert::QuorumCert,
     vote_data::VoteData,
 };
-use crypto::hash::{CryptoHash, HashValue};
+use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::{
     crypto_proxies::{SecretKey, ValidatorSigner},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},

@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto::{ed25519::*, traits::ValidKey};
 use failure::prelude::*;
 use lazy_static::lazy_static;
+use libra_crypto::{ed25519::*, traits::ValidKey};
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,

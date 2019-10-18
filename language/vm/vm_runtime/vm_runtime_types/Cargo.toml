@@ -18,7 +18,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 libra-types = { path = "../../../../types" }
 vm = { path = "../../" }
 lcs = { path = "../../../../common/lcs", package = "libra-canonical-serialization" }
-crypto = { path = "../../../../crypto/crypto" }
+libra-crypto = { path = "../../../../crypto/crypto" }
 failure = { path = "../../../../common/failure_ext", package = "failure_ext" }
 
 [dev-dependencies]

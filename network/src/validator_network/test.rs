@@ -12,9 +12,9 @@ use crate::{
     },
     ProtocolId,
 };
-use crypto::{ed25519::compat, test_utils::TEST_SEED, traits::ValidKey, x25519};
 use futures::{executor::block_on, future::join, StreamExt};
 use libra_config::config::RoleType;
+use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, traits::ValidKey, x25519};
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     proto::types::SignedTransaction,

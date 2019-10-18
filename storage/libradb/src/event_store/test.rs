@@ -3,8 +3,8 @@
 
 use super::*;
 use crate::LibraDB;
-use crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 use itertools::Itertools;
+use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
     account_address::AccountAddress,

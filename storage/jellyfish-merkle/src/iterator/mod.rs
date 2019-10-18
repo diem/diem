@@ -14,8 +14,8 @@ use crate::{
     node_type::{InternalNode, Node, NodeKey},
     TreeReader,
 };
-use crypto::HashValue;
 use failure::prelude::*;
+use libra_crypto::HashValue;
 use libra_nibble::Nibble;
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 

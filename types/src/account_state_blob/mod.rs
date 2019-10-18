@@ -7,11 +7,11 @@ use crate::{
     account_address::AccountAddress, account_config::get_account_resource_or_default,
     ledger_info::LedgerInfo, proof::AccountStateProof, transaction::Version,
 };
-use crypto::{
+use failure::prelude::*;
+use libra_crypto::{
     hash::{AccountStateBlobHasher, CryptoHash, CryptoHasher},
     HashValue,
 };
-use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest::{arbitrary::Arbitrary, prelude::*};
 #[cfg(any(test, feature = "testing"))]

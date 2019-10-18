@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::StorageRead;
-use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
+use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
     access_path::AccessPath, account_address::AccountAddress, proof::SparseMerkleProof,
     transaction::Version,

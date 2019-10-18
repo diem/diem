@@ -6,7 +6,7 @@ use consensus_types::{
     block::Block, block_info::BlockInfo, common::Round, quorum_cert::QuorumCert,
     sync_info::SyncInfo, vote::Vote, vote_data::VoteData, vote_msg::VoteMsg,
 };
-use crypto::hash::{CryptoHash, HashValue};
+use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::{
     crypto_proxies::ValidatorSigner,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},

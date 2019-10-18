@@ -12,7 +12,7 @@ use crate::{
     txn_executor::TransactionExecutor,
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
-use crypto::ed25519::compat;
+use libra_crypto::ed25519::compat;
 use libra_types::{
     access_path::AccessPath, account_address::AccountAddress, byte_array::ByteArray,
     vm_error::StatusCode,

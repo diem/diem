@@ -3,10 +3,10 @@
 
 use crate::utils;
 use config_builder::swarm_config::{SwarmConfig, SwarmConfigBuilder};
-use crypto::{ed25519::*, test_utils::KeyPair};
 use debug_interface::NodeDebugClient;
 use failure::prelude::*;
 use libra_config::config::{NodeConfig, RoleType};
+use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_logger::prelude::*;
 use libra_tools::tempdir::TempPath;
 use std::{

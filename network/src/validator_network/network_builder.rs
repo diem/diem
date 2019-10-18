@@ -27,12 +27,12 @@ use crate::{
     ProtocolId,
 };
 use channel;
-use crypto::{
+use futures::StreamExt;
+use libra_config::config::RoleType;
+use libra_crypto::{
     ed25519::*,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
-use futures::StreamExt;
-use libra_config::config::RoleType;
 use libra_logger::prelude::*;
 use libra_types::{validator_signer::ValidatorSigner, PeerId};
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};

@@ -3,7 +3,6 @@
 
 //! Convenience structs and functions for generating configuration for a swarm of libra nodes
 use crate::util::gen_genesis_transaction_bytes;
-use crypto::{ed25519::*, test_utils::KeyPair};
 use failure::prelude::*;
 use libra_config::{
     config::{
@@ -18,6 +17,7 @@ use libra_config::{
     },
     utils::get_available_port,
 };
+use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use parity_multiaddr::{Multiaddr, Protocol};

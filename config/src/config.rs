@@ -11,8 +11,8 @@ use crate::{
     },
     utils::{deserialize_whitelist, get_available_port, get_local_ip, serialize_whitelist},
 };
-use crypto::ValidKey;
 use failure::prelude::*;
+use libra_crypto::ValidKey;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
     transaction::{SignedTransaction, Transaction, SCRIPT_HASH_LENGTH},

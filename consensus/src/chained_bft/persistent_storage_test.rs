@@ -10,7 +10,7 @@ use consensus_types::{
     block::{Block, ExecutedBlock},
     quorum_cert::QuorumCert,
 };
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use std::sync::Arc;
 
 /// Partially obtain parameters for `RecoveryData::find_root()`.

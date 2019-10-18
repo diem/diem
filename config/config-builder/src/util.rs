@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crypto::{ed25519::*, test_utils::KeyPair};
 use libra_config::{
     config::{NodeConfig, NodeConfigHelpers},
     trusted_peers::{ConfigHelpers, ConsensusPeersConfig, NetworkPeersConfig},
 };
+use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_prost_ext::MessageExt;
 use libra_types::transaction::SignatureCheckedTransaction;
 use rand::{Rng, SeedableRng};

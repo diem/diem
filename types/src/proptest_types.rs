@@ -23,7 +23,7 @@ use crate::{
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use crypto::{
+use libra_crypto::{
     ed25519::{compat::keypair_strategy, *},
     hash::CryptoHash,
     traits::*,

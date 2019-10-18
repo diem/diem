@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::{mock_tree_store::MockTreeStore, nibble_path::NibblePath, node_type::Node, NodeKey};
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use libra_types::account_state_blob::AccountStateBlob;
 
 fn random_leaf_with_key(next_version: Version) -> (Node, NodeKey) {

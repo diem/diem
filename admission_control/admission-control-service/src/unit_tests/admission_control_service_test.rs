@@ -9,8 +9,8 @@ use crate::{
     mocks::local_mock_mempool::LocalMockMempool,
 };
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
-use crypto::{ed25519::*, test_utils::TEST_SEED};
 use futures::channel::mpsc;
+use libra_crypto::{ed25519::*, test_utils::TEST_SEED};
 use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},

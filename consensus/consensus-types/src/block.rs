@@ -7,12 +7,12 @@ use crate::{
     quorum_cert::QuorumCert,
     vote_data::VoteData,
 };
-use crypto::{
+use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
+use failure::{ensure, format_err};
+use libra_crypto::{
     hash::{BlockHasher, CryptoHash, CryptoHasher},
     HashValue,
 };
-use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
-use failure::{ensure, format_err};
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,

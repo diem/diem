@@ -39,11 +39,11 @@ use consensus_types::{
     vote_data::VoteData,
     vote_msg::VoteMsg,
 };
-use crypto::HashValue;
 use futures::{
     channel::{mpsc, oneshot},
     executor::block_on,
 };
+use libra_crypto::HashValue;
 use libra_types::crypto_proxies::{
     random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
 };

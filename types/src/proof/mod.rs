@@ -17,14 +17,14 @@ use crate::{
     ledger_info::LedgerInfo,
     transaction::{TransactionInfo, TransactionListWithProof, Version},
 };
-use crypto::{
+use failure::prelude::*;
+use libra_crypto::{
     hash::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, SparseMerkleInternalHasher,
         SparseMerkleLeafHasher, TestOnlyHasher, TransactionAccumulatorHasher,
     },
     HashValue,
 };
-use failure::prelude::*;
 use std::{collections::VecDeque, marker::PhantomData};
 
 pub use self::definition::{

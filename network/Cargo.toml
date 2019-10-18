@@ -25,7 +25,7 @@ admission-control-proto = { path = "../admission_control/admission-control-proto
 bounded-executor = { path = "../common/bounded-executor" }
 channel = { path = "../common/channel" }
 libra-config = { path = "../config" }
-crypto = { path = "../crypto/crypto" }
+libra-crypto = { path = "../crypto/crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 libra-types = { path = "../types" }
 libra-logger = { path = "../common/logger" }
@@ -40,7 +40,7 @@ proptest-helpers = { path = "../common/proptest-helpers", optional = true }
 
 [dev-dependencies]
 criterion = "0.3.0"
-crypto = { path = "../crypto/crypto", features = ["testing"] }
+libra-crypto = { path = "../crypto/crypto", features = ["testing"] }
 libra-types = { path = "../types", features = ["testing"]}
 proptest = { version = "0.9.4", default-features = false }
 proptest-helpers = { path = "../common/proptest-helpers" }

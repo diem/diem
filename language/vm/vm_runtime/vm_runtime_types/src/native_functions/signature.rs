@@ -4,7 +4,7 @@
 use super::dispatch::NativeReturnStatus;
 use crate::value::Value;
 use bit_vec::BitVec;
-use crypto::{
+use libra_crypto::{
     ed25519::{self, Ed25519PublicKey, Ed25519Signature},
     traits::*,
     HashValue,

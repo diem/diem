@@ -3,12 +3,12 @@
 
 use bech32::{Bech32, FromBase32, ToBase32};
 use bytes::Bytes;
-use crypto::{
+use failure::prelude::*;
+use hex;
+use libra_crypto::{
     hash::{AccountAddressHasher, CryptoHash, CryptoHasher},
     HashValue, VerifyingKey,
 };
-use failure::prelude::*;
-use hex;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};

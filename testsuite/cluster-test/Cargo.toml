@@ -40,7 +40,7 @@ admission-control-proto = { path = "../../admission_control/admission-control-pr
 
 libra-types = { path = "../../types" }
 transaction-builder = { path = "../../language/transaction-builder" }
-crypto = { path = "../../crypto/crypto" }
+libra-crypto = { path = "../../crypto/crypto" }
 generate-keypair = { path = "../../config/generate-keypair" }
 
 threadpool = "1.7.1"

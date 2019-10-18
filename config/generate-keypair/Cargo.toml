@@ -14,5 +14,5 @@ structopt = "0.3.2"
 
 lcs = { path = "../../common/lcs", package = "libra-canonical-serialization" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
-crypto = { path = "../../crypto/crypto/"}
+libra-crypto = { path = "../../crypto/crypto/"}
 libra-tools = { path = "../../common/tools" }

@@ -9,9 +9,9 @@ use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
-use crypto::HashValue;
 use failure::Result;
 use libra_config::config::{NodeConfig, NodeConfigHelpers};
+use libra_crypto::HashValue;
 use libra_types::ledger_info::LedgerInfo;
 use safety_rules::ConsensusState;
 use std::{

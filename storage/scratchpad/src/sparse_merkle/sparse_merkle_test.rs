@@ -5,7 +5,7 @@ use super::{
     node::{LeafNode, LeafValue, SparseMerkleNode},
     AccountState, ProofRead, SparseMerkleTree,
 };
-use crypto::{
+use libra_crypto::{
     hash::{CryptoHash, TestOnlyHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };

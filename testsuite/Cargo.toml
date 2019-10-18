@@ -27,4 +27,4 @@ libra-swarm = { path = "../libra-swarm", features = ["testing"]}
 libra-logger = { path = "../common/logger" }
 libra-config = { path = "../config" }
 libra-tools = { path = "../common/tools" }
-crypto = { path = "../crypto/crypto" }
+libra-crypto = { path = "../crypto/crypto" }

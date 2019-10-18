@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{block_info::BlockInfo, vote_data::VoteData};
-use crypto::{
+use failure::prelude::*;
+use libra_crypto::{
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
 };
-use failure::prelude::*;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,

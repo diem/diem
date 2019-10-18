@@ -27,7 +27,7 @@ serde = "1.0.96"
 
 accumulator = { path = "../accumulator" }
 lcs = { path = "../../common/lcs", package = "libra-canonical-serialization" }
-crypto = { path = "../../crypto/crypto" }
+libra-crypto = { path = "../../crypto/crypto" }
 failure = { path = "../../common/failure_ext", package = "failure_ext" }
 jellyfish-merkle = { path = "../jellyfish-merkle" }
 libra-logger = { path = "../../common/logger" }

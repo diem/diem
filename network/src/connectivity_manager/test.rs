@@ -4,8 +4,8 @@
 use super::*;
 use crate::peer_manager::PeerManagerRequest;
 use core::str::FromStr;
-use crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use futures::SinkExt;
+use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use memsocket::MemorySocket;
 use rand::{rngs::StdRng, SeedableRng};
 use std::io;

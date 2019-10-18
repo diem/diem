@@ -14,12 +14,12 @@ use crate::{
 };
 use accumulator::{HashReader, MerkleAccumulator};
 use arc_swap::ArcSwap;
-use crypto::{
+use failure::prelude::*;
+use itertools::Itertools;
+use libra_crypto::{
     hash::{CryptoHash, TransactionAccumulatorHasher},
     HashValue,
 };
-use failure::prelude::*;
-use itertools::Itertools;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     proof::{position::Position, AccumulatorConsistencyProof, TransactionAccumulatorProof},

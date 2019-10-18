@@ -19,8 +19,8 @@ use crate::{
     validator_change::ValidatorChangeEventWithProof,
     validator_verifier::ValidatorVerifier,
 };
-use crypto::{hash::CryptoHash, *};
 use failure::prelude::*;
+use libra_crypto::{hash::CryptoHash, *};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use std::{

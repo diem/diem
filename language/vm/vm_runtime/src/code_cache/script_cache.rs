@@ -7,7 +7,7 @@ use crate::loaded_data::{
     loaded_module::LoadedModule,
 };
 use bytecode_verifier::VerifiedScript;
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
     transaction::SCRIPT_HASH_LENGTH,

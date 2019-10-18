@@ -16,14 +16,14 @@ mod node_type_test;
 use crate::nibble_path::NibblePath;
 use bincode::{deserialize, serialize};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-use crypto::{
+use failure::{Fail, Result, *};
+use libra_crypto::{
     hash::{
         CryptoHash, SparseMerkleInternalHasher, SparseMerkleLeafHasher,
         SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
-use failure::{Fail, Result, *};
 use libra_nibble::Nibble;
 use libra_types::{
     account_state_blob::AccountStateBlob,

@@ -27,7 +27,7 @@ structopt = "0.3.2"
 admission-control-proto = { version = "0.1.0", path = "../admission_control/admission-control-proto" }
 libra-config = { path = "../config" }
 crash-handler = { path = "../common/crash-handler" }
-crypto = { path = "../crypto/crypto" }
+libra-crypto = { path = "../crypto/crypto" }
 failure = { package = "failure_ext", path = "../common/failure_ext" }
 lcs = { path = "../common/lcs", package = "libra-canonical-serialization" }
 libra_wallet = { path = "./libra_wallet" }
@@ -38,9 +38,9 @@ libra-tools = { path = "../common/tools/" }
 transaction-builder = { path = "../language/transaction-builder" }
 
 [dev-dependencies]
-crypto = { path = "../crypto/crypto", features = ["testing"] }
+libra-crypto = { path = "../crypto/crypto", features = ["testing"] }
 libra-types = { path = "../types", features = ["testing"]}
 
 [features]
 default = []
-testing = ["libra-types/testing", "crypto/testing"]
+testing = ["libra-types/testing", "libra-crypto/testing"]

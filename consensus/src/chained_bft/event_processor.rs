@@ -30,8 +30,8 @@ use consensus_types::{
     vote_data::VoteData,
     vote_msg::VoteMsg,
 };
-use crypto::HashValue;
 use failure::ResultExt;
+use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
 use mirai_annotations::{

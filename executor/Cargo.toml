@@ -19,7 +19,7 @@ rusty-fork = { version = "0.2.2", default-features = false }
 serde = { version = "1.0.99", default-features = false }
 
 libra-config = { path = "../config" }
-crypto = { path = "../crypto/crypto" }
+libra-crypto = { path = "../crypto/crypto" }
 failure = { path = "../common/failure_ext", package = "failure_ext" }
 libra-logger = { path = "../common/logger" }
 libra-metrics = { path = "../common/metrics" }

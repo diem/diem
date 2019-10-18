@@ -9,17 +9,17 @@ mod executor_test;
 mod mock_vm;
 
 use crate::block_processor::BlockProcessor;
-use crypto::{
+use failure::{format_err, Result};
+use futures::{channel::oneshot, executor::block_on};
+use lazy_static::lazy_static;
+use libra_config::config::NodeConfig;
+use libra_crypto::{
     hash::{
         EventAccumulatorHasher, TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH,
         GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
-use failure::{format_err, Result};
-use futures::{channel::oneshot, executor::block_on};
-use lazy_static::lazy_static;
-use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,

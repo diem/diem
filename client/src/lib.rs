@@ -6,7 +6,7 @@
 //!
 //! Client (binary) is the CLI tool to interact with Libra validator.
 //! It supposes all public APIs.
-pub use crypto::{ed25519::*, test_utils::KeyPair, traits::ValidKeyStringExt};
+pub use libra_crypto::{ed25519::*, test_utils::KeyPair, traits::ValidKeyStringExt};
 pub use libra_types::{
     account_address::AccountAddress,
     transaction::{RawTransaction, TransactionArgument, TransactionPayload},

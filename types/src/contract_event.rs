@@ -5,11 +5,11 @@ use crate::{
     account_config::AccountEvent, event::EventKey, ledger_info::LedgerInfo, proof::EventProof,
     transaction::Version,
 };
-use crypto::{
+use failure::prelude::*;
+use libra_crypto::{
     hash::{ContractEventHasher, CryptoHash, CryptoHasher},
     HashValue,
 };
-use failure::prelude::*;
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};

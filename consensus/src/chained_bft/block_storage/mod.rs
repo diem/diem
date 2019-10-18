@@ -7,7 +7,7 @@ use consensus_types::{
     quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate,
 };
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use std::sync::Arc;
 
 mod block_store;

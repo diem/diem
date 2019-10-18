@@ -24,8 +24,8 @@ use crate::{
     account::{Account, AccountData},
     gas_costs,
 };
-use crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use lazy_static::lazy_static;
+use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},

@@ -5,8 +5,8 @@ use crate::{
     common::{self, Author},
     vote_data::VoteData,
 };
-use crypto::hash::CryptoHash;
 use failure::{ensure, format_err, ResultExt};
+use libra_crypto::hash::CryptoHash;
 use libra_types::{
     crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,

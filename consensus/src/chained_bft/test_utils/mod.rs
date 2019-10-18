@@ -3,8 +3,8 @@
 
 use crate::chained_bft::block_storage::{BlockReader, BlockStore};
 use consensus_types::{quorum_cert::QuorumCert, sync_info::SyncInfo};
-use crypto::HashValue;
 use futures::executor::block_on;
+use libra_crypto::HashValue;
 use libra_logger::{set_simple_logger, set_simple_logger_prefix};
 use libra_types::{crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo};
 use std::sync::Arc;

@@ -6,7 +6,7 @@ use crate::{
     block::{block_test_utils::*, Block},
     quorum_cert::QuorumCert,
 };
-use crypto::hash::{CryptoHash, HashValue};
+use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
 use std::{collections::BTreeMap, panic, sync::Arc};
 

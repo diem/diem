@@ -4,7 +4,7 @@
 use crate::chained_bft::block_storage::pending_votes::PendingVotes;
 use crate::chained_bft::block_storage::VoteReceptionResult;
 use consensus_types::{block_info::BlockInfo, common::Round, vote::Vote, vote_data::VoteData};
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use libra_types::crypto_proxies::random_validator_verifier;
 use libra_types::ledger_info::LedgerInfo;
 

@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::{pruner, LibraDB};
-use crypto::hash::CryptoHash;
+use libra_crypto::hash::CryptoHash;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},

@@ -6,8 +6,8 @@ use crate::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
 };
-use crypto::hash::{AccessPathHasher, CryptoHash, CryptoHasher, HashValue};
 use failure::Result;
+use libra_crypto::hash::{AccessPathHasher, CryptoHash, CryptoHasher, HashValue};
 #[cfg(any(test, feature = "testing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};

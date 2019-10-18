@@ -31,7 +31,7 @@ grpc_helpers = { path = "../common/grpc_helpers" }
 libra-logger = { path = "../common/logger" }
 libra-mempool = { path = "../mempool" }
 libra-metrics = { path = "../common/metrics" }
-crypto = { path = "../crypto/crypto" }
+libra-crypto = { path = "../crypto/crypto" }
 network = { path = "../network" }
 state-synchronizer = { path = "../state-synchronizer" }
 storage-client = { path = "../storage/storage-client" }

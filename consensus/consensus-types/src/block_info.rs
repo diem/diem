@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::block::Block;
-use crypto::hash::HashValue;
 use failure::prelude::{Error, Result};
+use libra_crypto::hash::HashValue;
 use libra_types::transaction::Version;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
