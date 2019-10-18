@@ -43,6 +43,7 @@ members = [
     "language/compiler/bytecode_source_map",
     "language/stackless_bytecode/bytecode-to-boogie",
     "language/stackless_bytecode/generator",
+    "language/stackless_bytecode/tree_heap",
     "language/vm",
     "language/vm/serializer_tests",
     "language/vm/vm_runtime",
