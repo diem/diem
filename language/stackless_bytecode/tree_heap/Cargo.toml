@@ -1,0 +1,20 @@
+[package]
+name = "tree_heap"
+version = "0.1.0"
+authors = ["Libra <oncall+libra@xmail.facebook.com>"]
+publish = false
+edition = "2018"
+
+[dependencies]
+functional_tests = { path = "../../functional_tests" }
+bytecode-verifier = { path = "../../bytecode-verifier" }
+vm = { path = "../../vm" }
+libra-types = { path = "../../../types" }
+ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
+stackless_bytecode_generator = { path = "../generator"}
+stdlib = { path = "../../stdlib" }
+num = "0.2.0"
+
+[dev-dependencies]
+proptest = "0.9"
+libra-types = { path = "../../../types", features = ["testing"]}
