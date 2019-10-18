@@ -143,7 +143,7 @@ fn test_reconfiguration() {
     );
     let txn_block = vec![txn1, txn2, txn3];
     let block1_id = gen_block_id(1);
-    let (_vm_output, state_compute_result) = block_on(executor.execute_block(
+    let vm_output = block_on(executor.execute_block(
         txn_block,
         executor.committed_trees().clone(),
         *GENESIS_BLOCK_ID,
@@ -154,7 +154,7 @@ fn test_reconfiguration() {
 
     // Make sure the execution result sees the reconfiguration
     assert!(
-        state_compute_result.has_reconfiguration(),
+        vm_output.state_compute_result().has_reconfiguration(),
         "StateComputeResult is missing the new validator set"
     );
 
@@ -177,7 +177,7 @@ fn test_reconfiguration() {
     );
     let txn_block = vec![txn4, txn5];
     let block2_id = gen_block_id(2);
-    let (_vm_output, state_compute_result) = block_on(executor.execute_block(
+    let output = block_on(executor.execute_block(
         txn_block,
         executor.committed_trees().clone(),
         block1_id,
@@ -187,7 +187,7 @@ fn test_reconfiguration() {
     .unwrap();
 
     assert!(
-        !state_compute_result.has_reconfiguration(),
+        !output.state_compute_result().has_reconfiguration(),
         "StateComputeResult has a new validator set, but should not"
     );
 
@@ -294,7 +294,7 @@ fn test_execution_with_storage() {
         ));
     }
 
-    let (output1, state_compute_result_1) = block_on(executor.execute_block(
+    let output1 = block_on(executor.execute_block(
         block1.clone(),
         executor.committed_trees().clone(),
         *GENESIS_BLOCK_ID,
@@ -303,8 +303,7 @@ fn test_execution_with_storage() {
     .unwrap()
     .unwrap();
     let block1_trees = output1.executed_trees().clone();
-    let ledger_info_with_sigs =
-        gen_ledger_info_with_sigs(6, state_compute_result_1.root_hash(), block1_id);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(6, output1.accu_root(), block1_id);
     block_on(executor.commit_blocks(
         vec![CommittableBlock::new(block1.clone(), Arc::new(output1))],
         ledger_info_with_sigs,
@@ -539,12 +538,11 @@ fn test_execution_with_storage() {
     assert_eq!(account3_received_events.len(), 3);
 
     // Execution the 2nd block.
-    let (output2, state_compute_result_2) =
+    let output2 =
         block_on(executor.execute_block(block2.clone(), block1_trees, block1_id, block2_id))
             .unwrap()
             .unwrap();
-    let ledger_info_with_sigs =
-        gen_ledger_info_with_sigs(20, state_compute_result_2.root_hash(), block2_id);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(20, output2.accu_root(), block2_id);
     block_on(executor.commit_blocks(
         vec![CommittableBlock::new(block2.clone(), Arc::new(output2))],
         ledger_info_with_sigs,

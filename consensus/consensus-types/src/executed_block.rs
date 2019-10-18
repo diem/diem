@@ -16,18 +16,15 @@ use std::{
 pub struct ExecutedBlock<T> {
     /// Block data that cannot be regenerated.
     block: Block<T>,
-    /// The processed output needed by executor.
-    output: Arc<ProcessedVMOutput>,
-    /// The state compute result is calculated for all the pending blocks prior to insertion to
-    /// the tree (the initial root node might not have it, because it's been already
-    /// committed). The execution results are not persisted: they're recalculated again for the
+    /// The execution output is calculated for all the pending blocks prior to insertion to
+    /// the tree. The execution results are not persisted: they're recalculated again for the
     /// pending blocks upon restart.
-    compute_result: Arc<StateComputeResult>,
+    output: Arc<ProcessedVMOutput>,
 }
 
 impl<T: PartialEq> PartialEq for ExecutedBlock<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.block == other.block && self.compute_result == other.compute_result
+        self.block == other.block && self.compute_result() == other.compute_result()
     }
 }
 
@@ -40,15 +37,10 @@ impl<T: PartialEq> Display for ExecutedBlock<T> {
 }
 
 impl<T> ExecutedBlock<T> {
-    pub fn new(
-        block: Block<T>,
-        output: ProcessedVMOutput,
-        compute_result: StateComputeResult,
-    ) -> Self {
+    pub fn new(block: Block<T>, output: ProcessedVMOutput) -> Self {
         Self {
             block,
             output: Arc::new(output),
-            compute_result: Arc::new(compute_result),
         }
     }
 
@@ -56,8 +48,8 @@ impl<T> ExecutedBlock<T> {
         &self.block
     }
 
-    pub fn compute_result(&self) -> &Arc<StateComputeResult> {
-        &self.compute_result
+    pub fn compute_result(&self) -> StateComputeResult {
+        self.output().state_compute_result()
     }
 
     pub fn epoch(&self) -> u64 {

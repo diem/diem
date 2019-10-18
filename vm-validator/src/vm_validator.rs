@@ -88,10 +88,8 @@ impl TransactionValidation for VMValidator {
                         let smt = SparseMerkleTree::new(state_root);
                         let state_view = VerifiedStateView::new(
                             Arc::clone(&self.storage_read_client),
-                            (
-                                Some(ledger_info_with_sigs.ledger_info().version()),
-                                state_root,
-                            ),
+                            Some(ledger_info_with_sigs.ledger_info().version()),
+                            state_root,
                             &smt,
                         );
                         Box::new(ok(self.vm.validate_transaction(txn, &state_view)))

@@ -47,7 +47,7 @@ lazy_static! {
         libra_metrics::OpMetrics::new_and_registered("executor");
 }
 
-/// A structure that specifies the result of the execution.
+/// A structure that summarizes the result of the execution needed for consensus to agree on.
 /// The execution is responsible for generating the ID of the new state, which is returned in the
 /// result.
 ///
@@ -201,13 +201,22 @@ pub struct ProcessedVMOutput {
     /// The in-memory Merkle Accumulator and state Sparse Merkle Tree after appending all the
     /// transactions in this set.
     executed_trees: ExecutedTrees,
+
+    /// If set, this is the validator set that should be changed to if this block is committed.
+    /// TODO [Reconfiguration] the validators are currently ignored, no reconfiguration yet.
+    validators: Option<ValidatorSet>,
 }
 
 impl ProcessedVMOutput {
-    pub fn new(transaction_data: Vec<TransactionData>, executed_trees: ExecutedTrees) -> Self {
+    pub fn new(
+        transaction_data: Vec<TransactionData>,
+        executed_trees: ExecutedTrees,
+        validators: Option<ValidatorSet>,
+    ) -> Self {
         ProcessedVMOutput {
             transaction_data,
             executed_trees,
+            validators,
         }
     }
 
@@ -217,6 +226,45 @@ impl ProcessedVMOutput {
 
     pub fn executed_trees(&self) -> &ExecutedTrees {
         &self.executed_trees
+    }
+
+    pub fn accu_root(&self) -> HashValue {
+        self.executed_trees().txn_accumulator().root_hash()
+    }
+
+    pub fn version(&self) -> Option<Version> {
+        self.executed_trees().version()
+    }
+
+    pub fn validators(&self) -> &Option<ValidatorSet> {
+        &self.validators
+    }
+
+    // This method should only be called by tests.
+    pub fn set_validators(&mut self, validator_set: ValidatorSet) {
+        self.validators = Some(validator_set)
+    }
+
+    pub fn state_compute_result(&self) -> StateComputeResult {
+        let num_leaves = self.executed_trees().txn_accumulator().num_leaves();
+        let version = if num_leaves == 0 { 0 } else { num_leaves - 1 };
+        StateComputeResult {
+            // Now that we have the root hash and execution status we can send the response to
+            // consensus.
+            // TODO: The VM will support a special transaction to set the validators for the
+            // next epoch that is part of a block execution.
+            executed_state: ExecutedState {
+                state_id: self.accu_root(),
+                version,
+                validators: self.validators.clone(),
+            },
+            compute_status: self
+                .transaction_data()
+                .iter()
+                .map(|txn_data| txn_data.status())
+                .cloned()
+                .collect(),
+        }
     }
 }
 
@@ -316,7 +364,7 @@ where
         // immediately.
         // We create `PRE_GENESIS_BLOCK_ID` as the parent of the genesis block.
         let genesis_txns = vec![genesis_txn];
-        let (output, state_compute_result) = block_on(self.execute_block(
+        let output = block_on(self.execute_block(
             genesis_txns.clone(),
             ExecutedTrees::new_empty(),
             HashValue::zero(),
@@ -325,7 +373,7 @@ where
         .expect("Response sender was unexpectedly dropped.")
         .expect("Failed to execute genesis block.");
 
-        let root_hash = state_compute_result.executed_state.state_id;
+        let root_hash = output.accu_root();
         let ledger_info = LedgerInfo::new(
             /* version = */ 0,
             root_hash,
@@ -357,7 +405,7 @@ where
         parent_trees: ExecutedTrees,
         parent_id: HashValue,
         id: HashValue,
-    ) -> oneshot::Receiver<Result<(ProcessedVMOutput, StateComputeResult)>> {
+    ) -> oneshot::Receiver<Result<ProcessedVMOutput>> {
         debug!(
             "Received request to execute block. Parent id: {:x}. Id: {:x}.",
             parent_id, id
@@ -526,7 +574,7 @@ impl Chunk {
 enum Command {
     ExecuteBlock {
         executable_block: ExecutableBlock,
-        resp_sender: oneshot::Sender<Result<(ProcessedVMOutput, StateComputeResult)>>,
+        resp_sender: oneshot::Sender<Result<ProcessedVMOutput>>,
     },
     CommitBlockBatch {
         committable_block_batch: CommittableBlockBatch,
@@ -560,14 +608,21 @@ impl ExecutedTrees {
         &self.transaction_accumulator
     }
 
-    pub fn version_and_state_root(&self) -> (Option<Version>, HashValue) {
+    pub fn version(&self) -> Option<Version> {
         let num_elements = self.txn_accumulator().num_leaves() as u64;
-        let version = if num_elements > 0 {
+        if num_elements > 0 {
             Some(num_elements - 1)
         } else {
             None
-        };
-        (version, self.state_tree().root_hash())
+        }
+    }
+
+    pub fn state_id(&self) -> HashValue {
+        self.txn_accumulator().root_hash()
+    }
+
+    pub fn state_root(&self) -> HashValue {
+        self.state_tree().root_hash()
     }
 
     pub fn new(
