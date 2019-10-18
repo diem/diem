@@ -3,13 +3,8 @@
 
 use crate::common::{self, Author, Round};
 use failure::prelude::*;
-use libra_types::{
-    account_address::AccountAddress,
-    crypto_proxies::{Signature, ValidatorVerifier},
-};
-use network;
+use libra_types::crypto_proxies::{Signature, ValidatorVerifier};
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 use std::{collections::HashMap, fmt};
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
@@ -74,45 +69,5 @@ impl TimeoutCertificate {
 
     pub fn remove_signature(&mut self, author: Author) {
         self.signatures.remove(&author);
-    }
-}
-
-impl TryFrom<network::proto::TimeoutCertificate> for TimeoutCertificate {
-    type Error = failure::Error;
-
-    fn try_from(proto: network::proto::TimeoutCertificate) -> failure::Result<Self> {
-        let epoch = proto.epoch;
-        let round = proto.round;
-        let signatures = proto
-            .signatures
-            .into_iter()
-            .map(|proto| {
-                let author = AccountAddress::try_from(proto.validator_id)?;
-                let signature = Signature::try_from(&proto.signature)?;
-                Ok((author, signature))
-            })
-            .collect::<Result<HashMap<_, _>>>()?;
-        Ok(TimeoutCertificate::new(epoch, round, signatures))
-    }
-}
-
-impl From<TimeoutCertificate> for network::proto::TimeoutCertificate {
-    fn from(cert: TimeoutCertificate) -> Self {
-        let signatures = cert
-            .signatures
-            .into_iter()
-            .map(
-                |(validator_id, signature)| libra_types::proto::types::ValidatorSignature {
-                    validator_id: validator_id.to_vec(),
-                    signature: signature.to_bytes().to_vec(),
-                },
-            )
-            .collect();
-
-        Self {
-            epoch: cert.epoch,
-            round: cert.round,
-            signatures,
-        }
     }
 }

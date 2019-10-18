@@ -260,7 +260,8 @@ impl NetworkPlayground {
     pub fn timeout_votes_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
         // Timeout votes carry non-empty round signatures.
         if let Some(ConsensusMsg_oneof::VoteMsg(vote_msg)) = &msg_copy.1.message {
-            !vote_msg.vote.as_ref().unwrap().timeout_signature.is_empty()
+            let vote_msg = VoteMsg::try_from(vote_msg.clone()).unwrap();
+            vote_msg.vote().timeout_signature().is_some()
         } else {
             false
         }
@@ -320,6 +321,7 @@ impl DropConfig {
 
 #[cfg(test)]
 use libra_types::crypto_proxies::random_validator_verifier;
+use std::convert::TryFrom;
 
 #[test]
 fn test_network_api() {

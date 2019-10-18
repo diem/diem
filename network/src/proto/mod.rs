@@ -22,9 +22,8 @@ use ::libra_types::proto::types;
 
 pub use self::{
     consensus::{
-        consensus_msg::Message as ConsensusMsg_oneof, Block, BlockInfo, BlockRetrievalStatus,
-        ConsensusMsg, Proposal, QuorumCert, RequestBlock, RespondBlock, SyncInfo,
-        TimeoutCertificate, Vote, VoteData, VoteMsg,
+        consensus_msg::Message as ConsensusMsg_oneof, Block, BlockRetrievalStatus, ConsensusMsg,
+        Proposal, RequestBlock, RespondBlock, SyncInfo, VoteMsg,
     },
     mempool::MempoolSyncMsg,
     network::{

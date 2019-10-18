@@ -168,11 +168,13 @@ impl<T: Payload> fmt::Display for ProposalMsg<T> {
     }
 }
 
-impl<T: Payload> From<ProposalMsg<T>> for network::proto::Proposal {
-    fn from(proposal: ProposalMsg<T>) -> Self {
-        Self {
-            proposed_block: Some(proposal.proposal.into()),
-            sync_info: Some(proposal.sync_info.into()),
-        }
+impl<T: Payload> TryFrom<ProposalMsg<T>> for network::proto::Proposal {
+    type Error = failure::Error;
+
+    fn try_from(proposal: ProposalMsg<T>) -> failure::Result<Self> {
+        Ok(Self {
+            proposed_block: Some(proposal.proposal.try_into()?),
+            sync_info: Some(proposal.sync_info.try_into()?),
+        })
     }
 }

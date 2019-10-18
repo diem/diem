@@ -15,8 +15,6 @@ pub mod persistent_storage;
 mod chained_bft_smr_test;
 #[cfg(test)]
 mod network_tests;
-#[cfg(test)]
-mod proto_test;
 
 #[cfg(any(test, feature = "fuzzing"))]
 mod test_utils;

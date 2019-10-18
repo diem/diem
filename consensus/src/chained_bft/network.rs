@@ -25,7 +25,7 @@ use network::{
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
 };
 use std::{
-    convert::TryFrom,
+    convert::{TryFrom, TryInto},
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -210,8 +210,15 @@ impl ConsensusNetworkImpl {
     /// out. It does not give indication about when the message is delivered to the recipients,
     /// as well as there is no indication about the network failures.
     pub async fn broadcast_proposal<T: Payload>(&mut self, proposal: ProposalMsg<T>) {
+        let proposal = match proposal.try_into() {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                warn!("Fail to serialize VoteMsg: {:?}", e);
+                return;
+            }
+        };
         let msg = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::Proposal(proposal.into())),
+            message: Some(ConsensusMsg_oneof::Proposal(proposal)),
         };
         self.broadcast(msg).await
     }
@@ -246,8 +253,15 @@ impl ConsensusNetworkImpl {
     pub async fn send_vote(&self, vote_msg: VoteMsg, recipients: Vec<Author>) {
         let mut network_sender = self.network_sender.clone();
         let mut self_sender = self.self_sender.clone();
+        let vote_msg = match vote_msg.try_into() {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                warn!("Fail to serialize VoteMsg: {:?}", e);
+                return;
+            }
+        };
         let msg = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::VoteMsg(vote_msg.into())),
+            message: Some(ConsensusMsg_oneof::VoteMsg(vote_msg)),
         };
         for peer in recipients {
             if self.author == peer {
@@ -265,8 +279,15 @@ impl ConsensusNetworkImpl {
 
     /// Broadcasts vote message to all validators
     pub async fn broadcast_vote(&mut self, vote_msg: VoteMsg) {
+        let vote_msg = match vote_msg.try_into() {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                warn!("Fail to serialize VoteMsg: {:?}", e);
+                return;
+            }
+        };
         let msg = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::VoteMsg(vote_msg.into())),
+            message: Some(ConsensusMsg_oneof::VoteMsg(vote_msg)),
         };
         self.broadcast(msg).await
     }
@@ -279,8 +300,15 @@ impl ConsensusNetworkImpl {
             error!("An attempt to deliver sync info msg to itself: ignore.");
             return;
         }
+        let sync_info = match sync_info.try_into() {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                warn!("Fail to serialize SyncInfo: {:?}", e);
+                return;
+            }
+        };
         let msg = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::SyncInfo(sync_info.into())),
+            message: Some(ConsensusMsg_oneof::SyncInfo(sync_info)),
         };
         let mut network_sender = self.network_sender.clone();
         if let Err(e) = network_sender.send_to(recipient, msg).await {
@@ -435,7 +463,9 @@ where
         let BlockRetrievalResponse { status, blocks } = rx.await?;
         let mut response = RespondBlock::default();
         response.set_status(status);
-        response.blocks = blocks.into_iter().map(Into::into).collect();
+        for b in blocks {
+            response.blocks.push(b.try_into()?);
+        }
         let response_msg = ConsensusMsg {
             message: Some(ConsensusMsg_oneof::RespondBlock(response)),
         };

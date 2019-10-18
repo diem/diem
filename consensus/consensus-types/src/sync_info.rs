@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{common::Round, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate};
-use failure::{format_err, ResultExt};
+use failure::ResultExt;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use network;
 use serde::{Deserialize, Serialize};
 use std::{
-    convert::{TryFrom, TryInto},
+    convert::TryFrom,
     fmt::{Display, Formatter},
 };
 
@@ -100,33 +100,16 @@ impl TryFrom<network::proto::SyncInfo> for SyncInfo {
     type Error = failure::Error;
 
     fn try_from(proto: network::proto::SyncInfo) -> failure::Result<Self> {
-        let highest_quorum_cert = proto
-            .highest_quorum_cert
-            .ok_or_else(|| format_err!("Missing highest_quorum_cert"))?
-            .try_into()?;
-        let highest_ledger_info = proto
-            .highest_ledger_info
-            .ok_or_else(|| format_err!("Missing highest_ledger_info"))?
-            .try_into()?;
-        let highest_timeout_cert = proto
-            .highest_timeout_cert
-            .map(TryInto::try_into)
-            .transpose()?;
-
-        Ok(SyncInfo::new(
-            highest_quorum_cert,
-            highest_ledger_info,
-            highest_timeout_cert,
-        ))
+        Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }
 
-impl From<SyncInfo> for network::proto::SyncInfo {
-    fn from(info: SyncInfo) -> Self {
-        Self {
-            highest_ledger_info: Some(info.highest_ledger_info.into()),
-            highest_quorum_cert: Some(info.highest_quorum_cert.into()),
-            highest_timeout_cert: info.highest_timeout_cert.map(Into::into),
-        }
+impl TryFrom<SyncInfo> for network::proto::SyncInfo {
+    type Error = failure::Error;
+
+    fn try_from(info: SyncInfo) -> failure::Result<Self> {
+        Ok(Self {
+            bytes: lcs::to_bytes(&info)?,
+        })
     }
 }

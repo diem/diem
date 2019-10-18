@@ -5,17 +5,14 @@ use crate::{
     common::{self, Author},
     vote_data::VoteData,
 };
-use failure::{ensure, format_err, ResultExt};
+use failure::{ensure, ResultExt};
 use libra_crypto::hash::CryptoHash;
 use libra_types::{
     crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
 };
 use serde::{Deserialize, Serialize};
-use std::{
-    convert::{TryFrom, TryInto},
-    fmt::{Display, Formatter},
-};
+use std::fmt::{Display, Formatter};
 
 /// Vote is the struct that is ultimately sent by the voter in response for
 /// receiving a proposal.
@@ -141,49 +138,5 @@ impl Vote {
                 .with_context(|e| format!("Fail to verify Vote: {:?}", e))?;
         }
         Ok(())
-    }
-}
-
-impl TryFrom<network::proto::Vote> for Vote {
-    type Error = failure::Error;
-
-    fn try_from(proto: network::proto::Vote) -> failure::Result<Self> {
-        let vote_data = proto
-            .vote_data
-            .ok_or_else(|| format_err!("Missing vote_data"))?
-            .try_into()?;
-        let author = Author::try_from(proto.author)?;
-        let ledger_info = proto
-            .ledger_info
-            .ok_or_else(|| format_err!("Missing ledger_info"))?
-            .try_into()?;
-        let signature = Signature::try_from(&proto.signature)?;
-        let timeout_signature = if proto.timeout_signature.is_empty() {
-            None
-        } else {
-            Some(Signature::try_from(&proto.timeout_signature)?)
-        };
-        Ok(Self {
-            vote_data,
-            author,
-            ledger_info,
-            signature,
-            timeout_signature,
-        })
-    }
-}
-
-impl From<Vote> for network::proto::Vote {
-    fn from(vote: Vote) -> Self {
-        Self {
-            vote_data: Some(vote.vote_data.into()),
-            author: vote.author.into(),
-            ledger_info: Some(vote.ledger_info.into()),
-            signature: vote.signature.to_bytes(),
-            timeout_signature: vote
-                .timeout_signature
-                .map(|sig| sig.to_bytes())
-                .unwrap_or_else(Vec::new),
-        }
     }
 }

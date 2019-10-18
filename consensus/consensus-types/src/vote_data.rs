@@ -2,16 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::block_info::BlockInfo;
-use failure::prelude::format_err;
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher, VoteDataHasher},
     HashValue,
 };
 use serde::{Deserialize, Serialize};
-use std::{
-    convert::{TryFrom, TryInto},
-    fmt::{Display, Formatter},
-};
+use std::fmt::{Display, Formatter};
 
 /// VoteData keeps the information about the block, and its parent.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
@@ -55,32 +51,5 @@ impl CryptoHash for VoteData {
         let mut state = Self::Hasher::default();
         state.write(lcs::to_bytes(self).expect("Should serialize.").as_ref());
         state.finish()
-    }
-}
-
-impl TryFrom<network::proto::VoteData> for VoteData {
-    type Error = failure::Error;
-
-    fn try_from(proto: network::proto::VoteData) -> failure::Result<Self> {
-        let proposed = proto
-            .proposed
-            .ok_or_else(|| format_err!("Missing proposed BlockInfo"))?
-            .try_into()?;
-
-        let parent = proto
-            .parent
-            .ok_or_else(|| format_err!("Missing parent BlockInfo"))?
-            .try_into()?;
-
-        Ok(VoteData { proposed, parent })
-    }
-}
-
-impl From<VoteData> for network::proto::VoteData {
-    fn from(vote: VoteData) -> Self {
-        Self {
-            proposed: Some(vote.proposed.into()),
-            parent: Some(vote.parent.into()),
-        }
     }
 }

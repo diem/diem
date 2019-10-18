@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{sync_info::SyncInfo, vote::Vote};
-use failure::{bail, format_err};
+use failure::bail;
 use serde::{Deserialize, Serialize};
 use std::{
     convert::{TryFrom, TryInto},
@@ -43,22 +43,7 @@ impl VoteMsg {
     }
 }
 
-impl TryFrom<network::proto::VoteMsg> for VoteMsg {
-    type Error = failure::Error;
-
-    fn try_from(proto: network::proto::VoteMsg) -> failure::Result<Self> {
-        let vote = proto
-            .vote
-            .ok_or_else(|| format_err!("Missing vote"))?
-            .try_into()?;
-        let sync_info = proto
-            .sync_info
-            .ok_or_else(|| format_err!("Missing sync_info"))?
-            .try_into()?;
-        Ok(Self { vote, sync_info })
-    }
-}
-
+#[cfg(any(test, feature = "fuzzing"))]
 impl TryFrom<network::proto::ConsensusMsg> for VoteMsg {
     type Error = failure::Error;
 
@@ -70,11 +55,20 @@ impl TryFrom<network::proto::ConsensusMsg> for VoteMsg {
     }
 }
 
-impl From<VoteMsg> for network::proto::VoteMsg {
-    fn from(vote_msg: VoteMsg) -> Self {
-        Self {
-            vote: Some(vote_msg.vote.into()),
-            sync_info: Some(vote_msg.sync_info.into()),
-        }
+impl TryFrom<network::proto::VoteMsg> for VoteMsg {
+    type Error = failure::Error;
+
+    fn try_from(proto: network::proto::VoteMsg) -> failure::Result<Self> {
+        Ok(lcs::from_bytes(&proto.bytes)?)
+    }
+}
+
+impl TryFrom<VoteMsg> for network::proto::VoteMsg {
+    type Error = failure::Error;
+
+    fn try_from(vote_msg: VoteMsg) -> failure::Result<Self> {
+        Ok(Self {
+            bytes: lcs::to_bytes(&vote_msg)?,
+        })
     }
 }

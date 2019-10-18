@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::block::Block;
-use failure::prelude::{Error, Result};
 use libra_crypto::hash::HashValue;
 use libra_types::transaction::Version;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 
 /// The round of a block is a consensus-internal counter, which starts with 0 and increases
 /// monotonically. It is used for the protocol safety and liveness (please see the detailed protocol description).
@@ -105,33 +103,5 @@ impl BlockInfo {
 
     pub fn version(&self) -> Version {
         self.version
-    }
-}
-
-impl From<BlockInfo> for network::proto::BlockInfo {
-    fn from(block_info: BlockInfo) -> Self {
-        Self {
-            epoch: block_info.epoch(),
-            round: block_info.round(),
-            id: block_info.id().to_vec(),
-            executed_state_id: block_info.executed_state_id().to_vec(),
-            version: block_info.version(),
-            timestamp_usecs: block_info.timestamp_usecs(),
-        }
-    }
-}
-
-impl TryFrom<network::proto::BlockInfo> for BlockInfo {
-    type Error = Error;
-
-    fn try_from(proto: network::proto::BlockInfo) -> Result<Self> {
-        Ok(BlockInfo::new(
-            proto.epoch,
-            proto.round,
-            HashValue::from_slice(&proto.id)?,
-            HashValue::from_slice(&proto.executed_state_id)?,
-            proto.version,
-            proto.timestamp_usecs,
-        ))
     }
 }

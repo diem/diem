@@ -26,107 +26,16 @@ message Proposal {
 }
 
 message SyncInfo {
-  // Highest quorum certificate
-  QuorumCert highest_quorum_cert = 1;
-  // Highest ledger info
-  QuorumCert highest_ledger_info = 2;
-  // Optional highest timeout certificate if available
-  TimeoutCertificate highest_timeout_cert = 3;
-}
-
-message TimeoutCertificate {
-  uint64 epoch = 1;
-  // Round certified by this timeout certificate.
-  uint64 round = 2;
-  // List of signatures certifying the timeout.
-  repeated types.ValidatorSignature signatures = 3;
+  bytes bytes = 1;
 }
 
 message Block {
-  // Payload of the block (e.g. one or more transaction(s)
-  bytes payload = 1;
-  // Epoch number corresponds to the set of validators that are active for this block.
-  uint64 epoch = 2;
-  // The round of the block (internal monotonically increasing counter).
-  uint64 round = 3;
-  // The approximate physical microseconds since the epoch when the block was proposed
-  uint64 timestamp_usecs = 4;
-  // Contains the quorum certified ancestor and whether the quorum certified
-  // ancestor was voted on successfully
-  QuorumCert quorum_cert = 5;
-  // Author of the block that can be validated by the author's public key and
-  // the signature
-  bytes author = 6;
-  // Signature that the hash of this block has been authored by the owner of the
-  // private key
-  bytes signature = 7;
+  bytes bytes = 1;
 }
 
-message QuorumCert {
-  // The vote information certified by the quorum.
-  VoteData vote_data = 1;
-  // LedgerInfo with at least 2f+1 signatures. The LedgerInfo's consensus data
-  // hash is a digest that covers vote data hash.
-  types.LedgerInfoWithSignatures signed_ledger_info = 2;
-}
-
-/// This data structure stores the output of storage after executing a given
-/// block or set of transactions.
-message BlockInfo {
-  // Epoch number corresponds to the set of validators that are active for this
-  // ledger info. This can be used to ascertain the current set of validators,
-  // which then can be used to identify the necessary keys to verify the authenticity
-  // of this LedgerInfo. The very first epoch is 0. Without epoch number a potential
-  //attack could reuse the signatures from the validators in one epoch in order to sign
-  // the wrong info belonging to another epoch, in which these validators do not form a
-  // quorum.
-  uint64 epoch = 1;
-
-  // The consensus protocol executes proposals (blocks) in rounds, which monotically increase per epoch.
-  uint64 round = 2;
-
-  // The identifier (hash) of the block.
-  bytes id = 3;
-
-  // The accumulator root hash after executing this block.
-  bytes executed_state_id = 4;
-
-  // The version of the latest transaction in the ledger
-  uint64 version = 5;
-
-  // The timestamp this block was proposed by a proposer. This is strictly increasing with
-  // every block. If a client reads a timestamp > the one they specified for transaction
-  // expiration time, they can be certain that their transaction will never be included in a
-  // block in the future (assuming that their transaction has not yet been included)
-  uint64 timestamp_usecs = 6;
-}
-
-message VoteData {
-  // Contains all the block information needed for voting for the proposed round.
-  BlockInfo proposed = 1;
-  // Contains all the block information for the parent for the proposed round.
-  BlockInfo parent = 2;
-}
-
-message Vote {
-  // The actual vote information.
-  VoteData vote_data = 1;
-  // Author of the vote.
-  bytes author = 2;
-  // The ledger info carried with the vote (corresponding to the block of a
-  // potentially committed txn).
-  types.LedgerInfo ledger_info = 3;
-  // Signature of the ledger info.
-  bytes signature = 4;
-  // The round signatures can be aggregated into the timeout certificate.
-  bytes timeout_signature = 5;
-}
 
 message VoteMsg {
-  // The container of the vote material
-  Vote vote = 1;
-  // Sync info for exchanging information about highest QC, TC and LedgerInfo
-  SyncInfo sync_info = 2;
+  bytes bytes = 1;
 }
 
 message RequestBlock {
