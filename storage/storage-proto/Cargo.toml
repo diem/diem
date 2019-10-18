@@ -18,7 +18,7 @@ proptest-derive = "0.1.0"
 prost = "0.5.0"
 
 libra-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
+failure = { path = "../../common/failure-ext", package = "failure-ext" }
 libra-types = { path = "../../types" }
 
 [build-dependencies]

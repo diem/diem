@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
+failure = { path = "../../common/failure-ext", package = "failure-ext" }
 libra-types = { path = "../../types" }
 
 [dev-dependencies]

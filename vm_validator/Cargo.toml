@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 libra-config = { path = "../config" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
+failure = { path = "../common/failure-ext", package = "failure-ext" }
 futures = "0.1.28"
 scratchpad = { path = "../storage/scratchpad" }
 libra-state-view = { path = "../storage/state-view" }

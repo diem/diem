@@ -18,7 +18,7 @@ structopt = "0.3.2"
 libra-config = { path = "../config" }
 config-builder = { path = "../config/config-builder" }
 debug-interface = { path = "../common/debug-interface" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
+failure = { path = "../common/failure-ext", package = "failure-ext" }
 generate-keypair = { path = "../config/generate-keypair" }
 libra-logger = { path = "../common/logger" }
 libra-crypto = { path = "../crypto/crypto" }
