@@ -25,7 +25,7 @@ libra-logger = { path = "../common/logger" }
 libra-metrics = { path = "../common/metrics" }
 libra-prost-ext = { path = "../common/prost-ext" }
 scratchpad = { path = "../storage/scratchpad" }
-state-view = { path = "../storage/state-view" }
+libra-state-view = { path = "../storage/state-view" }
 storage-client = { path = "../storage/storage-client" }
 libra-types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }

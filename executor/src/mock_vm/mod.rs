@@ -8,6 +8,7 @@ use failure::Result;
 use lazy_static::lazy_static;
 use libra_config::config::VMConfig;
 use libra_crypto::ed25519::compat;
+use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -20,7 +21,6 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use state_view::StateView;
 use std::collections::HashMap;
 use vm_runtime::VMExecutor;
 

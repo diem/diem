@@ -4,12 +4,12 @@
 use crate::StorageRead;
 use failure::prelude::*;
 use libra_crypto::{hash::CryptoHash, HashValue};
+use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath, account_address::AccountAddress, proof::SparseMerkleProof,
     transaction::Version,
 };
 use scratchpad::{AccountState, SparseMerkleTree};
-use state_view::StateView;
 use std::{
     cell::RefCell,
     collections::{hash_map::Entry, BTreeMap, HashMap},

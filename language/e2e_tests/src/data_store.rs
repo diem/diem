@@ -6,6 +6,7 @@
 use crate::account::AccountData;
 use failure::prelude::*;
 use lazy_static::lazy_static;
+use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     language_storage::ModuleId,
@@ -13,7 +14,6 @@ use libra_types::{
     write_set::{WriteOp, WriteSet},
 };
 use prost::Message;
-use state_view::StateView;
 use std::convert::TryFrom;
 use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
 use vm::{errors::*, CompiledModule};

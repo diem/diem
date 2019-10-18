@@ -24,7 +24,7 @@ libra-config = { path = "../../../config" }
 libra-crypto = { path = "../../../crypto/crypto" }
 libra-logger = { path = "../../../common/logger" }
 libra-metrics = { path = "../../../common/metrics" }
-state-view = { path = "../../../storage/state-view" }
+libra-state-view = { path = "../../../storage/state-view" }
 libra-types = { path = "../../../types" }
 vm = { path = "../" }
 vm-cache-map = { path = "vm-cache-map" }

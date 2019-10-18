@@ -16,7 +16,7 @@ transaction-builder = { path = "../../transaction-builder"}
 libra-crypto = { path = "../../../crypto/crypto" }
 stdlib = { path = "../../stdlib" }
 libra-prost-ext = { path = "../../../common/prost-ext" }
-state-view = { path = "../../../storage/state-view" }
+libra-state-view = { path = "../../../storage/state-view" }
 libra-types = { path = "../../../types" }
 vm = { path = "../" }
 vm-cache-map = { path = "../vm_runtime/vm-cache-map" }

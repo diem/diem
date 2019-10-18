@@ -3,8 +3,8 @@
 //! Fetches code data from the blockchain.
 
 use libra_logger::prelude::*;
+use libra_state_view::StateView;
 use libra_types::language_storage::ModuleId;
-use state_view::StateView;
 use std::collections::HashMap;
 use vm::file_format::CompiledModule;
 

@@ -17,7 +17,7 @@ compiler = { path = "../compiler" }
 lazy_static = "1.3.0"
 libra-crypto = { path = "../../crypto/crypto"}
 rand = "0.6.5"
-state-view = { path = "../../storage/state-view" }
+libra-state-view = { path = "../../storage/state-view" }
 libra-types = { path = "../../types" }
 transaction-builder = { path = "../transaction-builder", features = ["testing"]}
 vm = { path = "../vm" }
