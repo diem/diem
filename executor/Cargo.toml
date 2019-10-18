@@ -20,7 +20,7 @@ serde = { version = "1.0.99", default-features = false }
 
 libra-config = { path = "../config" }
 libra-crypto = { path = "../crypto/crypto" }
-failure = { path = "../common/failure-ext", package = "failure-ext" }
+failure = { path = "../common/failure-ext", package = "libra-failure-ext" }
 libra-logger = { path = "../common/logger" }
 libra-metrics = { path = "../common/metrics" }
 libra-prost-ext = { path = "../common/prost-ext" }

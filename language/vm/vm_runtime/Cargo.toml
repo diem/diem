@@ -29,7 +29,7 @@ libra-types = { path = "../../../types" }
 vm = { path = "../" }
 vm-cache-map = { path = "vm-cache-map" }
 vm_runtime_types = { path = "vm_runtime_types" }
-failure = { path = "../../../common/failure-ext", package = "failure-ext" }
+failure = { path = "../../../common/failure-ext", package = "libra-failure-ext" }
 
 [dev-dependencies]
 compiler = { path = "../../compiler" }

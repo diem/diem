@@ -12,7 +12,7 @@ build = "build.rs"
 
 [dependencies]
 codespan = { version = "0.2.1", features = ["serialization"] }
-failure = { path = "../../../../common/failure-ext", package = "failure-ext" }
+failure = { path = "../../../../common/failure-ext", package = "libra-failure-ext" }
 hex = "0.3.2"
 lazy_static = "1.4.0"
 lalrpop-util = "0.17.2"
