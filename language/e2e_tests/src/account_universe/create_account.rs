@@ -9,13 +9,13 @@ use crate::{
     common_transactions::create_account_txn,
     gas_costs,
 };
+use libra_proptest_helpers::Index;
 use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
-use proptest_helpers::Index;
 
 /// Represents a create-account transaction performed in the account universe.
 ///

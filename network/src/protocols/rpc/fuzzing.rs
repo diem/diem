@@ -14,10 +14,10 @@ use futures::{
     io::{AsyncReadExt, AsyncWriteExt},
     stream::StreamExt,
 };
+use libra_proptest_helpers::ValueGenerator;
 use libra_types::{account_address::ADDRESS_LENGTH, PeerId};
 use memsocket::MemorySocket;
 use proptest::{arbitrary::any, collection::vec, prop_oneof, strategy::Strategy};
-use proptest_helpers::ValueGenerator;
 use std::{io, time::Duration};
 use tokio::{
     codec::{Encoder, LengthDelimitedCodec},

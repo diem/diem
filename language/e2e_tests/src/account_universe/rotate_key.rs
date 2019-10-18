@@ -7,6 +7,7 @@ use crate::{
     gas_costs,
 };
 use libra_crypto::ed25519::{compat::keypair_strategy, *};
+use libra_proptest_helpers::Index;
 use libra_types::{
     account_address::AccountAddress,
     transaction::{SignedTransaction, TransactionStatus},
@@ -14,7 +15,6 @@ use libra_types::{
 };
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
-use proptest_helpers::Index;
 
 /// Represents a rotate-key transaction performed in the account universe.
 #[derive(Arbitrary, Clone, Debug)]

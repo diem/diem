@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use proptest_helpers::ValueGenerator;
+use libra_proptest_helpers::ValueGenerator;
 use std::{fmt, ops::Deref, str::FromStr};
 
 pub mod commands;

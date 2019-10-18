@@ -4,7 +4,7 @@
 use crate::FuzzTargetImpl;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::prelude::*;
-use proptest_helpers::ValueGenerator;
+use libra_proptest_helpers::ValueGenerator;
 use std::io::Cursor;
 use vm_runtime_types::{
     loaded_data::{struct_def::StructDef, types::Type},
