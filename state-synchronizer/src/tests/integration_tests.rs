@@ -17,7 +17,7 @@ use libra_types::{
     ledger_info::LedgerInfo as TypesLedgerInfo,
     proof::AccumulatorProof,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{TransactionInfo, TransactionListWithProof},
+    transaction::{Transaction, TransactionInfo, TransactionListWithProof},
     vm_error::StatusCode,
 };
 use network::{
@@ -83,13 +83,13 @@ impl MockExecutorProxy {
         let sender = AccountAddress::from_public_key(&GENESIS_KEYPAIR.1);
         let receiver = AccountAddress::new([0xff; 32]);
         let program = encode_transfer_script(&receiver, 1);
-        let transaction = get_test_signed_txn(
+        let transaction = Transaction::UserTransaction(get_test_signed_txn(
             sender,
             version + 1,
             GENESIS_KEYPAIR.0.clone(),
             GENESIS_KEYPAIR.1.clone(),
             Some(program),
-        );
+        ));
 
         let txn_info = TransactionInfo::new(
             HashValue::zero(),

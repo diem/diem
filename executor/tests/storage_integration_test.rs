@@ -641,7 +641,8 @@ fn verify_transactions(
     let txns = txn_list_with_proof
         .transaction_and_infos
         .iter()
-        .map(|(txn, _)| Transaction::UserTransaction(txn.clone()))
+        .map(|(txn, _)| txn)
+        .cloned()
         .collect::<Vec<_>>();
     ensure!(
         expected_txns == &txns[..],

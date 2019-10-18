@@ -121,7 +121,7 @@ pub(crate) fn verify_transaction_list(
         .map(|(txn, txn_info)| {
             // Verify all transaction_infos and signed_transactions are consistent.
             ensure!(
-                txn.hash() == txn_info.signed_transaction_hash(),
+                txn.as_signed_user_txn()?.hash() == txn_info.signed_transaction_hash(),
                 "Some hash of signed transaction does not match the corresponding transaction info in proof"
             );
             Ok(txn_info.hash())

@@ -22,7 +22,7 @@ use libra_types::{
         UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::Version,
+    transaction::{Transaction, Version},
     vm_error::StatusCode,
 };
 use rand::{
@@ -256,7 +256,7 @@ fn get_mock_txn_data(
     start_seq: u64,
     end_seq: u64,
 ) -> (
-    Vec<libra_types::proto::types::SignedTransaction>,
+    Vec<libra_types::proto::types::Transaction>,
     Vec<TransactionInfo>,
 ) {
     let mut seed_rng = OsRng::new().expect("can't access OsRng");
@@ -266,7 +266,13 @@ fn get_mock_txn_data(
     let mut txns = vec![];
     let mut infos = vec![];
     for i in start_seq..=end_seq {
-        let txn = get_test_signed_txn(address, i, priv_key.clone(), pub_key.clone(), None);
+        let txn = Transaction::UserTransaction(get_test_signed_txn(
+            address,
+            i,
+            priv_key.clone(),
+            pub_key.clone(),
+            None,
+        ));
         txns.push(txn.into());
 
         let info = get_transaction_info().into();

@@ -820,7 +820,7 @@ fn arb_transaction_list_with_proof() -> impl Strategy<Value = TransactionListWit
         let transaction_and_infos: Vec<_> = transaction_and_infos_and_events
             .clone()
             .into_iter()
-            .map(|(transaction, info, _event)| (transaction, info))
+            .map(|(transaction, info, _event)| (Transaction::UserTransaction(transaction), info))
             .collect();
         let events: Vec<_> = transaction_and_infos_and_events
             .into_iter()

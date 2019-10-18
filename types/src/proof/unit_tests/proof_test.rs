@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::transaction::Transaction;
 use crate::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -467,7 +468,7 @@ fn test_verify_account_state_and_event() {
 // Return a variable length of transaction_and_info list with a random range within [0,
 // list_length).
 fn arb_signed_txn_list_and_range(
-) -> impl Strategy<Value = (Vec<(SignedTransaction, TransactionInfo)>, usize, usize)> {
+) -> impl Strategy<Value = (Vec<(Transaction, TransactionInfo)>, usize, usize)> {
     vec(
         (any::<SignedTransaction>(), any::<TransactionInfo>()),
         0..100,
@@ -486,7 +487,7 @@ fn arb_signed_txn_list_and_range(
             .map(|(txn, txn_info)| {
                 let txn_hash = txn.hash();
                 (
-                    txn,
+                    Transaction::UserTransaction(txn),
                     TransactionInfo::new(
                         txn_hash,
                         txn_info.state_root_hash(),
