@@ -20,15 +20,14 @@ use crate::{
 };
 use consensus_types::{
     block::Block,
-    block_info::BlockInfo,
     common::{Author, Payload, Round},
     proposal_msg::ProposalMsg,
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
     timeout_certificate::TimeoutCertificate,
     vote::Vote,
-    vote_data::VoteData,
     vote_msg::VoteMsg,
+    vote_proposal::VoteProposal,
 };
 use failure::ResultExt;
 use libra_crypto::HashValue;
@@ -615,36 +614,27 @@ impl<T: Payload> EventProcessor<T> {
         self.wait_before_vote_if_needed(block.timestamp_usecs())
             .await?;
 
-        let vote_info = self
+        let vote_proposal = VoteProposal::new(
+            block.clone(),
+            executed_block.compute_result().executed_state.state_id,
+            executed_block.compute_result().executed_state.version,
+            executed_block
+                .compute_result()
+                .executed_state
+                .validators
+                .clone(),
+        );
+
+        let vote = self
             .safety_rules
-            .voting_rule(block)
+            .construct_and_sign_vote(&vote_proposal)
             .with_context(|e| format!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e))?;
+
         let consensus_state = self.safety_rules.consensus_state();
         counters::LAST_VOTE_ROUND.set(consensus_state.last_vote_round() as i64);
 
-        let executed_state = &executed_block.compute_result().executed_state;
-
-        let ledger_info_placeholder = self
-            .block_store
-            .ledger_info_placeholder(vote_info.potential_commit_id(), block.epoch());
-
-        let vote = Vote::new(
-            VoteData::new(
-                BlockInfo::from_block(
-                    block,
-                    executed_state.state_id,
-                    executed_state.version,
-                    executed_state.validators.clone(),
-                ),
-                block.quorum_cert().certified_block().clone(),
-            ),
-            self.author,
-            ledger_info_placeholder,
-            self.block_store.signer(),
-        );
-
         self.storage
-            .save_consensus_state(vote_info.consensus_state().clone(), &vote)
+            .save_consensus_state(consensus_state, &vote)
             .with_context(|e| format!("Fail to persist consensus state: {:?}", e))?;
         self.last_vote_sent.replace((vote.clone(), block.round()));
         Ok(vote)

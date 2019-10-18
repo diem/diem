@@ -207,7 +207,7 @@ impl<T: Payload> ChainedBftSMR<T> {
         );
 
         let last_vote = initial_data.last_vote();
-        let safety_rules = SafetyRules::new(initial_data.state());
+        let safety_rules = SafetyRules::new(initial_data.state(), signer.clone());
 
         let block_store = Arc::new(block_on(BlockStore::new(
             Arc::clone(&self.storage),

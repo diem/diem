@@ -20,12 +20,9 @@ use failure::ResultExt;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 
+use libra_types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_types::validator_set::ValidatorSet;
-use libra_types::{
-    crypto_proxies::{ValidatorSigner, ValidatorVerifier},
-    ledger_info::LedgerInfo,
-};
 use mirai_annotations::checked_precondition;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
@@ -340,52 +337,6 @@ impl<T: Payload> BlockStore<T> {
             .unwrap()
             .process_pruned_blocks(next_root_id, id_to_remove.clone());
         id_to_remove
-    }
-
-    /// If block id information is found, returns the ledger info placeholder, otherwise, return
-    /// a placeholder with info of the genesis block.
-    pub fn ledger_info_placeholder(
-        &self,
-        potential_commit_id: Option<HashValue>,
-        epoch_num: u64,
-    ) -> LedgerInfo {
-        let block_id = match potential_commit_id {
-            Some(id) => id,
-            None => return Self::zero_ledger_info_placeholder(epoch_num),
-        };
-        let block_to_commit = match self.get_block(block_id) {
-            Some(b) => b,
-            None => {
-                return Self::zero_ledger_info_placeholder(epoch_num);
-            }
-        };
-        let compute_result = block_to_commit.compute_result();
-        // The block we vote for should be in the same epoch as the block we commit.
-        assert_eq!(epoch_num, block_to_commit.epoch());
-        LedgerInfo::new(
-            compute_result.executed_state.version,
-            compute_result.executed_state.state_id,
-            HashValue::zero(),
-            block_id,
-            block_to_commit.epoch(),
-            block_to_commit.timestamp_usecs(),
-            compute_result.executed_state.validators.clone(),
-        )
-    }
-
-    /// Used in case we're using a ledger info just as a placeholder for signing the votes / QCs
-    /// and there is no real block committed.
-    /// It's all pretty much zeroes.
-    fn zero_ledger_info_placeholder(epoch_num: u64) -> LedgerInfo {
-        LedgerInfo::new(
-            0,
-            HashValue::zero(),
-            HashValue::zero(),
-            HashValue::zero(),
-            epoch_num,
-            0,
-            None,
-        )
     }
 
     fn verify_and_get_parent(&self, block: &Block<T>) -> failure::Result<Arc<ExecutedBlock<T>>> {
