@@ -24,6 +24,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     collections::HashSet,
     convert::TryFrom,
+    fmt,
     fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
@@ -120,6 +121,15 @@ where
             "validator" => RoleType::Validator,
             "full_node" => RoleType::FullNode,
             _ => unimplemented!("Invalid node role: {}", t.as_ref()),
+        }
+    }
+}
+
+impl fmt::Display for RoleType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            RoleType::Validator => write!(f, "validator"),
+            RoleType::FullNode => write!(f, "full_node"),
         }
     }
 }

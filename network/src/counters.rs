@@ -3,6 +3,18 @@
 
 use lazy_static;
 use libra_metrics::{Histogram, IntCounter, IntGauge, OpMetrics};
+use prometheus::IntGaugeVec;
+
+lazy_static::lazy_static! {
+    pub static ref NETWORK_PEERS: IntGaugeVec = register_int_gauge_vec!(
+        // metric name
+        "libra_network_peers",
+        // metric description
+        "Libra network peers counter",
+        // metric labels (dimensions)
+        &["state", "role"]
+    ).unwrap();
+}
 
 lazy_static::lazy_static! {
     pub static ref OP_COUNTERS: OpMetrics = OpMetrics::new_and_registered("network");

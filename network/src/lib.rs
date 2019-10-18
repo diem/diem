@@ -7,6 +7,9 @@
 // </Black magic>
 
 // Public exports
+#[macro_use]
+extern crate prometheus;
+
 pub use common::NetworkPublicKeys;
 pub use interface::NetworkProvider;
 
