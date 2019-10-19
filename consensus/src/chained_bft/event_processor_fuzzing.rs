@@ -137,9 +137,6 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     // TODO: have two different nodes, one for proposing, one for accepting a proposal
     let proposer_election = Box::new(RotatingProposer::new(vec![signer.author()], 1));
 
-    // TODO: do we want to fuzz the real StateComputer as well?
-    let empty_state_computer = Arc::new(EmptyStateComputer);
-
     // We do not want to care about the time
     let enforce_increasing_timestamps = false;
 
@@ -151,7 +148,6 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         proposer_election,
         proposal_generator,
         safety_rules,
-        empty_state_computer,
         Arc::new(MockTransactionManager::new()),
         network,
         storage.clone(),

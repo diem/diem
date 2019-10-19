@@ -6,6 +6,7 @@ use crate::{
         block_storage::{block_tree::BlockTree, BlockReader, VoteReceptionResult},
         persistent_storage::{PersistentStorage, RecoveryData},
     },
+    counters,
     state_replication::StateComputer,
 };
 use consensus_types::{
@@ -22,7 +23,7 @@ use failure::ResultExt;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 
-use libra_types::crypto_proxies::ValidatorVerifier;
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_types::validator_set::ValidatorSet;
 use mirai_annotations::checked_precondition;
@@ -30,6 +31,7 @@ use std::{
     collections::{vec_deque::VecDeque, HashMap},
     sync::{Arc, RwLock},
 };
+use termion::color::*;
 
 #[cfg(test)]
 #[path = "block_store_test.rs"]
@@ -154,6 +156,50 @@ impl<T: Payload> BlockStore<T> {
         tree
     }
 
+    /// Commit the given block id with the proof, returns the path from current root or error
+    pub async fn commit(
+        &self,
+        finality_proof: LedgerInfoWithSignatures,
+    ) -> failure::Result<Vec<Arc<ExecutedBlock<T>>>> {
+        let block_id_to_commit = finality_proof.ledger_info().consensus_block_id();
+        let block_to_commit = self
+            .get_block(block_id_to_commit)
+            .ok_or_else(|| format_err!("Committed block id not found"))?;
+
+        // First make sure that this commit is new.
+        ensure!(
+            block_to_commit.round() > self.root().round(),
+            "Committed block round lower than root"
+        );
+
+        let blocks_to_commit = self
+            .path_from_root(block_id_to_commit)
+            .unwrap_or_else(Vec::new);
+
+        let payload_and_output_list = blocks_to_commit
+            .iter()
+            .map(|b| {
+                (
+                    b.payload().unwrap_or(&T::default()).clone(),
+                    Arc::clone(b.output()),
+                )
+            })
+            .collect();
+        self.state_computer
+            .commit(payload_and_output_list, finality_proof)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to persist commit due to {:?}", e));
+        counters::LAST_COMMITTED_ROUND.set(block_to_commit.round() as i64);
+        debug!("{}Committed{} {}", Fg(Blue), Fg(Reset), *block_to_commit);
+        event!("committed",
+            "block_id": block_to_commit.id().short_str(),
+            "round": block_to_commit.round(),
+            "parent_id": block_to_commit.parent_id().short_str(),
+        );
+        self.prune_tree(block_to_commit.id());
+        Ok(blocks_to_commit)
+    }
+
     pub async fn rebuild(
         &self,
         root: (Block<T>, QuorumCert, QuorumCert),
@@ -178,6 +224,19 @@ impl<T: Payload> BlockStore<T> {
             error!("fail to delete block: {:?}", e);
         }
         *self.inner.write().unwrap() = tree;
+        // If we fail to commit B_i via state computer and crash, after restart our highest ledger info
+        // will not match the latest commit B_j(j<i) of state computer.
+        // This introduces an inconsistent state if we send out SyncInfo and others try to sync to
+        // B_i and figure out we only have B_j.
+        // Here we commit up to the highest_ledger_info to maintain highest_ledger_info == state_computer.committed_trees.
+        if let Some(block_to_commit) = self.highest_ledger_info().committed_block_id() {
+            if block_to_commit != self.root().id() {
+                let finality_proof = self.highest_ledger_info().ledger_info().clone();
+                if let Err(e) = self.commit(finality_proof).await {
+                    warn!("{:?}", e);
+                }
+            }
+        }
     }
 
     /// Execute and insert a block if it passes all validation tests.
@@ -320,7 +379,7 @@ impl<T: Payload> BlockStore<T> {
     /// B3--> B4, root = B3
     ///
     /// Returns the block ids of the blocks removed.
-    pub fn prune_tree(&self, next_root_id: HashValue) -> VecDeque<HashValue> {
+    fn prune_tree(&self, next_root_id: HashValue) -> VecDeque<HashValue> {
         let id_to_remove = self
             .inner
             .read()

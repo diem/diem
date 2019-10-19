@@ -242,7 +242,6 @@ impl<T: Payload> ChainedBftSMR<T> {
             proposer_election,
             proposal_generator,
             safety_rules,
-            state_computer,
             txn_manager,
             network.clone(),
             Arc::clone(&self.storage),
