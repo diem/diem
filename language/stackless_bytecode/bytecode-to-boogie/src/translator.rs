@@ -13,8 +13,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        FieldDefinitionIndex, FunctionDefinitionIndex, FunctionHandleIndex, ModuleHandleIndex, SignatureToken,
-        StructDefinitionIndex, StructHandleIndex,
+        FieldDefinitionIndex, FunctionDefinitionIndex, FunctionHandleIndex, ModuleHandleIndex,
+        SignatureToken, StructDefinitionIndex, StructHandleIndex,
     },
     internals::ModuleIndex,
     views::{
@@ -207,12 +207,12 @@ impl<'a> ModuleTranslator<'a> {
     pub fn translate_function(&self, idx: usize) -> String {
         let mut res = String::new();
         // generate inline function with function body
-        res.push_str(&self.generate_function_sig(idx, true, &None));   // inlined version of function
+        res.push_str(&self.generate_function_sig(idx, true, &None)); // inlined version of function
         res.push_str(&self.generate_inline_function_body(idx, &None)); // generate function body
         res.push_str("\n");
 
         // generate non-line function which calls inline version for verification
-        res.push_str(&self.generate_function_sig(idx, false, &None));  // no inline
+        res.push_str(&self.generate_function_sig(idx, false, &None)); // no inline
         res.push_str(&self.generate_verify_function_body(idx, &None)); // function body just calls inlined version
         res
     }
@@ -232,10 +232,15 @@ impl<'a> ModuleTranslator<'a> {
             BrTrue(target, idx) => {
                 let (dbg_branch_taken_str, dbg_branch_not_taken_str) =
                     if self.dbg_branches_enabled(&fun_name) {
-                        let dbg_branch_var_name = format!("dbg_branch_at_line_{}", self.get_line_number(func_idx, offset));
+                        let dbg_branch_var_name = format!(
+                            "dbg_branch_at_line_{}",
+                            self.get_line_number(func_idx, offset)
+                        );
                         var_decls.push_str(&format!("    var {} : bool;\n", dbg_branch_var_name));
-                        (format!("assume {} == true; ", dbg_branch_var_name),
-                         format!("\n    assume {} == false;", dbg_branch_var_name))
+                        (
+                            format!("assume {} == true; ", dbg_branch_var_name),
+                            format!("\n    assume {} == false;", dbg_branch_var_name),
+                        )
                     } else {
                         (String::new(), String::new())
                     };
@@ -243,14 +248,19 @@ impl<'a> ModuleTranslator<'a> {
                     "if (b#Boolean(t{})) {{ {}goto Label_{}; }}{}",
                     idx, dbg_branch_taken_str, target, dbg_branch_not_taken_str
                 )]
-            },
+            }
             BrFalse(target, idx) => {
                 let (dbg_branch_taken_str, dbg_branch_not_taken_str) =
                     if self.dbg_branches_enabled(&fun_name) {
-                        let dbg_branch_var_name = format!("dbg_branch_at_line_{}", self.get_line_number(func_idx, offset));
+                        let dbg_branch_var_name = format!(
+                            "dbg_branch_at_line_{}",
+                            self.get_line_number(func_idx, offset)
+                        );
                         var_decls.push_str(&format!("    var {} : bool;\n", dbg_branch_var_name));
-                        (format!("assume {} == true; ", dbg_branch_var_name),
-                         format!("\n    assume {} == false;", dbg_branch_var_name))
+                        (
+                            format!("assume {} == true; ", dbg_branch_var_name),
+                            format!("\n    assume {} == false;", dbg_branch_var_name),
+                        )
                     } else {
                         (String::new(), String::new())
                     };
@@ -258,7 +268,7 @@ impl<'a> ModuleTranslator<'a> {
                     "if (!b#Boolean(t{})) {{ {}goto Label_{}; }}{}",
                     idx, dbg_branch_taken_str, target, dbg_branch_not_taken_str
                 )]
-            },
+            }
             MoveLoc(dest, src) => {
                 if self.is_local_ref(*dest, func_idx) {
                     vec![format!(
@@ -638,11 +648,13 @@ impl<'a> ModuleTranslator<'a> {
                 if self.dbg_args_enabled(&fun_name) {
                     var_decls.push_str(&format!(
                         "    var dbg_param_{}: {};\n",
-                        self.get_orig_arg_name(i), self.format_value_or_ref(&local_type)
+                        self.get_orig_arg_name(i),
+                        self.format_value_or_ref(&local_type)
                     ));
                     dbg_arg_assumption_str.push_str(&format!(
                         "    assume dbg_param_{} == {};\n",
-                        self.get_orig_arg_name(i), self.get_arg_name(i, arg_names)
+                        self.get_orig_arg_name(i),
+                        self.get_arg_name(i, arg_names)
                     ));
                 }
 
@@ -711,7 +723,8 @@ impl<'a> ModuleTranslator<'a> {
             if branching_targets.contains(&offset) {
                 res.push_str(&format!("Label_{}:\n", offset));
             }
-            let (new_var_decls, new_res) = self.translate_bytecode(offset, bytecode, idx, arg_names);
+            let (new_var_decls, new_res) =
+                self.translate_bytecode(offset, bytecode, idx, arg_names);
             var_decls.push_str(&new_var_decls);
             res.push_str(&new_res);
             if let WriteRef(dest, src) = bytecode {
@@ -819,7 +832,10 @@ impl<'a> ModuleTranslator<'a> {
     // Currently gets byte offset, not line number
     pub fn get_line_number(&self, func_idx: usize, offset: usize) -> usize {
         let function_definition_index = FunctionDefinitionIndex(func_idx as u16);
-        let loc = self.source_map.get_code_location(function_definition_index, offset as u16).unwrap();
+        let loc = self
+            .source_map
+            .get_code_location(function_definition_index, offset as u16)
+            .unwrap();
         loc.start().to_usize()
     }
 
