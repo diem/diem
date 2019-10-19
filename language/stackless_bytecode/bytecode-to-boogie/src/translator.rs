@@ -230,28 +230,30 @@ impl<'a> ModuleTranslator<'a> {
         let stmts = match bytecode {
             Branch(target) => vec![format!("goto Label_{};", target)],
             BrTrue(target, idx) => {
-                let mut dbg_branch_taken_str = String::new();
-                let mut dbg_branch_not_taken_str = String::new();
-                if self.dbg_branches_enabled(&fun_name) {
-                    let dbg_branch_var_name = format!("dbg_branch_at_line_{}", self.get_line_number(func_idx, offset));
-                    var_decls.push_str(&format!("    var {} : bool;\n", dbg_branch_var_name));
-                    dbg_branch_taken_str = format!("assume {} == true; ", dbg_branch_var_name);
-                    dbg_branch_not_taken_str = format!("\n    assume {} == false;", dbg_branch_var_name);
-                }
+                let (dbg_branch_taken_str, dbg_branch_not_taken_str) =
+                    if self.dbg_branches_enabled(&fun_name) {
+                        let dbg_branch_var_name = format!("dbg_branch_at_line_{}", self.get_line_number(func_idx, offset));
+                        var_decls.push_str(&format!("    var {} : bool;\n", dbg_branch_var_name));
+                        (format!("assume {} == true; ", dbg_branch_var_name),
+                         format!("\n    assume {} == false;", dbg_branch_var_name))
+                    } else {
+                        (String::new(), String::new())
+                    };
                 vec![format!(
                     "if (b#Boolean(t{})) {{ {}goto Label_{}; }}{}",
                     idx, dbg_branch_taken_str, target, dbg_branch_not_taken_str
                 )]
             },
             BrFalse(target, idx) => {
-                let mut dbg_branch_taken_str = String::new();
-                let mut dbg_branch_not_taken_str = String::new();
-                if self.dbg_branches_enabled(&fun_name) {
-                    let dbg_branch_var_name = format!("dbg_branch_at_line_{}", self.get_line_number(func_idx, offset));
-                    var_decls.push_str(&format!("    var {} : bool;\n", dbg_branch_var_name));
-                    dbg_branch_taken_str = format!("assume {} == true; ", dbg_branch_var_name);
-                    dbg_branch_not_taken_str = format!("\n    assume {} == false;", dbg_branch_var_name);
-                }
+                let (dbg_branch_taken_str, dbg_branch_not_taken_str) =
+                    if self.dbg_branches_enabled(&fun_name) {
+                        let dbg_branch_var_name = format!("dbg_branch_at_line_{}", self.get_line_number(func_idx, offset));
+                        var_decls.push_str(&format!("    var {} : bool;\n", dbg_branch_var_name));
+                        (format!("assume {} == true; ", dbg_branch_var_name),
+                         format!("\n    assume {} == false;", dbg_branch_var_name))
+                    } else {
+                        (String::new(), String::new())
+                    };
                 vec![format!(
                     "if (!b#Boolean(t{})) {{ {}goto Label_{}; }}{}",
                     idx, dbg_branch_taken_str, target, dbg_branch_not_taken_str
@@ -818,16 +820,16 @@ impl<'a> ModuleTranslator<'a> {
     pub fn get_line_number(&self, func_idx: usize, offset: usize) -> usize {
         let function_definition_index = FunctionDefinitionIndex(func_idx as u16);
         let loc = self.source_map.get_code_location(function_definition_index, offset as u16).unwrap();
-        return loc.start().to_usize();
+        loc.start().to_usize()
     }
 
     // Stubs for now: eventually should have a command-line or other flag to enable or disable debugging info.
     pub fn dbg_args_enabled(&self, _fun_name: &str) -> bool {
-        return false;
+        false
     }
 
     pub fn dbg_branches_enabled(&self, _fun_name: &str) -> bool {
-        return false;
+        false
     }
 
     /*
