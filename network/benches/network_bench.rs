@@ -182,9 +182,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
 fn compose_proposal(msg_len: usize) -> ConsensusMsg {
     let mut msg = ConsensusMsg::default();
     let mut proposal = Proposal::default();
-    let mut block = Block::default();
-    block.bytes = vec![0u8; msg_len];
-    proposal.proposed_block = Some(block);
+    proposal.bytes = vec![0u8; msg_len];
     msg.message = Some(ConsensusMsg_oneof::Proposal(proposal));
     msg
 }
