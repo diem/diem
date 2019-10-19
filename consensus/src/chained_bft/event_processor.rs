@@ -13,7 +13,7 @@ use crate::{
         persistent_storage::PersistentStorage,
     },
     counters,
-    state_replication::{StateComputer, TxnManager},
+    state_replication::TxnManager,
     util::time_service::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },
@@ -30,7 +30,6 @@ use consensus_types::{
     vote_proposal::VoteProposal,
 };
 use failure::ResultExt;
-use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
 use mirai_annotations::{
@@ -64,7 +63,6 @@ pub struct EventProcessor<T> {
     proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
     proposal_generator: ProposalGenerator<T>,
     safety_rules: SafetyRules,
-    state_computer: Arc<dyn StateComputer<Payload = T>>,
     txn_manager: Arc<dyn TxnManager<Payload = T>>,
     network: ConsensusNetworkImpl,
     storage: Arc<dyn PersistentStorage<T>>,
@@ -83,7 +81,6 @@ impl<T: Payload> EventProcessor<T> {
         proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
         proposal_generator: ProposalGenerator<T>,
         safety_rules: SafetyRules,
-        state_computer: Arc<dyn StateComputer<Payload = T>>,
         txn_manager: Arc<dyn TxnManager<Payload = T>>,
         network: ConsensusNetworkImpl,
         storage: Arc<dyn PersistentStorage<T>>,
@@ -103,7 +100,6 @@ impl<T: Payload> EventProcessor<T> {
             proposer_election,
             proposal_generator,
             safety_rules,
-            state_computer,
             txn_manager,
             network,
             storage,
@@ -429,7 +425,7 @@ impl<T: Payload> EventProcessor<T> {
                 highest_committed_proposal_round = Some(block.round());
             }
             let finality_proof = qc.ledger_info().clone();
-            self.process_commit(block.id(), finality_proof).await;
+            self.process_commit(finality_proof).await;
         }
         let mut tc_round = None;
         if let Some(timeout_cert) = tc {
@@ -739,64 +735,17 @@ impl<T: Payload> EventProcessor<T> {
     }
 
     /// Upon (potentially) new commit:
-    /// 0. Verify that this commit is newer than the current root.
-    /// 1. Notify state computer with the finality proof.
+    /// 1. Commit the blocks via block store.
     /// 2. After the state is finalized, update the txn manager with the status of the committed
     /// transactions.
-    /// 3. Prune the tree.
-    async fn process_commit(
-        &self,
-        block_id_to_commit: HashValue,
-        finality_proof: LedgerInfoWithSignatures,
-    ) {
-        let block_to_commit = match self.block_store.get_block(block_id_to_commit) {
-            Some(block) => block,
-            None => {
+    async fn process_commit(&self, finality_proof: LedgerInfoWithSignatures) {
+        let blocks_to_commit = match self.block_store.commit(finality_proof).await {
+            Ok(blocks) => blocks,
+            Err(e) => {
+                error!("{:?}", e);
                 return;
             }
         };
-
-        // First make sure that this commit is new.
-        if block_to_commit.round() <= self.block_store.root().round() {
-            return;
-        }
-
-        // Verify that the ledger info is indeed for the block we're planning to
-        // commit.
-        assert_eq!(
-            finality_proof.ledger_info().consensus_block_id(),
-            block_to_commit.id()
-        );
-
-        let blocks_to_commit = self
-            .block_store
-            .path_from_root(block_id_to_commit)
-            .unwrap_or_else(Vec::new);
-
-        let payload_and_output_list = blocks_to_commit
-            .iter()
-            .map(|b| {
-                (
-                    b.payload().unwrap_or(&T::default()).clone(),
-                    Arc::clone(b.output()),
-                )
-            })
-            .collect();
-        if let Err(e) = self
-            .state_computer
-            .commit(payload_and_output_list, finality_proof)
-            .await
-        {
-            // We assume that state computer cannot enter an inconsistent state that might
-            // violate safety of the protocol. Specifically, an executor service is going to panic
-            // if it fails to persist the commit requests, which would crash the whole process
-            // including consensus.
-            error!(
-                "Failed to persist commit, mempool will not be notified: {:?}",
-                e
-            );
-            return;
-        }
         // At this moment the new state is persisted and we can notify the clients.
         // Multiple blocks might be committed at once: notify about all the transactions in the
         // path from the old root to the new root.
@@ -821,14 +770,6 @@ impl<T: Payload> EventProcessor<T> {
                 }
             }
         }
-        counters::LAST_COMMITTED_ROUND.set(block_to_commit.round() as i64);
-        debug!("{}Committed{} {}", Fg(Blue), Fg(Reset), *block_to_commit);
-        event!("committed",
-            "block_id": block_to_commit.id().short_str(),
-            "round": block_to_commit.round(),
-            "parent_id": block_to_commit.parent_id().short_str(),
-        );
-        self.block_store.prune_tree(block_to_commit.id());
     }
 
     /// Retrieve a n chained blocks from the block store starting from

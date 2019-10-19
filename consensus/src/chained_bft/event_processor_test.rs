@@ -179,7 +179,6 @@ impl NodeSetup {
             proposer_election,
             proposal_generator,
             safety_rules,
-            state_computer,
             Arc::new(MockTransactionManager::new()),
             network,
             storage.clone(),

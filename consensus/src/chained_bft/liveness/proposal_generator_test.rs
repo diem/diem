@@ -9,6 +9,7 @@ use crate::{
     },
     util::mock_time_service::SimulatedTimeService,
 };
+use consensus_types::block::block_test_utils::placeholder_certificate_for_block;
 use consensus_types::{block::Block, quorum_cert::QuorumCert};
 use futures::executor::block_on;
 use libra_types::crypto_proxies::ValidatorSigner;
@@ -127,7 +128,15 @@ fn test_empty_proposal_after_reconfiguration() {
     let a2 = inserter.insert_reconfiguration_block(&a1, 2);
     inserter.insert_qc_for_block(a2.as_ref(), None);
     // if reconfiguration is committed, generate normal proposal
-    block_store.prune_tree(a2.id());
+    let li = placeholder_certificate_for_block(
+        vec![inserter.signer()],
+        a2.id(),
+        a2.round(),
+        a2.id(),
+        a2.round(),
+        Some(a2.id()),
+    );
+    block_on(block_store.commit(li.ledger_info().clone())).unwrap();
     let normal_proposal_2 =
         block_on(proposal_generator.generate_proposal(43, minute_from_now())).unwrap();
     assert!(!normal_proposal_2.payload().unwrap().is_empty());
