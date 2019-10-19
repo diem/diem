@@ -19,10 +19,7 @@ message ConsensusMsg {
 }
 
 message Proposal {
-  // The proposed block
-  Block proposed_block = 1;
-  // Information about the highest QC, LedgerInfo, TimeoutCertificate, etc.
-  SyncInfo sync_info = 2;
+  bytes bytes = 1;
 }
 
 message SyncInfo {

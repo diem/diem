@@ -8,13 +8,15 @@ use crate::{
 };
 use failure::prelude::*;
 use libra_types::crypto_proxies::ValidatorVerifier;
+use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 
 /// ProposalMsg contains the required information for the proposer election protocol to make its
 /// choice (typically depends on round and proposer info).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ProposalMsg<T> {
+    #[serde(bound(deserialize = "Block<T>: Deserialize<'de>"))]
     proposal: Block<T>,
     sync_info: SyncInfo,
 }
@@ -27,17 +29,7 @@ impl<T: Payload> TryFrom<network::proto::Proposal> for ProposalUncheckedSignatur
     type Error = failure::Error;
 
     fn try_from(proto: network::proto::Proposal) -> failure::Result<Self> {
-        let proposal = proto
-            .proposed_block
-            .ok_or_else(|| format_err!("Missing proposed_block"))?
-            .try_into()?;
-        let sync_info = proto
-            .sync_info
-            .ok_or_else(|| format_err!("Missing sync_info"))?
-            .try_into()?;
-        Ok(ProposalUncheckedSignatures(ProposalMsg::new(
-            proposal, sync_info,
-        )))
+        Ok(ProposalUncheckedSignatures(lcs::from_bytes(&proto.bytes)?))
     }
 }
 
@@ -173,8 +165,7 @@ impl<T: Payload> TryFrom<ProposalMsg<T>> for network::proto::Proposal {
 
     fn try_from(proposal: ProposalMsg<T>) -> failure::Result<Self> {
         Ok(Self {
-            proposed_block: Some(proposal.proposal.try_into()?),
-            sync_info: Some(proposal.sync_info.try_into()?),
+            bytes: lcs::to_bytes(&proposal)?,
         })
     }
 }
