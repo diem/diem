@@ -1,6 +1,8 @@
 //! This module translates the bytecode of a module to Boogie code.
 
+use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
 use bytecode_verifier::VerifiedModule;
+use ir_to_bytecode::parser::ast::Loc;
 use libra_types::identifier::Identifier;
 use num::{BigInt, Num};
 use stackless_bytecode_generator::{
@@ -11,8 +13,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        FieldDefinitionIndex, FunctionHandleIndex, ModuleHandleIndex, SignatureToken,
-        StructDefinitionIndex, StructHandleIndex,
+        FieldDefinitionIndex, FunctionDefinitionIndex, FunctionHandleIndex, ModuleHandleIndex,
+        SignatureToken, StructDefinitionIndex, StructHandleIndex,
     },
     internals::ModuleIndex,
     views::{
@@ -23,6 +25,7 @@ use vm::{
 
 pub struct BoogieTranslator {
     pub modules: Vec<VerifiedModule>,
+    pub source_maps: SourceMap<Loc>,
     pub struct_defs: BTreeMap<String, usize>,
     pub max_struct_depth: usize,
     pub module_name_to_idx: BTreeMap<Identifier, usize>,
@@ -30,12 +33,13 @@ pub struct BoogieTranslator {
 
 pub struct ModuleTranslator<'a> {
     pub module: &'a VerifiedModule,
+    pub source_map: &'a ModuleSourceMap<Loc>,
     pub stackless_bytecode: Vec<StacklessFunction>,
     pub all_type_strs: BTreeSet<String>,
 }
 
 impl BoogieTranslator {
-    pub fn new(modules: &[VerifiedModule]) -> Self {
+    pub fn new(modules: &[VerifiedModule], source_maps: &[ModuleSourceMap<Loc>]) -> Self {
         let mut struct_defs: BTreeMap<String, usize> = BTreeMap::new();
         let mut module_name_to_idx: BTreeMap<Identifier, usize> = BTreeMap::new();
         for (module_idx, module) in modules.iter().enumerate() {
@@ -55,6 +59,7 @@ impl BoogieTranslator {
         }
         Self {
             modules: modules.to_vec(),
+            source_maps: source_maps.to_vec(),
             struct_defs,
             max_struct_depth: 0,
             module_name_to_idx,
@@ -72,8 +77,8 @@ impl BoogieTranslator {
         // generate IsPrefix and UpdateValue to the max depth
         res.push_str(&self.emit_stratified_functions());
 
-        for module in self.modules.iter() {
-            let mut mt = ModuleTranslator::new(&module);
+        for (module_idx, module) in self.modules.iter().enumerate() {
+            let mut mt = ModuleTranslator::new(&module, &self.source_maps[module_idx]);
             res.push_str(&mt.translate());
         }
         res
@@ -170,7 +175,7 @@ impl BoogieTranslator {
 }
 
 impl<'a> ModuleTranslator<'a> {
-    pub fn new(module: &'a VerifiedModule) -> Self {
+    pub fn new(module: &'a VerifiedModule, source_map: &'a ModuleSourceMap<Loc>) -> Self {
         let stackless_bytecode = StacklessModuleGenerator::new(module.as_inner()).generate_module();
         let mut all_type_strs = BTreeSet::new();
         for struct_def in module.struct_defs().iter() {
@@ -179,6 +184,7 @@ impl<'a> ModuleTranslator<'a> {
         }
         Self {
             module,
+            source_map,
             stackless_bytecode,
             all_type_strs,
         }
@@ -200,30 +206,69 @@ impl<'a> ModuleTranslator<'a> {
 
     pub fn translate_function(&self, idx: usize) -> String {
         let mut res = String::new();
-        // generate function signature
+        // generate inline function with function body
+        res.push_str(&self.generate_function_sig(idx, true, &None)); // inlined version of function
+        res.push_str(&self.generate_inline_function_body(idx, &None)); // generate function body
+        res.push_str("\n");
+
+        // generate non-line function which calls inline version for verification
         res.push_str(&self.generate_function_sig(idx, false, &None)); // no inline
-                                                                      // generate function body
-        res.push_str(&self.generate_verify_function_body(idx, &None));
+        res.push_str(&self.generate_verify_function_body(idx, &None)); // function body just calls inlined version
         res
     }
 
     pub fn translate_bytecode(
         &self,
+        offset: usize,
         bytecode: &StacklessBytecode,
         func_idx: usize,
         arg_names: &Option<Vec<String>>,
-    ) -> String {
+    ) -> (String, String) {
+        let fun_name = self.function_name_from_definition_index(func_idx);
+        let mut var_decls = String::new();
         let mut res = String::new();
         let stmts = match bytecode {
             Branch(target) => vec![format!("goto Label_{};", target)],
-            BrTrue(target, idx) => vec![format!(
-                "if (b#Boolean(t{})) {{ goto Label_{}; }}",
-                idx, target
-            )],
-            BrFalse(target, idx) => vec![format!(
-                "if (!b#Boolean(t{})) {{ goto Label_{}; }}",
-                idx, target
-            )],
+            BrTrue(target, idx) => {
+                let (dbg_branch_taken_str, dbg_branch_not_taken_str) =
+                    if self.dbg_branches_enabled(&fun_name) {
+                        let dbg_branch_var_name = format!(
+                            "dbg_branch_at_line_{}",
+                            self.get_line_number(func_idx, offset)
+                        );
+                        var_decls.push_str(&format!("    var {} : bool;\n", dbg_branch_var_name));
+                        (
+                            format!("assume {} == true; ", dbg_branch_var_name),
+                            format!("\n    assume {} == false;", dbg_branch_var_name),
+                        )
+                    } else {
+                        (String::new(), String::new())
+                    };
+                vec![format!(
+                    "if (b#Boolean(t{})) {{ {}goto Label_{}; }}{}",
+                    idx, dbg_branch_taken_str, target, dbg_branch_not_taken_str
+                )]
+            }
+            BrFalse(target, idx) => {
+                let (dbg_branch_taken_str, dbg_branch_not_taken_str) =
+                    if self.dbg_branches_enabled(&fun_name) {
+                        let dbg_branch_var_name = format!(
+                            "dbg_branch_at_line_{}",
+                            self.get_line_number(func_idx, offset)
+                        );
+                        var_decls.push_str(&format!("    var {} : bool;\n", dbg_branch_var_name));
+                        (
+                            format!("assume {} == true; ", dbg_branch_var_name),
+                            format!("\n    assume {} == false;", dbg_branch_var_name),
+                        )
+                    } else {
+                        (String::new(), String::new())
+                    };
+                vec![format!(
+                    "if (!b#Boolean(t{})) {{ {}goto Label_{}; }}{}",
+                    idx, dbg_branch_taken_str, target, dbg_branch_not_taken_str
+                )]
+            }
             MoveLoc(dest, src) => {
                 if self.is_local_ref(*dest, func_idx) {
                     vec![format!(
@@ -469,7 +514,7 @@ impl<'a> ModuleTranslator<'a> {
             res.push_str(&format!("    {}\n", code));
         }
         res.push('\n');
-        res
+        (var_decls, res)
     }
 
     // return a string for a boogie procedure header.
@@ -572,13 +617,15 @@ impl<'a> ModuleTranslator<'a> {
         idx: usize,
         arg_names: &Option<Vec<String>>,
     ) -> String {
+        let mut var_decls = String::new();
         let mut res = String::new();
         let function_def = &self.module.function_defs()[idx];
         let code = &self.stackless_bytecode[idx];
 
-        res.push_str("\n{\n");
-        res.push_str("    // declare local variables\n");
+        var_decls.push_str("\n{\n");
+        var_decls.push_str("    // declare local variables\n");
 
+        let fun_name = self.function_name_from_definition_index(idx);
         let function_handle = self.module.function_handle_at(function_def.function);
         let function_signature = self.module.function_signature_at(function_handle.signature);
         let num_args = function_signature.arg_types.len();
@@ -586,6 +633,7 @@ impl<'a> ModuleTranslator<'a> {
         let mut val_vars = BTreeSet::new(); // set of locals that are not
         let mut arg_assignment_str = String::new();
         let mut arg_value_assumption_str = String::new();
+        let mut dbg_arg_assumption_str = String::new();
         for (i, local_type) in code.local_types.iter().enumerate() {
             if i < num_args {
                 arg_assignment_str.push_str(&format!(
@@ -597,6 +645,18 @@ impl<'a> ModuleTranslator<'a> {
                     "    {}",
                     self.format_type_checking(self.get_arg_name(i, arg_names), local_type)
                 ));
+                if self.dbg_args_enabled(&fun_name) {
+                    var_decls.push_str(&format!(
+                        "    var dbg_param_{}: {};\n",
+                        self.get_orig_arg_name(i),
+                        self.format_value_or_ref(&local_type)
+                    ));
+                    dbg_arg_assumption_str.push_str(&format!(
+                        "    assume dbg_param_{} == {};\n",
+                        self.get_orig_arg_name(i),
+                        self.get_arg_name(i, arg_names)
+                    ));
+                }
 
                 if self.is_local_ref(i, idx) {
                     arg_value_assumption_str.push_str(&format!(
@@ -617,7 +677,7 @@ impl<'a> ModuleTranslator<'a> {
             if i < num_args && local_type.is_mutable_reference() {
                 continue;
             }
-            res.push_str(&format!(
+            var_decls.push_str(&format!(
                 "    var {}: {}; // {}\n",
                 self.get_local_name(i, arg_names),
                 self.format_value_or_ref(&local_type),
@@ -625,8 +685,9 @@ impl<'a> ModuleTranslator<'a> {
             ));
         }
 
-        res.push_str("\n    // declare a new creation time for calls inside this function\n");
-        res.push_str("    var c': CreationTime;\n    assume c' > c;\n");
+        var_decls.push_str("\n    // declare a new creation time for calls inside this function\n");
+        var_decls.push_str("    var c': CreationTime;\n");
+        res.push_str("    assume c' > c;\n");
         // DD 10/8/2019: I think it's ok to assume !abort_flag even if function is inlined.
         // if !inline {
         res.push_str("    assume !abort_flag;\n");
@@ -635,6 +696,10 @@ impl<'a> ModuleTranslator<'a> {
         res.push_str(&arg_value_assumption_str);
         res.push_str("\n    // assign arguments to locals so they can be modified\n");
         res.push_str(&arg_assignment_str);
+        if self.dbg_args_enabled(&fun_name) {
+            res.push_str("\n    // record values of parameters\n");
+            res.push_str(&dbg_arg_assumption_str);
+        }
         res.push_str("\n    // assign ResourceStores to locals so they can be modified\n");
         res.push_str("    addr_exists' := addr_exists;\n");
         res.push_str("\n    // bytecode translation starts here\n");
@@ -658,7 +723,10 @@ impl<'a> ModuleTranslator<'a> {
             if branching_targets.contains(&offset) {
                 res.push_str(&format!("Label_{}:\n", offset));
             }
-            res.push_str(&self.translate_bytecode(bytecode, idx, arg_names));
+            let (new_var_decls, new_res) =
+                self.translate_bytecode(offset, bytecode, idx, arg_names);
+            var_decls.push_str(&new_var_decls);
+            res.push_str(&new_res);
             if let WriteRef(dest, src) = bytecode {
                 // update everything that might be related to the updated reference
                 for s in &ref_vars {
@@ -735,7 +803,8 @@ impl<'a> ModuleTranslator<'a> {
             }
         }
         res.push_str("}\n");
-        res
+        var_decls.push_str(&res);
+        var_decls
     }
 
     pub fn get_local_name(&self, idx: usize, arg_names: &Option<Vec<String>>) -> String {
@@ -753,6 +822,30 @@ impl<'a> ModuleTranslator<'a> {
         } else {
             format!("arg{}", idx)
         }
+    }
+
+    // FIXME: Stub for now: eventually get source-level name of arg
+    pub fn get_orig_arg_name(&self, idx: usize) -> String {
+        format!("arg{}", idx)
+    }
+
+    // Currently gets byte offset, not line number
+    pub fn get_line_number(&self, func_idx: usize, offset: usize) -> usize {
+        let function_definition_index = FunctionDefinitionIndex(func_idx as u16);
+        let loc = self
+            .source_map
+            .get_code_location(function_definition_index, offset as u16)
+            .unwrap();
+        loc.start().to_usize()
+    }
+
+    // Stubs for now: eventually should have a command-line or other flag to enable or disable debugging info.
+    pub fn dbg_args_enabled(&self, _fun_name: &str) -> bool {
+        false
+    }
+
+    pub fn dbg_branches_enabled(&self, _fun_name: &str) -> bool {
+        false
     }
 
     /*

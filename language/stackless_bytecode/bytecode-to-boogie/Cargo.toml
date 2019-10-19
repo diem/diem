@@ -13,6 +13,7 @@ edition = "2018"
 bytecode-verifier = { path = "../../bytecode-verifier" }
 vm = { path = "../../vm" }
 libra-types = { path = "../../../types" }
+bytecode_source_map = { path = "../../compiler/bytecode_source_map" }
 ir_to_bytecode = { path = "../../compiler/ir_to_bytecode" }
 stackless_bytecode_generator = { path = "../generator"}
 stdlib = { path = "../../stdlib" }

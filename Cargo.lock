@@ -354,6 +354,7 @@ name = "bytecode-to-boogie"
 version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
+ "bytecode_source_map 0.1.0",
  "ir_to_bytecode 0.1.0",
  "libra-types 0.1.0",
  "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
