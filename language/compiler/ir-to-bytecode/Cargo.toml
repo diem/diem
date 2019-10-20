@@ -1,5 +1,5 @@
 [package]
-name = "ir_to_bytecode"
+name = "ir-to-bytecode"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra ir to bytecode"
@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 failure = { path = "../../../common/failure-ext", package = "libra-failure-ext" }
-ir_to_bytecode_syntax = { path = "syntax" }
+ir-to-bytecode-syntax = { path = "syntax" }
 libra-types = { path = "../../../types" }
 vm = { path = "../../vm" }
 bytecode_source_map = { path = "../bytecode_source_map" }

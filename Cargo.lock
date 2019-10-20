@@ -355,7 +355,7 @@ version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
  "bytecode_source_map 0.1.0",
- "ir_to_bytecode 0.1.0",
+ "ir-to-bytecode 0.1.0",
  "libra-types 0.1.0",
  "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -384,7 +384,7 @@ dependencies = [
  "bytecode-verifier 0.1.0",
  "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "ir_to_bytecode_syntax 0.1.0",
+ "ir-to-bytecode-syntax 0.1.0",
  "libra-failure-ext 0.1.0",
  "libra-types 0.1.0",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -660,7 +660,7 @@ version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
  "bytecode_source_map 0.1.0",
- "ir_to_bytecode 0.1.0",
+ "ir-to-bytecode 0.1.0",
  "libra-failure-ext 0.1.0",
  "libra-types 0.1.0",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1333,8 +1333,8 @@ dependencies = [
  "bytecode-verifier 0.1.0",
  "datatest-stable 0.1.0",
  "filecheck 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ir_to_bytecode 0.1.0",
- "ir_to_bytecode_syntax 0.1.0",
+ "ir-to-bytecode 0.1.0",
+ "ir-to-bytecode-syntax 0.1.0",
  "language_e2e_tests 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
@@ -1737,13 +1737,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "ir_to_bytecode"
+name = "ir-to-bytecode"
 version = "0.1.0"
 dependencies = [
  "bytecode_source_map 0.1.0",
  "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "ir_to_bytecode_syntax 0.1.0",
+ "ir-to-bytecode-syntax 0.1.0",
  "lalrpop-util 0.17.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-failure-ext 0.1.0",
  "libra-types 0.1.0",
@@ -1752,7 +1752,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ir_to_bytecode_syntax"
+name = "ir-to-bytecode-syntax"
 version = "0.1.0"
 dependencies = [
  "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4174,7 +4174,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "stackless_bytecode_generator"
 version = "0.1.0"
 dependencies = [
- "ir_to_bytecode 0.1.0",
+ "ir-to-bytecode 0.1.0",
  "libra-types 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
@@ -4229,7 +4229,7 @@ version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
  "bytecode_source_map 0.1.0",
- "ir_to_bytecode 0.1.0",
+ "ir-to-bytecode 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
 ]
@@ -4999,7 +4999,7 @@ dependencies = [
 name = "transaction-builder"
 version = "0.1.0"
 dependencies = [
- "ir_to_bytecode 0.1.0",
+ "ir-to-bytecode 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
@@ -5014,7 +5014,7 @@ version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
  "functional_tests 0.1.0",
- "ir_to_bytecode 0.1.0",
+ "ir-to-bytecode 0.1.0",
  "libra-types 0.1.0",
  "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",

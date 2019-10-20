@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 bytecode-verifier = { path = "../bytecode-verifier" }
 failure = { path = "../../common/failure-ext", package = "libra-failure-ext" }
-ir_to_bytecode = { path = "ir_to_bytecode" }
+ir-to-bytecode = { path = "ir-to-bytecode" }
 bytecode_source_map = { path = "bytecode_source_map" }
 stdlib = { path = "../stdlib" }
 libra-types = { path = "../../types" }
