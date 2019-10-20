@@ -1,5 +1,5 @@
 [package]
-name = "vm_runtime"
+name = "vm-runtime"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra vm runtime"
@@ -28,7 +28,7 @@ libra-state-view = { path = "../../../storage/state-view" }
 libra-types = { path = "../../../types" }
 vm = { path = "../" }
 vm-cache-map = { path = "vm-cache-map" }
-vm_runtime_types = { path = "vm_runtime_types" }
+vm-runtime-types = { path = "vm-runtime-types" }
 failure = { path = "../../../common/failure-ext", package = "libra-failure-ext" }
 
 [dev-dependencies]

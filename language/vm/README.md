@@ -53,6 +53,6 @@ simple abstraction over the file format. Additionally, a set of
 ├── src             # VM core files
 ├── tests           # Proptests
 ├── vm-genesis      # Helpers to generate a genesis block, the initial state of the blockchain
-└── vm_runtime      # Interpreter and runtime data types (see README in that folder)
+└── vm-runtime      # Interpreter and runtime data types (see README in that folder)
 ```
 

@@ -50,5 +50,5 @@ Libra Core components interact with the language component through the VM. Speci
     ├── src            # Bytecode language definitions, serializer, and deserializer
     ├── tests          # VM tests
     ├── vm-genesis     # The genesis state creation, and blockchain genesis writeset
-    └── vm_runtime     # The bytecode interpreter
+    └── vm-runtime     # The bytecode interpreter
 ```

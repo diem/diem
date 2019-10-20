@@ -16,7 +16,7 @@ petgraph = "0.4"
 failure = { path = "../../common/failure-ext", package = "libra-failure-ext" }
 vm = { path = "../vm" }
 libra-types = { path = "../../types" }
-vm_runtime_types = { path = "../vm/vm_runtime/vm_runtime_types" }
+vm-runtime-types = { path = "../vm/vm-runtime/vm-runtime-types" }
 
 
 [dev-dependencies]

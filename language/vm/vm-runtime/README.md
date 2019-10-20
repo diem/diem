@@ -1,7 +1,7 @@
 ---
 id: vm-runtime
 title: MoveVM Runtime
-custom_edit_url: https://github.com/libra/libra/edit/master/language/vm/vm_runtime/README.md
+custom_edit_url: https://github.com/libra/libra/edit/master/language/vm/vm-runtime/README.md
 ---
 
 # MoveVM Runtime

@@ -17,7 +17,7 @@ scratchpad = { path = "../storage/scratchpad" }
 libra-state-view = { path = "../storage/state-view" }
 storage-client = { path = "../storage/storage-client" }
 libra-types = { path = "../types" }
-vm_runtime = { path = "../language/vm/vm_runtime" }
+vm-runtime = { path = "../language/vm/vm-runtime" }
 
 [dev-dependencies]
 grpcio = { version = "=0.5.0-alpha.4", default-features = false }
@@ -29,5 +29,5 @@ executor = { path = "../executor" }
 grpc-helpers = { path = "../common/grpc-helpers" }
 storage-service = { path = "../storage/storage-service" }
 libra-types = { path = "../types", features = ["testing"] }
-vm_runtime = { path = "../language/vm/vm_runtime" }
+vm-runtime = { path = "../language/vm/vm-runtime" }
 transaction-builder = { path = "../language/transaction-builder" }

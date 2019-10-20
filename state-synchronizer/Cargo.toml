@@ -25,7 +25,7 @@ libra-metrics = { path = "../common/metrics" }
 network = { path = "../network" }
 storage-client = { path = "../storage/storage-client" }
 libra-types = { path = "../types" }
-vm_runtime = { path = "../language/vm/vm_runtime" }
+vm-runtime = { path = "../language/vm/vm-runtime" }
 
 [dev-dependencies]
 bytes = "0.4.12"

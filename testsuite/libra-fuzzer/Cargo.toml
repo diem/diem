@@ -29,7 +29,7 @@ consensus = { path = "../../consensus" }
 libra-types = { path = "../../types" }
 network = { path = "../../network" }
 vm = { path = "../../language/vm" }
-vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types" }
+vm-runtime-types = { path = "../../language/vm/vm-runtime/vm-runtime-types" }
 consensus-types = { path = "../../consensus/consensus-types"}
 
 [dev-dependencies]
@@ -39,12 +39,12 @@ stats_alloc = "0.1.8"
 
 libra-types = { path = "../../types", features = ["testing"] }
 vm = { path = "../../language/vm", features = ["testing"] }
-vm_runtime_types = { path = "../../language/vm/vm_runtime/vm_runtime_types", features = ["testing"] }
+vm-runtime-types = { path = "../../language/vm/vm-runtime/vm-runtime-types", features = ["testing"] }
 
 [features]
 default = ["testing", "fuzzing"]
 fuzzing = ["admission-control-service/fuzzing", "consensus/fuzzing", "network/fuzzing", "consensus-types/fuzzing"]
-testing = ["libra-types/testing", "vm/testing", "vm_runtime_types/testing"]
+testing = ["libra-types/testing", "vm/testing", "vm-runtime-types/testing"]
 
 [[test]]
 name = "artifacts"

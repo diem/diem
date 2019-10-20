@@ -19,9 +19,9 @@ libra-prost-ext = { path = "../../../common/prost-ext" }
 libra-state-view = { path = "../../../storage/state-view" }
 libra-types = { path = "../../../types" }
 vm = { path = "../" }
-vm-cache-map = { path = "../vm_runtime/vm-cache-map" }
-vm_runtime = { path = "../vm_runtime" }
-vm_runtime_types = { path = "../vm_runtime/vm_runtime_types" }
+vm-cache-map = { path = "../vm-runtime/vm-cache-map" }
+vm-runtime = { path = "../vm-runtime" }
+vm-runtime-types = { path = "../vm-runtime/vm-runtime-types" }
 lazy_static = "1.3.0"
 rand = "0.6.5"
 
