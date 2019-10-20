@@ -16,7 +16,7 @@ stdlib = { path = "../stdlib" }
 libra-types = { path = "../../types" }
 vm = { path = "../vm" }
 bytecode-verifier = { path = "../bytecode-verifier" }
-language_e2e_tests = { path = "../e2e_tests" }
+language-e2e-tests = { path = "../e2e-tests" }
 libra-config = { path = "../../config" }
 libra-crypto = { path = "../../crypto/crypto" }
 filecheck = "0.4.0"

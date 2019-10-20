@@ -790,7 +790,7 @@ version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
  "csv 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "language_e2e_tests 0.1.0",
+ "language-e2e-tests 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-crypto 0.1.0",
  "libra-types 0.1.0",
@@ -1335,7 +1335,7 @@ dependencies = [
  "filecheck 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ir-to-bytecode 0.1.0",
  "ir-to-bytecode-syntax 0.1.0",
- "language_e2e_tests 0.1.0",
+ "language-e2e-tests 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
@@ -1877,18 +1877,7 @@ version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "language_benchmarks"
-version = "0.1.0"
-dependencies = [
- "criterion 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "language_e2e_tests 0.1.0",
- "libra-proptest-helpers 0.1.0",
- "libra-types 0.1.0",
- "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "language_e2e_tests"
+name = "language-e2e-tests"
 version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
@@ -1913,6 +1902,17 @@ dependencies = [
  "vm_runtime 0.1.0",
  "vm_runtime_types 0.1.0",
  "walkdir 2.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "language_benchmarks"
+version = "0.1.0"
+dependencies = [
+ "criterion 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "language-e2e-tests 0.1.0",
+ "libra-proptest-helpers 0.1.0",
+ "libra-types 0.1.0",
+ "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4474,7 +4474,7 @@ dependencies = [
  "bytecode-verifier 0.1.0",
  "cost-synthesis 0.1.0",
  "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "language_e2e_tests 0.1.0",
+ "language-e2e-tests 0.1.0",
  "libra-types 0.1.0",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
