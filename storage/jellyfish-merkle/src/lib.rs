@@ -4,12 +4,10 @@
 //! This module implements [`JellyfishMerkleTree`] backed by storage module. The tree itself doesn't
 //! persist anything, but realizes the logic of R/W only. The write path will produce all the
 //! intermediate results in a batch for storage layer to commit and the read path will return
-//! results directly. The public APIs are only [`new`](JellyfishMerkleTree::new),
-//! [`put_blob_sets`](JellyfishMerkleTree::put_blob_sets),
-//! [`put_blob_set`](JellyfishMerkleTree::put_blob_set) and
-//! [`get_with_proof`](JellyfishMerkleTree::get_with_proof). After each put with a `blob_set`
-//! based on a known version, the tree will return a new root hash with a [`TreeUpdateBatch`]
-//! containing all the new nodes and indices of stale nodes.
+//! results directly. The public APIs are only [`new`], [`put_blob_sets`], [`put_blob_set`] and
+//! [`get_with_proof`]. After each put with a `blob_set` based on a known version, the tree will
+//! return a new root hash with a [`TreeUpdateBatch`] containing all the new nodes and indices of
+//! stale nodes.
 //!
 //! A Jellyfish Merkle Tree itself logically is a 256-bit sparse Merkle tree with an optimization
 //! that any subtree containing 0 or 1 leaf node will be replaced by that leaf node or a placeholder
@@ -17,6 +15,8 @@
 //! many sparse levels in the tree. Physically, the tree is structurally similar to the modified
 //! Patricia Merkle tree of Ethereum but with some modifications. A standard Jellyfish Merkle tree
 //! will look like the following figure:
+//!
+//! ```text
 //!                                    .──────────────────────.
 //!                            _.─────'                        `──────.
 //!                       _.──'                                        `───.
@@ -49,15 +49,22 @@
 //! (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (
 //! ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■
 //! ■: account_state_blob
+//! ```
 //!
-//! A Jellyfish Merkle Tree consists of [`Internal`] node and [`Leaf`] node. [`Internal`] node is
-//! like branch node in ethereum patricia merkle with 16 children to represent a 4-level binary
-//! tree and [`Leaf`] node is similar to that in patricia merkle too. In the above figure, each
-//! `bell` in the jellyfish is an [`Internal`] node while each tentacle is a [`Leaf`] node. It is
-//! noted that Jellyfish merkle doesn't have a counterpart for `extension` node of ethereum patricia
-//! merkle.
-//! [Internal]: crate::node_type::Internal
-//! [Leaf]: crate::node_type::Leaf
+//! A Jellyfish Merkle Tree consists of [`InternalNode`] and [`LeafNode`]. [`InternalNode`] is like
+//! branch node in ethereum patricia merkle with 16 children to represent a 4-level binary tree and
+//! [`LeafNode`] is similar to that in patricia merkle too. In the above figure, each `bell` in the
+//! jellyfish is an [`InternalNode`] while each tentacle is a [`LeafNode`]. It is noted that
+//! Jellyfish merkle doesn't have a counterpart for `extension` node of ethereum patricia merkle.
+//!
+//! [`JellyfishMerkleTree`]: struct.JellyfishMerkleTree.html
+//! [`new`]: struct.JellyfishMerkleTree.html#method.new
+//! [`put_blob_sets`]: struct.JellyfishMerkleTree.html#method.put_blob_sets
+//! [`put_blob_set`]: struct.JellyfishMerkleTree.html#method.put_blob_set
+//! [`get_with_proof`]: struct.JellyfishMerkleTree.html#method.get_with_proof
+//! [`TreeUpdateBatch`]: struct.TreeUpdateBatch.html
+//! [`InternalNode`]: node_type/struct.InternalNode.html
+//! [`LeafNode`]: node_type/struct.LeafNode.html
 
 pub mod iterator;
 #[cfg(test)]
@@ -83,8 +90,9 @@ use tree_cache::TreeCache;
 /// The hardcoded maximum height of a [`JellyfishMerkleTree`] in nibbles.
 const ROOT_NIBBLE_HEIGHT: usize = HashValue::LENGTH * 2;
 
-/// `TreeReader` defines the interface between [`JellyfishMerkleTree`] and underlying storage
-/// holding nodes.
+/// `TreeReader` defines the interface between
+/// [`JellyfishMerkleTree`](struct.JellyfishMerkleTree.html)
+/// and underlying storage holding nodes.
 pub trait TreeReader {
     /// Gets node given a node key. Returns error if the node does not exist.
     fn get_node(&self, node_key: &NodeKey) -> Result<Node> {
@@ -107,7 +115,8 @@ pub trait TreeWriter {
 
 /// Node batch that will be written into db atomically with other batches.
 pub type NodeBatch = BTreeMap<NodeKey, Node>;
-/// [`RetireNodeIndex`] batch that will be written into db atomically with other batches.
+/// [`StaleNodeIndex`](struct.StaleNodeIndex.html) batch that will be written into db atomically
+/// with other batches.
 pub type StaleNodeIndexBatch = BTreeSet<StaleNodeIndex>;
 
 /// Indicates a node becomes stale since `stale_since_version`.
@@ -115,14 +124,14 @@ pub type StaleNodeIndexBatch = BTreeSet<StaleNodeIndex>;
 pub struct StaleNodeIndex {
     /// The version since when the node is overwritten and becomes stale.
     pub stale_since_version: Version,
-    /// The [`NodeKey`] identifying the node associated with this
+    /// The [`NodeKey`](node_type/struct.NodeKey.html) identifying the node associated with this
     /// record.
-    /// [`NodeKey`]: node_type::NodeKey
     pub node_key: NodeKey,
 }
 
-/// This is a wrapper of [`NodeBatch`], [`StaleNodeIndexBatch`] and some stats of nodes that
-/// represents the incremental updates of a tree and pruning indices after applying a write set,
+/// This is a wrapper of [`NodeBatch`](type.NodeBatch.html),
+/// [`StaleNodeIndexBatch`](type.StaleNodeIndexBatch.html) and some stats of nodes that represents
+/// the incremental updates of a tree and pruning indices after applying a write set,
 /// which is a vector of `hashed_account_address` and `new_account_state_blob` pairs.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct TreeUpdateBatch {
@@ -141,13 +150,14 @@ impl<'a, R> JellyfishMerkleTree<'a, R>
 where
     R: 'a + TreeReader,
 {
-    /// Creates a `JellyfishMerkleTree` backed by the given [`TreeReader`].
+    /// Creates a `JellyfishMerkleTree` backed by the given [`TreeReader`](trait.TreeReader.html).
     pub fn new(reader: &'a R) -> Self {
         Self { reader }
     }
 
     /// This is a convenient function that calls
-    /// [`put_blob_sets`](JellyfishMerkleTree::put_blob_sets) with a single `keyed_blob_set`.
+    /// [`put_blob_sets`](struct.JellyfishMerkleTree.html#method.put_blob_sets) with a single
+    /// `keyed_blob_set`.
     #[cfg(test)]
     pub fn put_blob_set(
         &self,
@@ -202,8 +212,8 @@ where
     /// example, if we want to execute another transaction `T_{i+1}'`, we can use the tree `S_i` in
     /// storage and apply the `blob_set` of transaction `T_{i+1}`. Then if the storage commits
     /// the returned batch, the state `S_{i+1}` is ready to be read from the tree by calling
-    /// [`get_with_proof`](JellyfishMerkleTree::get_with_proof). Anything inside the batch is not
-    /// reachable from public interfaces before being committed.
+    /// [`get_with_proof`](struct.JellyfishMerkleTree.html#method.get_with_proof). Anything inside
+    /// the batch is not reachable from public interfaces before being committed.
     pub fn put_blob_sets(
         &self,
         blob_sets: Vec<Vec<(HashValue, AccountStateBlob)>>,
@@ -254,7 +264,7 @@ where
     }
 
     /// Helper function for recursive insertion into the subtree that starts from the current
-    /// [`NodeKey`]. Returns the newly inserted node.
+    /// [`NodeKey`](node_type/struct.NodeKey.html). Returns the newly inserted node.
     /// It is safe to use recursion here because the max depth is limited by the key length which
     /// for this tree is the length of the hash of account addresses.
     fn insert_at(
@@ -304,7 +314,8 @@ where
     }
 
     /// Helper function for recursive insertion into the subtree that starts from the current
-    /// `internal_node`. Returns the newly inserted node with its [`NodeKey`].
+    /// `internal_node`. Returns the newly inserted node with its
+    /// [`NodeKey`](node_type/struct.NodeKey.html).
     fn insert_at_internal_node(
         mut node_key: NodeKey,
         internal_node: InternalNode,
@@ -349,7 +360,8 @@ where
     }
 
     /// Helper function for recursive insertion into the subtree that starts from the
-    /// `existing_leaf_node`. Returns the newly inserted node with its [`NodeKey`].
+    /// `existing_leaf_node`. Returns the newly inserted node with its
+    /// [`NodeKey`](node_type/struct.NodeKey.html).
     fn insert_at_leaf_node(
         mut node_key: NodeKey,
         existing_leaf_node: LeafNode,
