@@ -37,7 +37,7 @@ rand = "0.6.5"
 rusty-fork = "0.2.1"
 
 libra-config = { path = "../config", features = ["testing"]}
-grpc_helpers = { path = "../common/grpc_helpers" }
+grpc-helpers = { path = "../common/grpc-helpers" }
 libra-types = { path = "../types", features = ["testing"]}
 
 storage-proto = { path = "../storage/storage-proto" }

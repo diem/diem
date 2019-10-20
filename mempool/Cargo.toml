@@ -26,7 +26,7 @@ libra-mempool-shared-proto = { path = "mempool-shared-proto" }
 bounded-executor = { path = "../common/bounded-executor" }
 libra-config = { path = "../config" }
 failure = { path = "../common/failure-ext", package = "libra-failure-ext" }
-grpc_helpers = { path = "../common/grpc_helpers" }
+grpc-helpers = { path = "../common/grpc-helpers" }
 libra-logger = { path = "../common/logger" }
 libra-metrics = { path = "../common/metrics" }
 network = { path = "../network" }

@@ -43,7 +43,7 @@ dependencies = [
  "executable-helpers 0.1.0",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc_helpers 0.1.0",
+ "grpc-helpers 0.1.0",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
@@ -1222,7 +1222,7 @@ dependencies = [
  "backoff 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc_helpers 0.1.0",
+ "grpc-helpers 0.1.0",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1518,7 +1518,7 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "grpc_helpers"
+name = "grpc-helpers"
 version = "0.1.0"
 dependencies = [
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2073,7 +2073,7 @@ dependencies = [
  "chrono 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc_helpers 0.1.0",
+ "grpc-helpers 0.1.0",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio-compiler 0.5.0-alpha.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2143,7 +2143,7 @@ dependencies = [
  "executable-helpers 0.1.0",
  "executor 0.1.0",
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc_helpers 0.1.0",
+ "grpc-helpers 0.1.0",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "jemallocator 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
@@ -3887,7 +3887,7 @@ dependencies = [
  "debug-interface 0.1.0",
  "executable-helpers 0.1.0",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc_helpers 0.1.0",
+ "grpc-helpers 0.1.0",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio-compiler 0.5.0-alpha.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
@@ -4274,7 +4274,7 @@ dependencies = [
  "debug-interface 0.1.0",
  "executable-helpers 0.1.0",
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc_helpers 0.1.0",
+ "grpc-helpers 0.1.0",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
@@ -5259,7 +5259,7 @@ dependencies = [
  "config-builder 0.1.0",
  "executor 0.1.0",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc_helpers 0.1.0",
+ "grpc-helpers 0.1.0",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
