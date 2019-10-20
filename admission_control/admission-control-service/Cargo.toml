@@ -26,7 +26,7 @@ libra-crypto = { path = "../../crypto/crypto" }
 debug-interface = { path = "../../common/debug-interface" }
 failure = { package = "libra-failure-ext", path = "../../common/failure-ext" }
 executable-helpers = { path = "../../common/executable-helpers" }
-grpc_helpers = { path = "../../common/grpc_helpers" }
+grpc-helpers = { path = "../../common/grpc-helpers" }
 libra-logger = { path = "../../common/logger" }
 libra-mempool = { path = "../../mempool" }
 libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto" }

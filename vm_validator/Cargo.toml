@@ -26,7 +26,7 @@ rand = "0.6.5"
 config-builder = { path = "../config/config-builder" }
 libra-crypto = { path = "../crypto/crypto", features = ["testing"] }
 executor = { path = "../executor" }
-grpc_helpers = { path = "../common/grpc_helpers" }
+grpc-helpers = { path = "../common/grpc-helpers" }
 storage-service = { path = "../storage/storage-service" }
 libra-types = { path = "../types", features = ["testing"] }
 vm_runtime = { path = "../language/vm/vm_runtime" }
