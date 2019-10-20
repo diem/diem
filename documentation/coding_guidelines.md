@@ -72,7 +72,7 @@ Document the following for each function:
 
 Each major component of Libra Core needs to have a `README.md` file. Major components are:
 * top-level directories (e.g. `libra/network`, `libra/language`)
-* the most important crates in the system (e.g. `vm_runtime`)
+* the most important crates in the system (e.g. `vm-runtime`)
 
 This file should contain:
 

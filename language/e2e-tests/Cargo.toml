@@ -22,8 +22,8 @@ libra-types = { path = "../../types" }
 transaction-builder = { path = "../transaction-builder", features = ["testing"]}
 vm = { path = "../vm" }
 vm-genesis = { path = "../vm/vm-genesis" }
-vm_runtime = { path = "../vm/vm_runtime" }
-vm_runtime_types = { path = "../vm/vm_runtime/vm_runtime_types" }
+vm-runtime = { path = "../vm/vm-runtime" }
+vm-runtime-types = { path = "../vm/vm-runtime/vm-runtime-types" }
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
 libra-proptest-helpers = { path = "../../common/proptest-helpers" }

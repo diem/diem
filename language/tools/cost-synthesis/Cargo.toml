@@ -18,10 +18,10 @@ bytecode-verifier = { path = "../../bytecode-verifier" }
 stdlib = { path = "../../stdlib" }
 libra-types = { path = "../../../types" }
 vm = { path = "../../vm" }
-vm_runtime = { path = "../../vm/vm_runtime" }
-vm_runtime_types = { path = "../../vm/vm_runtime/vm_runtime_types" }
+vm-runtime = { path = "../../vm/vm-runtime" }
+vm-runtime-types = { path = "../../vm/vm-runtime/vm-runtime-types" }
 language-e2e-tests = { path = "../../e2e-tests" }
-vm-cache-map = { path = "../../vm/vm_runtime/vm-cache-map" }
+vm-cache-map = { path = "../../vm/vm-runtime/vm-cache-map" }
 libra-crypto = { path = "../../../crypto/crypto" }
 structopt = "0.3.2"
 
@@ -29,4 +29,4 @@ structopt = "0.3.2"
 libra-types = { path = "../../../types", features = ["testing"] }
 
 [features]
-default = ["vm_runtime/instruction_synthesis"]
+default = ["vm-runtime/instruction_synthesis"]

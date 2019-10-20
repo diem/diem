@@ -37,7 +37,7 @@ state-synchronizer = { path = "../state-synchronizer" }
 storage-client = { path = "../storage/storage-client" }
 storage-service = { path = "../storage/storage-service" }
 libra-types = { path = "../types" }
-vm_runtime = { path = "../language/vm/vm_runtime" }
+vm-runtime = { path = "../language/vm/vm-runtime" }
 
 [dev-dependencies]
 config-builder = { path = "../config/config-builder" }

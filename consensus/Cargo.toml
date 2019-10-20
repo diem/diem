@@ -49,7 +49,7 @@ schemadb = { path = "../storage/schemadb" }
 storage-client = { path = "../storage/storage-client" }
 libra-tools = { path = "../common/tools" }
 libra-types = { path = "../types" }
-vm_runtime = { path = "../language/vm/vm_runtime" }
+vm-runtime = { path = "../language/vm/vm-runtime" }
 
 [dev-dependencies]
 cached = "0.9.0"
