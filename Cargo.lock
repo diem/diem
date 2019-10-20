@@ -359,7 +359,7 @@ dependencies = [
  "libra-types 0.1.0",
  "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "stackless_bytecode_generator 0.1.0",
+ "stackless-bytecode-generator 0.1.0",
  "stdlib 0.1.0",
  "vm 0.1.0",
 ]
@@ -4171,7 +4171,7 @@ version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "stackless_bytecode_generator"
+name = "stackless-bytecode-generator"
 version = "0.1.0"
 dependencies = [
  "ir-to-bytecode 0.1.0",
@@ -5018,7 +5018,7 @@ dependencies = [
  "libra-types 0.1.0",
  "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "stackless_bytecode_generator 0.1.0",
+ "stackless-bytecode-generator 0.1.0",
  "stdlib 0.1.0",
  "vm 0.1.0",
 ]
