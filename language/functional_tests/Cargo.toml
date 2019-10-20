@@ -10,8 +10,8 @@ edition = "2018"
 
 [dependencies]
 failure = { path = "../../common/failure-ext", package = "libra-failure-ext" }
-ir_to_bytecode_syntax = { path = "../compiler/ir_to_bytecode/syntax" }
-ir_to_bytecode = { path = "../compiler/ir_to_bytecode" }
+ir-to-bytecode-syntax = { path = "../compiler/ir-to-bytecode/syntax" }
+ir-to-bytecode = { path = "../compiler/ir-to-bytecode" }
 stdlib = { path = "../stdlib" }
 libra-types = { path = "../../types" }
 vm = { path = "../vm" }
