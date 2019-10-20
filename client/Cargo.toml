@@ -30,7 +30,7 @@ crash-handler = { path = "../common/crash-handler" }
 libra-crypto = { path = "../crypto/crypto" }
 failure = { package = "libra-failure-ext", path = "../common/failure-ext" }
 lcs = { path = "../common/lcs", package = "libra-canonical-serialization" }
-libra_wallet = { path = "./libra_wallet" }
+libra-wallet = { path = "./libra_wallet" }
 libra-logger =  { path = "../common/logger" }
 libra-metrics = { path = "../common/metrics" }
 libra-types = { path = "../types" }

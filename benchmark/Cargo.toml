@@ -25,7 +25,7 @@ client = { path = "../client" }
 libra-config = { path = "../config" }
 failure = { package = "libra-failure-ext", path = "../common/failure-ext" }
 generate-keypair = { path = "../config/generate-keypair" }
-libra_wallet = { path = "../client/libra_wallet" }
+libra-wallet = { path = "../client/libra_wallet" }
 libra-swarm = { path = "../libra-swarm" }
 libra-logger = { path = "../common/logger" }
 libra-metrics = { path = "../common/metrics" }
