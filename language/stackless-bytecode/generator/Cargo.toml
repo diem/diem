@@ -10,11 +10,11 @@ publish = false
 edition = "2018"
 
 [dependencies]
-vm = { path = "../../vm" }
-ir-to-bytecode = { path = "../../compiler/ir-to-bytecode" }
-stdlib = { path = "../../stdlib" }
+vm = { path = "../../vm", version = "0.1.0" }
+ir-to-bytecode = { path = "../../compiler/ir-to-bytecode", version = "0.1.0" }
+stdlib = { path = "../../stdlib", version = "0.1.0" }
 #
 [dev-dependencies]
 # invalid-mutations = { path = "invalid-mutations" }
 proptest = "0.9"
-libra-types = { path = "../../../types", features = ["testing"]}
+libra-types = { path = "../../../types", version = "0.1.0", features = ["testing"]}

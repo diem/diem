@@ -25,22 +25,22 @@ strum = "0.15.0"
 strum_macros = "0.15.0"
 serde = "1.0.96"
 
-accumulator = { path = "../accumulator" }
-lcs = { path = "../../common/lcs", package = "libra-canonical-serialization" }
-libra-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure-ext", package = "libra-failure-ext" }
-jellyfish-merkle = { path = "../jellyfish-merkle" }
-libra-logger = { path = "../../common/logger" }
-libra-metrics = { path = "../../common/metrics" }
-libra-prost-ext = { path = "../../common/prost-ext" }
-schemadb = { path = "../schemadb" }
-storage-proto = { path = "../storage-proto" }
-libra-tools = { path = "../../common/tools" }
-libra-types = { path = "../../types" }
+accumulator = { path = "../accumulator", version = "0.1.0" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+jellyfish-merkle = { path = "../jellyfish-merkle", version = "0.1.0" }
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
+libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
+schemadb = { path = "../schemadb", version = "0.1.0" }
+storage-proto = { path = "../storage-proto", version = "0.1.0" }
+libra-tools = { path = "../../common/tools", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
 
 [dev-dependencies]
-libra-proptest-helpers = { path = "../../common/proptest-helpers" }
-libra-types = { path = "../../types", features = ["testing"]}
+libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0", features = ["testing"]}
 
 [features]
 default = []

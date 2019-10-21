@@ -21,30 +21,30 @@ rand = "0.6.5"
 tokio = "=0.2.0-alpha.6"
 tokio-retry = "0.2.0"
 
-admission-control-proto = { path = "../admission_control/admission-control-proto" }
-bounded-executor = { path = "../common/bounded-executor" }
-channel = { path = "../common/channel" }
-libra-config = { path = "../config" }
-libra-crypto = { path = "../crypto/crypto" }
-failure = { package = "libra-failure-ext", path = "../common/failure-ext" }
-libra-types = { path = "../types" }
-libra-logger = { path = "../common/logger" }
-memsocket = { path = "memsocket" }
-libra-metrics = { path = "../common/metrics" }
-netcore = { path = "netcore" }
-noise = { path = "noise" }
-libra-prost-ext = { path = "../common/prost-ext" }
+admission-control-proto = { path = "../admission_control/admission-control-proto", version = "0.1.0" }
+bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }
+channel = { path = "../common/channel", version = "0.1.0" }
+libra-config = { path = "../config", version = "0.1.0" }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+failure = { package = "libra-failure-ext", path = "../common/failure-ext", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0" }
+libra-logger = { path = "../common/logger", version = "0.1.0" }
+memsocket = { path = "memsocket", version = "0.1.0" }
+libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+netcore = { path = "netcore", version = "0.1.0" }
+noise = { path = "noise", version = "0.1.0" }
+libra-prost-ext = { path = "../common/prost-ext", version = "0.1.0" }
 
 proptest = { version = "0.9.4", default-features = false, optional = true }
-libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
+libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
 
 [dev-dependencies]
 criterion = "0.3.0"
-libra-crypto = { path = "../crypto/crypto", features = ["testing"] }
-libra-types = { path = "../types", features = ["testing"]}
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["testing"] }
+libra-types = { path = "../types", version = "0.1.0", features = ["testing"]}
 proptest = { version = "0.9.4", default-features = false }
-libra-proptest-helpers = { path = "../common/proptest-helpers" }
-socket-bench-server = { path = "socket-bench-server" }
+libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
+socket-bench-server = { path = "socket-bench-server", version = "0.1.0" }
 
 [build-dependencies]
 prost-build = "0.5.0"

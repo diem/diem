@@ -10,6 +10,6 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures-semaphore = { path = "../futures-semaphore" }
+futures-semaphore = { path = "../futures-semaphore", version = "0.1.0" }
 futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["async-await"] }
 tokio = "0.2.0-alpha.6"

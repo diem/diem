@@ -10,15 +10,15 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bytecode-verifier = { path = "../bytecode-verifier" }
-failure = { path = "../../common/failure-ext", package = "libra-failure-ext" }
-ir-to-bytecode = { path = "ir-to-bytecode" }
-bytecode_source_map = { path = "bytecode_source_map" }
-stdlib = { path = "../stdlib" }
-libra-types = { path = "../../types" }
-vm = { path = "../vm" }
+bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
+failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+ir-to-bytecode = { path = "ir-to-bytecode", version = "0.1.0" }
+bytecode_source_map = { path = "bytecode_source_map", version = "0.1.0" }
+stdlib = { path = "../stdlib", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+vm = { path = "../vm", version = "0.1.0" }
 structopt = "0.3.2"
 serde_json = "1.0.40"
 
 [dev-dependencies]
-libra-types = { path = "../../types", features = ["testing"] }
+libra-types = { path = "../../types", version = "0.1.0", features = ["testing"] }

@@ -18,27 +18,27 @@ signal-hook = "0.1.10"
 structopt = "0.3.2"
 tokio = "=0.2.0-alpha.6"
 
-admission-control-proto = { path = "../admission_control/admission-control-proto" }
-admission-control-service = { path = "../admission_control/admission-control-service" }
-libra-config = { path = "../config" }
-consensus = { path = "../consensus" }
-crash-handler = { path = "../common/crash-handler" }
-debug-interface = { path = "../common/debug-interface" }
-executable-helpers = { path = "../common/executable-helpers" }
-executor = { path = "../executor" }
+admission-control-proto = { path = "../admission_control/admission-control-proto", version = "0.1.0" }
+admission-control-service = { path = "../admission_control/admission-control-service", version = "0.1.0" }
+libra-config = { path = "../config", version = "0.1.0" }
+consensus = { path = "../consensus", version = "0.1.0" }
+crash-handler = { path = "../common/crash-handler", version = "0.1.0" }
+debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
+executable-helpers = { path = "../common/executable-helpers", version = "0.1.0" }
+executor = { path = "../executor", version = "0.1.0" }
 futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["async-await", "io-compat", "compat"] }
-grpc-helpers = { path = "../common/grpc-helpers" }
-libra-logger = { path = "../common/logger" }
-libra-mempool = { path = "../mempool" }
-libra-metrics = { path = "../common/metrics" }
-libra-crypto = { path = "../crypto/crypto" }
-network = { path = "../network" }
-state-synchronizer = { path = "../state-synchronizer" }
-storage-client = { path = "../storage/storage-client" }
-storage-service = { path = "../storage/storage-service" }
-libra-types = { path = "../types" }
-vm-runtime = { path = "../language/vm/vm-runtime" }
+grpc-helpers = { path = "../common/grpc-helpers", version = "0.1.0" }
+libra-logger = { path = "../common/logger", version = "0.1.0" }
+libra-mempool = { path = "../mempool", version = "0.1.0" }
+libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+network = { path = "../network", version = "0.1.0" }
+state-synchronizer = { path = "../state-synchronizer", version = "0.1.0" }
+storage-client = { path = "../storage/storage-client", version = "0.1.0" }
+storage-service = { path = "../storage/storage-service", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0" }
+vm-runtime = { path = "../language/vm/vm-runtime", version = "0.1.0" }
 
 [dev-dependencies]
-config-builder = { path = "../config/config-builder" }
-libra-types = { path = "../types", features = ["testing"]}
+config-builder = { path = "../config/config-builder", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0", features = ["testing"]}
