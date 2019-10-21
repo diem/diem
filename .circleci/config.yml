@@ -109,6 +109,46 @@ jobs:
             cargo install --force cargo-audit
             cargo audit
       - build_teardown
+  code-coverage:
+    description: Run code coverage
+    machine:
+      image: ubuntu-1604:201903-01
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Install deps
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y protobuf-compiler cmake curl clang
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+      - run:
+          name: Setup PATH
+          command: echo "export PATH=~/.cargo/bin:$PATH" >> $BASH_ENV
+      - env_setup
+      - run:
+          name: Install nightly toolchain (profile feature is not yet in beta/stable)
+          command: rustup install nightly
+      - run:
+          name: Install grcov
+          command: cargo install --force grcov
+      - run:
+          name: Setup rustc flags
+          command: |
+            echo "export CARGO_INCREMENTAL=0" >> $BASH_ENV
+            echo "export RUSTFLAGS='-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads'" >> $BASH_ENV
+      - run:
+          name: Cargo test
+          command: cargo +nightly test
+      - run:
+          name: Generate coverage report
+          command: |
+            zip -0 ccov.zip `find . \( -name "libra*.gc*" \) -print`
+            grcov ccov.zip -s . -t lcov --llvm --branch --ignore-not-existing --ignore "/*" -o lcov.info
+      - run:
+          name: Upload result to dashboard
+          command: bash <(curl -s https://codecov.io/bash) -f lcov.info;
+      - build_teardown
   terraform:
     executor: terraform-executor
     steps:
@@ -128,6 +168,7 @@ workflows:
       - build
       - validate-config
       - terraform
+      - code-coverage
 
   scheduled-workflow:
     triggers:
@@ -138,3 +179,4 @@ workflows:
               only: master
     jobs:
       - audit
+      - code-coverage
