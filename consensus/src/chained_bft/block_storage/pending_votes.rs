@@ -117,10 +117,11 @@ impl PendingVotes {
         validator_verifier: &ValidatorVerifier,
     ) -> Option<VoteReceptionResult> {
         let timeout_signature = vote.timeout_signature().cloned()?;
-        let round = vote.vote_data().proposed().round();
-        let tc = self.round_to_tc.entry(round).or_insert_with(|| {
-            TimeoutCertificate::new(vote.vote_data().proposed().epoch(), round, HashMap::new())
-        });
+        let timeout = vote.timeout();
+        let tc = self
+            .round_to_tc
+            .entry(timeout.round())
+            .or_insert_with(|| TimeoutCertificate::new(timeout, HashMap::new()));
         tc.add_signature(vote.author(), timeout_signature);
         match validator_verifier.check_voting_power(tc.signatures().keys()) {
             Ok(_) => Some(VoteReceptionResult::NewTimeoutCertificate(Arc::new(

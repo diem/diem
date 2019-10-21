@@ -34,6 +34,7 @@ use consensus_types::{
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
+    timeout::Timeout,
     timeout_certificate::TimeoutCertificate,
     vote::Vote,
     vote_data::VoteData,
@@ -664,7 +665,7 @@ fn process_timeout_certificate_test() {
         genesis_qc.clone(),
         node.block_store.signer(),
     );
-    let tc = TimeoutCertificate::new(1, 1, HashMap::new());
+    let tc = TimeoutCertificate::new(Timeout::new(1, 1), HashMap::new());
 
     block_on(async move {
         let skip_round_proposal = ProposalMsg::<TestPayload>::new(

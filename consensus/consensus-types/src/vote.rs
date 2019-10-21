@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    common::{self, Author},
-    vote_data::VoteData,
-};
+use crate::{common::Author, timeout::Timeout, vote_data::VoteData};
 use failure::{ensure, ResultExt};
 use libra_crypto::hash::CryptoHash;
 use libra_types::{
@@ -73,12 +70,10 @@ impl Vote {
         if self.timeout_signature.is_some() {
             return; // round signature is already set
         }
+
         self.timeout_signature.replace(
             validator_signer
-                .sign_message(common::timeout_hash(
-                    self.vote_data().proposed().round(),
-                    self.vote_data().proposed().epoch(),
-                ))
+                .sign_message(self.timeout().hash())
                 .expect("Failed to sign round")
                 .into(),
         );
@@ -101,6 +96,14 @@ impl Vote {
     /// Return the signature of the vote
     pub fn signature(&self) -> &Signature {
         &self.signature
+    }
+
+    /// Returns the hash of the data represent by a timeout proposal
+    pub fn timeout(&self) -> Timeout {
+        Timeout::new(
+            self.vote_data().proposed().epoch(),
+            self.vote_data().proposed().round(),
+        )
     }
 
     /// Returns the signature for the vote_data().proposed().round() that can be aggregated for
@@ -127,14 +130,7 @@ impl Vote {
             .with_context(|e| format!("Fail to verify Vote: {:?}", e))?;
         if let Some(timeout_signature) = &self.timeout_signature {
             timeout_signature
-                .verify(
-                    validator,
-                    self.author(),
-                    common::timeout_hash(
-                        self.vote_data().proposed().round(),
-                        self.vote_data.proposed().epoch(),
-                    ),
-                )
+                .verify(validator, self.author(), self.timeout().hash())
                 .with_context(|e| format!("Fail to verify Vote: {:?}", e))?;
         }
         Ok(())

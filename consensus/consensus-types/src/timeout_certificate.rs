@@ -1,8 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::common::{self, Author, Round};
+use crate::{
+    common::{Author, Round},
+    timeout::Timeout,
+};
 use failure::prelude::*;
+use libra_crypto::hash::CryptoHash;
 use libra_types::crypto_proxies::{Signature, ValidatorVerifier};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt};
@@ -11,8 +15,7 @@ use std::{collections::HashMap, fmt};
 /// TimeoutCertificate is a proof that 2f+1 participants in epoch i
 /// have voted in round r and we can now move to round r+1.
 pub struct TimeoutCertificate {
-    epoch: u64,
-    round: Round,
+    timeout: Timeout,
     signatures: HashMap<Author, Signature>,
 }
 
@@ -21,17 +24,17 @@ impl fmt::Display for TimeoutCertificate {
         write!(
             f,
             "TimeoutCertificate[epoch: {}, round: {}]",
-            self.epoch, self.round
+            self.timeout.epoch(),
+            self.timeout.round(),
         )
     }
 }
 
 impl TimeoutCertificate {
     /// Creates new TimeoutCertificate
-    pub fn new(epoch: u64, round: Round, signatures: HashMap<Author, Signature>) -> Self {
+    pub fn new(timeout: Timeout, signatures: HashMap<Author, Signature>) -> Self {
         Self {
-            epoch,
-            round,
+            timeout,
             signatures,
         }
     }
@@ -39,10 +42,10 @@ impl TimeoutCertificate {
     /// Verifies the signatures for the round
     pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
         validator.check_voting_power(self.signatures().keys())?;
-        let round_digest = common::timeout_hash(self.round(), self.epoch());
+        let timeout_hash = self.timeout.hash();
         for (author, signature) in self.signatures() {
             signature
-                .verify(validator, *author, round_digest)
+                .verify(validator, *author, timeout_hash)
                 .with_context(|e| format!("Fail to verify TimeoutCertificate: {:?}", e))?;
         }
         Ok(())
@@ -50,12 +53,12 @@ impl TimeoutCertificate {
 
     /// Returns the epoch of the timeout certificate
     pub fn epoch(&self) -> u64 {
-        self.epoch
+        self.timeout.epoch()
     }
 
     /// Returns the round of the timeout certificate
     pub fn round(&self) -> Round {
-        self.round
+        self.timeout.round()
     }
 
     /// Returns the signatures certifying the round
