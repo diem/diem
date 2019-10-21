@@ -305,10 +305,11 @@ impl SparseMerkleProof {
             }
         }
 
-        let current_hash = match self.leaf {
-            Some((key, value_hash)) => SparseMerkleLeafNode::new(key, value_hash).hash(),
-            None => *SPARSE_MERKLE_PLACEHOLDER_HASH,
-        };
+        let current_hash = self
+            .leaf
+            .map_or(*SPARSE_MERKLE_PLACEHOLDER_HASH, |(key, value_hash)| {
+                SparseMerkleLeafNode::new(key, value_hash).hash()
+            });
         let actual_root_hash = self
             .siblings
             .iter()

@@ -44,14 +44,16 @@ pub fn is_permitted_char(c: char) -> bool {
 }
 
 fn verify_string(string: &str) -> Result<()> {
-    match string.chars().find(|c| !is_permitted_char(*c)) {
-        None => Ok(()),
-        Some(chr) => bail!(
-            "Parser Error: invalid character {} found when reading file.\
-             Only ascii printable, tabs (\\t), and \\n line ending characters are permitted.",
-            chr
-        ),
-    }
+    string
+        .chars()
+        .find(|c| !is_permitted_char(*c))
+        .map_or(Ok(()), |chr| {
+            bail!(
+                "Parser Error: invalid character {} found when reading file.\
+                 Only ascii printable, tabs (\\t), and \\n line ending characters are permitted.",
+                chr
+            )
+        })
 }
 
 fn strip_comments(source: &str) -> String {

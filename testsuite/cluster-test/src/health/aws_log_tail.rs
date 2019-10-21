@@ -93,10 +93,8 @@ impl AwsLogThread {
     }
 
     fn make_kinesis_iterator(aws: &Aws) -> failure::Result<String> {
-        let stream_name = match env::var("KINESIS_STREAM") {
-            Err(..) => format!("JsonEvents-{}-{}", aws.region(), aws.workplace()),
-            Ok(s) => s,
-        };
+        let stream_name = env::var("KINESIS_STREAM")
+            .unwrap_or_else(|_| format!("JsonEvents-{}-{}", aws.region(), aws.workplace()));
         let (shard_iterator_type, timestamp) = match Self::log_start_offset_sec() {
             Some(offset) => {
                 let timestamp = unix_timestamp_now() - Duration::from_secs(offset);
