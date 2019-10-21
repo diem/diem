@@ -23,7 +23,6 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
-use std::convert::TryFrom;
 use vm_cache_map::Arena;
 
 /// An instantiation of the MoveVM.
