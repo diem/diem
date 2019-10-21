@@ -286,8 +286,9 @@ where
         validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
         let block_id = vote.vote_data().proposed().id();
-        if let Some(old_qc) = self.id_to_quorum_cert.get(&block_id) {
-            return VoteReceptionResult::OldQuorumCertificate(Arc::clone(old_qc));
+        // This block has already been certified.
+        if self.id_to_quorum_cert.get(&block_id).is_some() {
+            return VoteReceptionResult::VoteAdded(0);
         }
         let res = self.pending_votes.insert_vote(vote, validator_verifier);
         if let VoteReceptionResult::NewQuorumCertificate(_) = res {

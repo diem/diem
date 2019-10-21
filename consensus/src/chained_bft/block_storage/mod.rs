@@ -16,22 +16,19 @@ mod pending_votes;
 
 pub use block_store::{sync_manager::BlockRetriever, BlockStore};
 
-/// Result of the vote processing. The failure case (Verification error) is returned
-/// as the Error part of the result.
+/// Result of processing the vote.
+/// The failure case (Verification error) is returned as the Error part of the result.
 #[derive(Debug, PartialEq)]
 pub enum VoteReceptionResult {
-    /// The vote has been added but QC has not been formed yet. Return the amount of voting power
-    /// the given (proposal, execution) pair.
+    /// The vote has been added but a new certificate is not formed.
+    /// Zero vote is added in the following cases:
+    ///  1. The very same vote message has been processed in the past.
+    ///  2. The very same author has already voted for another proposal in this round (equivocation).
+    ///  3. This block has been already certified.
     VoteAdded(u64),
-    /// The very same vote message has been processed in past.
-    DuplicateVote,
-    /// The very same author has already voted for another proposal in this round (equivocation).
-    EquivocateVote,
-    /// This block has been already certified.
-    OldQuorumCertificate(Arc<QuorumCert>),
-    /// This block has just been certified after adding the vote.
+    /// The vote completes a new QuorumCert.
     NewQuorumCertificate(Arc<QuorumCert>),
-    /// The vote completes a new TimeoutCertificate
+    /// The vote completes a new TimeoutCertificate.
     NewTimeoutCertificate(Arc<TimeoutCertificate>),
 }
 

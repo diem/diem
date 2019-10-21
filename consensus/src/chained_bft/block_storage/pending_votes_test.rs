@@ -49,7 +49,7 @@ fn test_qc_aggregation() {
     // same author voting for the same thing: result is DuplicateVote
     assert_eq!(
         pending_votes.insert_vote(&vote_data_1_author_0, &validator),
-        VoteReceptionResult::DuplicateVote
+        VoteReceptionResult::VoteAdded(0)
     );
     // same author voting for a different result in the same round:
     // override the prev value and return equivocation
@@ -63,7 +63,7 @@ fn test_qc_aggregation() {
     );
     assert_eq!(
         pending_votes.insert_vote(&vote_data_2_author_0, &validator),
-        VoteReceptionResult::EquivocateVote
+        VoteReceptionResult::VoteAdded(0)
     );
     // A different author voting for a different result in the same round but without a round
     // signature: VoteAdded

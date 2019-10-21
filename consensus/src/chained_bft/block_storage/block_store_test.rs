@@ -328,7 +328,7 @@ fn test_insert_vote() {
         // filter out duplicates
         assert_eq!(
             block_store.insert_vote_and_qc(&vote, &validator_verifier),
-            VoteReceptionResult::DuplicateVote,
+            VoteReceptionResult::VoteAdded(0),
         );
         // qc is still not there
         assert!(block_store.get_quorum_cert_for_block(block.id()).is_none());

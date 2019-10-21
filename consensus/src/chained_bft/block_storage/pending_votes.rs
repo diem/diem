@@ -155,7 +155,7 @@ impl PendingVotes {
         if li_digest == last_voted_info.li_digest {
             if is_timeout == last_voted_info.is_timeout {
                 // Author has already voted for the very same LedgerInfo
-                return Err(VoteReceptionResult::DuplicateVote);
+                return Err(VoteReceptionResult::VoteAdded(0));
             } else {
                 // Author has already voted for this LedgerInfo, but this time the Vote's
                 // round signature is different.
@@ -184,7 +184,7 @@ impl PendingVotes {
                 author.short_str(),
                 round
             );
-            return Err(VoteReceptionResult::EquivocateVote);
+            return Err(VoteReceptionResult::VoteAdded(0));
         }
         if let Some(pending_tc) = self.round_to_tc.get_mut(&last_voted_info.round) {
             // Removing signature from last tc
