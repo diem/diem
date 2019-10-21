@@ -28,8 +28,9 @@ use libra_crypto::{
 use std::{collections::VecDeque, marker::PhantomData};
 
 pub use self::definition::{
-    AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, EventAccumulatorProof,
-    EventProof, SignedTransactionProof, SparseMerkleProof, TransactionAccumulatorProof,
+    AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, AccumulatorRangeProof,
+    EventAccumulatorProof, EventProof, SignedTransactionProof, SparseMerkleProof,
+    TransactionAccumulatorProof,
 };
 
 #[cfg(any(test, feature = "testing"))]

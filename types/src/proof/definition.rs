@@ -9,7 +9,8 @@ mod proof_proto_conversion_test;
 
 use self::bitmap::{AccumulatorBitmap, SparseMerkleBitmap};
 use super::{
-    verify_transaction_info, MerkleTreeInternalNode, SparseMerkleInternalNode, SparseMerkleLeafNode,
+    position::Position, verify_transaction_info, MerkleTreeInternalNode, SparseMerkleInternalNode,
+    SparseMerkleLeafNode,
 };
 use crate::{
     account_state_blob::AccountStateBlob,
@@ -468,6 +469,150 @@ impl From<AccumulatorConsistencyProof> for crate::proto::types::AccumulatorConsi
         Self {
             subtrees: proof.subtrees.iter().map(HashValue::to_vec).collect(),
         }
+    }
+}
+
+/// A proof that is similar to `AccumulatorProof`, but can be used to authenticate a range of
+/// leaves. For example, given the following accumulator:
+///
+/// ```text
+///                 root
+///                /     \
+///              /         \
+///            /             \
+///           o               o
+///         /   \           /   \
+///        /     \         /     \
+///       X       o       o       Y
+///      / \     / \     / \     / \
+///     o   o   a   b   c   Z   o   o
+/// ```
+///
+/// if the proof wants to show that `[a, b, c]` exists in the accumulator, it would need `X` on the
+/// left and `Y` and `Z` on the right.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AccumulatorRangeProof<H> {
+    /// The siblings on the left of the path from root to the first leaf. Siblings near the root
+    /// are at the beginning of the vector.
+    left_siblings: Vec<HashValue>,
+
+    /// The sliblings on the right of the path from root to the last leaf. Siblings near the root
+    /// are at the beginning of the vector.
+    right_siblings: Vec<HashValue>,
+
+    phantom: PhantomData<H>,
+}
+
+impl<H> AccumulatorRangeProof<H>
+where
+    H: CryptoHasher,
+{
+    /// Constructs a new `AccumulatorRangeProof` using `left_siblings` and `right_siblings`.
+    pub fn new(left_siblings: Vec<HashValue>, right_siblings: Vec<HashValue>) -> Self {
+        Self {
+            left_siblings,
+            right_siblings,
+            phantom: PhantomData,
+        }
+    }
+
+    /// Verifies the proof is correct. The verifier needs to have `expected_root_hash`, the index
+    /// of the first leaf and all of the leaves in possession.
+    pub fn verify(
+        &self,
+        expected_root_hash: HashValue,
+        first_leaf_index: Option<u64>,
+        leaf_hashes: &[HashValue],
+    ) -> Result<()> {
+        if first_leaf_index.is_none() {
+            ensure!(
+                leaf_hashes.is_empty(),
+                "first_leaf_index indicated empty list while leaf_hashes is not empty.",
+            );
+            ensure!(
+                self.left_siblings.is_empty() && self.right_siblings.is_empty(),
+                "No siblings are needed.",
+            );
+            return Ok(());
+        }
+
+        ensure!(
+            self.left_siblings.len() <= MAX_ACCUMULATOR_PROOF_DEPTH,
+            "Proof has more than {} ({}) left siblings.",
+            MAX_ACCUMULATOR_PROOF_DEPTH,
+            self.left_siblings.len(),
+        );
+        ensure!(
+            self.right_siblings.len() <= MAX_ACCUMULATOR_PROOF_DEPTH,
+            "Proof has more than {} ({}) right siblings.",
+            MAX_ACCUMULATOR_PROOF_DEPTH,
+            self.right_siblings.len(),
+        );
+        ensure!(
+            !leaf_hashes.is_empty(),
+            "leaf_hashes is empty while first_leaf_index indicated non-empty list.",
+        );
+
+        let mut left_sibling_iter = self.left_siblings.iter().rev().peekable();
+        let mut right_sibling_iter = self.right_siblings.iter().rev().peekable();
+
+        let mut first_pos = Position::from_leaf_index(
+            first_leaf_index.expect("first_leaf_index should not be None."),
+        );
+        let mut current_hashes = leaf_hashes.to_vec();
+        let mut parent_hashes = vec![];
+
+        // Keep reducing the list of hashes by combining all the children pairs, until there is
+        // only one hash left.
+        while current_hashes.len() > 1
+            || left_sibling_iter.peek().is_some()
+            || right_sibling_iter.peek().is_some()
+        {
+            let mut children_iter = current_hashes.iter();
+
+            // If the first position on the current level is a right child, it needs to be combined
+            // with a sibling on the left.
+            if first_pos.is_right_child() {
+                let left_hash = *left_sibling_iter.next().ok_or_else(|| {
+                    format_err!("First child is a right child, but missing sibling on the left.")
+                })?;
+                let right_hash = *children_iter.next().expect("The first leaf must exist.");
+                parent_hashes.push(MerkleTreeInternalNode::<H>::new(left_hash, right_hash).hash());
+            }
+
+            // Next we take two children at a time and compute their parents.
+            let mut children_iter = children_iter.as_slice().chunks_exact(2);
+            while let Some(chunk) = children_iter.next() {
+                let left_hash = chunk[0];
+                let right_hash = chunk[1];
+                parent_hashes.push(MerkleTreeInternalNode::<H>::new(left_hash, right_hash).hash());
+            }
+
+            // Similarly, if the last position is a left child, it needs to be combined with a
+            // sibling on the right.
+            let remainder = children_iter.remainder();
+            assert!(remainder.len() <= 1);
+            if !remainder.is_empty() {
+                let left_hash = remainder[0];
+                let right_hash = *right_sibling_iter.next().ok_or_else(|| {
+                    format_err!("Last child is a left child, but missing sibling on the right.")
+                })?;
+                parent_hashes.push(MerkleTreeInternalNode::<H>::new(left_hash, right_hash).hash());
+            }
+
+            first_pos = first_pos.parent();
+            current_hashes.clear();
+            std::mem::swap(&mut current_hashes, &mut parent_hashes);
+        }
+
+        ensure!(
+            current_hashes[0] == expected_root_hash,
+            "Root hashes do not match. Actual root hash: {:x}. Expected root hash: {:x}.",
+            current_hashes[0],
+            expected_root_hash,
+        );
+
+        Ok(())
     }
 }
 
