@@ -212,30 +212,31 @@ impl<T: Payload> BlockStore<T> {
             }
         };
 
-        // Reconfiguration rule - if a block is a child of reconfiguration, it needs to be empty
+        // Reconfiguration rule - if a block is a child of pending reconfiguration, it needs to be empty
         // So we roll over the executed state until it's committed and we start new epoch.
         let parent_state = parent_block.compute_result();
-        let (output, state_compute_result) = if parent_state.has_reconfiguration() {
-            ensure!(
-                block.payload().filter(|p| **p != T::default()).is_none(),
-                "Reconfiguration suffix should not carry payload"
-            );
-            (
-                parent_block.output().as_ref().clone(),
-                StateComputeResult {
-                    executed_state: parent_state.executed_state.clone(),
-                    compute_status: vec![],
-                },
-            )
-        } else {
-            let parent_trees = parent_block.executed_trees().clone();
-            // Although NIL blocks don't have payload, we still send a T::default() to compute
-            // because we may inject a block prologue transaction.
-            self.state_computer
-                .compute(&block, parent_trees)
-                .await
-                .with_context(|e| format!("Execution failure for block {}: {:?}", block, e))?
-        };
+        let (output, state_compute_result) =
+            if self.root() != parent_block && parent_state.has_reconfiguration() {
+                ensure!(
+                    block.payload().filter(|p| **p != T::default()).is_none(),
+                    "Reconfiguration suffix should not carry payload"
+                );
+                (
+                    parent_block.output().as_ref().clone(),
+                    StateComputeResult {
+                        executed_state: parent_state.executed_state.clone(),
+                        compute_status: vec![],
+                    },
+                )
+            } else {
+                let parent_trees = parent_block.executed_trees().clone();
+                // Although NIL blocks don't have payload, we still send a T::default() to compute
+                // because we may inject a block prologue transaction.
+                self.state_computer
+                    .compute(&block, parent_trees)
+                    .await
+                    .with_context(|e| format!("Execution failure for block {}: {:?}", block, e))?
+            };
         Ok(ExecutedBlock::new(block, output, state_compute_result))
     }
 

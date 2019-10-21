@@ -117,26 +117,35 @@ fn test_empty_proposal_after_reconfiguration() {
     let genesis = block_store.root();
     let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
     // Normal proposal is not empty
-    let normal_proposal =
+    let normal_proposal_1 =
         block_on(proposal_generator.generate_proposal(42, minute_from_now())).unwrap();
-    assert!(!normal_proposal.payload().unwrap().is_empty());
+    assert!(!normal_proposal_1.payload().unwrap().is_empty());
     let a2 = inserter.insert_reconfiguration_block(&a1, 2);
     inserter.insert_qc_for_block(a2.as_ref(), None);
+    // if reconfiguration is committed, generate normal proposal
+    block_store.prune_tree(a2.id());
+    let normal_proposal_2 =
+        block_on(proposal_generator.generate_proposal(43, minute_from_now())).unwrap();
+    assert!(!normal_proposal_2.payload().unwrap().is_empty());
+    // insert another pending reconfiguration block
+    let a3 = inserter.insert_reconfiguration_block(&a2, 3);
+    inserter.insert_qc_for_block(&a3, None);
+
     // The direct child is empty
     let empty_proposal_1 =
-        block_on(proposal_generator.generate_proposal(43, minute_from_now())).unwrap();
+        block_on(proposal_generator.generate_proposal(44, minute_from_now())).unwrap();
     assert!(empty_proposal_1.payload().unwrap().is_empty());
     // insert one more block after reconfiguration
-    let a3 = inserter.create_block_with_qc(
-        inserter.create_qc_for_block(a2.as_ref(), None),
-        a2.as_ref(),
+    let a4 = inserter.create_block_with_qc(
+        inserter.create_qc_for_block(a3.as_ref(), None),
+        a3.as_ref(),
         4,
         vec![],
     );
-    let a3 = block_on(block_store.execute_and_insert_block(a3)).unwrap();
-    inserter.insert_qc_for_block(a3.as_ref(), None);
+    let a4 = block_on(block_store.execute_and_insert_block(a4)).unwrap();
+    inserter.insert_qc_for_block(a4.as_ref(), None);
     // Indirect child is empty too
     let empty_proposal_2 =
-        block_on(proposal_generator.generate_proposal(44, minute_from_now())).unwrap();
+        block_on(proposal_generator.generate_proposal(45, minute_from_now())).unwrap();
     assert!(empty_proposal_2.payload().unwrap().is_empty());
 }
