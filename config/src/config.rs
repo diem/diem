@@ -620,12 +620,14 @@ impl NodeConfig {
         }
     }
 
-    pub fn get_metrics_dir(&self) -> PathBuf {
-        let path = self.metrics.dir.clone();
-        if path.is_relative() {
-            self.base.data_dir_path.join(path)
+    pub fn get_metrics_dir(&self) -> Option<PathBuf> {
+        let path = self.metrics.dir.as_path();
+        if path.as_os_str().is_empty() {
+            None
+        } else if path.is_relative() {
+            Some(self.base.data_dir_path.join(path))
         } else {
-            path
+            Some(path.to_owned())
         }
     }
 
