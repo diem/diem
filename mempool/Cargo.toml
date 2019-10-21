@@ -33,7 +33,7 @@ network = { path = "../network" }
 libra-crypto = { path = "../crypto/crypto" }
 storage-client = { path = "../storage/storage-client" }
 libra-types = { path = "../types" }
-vm_validator = { path = "../vm_validator" }
+vm-validator = { path = "../vm-validator" }
 
 [dev-dependencies]
 rand = "0.6.5"

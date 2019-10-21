@@ -61,7 +61,7 @@ consensus-types = { path = "consensus-types", features = ["fuzzing", "testing"]}
 libra-crypto = { path = "../crypto/crypto", features = ["testing"]}
 libra-types = { path = "../types", features = ["testing"]}
 vm-genesis = { path = "../language/vm/vm-genesis" }
-vm_validator = { path = "../vm_validator" }
+vm-validator = { path = "../vm-validator" }
 
 [features]
 default = []

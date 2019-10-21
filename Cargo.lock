@@ -64,7 +64,7 @@ dependencies = [
  "storage-client 0.1.0",
  "storage-service 0.1.0",
  "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
- "vm_validator 0.1.0",
+ "vm-validator 0.1.0",
 ]
 
 [[package]]
@@ -733,7 +733,7 @@ dependencies = [
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm-genesis 0.1.0",
  "vm-runtime 0.1.0",
- "vm_validator 0.1.0",
+ "vm-validator 0.1.0",
 ]
 
 [[package]]
@@ -2093,7 +2093,7 @@ dependencies = [
  "storage-service 0.1.0",
  "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "ttl_cache 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "vm_validator 0.1.0",
+ "vm-validator 0.1.0",
 ]
 
 [[package]]
@@ -5253,7 +5253,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "vm_validator"
+name = "vm-validator"
 version = "0.1.0"
 dependencies = [
  "config-builder 0.1.0",
