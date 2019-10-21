@@ -201,7 +201,9 @@ impl<T: Payload> ProposalGenerator<T> {
         };
 
         // Reconfiguration rule - we propose empty blocks after reconfiguration until it's committed
-        let txns = if hqc_block.compute_result().has_reconfiguration() {
+        let txns = if self.block_store.root() != hqc_block
+            && hqc_block.compute_result().has_reconfiguration()
+        {
             T::default()
         } else {
             self.txn_manager

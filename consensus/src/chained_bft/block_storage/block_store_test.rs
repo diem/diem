@@ -514,4 +514,7 @@ fn test_empty_reconfiguration_suffix() {
     assert!(a5.compute_result().has_reconfiguration());
     // Block continues another branch can carry payload
     inserter.insert_block(&a2, 4, None);
+    block_tree.prune_tree(a3.id());
+    // If reconfiguration is committed, the child block can carry payload
+    let _a6 = inserter.insert_block(&a3, 4, None);
 }
