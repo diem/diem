@@ -14,12 +14,12 @@ futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features =
 futures_01 = { version = "0.1.28", package = "futures" }
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 rand = "0.6.5"
-libra-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure-ext", package = "libra-failure-ext" }
-scratchpad = { path = "../scratchpad" }
-libra-state-view = { path = "../state-view" }
-storage-proto = { path = "../storage-proto" }
-libra-types = { path = "../../types" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+scratchpad = { path = "../scratchpad", version = "0.1.0" }
+libra-state-view = { path = "../state-view", version = "0.1.0" }
+storage-proto = { path = "../storage-proto", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
 
 [dev-dependencies]
-libra-types = { path = "../../types", features = ["testing"] }
+libra-types = { path = "../../types", version = "0.1.0", features = ["testing"] }

@@ -18,4 +18,4 @@ pin-project = "0.4.2"
 tokio = "=0.2.0-alpha.6"
 yamux = { version = "0.2.1", default-features = false }
 
-memsocket = { path = "../memsocket" }
+memsocket = { path = "../memsocket", version = "0.1.0" }

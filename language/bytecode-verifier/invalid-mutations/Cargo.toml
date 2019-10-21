@@ -11,9 +11,9 @@ publish = false
 
 [dependencies]
 proptest = "0.9"
-libra-proptest-helpers = { path = "../../../common/proptest-helpers" }
-vm = { path = "../../vm" }
-libra-types = { path = "../../../types" }
+libra-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0" }
+vm = { path = "../../vm", version = "0.1.0" }
+libra-types = { path = "../../../types", version = "0.1.0" }
 
 [dev-dependencies]
-vm = { path = "../../vm", features = ["testing"] }
+vm = { path = "../../vm", version = "0.1.0", features = ["testing"] }

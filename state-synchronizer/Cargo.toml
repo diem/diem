@@ -17,23 +17,23 @@ rand = "0.6.5"
 tokio = "=0.2.0-alpha.6"
 prometheus = { version = "0.7.0", default-features = false }
 
-libra-config = { path = "../config" }
-executor = { path = "../executor" }
-failure = { path = "../common/failure-ext", package = "libra-failure-ext" }
-libra-logger = { path = "../common/logger" }
-libra-metrics = { path = "../common/metrics" }
-network = { path = "../network" }
-storage-client = { path = "../storage/storage-client" }
-libra-types = { path = "../types" }
-vm-runtime = { path = "../language/vm/vm-runtime" }
+libra-config = { path = "../config", version = "0.1.0" }
+executor = { path = "../executor", version = "0.1.0" }
+failure = { path = "../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+libra-logger = { path = "../common/logger", version = "0.1.0" }
+libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+network = { path = "../network", version = "0.1.0" }
+storage-client = { path = "../storage/storage-client", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0" }
+vm-runtime = { path = "../language/vm/vm-runtime", version = "0.1.0" }
 
 [dev-dependencies]
 bytes = "0.4.12"
 
-config-builder = { path = "../config/config-builder" }
-libra-crypto = { path = "../crypto/crypto", features = ["testing"]}
+config-builder = { path = "../config/config-builder", version = "0.1.0" }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["testing"]}
 parity-multiaddr = "0.5.0"
-libra-types = { path = "../types", features = ["testing"] }
-vm-genesis = { path = "../language/vm/vm-genesis" }
-transaction-builder = { path = "../language/transaction-builder" }
-channel = { path = "../common/channel" }
+libra-types = { path = "../types", version = "0.1.0", features = ["testing"] }
+vm-genesis = { path = "../language/vm/vm-genesis", version = "0.1.0" }
+transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
+channel = { path = "../common/channel", version = "0.1.0" }

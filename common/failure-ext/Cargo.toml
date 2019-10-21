@@ -12,4 +12,4 @@ edition = "2018"
 [dependencies]
 failure = "0.1.3"
 
-libra-failure-macros = { path = "failure-macros" }
+libra-failure-macros = { path = "failure-macros", version = "0.1.0" }

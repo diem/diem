@@ -16,7 +16,7 @@ futures_01 = { version = "0.1.28", package = "futures" }
 parity-multiaddr = "0.5.0"
 tokio = "=0.2.0-alpha.6"
 
-libra-logger = { path = "../../common/logger" }
-memsocket = { path = "../memsocket" }
-netcore = { path = "../netcore" }
-noise = { path = "../noise" }
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
+memsocket = { path = "../memsocket", version = "0.1.0" }
+netcore = { path = "../netcore", version = "0.1.0" }
+noise = { path = "../noise", version = "0.1.0" }

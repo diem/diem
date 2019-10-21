@@ -10,8 +10,8 @@ publish = false
 edition = "2018"
 
 [dependencies]
-failure = { path = "../../common/failure-ext", package = "libra-failure-ext" }
-libra-types = { path = "../../types" }
+failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+libra-types = { path = "../../types", version = "0.1.0" }
 
 [dev-dependencies]
-libra-types = { path = "../../types", features = ["testing"]}
+libra-types = { path = "../../types", version = "0.1.0", features = ["testing"]}
