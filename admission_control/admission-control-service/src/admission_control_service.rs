@@ -255,13 +255,12 @@ where
                 match sent_result {
                     Ok(()) => {
                         let result = block_on(res_receiver);
-                        match result {
-                            Ok(res) => res,
-                            Err(e) => Err(format_err!(
+                        result.unwrap_or_else(|e| {
+                            Err(format_err!(
                                 "[admission-control] Upstream transaction failed with error: {:?}",
                                 e
-                            )),
-                        }
+                            ))
+                        })
                     }
                     Err(e) => Err(format_err!(
                         "[admission-control] Failed to submit write request with error: {:?}",

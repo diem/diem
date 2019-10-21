@@ -216,12 +216,9 @@ impl<Location: Clone + Eq + Default> ModuleSourceMap<Location> {
         fdef_idx: FunctionDefinitionIndex,
         location: Location,
     ) -> Result<()> {
-        match self.function_map.insert(fdef_idx.0, FunctionSourceMap::new(location)) {
-                None => Ok(()),
-                Some(_) => Err(format_err!(
+        self.function_map.insert(fdef_idx.0, FunctionSourceMap::new(location)).map_or(Ok(()), |_| { Err(format_err!(
                     "Multiple functions at same function definition index encountered when constructing source map"
-                )),
-        }
+                )) })
     }
 
     pub fn add_function_type_parameter_mapping(
@@ -305,12 +302,9 @@ impl<Location: Clone + Eq + Default> ModuleSourceMap<Location> {
         struct_def_idx: StructDefinitionIndex,
         location: Location,
     ) -> Result<()> {
-        match self.struct_map.insert(struct_def_idx.0, StructSourceMap::new(location)) {
-                None => Ok(()),
-                Some(_) => Err(format_err!(
+        self.struct_map.insert(struct_def_idx.0, StructSourceMap::new(location)).map_or(Ok(()), |_| { Err(format_err!(
                 "Multiple structs at same struct definition index encountered when constructing source map"
-                )),
-        }
+                )) })
     }
 
     pub fn add_struct_field_mapping(
