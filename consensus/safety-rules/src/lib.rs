@@ -22,7 +22,7 @@ mod safety_rules_test;
 
 #[derive(Debug, Fail, Eq, PartialEq)]
 /// Different reasons for proposal rejection
-pub enum ProposalReject {
+pub enum Error {
     /// This proposal's round is less than round of preferred block.
     /// Returns the id of the preferred block.
     #[fail(
@@ -200,11 +200,11 @@ impl SafetyRules {
     pub fn construct_and_sign_vote<T: Payload>(
         &mut self,
         vote_proposal: &VoteProposal<T>,
-    ) -> Result<Vote, ProposalReject> {
+    ) -> Result<Vote, Error> {
         let proposed_block = vote_proposal.block();
 
         if proposed_block.round() <= self.state.last_vote_round() {
-            return Err(ProposalReject::OldProposal {
+            return Err(Error::OldProposal {
                 proposal_round: proposed_block.round(),
                 last_vote_round: self.state.last_vote_round(),
             });
@@ -214,7 +214,7 @@ impl SafetyRules {
             >= self.state.preferred_block_round();
 
         if !respects_preferred_block {
-            return Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {
+            return Err(Error::ProposalRoundLowerThenPreferredBlock {
                 preferred_block_round: self.state.preferred_block_round(),
             });
         }

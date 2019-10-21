@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{ConsensusState, ProposalReject, SafetyRules};
+use crate::{ConsensusState, Error, SafetyRules};
 use consensus_types::{
     block::Block, block_info::BlockInfo, common::Round, quorum_cert::QuorumCert, vote::Vote,
     vote_data::VoteData, vote_proposal::VoteProposal,
@@ -272,7 +272,7 @@ fn test_voting() {
     safety_rules.update(b2.block().quorum_cert());
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b2),
-        Err(ProposalReject::OldProposal {
+        Err(Error::OldProposal {
             last_vote_round: 4,
             proposal_round: 3,
         })
@@ -293,7 +293,7 @@ fn test_voting() {
     safety_rules.update(a4.block().quorum_cert());
     assert_eq!(
         safety_rules.construct_and_sign_vote(&a4),
-        Err(ProposalReject::OldProposal {
+        Err(Error::OldProposal {
             last_vote_round: 7,
             proposal_round: 7,
         })
@@ -301,7 +301,7 @@ fn test_voting() {
     safety_rules.update(b4.block().quorum_cert());
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b4),
-        Err(ProposalReject::ProposalRoundLowerThenPreferredBlock {
+        Err(Error::ProposalRoundLowerThenPreferredBlock {
             preferred_block_round: 4,
         })
     );
