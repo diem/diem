@@ -1,10 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::{
-    hash::{CryptoHasher, RoundHasher},
-    HashValue,
-};
 use libra_types::account_address::AccountAddress;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
@@ -34,11 +30,4 @@ impl<T> Payload for T where
         + Eq
         + 'static
 {
-}
-
-pub fn timeout_hash(round: Round, epoch: u64) -> HashValue {
-    let digest = lcs::to_bytes(&(round, epoch)).expect("Should serialize");
-    let mut state = RoundHasher::default();
-    state.write(digest.as_ref());
-    state.finish()
 }

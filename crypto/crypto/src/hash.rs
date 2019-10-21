@@ -563,18 +563,8 @@ define_hasher! {
 }
 
 define_hasher! {
-    /// The hasher used to compute the hash of a PacemakerTimeout object.
-    (PacemakerTimeoutHasher, PACEMAKER_TIMEOUT_HASHER, b"PacemakerTimeout")
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a TimeoutMsgHasher object.
-    (TimeoutMsgHasher, TIMEOUT_MSG_HASHER, b"TimeoutMsg")
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a Round
-    (RoundHasher, ROUND_HASHER, b"Round")
+    /// The hasher used to compute the hash of a TimeoutProposal
+    (TimeoutHasher, ROUND_HASHER, b"Timeout")
 }
 
 define_hasher! {

@@ -7,6 +7,7 @@ pub mod common;
 pub mod proposal_msg;
 pub mod quorum_cert;
 pub mod sync_info;
+pub mod timeout;
 pub mod timeout_certificate;
 pub mod vote;
 pub mod vote_data;
