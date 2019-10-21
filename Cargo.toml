@@ -73,7 +73,7 @@ members = [
     "testsuite/cluster-test",
     "testsuite/libra-fuzzer",
     "types",
-    "vm_validator",
+    "vm-validator",
 ]
 
 [profile.release]
