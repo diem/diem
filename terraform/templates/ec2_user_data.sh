@@ -38,4 +38,4 @@ cat > /etc/profile.d/libra_prompt.sh <<EOF
 export PS1="[\u:validator@\h \w]$ "
 EOF
 
-yum -y install ngrep tcpdump perf gdb nmap-ncat strace htop sysstat
+yum -y install ngrep tcpdump perf gdb nmap-ncat strace htop sysstat tc
