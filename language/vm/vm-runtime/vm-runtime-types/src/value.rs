@@ -1022,24 +1022,6 @@ impl Locals {
         }
     }
 
-    // called from test, revisit and delete
-    pub fn equals(&self, other: &Locals) -> bool {
-        if self.0.len() != other.0.len() {
-            return false;
-        }
-        for (a, b) in self.0.iter().zip(&other.0) {
-            match a.equals(b) {
-                Ok(res) => {
-                    if !res {
-                        return false;
-                    }
-                }
-                Err(_) => return false,
-            }
-        }
-        true
-    }
-
     pub fn pretty_string(&self) -> String {
         let mut locals = "".to_string();
         for (i, local) in self.0.iter().enumerate() {
