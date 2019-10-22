@@ -374,7 +374,9 @@ where
             num_leaves > 0,
             "num_leaves is zero while first_leaf_index is not None.",
         );
-        let last_leaf_index = first_leaf_index + num_leaves - 1;
+        let last_leaf_index = first_leaf_index
+            .checked_add(num_leaves - 1)
+            .ok_or_else(|| format_err!("Requesting too many leaves."))?;
         ensure!(
             last_leaf_index < self.num_leaves as u64,
             "Invalid last_leaf_index: {}, num_leaves: {}",

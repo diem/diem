@@ -567,28 +567,35 @@ where
             || left_sibling_iter.peek().is_some()
             || right_sibling_iter.peek().is_some()
         {
-            let mut leaf_iter = current_hashes.iter();
-            // If the first leaf is a right child, it needs to be combined with a sibling on the
-            // left.
+            let mut children_iter = current_hashes.iter();
+
+            // If the first position on the current level is a right child, it needs to be combined
+            // with a sibling on the left.
             if first_pos.is_right_child() {
                 let left_hash = *left_sibling_iter.next().ok_or_else(|| {
                     format_err!("First child is a right child, but missing sibling on the left.")
                 })?;
-                let right_hash = *leaf_iter.next().expect("The first leaf must exist.");
+                let right_hash = *children_iter.next().expect("The first leaf must exist.");
                 parent_hashes.push(MerkleTreeInternalNode::<H>::new(left_hash, right_hash).hash());
             }
 
-            // Similarly, if the last leaf is a left child, it needs to be combined with a sibling
-            // on the right. Everything else should form an even number of leaves.
-            for chunk in leaf_iter.as_slice().chunks(2) {
+            // Next we take two children at a time and compute their parents.
+            let mut children_iter = children_iter.as_slice().chunks_exact(2);
+            while let Some(chunk) = children_iter.next() {
                 let left_hash = chunk[0];
-                let right_hash = if chunk.len() == 2 {
-                    chunk[1]
-                } else {
-                    *right_sibling_iter.next().ok_or_else(|| {
-                        format_err!("Last child is a left child, but missing sibling on the right.")
-                    })?
-                };
+                let right_hash = chunk[1];
+                parent_hashes.push(MerkleTreeInternalNode::<H>::new(left_hash, right_hash).hash());
+            }
+
+            // Similarly, if the last position is a left child, it needs to be combined with a
+            // sibling on the right.
+            let remainder = children_iter.remainder();
+            assert!(remainder.len() <= 1);
+            if !remainder.is_empty() {
+                let left_hash = remainder[0];
+                let right_hash = *right_sibling_iter.next().ok_or_else(|| {
+                    format_err!("Last child is a left child, but missing sibling on the right.")
+                })?;
                 parent_hashes.push(MerkleTreeInternalNode::<H>::new(left_hash, right_hash).hash());
             }
 
