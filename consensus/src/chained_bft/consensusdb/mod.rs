@@ -188,4 +188,10 @@ impl ConsensusDB {
         iter.seek_to_first();
         iter.collect::<Result<HashMap<HashValue, QuorumCert>>>()
     }
+
+    /// Get block by hash
+    pub fn get_block_by_hash<T: Payload>(&self, hash:&HashValue) -> Option<Block<T>> {
+        //:TODO
+        unimplemented!()
+    }
 }

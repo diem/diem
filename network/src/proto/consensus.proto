@@ -17,6 +17,7 @@ message ConsensusMsg {
     TimeoutMsg timeout_msg = 5;
     SyncInfo sync_info = 6;
     Block new_block = 7;
+    LongestChainInfo chain_info = 8;
   }
 }
 
@@ -146,4 +147,8 @@ message RespondBlock {
   BlockRetrievalStatus status = 1;
   // The responded block.
   repeated Block blocks = 2;
+}
+
+message LongestChainInfo{
+    uint64 height = 1;
 }
