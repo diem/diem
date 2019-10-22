@@ -43,6 +43,6 @@ macro_rules! with_loaded_vm {
         let data_cache = TransactionDataCache::new(&data_cache);
         let mut $vm = InterpreterForCostSynthesis::new(&$module_cache, txn_data, data_cache);
         $vm.turn_off_gas_metering();
-        $vm.push_frame(entry_func);
+        $vm.push_frame(entry_func, vec![]);
     };
 }

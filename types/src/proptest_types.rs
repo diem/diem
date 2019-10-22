@@ -12,6 +12,8 @@ use crate::{
     contract_event::ContractEvent,
     event::{EventHandle, EventKey},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
+    identifier::Identifier,
+    language_storage::{StructTag, TypeTag},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{AccumulatorConsistencyProof, TransactionAccumulatorProof},
     transaction::{
@@ -580,6 +582,7 @@ impl Arbitrary for UpdateToLatestLedgerResponse<Ed25519Signature> {
 
 #[derive(Arbitrary, Debug)]
 pub struct ContractEventGen {
+    type_tag: TypeTag,
     payload: Vec<u8>,
     use_sent_key: bool,
 }
@@ -600,7 +603,7 @@ impl ContractEventGen {
         *event_handle.count_mut() += 1;
         let event_key = event_handle.key();
 
-        ContractEvent::new(*event_key, sequence_number, self.payload)
+        ContractEvent::new(*event_key, sequence_number, self.type_tag, self.payload)
     }
 }
 
@@ -649,16 +652,6 @@ impl AccountStateBlobGen {
     }
 }
 
-impl ContractEvent {
-    pub fn strategy_impl(
-        event_key_strategy: impl Strategy<Value = EventKey>,
-    ) -> impl Strategy<Value = Self> {
-        (event_key_strategy, any::<u64>(), vec(any::<u8>(), 1..10)).prop_map(
-            |(event_key, seq_num, event_data)| ContractEvent::new(event_key, seq_num, event_data),
-        )
-    }
-}
-
 impl EventHandle {
     pub fn strategy_impl(
         event_key_strategy: impl Strategy<Value = EventKey>,
@@ -675,6 +668,54 @@ impl Arbitrary for EventHandle {
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         EventHandle::strategy_impl(any::<EventKey>()).boxed()
+    }
+}
+
+impl Arbitrary for TypeTag {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        use TypeTag::*;
+        let leaf = prop_oneof![Just(Bool), Just(U64), Just(ByteArray), Just(Address),];
+        leaf.prop_recursive(
+            8,  // levels deep
+            16, // max size
+            4,  // max number of items per collection
+            |inner| {
+                (
+                    any::<AccountAddress>(),
+                    any::<Identifier>(),
+                    any::<Identifier>(),
+                    vec(inner.clone(), 0..4),
+                )
+                    .prop_map(|(address, module, name, type_params)| {
+                        Struct(StructTag {
+                            address,
+                            module,
+                            name,
+                            type_params,
+                        })
+                    })
+            },
+        )
+        .boxed()
+    }
+}
+
+impl ContractEvent {
+    pub fn strategy_impl(
+        event_key_strategy: impl Strategy<Value = EventKey>,
+    ) -> impl Strategy<Value = Self> {
+        (
+            event_key_strategy,
+            any::<u64>(),
+            any::<TypeTag>(),
+            vec(any::<u8>(), 1..10),
+        )
+            .prop_map(|(event_key, seq_num, type_tag, event_data)| {
+                ContractEvent::new(event_key, seq_num, type_tag, event_data)
+            })
     }
 }
 

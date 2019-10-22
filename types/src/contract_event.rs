@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_config::AccountEvent, event::EventKey, ledger_info::LedgerInfo, proof::EventProof,
-    transaction::Version,
+    account_config::AccountEvent, event::EventKey, language_storage::TypeTag,
+    ledger_info::LedgerInfo, proof::EventProof, transaction::Version,
 };
 use failure::prelude::*;
 use libra_crypto::{
@@ -16,21 +16,29 @@ use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 
 /// Entry produced via a call to the `emit_event` builtin.
-#[derive(Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ContractEvent {
     /// The unique key that the event was emitted to
     key: EventKey,
     /// The number of messages that have been emitted to the path previously
     sequence_number: u64,
+    /// The type of the data
+    type_tag: TypeTag,
     /// The data payload of the event
     event_data: Vec<u8>,
 }
 
 impl ContractEvent {
-    pub fn new(key: EventKey, sequence_number: u64, event_data: Vec<u8>) -> Self {
+    pub fn new(
+        key: EventKey,
+        sequence_number: u64,
+        type_tag: TypeTag,
+        event_data: Vec<u8>,
+    ) -> Self {
         ContractEvent {
             key,
             sequence_number,
+            type_tag,
             event_data,
         }
     }
@@ -46,15 +54,20 @@ impl ContractEvent {
     pub fn event_data(&self) -> &[u8] {
         &self.event_data
     }
+
+    pub fn type_tag(&self) -> &TypeTag {
+        &self.type_tag
+    }
 }
 
 impl std::fmt::Debug for ContractEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "ContractEvent {{ key: {:?}, index: {:?}, event_data: {:?} }}",
+            "ContractEvent {{ key: {:?}, index: {:?}, type: {:?}, event_data: {:?} }}",
             self.key,
             self.sequence_number,
+            self.type_tag,
             hex::encode(&self.event_data)
         )
     }
@@ -65,8 +78,8 @@ impl std::fmt::Display for ContractEvent {
         if let Ok(payload) = AccountEvent::try_from(&self.event_data) {
             write!(
                 f,
-                "ContractEvent {{ key: {}, index: {:?}, event_data: {:?} }}",
-                self.key, self.sequence_number, payload,
+                "ContractEvent {{ key: {}, index: {:?}, type: {:?}, event_data: {:?} }}",
+                self.key, self.sequence_number, self.type_tag, payload,
             )
         } else {
             write!(f, "{:?}", self)
@@ -90,8 +103,9 @@ impl TryFrom<crate::proto::types::Event> for ContractEvent {
     fn try_from(event: crate::proto::types::Event) -> Result<Self> {
         let key = EventKey::try_from(event.key.as_ref())?;
         let sequence_number = event.sequence_number;
+        let type_tag = lcs::from_bytes(&event.type_tag)?;
         let event_data = event.event_data;
-        Ok(Self::new(key, sequence_number, event_data))
+        Ok(Self::new(key, sequence_number, type_tag, event_data))
     }
 }
 
@@ -100,6 +114,7 @@ impl From<ContractEvent> for crate::proto::types::Event {
         Self {
             key: event.key.to_vec(),
             sequence_number: event.sequence_number,
+            type_tag: lcs::to_bytes(&event.type_tag).expect("Failed to serialize."),
             event_data: event.event_data,
         }
     }

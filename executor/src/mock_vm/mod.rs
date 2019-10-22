@@ -14,6 +14,7 @@ use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     contract_event::ContractEvent,
     event::EventKey,
+    language_storage::TypeTag,
     transaction::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument,
         TransactionOutput, TransactionPayload, TransactionStatus,
@@ -246,6 +247,7 @@ fn gen_events(sender: AccountAddress) -> Vec<ContractEvent> {
     vec![ContractEvent::new(
         EventKey::new_from_address(&sender, 0),
         0,
+        TypeTag::ByteArray,
         b"event_data".to_vec(),
     )]
 }
