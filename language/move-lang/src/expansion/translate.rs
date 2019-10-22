@@ -327,9 +327,9 @@ fn struct_fields(
         if let Err(old_loc) = field_map.add(field.clone(), (idx, st)) {
             context.error(vec![
                 (
-                    sname.loc(),
+                    field.loc(),
                     format!(
-                        "Duplicate definition for field '{}' in sttruct '{}'",
+                        "Duplicate definition for field '{}' in struct '{}'",
                         field, sname
                     ),
                 ),

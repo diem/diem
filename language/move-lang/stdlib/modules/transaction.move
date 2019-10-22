@@ -5,7 +5,6 @@ module Transaction {
     native public max_gas_units(): u64;
     native public gas_remaining(): u64;
     native public sender(): address;
-    native public create_account(_: address);
     native public sequence_number(): u64;
     native public public_key(): bytearray;
 

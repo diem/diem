@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/expansion/public_main.move:1:1 ───
+   │
+ 1 │ public main() {
+   │ ^^^^^^ Extraneous 'public' modifier. This top-level function is assumed to be public
+   │
+
