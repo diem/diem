@@ -3,16 +3,45 @@
 
 use lazy_static;
 use libra_metrics::{Histogram, IntCounter, IntGauge, OpMetrics};
-use prometheus::IntGaugeVec;
+use prometheus::{IntCounterVec, IntGaugeVec};
 
 lazy_static::lazy_static! {
-    pub static ref NETWORK_PEERS: IntGaugeVec = register_int_gauge_vec!(
+    pub static ref LIBRA_NETWORK_PEERS: IntGaugeVec = register_int_gauge_vec!(
         // metric name
         "libra_network_peers",
         // metric description
         "Libra network peers counter",
         // metric labels (dimensions)
-        &["state", "role"]
+        &["role", "state"]
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_RPC_MESSAGES: IntCounterVec = register_int_counter_vec!(
+        "libra_network_rpc_messages",
+        "Libra network rpc messages counters",
+        &["type", "state"]
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_RPC_BYTES: IntCounterVec = register_int_counter_vec!(
+        "libra_network_rpc_bytes",
+        "Libra network rpc bytes counters",
+        &["type", "state"]
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_RPC_LATENCY: Histogram = register_histogram!(
+        "libra_network_rpc_latency_seconds",
+        "Libra network rpc latency histogram"
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_DIRECT_SEND_MESSAGES: IntCounterVec = register_int_counter_vec!(
+        "libra_network_direct_send_messages",
+        "Libra network direct send protocol counters, measured by messages",
+        &["state"]
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_DIRECT_SEND_BYTES: IntCounterVec = register_int_counter_vec!(
+        "libra_network_direct_send_bytes",
+        "Libra network direct send protocol counters, measured by bytes",
+        &["state"]
     ).unwrap();
 }
 

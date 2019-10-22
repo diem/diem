@@ -254,6 +254,16 @@ where
                     )
                     .get(),
             );
+            counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
+                .with_label_values(&["dropped"])
+                .inc_by(
+                    counters::OP_COUNTERS
+                        .peer_gauge(
+                            &counters::PENDING_DIRECT_SEND_OUTBOUND_MESSAGES,
+                            &peer_id.short_str(),
+                        )
+                        .get(),
+                );
         };
         executor.spawn(f_substream);
 
@@ -303,6 +313,9 @@ where
                     .await
                 {
                     counters::DIRECT_SEND_MESSAGES_DROPPED.inc();
+                    counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
+                        .with_label_values(&["dropped"])
+                        .inc();
                     warn!("DirectSend to peer {} failed: {}", peer_id.short_str(), e);
                 }
             }
