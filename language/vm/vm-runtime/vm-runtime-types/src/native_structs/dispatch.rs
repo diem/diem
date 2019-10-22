@@ -28,7 +28,7 @@ pub struct NativeStruct {
 
 /// Looks up the expected native struct definition from the module id (address and module) and
 /// function name where it was expected to be declared
-pub fn dispatch_native_struct(
+pub fn resolve_native_struct(
     module: &ModuleId,
     struct_name: &IdentStr,
 ) -> Option<&'static NativeStruct> {

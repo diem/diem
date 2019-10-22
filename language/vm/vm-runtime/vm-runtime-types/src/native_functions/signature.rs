@@ -1,8 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::dispatch::NativeReturnStatus;
-use crate::value::Value;
+use crate::{native_functions::dispatch::NativeResult, value::Value};
 use bit_vec::BitVec;
 use libra_crypto::{
     ed25519::{self, Ed25519PublicKey, Ed25519Signature},
@@ -14,6 +13,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use std::{collections::VecDeque, convert::TryFrom};
+use vm::errors::VMResult;
 
 // TODO: Talk to Crypto to determine these costs
 const ED25519_COST: u64 = 35;
@@ -42,15 +42,15 @@ const OVERSIZED_PUBLIC_KEY_SIZE_FAILURE: u64 = DEFAULT_ERROR_CODE + 8;
 /// Concatenated Ed25519 public keys should be a multiple of 32 bytes
 const INVALID_PUBLIC_KEY_SIZE_FAILURE: u64 = DEFAULT_ERROR_CODE + 9;
 
-pub fn native_ed25519_signature_verification(mut arguments: VecDeque<Value>) -> NativeReturnStatus {
+pub fn native_ed25519_signature_verification(
+    mut arguments: VecDeque<Value>,
+) -> VMResult<NativeResult> {
     if arguments.len() != 3 {
         let msg = format!(
             "wrong number of arguments for ed25519_signature_verification expected 3 found {}",
             arguments.len()
         );
-        return NativeReturnStatus::InvariantError(
-            VMStatus::new(StatusCode::UNREACHABLE).with_message(msg),
-        );
+        return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
     }
     let msg = pop_arg!(arguments, ByteArray);
     let pubkey = pop_arg!(arguments, ByteArray);
@@ -61,67 +61,52 @@ pub fn native_ed25519_signature_verification(mut arguments: VecDeque<Value>) -> 
     let sig = match ed25519::Ed25519Signature::try_from(signature.as_bytes()) {
         Ok(sig) => sig,
         Err(_) => {
-            return NativeReturnStatus::Aborted {
+            return Ok(NativeResult::err(
                 cost,
-                error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                     .with_sub_status(DEFAULT_ERROR_CODE),
-            }
+            ));
         }
     };
     let pk = match ed25519::Ed25519PublicKey::try_from(pubkey.as_bytes()) {
         Ok(pk) => pk,
         Err(_) => {
-            return NativeReturnStatus::Aborted {
+            return Ok(NativeResult::err(
                 cost,
-                error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                     .with_sub_status(DEFAULT_ERROR_CODE),
-            }
+            ));
         }
     };
 
     let bool_value = sig.verify_arbitrary_msg(msg.as_bytes(), &pk).is_ok();
     let return_values = vec![Value::bool(bool_value)];
-    NativeReturnStatus::Success {
-        cost,
-        return_values,
-    }
+    Ok(NativeResult::ok(cost, return_values))
 }
 
 /// Batch verify a collection of signatures using a bitmap for matching signatures to keys.
 pub fn native_ed25519_threshold_signature_verification(
     mut arguments: VecDeque<Value>,
-) -> NativeReturnStatus {
+) -> VMResult<NativeResult> {
     if arguments.len() != 4 {
         let msg = format!(
             "wrong number of arguments for ed25519_signature_verification expected 4 found {}",
             arguments.len()
         );
-        return NativeReturnStatus::InvariantError(
-            VMStatus::new(StatusCode::UNREACHABLE).with_message(msg),
-        );
+        return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
     }
     let message = pop_arg!(arguments, ByteArray);
     let public_keys = pop_arg!(arguments, ByteArray);
     let signatures = pop_arg!(arguments, ByteArray);
     let bitmap = pop_arg!(arguments, ByteArray);
 
-    let num_of_sigs = match ed25519_threshold_signature_verification(
+    Ok(ed25519_threshold_signature_verification(
         &bitmap,
         &signatures,
         &public_keys,
         &message,
         BATCH_ED25519_COST,
-    ) {
-        Ok(num_of_sigs) => num_of_sigs,
-        Err(e) => return e,
-    };
-
-    let cost = ed25519_threshold_signature_verification_cost(num_of_sigs, message.len());
-    let return_values = vec![Value::u64(num_of_sigs)];
-    NativeReturnStatus::Success {
-        cost,
-        return_values,
-    }
+    ))
 }
 
 fn ed25519_threshold_signature_verification_cost(num_of_sigs: u64, message_len: usize) -> u64 {
@@ -134,10 +119,13 @@ fn ed25519_threshold_signature_verification(
     public_keys: &ByteArray,
     message: &ByteArray,
     abort_cost: u64,
-) -> std::result::Result<u64, NativeReturnStatus> {
+) -> NativeResult {
     let bitvec = BitVec::from_bytes(bitmap.as_bytes());
 
-    let num_of_sigs = sanity_check(&bitvec, &signatures, &public_keys, abort_cost)?;
+    let num_of_sigs = match sanity_check(&bitvec, &signatures, &public_keys, abort_cost) {
+        Ok(sig_count) => sig_count,
+        Err(result) => return result,
+    };
     let abort_cost = ed25519_threshold_signature_verification_cost(num_of_sigs, message.len());
 
     let sig_chunks: ::std::result::Result<Vec<_>, _> = signatures
@@ -160,11 +148,11 @@ fn ed25519_threshold_signature_verification(
                         matching_keys_and_signatures(num_of_sigs, bitvec, signatures, keys);
                     let hash_value = match HashValue::from_slice(message.as_bytes()) {
                         Err(_) => {
-                            return Err(NativeReturnStatus::Aborted {
-                                cost: abort_cost,
-                                error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                            return NativeResult::err(
+                                abort_cost,
+                                VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                                     .with_sub_status(DEFAULT_ERROR_CODE),
-                            })
+                            )
                         }
                         Ok(hash_value) => hash_value,
                     };
@@ -172,37 +160,43 @@ fn ed25519_threshold_signature_verification(
                         &hash_value,
                         keys_and_signatures,
                     ) {
-                        Ok(()) => Ok(num_of_sigs),
+                        Ok(()) => NativeResult::ok(
+                            ed25519_threshold_signature_verification_cost(
+                                num_of_sigs,
+                                message.len(),
+                            ),
+                            vec![Value::u64(num_of_sigs)],
+                        ),
                         Err(_) =>
                         // Batch verification failed
                         {
-                            Err(NativeReturnStatus::Aborted {
-                                cost: abort_cost,
-                                error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                            NativeResult::err(
+                                abort_cost,
+                                VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                                     .with_sub_status(SIGNATURE_VERIFICATION_FAILURE),
-                            })
+                            )
                         }
                     }
                 }
                 Err(_) =>
                 // Key deserialization error
                 {
-                    Err(NativeReturnStatus::Aborted {
-                        cost: abort_cost,
-                        error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                    NativeResult::err(
+                        abort_cost,
+                        VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                             .with_sub_status(PUBLIC_KEY_DESERIALIZATION_FAILURE),
-                    })
+                    )
                 }
             }
         }
         Err(_) =>
         // Signature deserialization error
         {
-            Err(NativeReturnStatus::Aborted {
-                cost: abort_cost,
-                error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+            NativeResult::err(
+                abort_cost,
+                VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                     .with_sub_status(SIGNATURE_DESERIALIZATION_FAILURE),
-            })
+            )
         }
     }
 }
@@ -239,7 +233,7 @@ fn sanity_check(
     signatures: &ByteArray,
     pubkeys: &ByteArray,
     abort_cost: u64,
-) -> std::result::Result<u64, NativeReturnStatus> {
+) -> std::result::Result<u64, NativeResult> {
     let bitmap_len = bitmap.len();
     let signatures_len = signatures.len();
     let public_keys_len = pubkeys.len();
@@ -247,11 +241,11 @@ fn sanity_check(
     // Ensure a BITMAP_SIZE bitmap.
     if bitmap_len != BITMAP_SIZE {
         // Invalid bitmap length
-        return Err(NativeReturnStatus::Aborted {
-            cost: abort_cost,
-            error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+        return Err(NativeResult::err(
+            abort_cost,
+            VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                 .with_sub_status(INVALID_BITMAP_LENGTH_FAILURE),
-        });
+        ));
     }
 
     let mut bitmap_last_bit_set: usize = 0; // This is fine as we expect at least one set bit.
@@ -264,47 +258,46 @@ fn sanity_check(
     }
     if bitmap_count_ones == 0 {
         // Bitmap is all zeros
-        return Err(NativeReturnStatus::Aborted {
-            cost: abort_cost,
-            error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
-                .with_sub_status(ZERO_BITMAP_FAILURE),
-        });
+        return Err(NativeResult::err(
+            abort_cost,
+            VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR).with_sub_status(ZERO_BITMAP_FAILURE),
+        ));
     }
     // Ensure we have as many signatures as the number of set bits in bitmap.
     if bitmap_count_ones * 64 != signatures_len {
         // Mismatch between Bitmap Hamming weight and number of signatures
-        return Err(NativeReturnStatus::Aborted {
-            cost: abort_cost,
-            error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+        return Err(NativeResult::err(
+            abort_cost,
+            VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                 .with_sub_status(SIGNATURE_SIZE_FAILURE),
-        });
+        ));
     }
     // Ensure that we have at least as many keys as the index of the last set bit in bitmap.
     if public_keys_len < 32 * (bitmap_last_bit_set + 1) {
         // Bitmap points to a non-existent key
-        return Err(NativeReturnStatus::Aborted {
-            cost: abort_cost,
-            error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+        return Err(NativeResult::err(
+            abort_cost,
+            VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                 .with_sub_status(BITMAP_PUBLIC_KEY_SIZE_FAILURE),
-        });
+        ));
     }
     // Ensure no more than BITMAP_SIZE keys.
     if public_keys_len > 32 * BITMAP_SIZE {
         // Length of bytes of concatenated keys exceeds the maximum allowed
-        return Err(NativeReturnStatus::Aborted {
-            cost: abort_cost,
-            error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+        return Err(NativeResult::err(
+            abort_cost,
+            VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                 .with_sub_status(OVERSIZED_PUBLIC_KEY_SIZE_FAILURE),
-        });
+        ));
     }
     // Ensure ByteArray for keys is a multiple of 32 bytes.
     if public_keys_len % 32 != 0 {
         // Concatenated Ed25519 public keys should be a multiple of 32 bytes
-        return Err(NativeReturnStatus::Aborted {
-            cost: abort_cost,
-            error_code: VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+        return Err(NativeResult::err(
+            abort_cost,
+            VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                 .with_sub_status(INVALID_PUBLIC_KEY_SIZE_FAILURE),
-        });
+        ));
     }
     Ok(bitmap_count_ones as u64)
 }

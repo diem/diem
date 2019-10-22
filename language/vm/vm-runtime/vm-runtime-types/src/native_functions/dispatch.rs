@@ -3,7 +3,7 @@
 
 use super::{hash, primitive_helpers, signature};
 use crate::{
-    native_structs::{dispatch::dispatch_native_struct, vector::NativeVector},
+    native_structs::{dispatch::resolve_native_struct, vector::NativeVector},
     value::Value,
 };
 use libra_types::{
@@ -14,48 +14,66 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use std::collections::{HashMap, VecDeque};
-use vm::file_format::{FunctionSignature, Kind, SignatureToken};
+use vm::{
+    errors::VMResult,
+    file_format::{FunctionSignature, Kind, SignatureToken},
+};
 
-/// Enum representing the result of running a native function
-pub enum NativeReturnStatus {
-    /// Represents a successful execution.
-    Success {
-        /// The cost for running that function
-        cost: u64,
-        /// The `Vec<Value>` values will be pushed on the stack
-        return_values: Vec<Value>,
-    },
-    /// Represents the execution of an abort instruction with the given error code
-    Aborted {
-        /// The cost for running that function up to the point of the abort
-        cost: u64,
-        /// The error code aborted on
-        error_code: VMStatus,
-    },
-    /// `InvariantError` should not occur unless there is some error in the bytecode verifier
-    InvariantError(VMStatus),
+/// Result of a native function execution that requires charges for execution cost.
+///
+/// An execution that causes an invariant violation would not return a `NativeResult` but
+/// return a `VMResult` error directly.
+/// All native functions must return a `VMResult<NativeResult>` where an `Err` is returned
+/// when an error condition is met that should not charge for the execution. A common example
+/// is a VM invariant violation which should have been forbidden by the verifier.
+/// Errors (typically user errors and aborts) that are logically part of the function execution
+/// must be expressed in a `NativeResult` via a cost and a VMStatus.
+pub struct NativeResult {
+    /// The cost for running that function, whether successfully or not.
+    pub cost: u64,
+    /// Result of execution. This is either the return values or the error to report.
+    pub result: VMResult<Vec<Value>>,
 }
 
-/// Struct representing the expected definition for a native function
+impl NativeResult {
+    /// Return values of a successful execution.
+    pub fn ok(cost: u64, values: Vec<Value>) -> Self {
+        NativeResult {
+            cost,
+            result: Ok(values),
+        }
+    }
+
+    /// `VMStatus` of a failed execution. The failure is a runtime failure in the function
+    /// and not an invariant failure of the VM which would raise a `VMResult` error directly.
+    pub fn err(cost: u64, err: VMStatus) -> Self {
+        NativeResult {
+            cost,
+            result: Err(err),
+        }
+    }
+}
+
+/// Struct representing the expected definition for a native function.
 pub struct NativeFunction {
-    /// Given the vector of aguments, it executes the native function
-    pub dispatch: fn(VecDeque<Value>) -> NativeReturnStatus,
+    /// Given the vector of aguments, it executes the native function.
+    pub dispatch: fn(VecDeque<Value>) -> VMResult<NativeResult>,
     /// The signature as defined in it's declaring module.
     /// It should NOT be generally inspected outside of it's declaring module as the various
-    /// struct handle indexes are not remapped into the local context
+    /// struct handle indexes are not remapped into the local context.
     pub expected_signature: FunctionSignature,
 }
 
 impl NativeFunction {
-    /// Returns the number of arguments to the native function, derived from the expected signature
+    /// Returns the number of arguments to the native function, derived from the expected signature.
     pub fn num_args(&self) -> usize {
         self.expected_signature.arg_types.len()
     }
 }
 
 /// Looks up the expected native function definition from the module id (address and module) and
-/// function name where it was expected to be declared
-pub fn dispatch_native_function(
+/// function name where it was expected to be declared.
+pub fn resolve_native_function(
     module: &ModuleId,
     function_name: &IdentStr,
 ) -> Option<&'static NativeFunction> {
@@ -85,7 +103,7 @@ macro_rules! add {
     }};
 }
 
-/// Helper for finding expected struct handle index
+/// Helper for finding expected struct handle index.
 fn tstruct(
     addr: AccountAddress,
     module_name: &str,
@@ -94,7 +112,7 @@ fn tstruct(
 ) -> SignatureToken {
     let id = ModuleId::new(addr, Identifier::new(module_name).unwrap());
     let native_struct =
-        dispatch_native_struct(&id, &Identifier::new(function_name).unwrap()).unwrap();
+        resolve_native_struct(&id, &Identifier::new(function_name).unwrap()).unwrap();
     let idx = native_struct.expected_index;
     // TODO assert kinds match
     assert_eq!(args.len(), native_struct.expected_type_formals.len());
@@ -217,8 +235,7 @@ lazy_static! {
         // Event
         add!(m, addr, "Event", "write_to_event_store",
             |_| {
-                NativeReturnStatus::InvariantError(
-                    VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
                             "write_to_event_store does not have a native implementation"
                                 .to_string()))
              },
@@ -233,9 +250,6 @@ lazy_static! {
 #[macro_export]
 macro_rules! pop_arg {
     ($arguments:ident, $t:ty) => {{
-        match $arguments.pop_back().unwrap().value_as::<$t>() {
-            Ok(val) => val,
-            Err(err) => return NativeReturnStatus::InvariantError(err),
-        }
+        $arguments.pop_back().unwrap().value_as::<$t>()?
     }};
 }

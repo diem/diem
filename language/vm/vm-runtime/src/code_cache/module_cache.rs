@@ -28,7 +28,7 @@ use vm::{
 use vm_cache_map::{Arena, CacheRefMap};
 use vm_runtime_types::{
     loaded_data::{struct_def::StructDef, types::Type},
-    native_structs::dispatch::dispatch_native_struct,
+    native_structs::dispatch::resolve_native_struct,
     type_context::TypeContext,
 };
 
@@ -328,7 +328,7 @@ impl<'alloc> VMModuleCache<'alloc> {
                     let struct_def_module_id =
                         StructHandleView::new(module, struct_handle).module_id();
                     StructDef::Native(
-                        dispatch_native_struct(&struct_def_module_id, struct_name)
+                        resolve_native_struct(&struct_def_module_id, struct_name)
                             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?
                             .struct_type
                             .clone(),
