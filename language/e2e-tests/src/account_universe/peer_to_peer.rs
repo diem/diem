@@ -72,11 +72,11 @@ impl AUTransactionGen for P2PTransferGen {
             (true, true, true) => {
                 // Success!
                 sender.sequence_number += 1;
-                sender.sent_events_count += 1;
+                sender.payment_events_count += 1;
                 sender.balance -= to_deduct;
 
                 receiver.balance += self.amount;
-                receiver.received_events_count += 1;
+                receiver.payment_events_count += 1;
 
                 status = TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED));
             }

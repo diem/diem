@@ -104,22 +104,19 @@ pub struct AccountCurrent {
     initial_data: AccountData,
     balance: u64,
     sequence_number: u64,
-    sent_events_count: u64,
-    received_events_count: u64,
+    payment_events_count: u64,
 }
 
 impl AccountCurrent {
     fn new(initial_data: AccountData) -> Self {
         let balance = initial_data.balance();
         let sequence_number = initial_data.sequence_number();
-        let sent_events_count = initial_data.sent_events_count();
-        let received_events_count = initial_data.received_events_count();
+        let payment_events_count = initial_data.payment_events_count();
         Self {
             initial_data,
             balance,
             sequence_number,
-            sent_events_count,
-            received_events_count,
+            payment_events_count,
         }
     }
 
@@ -145,16 +142,10 @@ impl AccountCurrent {
         self.sequence_number
     }
 
-    /// Returns the current sent events count for this account, assuming all transactions seen so
+    /// Returns the current payment events count for this account, assuming all transactions seen so
     /// far are applied.
-    pub fn sent_events_count(&self) -> u64 {
-        self.sent_events_count
-    }
-
-    /// Returns the current received events count for this account, assuming all transactions seen
-    /// so far are applied.
-    pub fn received_events_count(&self) -> u64 {
-        self.received_events_count
+    pub fn payment_events_count(&self) -> u64 {
+        self.payment_events_count
     }
 }
 
@@ -181,7 +172,7 @@ pub fn txn_one_account_result(
         (true, true, true) => {
             // Success!
             sender.sequence_number += 1;
-            sender.sent_events_count += 1;
+            sender.payment_events_count += 1;
             sender.balance -= to_deduct;
             (
                 TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),

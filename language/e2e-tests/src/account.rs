@@ -257,8 +257,7 @@ pub struct AccountData {
     sequence_number: u64,
     delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
-    sent_events: EventHandle,
-    received_events: EventHandle,
+    payment_events: EventHandle,
 }
 
 fn new_event_handle(count: u64) -> EventHandle {
@@ -275,7 +274,7 @@ impl AccountData {
 
     /// Creates a new `AccountData` with the provided account.
     pub fn with_account(account: Account, balance: u64, sequence_number: u64) -> Self {
-        Self::with_account_and_event_counts(account, balance, sequence_number, 0, 0, false, false)
+        Self::with_account_and_event_counts(account, balance, sequence_number, 0, false, false)
     }
 
     /// Creates a new `AccountData` with custom parameters.
@@ -283,8 +282,7 @@ impl AccountData {
         account: Account,
         balance: u64,
         sequence_number: u64,
-        sent_events_count: u64,
-        received_events_count: u64,
+        payment_events_count: u64,
         delegated_key_rotation_capability: bool,
         delegated_withdrawal_capability: bool,
     ) -> Self {
@@ -294,8 +292,7 @@ impl AccountData {
             sequence_number,
             delegated_key_rotation_capability,
             delegated_withdrawal_capability,
-            sent_events: new_event_handle(sent_events_count),
-            received_events: new_event_handle(received_events_count),
+            payment_events: new_event_handle(payment_events_count),
         }
     }
 
@@ -316,12 +313,8 @@ impl AccountData {
             Value::bool(self.delegated_key_rotation_capability),
             Value::bool(self.delegated_withdrawal_capability),
             Value::struct_(Struct::new(vec![
-                Value::u64(self.received_events.count()),
-                Value::byte_array(ByteArray::new(self.received_events.key().to_vec())),
-            ])),
-            Value::struct_(Struct::new(vec![
-                Value::u64(self.sent_events.count()),
-                Value::byte_array(ByteArray::new(self.sent_events.key().to_vec())),
+                Value::u64(self.payment_events.count()),
+                Value::byte_array(ByteArray::new(self.payment_events.key().to_vec())),
             ])),
             Value::u64(self.sequence_number),
         ]))
@@ -364,22 +357,12 @@ impl AccountData {
     }
 
     /// Returns the unique key for this sent events stream.
-    pub fn sent_events_key(&self) -> &[u8] {
-        self.sent_events.key().as_bytes()
+    pub fn payment_events_key(&self) -> &[u8] {
+        self.payment_events.key().as_bytes()
     }
 
     /// Returns the initial sent events count.
-    pub fn sent_events_count(&self) -> u64 {
-        self.sent_events.count()
-    }
-
-    /// Returns the unique key for this received events stream.
-    pub fn received_events_key(&self) -> &[u8] {
-        self.received_events.key().as_bytes()
-    }
-
-    /// Returns the initial received events count.
-    pub fn received_events_count(&self) -> u64 {
-        self.received_events.count()
+    pub fn payment_events_count(&self) -> u64 {
+        self.payment_events.count()
     }
 }

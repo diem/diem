@@ -109,8 +109,7 @@ struct AccountInfo {
     private_key: Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     sequence_number: u64,
-    sent_event_handle: EventHandle,
-    received_event_handle: EventHandle,
+    payment_event_handle: EventHandle,
 }
 
 impl AccountInfo {
@@ -121,8 +120,7 @@ impl AccountInfo {
             private_key,
             public_key,
             sequence_number: 0,
-            sent_event_handle: EventHandle::new_from_address(&address, 0),
-            received_event_handle: EventHandle::new_from_address(&address, 1),
+            payment_event_handle: EventHandle::new_from_address(&address, 0),
         }
     }
 }
@@ -581,7 +579,6 @@ impl Arbitrary for UpdateToLatestLedgerResponse<Ed25519Signature> {
 #[derive(Arbitrary, Debug)]
 pub struct ContractEventGen {
     payload: Vec<u8>,
-    use_sent_key: bool,
 }
 
 impl ContractEventGen {
@@ -591,11 +588,7 @@ impl ContractEventGen {
         universe: &mut AccountInfoUniverse,
     ) -> ContractEvent {
         let account_info = universe.get_account_info_mut(account_index);
-        let event_handle = if self.use_sent_key {
-            &mut account_info.sent_event_handle
-        } else {
-            &mut account_info.received_event_handle
-        };
+        let event_handle = &mut account_info.payment_event_handle;
         let sequence_number = event_handle.count();
         *event_handle.count_mut() += 1;
         let event_key = event_handle.key();
@@ -625,8 +618,7 @@ impl AccountResourceGen {
             ByteArray::new(account_info.public_key.to_bytes().to_vec()),
             self.delegated_key_rotation_capability,
             self.delegated_withdrawal_capability,
-            account_info.sent_event_handle.clone(),
-            account_info.received_event_handle.clone(),
+            account_info.payment_event_handle.clone(),
         )
     }
 }

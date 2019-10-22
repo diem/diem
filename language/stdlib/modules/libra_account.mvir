@@ -18,10 +18,8 @@ module LibraAccount {
         delegated_key_rotation_capability: bool,
         // If true, the authority to withdraw funds from this account resides elsewhere
         delegated_withdrawal_capability: bool,
-        // Event handle for received event
-        received_events: Event.Handle<Self.ReceivedPaymentEvent>,
-        // Event handle for sent event
-        sent_events: Event.Handle<Self.SentPaymentEvent>,
+        // Event handle for payment event
+        payment_events: Event.Handle<Self.PaymentEvent>,
         // The current sequence number.
         // Incremented by one each time a transaction is submitted
         sequence_number: u64,
@@ -42,18 +40,12 @@ module LibraAccount {
     }
 
     // Message for sent events
-    struct SentPaymentEvent {
+    struct PaymentEvent {
         // The amount of LibraCoin.T sent
         amount: u64,
         // The address that was paid
         payee: address,
-    }
-
-    // Message for received events
-    struct ReceivedPaymentEvent {
-        // The amount of LibraCoin.T received
-        amount: u64,
-        // The address that sent the coin
+        // The address that paid libra.
         payer: address,
     }
 
@@ -61,11 +53,9 @@ module LibraAccount {
     // Invoked by the `create_account` builtin
     make(auth_key: bytearray): Self.T {
         let zero_balance: LibraCoin.T;
-        let sent_handle: Event.Handle<Self.SentPaymentEvent>;
-        let received_handle: Event.Handle<Self.ReceivedPaymentEvent>;
+        let handle: Event.Handle<Self.PaymentEvent>;
 
-        sent_handle = Event.new_event_handle<Self.SentPaymentEvent>();
-        received_handle = Event.new_event_handle<Self.ReceivedPaymentEvent>();
+        handle = Event.new_event_handle<Self.PaymentEvent>();
         zero_balance = LibraCoin.zero();
 
         return T {
@@ -73,8 +63,7 @@ module LibraAccount {
             balance: move(zero_balance),
             delegated_key_rotation_capability: false,
             delegated_withdrawal_capability: false,
-            received_events: move(received_handle),
-            sent_events: move(sent_handle),
+            payment_events: move(handle),
             sequence_number: 0,
         };
     }
@@ -85,10 +74,7 @@ module LibraAccount {
         let payee_account_ref: &mut Self.T;
         let sender: address;
         let sender_account_ref: &mut Self.T;
-        let sent_event: Self.SentPaymentEvent;
-        let received_event: Self.ReceivedPaymentEvent;
-        let sent_event_bytes: bytearray;
-        let received_event_bytes: bytearray;
+        let event: Self.PaymentEvent;
 
         // Check that the `to_deposit` coin is non-zero
         deposit_value = LibraCoin.value(&to_deposit);
@@ -97,18 +83,17 @@ module LibraAccount {
         // Load the sender's account
         sender = get_txn_sender();
         sender_account_ref = borrow_global_mut<T>(copy(sender));
-        // Log a send event
-        sent_event = SentPaymentEvent { amount: copy(deposit_value), payee: copy(payee) };
+        // Log a Payment event to sender
+        event = PaymentEvent { amount: copy(deposit_value), payee: copy(payee), payer: move(sender) };
 
-        Event.emit_event<Self.SentPaymentEvent>(&mut move(sender_account_ref).sent_events, move(sent_event));
+        Event.emit_event<Self.PaymentEvent>(&mut move(sender_account_ref).payment_events, copy(event));
 
         // Load the payee's account
         payee_account_ref = borrow_global_mut<T>(move(payee));
         // Deposit the `to_deposit` coin
         LibraCoin.deposit(&mut copy(payee_account_ref).balance, move(to_deposit));
-        // Log a received event
-        received_event = ReceivedPaymentEvent { amount: move(deposit_value), payer: move(sender) };
-        Event.emit_event<Self.ReceivedPaymentEvent>(&mut move(payee_account_ref).received_events, move(received_event));
+        // Log a Payment event to receiver.
+        Event.emit_event<Self.PaymentEvent>(&mut move(payee_account_ref).payment_events, copy(event));
         return;
     }
 

@@ -53,13 +53,11 @@ fn single_peer_to_peer_with_event() {
         assert_eq!(receiver_balance, updated_receiver.balance());
         assert_eq!(sender_balance, updated_sender.balance());
         assert_eq!(11, updated_sender.sequence_number());
-        assert_eq!(0, updated_sender.received_events().count(),);
-        assert_eq!(1, updated_sender.sent_events().count());
-        assert_eq!(1, updated_receiver.received_events().count());
-        assert_eq!(0, updated_receiver.sent_events().count());
+        assert_eq!(1, updated_sender.payment_events().count());
+        assert_eq!(1, updated_receiver.payment_events().count());
 
-        let rec_ev_path = receiver.received_events_key().to_vec();
-        let sent_ev_path = sender.sent_events_key().to_vec();
+        let rec_ev_path = receiver.payment_events_key().to_vec();
+        let sent_ev_path = sender.payment_events_key().to_vec();
         for event in txn_output.events() {
             assert!(
                 rec_ev_path.as_slice() == event.key().as_bytes()
@@ -152,10 +150,8 @@ fn few_peer_to_peer_with_event() {
                 let account_event: AccountEvent =
                     AccountEvent::try_from(event.event_data()).expect("event data must parse");
                 assert_eq!(transfer_amount, account_event.amount());
-                assert!(
-                    &account_event.account() == sender.address()
-                        || &account_event.account() == receiver.address()
-                );
+                assert_eq!(&account_event.payer(), sender.address());
+                assert_eq!(&account_event.payee(), receiver.address());
             }
 
             let original_sender = executor
@@ -179,10 +175,8 @@ fn few_peer_to_peer_with_event() {
             assert_eq!(receiver_balance, updated_receiver.balance());
             assert_eq!(sender_balance, updated_sender.balance());
             assert_eq!(11 + idx as u64, updated_sender.sequence_number());
-            assert_eq!(0, updated_sender.received_events().count());
-            assert_eq!(idx as u64 + 1, updated_sender.sent_events().count());
-            assert_eq!(idx as u64 + 1, updated_receiver.received_events().count());
-            assert_eq!(0, updated_receiver.sent_events().count());
+            assert_eq!(idx as u64 + 1, updated_sender.payment_events().count());
+            assert_eq!(idx as u64 + 1, updated_receiver.payment_events().count());
         }
     });
 }

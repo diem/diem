@@ -28,17 +28,15 @@ impl AccountData {
             any::<Account>(),
             balance_strategy,
             sequence_strategy,
-            event_count_strategy.clone(),
             event_count_strategy,
         )
             .prop_map(
-                |(account, balance, sequence_number, sent_events_count, received_events_count)| {
+                |(account, balance, sequence_number, payment_events_count)| {
                     AccountData::with_account_and_event_counts(
                         account,
                         balance,
                         sequence_number,
-                        sent_events_count,
-                        received_events_count,
+                        payment_events_count,
                         false, // TODO: vary withdrawal capability param?
                         false, // TODO: vary rotation capability param?
                     )

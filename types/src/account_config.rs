@@ -80,8 +80,7 @@ pub struct AccountResource {
     balance: u64,
     delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
-    received_events: EventHandle,
-    sent_events: EventHandle,
+    payment_events: EventHandle,
     sequence_number: u64,
 }
 
@@ -93,8 +92,7 @@ impl AccountResource {
         authentication_key: ByteArray,
         delegated_key_rotation_capability: bool,
         delegated_withdrawal_capability: bool,
-        sent_events: EventHandle,
-        received_events: EventHandle,
+        payment_events: EventHandle,
     ) -> Self {
         AccountResource {
             balance,
@@ -102,8 +100,7 @@ impl AccountResource {
             authentication_key,
             delegated_key_rotation_capability,
             delegated_withdrawal_capability,
-            sent_events,
-            received_events,
+            payment_events,
         }
     }
 
@@ -132,13 +129,8 @@ impl AccountResource {
     }
 
     /// Return the sent_events handle for the given AccountResource
-    pub fn sent_events(&self) -> &EventHandle {
-        &self.sent_events
-    }
-
-    /// Return the received_events handle for the given AccountResource
-    pub fn received_events(&self) -> &EventHandle {
-        &self.received_events
+    pub fn payment_events(&self) -> &EventHandle {
+        &self.payment_events
     }
 
     /// Return the delegated_key_rotation_capability field for the given AccountResource
@@ -152,10 +144,8 @@ impl AccountResource {
     }
 
     pub fn get_event_handle_by_query_path(&self, query_path: &[u8]) -> Result<&EventHandle> {
-        if *ACCOUNT_RECEIVED_EVENT_PATH == query_path {
-            Ok(&self.received_events)
-        } else if *ACCOUNT_SENT_EVENT_PATH == query_path {
-            Ok(&self.sent_events)
+        if *ACCOUNT_RECEIVED_EVENT_PATH == query_path || *ACCOUNT_SENT_EVENT_PATH == query_path {
+            Ok(&self.payment_events)
         } else {
             bail!("Unrecognized query path: {:?}", query_path);
         }
@@ -204,7 +194,8 @@ lazy_static! {
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct AccountEvent {
     amount: u64,
-    account: AccountAddress,
+    payee: AccountAddress,
+    payer: AccountAddress,
 }
 
 impl AccountEvent {
@@ -212,9 +203,14 @@ impl AccountEvent {
         lcs::from_bytes(bytes).map_err(Into::into)
     }
 
-    /// Get the account related to the event
-    pub fn account(&self) -> AccountAddress {
-        self.account
+    /// Get the payer of the event
+    pub fn payer(&self) -> AccountAddress {
+        self.payer
+    }
+
+    /// Get the payee of the event
+    pub fn payee(&self) -> AccountAddress {
+        self.payee
     }
 
     /// Get the amount sent or received
