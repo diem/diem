@@ -7,7 +7,7 @@ use itertools::zip_eq;
 use libra_config::config::NodeConfigHelpers;
 use libra_types::get_with_proof::{RequestItem, ResponseItem};
 use libradb::mock_genesis::db_with_mock_genesis;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 use libradb::test_helper::arb_blocks_to_commit;
 use proptest::prelude::*;
 use std::collections::HashMap;

@@ -277,44 +277,60 @@ References:
 
 *Conditional compilation of tests*
 
-Libra [conditionally compiles](https://doc.rust-lang.org/stable/reference/conditional-compilation.html) code that is *only relevant for tests, but does not consist of tests* (unitary or otherwise). Examples of this include proptest strategies, implementations and derivations of specific traits (e.g. the occasional `Clone`), helper functions, etc. Since Cargo is [currently not equipped for activating features in benchmarks](https://github.com/rust-lang/cargo/issues/2911), we rely on two conditions to perform this conditional compilation:
-- the test flag, which is activated by dependent test code in the same crate as the conditional test-only code.
-- the "testing" custom feature, activated by dependent test code in another crate as the conditional test-only code (as below).
+Libra [conditionally
+compiles](https://doc.rust-lang.org/stable/reference/conditional-compilation.html)
+code that is *only relevant for tests, but does not consist of tests* (unitary
+or otherwise). Examples of this include proptest strategies, implementations
+and derivations of specific traits (e.g. the occasional `Clone`), helper
+functions, etc. Since Cargo is [currently not equipped for automatically activating features
+in tests/benchmarks](https://github.com/rust-lang/cargo/issues/2911), we rely on two
+conditions to perform this conditional compilation:
+- the test flag, which is activated by dependent test code in the same crate
+  as the conditional test-only code.
+- the "fuzzing" custom feature, which is used to enable fuzzing and testing
+related code in downstream crates. Note that this must be passed explicitly to
+`cargo test` and `cargo bench`. Never use this in `[dependencies]` or
+`[dev-dependencies]` unless the crate is only for testing, otherwise Cargo's
+feature unification may pollute production code with the extra testing/fuzzing code.
 
 As a consequence, it is recommended that you set up your test-only code in the following fashion. For the sake of example, we'll consider you are defining a test-only helper function `foo` in `foo_crate`:
 1. Define the "testing" flag in `foo_crate/Cargo.toml` and make it non-default:
     ```
     [features]
     default = []
-    testing = []
+    fuzzing = []
     ```
-2. Annotate your test-only helper `foo` with both the `test` flag (for in-crate callers) and the `"testing"` custom feature (for out-of-crate callers):
+2. Annotate your test-only helper `foo` with both the `test` flag (for in-crate callers) and the `"fuzzing"` custom feature (for out-of-crate callers):
     ```
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "fuzzing"))]
     fn foo() { ... }
     ```
-3. Add a dev-dependency activating the "testing" feature to crates that import this test-only member:
-    ```
-    [dev-dependencies.foo_crate]
-    path = { "<same as the one in [dependencies]>"}
-    features = ["testing"]
-    ```
-4. (optional) Use `cfg_attr` to make test-only trait derivations conditional:
+3. (optional) Use `cfg_attr` to make test-only trait derivations conditional:
     ```
     #[cfg_attr(any(test, feature = "testing"), derive(FooTrait))]
     #[derive(Debug, Display, ...)] // inconditional derivations
     struct Foo { ... }
     ```
-5. (optional) Set up feature transitivitity for crates that call crates that have test-only members. Let's say it's the case of `bar_crate`, which, through its test helpers, calls into `foo_crate` to use your test-only `foo`. Here's how you would set up `bar_crate/Cargo.toml`:
+4. (optional) Set up feature transitivitity for crates that call crates that have test-only members. Let's say it's the case of `bar_crate`, which, through its test helpers, calls into `foo_crate` to use your test-only `foo`. Here's how you would set up `bar_crate/Cargo.toml`:
     ```
     [features]
     default = []
     testing = ["foo_crate/testing"]
     ```
+5. Update `xtask/src/test_unit.rs` to run the unit tests passing in the
+   features if needed.
 
-*A final note on integration tests*: All tests that use conditional test-only elements in another crate need to activate the "testing" feature through the `[features]` section in their `Cargo.toml`. [Integration tests](https://doc.rust-lang.org/rust-by-example/testing/integration_testing.html) can neither rely on the `test` flag nor do they have a proper `Cargo.toml` for feature activation. In the Libra codebase, we therefore recommend that *integration tests which depend on test-only code in their tested crate* be extracted to their own crate. You can look at `language/vm/serializer_tests` for an example of such an extracted integration test.
+*A final note on integration tests*: All tests that use conditional test-only
+elements in another crate need to activate the "fuzzing" feature through the
+`[features]` section in their `Cargo.toml`. [Integration
+tests](https://doc.rust-lang.org/rust-by-example/testing/integration_testing.html)
+can neither rely on the `test` flag nor do they have a proper `Cargo.toml` for
+feature activation. In the Libra codebase, we therefore recommend that
+*integration tests which depend on test-only code in their tested crate* be
+extracted to their own crate. You can look at `language/vm/serializer_tests`
+for an example of such an extracted integration test.
 
-*Note for developers*: The reason we use a feature re-export (in the `[features]` section of the `Cargo.toml` is that a profile is not enough to activate the `"testing"` feature flag. See [cargo-issue #291](https://github.com/rust-lang/cargo/issues/2911) for details).
+*Note for developers*: The reason we use a feature re-export (in the `[features]` section of the `Cargo.toml` is that a profile is not enough to activate the `"fuzzing"` feature flag. See [cargo-issue #291](https://github.com/rust-lang/cargo/issues/2911) for details).
 
 *Fuzzing*
 

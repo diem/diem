@@ -18,7 +18,7 @@ use stdlib::{
         ROTATE_CONSENSUS_PUBKEY_TXN_BODY,
     },
 };
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use vm::file_format::Bytecode;
 
 lazy_static! {
@@ -59,7 +59,7 @@ pub fn encode_transfer_script(recipient: &AccountAddress, amount: u64) -> Script
 
 /// Encode a program transferring `amount` coins from `sender` to `recipient` but padd the output
 /// bytecode with unreachable instructions.
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub fn encode_transfer_script_with_padding(
     recipient: &AccountAddress,
     amount: u64,

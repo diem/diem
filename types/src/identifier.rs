@@ -10,7 +10,7 @@
 // TODO: restrict identifiers to a subset of ASCII
 
 use failure::prelude::*;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Borrow, fmt, ops::Deref};
@@ -147,7 +147,7 @@ fn str_to_ident_str(s: &str) -> &IdentStr {
     unsafe { &*(s as *const str as *const IdentStr) }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for Identifier {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;

@@ -214,7 +214,7 @@ impl ClientProxy {
     }
 
     /// Clone all accounts held in the client.
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "fuzzing"))]
     pub fn copy_all_accounts(&self) -> Vec<AccountData> {
         self.accounts.clone()
     }

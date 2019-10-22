@@ -8,7 +8,7 @@
 //! mixing with other sorts of strings. For example, it is not possible to use one as an
 //! identifier for name resolution.
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Borrow, fmt, ops::Deref, result, string::FromUtf8Error};
@@ -17,8 +17,8 @@ use std::{borrow::Borrow, fmt, ops::Deref, result, string::FromUtf8Error};
 ///
 /// For more details, see the module level documentation.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 pub struct VMString(Box<str>);
 // A VMString cannot be mutated so use Box<str> instead of String -- it is 1 word smaller.
 

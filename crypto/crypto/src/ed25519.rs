@@ -396,12 +396,12 @@ fn check_s_lt_l(s: &[u8]) -> bool {
 /// disappear after
 pub mod compat {
     use crate::ed25519::*;
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(feature = "fuzzing")]
     use proptest::strategy::LazyJust;
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(feature = "fuzzing")]
     use proptest::{prelude::*, strategy::Strategy};
 
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "cloneable-private-keys"))]
     impl Clone for Ed25519PrivateKey {
         fn clone(&self) -> Self {
             let serialized: &[u8] = &(self.to_bytes());
@@ -430,7 +430,7 @@ pub mod compat {
     }
 
     /// Used to produce keypairs from a seed for testing purposes
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(feature = "fuzzing")]
     pub fn keypair_strategy() -> impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)> {
         // The no_shrink is because keypairs should be fixed -- shrinking would cause a different
         // keypair to be generated, which appears to not be very useful.
@@ -454,7 +454,7 @@ pub mod compat {
         (private_key, public_key)
     }
 
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(feature = "fuzzing")]
     impl Arbitrary for Ed25519PublicKey {
         type Parameters = ();
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {

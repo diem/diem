@@ -4,7 +4,7 @@
 use crate::account_address::AccountAddress;
 use failure::Result;
 use libra_crypto::{ed25519::*, traits::ValidKey, x25519::X25519StaticPublicKey};
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
@@ -15,7 +15,7 @@ use std::{convert::TryFrom, fmt};
 /// keys for creating secure channels of communication between validators.  The validators and
 /// their public keys and voting power may or may not change between epochs.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct ValidatorPublicKeys {
     // Hash value of the current public key of the account address
     account_address: AccountAddress,

@@ -69,7 +69,7 @@ lazy_static! {
 }
 
 #[derive(Debug)]
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(test, derive(Clone))]
 pub struct Account {
     pub addr: AccountAddress,
     pub privkey: Ed25519PrivateKey,

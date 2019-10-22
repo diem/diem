@@ -6,7 +6,7 @@
 #[macro_use]
 extern crate lazy_static;
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 mod proptest_types;
 
 pub mod loaded_data;

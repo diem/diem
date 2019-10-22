@@ -7,17 +7,22 @@ members = [
     "client",
     "client/libra_wallet",
     "common/bounded-executor",
+    "common/channel",
     "common/crash-handler",
     "common/datatest-stable",
     "common/debug-interface",
     "common/executable-helpers",
     "common/failure-ext",
+    "common/failure-ext/failure-macros",
     "common/futures-semaphore",
+    "common/grpc-helpers",
     "common/lcs",
     "common/logger",
     "common/metrics",
+    "common/nibble",
     "common/proptest-helpers",
     "common/prost-ext",
+    "common/tools",
     "config",
     "config/config-builder",
     "config/generate-keypair",
@@ -44,6 +49,7 @@ members = [
     "language/stackless-bytecode/bytecode-to-boogie",
     "language/stackless-bytecode/generator",
     "language/stackless-bytecode/tree_heap",
+    "language/stdlib",
     "language/vm",
     "language/vm/serializer_tests",
     "language/vm/vm-runtime",
@@ -74,6 +80,19 @@ members = [
     "testsuite/libra-fuzzer",
     "types",
     "vm-validator",
+    "xtask",
+]
+
+# NOTE: These members should never include crates that require fuzzing
+# features or test features. These are the crates we want built with no extra
+# test-only code included.
+default-members = [
+    "client",
+    "crypto/secret-service",
+    "language/compiler",
+    "language/vm/vm-genesis",
+    "libra-node",
+    "storage/storage-service",
 ]
 
 [profile.release]

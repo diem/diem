@@ -72,6 +72,7 @@ use bytes::Bytes;
 use failure::prelude::*;
 use lazy_static::lazy_static;
 use libra_nibble::Nibble;
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use rand::{rngs::EntropyRng, Rng};
 use serde::{de, ser};
@@ -87,7 +88,8 @@ mod hash_test;
 const SHORT_STRING_LENGTH: usize = 4;
 
 /// Output value of our hash function. Intentionally opaque for safety and modularity.
-#[derive(Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Ord, Arbitrary)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct HashValue {
     hash: [u8; HashValue::LENGTH],
 }

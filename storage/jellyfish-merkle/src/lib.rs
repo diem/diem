@@ -83,6 +83,7 @@ use libra_types::{
 };
 use nibble_path::{skip_common_prefix, NibbleIterator, NibblePath};
 use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey};
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use std::collections::{BTreeMap, BTreeSet};
 use tree_cache::TreeCache;
@@ -120,7 +121,8 @@ pub type NodeBatch = BTreeMap<NodeKey, Node>;
 pub type StaleNodeIndexBatch = BTreeSet<StaleNodeIndex>;
 
 /// Indicates a node becomes stale since `stale_since_version`.
-#[derive(Arbitrary, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct StaleNodeIndex {
     /// The version since when the node is overwritten and becomes stale.
     pub stale_since_version: Version,

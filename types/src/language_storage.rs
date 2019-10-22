@@ -8,7 +8,7 @@ use crate::{
 };
 use failure::Result;
 use libra_crypto::hash::{AccessPathHasher, CryptoHash, CryptoHasher, HashValue};
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
@@ -57,8 +57,8 @@ impl ResourceKey {
 /// Represents the initial key into global storage where we first index by the address, and then
 /// the struct tag
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 pub struct ModuleId {
     address: AccountAddress,
     name: Identifier,

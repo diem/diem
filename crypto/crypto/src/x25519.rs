@@ -371,9 +371,9 @@ impl<'de> de::Deserialize<'de> for X25519StaticPublicKey {
 /// disappear after.
 pub mod compat {
     use crate::traits::*;
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "fuzzing"))]
     use proptest::strategy::LazyJust;
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "fuzzing"))]
     use proptest::{prelude::*, strategy::Strategy};
 
     use crate::x25519::{X25519StaticPrivateKey, X25519StaticPublicKey};
@@ -397,7 +397,7 @@ pub mod compat {
     }
 
     /// Used to produce keypairs from a seed for testing purposes
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "fuzzing"))]
     pub fn keypair_strategy(
     ) -> impl Strategy<Value = (X25519StaticPrivateKey, X25519StaticPublicKey)> {
         // The no_shrink is because keypairs should be fixed -- shrinking would cause a different
@@ -411,7 +411,7 @@ pub mod compat {
             .no_shrink()
     }
 
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "fuzzing"))]
     impl Arbitrary for X25519StaticPublicKey {
         type Parameters = ();
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {

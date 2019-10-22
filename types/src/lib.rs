@@ -15,10 +15,10 @@ pub mod identifier;
 pub mod language_storage;
 pub mod ledger_info;
 pub mod proof;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_types;
 pub mod proto;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub mod test_helpers;
 pub mod transaction;
 pub mod validator_change;

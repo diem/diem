@@ -23,7 +23,7 @@ use std::{
 };
 
 #[path = "block_test_utils.rs"]
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub mod block_test_utils;
 
 #[cfg(test)]
@@ -119,7 +119,7 @@ impl<T> Block<T>
 where
     T: Default + PartialEq + Serialize,
 {
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "fuzzing"))]
     pub fn make_genesis_block() -> Self {
         Self::make_genesis_block_from_ledger_info(&LedgerInfo::genesis())
     }

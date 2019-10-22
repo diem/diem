@@ -35,7 +35,7 @@ use libra_types::{
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use std::convert::{TryFrom, TryInto};
 
@@ -147,7 +147,7 @@ impl Into<(Option<AccountStateBlob>, SparseMerkleProof)>
 
 /// Helper to construct and parse [`proto::storage::SaveTransactionsRequest`]
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct SaveTransactionsRequest {
     pub txns_to_commit: Vec<TransactionToCommit>,
     pub first_version: Version,
@@ -208,7 +208,7 @@ impl From<SaveTransactionsRequest> for crate::proto::storage::SaveTransactionsRe
 
 /// Helper to construct and parse [`proto::storage::GetTransactionsRequest`]
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct GetTransactionsRequest {
     pub start_version: Version,
     pub batch_size: u64,
@@ -259,7 +259,7 @@ impl From<GetTransactionsRequest> for crate::proto::storage::GetTransactionsRequ
 
 /// Helper to construct and parse [`proto::storage::GetTransactionsResponse`]
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct GetTransactionsResponse {
     pub txn_list_with_proof: TransactionListWithProof,
 }
@@ -296,7 +296,7 @@ impl From<GetTransactionsResponse> for crate::proto::storage::GetTransactionsRes
 
 /// Helper to construct and parse [`proto::storage::StartupInfo`]
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct StartupInfo {
     pub ledger_info: LedgerInfo,
     pub latest_version: Version,
@@ -349,7 +349,7 @@ impl From<StartupInfo> for crate::proto::storage::StartupInfo {
 
 /// Helper to construct and parse [`proto::storage::GetStartupInfoResponse`]
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct GetStartupInfoResponse {
     pub info: Option<StartupInfo>,
 }
@@ -374,7 +374,7 @@ impl From<GetStartupInfoResponse> for crate::proto::storage::GetStartupInfoRespo
 
 /// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochRequest`]
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct GetLatestLedgerInfosPerEpochRequest {
     pub start_epoch: u64,
 }
@@ -410,7 +410,7 @@ impl From<GetLatestLedgerInfosPerEpochRequest>
 
 /// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochResponse`]
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct GetLatestLedgerInfosPerEpochResponse {
     pub latest_ledger_infos: Vec<LedgerInfoWithSignatures>,
 }

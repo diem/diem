@@ -1,9 +1,9 @@
 use crate::OP_COUNTER;
 use num_derive::ToPrimitive;
 use num_traits::ToPrimitive;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 use proptest::{collection::hash_map, prelude::*};
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -12,7 +12,7 @@ use strum_macros::{AsRefStr, EnumIter};
 
 /// Types of ledger counters.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, ToPrimitive, EnumIter, AsRefStr)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(test, derive(Arbitrary))]
 #[strum(serialize_all = "snake_case")]
 pub(crate) enum LedgerCounter {
     EventsCreated = 101,
@@ -128,7 +128,7 @@ impl LedgerCounters {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 prop_compose! {
     pub(crate) fn ledger_counters_strategy()(
         counters_map in hash_map(any::<LedgerCounter>(), any::<usize>(), 0..3)
@@ -142,7 +142,7 @@ prop_compose! {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 impl Arbitrary for LedgerCounters {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;
