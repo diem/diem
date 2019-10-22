@@ -576,10 +576,7 @@ fn test_execution_with_storage() {
         .into_get_events_by_access_path_response()
         .unwrap();
     assert_eq!(account3_payment_events_batch2.len(), 7);
-    assert_eq!(
-        account3_payment_events_batch2[0].event.sequence_number(),
-        6
-    );
+    assert_eq!(account3_payment_events_batch2[0].event.sequence_number(), 6);
 }
 
 fn verify_account_balance<F>(account_state_with_proof: &AccountStateWithProof, f: F) -> Result<()>

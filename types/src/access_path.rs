@@ -37,9 +37,7 @@
 
 use crate::{
     account_address::AccountAddress,
-    account_config::{
-        account_resource_path, association_address, ACCOUNT_PAYMENT_EVENT_PATH,
-    },
+    account_config::{account_resource_path, association_address, ACCOUNT_PAYMENT_EVENT_PATH},
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, ResourceKey, StructTag},
     validator_set::validator_set_path,
