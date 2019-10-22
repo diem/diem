@@ -1,34 +1,37 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::str::FromStr;
-use std::fmt;
 use codespan::{ByteIndex, Span};
+use std::fmt;
+use std::str::FromStr;
 
 use crate::ast::{
-    ModuleDefinition, StructDefinition, Script, Program, ScriptOrModule,
-    FunctionBody, FunctionVisibility, ImportDefinition, ModuleName,
-    Block, Block_, Cmd, CopyableVal, CopyableVal_, Spanned, Kind, TypeVar,
-    Exp_, Exp, Var,  Var_, FunctionCall, FunctionCall_,
-    FunctionName, Builtin, Statement, IfElse, While, Loop, Type, Fields,
-    StructName, QualifiedStructIdent, Function, BinOp, ModuleIdent, QualifiedModuleIdent, UnaryOp,
-    LValue, LValue_, parse_field, Field_, TypeVar_, Function_, StructDefinition_,
+    parse_field, BinOp, Block, Block_, Builtin, Cmd, CopyableVal, CopyableVal_, Exp, Exp_, Field_,
+    Fields, Function, FunctionBody, FunctionCall, FunctionCall_, FunctionName, FunctionVisibility,
+    Function_, IfElse, ImportDefinition, Kind, LValue, LValue_, Loop, ModuleDefinition,
+    ModuleIdent, ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent, Script,
+    ScriptOrModule, Spanned, Statement, StructDefinition, StructDefinition_, StructName, Type,
+    TypeVar, TypeVar_, UnaryOp, Var, Var_, While,
 };
 use crate::lexer::*;
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 use hex;
+use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 
 // FIXME: The following simplified version of ParseError copied from
 // lalrpop-util should be replaced.
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ParseError<L, T, E> {
-    InvalidToken { location: L },
+    InvalidToken {
+        location: L,
+    },
     UnrecognizedToken {
         token: (L, T, L),
         expected: Vec<String>,
     },
-    User { error: E },
+    User {
+        error: E,
+    },
 }
 
 /// Format a list of expected tokens.
@@ -58,8 +61,7 @@ where
         use self::ParseError::*;
         match *self {
             User { ref error } => write!(f, "{}", error),
-            InvalidToken { ref location } => write!(f, "Invalid token at {}",
-            location),
+            InvalidToken { ref location } => write!(f, "Invalid token at {}", location),
             UnrecognizedToken {
                 token: (ref start, ref token, ref end),
                 ref expected,
@@ -75,32 +77,39 @@ where
     }
 }
 
-fn consume_token<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>, tok: Tok)
-    -> Result<(), ParseError<usize, Token<'input>, failure::Error>>
-{
+fn consume_token<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+    tok: Tok,
+) -> Result<(), ParseError<usize, Token<'input>, failure::Error>> {
     if (tokens.token.1).0 != tok {
-        return Err(ParseError::InvalidToken { location: tokens.token.0 });
+        return Err(ParseError::InvalidToken {
+            location: tokens.token.0,
+        });
     }
     tokens.advance()?;
     Ok(())
 }
 
-fn parse_name<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<String, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_name<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<String, ParseError<usize, Token<'input>, failure::Error>> {
     if (tokens.token.1).0 != Tok::NameValue {
-        return Err(ParseError::InvalidToken { location: tokens.token.0 });
+        return Err(ParseError::InvalidToken {
+            location: tokens.token.0,
+        });
     }
     let name = (tokens.token.1).1.to_string();
     tokens.advance()?;
     Ok(name)
 }
 
-fn parse_name_begin_ty<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<String, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_name_begin_ty<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<String, ParseError<usize, Token<'input>, failure::Error>> {
     if (tokens.token.1).0 != Tok::NameBeginTyValue {
-        return Err(ParseError::InvalidToken { location: tokens.token.0 });
+        return Err(ParseError::InvalidToken {
+            location: tokens.token.0,
+        });
     }
     let s = (tokens.token.1).1;
     tokens.advance()?;
@@ -108,11 +117,13 @@ fn parse_name_begin_ty<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder
     Ok(s[..s.len() - 1].to_string())
 }
 
-fn parse_dot_name<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<String, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_dot_name<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<String, ParseError<usize, Token<'input>, failure::Error>> {
     if (tokens.token.1).0 != Tok::DotNameValue {
-        return Err(ParseError::InvalidToken { location: tokens.token.0 });
+        return Err(ParseError::InvalidToken {
+            location: tokens.token.0,
+        });
     }
     let name = (tokens.token.1).1.to_string();
     tokens.advance()?;
@@ -123,14 +134,20 @@ fn parse_dot_name<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     < s: r"0[xX][0-9a-fA-F]+" > => { ... }
 // };
 
-fn parse_account_address<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<AccountAddress, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_account_address<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<AccountAddress, ParseError<usize, Token<'input>, failure::Error>> {
     if (tokens.token.1).0 != Tok::AccountAddressValue {
-        return Err(ParseError::InvalidToken { location: tokens.token.0 });
+        return Err(ParseError::InvalidToken {
+            location: tokens.token.0,
+        });
     }
-    let addr = AccountAddress::from_hex_literal(&(tokens.token.1).1)
-        .unwrap_or_else(|_| panic!("The address {:?} is of invalid length. Addresses are at most 32-bytes long", (tokens.token.1).1));
+    let addr = AccountAddress::from_hex_literal(&(tokens.token.1).1).unwrap_or_else(|_| {
+        panic!(
+            "The address {:?} is of invalid length. Addresses are at most 32-bytes long",
+            (tokens.token.1).1
+        )
+    });
     tokens.advance()?;
     Ok(addr)
 }
@@ -139,36 +156,38 @@ fn parse_account_address<'input, 'builder>(tokens: &mut __Matcher<'input, 'build
 //     <n:Name> =>? Var::parse(n),
 // };
 
-fn parse_var<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Var, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_var<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Var, ParseError<usize, Token<'input>, failure::Error>> {
     Var::parse(parse_name(tokens)?)
 }
 
-fn parse_var_<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Var_, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_var_<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Var_, ParseError<usize, Token<'input>, failure::Error>> {
     let v_start_loc = tokens.token.0;
     let var = parse_var(tokens)?;
     let v_end_loc = tokens.token.0;
-    Ok(Spanned{span: Span::new(ByteIndex(v_start_loc as u32),
-                               ByteIndex(v_end_loc as u32)),
-               value: var })
+    Ok(Spanned {
+        span: Span::new(ByteIndex(v_start_loc as u32), ByteIndex(v_end_loc as u32)),
+        value: var,
+    })
 }
 
 // Field: Field = {
 //     <n:Name> =>? parse_field(n),
 // };
 
-fn parse_field_<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Field_, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_field_<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Field_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.token.0;
     let f = parse_field(parse_name(tokens)?)?;
     let end_loc = tokens.token.0;
-    Ok(Spanned{span: Span::new(ByteIndex(start_loc as u32),
-                               ByteIndex(end_loc as u32)),
-               value: f })
+    Ok(Spanned {
+        span: Span::new(ByteIndex(start_loc as u32), ByteIndex(end_loc as u32)),
+        value: f,
+    })
 }
 
 // CopyableVal: CopyableVal = {
@@ -179,41 +198,51 @@ fn parse_field_<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     <buf: ByteArray> => CopyableVal::ByteArray(buf),
 // }
 
-fn parse_copyable_val_<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<CopyableVal_, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_copyable_val_<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<CopyableVal_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.token.0;
     let val = match (tokens.token.1).0 {
         Tok::AccountAddressValue => {
             let addr = parse_account_address(tokens)?;
             CopyableVal::Address(addr)
-        },
+        }
         Tok::True => {
             tokens.advance()?;
             CopyableVal::Bool(true)
-        },
+        }
         Tok::False => {
             tokens.advance()?;
             CopyableVal::Bool(false)
-        },
+        }
         Tok::U64Value => {
             let i = u64::from_str((tokens.token.1).1).unwrap();
             tokens.advance()?;
             CopyableVal::U64(i)
-        },
+        }
         Tok::ByteArrayValue => {
             let s = (tokens.token.1).1;
-            let buf = ByteArray::new(hex::decode(&s[2..s.len()-1]).unwrap_or_else(|_| panic!("The
-string {:?} is not a valid hex-encoded byte array", s)));
+            let buf = ByteArray::new(hex::decode(&s[2..s.len() - 1]).unwrap_or_else(|_| {
+                panic!(
+                    "The
+string {:?} is not a valid hex-encoded byte array",
+                    s
+                )
+            }));
             tokens.advance()?;
             CopyableVal::ByteArray(buf)
-        },
-        _ => { return Err(ParseError::InvalidToken { location: tokens.token.0 })},
+        }
+        _ => {
+            return Err(ParseError::InvalidToken {
+                location: tokens.token.0,
+            })
+        }
     };
     let end_loc = tokens.token.0;
-    Ok(Spanned{span: Span::new(ByteIndex(start_loc as u32),
-                               ByteIndex(end_loc as u32)),
-               value: val })
+    Ok(Spanned {
+        span: Span::new(ByteIndex(start_loc as u32), ByteIndex(end_loc as u32)),
+        value: val,
+    })
 }
 
 // Exp = BinopExp = CmpOpExp
@@ -226,8 +255,7 @@ string {:?} is not a valid hex-encoded byte array", s)));
 // AddSubExp = (FactorExp AddSubOp FactorExp) || FactorExp
 // FactorExp = (UnaryExp FactorOp UnaryExp) || UnaryExp
 
-fn get_precedence(token: &Tok) -> u32
-{
+fn get_precedence(token: &Tok) -> u32 {
     match token {
         Tok::EqualEqual => 1,
         Tok::ExclaimEqual => 1,
@@ -249,18 +277,18 @@ fn get_precedence(token: &Tok) -> u32
     }
 }
 
-fn parse_exp_<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_exp_<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>> {
     let lhs = parse_unary_exp_(tokens)?;
     parse_rhs_of_binary_exp(tokens, lhs, get_precedence(&Tok::EqualEqual))
 }
 
-fn parse_rhs_of_binary_exp<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>,
-                                             lhs: Exp_,
-                                             min_prec: u32)
-    -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_rhs_of_binary_exp<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+    lhs: Exp_,
+    min_prec: u32,
+) -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>> {
     let mut result = lhs;
     let mut next_tok_prec = get_precedence(&(tokens.token.1).0);
 
@@ -303,8 +331,10 @@ fn parse_rhs_of_binary_exp<'input, 'builder>(tokens: &mut __Matcher<'input, 'bui
         let start_loc = result.span.start();
         let end_loc = tokens.token.0;
         let e = Exp::BinopExp(Box::new(result), op, Box::new(rhs));
-        result = Spanned{span: Span::new(start_loc, ByteIndex(end_loc as u32)),
-                         value: e };
+        result = Spanned {
+            span: Span::new(start_loc, ByteIndex(end_loc as u32)),
+            value: e,
+        };
     }
 
     Ok(result)
@@ -315,44 +345,49 @@ fn parse_rhs_of_binary_exp<'input, 'builder>(tokens: &mut __Matcher<'input, 'bui
 //     <module_dot_name: DotName> <type_actuals: TypeActuals> =>? { ... }
 // }
 
-fn parse_qualified_function_name_<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<FunctionCall_, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_qualified_function_name_<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<FunctionCall_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.token.0;
     let call = match (tokens.token.1).0 {
-        Tok::CreateAccount |
-        Tok::Exists |
-        Tok::BorrowGlobal |
-        Tok::BorrowGlobalMut |
-        Tok::GetTxnGasUnitPrice |
-        Tok::GetTxnMaxGasUnits |
-        Tok::GetTxnPublicKey |
-        Tok::GetTxnSender |
-        Tok::GetTxnSequenceNumber |
-        Tok::MoveFrom |
-        Tok::MoveToSender |
-        Tok::GetGasRemaining |
-        Tok::Freeze => {
+        Tok::CreateAccount
+        | Tok::Exists
+        | Tok::BorrowGlobal
+        | Tok::BorrowGlobalMut
+        | Tok::GetTxnGasUnitPrice
+        | Tok::GetTxnMaxGasUnits
+        | Tok::GetTxnPublicKey
+        | Tok::GetTxnSender
+        | Tok::GetTxnSequenceNumber
+        | Tok::MoveFrom
+        | Tok::MoveToSender
+        | Tok::GetGasRemaining
+        | Tok::Freeze => {
             let f = parse_builtin(tokens)?;
             FunctionCall::Builtin(f)
-        },
+        }
         Tok::DotNameValue => {
             let module_dot_name = parse_dot_name(tokens)?;
             let type_actuals = parse_type_actuals(tokens)?;
-            let v: Vec<&str> = module_dot_name.split(".").collect();
+            let v: Vec<&str> = module_dot_name.split('.').collect();
             assert!(v.len() == 2, 42);
-            FunctionCall::ModuleFunctionCall{
+            FunctionCall::ModuleFunctionCall {
                 module: ModuleName::parse(v[0])?,
                 name: FunctionName::parse(v[1])?,
-                type_actuals: type_actuals,
+                type_actuals,
             }
-        },
-        _ => { return Err(ParseError::InvalidToken { location: tokens.token.0 })},
+        }
+        _ => {
+            return Err(ParseError::InvalidToken {
+                location: tokens.token.0,
+            })
+        }
     };
     let end_loc = tokens.token.0;
-    Ok(Spanned{span: Span::new(ByteIndex(start_loc as u32),
-                               ByteIndex(end_loc as u32)),
-               value: call })
+    Ok(Spanned {
+        span: Span::new(ByteIndex(start_loc as u32), ByteIndex(end_loc as u32)),
+        value: call,
+    })
 }
 
 // UnaryExp : Exp = {
@@ -363,10 +398,10 @@ fn parse_qualified_function_name_<'input, 'builder>(tokens: &mut __Matcher<'inpu
 //     CallOrTerm,
 // }
 
-fn parse_borrow_field<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>,
-                                        mutable: bool)
-    -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_borrow_field<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+    mutable: bool,
+) -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>> {
     // This could be either a field borrow (from UnaryExp) or
     // a borrow of a local variable (from Term). In the latter case,
     // only a simple name token is allowed, and it must not be
@@ -376,74 +411,82 @@ fn parse_borrow_field<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>
         let name = parse_name(tokens)?;
         let end_loc = tokens.token.0;
         if (tokens.token.1).0 != Tok::LBrace {
-            let var = Spanned{span: Span::new(ByteIndex(start_loc as u32),
-                                              ByteIndex(end_loc as u32)),
-                              value: Var::parse(name)? };
+            let var = Spanned {
+                span: Span::new(ByteIndex(start_loc as u32), ByteIndex(end_loc as u32)),
+                value: Var::parse(name)?,
+            };
             return Ok(Exp::BorrowLocal(mutable, var));
         }
         let type_actuals: Vec<Type> = vec![];
-        Spanned{span: Span::new(ByteIndex(start_loc as u32),
-                                ByteIndex(end_loc as u32)),
-                value: parse_pack(tokens, &name, type_actuals)? }
+        Spanned {
+            span: Span::new(ByteIndex(start_loc as u32), ByteIndex(end_loc as u32)),
+            value: parse_pack(tokens, &name, type_actuals)?,
+        }
     } else {
         parse_unary_exp_(tokens)?
     };
     consume_token(tokens, Tok::Period)?;
     let f = parse_field(parse_name(tokens)?)?;
-    Ok(Exp::Borrow{ is_mutable: mutable, exp: Box::new(e), field: f })
+    Ok(Exp::Borrow {
+        is_mutable: mutable,
+        exp: Box::new(e),
+        field: f,
+    })
 }
 
-fn parse_unary_exp<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_unary_exp<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>> {
     match (tokens.token.1).0 {
         Tok::Exclaim => {
             tokens.advance()?;
             let e = parse_unary_exp_(tokens)?;
             Ok(Exp::UnaryExp(UnaryOp::Not, Box::new(e)))
-        },
+        }
         Tok::Star => {
             tokens.advance()?;
             let e = parse_unary_exp_(tokens)?;
             Ok(Exp::Dereference(Box::new(e)))
-        },
+        }
         Tok::AmpMut => {
             tokens.advance()?;
             parse_borrow_field(tokens, true)
-        },
+        }
         Tok::Amp => {
             tokens.advance()?;
             parse_borrow_field(tokens, false)
-        },
+        }
         _ => parse_call_or_term(tokens),
     }
 }
 
-fn parse_unary_exp_<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_unary_exp_<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.token.0;
     let e = parse_unary_exp(tokens)?;
     let end_loc = tokens.token.0;
-    Ok(Spanned{span: Span::new(ByteIndex(start_loc as u32),
-                               ByteIndex(end_loc as u32)),
-               value: e })
+    Ok(Spanned {
+        span: Span::new(ByteIndex(start_loc as u32), ByteIndex(end_loc as u32)),
+        value: e,
+    })
 }
 
 // Call: Exp = {
 //     <f: Sp<QualifiedFunctionName>> <exp: Sp<CallOrTerm>> => Exp::FunctionCall(f, Box::new(exp)),
 // }
 
-fn parse_call_<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_call_<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.token.0;
     let f = parse_qualified_function_name_(tokens)?;
     let exp = parse_call_or_term_(tokens)?;
     let end_loc = tokens.token.0;
-    Ok(Spanned{span: Span::new(ByteIndex(start_loc as u32),
-                               ByteIndex(end_loc as u32)),
-               value: Exp::FunctionCall(f, Box::new(exp)) })
+    Ok(Spanned {
+        span: Span::new(ByteIndex(start_loc as u32), ByteIndex(end_loc as u32)),
+        value: Exp::FunctionCall(f, Box::new(exp)),
+    })
 }
 
 // CallOrTerm: Exp = {
@@ -451,50 +494,51 @@ fn parse_call_<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     Term,
 // }
 
-fn parse_call_or_term<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_call_or_term<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>> {
     match (tokens.token.1).0 {
-        Tok::CreateAccount |
-        Tok::Exists |
-        Tok::BorrowGlobal |
-        Tok::BorrowGlobalMut |
-        Tok::GetTxnGasUnitPrice |
-        Tok::GetTxnMaxGasUnits |
-        Tok::GetTxnPublicKey |
-        Tok::GetTxnSender |
-        Tok::GetTxnSequenceNumber |
-        Tok::MoveFrom |
-        Tok::MoveToSender |
-        Tok::GetGasRemaining |
-        Tok::Freeze |
-        Tok::DotNameValue => {
+        Tok::CreateAccount
+        | Tok::Exists
+        | Tok::BorrowGlobal
+        | Tok::BorrowGlobalMut
+        | Tok::GetTxnGasUnitPrice
+        | Tok::GetTxnMaxGasUnits
+        | Tok::GetTxnPublicKey
+        | Tok::GetTxnSender
+        | Tok::GetTxnSequenceNumber
+        | Tok::MoveFrom
+        | Tok::MoveToSender
+        | Tok::GetGasRemaining
+        | Tok::Freeze
+        | Tok::DotNameValue => {
             let f = parse_qualified_function_name_(tokens)?;
             let exp = parse_call_or_term_(tokens)?;
             Ok(Exp::FunctionCall(f, Box::new(exp)))
-        },
+        }
         _ => parse_term(tokens),
     }
 }
 
-fn parse_call_or_term_<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_call_or_term_<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.token.0;
     let v = parse_call_or_term(tokens)?;
     let end_loc = tokens.token.0;
-    Ok(Spanned{span: Span::new(ByteIndex(start_loc as u32),
-                               ByteIndex(end_loc as u32)),
-               value: v })
+    Ok(Spanned {
+        span: Span::new(ByteIndex(start_loc as u32), ByteIndex(end_loc as u32)),
+        value: v,
+    })
 }
 
 // FieldExp: (Field_, Exp_) = {
 //     <f: Sp<Field>> ":" <e: Sp<Exp>> => (f, e)
 // }
 
-fn parse_field_exp<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<(Field_, Exp_), ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_field_exp<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<(Field_, Exp_), ParseError<usize, Token<'input>, failure::Error>> {
     let f = parse_field_(tokens)?;
     consume_token(tokens, Tok::Colon)?;
     let e = parse_exp_(tokens)?;
@@ -511,11 +555,11 @@ fn parse_field_exp<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     "(" <exps: Comma<Sp<Exp>>> ")" => Exp::ExprList(exps),
 // }
 
-fn parse_pack<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>,
-              name: &str,
-              type_actuals: Vec<Type>)
-    -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_pack<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+    name: &str,
+    type_actuals: Vec<Type>,
+) -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::LBrace)?;
     let mut fs: Vec<(Field_, Exp_)> = vec![];
     while (tokens.token.1).0 != Tok::RBrace {
@@ -526,49 +570,46 @@ fn parse_pack<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>,
         consume_token(tokens, Tok::Comma)?;
     }
     tokens.advance()?; // consume the RBrace
-    Ok(Exp::Pack(StructName::parse(name)?,
-                 type_actuals,
-                 fs.into_iter().collect::<Vec<_>>()))
+    Ok(Exp::Pack(
+        StructName::parse(name)?,
+        type_actuals,
+        fs.into_iter().collect::<Vec<_>>(),
+    ))
 }
 
-fn parse_term<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_term<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>> {
     match (tokens.token.1).0 {
         Tok::Move => {
             tokens.advance()?;
             let v = parse_var_(tokens)?;
             consume_token(tokens, Tok::RParen)?;
             Ok(Exp::Move(v))
-        },
+        }
         Tok::Copy => {
             tokens.advance()?;
             let v = parse_var_(tokens)?;
             consume_token(tokens, Tok::RParen)?;
             Ok(Exp::Copy(v))
-        },
+        }
         Tok::AmpMut => {
             tokens.advance()?;
             let v = parse_var_(tokens)?;
             Ok(Exp::BorrowLocal(true, v))
-        },
+        }
         Tok::Amp => {
             tokens.advance()?;
             let v = parse_var_(tokens)?;
             Ok(Exp::BorrowLocal(false, v))
-        },
-        Tok::AccountAddressValue |
-        Tok::True |
-        Tok::False |
-        Tok::U64Value |
-        Tok::ByteArrayValue => {
+        }
+        Tok::AccountAddressValue | Tok::True | Tok::False | Tok::U64Value | Tok::ByteArrayValue => {
             Ok(Exp::Value(parse_copyable_val_(tokens)?))
-        },
-        Tok::NameValue |
-        Tok::NameBeginTyValue => {
+        }
+        Tok::NameValue | Tok::NameBeginTyValue => {
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
             parse_pack(tokens, &name, type_actuals)
-        },
+        }
         Tok::LParen => {
             tokens.advance()?;
             let mut exps: Vec<Exp_> = vec![];
@@ -581,8 +622,10 @@ fn parse_term<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
             }
             tokens.advance()?; // consume the RParen
             Ok(Exp::ExprList(exps))
-        },
-        _ => { return Err(ParseError::InvalidToken { location: tokens.token.0 })},
+        }
+        _ => Err(ParseError::InvalidToken {
+            location: tokens.token.0,
+        }),
     }
 }
 
@@ -590,9 +633,9 @@ fn parse_term<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     <n: Name> =>? StructName::parse(n),
 // }
 
-fn parse_struct_name<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<StructName, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_struct_name<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<StructName, ParseError<usize, Token<'input>, failure::Error>> {
     StructName::parse(parse_name(tokens)?)
 }
 
@@ -600,24 +643,24 @@ fn parse_struct_name<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     <module_dot_struct: DotName> =>? { ... }
 // }
 
-fn parse_qualified_struct_ident<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<QualifiedStructIdent, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_qualified_struct_ident<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<QualifiedStructIdent, ParseError<usize, Token<'input>, failure::Error>> {
     let module_dot_struct = parse_dot_name(tokens)?;
-    let v: Vec<&str> = module_dot_struct.split(".").collect();
+    let v: Vec<&str> = module_dot_struct.split('.').collect();
     assert!(v.len() == 2, 42);
     let m: ModuleName = ModuleName::parse(v[0])?;
     let n: StructName = StructName::parse(v[1])?;
-    Ok(QualifiedStructIdent::new(m,n))
+    Ok(QualifiedStructIdent::new(m, n))
 }
 
 // ModuleName: ModuleName = {
 //     <n: Name> =>? ModuleName::parse(n),
 // }
 
-fn parse_module_name<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<ModuleName, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_module_name<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<ModuleName, ParseError<usize, Token<'input>, failure::Error>> {
     ModuleName::parse(parse_name(tokens)?)
 }
 
@@ -637,73 +680,86 @@ fn parse_module_name<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     "freeze" => Builtin::Freeze,
 // }
 
-fn parse_builtin<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Builtin, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_builtin<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Builtin, ParseError<usize, Token<'input>, failure::Error>> {
     match (tokens.token.1).0 {
         Tok::CreateAccount => {
             tokens.advance()?;
             Ok(Builtin::CreateAccount)
-        },
+        }
         Tok::Exists => {
             tokens.advance()?;
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
             consume_token(tokens, Tok::Greater)?;
             Ok(Builtin::Exists(StructName::parse(name)?, type_actuals))
-        },
+        }
         Tok::BorrowGlobal => {
             tokens.advance()?;
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
             consume_token(tokens, Tok::Greater)?;
-            Ok(Builtin::BorrowGlobal(false, StructName::parse(name)?, type_actuals))
-        },
+            Ok(Builtin::BorrowGlobal(
+                false,
+                StructName::parse(name)?,
+                type_actuals,
+            ))
+        }
         Tok::BorrowGlobalMut => {
             tokens.advance()?;
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
             consume_token(tokens, Tok::Greater)?;
-            Ok(Builtin::BorrowGlobal(true, StructName::parse(name)?, type_actuals))
-        },
+            Ok(Builtin::BorrowGlobal(
+                true,
+                StructName::parse(name)?,
+                type_actuals,
+            ))
+        }
         Tok::GetTxnGasUnitPrice => {
             tokens.advance()?;
             Ok(Builtin::GetTxnGasUnitPrice)
-        },
+        }
         Tok::GetTxnMaxGasUnits => {
             tokens.advance()?;
             Ok(Builtin::GetTxnMaxGasUnits)
-        },
+        }
         Tok::GetTxnPublicKey => {
             tokens.advance()?;
             Ok(Builtin::GetTxnPublicKey)
-        },
+        }
         Tok::GetTxnSender => {
             tokens.advance()?;
             Ok(Builtin::GetTxnSender)
-        },
+        }
         Tok::GetTxnSequenceNumber => {
             tokens.advance()?;
             Ok(Builtin::GetTxnSequenceNumber)
-        },
+        }
         Tok::MoveFrom => {
             tokens.advance()?;
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
             consume_token(tokens, Tok::Greater)?;
             Ok(Builtin::MoveFrom(StructName::parse(name)?, type_actuals))
-        },
+        }
         Tok::MoveToSender => {
             tokens.advance()?;
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
             consume_token(tokens, Tok::Greater)?;
-            Ok(Builtin::MoveToSender(StructName::parse(name)?, type_actuals))
-        },
+            Ok(Builtin::MoveToSender(
+                StructName::parse(name)?,
+                type_actuals,
+            ))
+        }
         Tok::GetGasRemaining => {
             tokens.advance()?;
             Ok(Builtin::GetGasRemaining)
-        },
+        }
         Tok::Freeze => {
             tokens.advance()?;
             Ok(Builtin::Freeze)
-        },
-        _ => { return Err(ParseError::InvalidToken { location: tokens.token.0 })},
+        }
+        _ => Err(ParseError::InvalidToken {
+            location: tokens.token.0,
+        }),
     }
 }
 
@@ -713,46 +769,49 @@ fn parse_builtin<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     "_" => LValue::Pop,
 // }
 
-fn parse_lvalue<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<LValue, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_lvalue<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<LValue, ParseError<usize, Token<'input>, failure::Error>> {
     match (tokens.token.1).0 {
         Tok::NameValue => {
             let l = parse_var_(tokens)?;
             Ok(LValue::Var(l))
-        },
+        }
         Tok::Star => {
             tokens.advance()?;
             let e = parse_exp_(tokens)?;
             Ok(LValue::Mutate(e))
-        },
+        }
         Tok::Underscore => {
             tokens.advance()?;
             Ok(LValue::Pop)
-        },
-        _ => { return Err(ParseError::InvalidToken { location: tokens.token.0 })},
+        }
+        _ => Err(ParseError::InvalidToken {
+            location: tokens.token.0,
+        }),
     }
 }
 
-fn parse_lvalue_<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<LValue_, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_lvalue_<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<LValue_, ParseError<usize, Token<'input>, failure::Error>> {
     let lv_start_loc = tokens.token.0;
     let lv = parse_lvalue(tokens)?;
     let lv_end_loc = tokens.token.0;
-    Ok(Spanned{span: Span::new(ByteIndex(lv_start_loc as u32),
-                               ByteIndex(lv_end_loc as u32)),
-               value: lv })
+    Ok(Spanned {
+        span: Span::new(ByteIndex(lv_start_loc as u32), ByteIndex(lv_end_loc as u32)),
+        value: lv,
+    })
 }
 
 // LValues: Vec<LValue_> = {
 //     <l:Sp<LValue>> <v: ("," <Sp<LValue>>)*> => { ... }
 // }
 
-fn parse_lvalues<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>,
-                                   prefix: Option<LValue_>)
-    -> Result<Vec<LValue_>, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_lvalues<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+    prefix: Option<LValue_>,
+) -> Result<Vec<LValue_>, ParseError<usize, Token<'input>, failure::Error>> {
     let l = if let Some(lv) = prefix {
         lv
     } else {
@@ -771,16 +830,22 @@ fn parse_lvalues<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>,
 //     <f: Sp<Field>> => { ... }
 // }
 
-fn parse_field_bindings<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<(Field_, Var_), ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_field_bindings<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<(Field_, Var_), ParseError<usize, Token<'input>, failure::Error>> {
     let f = parse_field_(tokens)?;
     if (tokens.token.1).0 == Tok::Colon {
         tokens.advance()?; // consume the colon
         let v = parse_var_(tokens)?;
         Ok((f, v))
     } else {
-        Ok((f.clone(), Spanned { span: f.span, value: Var::new(f.value.name().into()) }))
+        Ok((
+            f.clone(),
+            Spanned {
+                span: f.span,
+                value: Var::new(f.value.name().into()),
+            },
+        ))
     }
 }
 
@@ -795,21 +860,21 @@ fn parse_field_bindings<'input, 'builder>(tokens: &mut __Matcher<'input, 'builde
 //     "(" <Comma<Sp<Exp>>> ")" => Cmd::Exp(Box::new(Spanned::no_loc(Exp::ExprList(<>)))),
 // }
 
-fn parse_assign<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>,
-                                  prefix: Option<LValue_>)
-    -> Result<Cmd, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_assign<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+    prefix: Option<LValue_>,
+) -> Result<Cmd, ParseError<usize, Token<'input>, failure::Error>> {
     let lvalues = parse_lvalues(tokens, prefix)?;
     consume_token(tokens, Tok::Equal)?;
     let e = parse_exp_(tokens)?;
     Ok(Cmd::Assign(lvalues, e))
 }
 
-fn parse_unpack<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>,
-                                  name: &str,
-                                  type_actuals: Vec<Type>)
-    -> Result<Cmd, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_unpack<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+    name: &str,
+    type_actuals: Vec<Type>,
+) -> Result<Cmd, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::LBrace)?;
     let mut bindings: Vec<(Field_, Var_)> = vec![];
     while (tokens.token.1).0 != Tok::RBrace {
@@ -822,15 +887,17 @@ fn parse_unpack<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>,
     tokens.advance()?; // consume the RBrace
     consume_token(tokens, Tok::Equal)?;
     let e = parse_exp_(tokens)?;
-    Ok(Cmd::Unpack(StructName::parse(name)?,
-                   type_actuals,
-                   bindings.into_iter().collect(),
-                   Box::new(e)))
+    Ok(Cmd::Unpack(
+        StructName::parse(name)?,
+        type_actuals,
+        bindings.into_iter().collect(),
+        Box::new(e),
+    ))
 }
 
-fn parse_cmd<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Cmd, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_cmd<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Cmd, ParseError<usize, Token<'input>, failure::Error>> {
     match (tokens.token.1).0 {
         Tok::NameValue => {
             // This could be either an LValue for an assignment or
@@ -843,23 +910,22 @@ fn parse_cmd<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
                 // Construct the first LValue_ for the LValues vector.
                 let var = Var::parse(name)?;
                 let v_end_loc = tokens.token.0;
-                let v = Spanned{span: Span::new(ByteIndex(v_start_loc as u32),
-                                                ByteIndex(v_end_loc as u32)),
-                                value: var };
-                let lv = Spanned{span: Span::new(ByteIndex(v_start_loc as u32),
-                                                 ByteIndex(v_end_loc as u32)),
-                                value: LValue::Var(v) };
+                let v = Spanned {
+                    span: Span::new(ByteIndex(v_start_loc as u32), ByteIndex(v_end_loc as u32)),
+                    value: var,
+                };
+                let lv = Spanned {
+                    span: Span::new(ByteIndex(v_start_loc as u32), ByteIndex(v_end_loc as u32)),
+                    value: LValue::Var(v),
+                };
                 parse_assign(tokens, Some(lv))
             }
-        },
-        Tok::Star |
-        Tok::Underscore => {
-            parse_assign(tokens, None)
-        },
+        }
+        Tok::Star | Tok::Underscore => parse_assign(tokens, None),
         Tok::NameBeginTyValue => {
             let (name, tys) = parse_name_and_type_actuals(tokens)?;
             parse_unpack(tokens, &name, tys)
-        },
+        }
         Tok::Abort => {
             tokens.advance()?;
             let val = if (tokens.token.1).0 == Tok::Semicolon {
@@ -868,7 +934,7 @@ fn parse_cmd<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
                 Some(Box::new(parse_exp_(tokens)?))
             };
             Ok(Cmd::Abort(val))
-        },
+        }
         Tok::Return => {
             tokens.advance()?;
             let mut v: Vec<Exp_> = vec![];
@@ -880,31 +946,29 @@ fn parse_cmd<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
                 consume_token(tokens, Tok::Comma)?;
             }
             Ok(Cmd::Return(Box::new(Spanned::no_loc(Exp::ExprList(v)))))
-        },
+        }
         Tok::Continue => {
             tokens.advance()?;
             Ok(Cmd::Continue)
-        },
+        }
         Tok::Break => {
             tokens.advance()?;
             Ok(Cmd::Break)
-        },
-        Tok::CreateAccount |
-        Tok::Exists |
-        Tok::BorrowGlobal |
-        Tok::BorrowGlobalMut |
-        Tok::GetTxnGasUnitPrice |
-        Tok::GetTxnMaxGasUnits |
-        Tok::GetTxnPublicKey |
-        Tok::GetTxnSender |
-        Tok::GetTxnSequenceNumber |
-        Tok::MoveFrom |
-        Tok::MoveToSender |
-        Tok::GetGasRemaining |
-        Tok::Freeze |
-        Tok::DotNameValue => {
-            Ok(Cmd::Exp(Box::new(parse_call_(tokens)?)))
-        },
+        }
+        Tok::CreateAccount
+        | Tok::Exists
+        | Tok::BorrowGlobal
+        | Tok::BorrowGlobalMut
+        | Tok::GetTxnGasUnitPrice
+        | Tok::GetTxnMaxGasUnits
+        | Tok::GetTxnPublicKey
+        | Tok::GetTxnSender
+        | Tok::GetTxnSequenceNumber
+        | Tok::MoveFrom
+        | Tok::MoveToSender
+        | Tok::GetGasRemaining
+        | Tok::Freeze
+        | Tok::DotNameValue => Ok(Cmd::Exp(Box::new(parse_call_(tokens)?))),
         Tok::LParen => {
             tokens.advance()?;
             let mut v: Vec<Exp_> = vec![];
@@ -917,8 +981,10 @@ fn parse_cmd<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
             }
             tokens.advance()?; // consume the RParen
             Ok(Cmd::Exp(Box::new(Spanned::no_loc(Exp::ExprList(v)))))
-        },
-        _ => { return Err(ParseError::InvalidToken { location: tokens.token.0 })},
+        }
+        _ => Err(ParseError::InvalidToken {
+            location: tokens.token.0,
+        }),
     }
 }
 
@@ -931,9 +997,9 @@ fn parse_cmd<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     ";" => Statement::EmptyStatement,
 // }
 
-fn parse_statement<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Statement, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_statement<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Statement, ParseError<usize, Token<'input>, failure::Error>> {
     match (tokens.token.1).0 {
         Tok::Assert => {
             tokens.advance()?;
@@ -945,7 +1011,7 @@ fn parse_statement<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
                 let span = e.span;
                 Spanned {
                     value: Exp::UnaryExp(UnaryOp::Not, Box::new(e)),
-                    span
+                    span,
                 }
             };
             let span = err.span;
@@ -955,10 +1021,13 @@ fn parse_statement<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
                     span,
                 })
             };
-            Ok(Statement::IfElseStatement(IfElse::if_block(cond, Spanned {
-                value: Block::new(vec![stmt]),
-                span
-            })))
+            Ok(Statement::IfElseStatement(IfElse::if_block(
+                cond,
+                Spanned {
+                    value: Block::new(vec![stmt]),
+                    span,
+                },
+            )))
         }
         Tok::If => parse_if_statement(tokens),
         Tok::While => parse_while_statement(tokens),
@@ -966,18 +1035,22 @@ fn parse_statement<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
         Tok::Semicolon => {
             tokens.advance()?;
             Ok(Statement::EmptyStatement)
-        },
+        }
         _ => {
             // Anything else should be parsed as a Cmd...
             let cmd_start_loc = tokens.token.0;
             let c = parse_cmd(tokens)?;
             let cmd_end_loc = tokens.token.0;
-            let cmd = Spanned{span: Span::new(ByteIndex(cmd_start_loc as u32),
-                                              ByteIndex(cmd_end_loc as u32)),
-                              value: c };
+            let cmd = Spanned {
+                span: Span::new(
+                    ByteIndex(cmd_start_loc as u32),
+                    ByteIndex(cmd_end_loc as u32),
+                ),
+                value: c,
+            };
             consume_token(tokens, Tok::Semicolon)?;
             Ok(Statement::CommandStatement(cmd))
-        },
+        }
     }
 }
 
@@ -986,9 +1059,9 @@ fn parse_statement<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     "if" "(" <cond: Sp<Exp>> ")" <if_block: Sp<Block>> "else" <else_block: Sp<Block>> => { ... }
 // }
 
-fn parse_if_statement<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Statement, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_if_statement<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Statement, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::If)?;
     consume_token(tokens, Tok::LParen)?;
     let cond = parse_exp_(tokens)?;
@@ -997,7 +1070,9 @@ fn parse_if_statement<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>
     if (tokens.token.1).0 == Tok::Else {
         tokens.advance()?;
         let else_block = parse_block_(tokens)?;
-        Ok(Statement::IfElseStatement(IfElse::if_else(cond, if_block, else_block)))
+        Ok(Statement::IfElseStatement(IfElse::if_else(
+            cond, if_block, else_block,
+        )))
     } else {
         Ok(Statement::IfElseStatement(IfElse::if_block(cond, if_block)))
     }
@@ -1007,36 +1082,36 @@ fn parse_if_statement<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>
 //     "while" "(" <cond: Sp<Exp>> ")" <block: Sp<Block>> => { ... }
 // }
 
-fn parse_while_statement<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Statement, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_while_statement<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Statement, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::While)?;
     consume_token(tokens, Tok::LParen)?;
     let cond = parse_exp_(tokens)?;
     consume_token(tokens, Tok::RParen)?;
     let block = parse_block_(tokens)?;
-    Ok(Statement::WhileStatement(While {cond, block}))
+    Ok(Statement::WhileStatement(While { cond, block }))
 }
 
 // LoopStatement : Statement = {
 //     "loop" <block: Sp<Block>> => { ... }
 // }
 
-fn parse_loop_statement<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Statement, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_loop_statement<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Statement, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Loop)?;
     let block = parse_block_(tokens)?;
-    Ok(Statement::LoopStatement(Loop {block}))
+    Ok(Statement::LoopStatement(Loop { block }))
 }
 
 // Statements : Vec<Statement> = {
 //     <Statement*>
 // }
 
-fn parse_statements<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Vec<Statement>, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_statements<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Vec<Statement>, ParseError<usize, Token<'input>, failure::Error>> {
     let mut stmts: Vec<Statement> = vec![];
     // The Statements non-terminal in the grammar is always followed by a
     // closing brace, so continue parsing until we find one of those.
@@ -1050,26 +1125,27 @@ fn parse_statements<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     "{" <stmts: Statements> "}" => Block::new(stmts)
 // }
 
-fn parse_block_<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Block_, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_block_<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Block_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.token.0;
     consume_token(tokens, Tok::LBrace)?;
     let stmts = parse_statements(tokens)?;
     consume_token(tokens, Tok::RBrace)?;
     let end_loc = tokens.token.0;
-    Ok(Spanned{span: Span::new(ByteIndex(start_loc as u32),
-                               ByteIndex(end_loc as u32)),
-               value: Block::new(stmts)})
+    Ok(Spanned {
+        span: Span::new(ByteIndex(start_loc as u32), ByteIndex(end_loc as u32)),
+        value: Block::new(stmts),
+    })
 }
 
 // Declaration: (Var_, Type) = {
 //   "let" <v: Sp<Var>> ":" <t: Type> ";" => (v, t),
 // }
 
-fn parse_declaration<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<(Var_, Type), ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_declaration<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<(Var_, Type), ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Let)?;
     let v = parse_var_(tokens)?;
     consume_token(tokens, Tok::Colon)?;
@@ -1082,9 +1158,9 @@ fn parse_declaration<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     <Declaration*>
 // }
 
-fn parse_declarations<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Vec<(Var_, Type)>, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_declarations<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Vec<(Var_, Type)>, ParseError<usize, Token<'input>, failure::Error>> {
     let mut decls: Vec<(Var_, Type)> = vec![];
     // Declarations always begin with the "let" token so continue parsing
     // them until we hit something else.
@@ -1098,9 +1174,9 @@ fn parse_declarations<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>
 //     "{" <locals: Declarations> <stmts: Statements> "}" => (locals, Block::new(stmts))
 // }
 
-fn parse_function_block<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<(Vec<(Var_, Type)>, Block), ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_function_block<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<(Vec<(Var_, Type)>, Block), ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::LBrace)?;
     let locals = parse_declarations(tokens)?;
     let stmts = parse_statements(tokens)?;
@@ -1113,13 +1189,17 @@ fn parse_function_block<'input, 'builder>(tokens: &mut __Matcher<'input, 'builde
 //     "unrestricted" => Kind::Unrestricted,
 // }
 
-fn parse_kind<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Kind, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_kind<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Kind, ParseError<usize, Token<'input>, failure::Error>> {
     let k = match (tokens.token.1).0 {
         Tok::Resource => Kind::Resource,
         Tok::Unrestricted => Kind::Unrestricted,
-        _ => { return Err(ParseError::InvalidToken { location: tokens.token.0 })},
+        _ => {
+            return Err(ParseError::InvalidToken {
+                location: tokens.token.0,
+            })
+        }
     };
     tokens.advance()?;
     Ok(k)
@@ -1136,31 +1216,45 @@ fn parse_kind<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     <n: Name> =>? Ok(Type::TypeParameter(TypeVar::parse(n)?)),
 // }
 
-fn parse_type<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Type, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_type<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Type, ParseError<usize, Token<'input>, failure::Error>> {
     let t = match (tokens.token.1).0 {
-        Tok::Address => { tokens.advance()?; Type::Address },
-        Tok::U64 => { tokens.advance()?; Type::U64 },
-        Tok::Bool => { tokens.advance()?; Type::Bool },
-        Tok::Bytearray => { tokens.advance()?; Type::ByteArray },
+        Tok::Address => {
+            tokens.advance()?;
+            Type::Address
+        }
+        Tok::U64 => {
+            tokens.advance()?;
+            Type::U64
+        }
+        Tok::Bool => {
+            tokens.advance()?;
+            Type::Bool
+        }
+        Tok::Bytearray => {
+            tokens.advance()?;
+            Type::ByteArray
+        }
         Tok::DotNameValue => {
             let s = parse_qualified_struct_ident(tokens)?;
             let tys = parse_type_actuals(tokens)?;
             Type::Struct(s, tys)
-        },
+        }
         Tok::Amp => {
             tokens.advance()?;
             Type::Reference(false, Box::new(parse_type(tokens)?))
-        },
+        }
         Tok::AmpMut => {
             tokens.advance()?;
             Type::Reference(true, Box::new(parse_type(tokens)?))
         }
-        Tok::NameValue => {
-            Type::TypeParameter(TypeVar::parse(parse_name(tokens)?)?)
+        Tok::NameValue => Type::TypeParameter(TypeVar::parse(parse_name(tokens)?)?),
+        _ => {
+            return Err(ParseError::InvalidToken {
+                location: tokens.token.0,
+            })
         }
-        _ => { return Err(ParseError::InvalidToken { location: tokens.token.0 })},
     };
     Ok(t)
 }
@@ -1170,24 +1264,25 @@ fn parse_type<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 // }
 // TypeVar_ = Sp<TypeVar>;
 
-fn parse_type_var_<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<TypeVar_, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_type_var_<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<TypeVar_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.token.0;
     let type_var = TypeVar::parse(parse_name(tokens)?)?;
     let end_loc = tokens.token.0;
-    Ok(Spanned{span: Span::new(ByteIndex(start_loc as u32),
-                               ByteIndex(end_loc as u32)),
-               value: type_var })
+    Ok(Spanned {
+        span: Span::new(ByteIndex(start_loc as u32), ByteIndex(end_loc as u32)),
+        value: type_var,
+    })
 }
 
 // TypeFormal: (TypeVar_, Kind) = {
 //     <type_var: Sp<TypeVar>> <k: (":" <Kind>)?> =>? {
 // }
 
-fn parse_type_formal<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<(TypeVar_, Kind), ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_type_formal<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<(TypeVar_, Kind), ParseError<usize, Token<'input>, failure::Error>> {
     let type_var = parse_type_var_(tokens)?;
     if (tokens.token.1).0 == Tok::Colon {
         tokens.advance()?; // consume the ":"
@@ -1202,9 +1297,9 @@ fn parse_type_formal<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     <tys: ("<" <Comma<Type>> ">")?> => { ... }
 // }
 
-fn parse_type_actuals<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Vec<Type>, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_type_actuals<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Vec<Type>, ParseError<usize, Token<'input>, failure::Error>> {
     let mut tys: Vec<Type> = vec![];
     if (tokens.token.1).0 == Tok::Less {
         tokens.advance()?; // consume the "<"
@@ -1225,9 +1320,9 @@ fn parse_type_actuals<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>
 //     <n: Name> => (n, vec![]),
 // }
 
-fn parse_name_and_type_formals<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<(String, Vec<(TypeVar_, Kind)>), ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_name_and_type_formals<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<(String, Vec<(TypeVar_, Kind)>), ParseError<usize, Token<'input>, failure::Error>> {
     let mut has_types = false;
     let n = if (tokens.token.1).0 == Tok::NameBeginTyValue {
         has_types = true;
@@ -1254,9 +1349,9 @@ fn parse_name_and_type_formals<'input, 'builder>(tokens: &mut __Matcher<'input, 
 //     <n: Name> => (n, vec![]),
 // }
 
-fn parse_name_and_type_actuals<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<(String, Vec<Type>), ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_name_and_type_actuals<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<(String, Vec<Type>), ParseError<usize, Token<'input>, failure::Error>> {
     let mut has_types = false;
     let n = if (tokens.token.1).0 == Tok::NameBeginTyValue {
         has_types = true;
@@ -1282,9 +1377,9 @@ fn parse_name_and_type_actuals<'input, 'builder>(tokens: &mut __Matcher<'input, 
 //     <v: Sp<Var>> ":" <t: Type> ","? => (v, t)
 // }
 
-fn parse_arg_decl<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<(Var_, Type), ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_arg_decl<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<(Var_, Type), ParseError<usize, Token<'input>, failure::Error>> {
     let v = parse_var_(tokens)?;
     consume_token(tokens, Tok::Colon)?;
     let t = parse_type(tokens)?;
@@ -1298,9 +1393,9 @@ fn parse_arg_decl<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     ":" <t: Type> <v: ("*" <Type>)*> => { ... }
 // }
 
-fn parse_return_type<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Vec<Type>, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_return_type<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Vec<Type>, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Colon)?;
     let t = parse_type(tokens)?;
     let mut v = vec![t];
@@ -1315,9 +1410,9 @@ fn parse_return_type<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     "acquires" <s: StructName> <al: ("," <StructName>)*> => { ... }
 // }
 
-fn parse_acquire_list<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Vec<StructName>, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_acquire_list<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Vec<StructName>, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Acquires)?;
     let s = parse_struct_name(tokens)?;
     let mut al = vec![s];
@@ -1347,11 +1442,11 @@ fn parse_acquire_list<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>
 //         ";" =>? { ... }
 // }
 
-fn parse_function_decl<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>,
-                                         is_native: bool,
-                                         start_loc: usize)
-    -> Result<(FunctionName, Function_), ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_function_decl<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+    is_native: bool,
+    start_loc: usize,
+) -> Result<(FunctionName, Function_), ParseError<usize, Token<'input>, failure::Error>> {
     let is_public = if (tokens.token.1).0 == Tok::Public {
         tokens.advance()?;
         true
@@ -1361,7 +1456,7 @@ fn parse_function_decl<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder
 
     let (name, type_formals) = parse_name_and_type_formals(tokens)?;
     consume_token(tokens, Tok::LParen)?;
-    let mut args : Vec<(Var_, Type)> = vec![];
+    let mut args: Vec<(Var_, Type)> = vec![];
     while (tokens.token.1).0 != Tok::RParen {
         args.push(parse_arg_decl(tokens)?);
     }
@@ -1381,10 +1476,13 @@ fn parse_function_decl<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder
 
     let func_name = FunctionName::parse(name)?;
     let func = Function::new(
-        if is_public { FunctionVisibility::Public } else {
-                       FunctionVisibility::Internal },
+        if is_public {
+            FunctionVisibility::Public
+        } else {
+            FunctionVisibility::Internal
+        },
         args,
-        ret.unwrap_or(vec![]),
+        ret.unwrap_or_else(|| vec![]),
         type_formals,
         acquires.unwrap_or_else(Vec::new),
         if is_native {
@@ -1392,23 +1490,27 @@ fn parse_function_decl<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder
             FunctionBody::Native
         } else {
             let (locals, body) = parse_function_block(tokens)?;
-            FunctionBody::Move{locals: locals, code: body}
+            FunctionBody::Move { locals, code: body }
         },
     );
 
     let end_loc = tokens.token.0;
-    Ok((func_name, Spanned{span: Span::new(ByteIndex(start_loc as u32),
-                                           ByteIndex(end_loc as u32)),
-                           value: func }))
+    Ok((
+        func_name,
+        Spanned {
+            span: Span::new(ByteIndex(start_loc as u32), ByteIndex(end_loc as u32)),
+            value: func,
+        },
+    ))
 }
 
 // FieldDecl : (Field_, Type) = {
 //     <f: Sp<Field>> ":" <t: Type> ","? => (f, t)
 // }
 
-fn parse_field_decl<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<(Field_, Type), ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_field_decl<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<(Field_, Type), ParseError<usize, Token<'input>, failure::Error>> {
     let f = parse_field_(tokens)?;
     consume_token(tokens, Tok::Colon)?;
     let t = parse_type(tokens)?;
@@ -1422,9 +1524,9 @@ fn parse_field_decl<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     "modules:" <c: Module*> "script:" => c,
 // }
 
-fn parse_modules<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Vec<ModuleDefinition>, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_modules<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Vec<ModuleDefinition>, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Modules)?;
     let mut c: Vec<ModuleDefinition> = vec![];
     while (tokens.token.1).0 == Tok::Module {
@@ -1439,9 +1541,9 @@ fn parse_modules<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     <m: Module> => { ... }
 // }
 
-fn parse_program<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Program, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_program<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Program, ParseError<usize, Token<'input>, failure::Error>> {
     if (tokens.token.1).0 == Tok::Module {
         let m = parse_module(tokens)?;
         let ret = Spanned {
@@ -1449,11 +1551,22 @@ fn parse_program<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
             value: Cmd::Return(Box::new(Spanned::no_loc(Exp::ExprList(vec![])))),
         };
         let return_stmt = Statement::CommandStatement(ret);
-        let body = FunctionBody::Move { locals: vec![],
-                                        code: Block::new(vec![return_stmt]) };
-        let main = Function::new(FunctionVisibility::Public,
-                                 vec![], vec![], vec![], vec![], body);
-        Ok(Program::new(vec![m], Script::new(vec![], Spanned::no_loc(main))))
+        let body = FunctionBody::Move {
+            locals: vec![],
+            code: Block::new(vec![return_stmt]),
+        };
+        let main = Function::new(
+            FunctionVisibility::Public,
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            body,
+        );
+        Ok(Program::new(
+            vec![m],
+            Script::new(vec![], Spanned::no_loc(main)),
+        ))
     } else {
         let modules = if (tokens.token.1).0 == Tok::Modules {
             parse_modules(tokens)?
@@ -1470,28 +1583,35 @@ fn parse_program<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     "main" "(" <args: (ArgDecl)*> ")" <locals_body: FunctionBlock> => { ... }
 // }
 
-fn parse_script<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<Script, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_script<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<Script, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.token.0;
-    let mut imports : Vec<ImportDefinition> = vec![];
+    let mut imports: Vec<ImportDefinition> = vec![];
     while (tokens.token.1).0 == Tok::Import {
         imports.push(parse_import_decl(tokens)?);
     }
     consume_token(tokens, Tok::Main)?;
     consume_token(tokens, Tok::LParen)?;
-    let mut args : Vec<(Var_, Type)> = vec![];
+    let mut args: Vec<(Var_, Type)> = vec![];
     while (tokens.token.1).0 != Tok::RParen {
         args.push(parse_arg_decl(tokens)?);
     }
     tokens.advance()?; // consume the RParen
     let (locals, body) = parse_function_block(tokens)?;
     let end_loc = tokens.token.0;
-    let main = Function::new(FunctionVisibility::Public, args, vec![], vec![], vec![],
-                             FunctionBody::Move{ locals: locals, code: body });
-    let main = Spanned{span: Span::new(ByteIndex(start_loc as u32),
-                                       ByteIndex(end_loc as u32)),
-                       value: main };
+    let main = Function::new(
+        FunctionVisibility::Public,
+        args,
+        vec![],
+        vec![],
+        vec![],
+        FunctionBody::Move { locals, code: body },
+    );
+    let main = Spanned {
+        span: Span::new(ByteIndex(start_loc as u32), ByteIndex(end_loc as u32)),
+        value: main,
+    };
     Ok(Script::new(imports, main))
 }
 
@@ -1506,15 +1626,19 @@ fn parse_script<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     <name_and_type_formals: NameAndTypeFormals> ";" =>? { ... }
 // }
 
-fn parse_struct_decl<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>,
-                                       is_native: bool,
-                                       start_loc: usize)
-    -> Result<StructDefinition_, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_struct_decl<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+    is_native: bool,
+    start_loc: usize,
+) -> Result<StructDefinition_, ParseError<usize, Token<'input>, failure::Error>> {
     let is_nominal_resource = match (tokens.token.1).0 {
         Tok::Struct => false,
         Tok::Resource => true,
-        _ => { return Err(ParseError::InvalidToken { location: tokens.token.0 })},
+        _ => {
+            return Err(ParseError::InvalidToken {
+                location: tokens.token.0,
+            })
+        }
     };
     tokens.advance()?;
 
@@ -1546,9 +1670,9 @@ fn parse_struct_decl<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>,
 //     <a: AccountAddress> "." <m: ModuleName> => QualifiedModuleIdent::new(m, a),
 // }
 
-fn parse_qualified_module_ident<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<QualifiedModuleIdent, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_qualified_module_ident<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<QualifiedModuleIdent, ParseError<usize, Token<'input>, failure::Error>> {
     let a = parse_account_address(tokens)?;
     consume_token(tokens, Tok::Period)?;
     let m = parse_module_name(tokens)?;
@@ -1560,14 +1684,16 @@ fn parse_qualified_module_ident<'input, 'builder>(tokens: &mut __Matcher<'input,
 //     <transaction_dot_module: DotName> =>? { ... }
 // }
 
-fn parse_module_ident<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<ModuleIdent, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_module_ident<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<ModuleIdent, ParseError<usize, Token<'input>, failure::Error>> {
     if (tokens.token.1).0 == Tok::AccountAddressValue {
-        return Ok(ModuleIdent::Qualified(parse_qualified_module_ident(tokens)?));
+        return Ok(ModuleIdent::Qualified(parse_qualified_module_ident(
+            tokens,
+        )?));
     }
     let transaction_dot_module = parse_dot_name(tokens)?;
-    let v: Vec<&str> = transaction_dot_module.split(".").collect();
+    let v: Vec<&str> = transaction_dot_module.split('.').collect();
     assert!(v.len() == 2, 42);
     let ident: String = v[0].to_string();
     if ident != "Transaction" {
@@ -1581,13 +1707,16 @@ fn parse_module_ident<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>
 //     "as" <alias: ModuleName> => { ... }
 // }
 
-fn parse_import_alias<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<ModuleName, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_import_alias<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<ModuleName, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::As)?;
     let alias = parse_module_name(tokens)?;
     if alias.as_inner() == ModuleName::self_name() {
-        panic!("Invalid use of reserved module alias '{}'", ModuleName::self_name());
+        panic!(
+            "Invalid use of reserved module alias '{}'",
+            ModuleName::self_name()
+        );
     }
     Ok(alias)
 }
@@ -1596,9 +1725,9 @@ fn parse_import_alias<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>
 //     "import" <ident: ModuleIdent> <alias: ImportAlias?> ";" => { ... }
 // }
 
-fn parse_import_decl<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<ImportDefinition, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_import_decl<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<ImportDefinition, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Import)?;
     let ident = parse_module_ident(tokens)?;
     let alias = if (tokens.token.1).0 == Tok::As {
@@ -1618,14 +1747,14 @@ fn parse_import_decl<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     "}" =>? ModuleDefinition::new(n, imports, structs, functions),
 // }
 
-fn parse_module<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
-    -> Result<ModuleDefinition, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_module<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<ModuleDefinition, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Module)?;
     let name = parse_name(tokens)?;
     consume_token(tokens, Tok::LBrace)?;
 
-    let mut imports : Vec<ImportDefinition> = vec![];
+    let mut imports: Vec<ImportDefinition> = vec![];
     while (tokens.token.1).0 == Tok::Import {
         imports.push(parse_import_decl(tokens)?);
     }
@@ -1641,9 +1770,8 @@ fn parse_module<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
         false
     };
 
-    let mut structs : Vec<StructDefinition_> = vec![];
-    while (tokens.token.1).0 == Tok::Struct ||
-          (tokens.token.1).0 == Tok::Resource {
+    let mut structs: Vec<StructDefinition_> = vec![];
+    while (tokens.token.1).0 == Tok::Struct || (tokens.token.1).0 == Tok::Resource {
         structs.push(parse_struct_decl(tokens, is_native, start_loc)?);
 
         start_loc = tokens.token.0;
@@ -1655,7 +1783,7 @@ fn parse_module<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
         };
     }
 
-    let mut functions : Vec<(FunctionName, Function_)> = vec![];
+    let mut functions: Vec<(FunctionName, Function_)> = vec![];
     while (tokens.token.1).0 != Tok::RBrace {
         functions.push(parse_function_decl(tokens, is_native, start_loc)?);
 
@@ -1669,7 +1797,9 @@ fn parse_module<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
     }
     // Make sure there was no "native" keyword before the RBrace.
     if is_native {
-       return Err(ParseError::InvalidToken { location: tokens.token.0 });
+        return Err(ParseError::InvalidToken {
+            location: tokens.token.0,
+        });
     }
     tokens.advance()?; // consume the RBrace
 
@@ -1681,9 +1811,9 @@ fn parse_module<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
 //     <m: Module> => ScriptOrModule::Module(m),
 // }
 
-fn parse_script_or_module<'input, 'builder>(tokens: &mut __Matcher<'input, 'builder>)
--> Result<ScriptOrModule, ParseError<usize, Token<'input>, failure::Error>>
-{
+fn parse_script_or_module<'input, 'builder>(
+    tokens: &mut __Matcher<'input, 'builder>,
+) -> Result<ScriptOrModule, ParseError<usize, Token<'input>, failure::Error>> {
     let (_, tok, _) = &tokens.token;
     if tok.0 == Tok::Module {
         Ok(ScriptOrModule::Module(parse_module(tokens)?))
@@ -1699,14 +1829,13 @@ pub struct CmdParser {
 impl CmdParser {
     pub fn new() -> CmdParser {
         let __builder = __MatcherBuilder::new();
-        CmdParser {
-            builder: __builder,
-        }
+        CmdParser { builder: __builder }
     }
 
-    pub fn parse<'input>(&self, input: &'input str) ->
-        Result<Cmd, ParseError<usize, Token<'input>, failure::Error>>
-    {
+    pub fn parse<'input>(
+        &self,
+        input: &'input str,
+    ) -> Result<Cmd, ParseError<usize, Token<'input>, failure::Error>> {
         let mut __tokens = self.builder.matcher(input);
         __tokens.advance()?;
         parse_cmd(&mut __tokens)
@@ -1720,14 +1849,13 @@ pub struct ModuleParser {
 impl ModuleParser {
     pub fn new() -> ModuleParser {
         let __builder = __MatcherBuilder::new();
-        ModuleParser {
-            builder: __builder,
-        }
+        ModuleParser { builder: __builder }
     }
 
-    pub fn parse<'input>(&self, input: &'input str) ->
-        Result<ModuleDefinition, ParseError<usize, Token<'input>, failure::Error>>
-    {
+    pub fn parse<'input>(
+        &self,
+        input: &'input str,
+    ) -> Result<ModuleDefinition, ParseError<usize, Token<'input>, failure::Error>> {
         let mut __tokens = self.builder.matcher(input);
         __tokens.advance()?;
         parse_module(&mut __tokens)
@@ -1741,14 +1869,13 @@ pub struct ProgramParser {
 impl ProgramParser {
     pub fn new() -> ProgramParser {
         let __builder = __MatcherBuilder::new();
-        ProgramParser {
-            builder: __builder,
-        }
+        ProgramParser { builder: __builder }
     }
 
-    pub fn parse<'input>(&self, input: &'input str) ->
-        Result<Program, ParseError<usize, Token<'input>, failure::Error>>
-    {
+    pub fn parse<'input>(
+        &self,
+        input: &'input str,
+    ) -> Result<Program, ParseError<usize, Token<'input>, failure::Error>> {
         let mut __tokens = self.builder.matcher(input);
         __tokens.advance()?;
         parse_program(&mut __tokens)
@@ -1762,14 +1889,13 @@ pub struct ScriptParser {
 impl ScriptParser {
     pub fn new() -> ScriptParser {
         let __builder = __MatcherBuilder::new();
-        ScriptParser {
-            builder: __builder,
-        }
+        ScriptParser { builder: __builder }
     }
 
-    pub fn parse<'input>(&self, input: &'input str) ->
-        Result<Script, ParseError<usize, Token<'input>, failure::Error>>
-    {
+    pub fn parse<'input>(
+        &self,
+        input: &'input str,
+    ) -> Result<Script, ParseError<usize, Token<'input>, failure::Error>> {
         let mut __tokens = self.builder.matcher(input);
         __tokens.advance()?;
         parse_script(&mut __tokens)
@@ -1783,14 +1909,13 @@ pub struct ScriptOrModuleParser {
 impl ScriptOrModuleParser {
     pub fn new() -> ScriptOrModuleParser {
         let __builder = __MatcherBuilder::new();
-        ScriptOrModuleParser {
-            builder: __builder,
-        }
+        ScriptOrModuleParser { builder: __builder }
     }
 
-    pub fn parse<'input>(&self, input: &'input str) ->
-        Result<ScriptOrModule, ParseError<usize, Token<'input>, failure::Error>>
-    {
+    pub fn parse<'input>(
+        &self,
+        input: &'input str,
+    ) -> Result<ScriptOrModule, ParseError<usize, Token<'input>, failure::Error>> {
         let mut __tokens = self.builder.matcher(input);
         __tokens.advance()?;
         parse_script_or_module(&mut __tokens)
