@@ -557,8 +557,8 @@ fn process_vote_timeout_msg_test() {
         placeholder_ledger_info(),
         &non_proposer.signer,
     );
-
-    vote_on_timeout.add_timeout_signature(&non_proposer.signer);
+    let signature = vote_on_timeout.timeout().sign(&non_proposer.signer);
+    vote_on_timeout.add_timeout_signature(signature);
 
     let vote_msg_on_timeout = VoteMsg::new(
         vote_on_timeout,
