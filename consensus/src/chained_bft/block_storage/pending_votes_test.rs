@@ -180,7 +180,10 @@ fn test_tc_aggregation() {
         li1.clone(),
         &signers[0],
     );
-    vote_round_1_author_0.add_timeout_signature(&signers[0]);
+
+    let timeout = vote_round_1_author_0.timeout();
+    let signature = timeout.sign(&signers[0]);
+    vote_round_1_author_0.add_timeout_signature(signature);
 
     // first time a new vote is added the result is VoteAdded
     assert_eq!(
@@ -204,7 +207,9 @@ fn test_tc_aggregation() {
     );
 
     // if that vote is now enhanced with a round signature, it can form a TC
-    vote2_round_1_author_1.add_timeout_signature(&signers[1]);
+    let timeout = vote2_round_1_author_1.timeout();
+    let signature = timeout.sign(&signers[1]);
+    vote2_round_1_author_1.add_timeout_signature(signature);
     match pending_votes.insert_vote(&vote2_round_1_author_1, &validator) {
         VoteReceptionResult::NewTimeoutCertificate(tc) => {
             assert!(validator.check_voting_power(tc.signatures().keys()).is_ok());
@@ -231,7 +236,9 @@ fn test_tc_aggregation_keep_last_only() {
         li1.clone(),
         &signers[0],
     );
-    vote_round_1_author_0.add_timeout_signature(&signers[0]);
+    let timeout = vote_round_1_author_0.timeout();
+    let signature = timeout.sign(&signers[0]);
+    vote_round_1_author_0.add_timeout_signature(signature);
 
     // first time a new vote is added the result is VoteAdded
     assert_eq!(
@@ -248,7 +255,9 @@ fn test_tc_aggregation_keep_last_only() {
         li2.clone(),
         &signers[0],
     );
-    vote_round_2_author_0.add_timeout_signature(&signers[0]);
+    let timeout = vote_round_2_author_0.timeout();
+    let signature = timeout.sign(&signers[0]);
+    vote_round_2_author_0.add_timeout_signature(signature);
     assert_eq!(
         pending_votes.insert_vote(&vote_round_2_author_0, &validator),
         VoteReceptionResult::VoteAdded(1)
@@ -263,7 +272,9 @@ fn test_tc_aggregation_keep_last_only() {
         li3.clone(),
         &signers[1],
     );
-    vote3_round_1_author_1.add_timeout_signature(&signers[1]);
+    let timeout = vote3_round_1_author_1.timeout();
+    let signature = timeout.sign(&signers[1]);
+    vote3_round_1_author_1.add_timeout_signature(signature);
     assert_eq!(
         pending_votes.insert_vote(&vote3_round_1_author_1, &validator),
         VoteReceptionResult::VoteAdded(1)
@@ -278,7 +289,9 @@ fn test_tc_aggregation_keep_last_only() {
         li4.clone(),
         &signers[1],
     );
-    vote4_round_2_author_1.add_timeout_signature(&signers[1]);
+    let timeout = vote4_round_2_author_1.timeout();
+    let signature = timeout.sign(&signers[1]);
+    vote4_round_2_author_1.add_timeout_signature(signature);
     match pending_votes.insert_vote(&vote4_round_2_author_1, &validator) {
         VoteReceptionResult::NewTimeoutCertificate(tc) => {
             assert!(validator.check_voting_power(tc.signatures().keys()).is_ok());

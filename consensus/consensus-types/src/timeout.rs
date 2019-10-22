@@ -3,7 +3,9 @@
 
 use crate::{block::Block, common::Round};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue, TimeoutHasher};
+use libra_types::crypto_proxies::{Signature, ValidatorSigner};
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 
 /// This structure contains all the information necessary to construct a signature
 /// on the equivalent of a timeout message
@@ -34,6 +36,13 @@ impl Timeout {
     pub fn round(&self) -> Round {
         self.round
     }
+
+    pub fn sign(&self, signer: &ValidatorSigner) -> Signature {
+        signer
+            .sign_message(self.hash())
+            .expect("Failed to sign Timeout")
+            .into()
+    }
 }
 
 impl CryptoHash for Timeout {
@@ -44,5 +53,11 @@ impl CryptoHash for Timeout {
         let mut state = Self::Hasher::default();
         state.write(bytes.as_ref());
         state.finish()
+    }
+}
+
+impl Display for Timeout {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "Timeout: [epoch: {}, round: {}]", self.epoch, self.round,)
     }
 }

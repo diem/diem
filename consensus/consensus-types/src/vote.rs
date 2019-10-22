@@ -66,17 +66,12 @@ impl Vote {
 
     /// Generates a round signature, which can then be used for aggregating a timeout certificate.
     /// Typically called for generating vote messages that are sent upon timeouts.
-    pub fn add_timeout_signature(&mut self, validator_signer: &ValidatorSigner) {
+    pub fn add_timeout_signature(&mut self, signature: Signature) {
         if self.timeout_signature.is_some() {
             return; // round signature is already set
         }
 
-        self.timeout_signature.replace(
-            validator_signer
-                .sign_message(self.timeout().hash())
-                .expect("Failed to sign round")
-                .into(),
-        );
+        self.timeout_signature.replace(signature);
     }
 
     pub fn vote_data(&self) -> &VoteData {

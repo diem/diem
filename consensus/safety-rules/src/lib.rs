@@ -6,13 +6,17 @@ use consensus_types::{
     block_info::BlockInfo,
     common::{Payload, Round},
     quorum_cert::QuorumCert,
+    timeout::Timeout,
     vote::Vote,
     vote_data::VoteData,
     vote_proposal::VoteProposal,
 };
 use failure::Fail;
-use libra_crypto::HashValue;
-use libra_types::{crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo};
+use libra_crypto::hash::HashValue;
+use libra_types::{
+    crypto_proxies::{Signature, ValidatorSigner},
+    ledger_info::LedgerInfo,
+};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
@@ -235,5 +239,11 @@ impl SafetyRules {
             self.construct_ledger_info(proposed_block),
             &self.validator_signer,
         ))
+    }
+
+    /// As the holder of the private key, SafetyRules also signs what is effectively a
+    /// timeout message. This returns the signature for that timeout message.
+    pub fn sign_timeout(&self, timeout: &Timeout) -> Result<Signature, Error> {
+        Ok(timeout.sign(&self.validator_signer))
     }
 }
