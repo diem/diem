@@ -1,4 +1,4 @@
-FROM debian:stretch
+FROM debian:buster
 
 RUN mkdir -p /opt/libra/bin /opt/libra/etc
 COPY cluster_test_docker_builder_cluster_test /opt/libra/bin/cluster-test
