@@ -39,7 +39,7 @@ use vm::{
 };
 use vm_runtime_types::{
     loaded_data::struct_def::StructDef,
-    native_functions::dispatch::{dispatch_native_function, NativeReturnStatus},
+    native_functions::dispatch::resolve_native_function,
     value::{Locals, ReferenceValue, Struct, Value},
 };
 
@@ -593,7 +593,7 @@ where
         let module = function.module();
         let module_id = module.self_id();
         let function_name = function.name();
-        let native_function = dispatch_native_function(&module_id, function_name)
+        let native_function = resolve_native_function(&module_id, function_name)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         if module_id == *EVENT_MODULE && function_name == EMIT_EVENT_NAME.as_ident_str() {
             self.call_emit_event()
@@ -611,24 +611,14 @@ where
             for _ in 0..expected_args {
                 arguments.push_front(self.operand_stack.pop()?);
             }
-            let (cost, return_values) = match (native_function.dispatch)(arguments) {
-                NativeReturnStatus::InvariantError(err) => {
-                    return Err(err);
+            let result = (native_function.dispatch)(arguments)?;
+            self.gas_meter.consume_gas(GasUnits::new(result.cost))?;
+            result.result.and_then(|values| {
+                for value in values {
+                    self.operand_stack.push(value)?;
                 }
-                NativeReturnStatus::Aborted { cost, error_code } => {
-                    self.gas_meter.consume_gas(GasUnits::new(cost))?;
-                    return Err(error_code);
-                }
-                NativeReturnStatus::Success {
-                    cost,
-                    return_values,
-                } => (cost, return_values),
-            };
-            self.gas_meter.consume_gas(GasUnits::new(cost))?;
-            for value in return_values {
-                self.operand_stack.push(value)?;
-            }
-            Ok(())
+                Ok(())
+            })
         }
     }
 
