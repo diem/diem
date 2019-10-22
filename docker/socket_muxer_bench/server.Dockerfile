@@ -1,7 +1,7 @@
 ### Build Image ###
-FROM debian:stretch as builder
+FROM debian:buster as builder
 
-RUN echo "deb http://deb.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list && apt-get update && apt-get install -y protobuf-compiler/stretch-backports cmake curl && apt-get clean && rm -r /var/lib/apt/lists/*
+RUN echo "deb http://deb.debian.org/debian buster-backports main" > /etc/apt/sources.list.d/backports.list && apt-get update && apt-get install -y protobuf-compiler/buster-backports cmake curl && apt-get clean && rm -r /var/lib/apt/lists/*
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
 ENV PATH "$PATH:/root/.cargo/bin"
@@ -14,7 +14,7 @@ COPY . /libra
 RUN cargo build --release --bin socket-bench-server
 
 ### Production Image ###
-FROM debian:stretch
+FROM debian:buster
 
 RUN mkdir -p /opt/libra/bin /opt/libra/etc
 
