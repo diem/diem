@@ -15,10 +15,10 @@ ir-to-bytecode-syntax = { path = "syntax", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 bytecode-source-map = { path = "../bytecode-source-map", version = "0.1.0" }
-lalrpop-util = "0.17.2"
 log = "0.4.7"
 codespan = "0.2.1"
 codespan-reporting = "0.2.1"
 
-[dev-dependencies]
-libra-types = { path = "../../../types", version = "0.1.0", features = ["testing"] }
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]

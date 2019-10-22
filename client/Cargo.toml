@@ -15,7 +15,7 @@ futures = "0.1.28"
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 hex = "0.3.2"
 itertools = "0.8.0"
-proptest = "0.9.2"
+proptest = { version = "0.9.2", optional = true }
 rustyline = "5.0.3"
 rust_decimal = "1.0.2"
 num-traits = "0.2"
@@ -38,9 +38,8 @@ libra-tools = { path = "../common/tools/", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
 
 [dev-dependencies]
-libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["testing"] }
-libra-types = { path = "../types", version = "0.1.0", features = ["testing"]}
+proptest = "0.9.2"
 
 [features]
 default = []
-testing = ["libra-types/testing", "libra-crypto/testing"]
+fuzzing = ["proptest", "libra-crypto/fuzzing", "libra-types/fuzzing"]

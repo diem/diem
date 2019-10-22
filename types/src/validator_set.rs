@@ -11,7 +11,7 @@ use crate::{
 };
 use failure::prelude::*;
 use lazy_static::lazy_static;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -46,7 +46,7 @@ pub(crate) fn validator_set_path() -> Vec<u8> {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct ValidatorSet(Vec<ValidatorPublicKeys>);
 
 impl fmt::Display for ValidatorSet {

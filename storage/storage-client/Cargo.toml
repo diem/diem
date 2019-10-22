@@ -21,5 +21,6 @@ libra-state-view = { path = "../state-view", version = "0.1.0" }
 storage-proto = { path = "../storage-proto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 
-[dev-dependencies]
-libra-types = { path = "../../types", version = "0.1.0", features = ["testing"] }
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]

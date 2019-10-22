@@ -27,8 +27,10 @@ rand = "0.6.5"
 
 [dev-dependencies]
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0", features = ["testing"]}
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
 libra-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0" }
-libra-types = { path = "../../../types", version = "0.1.0", features = ["testing"] }
+
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]

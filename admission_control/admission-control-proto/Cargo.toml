@@ -20,9 +20,10 @@ libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 
-[dev-dependencies]
-libra-types = { path = "../../types", version = "0.1.0", features = ["testing"]}
-
 [build-dependencies]
 grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }
 prost-build = "0.5.0"
+
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]

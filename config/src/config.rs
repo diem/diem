@@ -46,7 +46,7 @@ static CONFIG_TEMPLATE: &[u8] = include_bytes!("../data/configs/node.config.toml
 /// The config file is broken up into sections for each module
 /// so that only that module can be passed around
 #[derive(Debug, Deserialize, Serialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 pub struct NodeConfig {
     //TODO Add configuration for multiple chain's in a future diff
     #[serde(default)]
@@ -152,7 +152,7 @@ impl BaseConfig {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 impl Clone for BaseConfig {
     fn clone(&self) -> Self {
         Self {
@@ -303,7 +303,7 @@ impl Default for StorageConfig {
     }
 }
 
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct NetworkConfig {
@@ -398,7 +398,7 @@ impl NetworkConfig {
     }
 }
 
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct ConsensusConfig {
@@ -800,7 +800,7 @@ impl VMConfig {
     /// Creates a new `VMConfig` where the whitelist is empty. This should only be used for testing.
     #[allow(non_snake_case)]
     #[doc(hidden)]
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "fuzzing"))]
     pub fn empty_whitelist_FOR_TESTING() -> Self {
         VMConfig {
             publishing_options: VMPublishingOption::Locked(HashSet::new()),

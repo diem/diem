@@ -7,6 +7,7 @@
 //! [`storage-client`](../storage-client/index.html) instead of via
 //! [`StorageClient`](../storage-proto/proto/storage_grpc/struct.StorageClient.html) directly.
 
+#[cfg(feature = "fuzzing")]
 pub mod mocks;
 
 use failure::prelude::*;

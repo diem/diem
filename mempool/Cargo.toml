@@ -38,8 +38,11 @@ vm-validator = { path = "../vm-validator", version = "0.1.0" }
 [dev-dependencies]
 rand = "0.6.5"
 channel = { path = "../common/channel", version = "0.1.0" }
-storage-service = { path = "../storage/storage-service", version = "0.1.0" }
-libra-types = { path = "../types", version = "0.1.0", features = ["testing"] }
+storage-service = { path = "../storage/storage-service", version = "0.1.0", features = ["fuzzing"] }
 
 [build-dependencies]
 grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }
+
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]

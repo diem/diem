@@ -11,7 +11,7 @@ use std::convert::TryFrom;
 /// validating. This struct can be used for all signing operations including block and network
 /// signing, respectively.
 #[derive(Debug)]
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 pub struct ValidatorSigner<PrivateKey: SigningKey> {
     author: AccountAddress,
     public_key: PrivateKey::VerifyingKeyMaterial,
@@ -81,7 +81,7 @@ impl<PrivateKey: SigningKey + Uniform> ValidatorSigner<PrivateKey> {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub mod proptests {
     use super::*;
     #[cfg(test)]

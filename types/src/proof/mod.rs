@@ -4,7 +4,7 @@
 pub mod accumulator;
 pub mod definition;
 pub mod position;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_proof;
 
 #[cfg(test)]
@@ -33,7 +33,7 @@ pub use self::definition::{
     TransactionAccumulatorProof,
 };
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub use self::definition::TestAccumulatorProof;
 
 pub(crate) fn verify_transaction_list(

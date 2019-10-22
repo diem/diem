@@ -17,8 +17,6 @@ stdlib = { path = "../stdlib", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 vm = { path = "../vm", version = "0.1.0" }
 
-[dev-dependencies]
-libra-types = { path = "../../types", version = "0.1.0", features = ["testing"]}
-
 [features]
-testing = ["libra-types/testing", "libra-crypto/testing"]
+default = []
+fuzzing = ["libra-types/fuzzing"]

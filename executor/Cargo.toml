@@ -36,11 +36,12 @@ proptest = "0.9.2"
 rand = "0.6.5"
 rusty-fork = "0.2.1"
 
-libra-config = { path = "../config", version = "0.1.0", features = ["testing"]}
 grpc-helpers = { path = "../common/grpc-helpers", version = "0.1.0" }
-libra-types = { path = "../types", version = "0.1.0", features = ["testing"]}
-
 storage-proto = { path = "../storage/storage-proto", version = "0.1.0" }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 vm-genesis = { path = "../language/vm/vm-genesis", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
+
+[features]
+default = []
+fuzzing = ["libra-config/fuzzing", "libra-crypto/fuzzing", "libra-types/fuzzing"]

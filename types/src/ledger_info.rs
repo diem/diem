@@ -8,13 +8,13 @@ use crate::{
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
 use failure::prelude::*;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher, LedgerInfoHasher},
     HashValue, *,
 };
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -41,7 +41,7 @@ use std::{
 /// votes. It sets `consensus_data_hash` to represent B so that if those 2f+1 votes are gathered a
 /// QC is formed on B.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct LedgerInfo {
     /// The version of the latest transaction in the ledger.
     version: Version,
@@ -155,7 +155,7 @@ impl LedgerInfo {
     }
 
     /// To bootstrap the system until we execute and commit the genesis txn before start.
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "fuzzing"))]
     pub fn genesis() -> Self {
         Self::new(
             0,

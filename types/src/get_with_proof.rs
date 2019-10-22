@@ -21,7 +21,7 @@ use crate::{
 };
 use failure::prelude::*;
 use libra_crypto::{hash::CryptoHash, *};
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use std::{
     cmp,
@@ -31,7 +31,7 @@ use std::{
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct UpdateToLatestLedgerRequest {
     pub client_known_version: u64,
     pub requested_items: Vec<RequestItem>,
@@ -434,7 +434,7 @@ fn verify_get_txns_resp(
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum RequestItem {
     GetAccountTransactionBySequenceNumber {
         account: AccountAddress,
@@ -570,7 +570,7 @@ impl From<RequestItem> for crate::proto::types::RequestItem {
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum ResponseItem {
     GetAccountTransactionBySequenceNumber {
         signed_transaction_with_proof: Option<SignedTransactionWithProof>,

@@ -10,5 +10,9 @@ publish = false
 edition = "2018"
 
 [dependencies]
-proptest = "0.9.4"
+proptest = { version = "0.9.4", optional = true }
 serde = { version = "1.0.101", features = ["derive"] }
+
+[features]
+default = []
+fuzzing = ["proptest"]

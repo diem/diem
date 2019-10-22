@@ -199,20 +199,21 @@ impl<T: Payload> ChainedBftSMR<T> {
             .expect("Consensus start: No valid runtime found!")
             .executor();
         let time_service = Arc::new(ClockTimeService::new(executor.clone()));
+        let author = signer.author();
         let network = ConsensusNetworkImpl::new(
-            signer.author(),
+            author,
             network_sender.clone(),
             network_events,
             Arc::clone(&epoch_mgr),
         );
 
         let last_vote = initial_data.last_vote();
-        let safety_rules = SafetyRules::new(initial_data.state(), signer.clone());
+        let safety_rules = SafetyRules::new(initial_data.state(), signer);
 
         let block_store = Arc::new(block_on(BlockStore::new(
             Arc::clone(&self.storage),
             initial_data,
-            signer.author(),
+            author,
             Arc::clone(&state_computer),
             true,
             self.config.max_pruned_blocks_in_mem,

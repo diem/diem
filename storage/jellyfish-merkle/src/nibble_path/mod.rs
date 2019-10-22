@@ -9,6 +9,7 @@ mod nibble_path_test;
 
 use crate::ROOT_NIBBLE_HEIGHT;
 use libra_nibble::Nibble;
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::{fmt, iter::FromIterator};
@@ -45,6 +46,7 @@ impl FromIterator<Nibble> for NibblePath {
     }
 }
 
+#[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for NibblePath {
     type Parameters = ();
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
@@ -53,6 +55,7 @@ impl Arbitrary for NibblePath {
     type Strategy = BoxedStrategy<Self>;
 }
 
+#[cfg(any(test, feature = "fuzzing"))]
 prop_compose! {
     fn arb_nibble_path()(
         mut bytes in vec(any::<u8>(), 0..=ROOT_NIBBLE_HEIGHT/2),
@@ -68,6 +71,7 @@ prop_compose! {
     }
 }
 
+#[cfg(any(test, feature = "fuzzing"))]
 prop_compose! {
     fn arb_internal_nibble_path()(
         nibble_path in arb_nibble_path().prop_filter(

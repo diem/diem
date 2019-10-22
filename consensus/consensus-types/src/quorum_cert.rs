@@ -66,7 +66,7 @@ impl QuorumCert {
         }
     }
 
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "fuzzing"))]
     pub fn certificate_for_genesis() -> QuorumCert {
         Self::certificate_for_genesis_from_ledger_info(&LedgerInfo::genesis(), *GENESIS_BLOCK_ID)
     }

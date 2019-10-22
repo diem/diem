@@ -13,7 +13,6 @@ failure = { path = "../../common/failure-ext", version = "0.1.0", package = "lib
 serde = { version = "1.0.99", default-features = false }
 libra-types = { path = "../../types", version = "0.1.0" }
 
-[dev-dependencies]
-consensus-types = { path = "../consensus-types", version = "0.1.0", features = ["testing"]}
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["testing"]}
-libra-types = { path = "../../types", version = "0.1.0", features = ["testing"]}
+[features]
+default = []
+fuzzing = ["consensus-types/fuzzing"]

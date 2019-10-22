@@ -24,5 +24,8 @@ failure = { path = "../../common/failure-ext", version = "0.1.0", package = "lib
 libra-types = { path = "../../types", version = "0.1.0" }
 
 [dev-dependencies]
-libra-types = { path = "../../types", version = "0.1.0", features = ["testing"]}
-libra-tools = { path = "../../common/tools", version = "0.1.0"}
+libra-tools = { path = "../../common/tools", version = "0.1.0" }
+
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]

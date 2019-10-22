@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use crate::account_config::{account_resource_path, AccountResource};
 use crate::{
     account_address::AccountAddress, account_config::get_account_resource_or_default,
@@ -12,9 +12,9 @@ use libra_crypto::{
     hash::{AccountStateBlobHasher, CryptoHash, CryptoHasher},
     HashValue,
 };
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest::{arbitrary::Arbitrary, prelude::*};
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -88,7 +88,7 @@ impl From<AccountStateBlob> for crate::proto::types::AccountStateBlob {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 impl From<AccountResource> for AccountStateBlob {
     fn from(account_resource: AccountResource) -> Self {
         let mut account_state: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
@@ -118,14 +118,14 @@ impl CryptoHash for AccountStateBlob {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 prop_compose! {
     pub fn account_state_blob_strategy()(account_resource in any::<AccountResource>()) -> AccountStateBlob {
         AccountStateBlob::from(account_resource)
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for AccountStateBlob {
     type Parameters = ();
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
@@ -136,7 +136,7 @@ impl Arbitrary for AccountStateBlob {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountStateWithProof {
     /// The transaction version at which this account state is seen.
     pub version: Version,

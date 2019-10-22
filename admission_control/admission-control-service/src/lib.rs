@@ -13,7 +13,7 @@
 
 /// AC gRPC service.
 pub mod admission_control_service;
-#[cfg(any(test, feature = "fuzzing"))]
+#[cfg(feature = "fuzzing")]
 /// Useful Mocks
 pub mod mocks;
 /// AC runtime to launch gRPC and network service

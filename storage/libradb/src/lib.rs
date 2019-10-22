@@ -10,7 +10,7 @@
 // Used in other crates for testing.
 pub mod mock_genesis;
 // Used in this and other crates for testing.
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub mod test_helper;
 
 pub mod errors;

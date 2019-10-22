@@ -18,7 +18,7 @@ use crate::{
     transaction::{TransactionInfo, Version},
 };
 use failure::prelude::*;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::hash::TestOnlyHasher;
 use libra_crypto::{
     hash::{
@@ -27,7 +27,7 @@ use libra_crypto::{
     },
     HashValue,
 };
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use std::convert::{TryFrom, TryInto};
 use std::marker::PhantomData;
@@ -199,7 +199,7 @@ impl<H> From<AccumulatorProof<H>> for crate::proto::types::AccumulatorProof {
 
 pub type TransactionAccumulatorProof = AccumulatorProof<TransactionAccumulatorHasher>;
 pub type EventAccumulatorProof = AccumulatorProof<EventAccumulatorHasher>;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub type TestAccumulatorProof = AccumulatorProof<TestOnlyHasher>;
 
 /// A proof that can be used to authenticate an element in a Sparse Merkle Tree given trusted root
@@ -621,7 +621,7 @@ where
 /// the correctness of the `TransactionInfo` object, and the `TransactionInfo` object that is
 /// supposed to match the `SignedTransaction`.
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct SignedTransactionProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
     /// `TransactionInfo` object.
@@ -726,7 +726,7 @@ impl From<SignedTransactionProof> for crate::proto::types::SignedTransactionProo
 /// `AccumulatorProof` from `LedgerInfo` to `TransactionInfo`, the `TransactionInfo` object and the
 /// `SparseMerkleProof` from state root to the account.
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountStateProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
     /// `TransactionInfo` object.
@@ -836,7 +836,7 @@ impl From<AccountStateProof> for crate::proto::types::AccountStateProof {
 /// `AccumulatorProof` from `LedgerInfo` to `TransactionInfo`, the `TransactionInfo` object and the
 /// `AccumulatorProof` from event accumulator root to the event.
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct EventProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
     /// `TransactionInfo` object.

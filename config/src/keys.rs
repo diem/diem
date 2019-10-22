@@ -10,7 +10,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Debug)]
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 enum PrivateKeyContainer<T> {
     Present(T),
     Removed,
@@ -70,7 +70,7 @@ where
 // NetworkKeyPairs is used to store a node's Network specific keypairs.
 // It is filled via a config file at the moment.
 #[derive(Debug, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 pub struct NetworkKeyPairs {
     network_signing_private_key: PrivateKeyContainer<Ed25519PrivateKey>,
     #[serde(serialize_with = "serialize_key")]
@@ -141,7 +141,7 @@ impl NetworkKeyPairs {
 // ConsensusKeyPair is used to store a validator's consensus keypair.
 // It is filled via a config file at the moment.
 #[derive(Debug, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 pub struct ConsensusKeyPair {
     consensus_private_key: PrivateKeyContainer<Ed25519PrivateKey>,
     #[serde(serialize_with = "serialize_opt_key")]

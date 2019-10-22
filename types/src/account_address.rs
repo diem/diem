@@ -9,7 +9,7 @@ use libra_crypto::{
     hash::{AccountAddressHasher, CryptoHash, CryptoHasher},
     HashValue, VerifyingKey,
 };
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
 use serde::{de, ser};
@@ -24,7 +24,7 @@ const LIBRA_NETWORK_ID_SHORT: &str = "lb";
 /// A struct that represents an account address.
 /// Currently Public Key is used.
 #[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Copy)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountAddress([u8; ADDRESS_LENGTH]);
 
 impl AccountAddress {

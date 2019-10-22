@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 pub const TEST_SEED: [u8; 32] = [0u8; 32];
 
 /// A keypair consisting of a private and public key
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(feature = "cloneable-private-keys", derive(Clone))]
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct KeyPair<S, P>
 where

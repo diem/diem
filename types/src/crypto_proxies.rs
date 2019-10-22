@@ -82,7 +82,7 @@ use libra_crypto::ed25519::*;
 use std::collections::BTreeMap;
 
 // used in chained_bft::consensus_types::block_test
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub type SecretKey = Ed25519PrivateKey;
 
 pub type Signature = SignatureWrapper<Ed25519Signature>;

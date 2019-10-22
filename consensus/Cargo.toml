@@ -29,6 +29,7 @@ siphasher = { version = "0.3.0", default-features = false }
 termion = { version = "1.5.3", default-features = false }
 tokio = "=0.2.0-alpha.6"
 prometheus = { version = "0.7.0", default-features = false }
+proptest = { version = "0.9.4", optional = true }
 
 channel = { path = "../common/channel", version = "0.1.0" }
 libra-config = { path = "../config", version = "0.1.0" }
@@ -57,12 +58,9 @@ parity-multiaddr = "0.5.0"
 proptest = "0.9.4"
 rusty-fork = "0.2.2"
 
-consensus-types = { path = "consensus-types", version = "0.1.0", features = ["fuzzing", "testing"]}
-libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["testing"]}
-libra-types = { path = "../types", version = "0.1.0", features = ["testing"]}
 vm-genesis = { path = "../language/vm/vm-genesis", version = "0.1.0" }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
 [features]
 default = []
-fuzzing = []
+fuzzing = ["proptest", "consensus-types/fuzzing", "libra-crypto/fuzzing", "libra-types/fuzzing"]
