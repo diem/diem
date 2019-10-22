@@ -3,9 +3,10 @@ address 0x0:
 // The module for the account resource that governs every Libra account
 module LibraAccount {
     use 0x0.LibraCoin;
-    use 0x00.Hash;
+    use 0x0.Hash;
     use 0x0.Event;
     use 0x0.Transaction;
+    use 0x0.AddressUtil;
 
     // Every Libra account has a LibraAccount.T resource
     resource struct T {
@@ -53,19 +54,25 @@ module LibraAccount {
         payer: address,
     }
 
-    // Creates a new LibraAccount.T
-    // Invoked by the `create_account` builtin
-    make(auth_key: bytearray): T {
-        T {
-            authentication_key: auth_key,
+    // Creates a new account at `fresh_address` with the `initial_balance` deducted from the
+    // transaction sender's account
+    public create_new_account(fresh_address: address, initial_balance: u64) acquires T {
+        let account = T {
+            authentication_key: AddressUtil.address_to_bytes(fresh_address),
             balance: LibraCoin.zero(),
             delegated_key_rotation_capability: false,
             delegated_withdrawal_capability: false,
             received_events: Event.new_event_handle(),
             sent_events: Event.new_event_handle(),
             sequence_number: 0,
-        }
+        };
+        save_account(fresh_address, account);
+
+        if (initial_balance > 0) pay_from_sender(fresh_address, initial_balance);
     }
+
+    // Save an account to a given address if the address does not have an account resource yet
+    native save_account(addr: address, account: Self.T);
 
     // Deposits the `to_deposit` coin into the `payee`'s account
     public deposit(payee: address, to_deposit: LibraCoin.T) acquires T {
@@ -183,13 +190,6 @@ module LibraAccount {
         // The account owner will now be able to call rotate_authentication_key and
         // extract_sender_key_rotation_capability again
         borrow_global_mut<T>(account_address).delegated_key_rotation_capability = false
-    }
-
-    // Creates a new account at `fresh_address` with the `initial_balance` deducted from the
-    // transaction sender's account
-    public create_new_account(fresh_address: address, initial_balance: u64) acquires T {
-        Transaction.create_account(fresh_address);
-        if (initial_balance > 0) pay_from_sender(fresh_address, initial_balance)
     }
 
     // Return the current balance of the LibraCoin.T in LibraAccount.T at `addr`

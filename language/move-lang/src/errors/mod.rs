@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::shared::Loc;
-use codespan::{ByteSpan, CodeMap, FileMap, FileName, Span};
+use codespan::{FileId, Files, Span};
 use codespan_reporting::{
-    emit,
-    termcolor::{ColorChoice, StandardStream},
-    Diagnostic, Label,
+    diagnostic::{Diagnostic, Label},
+    term::termcolor::{Buffer, ColorChoice, StandardStream, WriteColor},
+    term::{emit, Config},
 };
 use std::collections::{HashMap, HashSet};
 
@@ -15,20 +15,31 @@ pub type Error = Vec<(Loc, String)>;
 pub type ErrorSlice = [(Loc, String)];
 pub type HashableError = Vec<(&'static str, usize, usize, String)>;
 
-pub type Files = HashMap<&'static str, FileMap>;
+pub type FilesSourceText = HashMap<&'static str, String>;
 
-pub fn report_errors(files: Files, errors: Errors) -> ! {
-    assert!(!errors.is_empty());
-    let mut codemap = CodeMap::new();
-    let mut file_mapping = HashMap::new();
-    let mut current_end = 1;
-    for (fname, filemap) in files.into_iter() {
-        file_mapping.insert(fname, current_end);
-        let added_fmap = codemap.add_filemap(FileName::real(fname), filemap.src().to_string());
-        current_end = added_fmap.span().end().to_usize() + 1;
-    }
-    render_errors(&codemap, file_mapping, errors);
+type FileMapping = HashMap<&'static str, FileId>;
+
+pub fn report_errors(files: FilesSourceText, errors: Errors) -> ! {
+    let mut writer = StandardStream::stderr(ColorChoice::Auto);
+    output_errors(&mut writer, files, errors);
     std::process::exit(1)
+}
+
+pub fn report_errors_to_buffer(files: FilesSourceText, errors: Errors) -> Vec<u8> {
+    let mut writer = Buffer::no_color();
+    output_errors(&mut writer, files, errors);
+    writer.into_inner()
+}
+
+fn output_errors<W: WriteColor>(writer: &mut W, sources: FilesSourceText, errors: Errors) {
+    assert!(!errors.is_empty());
+    let mut files = Files::new();
+    let mut file_mapping = HashMap::new();
+    for (fname, source) in sources.into_iter() {
+        let id = files.add(fname, source);
+        file_mapping.insert(fname, id);
+    }
+    render_errors(writer, &files, &file_mapping, errors);
 }
 
 fn hashable_error(error: &ErrorSlice) -> HashableError {
@@ -45,7 +56,12 @@ fn hashable_error(error: &ErrorSlice) -> HashableError {
         .collect()
 }
 
-fn render_errors(codemap: &CodeMap, file_mapping: HashMap<&'static str, usize>, errors: Errors) {
+fn render_errors<W: WriteColor>(
+    writer: &mut W,
+    files: &Files,
+    file_mapping: &FileMapping,
+    errors: Errors,
+) {
     let mut seen: HashSet<HashableError> = HashSet::new();
     for error in errors.into_iter() {
         let hashable_error = hashable_error(&error);
@@ -53,25 +69,28 @@ fn render_errors(codemap: &CodeMap, file_mapping: HashMap<&'static str, usize>, 
             continue;
         }
         seen.insert(hashable_error);
-        let writer = StandardStream::stderr(ColorChoice::Auto);
-        let err = render_error(&file_mapping, error);
-        emit(writer, &codemap, &err).unwrap()
+        let err = render_error(files, file_mapping, error);
+        emit(writer, &Config::default(), &files, &err).unwrap()
     }
 }
 
-fn convert_loc(file_mapping: &HashMap<&'static str, usize>, loc: Loc) -> ByteSpan {
+fn convert_loc(files: &Files, file_mapping: &FileMapping, loc: Loc) -> (FileId, Span) {
     let fname = loc.file();
-    let offset = *file_mapping.get(fname).unwrap();
+    let id = *file_mapping.get(fname).unwrap();
+    let offset = files.source_span(id).start().to_usize();
     let begin_index = (loc.span().start().to_usize() + offset) as u32;
     let end_index = (loc.span().end().to_usize() + offset) as u32;
-    Span::new(begin_index.into(), end_index.into())
+    (id, Span::new(begin_index, end_index))
 }
 
-fn render_error(file_mapping: &HashMap<&'static str, usize>, error: Error) -> Diagnostic {
-    let mut diag = Diagnostic::new_error(error[0].1.clone());
-    for err in error {
-        let label = Label::new_primary(convert_loc(file_mapping, err.0)).with_message(err.1);
-        diag = diag.with_label(label);
-    }
+fn render_error(files: &Files, file_mapping: &FileMapping, mut error: Error) -> Diagnostic {
+    let mk_lbl = |err: (Loc, String)| -> Label {
+        let (id, span) = convert_loc(files, file_mapping, err.0);
+        Label::new(id, span, err.1)
+    };
+    let err = error.remove(0);
+    // TODO message with each error msg
+    let mut diag = Diagnostic::new_error("", mk_lbl(err));
+    diag = diag.with_secondary_labels(error.into_iter().map(mk_lbl));
     diag
 }

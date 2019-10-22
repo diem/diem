@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use codespan::{ByteIndex, Span};
+use codespan::Span;
 use hex;
 use std::{
     cmp::Ordering,
@@ -113,10 +113,10 @@ impl TryFrom<&[u8]> for Address {
 #[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
 pub struct Loc {
     file: &'static str,
-    span: Span<ByteIndex>,
+    span: Span,
 }
 impl Loc {
-    pub fn new(file: &'static str, span: Span<ByteIndex>) -> Loc {
+    pub fn new(file: &'static str, span: Span) -> Loc {
         Loc { file, span }
     }
 
@@ -124,7 +124,7 @@ impl Loc {
         self.file
     }
 
-    pub fn span(self) -> Span<ByteIndex> {
+    pub fn span(self) -> Span {
         self.span
     }
 }
