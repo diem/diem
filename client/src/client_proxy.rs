@@ -13,7 +13,7 @@ use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_config::{
         association_address, core_code_address, get_account_resource_or_default, AccountResource,
-        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
+        ACCOUNT_PAYMENT_EVENT_PATH,
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
@@ -708,10 +708,9 @@ impl ClientProxy {
         );
         let account = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let path = match space_delim_strings[2] {
-            "sent" => ACCOUNT_SENT_EVENT_PATH.to_vec(),
-            "received" => ACCOUNT_RECEIVED_EVENT_PATH.to_vec(),
+            "payment" => ACCOUNT_PAYMENT_EVENT_PATH.to_vec(),
             _ => bail!(
-                "Unknown event type: {:?}, only sent and received are supported",
+                "Unknown event type: {:?}, only payment event is supported",
                 space_delim_strings[2]
             ),
         };

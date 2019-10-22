@@ -263,12 +263,8 @@ fn group_events_by_query_path(
             let account =
                 AccountResource::make_from(&account_btree).expect("AccountResource is not found");
             event_key_to_query_path.insert(
-                account.sent_events().key().clone(),
-                AccessPath::new_for_sent_event(*address),
-            );
-            event_key_to_query_path.insert(
-                account.received_events().key().clone(),
-                AccessPath::new_for_received_event(*address),
+                account.payment_events().key().clone(),
+                AccessPath::new_for_payment_event(*address),
             );
         }
     }
@@ -456,7 +452,7 @@ fn test_too_many_requested() {
     assert!(db.get_transactions(0, 1001 /* limit */, 0, true).is_err());
     assert!(db
         .get_events_by_query_path(
-            &AccessPath::new_for_sent_event(AccountAddress::random()),
+            &AccessPath::new_for_payment_event(AccountAddress::random()),
             0,
             true,
             1001, /* limit */

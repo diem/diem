@@ -293,39 +293,21 @@ fn test_execution_with_storage() {
             fetch_events: false,
         },
         RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_sent_event(account1),
+            access_path: AccessPath::new_for_payment_event(account1),
             start_event_seq_num: 0,
             ascending: true,
             limit: 10,
         },
         RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_sent_event(account2),
+            access_path: AccessPath::new_for_payment_event(account2),
             start_event_seq_num: 0,
             ascending: true,
             limit: 10,
         },
         RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_sent_event(account3),
+            access_path: AccessPath::new_for_payment_event(account3),
             start_event_seq_num: 0,
             ascending: true,
-            limit: 10,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_received_event(account1),
-            start_event_seq_num: u64::max_value(),
-            ascending: false,
-            limit: 10,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_received_event(account2),
-            start_event_seq_num: u64::max_value(),
-            ascending: false,
-            limit: 10,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_received_event(account3),
-            start_event_seq_num: u64::max_value(),
-            ascending: false,
             limit: 10,
         },
     ];
@@ -432,47 +414,26 @@ fn test_execution_with_storage() {
         .unwrap();
     verify_transactions(&transaction_list_with_proof, &block1[2..]).unwrap();
 
-    let (account1_sent_events, _) = response_items
+    let (account1_payment_events, _) = response_items
         .pop()
         .unwrap()
         .into_get_events_by_access_path_response()
         .unwrap();
-    assert_eq!(account1_sent_events.len(), 2);
+    assert_eq!(account1_payment_events.len(), 3);
 
-    let (account2_sent_events, _) = response_items
+    let (account2_payment_events, _) = response_items
         .pop()
         .unwrap()
         .into_get_events_by_access_path_response()
         .unwrap();
-    assert_eq!(account2_sent_events.len(), 1);
+    assert_eq!(account2_payment_events.len(), 3);
 
-    let (account3_sent_events, _) = response_items
+    let (account3_payment_events, _) = response_items
         .pop()
         .unwrap()
         .into_get_events_by_access_path_response()
         .unwrap();
-    assert_eq!(account3_sent_events.len(), 0);
-
-    let (account1_received_events, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
-        .unwrap();
-    assert_eq!(account1_received_events.len(), 1);
-
-    let (account2_received_events, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
-        .unwrap();
-    assert_eq!(account2_received_events.len(), 2);
-
-    let (account3_received_events, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
-        .unwrap();
-    assert_eq!(account3_received_events.len(), 3);
+    assert_eq!(account3_payment_events.len(), 3);
 
     // Execution the 2nd block.
     let (output2, state_compute_result_2) =
@@ -507,25 +468,25 @@ fn test_execution_with_storage() {
             fetch_events: false,
         },
         RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_sent_event(account1),
+            access_path: AccessPath::new_for_payment_event(account1),
             start_event_seq_num: 0,
             ascending: true,
             limit: 10,
         },
         RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_sent_event(account1),
+            access_path: AccessPath::new_for_payment_event(account1),
             start_event_seq_num: 10,
             ascending: true,
             limit: 10,
         },
         RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_received_event(account3),
+            access_path: AccessPath::new_for_payment_event(account3),
             start_event_seq_num: u64::max_value(),
             ascending: false,
             limit: 10,
         },
         RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_received_event(account3),
+            access_path: AccessPath::new_for_payment_event(account3),
             start_event_seq_num: 6,
             ascending: false,
             limit: 10,
@@ -584,39 +545,39 @@ fn test_execution_with_storage() {
         .unwrap();
     verify_transactions(&transaction_list_with_proof, &block2[..]).unwrap();
 
-    let (account1_sent_events_batch1, _) = response_items
+    let (account1_payment_events_batch1, _) = response_items
         .pop()
         .unwrap()
         .into_get_events_by_access_path_response()
         .unwrap();
-    assert_eq!(account1_sent_events_batch1.len(), 10);
+    assert_eq!(account1_payment_events_batch1.len(), 10);
 
-    let (account1_sent_events_batch2, _) = response_items
+    let (account1_payment_events_batch2, _) = response_items
         .pop()
         .unwrap()
         .into_get_events_by_access_path_response()
         .unwrap();
-    assert_eq!(account1_sent_events_batch2.len(), 6);
+    assert_eq!(account1_payment_events_batch2.len(), 7);
 
-    let (account3_received_events_batch1, _) = response_items
+    let (account3_payment_events_batch1, _) = response_items
         .pop()
         .unwrap()
         .into_get_events_by_access_path_response()
         .unwrap();
-    assert_eq!(account3_received_events_batch1.len(), 10);
+    assert_eq!(account3_payment_events_batch1.len(), 10);
     assert_eq!(
-        account3_received_events_batch1[0].event.sequence_number(),
+        account3_payment_events_batch1[0].event.sequence_number(),
         16
     );
 
-    let (account3_received_events_batch2, _) = response_items
+    let (account3_payment_events_batch2, _) = response_items
         .pop()
         .unwrap()
         .into_get_events_by_access_path_response()
         .unwrap();
-    assert_eq!(account3_received_events_batch2.len(), 7);
+    assert_eq!(account3_payment_events_batch2.len(), 7);
     assert_eq!(
-        account3_received_events_batch2[0].event.sequence_number(),
+        account3_payment_events_batch2[0].event.sequence_number(),
         6
     );
 }

@@ -144,7 +144,7 @@ impl AccountResource {
     }
 
     pub fn get_event_handle_by_query_path(&self, query_path: &[u8]) -> Result<&EventHandle> {
-        if *ACCOUNT_RECEIVED_EVENT_PATH == query_path || *ACCOUNT_SENT_EVENT_PATH == query_path {
+        if *ACCOUNT_PAYMENT_EVENT_PATH == query_path {
             Ok(&self.payment_events)
         } else {
             bail!("Unrecognized query path: {:?}", query_path);
@@ -171,19 +171,11 @@ pub fn account_resource_path() -> Vec<u8> {
 }
 
 lazy_static! {
-    /// The path to the sent event counter for an Account resource.
+    /// The path to the payment event counter for an Account resource.
     /// It can be used to query the event DB for the given event.
-    pub static ref ACCOUNT_SENT_EVENT_PATH: Vec<u8> = {
+    pub static ref ACCOUNT_PAYMENT_EVENT_PATH: Vec<u8> = {
         let mut path = account_resource_path();
-        path.extend_from_slice(b"/sent_events_count/");
-        path
-    };
-
-    /// Returns the path to the received event counter for an Account resource.
-    /// It can be used to query the event DB for the given event.
-    pub static ref ACCOUNT_RECEIVED_EVENT_PATH: Vec<u8> = {
-        let mut path = account_resource_path();
-        path.extend_from_slice(b"/received_events_count/");
+        path.extend_from_slice(b"/payment_events_count/");
         path
     };
 }

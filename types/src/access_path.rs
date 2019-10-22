@@ -38,8 +38,7 @@
 use crate::{
     account_address::AccountAddress,
     account_config::{
-        account_resource_path, association_address, ACCOUNT_RECEIVED_EVENT_PATH,
-        ACCOUNT_SENT_EVENT_PATH,
+        account_resource_path, association_address, ACCOUNT_PAYMENT_EVENT_PATH,
     },
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, ResourceKey, StructTag},
@@ -232,22 +231,12 @@ impl AccessPath {
     }
 
     /// Create an AccessPath to the event for the sender account in a deposit operation.
-    /// The sent counter in LibraAccount.T (LibraAccount.T.sent_events_count) is used to generate
+    /// The sent counter in LibraAccount.T (LibraAccount.T.payment_events_count) is used to generate
     /// the AccessPath.
     /// That AccessPath can be used as a key into the event storage to retrieve all sent
     /// events for a given account.
-    pub fn new_for_sent_event(address: AccountAddress) -> Self {
-        Self::new(address, ACCOUNT_SENT_EVENT_PATH.to_vec())
-    }
-
-    /// Create an AccessPath to the event for the target account (the receiver)
-    /// in a deposit operation.
-    /// The received counter in LibraAccount.T (LibraAccount.T.received_events_count) is used to
-    /// generate the AccessPath.
-    /// That AccessPath can be used as a key into the event storage to retrieve all received
-    /// events for a given account.
-    pub fn new_for_received_event(address: AccountAddress) -> Self {
-        Self::new(address, ACCOUNT_RECEIVED_EVENT_PATH.to_vec())
+    pub fn new_for_payment_event(address: AccountAddress) -> Self {
+        Self::new(address, ACCOUNT_PAYMENT_EVENT_PATH.to_vec())
     }
 
     pub fn resource_access_vec(tag: &StructTag, accesses: &Accesses) -> Vec<u8> {
