@@ -14,11 +14,20 @@ use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
+pub enum TypeTag {
+    Bool,
+    U64,
+    ByteArray,
+    Address,
+    Struct(StructTag),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 pub struct StructTag {
     pub address: AccountAddress,
     pub module: Identifier,
     pub name: Identifier,
-    pub type_params: Vec<StructTag>,
+    pub type_params: Vec<TypeTag>,
 }
 
 /// Represents the intitial key into global storage where we first index by the address, and then

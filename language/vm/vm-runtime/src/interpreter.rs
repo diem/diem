@@ -21,7 +21,7 @@ use libra_types::{
     contract_event::ContractEvent,
     event::EventKey,
     identifier::{IdentStr, Identifier},
-    language_storage::ModuleId,
+    language_storage::{ModuleId, StructTag, TypeTag},
     transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
@@ -32,7 +32,10 @@ use std::{collections::VecDeque, convert::TryFrom, marker::PhantomData};
 use vm::{
     access::ModuleAccess,
     errors::*,
-    file_format::{Bytecode, FunctionHandleIndex, LocalIndex, StructDefinitionIndex},
+    file_format::{
+        Bytecode, FunctionHandleIndex, LocalIndex, LocalsSignatureIndex, SignatureToken,
+        StructDefinitionIndex,
+    },
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits},
     transaction_metadata::TransactionMetadata,
     IndexKind,
@@ -95,6 +98,52 @@ where
     /// Code cache, this is effectively the loader.
     module_cache: P,
     phantom: PhantomData<&'alloc ()>,
+}
+
+fn derive_type_tag(
+    module: &impl ModuleAccess,
+    type_actual_tags: &[TypeTag],
+    ty: &SignatureToken,
+) -> VMResult<TypeTag> {
+    use SignatureToken::*;
+
+    match ty {
+        Bool => Ok(TypeTag::Bool),
+        Address => Ok(TypeTag::Address),
+        U64 => Ok(TypeTag::U64),
+        ByteArray => Ok(TypeTag::ByteArray),
+        String => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+            .with_message("Cannot derive type tags for strings: unimplemented.".to_string())),
+        TypeParameter(idx) => type_actual_tags
+            .get(*idx as usize)
+            .ok_or_else(|| {
+                VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
+                    "Cannot derive type tag: type parameter index out of bounds.".to_string(),
+                )
+            })
+            .map(|inner| inner.clone()),
+        Reference(_) | MutableReference(_) => {
+            Err(VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                .with_message("Cannot derive type tag for references.".to_string()))
+        }
+        Struct(idx, struct_type_actuals) => {
+            let struct_type_actuals_tags = struct_type_actuals
+                .iter()
+                .map(|ty| derive_type_tag(module, type_actual_tags, ty))
+                .collect::<VMResult<Vec<_>>>()?;
+            let struct_handle = module.struct_handle_at(*idx);
+            let struct_name = module.identifier_at(struct_handle.name);
+            let module_handle = module.module_handle_at(struct_handle.module);
+            let module_address = module.address_at(module_handle.address);
+            let module_name = module.identifier_at(module_handle.name);
+            Ok(TypeTag::Struct(StructTag {
+                address: *module_address,
+                module: module_name.into(),
+                name: struct_name.into(),
+                type_params: struct_type_actuals_tags,
+            }))
+        }
+    }
 }
 
 impl<'alloc, 'txn, P> Interpreter<'alloc, 'txn, P>
@@ -260,7 +309,7 @@ where
         for (i, value) in args.into_iter().enumerate() {
             locals.store_loc(i, value)?;
         }
-        let mut current_frame = Frame::new(function, locals);
+        let mut current_frame = Frame::new(function, vec![], locals);
         loop {
             let code = current_frame.code_definition();
             let exit_code = self
@@ -278,9 +327,24 @@ where
                         return Err(self.unreachable("call stack cannot be empty", &current_frame));
                     }
                 }
-                ExitCode::Call(idx) => {
+                ExitCode::Call(idx, type_actuals_idx) => {
+                    let type_actuals = &current_frame
+                        .module()
+                        .locals_signature_at(type_actuals_idx)
+                        .0;
+                    let type_actual_tags = type_actuals
+                        .iter()
+                        .map(|ty| {
+                            derive_type_tag(
+                                current_frame.module(),
+                                current_frame.type_actual_tags(),
+                                ty,
+                            )
+                        })
+                        .collect::<VMResult<Vec<_>>>()?;
+
                     let opt_frame = self
-                        .make_call_frame(current_frame.module(), idx)
+                        .make_call_frame(current_frame.module(), idx, type_actual_tags)
                         .or_else(|err| Err(self.maybe_core_dump(err, &current_frame)))?;
                     if let Some(frame) = opt_frame {
                         self.call_stack.push(current_frame).or_else(|frame| {
@@ -386,8 +450,8 @@ where
                     Bytecode::StLoc(idx) => {
                         frame.store_loc(*idx, self.operand_stack.pop()?)?;
                     }
-                    Bytecode::Call(idx, _) => {
-                        return Ok(ExitCode::Call(*idx));
+                    Bytecode::Call(idx, type_actuals_idx) => {
+                        return Ok(ExitCode::Call(*idx, *type_actuals_idx));
                     }
                     Bytecode::MutBorrowLoc(idx) | Bytecode::ImmBorrowLoc(idx) => {
                         self.operand_stack.push(frame.borrow_loc(*idx)?)?;
@@ -570,13 +634,14 @@ where
         &mut self,
         module: &LoadedModule,
         idx: FunctionHandleIndex,
+        type_actual_tags: Vec<TypeTag>,
     ) -> VMResult<Option<Frame<'txn, FunctionRef<'txn>>>> {
         let func = self
             .module_cache
             .resolve_function_ref(module, idx)?
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         if func.is_native() {
-            self.call_native(func)?;
+            self.call_native(func, type_actual_tags)?;
             Ok(None)
         } else {
             let mut locals = Locals::new(func.local_count());
@@ -584,19 +649,23 @@ where
             for i in 0..arg_count {
                 locals.store_loc(arg_count - i - 1, self.operand_stack.pop()?)?;
             }
-            Ok(Some(Frame::new(func, locals)))
+            Ok(Some(Frame::new(func, type_actual_tags, locals)))
         }
     }
 
     /// Call a native functions.
-    fn call_native(&mut self, function: FunctionRef<'txn>) -> VMResult<()> {
+    fn call_native(
+        &mut self,
+        function: FunctionRef<'txn>,
+        type_actual_tags: Vec<TypeTag>,
+    ) -> VMResult<()> {
         let module = function.module();
         let module_id = module.self_id();
         let function_name = function.name();
         let native_function = resolve_native_function(&module_id, function_name)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         if module_id == *EVENT_MODULE && function_name == EMIT_EVENT_NAME.as_ident_str() {
-            self.call_emit_event()
+            self.call_emit_event(type_actual_tags)
         } else {
             let mut arguments = VecDeque::new();
             let expected_args = native_function.num_args();
@@ -623,7 +692,17 @@ where
     }
 
     /// Emit an event if the native function was `write_to_event_store`.
-    fn call_emit_event(&mut self) -> VMResult<()> {
+    fn call_emit_event(&mut self, mut type_actual_tags: Vec<TypeTag>) -> VMResult<()> {
+        if type_actual_tags.len() != 1 {
+            return Err(
+                VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
+                    "write_to_event_storage expects 1 argument got {}.",
+                    type_actual_tags.len()
+                )),
+            );
+        }
+        let type_tag = type_actual_tags.pop().unwrap();
+
         let msg = self
             .operand_stack
             .pop()?
@@ -633,7 +712,8 @@ where
         let key = self.operand_stack.pop_as::<ByteArray>()?;
         let guid = EventKey::try_from(key.as_bytes())
             .map_err(|_| VMStatus::new(StatusCode::EVENT_KEY_MISMATCH))?;
-        self.event_data.push(ContractEvent::new(guid, count, msg));
+        self.event_data
+            .push(ContractEvent::new(guid, count, type_tag, msg));
         Ok(())
     }
 
@@ -987,6 +1067,7 @@ struct Frame<'txn, F: 'txn> {
     pc: u16,
     locals: Locals,
     function: F,
+    type_actual_tags: Vec<TypeTag>,
     phantom: PhantomData<&'txn F>,
 }
 
@@ -996,7 +1077,7 @@ enum ExitCode {
     /// A `Return` opcode was found.
     Return,
     /// A `Call` opcode was found.
-    Call(FunctionHandleIndex),
+    Call(FunctionHandleIndex, LocalsSignatureIndex),
     /// A `CreateAccount` opcode was found.
     CreateAccount,
 }
@@ -1008,11 +1089,12 @@ where
     /// Create a new `Frame` given a `FunctionReference` and the function `Locals`.
     ///
     /// The locals must be loaded before calling this.
-    fn new(function: F, locals: Locals) -> Self {
+    fn new(function: F, type_actual_tags: Vec<TypeTag>, locals: Locals) -> Self {
         Frame {
             pc: 0,
             locals,
             function,
+            type_actual_tags,
             phantom: PhantomData,
         }
     }
@@ -1049,6 +1131,10 @@ where
     /// out of bounds or the local is `Invalid`.
     fn borrow_loc(&mut self, idx: LocalIndex) -> VMResult<Value> {
         self.locals.borrow_loc(idx as usize)
+    }
+
+    fn type_actual_tags(&self) -> &[TypeTag] {
+        &self.type_actual_tags
     }
 }
 
@@ -1172,11 +1258,11 @@ where
             .expect("call stack must not be empty");
     }
 
-    pub fn push_frame(&mut self, func: FunctionRef<'txn>) {
+    pub fn push_frame(&mut self, func: FunctionRef<'txn>, type_actual_tags: Vec<TypeTag>) {
         let count = func.local_count();
         self.0
             .call_stack
-            .push(Frame::new(func, Locals::new(count)))
+            .push(Frame::new(func, type_actual_tags, Locals::new(count)))
             .expect("Call stack limit reached");
     }
 

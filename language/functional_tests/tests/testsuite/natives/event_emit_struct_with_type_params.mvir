@@ -1,0 +1,29 @@
+module M {
+    import 0x0.Event;
+
+    struct MyEvent<T1, T2> {}
+
+    public emit_event<T1: unrestricted, T2: unrestricted>() {
+        let handle: Event.Handle<Self.MyEvent<T2, T1>>;
+        handle = Event.new_event_handle<Self.MyEvent<T2, T1>>();
+        Event.emit_event<Self.MyEvent<T2, T1>>(&mut handle, MyEvent<T2, T1>{});
+        Event.destroy<Self.MyEvent<T2, T1>>(move(handle));
+        return;
+    }
+}
+
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    M.emit_event<bool, u64>();
+    return;
+}
+
+// check: ContractEvent
+// check: M
+// check: MyEvent
+// check: U64
+// check: Bool
+// check: EXECUTED
