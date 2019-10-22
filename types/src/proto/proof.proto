@@ -8,16 +8,10 @@ package types;
 import "transaction_info.proto";
 
 message AccumulatorProof {
-  // The bitmap indicating which siblings are default. 1 means non-default and
-  // 0 means default. The LSB corresponds to the sibling at the bottom of the
-  // accumulator. The leftmost 1-bit corresponds to the sibling at the level
-  // just below root level in the accumulator, since this one is always
-  // non-default.
-  uint64 bitmap = 1;
-
-  // The non-default siblings. The ones near the root are at the beginning of
-  // the list.
-  repeated bytes non_default_siblings = 2;
+  // The siblings. The ones near the root are at the beginning of the list. The
+  // placeholder nodes are represented by empty byte arrays, other nodes should
+  // be exactly 32-bytes long.
+  repeated bytes siblings = 1;
 }
 
 message SparseMerkleProof {
@@ -39,16 +33,10 @@ message SparseMerkleProof {
   //     in the Rust structure.
   bytes leaf = 1;
 
-  // The bitmap indicating which siblings are default. 1 means non-default and
-  // 0 means default. The MSB of the first byte corresponds to the sibling at
-  // the top of the Sparse Merkle Tree. The rightmost 1-bit of the last byte
-  // corresponds to the sibling at the bottom, since this one is always
-  // non-default.
-  bytes bitmap = 2;
-
-  // The non-default siblings. The ones near the root are at the beginning of
-  // the list.
-  repeated bytes non_default_siblings = 3;
+  // The siblings. The ones near the root are at the beginning of the list. The
+  // placeholder nodes are represented by empty byte arrays, other nodes should
+  // be exactly 32-bytes long.
+  repeated bytes siblings = 2;
 }
 
 message AccumulatorConsistencyProof {

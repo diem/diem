@@ -7,7 +7,6 @@
 #[path = "unit_tests/proof_proto_conversion_test.rs"]
 mod proof_proto_conversion_test;
 
-use self::bitmap::{AccumulatorBitmap, SparseMerkleBitmap};
 use super::{
     position::Position, verify_transaction_info, MerkleTreeInternalNode, SparseMerkleInternalNode,
     SparseMerkleLeafNode,
@@ -144,29 +143,14 @@ where
     type Error = Error;
 
     fn try_from(proto_proof: crate::proto::types::AccumulatorProof) -> Result<Self> {
-        let bitmap = proto_proof.bitmap;
-        let num_non_default_siblings = bitmap.count_ones() as usize;
-        ensure!(
-            num_non_default_siblings == proto_proof.non_default_siblings.len(),
-            "Malformed proof. Bitmap indicated {} non-default siblings. Found {} siblings.",
-            num_non_default_siblings,
-            proto_proof.non_default_siblings.len()
-        );
-
-        let mut proto_siblings = proto_proof.non_default_siblings.into_iter();
-        // Iterate from the leftmost 1-bit to LSB in the bitmap. If a bit is set, the corresponding
-        // sibling is non-default and we take the sibling from proto_siblings.  Otherwise the
-        // sibling on this position is default.
-        let siblings = AccumulatorBitmap::new(bitmap)
-            .iter()
-            .map(|x| {
-                if x {
-                    let hash_bytes = proto_siblings
-                        .next()
-                        .expect("Unexpected number of siblings.");
-                    HashValue::from_slice(&hash_bytes)
-                } else {
+        let siblings = proto_proof
+            .siblings
+            .into_iter()
+            .map(|hash_bytes| {
+                if hash_bytes.is_empty() {
                     Ok(*ACCUMULATOR_PLACEHOLDER_HASH)
+                } else {
+                    HashValue::from_slice(&hash_bytes)
                 }
             })
             .collect::<Result<Vec<_>>>()?;
@@ -178,21 +162,13 @@ where
 impl<H> From<AccumulatorProof<H>> for crate::proto::types::AccumulatorProof {
     fn from(proof: AccumulatorProof<H>) -> Self {
         let mut proto_proof = Self::default();
-        // Iterate over all siblings. For each non-default sibling, add to protobuf struct and set
-        // the corresponding bit in the bitmap.
-        let bitmap: AccumulatorBitmap = proof
-            .siblings
-            .into_iter()
-            .map(|sibling| {
-                if sibling != *ACCUMULATOR_PLACEHOLDER_HASH {
-                    proto_proof.non_default_siblings.push(sibling.to_vec());
-                    true
-                } else {
-                    false
-                }
-            })
-            .collect();
-        proto_proof.bitmap = bitmap.into();
+        for sibling in proof.siblings {
+            if sibling != *ACCUMULATOR_PLACEHOLDER_HASH {
+                proto_proof.siblings.push(sibling.to_vec());
+            } else {
+                proto_proof.siblings.push(vec![]);
+            }
+        }
         proto_proof
     }
 }
@@ -358,40 +334,19 @@ impl TryFrom<crate::proto::types::SparseMerkleProof> for SparseMerkleProof {
             );
         };
 
-        let bitmap = proto_proof.bitmap;
-        if let Some(last_byte) = bitmap.last() {
-            ensure!(
-                *last_byte != 0,
-                "Malformed proof. The last byte of the bitmap is zero."
-            );
-        }
-        let num_non_default_siblings = bitmap.iter().fold(0, |total, x| total + x.count_ones());
-        ensure!(
-            num_non_default_siblings as usize == proto_proof.non_default_siblings.len(),
-            "Malformed proof. Bitmap indicated {} non-default siblings. Found {} siblings.",
-            num_non_default_siblings,
-            proto_proof.non_default_siblings.len()
-        );
-
-        let mut proto_siblings = proto_proof.non_default_siblings.into_iter();
-        // Iterate from the MSB of the first byte to the rightmost 1-bit in the bitmap. If a bit is
-        // set, the corresponding sibling is non-default and we take the sibling from
-        // proto_siblings. Otherwise the sibling on this position is default.
-        let siblings: Result<Vec<_>> = SparseMerkleBitmap::new(bitmap)
-            .iter()
-            .map(|x| {
-                if x {
-                    let hash_bytes = proto_siblings
-                        .next()
-                        .expect("Unexpected number of siblings.");
-                    HashValue::from_slice(&hash_bytes)
-                } else {
+        let siblings = proto_proof
+            .siblings
+            .into_iter()
+            .map(|hash_bytes| {
+                if hash_bytes.is_empty() {
                     Ok(*SPARSE_MERKLE_PLACEHOLDER_HASH)
+                } else {
+                    HashValue::from_slice(&hash_bytes)
                 }
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
 
-        Ok(SparseMerkleProof::new(leaf, siblings?))
+        Ok(SparseMerkleProof::new(leaf, siblings))
     }
 }
 
@@ -404,21 +359,13 @@ impl From<SparseMerkleProof> for crate::proto::types::SparseMerkleProof {
             proto_proof.leaf.extend_from_slice(key.as_ref());
             proto_proof.leaf.extend_from_slice(value_hash.as_ref());
         }
-        // Iterate over all siblings. For each non-default sibling, add to protobuf struct and set
-        // the corresponding bit in the bitmap.
-        let bitmap: SparseMerkleBitmap = proof
-            .siblings
-            .into_iter()
-            .map(|sibling| {
-                if sibling != *SPARSE_MERKLE_PLACEHOLDER_HASH {
-                    proto_proof.non_default_siblings.push(sibling.to_vec());
-                    true
-                } else {
-                    false
-                }
-            })
-            .collect();
-        proto_proof.bitmap = bitmap.into();
+        for sibling in proof.siblings {
+            if sibling != *SPARSE_MERKLE_PLACEHOLDER_HASH {
+                proto_proof.siblings.push(sibling.to_vec());
+            } else {
+                proto_proof.siblings.push(vec![]);
+            }
+        }
         proto_proof
     }
 }
@@ -937,176 +884,6 @@ impl From<EventProof> for crate::proto::types::EventProof {
             ),
             transaction_info: Some(proof.transaction_info.into()),
             transaction_info_to_event_proof: Some(proof.transaction_info_to_event_proof.into()),
-        }
-    }
-}
-
-mod bitmap {
-    /// The bitmap indicating which siblings are default in a compressed accumulator proof. 1 means
-    /// non-default and 0 means default.  The LSB corresponds to the sibling at the bottom of the
-    /// accumulator. The leftmost 1-bit corresponds to the sibling at the top of the accumulator,
-    /// since this one is always non-default.
-    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-    pub struct AccumulatorBitmap(u64);
-
-    impl AccumulatorBitmap {
-        pub fn new(bitmap: u64) -> Self {
-            AccumulatorBitmap(bitmap)
-        }
-
-        pub fn iter(self) -> AccumulatorBitmapIterator {
-            AccumulatorBitmapIterator::new(self.0)
-        }
-    }
-
-    impl std::convert::From<AccumulatorBitmap> for u64 {
-        fn from(bitmap: AccumulatorBitmap) -> u64 {
-            bitmap.0
-        }
-    }
-
-    /// Given a u64 bitmap, this iterator generates one bit at a time starting from the leftmost
-    /// 1-bit.
-    pub struct AccumulatorBitmapIterator {
-        bitmap: AccumulatorBitmap,
-        mask: u64,
-    }
-
-    impl AccumulatorBitmapIterator {
-        fn new(bitmap: u64) -> Self {
-            let num_leading_zeros = bitmap.leading_zeros();
-            let mask = if num_leading_zeros >= 64 {
-                0
-            } else {
-                1 << (63 - num_leading_zeros)
-            };
-            AccumulatorBitmapIterator {
-                bitmap: AccumulatorBitmap(bitmap),
-                mask,
-            }
-        }
-    }
-
-    impl std::iter::Iterator for AccumulatorBitmapIterator {
-        type Item = bool;
-
-        fn next(&mut self) -> Option<bool> {
-            if self.mask == 0 {
-                return None;
-            }
-            let ret = self.bitmap.0 & self.mask != 0;
-            self.mask >>= 1;
-            Some(ret)
-        }
-    }
-
-    impl std::iter::FromIterator<bool> for AccumulatorBitmap {
-        fn from_iter<I>(iter: I) -> Self
-        where
-            I: std::iter::IntoIterator<Item = bool>,
-        {
-            let mut bitmap = 0;
-            for (i, bit) in iter.into_iter().enumerate() {
-                if i == 0 {
-                    assert!(bit, "The first bit should always be set.");
-                } else if i > 63 {
-                    panic!("Trying to put more than 64 bits in AccumulatorBitmap.");
-                }
-                bitmap <<= 1;
-                bitmap |= bit as u64;
-            }
-            AccumulatorBitmap::new(bitmap)
-        }
-    }
-
-    /// The bitmap indicating which siblings are default in a compressed sparse merkle proof. 1
-    /// means non-default and 0 means default.  The MSB of the first byte corresponds to the
-    /// sibling at the top of the Sparse Merkle Tree. The rightmost 1-bit of the last byte
-    /// corresponds to the sibling at the bottom, since this one is always non-default.
-    #[derive(Clone, Debug, Eq, PartialEq)]
-    pub struct SparseMerkleBitmap(Vec<u8>);
-
-    impl SparseMerkleBitmap {
-        pub fn new(bitmap: Vec<u8>) -> Self {
-            SparseMerkleBitmap(bitmap)
-        }
-
-        pub fn iter(&self) -> SparseMerkleBitmapIterator {
-            SparseMerkleBitmapIterator::new(&self.0)
-        }
-    }
-
-    impl std::convert::From<SparseMerkleBitmap> for Vec<u8> {
-        fn from(bitmap: SparseMerkleBitmap) -> Vec<u8> {
-            bitmap.0
-        }
-    }
-
-    /// Given a `Vec<u8>` bitmap, this iterator generates one bit at a time starting from the MSB
-    /// of the first byte. All trailing zeros of the last byte are discarded.
-    pub struct SparseMerkleBitmapIterator<'a> {
-        bitmap: &'a [u8],
-        index: usize,
-        len: usize,
-    }
-
-    impl<'a> SparseMerkleBitmapIterator<'a> {
-        fn new(bitmap: &'a [u8]) -> Self {
-            match bitmap.last() {
-                Some(last_byte) => {
-                    assert_ne!(
-                        *last_byte, 0,
-                        "The last byte of the bitmap should never be zero."
-                    );
-                    SparseMerkleBitmapIterator {
-                        bitmap,
-                        index: 0,
-                        len: bitmap.len() * 8 - last_byte.trailing_zeros() as usize,
-                    }
-                }
-                None => SparseMerkleBitmapIterator {
-                    bitmap,
-                    index: 0,
-                    len: 0,
-                },
-            }
-        }
-    }
-
-    impl<'a> std::iter::Iterator for SparseMerkleBitmapIterator<'a> {
-        type Item = bool;
-
-        fn next(&mut self) -> Option<bool> {
-            // We are past the last useful bit.
-            if self.index >= self.len {
-                return None;
-            }
-
-            let pos = self.index / 8;
-            let bit = self.index % 8;
-            let ret = self.bitmap[pos] >> (7 - bit) & 1 != 0;
-            self.index += 1;
-            Some(ret)
-        }
-    }
-
-    impl std::iter::FromIterator<bool> for SparseMerkleBitmap {
-        fn from_iter<I>(iter: I) -> Self
-        where
-            I: std::iter::IntoIterator<Item = bool>,
-        {
-            let mut bitmap = vec![];
-            for (i, bit) in iter.into_iter().enumerate() {
-                let pos = i % 8;
-                if pos == 0 {
-                    bitmap.push(0);
-                }
-                let last_byte = bitmap
-                    .last_mut()
-                    .expect("The bitmap vector should not be empty");
-                *last_byte |= (bit as u8) << (7 - pos);
-            }
-            SparseMerkleBitmap::new(bitmap)
         }
     }
 }
