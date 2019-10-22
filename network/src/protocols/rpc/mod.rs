@@ -318,6 +318,9 @@ async fn handle_outbound_rpc<TSubstream>(
                     // Log any errors.
                     if let Err(err) = &res {
                         counters::RPC_REQUESTS_FAILED.inc();
+                        counters::LIBRA_NETWORK_RPC_MESSAGES
+                            .with_label_values(&["request", "failed"])
+                            .inc();
                         warn!(
                             "Error making outbound rpc request to {}: {:?}",
                             peer_id.short_str(), err
@@ -327,12 +330,18 @@ async fn handle_outbound_rpc<TSubstream>(
                     // Propagate the results to the rpc client layer.
                     if res_tx.send(res).is_err() {
                         counters::RPC_REQUESTS_CANCELLED.inc();
+                        counters::LIBRA_NETWORK_RPC_MESSAGES
+                            .with_label_values(&["request", "cancelled"])
+                            .inc();
                         debug!("Rpc client canceled outbound rpc call to {}", peer_id.short_str());
                     }
                 },
                 // The rpc client canceled the request
                 cancel = f_rpc_cancel => {
                     counters::RPC_REQUESTS_CANCELLED.inc();
+                    counters::LIBRA_NETWORK_RPC_MESSAGES
+                        .with_label_values(&["request", "cancelled"])
+                        .inc();
                     debug!("Rpc client canceled outbound rpc call to {}", peer_id.short_str());
                 },
             }
@@ -349,7 +358,7 @@ async fn handle_outbound_rpc_inner<TSubstream>(
 where
     TSubstream: AsyncRead + AsyncWrite + Send + Unpin,
 {
-    let _timer = counters::RPC_LATENCY.start_timer();
+    let _timer = counters::LIBRA_NETWORK_RPC_LATENCY.start_timer();
     // Request a new substream with the peer.
     let substream = peer_mgr_tx.open_substream(peer_id, protocol).await?;
     // Rpc messages are length-prefixed.
@@ -361,7 +370,13 @@ where
     // output side.
     substream.close().await?;
     counters::RPC_REQUESTS_SENT.inc();
+    counters::LIBRA_NETWORK_RPC_MESSAGES
+        .with_label_values(&["request", "sent"])
+        .inc();
     counters::RPC_REQUEST_BYTES_SENT.inc_by(req_len as i64);
+    counters::LIBRA_NETWORK_RPC_BYTES
+        .with_label_values(&["request", "sent"])
+        .inc_by(req_len as i64);
 
     // Wait for listener's response.
     let res_data = match substream.next().await {
@@ -408,6 +423,9 @@ async fn handle_inbound_substream<TSubstream>(
             // Log any errors.
             if let Err(err) = res {
                 counters::RPC_RESPONSES_FAILED.inc();
+                counters::LIBRA_NETWORK_RPC_MESSAGES
+                    .with_label_values(&["response", "failed"])
+                    .inc();
                 warn!(
                     "Error handling inbound rpc request from {}: {:?}",
                     peer_id.short_str(),
@@ -440,6 +458,9 @@ where
         None => return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into()),
     };
     counters::RPC_REQUESTS_RECEIVED.inc();
+    counters::LIBRA_NETWORK_RPC_MESSAGES
+        .with_label_values(&["request", "received"])
+        .inc();
 
     // Wait for dialer to half-close their side.
     if substream.next().await.is_some() {
@@ -474,7 +495,13 @@ where
     // this, so this should gracefully shutdown the socket.
     substream.close().await?;
     counters::RPC_RESPONSES_SENT.inc();
+    counters::LIBRA_NETWORK_RPC_MESSAGES
+        .with_label_values(&["response", "sent"])
+        .inc();
     counters::RPC_RESPONSE_BYTES_SENT.inc_by(res_len as i64);
+    counters::LIBRA_NETWORK_RPC_BYTES
+        .with_label_values(&["response", "sent"])
+        .inc_by(res_len as i64);
 
     Ok(())
 }

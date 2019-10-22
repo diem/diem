@@ -282,8 +282,8 @@ where
                     }
                 }
                 // update libra_network_peer counter
-                counters::NETWORK_PEERS
-                    .with_label_values(&["connected", &role.to_string()])
+                counters::LIBRA_NETWORK_PEERS
+                    .with_label_values(&[&role.to_string(), "connected"])
                     .dec();
                 // Send LostPeer notifications to subscribers
                 for ch in &mut self.peer_event_handlers {
@@ -452,12 +452,13 @@ where
         );
         self.active_peers.insert(peer_id, peer_handle);
         self.executor.spawn(peer.start());
-        // update libra_network_peer counter
-        counters::NETWORK_PEERS
-            .with_label_values(&["connected", &role.to_string()])
-            .inc();
         // Send NewPeer notifications to subscribers
         if send_new_peer_notification {
+            // update libra_network_peer counter
+            counters::LIBRA_NETWORK_PEERS
+                .with_label_values(&[&role.to_string(), "connected"])
+                .inc();
+
             for ch in &mut self.peer_event_handlers {
                 ch.send(PeerManagerNotification::NewPeer(peer_id, address.clone()))
                     .await
