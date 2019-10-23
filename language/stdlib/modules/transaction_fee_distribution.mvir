@@ -10,7 +10,7 @@
 //    the validator set.
 module TransactionFeeDistribution {
   import 0x0.LibraCoin;
-  import 0x0.ValidatorSet;
+  import 0x0.LibraSystem;
   import 0x0.LibraAccount;
   // import 0x0.Epoch;
 
@@ -37,7 +37,7 @@ module TransactionFeeDistribution {
      // Note: We don't enforce sequentiality for transaction fee distribution.
      //*(&mut copy(distribution_resource).last_epoch_paid) = move(current_epoch);
 
-     num_validators = ValidatorSet.size();
+     num_validators = LibraSystem.validator_size();
      amount_collected = LibraAccount.balance(0xFEE);
 
      lib_coin_to_distribute = LibraAccount.withdraw_with_capability(
@@ -93,7 +93,7 @@ module TransactionFeeDistribution {
 
        while (copy(index) < copy(num_validators)) {
 
-           addr = ValidatorSet.get_ith_validator_address(copy(index));
+           addr = LibraSystem.get_ith_validator_address(copy(index));
            // Increment the index into the validator set.
            index = copy(index) + 1;
 

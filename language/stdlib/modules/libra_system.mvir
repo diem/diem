@@ -1,4 +1,4 @@
-module ValidatorSet {
+module LibraSystem {
     import 0x0.Event;
     import 0x0.LibraAccount;
     import 0x0.ValidatorConfig;
@@ -16,41 +16,83 @@ module ValidatorSet {
         new_validator_set: Vector.T<Self.ValidatorInfo>,
     }
 
-    resource T {
+    resource ValidatorSet {
         validators: Vector.T<Self.ValidatorInfo>,
         change_events: Event.Handle<Self.ChangeEvent>,
     }
 
-    // This can only be invoked by the special validator set address, and only a single time.
-    // Currently, it is invoked in the genesis transaction.
-    public initialize() {
-        // Only callable by the validator set address
-        assert(get_txn_sender() == 0x1D8, 1);
 
-        move_to_sender<T>(T {
-            validators: Vector.empty<Self.ValidatorInfo>(),
-            change_events: Event.new_event_handle<Self.ChangeEvent>(),
-        });
+    resource BlockMetadata {
+      // Height of the current block
+      height: u64,
+    }
 
-        return;
+    // This can only be invoked by the Association address, and only a single time.
+    // Currently, it is invoked in the genesis transaction
+    public initialize_validator_set() {
+      // Only callable by the Association address
+      assert(get_txn_sender() == 0x1D8, 1);
+
+      move_to_sender<ValidatorSet>(ValidatorSet {
+          validators: Vector.empty<Self.ValidatorInfo>(),
+          change_events: Event.new_event_handle<Self.ChangeEvent>(),
+      });
+      return;
+    }
+
+    // This can only be invoked by the Association address, and only a single time.
+    // Currently, it is invoked in the genesis transaction
+    public initialize_block_metadata() {
+      // Only callable by the Association address
+      assert(get_txn_sender() == 0xA550C18, 1);
+
+      move_to_sender<BlockMetadata>(BlockMetadata { height: 0 });
+      return;
+    }
+
+    // Set the metadata for the current block.
+    // The runtime always runs this before executing the transactions in a block.
+    // TODO: make this private, support other metadata
+    public prologue(height: u64) acquires BlockMetadata, ValidatorSet {
+      let height_ref: &mut u64;
+      let old_height: u64;
+
+      height_ref = &mut borrow_global_mut<BlockMetadata>(0xA550C18).height;
+      old_height = *copy(height_ref);
+      // ensure that height increases by 1
+      if (move(height) == copy(old_height) + 1) {
+          *move(height_ref) = move(old_height) + 1;
+          // triggers a reconfiguration if the validator keys or validator set has changed
+          Self.reconfigure();
+
+          return;
+      } else {
+          // TODO: standardize this error code
+          abort(99);
+      }
+    }
+
+    // Get the current block height
+    public get_current_height(): u64 acquires BlockMetadata {
+      return *&(borrow_global<BlockMetadata>(0xA550C18)).height;
     }
 
     // Return the size of the current validator set
-    public size(): u64 acquires T {
-        let validator_set_ref: &Self.T;
+    public validator_size(): u64 acquires ValidatorSet {
+        let validator_set_ref: &Self.ValidatorSet;
 
-        validator_set_ref = borrow_global<T>(0x1D8);
+        validator_set_ref = borrow_global<ValidatorSet>(0x1D8);
         return Vector.length<Self.ValidatorInfo>(&move(validator_set_ref).validators);
     }
 
     // Return true if addr is a current validator
-    public is_validator(addr: address): bool acquires T {
+    public is_validator(addr: address): bool acquires ValidatorSet {
         let size: u64;
         let i: u64;
         let vector_ref: &Vector.T<Self.ValidatorInfo>;
         let info_ref: &Self.ValidatorInfo;
 
-        vector_ref = &borrow_global<T>(0x1D8).validators;
+        vector_ref = &borrow_global<ValidatorSet>(0x1D8).validators;
         size = Vector.length<Self.ValidatorInfo>(copy(vector_ref));
         if (copy(size) == 0) {
             return false;
@@ -73,13 +115,13 @@ module ValidatorSet {
 
     // TODO: Decide on access control policy. For now, we ensure that this is only callable from the
     // genesis txn. Obviously, we'll need a different policy once we support reconfiguration.
-    add_validator(account_address: address) acquires T {
-        let validator_set_ref: &mut Self.T;
+    add_validator(account_address: address) acquires ValidatorSet {
+        let validator_set_ref: &mut Self.ValidatorSet;
 
         // A prospective validator must have a validator config resource
         assert(ValidatorConfig.has(copy(account_address)), 17);
 
-        validator_set_ref = borrow_global_mut<T>(0x1D8);
+        validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
         Vector.push_back<Self.ValidatorInfo>(
             &mut move(validator_set_ref).validators,
             ValidatorInfo {
@@ -131,8 +173,8 @@ module ValidatorSet {
     // (1) Computing a new validator set and storing it on chain
     // (2) Emitting an event containing new validator set, which will be passed to the executor
     // TODO: make  this private + only callable from block prologue
-    public reconfigure() acquires T {
-        let validator_set_ref: &mut Self.T;
+    reconfigure() acquires ValidatorSet {
+        let validator_set_ref: &mut Self.ValidatorSet;
         let vector_ref: &mut Vector.T<Self.ValidatorInfo>;
         let info_ref: &mut Self.ValidatorInfo;
         let i: u64;
@@ -143,7 +185,7 @@ module ValidatorSet {
         // validators to rotate their keys.
         // TODO: support adding and removing validators. Eventually, we will do this by computing
         // the new validator set from a larger list of candidate validators sorted by stake.
-        validator_set_ref = borrow_global_mut<T>(0x1D8);
+        validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
         vector_ref = &mut copy(validator_set_ref).validators;
 
         i = 0;
@@ -179,13 +221,13 @@ module ValidatorSet {
     }
 
   // Get the address of the i'th validator.
-  public get_ith_validator_address(i: u64): address acquires T {
+  public get_ith_validator_address(i: u64): address acquires ValidatorSet {
       let len: u64;
-      let validator_set: &Self.T;
+      let validator_set: &Self.ValidatorSet;
       let addr: address;
       let peer: &Self.ValidatorInfo;
 
-      validator_set = borrow_global<T>(0x1D8);
+      validator_set = borrow_global<ValidatorSet>(0x1D8);
       len = Vector.length<Self.ValidatorInfo>(&copy(validator_set).validators);
       assert(copy(i) < move(len), 3);
       peer = Vector.borrow<Self.ValidatorInfo>(&move(validator_set).validators, move(i));
