@@ -241,11 +241,13 @@ impl SynchronizerEnv {
         let synchronizers: Vec<StateSynchronizer> = vec![
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_a, events_a)],
+                role,
                 &config.state_sync,
                 MockExecutorProxy::new(peers[0], Self::default_handler()),
             ),
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_b, events_b)],
+                role,
                 &get_test_config().0.state_sync,
                 MockExecutorProxy::new(peers[1], handler),
             ),
@@ -266,7 +268,12 @@ impl SynchronizerEnv {
 
     fn sync_to(&self, peer_id: usize, version: u64) -> bool {
         let target = MockExecutorProxy::mock_ledger_info(self.peers[1], version);
-        block_on(self.clients[peer_id].sync_to(target)).unwrap()
+        block_on(self.clients[peer_id].sync_to_deprecated(target)).unwrap()
+    }
+
+    fn sync_to_new_flow(&self, peer_id: usize, version: u64) -> bool {
+        let (li, peer) = block_on(self.clients[peer_id].sync_to(vec![self.peers[1]])).unwrap();
+        self.peers[1] == peer && li.ledger_info().version() == version
     }
 
     fn commit(&self, peer_id: usize, version: u64) {
@@ -296,6 +303,14 @@ fn test_basic_catch_up() {
     }
     // test batch sync for multiple transactions
     assert!(env.sync_to(0, 10));
+}
+
+#[test]
+fn test_basic_catch_up_new_flow() {
+    let env = SynchronizerEnv::new(SynchronizerEnv::default_handler(), RoleType::Validator);
+    for version in 1..5 {
+        assert!(env.sync_to_new_flow(0, version));
+    }
 }
 
 #[test]

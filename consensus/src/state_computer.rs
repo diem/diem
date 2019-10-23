@@ -138,7 +138,7 @@ impl StateComputer for ExecutionProxy {
     fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
         counters::STATE_SYNC_COUNT.inc();
         self.synchronizer
-            .sync_to(commit.ledger_info().clone())
+            .sync_to_deprecated(commit.ledger_info().clone())
             .boxed()
     }
 

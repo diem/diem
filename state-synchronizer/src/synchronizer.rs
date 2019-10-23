@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::PeerId;
 use crate::{
     coordinator::{CoordinatorMessage, SyncCoordinator},
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
@@ -12,7 +13,7 @@ use futures::{
     future::Future,
     SinkExt,
 };
-use libra_config::config::{NodeConfig, StateSyncConfig};
+use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::sync::Arc;
@@ -32,11 +33,17 @@ impl StateSynchronizer {
         config: &NodeConfig,
     ) -> Self {
         let executor_proxy = ExecutorProxy::new(executor, config);
-        Self::bootstrap_with_executor_proxy(network, &config.state_sync, executor_proxy)
+        Self::bootstrap_with_executor_proxy(
+            network,
+            config.get_role(),
+            &config.state_sync,
+            executor_proxy,
+        )
     }
 
     pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
+        role: RoleType,
         state_sync_config: &StateSyncConfig,
         executor_proxy: E,
     ) -> Self {
@@ -50,6 +57,7 @@ impl StateSynchronizer {
 
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,
+            role,
             state_sync_config.clone(),
             executor_proxy,
         );
@@ -74,12 +82,31 @@ pub struct StateSyncClient {
 
 impl StateSyncClient {
     /// Sync validator's state up to given `version`
-    pub fn sync_to(&self, target: LedgerInfoWithSignatures) -> impl Future<Output = Result<bool>> {
+    pub fn sync_to_deprecated(
+        &self,
+        target: LedgerInfoWithSignatures,
+    ) -> impl Future<Output = Result<bool>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
         async move {
             sender
-                .send(CoordinatorMessage::Requested(target, cb_sender))
+                .send(CoordinatorMessage::RequestedDeprecated(target, cb_sender))
+                .await?;
+            let sync_status = cb_receiver.await?;
+            Ok(sync_status)
+        }
+    }
+
+    /// Sync validator's state up to remote peers
+    pub fn sync_to(
+        &self,
+        peers: Vec<PeerId>,
+    ) -> impl Future<Output = Result<(LedgerInfoWithSignatures, PeerId)>> {
+        let mut sender = self.coordinator_sender.clone();
+        let (cb_sender, cb_receiver) = oneshot::channel();
+        async move {
+            sender
+                .send(CoordinatorMessage::Requested(peers, cb_sender))
                 .await?;
             let sync_status = cb_receiver.await?;
             Ok(sync_status)
