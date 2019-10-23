@@ -3,6 +3,7 @@
 
 use crate::chained_bft::chained_bft_consensus_provider::InitialSetup;
 use crate::chained_bft::epoch_manager::EpochManager;
+use crate::chained_bft::network::{NetworkReceivers, NetworkTask};
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
@@ -14,7 +15,7 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::{choose_leader, RotatingProposer},
         },
-        network::ConsensusNetworkImpl,
+        network::NetworkSender,
         persistent_storage::{PersistentStorage, RecoveryData},
     },
     counters,
@@ -28,7 +29,6 @@ use futures::{executor::block_on, select, stream::StreamExt};
 use libra_config::config::{ConsensusConfig, ConsensusProposerType};
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use safety_rules::SafetyRules;
 use std::{
     sync::Arc,
@@ -142,9 +142,9 @@ impl<T: Payload> ChainedBftSMR<T> {
         executor: TaskExecutor,
         mut event_processor: EventProcessor<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
-        mut network: ConsensusNetworkImpl,
+        network_task: NetworkTask<T>,
+        mut network_receivers: NetworkReceivers<T>,
     ) {
-        let mut network_receivers = network.start(&executor);
         let fut = async move {
             event_processor.start().await;
             loop {
@@ -180,33 +180,21 @@ impl<T: Payload> ChainedBftSMR<T> {
                 counters::EVENT_PROCESSING_LOOP_IDLE_DURATION_S.observe_duration(idle_duration);
             }
         };
+        executor.spawn(network_task.run());
         executor.spawn(fut);
     }
 
     fn start_epoch(
         &mut self,
         epoch_mgr: Arc<EpochManager>,
-        network_sender: ConsensusNetworkSender,
-        network_events: ConsensusNetworkEvents,
+        time_service: Arc<ClockTimeService>,
+        network_sender: NetworkSender,
+        timeout_sender: channel::Sender<Round>,
         signer: ValidatorSigner,
         initial_data: RecoveryData<T>,
         txn_manager: Arc<dyn TxnManager<Payload = T>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
-    ) {
-        let executor = self
-            .runtime
-            .as_mut()
-            .expect("Consensus start: No valid runtime found!")
-            .executor();
-        let time_service = Arc::new(ClockTimeService::new(executor.clone()));
-        let author = signer.author();
-        let network = ConsensusNetworkImpl::new(
-            author,
-            network_sender.clone(),
-            network_events,
-            Arc::clone(&epoch_mgr),
-        );
-
+    ) -> EventProcessor<T> {
         let last_vote = initial_data.last_vote();
         let safety_rules = SafetyRules::new(initial_data.state(), signer);
 
@@ -231,12 +219,10 @@ impl<T: Payload> ChainedBftSMR<T> {
             true,
         );
 
-        let (timeout_sender, timeout_receiver) =
-            channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let pacemaker = self.create_pacemaker(time_service.clone(), timeout_sender);
 
         let proposer_election = self.create_proposer_election(epoch_mgr.validators().as_ref());
-        let event_processor = EventProcessor::new(
+        EventProcessor::new(
             Arc::clone(&block_store),
             last_vote,
             pacemaker,
@@ -244,14 +230,12 @@ impl<T: Payload> ChainedBftSMR<T> {
             proposal_generator,
             safety_rules,
             txn_manager,
-            network.clone(),
+            network_sender.clone(),
             Arc::clone(&self.storage),
             time_service.clone(),
             true,
             epoch_mgr.validators(),
-        );
-
-        Self::start_event_processing(executor, event_processor, timeout_receiver, network);
+        )
     }
 }
 
@@ -289,14 +273,43 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         ));
 
         // Step 3
-        self.start_epoch(
-            epoch_mgr,
-            initial_setup.network_sender,
-            initial_setup.network_events,
+        let executor = self
+            .runtime
+            .as_mut()
+            .expect("Consensus start: No valid runtime found!")
+            .executor();
+        let time_service = Arc::new(ClockTimeService::new(executor.clone()));
+
+        let (timeout_sender, timeout_receiver) =
+            channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
+        let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
+        let network_sender = NetworkSender::new(
+            initial_setup.signer.author(),
+            initial_setup.network_sender.clone(),
+            self_sender,
+            Arc::clone(&epoch_mgr),
+        );
+
+        let event_processor = self.start_epoch(
+            epoch_mgr.clone(),
+            time_service,
+            network_sender,
+            timeout_sender,
             initial_setup.signer,
             initial_data,
             txn_manager,
             state_computer,
+        );
+
+        let (network_task, network_receiver) =
+            NetworkTask::start(initial_setup.network_events, self_receiver, epoch_mgr);
+
+        Self::start_event_processing(
+            executor,
+            event_processor,
+            timeout_receiver,
+            network_task,
+            network_receiver,
         );
         debug!("Chained BFT SMR started.");
         Ok(())

@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
-        network::ConsensusNetworkImpl,
+        network::NetworkSender,
     },
     counters,
 };
@@ -189,13 +189,13 @@ impl<T: Payload> BlockStore<T> {
 
 /// BlockRetriever is used internally to retrieve blocks
 pub struct BlockRetriever {
-    network: ConsensusNetworkImpl,
+    network: NetworkSender,
     deadline: Instant,
     preferred_peer: Author,
 }
 
 impl BlockRetriever {
-    pub fn new(network: ConsensusNetworkImpl, deadline: Instant, preferred_peer: Author) -> Self {
+    pub fn new(network: NetworkSender, deadline: Instant, preferred_peer: Author) -> Self {
         Self {
             network,
             deadline,

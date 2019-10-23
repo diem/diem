@@ -8,7 +8,7 @@ use crate::{
             proposal_generator::ProposalGenerator,
             rotating_proposer_election::RotatingProposer,
         },
-        network::ConsensusNetworkImpl,
+        network::NetworkSender,
         persistent_storage::{PersistentStorage, RecoveryData},
         test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager, TestPayload},
     },
@@ -22,10 +22,7 @@ use futures::{channel::mpsc, executor::block_on};
 use lazy_static::lazy_static;
 use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
-use network::{
-    proto::Proposal,
-    validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
-};
+use network::{proto::Proposal, validator_network::ConsensusNetworkSender};
 use prost::Message as _;
 use safety_rules::SafetyRules;
 use std::convert::TryFrom;
@@ -106,13 +103,12 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
 
     // TODO: mock channels
     let (network_reqs_tx, _network_reqs_rx) = channel::new_test(8);
-    let (_consensus_tx, consensus_rx) = channel::new_test(8);
     let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
-    let network_events = ConsensusNetworkEvents::new(consensus_rx);
-    let network = ConsensusNetworkImpl::new(
+    let (self_sender, _self_receiver) = channel::new_test(8);
+    let network = NetworkSender::new(
         signer.author(),
         network_sender,
-        network_events,
+        self_sender,
         Arc::clone(&epoch_mgr),
     );
 
