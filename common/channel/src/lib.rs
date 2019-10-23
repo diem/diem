@@ -20,6 +20,10 @@ use std::{
 #[cfg(test)]
 mod test;
 
+pub mod libra_channel;
+#[cfg(test)]
+mod libra_channel_test;
+
 const MAX_TIMEOUT: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// Wrapper around a value with an entry timestamp

@@ -10,10 +10,11 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = { version = "=0.3.0-alpha.19", package = "futures-preview" }
+futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["async-await"]}
 lazy_static = "1.3.0"
 libra-logger = { path = "../logger", version = "0.1.0" }
 libra-metrics = { path = "../metrics", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0"  }
 
 [dev-dependencies]
 rusty-fork = "0.2.1"
