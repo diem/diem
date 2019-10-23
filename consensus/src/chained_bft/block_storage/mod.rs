@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use consensus_types::{
-    block::{Block, ExecutedBlock},
-    common::Round,
-    quorum_cert::QuorumCert,
+    block::Block, common::Round, executed_block::ExecutedBlock, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate,
 };
 use libra_crypto::HashValue;

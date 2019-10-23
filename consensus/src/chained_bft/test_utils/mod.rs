@@ -15,9 +15,11 @@ mod mock_state_computer;
 mod mock_storage;
 mod mock_txn_manager;
 
-use consensus_types::block::block_test_utils::placeholder_certificate_for_block;
-use consensus_types::block::{Block, ExecutedBlock};
-use consensus_types::common::Round;
+use consensus_types::{
+    block::{block_test_utils::placeholder_certificate_for_block, Block},
+    common::Round,
+    executed_block::ExecutedBlock,
+};
 pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
 pub use mock_storage::{EmptyStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;
@@ -168,8 +170,7 @@ impl TreeInserter {
         round: Round,
         payload: TestPayload,
     ) -> Block<TestPayload> {
-        Block::make_block(
-            parent.block(),
+        Block::new_proposal(
             payload,
             round,
             parent.timestamp_usecs() + 1,

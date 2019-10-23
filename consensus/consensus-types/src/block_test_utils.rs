@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    block::{Block, BlockType},
-    block_info::BlockInfo,
-    common::Round,
-    quorum_cert::QuorumCert,
-    vote_data::VoteData,
+    block::Block, block_data::BlockData, block_info::BlockInfo, common::Round,
+    quorum_cert::QuorumCert, vote_data::VoteData,
 };
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::{
@@ -25,7 +22,7 @@ prop_compose! {
     /// dependent on signer, round, parent and ancestor_id.
     /// Note that the quorum certificate carried by this block is still placeholder: one will have
     /// to generate it later on when adding to the tree.
-    pub fn make_block(
+    pub fn new_proposal(
         _ancestor_id: HashValue,
         round_strategy: impl Strategy<Value = Round>,
         signer_strategy: impl Strategy<Value = ValidatorSigner>,
@@ -36,9 +33,8 @@ prop_compose! {
         signer in signer_strategy,
         parent_qc in Just(parent_qc)
     ) -> Block<Vec<usize>> {
-        Block::new_internal(
+        Block::new_proposal(
             vec![payload],
-            0,
             round,
             get_current_timestamp().as_micros() as u64,
             parent_qc,
@@ -57,7 +53,7 @@ prop_compose! {
     pub fn unmoored_block(ancestor_id_strategy: impl Strategy<Value = HashValue>)(
         ancestor_id in ancestor_id_strategy,
     )(
-        block in make_block(
+        block in new_proposal(
             ancestor_id,
             Round::arbitrary(),
             proptests::arb_signer(),
@@ -80,16 +76,15 @@ prop_compose! {
         (fake_id in HashValue::arbitrary(),
          block in block_strategy) -> Block<Vec<usize>> {
             Block {
-                timestamp_usecs: get_current_timestamp().as_micros() as u64,
                 id: fake_id,
-                epoch: block.epoch(),
-                round: block.round(),
-                quorum_cert: block.quorum_cert().clone(),
-                block_type: BlockType::Proposal {
-                    payload: block.payload().unwrap().clone(),
-                    author: block.author().unwrap(),
-                    signature: block.signature().unwrap().clone(),
-                },
+                block_data: BlockData::new_proposal(
+                    block.payload().unwrap().clone(),
+                    block.author().unwrap(),
+                    block.round(),
+                    get_current_timestamp().as_micros() as u64,
+                    block.quorum_cert().clone(),
+                ),
+                signature: Some(block.signature().unwrap().clone()),
             }
         }
 }
@@ -129,7 +124,7 @@ prop_compose! {
             .prop_flat_map(|(forest_vec, parent_idx)| {
                 (Just(forest_vec), Just(parent_idx), 0..=parent_idx)
             }),
-    )( block in make_block(
+    )( block in new_proposal(
         // ancestor_id
         forest_vec[qc_idx].id(),
         // round

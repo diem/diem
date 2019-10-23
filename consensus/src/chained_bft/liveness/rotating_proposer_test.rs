@@ -20,33 +20,13 @@ fn test_rotating_proposer() {
     // follow the round-robin rotation.
 
     // Test genesis and the next block
-    let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
 
-    let good_proposal = Block::make_block(
-        &genesis_block,
-        1,
-        1,
-        1,
-        quorum_cert.clone(),
-        &another_validator_signer,
-    );
-    let bad_proposal = Block::make_block(
-        &genesis_block,
-        2,
-        1,
-        2,
-        quorum_cert.clone(),
-        &chosen_validator_signer,
-    );
-    let next_good_proposal = Block::make_block(
-        &genesis_block,
-        3,
-        2,
-        3,
-        quorum_cert.clone(),
-        &chosen_validator_signer,
-    );
+    let good_proposal =
+        Block::new_proposal(1, 1, 1, quorum_cert.clone(), &another_validator_signer);
+    let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &chosen_validator_signer);
+    let next_good_proposal =
+        Block::new_proposal(3, 2, 3, quorum_cert.clone(), &chosen_validator_signer);
     assert_eq!(
         pe.process_proposal(good_proposal.clone()),
         Some(good_proposal)
@@ -80,33 +60,12 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
     // follow the round-robin rotation with 3 contiguous rounds.
 
     // Test genesis and the next block
-    let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
 
-    let good_proposal = Block::make_block(
-        &genesis_block,
-        1,
-        1,
-        1,
-        quorum_cert.clone(),
-        &chosen_validator_signer,
-    );
-    let bad_proposal = Block::make_block(
-        &genesis_block,
-        2,
-        1,
-        2,
-        quorum_cert.clone(),
-        &another_validator_signer,
-    );
-    let next_good_proposal = Block::make_block(
-        &genesis_block,
-        3,
-        2,
-        3,
-        quorum_cert.clone(),
-        &chosen_validator_signer,
-    );
+    let good_proposal = Block::new_proposal(1, 1, 1, quorum_cert.clone(), &chosen_validator_signer);
+    let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &another_validator_signer);
+    let next_good_proposal =
+        Block::new_proposal(3, 2, 3, quorum_cert.clone(), &chosen_validator_signer);
     assert_eq!(
         pe.process_proposal(good_proposal.clone()),
         Some(good_proposal)
@@ -137,33 +96,12 @@ fn test_fixed_proposer() {
     // from the chosen author.
 
     // Test genesis and the next block
-    let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
 
-    let good_proposal = Block::make_block(
-        &genesis_block,
-        1,
-        1,
-        1,
-        quorum_cert.clone(),
-        &chosen_validator_signer,
-    );
-    let bad_proposal = Block::make_block(
-        &genesis_block,
-        2,
-        1,
-        2,
-        quorum_cert.clone(),
-        &another_validator_signer,
-    );
-    let next_good_proposal = Block::make_block(
-        &genesis_block,
-        2,
-        2,
-        3,
-        quorum_cert.clone(),
-        &chosen_validator_signer,
-    );
+    let good_proposal = Block::new_proposal(1, 1, 1, quorum_cert.clone(), &chosen_validator_signer);
+    let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &another_validator_signer);
+    let next_good_proposal =
+        Block::new_proposal(2, 2, 3, quorum_cert.clone(), &chosen_validator_signer);
     assert_eq!(
         pe.process_proposal(good_proposal.clone()),
         Some(good_proposal)

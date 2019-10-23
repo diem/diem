@@ -22,9 +22,8 @@ fn make_proposal_with_qc(
     validator_signer: &ValidatorSigner,
 ) -> VoteProposal<Round> {
     VoteProposal::<Round>::new(
-        Block::<Round>::new_internal(
+        Block::<Round>::new_proposal(
             round,
-            0,
             round,
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
