@@ -13,7 +13,7 @@ main() {
 
   index = 0;
 
-  number_of_validators = LibraSystem.validator_size();
+  number_of_validators = LibraSystem.validator_set_size();
 
   lib_coin = LibraAccount.withdraw_from_sender(copy(number_of_validators) * 10 + 1);
   LibraAccount.deposit({{fees}}, move(lib_coin));

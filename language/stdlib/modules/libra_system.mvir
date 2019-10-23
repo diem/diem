@@ -53,7 +53,7 @@ module LibraSystem {
     // Set the metadata for the current block.
     // The runtime always runs this before executing the transactions in a block.
     // TODO: make this private, support other metadata
-    public prologue(height: u64) acquires BlockMetadata, ValidatorSet {
+    public block_prologue(height: u64) acquires BlockMetadata, ValidatorSet {
       let height_ref: &mut u64;
       let old_height: u64;
 
@@ -73,12 +73,12 @@ module LibraSystem {
     }
 
     // Get the current block height
-    public get_current_height(): u64 acquires BlockMetadata {
+    public get_current_block_height(): u64 acquires BlockMetadata {
       return *&(borrow_global<BlockMetadata>(0xA550C18)).height;
     }
 
     // Return the size of the current validator set
-    public validator_size(): u64 acquires ValidatorSet {
+    public validator_set_size(): u64 acquires ValidatorSet {
         let validator_set_ref: &Self.ValidatorSet;
 
         validator_set_ref = borrow_global<ValidatorSet>(0x1D8);

@@ -3,9 +3,9 @@ import 0x0.LibraSystem;
 main() {
     // TODO: this will stop working once we make the Block prologue private. We should delete this
     // part (which will be done by the executor) and leave the second assert
-    LibraSystem.prologue(1);
+    LibraSystem.block_prologue(1);
 
-    assert(LibraSystem.get_current_height() == 1, 77);
+    assert(<ValidatorSet>rent_height() == 1, 77);
     return;
 }
 
@@ -14,7 +14,7 @@ import 0x0.LibraSystem;
 
 main() {
     // TODO: this will stop working once we make the Block prologue private.
-    LibraSystem.prologue(11); // should fail
+    LibraSystem.block_prologue(11); // should fail
     return;
 }
 

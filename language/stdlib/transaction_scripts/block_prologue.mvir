@@ -4,7 +4,7 @@
 
 import 0x0.LibraSystem;
 main(height: u64) {
-  LibraSystem.prologue(move(height));
+  LibraSystem.block_prologue(move(height));
 
   return;
 }
