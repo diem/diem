@@ -13,7 +13,7 @@ use std::{collections::BTreeMap, panic, sync::Arc};
 #[test]
 fn test_genesis() {
     // Test genesis and the next block
-    let genesis_block = Block::<i64>::make_genesis_block();
+    let genesis_block = Block::<i16>::make_genesis_block();
     assert_eq!(genesis_block.parent_id(), HashValue::zero());
     assert_ne!(genesis_block.id(), HashValue::zero());
     assert!(genesis_block.is_genesis_block());
@@ -21,10 +21,10 @@ fn test_genesis() {
 
 #[test]
 fn test_nil_block() {
-    let genesis_block = Block::make_genesis_block();
+    let genesis_block = Block::<i16>::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
 
-    let nil_block = Block::make_nil_block(&genesis_block, 1, quorum_cert);
+    let nil_block = Block::<i16>::new_nil(1, quorum_cert);
     assert_eq!(
         nil_block.quorum_cert().certified_block().id(),
         genesis_block.id()
@@ -58,8 +58,7 @@ fn test_nil_block() {
         nil_block.id(),
         nil_block_qc.certified_block().id()
     );
-    let nil_block_child = Block::make_block(
-        &nil_block,
+    let nil_block_child = Block::new_proposal(
         payload,
         2,
         get_current_timestamp().as_micros() as u64,
@@ -78,8 +77,7 @@ fn test_block_relation() {
     let genesis_block = Block::make_genesis_block();
     let quorum_cert = QuorumCert::certificate_for_genesis();
     let payload = 101;
-    let next_block = Block::make_block(
-        &genesis_block,
+    let next_block = Block::new_proposal(
         payload,
         1,
         get_current_timestamp().as_micros() as u64,
@@ -98,68 +96,16 @@ fn test_block_relation() {
     assert_eq!(cloned_block.round(), next_block.round());
 }
 
-#[test]
-fn test_block_qc() {
-    // Verify that it's impossible to create a block with QC that doesn't point to a parent.
-    let signer = ValidatorSigner::random(None);
-    // Test genesis and the next block
-    let genesis_block = Block::make_genesis_block();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
-
-    let payload = 42;
-    let a1 = Block::make_block(
-        &genesis_block,
-        payload,
-        1,
-        get_current_timestamp().as_micros() as u64,
-        genesis_qc.clone(),
-        &signer,
-    );
-    let a1_qc = placeholder_certificate_for_block(
-        vec![&signer],
-        a1.id(),
-        a1.round(),
-        a1.quorum_cert().certified_block().id(),
-        a1.quorum_cert().certified_block().round(),
-        None,
-    );
-
-    let result = panic::catch_unwind(|| {
-        // should panic because qc does not point to parent
-        Block::make_block(
-            &a1,
-            payload,
-            2,
-            get_current_timestamp().as_micros() as u64,
-            genesis_qc.clone(),
-            &signer,
-        );
-    });
-    assert!(result.is_err());
-
-    // once qc is correct, should not panic
-    let _a2 = Block::make_block(
-        &a1,
-        payload,
-        2,
-        get_current_timestamp().as_micros() as u64,
-        a1_qc.clone(),
-        &signer,
-    );
-}
-
 // Ensure that blocks that extend from the same QuorumCertificate but with different signatures
 // have different block ids.
 #[test]
 fn test_same_qc_different_authors() {
     let signer = ValidatorSigner::random(None);
-    let genesis_block = Block::make_genesis_block();
     let genesis_qc = QuorumCert::certificate_for_genesis();
     let round = 1;
     let payload = 42;
     let current_timestamp = get_current_timestamp().as_micros() as u64;
-    let block_round_1 = Block::make_block(
-        &genesis_block,
+    let block_round_1 = Block::new_proposal(
         payload,
         round,
         current_timestamp,
@@ -174,8 +120,7 @@ fn test_same_qc_different_authors() {
     ledger_info_altered.add_signature(signer.author(), signature);
     let genesis_qc_altered = QuorumCert::new(genesis_qc.vote_data().clone(), ledger_info_altered);
 
-    let block_round_1_altered = Block::make_block(
-        &genesis_block,
+    let block_round_1_altered = Block::new_proposal(
         payload,
         round,
         current_timestamp,
@@ -183,14 +128,8 @@ fn test_same_qc_different_authors() {
         &signer,
     );
 
-    let block_round_1_same = Block::make_block(
-        &genesis_block,
-        payload,
-        round,
-        current_timestamp,
-        genesis_qc,
-        &signer,
-    );
+    let block_round_1_same =
+        Block::new_proposal(payload, round, current_timestamp, genesis_qc, &signer);
 
     assert!(block_round_1.id() != block_round_1_altered.id());
     assert_eq!(block_round_1.id(), block_round_1_same.id());

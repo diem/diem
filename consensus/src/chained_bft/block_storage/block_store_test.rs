@@ -368,10 +368,9 @@ fn test_insert_vote() {
 fn test_illegal_timestamp() {
     let block_store = build_empty_tree();
     let genesis = block_store.root();
-    let block_with_illegal_timestamp = Block::<Vec<usize>>::new_internal(
+    let block_with_illegal_timestamp = Block::<Vec<usize>>::new_proposal(
         vec![],
         0,
-        1,
         // This timestamp is illegal, it is the same as genesis
         genesis.timestamp_usecs(),
         QuorumCert::certificate_for_genesis(),

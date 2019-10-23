@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod block;
+pub mod block_data;
 pub mod block_info;
 pub mod common;
+pub mod executed_block;
 pub mod proposal_msg;
 pub mod quorum_cert;
 pub mod sync_info;

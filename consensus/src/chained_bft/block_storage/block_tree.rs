@@ -7,8 +7,8 @@ use crate::{
     util::time_service::duration_since_epoch,
 };
 use consensus_types::{
-    block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
-    vote::Vote,
+    executed_block::ExecutedBlock, quorum_cert::QuorumCert,
+    timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;

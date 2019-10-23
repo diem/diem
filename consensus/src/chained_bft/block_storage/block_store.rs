@@ -9,8 +9,9 @@ use crate::{
     state_replication::StateComputer,
 };
 use consensus_types::{
-    block::{Block, ExecutedBlock},
+    block::Block,
     common::{Payload, Round},
+    executed_block::ExecutedBlock,
     quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate,
     vote::Vote,
@@ -401,8 +402,7 @@ impl<T: Payload> BlockReader for BlockStore<T> {
             .expect("Parent for the newly created block is not certified!")
             .as_ref()
             .clone();
-        Block::make_block(
-            parent,
+        Block::new_proposal(
             payload,
             round,
             timestamp_usecs,

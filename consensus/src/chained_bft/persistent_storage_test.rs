@@ -6,10 +6,7 @@ use crate::chained_bft::{
     persistent_storage::RecoveryData,
     test_utils::{build_chain, build_simple_tree},
 };
-use consensus_types::{
-    block::{Block, ExecutedBlock},
-    quorum_cert::QuorumCert,
-};
+use consensus_types::{block::Block, executed_block::ExecutedBlock, quorum_cert::QuorumCert};
 use libra_crypto::HashValue;
 use std::sync::Arc;
 

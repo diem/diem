@@ -78,11 +78,7 @@ impl<T: Payload> ProposalGenerator<T> {
             .block_store
             .get_quorum_cert_for_block(hqc_block.id())
             .ok_or_else(|| format_err!("Quorum Cert for HQC block not found"))?;
-        Ok(Block::make_nil_block(
-            hqc_block.block(),
-            round,
-            hqc_block_qc.as_ref().clone(),
-        ))
+        Ok(Block::new_nil(round, hqc_block_qc.as_ref().clone()))
     }
 
     /// The function generates a new proposal block: the returned future is fulfilled when the

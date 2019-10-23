@@ -46,9 +46,7 @@ fn test_multi_proposer() {
     }
     assert_eq!(pe.is_valid_proposer(proposers[another_idx], round), None);
 
-    let genesis_block = Block::make_genesis_block();
-    let good_proposal = Block::make_block(
-        &genesis_block,
+    let good_proposal = Block::new_proposal(
         1,
         1,
         1,
@@ -62,8 +60,7 @@ fn test_multi_proposer() {
     );
     assert_eq!(pe.take_backup_proposal(1), None);
 
-    let secondary_proposal = Block::make_block(
-        &genesis_block,
+    let secondary_proposal = Block::new_proposal(
         1,
         1,
         1,
