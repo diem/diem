@@ -1,5 +1,6 @@
 [package-exceptions]
 libra-crypto = { path = "crypto/crypto", all-features = false }
+libra-node = { path = "libra-node" }
 testsuite = { path = "testsuite", system = true }
 
 [clippy]

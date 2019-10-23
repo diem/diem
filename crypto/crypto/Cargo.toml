@@ -25,6 +25,7 @@ rand = "0.6.5"
 serde = { version = "1.0.96", features = ["derive"] }
 sha2 = "0.8.0"
 sha3 = "0.8.2"
+static_assertions = { version = "1.0.0", optional = true }
 threshold_crypto = "0.3"
 tiny-keccak = "1.5.0"
 x25519-dalek = { git = "https://github.com/calibra/x25519-dalek.git", branch = "fiat", default-features = false }
@@ -43,6 +44,7 @@ ripemd160 = "0.8.0"
 
 [features]
 default = ["std", "u64_backend"]
+assert-private-keys-not-cloneable = ["static_assertions"]
 cloneable-private-keys = []
 fuzzing = ["proptest", "proptest-derive", "cloneable-private-keys"]
 std = ["curve25519-dalek/std", "ed25519-dalek/std", "x25519-dalek/std"]

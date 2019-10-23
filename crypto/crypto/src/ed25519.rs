@@ -54,6 +54,9 @@ const L: [u8; 32] = [
 #[derive(SilentDisplay, SilentDebug)]
 pub struct Ed25519PrivateKey(ed25519_dalek::SecretKey);
 
+#[cfg(feature = "assert-private-keys-not-cloneable")]
+static_assertions::assert_not_impl_any!(Ed25519PrivateKey: Clone);
+
 /// An Ed25519 public key
 #[derive(Clone, Debug)]
 pub struct Ed25519PublicKey(ed25519_dalek::PublicKey);
