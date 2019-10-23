@@ -3,7 +3,7 @@
 
 use crate::proof::{
     AccountStateProof, AccumulatorConsistencyProof, EventProof, SignedTransactionProof,
-    SparseMerkleProof, TestAccumulatorProof,
+    SparseMerkleProof, TestAccumulatorProof, TestAccumulatorRangeProof,
 };
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;
@@ -24,6 +24,13 @@ proptest! {
         proof in any::<AccumulatorConsistencyProof>(),
     ) {
         assert_protobuf_encode_decode::<crate::proto::types::AccumulatorConsistencyProof, AccumulatorConsistencyProof>(&proof);
+    }
+
+    #[test]
+    fn test_accumulator_range_protobuf_conversion_roundtrip(
+        proof in any::<TestAccumulatorRangeProof>(),
+    ) {
+        assert_protobuf_encode_decode::<crate::proto::types::AccumulatorRangeProof, TestAccumulatorRangeProof>(&proof);
     }
 
     #[test]

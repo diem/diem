@@ -6,7 +6,7 @@
 
 use crate::proof::{
     definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccumulatorConsistencyProof, AccumulatorProof,
-    SparseMerkleProof,
+    AccumulatorRangeProof, SparseMerkleProof,
 };
 use libra_crypto::{
     hash::{CryptoHasher, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -110,5 +110,27 @@ impl Arbitrary for AccumulatorConsistencyProof {
         )
         .prop_map(AccumulatorConsistencyProof::new)
         .boxed()
+    }
+}
+
+impl<H> Arbitrary for AccumulatorRangeProof<H>
+where
+    H: CryptoHasher,
+{
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (
+            vec(
+                arb_non_placeholder_accumulator_sibling(),
+                0..MAX_ACCUMULATOR_PROOF_DEPTH,
+            ),
+            vec(arb_accumulator_sibling(), 0..MAX_ACCUMULATOR_PROOF_DEPTH),
+        )
+            .prop_map(|(left_siblings, right_siblings)| {
+                AccumulatorRangeProof::new(left_siblings, right_siblings)
+            })
+            .boxed()
     }
 }
