@@ -45,6 +45,20 @@ message AccumulatorConsistencyProof {
   repeated bytes subtrees = 1;
 }
 
+message AccumulatorRangeProof {
+  // The siblings on the left of the path from root to the first leaf. The ones
+  // near the root are at the beginning of the list. The placeholder nodes are
+  // represented by empty byte arrays, other nodes should be exactly 32-bytes
+  // long.
+  repeated bytes left_siblings = 1;
+
+  // The siblings on the right of the path from root to the last leaf. The ones
+  // near the root are at the beginning of the list. The placeholder nodes are
+  // represented by empty byte arrays, other nodes should be exactly 32-bytes
+  // long.
+  repeated bytes right_siblings = 2;
+}
+
 // The complete proof used to authenticate a signed transaction.
 message SignedTransactionProof {
   AccumulatorProof ledger_info_to_transaction_info_proof = 1;

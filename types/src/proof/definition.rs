@@ -31,6 +31,48 @@ use proptest_derive::Arbitrary;
 use std::convert::{TryFrom, TryInto};
 use std::marker::PhantomData;
 
+/// Converts sibling nodes from Protobuf format to Rust format, using the fact that empty byte
+/// arrays represent placeholder hashes.
+fn from_proto_siblings(siblings: Vec<Vec<u8>>, placeholder: HashValue) -> Result<Vec<HashValue>> {
+    debug_assert!(
+        placeholder == *ACCUMULATOR_PLACEHOLDER_HASH
+            || placeholder == *SPARSE_MERKLE_PLACEHOLDER_HASH,
+        "Placeholder can only be ACCUMULATOR_PLACEHOLDER_HASH or SPARSE_MERKLE_PLACEHOLDER_HASH.",
+    );
+
+    siblings
+        .into_iter()
+        .map(|hash_bytes| {
+            if hash_bytes.is_empty() {
+                Ok(placeholder)
+            } else {
+                HashValue::from_slice(&hash_bytes)
+            }
+        })
+        .collect()
+}
+
+/// Converts sibling nodes from Rust format to Protobuf format. The placeholder hashes are
+/// converted to empty byte arrays.
+fn into_proto_siblings(siblings: Vec<HashValue>, placeholder: HashValue) -> Vec<Vec<u8>> {
+    debug_assert!(
+        placeholder == *ACCUMULATOR_PLACEHOLDER_HASH
+            || placeholder == *SPARSE_MERKLE_PLACEHOLDER_HASH,
+        "Placeholder can only be ACCUMULATOR_PLACEHOLDER_HASH or SPARSE_MERKLE_PLACEHOLDER_HASH.",
+    );
+
+    siblings
+        .into_iter()
+        .map(|sibling| {
+            if sibling != placeholder {
+                sibling.to_vec()
+            } else {
+                vec![]
+            }
+        })
+        .collect()
+}
+
 /// A proof that can be used authenticate an element in an accumulator given trusted root hash. For
 /// example, both `LedgerInfoToTransactionInfoProof` and `TransactionInfoToEventProof` can be
 /// constructed on top of this structure.
@@ -143,18 +185,7 @@ where
     type Error = Error;
 
     fn try_from(proto_proof: crate::proto::types::AccumulatorProof) -> Result<Self> {
-        let siblings = proto_proof
-            .siblings
-            .into_iter()
-            .map(|hash_bytes| {
-                if hash_bytes.is_empty() {
-                    Ok(*ACCUMULATOR_PLACEHOLDER_HASH)
-                } else {
-                    HashValue::from_slice(&hash_bytes)
-                }
-            })
-            .collect::<Result<Vec<_>>>()?;
-
+        let siblings = from_proto_siblings(proto_proof.siblings, *ACCUMULATOR_PLACEHOLDER_HASH)?;
         Ok(AccumulatorProof::new(siblings))
     }
 }
@@ -162,13 +193,7 @@ where
 impl<H> From<AccumulatorProof<H>> for crate::proto::types::AccumulatorProof {
     fn from(proof: AccumulatorProof<H>) -> Self {
         let mut proto_proof = Self::default();
-        for sibling in proof.siblings {
-            if sibling != *ACCUMULATOR_PLACEHOLDER_HASH {
-                proto_proof.siblings.push(sibling.to_vec());
-            } else {
-                proto_proof.siblings.push(vec![]);
-            }
-        }
+        proto_proof.siblings = into_proto_siblings(proof.siblings, *ACCUMULATOR_PLACEHOLDER_HASH);
         proto_proof
     }
 }
@@ -334,17 +359,7 @@ impl TryFrom<crate::proto::types::SparseMerkleProof> for SparseMerkleProof {
             );
         };
 
-        let siblings = proto_proof
-            .siblings
-            .into_iter()
-            .map(|hash_bytes| {
-                if hash_bytes.is_empty() {
-                    Ok(*SPARSE_MERKLE_PLACEHOLDER_HASH)
-                } else {
-                    HashValue::from_slice(&hash_bytes)
-                }
-            })
-            .collect::<Result<Vec<_>>>()?;
+        let siblings = from_proto_siblings(proto_proof.siblings, *SPARSE_MERKLE_PLACEHOLDER_HASH)?;
 
         Ok(SparseMerkleProof::new(leaf, siblings))
     }
@@ -359,13 +374,7 @@ impl From<SparseMerkleProof> for crate::proto::types::SparseMerkleProof {
             proto_proof.leaf.extend_from_slice(key.as_ref());
             proto_proof.leaf.extend_from_slice(value_hash.as_ref());
         }
-        for sibling in proof.siblings {
-            if sibling != *SPARSE_MERKLE_PLACEHOLDER_HASH {
-                proto_proof.siblings.push(sibling.to_vec());
-            } else {
-                proto_proof.siblings.push(vec![]);
-            }
-        }
+        proto_proof.siblings = into_proto_siblings(proof.siblings, *SPARSE_MERKLE_PLACEHOLDER_HASH);
         proto_proof
     }
 }
@@ -437,7 +446,7 @@ impl From<AccumulatorConsistencyProof> for crate::proto::types::AccumulatorConsi
 ///
 /// if the proof wants to show that `[a, b, c]` exists in the accumulator, it would need `X` on the
 /// left and `Y` and `Z` on the right.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone)]
 pub struct AccumulatorRangeProof<H> {
     /// The siblings on the left of the path from root to the first leaf. Siblings near the root
     /// are at the beginning of the vector.
@@ -562,6 +571,54 @@ where
         Ok(())
     }
 }
+
+impl<H> std::fmt::Debug for AccumulatorRangeProof<H> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "AccumulatorRangeProof {{ left_siblings: {:?}, right_siblings: {:?} }}",
+            self.left_siblings, self.right_siblings,
+        )
+    }
+}
+
+impl<H> PartialEq for AccumulatorRangeProof<H> {
+    fn eq(&self, other: &Self) -> bool {
+        self.left_siblings == other.left_siblings && self.right_siblings == other.right_siblings
+    }
+}
+
+impl<H> Eq for AccumulatorRangeProof<H> {}
+
+impl<H> TryFrom<crate::proto::types::AccumulatorRangeProof> for AccumulatorRangeProof<H>
+where
+    H: CryptoHasher,
+{
+    type Error = Error;
+
+    fn try_from(proto_proof: crate::proto::types::AccumulatorRangeProof) -> Result<Self> {
+        let left_siblings =
+            from_proto_siblings(proto_proof.left_siblings, *ACCUMULATOR_PLACEHOLDER_HASH)?;
+        let right_siblings =
+            from_proto_siblings(proto_proof.right_siblings, *ACCUMULATOR_PLACEHOLDER_HASH)?;
+
+        Ok(Self::new(left_siblings, right_siblings))
+    }
+}
+
+impl<H> From<AccumulatorRangeProof<H>> for crate::proto::types::AccumulatorRangeProof {
+    fn from(proof: AccumulatorRangeProof<H>) -> Self {
+        let mut proto_proof = Self::default();
+        proto_proof.left_siblings =
+            into_proto_siblings(proof.left_siblings, *ACCUMULATOR_PLACEHOLDER_HASH);
+        proto_proof.right_siblings =
+            into_proto_siblings(proof.right_siblings, *ACCUMULATOR_PLACEHOLDER_HASH);
+        proto_proof
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+pub type TestAccumulatorRangeProof = AccumulatorRangeProof<TestOnlyHasher>;
 
 /// The complete proof used to authenticate a `SignedTransaction` object.  This structure consists
 /// of an `AccumulatorProof` from `LedgerInfo` to `TransactionInfo` the verifier needs to verify

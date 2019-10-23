@@ -34,7 +34,7 @@ pub use self::definition::{
 };
 
 #[cfg(any(test, feature = "fuzzing"))]
-pub use self::definition::TestAccumulatorProof;
+pub use self::definition::{TestAccumulatorProof, TestAccumulatorRangeProof};
 
 pub(crate) fn verify_transaction_list(
     ledger_info: &LedgerInfo,
