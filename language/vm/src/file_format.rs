@@ -184,8 +184,8 @@ pub type FunctionSignaturePool = Vec<FunctionSignature>;
 /// locals used and their types.
 pub type LocalsSignaturePool = Vec<LocalsSignature>;
 
-// TODO: "<SELF>" wouldn't pass a checker for identifiers unless special cased -- what do we want to
-// do?
+// TODO: "<SELF>" only passes the validator for identifiers because it is special cased. Whenever
+// "<SELF>" is removed, so should the special case in identifier.rs.
 lazy_static! {
     static ref SELF_MODULE_NAME: Identifier = Identifier::new("<SELF>").unwrap();
 }
