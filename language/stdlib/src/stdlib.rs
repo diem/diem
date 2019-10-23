@@ -14,8 +14,6 @@ macro_rules! make_module_definition {
 lazy_static! {
     static ref ACCOUNT_MODULE: ModuleDefinition =
         make_module_definition!("../modules/libra_account.mvir");
-    static ref BLOCK_MODULE: ModuleDefinition =
-        make_module_definition!("../modules/block.mvir");
     static ref COIN_MODULE: ModuleDefinition =
         make_module_definition!("../modules/libra_coin.mvir");
     static ref NATIVE_HASH_MODULE: ModuleDefinition =
@@ -24,8 +22,8 @@ lazy_static! {
         make_module_definition!("../modules/signature.mvir");
     static ref VALIDATOR_CONFIG_MODULE: ModuleDefinition =
         make_module_definition!("../modules/validator_config.mvir");
-    static ref VALIDATOR_SET_MODULE: ModuleDefinition =
-        make_module_definition!("../modules/validator_set.mvir");
+    static ref LIBRA_SYSTEM_MODULE: ModuleDefinition =
+        make_module_definition!("../modules/libra_system.mvir");
     static ref ADDRESS_UTIL_MODULE: ModuleDefinition =
         make_module_definition!("../modules/address_util.mvir");
     static ref U64_UTIL_MODULE: ModuleDefinition =
@@ -51,9 +49,8 @@ lazy_static! {
             &*VALIDATOR_CONFIG_MODULE,
             &*EVENT_MODULE, // depends on AddressUtil, BytearrayUtil, Hash, U64Util
             &*ACCOUNT_MODULE, // depends on LibraCoin, Event, AddressUtil, BytearrayUtil, U64Util
-            &*VALIDATOR_SET_MODULE, // depends on LibraAccount, ValidatorConfig
+            &*LIBRA_SYSTEM_MODULE, // depends on LibraAccount, ValidatorConfig
             &*TRANSACTION_FEE_DISTRIBUTION_MODULE, // depends on Block, ValidatorSet, LibraCoin, LibraAccount,
-            &*BLOCK_MODULE, // depends on ValidatorSet
         ]
     };
 }
@@ -78,8 +75,8 @@ pub fn validator_config_module() -> ModuleDefinition {
     VALIDATOR_CONFIG_MODULE.clone()
 }
 
-pub fn validator_set_module() -> ModuleDefinition {
-    VALIDATOR_SET_MODULE.clone()
+pub fn libra_system_module() -> ModuleDefinition {
+    LIBRA_SYSTEM_MODULE.clone()
 }
 
 pub fn address_util_module() -> ModuleDefinition {

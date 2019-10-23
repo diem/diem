@@ -26,8 +26,8 @@ use vm_runtime::{
     },
     data_cache::BlockDataCache,
     txn_executor::{
-        TransactionExecutor, ACCOUNT_MODULE, BLOCK_MODULE, COIN_MODULE,
-        TRANSACTION_FEE_DISTRIBUTION_MODULE, VALIDATOR_CONFIG_MODULE, VALIDATOR_SET_MODULE,
+        TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE, LIBRA_SYSTEM_MODULE,
+        TRANSACTION_FEE_DISTRIBUTION_MODULE, VALIDATOR_CONFIG_MODULE,
     },
 };
 use vm_runtime_types::value::Value;
@@ -56,6 +56,9 @@ pub fn sign_genesis_transaction(raw_txn: RawTransaction) -> Result<SignatureChec
 lazy_static! {
     static ref ADD_VALIDATOR: Identifier = Identifier::new("add_validator").unwrap();
     static ref INITIALIZE: Identifier = Identifier::new("initialize").unwrap();
+    static ref INITIALIZE_BLOCK: Identifier = Identifier::new("initialize_block_metadata").unwrap();
+    static ref INITIALIZE_VALIDATOR: Identifier =
+        Identifier::new("initialize_validator_set").unwrap();
     static ref MINT_TO_ADDRESS: Identifier = Identifier::new("mint_to_address").unwrap();
     static ref RECONFIGURE: Identifier = Identifier::new("reconfigure").unwrap();
     static ref REGISTER_CANDIDATE_VALIDATOR: Identifier =
@@ -221,10 +224,10 @@ pub fn encode_genesis_transaction_with_validator(
                 .create_account(account_config::core_code_address())
                 .unwrap();
             txn_executor
-                .execute_function(&BLOCK_MODULE, &INITIALIZE, vec![])
+                .execute_function(&COIN_MODULE, &INITIALIZE, vec![])
                 .unwrap();
             txn_executor
-                .execute_function(&COIN_MODULE, &INITIALIZE, vec![])
+                .execute_function(&LIBRA_SYSTEM_MODULE, &INITIALIZE_BLOCK, vec![])
                 .unwrap();
 
             txn_executor
@@ -268,8 +271,8 @@ pub fn encode_genesis_transaction_with_validator(
             txn_executor
                 .execute_function_with_sender_FOR_GENESIS_ONLY(
                     account_config::validator_set_address(),
-                    &VALIDATOR_SET_MODULE,
-                    &INITIALIZE,
+                    &LIBRA_SYSTEM_MODULE,
+                    &INITIALIZE_VALIDATOR,
                     vec![],
                 )
                 .unwrap();
@@ -304,7 +307,7 @@ pub fn encode_genesis_transaction_with_validator(
                 // Then, add the account to the validator set
                 txn_executor
                     .execute_function(
-                        &VALIDATOR_SET_MODULE,
+                        &LIBRA_SYSTEM_MODULE,
                         &ADD_VALIDATOR,
                         vec![Value::address(validator_address)],
                     )
@@ -317,7 +320,7 @@ pub fn encode_genesis_transaction_with_validator(
             txn_executor
                 .execute_function_with_sender_FOR_GENESIS_ONLY(
                     account_config::validator_set_address(),
-                    &VALIDATOR_SET_MODULE,
+                    &LIBRA_SYSTEM_MODULE,
                     &RECONFIGURE,
                     vec![],
                 )

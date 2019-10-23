@@ -1,5 +1,5 @@
 import 0x0.ValidatorConfig;
-import 0x0.ValidatorSet;
+import 0x0.LibraSystem;
 
 // register Alice as a validator candidate, then rotate a key + check that it worked
 main() {

@@ -20,12 +20,12 @@ use std::{
 };
 
 lazy_static! {
-    static ref VALIDATOR_SET_MODULE_NAME: Identifier = Identifier::new("ValidatorSet").unwrap();
-    static ref VALIDATOR_SET_STRUCT_NAME: Identifier = Identifier::new("T").unwrap();
+    static ref LIBRA_SYSTEM_MODULE_NAME: Identifier = Identifier::new("LibraSystem").unwrap();
+    static ref VALIDATOR_SET_STRUCT_NAME: Identifier = Identifier::new("ValidatorSet").unwrap();
 }
 
 pub fn validator_set_module_name() -> &'static IdentStr {
-    &*VALIDATOR_SET_MODULE_NAME
+    &*LIBRA_SYSTEM_MODULE_NAME
 }
 
 pub fn validator_set_struct_name() -> &'static IdentStr {

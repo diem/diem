@@ -34,9 +34,6 @@ lazy_static! {
     /// The ModuleId for the Account module
     pub static ref ACCOUNT_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("LibraAccount").unwrap()) };
-    /// The ModuleId for the Account module
-    pub static ref BLOCK_MODULE: ModuleId =
-        { ModuleId::new(account_config::core_code_address(), Identifier::new("Block").unwrap()) };
     /// The ModuleId for the LibraCoin module
     pub static ref COIN_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("LibraCoin").unwrap()) };
@@ -46,9 +43,9 @@ lazy_static! {
     /// The ModuleId for the validator config
     pub static ref VALIDATOR_CONFIG_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("ValidatorConfig").unwrap()) };
-    /// The ModuleId for the validator set
-    pub static ref VALIDATOR_SET_MODULE: ModuleId =
-        { ModuleId::new(account_config::core_code_address(), Identifier::new("ValidatorSet").unwrap()) };
+    /// The ModuleId for the libra system module
+    pub static ref LIBRA_SYSTEM_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), Identifier::new("LibraSystem").unwrap()) };
 
     /// The ModuleId for the transaction fee distribution module
     pub static ref TRANSACTION_FEE_DISTRIBUTION_MODULE: ModuleId =
