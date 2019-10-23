@@ -9,6 +9,7 @@ use crate::{
 };
 use consensus_types::{
     block::Block,
+    block_data::BlockData,
     common::{Payload, Round},
 };
 use failure::ResultExt;
@@ -95,7 +96,7 @@ impl<T: Payload> ProposalGenerator<T> {
         &self,
         round: Round,
         round_deadline: Instant,
-    ) -> failure::Result<Block<T>> {
+    ) -> failure::Result<BlockData<T>> {
         {
             let mut last_round_generated = self.last_round_generated.lock().unwrap();
             if *last_round_generated < round {
@@ -208,7 +209,7 @@ impl<T: Payload> ProposalGenerator<T> {
                 .with_context(|e| format!("Fail to retrieve txn: {}", e))?
         };
 
-        Ok(self.block_store.create_block(
+        Ok(self.block_store.create_proposal(
             hqc_block.block(),
             txns,
             round,

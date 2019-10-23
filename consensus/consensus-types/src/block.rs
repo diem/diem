@@ -192,6 +192,13 @@ where
             quorum_cert,
         );
 
+        Self::new_proposal_from_block_data(block_data, validator_signer)
+    }
+
+    pub fn new_proposal_from_block_data(
+        block_data: BlockData<T>,
+        validator_signer: &ValidatorSigner,
+    ) -> Self {
         let id = block_data.hash();
         let signature = validator_signer
             .sign_message(id)

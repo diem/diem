@@ -59,7 +59,6 @@ pub mod event_processor_fuzzing;
 /// The caller is responsible for running the event loops and driving the execution via some
 /// executors.
 pub struct EventProcessor<T> {
-    author: Author,
     block_store: Arc<BlockStore<T>>,
     pacemaker: Pacemaker,
     proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
@@ -94,13 +93,11 @@ impl<T: Payload> EventProcessor<T> {
     ) -> Self {
         counters::BLOCK_RETRIEVAL_COUNT.get();
         counters::STATE_SYNC_COUNT.get();
-        let author = block_store.signer().author();
         let last_vote_sent = last_vote.map(|v| {
             let round = v.vote_data().proposed().round();
             (v, round)
         });
         Self {
-            author,
             block_store,
             pacemaker,
             proposer_election,
@@ -147,7 +144,7 @@ impl<T: Payload> EventProcessor<T> {
         };
         if self
             .proposer_election
-            .is_valid_proposer(self.author, new_round_event.round)
+            .is_valid_proposer(self.block_store.author(), new_round_event.round)
             .is_none()
         {
             return;
@@ -176,9 +173,10 @@ impl<T: Payload> EventProcessor<T> {
                 self.pacemaker.current_round_deadline(),
             )
             .await?;
-        debug!("Propose {}", proposal);
+        let signed_proposal = self.safety_rules.sign_proposal(proposal)?;
+        debug!("Propose {}", signed_proposal);
         // return proposal
-        Ok(ProposalMsg::new(proposal, self.gen_sync_info()))
+        Ok(ProposalMsg::new(signed_proposal, self.gen_sync_info()))
     }
 
     /// Process a ProposalMsg, pre_process would bring all the dependencies and filter out invalid
@@ -243,7 +241,7 @@ impl<T: Payload> EventProcessor<T> {
         remote_round: Round,
         remote_hqc_round: Round,
     ) {
-        if self.author == peer {
+        if self.block_store.author() == peer {
             return;
         }
         // pacemaker's round is sync_info.highest_round() + 1
@@ -661,7 +659,7 @@ impl<T: Payload> EventProcessor<T> {
             let next_round = vote_msg.vote().vote_data().proposed().round() + 1;
             if self
                 .proposer_election
-                .is_valid_proposer(self.author, next_round)
+                .is_valid_proposer(self.block_store.author(), next_round)
                 .is_none()
             {
                 debug!(
