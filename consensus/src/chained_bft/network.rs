@@ -29,7 +29,6 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use tokio::runtime::TaskExecutor;
 
 /// The response sent back from EventProcessor for the BlockRetrievalRequest.
 #[derive(Debug)]
@@ -81,82 +80,29 @@ pub struct NetworkReceivers<T> {
 }
 
 /// Implements the actual networking support for all consensus messaging.
-pub struct ConsensusNetworkImpl {
+#[derive(Clone)]
+pub struct NetworkSender {
     author: Author,
     network_sender: ConsensusNetworkSender,
-    network_events: Option<ConsensusNetworkEvents>,
     // Self sender and self receivers provide a shortcut for sending the messages to itself.
     // (self sending is not supported by the networking API).
     // Note that we do not support self rpc requests as it might cause infinite recursive calls.
     self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
-    self_receiver: Option<channel::Receiver<failure::Result<Event<ConsensusMsg>>>>,
     epoch_mgr: Arc<EpochManager>,
 }
 
-impl Clone for ConsensusNetworkImpl {
-    fn clone(&self) -> Self {
-        Self {
-            author: self.author,
-            network_sender: self.network_sender.clone(),
-            network_events: None,
-            self_sender: self.self_sender.clone(),
-            self_receiver: None,
-            epoch_mgr: Arc::clone(&self.epoch_mgr),
-        }
-    }
-}
-
-impl ConsensusNetworkImpl {
+impl NetworkSender {
     pub fn new(
         author: Author,
         network_sender: ConsensusNetworkSender,
-        network_events: ConsensusNetworkEvents,
+        self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
         epoch_mgr: Arc<EpochManager>,
     ) -> Self {
-        let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
-        ConsensusNetworkImpl {
+        NetworkSender {
             author,
             network_sender,
-            network_events: Some(network_events),
             self_sender,
-            self_receiver: Some(self_receiver),
             epoch_mgr,
-        }
-    }
-
-    /// Establishes the initial connections with the peers and returns the receivers.
-    pub fn start<T: Payload>(&mut self, executor: &TaskExecutor) -> NetworkReceivers<T> {
-        let (proposal_tx, proposal_rx) = channel::new(1_024, &counters::PENDING_PROPOSAL);
-        let (vote_tx, vote_rx) = channel::new(1_024, &counters::PENDING_VOTES);
-        let (block_request_tx, block_request_rx) =
-            channel::new(1_024, &counters::PENDING_BLOCK_REQUESTS);
-        let (sync_info_tx, sync_info_rx) = channel::new(1_024, &counters::PENDING_SYNC_INFO_MSGS);
-        let network_events = self
-            .network_events
-            .take()
-            .expect("[consensus] Failed to start; network_events stream is already taken")
-            .map_err(Into::<failure::Error>::into);
-        let own_msgs = self
-            .self_receiver
-            .take()
-            .expect("[consensus]: self receiver is already taken");
-        let all_events = select(network_events, own_msgs);
-        executor.spawn(
-            NetworkTask {
-                proposal_tx,
-                vote_tx,
-                block_request_tx,
-                sync_info_tx,
-                all_events,
-                epoch_mgr: Arc::clone(&self.epoch_mgr),
-            }
-            .run(),
-        );
-        NetworkReceivers {
-            proposals: proposal_rx,
-            votes: vote_rx,
-            block_retrieval: block_request_rx,
-            sync_info_msgs: sync_info_rx,
         }
     }
 
@@ -320,20 +266,47 @@ impl ConsensusNetworkImpl {
     }
 }
 
-struct NetworkTask<T, S> {
+pub struct NetworkTask<T> {
     proposal_tx: channel::Sender<ProposalMsg<T>>,
     vote_tx: channel::Sender<VoteMsg>,
     block_request_tx: channel::Sender<BlockRetrievalRequest<T>>,
     sync_info_tx: channel::Sender<(SyncInfo, AccountAddress)>,
-    all_events: S,
+    all_events: Box<dyn Stream<Item = failure::Result<Event<ConsensusMsg>>> + Send + Unpin>,
     epoch_mgr: Arc<EpochManager>,
 }
 
-impl<T, S> NetworkTask<T, S>
-where
-    S: Stream<Item = failure::Result<Event<ConsensusMsg>>> + Unpin,
-    T: Payload,
-{
+impl<T: Payload> NetworkTask<T> {
+    /// Establishes the initial connections with the peers and returns the receivers.
+    pub fn start(
+        network_events: ConsensusNetworkEvents,
+        self_receiver: channel::Receiver<failure::Result<Event<ConsensusMsg>>>,
+        epoch_mgr: Arc<EpochManager>,
+    ) -> (NetworkTask<T>, NetworkReceivers<T>) {
+        let (proposal_tx, proposal_rx) = channel::new(1_024, &counters::PENDING_PROPOSAL);
+        let (vote_tx, vote_rx) = channel::new(1_024, &counters::PENDING_VOTES);
+        let (block_request_tx, block_request_rx) =
+            channel::new(1_024, &counters::PENDING_BLOCK_REQUESTS);
+        let (sync_info_tx, sync_info_rx) = channel::new(1_024, &counters::PENDING_SYNC_INFO_MSGS);
+        let network_events = network_events.map_err(Into::<failure::Error>::into);
+        let all_events = Box::new(select(network_events, self_receiver));
+        (
+            NetworkTask {
+                proposal_tx,
+                vote_tx,
+                block_request_tx,
+                sync_info_tx,
+                all_events,
+                epoch_mgr,
+            },
+            NetworkReceivers {
+                proposals: proposal_rx,
+                votes: vote_rx,
+                block_retrieval: block_request_rx,
+                sync_info_msgs: sync_info_rx,
+            },
+        )
+    }
+
     pub async fn run(mut self) {
         use ConsensusMsg_oneof::*;
         while let Some(Ok(message)) = self.all_events.next().await {

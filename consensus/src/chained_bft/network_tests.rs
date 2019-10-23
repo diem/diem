@@ -3,7 +3,7 @@
 
 use crate::chained_bft::{
     epoch_manager::EpochManager,
-    network::{BlockRetrievalResponse, ConsensusNetworkImpl, NetworkReceivers},
+    network::{BlockRetrievalResponse, NetworkReceivers, NetworkSender},
     test_utils::{self, consensus_runtime, placeholder_ledger_info},
 };
 use channel;
@@ -319,6 +319,7 @@ impl DropConfig {
     }
 }
 
+use crate::chained_bft::network::NetworkTask;
 #[cfg(test)]
 use libra_types::crypto_proxies::random_validator_verifier;
 use std::convert::TryFrom;
@@ -340,13 +341,12 @@ fn test_network_api() {
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
 
         playground.add_node(*peer, consensus_tx, network_reqs_rx);
-        let mut node = ConsensusNetworkImpl::new(
-            *peer,
-            network_sender,
-            network_events,
-            Arc::clone(&epoch_mgr),
-        );
-        receivers.push(node.start(&runtime.executor()));
+        let (self_sender, self_receiver) = channel::new_test(8);
+        let node = NetworkSender::new(*peer, network_sender, self_sender, Arc::clone(&epoch_mgr));
+        let (task, receiver) =
+            NetworkTask::start(network_events, self_receiver, Arc::clone(&epoch_mgr));
+        receivers.push(receiver);
+        runtime.executor().spawn(task.run());
         nodes.push(node);
     }
     let vote_msg = VoteMsg::new(
@@ -403,14 +403,18 @@ fn test_rpc() {
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
 
         playground.add_node(*peer, consensus_tx, network_reqs_rx);
-        let mut node = ConsensusNetworkImpl::new(
+        let (self_sender, self_receiver) = channel::new_test(8);
+        let node = NetworkSender::new(
             *peer,
             network_sender.clone(),
-            network_events,
+            self_sender,
             Arc::clone(&epoch_mgr),
         );
+        let (task, receiver) =
+            NetworkTask::start(network_events, self_receiver, Arc::clone(&epoch_mgr));
         senders.push(network_sender);
-        receivers.push(node.start(&runtime.executor()));
+        receivers.push(receiver);
+        runtime.executor().spawn(task.run());
         nodes.push(node);
     }
     let receiver_1 = receivers.remove(1);

@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::chained_bft::network::NetworkTask;
 use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
@@ -12,7 +13,7 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::RotatingProposer,
         },
-        network::{BlockRetrievalRequest, BlockRetrievalResponse, ConsensusNetworkImpl},
+        network::{BlockRetrievalRequest, BlockRetrievalResponse, NetworkSender},
         network_tests::NetworkPlayground,
         persistent_storage::{PersistentStorage, RecoveryData},
         test_utils::{
@@ -139,12 +140,16 @@ impl NodeSetup {
 
         playground.add_node(author, consensus_tx, network_reqs_rx);
 
-        let network = ConsensusNetworkImpl::new(
+        let (self_sender, self_receiver) = channel::new_test(8);
+        let network = NetworkSender::new(
             signer.author(),
             network_sender,
-            network_events,
+            self_sender,
             Arc::clone(&epoch_mgr),
         );
+        let (task, _receiver) =
+            NetworkTask::<TestPayload>::start(network_events, self_receiver, epoch_mgr.clone());
+        executor.spawn(task.run());
         let consensus_state = initial_data.state();
         let last_vote_sent = initial_data.last_vote();
         let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
