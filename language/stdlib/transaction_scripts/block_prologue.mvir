@@ -2,9 +2,9 @@
 // Will disappear once we run the block prologue from a BlockMetadataTransaction/make the block
 // prologue  public
 
-import 0x0.Block;
+import 0x0.LibraSystem;
 main(height: u64) {
-  Block.prologue(move(height));
+  LibraSystem.prologue(move(height));
 
   return;
 }
