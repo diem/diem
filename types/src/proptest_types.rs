@@ -270,17 +270,7 @@ fn new_raw_transaction(
             // not used, but it isn't a huge deal.
             RawTransaction::new_write_set(sender, sequence_number, write_set)
         }
-        TransactionPayload::ChannelWriteSet(channel_payload) => {
-            RawTransaction::new_channel_write_set(
-                sender,
-                sequence_number,
-                channel_payload,
-                max_gas_amount,
-                gas_unit_price,
-                Duration::from_secs(expiration_time_secs),
-            )
-        }
-        TransactionPayload::ChannelScript(channel_payload) => RawTransaction::new_channel_script(
+        TransactionPayload::Channel(channel_payload) => RawTransaction::new_channel(
             sender,
             sequence_number,
             channel_payload,

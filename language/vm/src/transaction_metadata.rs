@@ -5,9 +5,7 @@ use crate::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, 
 use crypto::ed25519::{compat, Ed25519PublicKey};
 use libra_types::{
     account_address::AccountAddress,
-    transaction::{
-        ChannelScriptPayload, ChannelWriteSetPayload, SignedTransaction, TransactionPayload,
-    },
+    transaction::{SignedTransaction, TransactionPayload},
 };
 
 pub struct ChannelMetadata {
@@ -29,22 +27,10 @@ pub struct TransactionMetadata {
 impl TransactionMetadata {
     pub fn new(txn: &SignedTransaction) -> Self {
         let channel_metadata = match txn.payload() {
-            TransactionPayload::ChannelScript(ChannelScriptPayload {
-                channel_sequence_number,
-                write_set: _,
-                receiver,
-                ..
-            })
-            | TransactionPayload::ChannelWriteSet(ChannelWriteSetPayload {
-                channel_sequence_number,
-                write_set: _,
-                receiver,
-            }) => Some(ChannelMetadata {
-                receiver: *receiver,
-                channel_sequence_number: *channel_sequence_number,
-                receiver_public_key: txn
-                    .receiver_public_key()
-                    .expect("channel txn must contains receiver_public_key"),
+            TransactionPayload::Channel(channel_payload) => Some(ChannelMetadata {
+                receiver: channel_payload.receiver(),
+                channel_sequence_number: channel_payload.channel_sequence_number(),
+                receiver_public_key: channel_payload.receiver_public_key.clone(),
             }),
             _ => None,
         };

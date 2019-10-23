@@ -26,7 +26,7 @@ use crate::{
     },
     txn_executor::TransactionExecutor,
 };
-use libra_types::transaction::{ChannelScriptPayload, ChannelWriteSetPayload};
+use libra_types::transaction::ChannelTransactionPayloadBody;
 
 pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8]) -> bool {
     match publishing_option {
@@ -169,45 +169,53 @@ where
 
                 None
             }
-            TransactionPayload::ChannelWriteSet(channel_payload) => {
-                //channel write_set transaction only accept in onchain vm.
-                if vm_mode != VMMode::Onchain {
-                    warn!("[VM] Attempt to process channel write set in Offchain VM");
-                    return Err(VMStatus::new(StatusCode::REJECTED_WRITE_SET));
-                }
-                Self::check_channel_write_set(
-                    channel_payload.write_set(),
-                    txn.sender(),
-                    channel_payload.receiver,
-                )?;
-                //TODO(jole) do more validate
-                None
-            }
-            TransactionPayload::ChannelScript(channel_payload) => {
-                Some(ValidatedTransaction::validate(
-                    &txn,
-                    module_cache,
-                    data_cache,
-                    allocator,
-                    mode,
-                    vm_mode,
-                    || {
-                        // Verify against whitelist if we are locked. Otherwise allow.
-                        if !is_allowed_script(&publishing_option, channel_payload.script().code()) {
-                            warn!(
-                                "[VM] Custom scripts not allowed: {:?}",
-                                channel_payload.script().code()
-                            );
-                            return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT));
+            TransactionPayload::Channel(channel_payload) => {
+                match &channel_payload.body {
+                    ChannelTransactionPayloadBody::WriteSet(write_set_body) => {
+                        //channel write_set transaction only accept in onchain vm.
+                        //TODO channel write_set transaction should execute prologue and epilogue
+                        if vm_mode != VMMode::Onchain {
+                            warn!("[VM] Attempt to process channel write set in Offchain VM");
+                            return Err(VMStatus::new(StatusCode::REJECTED_WRITE_SET));
                         }
                         Self::check_channel_write_set(
-                            channel_payload.write_set(),
+                            write_set_body.write_set(),
                             txn.sender(),
-                            channel_payload.receiver,
+                            write_set_body.receiver,
                         )?;
-                        Ok(())
-                    },
-                )?)
+                        //TODO(jole) do more validate
+                        None
+                    }
+                    ChannelTransactionPayloadBody::Script(script_body) => {
+                        Some(ValidatedTransaction::validate(
+                            &txn,
+                            module_cache,
+                            data_cache,
+                            allocator,
+                            mode,
+                            vm_mode,
+                            || {
+                                // Verify against whitelist if we are locked. Otherwise allow.
+                                if !is_allowed_script(
+                                    &publishing_option,
+                                    script_body.script().code(),
+                                ) {
+                                    warn!(
+                                        "[VM] Custom scripts not allowed: {:?}",
+                                        script_body.script().code()
+                                    );
+                                    return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT));
+                                }
+                                Self::check_channel_write_set(
+                                    script_body.write_set(),
+                                    txn.sender(),
+                                    script_body.receiver,
+                                )?;
+                                Ok(())
+                            },
+                        )?)
+                    }
+                }
             }
         };
 
@@ -371,11 +379,10 @@ where
         // Check channel write_set asset balance, offchain channel transaction should keep asset
         // balance, then cache the write_set to transaction cache for Move script to use.
         let pre_cache_write_set = match txn.payload() {
-            TransactionPayload::ChannelWriteSet(ChannelWriteSetPayload { write_set, .. })
-            | TransactionPayload::ChannelScript(ChannelScriptPayload { write_set, .. }) => {
+            TransactionPayload::Channel(channel_payload) => {
                 let balance_checker = BalanceChecker::new(data_cache, &module_cache);
-                balance_checker.check_balance(write_set)?;
-                Some(write_set.clone())
+                balance_checker.check_balance(channel_payload.write_set())?;
+                Some(channel_payload.write_set().clone())
             }
             _ => None,
         };

@@ -52,7 +52,10 @@ pub use module::Module;
 pub use program::Program;
 pub use script::{Script, SCRIPT_HASH_LENGTH};
 
-pub use channel_transaction_payload::{ChannelScriptPayload, ChannelWriteSetPayload};
+pub use channel_transaction_payload::{
+    ChannelScriptBody, ChannelTransactionPayload, ChannelTransactionPayloadBody,
+    ChannelWriteSetBody,
+};
 use std::ops::Deref;
 pub use transaction_argument::{parse_as_transaction_argument, TransactionArgument};
 
@@ -166,10 +169,10 @@ impl RawTransaction {
         }
     }
 
-    pub fn new_channel_write_set(
+    pub fn new_channel(
         sender: AccountAddress,
         sequence_number: u64,
-        channel_payload: ChannelWriteSetPayload,
+        channel_payload: ChannelTransactionPayload,
         max_gas_amount: u64,
         gas_unit_price: u64,
         expiration_time: Duration,
@@ -177,25 +180,7 @@ impl RawTransaction {
         RawTransaction {
             sender,
             sequence_number,
-            payload: TransactionPayload::ChannelWriteSet(channel_payload),
-            max_gas_amount,
-            gas_unit_price,
-            expiration_time,
-        }
-    }
-
-    pub fn new_channel_script(
-        sender: AccountAddress,
-        sequence_number: u64,
-        channel_payload: ChannelScriptPayload,
-        max_gas_amount: u64,
-        gas_unit_price: u64,
-        expiration_time: Duration,
-    ) -> Self {
-        RawTransaction {
-            sender,
-            sequence_number,
-            payload: TransactionPayload::ChannelScript(channel_payload),
+            payload: TransactionPayload::Channel(channel_payload),
             max_gas_amount,
             gas_unit_price,
             expiration_time,
@@ -254,13 +239,7 @@ impl RawTransaction {
                 (get_transaction_name(script.code()), script.args())
             }
             TransactionPayload::Module(_) => ("module publishing".to_string(), &empty_vec[..]),
-            TransactionPayload::ChannelWriteSet(_) => {
-                ("channel_write_set".to_string(), &empty_vec[..])
-            }
-            TransactionPayload::ChannelScript(channel_script) => (
-                get_transaction_name(channel_script.script.code()),
-                channel_script.script.args(),
-            ),
+            TransactionPayload::Channel(_) => ("channel".to_string(), &empty_vec[..]),
         };
         let mut f_args: String = "".to_string();
         for arg in args {
@@ -349,22 +328,34 @@ pub enum TransactionPayload {
     Module(Module),
     /// A transaction that executes code.
     Script(Script),
-    ChannelWriteSet(ChannelWriteSetPayload),
-    /// Channel script transaction payload
-    ChannelScript(ChannelScriptPayload),
+    /// Channel transaction
+    Channel(ChannelTransactionPayload),
 }
 
 impl TransactionPayload {
     pub fn is_channel_write_set(&self) -> bool {
         match self {
-            TransactionPayload::ChannelWriteSet(_) => true,
+            TransactionPayload::Channel(payload) => match payload.body {
+                ChannelTransactionPayloadBody::WriteSet(_) => true,
+                _ => false,
+            },
             _ => false,
         }
     }
 
     pub fn is_channel_script(&self) -> bool {
         match self {
-            TransactionPayload::ChannelScript(_) => true,
+            TransactionPayload::Channel(payload) => match payload.body {
+                ChannelTransactionPayloadBody::Script(_) => true,
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+
+    pub fn is_channel(&self) -> bool {
+        match self {
+            TransactionPayload::Channel(_) => true,
             _ => false,
         }
     }
@@ -389,13 +380,9 @@ impl CanonicalSerialize for TransactionPayload {
                 serializer.encode_u32(TransactionPayloadType::Module as u32)?;
                 serializer.encode_struct(module)?;
             }
-            TransactionPayload::ChannelWriteSet(channel_write_set) => {
-                serializer.encode_u32(TransactionPayloadType::ChannelWriteSet as u32)?;
-                serializer.encode_struct(channel_write_set)?;
-            }
-            TransactionPayload::ChannelScript(channel_script) => {
-                serializer.encode_u32(TransactionPayloadType::ChannelScript as u32)?;
-                serializer.encode_struct(channel_script)?;
+            TransactionPayload::Channel(channel_payload) => {
+                serializer.encode_u32(TransactionPayloadType::Channel as u32)?;
+                serializer.encode_struct(channel_payload)?;
             }
         };
         Ok(())
@@ -419,12 +406,9 @@ impl CanonicalDeserialize for TransactionPayload {
             Some(TransactionPayloadType::Module) => {
                 Ok(TransactionPayload::Module(deserializer.decode_struct()?))
             }
-            Some(TransactionPayloadType::ChannelWriteSet) => Ok(
-                TransactionPayload::ChannelWriteSet(deserializer.decode_struct()?),
-            ),
-            Some(TransactionPayloadType::ChannelScript) => Ok(TransactionPayload::ChannelScript(
-                deserializer.decode_struct()?,
-            )),
+            Some(TransactionPayloadType::Channel) => {
+                Ok(TransactionPayload::Channel(deserializer.decode_struct()?))
+            }
             None => Err(format_err!(
                 "ParseError: Unable to decode TransactionPayloadType, found {}",
                 decoded_payload_type
@@ -439,8 +423,7 @@ enum TransactionPayloadType {
     WriteSet = 1,
     Script = 2,
     Module = 3,
-    ChannelWriteSet = 4,
-    ChannelScript = 5,
+    Channel = 4,
 }
 
 impl TransactionPayloadType {
@@ -450,8 +433,7 @@ impl TransactionPayloadType {
             1 => Some(TransactionPayloadType::WriteSet),
             2 => Some(TransactionPayloadType::Script),
             3 => Some(TransactionPayloadType::Module),
-            4 => Some(TransactionPayloadType::ChannelWriteSet),
-            5 => Some(TransactionPayloadType::ChannelScript),
+            4 => Some(TransactionPayloadType::Channel),
             _ => None,
         }
     }
@@ -481,11 +463,6 @@ pub struct SignedTransaction {
 
     /// The transaction length is used by the VM to limit the size of transactions
     transaction_length: usize,
-
-    /// Only channel transaction need receiver public_key and signature.
-    /// receiver only need to sign the ChannelTransactionPayload, not whole RawTransaction.
-    receiver_public_key: Option<Ed25519PublicKey>,
-    receiver_signature: Option<Ed25519Signature>,
 }
 
 /// A transaction for which the signature has been verified. Created by
@@ -543,29 +520,6 @@ impl SignedTransaction {
             public_key,
             signature,
             transaction_length,
-            receiver_public_key: None,
-            receiver_signature: None,
-        }
-    }
-
-    pub fn new_with_receiver(
-        raw_txn: RawTransaction,
-        public_key: Ed25519PublicKey,
-        signature: Ed25519Signature,
-        receiver_public_key: Option<Ed25519PublicKey>,
-        receiver_signature: Option<Ed25519Signature>,
-    ) -> SignedTransaction {
-        let transaction_length = SimpleSerializer::<Vec<u8>>::serialize(&raw_txn)
-            .expect("Unable to serialize RawTransaction")
-            .len();
-
-        SignedTransaction {
-            raw_txn: raw_txn.clone(),
-            public_key,
-            signature,
-            transaction_length,
-            receiver_public_key,
-            receiver_signature,
         }
     }
 
@@ -615,44 +569,27 @@ impl SignedTransaction {
 
     pub fn receiver(&self) -> Option<AccountAddress> {
         match &self.raw_txn.payload {
-            TransactionPayload::ChannelScript(channel_payload) => Some(channel_payload.receiver),
-            TransactionPayload::ChannelWriteSet(channel_payload) => Some(channel_payload.receiver),
+            TransactionPayload::Channel(channel_payload) => Some(channel_payload.receiver()),
             _ => None,
         }
     }
 
     pub fn receiver_public_key(&self) -> Option<Ed25519PublicKey> {
-        self.receiver_public_key.clone()
+        match &self.raw_txn.payload {
+            TransactionPayload::Channel(channel_payload) => {
+                Some(channel_payload.receiver_public_key.clone())
+            }
+            _ => None,
+        }
     }
 
     pub fn receiver_signature(&self) -> Option<Ed25519Signature> {
-        self.receiver_signature.clone()
-    }
-
-    pub fn set_receiver_public_key_and_signature(
-        &mut self,
-        public_key: Ed25519PublicKey,
-        signature: Ed25519Signature,
-    ) {
-        self.receiver_public_key = Some(public_key);
-        self.receiver_signature = Some(signature);
-    }
-
-    //TODO refactor
-    pub fn sign_by_receiver(
-        &mut self,
-        private_key: &Ed25519PrivateKey,
-        public_key: Ed25519PublicKey,
-    ) -> Result<()> {
-        let hash = match self.payload() {
-            TransactionPayload::ChannelWriteSet(payload) => payload.hash(),
-            TransactionPayload::ChannelScript(payload) => payload.hash(),
-            _ => bail!("the txn is not a channel txn."),
-        };
-        let signature = private_key.sign_message(&hash);
-        self.receiver_public_key = Some(public_key);
-        self.receiver_signature = Some(signature);
-        Ok(())
+        match &self.raw_txn.payload {
+            TransactionPayload::Channel(channel_payload) => {
+                Some(channel_payload.receiver_signature.clone())
+            }
+            _ => None,
+        }
     }
 
     /// Checks that the signature of given transaction. Returns `Ok(SignatureCheckedTransaction)` if
@@ -822,9 +759,7 @@ impl CanonicalSerialize for SignedTransaction {
         serializer
             .encode_struct(&self.raw_txn)?
             .encode_struct(&self.public_key)?
-            .encode_struct(&self.signature)?
-            .encode_optional(&self.receiver_public_key)?
-            .encode_optional(&self.receiver_signature)?;
+            .encode_struct(&self.signature)?;
         Ok(())
     }
 }
@@ -838,16 +773,7 @@ impl CanonicalDeserialize for SignedTransaction {
         let public_key: Ed25519PublicKey = deserializer.decode_struct()?;
         let signature: Ed25519Signature = deserializer.decode_struct()?;
 
-        let receiver_public_key = deserializer.decode_optional()?;
-        let receiver_signature = deserializer.decode_optional()?;
-
-        Ok(SignedTransaction::new_with_receiver(
-            raw_txn,
-            public_key,
-            signature,
-            receiver_public_key,
-            receiver_signature,
-        ))
+        Ok(SignedTransaction::new(raw_txn, public_key, signature))
     }
 }
 

@@ -8,6 +8,7 @@ use crate::{
     txn_executor::TransactionExecutor,
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
+use libra_types::transaction::ChannelTransactionPayloadBody;
 use libra_types::{
     account_address::AccountAddress,
     transaction::{
@@ -87,21 +88,26 @@ where
                     verified_txn: VerTxn::Script(main),
                 })
             }
-            TransactionPayload::ChannelWriteSet(_chanel_write_set) => {
-                //TODO(jole) do more verify.
-                None
-            }
-            TransactionPayload::ChannelScript(channel_payload) => {
-                //TODO(jole) do more verify.
-                let txn_state = txn_state
-                    .expect("script-based transactions should always have associated state");
+            TransactionPayload::Channel(channel_payload) => {
+                match &channel_payload.body {
+                    ChannelTransactionPayloadBody::WriteSet(_) => {
+                        //TODO(jole) do more verify.
+                        None
+                    }
+                    ChannelTransactionPayloadBody::Script(script_body) => {
+                        //TODO(jole) do more verify.
+                        let txn_state = txn_state.expect(
+                            "script-based transactions should always have associated state",
+                        );
 
-                let main = Self::verify_script(&channel_payload.script, script_cache)?;
+                        let main = Self::verify_script(&script_body.script, script_cache)?;
 
-                Some(VerifiedTransactionState {
-                    txn_executor: txn_state.txn_executor,
-                    verified_txn: VerTxn::Script(main),
-                })
+                        Some(VerifiedTransactionState {
+                            txn_executor: txn_state.txn_executor,
+                            verified_txn: VerTxn::Script(main),
+                        })
+                    }
+                }
             }
         };
 

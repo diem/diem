@@ -811,8 +811,7 @@ where
                         TransactionPayload::Program(_)
                         | TransactionPayload::Module(_)
                         | TransactionPayload::Script(_)
-                        | TransactionPayload::ChannelWriteSet(_)
-                        | TransactionPayload::ChannelScript(_) => {
+                        | TransactionPayload::Channel(_) => {
                             bail!("Write set should be a subset of read set.")
                         }
                         TransactionPayload::WriteSet(_) => (),

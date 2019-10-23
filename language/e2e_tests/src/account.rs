@@ -168,26 +168,14 @@ impl Account {
                 gas_unit_price,
                 Duration::from_secs(u64::max_value()),
             ),
-            TransactionPayload::ChannelWriteSet(channel_payload) => {
-                RawTransaction::new_channel_write_set(
-                    *self.address(),
-                    sequence_number,
-                    channel_payload,
-                    max_gas_amount,
-                    gas_unit_price,
-                    Duration::from_secs(u64::max_value()),
-                )
-            }
-            TransactionPayload::ChannelScript(channel_payload) => {
-                RawTransaction::new_channel_script(
-                    *self.address(),
-                    sequence_number,
-                    channel_payload,
-                    max_gas_amount,
-                    gas_unit_price,
-                    Duration::from_secs(u64::max_value()),
-                )
-            }
+            TransactionPayload::Channel(channel_payload) => RawTransaction::new_channel(
+                *self.address(),
+                sequence_number,
+                channel_payload,
+                max_gas_amount,
+                gas_unit_price,
+                Duration::from_secs(u64::max_value()),
+            ),
         };
 
         raw_txn

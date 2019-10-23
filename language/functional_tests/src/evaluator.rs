@@ -19,7 +19,7 @@ use libra_types::access_path::AccessPath;
 use libra_types::channel_account::{channel_account_struct_tag, ChannelAccountResource};
 use libra_types::{
     transaction::{
-        ChannelScriptPayload, Module as TransactionModule, RawTransaction,
+        ChannelScriptBody, Module as TransactionModule, RawTransaction,
         Script as TransactionScript, SignedTransaction, TransactionOutput, TransactionStatus,
     },
     vm_error::StatusCode,
@@ -203,13 +203,14 @@ fn make_script_transaction(
     let txn = match receiver {
         //TODO support channel sequence number
         Some((receiver, channel_sequence_number)) => {
-            let payload = ChannelScriptPayload::new(
+            let body = ChannelScriptBody::new(
                 channel_sequence_number,
                 WriteSet::default(),
                 *receiver.address(),
                 script,
             );
-            let mut txn = RawTransaction::new_channel_script(
+            let payload = body.sign(&receiver.privkey, receiver.pubkey.clone());
+            let txn = RawTransaction::new_channel(
                 *account.address(),
                 account_resource.sequence_number(),
                 payload,
@@ -222,7 +223,6 @@ fn make_script_transaction(
             )
             .sign(&account.privkey, account.pubkey.clone())?
             .into_inner();
-            txn.sign_by_receiver(&receiver.privkey, receiver.pubkey.clone())?;
             txn
         }
         None => RawTransaction::new_script(

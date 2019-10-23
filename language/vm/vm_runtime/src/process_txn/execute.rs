@@ -2,6 +2,7 @@ use crate::{
     code_cache::module_cache::ModuleCache,
     process_txn::verify::{VerTxn, VerifiedTransaction, VerifiedTransactionState},
 };
+use libra_types::transaction::ChannelTransactionPayloadBody;
 use libra_types::{
     transaction::{TransactionOutput, TransactionPayload, TransactionStatus},
     vm_error::{StatusCode, StatusType, VMStatus},
@@ -203,46 +204,51 @@ where
                 },
             }
         }
-        TransactionPayload::ChannelWriteSet(channel_payload) => TransactionOutput::new(
-            channel_payload.write_set,
-            vec![],
-            0,
-            VMStatus::new(StatusCode::EXECUTED).into(),
-        ),
-        TransactionPayload::ChannelScript(channel_payload) => {
-            let VerifiedTransactionState {
-                mut txn_executor,
-                verified_txn,
-            } = txn_state.expect("script-based transactions should always have associated state");
-            let main = match verified_txn {
-                VerTxn::Script(func) => func,
-                _ => unreachable!("TransactionPayload::Script expects VerTxn::Program"),
-            };
+        TransactionPayload::Channel(channel_payload) => {
+            match channel_payload.body {
+                ChannelTransactionPayloadBody::WriteSet(write_set_body) => TransactionOutput::new(
+                    write_set_body.write_set,
+                    vec![],
+                    0,
+                    VMStatus::new(StatusCode::EXECUTED).into(),
+                ),
+                ChannelTransactionPayloadBody::Script(script_body) => {
+                    let VerifiedTransactionState {
+                        mut txn_executor,
+                        verified_txn,
+                    } = txn_state
+                        .expect("script-based transactions should always have associated state");
+                    let main = match verified_txn {
+                        VerTxn::Script(func) => func,
+                        _ => unreachable!("TransactionPayload::Script expects VerTxn::Program"),
+                    };
 
-            let (_, args) = channel_payload.script.into_inner();
-            txn_executor.setup_main_args(args);
-            let script_output = match txn_executor.interpeter_entrypoint(main) {
-                Ok(_) => txn_executor.transaction_cleanup(vec![]),
-                Err(err) => match err.status_type() {
-                    StatusType::InvariantViolation => {
-                        error!("[VM] VM error running script: {:?}", err);
-                        ExecutedTransaction::discard_error_output(err)
-                    }
-                    _ => {
-                        warn!("[VM] User error running script: {:?}", err);
-                        txn_executor.failed_transaction_cleanup(Err(err))
-                    }
-                },
-            };
-            let merged_write_set =
-                WriteSet::merge(&channel_payload.write_set, script_output.write_set());
-            //TODO(jole) eliminate clone
-            TransactionOutput::new(
-                merged_write_set,
-                script_output.events().to_vec(),
-                script_output.gas_used(),
-                script_output.status().clone(),
-            )
+                    let (_, args) = script_body.script.into_inner();
+                    txn_executor.setup_main_args(args);
+                    let script_output = match txn_executor.interpeter_entrypoint(main) {
+                        Ok(_) => txn_executor.transaction_cleanup(vec![]),
+                        Err(err) => match err.status_type() {
+                            StatusType::InvariantViolation => {
+                                error!("[VM] VM error running script: {:?}", err);
+                                ExecutedTransaction::discard_error_output(err)
+                            }
+                            _ => {
+                                warn!("[VM] User error running script: {:?}", err);
+                                txn_executor.failed_transaction_cleanup(Err(err))
+                            }
+                        },
+                    };
+                    let merged_write_set =
+                        WriteSet::merge(&script_body.write_set, script_output.write_set());
+                    //TODO(jole) eliminate clone
+                    TransactionOutput::new(
+                        merged_write_set,
+                        script_output.events().to_vec(),
+                        script_output.gas_used(),
+                        script_output.status().clone(),
+                    )
+                }
+            }
         }
     }
 }

@@ -5,7 +5,7 @@ use crate::{
     account_address::AccountAddress,
     proto::types::SignedTransaction as ProtoSignedTransaction,
     transaction::{
-        ChannelScriptPayload, ChannelWriteSetPayload, RawTransaction, SignedTransaction,
+        ChannelScriptBody, ChannelWriteSetBody, RawTransaction, SignedTransaction,
         TransactionPayload,
     },
 };
@@ -74,16 +74,13 @@ pub trait TransactionSigner {
 }
 
 pub trait ChannelPayloadSigner {
-    fn sign_script_payload(
-        &self,
-        channel_payload: &ChannelScriptPayload,
-    ) -> Result<Ed25519Signature> {
+    fn sign_script_payload(&self, channel_payload: &ChannelScriptBody) -> Result<Ed25519Signature> {
         self.sign_bytes(SimpleSerializer::serialize(channel_payload)?)
     }
 
     fn sign_write_set_payload(
         &self,
-        channel_payload: &ChannelWriteSetPayload,
+        channel_payload: &ChannelWriteSetBody,
     ) -> Result<Ed25519Signature> {
         self.sign_bytes(SimpleSerializer::serialize(channel_payload)?)
     }
