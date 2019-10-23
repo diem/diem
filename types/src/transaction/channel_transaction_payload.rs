@@ -19,6 +19,21 @@ pub enum ChannelTransactionPayloadBody {
     Script(ChannelScriptBody),
 }
 
+impl ChannelTransactionPayloadBody {
+    pub fn sign(
+        self,
+        private_key: &Ed25519PrivateKey,
+        public_key: Ed25519PublicKey,
+    ) -> ChannelTransactionPayload {
+        let hash = match &self {
+            ChannelTransactionPayloadBody::WriteSet(write_set_body) => write_set_body.hash(),
+            ChannelTransactionPayloadBody::Script(script_body) => script_body.hash(),
+        };
+        let signature = private_key.sign_message(&hash);
+        ChannelTransactionPayload::new(self, public_key, signature)
+    }
+}
+
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 enum ChannelTransactionPayloadBodyType {
     WriteSet = 0,

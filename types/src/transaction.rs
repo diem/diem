@@ -271,6 +271,22 @@ impl RawTransaction {
     pub fn sender(&self) -> AccountAddress {
         self.sender
     }
+
+    pub fn sequence_number(&self) -> u64 {
+        self.sequence_number
+    }
+
+    pub fn max_gas_amount(&self) -> u64 {
+        self.max_gas_amount
+    }
+
+    pub fn gas_unit_price(&self) -> u64 {
+        self.gas_unit_price
+    }
+
+    pub fn expiration_time(&self) -> Duration {
+        self.expiration_time
+    }
 }
 
 impl CryptoHash for RawTransaction {
