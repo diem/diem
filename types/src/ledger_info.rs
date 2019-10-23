@@ -8,8 +8,10 @@ use crate::{
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
 use failure::prelude::*;
+#[cfg(any(test, feature = "testing"))]
+use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 use libra_crypto::{
-    hash::{CryptoHash, CryptoHasher, LedgerInfoHasher, ACCUMULATOR_PLACEHOLDER_HASH},
+    hash::{CryptoHash, CryptoHasher, LedgerInfoHasher},
     HashValue, *,
 };
 #[cfg(any(test, feature = "testing"))]
@@ -153,6 +155,7 @@ impl LedgerInfo {
     }
 
     /// To bootstrap the system until we execute and commit the genesis txn before start.
+    #[cfg(any(test, feature = "testing"))]
     pub fn genesis() -> Self {
         Self::new(
             0,
