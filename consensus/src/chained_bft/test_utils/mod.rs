@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::block_storage::{BlockReader, BlockStore};
-use consensus_types::{quorum_cert::QuorumCert, sync_info::SyncInfo};
+use consensus_types::{
+    block::{block_test_utils::placeholder_certificate_for_block, Block},
+    common::{Author, Round},
+    executed_block::ExecutedBlock,
+    quorum_cert::QuorumCert,
+    sync_info::SyncInfo,
+};
 use futures::executor::block_on;
 use libra_crypto::HashValue;
 use libra_logger::{set_simple_logger, set_simple_logger_prefix};
@@ -15,11 +21,6 @@ mod mock_state_computer;
 mod mock_storage;
 mod mock_txn_manager;
 
-use consensus_types::{
-    block::{block_test_utils::placeholder_certificate_for_block, Block},
-    common::Round,
-    executed_block::ExecutedBlock,
-};
 pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
 pub use mock_storage::{EmptyStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;
@@ -30,7 +31,8 @@ pub fn build_simple_tree() -> (
     Vec<Arc<ExecutedBlock<TestPayload>>>,
     Arc<BlockStore<TestPayload>>,
 ) {
-    let block_store = build_empty_tree();
+    let mut inserter = TreeInserter::default();
+    let block_store = inserter.block_store();
     let genesis = block_store.root();
     let genesis_block_id = genesis.id();
     let genesis_block = block_store
@@ -43,7 +45,6 @@ pub fn build_simple_tree() -> (
     //       ╭--> A1--> A2--> A3
     // Genesis--> B1--> B2
     //             ╰--> C1
-    let mut inserter = TreeInserter::new(block_store.clone());
     let a1 =
         inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis_block, 1);
     let a2 = inserter.insert_block(&a1, 2, None);
@@ -60,8 +61,8 @@ pub fn build_simple_tree() -> (
 }
 
 pub fn build_chain() -> Vec<Arc<ExecutedBlock<TestPayload>>> {
-    let block_store = build_empty_tree();
-    let mut inserter = TreeInserter::new(block_store.clone());
+    let mut inserter = TreeInserter::default();
+    let block_store = inserter.block_store();
     let genesis = block_store.root();
     let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
     let a2 = inserter.insert_block(&a1, 2, None);
@@ -73,19 +74,12 @@ pub fn build_chain() -> Vec<Arc<ExecutedBlock<TestPayload>>> {
     vec![genesis, a1, a2, a3, a4, a5, a6, a7]
 }
 
-pub fn build_empty_tree() -> Arc<BlockStore<TestPayload>> {
-    let signer = ValidatorSigner::random(None);
-    build_empty_tree_with_custom_signing(signer)
-}
-
-pub fn build_empty_tree_with_custom_signing(
-    my_signer: ValidatorSigner,
-) -> Arc<BlockStore<TestPayload>> {
+pub fn build_empty_tree(author: Author) -> Arc<BlockStore<TestPayload>> {
     let (storage, initial_data) = EmptyStorage::start_for_testing();
     Arc::new(block_on(BlockStore::new(
         storage,
         initial_data,
-        my_signer,
+        author,
         Arc::new(EmptyStateComputer),
         true,
         10, // max pruned blocks in mem
@@ -93,16 +87,42 @@ pub fn build_empty_tree_with_custom_signing(
 }
 
 pub struct TreeInserter {
+    signer: ValidatorSigner,
     payload_val: usize,
     block_store: Arc<BlockStore<TestPayload>>,
 }
 
 impl TreeInserter {
-    pub fn new(block_store: Arc<BlockStore<TestPayload>>) -> Self {
+    pub fn default() -> Self {
+        Self::new(ValidatorSigner::random(None))
+    }
+
+    pub fn new(signer: ValidatorSigner) -> Self {
+        let block_store = build_empty_tree(signer.author());
         Self {
+            signer,
             payload_val: 0,
             block_store,
         }
+    }
+
+    pub fn new_with_store(
+        signer: ValidatorSigner,
+        block_store: Arc<BlockStore<TestPayload>>,
+    ) -> Self {
+        Self {
+            signer,
+            payload_val: 0,
+            block_store,
+        }
+    }
+
+    pub fn signer(&self) -> &ValidatorSigner {
+        &self.signer
+    }
+
+    pub fn block_store(&self) -> Arc<BlockStore<TestPayload>> {
+        Arc::clone(&self.block_store)
     }
 
     /// This function is generating a placeholder QC for a block's parent that is signed by a single
@@ -144,7 +164,7 @@ impl TreeInserter {
         consensus_block_id: Option<HashValue>,
     ) -> QuorumCert {
         placeholder_certificate_for_block(
-            vec![self.block_store.signer()],
+            vec![&self.signer],
             block.id(),
             block.round(),
             block.quorum_cert().certified_block().id(),
@@ -175,7 +195,7 @@ impl TreeInserter {
             round,
             parent.timestamp_usecs() + 1,
             parent_qc,
-            self.block_store.signer(),
+            &self.signer,
         )
     }
 

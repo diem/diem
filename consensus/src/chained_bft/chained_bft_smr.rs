@@ -212,7 +212,7 @@ impl<T: Payload> ChainedBftSMR<T> {
         let block_store = Arc::new(block_on(BlockStore::new(
             Arc::clone(&self.storage),
             initial_data,
-            signer,
+            signer.author(),
             Arc::clone(&state_computer),
             true,
             self.config.max_pruned_blocks_in_mem,

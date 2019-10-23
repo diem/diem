@@ -14,7 +14,10 @@ use crate::{
     },
     util::mock_time_service::SimulatedTimeService,
 };
-use consensus_types::proposal_msg::{ProposalMsg, ProposalUncheckedSignatures};
+use consensus_types::{
+    common::Author,
+    proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
+};
 use futures::{channel::mpsc, executor::block_on};
 use lazy_static::lazy_static;
 use libra_prost_ext::MessageExt;
@@ -58,7 +61,7 @@ lazy_static! {
 
 // helpers
 fn build_empty_store(
-    signer: ValidatorSigner,
+    author: Author,
     storage: Arc<dyn PersistentStorage<TestPayload>>,
     initial_data: RecoveryData<TestPayload>,
 ) -> Arc<BlockStore<TestPayload>> {
@@ -67,7 +70,7 @@ fn build_empty_store(
     Arc::new(block_on(BlockStore::new(
         storage,
         initial_data,
-        signer,
+        author,
         Arc::new(EmptyStateComputer),
         true,
         10, // max pruned blocks in mem
@@ -114,7 +117,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     );
 
     // TODO: mock
-    let block_store = build_empty_store(signer.clone(), storage.clone(), initial_data);
+    let block_store = build_empty_store(signer.author(), storage.clone(), initial_data);
 
     // TODO: remove
     let time_service = Arc::new(SimulatedTimeService::new());

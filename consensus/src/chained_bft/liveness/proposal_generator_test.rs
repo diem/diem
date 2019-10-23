@@ -9,8 +9,9 @@ use crate::{
     },
     util::mock_time_service::SimulatedTimeService,
 };
-use consensus_types::quorum_cert::QuorumCert;
+use consensus_types::{block::Block, quorum_cert::QuorumCert};
 use futures::executor::block_on;
+use libra_types::crypto_proxies::ValidatorSigner;
 use std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -22,7 +23,8 @@ fn minute_from_now() -> Instant {
 
 #[test]
 fn test_proposal_generation_empty_tree() {
-    let block_store = build_empty_tree();
+    let signer = ValidatorSigner::random(None);
+    let block_store = build_empty_tree(signer.author());
     let proposal_generator = ProposalGenerator::new(
         block_store.clone(),
         Arc::new(MockTransactionManager::new()),
@@ -33,7 +35,9 @@ fn test_proposal_generation_empty_tree() {
     let genesis = block_store.root();
 
     // Generate proposals for an empty tree.
-    let proposal = block_on(proposal_generator.generate_proposal(1, minute_from_now())).unwrap();
+    let proposal_data =
+        block_on(proposal_generator.generate_proposal(1, minute_from_now())).unwrap();
+    let proposal = Block::new_proposal_from_block_data(proposal_data, &signer);
     assert_eq!(proposal.parent_id(), genesis.id());
     assert_eq!(proposal.round(), 1);
     assert_eq!(proposal.quorum_cert().certified_block().id(), genesis.id());
@@ -45,8 +49,8 @@ fn test_proposal_generation_empty_tree() {
 
 #[test]
 fn test_proposal_generation_parent() {
-    let block_store = build_empty_tree();
-    let mut inserter = TreeInserter::new(block_store.clone());
+    let mut inserter = TreeInserter::default();
+    let block_store = inserter.block_store();
     let proposal_generator = ProposalGenerator::new(
         block_store.clone(),
         Arc::new(MockTransactionManager::new()),
@@ -86,8 +90,8 @@ fn test_proposal_generation_parent() {
 
 #[test]
 fn test_old_proposal_generation() {
-    let block_store = build_empty_tree();
-    let mut inserter = TreeInserter::new(block_store.clone());
+    let mut inserter = TreeInserter::default();
+    let block_store = inserter.block_store();
     let proposal_generator = ProposalGenerator::new(
         block_store.clone(),
         Arc::new(MockTransactionManager::new()),
@@ -105,8 +109,8 @@ fn test_old_proposal_generation() {
 
 #[test]
 fn test_empty_proposal_after_reconfiguration() {
-    let block_store = build_empty_tree();
-    let mut inserter = TreeInserter::new(block_store.clone());
+    let mut inserter = TreeInserter::default();
+    let block_store = inserter.block_store();
     let proposal_generator = ProposalGenerator::new(
         block_store.clone(),
         Arc::new(MockTransactionManager::new()),

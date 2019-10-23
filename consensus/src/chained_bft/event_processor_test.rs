@@ -70,7 +70,7 @@ pub struct NodeSetup {
 
 impl NodeSetup {
     fn build_empty_store(
-        signer: ValidatorSigner,
+        author: Author,
         storage: Arc<dyn PersistentStorage<TestPayload>>,
         state_computer: Arc<dyn StateComputer<Payload = TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
@@ -78,7 +78,7 @@ impl NodeSetup {
         Arc::new(block_on(BlockStore::new(
             storage,
             initial_data,
-            signer,
+            author,
             state_computer,
             true,
             10, // max pruned blocks in mem
@@ -154,7 +154,7 @@ impl NodeSetup {
         ));
 
         let block_store = Self::build_empty_store(
-            signer.clone(),
+            signer.author(),
             storage.clone(),
             state_computer.clone(),
             initial_data,
@@ -223,7 +223,7 @@ fn basic_new_rank_event_test() {
     let nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
     let node = &nodes[0];
     let genesis = node.block_store.root();
-    let mut inserter = TreeInserter::new(node.block_store.clone());
+    let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
     let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
     block_on(async move {
         let new_round = 1;
@@ -274,13 +274,13 @@ fn basic_new_rank_event_test() {
                 ),
                 a1.quorum_cert().certified_block().clone(),
             ),
-            node.block_store.signer().author(),
+            node.signer.author(),
             placeholder_ledger_info(),
-            node.block_store.signer(),
+            &node.signer,
         );
         let validator_verifier = Arc::new(ValidatorVerifier::new_single(
-            node.block_store.signer().author(),
-            node.block_store.signer().public_key(),
+            node.signer.author(),
+            node.signer.public_key(),
         ));
         node.block_store
             .insert_vote_and_qc(&vote, &validator_verifier);
@@ -331,8 +331,7 @@ fn process_successful_proposal_test() {
 
     let genesis_qc = QuorumCert::certificate_for_genesis();
     block_on(async move {
-        let proposal =
-            Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), node.block_store.signer());
+        let proposal = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
         let proposal_id = proposal.id();
         node.event_processor.process_proposed_block(proposal).await;
         let pending_messages = playground
@@ -377,11 +376,9 @@ fn process_old_proposal_test() {
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
     let node = &mut nodes[1];
     let genesis_qc = QuorumCert::certificate_for_genesis();
-    let new_block =
-        Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), node.block_store.signer());
+    let new_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let new_block_id = new_block.id();
-    let old_block =
-        Block::new_proposal(vec![1], 1, 2, genesis_qc.clone(), node.block_store.signer());
+    let old_block = Block::new_proposal(vec![1], 1, 2, genesis_qc.clone(), &node.signer);
     let old_block_id = old_block.id();
     block_on(async move {
         node.event_processor.process_proposed_block(new_block).await;
@@ -428,10 +425,8 @@ fn process_round_mismatch_test() {
         .pop()
         .unwrap();
     let genesis_qc = QuorumCert::certificate_for_genesis();
-    let correct_block =
-        Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), node.block_store.signer());
-    let block_skip_round =
-        Block::new_proposal(vec![1], 2, 2, genesis_qc.clone(), node.block_store.signer());
+    let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
+    let block_skip_round = Block::new_proposal(vec![1], 2, 2, genesis_qc.clone(), &node.signer);
     block_on(async move {
         let bad_proposal = ProposalMsg::<TestPayload>::new(
             block_skip_round,
@@ -469,7 +464,8 @@ fn process_vote_timeout_msg_test() {
     let genesis = non_proposer.block_store.root();
     let block_0 = non_proposer
         .block_store
-        .create_block(genesis.block(), vec![1], 1, 1);
+        .create_proposal(genesis.block(), vec![1], 1, 1);
+    let block_0 = Block::new_proposal_from_block_data(block_0, &static_proposer.signer);
     let block_0_id = block_0.id();
     block_on(
         non_proposer
@@ -562,14 +558,13 @@ fn process_proposer_mismatch_test() {
     let incorrect_proposer = nodes.pop().unwrap();
     let mut node = nodes.pop().unwrap();
     let genesis_qc = QuorumCert::certificate_for_genesis();
-    let correct_block =
-        Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), node.block_store.signer());
+    let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_incorrect_proposer = Block::new_proposal(
         vec![1],
         1,
         1,
         genesis_qc.clone(),
-        incorrect_proposer.block_store.signer(),
+        &incorrect_proposer.signer,
     );
     block_on(async move {
         let bad_proposal = ProposalMsg::<TestPayload>::new(
@@ -607,10 +602,8 @@ fn process_timeout_certificate_test() {
         .pop()
         .unwrap();
     let genesis_qc = QuorumCert::certificate_for_genesis();
-    let correct_block =
-        Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), node.block_store.signer());
-    let block_skip_round =
-        Block::new_proposal(vec![1], 2, 2, genesis_qc.clone(), node.block_store.signer());
+    let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
+    let block_skip_round = Block::new_proposal(vec![1], 2, 2, genesis_qc.clone(), &node.signer);
     let tc = TimeoutCertificate::new(Timeout::new(1, 1), HashMap::new());
 
     block_on(async move {
@@ -647,7 +640,7 @@ fn process_votes_basic_test() {
         .pop()
         .unwrap();
     let genesis = node.block_store.root();
-    let mut inserter = TreeInserter::new(node.block_store.clone());
+    let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
     let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
     let executed_state = &a1.compute_result().executed_state;
 
@@ -667,9 +660,9 @@ fn process_votes_basic_test() {
     let vote_msg = VoteMsg::new(
         Vote::new(
             vote_data,
-            node.block_store.signer().author(),
+            node.signer.author(),
             placeholder_ledger_info(),
-            node.block_store.signer(),
+            &node.signer,
         ),
         test_utils::placeholder_sync_info(),
     );
@@ -697,7 +690,7 @@ fn process_block_retrieval() {
         .unwrap();
 
     let genesis_qc = QuorumCert::certificate_for_genesis();
-    let block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), node.block_store.signer());
+    let block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_id = block.id();
 
     block_on(async move {
@@ -772,7 +765,7 @@ fn basic_restart_test() {
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
         .pop()
         .unwrap();
-    let mut inserter = TreeInserter::new(node.block_store.clone());
+    let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
     let node_mut = &mut node;
 
     let genesis = node_mut.block_store.root();

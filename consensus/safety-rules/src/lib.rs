@@ -3,6 +3,7 @@
 
 use consensus_types::{
     block::Block,
+    block_data::BlockData,
     block_info::BlockInfo,
     common::{Payload, Round},
     quorum_cert::QuorumCert,
@@ -133,6 +134,10 @@ impl SafetyRules {
         }
     }
 
+    pub fn signer(&self) -> &ValidatorSigner {
+        &self.validator_signer
+    }
+
     /// Learn about a new quorum certificate. Several things can happen as a result of that:
     /// 1) update the preferred block to a higher value.
     /// 2) commit some blocks.
@@ -237,6 +242,13 @@ impl SafetyRules {
             ),
             self.validator_signer.author(),
             self.construct_ledger_info(proposed_block),
+            &self.validator_signer,
+        ))
+    }
+
+    pub fn sign_proposal<T: Payload>(&self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
+        Ok(Block::new_proposal_from_block_data(
+            block_data,
             &self.validator_signer,
         ))
     }
