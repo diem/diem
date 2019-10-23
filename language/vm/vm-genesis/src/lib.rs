@@ -334,17 +334,17 @@ pub fn encode_genesis_transaction_with_validator(
 
             let txn_output = txn_executor.make_write_set(stdlib_modules, Ok(())).unwrap();
             // Sanity checks on emitted events:
-            // (1) The genesis tx should emit 3 events: a pair of payment sent/received events for
+            // (1) The genesis tx should emit 2 events: one payment event for
             // minting to the genesis address, and a ValidatorSet.ChangeEvent
             assert_eq!(
                 txn_output.events().len(),
-                3,
-                "Genesis transaction should emit three events, but found {} events: {:?}",
+                2,
+                "Genesis transaction should emit two events, but found {} events: {:?}",
                 txn_output.events().len(),
                 txn_output.events()
             );
             // (2) The last event should be the validator set change event
-            let validator_set_change_event = &txn_output.events()[2];
+            let validator_set_change_event = &txn_output.events()[1];
             assert_eq!(
                 *validator_set_change_event.key(),
                 ValidatorSet::change_event_key(),

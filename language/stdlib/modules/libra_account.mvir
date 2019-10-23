@@ -45,7 +45,7 @@ module LibraAccount {
         amount: u64,
         // The address that was paid
         payee: address,
-        // The address that paid libra.
+        // The address that sent payment.
         payer: address,
     }
 
@@ -76,24 +76,27 @@ module LibraAccount {
         let sender_account_ref: &mut Self.T;
         let event: Self.PaymentEvent;
 
+        sender = get_txn_sender();
+
         // Check that the `to_deposit` coin is non-zero
         deposit_value = LibraCoin.value(&to_deposit);
         assert(copy(deposit_value) > 0, 7);
 
-        // Load the sender's account
-        sender = get_txn_sender();
-        sender_account_ref = borrow_global_mut<T>(copy(sender));
-        // Log a Payment event to sender
-        event = PaymentEvent { amount: copy(deposit_value), payee: copy(payee), payer: move(sender) };
-
-        Event.emit_event<Self.PaymentEvent>(&mut move(sender_account_ref).payment_events, copy(event));
-
         // Load the payee's account
-        payee_account_ref = borrow_global_mut<T>(move(payee));
+        payee_account_ref = borrow_global_mut<T>(copy(payee));
         // Deposit the `to_deposit` coin
         LibraCoin.deposit(&mut copy(payee_account_ref).balance, move(to_deposit));
-        // Log a Payment event to receiver.
+        event = PaymentEvent { amount: copy(deposit_value), payee: copy(payee), payer: copy(sender) };
+
+        // Log Payment events to payee.
         Event.emit_event<Self.PaymentEvent>(&mut move(payee_account_ref).payment_events, copy(event));
+
+        if (copy(sender) != move(payee)) {
+            // Load the sender's account
+            sender_account_ref = borrow_global_mut<T>(move(sender));
+
+            Event.emit_event<Self.PaymentEvent>(&mut move(sender_account_ref).payment_events, move(event));
+        }
         return;
     }
 
