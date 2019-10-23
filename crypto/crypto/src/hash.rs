@@ -608,6 +608,7 @@ lazy_static! {
         create_literal_hash("PRE_GENESIS_BLOCK_ID");
 
     /// Genesis block id is used as a parent of the very first block executed by the executor.
+    #[cfg(any(test, feature = "testing"))]
     pub static ref GENESIS_BLOCK_ID: HashValue =
         // This maintains the invariant that block.id() == block.hash(), for
         // the genesis block and allows us to (de/)serialize it consistently

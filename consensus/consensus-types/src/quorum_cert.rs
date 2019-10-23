@@ -68,7 +68,7 @@ impl QuorumCert {
 
     #[cfg(any(test, feature = "testing"))]
     pub fn certificate_for_genesis() -> QuorumCert {
-        Self::certificate_for_genesis_from_ledger_info(&LedgerInfo::genesis())
+        Self::certificate_for_genesis_from_ledger_info(&LedgerInfo::genesis(), *GENESIS_BLOCK_ID)
     }
 
     /// QuorumCert for the genesis block deterministically generated from end-epoch LedgerInfo:
@@ -76,11 +76,14 @@ impl QuorumCert {
     /// - the accumulator root hash of the LedgerInfo is set to the last executed state of previous
     ///   epoch.
     /// - the map of signatures is empty because genesis block is implicitly agreed.
-    pub fn certificate_for_genesis_from_ledger_info(ledger_info: &LedgerInfo) -> QuorumCert {
+    pub fn certificate_for_genesis_from_ledger_info(
+        ledger_info: &LedgerInfo,
+        genesis_id: HashValue,
+    ) -> QuorumCert {
         let ancestor = BlockInfo::new(
             ledger_info.epoch(),
             0,
-            *GENESIS_BLOCK_ID,
+            genesis_id,
             ledger_info.transaction_accumulator_hash(),
             ledger_info.version(),
             ledger_info.timestamp_usecs(),
@@ -92,7 +95,7 @@ impl QuorumCert {
             ledger_info.version(),
             ledger_info.transaction_accumulator_hash(),
             vote_data.hash(),
-            *GENESIS_BLOCK_ID,
+            genesis_id,
             ledger_info.epoch() + 1,
             ledger_info.timestamp_usecs(),
             ledger_info.next_validator_set().cloned(),

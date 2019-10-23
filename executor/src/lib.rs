@@ -16,7 +16,7 @@ use libra_config::config::NodeConfig;
 use libra_crypto::{
     hash::{
         EventAccumulatorHasher, TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH,
-        GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
+        PRE_GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
@@ -268,7 +268,7 @@ where
                 (
                     Arc::new(Mutex::new(ExecutedTrees::new_empty())),
                     0,
-                    *PRE_GENESIS_BLOCK_ID,
+                    HashValue::zero(),
                 )
             }
         };
@@ -299,7 +299,7 @@ where
             committed_trees,
         };
 
-        if committed_block_id == *PRE_GENESIS_BLOCK_ID {
+        if committed_block_id.is_zero() {
             let genesis_transaction = config
                 .get_genesis_transaction()
                 .expect("failed to load genesis transaction!");
@@ -319,8 +319,8 @@ where
         let (output, state_compute_result) = block_on(self.execute_block(
             genesis_txns.clone(),
             ExecutedTrees::new_empty(),
+            HashValue::zero(),
             *PRE_GENESIS_BLOCK_ID,
-            *GENESIS_BLOCK_ID,
         ))
         .expect("Response sender was unexpectedly dropped.")
         .expect("Failed to execute genesis block.");
@@ -330,10 +330,11 @@ where
             /* version = */ 0,
             root_hash,
             /* consensus_data_hash = */ HashValue::zero(),
-            *GENESIS_BLOCK_ID,
+            /* consensus_block_id */ *PRE_GENESIS_BLOCK_ID,
             /* epoch = */ 0,
             /* timestamp_usecs = */ 0,
-            None,
+            // TODO: once genesis emit the event, this should be parsed from vm output
+            Some(ValidatorSet::new(vec![])),
         );
         let ledger_info_with_sigs =
             LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ BTreeMap::new());

@@ -10,7 +10,7 @@ use crate::{
 use futures::executor::block_on;
 use grpcio::{EnvBuilder, ServerBuilder};
 use libra_config::config::{NodeConfig, NodeConfigHelpers};
-use libra_crypto::{hash::GENESIS_BLOCK_ID, HashValue};
+use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
 use libra_prost_ext::MessageExt;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -95,7 +95,7 @@ fn create_executor(config: &NodeConfig) -> Executor<MockVM> {
 fn execute_and_commit_block(executor: &TestExecutor, txn_index: u64) {
     let txn = wrap_user_txn(encode_mint_transaction(gen_address(txn_index), 100));
     let parent_block_id = match txn_index {
-        0 => *GENESIS_BLOCK_ID,
+        0 => *PRE_GENESIS_BLOCK_ID,
         x => gen_block_id(x),
     };
     let id = gen_block_id(txn_index + 1);
@@ -211,7 +211,7 @@ fn test_executor_status() {
         500,
     ));
 
-    let parent_block_id = *GENESIS_BLOCK_ID;
+    let parent_block_id = *PRE_GENESIS_BLOCK_ID;
     let block_id = gen_block_id(1);
 
     let (_output, state_compute_result) = block_on(executor.execute_block(
@@ -237,7 +237,7 @@ fn test_executor_status() {
 fn test_executor_one_block() {
     let executor = TestExecutor::new();
 
-    let parent_block_id = *GENESIS_BLOCK_ID;
+    let parent_block_id = *PRE_GENESIS_BLOCK_ID;
     let block_id = gen_block_id(1);
     let version = 100;
 
@@ -272,7 +272,7 @@ fn test_executor_multiple_blocks() {
 
 #[test]
 fn test_executor_execute_same_block_multiple_times() {
-    let parent_block_id = *GENESIS_BLOCK_ID;
+    let parent_block_id = *PRE_GENESIS_BLOCK_ID;
     let block_id = gen_block_id(1);
     let version = 100;
 
@@ -358,7 +358,7 @@ fn create_transaction_chunks(
     let (output, state_compute_result) = block_on(executor.execute_block(
         txns.clone(),
         executor.committed_trees(),
-        *GENESIS_BLOCK_ID,
+        *PRE_GENESIS_BLOCK_ID,
         id,
     ))
     .unwrap()
@@ -432,7 +432,7 @@ fn test_executor_execute_and_commit_chunk() {
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
-    assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
+    assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
 
     // Execute the second chunk. After that we should still get the genesis ledger info from DB.
     block_on(executor.execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone()))
@@ -440,7 +440,7 @@ fn test_executor_execute_and_commit_chunk() {
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
-    assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
+    assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
 
     // Execute an empty chunk. After that we should still get the genesis ledger info from DB.
     block_on(
@@ -451,7 +451,7 @@ fn test_executor_execute_and_commit_chunk() {
     .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
-    assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
+    assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
 
     // Execute the second chunk again. After that we should still get the same thing.
     block_on(executor.execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone()))
@@ -459,7 +459,7 @@ fn test_executor_execute_and_commit_chunk() {
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
-    assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
+    assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
 
     // Execute the third chunk. After that we should get the new ledger info.
     block_on(executor.execute_and_commit_chunk(chunks[2].clone(), ledger_info.clone()))
@@ -503,7 +503,7 @@ fn test_executor_execute_and_commit_chunk_restart() {
             .unwrap();
         let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
         assert_eq!(li.ledger_info().version(), 0);
-        assert_eq!(li.ledger_info().consensus_block_id(), *GENESIS_BLOCK_ID);
+        assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
     }
 
     // Then we restart executor and resume to the next chunk.
@@ -564,7 +564,7 @@ fn run_transactions_naive(transactions: Vec<Transaction>) -> HashValue {
     let mut response = block_on(executor.execute_block(
         first_txn.clone(),
         executor.committed_trees(),
-        *GENESIS_BLOCK_ID,
+        *PRE_GENESIS_BLOCK_ID,
         gen_block_id(1),
     ))
     .unwrap()
@@ -613,7 +613,7 @@ proptest! {
         // Genesis -> A -> B
         //            |
         //            └--> C
-        let block_a = TestBlock::new(0..a_size, amount, *GENESIS_BLOCK_ID, gen_block_id(1));
+        let block_a = TestBlock::new(0..a_size, amount, *PRE_GENESIS_BLOCK_ID, gen_block_id(1));
         let block_b = TestBlock::new(0..b_size, amount, gen_block_id(1), gen_block_id(2));
         let block_c = TestBlock::new(0..c_size, amount, gen_block_id(1), gen_block_id(3));
 
@@ -660,7 +660,7 @@ proptest! {
 
     #[test]
     fn test_executor_restart(a_size in 0..30u64, b_size in 0..30u64, amount in any::<u32>()) {
-        let block_a = TestBlock::new(0..a_size, amount, *GENESIS_BLOCK_ID, gen_block_id(1));
+        let block_a = TestBlock::new(0..a_size, amount, *PRE_GENESIS_BLOCK_ID, gen_block_id(1));
         let block_b = TestBlock::new(0..b_size, amount, gen_block_id(1), gen_block_id(2));
 
         let mut config = get_config();
