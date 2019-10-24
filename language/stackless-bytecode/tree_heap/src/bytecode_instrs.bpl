@@ -4,7 +4,7 @@ type LocalName;
 type Address = int;
 type ByteArray;
 type String;
-
+type Location = int;
 type {:datatype} Edge;
 function {:constructor} Field(f: FieldName): Edge;
 function {:constructor} Index(i: int): Edge;
@@ -22,25 +22,29 @@ function {:constructor} Address(a: Address): Value;
 function {:constructor} ByteArray(b: ByteArray): Value;
 function {:constructor} Str(a: String): Value;
 function {:constructor} Map(m: [Edge]Value): Value;
+function {:constructor} Vector(v: [Edge]Value, l: int): Value;
 
 const DefaultMap: [Edge]Value;
 
 type {:datatype} Reference;
-function {:constructor} Reference(rt: RefType, p: Path): Reference;
+function {:constructor} Reference(rt: RefType, p: Path, l: Location): Reference;
 
 type {:datatype} RefType;
 function {:constructor} Global(a: Address, t: TypeName): RefType;
-function {:constructor} Local(l: int): RefType;
+function {:constructor} Local(): RefType;
 
 type {:datatype} TypeStore;
-function {:constructor} TypeStore(domain: [TypeName]bool, contents: [TypeName]Value): TypeStore;
+function {:constructor} TypeStore(domain: [TypeName]bool, contents: [TypeName]Location): TypeStore;
 
 type {:datatype} GlobalStore;
 function {:constructor} GlobalStore(domain: [Address]bool, contents: [Address]TypeStore): GlobalStore;
 
+type {:datatype} Memory;
+function {:constructor} Memory(domain: [Location]bool, contents: [Location]Value): Memory;
+
 var gs : GlobalStore;
-var ls : [int]Value;
-var ls_size : int;
+var m : Memory;
+var m_size : int;
 
 procedure {:inline 1} Exists(address: Value, t: TypeName) returns (dst: Value)
 requires is#Address(address);
@@ -56,8 +60,10 @@ procedure {:inline 1} MoveToSender(t: TypeName, v: Value)
     assert domain#GlobalStore(gs)[a];
     ts := contents#GlobalStore(gs)[a];
     assert !domain#TypeStore(ts)[t];
-    ts := TypeStore(domain#TypeStore(ts)[t := true], contents#TypeStore(ts)[t := v]);
+    ts := TypeStore(domain#TypeStore(ts)[t := true], contents#TypeStore(ts)[t := m_size]);
     gs := GlobalStore(domain#GlobalStore(gs), contents#GlobalStore(gs)[a := ts]);
+    m := Memory(domain#Memory(m)[m_size := true], contents#Memory(m)[m_size := v]);
+    m_size := m_size + 1;
 }
 
 procedure {:inline 1} MoveFrom(address: Value, t: TypeName) returns (dst: Value)
@@ -65,11 +71,15 @@ requires is#Address(address);
 {
     var a: Address;
     var ts: TypeStore;
+    var l: Location;
     a := a#Address(address);
     assert domain#GlobalStore(gs)[a];
     ts := contents#GlobalStore(gs)[a];
     assert domain#TypeStore(ts)[t];
-    dst := contents#TypeStore(ts)[t];
+    l := contents#TypeStore(ts)[t];
+    assert domain#Memory(m)[l];
+    dst := contents#Memory(m)[l];
+    m := Memory(domain#Memory(m)[l := false], contents#Memory(m));
     ts := TypeStore(domain#TypeStore(ts)[t := false], contents#TypeStore(ts));
     gs := GlobalStore(domain#GlobalStore(gs), contents#GlobalStore(gs)[a := ts]);
 }
@@ -80,16 +90,19 @@ requires is#Address(address);
     var a: Address;
     var v: Value;
     var ts: TypeStore;
+    var l: Location;
     a := a#Address(address);
     assert domain#GlobalStore(gs)[a];
     ts := contents#GlobalStore(gs)[a];
     assert domain#TypeStore(ts)[t];
-    dst := Reference(Global(a, t), Path(DefaultPath, 0));
+    l := contents#TypeStore(ts)[t];
+    assert domain#Memory(m)[l];
+    dst := Reference(Global(a, t), Path(DefaultPath, 0), l);
 }
 
 procedure {:inline 1} BorrowLoc(l: int) returns (dst: Reference)
 {
-    dst := Reference(Local(l), Path(DefaultPath, 0));
+    dst := Reference(Local(), Path(DefaultPath, 0), l);
 }
 
 procedure {:inline 1} BorrowField(src: Reference, f: FieldName) returns (dst: Reference)
@@ -98,9 +111,8 @@ procedure {:inline 1} BorrowField(src: Reference, f: FieldName) returns (dst: Re
     var size: int;
     p := p#Reference(src);
     size := size#Path(p);
-	p := Path(p#Path(p)[size := Field(f)], size+1);
-    dst := Reference(rt#Reference(src), p);
-
+	  p := Path(p#Path(p)[size := Field(f)], size+1);
+    dst := Reference(rt#Reference(src), p, l#Reference(src));
 }
 
 procedure {:inline 1} WriteRef(to: Reference, new_v: Value)
@@ -109,20 +121,21 @@ procedure {:inline 1} WriteRef(to: Reference, new_v: Value)
     var ts: TypeStore;
     var t: TypeName;
     var v: Value;
+    var l: Location;
     if (is#Global(rt#Reference(to))) {
         a := a#Global(rt#Reference(to));
         assert domain#GlobalStore(gs)[a];
         ts := contents#GlobalStore(gs)[a];
         t := t#Global(rt#Reference(to));
         assert domain#TypeStore(ts)[t];
-        v := contents#TypeStore(ts)[t];
+        l := l#Reference(to);
+        v := contents#Memory(m)[l];
         call v := UpdateValueMax(p#Reference(to), 0, v, new_v);
-        ts := TypeStore(domain#TypeStore(ts), contents#TypeStore(ts)[t := v]);
-        gs := GlobalStore(domain#GlobalStore(gs), contents#GlobalStore(gs)[a := ts]);
+        m := Memory(domain#Memory(m), contents#Memory(m)[l := v]);
     } else {
-        v := ls[l#Local(rt#Reference(to))];
+        v := contents#Memory(m)[l#Reference(to)];
         call v := UpdateValueMax(p#Reference(to), 0, v, new_v);
-        ls := ls[l#Local(rt#Reference(to)) := v];
+        m := Memory(domain#Memory(m), contents#Memory(m)[l#Reference(to) := v]);
     }
 }
 
@@ -137,9 +150,9 @@ procedure {:inline 1} ReadRef(from: Reference) returns (v: Value)
         ts := contents#GlobalStore(gs)[a];
         t := t#Global(rt#Reference(from));
         assert domain#TypeStore(ts)[t];
-        call v := ReadValueMax(p#Reference(from), 0, contents#TypeStore(ts)[t]);
+        call v := ReadValueMax(p#Reference(from), 0, contents#Memory(m)[contents#TypeStore(ts)[t]]);
     } else {
-        call v := ReadValueMax(p#Reference(from), 0, ls[l#Local(rt#Reference(from))]);
+        call v := ReadValueMax(p#Reference(from), 0, contents#Memory(m)[l#Reference(from)]);
     }
 }
 
@@ -249,6 +262,26 @@ procedure {:inline 1} Not(src: Value) returns (dst: Value)
 {
     assert is#Boolean(src);
     dst := Boolean(!b#Boolean(src));
+}
+
+procedure {:inline 1} Eq(src1: Value, src2: Value) returns (dst: Value)
+{
+    dst := Boolean(src1 == src2);
+}
+
+procedure {:inline 1} Neq(src1: Value, src2: Value) returns (dst: Value)
+{
+    dst := Boolean(src1 != src2);
+}
+
+procedure {:inline 1} Eq_Vector_T(src1: Value, src2: Value) returns (dst: Value)
+{
+    dst := Boolean(src1 == src2);
+}
+
+procedure {:inline 1} Neq_Vector_T(src1: Value, src2: Value) returns (dst: Value)
+{
+    dst := Boolean(src1 != src2);
 }
 
 procedure {:inline 1} Eq_int(src1: Value, src2: Value) returns (dst: Value)
@@ -364,4 +397,128 @@ procedure {:inline 1} GetTxnMaxGasUnits() returns (ret_max_gas_units: Value)
 procedure {:inline 1} GetTxnGasUnitPrice() returns (ret_gas_unit_price: Value)
 {
   ret_gas_unit_price := Integer(gas_unit_price#Transaction_cons(txn));
+}
+
+procedure {:inline 1} Vector_empty() returns (v: Value) {
+    v := Vector(DefaultMap, 0);
+}
+
+procedure {:inline 1} Vector_is_empty(r: Reference) returns (b: Value) {
+    var v: Value;
+    call v := ReadRef(r);
+    b := Boolean(l#Vector(v) == 0);
+}
+
+procedure {:inline 1} Vector_push_back(r: Reference, val: Value) {
+    var old_v: Value;
+    var old_len: int;
+    call old_v := ReadRef(r);
+    old_len := l#Vector(old_v);
+    call WriteRef(r, Vector(v#Vector(old_v)[Index(old_len) := val], old_len+1));
+}
+
+procedure {:inline 1} Vector_pop_back(r: Reference) returns (e: Value){
+    var v: Value;
+    var old_len: int;
+    call v := ReadRef(r);
+    old_len := l#Vector(v);
+    e := v#Vector(v)[Index(old_len-1)];
+    call WriteRef(r, Vector(v#Vector(v), old_len-1));
+}
+
+procedure {:inline 1} Vector_append(r: Reference, other_v: Value) {
+    var v: Value;
+    var old_len: int;
+    var other_len: int;
+    var result: Value;
+    call v := ReadRef(r);
+    old_len := l#Vector(v);
+    other_len := l#Vector(other_v);
+    result := Vector(
+        (lambda e:Edge ::
+            if i#Index(e) < old_len then
+		        v#Vector(v)[e]
+		    else
+		        v#Vector(other_v)[Index(i#Index(e) - old_len)]
+        ),
+	    old_len + other_len);
+    call WriteRef(r, result);
+}
+
+procedure {:inline 1} Vector_reverse(r: Reference) {
+    var v: Value;
+    var result: Value;
+    var len: int;
+
+    call v := ReadRef(r);
+    len := l#Vector(v);
+    result := Vector(
+        (lambda e:Edge ::
+            v#Vector(v)[Index(len-i#Index(e)-1)]
+        ),
+	    len);
+    call WriteRef(r, result);
+}
+
+procedure {:inline 1} Vector_length(r: Reference) returns (l: Value) {
+    var v: Value;
+    call v := ReadRef(r);
+    l := Integer(l#Vector(v));
+}
+
+procedure {:inline 1} Vector_borrow(src: Reference, index: Value) returns (dst: Reference) {
+    var p: Path;
+    var size: int;
+    p := p#Reference(src);
+    size := size#Path(p);
+	  p := Path(p#Path(p)[size := Index(i#Integer(index))], size+1);
+    dst := Reference(rt#Reference(src), p, l#Reference(src));
+}
+
+procedure {:inline 1} Vector_borrow_mut(src: Reference, index: Value) returns (dst: Reference) {
+    var p: Path;
+    var size: int;
+    p := p#Reference(src);
+    size := size#Path(p);
+	  p := Path(p#Path(p)[size := Index(i#Integer(index))], size+1);
+    dst := Reference(rt#Reference(src), p, l#Reference(src));
+}
+
+procedure {:inline 1} Vector_destroy_empty(v: Value) {
+    assert (l#Vector(v) == 0);
+}
+
+procedure {:inline 1} Vector_swap(src: Reference, i: Value, j: Value) {
+    var i_val: Value;
+    var j_val: Value;
+    var i_ind: int;
+    var j_ind: int;
+    var v: Value;
+    i_ind := i#Integer(i);
+    j_ind := i#Integer(j);
+    call v := ReadRef(src);
+    assert (l#Vector(v) > i_ind && l#Vector(v) > j_ind);
+    i_val := v#Vector(v)[Index(i_ind)];
+    j_val := v#Vector(v)[Index(j_ind)];
+    v := Vector(v#Vector(v)[Index(i_ind) := j_val][Index(j_ind) := i_val], l#Vector(v));
+    call WriteRef(src, v);
+}
+
+procedure {:inline 1} Vector_get(src: Reference, i: Value) returns (e: Value) {
+    var i_ind: int;
+    var v: Value;
+    call v := ReadRef(src);
+    i_ind := i#Integer(i);
+    assert (i_ind < l#Vector(v));
+    e := v#Vector(v)[Index(i_ind)];
+}
+
+procedure {:inline 1} Vector_set(src: Reference, i: Value, e: Value) {
+    var i_ind: int;
+    var v: Value;
+    i_ind := i#Integer(i);
+    call v := ReadRef(src);
+    assert (l#Vector(v) > i_ind);
+    v := Vector(v#Vector(v)[Index(i_ind) := e], l#Vector(v));
+    call WriteRef(src, v);
 }

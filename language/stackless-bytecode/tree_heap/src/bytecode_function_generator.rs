@@ -45,17 +45,21 @@ impl BoogieTranslator {
             } else {
                 res.push_str("        e := p#Path(p)[i];\n");
                 res.push_str("        v' := m#Map(v)[e];\n");
+                res.push_str("        if (is#Vector(v)) { v' := v#Vector(v)[e]; }\n");
                 res.push_str(&format!(
                     "        call v' := ReadValue{}(p, i+1, v');\n",
                     i - 1
                 ));
                 update_value_str.push_str("        e := p#Path(p)[i];\n");
                 update_value_str.push_str("        v' := m#Map(v)[e];\n");
+                update_value_str.push_str("        if (is#Vector(v)) { v' := v#Vector(v)[e]; }\n");
                 update_value_str.push_str(&format!(
                     "        call v' := UpdateValue{}(p, i+1, v', new_v);\n",
                     i - 1,
                 ));
-                update_value_str.push_str("        v' := Map(m#Map(v)[e := v']);\n");
+                update_value_str
+                    .push_str("        if (is#Map(v)) { v' := Map(m#Map(v)[e := v']);}\n");
+                update_value_str.push_str("        if (is#Vector(v)) { v' := Vector(v#Vector(v)[e := v'], l#Vector(v));}\n");
             }
             res.push_str("    }\n}\n\n");
             update_value_str.push_str("    }\n}\n\n");

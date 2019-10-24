@@ -15,7 +15,10 @@ use tree_heap::translator::BoogieTranslator;
 
 // mod translator;
 fn compile_files(file_names: Vec<String>) -> (Vec<VerifiedModule>, SourceMap<Loc>) {
-    let mut verified_modules = stdlib_modules().to_vec();
+    // only include vector module for ease of testing vector implementation
+    let vector_module = stdlib_modules().to_vec()[6].clone();
+    let mut verified_modules = vec![vector_module];
+    // let mut verified_modules = stdlib_modules().to_vec();
     let mut source_maps = stdlib_source_map().to_vec();
     let files_len = file_names.len();
     let dep_files = &file_names[0..files_len];

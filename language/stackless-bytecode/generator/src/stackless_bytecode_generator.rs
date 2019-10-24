@@ -360,8 +360,25 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 }
                 for return_type_view in function_signature_view.return_tokens() {
                     let return_temp_index = self.temp_count;
+                    // instantiate type parameters
                     let return_type = match return_type_view.as_inner() {
                         SignatureToken::TypeParameter(i) => type_sigs[*i as usize].clone(),
+                        SignatureToken::Reference(b) => {
+                            if let SignatureToken::TypeParameter(i) = **b {
+                                SignatureToken::Reference(Box::new(type_sigs[i as usize].clone()))
+                            } else {
+                                return_type_view.as_inner().clone()
+                            }
+                        }
+                        SignatureToken::MutableReference(b) => {
+                            if let SignatureToken::TypeParameter(i) = **b {
+                                SignatureToken::MutableReference(Box::new(
+                                    type_sigs[i as usize].clone(),
+                                ))
+                            } else {
+                                return_type_view.as_inner().clone()
+                            }
+                        }
                         _ => return_type_view.as_inner().clone(),
                     };
                     return_temp_indices.push(return_temp_index);
