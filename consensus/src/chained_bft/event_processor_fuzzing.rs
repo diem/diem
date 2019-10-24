@@ -1,7 +1,6 @@
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
-        epoch_manager::EpochManager,
         event_processor::EventProcessor,
         liveness::{
             pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
@@ -89,10 +88,10 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     let signer = FUZZING_SIGNER.clone();
 
     // TODO: remove
-    let validator = ValidatorVerifier::new_single(signer.author(), signer.public_key());
-
-    // EpochManager
-    let epoch_mgr = Arc::new(EpochManager::new(0, validator));
+    let validator = Arc::new(ValidatorVerifier::new_single(
+        signer.author(),
+        signer.public_key(),
+    ));
 
     // TODO: EmptyStorage
     let (storage, initial_data) = MockStorage::<TestPayload>::start_for_testing();
@@ -109,7 +108,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         signer.author(),
         network_sender,
         self_sender,
-        Arc::clone(&epoch_mgr),
+        Arc::clone(&validator),
     );
 
     // TODO: mock
@@ -149,7 +148,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         storage.clone(),
         time_service,
         enforce_increasing_timestamps,
-        epoch_mgr.validators(),
+        validator,
     )
 }
 

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    epoch_manager::EpochManager,
     network::{BlockRetrievalResponse, NetworkReceivers, NetworkSender},
     test_utils::{self, consensus_runtime, placeholder_ledger_info},
 };
@@ -333,7 +332,7 @@ fn test_network_api() {
     let mut nodes = Vec::new();
     let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
     let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
-    let epoch_mgr = Arc::new(EpochManager::new(0, validator_verifier));
+    let validators = Arc::new(validator_verifier);
     for peer in &peers {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -342,11 +341,11 @@ fn test_network_api() {
 
         playground.add_node(*peer, consensus_tx, network_reqs_rx);
         let (self_sender, self_receiver) = channel::new_test(8);
-        let node = NetworkSender::new(*peer, network_sender, self_sender, Arc::clone(&epoch_mgr));
+        let node = NetworkSender::new(*peer, network_sender, self_sender, Arc::clone(&validators));
         let (task, receiver) =
-            NetworkTask::start(network_events, self_receiver, Arc::clone(&epoch_mgr));
+            NetworkTask::new(network_events, self_receiver, Arc::clone(&validators));
         receivers.push(receiver);
-        runtime.executor().spawn(task.run());
+        runtime.executor().spawn(task.start());
         nodes.push(node);
     }
     let vote_msg = VoteMsg::new(
@@ -394,8 +393,8 @@ fn test_rpc() {
     let mut playground = NetworkPlayground::new(runtime.executor());
     let mut nodes = Vec::new();
     let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
+    let validators = Arc::new(validator_verifier);
     let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
-    let epoch_mgr = Arc::new(EpochManager::new(0, validator_verifier));
     for peer in peers.iter() {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -408,13 +407,13 @@ fn test_rpc() {
             *peer,
             network_sender.clone(),
             self_sender,
-            Arc::clone(&epoch_mgr),
+            Arc::clone(&validators),
         );
         let (task, receiver) =
-            NetworkTask::start(network_events, self_receiver, Arc::clone(&epoch_mgr));
+            NetworkTask::new(network_events, self_receiver, Arc::clone(&validators));
         senders.push(network_sender);
         receivers.push(receiver);
-        runtime.executor().spawn(task.run());
+        runtime.executor().spawn(task.start());
         nodes.push(node);
     }
     let receiver_1 = receivers.remove(1);
