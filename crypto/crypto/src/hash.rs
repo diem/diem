@@ -35,6 +35,25 @@
 //!
 //! # Implementing new hashers
 //!
+//! ## The automatic way
+//!
+//! For any new structure `MyNewStruct` that needs to be hashed, the developer
+//! should use the [`CryptoHasher` derive macro](https://doc.rust-lang.org/reference/procedural-macros.html).
+//!
+//! ```ignore
+//! #[derive(CryptoHasher)]
+//! struct MyNewStruct {
+//!   ...
+//! }
+//! ```
+//!
+//! The macro will define a hasher automatically called `MyNewStructHasher`, and pick a salt
+//! equal to the full module path + "::"  + structure name, i.e. if
+//! `MyNewStruct` is defined in `bar::baz::quux`, the salt will be `b"bar::baz::quux::MyNewStruct"`.
+//! You can then use it in your implementation of `CryptoHash` (see below).
+//!
+//! ## The semi-automatic way
+//!
 //! For any new structure `MyNewStruct` that needs to be hashed, the developer should define a
 //! new hasher with:
 //!
@@ -46,6 +65,7 @@
 //!
 //! **Note**: The last argument for the `define_hasher` macro must be a unique string.
 //!
+//! ## The `CryptoHash` implementation (for both automatic and semi-automatic way)
 //! Then, the `CryptoHash` trait should be implemented:
 //! ```
 //! # use libra_crypto::hash::*;
@@ -416,7 +436,7 @@ pub trait CryptoHasher: Default {
 /// ambiguities within a same domain.
 /// * Only used internally within this crate
 #[derive(Clone)]
-struct DefaultHasher {
+pub struct DefaultHasher {
     state: Keccak,
 }
 
@@ -442,7 +462,8 @@ impl Default for DefaultHasher {
 }
 
 impl DefaultHasher {
-    fn new_with_salt(typename: &[u8]) -> Self {
+    /// initialize a new hasher with a specific salt
+    pub fn new_with_salt(typename: &[u8]) -> Self {
         let mut state = Keccak::new_sha3_256();
         if !typename.is_empty() {
             let mut salt = typename.to_vec();
@@ -497,14 +518,14 @@ define_hasher! {
     (AccessPathHasher, ACCESS_PATH_HASHER, b"VM_ACCESS_PATH")
 }
 
-define_hasher! {
-    /// The hasher used to compute the hash of an AccountAddress object.
-    (
-        AccountAddressHasher,
-        ACCOUNT_ADDRESS_HASHER,
-        b"AccountAddress"
-    )
-}
+// define_hasher! {
+//     /// The hasher used to compute the hash of an AccountAddress object.
+//     (
+//         AccountAddressHasher,
+//         ACCOUNT_ADDRESS_HASHER,
+//         b"AccountAddress"
+//     )
+// }
 
 define_hasher! {
     /// The hasher used to compute the hash of a LedgerInfo object.

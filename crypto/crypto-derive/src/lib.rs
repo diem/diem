@@ -1,15 +1,32 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This crate contains three types of derive macros:
+//! # Derive macros for crypto operations
+//! This crate contains four types of derive macros:
+//!
 //! - the `SilentDebug` and SilentDisplay macros are meant to be used on private key types, and
 //!   elide their input for confidentiality.
 //! - the `Deref` macro helps derive the canonical instances on new types.
 //! - the derive macros for `libra_crypto::traits`, namely `ValidKey`, `PublicKey`, `PrivateKey`,
 //!   `VerifyingKey`, `SigningKey` and `Signature` are meant to be derived on simple unions of types
 //!   implementing these traits.
+//! - the derive macro for `libra_crypto::hash::CryptoHasher`, which defines
+//!   the domain-separation hasher structures described in `libra_crypto::hash`
+//!   (look there for details). This derive macro has for sole difference that it
+//!   automatically picks a unique salt for you, using the path of the structure
+//!   + its name. I.e. for a Structure Foo defined in bar::baz::quux, it will
+//!   define the equivalent of:
+//!   ```ignore
+//!   define_hasher! {
+//!    (
+//!         FooHasher,
+//!         FOO_HASHER,
+//!         b"bar::baz::quux::Foo"
+//!     )
+//!   }
+//!   ```
 //!
-//! ## Unions of Signing Traits, in detail
+//! # Unions of Signing Traits, in detail
 //!
 //! Those types typically come into play when you need to accept several
 //! alternatives at runtime for several signature and verification schemes
@@ -79,11 +96,14 @@
 
 extern crate proc_macro;
 
+mod hasher;
 mod unions;
 
+use hasher::camel_to_snake;
 use proc_macro::TokenStream;
+use proc_macro2::Span;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput};
+use syn::{parse_macro_input, Data, DeriveInput, Ident};
 use unions::*;
 
 #[proc_macro_derive(SilentDisplay)]
@@ -226,4 +246,59 @@ pub fn derive_enum_signature(input: TokenStream) -> TokenStream {
             panic!("#[derive(PrivateKey)] is only defined for enums")
         }
     }
+}
+
+#[proc_macro_derive(CryptoHasher, attributes(CryptoHasherSalt))]
+pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(input as DeriveInput);
+    let hasher_name = Ident::new(
+        &format!("{}Hasher", &item.ident.to_string()),
+        Span::call_site(),
+    );
+    let snake_name = camel_to_snake(&item.ident.to_string());
+    let static_hasher_name = Ident::new(
+        &format!("{}_HASHER", snake_name.to_uppercase()),
+        Span::call_site(),
+    );
+    let fn_name = get_type_from_attrs(&item.attrs, "CryptoHasherSalt")
+        .unwrap_or_else(|_| syn::LitStr::new(&item.ident.to_string(), Span::call_site()));
+
+    let out = quote!(
+        #[derive(Clone)]
+        pub struct #hasher_name(libra_crypto::hash::DefaultHasher);
+
+        impl #hasher_name {
+            fn new() -> Self {
+                let mp = module_path!();
+                let f_name = #fn_name;
+
+                #hasher_name(
+                    libra_crypto::hash::DefaultHasher::new_with_salt(&format!("{}::{}", f_name, mp).as_bytes()))
+            }
+        }
+
+        ::lazy_static::lazy_static!{
+            static ref #static_hasher_name: #hasher_name = #hasher_name::new();
+        }
+
+        impl std::default::Default for #hasher_name
+        {
+            fn default() -> Self {
+                #static_hasher_name.clone()
+            }
+        }
+
+        impl libra_crypto::hash::CryptoHasher for #hasher_name {
+            fn finish(self) -> HashValue {
+                self.0.finish()
+            }
+
+            fn write(&mut self, bytes: &[u8]) -> &mut Self {
+                self.0.write(bytes);
+                self
+            }
+        }
+
+    );
+    out.into()
 }
