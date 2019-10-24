@@ -15,11 +15,11 @@ use crate::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    proof::{AccumulatorConsistencyProof, TransactionAccumulatorProof},
+    proof::{AccumulatorConsistencyProof, TransactionListProof},
     transaction::{
         Module, Program, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction,
-        TransactionArgument, TransactionInfo, TransactionListWithProof, TransactionPayload,
-        TransactionStatus, TransactionToCommit, Version,
+        TransactionArgument, TransactionListWithProof, TransactionPayload, TransactionStatus,
+        TransactionToCommit, Version,
     },
     validator_change::ValidatorChangeEventWithProof,
     vm_error::{StatusCode, VMStatus},
@@ -849,60 +849,41 @@ impl Arbitrary for TransactionToCommitGen {
 }
 
 fn arb_transaction_list_with_proof() -> impl Strategy<Value = TransactionListWithProof> {
-    vec(
-        (
-            any::<SignedTransaction>(),
-            any::<TransactionInfo>(),
-            vec(any::<ContractEvent>(), 0..10),
+    (
+        vec(
+            (
+                any::<SignedTransaction>(),
+                vec(any::<ContractEvent>(), 0..10),
+            ),
+            0..10,
         ),
-        0..10,
+        any::<TransactionListProof>(),
     )
-    .prop_flat_map(|transaction_and_infos_and_events| {
-        let transaction_and_infos: Vec<_> = transaction_and_infos_and_events
-            .clone()
-            .into_iter()
-            .map(|(transaction, info, _event)| (Transaction::UserTransaction(transaction), info))
-            .collect();
-        let events: Vec<_> = transaction_and_infos_and_events
-            .into_iter()
-            .map(|(_transaction, _info, event)| event)
-            .collect();
+        .prop_flat_map(|(transaction_and_events, proof)| {
+            let transactions: Vec<_> = transaction_and_events
+                .clone()
+                .into_iter()
+                .map(|(transaction, _event)| Transaction::UserTransaction(transaction))
+                .collect();
+            let events: Vec<_> = transaction_and_events
+                .into_iter()
+                .map(|(_transaction, event)| event)
+                .collect();
 
-        (
-            Just(transaction_and_infos),
-            option::of(Just(events)),
-            any::<Version>(),
-            any::<TransactionAccumulatorProof>(),
-            any::<TransactionAccumulatorProof>(),
-        )
-    })
-    .prop_map(
-        |(
-            transaction_and_infos,
-            events,
-            first_txn_version,
-            proof_of_first_txn,
-            proof_of_last_txn,
-        )| {
-            match transaction_and_infos.len() {
-                0 => TransactionListWithProof::new_empty(),
-                1 => TransactionListWithProof::new(
-                    transaction_and_infos,
-                    events,
-                    Some(first_txn_version),
-                    Some(proof_of_first_txn),
-                    None,
-                ),
-                _ => TransactionListWithProof::new(
-                    transaction_and_infos,
-                    events,
-                    Some(first_txn_version),
-                    Some(proof_of_first_txn),
-                    Some(proof_of_last_txn),
-                ),
-            }
-        },
-    )
+            (
+                Just(transactions.clone()),
+                option::of(Just(events)),
+                if transactions.is_empty() {
+                    Just(None).boxed()
+                } else {
+                    any::<Version>().prop_map(Some).boxed()
+                },
+                Just(proof),
+            )
+        })
+        .prop_map(|(transactions, events, first_txn_version, proof)| {
+            TransactionListWithProof::new(transactions, events, first_txn_version, proof)
+        })
 }
 
 impl Arbitrary for TransactionListWithProof {

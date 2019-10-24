@@ -7,10 +7,7 @@ use crate::{
     block_metadata::BlockMetadata,
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
-    proof::{
-        accumulator::InMemoryAccumulator, verify_transaction_list, SignedTransactionProof,
-        TransactionAccumulatorProof,
-    },
+    proof::{accumulator::InMemoryAccumulator, SignedTransactionProof, TransactionListProof},
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
@@ -887,34 +884,31 @@ impl From<TransactionToCommit> for crate::proto::types::TransactionToCommit {
 /// 3. The list has 2+ transactions/transaction_infos. The both proofs must exist.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TransactionListWithProof {
-    pub transaction_and_infos: Vec<(Transaction, TransactionInfo)>,
+    pub transactions: Vec<Transaction>,
     pub events: Option<Vec<Vec<ContractEvent>>>,
     pub first_transaction_version: Option<Version>,
-    pub proof_of_first_transaction: Option<TransactionAccumulatorProof>,
-    pub proof_of_last_transaction: Option<TransactionAccumulatorProof>,
+    pub proof: TransactionListProof,
 }
 
 impl TransactionListWithProof {
     /// Constructor.
     pub fn new(
-        transaction_and_infos: Vec<(Transaction, TransactionInfo)>,
+        transactions: Vec<Transaction>,
         events: Option<Vec<Vec<ContractEvent>>>,
         first_transaction_version: Option<Version>,
-        proof_of_first_transaction: Option<TransactionAccumulatorProof>,
-        proof_of_last_transaction: Option<TransactionAccumulatorProof>,
+        proof: TransactionListProof,
     ) -> Self {
         Self {
-            transaction_and_infos,
+            transactions,
             events,
             first_transaction_version,
-            proof_of_first_transaction,
-            proof_of_last_transaction,
+            proof,
         }
     }
 
     /// Creates an empty transaction list.
     pub fn new_empty() -> Self {
-        Self::new(Vec::new(), None, None, None, None)
+        Self::new(vec![], None, None, TransactionListProof::new_empty())
     }
 
     /// Verifies the transaction list with the proofs, both carried on `self`.
@@ -936,15 +930,47 @@ impl TransactionListWithProof {
             Self::display_option_version(first_transaction_version),
         );
 
-        verify_transaction_list(ledger_info, self)
+        let txn_hashes = self
+            .transactions
+            .iter()
+            .map(|txn| Ok(txn.as_signed_user_txn()?.hash()))
+            .collect::<Result<Vec<_>>>()?;
+        self.proof
+            .verify(ledger_info, self.first_transaction_version, &txn_hashes)?;
+
+        // Verify the events if they exist.
+        if let Some(event_lists) = &self.events {
+            ensure!(
+                event_lists.len() == self.transactions.len(),
+                "The length of event_lists ({}) does not match the number of transactions ({}).",
+                event_lists.len(),
+                self.transactions.len(),
+            );
+            itertools::zip_eq(event_lists, self.proof.transaction_infos())
+                .map(|(events, txn_info)| {
+                    let event_hashes: Vec<_> = events.iter().map(ContractEvent::hash).collect();
+                    let event_root_hash =
+                        InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes)
+                            .root_hash();
+                    ensure!(
+                        event_root_hash == txn_info.event_root_hash(),
+                        "Some event root hash calculated doesn't match that carried on the \
+                         transaction info.",
+                    );
+                    Ok(())
+                })
+                .collect::<Result<Vec<_>>>()?;
+        }
+
+        Ok(())
     }
 
     pub fn is_empty(&self) -> bool {
-        self.transaction_and_infos.is_empty()
+        self.transactions.is_empty()
     }
 
     pub fn len(&self) -> usize {
-        self.transaction_and_infos.len()
+        self.transactions.len()
     }
 
     fn display_option_version(version: Option<Version>) -> String {
@@ -959,33 +985,11 @@ impl TryFrom<crate::proto::types::TransactionListWithProof> for TransactionListW
     type Error = Error;
 
     fn try_from(mut proto: crate::proto::types::TransactionListWithProof) -> Result<Self> {
-        let num_txns = proto.transactions.len();
-        let num_infos = proto.infos.len();
-        ensure!(
-            num_txns == num_infos,
-            "Number of transactions ({}) does not match the number of transaction infos ({}).",
-            num_txns,
-            num_infos
-        );
-        let (has_first, has_last, has_first_version) = (
-            proto.proof_of_first_transaction.is_some(),
-            proto.proof_of_last_transaction.is_some(),
-            proto.first_transaction_version.is_some(),
-        );
-        match num_txns {
-            0 => ensure!(
-                !has_first && !has_last && !has_first_version,
-                "Some proof exists with 0 transactions"
-            ),
-            1 => ensure!(
-                has_first && !has_last && has_first_version,
-                "Proof of last transaction exists with 1 transaction"
-            ),
-            _ => ensure!(
-                has_first && has_last && has_first_version,
-                "Both proofs of first and last transactions must exist with 2+ transactions"
-            ),
-        }
+        let transactions = proto
+            .transactions
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<Vec<_>>>()?;
 
         let events = proto
             .events_for_versions
@@ -1006,41 +1010,25 @@ impl TryFrom<crate::proto::types::TransactionListWithProof> for TransactionListW
             })
             .transpose()?;
 
-        let transaction_and_infos =
-            itertools::zip_eq(proto.transactions.into_iter(), proto.infos.into_iter())
-                .map(|(txn, info)| {
-                    Ok((
-                        Transaction::try_from(txn)?,
-                        TransactionInfo::try_from(info)?,
-                    ))
-                })
-                .collect::<Result<Vec<_>>>()?;
+        let first_transaction_version = proto.first_transaction_version;
 
-        Ok(TransactionListWithProof {
-            transaction_and_infos,
+        let proof = proto
+            .proof
+            .ok_or_else(|| format_err!("Missing proof."))?
+            .try_into()?;
+
+        Ok(Self::new(
+            transactions,
             events,
-            proof_of_first_transaction: proto
-                .proof_of_first_transaction
-                .take()
-                .map(TransactionAccumulatorProof::try_from)
-                .transpose()?,
-            proof_of_last_transaction: proto
-                .proof_of_last_transaction
-                .take()
-                .map(TransactionAccumulatorProof::try_from)
-                .transpose()?,
-            first_transaction_version: proto.first_transaction_version,
-        })
+            first_transaction_version,
+            proof,
+        ))
     }
 }
 
 impl From<TransactionListWithProof> for crate::proto::types::TransactionListWithProof {
     fn from(txn: TransactionListWithProof) -> Self {
-        let (transactions, infos) = txn
-            .transaction_and_infos
-            .into_iter()
-            .map(|(txn, info)| (txn.into(), info.into()))
-            .unzip();
+        let transactions = txn.transactions.into_iter().map(Into::into).collect();
 
         let events_for_versions =
             txn.events
@@ -1056,18 +1044,11 @@ impl From<TransactionListWithProof> for crate::proto::types::TransactionListWith
                         .collect::<Vec<_>>(),
                 });
 
-        let first_transaction_version = txn.first_transaction_version;
-
-        let proof_of_first_transaction = txn.proof_of_first_transaction.map(Into::into);
-        let proof_of_last_transaction = txn.proof_of_last_transaction.map(Into::into);
-
         Self {
             transactions,
-            infos,
             events_for_versions,
-            first_transaction_version,
-            proof_of_first_transaction,
-            proof_of_last_transaction,
+            first_transaction_version: txn.first_transaction_version,
+            proof: Some(txn.proof.into()),
         }
     }
 }

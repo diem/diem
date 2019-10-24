@@ -420,11 +420,11 @@ fn verify_get_txns_resp(
             req_fetch_events,
             txn_list_with_proof.events.is_some(),
         );
-        let num_txns = txn_list_with_proof.transaction_and_infos.len();
+        let num_txns = txn_list_with_proof.transactions.len();
         ensure!(
-            cmp::min(req_limit, ledger_info.version() - req_start_version + 1)
-                == txn_list_with_proof.transaction_and_infos.len() as u64,
-            "Number of transactions returned not expected. num_txns: {}, start version: {}, latest version: {}",
+            cmp::min(req_limit, ledger_info.version() - req_start_version + 1) == num_txns as u64,
+            "Number of transactions returned not expected. num_txns: {}, start version: {}, \
+             latest version: {}",
             num_txns,
             req_start_version,
             ledger_info.version(),

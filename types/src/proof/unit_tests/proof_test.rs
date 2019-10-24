@@ -1,32 +1,27 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::transaction::Transaction;
 use crate::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfo,
     proof::{
         definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccountStateProof, EventAccumulatorInternalNode,
-        EventAccumulatorProof, EventProof, MerkleTreeInternalNode, SignedTransactionProof,
-        SparseMerkleInternalNode, SparseMerkleLeafNode, SparseMerkleProof,
-        TestAccumulatorInternalNode, TestAccumulatorProof, TransactionAccumulatorInternalNode,
-        TransactionAccumulatorProof,
+        EventAccumulatorProof, EventProof, SignedTransactionProof, SparseMerkleInternalNode,
+        SparseMerkleLeafNode, SparseMerkleProof, TestAccumulatorInternalNode, TestAccumulatorProof,
+        TransactionAccumulatorInternalNode, TransactionAccumulatorProof,
     },
-    transaction::{
-        RawTransaction, Script, SignedTransaction, TransactionInfo, TransactionListWithProof,
-    },
+    transaction::{RawTransaction, Script, TransactionInfo},
     vm_error::StatusCode,
 };
 use libra_crypto::{
     ed25519::*,
     hash::{
-        CryptoHash, TestOnlyHash, TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH,
-        GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
+        CryptoHash, TestOnlyHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID,
+        SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
-use proptest::{collection::vec, prelude::*};
 
 #[test]
 fn test_verify_empty_accumulator() {
@@ -463,135 +458,4 @@ fn test_verify_account_state_and_event() {
             /* event_version_within_transaction = */ 0,
         )
         .is_err());
-}
-
-// Return a variable length of transaction_and_info list with a random range within [0,
-// list_length).
-fn arb_signed_txn_list_and_range(
-) -> impl Strategy<Value = (Vec<(Transaction, TransactionInfo)>, usize, usize)> {
-    vec(
-        (any::<SignedTransaction>(), any::<TransactionInfo>()),
-        0..100,
-    )
-    .prop_flat_map(|list| {
-        let len = list.len();
-        (Just(list), 0..std::cmp::max(len, 1))
-    })
-    .prop_flat_map(|(list, start)| {
-        let len = list.len();
-        (Just(list), Just(start), start..std::cmp::max(len, 1))
-    })
-    .prop_map(|(list, start, end)| {
-        let final_list = list
-            .into_iter()
-            .map(|(txn, txn_info)| {
-                let txn_hash = txn.hash();
-                (
-                    Transaction::UserTransaction(txn),
-                    TransactionInfo::new(
-                        txn_hash,
-                        txn_info.state_root_hash(),
-                        txn_info.event_root_hash(),
-                        txn_info.gas_used(),
-                        txn_info.major_status(),
-                    ),
-                )
-            })
-            .collect::<Vec<_>>();
-        (final_list, start, end)
-    })
-}
-
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(20))]
-
-    #[test]
-    fn test_transaction_list_with_proof((txn_and_infos, first_version, last_version) in arb_signed_txn_list_and_range()) {
-        let mut root_hash = *ACCUMULATOR_PLACEHOLDER_HASH;
-
-        let txn_list_with_proof =
-           if txn_and_infos.is_empty() {
-               TransactionListWithProof::new(vec![], None, None, None, None)
-           } else {
-               let mut hashes = txn_and_infos
-                   .iter()
-                   .map(|(_, txn_info)|
-                       txn_info.hash()
-                   ).collect::<Vec<_>>();
-               if hashes.len() % 2 == 1 && hashes.len() != 1 {
-                   hashes.push(*ACCUMULATOR_PLACEHOLDER_HASH);
-               }
-               let mut tree = vec![hashes];
-               while tree.last().unwrap().len() > 1 {
-                   let mut parent_hashes = vec![];
-                   let mut hash_iter = tree.last().unwrap().iter();
-                   while let Some(left) = hash_iter.next() {
-                       let right = hash_iter.next().expect("Can't be None");
-                       parent_hashes.push(
-                           MerkleTreeInternalNode::<TransactionAccumulatorHasher>::new(*left, *right).hash(),
-                       )
-                   }
-                   hashes = parent_hashes;
-                   if hashes.len() % 2 == 1 && hashes.len() != 1 {
-                       hashes.push(*ACCUMULATOR_PLACEHOLDER_HASH);
-                   }
-                   tree.push(hashes);
-               }
-               assert_eq!(tree.last().unwrap().len(), 1);
-               root_hash = tree.pop().unwrap()[0];
-
-               // Get proofs.
-               let mut first_index = first_version;
-               let mut last_index = last_version;
-               let mut first_siblings = vec![];
-               let mut last_siblings = vec![];
-               for nodes in tree {
-                   first_siblings.push(
-                       if first_index % 2 == 0 {
-                           nodes[first_index + 1]
-                       } else {
-                           nodes[first_index - 1]
-                       }
-                   );
-                   last_siblings.push(
-                       if last_index % 2 == 0 {
-                           nodes[last_index + 1]
-                       } else {
-                           nodes[last_index - 1]
-                       }
-                   );
-                   first_index /= 2;
-                   last_index /= 2;
-               }
-               let first_proof =
-                   Some(TransactionAccumulatorProof::new(first_siblings.into_iter().rev().collect::<Vec<_>>()));
-               let last_proof = if first_version == last_version {
-                   None
-               } else {
-                   Some(TransactionAccumulatorProof::new(last_siblings.into_iter().rev().collect::<Vec<_>>()))
-               };
-
-               TransactionListWithProof::new(
-                   txn_and_infos[first_version..=last_version].to_vec(),
-                   None,
-                   Some(first_version as u64),
-                   first_proof,
-                   last_proof,
-               )
-           };
-
-        // consensus_data_hash isn't used in proofs, but we need it to construct LedgerInfo.
-        let consensus_data_hash = b"consensus_data".test_only_hash();
-        let ledger_info = LedgerInfo::new(
-            /* version = */ std::cmp::max(1, txn_and_infos.len()) as u64 - 1,
-            root_hash,
-            consensus_data_hash,
-            *GENESIS_BLOCK_ID,
-            0,
-            /* timestamp = */ 10000,
-            None,
-        );
-        let first_version = if txn_and_infos.is_empty() { None } else { Some(first_version as u64) };
-        prop_assert!(txn_list_with_proof.verify(&ledger_info,first_version).is_ok());
-    }
 }

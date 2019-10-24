@@ -700,14 +700,9 @@ fn verify_transactions(
     txn_list_with_proof: &TransactionListWithProof,
     expected_txns: &[Transaction],
 ) -> Result<()> {
-    let txns = txn_list_with_proof
-        .transaction_and_infos
-        .iter()
-        .map(|(txn, _)| txn)
-        .cloned()
-        .collect::<Vec<_>>();
+    let txns = &txn_list_with_proof.transactions;
     ensure!(
-        expected_txns == &txns[..],
+        *txns == expected_txns,
         "expected txns {:?} doesn't equal to returned txns {:?}",
         expected_txns,
         txns

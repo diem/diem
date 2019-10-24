@@ -121,7 +121,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
                     false,
                 )
                 .await?;
-            if transactions.transaction_and_infos.is_empty() {
+            if transactions.transactions.is_empty() {
                 error!(
                     "[state sync] can't get {} txns from version {}",
                     limit, known_version

@@ -480,7 +480,7 @@ where
     ) -> oneshot::Receiver<Result<()>> {
         debug!(
             "Received request to execute chunk. Chunk size: {}. Target version: {}.",
-            txn_list_with_proof.transaction_and_infos.len(),
+            txn_list_with_proof.transactions.len(),
             ledger_info_with_sigs.ledger_info().version(),
         );
 

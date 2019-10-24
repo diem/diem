@@ -981,6 +981,11 @@ impl TransactionListProof {
         Self::new(AccumulatorRangeProof::new_empty(), vec![])
     }
 
+    /// Returns the list of `TransactionInfo` objects.
+    pub fn transaction_infos(&self) -> &[TransactionInfo] {
+        &self.transaction_infos
+    }
+
     /// Verifies the list of transactions are correct using the proof. The verifier needs to have
     /// the ledger info and the version of the first transaction in possession.
     pub fn verify(
