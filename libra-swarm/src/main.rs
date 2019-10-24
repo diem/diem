@@ -75,11 +75,11 @@ fn main() {
         None
     };
     validator_swarm
-        .launch_attempt(!args.enable_logging)
+        .launch_attempt(RoleType::Validator, !args.enable_logging)
         .expect("Failed to launch validator swarm");
     if let Some(ref mut swarm) = full_node_swarm {
         swarm
-            .launch_attempt(!args.enable_logging)
+            .launch_attempt(RoleType::FullNode, !args.enable_logging)
             .expect("Failed to launch full node swarm");
     }
 
