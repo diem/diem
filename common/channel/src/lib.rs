@@ -24,6 +24,10 @@ pub mod libra_channel;
 #[cfg(test)]
 mod libra_channel_test;
 
+pub mod message_queues;
+#[cfg(test)]
+mod message_queues_test;
+
 const MAX_TIMEOUT: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// Wrapper around a value with an entry timestamp
