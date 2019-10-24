@@ -80,7 +80,7 @@ impl TestEnvironment {
         };
         let num_attempts = 5;
         for _ in 0..num_attempts {
-            match swarm.launch_attempt(false) {
+            match swarm.launch_attempt(role, false) {
                 Ok(_) => {
                     return;
                 }
@@ -302,7 +302,10 @@ fn test_basic_restartability() {
     let peer_to_restart = 0;
     // restart node
     env.validator_swarm.kill_node(peer_to_restart);
-    assert!(env.validator_swarm.add_node(peer_to_restart, false).is_ok());
+    assert!(env
+        .validator_swarm
+        .add_node(peer_to_restart, RoleType::Validator, false)
+        .is_ok());
     assert_eq!(
         Decimal::from_f64(90.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
@@ -360,7 +363,10 @@ fn test_startup_sync_state() {
     // behind consensus db and forcing a state sync
     // during a node startup
     fs::remove_dir_all(state_db_path).unwrap();
-    assert!(env.validator_swarm.add_node(peer_to_stop, false).is_ok());
+    assert!(env
+        .validator_swarm
+        .add_node(peer_to_stop, RoleType::Validator, false)
+        .is_ok());
     let max_tries = 60;
     for retry in 0..max_tries {
         if retry == max_tries - 1 {
@@ -437,7 +443,10 @@ fn test_basic_state_synchronization() {
     }
 
     // Reconnect and synchronize the state
-    assert!(env.validator_swarm.add_node(node_to_restart, false).is_ok());
+    assert!(env
+        .validator_swarm
+        .add_node(node_to_restart, RoleType::Validator, false)
+        .is_ok());
 
     // Wait for all the nodes to catch up
     assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());

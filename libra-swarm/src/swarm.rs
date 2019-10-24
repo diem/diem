@@ -24,6 +24,7 @@ const LIBRA_NODE_BIN: &str = "libra-node";
 pub struct LibraNode {
     node: Child,
     node_id: String,
+    role: RoleType,
     debug_client: NodeDebugClient,
     ac_port: u16,
     log: PathBuf,
@@ -50,6 +51,7 @@ impl Drop for LibraNode {
 impl LibraNode {
     pub fn launch(
         node_id: String,
+        role: RoleType,
         config_path: &Path,
         log_path: PathBuf,
         disable_logging: bool,
@@ -82,6 +84,7 @@ impl LibraNode {
         Ok(Self {
             node,
             node_id,
+            role,
             debug_client,
             ac_port: config.admission_control.admission_control_service_port,
             log: log_path,
@@ -118,7 +121,11 @@ impl LibraNode {
     }
 
     pub fn check_connectivity(&self, expected_peers: i64) -> bool {
-        if let Some(num_connected_peers) = self.get_metric("network_gauge{op=connected_peers}") {
+        let connected_peers = format!(
+            "libra_network_peers{{role={},state=connected}}",
+            self.role.to_string()
+        );
+        if let Some(num_connected_peers) = self.get_metric(&connected_peers) {
             if num_connected_peers < expected_peers {
                 debug!(
                     "Node '{}' Expected peers: {}, found peers: {}",
@@ -239,7 +246,7 @@ impl LibraSwarm {
                 template_path.clone(),
                 upstream_config_dir.clone(),
             ) {
-                match swarm.launch_attempt(disable_logging) {
+                match swarm.launch_attempt(role, disable_logging) {
                     Ok(_) => {
                         return swarm;
                     }
@@ -311,6 +318,7 @@ impl LibraSwarm {
 
     pub fn launch_attempt(
         &mut self,
+        role: RoleType,
         disable_logging: bool,
     ) -> std::result::Result<(), SwarmLaunchFailure> {
         let logs_dir_path = self.dir.as_ref().join("logs");
@@ -321,6 +329,7 @@ impl LibraSwarm {
             let node_id = format!("{}", index);
             let node = LibraNode::launch(
                 node_id.clone(),
+                role,
                 &path,
                 logs_dir_path.join(format!("{}.log", index)),
                 disable_logging,
@@ -506,6 +515,7 @@ impl LibraSwarm {
     pub fn add_node(
         &mut self,
         idx: usize,
+        role: RoleType,
         disable_logging: bool,
     ) -> std::result::Result<(), SwarmLaunchFailure> {
         // First take the configs out to not keep immutable borrow on self when calling
@@ -518,7 +528,7 @@ impl LibraSwarm {
         let log_file_path = self.dir.as_ref().join("logs").join(format!("{}.log", idx));
         let node_id = format!("{}", idx);
         let mut node =
-            LibraNode::launch(node_id.clone(), path, log_file_path, disable_logging).unwrap();
+            LibraNode::launch(node_id.clone(), role, path, log_file_path, disable_logging).unwrap();
         for _ in 0..60 {
             if let HealthStatus::Healthy = node.health_check() {
                 self.nodes.insert(node_id, node);
