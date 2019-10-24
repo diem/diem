@@ -6,7 +6,7 @@ use canonical_serialization::{
 };
 use crypto::{
     hash::{CryptoHash, CryptoHasher, TestOnlyHasher},
-    HashValue, SigningKey,
+    HashValue, SigningKey, VerifyingKey,
 };
 use failure::prelude::*;
 
@@ -20,6 +20,7 @@ pub enum ChannelTransactionPayloadBody {
 }
 
 impl ChannelTransactionPayloadBody {
+    // TODO: refactor this two methods, seems very old to use.
     pub fn sign(
         self,
         private_key: &Ed25519PrivateKey,
@@ -31,6 +32,17 @@ impl ChannelTransactionPayloadBody {
         };
         let signature = private_key.sign_message(&hash);
         ChannelTransactionPayload::new(self, public_key, signature)
+    }
+    pub fn verify(
+        &self,
+        public_key: &Ed25519PublicKey,
+        signature: &Ed25519Signature,
+    ) -> Result<()> {
+        let hash = match self {
+            ChannelTransactionPayloadBody::WriteSet(write_set_body) => write_set_body.hash(),
+            ChannelTransactionPayloadBody::Script(script_body) => script_body.hash(),
+        };
+        public_key.verify_signature(&hash, &signature)
     }
 }
 
