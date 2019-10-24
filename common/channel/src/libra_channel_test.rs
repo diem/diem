@@ -10,9 +10,10 @@ struct TestMessageQueue {
 }
 
 impl MessageQueue for TestMessageQueue {
+    type Key = u8;
     type Message = u8;
 
-    fn push(&mut self, message: Self::Message) {
+    fn push(&mut self, _key: Self::Key, message: Self::Message) {
         self.queue.push_back(message);
     }
 
@@ -27,10 +28,10 @@ fn test_send_recv_order() {
         queue: VecDeque::new(),
     };
     let (mut sender, mut receiver) = libra_channel::new(mq);
-    sender.put(0);
-    sender.put(1);
-    sender.put(2);
-    sender.put(3);
+    sender.put(0, 0);
+    sender.put(0, 1);
+    sender.put(0, 2);
+    sender.put(0, 3);
     let task = async move {
         // Ensure that messages are received in order
         assert_eq!(receiver.select_next_some().await, 0);
@@ -73,10 +74,10 @@ fn test_waker() {
         });
     });
     thread::sleep(Duration::from_millis(100));
-    sender.put(0);
+    sender.put(0, 0);
     thread::sleep(Duration::from_millis(100));
-    sender.put(1);
+    sender.put(0, 1);
     thread::sleep(Duration::from_millis(100));
-    sender.put(2);
+    sender.put(0, 2);
     join_handle.join().unwrap();
 }

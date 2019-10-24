@@ -2,14 +2,6 @@ use crate::libra_channel::MessageQueue;
 use libra_types::account_address::AccountAddress;
 use std::collections::{HashMap, VecDeque};
 
-/// ValidatorMessage trait needs to be implemented by every message which gets pushed into the Libra
-/// channel so that we can ensure fairness among validators
-pub trait ValidatorMessage {
-    /// Extract the Validator from which this message arrived. This
-    /// will be used for ensuring fairness among validators.
-    fn get_validator(&self) -> AccountAddress;
-}
-
 /// QueueStyle is an enum which can be used as a configuration option for
 /// PerValidatorQueue. Since the queue per validator is going to be bounded,
 /// QueueStyle also determines the policy for dropping messages.
@@ -77,21 +69,21 @@ impl<T> PerValidatorQueue<T> {
     }
 }
 
-impl<T: ValidatorMessage> MessageQueue for PerValidatorQueue<T> {
+impl<T> MessageQueue for PerValidatorQueue<T> {
+    type Key = AccountAddress;
     type Message = T;
 
     /// push a message to the appropriate queue in per_validator_queue
     /// add the validator to round_robin_queue if it didnt already exist
-    fn push(&mut self, message: Self::Message) {
-        let validator = message.get_validator();
+    fn push(&mut self, key: Self::Key, message: Self::Message) {
         let max_queue_size = self.max_queue_size;
         let validator_message_queue = self
             .per_validator_queue
-            .entry(validator)
+            .entry(key)
             .or_insert_with(|| VecDeque::with_capacity(max_queue_size));
         // Add the validator to our round-robin queue if it's not already there
         if validator_message_queue.is_empty() {
-            self.round_robin_queue.push_back(validator);
+            self.round_robin_queue.push_back(key);
         }
         // Push the message to the actual validator message queue
         if validator_message_queue.len() == max_queue_size {
