@@ -305,33 +305,33 @@ impl<Location: Clone + Eq + Default> Disassembler<Location> {
                 Ok(format!("LdStr[{}]({})", string_idx, string.as_str()))
             }
             Bytecode::CopyLoc(local_idx) => {
-                let name = self.name_for_local(*local_idx as u64, function_source_map)?;
+                let name = self.name_for_local(u64::from(*local_idx), function_source_map)?;
                 let ty =
-                    self.type_for_local(*local_idx as u64, locals_sigs, function_source_map)?;
+                    self.type_for_local(u64::from(*local_idx), locals_sigs, function_source_map)?;
                 Ok(format!("CopyLoc[{}]({}: {})", local_idx, name, ty))
             }
             Bytecode::MoveLoc(local_idx) => {
-                let name = self.name_for_local(*local_idx as u64, function_source_map)?;
+                let name = self.name_for_local(u64::from(*local_idx), function_source_map)?;
                 let ty =
-                    self.type_for_local(*local_idx as u64, locals_sigs, function_source_map)?;
+                    self.type_for_local(u64::from(*local_idx), locals_sigs, function_source_map)?;
                 Ok(format!("MoveLoc[{}]({}: {})", local_idx, name, ty))
             }
             Bytecode::StLoc(local_idx) => {
-                let name = self.name_for_local(*local_idx as u64, function_source_map)?;
+                let name = self.name_for_local(u64::from(*local_idx), function_source_map)?;
                 let ty =
-                    self.type_for_local(*local_idx as u64, locals_sigs, function_source_map)?;
+                    self.type_for_local(u64::from(*local_idx), locals_sigs, function_source_map)?;
                 Ok(format!("StLoc[{}]({}: {})", local_idx, name, ty))
             }
             Bytecode::MutBorrowLoc(local_idx) => {
-                let name = self.name_for_local(*local_idx as u64, function_source_map)?;
+                let name = self.name_for_local(u64::from(*local_idx), function_source_map)?;
                 let ty =
-                    self.type_for_local(*local_idx as u64, locals_sigs, function_source_map)?;
+                    self.type_for_local(u64::from(*local_idx), locals_sigs, function_source_map)?;
                 Ok(format!("MutBorrowLoc[{}]({}: {})", local_idx, name, ty))
             }
             Bytecode::ImmBorrowLoc(local_idx) => {
-                let name = self.name_for_local(*local_idx as u64, function_source_map)?;
+                let name = self.name_for_local(u64::from(*local_idx), function_source_map)?;
                 let ty =
-                    self.type_for_local(*local_idx as u64, locals_sigs, function_source_map)?;
+                    self.type_for_local(u64::from(*local_idx), locals_sigs, function_source_map)?;
                 Ok(format!("ImmBorrowLoc[{}]({}: {})", local_idx, name, ty))
             }
             Bytecode::MutBorrowField(field_idx) => {
