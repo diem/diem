@@ -15,15 +15,17 @@ use futures::async_await::FusedStream;
 use futures::stream::Stream;
 use futures::task::Context;
 use futures::Poll;
+use std::hash::Hash;
 
 /// MessageQueue is a trait which provides a very simple set of methods for implementing
 /// a queue which will be used as the internal queue libra_channel.
 pub trait MessageQueue {
+    type Key: Eq + Hash;
     /// The actual type of the messages stored in this MessageQueue
     type Message;
 
-    /// Push a message to this queue
-    fn push(&mut self, message: Self::Message);
+    /// Push a message with the given key to this queue
+    fn push(&mut self, key: Self::Key, message: Self::Message);
 
     /// Pop a message from this queue
     fn pop(&mut self) -> Option<Self::Message>;
@@ -52,9 +54,9 @@ impl<T: MessageQueue> Sender<T> {
     /// This adds the message into the internal queue data structure. This is a non-blocking
     /// synchronous call.
     /// TODO: We can have this return a boolean if the queue of a validator is capacity
-    pub fn put(&mut self, message: <T as MessageQueue>::Message) {
+    pub fn put(&mut self, key: <T as MessageQueue>::Key, message: <T as MessageQueue>::Message) {
         let mut shared_state = self.shared_state.lock().unwrap();
-        shared_state.internal_queue.push(message);
+        shared_state.internal_queue.push(key, message);
         if let Some(w) = shared_state.waker.take() {
             w.wake();
         }
