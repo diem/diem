@@ -413,11 +413,7 @@ async fn handle_inbound_substream<TSubstream>(
             )
             .timeout(timeout)
             .map_err(Into::<RpcError>::into)
-            .map(|r| match r {
-                Ok(Ok(_x)) => Ok(()),
-                Ok(Err(e)) => Err(e),
-                Err(e) => Err(e),
-            })
+            .map(|r| r.and_then(|x| x))
             .await;
 
             // Log any errors.
