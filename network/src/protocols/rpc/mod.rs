@@ -414,7 +414,7 @@ async fn handle_inbound_substream<TSubstream>(
             .timeout(timeout)
             .map_err(Into::<RpcError>::into)
             .map(|r| match r {
-                Ok(Ok(x)) => Ok(x),
+                Ok(Ok(_x)) => Ok(()),
                 Ok(Err(e)) => Err(e),
                 Err(e) => Err(e),
             })
