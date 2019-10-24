@@ -4,7 +4,7 @@
 use crate::chained_bft::block_storage::{BlockReader, BlockStore};
 use consensus_types::{
     block::{block_test_utils::placeholder_certificate_for_block, Block},
-    common::{Author, Round},
+    common::Round,
     executed_block::ExecutedBlock,
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
@@ -74,12 +74,11 @@ pub fn build_chain() -> Vec<Arc<ExecutedBlock<TestPayload>>> {
     vec![genesis, a1, a2, a3, a4, a5, a6, a7]
 }
 
-pub fn build_empty_tree(author: Author) -> Arc<BlockStore<TestPayload>> {
+pub fn build_empty_tree() -> Arc<BlockStore<TestPayload>> {
     let (storage, initial_data) = EmptyStorage::start_for_testing();
     Arc::new(block_on(BlockStore::new(
         storage,
         initial_data,
-        author,
         Arc::new(EmptyStateComputer),
         true,
         10, // max pruned blocks in mem
@@ -98,7 +97,7 @@ impl TreeInserter {
     }
 
     pub fn new(signer: ValidatorSigner) -> Self {
-        let block_store = build_empty_tree(signer.author());
+        let block_store = build_empty_tree();
         Self {
             signer,
             payload_val: 0,

@@ -115,7 +115,6 @@ impl<T: Payload> EpochManager<T> {
         let block_store = Arc::new(block_on(BlockStore::new(
             Arc::clone(&self.storage),
             initial_data,
-            author,
             Arc::clone(&self.state_computer),
             true,
             self.config.max_pruned_blocks_in_mem,
@@ -124,6 +123,7 @@ impl<T: Payload> EpochManager<T> {
         // txn manager is required both by proposal generator (to pull the proposers)
         // and by event processor (to update their status).
         let proposal_generator = ProposalGenerator::new(
+            author,
             block_store.clone(),
             Arc::clone(&self.txn_manager),
             self.time_service.clone(),

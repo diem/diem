@@ -101,6 +101,10 @@ impl BlockInfo {
         self.executed_state_id
     }
 
+    pub fn has_reconfiguration(&self) -> bool {
+        self.next_validator_set.is_some()
+    }
+
     pub fn id(&self) -> HashValue {
         self.id
     }

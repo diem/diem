@@ -19,48 +19,10 @@ use consensus_types::{
 };
 use futures::executor::block_on;
 use libra_crypto::{HashValue, PrivateKey};
-use libra_types::crypto_proxies::{random_validator_verifier, ValidatorVerifier};
+use libra_types::crypto_proxies::random_validator_verifier;
 use libra_types::{account_address::AccountAddress, crypto_proxies::ValidatorSigner};
 use proptest::prelude::*;
 use std::{cmp::min, collections::HashSet};
-
-#[test]
-fn test_block_store_create_block() {
-    let signer = ValidatorSigner::random(None);
-    let block_store = build_empty_tree(signer.author());
-    let genesis = block_store.root();
-    let a1_data = block_store.create_proposal(genesis.block(), vec![1], 1, 1);
-    let a1 = Block::new_proposal_from_block_data(a1_data, &signer);
-    assert_eq!(a1.parent_id(), genesis.id());
-    assert_eq!(a1.round(), 1);
-    assert_eq!(a1.quorum_cert().certified_block().id(), genesis.id());
-
-    let a1_ref = block_on(block_store.execute_and_insert_block(a1)).unwrap();
-    let executed_state = &a1_ref.compute_result().executed_state;
-
-    // certify a1
-    let vote = Vote::new(
-        VoteData::new(
-            BlockInfo::from_block(
-                a1_ref.block(),
-                executed_state.state_id,
-                executed_state.version,
-                executed_state.validators.clone(),
-            ),
-            a1_ref.quorum_cert().certified_block().clone(),
-        ),
-        signer.author(),
-        placeholder_ledger_info(),
-        &signer,
-    );
-    let validator_verifier = ValidatorVerifier::new_single(signer.author(), signer.public_key());
-    block_store.insert_vote_and_qc(&vote, &validator_verifier);
-
-    let b1 = block_store.create_proposal(a1_ref.block(), vec![2], 2, 2);
-    assert_eq!(b1.parent_id(), a1_ref.id());
-    assert_eq!(b1.round(), 2);
-    assert_eq!(b1.quorum_cert().certified_block().id(), a1_ref.id());
-}
 
 #[test]
 fn test_highest_block_and_quorum_cert() {
@@ -142,16 +104,14 @@ proptest! {
 
     #[test]
     fn test_block_store_insert(
-        (mut private_keys, blocks) in block_test_utils::block_forest_and_its_keys(
+        (private_keys, blocks) in block_test_utils::block_forest_and_its_keys(
             // quorum size
             10,
             // recursion depth
             50)
     ){
         let authors: HashSet<Author> = private_keys.iter().map(|private_key| AccountAddress::from_public_key(&private_key.public_key())).collect();
-        let priv_key = private_keys.pop().expect("several keypairs generated");
-        let signer = ValidatorSigner::new(None, priv_key);
-        let block_store = build_empty_tree(signer.author());
+        let block_store = build_empty_tree();
         for block in blocks {
             if block.round() > 0 && authors.contains(&block.author().unwrap()) {
                 let known_parent = block_store.block_exists(block.parent_id());
@@ -366,7 +326,7 @@ fn test_insert_vote() {
 #[test]
 fn test_illegal_timestamp() {
     let signer = ValidatorSigner::random(None);
-    let block_store = build_empty_tree(signer.author());
+    let block_store = build_empty_tree();
     let genesis = block_store.root();
     let block_with_illegal_timestamp = Block::<Vec<usize>>::new_proposal(
         vec![],
