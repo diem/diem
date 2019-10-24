@@ -26,7 +26,7 @@ import 0x0.ValidatorConfig;
 // TODO: trigger a BlockMetadata transaction here instead
 main() {
     ValidatorConfig.rotate_consensus_pubkey(h"40");
-    LibraSystem.block_prologue(1);
+    LibraSystem.block_prologue(0, h"aa", h"bb", {{alice}});
 
     return;
 }
@@ -47,7 +47,7 @@ main() {
     // check that the validator set contains Vivian's old key before reconfiguration
     info = LibraSystem.get_ith_validator_info(1);
     assert(*LibraSystem.get_consensus_pubkey(&info) != h"40", 98);
-    LibraSystem.block_prologue(2);
+    LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
     // check that the validator set contains Vivian's new key after reconfiguration
     info = LibraSystem.get_ith_validator_info(1);
     assert(*LibraSystem.get_consensus_pubkey(&info) == h"40", 99);
@@ -68,7 +68,7 @@ import 0x0.ValidatorConfig;
 // ValidatorSetChange event.
 main() {
     ValidatorConfig.rotate_consensus_pubkey(h"40");
-    LibraSystem.block_prologue(3);
+    LibraSystem.block_prologue(2, h"aa", h"bb", {{vivian}});
 
     return;
 }
@@ -114,7 +114,7 @@ import 0x0.ValidatorConfig;
 main() {
     let info: LibraSystem.ValidatorInfo;
 
-    LibraSystem.block_prologue(4);
+    LibraSystem.block_prologue(3, h"aa", h"bb", {{vivian}});
     // check that the validator set contains Vivian's new key
     info = LibraSystem.get_ith_validator_info(0);
     assert(*LibraSystem.get_consensus_pubkey(&info) == h"80", 15);

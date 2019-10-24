@@ -24,7 +24,18 @@ module LibraSystem {
 
     resource BlockMetadata {
       // Height of the current block
+      // TODO: Should we keep the height?
       height: u64,
+
+      // Unix Timestamp for the current block.
+      // TODO: Use a better wrapper for timestamp.
+      timestamp: u64,
+
+      // Hash of the current block of transactions.
+      id: bytearray,
+
+      // Proposer of the current block.
+      proposer: address,
     }
 
     // This can only be invoked by the Association address, and only a single time.
@@ -46,7 +57,14 @@ module LibraSystem {
       // Only callable by the Association address
       assert(get_txn_sender() == 0xA550C18, 1);
 
-      move_to_sender<BlockMetadata>(BlockMetadata { height: 0 });
+      // TODO: How should we get the default block metadata? Should it be set in the first block prologue transaction or
+      //       in the genesis?
+      move_to_sender<BlockMetadata>(BlockMetadata {
+        height: 0,
+        timestamp: 0,
+        id: h"",
+        proposer: 0xA550C18,
+      });
       return;
     }
 
@@ -68,29 +86,61 @@ module LibraSystem {
 
     // Set the metadata for the current block.
     // The runtime always runs this before executing the transactions in a block.
-    // TODO: make this private, support other metadata
-    public block_prologue(height: u64) acquires BlockMetadata, ValidatorSet {
-      let height_ref: &mut u64;
-      let old_height: u64;
+    // TODO: 1. Make this private, support other metadata
+    //       2. Should the previous block votes be provided from BlockMetadata or should it come from the ValidatorSet
+    //          Resource?
+    public block_prologue(
+        timestamp: u64,
+        new_block_hash: bytearray,
+        previous_block_votes: bytearray,
+        proposer: address
+    ) acquires BlockMetadata, ValidatorSet {
+      Self.process_block_prologue(move(timestamp), move(new_block_hash), move(previous_block_votes), move(proposer));
+      // triggers a reconfiguration if the validator keys or validator set has changed
+      Self.reconfigure();
+      return;
+    }
 
-      height_ref = &mut borrow_global_mut<BlockMetadata>(0xA550C18).height;
-      old_height = *copy(height_ref);
-      // ensure that height increases by 1
-      if (move(height) == copy(old_height) + 1) {
-          *move(height_ref) = move(old_height) + 1;
-          // triggers a reconfiguration if the validator keys or validator set has changed
-          Self.reconfigure();
+    // Update the BlockMetadata resource with the new blockmetada coming from the consensus.
+    process_block_prologue(
+        timestamp: u64,
+        new_block_hash: bytearray,
+        previous_block_votes: bytearray,
+        proposer: address
+    ) acquires BlockMetadata, ValidatorSet {
+        let block_metadata_ref: &mut Self.BlockMetadata;
 
-          return;
-      } else {
-          // TODO: standardize this error code
-          abort(99);
-      }
+        block_metadata_ref = borrow_global_mut<BlockMetadata>(0xA550C18);
+
+        // TODO: Figure out a story for errors in the system transactions.
+        assert(copy(timestamp) > *(&copy(block_metadata_ref).timestamp), 5001);
+        assert(Self.is_validator(copy(proposer)), 5002);
+
+        *(&mut copy(block_metadata_ref).id) = move(new_block_hash);
+        *(&mut copy(block_metadata_ref).timestamp) = move(timestamp);
+        *(&mut copy(block_metadata_ref).proposer) = move(proposer);
+        *(&mut move(block_metadata_ref).height) = *(&copy(block_metadata_ref).height) + 1;
+        return;
     }
 
     // Get the current block height
     public get_current_block_height(): u64 acquires BlockMetadata {
       return *&(borrow_global<BlockMetadata>(0xA550C18)).height;
+    }
+
+    // Get the current block id
+    public get_current_block_id(): bytearray acquires BlockMetadata {
+      return *&(borrow_global<BlockMetadata>(0xA550C18)).id;
+    }
+
+    // Get the current time
+    public get_current_timestamp(): u64 acquires BlockMetadata {
+      return *&(borrow_global<BlockMetadata>(0xA550C18)).timestamp;
+    }
+
+    // Gets the address of the proposer of the current block
+    public get_current_proposer(): address acquires BlockMetadata {
+      return *&(borrow_global<BlockMetadata>(0xA550C18)).proposer;
     }
 
     // Return the size of the current validator set
