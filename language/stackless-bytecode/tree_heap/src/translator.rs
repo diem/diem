@@ -6,7 +6,7 @@
 use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::parser::ast::Loc;
-use libra_types::identifier::Identifier;
+use libra_types::{account_address::AccountAddress, identifier::Identifier};
 use num::{BigInt, Num};
 use stackless_bytecode_generator::{
     stackless_bytecode::StacklessBytecode::{self, *},
@@ -39,6 +39,7 @@ pub struct ModuleTranslator<'a> {
     pub source_map: &'a ModuleSourceMap<Loc>,
     pub stackless_bytecode: Vec<StacklessFunction>,
     pub all_type_strs: BTreeSet<String>,
+    pub ignore: bool,
 }
 
 impl BoogieTranslator {
@@ -113,6 +114,7 @@ impl BoogieTranslator {
                 );
             }
         }
+        self.max_struct_depth += 1;
         res
     }
 
@@ -159,20 +161,31 @@ impl<'a> ModuleTranslator<'a> {
             let struct_name = struct_name_from_handle_index(module, struct_def.struct_handle);
             all_type_strs.insert(struct_name);
         }
+        // let ignore = false;
+        let module_name =
+            module.identifier_at(module.module_handle_at(ModuleHandleIndex::new(0)).name);
+        let module_address =
+            module.address_at(module.module_handle_at(ModuleHandleIndex::new(0)).address);
+        let ignore = module_name.to_string() == "Vector"
+            && *module_address == AccountAddress::from_hex_literal("0x0").unwrap();
         Self {
             module,
             source_map,
             stackless_bytecode,
             all_type_strs,
+            ignore,
         }
     }
 
     pub fn translate(&mut self) -> String {
         let mut res = String::new();
+        if self.ignore {
+            return res;
+        }
         // translation of stackless bytecode
         for (idx, function_def) in self.module.function_defs().iter().enumerate() {
             if function_def.is_native() {
-                res.push_str(&self.generate_function_sig(idx, false, &None));
+                res.push_str(&self.generate_function_sig(idx, true, &None));
                 res.push_str(";\n");
                 continue;
             }
@@ -222,7 +235,7 @@ impl<'a> ModuleTranslator<'a> {
                         (String::new(), String::new())
                     };
                 vec![format!(
-                    "tmp := ls[old_size + {}];\nif (b#Boolean(tmp)) {{ {}goto Label_{}; }}{}",
+                    "tmp := contents#Memory(m)[old_size + {}];\nif (b#Boolean(tmp)) {{ {}goto Label_{}; }}{}",
                     idx, dbg_branch_taken_str, target, dbg_branch_not_taken_str
                 )]
             }
@@ -242,7 +255,7 @@ impl<'a> ModuleTranslator<'a> {
                         (String::new(), String::new())
                     };
                 vec![format!(
-                    "tmp := ls[old_size + {}];\nif (!b#Boolean(tmp)) {{ {}goto Label_{}; }}{}",
+                    "tmp := contents#Memory(m)[old_size + {}];\nif (!b#Boolean(tmp)) {{ {}goto Label_{}; }}{}",
                     idx, dbg_branch_taken_str, target, dbg_branch_not_taken_str
                 )]
             }
@@ -255,8 +268,8 @@ impl<'a> ModuleTranslator<'a> {
                     )]
                 } else {
                     vec![
-                        format!("call tmp := CopyOrMoveValue(ls[old_size+{}]);", src),
-                        format!("ls[old_size+{}] := tmp;", dest),
+                        format!("call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+{}]);", src),
+                        format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);",dest, dest),
                     ]
                 }
             }
@@ -269,8 +282,8 @@ impl<'a> ModuleTranslator<'a> {
                     )]
                 } else {
                     vec![
-                        format!("call tmp := CopyOrMoveValue(ls[old_size+{}]);", src),
-                        format!("ls[old_size+{}] := tmp;", dest),
+                        format!("call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+{}]);", src),
+                        format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
                     ]
                 }
             }
@@ -283,8 +296,8 @@ impl<'a> ModuleTranslator<'a> {
                     )]
                 } else {
                     vec![
-                        format!("call tmp := CopyOrMoveValue(ls[old_size+{}]);", src),
-                        format!("ls[old_size+{}] := tmp;", dest),
+                        format!("call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+{}]);", src),
+                        format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
                     ]
                 }
             }
@@ -292,9 +305,9 @@ impl<'a> ModuleTranslator<'a> {
             ReadRef(dest, src) => vec![
                 format!("call tmp := ReadRef(t{});", src),
                 self.format_type_checking("tmp".to_string(), &self.get_local_type(*dest, func_idx)),
-                format!("ls[old_size+{}] := tmp;", dest),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
-            WriteRef(dest, src) => vec![format!("call WriteRef(t{}, ls[old_size+{}]);", dest, src)],
+            WriteRef(dest, src) => vec![format!("call WriteRef(t{}, contents#Memory(m)[old_size+{}]);", dest, src)],
             FreezeRef(dest, src) => vec![format!("call t{} := FreezeRef(t{});", dest, src)],
             Call(dests, callee_index, _, args) => {
                 let callee_name = self.function_name_from_handle_index(*callee_index);
@@ -309,7 +322,7 @@ impl<'a> ModuleTranslator<'a> {
                     if self.is_local_ref(*arg, func_idx) {
                         args_str.push_str(&format!("t{}", arg));
                     } else {
-                        args_str.push_str(&format!("ls[old_size+{}]", arg));
+                        args_str.push_str(&format!("contents#Memory(m)[old_size+{}]", arg));
                     }
                 }
                 for (i, dest) in dests.iter().enumerate() {
@@ -322,7 +335,9 @@ impl<'a> ModuleTranslator<'a> {
                         &self.get_local_type(*dest, func_idx),
                     ));
                     if !self.is_local_ref(*dest, func_idx) {
-                        tmp_assignments.push(format!("ls[old_size+{}] := t{};", dest, dest));
+                        tmp_assignments.push(format!(
+                            "m := Memory(domain#Memory(m)[old_size+{} := true], contents#Memory(m)[old_size+{} := t{}]);",
+                            dest, dest, dest));
                     }
                 }
                 let mut res_vec = vec![];
@@ -346,14 +361,14 @@ impl<'a> ModuleTranslator<'a> {
                     if idx > 0 {
                         fields_str.push_str(", ");
                     }
-                    fields_str.push_str(&format!("ls[old_size+{}]", field_temp));
+                    fields_str.push_str(&format!("contents#Memory(m)[old_size+{}]", field_temp));
                     res_vec.push(self.format_type_checking(
-                        format!("ls[old_size+{}]", field_temp),
+                        format!("contents#Memory(m)[old_size+{}]", field_temp),
                         &self.get_local_type(*field_temp, func_idx),
                     ));
                 }
                 res_vec.push(format!("call tmp := Pack_{}({});", struct_str, fields_str));
-                res_vec.push(format!("ls[old_size+{}] := tmp;", dest));
+                res_vec.push(format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest));
                 res_vec
             }
             Unpack(dests, struct_def_index, _, src) => {
@@ -371,11 +386,15 @@ impl<'a> ModuleTranslator<'a> {
                         &self.get_local_type(*dest, func_idx),
                     ));
                     if !self.is_local_ref(*dest, func_idx) {
-                        tmp_assignments.push(format!("ls[old_size+{}] := t{};", dest, dest));
+                        tmp_assignments.push(
+                            format!(
+                                "m := Memory(domain#Memory(m)[old_size+{} := true], contents#Memory(m)[old_size+{} := t{}]);",
+                                dest, dest, dest));
+                            // format!("contents#Memory(m)[old_size+{}] := t{};", dest, dest));
                     }
                 }
                 let mut res_vec = vec![format!(
-                    "call {} := Unpack_{}(ls[old_size+{}]);",
+                    "call {} := Unpack_{}(contents#Memory(m)[old_size+{}]);",
                     dests_str, struct_str, src
                 )];
                 res_vec.extend(dest_type_assumptions);
@@ -392,21 +411,21 @@ impl<'a> ModuleTranslator<'a> {
             Exists(dest, addr, struct_def_index, _) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 vec![
-                    format!("call tmp := Exists(ls[old_size+{}], {});", addr, struct_str),
-                    format!("ls[old_size+{}] := tmp;", dest),
+                    format!("call tmp := Exists(contents#Memory(m)[old_size+{}], {});", addr, struct_str),
+                    format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
                 ]
             }
             BorrowGlobal(dest, addr, struct_def_index, _) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 vec![format!(
-                    "call t{} := BorrowGlobal(ls[old_size+{}], {});",
+                    "call t{} := BorrowGlobal(contents#Memory(m)[old_size+{}], {});",
                     dest, addr, struct_str,
                 )]
             }
             MoveToSender(src, struct_def_index, _) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 vec![format!(
-                    "call MoveToSender({}, ls[old_size+{}]);",
+                    "call MoveToSender({}, contents#Memory(m)[old_size+{}]);",
                     struct_str, src,
                 )]
             }
@@ -414,10 +433,10 @@ impl<'a> ModuleTranslator<'a> {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 vec![
                     format!(
-                        "call tmp := MoveFrom(ls[old_size+{}], {});",
+                        "call tmp := MoveFrom(contents#Memory(m)[old_size+{}], {});",
                         src, struct_str,
                     ),
-                    format!("ls[old_size+{}] := tmp;", dest),
+                    format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
                     self.format_type_checking(
                         format!("t{}", dest),
                         &self.get_local_type(*dest, func_idx),
@@ -430,7 +449,7 @@ impl<'a> ModuleTranslator<'a> {
                     if self.is_local_ref(*r, func_idx) {
                         ret_assignments.push(format!("ret{} := t{};", i, r));
                     } else {
-                        ret_assignments.push(format!("ret{} := ls[old_size+{}];", i, r));
+                        ret_assignments.push(format!("ret{} := contents#Memory(m)[old_size+{}];", i, r));
                     }
                 }
                 ret_assignments.push("return;".to_string());
@@ -438,127 +457,123 @@ impl<'a> ModuleTranslator<'a> {
             }
             LdTrue(idx) => vec![
                 "call tmp := LdTrue();".to_string(),
-                format!("ls[old_size+{}] := tmp;", idx),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
             ],
             LdFalse(idx) => vec![
                 "call tmp := LdFalse();".to_string(),
-                format!("ls[old_size+{}] := tmp;", idx),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
             ],
             LdConst(idx, num) => vec![
                 format!("call tmp := LdConst({});", num),
-                format!("ls[old_size+{}] := tmp;", idx),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
             ],
             LdAddr(idx, addr_idx) => {
                 let addr = self.module.address_pool()[(*addr_idx).into_index()];
                 let addr_int = BigInt::from_str_radix(&addr.to_string(), 16).unwrap();
                 vec![
                     format!("call tmp := LdAddr({});", addr_int),
-                    format!("ls[old_size+{}] := tmp;", idx),
+                    format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
                 ]
             }
             Not(dest, operand) => vec![
-                format!("call tmp := Not(ls[old_size+{}]);", operand),
-                format!("ls[old_size+{}] := tmp;", dest),
+                format!("call tmp := Not(contents#Memory(m)[old_size+{}]);", operand),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
             Add(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Add(ls[old_size+{}], ls[old_size+{}]);",
+                    "call tmp := Add(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
                     op1, op2
                 ),
-                format!("ls[old_size+{}] := tmp;", dest),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
             Sub(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Sub(ls[old_size+{}], ls[old_size+{}]);",
+                    "call tmp := Sub(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
                     op1, op2
                 ),
-                format!("ls[old_size+{}] := tmp;", dest),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
             Mul(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Mul(ls[old_size+{}], ls[old_size+{}]);",
+                    "call tmp := Mul(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
                     op1, op2
                 ),
-                format!("ls[old_size+{}] := tmp;", dest),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
             Div(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Div(ls[old_size+{}], ls[old_size+{}]);",
+                    "call tmp := Div(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
                     op1, op2
                 ),
-                format!("ls[old_size+{}] := tmp;", dest),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
             Mod(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Mod(ls[old_size+{}], ls[old_size+{}]);",
+                    "call tmp := Mod(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
                     op1, op2
                 ),
-                format!("ls[old_size+{}] := tmp;", dest),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
             Lt(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Lt(ls[old_size+{}], ls[old_size+{}]);",
+                    "call tmp := Lt(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
                     op1, op2
                 ),
-                format!("ls[old_size+{}] := tmp;", dest),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
             Gt(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Gt(ls[old_size+{}], ls[old_size+{}]);",
+                    "call tmp := Gt(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
                     op1, op2
                 ),
-                format!("ls[old_size+{}] := tmp;", dest),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
             Le(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Le(ls[old_size+{}], ls[old_size+{}]);",
+                    "call tmp := Le(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
                     op1, op2
                 ),
-                format!("ls[old_size+{}] := tmp;", dest),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
             Ge(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Ge(ls[old_size+{}], ls[old_size+{}]);",
+                    "call tmp := Ge(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
                     op1, op2
                 ),
-                format!("ls[old_size+{}] := tmp;", dest),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
             Or(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := Or(ls[old_size+{}], ls[old_size+{}]);",
+                    "call tmp := Or(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
                     op1, op2
                 ),
-                format!("ls[old_size+{}] := tmp;", dest),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
             And(dest, op1, op2) => vec![
                 format!(
-                    "call tmp := And(ls[old_size+{}], ls[old_size+{}]);",
+                    "call tmp := And(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
                     op1, op2
                 ),
-                format!("ls[old_size+{}] := tmp;", dest),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
             Eq(dest, op1, op2) => {
-                let operand_type = self.get_local_type(*op1, func_idx);
                 vec![
                     format!(
-                        "call tmp := Eq_{}(ls[old_size+{}], ls[old_size+{}]);",
-                        format_type(self.module, &operand_type),
+                        "call tmp := Eq(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
                         op1,
                         op2
                     ),
-                    format!("ls[old_size+{}] := tmp;", dest),
+                    format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
                 ]
             }
             Neq(dest, op1, op2) => {
-                let operand_type = self.get_local_type(*op1, func_idx);
                 vec![
                     format!(
-                        "call tmp := Neq_{}(ls[old_size+{}], ls[old_size+{}]);",
-                        format_type(self.module, &operand_type),
+                        "call tmp := Neq(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
                         op1,
                         op2
                     ),
-                    format!("ls[old_size+{}] := tmp;", dest),
+                    format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
                 ]
             }
             BitOr(_, _, _) | BitAnd(_, _, _) | Xor(_, _, _) => {
@@ -567,27 +582,27 @@ impl<'a> ModuleTranslator<'a> {
             Abort(_) => vec!["assert false;".into()],
             GetGasRemaining(idx) => vec![
                 "call tmp := GetGasRemaining();".to_string(),
-                format!("ls[old_size+{}] := tmp;", idx),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
             ],
             GetTxnSequenceNumber(idx) => vec![
                 "call tmp := GetTxnSequenceNumber();".to_string(),
-                format!("ls[old_size+{}] := tmp;", idx),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
             ],
             GetTxnPublicKey(idx) => vec![
                 "call tmp := GetTxnPublicKey();".to_string(),
-                format!("ls[old_size+{}] := tmp;", idx),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
             ],
             GetTxnSenderAddress(idx) => vec![
                 "call tmp := GetTxnSenderAddress();".to_string(),
-                format!("ls[old_size+{}] := tmp;", idx),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
             ],
             GetTxnMaxGasUnits(idx) => vec![
                 "call tmp := GetTxnMaxGasUnits();".to_string(),
-                format!("ls[old_size+{}] := tmp;", idx),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
             ],
             GetTxnGasUnitPrice(idx) => vec![
                 "call tmp := GetTxnGasUnitPrice();".to_string(),
-                format!("ls[old_size+{}] := tmp;", idx),
+                format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", idx, idx),
             ],
             _ => vec!["// unimplemented instruction".into()],
         };
@@ -609,6 +624,9 @@ impl<'a> ModuleTranslator<'a> {
         inline: bool,
         arg_names: &Option<Vec<String>>,
     ) -> String {
+        if self.ignore {
+            return "".to_string();
+        }
         let function_def = &self.module.function_defs()[idx];
         let fun_name = self.function_name_from_definition_index(idx);
         let function_handle = self.module.function_handle_at(function_def.function);
@@ -655,6 +673,9 @@ impl<'a> ModuleTranslator<'a> {
         idx: usize,
         arg_names: &Option<Vec<String>>,
     ) -> String {
+        if self.ignore {
+            return "".to_string();
+        }
         let fun_name = self.function_name_from_definition_index(idx);
         let function_def = &self.module.function_defs()[idx];
         let function_handle = self.module.function_handle_at(function_def.function);
@@ -662,18 +683,11 @@ impl<'a> ModuleTranslator<'a> {
         let mut args = String::new(); // vector of ", argname"
         let mut rets = String::new(); // vector of ", argname"
                                       // return values are: <mutable references>, <actual returns>
-        for (i, arg_type) in function_signature.arg_types.iter().enumerate() {
+        for (i, _arg_type) in function_signature.arg_types.iter().enumerate() {
             if i > 0 {
                 args.push_str(", ");
             }
             args.push_str(&self.get_arg_name(i, arg_names).to_string());
-            // collect mutable reference return values
-            if arg_type.is_mutable_reference() {
-                if !rets.is_empty() {
-                    rets.push_str(", ");
-                }
-                rets.push_str(&self.get_local_name(i, arg_names).to_string());
-            }
         }
         // Next loop collects actual return values from Move function
         for i in 0..function_signature.return_types.len() {
@@ -696,6 +710,9 @@ impl<'a> ModuleTranslator<'a> {
         idx: usize,
         arg_names: &Option<Vec<String>>,
     ) -> String {
+        if self.ignore {
+            return "".to_string();
+        }
         let mut var_decls = String::new();
         let mut res = String::new();
         let function_def = &self.module.function_defs()[idx];
@@ -717,8 +734,8 @@ impl<'a> ModuleTranslator<'a> {
             if i < num_args {
                 if !self.is_local_ref(i, idx) {
                     arg_assignment_str.push_str(&format!(
-                        "    ls[old_size+{}] := {};\n",
-                        i,
+                        "    m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size :=  {}]);\n",
+                        i, i,
                         self.get_arg_name(i, arg_names)
                     ));
                 } else {
@@ -765,9 +782,9 @@ impl<'a> ModuleTranslator<'a> {
         //        }
         res.push_str("\n    // assume arguments are of correct types\n");
         res.push_str(&arg_value_assumption_str);
-        res.push_str("\n    old_size := ls_size;\n");
+        res.push_str("\n    old_size := m_size;\n");
         res.push_str(&format!(
-            "    ls_size := ls_size + {};\n",
+            "    m_size := m_size + {};\n",
             code.local_types.len()
         ));
         res.push_str(&arg_assignment_str);
@@ -914,7 +931,12 @@ impl<'a> ModuleTranslator<'a> {
     pub fn format_type_checking(&self, name: String, sig: &SignatureToken) -> String {
         match sig {
             SignatureToken::Reference(_) | SignatureToken::MutableReference(_) => "".to_string(),
-            _ => format!("assume is#{}({});\n", format_value_cons(sig), name,),
+            SignatureToken::TypeParameter(_) => "".to_string(),
+            _ => format!(
+                "assume is#{}({});\n",
+                format_value_cons(self.module, sig),
+                name,
+            ),
         }
     }
 }
@@ -925,6 +947,15 @@ pub fn struct_name_from_handle_index(module: &VerifiedModule, idx: StructHandleI
     let module_name = module.identifier_at(struct_handle_view.module_handle().name);
     let struct_name = struct_handle_view.name();
     format!("{}_{}", module_name, struct_name)
+}
+
+pub fn is_struct_vector(module: &VerifiedModule, idx: StructHandleIndex) -> bool {
+    let struct_handle = module.struct_handle_at(idx);
+    let struct_handle_view = StructHandleView::new(module, struct_handle);
+    let module_name = module.identifier_at(struct_handle_view.module_handle().name);
+    let module_address = module.address_at(struct_handle_view.module_handle().address);
+    module_name.to_string() == "Vector"
+        && *module_address == AccountAddress::from_hex_literal("0x0").unwrap()
 }
 
 pub fn format_type(module: &VerifiedModule, sig: &SignatureToken) -> String {
@@ -938,18 +969,24 @@ pub fn format_type(module: &VerifiedModule, sig: &SignatureToken) -> String {
         SignatureToken::Reference(t) | SignatureToken::MutableReference(t) => {
             format!("{}_ref", format_type(module, &*t))
         }
-        SignatureToken::TypeParameter(_) => "unsupported".into(),
+        SignatureToken::TypeParameter(_) => "typeparam".into(),
     }
 }
 
-pub fn format_value_cons(sig: &SignatureToken) -> String {
+pub fn format_value_cons(module: &VerifiedModule, sig: &SignatureToken) -> String {
     match sig {
         SignatureToken::Bool => "Boolean",
         SignatureToken::U64 => "Integer",
         SignatureToken::String => "Str",
         SignatureToken::ByteArray => "ByteArray",
         SignatureToken::Address => "Address",
-        SignatureToken::Struct(_, _) => "Map",
+        SignatureToken::Struct(idx, _) => {
+            if is_struct_vector(module, *idx) {
+                "Vector"
+            } else {
+                "Map"
+            }
+        }
         _ => "unsupported",
     }
     .into()
@@ -967,7 +1004,7 @@ pub fn get_field_info_from_def_index(
         let sig = field_definition_view.type_signature().token().as_inner();
         name_to_type.insert(
             field_name,
-            (format_type(module, sig), format_value_cons(sig)),
+            (format_type(module, sig), format_value_cons(module, sig)),
         );
     }
     name_to_type
