@@ -85,50 +85,35 @@ fn strip_comments_and_verify(string: &str) -> Result<String> {
 /// Fails with `Err(_)` if the text cannot be parsed`
 pub fn parse_script_or_module(s: &str) -> Result<ast::ScriptOrModule> {
     let stripped_string = &strip_comments_and_verify(s)?;
-    let parser = syntax::ScriptOrModuleParser::new();
-    parser
-        .parse(stripped_string)
-        .or_else(|e| handle_error(e, s))
+    syntax::parse_script_or_module_string(stripped_string).or_else(|e| handle_error(e, s))
 }
 
 /// Given the raw input of a file, creates a `Program` struct
 /// Fails with `Err(_)` if the text cannot be parsed
 pub fn parse_program(program_str: &str) -> Result<ast::Program> {
     let stripped_string = &strip_comments_and_verify(program_str)?;
-    let parser = syntax::ProgramParser::new();
-    parser
-        .parse(stripped_string)
-        .or_else(|e| handle_error(e, stripped_string))
+    syntax::parse_program_string(stripped_string).or_else(|e| handle_error(e, stripped_string))
 }
 
 /// Given the raw input of a file, creates a `Script` struct
 /// Fails with `Err(_)` if the text cannot be parsed
 pub fn parse_script(script_str: &str) -> Result<ast::Script> {
     let stripped_string = &strip_comments_and_verify(script_str)?;
-    let parser = syntax::ScriptParser::new();
-    parser
-        .parse(stripped_string)
-        .or_else(|e| handle_error(e, stripped_string))
+    syntax::parse_script_string(stripped_string).or_else(|e| handle_error(e, stripped_string))
 }
 
 /// Given the raw input of a file, creates a single `ModuleDefinition` struct
 /// Fails with `Err(_)` if the text cannot be parsed
 pub fn parse_module(modules_str: &str) -> Result<ast::ModuleDefinition> {
     let stripped_string = &strip_comments_and_verify(modules_str)?;
-    let parser = syntax::ModuleParser::new();
-    parser
-        .parse(stripped_string)
-        .or_else(|e| handle_error(e, stripped_string))
+    syntax::parse_module_string(stripped_string).or_else(|e| handle_error(e, stripped_string))
 }
 
 /// Given the raw input of a file, creates a single `Cmd` struct
 /// Fails with `Err(_)` if the text cannot be parsed
 pub fn parse_cmd(cmd_str: &str, _sender_address: AccountAddress) -> Result<ast::Cmd> {
     let stripped_string = &strip_comments_and_verify(cmd_str)?;
-    let parser = syntax::CmdParser::new();
-    parser
-        .parse(stripped_string)
-        .or_else(|e| handle_error(e, stripped_string))
+    syntax::parse_cmd_string(stripped_string).or_else(|e| handle_error(e, stripped_string))
 }
 
 fn handle_error<'input, T, Token>(

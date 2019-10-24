@@ -84,8 +84,8 @@ fn spanned<T>(start: usize, end: usize, value: T) -> Spanned<T> {
     }
 }
 
-fn consume_token<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn consume_token<'input>(
+    tokens: &mut Lexer<'input>,
     tok: Tok,
 ) -> Result<(), ParseError<usize, Token<'input>, failure::Error>> {
     if tokens.peek() != tok {
@@ -97,8 +97,8 @@ fn consume_token<'input, 'builder>(
     Ok(())
 }
 
-fn parse_name<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_name<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<String, ParseError<usize, Token<'input>, failure::Error>> {
     if tokens.peek() != Tok::NameValue {
         return Err(ParseError::InvalidToken {
@@ -110,8 +110,8 @@ fn parse_name<'input, 'builder>(
     Ok(name)
 }
 
-fn parse_name_begin_ty<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_name_begin_ty<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<String, ParseError<usize, Token<'input>, failure::Error>> {
     if tokens.peek() != Tok::NameBeginTyValue {
         return Err(ParseError::InvalidToken {
@@ -125,8 +125,8 @@ fn parse_name_begin_ty<'input, 'builder>(
     Ok(name)
 }
 
-fn parse_dot_name<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_dot_name<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<String, ParseError<usize, Token<'input>, failure::Error>> {
     if tokens.peek() != Tok::DotNameValue {
         return Err(ParseError::InvalidToken {
@@ -142,8 +142,8 @@ fn parse_dot_name<'input, 'builder>(
 //     < s: r"0[xX][0-9a-fA-F]+" > => { ... }
 // };
 
-fn parse_account_address<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_account_address<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<AccountAddress, ParseError<usize, Token<'input>, failure::Error>> {
     if tokens.peek() != Tok::AccountAddressValue {
         return Err(ParseError::InvalidToken {
@@ -164,14 +164,14 @@ fn parse_account_address<'input, 'builder>(
 //     <n:Name> =>? Var::parse(n),
 // };
 
-fn parse_var<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_var<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Var, ParseError<usize, Token<'input>, failure::Error>> {
     Var::parse(parse_name(tokens)?)
 }
 
-fn parse_var_<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_var_<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Var_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.start_loc();
     let var = parse_var(tokens)?;
@@ -183,8 +183,8 @@ fn parse_var_<'input, 'builder>(
 //     <n:Name> =>? parse_field(n),
 // };
 
-fn parse_field_<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_field_<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Field_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.start_loc();
     let f = parse_field(parse_name(tokens)?)?;
@@ -200,8 +200,8 @@ fn parse_field_<'input, 'builder>(
 //     <buf: ByteArray> => CopyableVal::ByteArray(buf),
 // }
 
-fn parse_copyable_val_<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_copyable_val_<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<CopyableVal_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.start_loc();
     let val = match tokens.peek() {
@@ -272,15 +272,15 @@ fn get_precedence(token: &Tok) -> u32 {
     }
 }
 
-fn parse_exp_<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_exp_<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>> {
     let lhs = parse_unary_exp_(tokens)?;
     parse_rhs_of_binary_exp(tokens, lhs, get_precedence(&Tok::EqualEqual))
 }
 
-fn parse_rhs_of_binary_exp<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_rhs_of_binary_exp<'input>(
+    tokens: &mut Lexer<'input>,
     lhs: Exp_,
     min_prec: u32,
 ) -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>> {
@@ -340,8 +340,8 @@ fn parse_rhs_of_binary_exp<'input, 'builder>(
 //     <module_dot_name: DotName> <type_actuals: TypeActuals> =>? { ... }
 // }
 
-fn parse_qualified_function_name_<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_qualified_function_name_<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<FunctionCall_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.start_loc();
     let call = match tokens.peek() {
@@ -390,8 +390,8 @@ fn parse_qualified_function_name_<'input, 'builder>(
 //     CallOrTerm,
 // }
 
-fn parse_borrow_field<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_borrow_field<'input>(
+    tokens: &mut Lexer<'input>,
     mutable: bool,
 ) -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>> {
     // This could be either a field borrow (from UnaryExp) or
@@ -420,8 +420,8 @@ fn parse_borrow_field<'input, 'builder>(
     })
 }
 
-fn parse_unary_exp<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_unary_exp<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>> {
     match tokens.peek() {
         Tok::Exclaim => {
@@ -446,8 +446,8 @@ fn parse_unary_exp<'input, 'builder>(
     }
 }
 
-fn parse_unary_exp_<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_unary_exp_<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.start_loc();
     let e = parse_unary_exp(tokens)?;
@@ -459,8 +459,8 @@ fn parse_unary_exp_<'input, 'builder>(
 //     <f: Sp<QualifiedFunctionName>> <exp: Sp<CallOrTerm>> => Exp::FunctionCall(f, Box::new(exp)),
 // }
 
-fn parse_call_<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_call_<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.start_loc();
     let f = parse_qualified_function_name_(tokens)?;
@@ -478,8 +478,8 @@ fn parse_call_<'input, 'builder>(
 //     Term,
 // }
 
-fn parse_call_or_term<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_call_or_term<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>> {
     match tokens.peek() {
         Tok::CreateAccount
@@ -504,8 +504,8 @@ fn parse_call_or_term<'input, 'builder>(
     }
 }
 
-fn parse_call_or_term_<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_call_or_term_<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.start_loc();
     let v = parse_call_or_term(tokens)?;
@@ -517,8 +517,8 @@ fn parse_call_or_term_<'input, 'builder>(
 //     <f: Sp<Field>> ":" <e: Sp<Exp>> => (f, e)
 // }
 
-fn parse_field_exp<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_field_exp<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<(Field_, Exp_), ParseError<usize, Token<'input>, failure::Error>> {
     let f = parse_field_(tokens)?;
     consume_token(tokens, Tok::Colon)?;
@@ -536,8 +536,8 @@ fn parse_field_exp<'input, 'builder>(
 //     "(" <exps: Comma<Sp<Exp>>> ")" => Exp::ExprList(exps),
 // }
 
-fn parse_pack<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_pack<'input>(
+    tokens: &mut Lexer<'input>,
     name: &str,
     type_actuals: Vec<Type>,
 ) -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>> {
@@ -558,8 +558,8 @@ fn parse_pack<'input, 'builder>(
     ))
 }
 
-fn parse_term<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_term<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>> {
     match tokens.peek() {
         Tok::Move => {
@@ -614,8 +614,8 @@ fn parse_term<'input, 'builder>(
 //     <n: Name> =>? StructName::parse(n),
 // }
 
-fn parse_struct_name<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_struct_name<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<StructName, ParseError<usize, Token<'input>, failure::Error>> {
     StructName::parse(parse_name(tokens)?)
 }
@@ -624,8 +624,8 @@ fn parse_struct_name<'input, 'builder>(
 //     <module_dot_struct: DotName> =>? { ... }
 // }
 
-fn parse_qualified_struct_ident<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_qualified_struct_ident<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<QualifiedStructIdent, ParseError<usize, Token<'input>, failure::Error>> {
     let module_dot_struct = parse_dot_name(tokens)?;
     let v: Vec<&str> = module_dot_struct.split('.').collect();
@@ -639,8 +639,8 @@ fn parse_qualified_struct_ident<'input, 'builder>(
 //     <n: Name> =>? ModuleName::parse(n),
 // }
 
-fn parse_module_name<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_module_name<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<ModuleName, ParseError<usize, Token<'input>, failure::Error>> {
     ModuleName::parse(parse_name(tokens)?)
 }
@@ -661,8 +661,8 @@ fn parse_module_name<'input, 'builder>(
 //     "freeze" => Builtin::Freeze,
 // }
 
-fn parse_builtin<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_builtin<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Builtin, ParseError<usize, Token<'input>, failure::Error>> {
     match tokens.peek() {
         Tok::CreateAccount => {
@@ -750,8 +750,8 @@ fn parse_builtin<'input, 'builder>(
 //     "_" => LValue::Pop,
 // }
 
-fn parse_lvalue<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_lvalue<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<LValue, ParseError<usize, Token<'input>, failure::Error>> {
     match tokens.peek() {
         Tok::NameValue => {
@@ -773,8 +773,8 @@ fn parse_lvalue<'input, 'builder>(
     }
 }
 
-fn parse_lvalue_<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_lvalue_<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<LValue_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.start_loc();
     let lv = parse_lvalue(tokens)?;
@@ -786,8 +786,8 @@ fn parse_lvalue_<'input, 'builder>(
 //     <l:Sp<LValue>> <v: ("," <Sp<LValue>>)*> => { ... }
 // }
 
-fn parse_lvalues<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_lvalues<'input>(
+    tokens: &mut Lexer<'input>,
     prefix: Option<LValue_>,
 ) -> Result<Vec<LValue_>, ParseError<usize, Token<'input>, failure::Error>> {
     let l = if let Some(lv) = prefix {
@@ -808,8 +808,8 @@ fn parse_lvalues<'input, 'builder>(
 //     <f: Sp<Field>> => { ... }
 // }
 
-fn parse_field_bindings<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_field_bindings<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<(Field_, Var_), ParseError<usize, Token<'input>, failure::Error>> {
     let f = parse_field_(tokens)?;
     if tokens.peek() == Tok::Colon {
@@ -838,8 +838,8 @@ fn parse_field_bindings<'input, 'builder>(
 //     "(" <Comma<Sp<Exp>>> ")" => Cmd::Exp(Box::new(Spanned::no_loc(Exp::ExprList(<>)))),
 // }
 
-fn parse_assign<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_assign<'input>(
+    tokens: &mut Lexer<'input>,
     prefix: Option<LValue_>,
 ) -> Result<Cmd, ParseError<usize, Token<'input>, failure::Error>> {
     let lvalues = parse_lvalues(tokens, prefix)?;
@@ -848,8 +848,8 @@ fn parse_assign<'input, 'builder>(
     Ok(Cmd::Assign(lvalues, e))
 }
 
-fn parse_unpack<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_unpack<'input>(
+    tokens: &mut Lexer<'input>,
     name: &str,
     type_actuals: Vec<Type>,
 ) -> Result<Cmd, ParseError<usize, Token<'input>, failure::Error>> {
@@ -873,8 +873,8 @@ fn parse_unpack<'input, 'builder>(
     ))
 }
 
-fn parse_cmd<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_cmd<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Cmd, ParseError<usize, Token<'input>, failure::Error>> {
     match tokens.peek() {
         Tok::NameValue => {
@@ -969,8 +969,8 @@ fn parse_cmd<'input, 'builder>(
 //     ";" => Statement::EmptyStatement,
 // }
 
-fn parse_statement<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_statement<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Statement, ParseError<usize, Token<'input>, failure::Error>> {
     match tokens.peek() {
         Tok::Assert => {
@@ -1025,8 +1025,8 @@ fn parse_statement<'input, 'builder>(
 //     "if" "(" <cond: Sp<Exp>> ")" <if_block: Sp<Block>> "else" <else_block: Sp<Block>> => { ... }
 // }
 
-fn parse_if_statement<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_if_statement<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Statement, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::If)?;
     consume_token(tokens, Tok::LParen)?;
@@ -1048,8 +1048,8 @@ fn parse_if_statement<'input, 'builder>(
 //     "while" "(" <cond: Sp<Exp>> ")" <block: Sp<Block>> => { ... }
 // }
 
-fn parse_while_statement<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_while_statement<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Statement, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::While)?;
     consume_token(tokens, Tok::LParen)?;
@@ -1063,8 +1063,8 @@ fn parse_while_statement<'input, 'builder>(
 //     "loop" <block: Sp<Block>> => { ... }
 // }
 
-fn parse_loop_statement<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_loop_statement<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Statement, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Loop)?;
     let block = parse_block_(tokens)?;
@@ -1075,8 +1075,8 @@ fn parse_loop_statement<'input, 'builder>(
 //     <Statement*>
 // }
 
-fn parse_statements<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_statements<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Vec<Statement>, ParseError<usize, Token<'input>, failure::Error>> {
     let mut stmts: Vec<Statement> = vec![];
     // The Statements non-terminal in the grammar is always followed by a
@@ -1091,8 +1091,8 @@ fn parse_statements<'input, 'builder>(
 //     "{" <stmts: Statements> "}" => Block::new(stmts)
 // }
 
-fn parse_block_<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_block_<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Block_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.start_loc();
     consume_token(tokens, Tok::LBrace)?;
@@ -1106,8 +1106,8 @@ fn parse_block_<'input, 'builder>(
 //   "let" <v: Sp<Var>> ":" <t: Type> ";" => (v, t),
 // }
 
-fn parse_declaration<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_declaration<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<(Var_, Type), ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Let)?;
     let v = parse_var_(tokens)?;
@@ -1121,8 +1121,8 @@ fn parse_declaration<'input, 'builder>(
 //     <Declaration*>
 // }
 
-fn parse_declarations<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_declarations<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Vec<(Var_, Type)>, ParseError<usize, Token<'input>, failure::Error>> {
     let mut decls: Vec<(Var_, Type)> = vec![];
     // Declarations always begin with the "let" token so continue parsing
@@ -1137,8 +1137,8 @@ fn parse_declarations<'input, 'builder>(
 //     "{" <locals: Declarations> <stmts: Statements> "}" => (locals, Block::new(stmts))
 // }
 
-fn parse_function_block<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_function_block<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<(Vec<(Var_, Type)>, Block), ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::LBrace)?;
     let locals = parse_declarations(tokens)?;
@@ -1152,8 +1152,8 @@ fn parse_function_block<'input, 'builder>(
 //     "unrestricted" => Kind::Unrestricted,
 // }
 
-fn parse_kind<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_kind<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Kind, ParseError<usize, Token<'input>, failure::Error>> {
     let k = match tokens.peek() {
         Tok::Resource => Kind::Resource,
@@ -1179,8 +1179,8 @@ fn parse_kind<'input, 'builder>(
 //     <n: Name> =>? Ok(Type::TypeParameter(TypeVar::parse(n)?)),
 // }
 
-fn parse_type<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_type<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Type, ParseError<usize, Token<'input>, failure::Error>> {
     let t = match tokens.peek() {
         Tok::Address => {
@@ -1227,8 +1227,8 @@ fn parse_type<'input, 'builder>(
 // }
 // TypeVar_ = Sp<TypeVar>;
 
-fn parse_type_var_<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_type_var_<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<TypeVar_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.start_loc();
     let type_var = TypeVar::parse(parse_name(tokens)?)?;
@@ -1240,8 +1240,8 @@ fn parse_type_var_<'input, 'builder>(
 //     <type_var: Sp<TypeVar>> <k: (":" <Kind>)?> =>? {
 // }
 
-fn parse_type_formal<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_type_formal<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<(TypeVar_, Kind), ParseError<usize, Token<'input>, failure::Error>> {
     let type_var = parse_type_var_(tokens)?;
     if tokens.peek() == Tok::Colon {
@@ -1257,8 +1257,8 @@ fn parse_type_formal<'input, 'builder>(
 //     <tys: ("<" <Comma<Type>> ">")?> => { ... }
 // }
 
-fn parse_type_actuals<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_type_actuals<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Vec<Type>, ParseError<usize, Token<'input>, failure::Error>> {
     let mut tys: Vec<Type> = vec![];
     if tokens.peek() == Tok::Less {
@@ -1280,8 +1280,8 @@ fn parse_type_actuals<'input, 'builder>(
 //     <n: Name> => (n, vec![]),
 // }
 
-fn parse_name_and_type_formals<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_name_and_type_formals<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<(String, Vec<(TypeVar_, Kind)>), ParseError<usize, Token<'input>, failure::Error>> {
     let mut has_types = false;
     let n = if tokens.peek() == Tok::NameBeginTyValue {
@@ -1309,8 +1309,8 @@ fn parse_name_and_type_formals<'input, 'builder>(
 //     <n: Name> => (n, vec![]),
 // }
 
-fn parse_name_and_type_actuals<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_name_and_type_actuals<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<(String, Vec<Type>), ParseError<usize, Token<'input>, failure::Error>> {
     let mut has_types = false;
     let n = if tokens.peek() == Tok::NameBeginTyValue {
@@ -1337,8 +1337,8 @@ fn parse_name_and_type_actuals<'input, 'builder>(
 //     <v: Sp<Var>> ":" <t: Type> ","? => (v, t)
 // }
 
-fn parse_arg_decl<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_arg_decl<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<(Var_, Type), ParseError<usize, Token<'input>, failure::Error>> {
     let v = parse_var_(tokens)?;
     consume_token(tokens, Tok::Colon)?;
@@ -1353,8 +1353,8 @@ fn parse_arg_decl<'input, 'builder>(
 //     ":" <t: Type> <v: ("*" <Type>)*> => { ... }
 // }
 
-fn parse_return_type<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_return_type<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Vec<Type>, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Colon)?;
     let t = parse_type(tokens)?;
@@ -1370,8 +1370,8 @@ fn parse_return_type<'input, 'builder>(
 //     "acquires" <s: StructName> <al: ("," <StructName>)*> => { ... }
 // }
 
-fn parse_acquire_list<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_acquire_list<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Vec<StructName>, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Acquires)?;
     let s = parse_struct_name(tokens)?;
@@ -1402,8 +1402,8 @@ fn parse_acquire_list<'input, 'builder>(
 //         ";" =>? { ... }
 // }
 
-fn parse_function_decl<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_function_decl<'input>(
+    tokens: &mut Lexer<'input>,
     is_native: bool,
     start_loc: usize,
 ) -> Result<(FunctionName, Function_), ParseError<usize, Token<'input>, failure::Error>> {
@@ -1462,8 +1462,8 @@ fn parse_function_decl<'input, 'builder>(
 //     <f: Sp<Field>> ":" <t: Type> ","? => (f, t)
 // }
 
-fn parse_field_decl<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_field_decl<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<(Field_, Type), ParseError<usize, Token<'input>, failure::Error>> {
     let f = parse_field_(tokens)?;
     consume_token(tokens, Tok::Colon)?;
@@ -1478,8 +1478,8 @@ fn parse_field_decl<'input, 'builder>(
 //     "modules:" <c: Module*> "script:" => c,
 // }
 
-fn parse_modules<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_modules<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Vec<ModuleDefinition>, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Modules)?;
     let mut c: Vec<ModuleDefinition> = vec![];
@@ -1495,8 +1495,8 @@ fn parse_modules<'input, 'builder>(
 //     <m: Module> => { ... }
 // }
 
-fn parse_program<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_program<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Program, ParseError<usize, Token<'input>, failure::Error>> {
     if tokens.peek() == Tok::Module {
         let m = parse_module(tokens)?;
@@ -1537,8 +1537,8 @@ fn parse_program<'input, 'builder>(
 //     "main" "(" <args: (ArgDecl)*> ")" <locals_body: FunctionBlock> => { ... }
 // }
 
-fn parse_script<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_script<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<Script, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.start_loc();
     let mut imports: Vec<ImportDefinition> = vec![];
@@ -1577,8 +1577,8 @@ fn parse_script<'input, 'builder>(
 //     <name_and_type_formals: NameAndTypeFormals> ";" =>? { ... }
 // }
 
-fn parse_struct_decl<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_struct_decl<'input>(
+    tokens: &mut Lexer<'input>,
     is_native: bool,
     start_loc: usize,
 ) -> Result<StructDefinition_, ParseError<usize, Token<'input>, failure::Error>> {
@@ -1623,8 +1623,8 @@ fn parse_struct_decl<'input, 'builder>(
 //     <a: AccountAddress> "." <m: ModuleName> => QualifiedModuleIdent::new(m, a),
 // }
 
-fn parse_qualified_module_ident<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_qualified_module_ident<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<QualifiedModuleIdent, ParseError<usize, Token<'input>, failure::Error>> {
     let a = parse_account_address(tokens)?;
     consume_token(tokens, Tok::Period)?;
@@ -1637,8 +1637,8 @@ fn parse_qualified_module_ident<'input, 'builder>(
 //     <transaction_dot_module: DotName> =>? { ... }
 // }
 
-fn parse_module_ident<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_module_ident<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<ModuleIdent, ParseError<usize, Token<'input>, failure::Error>> {
     if tokens.peek() == Tok::AccountAddressValue {
         return Ok(ModuleIdent::Qualified(parse_qualified_module_ident(
@@ -1660,8 +1660,8 @@ fn parse_module_ident<'input, 'builder>(
 //     "as" <alias: ModuleName> => { ... }
 // }
 
-fn parse_import_alias<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_import_alias<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<ModuleName, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::As)?;
     let alias = parse_module_name(tokens)?;
@@ -1678,8 +1678,8 @@ fn parse_import_alias<'input, 'builder>(
 //     "import" <ident: ModuleIdent> <alias: ImportAlias?> ";" => { ... }
 // }
 
-fn parse_import_decl<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_import_decl<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<ImportDefinition, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Import)?;
     let ident = parse_module_ident(tokens)?;
@@ -1700,8 +1700,8 @@ fn parse_import_decl<'input, 'builder>(
 //     "}" =>? ModuleDefinition::new(n, imports, structs, functions),
 // }
 
-fn parse_module<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_module<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<ModuleDefinition, ParseError<usize, Token<'input>, failure::Error>> {
     consume_token(tokens, Tok::Module)?;
     let name = parse_name(tokens)?;
@@ -1764,8 +1764,8 @@ fn parse_module<'input, 'builder>(
 //     <m: Module> => ScriptOrModule::Module(m),
 // }
 
-fn parse_script_or_module<'input, 'builder>(
-    tokens: &mut Lexer<'input, 'builder>,
+fn parse_script_or_module<'input>(
+    tokens: &mut Lexer<'input>,
 ) -> Result<ScriptOrModule, ParseError<usize, Token<'input>, failure::Error>> {
     if tokens.peek() == Tok::Module {
         Ok(ScriptOrModule::Module(parse_module(tokens)?))
@@ -1774,102 +1774,42 @@ fn parse_script_or_module<'input, 'builder>(
     }
 }
 
-pub struct CmdParser {
-    builder: LexerBuilder,
+pub fn parse_cmd_string<'input>(
+    input: &'input str,
+) -> Result<Cmd, ParseError<usize, Token<'input>, failure::Error>> {
+    let mut tokens = Lexer::new(input);
+    tokens.advance()?;
+    parse_cmd(&mut tokens)
 }
 
-impl CmdParser {
-    pub fn new() -> CmdParser {
-        let builder = LexerBuilder::new();
-        CmdParser { builder }
-    }
-
-    pub fn parse<'input>(
-        &self,
-        input: &'input str,
-    ) -> Result<Cmd, ParseError<usize, Token<'input>, failure::Error>> {
-        let mut tokens = self.builder.lexer(input);
-        tokens.advance()?;
-        parse_cmd(&mut tokens)
-    }
+pub fn parse_module_string<'input>(
+    input: &'input str,
+) -> Result<ModuleDefinition, ParseError<usize, Token<'input>, failure::Error>> {
+    let mut tokens = Lexer::new(input);
+    tokens.advance()?;
+    parse_module(&mut tokens)
 }
 
-pub struct ModuleParser {
-    builder: LexerBuilder,
+pub fn parse_program_string<'input>(
+    input: &'input str,
+) -> Result<Program, ParseError<usize, Token<'input>, failure::Error>> {
+    let mut tokens = Lexer::new(input);
+    tokens.advance()?;
+    parse_program(&mut tokens)
 }
 
-impl ModuleParser {
-    pub fn new() -> ModuleParser {
-        let builder = LexerBuilder::new();
-        ModuleParser { builder }
-    }
-
-    pub fn parse<'input>(
-        &self,
-        input: &'input str,
-    ) -> Result<ModuleDefinition, ParseError<usize, Token<'input>, failure::Error>> {
-        let mut tokens = self.builder.lexer(input);
-        tokens.advance()?;
-        parse_module(&mut tokens)
-    }
+pub fn parse_script_string<'input>(
+    input: &'input str,
+) -> Result<Script, ParseError<usize, Token<'input>, failure::Error>> {
+    let mut tokens = Lexer::new(input);
+    tokens.advance()?;
+    parse_script(&mut tokens)
 }
 
-pub struct ProgramParser {
-    builder: LexerBuilder,
-}
-
-impl ProgramParser {
-    pub fn new() -> ProgramParser {
-        let builder = LexerBuilder::new();
-        ProgramParser { builder }
-    }
-
-    pub fn parse<'input>(
-        &self,
-        input: &'input str,
-    ) -> Result<Program, ParseError<usize, Token<'input>, failure::Error>> {
-        let mut tokens = self.builder.lexer(input);
-        tokens.advance()?;
-        parse_program(&mut tokens)
-    }
-}
-
-pub struct ScriptParser {
-    builder: LexerBuilder,
-}
-
-impl ScriptParser {
-    pub fn new() -> ScriptParser {
-        let builder = LexerBuilder::new();
-        ScriptParser { builder }
-    }
-
-    pub fn parse<'input>(
-        &self,
-        input: &'input str,
-    ) -> Result<Script, ParseError<usize, Token<'input>, failure::Error>> {
-        let mut tokens = self.builder.lexer(input);
-        tokens.advance()?;
-        parse_script(&mut tokens)
-    }
-}
-
-pub struct ScriptOrModuleParser {
-    builder: LexerBuilder,
-}
-
-impl ScriptOrModuleParser {
-    pub fn new() -> ScriptOrModuleParser {
-        let builder = LexerBuilder::new();
-        ScriptOrModuleParser { builder }
-    }
-
-    pub fn parse<'input>(
-        &self,
-        input: &'input str,
-    ) -> Result<ScriptOrModule, ParseError<usize, Token<'input>, failure::Error>> {
-        let mut tokens = self.builder.lexer(input);
-        tokens.advance()?;
-        parse_script_or_module(&mut tokens)
-    }
+pub fn parse_script_or_module_string<'input>(
+    input: &'input str,
+) -> Result<ScriptOrModule, ParseError<usize, Token<'input>, failure::Error>> {
+    let mut tokens = Lexer::new(input);
+    tokens.advance()?;
+    parse_script_or_module(&mut tokens)
 }
