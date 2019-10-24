@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{chained_bft::epoch_manager::EpochManager, counters};
+use crate::counters;
 use bytes::Bytes;
 use channel;
 use consensus_types::{
@@ -17,6 +17,7 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_prost_ext::MessageExt;
 use libra_types::account_address::AccountAddress;
+use libra_types::crypto_proxies::ValidatorVerifier;
 use network::{
     proto::{
         BlockRetrievalStatus, ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock,
@@ -88,7 +89,7 @@ pub struct NetworkSender {
     // (self sending is not supported by the networking API).
     // Note that we do not support self rpc requests as it might cause infinite recursive calls.
     self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
-    epoch_mgr: Arc<EpochManager>,
+    validators: Arc<ValidatorVerifier>,
 }
 
 impl NetworkSender {
@@ -96,13 +97,13 @@ impl NetworkSender {
         author: Author,
         network_sender: ConsensusNetworkSender,
         self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
-        epoch_mgr: Arc<EpochManager>,
+        validators: Arc<ValidatorVerifier>,
     ) -> Self {
         NetworkSender {
             author,
             network_sender,
             self_sender,
-            epoch_mgr,
+            validators,
         }
     }
 
@@ -133,7 +134,7 @@ impl NetworkSender {
             match Block::try_from(block) {
                 Ok(block) => {
                     block
-                        .validate_signatures(self.epoch_mgr.validators().as_ref())
+                        .validate_signatures(self.validators.as_ref())
                         .and_then(|_| block.verify_well_formed())
                         .with_context(|e| format_err!("Invalid block because of {:?}", e))?;
                     blocks.push(block);
@@ -171,7 +172,7 @@ impl NetworkSender {
 
     async fn broadcast(&mut self, msg: ConsensusMsg) {
         let msg_raw = msg.to_bytes().unwrap();
-        for peer in self.epoch_mgr.validators().get_ordered_account_addresses() {
+        for peer in self.validators.get_ordered_account_addresses() {
             if self.author == peer {
                 let self_msg = Event::Message((self.author, msg.clone()));
                 if let Err(err) = self.self_sender.send(Ok(self_msg)).await {
@@ -272,15 +273,15 @@ pub struct NetworkTask<T> {
     block_request_tx: channel::Sender<BlockRetrievalRequest<T>>,
     sync_info_tx: channel::Sender<(SyncInfo, AccountAddress)>,
     all_events: Box<dyn Stream<Item = failure::Result<Event<ConsensusMsg>>> + Send + Unpin>,
-    epoch_mgr: Arc<EpochManager>,
+    validators: Arc<ValidatorVerifier>,
 }
 
 impl<T: Payload> NetworkTask<T> {
     /// Establishes the initial connections with the peers and returns the receivers.
-    pub fn start(
+    pub fn new(
         network_events: ConsensusNetworkEvents,
         self_receiver: channel::Receiver<failure::Result<Event<ConsensusMsg>>>,
-        epoch_mgr: Arc<EpochManager>,
+        validators: Arc<ValidatorVerifier>,
     ) -> (NetworkTask<T>, NetworkReceivers<T>) {
         let (proposal_tx, proposal_rx) = channel::new(1_024, &counters::PENDING_PROPOSAL);
         let (vote_tx, vote_rx) = channel::new(1_024, &counters::PENDING_VOTES);
@@ -296,7 +297,7 @@ impl<T: Payload> NetworkTask<T> {
                 block_request_tx,
                 sync_info_tx,
                 all_events,
-                epoch_mgr,
+                validators,
             },
             NetworkReceivers {
                 proposals: proposal_rx,
@@ -307,7 +308,7 @@ impl<T: Payload> NetworkTask<T> {
         )
     }
 
-    pub async fn run(mut self) {
+    pub async fn start(mut self) {
         use ConsensusMsg_oneof::*;
         while let Some(Ok(message)) = self.all_events.next().await {
             match message {
@@ -366,7 +367,7 @@ impl<T: Payload> NetworkTask<T> {
     async fn process_proposal(&mut self, proposal: Proposal) -> failure::Result<()> {
         let proposal = ProposalUncheckedSignatures::<T>::try_from(proposal)?;
         let proposal = proposal
-            .validate_signatures(self.epoch_mgr.validators().as_ref())?
+            .validate_signatures(self.validators.as_ref())?
             .verify_well_formed()?;
         debug!("Received proposal {}", proposal);
         if self.proposal_tx.try_send(proposal).is_err() {
@@ -380,7 +381,7 @@ impl<T: Payload> NetworkTask<T> {
         debug!("Received {}", vote_msg);
         vote_msg
             .vote()
-            .verify(self.epoch_mgr.validators().as_ref())
+            .verify(self.validators.as_ref())
             .map_err(|e| {
                 security_log(SecurityEvent::InvalidConsensusVote)
                     .error(&e)
@@ -400,15 +401,13 @@ impl<T: Payload> NetworkTask<T> {
         peer: AccountAddress,
     ) -> failure::Result<()> {
         let sync_info = SyncInfo::try_from(sync_info)?;
-        sync_info
-            .verify(self.epoch_mgr.validators().as_ref())
-            .map_err(|e| {
-                security_log(SecurityEvent::InvalidSyncInfoMsg)
-                    .error(&e)
-                    .data(&sync_info)
-                    .log();
-                e
-            })?;
+        sync_info.verify(self.validators.as_ref()).map_err(|e| {
+            security_log(SecurityEvent::InvalidSyncInfoMsg)
+                .error(&e)
+                .data(&sync_info)
+                .log();
+            e
+        })?;
         self.sync_info_tx.try_send((sync_info, peer))?;
         Ok(())
     }

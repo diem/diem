@@ -824,4 +824,8 @@ impl<T: Payload> EventProcessor<T> {
     pub fn consensus_state(&self) -> ConsensusState {
         self.safety_rules.consensus_state()
     }
+
+    pub fn block_store(&self) -> Arc<BlockStore<T>> {
+        self.block_store.clone()
+    }
 }

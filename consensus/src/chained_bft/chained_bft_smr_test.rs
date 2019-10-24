@@ -24,7 +24,6 @@ use std::sync::Arc;
 
 use crate::chained_bft::chained_bft_consensus_provider::InitialSetup;
 use crate::chained_bft::{
-    epoch_manager::EpochManager,
     persistent_storage::RecoveryData,
     test_utils::{consensus_runtime, with_smr_id},
 };
@@ -32,7 +31,7 @@ use libra_config::config::ConsensusProposerType::{
     self, FixedProposer, MultipleOrderedProposers, RotatingProposer,
 };
 use libra_types::crypto_proxies::{
-    random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner,
+    random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
 };
 use std::time::Duration;
 use tokio::runtime;
@@ -40,7 +39,7 @@ use tokio::runtime;
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
     signer: ValidatorSigner,
-    epoch_mgr: Arc<EpochManager>,
+    validators: Arc<ValidatorVerifier>,
     proposer_type: ConsensusProposerType,
     smr_id: usize,
     smr: ChainedBftSMR<TestPayload>,
@@ -54,7 +53,7 @@ impl SMRNode {
     fn start(
         playground: &mut NetworkPlayground,
         signer: ValidatorSigner,
-        epoch_mgr: Arc<EpochManager>,
+        validators: Arc<ValidatorVerifier>,
         smr_id: usize,
         storage: Arc<MockStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
@@ -84,7 +83,7 @@ impl SMRNode {
             author,
             signer: signer.clone(),
             epoch: 0,
-            validator: epoch_mgr.validators().as_ref().clone(),
+            validator: validators.as_ref().clone(),
             network_sender,
             network_events,
         };
@@ -109,7 +108,7 @@ impl SMRNode {
         .expect("Failed to start SMR!");
         Self {
             signer,
-            epoch_mgr,
+            validators,
             proposer_type,
             smr_id,
             smr,
@@ -129,7 +128,7 @@ impl SMRNode {
         Self::start(
             playground,
             self.signer,
-            self.epoch_mgr,
+            self.validators,
             self.smr_id + 10,
             self.storage,
             recover_data,
@@ -145,14 +144,14 @@ impl SMRNode {
     ) -> Vec<Self> {
         let (mut signers, validator_verifier) =
             random_validator_verifier(num_nodes, Some(quorum_voting_power), true);
-        let epoch_mgr = Arc::new(EpochManager::new(0, validator_verifier));
+        let validators = Arc::new(validator_verifier);
         let mut nodes = vec![];
         for smr_id in 0..num_nodes {
             let (storage, initial_data) = MockStorage::start_for_testing();
             nodes.push(Self::start(
                 playground,
                 signers.remove(0),
-                Arc::clone(&epoch_mgr),
+                Arc::clone(&validators),
                 smr_id,
                 storage,
                 initial_data,
@@ -168,8 +167,7 @@ fn verify_finality_proof(node: &SMRNode, ledger_info_with_sig: &LedgerInfoWithSi
     for (author, signature) in ledger_info_with_sig.signatures() {
         assert_eq!(
             Ok(()),
-            node.epoch_mgr
-                .validators()
+            node.validators
                 .verify_signature(*author, ledger_info_hash, &signature)
         );
     }

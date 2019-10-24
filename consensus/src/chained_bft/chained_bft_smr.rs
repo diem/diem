@@ -8,28 +8,18 @@ use crate::{
     chained_bft::{
         block_storage::BlockStore,
         event_processor::EventProcessor,
-        liveness::{
-            multi_proposer_election::MultiProposer,
-            pacemaker::{ExponentialTimeInterval, Pacemaker},
-            proposal_generator::ProposalGenerator,
-            proposer_election::ProposerElection,
-            rotating_proposer_election::{choose_leader, RotatingProposer},
-        },
-        network::NetworkSender,
         persistent_storage::{PersistentStorage, RecoveryData},
     },
     counters,
     state_replication::{StateComputer, StateMachineReplication, TxnManager},
-    util::time_service::{ClockTimeService, TimeService},
+    util::time_service::ClockTimeService,
 };
 use channel;
 use consensus_types::common::{Payload, Round};
 use failure::prelude::*;
-use futures::{executor::block_on, select, stream::StreamExt};
+use futures::{select, stream::StreamExt};
 use libra_config::config::{ConsensusConfig, ConsensusProposerType};
 use libra_logger::prelude::*;
-use libra_types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
-use safety_rules::SafetyRules;
 use std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -70,7 +60,7 @@ pub struct ChainedBftSMR<T> {
     initial_setup: Option<InitialSetup>,
     runtime: Option<Runtime>,
     block_store: Option<Arc<BlockStore<T>>>,
-    config: ChainedBftSMRConfig,
+    config: Option<ChainedBftSMRConfig>,
     storage: Arc<dyn PersistentStorage<T>>,
     initial_data: Option<RecoveryData<T>>,
 }
@@ -87,7 +77,7 @@ impl<T: Payload> ChainedBftSMR<T> {
             initial_setup: Some(initial_setup),
             runtime: Some(runtime),
             block_store: None,
-            config,
+            config: Some(config),
             storage,
             initial_data: Some(initial_data),
         }
@@ -96,46 +86,6 @@ impl<T: Payload> ChainedBftSMR<T> {
     #[cfg(test)]
     pub fn block_store(&self) -> Option<Arc<BlockStore<T>>> {
         self.block_store.clone()
-    }
-
-    fn create_pacemaker(
-        &self,
-        time_service: Arc<dyn TimeService>,
-        timeout_sender: channel::Sender<Round>,
-    ) -> Pacemaker {
-        // 1.5^6 ~= 11
-        // Timeout goes from initial_timeout to initial_timeout*11 in 6 steps
-        let time_interval = Box::new(ExponentialTimeInterval::new(
-            self.config.pacemaker_initial_timeout,
-            1.5,
-            6,
-        ));
-        Pacemaker::new(time_interval, time_service, timeout_sender)
-    }
-
-    /// Create a proposer election handler based on proposers
-    fn create_proposer_election(
-        &self,
-        validators: &ValidatorVerifier,
-    ) -> Box<dyn ProposerElection<T> + Send + Sync> {
-        let proposers = validators.get_ordered_account_addresses();
-        match self.config.proposer_type {
-            ConsensusProposerType::MultipleOrderedProposers => {
-                Box::new(MultiProposer::new(proposers, 2))
-            }
-            ConsensusProposerType::RotatingProposer => Box::new(RotatingProposer::new(
-                proposers,
-                self.config.contiguous_rounds,
-            )),
-            // We don't really have a fixed proposer!
-            ConsensusProposerType::FixedProposer => {
-                let proposer = choose_leader(proposers);
-                Box::new(RotatingProposer::new(
-                    vec![proposer],
-                    self.config.contiguous_rounds,
-                ))
-            }
-        }
     }
 
     fn start_event_processing(
@@ -171,6 +121,7 @@ impl<T: Payload> ChainedBftSMR<T> {
                         idle_duration = pre_select_instant.elapsed();
                         event_processor.process_sync_info_msg(sync_info_msg.0, sync_info_msg.1).await;
                     }
+                    // TODO: with epoch changes populated , event_processor = epoch_mgr.start_epoch(..)
                     complete => {
                         break;
                     }
@@ -180,62 +131,8 @@ impl<T: Payload> ChainedBftSMR<T> {
                 counters::EVENT_PROCESSING_LOOP_IDLE_DURATION_S.observe_duration(idle_duration);
             }
         };
-        executor.spawn(network_task.run());
+        executor.spawn(network_task.start());
         executor.spawn(fut);
-    }
-
-    fn start_epoch(
-        &mut self,
-        epoch_mgr: Arc<EpochManager>,
-        time_service: Arc<ClockTimeService>,
-        network_sender: NetworkSender,
-        timeout_sender: channel::Sender<Round>,
-        signer: ValidatorSigner,
-        initial_data: RecoveryData<T>,
-        txn_manager: Arc<dyn TxnManager<Payload = T>>,
-        state_computer: Arc<dyn StateComputer<Payload = T>>,
-    ) -> EventProcessor<T> {
-        let last_vote = initial_data.last_vote();
-        let safety_rules = SafetyRules::new(initial_data.state(), signer);
-
-        let block_store = Arc::new(block_on(BlockStore::new(
-            Arc::clone(&self.storage),
-            initial_data,
-            author,
-            Arc::clone(&state_computer),
-            true,
-            self.config.max_pruned_blocks_in_mem,
-        )));
-
-        self.block_store = Some(Arc::clone(&block_store));
-
-        // txn manager is required both by proposal generator (to pull the proposers)
-        // and by event processor (to update their status).
-        let proposal_generator = ProposalGenerator::new(
-            block_store.clone(),
-            Arc::clone(&txn_manager),
-            time_service.clone(),
-            self.config.max_block_size,
-            true,
-        );
-
-        let pacemaker = self.create_pacemaker(time_service.clone(), timeout_sender);
-
-        let proposer_election = self.create_proposer_election(epoch_mgr.validators().as_ref());
-        EventProcessor::new(
-            Arc::clone(&block_store),
-            last_vote,
-            pacemaker,
-            proposer_election,
-            proposal_generator,
-            safety_rules,
-            txn_manager,
-            network_sender.clone(),
-            Arc::clone(&self.storage),
-            time_service.clone(),
-            true,
-            epoch_mgr.validators(),
-        )
     }
 }
 
@@ -266,13 +163,8 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             state_computer.sync_to_or_bail(initial_data.root_ledger_info());
         }
 
-        // Step 2 TODO: read from libradb instead of config
-        let epoch_mgr = Arc::new(EpochManager::new(
-            initial_setup.epoch,
-            initial_setup.validator.clone(),
-        ));
-
-        // Step 3
+        // Step 2 TODO: read validators from libradb instead of config
+        let validator = Arc::new(initial_setup.validator);
         let executor = self
             .runtime
             .as_mut()
@@ -283,26 +175,27 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         let (timeout_sender, timeout_receiver) =
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
-        let network_sender = NetworkSender::new(
-            initial_setup.signer.author(),
-            initial_setup.network_sender.clone(),
-            self_sender,
-            Arc::clone(&epoch_mgr),
-        );
-
-        let event_processor = self.start_epoch(
-            epoch_mgr.clone(),
+        let epoch_mgr = EpochManager::new(
+            initial_setup.epoch,
+            self.config.take().expect("already started, config is None"),
             time_service,
-            network_sender,
+            self_sender,
+            initial_setup.network_sender,
             timeout_sender,
-            initial_setup.signer,
-            initial_data,
             txn_manager,
             state_computer,
+            self.storage.clone(),
         );
 
+        // Step 3
+        let event_processor =
+            epoch_mgr.start_epoch(initial_setup.signer, validator.clone(), initial_data);
+
+        // TODO: this is test only, we should remove this
+        self.block_store = Some(event_processor.block_store());
+
         let (network_task, network_receiver) =
-            NetworkTask::start(initial_setup.network_events, self_receiver, epoch_mgr);
+            NetworkTask::new(initial_setup.network_events, self_receiver, validator);
 
         Self::start_event_processing(
             executor,

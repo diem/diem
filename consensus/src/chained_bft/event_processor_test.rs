@@ -5,7 +5,6 @@ use crate::chained_bft::network::NetworkTask;
 use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
-        epoch_manager::EpochManager,
         event_processor::EventProcessor,
         liveness::{
             pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
@@ -66,7 +65,7 @@ pub struct NodeSetup {
     storage: Arc<MockStorage<TestPayload>>,
     signer: ValidatorSigner,
     proposer_author: Author,
-    epoch_mgr: Arc<EpochManager>,
+    validators: Arc<ValidatorVerifier>,
 }
 
 impl NodeSetup {
@@ -106,7 +105,7 @@ impl NodeSetup {
     ) -> Vec<NodeSetup> {
         let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
         let proposer_author = signers[0].author();
-        let epoch_mgr = Arc::new(EpochManager::new(0, validator_verifier));
+        let validators = Arc::new(validator_verifier);
         let mut nodes = vec![];
         for signer in signers.iter().take(num_nodes) {
             let (storage, initial_data) = MockStorage::<TestPayload>::start_for_testing();
@@ -117,7 +116,7 @@ impl NodeSetup {
                 proposer_author,
                 storage,
                 initial_data,
-                Arc::clone(&epoch_mgr),
+                Arc::clone(&validators),
             ));
         }
         nodes
@@ -130,7 +129,7 @@ impl NodeSetup {
         proposer_author: Author,
         storage: Arc<MockStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
-        epoch_mgr: Arc<EpochManager>,
+        validators: Arc<ValidatorVerifier>,
     ) -> Self {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -145,11 +144,11 @@ impl NodeSetup {
             signer.author(),
             network_sender,
             self_sender,
-            Arc::clone(&epoch_mgr),
+            validators.clone(),
         );
         let (task, _receiver) =
-            NetworkTask::<TestPayload>::start(network_events, self_receiver, epoch_mgr.clone());
-        executor.spawn(task.run());
+            NetworkTask::<TestPayload>::new(network_events, self_receiver, validators.clone());
+        executor.spawn(task.start());
         let consensus_state = initial_data.state();
         let last_vote_sent = initial_data.last_vote();
         let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
@@ -189,7 +188,7 @@ impl NodeSetup {
             storage.clone(),
             time_service,
             true,
-            epoch_mgr.validators(),
+            validators.clone(),
         );
         block_on(event_processor.start());
         Self {
@@ -199,7 +198,7 @@ impl NodeSetup {
             storage,
             signer,
             proposer_author,
-            epoch_mgr,
+            validators,
         }
     }
 
@@ -215,7 +214,7 @@ impl NodeSetup {
             self.proposer_author,
             self.storage,
             recover_data,
-            self.epoch_mgr,
+            self.validators,
         )
     }
 }
