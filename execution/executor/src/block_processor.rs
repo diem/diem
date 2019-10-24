@@ -114,6 +114,33 @@ where
         }
     }
 
+    /// Rollback
+    pub fn rollback(&mut self, block_id: HashValue) -> Result<()> {
+        // 1. rollback
+        self.storage_write_client.rollback_by_block_id(block_id);
+
+        // 2. get StartInfo
+        let startup_info = self.storage_read_client
+            .get_startup_info()
+            .expect("Failed to read startup info from storage.").expect("block not exist err.");
+
+        // 3. Reset ExecutedTrees
+        let state_tree = Rc::new(SparseMerkleTree::new(startup_info.account_state_root_hash));
+        let transaction_accumulator = Rc::new(
+            Accumulator::new(
+                startup_info.ledger_frozen_subtree_hashes,
+                (startup_info.latest_version + 1),
+            )
+            .expect("The startup info read from storage should be valid."),
+        );
+        self.committed_trees.reset(state_tree, transaction_accumulator);
+
+        // 4. Reset BlockTree
+        self.block_tree.reset(block_id);
+
+        Ok(())
+    }
+
     /// Keeps processing blocks until the command sender is disconnected.
     pub fn run(&mut self) {
         loop {
@@ -259,6 +286,20 @@ where
                 resp_sender
                     .send(res)
                     .expect("Failed to send execute chunk response.");
+            }
+            Command::RollbackBlock{block_id, resp_sender} => {
+                let res = self
+                    .rollback(block_id)
+                    .map_err(|e| {
+                        security_log(SecurityEvent::InvalidBlock)
+                            .error(&e)
+                            .data(block_id)
+                            .log();
+                        e
+                    });
+                resp_sender
+                    .send(res)
+                    .expect("Failed to send rollback response.");
             }
         }
     }

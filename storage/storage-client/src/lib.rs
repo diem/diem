@@ -32,10 +32,11 @@ use storage_proto::{
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
     GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
     GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    SaveTransactionsRequest, StartupInfo,
+    SaveTransactionsRequest, StartupInfo, RollbackRequest, RollbackResponse
 };
 
 pub use crate::state_view::VerifiedStateView;
+use crypto::HashValue;
 
 fn pick<T>(items: &[T]) -> &T {
     let mut rng = rand::thread_rng();
@@ -280,6 +281,11 @@ impl StorageWrite for StorageWriteServiceClient {
             .map_ok(|_| ())
             .boxed()
     }
+
+    fn rollback_by_block_id(&self, block_id:HashValue) {
+        let req = RollbackRequest{block_id};
+        self.client().rollback_by_block_id(&req.into());
+    }
 }
 
 /// This trait defines interfaces to be implemented by a storage read client.
@@ -424,6 +430,9 @@ pub trait StorageWrite: Send + Sync {
         first_version: Version,
         ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
+
+    /// Rollback
+    fn rollback_by_block_id(&self, block_id:HashValue);
 }
 
 fn convert_grpc_err(e: grpcio::Error) -> Error {

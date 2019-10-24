@@ -112,6 +112,7 @@ impl CanonicalSerialize for ExecutedState {
         Ok(())
     }
 }
+
 /// `Executor` implements all functionalities the execution module needs to provide.
 pub struct Executor<V> {
     /// A thread that keeps processing blocks.
@@ -125,8 +126,8 @@ pub struct Executor<V> {
 }
 
 impl<V> Executor<V>
-where
-    V: VMExecutor,
+    where
+        V: VMExecutor,
 {
     /// Constructs an `Executor`.
     pub fn new(
@@ -216,8 +217,8 @@ where
             *PRE_GENESIS_BLOCK_ID,
             *GENESIS_BLOCK_ID,
         ))
-        .expect("Response sender was unexpectedly dropped.")
-        .expect("Failed to execute genesis block.");
+            .expect("Response sender was unexpectedly dropped.")
+            .expect("Failed to execute genesis block.");
 
         let root_hash = state_compute_result.executed_state.state_id;
         let ledger_info = LedgerInfo::new(
@@ -254,19 +255,19 @@ where
             .lock()
             .expect("Failed to lock mutex.")
             .as_ref()
-        {
-            Some(sender) => sender
-                .send(Command::ExecuteBlock {
-                    transactions,
-                    parent_id,
-                    id,
-                    resp_sender,
-                })
-                .expect("Did block processor thread panic?"),
-            None => resp_sender
-                .send(Err(format_err!("Executor is shutting down.")))
-                .expect("Failed to send error message."),
-        }
+            {
+                Some(sender) => sender
+                    .send(Command::ExecuteBlock {
+                        transactions,
+                        parent_id,
+                        id,
+                        resp_sender,
+                    })
+                    .expect("Did block processor thread panic?"),
+                None => resp_sender
+                    .send(Err(format_err!("Executor is shutting down.")))
+                    .expect("Failed to send error message."),
+            }
         resp_receiver
     }
 
@@ -286,17 +287,17 @@ where
             .lock()
             .expect("Failed to lock mutex.")
             .as_ref()
-        {
-            Some(sender) => sender
-                .send(Command::CommitBlock {
-                    ledger_info_with_sigs,
-                    resp_sender,
-                })
-                .expect("Did block processor thread panic?"),
-            None => resp_sender
-                .send(Err(format_err!("Executor is shutting down.")))
-                .expect("Failed to send error message."),
-        }
+            {
+                Some(sender) => sender
+                    .send(Command::CommitBlock {
+                        ledger_info_with_sigs,
+                        resp_sender,
+                    })
+                    .expect("Did block processor thread panic?"),
+                None => resp_sender
+                    .send(Err(format_err!("Executor is shutting down.")))
+                    .expect("Failed to send error message."),
+            }
         resp_receiver
     }
 
@@ -319,18 +320,43 @@ where
             .lock()
             .expect("Failed to lock mutex.")
             .as_ref()
-        {
-            Some(sender) => sender
-                .send(Command::ExecuteChunk {
-                    txn_list_with_proof,
-                    ledger_info_with_sigs,
-                    resp_sender,
-                })
-                .expect("Did block processor thread panic?"),
-            None => resp_sender
-                .send(Err(format_err!("Executor is shutting down.")))
-                .expect("Failed to send error message."),
-        }
+            {
+                Some(sender) => sender
+                    .send(Command::ExecuteChunk {
+                        txn_list_with_proof,
+                        ledger_info_with_sigs,
+                        resp_sender,
+                    })
+                    .expect("Did block processor thread panic?"),
+                None => resp_sender
+                    .send(Err(format_err!("Executor is shutting down.")))
+                    .expect("Failed to send error message."),
+            }
+        resp_receiver
+    }
+
+    /// Rollback
+    pub fn rollback_by_block_id(
+        &self,
+        block_id: HashValue,
+    ) -> oneshot::Receiver<Result<()>> {
+        let (resp_sender, resp_receiver) = oneshot::channel();
+        match self
+            .command_sender
+            .lock()
+            .expect("Failed to lock mutex.")
+            .as_ref()
+            {
+                Some(sender) => sender
+                    .send(Command::RollbackBlock {
+                        block_id,
+                        resp_sender,
+                    })
+                    .expect("Did block processor thread panic?"),
+                None => resp_sender
+                    .send(Err(format_err!("Executor is shutting down.")))
+                    .expect("Failed to send error message."),
+            }
         resp_receiver
     }
 }
@@ -369,6 +395,10 @@ enum Command {
         ledger_info_with_sigs: LedgerInfoWithSignatures,
         resp_sender: oneshot::Sender<Result<()>>,
     },
+    RollbackBlock {
+        block_id: HashValue,
+        resp_sender: oneshot::Sender<Result<()>>,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -401,5 +431,11 @@ impl ExecutedTrees {
             None
         };
         (version, self.state_tree().root_hash())
+    }
+
+    /// Reset ExecutedTrees
+    pub fn reset(&mut self, state_tree: Rc<SparseMerkleTree>, transaction_accumulator: Rc<Accumulator<TransactionAccumulatorHasher>>) {
+        let mut executed_trees = ExecutedTrees { state_tree, transaction_accumulator };
+        std::mem::swap(self, &mut executed_trees);
     }
 }

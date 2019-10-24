@@ -20,7 +20,10 @@ use std::{
     sync::Arc,
 };
 use storage_client::{StorageRead, StorageWrite};
-use storage_proto::proto::storage::{create_storage, GetAccountStateWithProofByVersionRequest};
+use storage_proto::proto::storage::{
+    create_storage, GetAccountStateWithProofByVersionRequest,
+};
+use crypto::HashValue;
 
 pub fn start_storage_service_and_return_service(
     config: &NodeConfig,
@@ -227,5 +230,9 @@ impl StorageWrite for StorageService {
             Ok(())
         }
             .boxed()
+    }
+
+    fn rollback_by_block_id(&self, block_id:HashValue) {
+        self.rollback_by_block_id_inner(&block_id);
     }
 }

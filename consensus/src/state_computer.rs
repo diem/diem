@@ -115,6 +115,26 @@ impl StateComputer for ExecutionProxy {
             .boxed()
     }
 
+    fn rollback(
+        &self,
+        block_id: HashValue,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+        let pre_rollback_instant = Instant::now();
+        let rollback_future = self.executor.rollback_by_block_id(block_id);
+        async move {
+            match rollback_future.await {
+                Ok(Ok(())) => {
+                    counters::BLOCK_COMMIT_DURATION_S
+                        .observe_duration(pre_rollback_instant.elapsed());
+                    Ok(())
+                }
+                Ok(Err(e)) => Err(e),
+                Err(e) => Err(e.into()),
+            }
+        }
+            .boxed()
+    }
+
     /// Synchronize to a commit that not present locally.
     fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
         counters::STATE_SYNC_COUNT.inc();

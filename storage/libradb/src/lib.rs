@@ -112,6 +112,7 @@ impl LibraDB {
                 JELLYFISH_MERKLE_NODE_CF_NAME,
                 ColumnFamilyOptions::default(),
             ),
+            (LEDGER_HISTORY_CF_NAME, ColumnFamilyOptions::default()),
             (LEDGER_COUNTERS_CF_NAME, ColumnFamilyOptions::default()),
             (STALE_NODE_INDEX_CF_NAME, ColumnFamilyOptions::default()),
             (TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
@@ -723,6 +724,11 @@ impl LibraDB {
             events,
             proof,
         })
+    }
+
+    pub fn rollback_by_block_id(&self, block_id:&HashValue) -> Result<()> {
+        let mut cs = ChangeSet::new();
+        self.ledger_store.rollback_by_block_id(block_id, &mut cs)
     }
 }
 

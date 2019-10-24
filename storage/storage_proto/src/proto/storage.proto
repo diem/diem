@@ -49,6 +49,10 @@ service Storage {
     // Returns latest ledger infos per epoch.
     rpc GetLatestLedgerInfosPerEpoch(GetLatestLedgerInfosPerEpochRequest)
     returns (GetLatestLedgerInfosPerEpochResponse);
+
+    // Rollback
+    rpc RollbackByBlockId(RollbackRequest)
+    returns (RollbackResponse);
 }
 
 message SaveTransactionsRequest {
@@ -126,4 +130,12 @@ message GetLatestLedgerInfosPerEpochRequest {
 message GetLatestLedgerInfosPerEpochResponse {
     /// Vector of latest ledger infos per epoch (not sorted)
     repeated types.LedgerInfoWithSignatures latest_ledger_infos = 1;
+}
+
+message RollbackRequest {
+    bytes block_id = 1;
+}
+
+message RollbackResponse {
+
 }

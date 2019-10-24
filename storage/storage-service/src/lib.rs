@@ -28,8 +28,9 @@ use storage_proto::proto::storage::{
     GetAccountStateWithProofByVersionResponse, GetLatestLedgerInfosPerEpochRequest,
     GetLatestLedgerInfosPerEpochResponse, GetStartupInfoRequest, GetStartupInfoResponse,
     GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
-    SaveTransactionsResponse, Storage,
+    SaveTransactionsResponse, Storage, RollbackRequest, RollbackResponse
 };
+use crypto::HashValue;
 
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
@@ -228,6 +229,10 @@ impl StorageService {
         let rust_resp = storage_proto::GetLatestLedgerInfosPerEpochResponse::new(ledger_infos);
         Ok(rust_resp.into())
     }
+
+    fn rollback_by_block_id_inner(&self, block_id:&HashValue) -> Result<()> {
+        self.db.rollback_by_block_id(block_id)
+    }
 }
 
 impl Storage for StorageService {
@@ -301,6 +306,18 @@ impl Storage for StorageService {
         let _timer = SVC_COUNTERS.req(&ctx);
         let resp = self.get_latest_ledger_infos_per_epoch_inner(req);
         provide_grpc_response(resp, ctx, sink);
+    }
+
+    fn rollback_by_block_id(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: RollbackRequest,
+        sink: grpcio::UnarySink<RollbackResponse>,
+    ) {
+        debug!("[GRPC] Storage::rollback_by_block_id");
+        self.rollback_by_block_id_inner(&HashValue::from_slice(req.block_id.as_ref()).expect("parse err.")).expect("rollback err.");
+        let resp = RollbackResponse{};
+        provide_grpc_response(Ok(resp), ctx, sink);
     }
 }
 
