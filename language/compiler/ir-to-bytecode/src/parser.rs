@@ -84,7 +84,7 @@ fn strip_comments_and_verify(string: &str) -> Result<String> {
 /// Given the raw input of a file, creates a `ScriptOrModule` enum
 /// Fails with `Err(_)` if the text cannot be parsed`
 pub fn parse_script_or_module(s: &str) -> Result<ast::ScriptOrModule> {
-    let stripped_string = &strip_comments(s);
+    let stripped_string = &strip_comments_and_verify(s)?;
     let parser = syntax::ScriptOrModuleParser::new();
     parser
         .parse(stripped_string)
