@@ -14,6 +14,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},
     account_state_blob::AccountStateWithProof,
+    block_metadata::BlockMetadata,
     crypto_proxies::ValidatorVerifier,
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -49,6 +50,10 @@ fn gen_ledger_info_with_sigs(
         None,
     );
     LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
+}
+
+fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
+    BlockMetadata::new(gen_block_id(index), index as u64, BTreeMap::new(), proposer)
 }
 
 fn create_storage_service_and_executor(config: &NodeConfig) -> (ServerHandle, Executor<MoveVM>) {
@@ -139,7 +144,10 @@ fn test_reconfiguration() {
         /* sequence_number = */ 2,
         genesis_keypair.private_key.clone(),
         genesis_keypair.public_key.clone(),
-        Some(encode_block_prologue_script(/* block_height */ 1)),
+        Some(encode_block_prologue_script(gen_block_metadata(
+            1,
+            *validator_account,
+        ))),
     );
     let txn_block = vec![txn1, txn2, txn3];
     let block1_id = gen_block_id(1);
@@ -173,7 +181,10 @@ fn test_reconfiguration() {
         /* sequence_number = */ 3,
         genesis_keypair.private_key.clone(),
         genesis_keypair.public_key.clone(),
-        Some(encode_block_prologue_script(/* block_height */ 2)),
+        Some(encode_block_prologue_script(gen_block_metadata(
+            2,
+            *validator_account,
+        ))),
     );
     let txn_block = vec![txn4, txn5];
     let block2_id = gen_block_id(2);

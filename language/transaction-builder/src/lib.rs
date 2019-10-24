@@ -4,6 +4,7 @@ use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::HashValue;
+use libra_types::block_metadata::BlockMetadata;
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
@@ -143,10 +144,16 @@ pub fn encode_mint_script(sender: &AccountAddress, amount: u64) -> Script {
 
 // TODO: this should go away once we are no longer using it in tests
 /// Encode a program creating `amount` coins for sender
-pub fn encode_block_prologue_script(block_height: u64) -> Script {
+pub fn encode_block_prologue_script(block_metadata: BlockMetadata) -> Script {
+    let (id, timestamp, previous_vote, proposer) = block_metadata.into_inner().unwrap();
     Script::new(
         BLOCK_PROLOGUE_TXN.clone(),
-        vec![TransactionArgument::U64(block_height)],
+        vec![
+            TransactionArgument::U64(timestamp),
+            TransactionArgument::ByteArray(id),
+            TransactionArgument::ByteArray(previous_vote),
+            TransactionArgument::Address(proposer),
+        ],
     )
 }
 
