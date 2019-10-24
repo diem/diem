@@ -365,7 +365,7 @@ fn parse_qualified_function_name_<'input, 'builder>(
             let module_dot_name = parse_dot_name(tokens)?;
             let type_actuals = parse_type_actuals(tokens)?;
             let v: Vec<&str> = module_dot_name.split('.').collect();
-            assert!(v.len() == 2, 42);
+            assert!(v.len() == 2);
             FunctionCall::ModuleFunctionCall {
                 module: ModuleName::parse(v[0])?,
                 name: FunctionName::parse(v[1])?,
@@ -629,7 +629,7 @@ fn parse_qualified_struct_ident<'input, 'builder>(
 ) -> Result<QualifiedStructIdent, ParseError<usize, Token<'input>, failure::Error>> {
     let module_dot_struct = parse_dot_name(tokens)?;
     let v: Vec<&str> = module_dot_struct.split('.').collect();
-    assert!(v.len() == 2, 42);
+    assert!(v.len() == 2);
     let m: ModuleName = ModuleName::parse(v[0])?;
     let n: StructName = StructName::parse(v[1])?;
     Ok(QualifiedStructIdent::new(m, n))
@@ -1647,7 +1647,7 @@ fn parse_module_ident<'input, 'builder>(
     }
     let transaction_dot_module = parse_dot_name(tokens)?;
     let v: Vec<&str> = transaction_dot_module.split('.').collect();
-    assert!(v.len() == 2, 42);
+    assert!(v.len() == 2);
     let ident: String = v[0].to_string();
     if ident != "Transaction" {
         panic!("Ident = {} which is not Transaction", ident);
