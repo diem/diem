@@ -204,7 +204,5 @@
 //! ```
 
 pub mod ast;
-pub mod lexer;
-
-#[allow(deprecated)]
+mod lexer;
 pub mod syntax;
