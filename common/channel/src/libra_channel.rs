@@ -54,7 +54,7 @@ impl<T: MessageQueue> Sender<T> {
     /// This adds the message into the internal queue data structure. This is a non-blocking
     /// synchronous call.
     /// TODO: We can have this return a boolean if the queue of a validator is capacity
-    pub fn put(&mut self, key: <T as MessageQueue>::Key, message: <T as MessageQueue>::Message) {
+    pub fn put(&mut self, key: T::Key, message: T::Message) {
         let mut shared_state = self.shared_state.lock().unwrap();
         shared_state.internal_queue.push(key, message);
         if let Some(w) = shared_state.waker.take() {
