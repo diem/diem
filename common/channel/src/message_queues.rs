@@ -75,10 +75,7 @@ impl<T> PerValidatorQueue<T> {
             (None, true)
         }
     }
-
 }
-
-
 
 impl<T: ValidatorMessage> MessageQueue for PerValidatorQueue<T> {
     type Message = T;
@@ -88,7 +85,8 @@ impl<T: ValidatorMessage> MessageQueue for PerValidatorQueue<T> {
     fn push(&mut self, message: Self::Message) {
         let validator = message.get_validator();
         let max_queue_size = self.max_queue_size;
-        let validator_message_queue = self.per_validator_queue
+        let validator_message_queue = self
+            .per_validator_queue
             .entry(validator)
             .or_insert_with(|| VecDeque::with_capacity(max_queue_size));
         // Add the validator to our round-robin queue if it's not already there
@@ -116,7 +114,9 @@ impl<T: ValidatorMessage> MessageQueue for PerValidatorQueue<T> {
     fn pop(&mut self) -> Option<Self::Message> {
         let validator = match self.round_robin_queue.pop_front() {
             Some(v) => v,
-            _ => { return None; }
+            _ => {
+                return None;
+            }
         };
         let (message, is_q_empty) = self.pop_from_validator_queue(validator);
         if !is_q_empty {
