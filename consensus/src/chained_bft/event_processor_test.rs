@@ -14,13 +14,12 @@ use crate::{
         },
         network::{BlockRetrievalRequest, BlockRetrievalResponse, NetworkSender},
         network_tests::NetworkPlayground,
-        persistent_storage::{PersistentStorage, RecoveryData},
+        persistent_storage::RecoveryData,
         test_utils::{
             self, consensus_runtime, MockStateComputer, MockStorage, MockTransactionManager,
             TestPayload, TreeInserter,
         },
     },
-    state_replication::StateComputer,
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
@@ -69,22 +68,6 @@ pub struct NodeSetup {
 }
 
 impl NodeSetup {
-    fn build_empty_store(
-        author: Author,
-        storage: Arc<dyn PersistentStorage<TestPayload>>,
-        state_computer: Arc<dyn StateComputer<Payload = TestPayload>>,
-        initial_data: RecoveryData<TestPayload>,
-    ) -> Arc<BlockStore<TestPayload>> {
-        Arc::new(block_on(BlockStore::new(
-            storage,
-            initial_data,
-            author,
-            state_computer,
-            true,
-            10, // max pruned blocks in mem
-        )))
-    }
-
     fn create_pacemaker(time_service: Arc<dyn TimeService>) -> Pacemaker {
         let base_timeout = Duration::new(60, 0);
         let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
@@ -157,20 +140,25 @@ impl NodeSetup {
             Arc::clone(&storage),
         ));
 
-        let block_store = Self::build_empty_store(
-            signer.author(),
+        let block_store = Arc::new(block_on(BlockStore::new(
             storage.clone(),
-            state_computer.clone(),
             initial_data,
-        );
+            state_computer.clone(),
+            true,
+            10, // max pruned blocks in mem
+        )));
+
         let time_service = Arc::new(ClockTimeService::new(executor.clone()));
+
         let proposal_generator = ProposalGenerator::new(
+            signer.author(),
             block_store.clone(),
             Arc::new(MockTransactionManager::new()),
             time_service.clone(),
             1,
             true,
         );
+
         let safety_rules = SafetyRules::new(consensus_state, signer.clone());
 
         let pacemaker = Self::create_pacemaker(time_service.clone());
@@ -464,11 +452,8 @@ fn process_vote_timeout_msg_test() {
     let non_proposer = nodes.pop().unwrap();
     let mut static_proposer = nodes.pop().unwrap();
 
-    let genesis = non_proposer.block_store.root();
-    let block_0 = non_proposer
-        .block_store
-        .create_proposal(genesis.block(), vec![1], 1, 1);
-    let block_0 = Block::new_proposal_from_block_data(block_0, &static_proposer.signer);
+    let qc = non_proposer.block_store.highest_quorum_cert();
+    let block_0 = Block::new_proposal(vec![1], 1, 1, qc.as_ref().clone(), &non_proposer.signer);
     let block_0_id = block_0.id();
     block_on(
         non_proposer

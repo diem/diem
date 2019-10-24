@@ -140,7 +140,7 @@ impl<T: Payload> EventProcessor<T> {
         };
         if self
             .proposer_election
-            .is_valid_proposer(self.block_store.author(), new_round_event.round)
+            .is_valid_proposer(self.proposal_generator.author(), new_round_event.round)
             .is_none()
         {
             return;
@@ -237,7 +237,7 @@ impl<T: Payload> EventProcessor<T> {
         remote_round: Round,
         remote_hqc_round: Round,
     ) {
-        if self.block_store.author() == peer {
+        if self.proposal_generator.author() == peer {
             return;
         }
         // pacemaker's round is sync_info.highest_round() + 1
@@ -657,7 +657,7 @@ impl<T: Payload> EventProcessor<T> {
             let next_round = vote_msg.vote().vote_data().proposed().round() + 1;
             if self
                 .proposer_election
-                .is_valid_proposer(self.block_store.author(), next_round)
+                .is_valid_proposer(self.proposal_generator.author(), next_round)
                 .is_none()
             {
                 debug!(

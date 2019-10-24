@@ -10,7 +10,8 @@ use crate::{
 use consensus_types::{
     block::Block,
     block_data::BlockData,
-    common::{Payload, Round},
+    common::{Author, Payload, Round},
+    quorum_cert::QuorumCert,
 };
 use failure::ResultExt;
 use libra_logger::prelude::*;
@@ -33,6 +34,8 @@ mod proposal_generator_test;
 /// TxnManager should be aware of the pending transactions in the branch that it is extending,
 /// such that it will filter them out to avoid transaction duplication.
 pub struct ProposalGenerator<T> {
+    // The account address of this validator
+    author: Author,
     // Block store is queried both for finding the branch to extend and for generating the
     // proposed block.
     block_store: Arc<dyn BlockReader<Payload = T> + Send + Sync>,
@@ -50,6 +53,7 @@ pub struct ProposalGenerator<T> {
 
 impl<T: Payload> ProposalGenerator<T> {
     pub fn new(
+        author: Author,
         block_store: Arc<dyn BlockReader<Payload = T> + Send + Sync>,
         txn_manager: Arc<dyn TxnManager<Payload = T>>,
         time_service: Arc<dyn TimeService>,
@@ -57,6 +61,7 @@ impl<T: Payload> ProposalGenerator<T> {
         enforce_increasing_timestamps: bool,
     ) -> Self {
         Self {
+            author,
             block_store,
             txn_manager,
             time_service,
@@ -66,20 +71,14 @@ impl<T: Payload> ProposalGenerator<T> {
         }
     }
 
+    pub fn author(&self) -> Author {
+        self.author
+    }
+
     /// Creates a NIL block proposal extending the highest certified block from the block store.
     pub fn generate_nil_block(&self, round: Round) -> failure::Result<Block<T>> {
-        let hqc_block = self.block_store.highest_certified_block();
-        ensure!(
-            hqc_block.round() < round,
-            "Given round {} is lower than hqc round {}",
-            round,
-            hqc_block.round()
-        );
-        let hqc_block_qc = self
-            .block_store
-            .get_quorum_cert_for_block(hqc_block.id())
-            .ok_or_else(|| format_err!("Quorum Cert for HQC block not found"))?;
-        Ok(Block::new_nil(round, hqc_block_qc.as_ref().clone()))
+        let hqc = self.ensure_highest_quorum_cert(round)?;
+        Ok(Block::new_nil(round, hqc.as_ref().clone()))
     }
 
     /// The function generates a new proposal block: the returned future is fulfilled when the
@@ -88,7 +87,7 @@ impl<T: Payload> ProposalGenerator<T> {
     /// Errors returned by the TxnManager implementation are propagated to the caller.
     /// The logic for choosing the branch to extend is as follows:
     /// 1. The function gets the highest head of a one-chain from block tree.
-    /// The new proposal must extend hqc_block to ensure optimistic responsiveness.
+    /// The new proposal must extend hqc to ensure optimistic responsiveness.
     /// 2. The round is provided by the caller.
     /// 3. In case a given round is not greater than the calculated parent, return an OldRound
     /// error.
@@ -106,24 +105,16 @@ impl<T: Payload> ProposalGenerator<T> {
             }
         }
 
-        let hqc_block = self.block_store.highest_certified_block();
-        ensure!(
-            hqc_block.round() < round,
-            "Given round {} is lower than hqc round {}",
-            round,
-            hqc_block.round()
-        );
+        let hqc = self.ensure_highest_quorum_cert(round)?;
 
         // One needs to hold the blocks with the references to the payloads while get_block is
         // being executed: pending blocks vector keeps all the pending ancestors of the extended
         // branch.
-        let pending_blocks = match self.block_store.path_from_root(hqc_block.id()) {
-            Some(res) => res,
-            // In case the whole system moved forward between the check of a round and getting
-            // path from root.
-            None => bail!("HQC {} already pruned", hqc_block),
-        };
-        //let pending_blocks = self.get_pending_blocks(Arc::clone(&hqc_block));
+        let pending_blocks = self
+            .block_store
+            .path_from_root(hqc.certified_block().id())
+            .ok_or_else(|| format_err!("HQC {} already pruned", hqc.certified_block().id()))?;
+
         // Exclude all the pending transactions: these are all the ancestors of
         // parent (including) up to the root (excluding).
         let exclude_payload = pending_blocks
@@ -135,7 +126,7 @@ impl<T: Payload> ProposalGenerator<T> {
             if self.enforce_increasing_timestamps {
                 match wait_if_possible(
                     self.time_service.as_ref(),
-                    Duration::from_micros(hqc_block.timestamp_usecs()),
+                    Duration::from_micros(hqc.certified_block().timestamp_usecs()),
                     round_deadline,
                 )
                 .await
@@ -174,7 +165,7 @@ impl<T: Payload> ProposalGenerator<T> {
                                 counters::PROPOSAL_MAX_WAIT_EXCEEDED_COUNT.inc();
                                 bail!(
                                     "Waiting until parent block timestamp usecs {:?} would exceed the round duration {:?}, hence will not create a proposal for this round",
-                                    hqc_block.timestamp_usecs(),
+                                    hqc.certified_block().timestamp_usecs(),
                                     round_deadline);
                             }
                             WaitingError::WaitFailed {
@@ -186,7 +177,7 @@ impl<T: Payload> ProposalGenerator<T> {
                                 bail!(
                                     "Even after waiting for {:?}, parent block timestamp usecs {:?} >= current timestamp usecs {:?}, will not create a proposal for this round",
                                     wait_duration,
-                                    hqc_block.timestamp_usecs(),
+                                    hqc.certified_block().timestamp_usecs(),
                                     current_duration_since_epoch);
                             }
                         };
@@ -198,8 +189,8 @@ impl<T: Payload> ProposalGenerator<T> {
         };
 
         // Reconfiguration rule - we propose empty blocks after reconfiguration until it's committed
-        let txns = if self.block_store.root() != hqc_block
-            && hqc_block.compute_result().has_reconfiguration()
+        let txns = if self.block_store.root().id() != hqc.certified_block().id()
+            && hqc.certified_block().has_reconfiguration()
         {
             T::default()
         } else {
@@ -209,11 +200,23 @@ impl<T: Payload> ProposalGenerator<T> {
                 .with_context(|e| format!("Fail to retrieve txn: {}", e))?
         };
 
-        Ok(self.block_store.create_proposal(
-            hqc_block.block(),
+        Ok(BlockData::new_proposal(
             txns,
+            self.author,
             round,
             block_timestamp.as_micros() as u64,
+            hqc.as_ref().clone(),
         ))
+    }
+
+    fn ensure_highest_quorum_cert(&self, round: Round) -> failure::Result<Arc<QuorumCert>> {
+        let hqc = self.block_store.highest_quorum_cert();
+        ensure!(
+            hqc.certified_block().round() < round,
+            "Given round {} is lower than hqc round {}",
+            round,
+            hqc.certified_block().round()
+        );
+        Ok(hqc)
     }
 }

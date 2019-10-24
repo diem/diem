@@ -10,13 +10,8 @@ use crate::{
     state_replication::StateComputer,
 };
 use consensus_types::{
-    block::Block,
-    block_data::BlockData,
-    common::{Author, Payload, Round},
-    executed_block::ExecutedBlock,
-    quorum_cert::QuorumCert,
-    timeout_certificate::TimeoutCertificate,
-    vote::Vote,
+    block::Block, common::Payload, executed_block::ExecutedBlock, quorum_cert::QuorumCert,
+    timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use executor::ProcessedVMOutput;
 use failure::ResultExt;
@@ -26,7 +21,6 @@ use libra_logger::prelude::*;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_types::validator_set::ValidatorSet;
-use mirai_annotations::checked_precondition;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
     sync::{Arc, RwLock},
@@ -58,7 +52,6 @@ pub mod sync_manager;
 ///             ╰--------------> D3
 pub struct BlockStore<T> {
     inner: Arc<RwLock<BlockTree<T>>>,
-    author: Author,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
     enforce_increasing_timestamps: bool,
     /// The persistent storage backing up the in-memory data structure, every write should go
@@ -70,7 +63,6 @@ impl<T: Payload> BlockStore<T> {
     pub async fn new(
         storage: Arc<dyn PersistentStorage<T>>,
         initial_data: RecoveryData<T>,
-        author: Author,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         enforce_increasing_timestamps: bool,
         max_pruned_blocks_in_mem: usize,
@@ -90,15 +82,10 @@ impl<T: Payload> BlockStore<T> {
         ));
         BlockStore {
             inner,
-            author,
             state_computer,
             enforce_increasing_timestamps,
             storage,
         }
-    }
-
-    pub fn author(&self) -> Author {
-        self.author
     }
 
     async fn build_block_tree(
@@ -445,24 +432,6 @@ impl<T: Payload> BlockReader for BlockStore<T> {
 
     fn path_from_root(&self, block_id: HashValue) -> Option<Vec<Arc<ExecutedBlock<T>>>> {
         self.inner.read().unwrap().path_from_root(block_id)
-    }
-
-    fn create_proposal(
-        &self,
-        parent: &Block<Self::Payload>,
-        payload: Self::Payload,
-        round: Round,
-        timestamp_usecs: u64,
-    ) -> BlockData<Self::Payload> {
-        if self.enforce_increasing_timestamps {
-            checked_precondition!(parent.timestamp_usecs() < timestamp_usecs);
-        }
-        let quorum_cert = self
-            .get_quorum_cert_for_block(parent.id())
-            .expect("Parent for the newly created block is not certified!")
-            .as_ref()
-            .clone();
-        BlockData::new_proposal(payload, self.author, round, timestamp_usecs, quorum_cert)
     }
 
     fn highest_certified_block(&self) -> Arc<ExecutedBlock<Self::Payload>> {

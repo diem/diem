@@ -25,8 +25,9 @@ fn minute_from_now() -> Instant {
 #[test]
 fn test_proposal_generation_empty_tree() {
     let signer = ValidatorSigner::random(None);
-    let block_store = build_empty_tree(signer.author());
+    let block_store = build_empty_tree();
     let proposal_generator = ProposalGenerator::new(
+        signer.author(),
         block_store.clone(),
         Arc::new(MockTransactionManager::new()),
         Arc::new(SimulatedTimeService::new()),
@@ -53,6 +54,7 @@ fn test_proposal_generation_parent() {
     let mut inserter = TreeInserter::default();
     let block_store = inserter.block_store();
     let proposal_generator = ProposalGenerator::new(
+        inserter.signer().author(),
         block_store.clone(),
         Arc::new(MockTransactionManager::new()),
         Arc::new(SimulatedTimeService::new()),
@@ -94,6 +96,7 @@ fn test_old_proposal_generation() {
     let mut inserter = TreeInserter::default();
     let block_store = inserter.block_store();
     let proposal_generator = ProposalGenerator::new(
+        inserter.signer().author(),
         block_store.clone(),
         Arc::new(MockTransactionManager::new()),
         Arc::new(SimulatedTimeService::new()),
@@ -113,6 +116,7 @@ fn test_empty_proposal_after_reconfiguration() {
     let mut inserter = TreeInserter::default();
     let block_store = inserter.block_store();
     let proposal_generator = ProposalGenerator::new(
+        inserter.signer().author(),
         block_store.clone(),
         Arc::new(MockTransactionManager::new()),
         Arc::new(SimulatedTimeService::new()),

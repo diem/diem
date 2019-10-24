@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use consensus_types::{
-    block::Block, block_data::BlockData, common::Round, executed_block::ExecutedBlock,
-    quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
+    executed_block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
 };
 use libra_crypto::HashValue;
 use std::sync::Arc;
@@ -56,21 +55,6 @@ pub trait BlockReader: Send + Sync {
     /// path_from_root(a) -> None
     fn path_from_root(&self, block_id: HashValue)
         -> Option<Vec<Arc<ExecutedBlock<Self::Payload>>>>;
-
-    /// Generates and returns a proposal to create a new block with the given parent and payload.
-    /// Note that it does not add the block to the tree, just generates it.
-    /// The main reason we want this function in the BlockStore maintains the QuorumCert.
-    /// The function panics in the following cases:
-    /// * If the parent or its quorum certificate are not present in the tree,
-    /// * If the given round (which is typically calculated by Pacemaker) is not greater than that
-    ///   of a parent.
-    fn create_proposal(
-        &self,
-        parent: &Block<Self::Payload>,
-        payload: Self::Payload,
-        round: Round,
-        timestamp_usecs: u64,
-    ) -> BlockData<Self::Payload>;
 
     /// Return the certified block with the highest round.
     fn highest_certified_block(&self) -> Arc<ExecutedBlock<Self::Payload>>;

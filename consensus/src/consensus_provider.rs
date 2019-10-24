@@ -44,6 +44,7 @@ pub fn make_consensus_provider(
         state_sync_client,
     ))
 }
+
 /// Create a mempool client assuming the mempool is running on localhost
 fn create_mempool_client(config: &NodeConfig) -> Arc<MempoolClient> {
     let port = config.mempool.mempool_service_port;
