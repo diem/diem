@@ -472,6 +472,11 @@ where
         }
     }
 
+    /// Constructs a new `AccumulatorRangeProof` for an empty list of leaves.
+    pub fn new_empty() -> Self {
+        Self::new(vec![], vec![])
+    }
+
     /// Verifies the proof is correct. The verifier needs to have `expected_root_hash`, the index
     /// of the first leaf and all of the leaves in possession.
     pub fn verify(
@@ -617,6 +622,7 @@ impl<H> From<AccumulatorRangeProof<H>> for crate::proto::types::AccumulatorRange
     }
 }
 
+pub type TransactionAccumulatorRangeProof = AccumulatorRangeProof<TransactionAccumulatorHasher>;
 #[cfg(any(test, feature = "fuzzing"))]
 pub type TestAccumulatorRangeProof = AccumulatorRangeProof<TestOnlyHasher>;
 
@@ -941,6 +947,115 @@ impl From<EventProof> for crate::proto::types::EventProof {
             ),
             transaction_info: Some(proof.transaction_info.into()),
             transaction_info_to_event_proof: Some(proof.transaction_info_to_event_proof.into()),
+        }
+    }
+}
+
+/// The complete proof used to authenticate a list of consecutive transactions.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct TransactionListProof {
+    /// The accumulator range proof from ledger info root to leaves that authenticates the hashes
+    /// of all `TransactionInfo` objects.
+    ledger_info_to_transaction_info_proof: TransactionAccumulatorRangeProof,
+
+    /// The `TransactionInfo` objects that correspond to all the transactions.
+    transaction_infos: Vec<TransactionInfo>,
+}
+
+impl TransactionListProof {
+    /// Constructs a new `TransactionListProof` using `ledger_info_to_transaction_info_proof` and
+    /// `transaction_infos`.
+    pub fn new(
+        ledger_info_to_transaction_info_proof: TransactionAccumulatorRangeProof,
+        transaction_infos: Vec<TransactionInfo>,
+    ) -> Self {
+        Self {
+            ledger_info_to_transaction_info_proof,
+            transaction_infos,
+        }
+    }
+
+    /// Constructs a proof for an empty list of transactions.
+    pub fn new_empty() -> Self {
+        Self::new(AccumulatorRangeProof::new_empty(), vec![])
+    }
+
+    /// Verifies the list of transactions are correct using the proof. The verifier needs to have
+    /// the ledger info and the version of the first transaction in possession.
+    pub fn verify(
+        &self,
+        ledger_info: &LedgerInfo,
+        first_transaction_version: Option<Version>,
+        transaction_hashes: &[HashValue],
+    ) -> Result<()> {
+        ensure!(
+            self.transaction_infos.len() == transaction_hashes.len(),
+            "The number of TransactionInfo objects ({}) does not match the number of \
+             transactions ({}).",
+            self.transaction_infos.len(),
+            transaction_hashes.len(),
+        );
+
+        itertools::zip_eq(transaction_hashes, &self.transaction_infos)
+            .map(|(txn_hash, txn_info)| {
+                ensure!(
+                    *txn_hash == txn_info.signed_transaction_hash(),
+                    "The hash of transaction does not match the transaction info in proof. \
+                     Transaction hash: {:x}. Transaction hash in txn_info: {:x}.",
+                    txn_hash,
+                    txn_info.signed_transaction_hash(),
+                );
+                Ok(())
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        let txn_info_hashes: Vec<_> = self
+            .transaction_infos
+            .iter()
+            .map(CryptoHash::hash)
+            .collect();
+        self.ledger_info_to_transaction_info_proof.verify(
+            ledger_info.transaction_accumulator_hash(),
+            first_transaction_version,
+            &txn_info_hashes,
+        )?;
+        Ok(())
+    }
+}
+
+impl TryFrom<crate::proto::types::TransactionListProof> for TransactionListProof {
+    type Error = Error;
+
+    fn try_from(proto_proof: crate::proto::types::TransactionListProof) -> Result<Self> {
+        let ledger_info_to_transaction_info_proof = proto_proof
+            .ledger_info_to_transaction_info_proof
+            .ok_or_else(|| format_err!("Missing ledger_info_to_transaction_info_proof"))?
+            .try_into()?;
+        let transaction_infos = proto_proof
+            .transaction_infos
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(TransactionListProof::new(
+            ledger_info_to_transaction_info_proof,
+            transaction_infos,
+        ))
+    }
+}
+
+impl From<TransactionListProof> for crate::proto::types::TransactionListProof {
+    fn from(proof: TransactionListProof) -> Self {
+        Self {
+            ledger_info_to_transaction_info_proof: Some(
+                proof.ledger_info_to_transaction_info_proof.into(),
+            ),
+            transaction_infos: proof
+                .transaction_infos
+                .into_iter()
+                .map(Into::into)
+                .collect(),
         }
     }
 }

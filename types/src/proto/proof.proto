@@ -78,3 +78,9 @@ message EventProof {
   TransactionInfo transaction_info = 2;
   AccumulatorProof transaction_info_to_event_proof = 3;
 }
+
+// The complete proof used to authenticate a list of transactions.
+message TransactionListProof {
+  AccumulatorRangeProof ledger_info_to_transaction_info_proof = 1;
+  repeated TransactionInfo transaction_infos = 2;
+}

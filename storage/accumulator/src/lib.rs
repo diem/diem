@@ -366,7 +366,7 @@ where
                 num_leaves == 0,
                 "num_leaves is not zero while first_leaf_index is None.",
             );
-            return Ok(AccumulatorRangeProof::new(vec![], vec![]));
+            return Ok(AccumulatorRangeProof::new_empty());
         }
 
         let first_leaf_index = first_leaf_index.expect("first_leaf_index should not be None.");

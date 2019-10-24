@@ -30,7 +30,7 @@ use std::{collections::VecDeque, marker::PhantomData};
 pub use self::definition::{
     AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, AccumulatorRangeProof,
     EventAccumulatorProof, EventProof, SignedTransactionProof, SparseMerkleProof,
-    TransactionAccumulatorProof,
+    TransactionAccumulatorProof, TransactionListProof,
 };
 
 #[cfg(any(test, feature = "fuzzing"))]
