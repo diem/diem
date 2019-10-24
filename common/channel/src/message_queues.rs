@@ -1,5 +1,4 @@
 use crate::libra_channel::MessageQueue;
-use libra_logger::{self, prelude::*};
 use libra_types::account_address::AccountAddress;
 use std::collections::{HashMap, VecDeque};
 
@@ -66,9 +65,6 @@ impl<T> PerValidatorQueue<T> {
     /// after popping the message
     fn pop_from_validator_queue(&mut self, validator: AccountAddress) -> (Option<T>, bool) {
         if let Some(q) = self.per_validator_queue.get_mut(&validator) {
-            if q.is_empty() {
-                return (None, true);
-            }
             // Extract message from the validator's queue
             let retval = match self.queue_style {
                 QueueStyle::FIFO => q.pop_front(),
@@ -95,7 +91,7 @@ impl<T: ValidatorMessage> MessageQueue for PerValidatorQueue<T> {
         let validator_message_queue = self.per_validator_queue
             .entry(validator)
             .or_insert_with(|| VecDeque::with_capacity(max_queue_size));
-        // Add the validator to our round-robin queue is its not already there
+        // Add the validator to our round-robin queue if it's not already there
         if validator_message_queue.is_empty() {
             self.round_robin_queue.push_back(validator);
         }
@@ -118,12 +114,10 @@ impl<T: ValidatorMessage> MessageQueue for PerValidatorQueue<T> {
     /// pop a message from the appropriate queue in per_validator_queue
     /// remove the validator from the round_robin_queue if it has no more messages
     fn pop(&mut self) -> Option<Self::Message> {
-        let validator;
-        if let Some(v) = self.round_robin_queue.pop_front() {
-            validator = v;
-        } else {
-            return None;
-        }
+        let validator = match self.round_robin_queue.pop_front() {
+            Some(v) => v,
+            _ => { return None; }
+        };
         let (message, is_q_empty) = self.pop_from_validator_queue(validator);
         if !is_q_empty {
             self.round_robin_queue.push_back(validator);
