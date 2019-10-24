@@ -15,10 +15,9 @@ use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo as TypesLedgerInfo,
-    proof::AccumulatorProof,
+    proof::TransactionListProof,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{Transaction, TransactionInfo, TransactionListWithProof},
-    vm_error::StatusCode,
+    transaction::{Transaction, TransactionListWithProof},
 };
 use network::{
     proto::GetChunkResponse,
@@ -91,21 +90,8 @@ impl MockExecutorProxy {
             Some(program),
         ));
 
-        let txn_info = TransactionInfo::new(
-            HashValue::zero(),
-            HashValue::zero(),
-            HashValue::zero(),
-            0,
-            StatusCode::EXECUTED,
-        );
-        let accumulator_proof = AccumulatorProof::new(vec![]);
-        let txns = TransactionListWithProof::new(
-            vec![(transaction, txn_info)],
-            None,
-            Some(version + 1),
-            Some(accumulator_proof),
-            None,
-        );
+        let proof = TransactionListProof::new_empty();
+        let txns = TransactionListWithProof::new(vec![transaction], None, Some(version + 1), proof);
 
         GetChunkResponse {
             txn_list_with_proof: Some(txns.into()),

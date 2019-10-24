@@ -91,21 +91,17 @@ message TransactionListWithProof {
     // The list of transactions.
     repeated Transaction transactions = 1;
 
-    // The list of corresponding TransactionInfo objects.
-    repeated TransactionInfo infos = 2;
-
     // The list of corresponding Event objects (only present if fetch_events was set to true in req)
-    EventsForVersions events_for_versions = 3;
+    EventsForVersions events_for_versions = 2;
 
     // If the list is not empty, the version of the first transaction.
-    google.protobuf.UInt64Value first_transaction_version = 4;
+    google.protobuf.UInt64Value first_transaction_version = 3;
 
-    // The proofs of the first and last transaction in this chunk. When this is
-    // used for state synchronization, the validator who requests the transactions
+    // The proof authenticating the transactions and events.When this is used
+    // for state synchronization, the validator who requests the transactions
     // will provide a version in the request and the proofs will be relative to
     // the given version. When this is returned in GetTransactionsResponse, the
     // proofs will be relative to the ledger info returned in
     // UpdateToLatestLedgerResponse.
-    AccumulatorProof proof_of_first_transaction = 5;
-    AccumulatorProof proof_of_last_transaction = 6;
+    TransactionListProof proof = 4;
 }

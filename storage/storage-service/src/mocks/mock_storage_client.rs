@@ -16,10 +16,10 @@ use libra_types::{
     proof::SparseMerkleProof,
     proto::types::{
         request_item::RequestedItems, response_item::ResponseItems, AccountStateWithProof,
-        AccumulatorProof, GetAccountStateResponse, GetTransactionsResponse,
+        GetAccountStateResponse, GetTransactionsResponse,
         LedgerInfoWithSignatures as ProtoLedgerInfoWithSignatures, RequestItem as ProtoRequestItem,
-        ResponseItem as ProtoResponseItem, TransactionInfo, TransactionListWithProof,
-        UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
+        ResponseItem as ProtoResponseItem, TransactionListWithProof, UpdateToLatestLedgerRequest,
+        UpdateToLatestLedgerResponse,
     },
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Transaction, Version},
@@ -230,15 +230,8 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                 let mut ret = TransactionListWithProof::default();
                 let sender = AccountAddress::new([1; ADDRESS_LENGTH]);
                 if request.limit > 0 {
-                    let (txns, infos) = get_mock_txn_data(sender, 0, request.limit - 1);
-                    if !txns.is_empty() {
-                        ret.proof_of_first_transaction = Some(get_accumulator_proof());
-                    }
-                    if txns.len() >= 2 {
-                        ret.proof_of_last_transaction = Some(get_accumulator_proof());
-                    }
+                    let txns = get_mock_txn_data(sender, 0, request.limit - 1);
                     ret.transactions = txns;
-                    ret.infos = infos;
                 }
 
                 let mut resp = GetTransactionsResponse::default();
@@ -255,16 +248,12 @@ fn get_mock_txn_data(
     address: AccountAddress,
     start_seq: u64,
     end_seq: u64,
-) -> (
-    Vec<libra_types::proto::types::Transaction>,
-    Vec<TransactionInfo>,
-) {
+) -> Vec<libra_types::proto::types::Transaction> {
     let mut seed_rng = OsRng::new().expect("can't access OsRng");
     let seed_buf: [u8; 32] = seed_rng.gen();
     let mut rng = StdRng::from_seed(seed_buf);
     let (priv_key, pub_key) = compat::generate_keypair(&mut rng);
     let mut txns = vec![];
-    let mut infos = vec![];
     for i in start_seq..=end_seq {
         let txn = Transaction::UserTransaction(get_test_signed_txn(
             address,
@@ -274,23 +263,6 @@ fn get_mock_txn_data(
             None,
         ));
         txns.push(txn.into());
-
-        let info = get_transaction_info().into();
-        infos.push(info);
     }
-    (txns, infos)
-}
-
-fn get_accumulator_proof() -> AccumulatorProof {
-    libra_types::proof::TransactionAccumulatorProof::new(vec![]).into()
-}
-
-fn get_transaction_info() -> libra_types::transaction::TransactionInfo {
-    libra_types::transaction::TransactionInfo::new(
-        HashValue::zero(),
-        HashValue::zero(),
-        HashValue::zero(),
-        0,
-        StatusCode::UNKNOWN_STATUS,
-    )
+    txns
 }

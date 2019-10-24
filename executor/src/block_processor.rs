@@ -231,7 +231,7 @@ where
              Number of transactions in request: {}.",
             committed_trees.txn_accumulator().num_leaves() - 1,
             chunk.txn_list_with_proof.first_transaction_version,
-            chunk.txn_list_with_proof.transaction_and_infos.len(),
+            chunk.txn_list_with_proof.transactions.len(),
         );
 
         let (num_txns_to_skip, first_version) =
@@ -240,11 +240,11 @@ where
         let (txn_list_with_proof, li_with_sigs) =
             (chunk.txn_list_with_proof, chunk.ledger_info_with_sigs);
         info!("Skipping the first {} transactions.", num_txns_to_skip);
-        let (transactions, infos): (Vec<_>, Vec<_>) = txn_list_with_proof
-            .transaction_and_infos
+        let transactions: Vec<_> = txn_list_with_proof
+            .transactions
             .into_iter()
             .skip(num_txns_to_skip as usize)
-            .unzip();
+            .collect();
 
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
@@ -279,25 +279,7 @@ where
         // Since we have verified the proofs, we just need to verify that each TransactionInfo
         // object matches what we have computed locally.
         let mut txns_to_commit = vec![];
-        for ((txn, txn_data), (i, txn_info)) in itertools::zip_eq(
-            itertools::zip_eq(transactions, output.transaction_data()),
-            infos.into_iter().enumerate(),
-        ) {
-            ensure!(
-                txn_info.state_root_hash() == txn_data.state_root_hash(),
-                "State root hashes do not match for {}-th transaction in chunk.",
-                i,
-            );
-            ensure!(
-                txn_info.event_root_hash() == txn_data.event_root_hash(),
-                "Event root hashes do not match for {}-th transaction in chunk.",
-                i,
-            );
-            ensure!(
-                txn_info.gas_used() == txn_data.gas_used(),
-                "Gas used do not match for {}-th transaction in chunk.",
-                i,
-            );
+        for (txn, txn_data) in itertools::zip_eq(transactions, output.transaction_data()) {
             txns_to_commit.push(TransactionToCommit::new(
                 txn,
                 txn_data.account_blobs().clone(),
@@ -313,9 +295,6 @@ where
             + txns_to_commit.len() as LeafCount
             == li_with_sigs.ledger_info().version() + 1
         {
-            // We have constructed the transaction accumulator root and checked that it matches the
-            // given ledger info in the verification process above, so this check can possibly fail
-            // only when input transaction list is empty.
             ensure!(
                 li_with_sigs.ledger_info().transaction_accumulator_hash()
                     == output.executed_trees().txn_accumulator().root_hash(),
@@ -363,7 +342,7 @@ where
             txn_list_with_proof.first_transaction_version,
         )?;
 
-        if txn_list_with_proof.transaction_and_infos.is_empty() {
+        if txn_list_with_proof.transactions.is_empty() {
             return Ok((0, num_committed_txns as Version /* first_version */));
         }
 

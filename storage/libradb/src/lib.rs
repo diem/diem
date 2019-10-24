@@ -56,7 +56,7 @@ use libra_types::{
     get_with_proof::{RequestItem, ResponseItem},
     proof::{
         AccountStateProof, AccumulatorConsistencyProof, EventProof, SignedTransactionProof,
-        SparseMerkleProof,
+        SparseMerkleProof, TransactionListProof,
     },
     transaction::{
         SignedTransactionWithProof, TransactionInfo, TransactionListWithProof, TransactionToCommit,
@@ -609,26 +609,13 @@ impl LibraDB {
         }
 
         let limit = std::cmp::min(limit, ledger_version - start_version + 1);
-        let txn_and_txn_info_list = (start_version..start_version + limit)
-            .map(|version| {
-                Ok((
-                    self.transaction_store.get_transaction(version)?,
-                    self.ledger_store.get_transaction_info(version)?,
-                ))
-            })
+
+        let txns = (start_version..start_version + limit)
+            .map(|version| Ok(self.transaction_store.get_transaction(version)?))
             .collect::<Result<Vec<_>>>()?;
-        let proof_of_first_transaction = Some(
-            self.ledger_store
-                .get_transaction_proof(start_version, ledger_version)?,
-        );
-        let proof_of_last_transaction = if limit == 1 {
-            None
-        } else {
-            Some(
-                self.ledger_store
-                    .get_transaction_proof(start_version + limit - 1, ledger_version)?,
-            )
-        };
+        let txn_infos = (start_version..start_version + limit)
+            .map(|version| Ok(self.ledger_store.get_transaction_info(version)?))
+            .collect::<Result<Vec<_>>>()?;
         let events = if fetch_events {
             Some(
                 (start_version..start_version + limit)
@@ -638,13 +625,20 @@ impl LibraDB {
         } else {
             None
         };
+        let proof = TransactionListProof::new(
+            self.ledger_store.get_transaction_range_proof(
+                Some(start_version),
+                limit,
+                ledger_version,
+            )?,
+            txn_infos,
+        );
 
         Ok(TransactionListWithProof::new(
-            txn_and_txn_info_list,
+            txns,
             events,
             Some(start_version),
-            proof_of_first_transaction,
-            proof_of_last_transaction,
+            proof,
         ))
     }
 

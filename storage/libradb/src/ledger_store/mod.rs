@@ -22,7 +22,10 @@ use libra_crypto::{
 };
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
-    proof::{position::Position, AccumulatorConsistencyProof, TransactionAccumulatorProof},
+    proof::{
+        position::Position, AccumulatorConsistencyProof, TransactionAccumulatorProof,
+        TransactionAccumulatorRangeProof,
+    },
     transaction::{TransactionInfo, Version},
 };
 use schemadb::{ReadOptions, DB};
@@ -127,6 +130,22 @@ impl LedgerStore {
         ledger_version: Version,
     ) -> Result<TransactionAccumulatorProof> {
         Accumulator::get_proof(self, ledger_version + 1 /* num_leaves */, version)
+    }
+
+    /// Get proof for `num_txns` consecutive transactions starting from `start_version` towards
+    /// root of ledger at `ledger_version`.
+    pub fn get_transaction_range_proof(
+        &self,
+        start_version: Option<Version>,
+        num_txns: u64,
+        ledger_version: Version,
+    ) -> Result<TransactionAccumulatorRangeProof> {
+        Accumulator::get_range_proof(
+            self,
+            ledger_version + 1, /* num_leaves */
+            start_version,
+            num_txns,
+        )
     }
 
     /// Gets proof that shows the ledger at `ledger_version` is consistent with the ledger at

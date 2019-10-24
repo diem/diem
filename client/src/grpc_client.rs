@@ -250,16 +250,13 @@ impl GRPCClient {
             .into_get_transactions_response()?;
 
         // Transform the response.
-        let num_txns = txn_list_with_proof.transaction_and_infos.len();
+        let num_txns = txn_list_with_proof.transactions.len();
         let event_lists = txn_list_with_proof
             .events
             .map(|event_lists| event_lists.into_iter().map(Some).collect())
             .unwrap_or_else(|| vec![None; num_txns]);
 
-        let res = itertools::zip_eq(txn_list_with_proof.transaction_and_infos, event_lists)
-            .map(|((signed_txn, _), events)| (signed_txn, events))
-            .collect();
-        Ok(res)
+        Ok(itertools::zip_eq(txn_list_with_proof.transactions, event_lists).collect())
     }
 
     /// Get event by access path from validator. AccountStateWithProof will be returned if
