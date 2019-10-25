@@ -298,11 +298,9 @@ where
                     .unwrap();
             }
             NetworkRequest::SendMessage(peer_id, msg) => {
-                counters::DIRECT_SEND_MESSAGES_SENT.inc();
                 counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
                     .with_label_values(&["sent"])
                     .inc();
-                counters::DIRECT_SEND_BYTES_SENT.inc_by(msg.mdata.len() as i64);
                 counters::LIBRA_NETWORK_DIRECT_SEND_BYTES
                     .with_label_values(&["sent"])
                     .inc_by(msg.mdata.len() as i64);
@@ -330,7 +328,6 @@ where
         trace!("PeerManagerNotification::{:?}", notif);
         match notif {
             PeerManagerNotification::NewPeer(peer_id, _addr) => {
-                counters::CONNECTED_PEERS.inc();
                 for ch in upstream_handlers.values_mut() {
                     ch.send(NetworkNotification::NewPeer(peer_id))
                         .await
@@ -338,7 +335,6 @@ where
                 }
             }
             PeerManagerNotification::LostPeer(peer_id, _addr) => {
-                counters::CONNECTED_PEERS.dec();
                 for ch in upstream_handlers.values_mut() {
                     ch.send(NetworkNotification::LostPeer(peer_id))
                         .await
@@ -376,11 +372,9 @@ where
         trace!("DirectSendNotification::{:?}", notif);
         match notif {
             DirectSendNotification::RecvMessage(peer_id, msg) => {
-                counters::DIRECT_SEND_MESSAGES_RECEIVED.inc();
                 counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
                     .with_label_values(&["received"])
                     .inc();
-                counters::DIRECT_SEND_BYTES_RECEIVED.inc_by(msg.mdata.len() as i64);
                 counters::LIBRA_NETWORK_DIRECT_SEND_BYTES
                     .with_label_values(&["received"])
                     .inc_by(msg.mdata.len() as i64);

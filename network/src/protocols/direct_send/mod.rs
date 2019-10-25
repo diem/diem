@@ -246,14 +246,6 @@ where
                 );
             }
             // The messages in queue will be dropped
-            counters::DIRECT_SEND_MESSAGES_DROPPED.inc_by(
-                counters::OP_COUNTERS
-                    .peer_gauge(
-                        &counters::PENDING_DIRECT_SEND_OUTBOUND_MESSAGES,
-                        &peer_id.short_str(),
-                    )
-                    .get(),
-            );
             counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
                 .with_label_values(&["dropped"])
                 .inc_by(
@@ -312,7 +304,6 @@ where
                     .try_send_msg(peer_id, msg.clone(), self.peer_mgr_reqs_tx.clone())
                     .await
                 {
-                    counters::DIRECT_SEND_MESSAGES_DROPPED.inc();
                     counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
                         .with_label_values(&["dropped"])
                         .inc();

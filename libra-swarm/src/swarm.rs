@@ -122,7 +122,7 @@ impl LibraNode {
 
     pub fn check_connectivity(&self, expected_peers: i64) -> bool {
         let connected_peers = format!(
-            "libra_network_peers{{role={},state=connected}}",
+            "libra_network_peers{{role_type={},state=connected}}",
             self.role.to_string()
         );
         if let Some(num_connected_peers) = self.get_metric(&connected_peers) {
