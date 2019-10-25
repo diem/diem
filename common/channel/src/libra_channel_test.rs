@@ -91,7 +91,8 @@ fn test_multiple_validators_helper(
     num_messages_per_validator: usize,
     expected_last_message: usize,
 ) {
-    let (mut sender, mut receiver) = libra_channel::new(PerValidatorQueue::new(queue_style, 1));
+    let (mut sender, mut receiver) =
+        libra_channel::new(PerValidatorQueue::new(queue_style, 1, None));
     let num_validators = 128;
     for message in 0..num_messages_per_validator {
         for validator in 0..num_validators {
