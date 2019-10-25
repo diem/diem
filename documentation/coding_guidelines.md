@@ -317,7 +317,7 @@ As a consequence, it is recommended that you set up your test-only code in the f
     default = []
     testing = ["foo_crate/testing"]
     ```
-5. Update `xtask/src/test_unit.rs` to run the unit tests passing in the
+5. Update `x/src/test_unit.rs` to run the unit tests passing in the
    features if needed.
 
 *A final note on integration tests*: All tests that use conditional test-only

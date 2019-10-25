@@ -5375,6 +5375,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "x"
+version = "0.1.0"
+dependencies = [
+ "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "x25519-dalek"
 version = "0.5.2"
 source = "git+https://github.com/calibra/x25519-dalek.git?branch=fiat#8d5b63010f8466d75a4fa2fb95f573092aed5611"
@@ -5398,14 +5406,6 @@ dependencies = [
 name = "xml-rs"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "xtask"
-version = "0.1.0"
-dependencies = [
- "structopt 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
 [[package]]
 name = "yamux"
