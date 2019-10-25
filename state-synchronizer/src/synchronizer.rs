@@ -1,9 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-
-use crate::PeerId;
 use crate::{
-    coordinator::{CoordinatorMessage, SyncCoordinator},
+    coordinator::{CoordinatorMessage, SyncCoordinator, SyncRequest},
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
 };
 use executor::Executor;
@@ -97,19 +95,17 @@ impl StateSyncClient {
         }
     }
 
-    /// Sync validator's state up to remote peers
+    /// Sync validator's state to target
     pub fn sync_to(
         &self,
-        peers: Vec<PeerId>,
-    ) -> impl Future<Output = Result<(LedgerInfoWithSignatures, PeerId)>> {
+        target: LedgerInfoWithSignatures,
+    ) -> impl Future<Output = Result<LedgerInfoWithSignatures>> {
         let mut sender = self.coordinator_sender.clone();
-        let (cb_sender, cb_receiver) = oneshot::channel();
+        let (callback, cb_receiver) = oneshot::channel();
+        let request = SyncRequest { callback, target };
         async move {
-            sender
-                .send(CoordinatorMessage::Requested(peers, cb_sender))
-                .await?;
-            let sync_status = cb_receiver.await?;
-            Ok(sync_status)
+            sender.send(CoordinatorMessage::Request(request)).await?;
+            Ok(cb_receiver.await?)
         }
     }
 
