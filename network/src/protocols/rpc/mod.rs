@@ -317,7 +317,6 @@ async fn handle_outbound_rpc<TSubstream>(
                 res = f_rpc_res => {
                     // Log any errors.
                     if let Err(err) = &res {
-                        counters::RPC_REQUESTS_FAILED.inc();
                         counters::LIBRA_NETWORK_RPC_MESSAGES
                             .with_label_values(&["request", "failed"])
                             .inc();
@@ -329,7 +328,6 @@ async fn handle_outbound_rpc<TSubstream>(
 
                     // Propagate the results to the rpc client layer.
                     if res_tx.send(res).is_err() {
-                        counters::RPC_REQUESTS_CANCELLED.inc();
                         counters::LIBRA_NETWORK_RPC_MESSAGES
                             .with_label_values(&["request", "cancelled"])
                             .inc();
@@ -338,7 +336,6 @@ async fn handle_outbound_rpc<TSubstream>(
                 },
                 // The rpc client canceled the request
                 cancel = f_rpc_cancel => {
-                    counters::RPC_REQUESTS_CANCELLED.inc();
                     counters::LIBRA_NETWORK_RPC_MESSAGES
                         .with_label_values(&["request", "cancelled"])
                         .inc();
@@ -369,11 +366,9 @@ where
     // We won't send anything else on this substream, so we can half-close our
     // output side.
     substream.close().await?;
-    counters::RPC_REQUESTS_SENT.inc();
     counters::LIBRA_NETWORK_RPC_MESSAGES
         .with_label_values(&["request", "sent"])
         .inc();
-    counters::RPC_REQUEST_BYTES_SENT.inc_by(req_len as i64);
     counters::LIBRA_NETWORK_RPC_BYTES
         .with_label_values(&["request", "sent"])
         .inc_by(req_len as i64);
@@ -418,7 +413,6 @@ async fn handle_inbound_substream<TSubstream>(
 
             // Log any errors.
             if let Err(err) = res {
-                counters::RPC_RESPONSES_FAILED.inc();
                 counters::LIBRA_NETWORK_RPC_MESSAGES
                     .with_label_values(&["response", "failed"])
                     .inc();
@@ -453,7 +447,6 @@ where
         Some(req_data) => req_data?.freeze(),
         None => return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into()),
     };
-    counters::RPC_REQUESTS_RECEIVED.inc();
     counters::LIBRA_NETWORK_RPC_MESSAGES
         .with_label_values(&["request", "received"])
         .inc();
@@ -490,11 +483,9 @@ where
     // our output. The initiator will have also half-closed their side before
     // this, so this should gracefully shutdown the socket.
     substream.close().await?;
-    counters::RPC_RESPONSES_SENT.inc();
     counters::LIBRA_NETWORK_RPC_MESSAGES
         .with_label_values(&["response", "sent"])
         .inc();
-    counters::RPC_RESPONSE_BYTES_SENT.inc_by(res_len as i64);
     counters::LIBRA_NETWORK_RPC_BYTES
         .with_label_values(&["response", "sent"])
         .inc_by(res_len as i64);
