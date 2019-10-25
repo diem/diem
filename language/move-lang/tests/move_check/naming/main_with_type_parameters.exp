@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/naming/main_with_type_parameters.move:1:6 ───
+   │
+ 1 │ main<T>() {
+   │      ^ Invalid 'main' declaration. Found type parameter 'T'. The main function cannot have type parameters
+   │
+

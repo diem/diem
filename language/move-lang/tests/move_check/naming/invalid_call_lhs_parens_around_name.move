@@ -1,0 +1,5 @@
+module M {
+    foo() {
+        (foo)()
+    }
+}

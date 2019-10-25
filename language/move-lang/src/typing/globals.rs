@@ -188,9 +188,9 @@ fn builtin_function(
     match &b.value {
         B::MoveFrom(bt) => {
             let msg = mk_msg(N::BuiltinFunction_::MOVE_FROM);
-            check_global_access(context, loc, msg, bt);
-
-            check_acquire_listed(context, annotated_acquires, loc, msg, bt);
+            if check_global_access(context, loc, msg, bt) {
+                check_acquire_listed(context, annotated_acquires, loc, msg, bt);
+            }
             seen.insert(bt.clone());
         }
         B::BorrowGlobal(mut_, bt) => {
@@ -200,9 +200,9 @@ fn builtin_function(
                 N::BuiltinFunction_::BORROW_GLOBAL
             };
             let msg = mk_msg(name);
-            check_global_access(context, loc, msg, bt);
-
-            check_acquire_listed(context, annotated_acquires, loc, msg, bt);
+            if check_global_access(context, loc, msg, bt) {
+                check_acquire_listed(context, annotated_acquires, loc, msg, bt);
+            }
             seen.insert(bt.clone());
         }
         B::MoveToSender(bt) => {

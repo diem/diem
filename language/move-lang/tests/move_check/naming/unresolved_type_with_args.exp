@@ -1,0 +1,48 @@
+error: 
+
+   ┌── tests/move_check/naming/unresolved_type_with_args.move:2:28 ───
+   │
+ 2 │     struct Mine<T, U> { f: A<T, U>, g: X<U> }
+   │                            ^^ Could not resolve type name: 'A'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unresolved_type_with_args.move:2:40 ───
+   │
+ 2 │     struct Mine<T, U> { f: A<T, U>, g: X<U> }
+   │                                        ^^ Could not resolve type name: 'X'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unresolved_type_with_args.move:3:18 ───
+   │
+ 3 │     foo<T, U>(x: S<T>): G<T, U> {
+   │                  ^^ Could not resolve type name: 'S'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unresolved_type_with_args.move:3:25 ───
+   │
+ 3 │     foo<T, U>(x: S<T>): G<T, U> {
+   │                         ^^ Could not resolve type name: 'G'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unresolved_type_with_args.move:4:16 ───
+   │
+ 4 │         let _: B<U> = (0: P<U, T>);
+   │                ^^ Could not resolve type name: 'B'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unresolved_type_with_args.move:4:27 ───
+   │
+ 4 │         let _: B<U> = (0: P<U, T>);
+   │                           ^^ Could not resolve type name: 'P'
+   │
+

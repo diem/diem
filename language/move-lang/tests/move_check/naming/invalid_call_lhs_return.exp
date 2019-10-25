@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/naming/invalid_call_lhs_return.move:3:9 ───
+   │
+ 3 │         (return ())(0, 1);
+   │         ^^^^^^^^^^^^^^^^^ Invalid function call
+   ·
+ 3 │         (return ())(0, 1);
+   │         ----------- Expected: a name, a dotted Module access, or dotted access of an expression
+   │
+
