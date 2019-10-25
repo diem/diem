@@ -8,5 +8,8 @@ publish = false
 license = "Apache-2.0"
 
 [dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0.40"
 structopt = "0.3.2"
-thiserror = "1.0"
+anyhow = "1.0"
+toml = "0.5.3"
