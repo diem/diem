@@ -1,4 +1,5 @@
 use crate::libra_channel::MessageQueue;
+use libra_metrics::IntCounter;
 use libra_types::account_address::AccountAddress;
 use std::collections::{HashMap, VecDeque};
 
@@ -34,12 +35,17 @@ pub struct PerValidatorQueue<T> {
     round_robin_queue: VecDeque<AccountAddress>,
     /// Maximum number of messages to store per validator
     max_queue_size: usize,
+    dropped_msgs_counter: Option<&'static IntCounter>,
 }
 
 impl<T> PerValidatorQueue<T> {
     /// Create a new PerValidatorQueue with the provided QueueStyle and
     /// max_queue_size_per_validator
-    pub fn new(queue_style: QueueStyle, max_queue_size_per_validator: usize) -> Self {
+    pub fn new(
+        queue_style: QueueStyle,
+        max_queue_size_per_validator: usize,
+        dropped_msgs_counter: Option<&'static IntCounter>,
+    ) -> Self {
         assert!(
             max_queue_size_per_validator > 0,
             "max_queue_size_per_validator should be > 0"
@@ -49,6 +55,7 @@ impl<T> PerValidatorQueue<T> {
             max_queue_size: max_queue_size_per_validator,
             per_validator_queue: HashMap::new(),
             round_robin_queue: VecDeque::new(),
+            dropped_msgs_counter,
         }
     }
 
@@ -87,6 +94,9 @@ impl<T> MessageQueue for PerValidatorQueue<T> {
         }
         // Push the message to the actual validator message queue
         if validator_message_queue.len() == max_queue_size {
+            if let Some(c) = self.dropped_msgs_counter {
+                c.inc()
+            }
             match self.queue_style {
                 // Drop the newest message for FIFO
                 QueueStyle::FIFO => (),

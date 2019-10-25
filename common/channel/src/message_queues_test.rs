@@ -17,7 +17,7 @@ struct VoteMsg {
 
 #[test]
 fn test_fifo() {
-    let mut q = PerValidatorQueue::new(QueueStyle::FIFO, 3);
+    let mut q = PerValidatorQueue::new(QueueStyle::FIFO, 3, None);
     let validator = AccountAddress::new([0u8; ADDRESS_LENGTH]);
 
     // Test order
@@ -76,7 +76,7 @@ fn test_fifo() {
 
 #[test]
 fn test_lifo() {
-    let mut q = PerValidatorQueue::new(QueueStyle::LIFO, 3);
+    let mut q = PerValidatorQueue::new(QueueStyle::LIFO, 3, None);
     let validator = AccountAddress::new([0u8; ADDRESS_LENGTH]);
 
     // Test order
@@ -135,7 +135,7 @@ fn test_lifo() {
 
 #[test]
 fn test_fifo_round_robin() {
-    let mut q = PerValidatorQueue::new(QueueStyle::FIFO, 3);
+    let mut q = PerValidatorQueue::new(QueueStyle::FIFO, 3, None);
     let validator1 = AccountAddress::new([0u8; ADDRESS_LENGTH]);
     let validator2 = AccountAddress::new([1u8; ADDRESS_LENGTH]);
     let validator3 = AccountAddress::new([2u8; ADDRESS_LENGTH]);
@@ -206,7 +206,7 @@ fn test_fifo_round_robin() {
 
 #[test]
 fn test_lifo_round_robin() {
-    let mut q = PerValidatorQueue::new(QueueStyle::LIFO, 3);
+    let mut q = PerValidatorQueue::new(QueueStyle::LIFO, 3, None);
     let validator1 = AccountAddress::new([0u8; ADDRESS_LENGTH]);
     let validator2 = AccountAddress::new([1u8; ADDRESS_LENGTH]);
     let validator3 = AccountAddress::new([2u8; ADDRESS_LENGTH]);
