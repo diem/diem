@@ -355,7 +355,7 @@ pub trait CryptoHasher: Default {
 /// ambiguities within a same domain.
 /// * Only used internally within this crate
 #[derive(Clone)]
-struct DefaultHasher {
+pub struct DefaultHasher {
     state: Keccak,
 }
 
@@ -381,7 +381,8 @@ impl Default for DefaultHasher {
 }
 
 impl DefaultHasher {
-    fn new_with_salt(typename: &[u8]) -> Self {
+    /// create a new hasher with salt `typename`
+    pub fn new_with_salt(typename: &[u8]) -> Self {
         let mut state = Keccak::new_sha3_256();
         if !typename.is_empty() {
             let mut salt = typename.to_vec();
@@ -392,6 +393,14 @@ impl DefaultHasher {
     }
 }
 
+/// define a hasher with specified salt
+/// usage:
+/// ```
+/// define_hasher! {
+/// (TransactionHasher, "TRANSACTION_HASHER", "TRANSACTION")
+/// }
+/// ```
+#[macro_export]
 macro_rules! define_hasher {
     (
         $(#[$attr:meta])*
