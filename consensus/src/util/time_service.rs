@@ -148,53 +148,43 @@ pub enum WaitingError {
     },
 }
 
-/// Attempt to wait until the current time exceeds the min_duration_since_epoch if possible
+/// Attempt to wait until the current time exceeds the timestamp_then if possible
 ///
-/// If the waiting time exceeds max_instant then fail immediately.
+/// If the waiting time exceeds the deadline, then fail immediately.
 /// There are 4 potential outcomes, 2 successful and 2 errors, each represented by
 /// WaitingSuccess and WaitingError.
 pub async fn wait_if_possible(
     time_service: &dyn TimeService,
-    min_duration_since_epoch: Duration,
-    max_instant: Instant,
+    timestamp_then: Duration,
+    deadline: Instant,
 ) -> Result<WaitingSuccess, WaitingError> {
-    // Fail early if waiting for min_duration_since_epoch would exceed max_instant
-    // Ideally, comparing min_duration_since_epoch and max_instant would be straightforward, but
-    // min_duration_since_epoch is relative to UNIX_EPOCH and Instant is not comparable.  Therefore,
-    // we use relative differences to do the comparison.
-    let current_instant = Instant::now();
-    let current_duration_since_epoch = time_service.get_current_timestamp();
-    if current_instant <= max_instant {
-        let duration_to_max_time = max_instant.duration_since(current_instant);
-        if current_duration_since_epoch <= min_duration_since_epoch {
-            let duration_to_min_time = min_duration_since_epoch - current_duration_since_epoch;
-            if duration_to_max_time < duration_to_min_time {
-                return Err(WaitingError::MaxWaitExceeded);
-            }
-        }
+    // are we already passed the deadline?
+    let instant_now = Instant::now();
+    if instant_now >= deadline {
+        return Err(WaitingError::WaitFailed {
+            current_duration_since_epoch: 0,
+            wait_duration: 0,
+        });
     }
-
-    if current_duration_since_epoch <= min_duration_since_epoch {
-        // Delay has millisecond granularity, add 1 millisecond to ensure a higher timestamp
-        let sleep_duration =
-            min_duration_since_epoch - current_duration_since_epoch + Duration::from_millis(1);
-        time_service.sleep(sleep_duration).await;
-        let waited_duration_since_epoch = time_service.get_current_timestamp();
-        if waited_duration_since_epoch > min_duration_since_epoch {
-            Ok(WaitingSuccess::WaitWasRequired {
-                current_duration_since_epoch: waited_duration_since_epoch,
-                wait_duration: sleep_duration,
-            })
-        } else {
-            Err(WaitingError::WaitFailed {
-                current_duration_since_epoch: waited_duration_since_epoch,
-                wait_duration: sleep_duration,
-            })
-        }
-    } else {
-        Ok(WaitingSuccess::NoWaitRequired {
-            current_duration_since_epoch,
-            early_duration: current_duration_since_epoch - min_duration_since_epoch,
-        })
+    // get current timestamp
+    let timestamp_now = time_service.get_current_timestamp();
+    // we don't need to wait
+    if timestamp_now > timestamp_then {
+        return Ok(WaitingSuccess::NoWaitRequired {
+            timestamp_now,
+            early_duration: timestamp_now - timestamp_then,
+        });
     }
+    // we need to wait, but the deadline will be reached first
+    let time_to_timeout = deadline.duration_since(instant_now);
+    let time_to_wait = timestamp_then - timestamp_now + Duration::from_millis(1);
+    if time_to_timeout < time_to_wait {
+        return Err(WaitingError::MaxWaitExceeded);
+    }
+    // we wait
+    time_service.sleep(time_to_wait).await;
+    Ok(WaitingSuccess::WaitWasRequired {
+        current_duration_since_epoch: timestamp_now,
+        wait_duration: time_to_wait,
+    })
 }
