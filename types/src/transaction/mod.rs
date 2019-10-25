@@ -7,7 +7,7 @@ use crate::{
     block_metadata::BlockMetadata,
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
-    proof::{accumulator::InMemoryAccumulator, SignedTransactionProof, TransactionListProof},
+    proof::{accumulator::InMemoryAccumulator, TransactionListProof, TransactionProof},
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
@@ -453,7 +453,7 @@ pub struct SignedTransactionWithProof {
     pub version: Version,
     pub signed_transaction: SignedTransaction,
     pub events: Option<Vec<ContractEvent>>,
-    pub proof: SignedTransactionProof,
+    pub proof: TransactionProof,
 }
 
 impl SignedTransactionWithProof {

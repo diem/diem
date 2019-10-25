@@ -27,8 +27,8 @@ use std::marker::PhantomData;
 
 pub use self::definition::{
     AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, AccumulatorRangeProof,
-    EventAccumulatorProof, EventProof, SignedTransactionProof, SparseMerkleProof,
-    TransactionAccumulatorProof, TransactionAccumulatorRangeProof, TransactionListProof,
+    EventAccumulatorProof, EventProof, SparseMerkleProof, TransactionAccumulatorProof,
+    TransactionAccumulatorRangeProof, TransactionListProof, TransactionProof,
 };
 
 #[cfg(any(test, feature = "fuzzing"))]

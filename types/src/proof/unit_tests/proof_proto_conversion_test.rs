@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::proof::{
-    AccountStateProof, AccumulatorConsistencyProof, EventProof, SignedTransactionProof,
-    SparseMerkleProof, TestAccumulatorProof, TestAccumulatorRangeProof, TransactionListProof,
+    AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
+    TestAccumulatorProof, TestAccumulatorRangeProof, TransactionListProof, TransactionProof,
 };
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;
@@ -34,8 +34,8 @@ proptest! {
     }
 
     #[test]
-    fn test_signed_transaction_proof_protobuf_conversion_roundtrip(proof in any::<SignedTransactionProof>()) {
-        assert_protobuf_encode_decode::<crate::proto::types::SignedTransactionProof, SignedTransactionProof>(&proof);
+    fn test_transaction_proof_protobuf_conversion_roundtrip(proof in any::<TransactionProof>()) {
+        assert_protobuf_encode_decode::<crate::proto::types::TransactionProof, TransactionProof>(&proof);
     }
 
     #[test]
