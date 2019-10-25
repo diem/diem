@@ -661,14 +661,14 @@ impl TryFrom<crate::proto::types::TransactionInfo> for TransactionInfo {
     type Error = Error;
 
     fn try_from(proto_txn_info: crate::proto::types::TransactionInfo) -> Result<Self> {
-        let signed_txn_hash = HashValue::from_slice(&proto_txn_info.signed_transaction_hash)?;
+        let transaction_hash = HashValue::from_slice(&proto_txn_info.transaction_hash)?;
         let state_root_hash = HashValue::from_slice(&proto_txn_info.state_root_hash)?;
         let event_root_hash = HashValue::from_slice(&proto_txn_info.event_root_hash)?;
         let gas_used = proto_txn_info.gas_used;
         let major_status =
             StatusCode::try_from(proto_txn_info.major_status).unwrap_or(StatusCode::UNKNOWN_STATUS);
         Ok(TransactionInfo::new(
-            signed_txn_hash,
+            transaction_hash,
             state_root_hash,
             event_root_hash,
             gas_used,
@@ -680,7 +680,7 @@ impl TryFrom<crate::proto::types::TransactionInfo> for TransactionInfo {
 impl From<TransactionInfo> for crate::proto::types::TransactionInfo {
     fn from(txn_info: TransactionInfo) -> Self {
         Self {
-            signed_transaction_hash: txn_info.signed_transaction_hash.to_vec(),
+            transaction_hash: txn_info.transaction_hash.to_vec(),
             state_root_hash: txn_info.state_root_hash.to_vec(),
             event_root_hash: txn_info.event_root_hash.to_vec(),
             gas_used: txn_info.gas_used,
@@ -695,7 +695,7 @@ impl From<TransactionInfo> for crate::proto::types::TransactionInfo {
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct TransactionInfo {
     /// The hash of this transaction.
-    signed_transaction_hash: HashValue,
+    transaction_hash: HashValue,
 
     /// The root hash of Sparse Merkle Tree describing the world state at the end of this
     /// transaction.
@@ -714,17 +714,17 @@ pub struct TransactionInfo {
 }
 
 impl TransactionInfo {
-    /// Constructs a new `TransactionInfo` object using signed transaction hash, state root hash
-    /// and event root hash.
+    /// Constructs a new `TransactionInfo` object using transaction hash, state root hash and event
+    /// root hash.
     pub fn new(
-        signed_transaction_hash: HashValue,
+        transaction_hash: HashValue,
         state_root_hash: HashValue,
         event_root_hash: HashValue,
         gas_used: u64,
         major_status: StatusCode,
     ) -> TransactionInfo {
         TransactionInfo {
-            signed_transaction_hash,
+            transaction_hash,
             state_root_hash,
             event_root_hash,
             gas_used,
@@ -733,8 +733,8 @@ impl TransactionInfo {
     }
 
     /// Returns the hash of this transaction.
-    pub fn signed_transaction_hash(&self) -> HashValue {
-        self.signed_transaction_hash
+    pub fn transaction_hash(&self) -> HashValue {
+        self.transaction_hash
     }
 
     /// Returns root hash of Sparse Merkle Tree describing the world state at the end of this
