@@ -18,12 +18,10 @@ use bincode::{deserialize, serialize};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::{Fail, Result, *};
 use libra_crypto::{
-    hash::{
-        CryptoHash, SparseMerkleInternalHasher, SparseMerkleLeafHasher,
-        SPARSE_MERKLE_PLACEHOLDER_HASH,
-    },
+    hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
+use libra_crypto_derive::CryptoHasher;
 use libra_nibble::Nibble;
 use libra_types::{
     account_state_blob::AccountStateBlob,
@@ -163,14 +161,14 @@ pub(crate) type Children = HashMap<Nibble, Child>;
 /// Though we choose the same internal node structure as that of Patricia Merkle tree, the root hash
 /// computation logic is similar to a 4-level sparse Merkle tree except for some customizations. See
 /// the `CryptoHash` trait implementation below for details.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, CryptoHasher)]
 pub struct InternalNode {
     // Up to 16 children.
     children: Children,
 }
 
 /// Represents an account.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
 pub struct LeafNode {
     // The hashed account address associated with this leaf node.
     account_key: HashValue,
@@ -227,8 +225,7 @@ pub struct LeafNode {
 /// Note: @ denotes placeholder hash.
 /// ```
 impl CryptoHash for InternalNode {
-    // Unused hasher.
-    type Hasher = SparseMerkleInternalHasher;
+    type Hasher = InternalNodeHasher;
 
     fn hash(&self) -> HashValue {
         self.merkle_hash(
@@ -242,7 +239,7 @@ impl CryptoHash for InternalNode {
 /// Computes the hash of a [`LeafNode`].
 impl CryptoHash for LeafNode {
     // Unused hasher.
-    type Hasher = SparseMerkleLeafHasher;
+    type Hasher = LeafNodeHasher;
 
     fn hash(&self) -> HashValue {
         SparseMerkleLeafNode::new(self.account_key, self.blob_hash).hash()
