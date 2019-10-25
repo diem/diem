@@ -59,7 +59,7 @@ use libra_types::{
         TransactionListProof, TransactionProof,
     },
     transaction::{
-        SignedTransactionWithProof, TransactionInfo, TransactionListWithProof, TransactionToCommit,
+        TransactionInfo, TransactionListWithProof, TransactionToCommit, TransactionWithProof,
         Version,
     },
 };
@@ -278,15 +278,15 @@ impl LibraDB {
         Ok((events_with_proof, account_state))
     }
 
-    /// Returns a signed transaction that is the `seq_num`-th one associated with the given account.
-    /// If the signed transaction with given `seq_num` doesn't exist, returns `None`.
+    /// Returns a transaction that is the `seq_num`-th one associated with the given account. If
+    /// the transaction with given `seq_num` doesn't exist, returns `None`.
     fn get_txn_by_account(
         &self,
         address: AccountAddress,
         seq_num: u64,
         ledger_version: Version,
         fetch_events: bool,
-    ) -> Result<Option<SignedTransactionWithProof>> {
+    ) -> Result<Option<TransactionWithProof>> {
         self.transaction_store
             .lookup_transaction_by_account(address, seq_num, ledger_version)?
             .map(|version| self.get_transaction_with_proof(version, ledger_version, fetch_events))
@@ -480,14 +480,14 @@ impl LibraDB {
                     sequence_number,
                     fetch_events,
                 } => {
-                    let signed_transaction_with_proof = self.get_txn_by_account(
+                    let transaction_with_proof = self.get_txn_by_account(
                         account,
                         sequence_number,
                         ledger_version,
                         fetch_events,
                     )?;
 
-                    let proof_of_current_sequence_number = match signed_transaction_with_proof {
+                    let proof_of_current_sequence_number = match transaction_with_proof {
                         Some(_) => None,
                         None => Some(self.get_account_state_with_proof(
                             account,
@@ -497,7 +497,7 @@ impl LibraDB {
                     };
 
                     Ok(ResponseItem::GetAccountTransactionBySequenceNumber {
-                        signed_transaction_with_proof,
+                        transaction_with_proof,
                         proof_of_current_sequence_number,
                     })
                 }
@@ -694,7 +694,7 @@ impl LibraDB {
         version: Version,
         ledger_version: Version,
         fetch_events: bool,
-    ) -> Result<SignedTransactionWithProof> {
+    ) -> Result<TransactionWithProof> {
         let proof = {
             let (txn_info, txn_info_accumulator_proof) = self
                 .ledger_store
@@ -713,7 +713,7 @@ impl LibraDB {
             None
         };
 
-        Ok(SignedTransactionWithProof {
+        Ok(TransactionWithProof {
             version,
             signed_transaction,
             events,
