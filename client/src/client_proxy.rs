@@ -605,7 +605,7 @@ impl ClientProxy {
     pub fn get_committed_txn_by_acc_seq(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<Option<(SignedTransaction, Option<Vec<ContractEvent>>)>> {
+    ) -> Result<Option<(Transaction, Option<Vec<ContractEvent>>)>> {
         ensure!(
             space_delim_strings.len() == 4,
             "Invalid number of arguments to get transaction by account and sequence number"

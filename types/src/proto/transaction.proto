@@ -38,7 +38,7 @@ message TransactionWithProof {
     uint64 version = 1;
 
     // The transaction itself.
-    SignedTransaction signed_transaction = 2;
+    Transaction transaction = 2;
 
     // The proof authenticating the transaction.
     TransactionProof proof = 3;

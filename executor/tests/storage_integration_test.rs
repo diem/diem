@@ -714,15 +714,15 @@ fn verify_committed_txn_status(
     txn_with_proof: Option<&TransactionWithProof>,
     expected_txn: &Transaction,
 ) -> Result<()> {
-    let signed_txn = &txn_with_proof
+    let txn = &txn_with_proof
         .ok_or_else(|| format_err!("Transaction is not committed."))?
-        .signed_transaction;
+        .transaction;
 
     ensure!(
-        *expected_txn == Transaction::UserTransaction(signed_txn.clone()),
+        expected_txn == txn,
         "The two transactions do not match. Expected txn: {:?}, returned txn: {:?}",
         expected_txn,
-        signed_txn,
+        txn,
     );
 
     Ok(())
