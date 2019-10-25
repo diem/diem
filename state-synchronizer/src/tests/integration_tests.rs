@@ -258,8 +258,9 @@ impl SynchronizerEnv {
     }
 
     fn sync_to_new_flow(&self, peer_id: usize, version: u64) -> bool {
-        let (li, peer) = block_on(self.clients[peer_id].sync_to(vec![self.peers[1]])).unwrap();
-        self.peers[1] == peer && li.ledger_info().version() == version
+        let target = MockExecutorProxy::mock_ledger_info(self.peers[1], version);
+        let li = block_on(self.clients[peer_id].sync_to(target)).unwrap();
+        li.ledger_info().version() == version
     }
 
     fn commit(&self, peer_id: usize, version: u64) {
