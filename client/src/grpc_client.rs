@@ -24,7 +24,7 @@ use libra_types::{
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
-    transaction::{SignedTransaction, Transaction, Version},
+    transaction::{Transaction, Version},
     vm_error::StatusCode,
 };
 use std::convert::TryFrom;
@@ -214,7 +214,7 @@ impl GRPCClient {
         account: AccountAddress,
         sequence_number: u64,
         fetch_events: bool,
-    ) -> Result<Option<(SignedTransaction, Option<Vec<ContractEvent>>)>> {
+    ) -> Result<Option<(Transaction, Option<Vec<ContractEvent>>)>> {
         let req_item = RequestItem::GetAccountTransactionBySequenceNumber {
             account,
             sequence_number,
@@ -227,7 +227,7 @@ impl GRPCClient {
             .remove(0)
             .into_get_account_txn_by_seq_num_response()?;
 
-        Ok(signed_txn_with_proof.map(|t| (t.signed_transaction, t.events)))
+        Ok(signed_txn_with_proof.map(|t| (t.transaction, t.events)))
     }
 
     /// Get transactions in range (start_version..start_version + limit - 1) from validator.

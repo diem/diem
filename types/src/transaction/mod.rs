@@ -451,7 +451,7 @@ impl From<SignatureCheckedTransaction> for crate::proto::types::SignedTransactio
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct TransactionWithProof {
     pub version: Version,
-    pub signed_transaction: SignedTransaction,
+    pub transaction: Transaction,
     pub events: Option<Vec<ContractEvent>>,
     pub proof: TransactionProof,
 }
@@ -473,8 +473,7 @@ impl TransactionWithProof {
         sender: AccountAddress,
         sequence_number: u64,
     ) -> Result<()> {
-        // TODO: this will become `self.transaction.as_signed_user_txn()?`.
-        let signed_transaction = &self.signed_transaction;
+        let signed_transaction = self.transaction.as_signed_user_txn()?;
 
         ensure!(
             self.version == version,
@@ -513,9 +512,9 @@ impl TryFrom<crate::proto::types::TransactionWithProof> for TransactionWithProof
 
     fn try_from(mut proto: crate::proto::types::TransactionWithProof) -> Result<Self> {
         let version = proto.version;
-        let signed_transaction = proto
-            .signed_transaction
-            .ok_or_else(|| format_err!("Missing signed_transaction"))?
+        let transaction = proto
+            .transaction
+            .ok_or_else(|| format_err!("Missing transaction"))?
             .try_into()?;
         let proof = proto
             .proof
@@ -534,7 +533,7 @@ impl TryFrom<crate::proto::types::TransactionWithProof> for TransactionWithProof
 
         Ok(Self {
             version,
-            signed_transaction,
+            transaction,
             proof,
             events,
         })
@@ -545,7 +544,7 @@ impl From<TransactionWithProof> for crate::proto::types::TransactionWithProof {
     fn from(mut txn: TransactionWithProof) -> Self {
         Self {
             version: txn.version,
-            signed_transaction: Some(txn.signed_transaction.into()),
+            transaction: Some(txn.transaction.into()),
             proof: Some(txn.proof.into()),
             events: txn
                 .events

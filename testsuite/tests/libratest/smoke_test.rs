@@ -519,7 +519,7 @@ fn test_external_transaction_signer() {
     assert!(submit_txn_result.is_ok());
 
     // query the transaction and check it contains the same values as requested
-    let submitted_signed_txn = client_proxy
+    let txn = client_proxy
         .get_committed_txn_by_acc_seq(&[
             "txn_acc_seq",
             &format!("{}", sender_address),
@@ -529,6 +529,9 @@ fn test_external_transaction_signer() {
         .unwrap()
         .unwrap()
         .0;
+    let submitted_signed_txn = txn
+        .as_signed_user_txn()
+        .expect("Query should get user transaction.");
 
     assert_eq!(submitted_signed_txn.sender(), sender_address);
     assert_eq!(submitted_signed_txn.sequence_number(), sequence_number);

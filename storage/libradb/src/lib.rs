@@ -701,10 +701,7 @@ impl LibraDB {
                 .get_transaction_info_with_proof(version, ledger_version)?;
             TransactionProof::new(txn_info_accumulator_proof, txn_info)
         };
-        let signed_transaction = self
-            .transaction_store
-            .get_transaction(version)?
-            .try_into()?;
+        let transaction = self.transaction_store.get_transaction(version)?;
 
         // If events were requested, also fetch those.
         let events = if fetch_events {
@@ -715,7 +712,7 @@ impl LibraDB {
 
         Ok(TransactionWithProof {
             version,
-            signed_transaction,
+            transaction,
             events,
             proof,
         })
