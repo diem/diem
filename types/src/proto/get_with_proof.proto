@@ -247,7 +247,7 @@ message GetAccountTransactionBySequenceNumberRequest {
 message GetAccountTransactionBySequenceNumberResponse {
   // When the transaction requested is committed, return the committed
   // transaction with proof.
-  SignedTransactionWithProof signed_transaction_with_proof = 2;
+  TransactionWithProof transaction_with_proof = 2;
   // When the transaction requested is not committed, we give a proof that
   // shows the current sequence number is smaller than what would have been if
   // the transaction was committed.

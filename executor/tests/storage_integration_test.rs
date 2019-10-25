@@ -18,7 +18,7 @@ use libra_types::{
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{Script, SignedTransactionWithProof, Transaction, TransactionListWithProof},
+    transaction::{Script, Transaction, TransactionListWithProof, TransactionWithProof},
 };
 use rand::SeedableRng;
 use std::{collections::BTreeMap, sync::Arc};
@@ -711,10 +711,10 @@ fn verify_transactions(
 }
 
 fn verify_committed_txn_status(
-    signed_txn_with_proof: Option<&SignedTransactionWithProof>,
+    txn_with_proof: Option<&TransactionWithProof>,
     expected_txn: &Transaction,
 ) -> Result<()> {
-    let signed_txn = &signed_txn_with_proof
+    let signed_txn = &txn_with_proof
         .ok_or_else(|| format_err!("Transaction is not committed."))?
         .signed_transaction;
 
@@ -729,12 +729,12 @@ fn verify_committed_txn_status(
 }
 
 fn verify_uncommitted_txn_status(
-    signed_txn_with_proof: Option<&SignedTransactionWithProof>,
+    txn_with_proof: Option<&TransactionWithProof>,
     proof_of_current_sequence_number: Option<&AccountStateWithProof>,
     expected_seq_num: u64,
 ) -> Result<()> {
     ensure!(
-        signed_txn_with_proof.is_none(),
+        txn_with_proof.is_none(),
         "Transaction is unexpectedly committed."
     );
 

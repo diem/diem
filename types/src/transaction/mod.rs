@@ -449,29 +449,33 @@ impl From<SignatureCheckedTransaction> for crate::proto::types::SignedTransactio
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct SignedTransactionWithProof {
+pub struct TransactionWithProof {
     pub version: Version,
     pub signed_transaction: SignedTransaction,
     pub events: Option<Vec<ContractEvent>>,
     pub proof: TransactionProof,
 }
 
-impl SignedTransactionWithProof {
-    /// Verifies the signed transaction with the proof, both carried by `self`.
+impl TransactionWithProof {
+    /// Verifies the transaction with the proof, both carried by `self`.
     ///
-    /// Two things are ensured if no error is raised:
-    ///   1. This signed transaction exists in the ledger represented by `ledger_info`.
-    ///   2. And this signed transaction has the same `version`, `sender`, and `sequence_number` as
-    /// indicated by the parameter list. If any of these parameter is unknown to the call site that
-    /// is supposed to be informed via this struct, get it from the struct itself, such as:
-    /// `signed_txn_with_proof.version`, `signed_txn_with_proof.signed_transaction.sender()`, etc.
-    pub fn verify(
+    /// A few things are ensured if no error is raised:
+    ///   1. This transaction exists in the ledger represented by `ledger_info`.
+    ///   2. This transaction is a `UserTransaction`.
+    ///   3. And this user transaction has the same `version`, `sender`, and `sequence_number` as
+    ///      indicated by the parameter list. If any of these parameter is unknown to the call site
+    ///      that is supposed to be informed via this struct, get it from the struct itself, such
+    ///      as version and sender.
+    pub fn verify_user_txn(
         &self,
         ledger_info: &LedgerInfo,
         version: Version,
         sender: AccountAddress,
         sequence_number: u64,
     ) -> Result<()> {
+        // TODO: this will become `self.transaction.as_signed_user_txn()?`.
+        let signed_transaction = &self.signed_transaction;
+
         ensure!(
             self.version == version,
             "Version ({}) is not expected ({}).",
@@ -479,15 +483,15 @@ impl SignedTransactionWithProof {
             version,
         );
         ensure!(
-            self.signed_transaction.sender() == sender,
+            signed_transaction.sender() == sender,
             "Sender ({}) not expected ({}).",
-            self.signed_transaction.sender(),
+            signed_transaction.sender(),
             sender,
         );
         ensure!(
-            self.signed_transaction.sequence_number() == sequence_number,
+            signed_transaction.sequence_number() == sequence_number,
             "Sequence number ({}) not expected ({}).",
-            self.signed_transaction.sequence_number(),
+            signed_transaction.sequence_number(),
             sequence_number,
         );
 
@@ -497,17 +501,17 @@ impl SignedTransactionWithProof {
         });
         self.proof.verify(
             ledger_info,
-            self.signed_transaction.hash(),
+            signed_transaction.hash(),
             events_root_hash,
             version,
         )
     }
 }
 
-impl TryFrom<crate::proto::types::SignedTransactionWithProof> for SignedTransactionWithProof {
+impl TryFrom<crate::proto::types::TransactionWithProof> for TransactionWithProof {
     type Error = Error;
 
-    fn try_from(mut proto: crate::proto::types::SignedTransactionWithProof) -> Result<Self> {
+    fn try_from(mut proto: crate::proto::types::TransactionWithProof) -> Result<Self> {
         let version = proto.version;
         let signed_transaction = proto
             .signed_transaction
@@ -537,8 +541,8 @@ impl TryFrom<crate::proto::types::SignedTransactionWithProof> for SignedTransact
     }
 }
 
-impl From<SignedTransactionWithProof> for crate::proto::types::SignedTransactionWithProof {
-    fn from(mut txn: SignedTransactionWithProof) -> Self {
+impl From<TransactionWithProof> for crate::proto::types::TransactionWithProof {
+    fn from(mut txn: TransactionWithProof) -> Self {
         Self {
             version: txn.version,
             signed_transaction: Some(txn.signed_transaction.into()),
