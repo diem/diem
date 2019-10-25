@@ -957,7 +957,7 @@ impl From<EventProof> for crate::proto::types::EventProof {
 pub struct TransactionListProof {
     /// The accumulator range proof from ledger info root to leaves that authenticates the hashes
     /// of all `TransactionInfo` objects.
-    ledger_info_to_transaction_info_proof: TransactionAccumulatorRangeProof,
+    ledger_info_to_transaction_infos_proof: TransactionAccumulatorRangeProof,
 
     /// The `TransactionInfo` objects that correspond to all the transactions.
     transaction_infos: Vec<TransactionInfo>,
@@ -967,11 +967,11 @@ impl TransactionListProof {
     /// Constructs a new `TransactionListProof` using `ledger_info_to_transaction_info_proof` and
     /// `transaction_infos`.
     pub fn new(
-        ledger_info_to_transaction_info_proof: TransactionAccumulatorRangeProof,
+        ledger_info_to_transaction_infos_proof: TransactionAccumulatorRangeProof,
         transaction_infos: Vec<TransactionInfo>,
     ) -> Self {
         Self {
-            ledger_info_to_transaction_info_proof,
+            ledger_info_to_transaction_infos_proof,
             transaction_infos,
         }
     }
@@ -1020,7 +1020,7 @@ impl TransactionListProof {
             .iter()
             .map(CryptoHash::hash)
             .collect();
-        self.ledger_info_to_transaction_info_proof.verify(
+        self.ledger_info_to_transaction_infos_proof.verify(
             ledger_info.transaction_accumulator_hash(),
             first_transaction_version,
             &txn_info_hashes,
@@ -1033,9 +1033,9 @@ impl TryFrom<crate::proto::types::TransactionListProof> for TransactionListProof
     type Error = Error;
 
     fn try_from(proto_proof: crate::proto::types::TransactionListProof) -> Result<Self> {
-        let ledger_info_to_transaction_info_proof = proto_proof
-            .ledger_info_to_transaction_info_proof
-            .ok_or_else(|| format_err!("Missing ledger_info_to_transaction_info_proof"))?
+        let ledger_info_to_transaction_infos_proof = proto_proof
+            .ledger_info_to_transaction_infos_proof
+            .ok_or_else(|| format_err!("Missing ledger_info_to_transaction_infos_proof"))?
             .try_into()?;
         let transaction_infos = proto_proof
             .transaction_infos
@@ -1044,7 +1044,7 @@ impl TryFrom<crate::proto::types::TransactionListProof> for TransactionListProof
             .collect::<Result<Vec<_>>>()?;
 
         Ok(TransactionListProof::new(
-            ledger_info_to_transaction_info_proof,
+            ledger_info_to_transaction_infos_proof,
             transaction_infos,
         ))
     }
@@ -1053,8 +1053,8 @@ impl TryFrom<crate::proto::types::TransactionListProof> for TransactionListProof
 impl From<TransactionListProof> for crate::proto::types::TransactionListProof {
     fn from(proof: TransactionListProof) -> Self {
         Self {
-            ledger_info_to_transaction_info_proof: Some(
-                proof.ledger_info_to_transaction_info_proof.into(),
+            ledger_info_to_transaction_infos_proof: Some(
+                proof.ledger_info_to_transaction_infos_proof.into(),
             ),
             transaction_infos: proof
                 .transaction_infos
