@@ -87,7 +87,7 @@ jobs:
       - run:
           name: Run All Unit Tests
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || RUST_BACKTRACE=1 cargo x test-unit
+            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || RUST_BACKTRACE=1 cargo x test --unit
       - run:
           name: Run Cryptography Unit Tests with the formally verified backend
           command: |

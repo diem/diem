@@ -1,0 +1,3 @@
+[package-exceptions]
+libra-crypto = { path = "crypto/crypto", all-features = false }
+testsuite = { path = "testsuite", system = true }
