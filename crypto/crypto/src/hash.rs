@@ -552,10 +552,20 @@ define_hasher! {
 
 define_hasher! {
     /// The hasher used to compute the hash of a SignedTransaction object.
+    /// TODO: this can be removed once we hash Transaction instead of SignedTransaction everywhere.
     (
         SignedTransactionHasher,
         SIGNED_TRANSACTION_HASHER,
         b"SignedTransaction"
+    )
+}
+
+define_hasher! {
+    /// The hasher used to complete the hash of a Transaction object.
+    (
+        TransactionHasher,
+        TRANSACTION_HASHER,
+        b"TRANSACTION"
     )
 }
 

@@ -16,7 +16,7 @@ use libra_crypto::{
     ed25519::*,
     hash::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, RawTransactionHasher,
-        SignedTransactionHasher, TransactionInfoHasher,
+        SignedTransactionHasher, TransactionHasher, TransactionInfoHasher,
     },
     traits::*,
     HashValue,
@@ -1094,6 +1094,16 @@ impl Transaction {
             // TODO: display proper information for client
             Transaction::BlockMetadata(_block_metadata) => String::from("block_metadata"),
         }
+    }
+}
+
+impl CryptoHash for Transaction {
+    type Hasher = TransactionHasher;
+
+    fn hash(&self) -> HashValue {
+        let mut state = Self::Hasher::default();
+        state.write(&lcs::to_bytes(self).expect("Failed to serialize Transaction."));
+        state.finish()
     }
 }
 
