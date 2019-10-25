@@ -8,23 +8,23 @@ module M {
     move_from(): u64 { 0 }
     freeze(): u64 { 0 }
 
-    t() acquires R {
+    t() acquires Self.R {
         let _ : u64 = exists();
-        let _ : bool = .exists<R>(0x0);
+        let _ : bool = .exists<Self.R>(0x0);
 
         let _ : u64 = move_to_sender();
-        let () = .move_to_sender<R>(R{});
+        let () = .move_to_sender<Self.R>(Self.R{});
 
         let _ : u64 = borrow_global();
-        let _ : &R = .borrow_global<R>(0x0);
+        let _ : &Self.R = .borrow_global<Self.R>(0x0);
 
         let _ : u64 = move_from();
-        let R {} = .move_from<R>(0x0);
+        let Self.R {} = .move_from<Self.R>(0x0);
 
         let _ : u64 = borrow_global();
-        let r : &mut R = .borrow_global_mut<R>(0x0);
+        let r : &mut Self.R = .borrow_global_mut<Self.R>(0x0);
 
         let _ : u64 = freeze();
-        let _ : &R = .freeze(r);
+        let _ : &Self.R = .freeze<Self.R>(r);
     }
 }

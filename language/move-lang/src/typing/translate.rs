@@ -750,8 +750,12 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             (ty, TE::BinopExp(el, bop, er))
         }
 
-        NE::ExpList(nes) => {
-            assert!(nes.len() > 1);
+        NE::ExpList(mut nes) => {
+            assert!(!nes.is_empty());
+            if nes.len() == 1 {
+                return exp_(context, nes.pop().unwrap());
+            }
+
             let es = exp_vec(context, nes);
             let tys = es.iter().map(|e| {
                 use Type_::*;

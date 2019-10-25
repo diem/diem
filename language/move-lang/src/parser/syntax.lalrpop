@@ -158,10 +158,8 @@ Term_ : Exp_ = {
     },
     "()" => Exp_::Unit,
     "(" <es: Comma<Exp>> ")" => {
-        let mut es = es;
         match es.len() {
             0 => Exp_::Unit,
-            1 => es.pop().unwrap().value,
             _ => Exp_::ExpList(es),
         }
     },

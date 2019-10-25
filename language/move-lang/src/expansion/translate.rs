@@ -520,7 +520,7 @@ fn sequence(context: &mut Context, loc: Loc, seq: P::Sequence) -> E::Sequence {
         None => sp(loc, E::Exp_::Unit),
         Some(e) => e,
     };
-    let final_item = sp(loc, E::SequenceItem_::Seq(final_e));
+    let final_item = sp(final_e.loc, E::SequenceItem_::Seq(final_e));
     items.push_back(final_item);
     items
 }
@@ -621,7 +621,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::Loop(ploop) => EE::Loop(exp(context, *ploop)),
         PE::Block(seq) => EE::Block(sequence(context, loc, seq)),
         PE::ExpList(pes) => {
-            assert!(pes.len() >= 2);
+            assert!(!pes.is_empty());
             EE::ExpList(pes.into_iter().map(|pe| exp_(context, pe)).collect())
         }
 

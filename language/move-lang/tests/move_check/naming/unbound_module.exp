@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/naming/unbound_module.move:2:9 ───
+   │
+ 4 │         X.foo();
+   │         ^^^^^^^ Invalid function call
+   ·
+ 2 │     use 0x0.X as X;
+   │         ----- Unbound module '0000000000000000000000000000000000000000000000000000000000000000.X'
+   │
+

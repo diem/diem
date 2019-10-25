@@ -109,7 +109,10 @@ impl Context {
                     Some((m, sn))
                 }
             },
-            E::TypeName_::ModuleType(m, sn) => Some((m, sn)),
+            E::TypeName_::ModuleType(m, sn) => {
+                self.resolve_struct(loc, &m, &sn)?;
+                Some((m, sn))
+            }
         }
     }
 
@@ -261,20 +264,7 @@ fn struct_def(
         (Some(_), _) | (_, N::StructFields::Native(_)) => (),
         (None, N::StructFields::Defined(fields)) => {
             for (field, idx_ty) in fields.iter() {
-                use N::BaseType_ as T;
-                let ty = &idx_ty.1;
-                match ty {
-                    sp!(tloc, T::Param(N::TParam { kind: sp!(kloc, Kind_::Resource), .. })) |
-                    sp!(tloc, T::Apply(Some(sp!(kloc, Kind_::Resource)), _, _)) => {
-                        context.error(vec![
-                            (field.loc(), format!("Invalid resource field '{}' for struct '{}'. Structs cannot contain resource types, except through type parameters", &field, &name)),
-                            (*tloc, format!("Field '{}' is a resource due to its type: '{}'", field, ty.value.subst_format(&HashMap::new()))),
-                            (*kloc, format!("Type '{}' was declared as a resource here", ty.value.subst_format(&HashMap::new()))),
-                            (name.loc(), format!("'{}' declared as a `struct` here", &name)),
-                        ])
-                    }
-                    _ => (),
-                }
+                check_no_nominal_resources(context, &name, &field, &idx_ty.1);
             }
         }
     }
@@ -291,6 +281,29 @@ fn struct_fields(context: &mut Context, efields: E::StructFields) -> N::StructFi
         E::StructFields::Defined(em) => {
             N::StructFields::Defined(em.map(|_f, (idx, t)| (idx, base_type(context, t))))
         }
+    }
+}
+
+fn check_no_nominal_resources(
+    context: &mut Context,
+    s: &StructName,
+    field: &Field,
+    ty: &N::BaseType,
+) {
+    use N::BaseType_ as T;
+    match ty {
+        sp!(tloc, T::Apply(Some(sp!(kloc, Kind_::Resource)), _, _)) => {
+            context.error(vec![
+                (field.loc(), format!("Invalid resource field '{}' for struct '{}'. Structs cannot contain resource types, except through type parameters", field, s)),
+                (*tloc, format!("Field '{}' is a resource due to the type: '{}'", field, ty.value.subst_format(&HashMap::new()))),
+                (*kloc, format!("Type '{}' was declared as a resource here", ty.value.subst_format(&HashMap::new()))),
+                (s.loc(), format!("'{}' declared as a `struct` here", s)),
+            ])
+        }
+        sp!(_, T::Apply(None, _, tyl)) => {
+            tyl.iter().for_each(|t| check_no_nominal_resources(context, s, field, t))
+        }
+        _ => ()
     }
 }
 
@@ -507,7 +520,17 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
                 Some(na) => NE::Assign(na, ne),
             }
         }
-        EE::Mutate(edotted, er) => NE::Mutate(dotted(context, *edotted), exp(context, *er)),
+        EE::Mutate(edotted, er) => {
+            let ndot_opt = dotted(context, *edotted);
+            let ner = exp(context, *er);
+            match ndot_opt {
+                None => {
+                    assert!(context.has_errors());
+                    NE::UnresolvedError
+                }
+                Some(ndot) => NE::Mutate(ndot, ner),
+            }
+        }
 
         EE::Return(es) => NE::Return(exp(context, *es)),
         EE::Abort(es) => NE::Abort(exp(context, *es)),
@@ -533,14 +556,26 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
         EE::ExpList(es) => NE::ExpList(exp_vec(context, es)),
 
         EE::Borrow(mut_, inner) => match *inner {
-            sp!(_, EE::ExpDotted(edot)) => NE::Borrow(mut_, dotted(context, *edot)),
+            sp!(_, EE::ExpDotted(edot)) => match dotted(context, *edot) {
+                None => {
+                    assert!(context.has_errors());
+                    NE::UnresolvedError
+                }
+                Some(d) => NE::Borrow(mut_, d),
+            },
             e => {
                 let ne = exp(context, e);
                 NE::Borrow(mut_, sp(ne.loc, N::ExpDotted_::Exp(ne)))
             }
         },
 
-        EE::ExpDotted(edot) => NE::DerefBorrow(dotted(context, *edot)),
+        EE::ExpDotted(edot) => match dotted(context, *edot) {
+            None => {
+                assert!(context.has_errors());
+                NE::UnresolvedError
+            }
+            Some(d) => NE::DerefBorrow(d),
+        },
 
         EE::Annotate(e, t) => NE::Annotate(exp(context, *e), type_(context, t)),
 
@@ -582,12 +617,23 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
                     dexp!(_) => panic!("ICE stand alone expdotted"),
                     dot!(inner, f) => match *inner {
                         dexp!(sp!(_, EE::ModuleIdent(m))) => {
-                            NE::ModuleCall(m, FunctionName(f), ty_args, nes)
+                            if !context.structs.contains_key(&m) {
+                                context.error(vec![
+                                    (eloc, "Invalid function call".into()),
+                                    (m.loc(), format!("Unbound module '{}'", m,)),
+                                ]);
+                                NE::UnresolvedError
+                            } else {
+                                NE::ModuleCall(m, FunctionName(f), ty_args, nes)
+                            }
                         }
-                        edot => {
-                            let ndot = dotted(context, edot);
-                            NE::MethodCall(ndot, FunctionName(f), ty_args, nes)
-                        }
+                        edot => match dotted(context, edot) {
+                            None => {
+                                assert!(context.has_errors());
+                                NE::UnresolvedError
+                            }
+                            Some(ndot) => NE::MethodCall(ndot, FunctionName(f), ty_args, nes),
+                        },
                     },
                 },
                 sp!(loc, _) => {
@@ -615,13 +661,19 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
     sp(eloc, ne_)
 }
 
-fn dotted(context: &mut Context, edot: E::ExpDotted) -> N::ExpDotted {
+fn dotted(context: &mut Context, edot: E::ExpDotted) -> Option<N::ExpDotted> {
     let sp!(loc, edot_) = edot;
     let nedot_ = match edot_ {
-        E::ExpDotted_::Exp(e) => N::ExpDotted_::Exp(exp(context, e)),
-        E::ExpDotted_::Dot(d, f) => N::ExpDotted_::Dot(Box::new(dotted(context, *d)), Field(f)),
+        E::ExpDotted_::Exp(e) => {
+            let ne = exp(context, e);
+            match &ne.value {
+                N::Exp_::UnresolvedError => return None,
+                _ => N::ExpDotted_::Exp(ne),
+            }
+        }
+        E::ExpDotted_::Dot(d, f) => N::ExpDotted_::Dot(Box::new(dotted(context, *d)?), Field(f)),
     };
-    sp(loc, nedot_)
+    Some(sp(loc, nedot_))
 }
 
 fn bind(context: &mut Context, sp!(loc, b_): E::Bind) -> Option<N::Bind> {
