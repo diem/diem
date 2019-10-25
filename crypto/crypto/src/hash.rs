@@ -514,25 +514,6 @@ macro_rules! define_hasher {
 }
 
 define_hasher! {
-    /// The hasher used to compute the hash of an AccessPath object.
-    (AccessPathHasher, ACCESS_PATH_HASHER, b"VM_ACCESS_PATH")
-}
-
-// define_hasher! {
-//     /// The hasher used to compute the hash of an AccountAddress object.
-//     (
-//         AccountAddressHasher,
-//         ACCOUNT_ADDRESS_HASHER,
-//         b"AccountAddress"
-//     )
-// }
-
-define_hasher! {
-    /// The hasher used to compute the hash of a LedgerInfo object.
-    (LedgerInfoHasher, LEDGER_INFO_HASHER, b"LedgerInfo")
-}
-
-define_hasher! {
     /// The hasher used to compute the hash of an internal node in the transaction accumulator.
     (
         TransactionAccumulatorHasher,
@@ -557,71 +538,6 @@ define_hasher! {
         SPARSE_MERKLE_INTERNAL_HASHER,
         b"SparseMerkleInternal"
     )
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a leaf node in the Sparse Merkle Tree.
-    (
-        SparseMerkleLeafHasher,
-        SPARSE_MERKLE_LEAF_HASHER,
-        b"SparseMerkleLeaf"
-    )
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of the blob content of an account.
-    (
-        AccountStateBlobHasher,
-        ACCOUNT_STATE_BLOB_HASHER,
-        b"AccountStateBlob"
-    )
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a TransactionInfo object.
-    (
-        TransactionInfoHasher,
-        TRANSACTION_INFO_HASHER,
-        b"TransactionInfo"
-    )
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a RawTransaction object.
-    (
-        RawTransactionHasher,
-        RAW_TRANSACTION_HASHER,
-        b"RawTransaction"
-    )
-}
-
-define_hasher! {
-    /// The hasher used to complete the hash of a Transaction object.
-    (
-        TransactionHasher,
-        TRANSACTION_HASHER,
-        b"TRANSACTION"
-    )
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash (block_id) of a Block object.
-    (BlockHasher, BLOCK_HASHER, b"BlockId")
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a TimeoutProposal
-    (TimeoutHasher, ROUND_HASHER, b"Timeout")
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a VoteData object.
-    (VoteDataHasher, VOTE_DATA_HASHER, b"VoteData")
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a ContractEvent object.
-    (ContractEventHasher, CONTRACT_EVENT_HASHER, b"ContractEvent")
 }
 
 define_hasher! {
