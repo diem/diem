@@ -96,7 +96,7 @@ fn transform_code_with_arithmetic_ops() {
 
             public arithmetic_ops(a: u64, b: u64): u64 * u64 {
                 let c: u64;
-                c = (copy(a) + move(b) - 1) * 2 / 3 % 4 | 5 & 6 ^ 7;
+                c = ((copy(a) + move(b) - 1) * 2 / 3 % 4 | 5 & 6) ^ 7;
                 return move(c), move(a);
             }
         }

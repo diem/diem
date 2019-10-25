@@ -240,34 +240,30 @@ fn parse_copyable_val_<'input>(
     Ok(spanned(start_loc, end_loc, val))
 }
 
-// Exp = BinopExp = CmpOpExp
-// CmpOpExp = (OrExp CmpOp OrExp) || OrExp
-// OrExp = (AndExp OrOp AndExp) || AndExp
-// AndExp = (XorExp AndOp XorExp) || XorExp
-// XorExp = (BinOrExp XorOp BinOrExp) || BinOrExp
-// BinOrExp = (BinAndExp BinOrOp BinAndExp) || BinAndExp
-// BinAndExp = (AddSubExp BinAndOp AddSubExp) || AddSubExp
-// AddSubExp = (FactorExp AddSubOp FactorExp) || FactorExp
-// FactorExp = (UnaryExp FactorOp UnaryExp) || UnaryExp
-
+// Get the precedence of a binary operator. The minimum precedence value
+// is 1, and larger values have higher precedence. For tokens that are not
+// binary operators, this returns a value of zero so that they will be
+// below the minimum value and will mark the end of the binary expression
+// for the code in parse_rhs_of_binary_exp.
 fn get_precedence(token: &Tok) -> u32 {
     match token {
-        Tok::EqualEqual => 1,
-        Tok::ExclaimEqual => 1,
-        Tok::Less => 1,
-        Tok::Greater => 1,
-        Tok::LessEqual => 1,
-        Tok::GreaterEqual => 1,
+        // Reserved minimum precedence value is 1 (specified in parse_exp_)
         Tok::PipePipe => 2,
         Tok::AmpAmp => 3,
-        Tok::Caret => 4,
+        Tok::EqualEqual => 4,
+        Tok::ExclaimEqual => 4,
+        Tok::Less => 4,
+        Tok::Greater => 4,
+        Tok::LessEqual => 4,
+        Tok::GreaterEqual => 4,
         Tok::Pipe => 5,
-        Tok::Amp => 6,
-        Tok::Plus => 7,
-        Tok::Minus => 7,
-        Tok::Star => 8,
-        Tok::Slash => 8,
-        Tok::Percent => 8,
+        Tok::Caret => 6,
+        Tok::Amp => 7,
+        Tok::Plus => 8,
+        Tok::Minus => 8,
+        Tok::Star => 9,
+        Tok::Slash => 9,
+        Tok::Percent => 9,
         _ => 0, // anything else is not a binary operator
     }
 }
@@ -276,7 +272,7 @@ fn parse_exp_<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<Exp_, ParseError<usize, Token<'input>, failure::Error>> {
     let lhs = parse_unary_exp_(tokens)?;
-    parse_rhs_of_binary_exp(tokens, lhs, get_precedence(&Tok::EqualEqual))
+    parse_rhs_of_binary_exp(tokens, lhs, /* min_prec */ 1)
 }
 
 fn parse_rhs_of_binary_exp<'input>(
