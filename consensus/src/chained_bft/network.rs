@@ -3,7 +3,10 @@
 
 use crate::counters;
 use bytes::Bytes;
-use channel;
+use channel::{
+    self, libra_channel,
+    message_queues::{PerValidatorQueue, QueueStyle},
+};
 use consensus_types::{
     block::Block,
     common::{Author, Payload},
@@ -74,10 +77,10 @@ pub struct BlockRetrievalRequest<T> {
 /// Just a convenience struct to keep all the network proxy receiving queues in one place.
 /// Will be returned by the networking trait upon startup.
 pub struct NetworkReceivers<T> {
-    pub proposals: channel::Receiver<ProposalMsg<T>>,
-    pub votes: channel::Receiver<VoteMsg>,
-    pub block_retrieval: channel::Receiver<BlockRetrievalRequest<T>>,
-    pub sync_info_msgs: channel::Receiver<(SyncInfo, AccountAddress)>,
+    pub proposals: libra_channel::Receiver<PerValidatorQueue<ProposalMsg<T>>>,
+    pub votes: libra_channel::Receiver<PerValidatorQueue<VoteMsg>>,
+    pub block_retrieval: libra_channel::Receiver<PerValidatorQueue<BlockRetrievalRequest<T>>>,
+    pub sync_info_msgs: libra_channel::Receiver<PerValidatorQueue<(SyncInfo, AccountAddress)>>,
 }
 
 /// Implements the actual networking support for all consensus messaging.
@@ -268,10 +271,10 @@ impl NetworkSender {
 }
 
 pub struct NetworkTask<T> {
-    proposal_tx: channel::Sender<ProposalMsg<T>>,
-    vote_tx: channel::Sender<VoteMsg>,
-    block_request_tx: channel::Sender<BlockRetrievalRequest<T>>,
-    sync_info_tx: channel::Sender<(SyncInfo, AccountAddress)>,
+    proposal_tx: libra_channel::Sender<PerValidatorQueue<ProposalMsg<T>>>,
+    vote_tx: libra_channel::Sender<PerValidatorQueue<VoteMsg>>,
+    block_request_tx: libra_channel::Sender<PerValidatorQueue<BlockRetrievalRequest<T>>>,
+    sync_info_tx: libra_channel::Sender<PerValidatorQueue<(SyncInfo, AccountAddress)>>,
     all_events: Box<dyn Stream<Item = failure::Result<Event<ConsensusMsg>>> + Send + Unpin>,
     validators: Arc<ValidatorVerifier>,
 }
@@ -283,11 +286,26 @@ impl<T: Payload> NetworkTask<T> {
         self_receiver: channel::Receiver<failure::Result<Event<ConsensusMsg>>>,
         validators: Arc<ValidatorVerifier>,
     ) -> (NetworkTask<T>, NetworkReceivers<T>) {
-        let (proposal_tx, proposal_rx) = channel::new(1_024, &counters::PENDING_PROPOSAL);
-        let (vote_tx, vote_rx) = channel::new(1_024, &counters::PENDING_VOTES);
-        let (block_request_tx, block_request_rx) =
-            channel::new(1_024, &counters::PENDING_BLOCK_REQUESTS);
-        let (sync_info_tx, sync_info_rx) = channel::new(1_024, &counters::PENDING_SYNC_INFO_MSGS);
+        let (proposal_tx, proposal_rx) = libra_channel::new(PerValidatorQueue::new(
+            QueueStyle::LIFO,
+            1,
+            Some(&counters::PROPOSAL_DROPPED_MSGS),
+        ));
+        let (vote_tx, vote_rx) = libra_channel::new(PerValidatorQueue::new(
+            QueueStyle::LIFO,
+            1,
+            Some(&counters::VOTES_DROPPED_MSGS),
+        ));
+        let (block_request_tx, block_request_rx) = libra_channel::new(PerValidatorQueue::new(
+            QueueStyle::LIFO,
+            1,
+            Some(&counters::BLOCK_RETRIEVAL_DROPPED_MSGS),
+        ));
+        let (sync_info_tx, sync_info_rx) = libra_channel::new(PerValidatorQueue::new(
+            QueueStyle::LIFO,
+            1,
+            Some(&counters::SYNC_INFO_DROPPED_MSGS),
+        ));
         let network_events = network_events.map_err(Into::<failure::Error>::into);
         let all_events = Box::new(select(network_events, self_receiver));
         (
@@ -322,14 +340,16 @@ impl<T: Payload> NetworkTask<T> {
                     };
 
                     let r = match msg.clone() {
-                        Proposal(proposal) => self.process_proposal(proposal).await.map_err(|e| {
-                            security_log(SecurityEvent::InvalidConsensusProposal)
-                                .error(&e)
-                                .data(&msg)
-                                .log();
-                            e
-                        }),
-                        VoteMsg(vote_msg) => self.process_vote(vote_msg).await,
+                        Proposal(proposal) => {
+                            self.process_proposal(peer_id, proposal).await.map_err(|e| {
+                                security_log(SecurityEvent::InvalidConsensusProposal)
+                                    .error(&e)
+                                    .data(&msg)
+                                    .log();
+                                e
+                            })
+                        }
+                        VoteMsg(vote_msg) => self.process_vote(peer_id, vote_msg).await,
                         SyncInfo(sync_info) => self.process_sync_info(sync_info, peer_id).await,
                         _ => {
                             warn!("Unexpected msg from {}: {:?}", peer_id, msg);
@@ -343,7 +363,7 @@ impl<T: Payload> NetworkTask<T> {
                 Event::RpcRequest((peer_id, msg, callback)) => {
                     let r = match msg.message {
                         Some(RequestBlock(request)) => {
-                            self.process_request_block(request, callback).await
+                            self.process_request_block(peer_id, request, callback).await
                         }
                         _ => {
                             warn!("Unexpected RPC from {}: {:?}", peer_id, msg);
@@ -364,19 +384,24 @@ impl<T: Payload> NetworkTask<T> {
         }
     }
 
-    async fn process_proposal(&mut self, proposal: Proposal) -> failure::Result<()> {
+    async fn process_proposal(
+        &mut self,
+        peer_id: AccountAddress,
+        proposal: Proposal,
+    ) -> failure::Result<()> {
         let proposal = ProposalUncheckedSignatures::<T>::try_from(proposal)?;
         let proposal = proposal
             .validate_signatures(self.validators.as_ref())?
             .verify_well_formed()?;
         debug!("Received proposal {}", proposal);
-        if self.proposal_tx.try_send(proposal).is_err() {
-            counters::DROP_NETWORK_TO_CONSENSUS.inc();
-        }
-        Ok(())
+        Ok(self.proposal_tx.put(peer_id, proposal))
     }
 
-    async fn process_vote(&mut self, vote_msg: VoteMsgProto) -> failure::Result<()> {
+    async fn process_vote(
+        &mut self,
+        peer_id: AccountAddress,
+        vote_msg: VoteMsgProto,
+    ) -> failure::Result<()> {
         let vote_msg = VoteMsg::try_from(vote_msg)?;
         debug!("Received {}", vote_msg);
         vote_msg
@@ -389,10 +414,7 @@ impl<T: Payload> NetworkTask<T> {
                     .log();
                 e
             })?;
-        if self.vote_tx.try_send(vote_msg).is_err() {
-            counters::DROP_NETWORK_TO_CONSENSUS.inc();
-        }
-        Ok(())
+        Ok(self.vote_tx.put(peer_id, vote_msg))
     }
 
     async fn process_sync_info(
@@ -408,12 +430,12 @@ impl<T: Payload> NetworkTask<T> {
                 .log();
             e
         })?;
-        self.sync_info_tx.try_send((sync_info, peer))?;
-        Ok(())
+        Ok(self.sync_info_tx.put(peer, (sync_info, peer)))
     }
 
     async fn process_request_block(
         &mut self,
+        peer_id: AccountAddress,
         request: RequestBlock,
         callback: oneshot::Sender<Result<Bytes, RpcError>>,
     ) -> failure::Result<()> {
@@ -429,9 +451,7 @@ impl<T: Payload> NetworkTask<T> {
             num_blocks,
             response_sender: tx,
         };
-        if self.block_request_tx.try_send(request).is_err() {
-            counters::DROP_NETWORK_TO_CONSENSUS.inc();
-        }
+        self.block_request_tx.put(peer_id, request);
         let BlockRetrievalResponse { status, blocks } = rx.await?;
         let mut response = RespondBlock::default();
         response.set_status(status);

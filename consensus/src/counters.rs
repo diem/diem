@@ -41,13 +41,20 @@ pub static ref SUCCESS_TXNS_COUNT: IntCounter = OP_COUNTERS.counter("success_txn
 /// FAILED_TXNS_COUNT + SUCCESS_TXN_COUNT == COMMITTED_TXNS_COUNT
 pub static ref FAILED_TXNS_COUNT: IntCounter = OP_COUNTERS.counter("failed_txns_count");
 
-/// Count of how many messages dropped between network task and main consensus task
-pub static ref DROP_NETWORK_TO_CONSENSUS: IntCounter = OP_COUNTERS.counter("drop_network_to_consensus");
-
 /// Histogram of idle time (ms) of spent in event processing loop
 pub static ref EVENT_PROCESSING_LOOP_IDLE_DURATION_S: DurationHistogram = OP_COUNTERS.duration_histogram("event_processing_loop_idle_duration_s");
 /// Histogram of busy time (ms) of spent in event processing loop
 pub static ref EVENT_PROCESSING_LOOP_BUSY_DURATION_S: DurationHistogram = OP_COUNTERS.duration_histogram("event_processing_loop_busy_duration_s");
+
+/// Count of number of messages dropped by proposals channel
+pub static ref PROPOSAL_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("proposal_dropped_msgs_count");
+/// Count of number of messages dropped by votes channel
+pub static ref VOTES_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("votes_dropped_msgs_count");
+/// Count of number of messages dropped by block retrieval channel
+pub static ref BLOCK_RETRIEVAL_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("block_retrieval_dropped_msgs_count");
+/// Count of number of messages dropped by sync info channel
+pub static ref SYNC_INFO_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("sync_info_dropped_msgs_count");
+
 
 //////////////////////
 // PROPOSAL ELECTION
