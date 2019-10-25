@@ -420,12 +420,14 @@ impl<T: Payload> EventProcessor<T> {
             .committed_block_id()
             .and_then(|new_commit| self.block_store.get_block(new_commit))
         {
-            // We don't want to use NIL commits for pacemaker round interval calculations.
-            if !block.is_nil_block() {
-                highest_committed_proposal_round = Some(block.round());
+            if block.round() > self.block_store.root().round() {
+                // We don't want to use NIL commits for pacemaker round interval calculations.
+                if !block.is_nil_block() {
+                    highest_committed_proposal_round = Some(block.round());
+                }
+                let finality_proof = qc.ledger_info().clone();
+                self.process_commit(finality_proof).await;
             }
-            let finality_proof = qc.ledger_info().clone();
-            self.process_commit(finality_proof).await;
         }
         let mut tc_round = None;
         if let Some(timeout_cert) = tc {
@@ -742,7 +744,7 @@ impl<T: Payload> EventProcessor<T> {
         let blocks_to_commit = match self.block_store.commit(finality_proof).await {
             Ok(blocks) => blocks,
             Err(e) => {
-                error!("{:?}", e);
+                error!("{}", e);
                 return;
             }
         };
