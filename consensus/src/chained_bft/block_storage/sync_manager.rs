@@ -11,6 +11,7 @@ use crate::{
 use consensus_types::block_retrieval::{
     BlockRetrievalMode, BlockRetrievalRequest, BlockRetrievalStatus,
 };
+use consensus_types::common::Round;
 use consensus_types::{
     block::Block,
     common::{Author, Payload},
@@ -21,7 +22,6 @@ use failure;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
-use mirai_annotations::checked_precondition;
 use rand::{prelude::*, Rng};
 use std::{
     clone::Clone,
@@ -39,24 +39,11 @@ pub enum NeedFetchResult {
 }
 
 impl<T: Payload> BlockStore<T> {
-    /// Check if we're far away from this ledger info and need to sync.
-    /// Returns false if we have this block in the tree or the root's round is higher than the
-    /// block.
-    pub fn need_sync_for_quorum_cert(
-        &self,
-        committed_block_id: HashValue,
-        qc: &QuorumCert,
-    ) -> bool {
-        // This precondition ensures that the check in the following lines
-        // does not result in an addition overflow.
-        checked_precondition!(self.root().round() < std::u64::MAX - 1);
-
-        // LedgerInfo doesn't carry the information about the round of the committed block. However,
-        // the 3-chain safety rules specify that the round of the committed block must be
-        // certified_block_round() - 2. In case root().round() is greater than that the committed
-        // block carried by LI is older than my current commit.
-        !(self.block_exists(committed_block_id)
-            || self.root().round() + 2 >= qc.certified_block().round())
+    /// Check whether the local tree is falling behind (and might need state synchronization):
+    /// 1) the root round is lower than the given round.
+    /// 2) the committed block is not present in the block store.
+    pub fn is_tree_outdated(&self, committed_block_id: HashValue, committed_round: Round) -> bool {
+        self.root().round() < committed_round && !self.block_exists(committed_block_id)
     }
 
     /// Checks if quorum certificate can be inserted in block store without RPC
@@ -85,8 +72,11 @@ impl<T: Payload> BlockStore<T> {
         sync_info: &SyncInfo,
         mut retriever: BlockRetriever,
     ) -> failure::Result<()> {
-        self.process_highest_ledger_info(sync_info.highest_ledger_info().clone(), &mut retriever)
-            .await?;
+        self.process_highest_ledger_info_deprecated(
+            sync_info.highest_ledger_info().clone(),
+            &mut retriever,
+        )
+        .await?;
 
         match self.need_fetch_for_quorum_cert(sync_info.highest_quorum_cert()) {
             NeedFetchResult::NeedFetch => {
@@ -116,7 +106,20 @@ impl<T: Payload> BlockStore<T> {
             if self.block_exists(retrieve_qc.certified_block().id()) {
                 break;
             }
-            let mut blocks = retriever.retrieve_block_for_qc(&retrieve_qc, 1).await?;
+            let mut blocks = retriever
+                .retrieve_blocks(
+                    BlockRetrievalRequest::new(
+                        retrieve_qc.certified_block().id(),
+                        BlockRetrievalMode::Ancestors(1),
+                    ),
+                    retrieve_qc
+                        .ledger_info()
+                        .signatures()
+                        .keys()
+                        .copied()
+                        .collect(),
+                )
+                .await?;
             // retrieve_block_for_qc guarantees that blocks has exactly 1 element
             let block = blocks.remove(0);
             retrieve_qc = block.quorum_cert().clone();
@@ -139,7 +142,7 @@ impl<T: Payload> BlockStore<T> {
     /// 2. We persist the 3-chain to storage before start sync to ensure we could restart if we
     /// crash in the middle of the sync.
     /// 3. We prune the old tree and replace with a new tree built with the 3-chain.
-    async fn process_highest_ledger_info(
+    async fn process_highest_ledger_info_deprecated(
         &self,
         highest_ledger_info: QuorumCert,
         retriever: &mut BlockRetriever,
@@ -147,7 +150,15 @@ impl<T: Payload> BlockStore<T> {
         let committed_block_id = highest_ledger_info
             .committed_block_id()
             .ok_or_else(|| format_err!("highest ledger info has no committed block"))?;
-        if !self.need_sync_for_quorum_cert(committed_block_id, &highest_ledger_info) {
+        // Unfortunately we're leaking some information about the commit rule here:
+        // qc.parent_block() must be a child of the commit due to the three chain commit rule.
+        // Hence, commit_round is qc.parent_block() - 1.
+        let commit_round = if highest_ledger_info.parent_block().round() > 0 {
+            highest_ledger_info.parent_block().round() - 1
+        } else {
+            0
+        };
+        if !self.is_tree_outdated(committed_block_id, commit_round) {
             return Ok(());
         }
         debug!(
@@ -157,8 +168,20 @@ impl<T: Payload> BlockStore<T> {
             highest_ledger_info.certified_block().round() - 2,
             self.root()
         );
+
         let mut blocks = retriever
-            .retrieve_block_for_qc(&highest_ledger_info, 3)
+            .retrieve_blocks(
+                BlockRetrievalRequest::new(
+                    highest_ledger_info.certified_block().id(),
+                    BlockRetrievalMode::Ancestors(3),
+                ),
+                highest_ledger_info
+                    .ledger_info()
+                    .signatures()
+                    .keys()
+                    .copied()
+                    .collect(),
+            )
             .await?;
         assert_eq!(
             blocks.last().expect("should have 3-chain").id(),
@@ -174,7 +197,7 @@ impl<T: Payload> BlockStore<T> {
             .save_tree(blocks.clone(), quorum_certs.clone())?;
         let pre_sync_instance = Instant::now();
         self.state_computer
-            .sync_to_or_bail(highest_ledger_info.ledger_info().clone());
+            .sync_to_or_bail_deprecated(highest_ledger_info.ledger_info().clone());
         counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());
         let root = (
             blocks.pop().expect("should have 3-chain"),
@@ -185,6 +208,113 @@ impl<T: Payload> BlockStore<T> {
         // ensure it's [b1, b2]
         blocks.reverse();
         self.rebuild(root, blocks, quorum_certs).await;
+        Ok(())
+    }
+
+    /// Check the highest ledger info sent by peer to see if we're behind and start
+    /// state synchronization if the committed block doesn't exist in the tree (the whole tree is
+    /// outdated).
+    async fn process_highest_ledger_info(
+        &self,
+        highest_ledger_info: QuorumCert,
+        retriever: &mut BlockRetriever,
+    ) -> failure::Result<()> {
+        let committed_block_id = highest_ledger_info
+            .committed_block_id()
+            .ok_or_else(|| format_err!("highest ledger info has no committed block"))?;
+        // Unfortunately we're leaking some information about the commit rule here:
+        // qc.parent_block() must be a child of the commit.
+        // Hence, commit_round is qc.parent_block() - 1.
+        let commit_round = if highest_ledger_info.parent_block().round() > 0 {
+            highest_ledger_info.parent_block().round() - 1
+        } else {
+            0
+        };
+        if !self.is_tree_outdated(committed_block_id, commit_round) {
+            return Ok(());
+        }
+        // TODO: store the pending LedgerInfo for the duration of the state synchronization
+        let mut attempt = 0_u32;
+        loop {
+            debug!(
+                "State sync attempt = {} to round {} from {}",
+                attempt,
+                commit_round,
+                self.root()
+            );
+            match self
+                .state_sync_attempt(highest_ledger_info.clone(), retriever)
+                .await
+            {
+                Err(e) => {
+                    error!(
+                        "Failed state sync attempt {} to round {}: {}",
+                        attempt, commit_round, e
+                    );
+                    attempt += 1;
+                }
+                Ok(_) => {
+                    debug!("State sync success. New root: {}", self.root());
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    async fn state_sync_attempt(
+        &self,
+        highest_ledger_info: QuorumCert,
+        retriever: &mut BlockRetriever,
+    ) -> failure::Result<()> {
+        // State computer synchronization must eventually succeed (an infinite retry):
+        // it returns the LedgerInfo corresponding to the latest committed state in accumulator.
+        let pre_sync_instance = Instant::now();
+        let new_root_li = self
+            .state_computer
+            .state_sync_or_bail(highest_ledger_info.ledger_info().clone());
+        counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());
+        let new_root_id = new_root_li.ledger_info().consensus_block_id();
+        // BlockRetrieval guarantees that upon success the returned chain certifies the commit of
+        // the given root in one of the QuorumCerts carried by the blocks.
+        // The root is the very last element in the chain.
+        let mut new_root_chain = retriever
+            .retrieve_blocks(
+                BlockRetrievalRequest::new(new_root_id, BlockRetrievalMode::Descendants),
+                highest_ledger_info
+                    .ledger_info()
+                    .signatures()
+                    .keys()
+                    .copied()
+                    .collect(),
+            )
+            .await?;
+
+        // An example chain looks like b3-->b2-->b1-->b0, where b0 is the new root.
+        let new_root_block = new_root_chain
+            .pop()
+            .expect("Empty chain in a successful retrieval response");
+        // QuorumCerts in descending order
+        let quorum_certs = new_root_chain
+            .iter()
+            .map(|b| b.quorum_cert().clone())
+            .collect::<Vec<QuorumCert>>();
+        // Find the QC that carries a commit proof for the root.
+        let new_root_li = new_root_chain
+            .iter()
+            .find(|b| b.quorum_cert().committed_block_id() == Some(new_root_id))
+            .expect("No commit proof for root in a successful retrieval response")
+            .quorum_cert()
+            .clone();
+        let root_info = (
+            new_root_block,
+            quorum_certs
+                .last()
+                .expect("No QC for root in a successful retrieval response")
+                .clone(),
+            new_root_li,
+        );
+        new_root_chain.reverse(); // Tree building process executes the blocks in ascending order.
+        self.rebuild(root_info, new_root_chain, quorum_certs).await;
         Ok(())
     }
 }
@@ -204,34 +334,29 @@ impl BlockRetriever {
             preferred_peer,
         }
     }
-    /// Retrieve chain of n blocks for given QC
+    /// Retrieve chain of n blocks starting with the given block id and continuing to its
+    /// ancestors (e.g., for num_blocks = 3 it'll be the block, its parent and grandparent).
     ///
-    /// Returns Result with Vec that has a guaranteed size of num_blocks
-    /// This guarantee is based on BlockRetrievalResponse::verify that ensures that number of
-    /// blocks in response is equal to number of blocks requested.  This method will
-    /// continue until either the round deadline is reached or the quorum certificate members all
-    /// fail to return the missing chain.
+    /// This method continues attempts to bring the requested chain either until the round deadline
+    /// is reached or until all the members from the given list fail to return the requested chain.
     ///
     /// The first attempt of block retrieval will always be sent to preferred_peer to allow the
-    /// leader to drive quorum certificate creation The other peers from the quorum certificate
-    /// will be randomly tried next.  If all members of the quorum certificate are exhausted, an
-    /// error is returned
-    async fn retrieve_block_for_qc<'a, T>(
-        &'a mut self,
-        qc: &'a QuorumCert,
-        num_blocks: u64,
+    /// leader to drive quorum certificate creation. The other peers from the given list will be
+    /// randomly tried next.
+    async fn retrieve_blocks<T>(
+        &mut self,
+        req: BlockRetrievalRequest,
+        mut peers: Vec<AccountAddress>,
     ) -> failure::Result<Vec<Block<T>>>
     where
         T: Payload,
     {
-        let block_id = qc.certified_block().id();
-        let mut peers: Vec<&AccountAddress> = qc.ledger_info().signatures().keys().collect();
         let mut attempt = 0_u32;
         loop {
             if peers.is_empty() {
                 bail!(
-                    "Failed to fetch block {} in {} attempts: no more peers available",
-                    block_id,
+                    "{} failed in {} attempts: no more peers available",
+                    req.clone(),
                     attempt
                 );
             }
@@ -240,27 +365,20 @@ impl BlockRetriever {
 
             let timeout = retrieval_timeout(&self.deadline, attempt);
             let timeout = timeout.ok_or_else(|| {
-                format_err!("Failed to fetch block {} from {}, attempt {}: round deadline was reached, won't make more attempts", block_id, peer, attempt)
+                format_err!("{} to {} failed, attempt {}: round deadline was reached, won't make more attempts", req, peer.short_str(), attempt)
             })?;
             debug!(
-                "Fetching {} from {}, attempt {}",
-                block_id,
+                "Sending {} to {}, attempt {}",
+                req,
                 peer.short_str(),
                 attempt
             );
-            let response = self
-                .network
-                .request_block(
-                    BlockRetrievalRequest::new(block_id, BlockRetrievalMode::Ancestors(num_blocks)),
-                    peer,
-                    timeout,
-                )
-                .await;
+            let response = self.network.request_block(req.clone(), peer, timeout).await;
             let response = match response {
                 Err(e) => {
                     warn!(
-                        "Failed to fetch block {} from {}: {:?}, trying another peer",
-                        block_id,
+                        "{} to {} failed: {}, trying another peer",
+                        req,
                         peer.short_str(),
                         e
                     );
@@ -270,8 +388,8 @@ impl BlockRetriever {
             };
             if response.status() != BlockRetrievalStatus::Succeeded {
                 warn!(
-                    "Failed to fetch block {} from {}: {:?}, trying another peer",
-                    block_id,
+                    "{} to {} failed: {:?}, trying another peer",
+                    req,
                     peer.short_str(),
                     response.status()
                 );
@@ -281,14 +399,14 @@ impl BlockRetriever {
         }
     }
 
-    fn pick_peer(&self, attempt: u32, peers: &mut Vec<&AccountAddress>) -> AccountAddress {
+    fn pick_peer(&self, attempt: u32, peers: &mut Vec<AccountAddress>) -> AccountAddress {
         assert!(!peers.is_empty(), "pick_peer on empty peer list");
 
         if attempt == 0 {
             // remove preferred_peer if its in list of peers
             // (strictly speaking it is not required to be there)
             for i in 0..peers.len() {
-                if *peers[i] == self.preferred_peer {
+                if peers[i] == self.preferred_peer {
                     peers.remove(i);
                     break;
                 }
@@ -297,7 +415,7 @@ impl BlockRetriever {
         }
 
         let peer_idx = thread_rng().gen_range(0, peers.len());
-        *peers.remove(peer_idx)
+        peers.remove(peer_idx)
     }
 }
 

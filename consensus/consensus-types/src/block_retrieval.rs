@@ -49,7 +49,7 @@ impl fmt::Display for BlockRetrievalRequest {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "[BlockRetrievalRequest starting from id {}, retrieval mode {:?}]",
+            "[BlockRetrievalRequest for id {}, retrieval mode {:?}]",
             self.block_id, self.retrieval_mode
         )
     }

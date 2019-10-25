@@ -95,7 +95,11 @@ impl StateSyncClient {
         }
     }
 
-    /// Sync validator's state to target
+    /// StateSynchronizer retrieves the committed transactions from the peers determined by the
+    /// target LedgerInfo. The function returns only when the local version is >= target version.
+    /// The returned LedgerInfo corresponds to the latest ledger info in storage.
+    /// StateSynchronizer maintains an invariant that the returned LedgerInfo matches the
+    /// local accumulator: i.e., the latest version in the accumulator == ledger_info.version.
     pub fn sync_to(
         &self,
         target: LedgerInfoWithSignatures,

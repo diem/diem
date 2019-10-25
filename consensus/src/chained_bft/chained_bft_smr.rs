@@ -164,7 +164,8 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         // Step 1
         if initial_data.need_sync() {
             // make sure we sync to the root state in case we're not
-            state_computer.sync_to_or_bail(initial_data.root_ledger_info().ledger_info().clone());
+            state_computer
+                .sync_to_or_bail_deprecated(initial_data.root_ledger_info().ledger_info().clone());
         }
 
         // Step 2 TODO: read validators from libradb instead of config

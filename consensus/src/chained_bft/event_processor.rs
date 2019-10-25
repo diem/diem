@@ -287,21 +287,6 @@ impl<T: Payload> EventProcessor<T> {
 
         if current_hqc_round < sync_info.hqc_round() {
             let deadline = self.pacemaker.current_round_deadline();
-            let now = Instant::now();
-            let deadline_repr = if deadline.gt(&now) {
-                deadline
-                    .checked_duration_since(now)
-                    .map_or("0 ms".to_string(), |v| format!("{:?}", v))
-            } else {
-                now.checked_duration_since(deadline)
-                    .map_or("0 ms".to_string(), |v| format!("Already late by {:?}", v))
-            };
-            debug!(
-                "Starting sync: current_hqc_round = {}, sync_info_hqc_round = {}, deadline = {:?}",
-                current_hqc_round,
-                sync_info.hqc_round(),
-                deadline_repr,
-            );
             self.block_store
                 .sync_to(&sync_info, self.create_block_retriever(deadline, author))
                 .await
@@ -313,7 +298,6 @@ impl<T: Payload> EventProcessor<T> {
                     );
                     e
                 })?;
-            debug!("Caught up to HQC at round {}", sync_info.hqc_round());
         }
         // Update the block store and potentially start a new round.
         self.process_certificates(

@@ -56,15 +56,15 @@ pub trait StateComputer: Send + Sync {
         finality_proof: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
-    fn sync_to(
+    fn sync_to_deprecated(
         &self,
         commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>>;
 
     fn committed_trees(&self) -> ExecutedTrees;
 
-    fn sync_to_or_bail(&self, commit: LedgerInfoWithSignatures) {
-        let status = futures::executor::block_on(self.sync_to(commit));
+    fn sync_to_or_bail_deprecated(&self, commit: LedgerInfoWithSignatures) {
+        let status = futures::executor::block_on(self.sync_to_deprecated(commit));
         match status {
             Ok(true) => (),
             Ok(false) => panic!(
@@ -74,6 +74,27 @@ pub trait StateComputer: Send + Sync {
             ),
             Err(e) => panic!(
                 "state synchronizer failure: {:?}, this validator will be killed as it can not \
+                 recover from this error.  After the validator is restarted, synchronization will \
+                 be retried.",
+                e
+            ),
+        }
+    }
+
+    /// Retrieves the committed transactions: returns only when the local version is greater or
+    /// equal to target version.
+    /// The returned LedgerInfo corresponds to the latest ledger info in storage.
+    fn state_sync(
+        &self,
+        target: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<LedgerInfoWithSignatures>> + Send>>;
+
+    fn state_sync_or_bail(&self, target: LedgerInfoWithSignatures) -> LedgerInfoWithSignatures {
+        let status = futures::executor::block_on(self.state_sync(target));
+        match status {
+            Ok(res) => res,
+            Err(e) => panic!(
+                "State synchronization failure: {:?}, this validator will be killed as it can not \
                  recover from this error.  After the validator is restarted, synchronization will \
                  be retried.",
                 e

@@ -134,12 +134,20 @@ impl StateComputer for ExecutionProxy {
     }
 
     /// Synchronize to a commit that not present locally.
-    fn sync_to(
+    fn sync_to_deprecated(
         &self,
         commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
         counters::STATE_SYNC_COUNT.inc();
         self.synchronizer.sync_to_deprecated(commit).boxed()
+    }
+
+    fn state_sync(
+        &self,
+        target: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<LedgerInfoWithSignatures>> + Send>> {
+        counters::STATE_SYNC_COUNT.inc();
+        self.synchronizer.sync_to(target).boxed()
     }
 
     fn committed_trees(&self) -> ExecutedTrees {

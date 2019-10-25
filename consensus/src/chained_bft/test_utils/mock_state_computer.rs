@@ -64,7 +64,7 @@ impl StateComputer for MockStateComputer {
         future::ok(()).boxed()
     }
 
-    fn sync_to(
+    fn sync_to_deprecated(
         &self,
         commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
@@ -80,6 +80,16 @@ impl StateComputer for MockStateComputer {
             .unbounded_send(commit.clone())
             .expect("Fail to notify about sync");
         async { Ok(true) }.boxed()
+    }
+
+    fn state_sync(
+        &self,
+        _target: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<LedgerInfoWithSignatures>> + Send>> {
+        async {
+            bail!("Unimplemented!");
+        }
+            .boxed()
     }
 
     fn committed_trees(&self) -> ExecutedTrees {
@@ -112,11 +122,21 @@ impl StateComputer for EmptyStateComputer {
         future::ok(()).boxed()
     }
 
-    fn sync_to(
+    fn sync_to_deprecated(
         &self,
         _commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
         async { Ok(true) }.boxed()
+    }
+
+    fn state_sync(
+        &self,
+        _target: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<LedgerInfoWithSignatures>> + Send>> {
+        async {
+            bail!("Unimplemented!");
+        }
+            .boxed()
     }
 
     fn committed_trees(&self) -> ExecutedTrees {

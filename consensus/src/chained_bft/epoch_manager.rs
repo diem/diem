@@ -112,7 +112,8 @@ impl<T: Payload> EpochManager<T> {
 
     pub fn start_new_epoch(&self, ledger_info: LedgerInfoWithSignatures) -> EventProcessor<T> {
         // make sure storage is on this ledger_info too, it should be no-op if it's already committed
-        self.state_computer.sync_to_or_bail(ledger_info.clone());
+        self.state_computer
+            .sync_to_or_bail_deprecated(ledger_info.clone());
         let validators = ledger_info
             .ledger_info()
             .next_validator_set()
