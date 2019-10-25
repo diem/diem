@@ -80,7 +80,7 @@ members = [
     "testsuite/libra-fuzzer",
     "types",
     "vm-validator",
-    "xtask",
+    "x",
 ]
 
 # NOTE: These members should never include crates that require fuzzing
