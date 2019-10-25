@@ -675,11 +675,11 @@ impl TransactionProof {
         transaction_version: Version,
     ) -> Result<()> {
         ensure!(
-            transaction_hash == self.transaction_info.signed_transaction_hash(),
+            transaction_hash == self.transaction_info.transaction_hash(),
             "The hash of transaction does not match the transaction info in proof. \
              Transaction hash: {:x}. Transaction hash provided by proof: {:x}.",
             transaction_hash,
-            self.transaction_info.signed_transaction_hash()
+            self.transaction_info.transaction_hash()
         );
 
         if let Some(event_root_hash) = event_root_hash {
@@ -1005,11 +1005,11 @@ impl TransactionListProof {
         itertools::zip_eq(transaction_hashes, &self.transaction_infos)
             .map(|(txn_hash, txn_info)| {
                 ensure!(
-                    *txn_hash == txn_info.signed_transaction_hash(),
+                    *txn_hash == txn_info.transaction_hash(),
                     "The hash of transaction does not match the transaction info in proof. \
                      Transaction hash: {:x}. Transaction hash in txn_info: {:x}.",
                     txn_hash,
-                    txn_info.signed_transaction_hash(),
+                    txn_info.transaction_hash(),
                 );
                 Ok(())
             })

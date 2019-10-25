@@ -306,7 +306,7 @@ fn verify_committed_transactions(
 
         // Verify transaction hash.
         assert_eq!(
-            txn_info.signed_transaction_hash(),
+            txn_info.transaction_hash(),
             txn_to_commit.as_signed_user_txn()?.hash()
         );
 

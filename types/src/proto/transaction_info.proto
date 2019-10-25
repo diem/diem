@@ -10,8 +10,8 @@ package types;
 // transaction. This are later returned to the client so that a client can
 // validate the tree
 message TransactionInfo {
-  // Hash of the signed transaction that is stored
-  bytes signed_transaction_hash = 1;
+  // Hash of the transaction that is stored.
+  bytes transaction_hash = 1;
 
   // The root hash of Sparse Merkle Tree describing the world state at the end
   // of this transaction
