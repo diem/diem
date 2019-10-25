@@ -2,15 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_crypto::{
-    hash::{CryptoHash, CryptoHasher, VoteDataHasher},
+    hash::{CryptoHash, CryptoHasher},
     HashValue,
 };
+use libra_crypto_derive::CryptoHasher;
 use libra_types::block_info::BlockInfo;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 /// VoteData keeps the information about the block, and its parent.
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, CryptoHasher)]
 pub struct VoteData {
     /// Contains all the block information needed for voting for the proposed round.
     proposed: BlockInfo,

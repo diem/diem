@@ -5,7 +5,8 @@ use crate::{
     common::{Author, Round},
     quorum_cert::QuorumCert,
 };
-use libra_crypto::hash::{BlockHasher, CryptoHash, CryptoHasher, HashValue};
+use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
+use libra_crypto_derive::CryptoHasher;
 use mirai_annotations::*;
 use serde::{Deserialize, Serialize};
 
@@ -27,7 +28,7 @@ pub enum BlockType<T> {
     Genesis,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, CryptoHasher)]
 /// Block has the core data of a consensus block that should be persistent when necessary.
 /// Each block must know the id of its parent and keep the QuorurmCertificate to that parent.
 pub struct BlockData<T> {
@@ -175,7 +176,7 @@ impl<T> CryptoHash for BlockData<T>
 where
     T: Serialize,
 {
-    type Hasher = BlockHasher;
+    type Hasher = BlockDataHasher;
 
     fn hash(&self) -> HashValue {
         let bytes = lcs::to_bytes(self).expect("BlockData serialization failed");
