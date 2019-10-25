@@ -17,9 +17,20 @@ pub struct Args {
     #[structopt(long, short)]
     /// Only run unit tests
     unit: bool,
+    #[structopt(name = "TESTNAME")]
+    testname: Option<String>,
+    #[structopt(last = true)]
+    args: Vec<String>,
 }
 
 pub fn run(args: Args, config: Config) -> Result<()> {
+    let pass_through_args = args
+        .testname
+        .as_ref()
+        .into_iter()
+        .map(|s| s.as_str())
+        .chain(iter::once("--"))
+        .chain(args.args.iter().map(|s| s.as_str()));
     if args.unit {
         run_cargo_test_on_packages_separate(
             config
@@ -27,9 +38,11 @@ pub fn run(args: Args, config: Config) -> Result<()> {
                 .iter()
                 .filter(|(_, pkg)| !pkg.system)
                 .map(|(p, pkg)| (p.as_str(), pkg)),
+            pass_through_args.clone(),
         )?;
         run_cargo_test_with_exclusions(
             config.package_exceptions().iter().map(|(p, _)| p.as_str()),
+            pass_through_args,
         )?;
         Ok(())
     } else if !args.package.is_empty() {
@@ -39,8 +52,8 @@ pub fn run(args: Args, config: Config) -> Result<()> {
             .iter()
             .filter(|p| config.is_exception(p))
             .map(|p| (p.as_str(), config.package_exceptions().get(p).unwrap()));
-        run_cargo_test_on_packages_separate(run_separate)?;
-        run_cargo_test_on_packages_together(run_together.map(|s| s.as_str()))?;
+        run_cargo_test_on_packages_separate(run_separate, pass_through_args.clone())?;
+        run_cargo_test_on_packages_together(run_together.map(|s| s.as_str()), pass_through_args)?;
         Ok(())
     } else if utils::project_is_root()? {
         // TODO Maybe only run a subest of tests if we're not inside
@@ -50,9 +63,11 @@ pub fn run(args: Args, config: Config) -> Result<()> {
                 .package_exceptions()
                 .iter()
                 .map(|(p, pkg)| (p.as_str(), pkg)),
+            pass_through_args.clone(),
         )?;
         run_cargo_test_with_exclusions(
             config.package_exceptions().iter().map(|(p, _)| p.as_str()),
+            pass_through_args,
         )?;
         Ok(())
     } else {
@@ -63,12 +78,15 @@ pub fn run(args: Args, config: Config) -> Result<()> {
             .map(|pkg| pkg.all_features)
             .unwrap_or(true);
 
-        run_cargo_test_on_local_package(all_features)?;
+        run_cargo_test_on_local_package(all_features, pass_through_args)?;
         Ok(())
     }
 }
 
-fn run_cargo_test_on_local_package(all_features: bool) -> Result<()> {
+fn run_cargo_test_on_local_package<'a>(
+    all_features: bool,
+    pass_through_args: impl Iterator<Item = &'a str>,
+) -> Result<()> {
     let args = if all_features {
         vec!["test", "--all-features"]
     } else {
@@ -76,6 +94,7 @@ fn run_cargo_test_on_local_package(all_features: bool) -> Result<()> {
     };
     let output = Command::new("cargo")
         .args(args)
+        .args(pass_through_args)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()?;
@@ -87,6 +106,7 @@ fn run_cargo_test_on_local_package(all_features: bool) -> Result<()> {
 
 fn run_cargo_test_on_packages_separate<'a>(
     packages: impl Iterator<Item = (&'a str, &'a Package)>,
+    pass_through_args: impl Iterator<Item = &'a str> + Clone,
 ) -> Result<()> {
     for (name, pkg) in packages {
         let mut args = if pkg.all_features {
@@ -99,6 +119,7 @@ fn run_cargo_test_on_packages_separate<'a>(
         let output = Command::new("cargo")
             .current_dir(project_root())
             .args(args)
+            .args(pass_through_args.clone())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .output()?;
@@ -109,7 +130,10 @@ fn run_cargo_test_on_packages_separate<'a>(
     Ok(())
 }
 
-fn run_cargo_test_on_packages_together<'a>(packages: impl Iterator<Item = &'a str>) -> Result<()> {
+fn run_cargo_test_on_packages_together<'a>(
+    packages: impl Iterator<Item = &'a str>,
+    pass_through_args: impl Iterator<Item = &'a str>,
+) -> Result<()> {
     let output = Command::new("cargo")
         .current_dir(project_root())
         .args(&["test", "--all-features"])
@@ -118,6 +142,7 @@ fn run_cargo_test_on_packages_together<'a>(packages: impl Iterator<Item = &'a st
                 .zip(packages)
                 .flat_map(|tup| iter::once(tup.0).chain(iter::once(tup.1))),
         )
+        .args(pass_through_args)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()?;
@@ -127,7 +152,10 @@ fn run_cargo_test_on_packages_together<'a>(packages: impl Iterator<Item = &'a st
     Ok(())
 }
 
-fn run_cargo_test_with_exclusions<'a>(exclude: impl Iterator<Item = &'a str>) -> Result<()> {
+fn run_cargo_test_with_exclusions<'a>(
+    exclude: impl Iterator<Item = &'a str>,
+    pass_through_args: impl Iterator<Item = &'a str>,
+) -> Result<()> {
     let output = Command::new("cargo")
         .current_dir(project_root())
         .args(&["test", "--all", "--all-features"])
@@ -136,6 +164,7 @@ fn run_cargo_test_with_exclusions<'a>(exclude: impl Iterator<Item = &'a str>) ->
                 .zip(exclude)
                 .flat_map(|tup| iter::once(tup.0).chain(iter::once(tup.1))),
         )
+        .args(pass_through_args)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()?;
