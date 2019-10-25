@@ -81,7 +81,7 @@ echo "Cleaning project..."
 echo "Running tests..."
 while read -r line; do
         dirline=$(realpath $(dirname "$line"));
-        (cd "$dirline"; cargo test)
+        (cd "$dirline"; cargo +nightly test --all-features)
 done < <(find "$TEST_DIR" -name 'Cargo.toml')
 
 # Make the coverage directory if it doesn't exist
