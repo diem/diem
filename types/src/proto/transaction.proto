@@ -40,8 +40,8 @@ message SignedTransactionWithProof {
     // The transaction itself.
     SignedTransaction signed_transaction = 2;
 
-    // The proof authenticating the signed transaction.
-    SignedTransactionProof proof = 3;
+    // The proof authenticating the transaction.
+    TransactionProof proof = 3;
 
     // The events yielded by executing the transaction, if requested.
     EventsList events = 4;

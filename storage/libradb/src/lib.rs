@@ -55,8 +55,8 @@ use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     get_with_proof::{RequestItem, ResponseItem},
     proof::{
-        AccountStateProof, AccumulatorConsistencyProof, EventProof, SignedTransactionProof,
-        SparseMerkleProof, TransactionListProof,
+        AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
+        TransactionListProof, TransactionProof,
     },
     transaction::{
         SignedTransactionWithProof, TransactionInfo, TransactionListWithProof, TransactionToCommit,
@@ -699,7 +699,7 @@ impl LibraDB {
             let (txn_info, txn_info_accumulator_proof) = self
                 .ledger_store
                 .get_transaction_info_with_proof(version, ledger_version)?;
-            SignedTransactionProof::new(txn_info_accumulator_proof, txn_info)
+            TransactionProof::new(txn_info_accumulator_proof, txn_info)
         };
         let signed_transaction = self
             .transaction_store

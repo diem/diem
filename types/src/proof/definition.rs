@@ -626,13 +626,13 @@ pub type TransactionAccumulatorRangeProof = AccumulatorRangeProof<TransactionAcc
 #[cfg(any(test, feature = "fuzzing"))]
 pub type TestAccumulatorRangeProof = AccumulatorRangeProof<TestOnlyHasher>;
 
-/// The complete proof used to authenticate a `SignedTransaction` object.  This structure consists
-/// of an `AccumulatorProof` from `LedgerInfo` to `TransactionInfo` the verifier needs to verify
-/// the correctness of the `TransactionInfo` object, and the `TransactionInfo` object that is
-/// supposed to match the `SignedTransaction`.
+/// The complete proof used to authenticate a `Transaction` object.  This structure consists of an
+/// `AccumulatorProof` from `LedgerInfo` to `TransactionInfo` the verifier needs to verify the
+/// correctness of the `TransactionInfo` object, and the `TransactionInfo` object that is supposed
+/// to match the `Transaction`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct SignedTransactionProof {
+pub struct TransactionProof {
     /// The accumulator proof from ledger info root to leaf that authenticates the hash of the
     /// `TransactionInfo` object.
     ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
@@ -641,14 +641,14 @@ pub struct SignedTransactionProof {
     transaction_info: TransactionInfo,
 }
 
-impl SignedTransactionProof {
-    /// Constructs a new `SignedTransactionProof` object using given
+impl TransactionProof {
+    /// Constructs a new `TransactionProof` object using given
     /// `ledger_info_to_transaction_info_proof`.
     pub fn new(
         ledger_info_to_transaction_info_proof: TransactionAccumulatorProof,
         transaction_info: TransactionInfo,
     ) -> Self {
-        SignedTransactionProof {
+        Self {
             ledger_info_to_transaction_info_proof,
             transaction_info,
         }
@@ -664,21 +664,21 @@ impl SignedTransactionProof {
         &self.transaction_info
     }
 
-    /// Verifies that a `SignedTransaction` with hash value of `signed_transaction_hash`
-    /// is the version `transaction_version` transaction in the ledger using the provided proof.
-    /// If event_root_hash is provided, it's also verified against the proof.
+    /// Verifies that a `Transaction` with hash value of `transaction_hash` is the version
+    /// `transaction_version` transaction in the ledger using the provided proof.  If
+    /// `event_root_hash` is provided, it's also verified against the proof.
     pub fn verify(
         &self,
         ledger_info: &LedgerInfo,
-        signed_transaction_hash: HashValue,
+        transaction_hash: HashValue,
         event_root_hash: Option<HashValue>,
         transaction_version: Version,
     ) -> Result<()> {
         ensure!(
-            signed_transaction_hash == self.transaction_info.signed_transaction_hash(),
-            "The hash of signed transaction does not match the transaction info in proof. \
+            transaction_hash == self.transaction_info.signed_transaction_hash(),
+            "The hash of transaction does not match the transaction info in proof. \
              Transaction hash: {:x}. Transaction hash provided by proof: {:x}.",
-            signed_transaction_hash,
+            transaction_hash,
             self.transaction_info.signed_transaction_hash()
         );
 
@@ -701,10 +701,10 @@ impl SignedTransactionProof {
     }
 }
 
-impl TryFrom<crate::proto::types::SignedTransactionProof> for SignedTransactionProof {
+impl TryFrom<crate::proto::types::TransactionProof> for TransactionProof {
     type Error = Error;
 
-    fn try_from(proto_proof: crate::proto::types::SignedTransactionProof) -> Result<Self> {
+    fn try_from(proto_proof: crate::proto::types::TransactionProof) -> Result<Self> {
         let ledger_info_to_transaction_info_proof = proto_proof
             .ledger_info_to_transaction_info_proof
             .ok_or_else(|| format_err!("Missing ledger_info_to_transaction_info_proof"))?
@@ -714,15 +714,15 @@ impl TryFrom<crate::proto::types::SignedTransactionProof> for SignedTransactionP
             .ok_or_else(|| format_err!("Missing transaction_info"))?
             .try_into()?;
 
-        Ok(SignedTransactionProof::new(
+        Ok(TransactionProof::new(
             ledger_info_to_transaction_info_proof,
             transaction_info,
         ))
     }
 }
 
-impl From<SignedTransactionProof> for crate::proto::types::SignedTransactionProof {
-    fn from(proof: SignedTransactionProof) -> Self {
+impl From<TransactionProof> for crate::proto::types::TransactionProof {
+    fn from(proof: TransactionProof) -> Self {
         Self {
             ledger_info_to_transaction_info_proof: Some(
                 proof.ledger_info_to_transaction_info_proof.into(),

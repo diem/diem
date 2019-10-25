@@ -7,9 +7,9 @@ use crate::{
     ledger_info::LedgerInfo,
     proof::{
         definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccountStateProof, EventAccumulatorInternalNode,
-        EventAccumulatorProof, EventProof, SignedTransactionProof, SparseMerkleInternalNode,
-        SparseMerkleLeafNode, SparseMerkleProof, TestAccumulatorInternalNode, TestAccumulatorProof,
-        TransactionAccumulatorInternalNode, TransactionAccumulatorProof,
+        EventAccumulatorProof, EventProof, SparseMerkleInternalNode, SparseMerkleLeafNode,
+        SparseMerkleProof, TestAccumulatorInternalNode, TestAccumulatorProof,
+        TransactionAccumulatorInternalNode, TransactionAccumulatorProof, TransactionProof,
     },
     transaction::{RawTransaction, Script, TransactionInfo},
     vm_error::StatusCode,
@@ -247,7 +247,7 @@ fn test_verify_three_element_sparse_merkle() {
 }
 
 #[test]
-fn test_verify_signed_transaction() {
+fn test_verify_transaction() {
     //            root
     //           /     \
     //         /         \
@@ -289,7 +289,7 @@ fn test_verify_signed_transaction() {
 
     let ledger_info_to_transaction_info_proof =
         TransactionAccumulatorProof::new(vec![internal_b_hash, txn_info0_hash]);
-    let proof = SignedTransactionProof::new(ledger_info_to_transaction_info_proof, txn_info1);
+    let proof = TransactionProof::new(ledger_info_to_transaction_info_proof, txn_info1);
 
     // The proof can be used to verify txn1.
     assert!(proof.verify(&ledger_info, txn1_hash, None, 1).is_ok());

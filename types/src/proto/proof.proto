@@ -59,8 +59,8 @@ message AccumulatorRangeProof {
   repeated bytes right_siblings = 2;
 }
 
-// The complete proof used to authenticate a signed transaction.
-message SignedTransactionProof {
+// The complete proof used to authenticate a transaction.
+message TransactionProof {
   AccumulatorProof ledger_info_to_transaction_info_proof = 1;
   TransactionInfo transaction_info = 2;
 }
