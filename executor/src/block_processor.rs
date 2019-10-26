@@ -545,6 +545,7 @@ where
                     vm_output.events().iter().map(CryptoHash::hash).collect();
                 InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes)
             };
+            let mut txn_info_hash = None;
 
             match vm_output.status() {
                 TransactionStatus::Keep(status) => {
@@ -561,7 +562,10 @@ where
                         vm_output.gas_used(),
                         status.major_status,
                     );
-                    txn_info_hashes.push(txn_info.hash());
+
+                    let real_txn_info_hash = txn_info.hash();
+                    txn_info_hashes.push(real_txn_info_hash);
+                    txn_info_hash = Some(real_txn_info_hash);
                 }
                 TransactionStatus::Discard(_) => {
                     ensure!(
@@ -583,6 +587,7 @@ where
                 Arc::new(event_tree),
                 vm_output.gas_used(),
                 num_accounts_created,
+                txn_info_hash,
             ));
             current_state_tree = state_tree;
 
