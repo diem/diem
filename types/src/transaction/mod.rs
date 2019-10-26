@@ -15,8 +15,8 @@ use failure::prelude::*;
 use libra_crypto::{
     ed25519::*,
     hash::{
-        CryptoHash, CryptoHasher, EventAccumulatorHasher, RawTransactionHasher,
-        SignedTransactionHasher, TransactionHasher, TransactionInfoHasher,
+        CryptoHash, CryptoHasher, EventAccumulatorHasher, RawTransactionHasher, TransactionHasher,
+        TransactionInfoHasher,
     },
     traits::*,
     HashValue,
@@ -416,16 +416,6 @@ impl SignedTransaction {
     }
 }
 
-impl CryptoHash for SignedTransaction {
-    type Hasher = SignedTransactionHasher;
-
-    fn hash(&self) -> HashValue {
-        let mut state = Self::Hasher::default();
-        state.write(&lcs::to_bytes(self).expect("serialization failed"));
-        state.finish()
-    }
-}
-
 impl TryFrom<crate::proto::types::SignedTransaction> for SignedTransaction {
     type Error = Error;
 
@@ -500,7 +490,7 @@ impl TransactionWithProof {
         });
         self.proof.verify(
             ledger_info,
-            signed_transaction.hash(),
+            self.transaction.hash(),
             events_root_hash,
             version,
         )
@@ -798,10 +788,6 @@ impl TransactionToCommit {
         &self.transaction
     }
 
-    pub fn as_signed_user_txn(&self) -> Result<&SignedTransaction> {
-        self.transaction.as_signed_user_txn()
-    }
-
     pub fn account_states(&self) -> &HashMap<AccountAddress, AccountStateBlob> {
         &self.account_states
     }
@@ -933,11 +919,7 @@ impl TransactionListWithProof {
             Self::display_option_version(first_transaction_version),
         );
 
-        let txn_hashes = self
-            .transactions
-            .iter()
-            .map(|txn| Ok(txn.as_signed_user_txn()?.hash()))
-            .collect::<Result<Vec<_>>>()?;
+        let txn_hashes: Vec<_> = self.transactions.iter().map(CryptoHash::hash).collect();
         self.proof
             .verify(ledger_info, self.first_transaction_version, &txn_hashes)?;
 

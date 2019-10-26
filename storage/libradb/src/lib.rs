@@ -428,7 +428,7 @@ impl LibraDB {
         let txn_infos = izip!(txns_to_commit, state_root_hashes, event_root_hashes)
             .map(|(t, s, e)| {
                 Ok(TransactionInfo::new(
-                    t.as_signed_user_txn()?.hash(),
+                    t.transaction().hash(),
                     s,
                     e,
                     t.gas_used(),
