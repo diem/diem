@@ -81,7 +81,9 @@ mod tree_cache;
 use failure::prelude::*;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
-    account_state_blob::AccountStateBlob, proof::SparseMerkleProof, transaction::Version,
+    account_state_blob::AccountStateBlob,
+    proof::{SparseMerkleProof, SparseMerkleRangeProof},
+    transaction::Version,
 };
 use nibble_path::{skip_common_prefix, NibbleIterator, NibblePath};
 use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey};
@@ -559,6 +561,33 @@ where
             }
         }
         bail!("Jellyfish Merkle tree has cyclic graph inside.");
+    }
+
+    /// Gets the proof that shows a list of keys up to `rightmost_key_to_prove` exist at `version`.
+    pub fn get_range_proof(
+        &self,
+        rightmost_key_to_prove: HashValue,
+        version: Version,
+    ) -> Result<SparseMerkleRangeProof> {
+        let (account, proof) = self.get_with_proof(rightmost_key_to_prove, version)?;
+        ensure!(account.is_some(), "rightmost_key_to_prove must exist.");
+
+        let siblings = proof
+            .siblings()
+            .iter()
+            .rev()
+            .zip(rightmost_key_to_prove.iter_bits())
+            .filter_map(|(sibling, bit)| {
+                // We only need to keep the siblings on the right.
+                if !bit {
+                    Some(*sibling)
+                } else {
+                    None
+                }
+            })
+            .rev()
+            .collect();
+        Ok(SparseMerkleRangeProof::new(siblings))
     }
 
     #[cfg(test)]
