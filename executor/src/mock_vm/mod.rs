@@ -263,7 +263,7 @@ pub fn encode_transfer_program(recipient: AccountAddress, amount: u64) -> Script
     Script::new(vec![], vec![argument1, argument2])
 }
 
-pub fn encode_mint_transaction(sender: AccountAddress, amount: u64) -> SignedTransaction {
+pub fn encode_mint_transaction(sender: AccountAddress, amount: u64) -> Transaction {
     encode_transaction(sender, encode_mint_program(amount))
 }
 
@@ -271,19 +271,21 @@ pub fn encode_transfer_transaction(
     sender: AccountAddress,
     recipient: AccountAddress,
     amount: u64,
-) -> SignedTransaction {
+) -> Transaction {
     encode_transaction(sender, encode_transfer_program(recipient, amount))
 }
 
-fn encode_transaction(sender: AccountAddress, program: Script) -> SignedTransaction {
+fn encode_transaction(sender: AccountAddress, program: Script) -> Transaction {
     let raw_transaction =
         RawTransaction::new_script(sender, 0, program, 0, 0, std::time::Duration::from_secs(0));
 
     let (privkey, pubkey) = compat::generate_keypair(None);
-    raw_transaction
-        .sign(&privkey, pubkey)
-        .expect("Failed to sign raw transaction.")
-        .into_inner()
+    Transaction::UserTransaction(
+        raw_transaction
+            .sign(&privkey, pubkey)
+            .expect("Failed to sign raw transaction.")
+            .into_inner(),
+    )
 }
 
 fn decode_transaction(txn: &SignedTransaction) -> MockVMTransaction {
