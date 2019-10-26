@@ -11,7 +11,7 @@ use crate::{
         SparseMerkleProof, TestAccumulatorInternalNode, TestAccumulatorProof,
         TransactionAccumulatorInternalNode, TransactionAccumulatorProof, TransactionProof,
     },
-    transaction::{RawTransaction, Script, TransactionInfo},
+    transaction::{RawTransaction, Script, Transaction, TransactionInfo},
     vm_error::StatusCode,
 };
 use libra_crypto::{
@@ -346,16 +346,19 @@ fn test_verify_account_state_and_event() {
     let txn_info1_hash = b"worldworld".test_only_hash();
 
     let (privkey, pubkey) = compat::generate_keypair(None);
-    let txn2_hash = RawTransaction::new_script(
-        AccountAddress::from_public_key(&pubkey),
-        /* sequence_number = */ 0,
-        Script::new(vec![], vec![]),
-        /* max_gas_amount = */ 0,
-        /* gas_unit_price = */ 0,
-        /* expiration_time = */ std::time::Duration::new(0, 0),
+    let txn2_hash = Transaction::UserTransaction(
+        RawTransaction::new_script(
+            AccountAddress::from_public_key(&pubkey),
+            /* sequence_number = */ 0,
+            Script::new(vec![], vec![]),
+            /* max_gas_amount = */ 0,
+            /* gas_unit_price = */ 0,
+            /* expiration_time = */ std::time::Duration::new(0, 0),
+        )
+        .sign(&privkey, pubkey)
+        .expect("Signing failed.")
+        .into_inner(),
     )
-    .sign(&privkey, pubkey)
-    .expect("Signing failed.")
     .hash();
 
     let event0_hash = b"event0".test_only_hash();

@@ -555,7 +555,7 @@ where
                     // Compute hash for the TransactionInfo object. We need the hash of the
                     // transaction itself, the state root hash as well as the event root hash.
                     let txn_info = TransactionInfo::new(
-                        txn.as_signed_user_txn()?.hash(),
+                        txn.hash(),
                         state_tree.root_hash(),
                         event_tree.root_hash(),
                         vm_output.gas_used(),
