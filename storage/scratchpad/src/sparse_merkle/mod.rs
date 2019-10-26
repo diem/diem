@@ -224,15 +224,15 @@ impl SparseMerkleTree {
                 };
 
                 let num_remaining_bits = remaining_bits.len();
+                let proof_length = proof.siblings().len();
                 Ok(Self::construct_subtree(
                     remaining_bits
                         .rev()
-                        .skip(HashValue::LENGTH_IN_BITS - proof.siblings().len()),
+                        .skip(HashValue::LENGTH_IN_BITS - proof_length),
                     proof
                         .siblings()
                         .iter()
-                        .skip(HashValue::LENGTH_IN_BITS - num_remaining_bits)
-                        .rev()
+                        .take(num_remaining_bits + proof_length - HashValue::LENGTH_IN_BITS)
                         .map(|sibling_hash| {
                             Arc::new(if *sibling_hash != *SPARSE_MERKLE_PLACEHOLDER_HASH {
                                 SparseMerkleNode::new_subtree(*sibling_hash)

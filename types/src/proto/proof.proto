@@ -8,7 +8,7 @@ package types;
 import "transaction_info.proto";
 
 message AccumulatorProof {
-  // The siblings. The ones near the root are at the beginning of the list. The
+  // The siblings. The ones near the leaf are at the beginning of the list. The
   // placeholder nodes are represented by empty byte arrays, other nodes should
   // be exactly 32-bytes long.
   repeated bytes siblings = 1;
@@ -33,7 +33,7 @@ message SparseMerkleProof {
   //     in the Rust structure.
   bytes leaf = 1;
 
-  // The siblings. The ones near the root are at the beginning of the list. The
+  // The siblings. The ones near the leaf are at the beginning of the list. The
   // placeholder nodes are represented by empty byte arrays, other nodes should
   // be exactly 32-bytes long.
   repeated bytes siblings = 2;
@@ -47,13 +47,13 @@ message AccumulatorConsistencyProof {
 
 message AccumulatorRangeProof {
   // The siblings on the left of the path from root to the first leaf. The ones
-  // near the root are at the beginning of the list. The placeholder nodes are
+  // near the leaf are at the beginning of the list. The placeholder nodes are
   // represented by empty byte arrays, other nodes should be exactly 32-bytes
   // long.
   repeated bytes left_siblings = 1;
 
   // The siblings on the right of the path from root to the last leaf. The ones
-  // near the root are at the beginning of the list. The placeholder nodes are
+  // near the leaf are at the beginning of the list. The placeholder nodes are
   // represented by empty byte arrays, other nodes should be exactly 32-bytes
   // long.
   repeated bytes right_siblings = 2;

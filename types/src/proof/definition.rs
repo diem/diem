@@ -78,8 +78,8 @@ fn into_proto_siblings(siblings: Vec<HashValue>, placeholder: HashValue) -> Vec<
 /// constructed on top of this structure.
 #[derive(Clone)]
 pub struct AccumulatorProof<H> {
-    /// All siblings in this proof, including the default ones. Siblings near the root are at the
-    /// beginning of the vector.
+    /// All siblings in this proof, including the default ones. Siblings are ordered from the bottom
+    /// level to the root level.
     siblings: Vec<HashValue>,
 
     phantom: PhantomData<H>,
@@ -101,8 +101,8 @@ where
         // The sibling list could be empty in case the accumulator is empty or has a single
         // element. When it's not empty, the top most sibling will never be default, otherwise the
         // accumulator should have collapsed to a smaller one.
-        if let Some(first_sibling) = siblings.first() {
-            assert_ne!(*first_sibling, *ACCUMULATOR_PLACEHOLDER_HASH);
+        if let Some(last_sibling) = siblings.last() {
+            assert_ne!(*last_sibling, *ACCUMULATOR_PLACEHOLDER_HASH);
         }
 
         AccumulatorProof {
@@ -134,7 +134,6 @@ where
         let actual_root_hash = self
             .siblings
             .iter()
-            .rev()
             .fold(
                 (element_hash, element_index),
                 // `index` denotes the index of the ancestor of the element at the current level.
@@ -218,8 +217,8 @@ pub struct SparseMerkleProof {
     ///       empty.
     leaf: Option<(HashValue, HashValue)>,
 
-    /// All siblings in this proof, including the default ones. Siblings near the root are at the
-    /// beginning of the vector.
+    /// All siblings in this proof, including the default ones. Siblings are ordered from the bottom
+    /// level to the root level.
     siblings: Vec<HashValue>,
 }
 
@@ -229,8 +228,8 @@ impl SparseMerkleProof {
         // The sibling list could be empty in case the Sparse Merkle Tree is empty or has a single
         // element. When it's not empty, the bottom most sibling will never be default, otherwise a
         // leaf and a default sibling should have collapsed to a leaf.
-        if let Some(last_sibling) = siblings.last() {
-            assert_ne!(*last_sibling, *SPARSE_MERKLE_PLACEHOLDER_HASH);
+        if let Some(first_sibling) = siblings.first() {
+            assert_ne!(*first_sibling, *SPARSE_MERKLE_PLACEHOLDER_HASH);
         }
 
         SparseMerkleProof { leaf, siblings }
@@ -315,7 +314,6 @@ impl SparseMerkleProof {
         let actual_root_hash = self
             .siblings
             .iter()
-            .rev()
             .zip(
                 element_key
                     .iter_bits()
@@ -448,11 +446,11 @@ impl From<AccumulatorConsistencyProof> for crate::proto::types::AccumulatorConsi
 /// left and `Y` and `Z` on the right.
 #[derive(Clone)]
 pub struct AccumulatorRangeProof<H> {
-    /// The siblings on the left of the path from root to the first leaf. Siblings near the root
+    /// The siblings on the left of the path from the first leaf to the root. Siblings near the root
     /// are at the beginning of the vector.
     left_siblings: Vec<HashValue>,
 
-    /// The sliblings on the right of the path from root to the last leaf. Siblings near the root
+    /// The sliblings on the right of the path from the last leaf to the root. Siblings near the root
     /// are at the beginning of the vector.
     right_siblings: Vec<HashValue>,
 
@@ -514,8 +512,8 @@ where
             "leaf_hashes is empty while first_leaf_index indicated non-empty list.",
         );
 
-        let mut left_sibling_iter = self.left_siblings.iter().rev().peekable();
-        let mut right_sibling_iter = self.right_siblings.iter().rev().peekable();
+        let mut left_sibling_iter = self.left_siblings.iter().peekable();
+        let mut right_sibling_iter = self.right_siblings.iter().peekable();
 
         let mut first_pos = Position::from_leaf_index(
             first_leaf_index.expect("first_leaf_index should not be None."),
