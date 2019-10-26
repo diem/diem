@@ -2,15 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use libra_crypto::HashValue;
+use libra_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use libra_nibble::Nibble;
+use libra_types::proof::SparseMerkleInternalNode;
 use mock_tree_store::MockTreeStore;
 use proptest::{
-    collection::{hash_map, vec},
+    collection::{btree_map, hash_map, vec},
     prelude::*,
 };
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Bound};
 use test_helper::{init_mock_db, plus_one};
 
 fn update_nibble(original_key: &HashValue, n: usize, nibble: u8) -> HashValue {
@@ -635,6 +636,26 @@ proptest! {
 
         test_existent_keys_impl(&tree, version, &kvs);
     }
+
+    #[test]
+    fn test_get_range_proof(
+        (btree, n) in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 1..1000)
+            .prop_flat_map(|btree| {
+                let len = btree.len();
+                (Just(btree), 0..len)
+            })
+    ) {
+        let (db, version) = init_mock_db(&btree.clone().into_iter().collect());
+        let tree = JellyfishMerkleTree::new(&db);
+
+        let nth_key = *btree.keys().nth(n).unwrap();
+        let proof = tree.get_range_proof(nth_key, version).unwrap();
+        verify_range_proof(
+            tree.get_root_hash(version).unwrap(),
+            btree.into_iter().take(n + 1).collect(),
+            proof,
+        );
+    }
 }
 
 fn test_existent_keys_impl<'a>(
@@ -663,4 +684,237 @@ fn test_nonexistent_keys_impl<'a>(
         assert!(proof.verify(root_hash, *key, account.as_ref()).is_ok());
         assert!(account.is_none());
     }
+}
+
+/// Checks if we can construct the expected root hash using the entries in the btree and the proof.
+fn verify_range_proof(
+    expected_root_hash: HashValue,
+    btree: BTreeMap<HashValue, AccountStateBlob>,
+    proof: SparseMerkleRangeProof,
+) {
+    // For example, given the following sparse Merkle tree:
+    //
+    //                   root
+    //                  /     \
+    //                 /       \
+    //                /         \
+    //               o           o
+    //              / \         / \
+    //             a   o       o   h
+    //                / \     / \
+    //               o   d   e   X
+    //              / \         / \
+    //             b   c       f   g
+    //
+    // we transform the keys as follows:
+    //   a => 00,
+    //   b => 0100,
+    //   c => 0101,
+    //   d => 011,
+    //   e => 100,
+    //   X => 101
+    //   h => 11
+    //
+    // Basically, the suffixes that doesn't affect the common prefix of adjacent leaves are
+    // discarded. In this example, we assume `btree` has the keys `a` to `e` and the proof has `X`
+    // and `h` in the siblings.
+
+    // Now we want to construct a set of key-value pairs that covers the entire set of leaves. For
+    // `a` to `e` this is simple -- we just insert them directly into this set. For the rest of the
+    // leaves, they are represented by the siblings, so we just make up some keys that make sense.
+    // For example, for `X` we just use 101000... (more zeros omitted), because that is one key
+    // that would cause `X` to end up in the above position.
+    let mut btree1 = BTreeMap::new();
+    for (key, blob) in &btree {
+        let leaf = LeafNode::new(*key, blob.clone());
+        btree1.insert(*key, leaf.hash());
+    }
+    // Using the above example, `last_proven_key` is `e`. We look at the path from root to `e`.
+    // For each 0-bit, there should be a sibling in the proof. And we use the path from root to
+    // this position, plus a `1` as the key.
+    let last_proven_key = *btree
+        .keys()
+        .last()
+        .expect("We are proving at least one key.");
+    for (i, sibling) in last_proven_key
+        .iter_bits()
+        .enumerate()
+        .filter_map(|(i, bit)| if !bit { Some(i) } else { None })
+        .zip(proof.siblings().iter().rev())
+    {
+        // This means the `i`-th bit is zero. We take `i` bits from `last_proven_key` and append a
+        // one to make up the key for this sibling.
+        let mut buf: Vec<_> = last_proven_key.iter_bits().take(i).collect();
+        buf.push(true);
+        // The rest doesn't matter, because they don't affect the position of the node. We just
+        // add zeros.
+        buf.resize(HashValue::LENGTH_IN_BITS, false);
+        let key = HashValue::from_bit_iter(buf.into_iter()).unwrap();
+        btree1.insert(key, *sibling);
+    }
+
+    // Now we do the transformation (removing the suffixes) described above.
+    let mut btree2 = BTreeMap::new();
+    for (key, value) in &btree1 {
+        // The length of the common prefix of the previous key and the current key.
+        let prev_common_prefix_len =
+            prev_key(&btree1, key).map(|pkey| pkey.common_prefix_bits_len(*key));
+        // The length of the common prefix of the next key and the current key.
+        let next_common_prefix_len =
+            next_key(&btree1, key).map(|nkey| nkey.common_prefix_bits_len(*key));
+
+        // We take the longest common prefix of the current key and its neighbors. That's how much
+        // we need to keep.
+        let len = match (prev_common_prefix_len, next_common_prefix_len) {
+            (Some(plen), Some(nlen)) => std::cmp::max(plen, nlen),
+            (Some(plen), None) => plen,
+            (None, Some(nlen)) => nlen,
+            (None, None) => 0,
+        };
+        let transformed_key: Vec<_> = key.iter_bits().take(len + 1).collect();
+        btree2.insert(transformed_key, *value);
+    }
+
+    // As the last step, we just keep shrinking the tree until it has only one element. Every
+    // iteration we find two adjacent keys that have the longest common prefix, then we know that
+    // these two are left child and right child of the same parent. We then replace these two keys
+    // with their parent/ancestor and repeat.
+    while btree2.len() > 1 {
+        // Compute the common prefix length for every two adjacent keys.
+        let common_prefix_lengths: Vec<_> = btree2
+            .keys()
+            .skip(1)
+            .map(|k| {
+                let pkey = prev_key(&btree2, k).expect("The previous key must exist.");
+                common_prefix_len(k, &pkey)
+            })
+            .collect();
+        let (index, _len) = common_prefix_lengths
+            .iter()
+            .enumerate()
+            .max_by_key(|(_i, len)| *len)
+            .unwrap();
+        // Now the `index`-th key and the next one form the longest common prefix.
+        let (left_key, left_hash) = btree2
+            .iter()
+            .nth(index)
+            .map(|(k, v)| (k.clone(), *v))
+            .unwrap();
+        let (right_key, right_hash) = btree2
+            .iter()
+            .nth(index + 1)
+            .map(|(k, v)| (k.clone(), *v))
+            .unwrap();
+
+        // How many levels we can shrink depends on the keys beside `left_key` and `right_key`.
+        let remaining_len = match (prev_key(&btree2, &left_key), next_key(&btree2, &right_key)) {
+            (Some(_), Some(_)) => {
+                std::cmp::max(
+                    common_prefix_lengths[index - 1],
+                    common_prefix_lengths[index + 1],
+                ) + 1
+            }
+            (Some(_), None) => common_prefix_lengths[index - 1] + 1,
+            (None, Some(_)) => common_prefix_lengths[index + 1] + 1,
+            (None, None) => 0,
+        };
+
+        let (ancestor_key, ancestor_hash) =
+            compute_ancestor(&left_key, left_hash, &right_key, right_hash, remaining_len);
+
+        // Now we remove both existing entries and add the new entry.
+        assert_eq!(btree2.remove(&left_key).unwrap(), left_hash);
+        assert_eq!(btree2.remove(&right_key).unwrap(), right_hash);
+        assert!(btree2.insert(ancestor_key, ancestor_hash).is_none());
+    }
+
+    // When the set has only one element, it is the root hash.
+    assert_eq!(*btree2.values().next().unwrap(), expected_root_hash);
+}
+
+/// Returns the key immediately before `key` in `btree`.
+fn prev_key<K, V>(btree: &BTreeMap<K, V>, key: &K) -> Option<K>
+where
+    K: Clone + Ord,
+{
+    btree
+        .range((Bound::Unbounded, Bound::Excluded(key)))
+        .next_back()
+        .map(|(k, _v)| k.clone())
+}
+
+/// Returns the key immediately after `key` in `btree`.
+fn next_key<K, V>(btree: &BTreeMap<K, V>, key: &K) -> Option<K>
+where
+    K: Clone + Ord,
+{
+    btree
+        .range((Bound::Excluded(key), Bound::Unbounded))
+        .next()
+        .map(|(k, _v)| k.clone())
+}
+
+/// Computes the length of the common prefix of two keys.
+fn common_prefix_len(key1: &[bool], key2: &[bool]) -> usize {
+    key1.iter()
+        .zip(key2.iter())
+        .take_while(|(x, y)| x == y)
+        .count()
+}
+
+/// Computes the ancestor of the two given nodes so the new key is `remaining_len` long. For
+/// example, when we shrink the following tree, we would pass in `b` and `c`, and output `X`'s key
+/// and hash.
+///
+/// ```text
+///
+///                   root
+///                  /     \
+///                 /       \
+///                /         \
+///               o           d
+///              / \
+///             a   X
+///                / \
+///               o   placeholder
+///              / \
+///             o   placeholder
+///            / \
+///           b   c
+/// ```
+fn compute_ancestor(
+    key1: &[bool],
+    hash1: HashValue,
+    key2: &[bool],
+    hash2: HashValue,
+    remaining_len: usize,
+) -> (Vec<bool>, HashValue) {
+    assert_eq!(
+        key1.len(),
+        key2.len(),
+        "Both keys must have the same length.",
+    );
+    assert!(!*key1.last().unwrap(), "The last bit of key1 must be 0.");
+    assert!(*key2.last().unwrap(), "The last bit of key2 must be 1.");
+
+    let len = key1.len();
+    assert_eq!(
+        key1[0..len - 1],
+        key2[0..len - 1],
+        "Only the last bit should be different.",
+    );
+
+    let mut current_hash = SparseMerkleInternalNode::new(hash1, hash2).hash();
+    if len > remaining_len {
+        for bit in key1.iter().rev().skip(1).take(len - remaining_len - 1) {
+            current_hash = if *bit {
+                SparseMerkleInternalNode::new(*SPARSE_MERKLE_PLACEHOLDER_HASH, current_hash)
+            } else {
+                SparseMerkleInternalNode::new(current_hash, *SPARSE_MERKLE_PLACEHOLDER_HASH)
+            }
+            .hash();
+        }
+    }
+
+    (key1[0..remaining_len].to_vec(), current_hash)
 }

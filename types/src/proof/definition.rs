@@ -624,6 +624,44 @@ pub type TransactionAccumulatorRangeProof = AccumulatorRangeProof<TransactionAcc
 #[cfg(any(test, feature = "fuzzing"))]
 pub type TestAccumulatorRangeProof = AccumulatorRangeProof<TestOnlyHasher>;
 
+/// A proof that but can be used authenticate a range of consecutive leaves, from the leftmost leaf
+/// to a certain one, in a sparse Merkle tree. For example, given the following sparse Merkle tree:
+///
+/// ```text
+///                   root
+///                  /     \
+///                 /       \
+///                /         \
+///               o           o
+///              / \         / \
+///             a   o       o   h
+///                / \     / \
+///               o   d   e   X
+///              / \         / \
+///             b   c       f   g
+/// ```
+///
+/// if the proof wants show that `[a, b, c, d, e]` exists in the tree, it would need the siblings
+/// `X` and `h` on the right.
+#[derive(Debug)]
+pub struct SparseMerkleRangeProof {
+    /// The vector of siblings. The ones near the bottom are at the beginning of the vector. In the
+    /// above example, it's `[X, h]`.
+    siblings: Vec<HashValue>,
+}
+
+impl SparseMerkleRangeProof {
+    /// Constructs a new `SparseMerkleRangeProof`.
+    pub fn new(siblings: Vec<HashValue>) -> Self {
+        Self { siblings }
+    }
+
+    /// Returns the siblings.
+    pub fn siblings(&self) -> &[HashValue] {
+        &self.siblings
+    }
+}
+
 /// The complete proof used to authenticate a `Transaction` object.  This structure consists of an
 /// `AccumulatorProof` from `LedgerInfo` to `TransactionInfo` the verifier needs to verify the
 /// correctness of the `TransactionInfo` object, and the `TransactionInfo` object that is supposed
