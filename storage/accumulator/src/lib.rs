@@ -389,15 +389,15 @@ where
         Ok(AccumulatorRangeProof::new(left_siblings, right_siblings))
     }
 
-    /// Helper function to get siblings on the path from root to given leaf. An additional filter
-    /// function can be applied to filter out certain siblings.
+    /// Helper function to get siblings on the path from the given leaf to the root. An additional
+    /// filter function can be applied to filter out certain siblings.
     fn get_siblings(
         &self,
         leaf_index: u64,
         filter: impl Fn(Position) -> bool,
     ) -> Result<Vec<HashValue>> {
         let root_pos = Position::root_from_leaf_count(self.num_leaves);
-        let mut siblings = Position::from_leaf_index(leaf_index)
+        let siblings = Position::from_leaf_index(leaf_index)
             .iter_ancestor_sibling()
             .take(root_pos.level() as usize)
             .filter_map(|p| {
@@ -408,7 +408,6 @@ where
                 }
             })
             .collect::<Result<Vec<_>>>()?;
-        siblings.reverse();
         Ok(siblings)
     }
 

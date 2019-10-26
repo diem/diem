@@ -517,7 +517,15 @@ where
                     siblings.append(&mut siblings_in_internal);
                     next_node_key = match child_node_key {
                         Some(node_key) => node_key,
-                        None => return Ok((None, SparseMerkleProof::new(None, siblings))),
+                        None => {
+                            return Ok((
+                                None,
+                                SparseMerkleProof::new(None, {
+                                    siblings.reverse();
+                                    siblings
+                                }),
+                            ))
+                        }
                     };
                 }
                 Node::Leaf(leaf_node) => {
@@ -529,7 +537,10 @@ where
                         },
                         SparseMerkleProof::new(
                             Some((leaf_node.account_key(), leaf_node.blob_hash())),
-                            siblings,
+                            {
+                                siblings.reverse();
+                                siblings
+                            },
                         ),
                     ));
                 }
