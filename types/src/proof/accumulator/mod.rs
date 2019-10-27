@@ -233,6 +233,14 @@ where
         self.root_hash
     }
 
+    pub fn version(&self) -> u64 {
+        if self.num_leaves() == 0 {
+            0
+        } else {
+            self.num_leaves() - 1
+        }
+    }
+
     /// Computes the root hash of an accumulator given the frozen subtree roots and the number of
     /// leaves in this accumulator.
     fn compute_root_hash(frozen_subtree_roots: &[HashValue], num_leaves: LeafCount) -> HashValue {
@@ -264,6 +272,11 @@ where
         }
 
         current_hash
+    }
+
+    /// Returns the set of frozen subtree roots in this accumulator
+    pub fn frozen_subtree_roots(&self) -> &Vec<HashValue> {
+        &self.frozen_subtree_roots
     }
 
     /// Returns the total number of leaves in this accumulator.
