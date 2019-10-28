@@ -446,11 +446,11 @@ impl From<AccumulatorConsistencyProof> for crate::proto::types::AccumulatorConsi
 /// left and `Y` and `Z` on the right.
 #[derive(Clone)]
 pub struct AccumulatorRangeProof<H> {
-    /// The siblings on the left of the path from root to the first leaf. Siblings near the root
+    /// The siblings on the left of the path from the first leaf to the root. Siblings near the root
     /// are at the beginning of the vector.
     left_siblings: Vec<HashValue>,
 
-    /// The sliblings on the right of the path from root to the last leaf. Siblings near the root
+    /// The sliblings on the right of the path from the last leaf to the root. Siblings near the root
     /// are at the beginning of the vector.
     right_siblings: Vec<HashValue>,
 
