@@ -28,7 +28,7 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
     let signed_txn = gen.generate(proptest::arbitrary::any::<SignedTransaction>());
     // wrap it in a SubmitTransactionRequest
     let mut req = SubmitTransactionRequest::default();
-    req.signed_txn = Some(signed_txn.into());
+    req.transaction = Some(signed_txn.into());
 
     let mut bytes = bytes::BytesMut::with_capacity(req.encoded_len());
     req.encode(&mut bytes).unwrap();

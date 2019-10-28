@@ -541,7 +541,7 @@ impl ClientProxy {
         let sender_address = signed_txn.sender();
         let sender_sequence = signed_txn.sequence_number();
 
-        req.signed_txn = Some(signed_txn.into());
+        req.transaction = Some(signed_txn.into());
         self.client.submit_transaction(None, &req)?;
         // blocking by default (until transaction completion)
         self.wait_for_transaction(sender_address, sender_sequence + 1);
@@ -1025,7 +1025,7 @@ impl ClientProxy {
         )
         .unwrap();
         let mut req = SubmitTransactionRequest::default();
-        req.signed_txn = Some(signed_txn.into());
+        req.transaction = Some(signed_txn.into());
         Ok(req)
     }
 

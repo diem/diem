@@ -107,7 +107,7 @@ fn gen_submit_transaction_request<T: TransactionSigner>(
         Err(e)
     })?;
     let mut req = SubmitTransactionRequest::default();
-    req.signed_txn = Some(signed_txn.into());
+    req.transaction = Some(signed_txn.into());
     sender_account.sequence_number += 1;
     OP_COUNTER.inc("create_txn_request.success");
     Ok(Request::WriteRequest(req))
