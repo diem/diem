@@ -14,7 +14,7 @@ use libra_types::{
     get_with_proof::{RequestItem, UpdateToLatestLedgerRequest},
     proto::types::UpdateToLatestLedgerRequest as ProtoUpdateToLatestLedgerRequest,
     transaction::{
-        helpers::{create_signed_txn, TransactionSigner},
+        helpers::{create_user_txn, TransactionSigner},
         Script, TransactionPayload,
     },
 };
@@ -93,7 +93,7 @@ fn gen_submit_transaction_request<T: TransactionSigner>(
 ) -> Result<Request> {
     // If generation fails here, sequence number will not be increased,
     // so it is fine to continue later generation.
-    let signed_txn = create_signed_txn(
+    let signed_txn = create_user_txn(
         signer,
         TransactionPayload::Script(program),
         sender_account.address,

@@ -31,7 +31,7 @@ use libra_types::{
         request_item::RequestedItems, GetAccountStateRequest, RequestItem,
         UpdateToLatestLedgerRequest,
     },
-    transaction::{helpers::create_signed_txn, Script, TransactionPayload},
+    transaction::{helpers::create_user_txn, Script, TransactionPayload},
 };
 use rand::{
     prelude::ThreadRng,
@@ -303,7 +303,7 @@ fn gen_submit_transaction_request(
     script: Script,
     sender_account: &mut AccountData,
 ) -> SubmitTransactionRequest {
-    let signed_txn = create_signed_txn(
+    let signed_txn = create_user_txn(
         &sender_account.key_pair,
         TransactionPayload::Script(script),
         sender_account.address,
