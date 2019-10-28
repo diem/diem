@@ -14,6 +14,12 @@ pub enum QueueStyle {
     FIFO,
 }
 
+pub struct Counters {
+    pub dropped_msgs_counter: &'static IntCounter,
+    pub enqueued_msgs_counter: &'static IntCounter,
+    pub dequeued_msgs_counter: &'static IntCounter,
+}
+
 /// PerValidatorQueue maintains a queue of messages per validator. It
 /// is a bounded queue per validator and the style (FIFO, LIFO) is
 /// configurable. When a new message is added using `push`, it is added to
@@ -35,7 +41,7 @@ pub struct PerValidatorQueue<T> {
     round_robin_queue: VecDeque<AccountAddress>,
     /// Maximum number of messages to store per validator
     max_queue_size: usize,
-    dropped_msgs_counter: Option<&'static IntCounter>,
+    counters: Option<Counters>,
 }
 
 impl<T> PerValidatorQueue<T> {
@@ -44,7 +50,7 @@ impl<T> PerValidatorQueue<T> {
     pub fn new(
         queue_style: QueueStyle,
         max_queue_size_per_validator: usize,
-        dropped_msgs_counter: Option<&'static IntCounter>,
+        counters: Option<Counters>,
     ) -> Self {
         assert!(
             max_queue_size_per_validator > 0,
@@ -55,7 +61,7 @@ impl<T> PerValidatorQueue<T> {
             max_queue_size: max_queue_size_per_validator,
             per_validator_queue: HashMap::new(),
             round_robin_queue: VecDeque::new(),
-            dropped_msgs_counter,
+            counters,
         }
     }
 
@@ -83,6 +89,9 @@ impl<T> MessageQueue for PerValidatorQueue<T> {
     /// push a message to the appropriate queue in per_validator_queue
     /// add the validator to round_robin_queue if it didnt already exist
     fn push(&mut self, key: Self::Key, message: Self::Message) {
+        if let Some(c) = self.counters.as_ref() {
+            c.enqueued_msgs_counter.inc();
+        }
         let max_queue_size = self.max_queue_size;
         let validator_message_queue = self
             .per_validator_queue
@@ -94,8 +103,8 @@ impl<T> MessageQueue for PerValidatorQueue<T> {
         }
         // Push the message to the actual validator message queue
         if validator_message_queue.len() == max_queue_size {
-            if let Some(c) = self.dropped_msgs_counter {
-                c.inc()
+            if let Some(c) = self.counters.as_ref() {
+                c.dropped_msgs_counter.inc()
             }
             match self.queue_style {
                 // Drop the newest message for FIFO
@@ -123,6 +132,11 @@ impl<T> MessageQueue for PerValidatorQueue<T> {
         let (message, is_q_empty) = self.pop_from_validator_queue(validator);
         if !is_q_empty {
             self.round_robin_queue.push_back(validator);
+        }
+        if message.is_some() {
+            if let Some(c) = self.counters.as_ref() {
+                c.dequeued_msgs_counter.inc();
+            }
         }
         message
     }

@@ -5,7 +5,7 @@ use crate::counters;
 use bytes::Bytes;
 use channel::{
     self, libra_channel,
-    message_queues::{PerValidatorQueue, QueueStyle},
+    message_queues::{self, PerValidatorQueue, QueueStyle},
 };
 use consensus_types::{
     block::Block,
@@ -289,22 +289,38 @@ impl<T: Payload> NetworkTask<T> {
         let (proposal_tx, proposal_rx) = libra_channel::new(PerValidatorQueue::new(
             QueueStyle::LIFO,
             1,
-            Some(&counters::PROPOSAL_DROPPED_MSGS),
+            Some(message_queues::Counters {
+                dropped_msgs_counter: &counters::PROPOSAL_DROPPED_MSGS,
+                enqueued_msgs_counter: &counters::PROPOSAL_ENQUEUED_MSGS,
+                dequeued_msgs_counter: &counters::PROPOSAL_DEQUEUED_MSGS,
+            }),
         ));
         let (vote_tx, vote_rx) = libra_channel::new(PerValidatorQueue::new(
             QueueStyle::LIFO,
             1,
-            Some(&counters::VOTES_DROPPED_MSGS),
+            Some(message_queues::Counters {
+                dropped_msgs_counter: &counters::VOTES_DROPPED_MSGS,
+                enqueued_msgs_counter: &counters::VOTES_ENQUEUED_MSGS,
+                dequeued_msgs_counter: &counters::VOTES_DEQUEUED_MSGS,
+            }),
         ));
         let (block_request_tx, block_request_rx) = libra_channel::new(PerValidatorQueue::new(
             QueueStyle::LIFO,
             1,
-            Some(&counters::BLOCK_RETRIEVAL_DROPPED_MSGS),
+            Some(message_queues::Counters {
+                dropped_msgs_counter: &counters::BLOCK_RETRIEVAL_DROPPED_MSGS,
+                enqueued_msgs_counter: &counters::BLOCK_RETRIEVAL_ENQUEUED_MSGS,
+                dequeued_msgs_counter: &counters::BLOCK_RETRIEVAL_DEQUEUED_MSGS,
+            }),
         ));
         let (sync_info_tx, sync_info_rx) = libra_channel::new(PerValidatorQueue::new(
             QueueStyle::LIFO,
             1,
-            Some(&counters::SYNC_INFO_DROPPED_MSGS),
+            Some(message_queues::Counters {
+                dropped_msgs_counter: &counters::SYNC_INFO_DROPPED_MSGS,
+                enqueued_msgs_counter: &counters::SYNC_INFO_ENQUEUED_MSGS,
+                dequeued_msgs_counter: &counters::SYNC_INFO_DEQUEUED_MSGS,
+            }),
         ));
         let network_events = network_events.map_err(Into::<failure::Error>::into);
         let all_events = Box::new(select(network_events, self_receiver));

@@ -46,14 +46,25 @@ pub static ref EVENT_PROCESSING_LOOP_IDLE_DURATION_S: DurationHistogram = OP_COU
 /// Histogram of busy time (ms) of spent in event processing loop
 pub static ref EVENT_PROCESSING_LOOP_BUSY_DURATION_S: DurationHistogram = OP_COUNTERS.duration_histogram("event_processing_loop_busy_duration_s");
 
-/// Count of number of messages dropped by proposals channel
+/// Counters(queued,dequeued,dropped) related to proposals channel
 pub static ref PROPOSAL_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("proposal_dropped_msgs_count");
-/// Count of number of messages dropped by votes channel
+pub static ref PROPOSAL_ENQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("proposal_enqueued_msgs_count");
+pub static ref PROPOSAL_DEQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("proposal_dequeued_msgs_count");
+
+/// Counters(queued,dequeued,dropped) related to votes channel
 pub static ref VOTES_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("votes_dropped_msgs_count");
-/// Count of number of messages dropped by block retrieval channel
+pub static ref VOTES_ENQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("votes_enqueued_msgs_count");
+pub static ref VOTES_DEQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("votes_dequeued_msgs_count");
+
+/// Counters(queued,dequeued,dropped) related to block retrieval channel
 pub static ref BLOCK_RETRIEVAL_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("block_retrieval_dropped_msgs_count");
-/// Count of number of messages dropped by sync info channel
+pub static ref BLOCK_RETRIEVAL_ENQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("block_retrieval_enqueued_msgs_count");
+pub static ref BLOCK_RETRIEVAL_DEQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("block_retrieval_dequeued_msgs_count");
+
+/// Counters(queued,dequeued,dropped) related to sync info channel
 pub static ref SYNC_INFO_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("sync_info_dropped_msgs_count");
+pub static ref SYNC_INFO_ENQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("sync_info_enqueued_msgs_count");
+pub static ref SYNC_INFO_DEQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("sync_info_dequeued_msgs_count");
 
 
 //////////////////////
