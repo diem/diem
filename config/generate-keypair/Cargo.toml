@@ -10,6 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
+rand = "0.6.5"
 structopt = "0.3.2"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
