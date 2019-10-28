@@ -27,7 +27,7 @@ resource "aws_lb_target_group" "validator-ac" {
 }
 
 resource "aws_lb_target_group_attachment" "validator-ac" {
-  count            = length(var.peer_ids)
+  count            = var.cluster_test ? 0 : length(var.peer_ids)
   target_group_arn = aws_lb_target_group.validator-ac.arn
   target_id        = element(aws_instance.validator.*.id, count.index)
 }
