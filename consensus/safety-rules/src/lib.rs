@@ -26,9 +26,15 @@ use std::sync::Arc;
 #[path = "safety_rules_test.rs"]
 mod safety_rules_test;
 
-#[derive(Debug, Fail, Eq, PartialEq)]
+#[derive(Debug, Fail, PartialEq)]
 /// Different reasons for proposal rejection
 pub enum Error {
+    #[fail(
+        display = "Unable to verify that the new tree extneds the parent: {:?}",
+        error
+    )]
+    InvalidAccumulatorExtension { error: String },
+
     /// This proposal's round is less than round of preferred block.
     /// Returns the id of the preferred block.
     #[fail(
@@ -232,14 +238,26 @@ impl SafetyRules {
             });
         }
 
+        let new_tree = vote_proposal
+            .accumulator_extension_proof()
+            .verify(
+                proposed_block
+                    .quorum_cert()
+                    .certified_block()
+                    .executed_state_id(),
+            )
+            .map_err(|e| Error::InvalidAccumulatorExtension {
+                error: format!("{}", e),
+            })?;
+
         self.state.set_last_vote_round(proposed_block.round());
 
         Ok(Vote::new(
             VoteData::new(
                 BlockInfo::from_block(
                     proposed_block,
-                    vote_proposal.executed_state_id(),
-                    vote_proposal.version(),
+                    new_tree.root_hash(),
+                    new_tree.version(),
                     vote_proposal.next_validator_set().cloned(),
                 ),
                 proposed_block.quorum_cert().certified_block().clone(),
