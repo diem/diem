@@ -1,3 +1,4 @@
+use cluster_test::experiments::PacketLossRandomValidators;
 use cluster_test::prometheus::Prometheus;
 use cluster_test::tx_emitter::{EmitJobRequest, EmitThreadParams};
 use cluster_test::util::unix_timestamp_now;
@@ -72,6 +73,8 @@ struct Args {
     emit_tx: bool,
     #[structopt(long, group = "action")]
     stop_experiment: bool,
+    #[structopt(long, group = "action")]
+    packet_loss_experiment: bool,
 
     // emit_tx options
     #[structopt(long, default_value = "10")]
@@ -86,6 +89,26 @@ struct Args {
     //stop_experiment options
     #[structopt(long, default_value = "10")]
     max_stopped: usize,
+
+    //packet_loss_experiment options
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Percent of instances in which packet loss should be introduced"
+    )]
+    packet_loss_percent_instances: f32,
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Percent of packet loss for each instance"
+    )]
+    packet_loss_percent: f32,
+    #[structopt(
+        long,
+        default_value = "60",
+        help = "Duration in secs for which packet loss happens"
+    )]
+    packet_loss_duration_secs: u64,
 }
 
 pub fn main() {
@@ -144,6 +167,19 @@ pub fn main() {
         runner.stop();
     } else if args.start {
         runner.start();
+    } else if args.packet_loss_experiment {
+        let total_instances = runner.cluster.instances().len();
+        let packet_loss_num_instances: usize = std::cmp::min(
+            ((args.packet_loss_percent_instances / 100.0) * total_instances as f32).ceil() as usize,
+            total_instances,
+        );
+        let experiment = PacketLossRandomValidators::new(
+            packet_loss_num_instances,
+            args.packet_loss_percent,
+            Duration::from_secs(args.packet_loss_duration_secs),
+            &runner.cluster,
+        );
+        runner.run_single_experiment(Box::new(experiment)).unwrap();
     }
 }
 
