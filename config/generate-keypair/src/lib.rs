@@ -4,6 +4,7 @@
 use failure::prelude::*;
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_tools::tempdir::TempPath;
+use rand::{rngs::OsRng, Rng, SeedableRng};
 use std::{
     fs::{self, File},
     io::Write,
@@ -17,7 +18,10 @@ pub fn create_faucet_key_file(output_file: &str) -> KeyPair<Ed25519PrivateKey, E
         panic!("Specified output file path is a directory");
     }
 
-    let (private_key, _) = compat::generate_keypair(None);
+    let mut seed_rng = OsRng::new().expect("can't access OsRng");
+    let mut rng = rand::rngs::StdRng::from_seed(seed_rng.gen());
+
+    let (private_key, _) = compat::generate_keypair(&mut rng);
     let keypair = KeyPair::from(private_key);
 
     // Write to disk
