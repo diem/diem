@@ -98,7 +98,7 @@ pub struct Lexer<'input> {
     text: &'input str,
     consumed: usize,
     previous_end: usize,
-    pub token: (usize, Token<'input>, usize),
+    token: (usize, Token<'input>, usize),
 }
 
 impl<'input> Lexer<'input> {
@@ -161,8 +161,11 @@ impl<'input> Lexer<'input> {
                 match &text[len..].chars().next() {
                     Some('"') => {
                         // Special case for ByteArrayValue: h\"[0-9A-Fa-f]*\"
-                        let bvlen = get_byte_array_value_len(&text[(len + 1)..]);
-                        if name == "h" && bvlen > 0 {
+                        let mut bvlen = 0;
+                        if name == "h" && {
+                            bvlen = get_byte_array_value_len(&text[(len + 1)..]);
+                            bvlen > 0
+                        } {
                             (Tok::ByteArrayValue, 2 + bvlen)
                         } else {
                             (get_name_token(name), len)
@@ -275,56 +278,37 @@ impl<'input> Lexer<'input> {
 
 // Return the length of the substring matching [a-zA-Z$_][a-zA-Z0-9$_]
 fn get_name_len(text: &str) -> usize {
-    let mut len = 0;
-    for c in text.chars() {
-        match c {
-            'a'..='z' | 'A'..='Z' | '$' | '_' => {
-                len += 1;
-            }
-            '0'..='9' => {
-                if len == 0 {
-                    break;
-                }
-                len += 1;
-            }
-            _ => {
-                break;
-            }
-        }
+    // If the first character is 0..=9 or EOF, then return a length of 0.
+    let first_char = text.chars().next().unwrap_or('0');
+    if ('0'..='9').contains(&first_char) {
+        return 0;
     }
-    len
+    text.chars()
+        .position(|c| match c {
+            'a'..='z' | 'A'..='Z' | '$' | '_' | '0'..='9' => false,
+            _ => true,
+        })
+        .unwrap_or(text.len())
 }
 
 // Return the length of the substring containing characters in [0-9].
 fn get_decimal_digits_len(text: &str) -> usize {
-    let mut len = 0;
-    for c in text.chars() {
-        match c {
-            '0'..='9' => {
-                len += 1;
-            }
-            _ => {
-                break;
-            }
-        }
-    }
-    len
+    text.chars()
+        .position(|c| match c {
+            '0'..='9' => false,
+            _ => true,
+        })
+        .unwrap_or(text.len())
 }
 
 // Return the length of the substring containing characters in [0-9a-fA-F].
 fn get_hex_digits_len(text: &str) -> usize {
-    let mut len = 0;
-    for c in text.chars() {
-        match c {
-            '0'..='9' | 'a'..='f' | 'A'..='F' => {
-                len += 1;
-            }
-            _ => {
-                break;
-            }
-        }
-    }
-    len
+    text.chars()
+        .position(|c| match c {
+            'a'..='f' | 'A'..='F' | '0'..='9' => false,
+            _ => true,
+        })
+        .unwrap_or(text.len())
 }
 
 // Check for an optional sequence of hex digits following by a double quote, and return
