@@ -27,8 +27,10 @@ module GasSchedule {
     // Initialize the table under the association account
     initialize() {
         let instruction_table: Vector.T<Self.Cost>;
+        let native_table: Vector.T<Self.Cost>;
         assert(get_txn_sender() == 0xA550C18, 0);
         instruction_table = Vector.empty<Self.Cost>();
+        native_table = Vector.empty<Self.Cost>();
 
         // NB: DO NOT change the order of these pushes to the vector.
         Vector.push_back<Self.Cost>(
@@ -244,9 +246,79 @@ module GasSchedule {
           Cost { cpu: 10, storage: 1 }
         );
 
+        // Native table. Do not change the order of these
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+        Vector.push_back<Self.Cost>(
+          &mut native_table,
+          Cost { cpu: 30, storage: 1 }
+        );
+
         move_to_sender<T>(T {
             instruction_schedule: move(instruction_table),
-            native_schedule: Vector.empty<Self.Cost>(),
+            native_schedule: move(native_table),
         });
         return;
     }

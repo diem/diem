@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{native_functions::dispatch::NativeResult, value::Value};
+use crate::{
+    native_functions::dispatch::{native_gas, NativeResult},
+    value::Value,
+};
 use bit_vec::BitVec;
 use libra_crypto::{
     ed25519::{self, Ed25519PublicKey, Ed25519Signature},
@@ -13,11 +16,10 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use std::{collections::VecDeque, convert::TryFrom};
-use vm::errors::VMResult;
-
-// TODO: Talk to Crypto to determine these costs
-const ED25519_COST: u64 = 35;
-const BATCH_ED25519_COST: u64 = 30;
+use vm::{
+    errors::VMResult,
+    gas_schedule::{CostTable, NativeCostIndex},
+};
 
 const BITMAP_SIZE: usize = 32;
 
@@ -44,6 +46,7 @@ const INVALID_PUBLIC_KEY_SIZE_FAILURE: u64 = DEFAULT_ERROR_CODE + 9;
 
 pub fn native_ed25519_signature_verification(
     mut arguments: VecDeque<Value>,
+    cost_table: &CostTable,
 ) -> VMResult<NativeResult> {
     if arguments.len() != 3 {
         let msg = format!(
@@ -56,7 +59,7 @@ pub fn native_ed25519_signature_verification(
     let pubkey = pop_arg!(arguments, ByteArray);
     let signature = pop_arg!(arguments, ByteArray);
 
-    let cost = ED25519_COST * msg.len() as u64;
+    let cost = native_gas(cost_table, NativeCostIndex::ED25519_VERIFY, msg.len());
 
     let sig = match ed25519::Ed25519Signature::try_from(signature.as_bytes()) {
         Ok(sig) => sig,
@@ -87,6 +90,7 @@ pub fn native_ed25519_signature_verification(
 /// Batch verify a collection of signatures using a bitmap for matching signatures to keys.
 pub fn native_ed25519_threshold_signature_verification(
     mut arguments: VecDeque<Value>,
+    cost_table: &CostTable,
 ) -> VMResult<NativeResult> {
     if arguments.len() != 4 {
         let msg = format!(
@@ -105,12 +109,8 @@ pub fn native_ed25519_threshold_signature_verification(
         &signatures,
         &public_keys,
         &message,
-        BATCH_ED25519_COST,
+        cost_table,
     ))
-}
-
-fn ed25519_threshold_signature_verification_cost(num_of_sigs: u64, message_len: usize) -> u64 {
-    BATCH_ED25519_COST * num_of_sigs * message_len as u64
 }
 
 fn ed25519_threshold_signature_verification(
@@ -118,15 +118,19 @@ fn ed25519_threshold_signature_verification(
     signatures: &ByteArray,
     public_keys: &ByteArray,
     message: &ByteArray,
-    abort_cost: u64,
+    cost_table: &CostTable,
 ) -> NativeResult {
     let bitvec = BitVec::from_bytes(bitmap.as_bytes());
 
-    let num_of_sigs = match sanity_check(&bitvec, &signatures, &public_keys, abort_cost) {
+    let num_of_sigs = match sanity_check(&bitvec, &signatures, &public_keys, cost_table) {
         Ok(sig_count) => sig_count,
         Err(result) => return result,
     };
-    let abort_cost = ed25519_threshold_signature_verification_cost(num_of_sigs, message.len());
+    let cost = native_gas(
+        cost_table,
+        NativeCostIndex::ED25519_THRESHOLD_VERIFY,
+        num_of_sigs as usize * message.len(),
+    );
 
     let sig_chunks: ::std::result::Result<Vec<_>, _> = signatures
         .as_bytes()
@@ -149,7 +153,7 @@ fn ed25519_threshold_signature_verification(
                     let hash_value = match HashValue::from_slice(message.as_bytes()) {
                         Err(_) => {
                             return NativeResult::err(
-                                abort_cost,
+                                cost,
                                 VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                                     .with_sub_status(DEFAULT_ERROR_CODE),
                             )
@@ -160,18 +164,12 @@ fn ed25519_threshold_signature_verification(
                         &hash_value,
                         keys_and_signatures,
                     ) {
-                        Ok(()) => NativeResult::ok(
-                            ed25519_threshold_signature_verification_cost(
-                                num_of_sigs,
-                                message.len(),
-                            ),
-                            vec![Value::u64(num_of_sigs)],
-                        ),
+                        Ok(()) => NativeResult::ok(cost, vec![Value::u64(num_of_sigs)]),
                         Err(_) =>
                         // Batch verification failed
                         {
                             NativeResult::err(
-                                abort_cost,
+                                cost,
                                 VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                                     .with_sub_status(SIGNATURE_VERIFICATION_FAILURE),
                             )
@@ -182,7 +180,7 @@ fn ed25519_threshold_signature_verification(
                 // Key deserialization error
                 {
                     NativeResult::err(
-                        abort_cost,
+                        cost,
                         VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                             .with_sub_status(PUBLIC_KEY_DESERIALIZATION_FAILURE),
                     )
@@ -193,7 +191,7 @@ fn ed25519_threshold_signature_verification(
         // Signature deserialization error
         {
             NativeResult::err(
-                abort_cost,
+                cost,
                 VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                     .with_sub_status(SIGNATURE_DESERIALIZATION_FAILURE),
             )
@@ -232,17 +230,23 @@ fn sanity_check(
     bitmap: &BitVec<u32>,
     signatures: &ByteArray,
     pubkeys: &ByteArray,
-    abort_cost: u64,
+    cost_table: &CostTable,
 ) -> std::result::Result<u64, NativeResult> {
     let bitmap_len = bitmap.len();
     let signatures_len = signatures.len();
     let public_keys_len = pubkeys.len();
 
+    let cost = native_gas(
+        cost_table,
+        NativeCostIndex::ED25519_THRESHOLD_VERIFY,
+        bitmap_len + signatures_len + public_keys_len,
+    );
+
     // Ensure a BITMAP_SIZE bitmap.
     if bitmap_len != BITMAP_SIZE {
         // Invalid bitmap length
         return Err(NativeResult::err(
-            abort_cost,
+            cost,
             VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                 .with_sub_status(INVALID_BITMAP_LENGTH_FAILURE),
         ));
@@ -259,7 +263,7 @@ fn sanity_check(
     if bitmap_count_ones == 0 {
         // Bitmap is all zeros
         return Err(NativeResult::err(
-            abort_cost,
+            cost,
             VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR).with_sub_status(ZERO_BITMAP_FAILURE),
         ));
     }
@@ -267,7 +271,7 @@ fn sanity_check(
     if bitmap_count_ones * 64 != signatures_len {
         // Mismatch between Bitmap Hamming weight and number of signatures
         return Err(NativeResult::err(
-            abort_cost,
+            cost,
             VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                 .with_sub_status(SIGNATURE_SIZE_FAILURE),
         ));
@@ -276,7 +280,7 @@ fn sanity_check(
     if public_keys_len < 32 * (bitmap_last_bit_set + 1) {
         // Bitmap points to a non-existent key
         return Err(NativeResult::err(
-            abort_cost,
+            cost,
             VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                 .with_sub_status(BITMAP_PUBLIC_KEY_SIZE_FAILURE),
         ));
@@ -285,7 +289,7 @@ fn sanity_check(
     if public_keys_len > 32 * BITMAP_SIZE {
         // Length of bytes of concatenated keys exceeds the maximum allowed
         return Err(NativeResult::err(
-            abort_cost,
+            cost,
             VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                 .with_sub_status(OVERSIZED_PUBLIC_KEY_SIZE_FAILURE),
         ));
@@ -294,7 +298,7 @@ fn sanity_check(
     if public_keys_len % 32 != 0 {
         // Concatenated Ed25519 public keys should be a multiple of 32 bytes
         return Err(NativeResult::err(
-            abort_cost,
+            cost,
             VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                 .with_sub_status(INVALID_PUBLIC_KEY_SIZE_FAILURE),
         ));
