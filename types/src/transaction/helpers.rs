@@ -21,7 +21,7 @@ use libra_crypto::{
 pub fn get_signed_transactions_digest(signed_txns: &[ProtoSignedTransaction]) -> HashValue {
     let mut signatures = vec![];
     for transaction in signed_txns {
-        let signed_txn: SignedTransaction = lcs::from_bytes(&transaction.signed_txn)
+        let signed_txn: SignedTransaction = lcs::from_bytes(&transaction.txn_bytes)
             .expect("Unable to deserialize SignedTransaction");
         signatures.extend_from_slice(&signed_txn.signature().to_bytes());
     }

@@ -420,14 +420,14 @@ impl TryFrom<crate::proto::types::SignedTransaction> for SignedTransaction {
     type Error = Error;
 
     fn try_from(txn: crate::proto::types::SignedTransaction) -> Result<Self> {
-        lcs::from_bytes(&txn.signed_txn).map_err(Into::into)
+        lcs::from_bytes(&txn.txn_bytes).map_err(Into::into)
     }
 }
 
 impl From<SignedTransaction> for crate::proto::types::SignedTransaction {
     fn from(txn: SignedTransaction) -> Self {
-        let signed_txn = lcs::to_bytes(&txn).expect("Unable to serialize SignedTransaction");
-        Self { signed_txn }
+        let txn_bytes = lcs::to_bytes(&txn).expect("Unable to serialize SignedTransaction");
+        Self { txn_bytes }
     }
 }
 
