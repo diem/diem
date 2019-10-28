@@ -1,8 +1,12 @@
+mod packet_loss;
 mod reboot;
+mod remove_network_effects;
 mod stop_container;
 
 use failure;
+pub use packet_loss::PacketLoss;
 pub use reboot::Reboot;
+pub use remove_network_effects::RemoveNetworkEffects;
 use std::fmt::Display;
 pub use stop_container::StopContainer;
 
