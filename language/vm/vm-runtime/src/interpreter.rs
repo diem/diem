@@ -5,6 +5,7 @@ use crate::{
     code_cache::module_cache::ModuleCache,
     counters::*,
     data_cache::TransactionDataCache,
+    gas,
     gas_meter::GasMeter,
     identifier::{create_access_path, resource_storage_key},
     loaded_data::{
@@ -29,6 +30,8 @@ use libra_types::{
 #[cfg(any(test, feature = "instruction_synthesis"))]
 use std::collections::HashMap;
 use std::{collections::VecDeque, convert::TryFrom, marker::PhantomData};
+#[cfg(any(test, feature = "instruction_synthesis"))]
+use vm::gas_schedule::{CostTable, MAXIMUM_NUMBER_OF_GAS_UNITS};
 use vm::{
     access::ModuleAccess,
     errors::*,
@@ -36,9 +39,10 @@ use vm::{
         Bytecode, FunctionHandleIndex, LocalIndex, LocalsSignatureIndex, SignatureToken,
         StructDefinitionIndex,
     },
-    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
+    gas_schedule::{
+        AbstractMemorySize, GasAlgebra, GasCarrier, NativeCostIndex, Opcodes, CONST_SIZE,
+    },
     transaction_metadata::TransactionMetadata,
-    IndexKind,
 };
 use vm_runtime_types::{
     loaded_data::struct_def::StructDef,
@@ -161,12 +165,12 @@ where
         module_cache: P,
         txn_data: TransactionMetadata,
         data_view: TransactionDataCache<'txn>,
-        gas_schedule: &'txn CostTable,
+        gas_meter: GasMeter<'txn>,
     ) -> Self {
         Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
-            gas_meter: GasMeter::new(txn_data.max_gas_amount(), gas_schedule),
+            gas_meter,
             txn_data,
             event_data: vec![],
             data_view,
@@ -335,6 +339,11 @@ where
                         .module()
                         .locals_signature_at(type_actuals_idx)
                         .0;
+                    gas!(
+                        instr: self,
+                        Opcodes::CALL,
+                        AbstractMemorySize::new((type_actuals.len() + 1) as GasCarrier)
+                    )?;
                     let type_actual_tags = type_actuals
                         .iter()
                         .map(|ty| {
@@ -372,76 +381,104 @@ where
         //let code = frame.code_definition();
         loop {
             for instruction in &code[frame.pc as usize..] {
-                // FIXME: Once we add in memory ops, we will need to pass in the current memory size
-                // to this function.
-                self.gas_meter.calculate_and_consume(
-                    instruction,
-                    InterpreterForGasCost::new(&self.operand_stack, &self.module_cache, frame),
-                    AbstractMemorySize::new(1),
-                )?;
                 frame.pc += 1;
 
                 match instruction {
                     Bytecode::Pop => {
+                        gas!(const_instr: self, Opcodes::POP)?;
                         self.operand_stack.pop()?;
                     }
                     Bytecode::Ret => {
+                        gas!(const_instr: self, Opcodes::RET)?;
                         return Ok(ExitCode::Return);
                     }
                     Bytecode::BrTrue(offset) => {
+                        gas!(const_instr: self, Opcodes::BR_TRUE)?;
                         if self.operand_stack.pop_as::<bool>()? {
                             frame.pc = *offset;
                             break;
                         }
                     }
                     Bytecode::BrFalse(offset) => {
+                        gas!(const_instr: self, Opcodes::BR_FALSE)?;
                         if !self.operand_stack.pop_as::<bool>()? {
                             frame.pc = *offset;
                             break;
                         }
                     }
                     Bytecode::Branch(offset) => {
+                        gas!(const_instr: self, Opcodes::BRANCH)?;
                         frame.pc = *offset;
                         break;
                     }
                     Bytecode::LdConst(int_const) => {
+                        gas!(const_instr: self, Opcodes::LD_CONST)?;
                         self.operand_stack.push(Value::u64(*int_const))?;
                     }
                     Bytecode::LdAddr(idx) => {
+                        gas!(const_instr: self, Opcodes::LD_ADDR)?;
                         self.operand_stack
                             .push(Value::address(*frame.module().address_at(*idx)))?;
                     }
                     Bytecode::LdStr(idx) => {
-                        self.operand_stack
-                            .push(Value::string(frame.module().user_string_at(*idx).into()))?;
+                        let string = frame.module().user_string_at(*idx);
+                        gas!(
+                            instr: self,
+                            Opcodes::LD_STR,
+                            AbstractMemorySize::new(string.len() as GasCarrier)
+                        )?;
+                        self.operand_stack.push(Value::string(string.into()))?;
                     }
                     Bytecode::LdByteArray(idx) => {
-                        self.operand_stack.push(Value::byte_array(
-                            frame.module().byte_array_at(*idx).clone(),
-                        ))?;
+                        let byte_array = frame.module().byte_array_at(*idx);
+                        gas!(
+                            instr: self,
+                            Opcodes::LD_STR,
+                            AbstractMemorySize::new(byte_array.len() as GasCarrier)
+                        )?;
+                        self.operand_stack
+                            .push(Value::byte_array(byte_array.clone()))?;
                     }
                     Bytecode::LdTrue => {
+                        gas!(const_instr: self, Opcodes::LD_TRUE)?;
                         self.operand_stack.push(Value::bool(true))?;
                     }
                     Bytecode::LdFalse => {
+                        gas!(const_instr: self, Opcodes::LD_TRUE)?;
                         self.operand_stack.push(Value::bool(false))?;
                     }
                     Bytecode::CopyLoc(idx) => {
-                        self.operand_stack.push(frame.copy_loc(*idx)?)?;
+                        let local = frame.copy_loc(*idx)?;
+                        gas!(instr: self, Opcodes::COPY_LOC, local.size())?;
+                        self.operand_stack.push(local)?;
                     }
                     Bytecode::MoveLoc(idx) => {
-                        self.operand_stack.push(frame.move_loc(*idx)?)?;
+                        let local = frame.move_loc(*idx)?;
+                        gas!(instr: self, Opcodes::MOVE_LOC, local.size())?;
+                        self.operand_stack.push(local)?;
                     }
                     Bytecode::StLoc(idx) => {
-                        frame.store_loc(*idx, self.operand_stack.pop()?)?;
+                        let value_to_store = self.operand_stack.pop()?;
+                        gas!(instr: self, Opcodes::ST_LOC, value_to_store.size())?;
+                        frame.store_loc(*idx, value_to_store)?;
                     }
                     Bytecode::Call(idx, type_actuals_idx) => {
                         return Ok(ExitCode::Call(*idx, *type_actuals_idx));
                     }
                     Bytecode::MutBorrowLoc(idx) | Bytecode::ImmBorrowLoc(idx) => {
+                        let opcode = match instruction {
+                            Bytecode::MutBorrowLoc(_) => Opcodes::MUT_BORROW_LOC,
+                            _ => Opcodes::IMM_BORROW_LOC,
+                        };
+                        gas!(const_instr: self, opcode)?;
                         self.operand_stack.push(frame.borrow_loc(*idx)?)?;
                     }
                     Bytecode::ImmBorrowField(fd_idx) | Bytecode::MutBorrowField(fd_idx) => {
+                        let opcode = match instruction {
+                            Bytecode::MutBorrowField(_) => Opcodes::MUT_BORROW_FIELD,
+                            _ => Opcodes::IMM_BORROW_FIELD,
+                        };
+                        gas!(const_instr: self, opcode)?;
                         let field_offset = frame.module().get_field_offset(*fd_idx)?;
                         let reference = self.operand_stack.pop_as::<ReferenceValue>()?;
                         let field_ref = reference.borrow_field(field_offset as usize)?;
@@ -451,72 +488,140 @@ where
                         let struct_def = frame.module().struct_def_at(*sd_idx);
                         let field_count = struct_def.declared_field_count()?;
                         let args = self.operand_stack.popn(field_count)?;
+                        let size = args.iter().fold(
+                            AbstractMemorySize::new(GasCarrier::from(field_count)),
+                            |acc, arg| acc.add(arg.size()),
+                        );
+                        gas!(instr: self, Opcodes::PACK, size)?;
                         self.operand_stack.push(Value::struct_(Struct::new(args)))?;
                     }
                     Bytecode::Unpack(sd_idx, _) => {
                         let struct_def = frame.module().struct_def_at(*sd_idx);
                         let field_count = struct_def.declared_field_count()?;
                         let struct_ = self.operand_stack.pop_as::<Struct>()?;
+                        gas!(
+                            instr: self,
+                            Opcodes::UNPACK,
+                            AbstractMemorySize::new(GasCarrier::from(field_count))
+                        )?;
+                        // TODO: Whether or not we want this gas metering in the loop is
+                        // questionable.  However, if we don't have it in the loop we could wind up
+                        // doing a fair bit of work before charging for it.
                         for idx in 0..field_count {
-                            self.operand_stack
-                                .push(struct_.get_field_value(idx as usize)?)?;
+                            let value = struct_.get_field_value(idx as usize)?;
+                            gas!(instr: self, Opcodes::UNPACK, value.size())?;
+                            self.operand_stack.push(value)?;
                         }
                     }
                     Bytecode::ReadRef => {
                         let reference = self.operand_stack.pop_as::<ReferenceValue>()?;
-                        self.operand_stack.push(reference.read_ref()?)?;
+                        let value = reference.read_ref()?;
+                        gas!(instr: self, Opcodes::READ_REF, value.size())?;
+                        self.operand_stack.push(value)?;
                     }
                     Bytecode::WriteRef => {
                         let reference = self.operand_stack.pop_as::<ReferenceValue>()?;
-                        reference.write_ref(self.operand_stack.pop()?);
+                        let value = self.operand_stack.pop()?;
+                        gas!(instr: self, Opcodes::WRITE_REF, value.size())?;
+                        reference.write_ref(value);
                     }
                     // Arithmetic Operations
-                    Bytecode::Add => self.binop_int(u64::checked_add)?,
-                    Bytecode::Sub => self.binop_int(u64::checked_sub)?,
-                    Bytecode::Mul => self.binop_int(u64::checked_mul)?,
-                    Bytecode::Mod => self.binop_int(u64::checked_rem)?,
-                    Bytecode::Div => self.binop_int(u64::checked_div)?,
-                    Bytecode::BitOr => self.binop_int(|l: u64, r| Some(l | r))?,
-                    Bytecode::BitAnd => self.binop_int(|l: u64, r| Some(l & r))?,
-                    Bytecode::Xor => self.binop_int(|l: u64, r| Some(l ^ r))?,
-                    Bytecode::Or => self.binop_bool(|l, r| l || r)?,
-                    Bytecode::And => self.binop_bool(|l, r| l && r)?,
-                    Bytecode::Lt => self.binop_bool(|l: u64, r| l < r)?,
-                    Bytecode::Gt => self.binop_bool(|l: u64, r| l > r)?,
-                    Bytecode::Le => self.binop_bool(|l: u64, r| l <= r)?,
-                    Bytecode::Ge => self.binop_bool(|l: u64, r| l >= r)?,
+                    Bytecode::Add => {
+                        gas!(const_instr: self, Opcodes::ADD)?;
+                        self.binop_int(u64::checked_add)?
+                    }
+                    Bytecode::Sub => {
+                        gas!(const_instr: self, Opcodes::SUB)?;
+                        self.binop_int(u64::checked_sub)?
+                    }
+                    Bytecode::Mul => {
+                        gas!(const_instr: self, Opcodes::MUL)?;
+                        self.binop_int(u64::checked_mul)?
+                    }
+                    Bytecode::Mod => {
+                        gas!(const_instr: self, Opcodes::MOD)?;
+                        self.binop_int(u64::checked_rem)?
+                    }
+                    Bytecode::Div => {
+                        gas!(const_instr: self, Opcodes::DIV)?;
+                        self.binop_int(u64::checked_div)?
+                    }
+                    Bytecode::BitOr => {
+                        gas!(const_instr: self, Opcodes::BIT_OR)?;
+                        self.binop_int(|l: u64, r| Some(l | r))?
+                    }
+                    Bytecode::BitAnd => {
+                        gas!(const_instr: self, Opcodes::BIT_AND)?;
+                        self.binop_int(|l: u64, r| Some(l & r))?
+                    }
+                    Bytecode::Xor => {
+                        gas!(const_instr: self, Opcodes::XOR)?;
+                        self.binop_int(|l: u64, r| Some(l ^ r))?
+                    }
+                    Bytecode::Or => {
+                        gas!(const_instr: self, Opcodes::OR)?;
+                        self.binop_bool(|l, r| l || r)?
+                    }
+                    Bytecode::And => {
+                        gas!(const_instr: self, Opcodes::AND)?;
+                        self.binop_bool(|l, r| l && r)?
+                    }
+                    Bytecode::Lt => {
+                        gas!(const_instr: self, Opcodes::LT)?;
+                        self.binop_bool(|l: u64, r| l < r)?
+                    }
+                    Bytecode::Gt => {
+                        gas!(const_instr: self, Opcodes::GT)?;
+                        self.binop_bool(|l: u64, r| l > r)?
+                    }
+                    Bytecode::Le => {
+                        gas!(const_instr: self, Opcodes::LE)?;
+                        self.binop_bool(|l: u64, r| l <= r)?
+                    }
+                    Bytecode::Ge => {
+                        gas!(const_instr: self, Opcodes::GE)?;
+                        self.binop_bool(|l: u64, r| l >= r)?
+                    }
                     Bytecode::Abort => {
+                        gas!(const_instr: self, Opcodes::ABORT)?;
                         let error_code = self.operand_stack.pop_as::<u64>()?;
                         return Err(VMStatus::new(StatusCode::ABORTED).with_sub_status(error_code));
                     }
                     Bytecode::Eq => {
                         let lhs = self.operand_stack.pop()?;
                         let rhs = self.operand_stack.pop()?;
+                        gas!(instr: self, Opcodes::EQ, lhs.size().add(rhs.size()))?;
                         self.operand_stack.push(Value::bool(lhs.equals(&rhs)?))?;
                     }
                     Bytecode::Neq => {
                         let lhs = self.operand_stack.pop()?;
                         let rhs = self.operand_stack.pop()?;
+                        gas!(instr: self, Opcodes::NEQ, lhs.size().add(rhs.size()))?;
                         self.operand_stack
                             .push(Value::bool(lhs.not_equals(&rhs)?))?;
                     }
                     Bytecode::GetTxnGasUnitPrice => {
+                        gas!(const_instr: self, Opcodes::GET_TXN_GAS_UNIT_PRICE)?;
                         self.operand_stack
                             .push(Value::u64(self.txn_data.gas_unit_price().get()))?;
                     }
                     Bytecode::GetTxnMaxGasUnits => {
+                        gas!(const_instr: self, Opcodes::GET_TXN_MAX_GAS_UNITS)?;
                         self.operand_stack
                             .push(Value::u64(self.txn_data.max_gas_amount().get()))?;
                     }
                     Bytecode::GetTxnSequenceNumber => {
+                        gas!(const_instr: self, Opcodes::GET_TXN_SEQUENCE_NUMBER)?;
                         self.operand_stack
                             .push(Value::u64(self.txn_data.sequence_number()))?;
                     }
                     Bytecode::GetTxnSenderAddress => {
+                        gas!(const_instr: self, Opcodes::GET_TXN_SENDER)?;
                         self.operand_stack
                             .push(Value::address(self.txn_data.sender()))?;
                     }
                     Bytecode::GetTxnPublicKey => {
+                        gas!(const_instr: self, Opcodes::GET_TXN_PUBLIC_KEY)?;
                         let byte_array =
                             ByteArray::new(self.txn_data.public_key().to_bytes().to_vec());
                         self.operand_stack.push(Value::byte_array(byte_array))?;
@@ -525,67 +630,38 @@ where
                         let addr = self.operand_stack.pop_as::<AccountAddress>()?;
                         let size =
                             self.global_data_op(addr, *idx, frame.module(), Self::borrow_global)?;
-
-                        self.gas_meter.calculate_and_consume(
-                            &instruction,
-                            InterpreterForGasCost::new(
-                                &self.operand_stack,
-                                &self.module_cache,
-                                frame,
-                            ),
-                            size,
-                        )?;
+                        gas!(instr: self, Opcodes::MUT_BORROW_GLOBAL, size)?;
                     }
                     Bytecode::Exists(idx, _) => {
                         let addr = self.operand_stack.pop_as::<AccountAddress>()?;
                         let size = self.global_data_op(addr, *idx, frame.module(), Self::exists)?;
-                        self.gas_meter.calculate_and_consume(
-                            &instruction,
-                            InterpreterForGasCost::new(
-                                &self.operand_stack,
-                                &self.module_cache,
-                                frame,
-                            ),
-                            size,
-                        )?;
+                        gas!(instr: self, Opcodes::EXISTS, size)?;
                     }
                     Bytecode::MoveFrom(idx, _) => {
                         let addr = self.operand_stack.pop_as::<AccountAddress>()?;
                         let size =
                             self.global_data_op(addr, *idx, frame.module(), Self::move_from)?;
-                        self.gas_meter.calculate_and_consume(
-                            &instruction,
-                            InterpreterForGasCost::new(
-                                &self.operand_stack,
-                                &self.module_cache,
-                                frame,
-                            ),
-                            size,
-                        )?;
+                        // TODO: Have this calculate before pulling in the data based upon
+                        // the size of the data that we are about to read in.
+                        gas!(instr: self, Opcodes::MOVE_FROM, size)?;
                     }
                     Bytecode::MoveToSender(idx, _) => {
                         let addr = self.txn_data.sender();
                         let size =
                             self.global_data_op(addr, *idx, frame.module(), Self::move_to_sender)?;
-                        self.gas_meter.calculate_and_consume(
-                            &instruction,
-                            InterpreterForGasCost::new(
-                                &self.operand_stack,
-                                &self.module_cache,
-                                frame,
-                            ),
-                            size,
-                        )?;
+                        gas!(instr: self, Opcodes::MOVE_TO, size)?;
                     }
                     Bytecode::FreezeRef => {
                         // FreezeRef should just be a null op as we don't distinguish between mut
                         // and immut ref at runtime.
                     }
                     Bytecode::Not => {
+                        gas!(const_instr: self, Opcodes::NOT)?;
                         let value = !self.operand_stack.pop_as::<bool>()?;
                         self.operand_stack.push(Value::bool(value))?;
                     }
                     Bytecode::GetGasRemaining => {
+                        gas!(const_instr: self, Opcodes::GET_GAS_REMAINING)?;
                         let remaining_gas = self.gas_meter.remaining_gas().get();
                         self.operand_stack.push(Value::u64(remaining_gas))?;
                     }
@@ -662,8 +738,8 @@ where
             for _ in 0..expected_args {
                 arguments.push_front(self.operand_stack.pop()?);
             }
-            let result = (native_function.dispatch)(arguments)?;
-            self.gas_meter.consume_gas(GasUnits::new(result.cost))?;
+            let result = (native_function.dispatch)(arguments, self.gas_meter.cost_table())?;
+            gas!(consume: self, result.cost)?;
             result.result.and_then(|values| {
                 for value in values {
                     self.operand_stack.push(value)?;
@@ -827,6 +903,13 @@ where
         addr: AccountAddress,
         account_resource: Struct,
     ) -> VMResult<()> {
+        gas!(
+            consume: self,
+            self.gas_meter
+                .cost_table()
+                .native_cost(NativeCostIndex::SAVE_ACCOUNT)
+                .total()
+        )?;
         let account_struct_id = account_module
             .struct_defs_table
             .get(&*ACCOUNT_STRUCT_NAME)
@@ -1103,75 +1186,6 @@ where
 // For now they are grouped in a couple of temporary struct and impl that can be used
 // to determine what the needs of gas logic has to be.
 //
-
-pub struct InterpreterForGasCost<'a, 'alloc, 'txn>
-where
-    'alloc: 'txn,
-{
-    operand_stack: &'a Stack,
-    module_cache: &'a dyn ModuleCache<'alloc>,
-    frame: &'a Frame<'txn, FunctionRef<'txn>>,
-}
-
-impl<'a, 'alloc, 'txn> InterpreterForGasCost<'a, 'alloc, 'txn>
-where
-    'alloc: 'txn,
-{
-    fn new(
-        operand_stack: &'a Stack,
-        module_cache: &'a dyn ModuleCache<'alloc>,
-        frame: &'a Frame<'txn, FunctionRef<'txn>>,
-    ) -> Self {
-        InterpreterForGasCost {
-            operand_stack,
-            module_cache,
-            frame,
-        }
-    }
-
-    pub fn peek(&self) -> VMResult<&Value> {
-        Ok(self
-            .operand_stack
-            .0
-            .last()
-            .ok_or_else(|| VMStatus::new(StatusCode::EMPTY_VALUE_STACK))?)
-    }
-
-    pub fn peek_at(&self, index: usize) -> VMResult<&Value> {
-        let size = self.operand_stack.0.len();
-        if let Some(valid_index) = size
-            .checked_sub(index)
-            .and_then(|index| index.checked_sub(1))
-        {
-            Ok(self
-                .operand_stack
-                .0
-                .get(valid_index)
-                .ok_or_else(|| VMStatus::new(StatusCode::EMPTY_VALUE_STACK))?)
-        } else {
-            let msg = format!(
-                "Index {} out of bounds for {} while indexing {}",
-                index,
-                size,
-                IndexKind::LocalPool,
-            );
-            Err(VMStatus::new(StatusCode::INDEX_OUT_OF_BOUNDS).with_message(msg))
-        }
-    }
-
-    pub fn module_cache(&self) -> &'a dyn ModuleCache<'alloc> {
-        self.module_cache
-    }
-
-    pub fn module(&self) -> &'txn LoadedModule {
-        self.frame.module()
-    }
-
-    pub fn copy_loc(&self, idx: LocalIndex) -> VMResult<Value> {
-        self.frame.copy_loc(idx)
-    }
-}
-
 #[cfg(any(test, feature = "instruction_synthesis"))]
 pub struct InterpreterForCostSynthesis<'alloc, 'txn, P>(Interpreter<'alloc, 'txn, P>)
 where
@@ -1190,7 +1204,8 @@ where
         data_view: TransactionDataCache<'txn>,
         gas_schedule: &'txn CostTable,
     ) -> Self {
-        let interpreter = Interpreter::new(module_cache, txn_data, data_view, gas_schedule);
+        let gas_meter = GasMeter::new(*MAXIMUM_NUMBER_OF_GAS_UNITS, gas_schedule);
+        let interpreter = Interpreter::new(module_cache, txn_data, data_view, gas_meter);
         InterpreterForCostSynthesis(interpreter)
     }
 

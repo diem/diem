@@ -17,6 +17,9 @@ use std::collections::{HashMap, VecDeque};
 use vm::{
     errors::VMResult,
     file_format::{FunctionSignature, Kind, SignatureToken, StructHandleIndex},
+    gas_schedule::{
+        AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits, NativeCostIndex,
+    },
 };
 
 /// Result of a native function execution that requires charges for execution cost.
@@ -30,14 +33,14 @@ use vm::{
 /// must be expressed in a `NativeResult` via a cost and a VMStatus.
 pub struct NativeResult {
     /// The cost for running that function, whether successfully or not.
-    pub cost: u64,
+    pub cost: GasUnits<GasCarrier>,
     /// Result of execution. This is either the return values or the error to report.
     pub result: VMResult<Vec<Value>>,
 }
 
 impl NativeResult {
     /// Return values of a successful execution.
-    pub fn ok(cost: u64, values: Vec<Value>) -> Self {
+    pub fn ok(cost: GasUnits<GasCarrier>, values: Vec<Value>) -> Self {
         NativeResult {
             cost,
             result: Ok(values),
@@ -46,7 +49,7 @@ impl NativeResult {
 
     /// `VMStatus` of a failed execution. The failure is a runtime failure in the function
     /// and not an invariant failure of the VM which would raise a `VMResult` error directly.
-    pub fn err(cost: u64, err: VMStatus) -> Self {
+    pub fn err(cost: GasUnits<GasCarrier>, err: VMStatus) -> Self {
         NativeResult {
             cost,
             result: Err(err),
@@ -57,7 +60,7 @@ impl NativeResult {
 /// Struct representing the expected definition for a native function.
 pub struct NativeFunction {
     /// Given the vector of aguments, it executes the native function.
-    pub dispatch: fn(VecDeque<Value>) -> VMResult<NativeResult>,
+    pub dispatch: fn(VecDeque<Value>, &CostTable) -> VMResult<NativeResult>,
     /// The signature as defined in it's declaring module.
     /// It should NOT be generally inspected outside of it's declaring module as the various
     /// struct handle indexes are not remapped into the local context.
@@ -78,6 +81,12 @@ pub fn resolve_native_function(
     function_name: &IdentStr,
 ) -> Option<&'static NativeFunction> {
     NATIVE_FUNCTION_MAP.get(module)?.get(function_name)
+}
+
+pub fn native_gas(table: &CostTable, key: NativeCostIndex, size: usize) -> GasUnits<GasCarrier> {
+    let gas_amt = table.native_cost(key);
+    let memory_size = AbstractMemorySize::new(size as GasCarrier);
+    gas_amt.total().mul(memory_size)
 }
 
 macro_rules! add {
@@ -245,7 +254,7 @@ lazy_static! {
 
         // Event
         add!(m, addr, "Event", "write_to_event_store",
-            |_| {
+            |_, _| {
                 Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
                             "write_to_event_store does not have a native implementation"
                                 .to_string()))
@@ -256,7 +265,7 @@ lazy_static! {
         );
         // LibraAccount
         add!(m, addr, "LibraAccount", "save_account",
-            |_| {
+            |_, _| {
                 Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
                     "save_account does not have a native implementation".to_string()))
             },

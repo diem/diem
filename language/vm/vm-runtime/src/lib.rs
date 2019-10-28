@@ -113,6 +113,7 @@ mod counters;
 pub mod foreign_contracts;
 
 mod block_processor;
+#[macro_use]
 mod gas_meter;
 mod move_vm;
 mod process_txn;

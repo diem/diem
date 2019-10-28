@@ -116,7 +116,6 @@ main() {
 
 //! new-transaction
 //! sender: vivian
-//! max-gas: 100000
 import 0x0.LibraSystem;
 import 0x0.ValidatorConfig;
 // trigger a reconfiguration and check that both vivian and viola's key updates are reflected in

@@ -215,6 +215,7 @@ fn stack_instructions(options: &Opt) {
 macro_rules! bench_native {
     ($name:expr, $function:path, $table:ident, $iters:expr) => {
         let mut stack_access = StackAccessorMocker::new();
+        let cost_table = CostTable::zero();
         let per_byte_costs: Vec<u64> = (1..512)
             .map(|i| {
                 stack_access.set_hash_length(i);
@@ -222,7 +223,7 @@ macro_rules! bench_native {
                     let before = Instant::now();
                     let mut args = VecDeque::new();
                     args.push_front(Value::byte_array(stack_access.next_bytearray()));
-                    let _ = $function(args);
+                    let _ = $function(args, &cost_table);
                     acc + before.elapsed().as_nanos()
                 });
                 // Time per byte averaged over the number of iterations that we performed.
