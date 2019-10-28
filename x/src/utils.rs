@@ -1,10 +1,6 @@
-use crate::Result;
-use anyhow::anyhow;
+use crate::{cargo::Cargo, Result};
 use serde::Deserialize;
-use std::{
-    path::{Path, PathBuf},
-    process::{Command, Stdio},
-};
+use std::path::{Path, PathBuf};
 
 pub fn project_root() -> PathBuf {
     Path::new(&env!("CARGO_MANIFEST_DIR"))
@@ -20,15 +16,8 @@ pub fn locate_project() -> Result<PathBuf> {
         root: PathBuf,
     };
 
-    let output = Command::new("cargo")
-        .arg("locate-project")
-        .stderr(Stdio::inherit())
-        .output()?;
-    if !output.status.success() {
-        return Err(anyhow!("unable to locate project"));
-    }
-
-    Ok(serde_json::from_slice::<LocateProject>(&output.stdout)?.root)
+    let output = Cargo::new("locate-project").run_with_output()?;
+    Ok(serde_json::from_slice::<LocateProject>(&output)?.root)
 }
 
 pub fn project_is_root() -> Result<bool> {
@@ -39,16 +28,12 @@ pub fn project_is_root() -> Result<bool> {
 }
 
 pub fn get_local_package() -> Result<String> {
-    let output = Command::new("cargo")
-        .arg("pkgid")
-        .stderr(Stdio::inherit())
-        .output()?;
-    if !output.status.success() {
-        return Err(anyhow!("unable to get package id"));
-    }
-
-    let output = std::str::from_utf8(&output.stdout)?;
-    let pkgid = Path::new(&output).file_name().unwrap().to_str().unwrap();
+    let output = Cargo::new("pkgid").run_with_output()?;
+    let pkgid = Path::new(std::str::from_utf8(&output)?)
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap();
 
     let name = if let Some(idx) = pkgid.find(':') {
         let (pkgid, _) = pkgid.split_at(idx);

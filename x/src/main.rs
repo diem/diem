@@ -1,5 +1,6 @@
 use structopt::StructOpt;
 
+mod cargo;
 mod config;
 mod test;
 mod utils;

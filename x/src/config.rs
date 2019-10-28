@@ -43,7 +43,7 @@ impl Config {
     }
 
     pub fn is_exception(&self, p: &str) -> bool {
-        self.package_exceptions.iter().any(|(pkg, _)| pkg == p)
+        self.package_exceptions.get(p).is_some()
     }
 
     pub fn package_exceptions(&self) -> &HashMap<String, Package> {
