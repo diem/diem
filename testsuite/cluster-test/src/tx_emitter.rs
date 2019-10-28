@@ -303,7 +303,7 @@ fn gen_submit_transaction_request(
     script: Script,
     sender_account: &mut AccountData,
 ) -> SubmitTransactionRequest {
-    let signed_txn = create_user_txn(
+    let transaction = create_user_txn(
         &sender_account.key_pair,
         TransactionPayload::Script(script),
         sender_account.address,
@@ -314,7 +314,7 @@ fn gen_submit_transaction_request(
     )
     .expect("Failed to create signed transaction");
     let mut req = SubmitTransactionRequest::default();
-    req.transaction = Some(signed_txn.into());
+    req.transaction = Some(transaction.into());
     sender_account.sequence_number += 1;
     req
 }

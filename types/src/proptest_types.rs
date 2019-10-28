@@ -768,7 +768,7 @@ impl TransactionToCommitGen {
     /// Materialize considering current states in the universe.
     pub fn materialize(self, universe: &mut AccountInfoUniverse) -> TransactionToCommit {
         let (sender_index, txn_gen) = self.transaction_gen;
-        let signed_txn = txn_gen.materialize(sender_index, universe).into_inner();
+        let transaction = txn_gen.materialize(sender_index, universe).into_inner();
 
         let events = self
             .event_gens
@@ -789,7 +789,7 @@ impl TransactionToCommitGen {
             .collect();
 
         TransactionToCommit::new(
-            Transaction::UserTransaction(signed_txn),
+            Transaction::UserTransaction(transaction),
             account_states,
             events,
             self.gas_used,

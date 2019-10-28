@@ -535,13 +535,13 @@ impl ClientProxy {
         public_key: Ed25519PublicKey,
         signature: Ed25519Signature,
     ) -> Result<()> {
-        let signed_txn = SignedTransaction::new(raw_txn, public_key.clone(), signature);
+        let transaction = SignedTransaction::new(raw_txn, public_key.clone(), signature);
 
         let mut req = SubmitTransactionRequest::default();
-        let sender_address = signed_txn.sender();
-        let sender_sequence = signed_txn.sequence_number();
+        let sender_address = transaction.sender();
+        let sender_sequence = transaction.sequence_number();
 
-        req.transaction = Some(signed_txn.into());
+        req.transaction = Some(transaction.into());
         self.client.submit_transaction(None, &req)?;
         // blocking by default (until transaction completion)
         self.wait_for_transaction(sender_address, sender_sequence + 1);

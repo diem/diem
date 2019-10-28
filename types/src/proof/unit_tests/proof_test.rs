@@ -314,7 +314,7 @@ fn test_verify_account_state_and_event() {
     //                 transaction_info2
     //                /    /           \
     //              /     /              \
-    //    signed_txn  state_root          event_root
+    //           txn  state_root          event_root
     //                  /    \               / \
     //                 c      default  event0   event1
     //                / \

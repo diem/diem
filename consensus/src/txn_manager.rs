@@ -84,10 +84,10 @@ impl TxnManager for MempoolProxy {
     ) -> Pin<Box<dyn Future<Output = Result<Self::Payload>> + Send>> {
         let mut exclude_txns = vec![];
         for payload in exclude_payloads {
-            for signed_txn in payload {
+            for transaction in payload {
                 let mut txn_meta = TransactionExclusion::default();
-                txn_meta.sender = signed_txn.sender().into();
-                txn_meta.sequence_number = signed_txn.sequence_number();
+                txn_meta.sender = transaction.sender().into();
+                txn_meta.sequence_number = transaction.sequence_number();
                 exclude_txns.push(txn_meta);
             }
         }
