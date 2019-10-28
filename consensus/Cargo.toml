@@ -51,6 +51,7 @@ libra-types = { path = "../types" }
 vm_runtime = { path = "../language/vm/vm_runtime" }
 atomic_refcell = "0.1.3"
 futures_locks = { version = "=0.3.0", package = "futures-locks", features=["tokio"]}
+tokio-timer = "0.2.11"
 
 [dev-dependencies]
 cached = "0.9.0"

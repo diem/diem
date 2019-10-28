@@ -60,6 +60,13 @@ pub trait StateComputer: Send + Sync {
         commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
+    /// Send a successful commit. A future is fulfilled when the state is finalized.
+    fn commit_with_id(
+        &self,
+        block_id: HashValue,
+        commit: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
+
     /// Rollback
     fn rollback(
         &self,

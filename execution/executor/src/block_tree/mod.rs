@@ -105,6 +105,7 @@ where
         if parent_id == self.last_committed_id {
             assert!(self.heads.insert(id), "Block already existed in heads.");
             self.id_to_block.insert(id, block);
+
             return Ok(());
         }
 

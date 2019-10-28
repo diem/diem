@@ -39,9 +39,9 @@ impl ConsensusDB {
             (QC_CF_NAME, ColumnFamilyOptions::default()),
             (SINGLE_ENTRY_CF_NAME, ColumnFamilyOptions::default()),
         ]
-        .iter()
-        .cloned()
-        .collect();
+            .iter()
+            .cloned()
+            .collect();
 
         let path = db_root_path.as_ref().join("consensusdb");
         let instant = Instant::now();
@@ -190,8 +190,18 @@ impl ConsensusDB {
     }
 
     /// Get block by hash
-    pub fn get_block_by_hash<T: Payload>(&self, hash:&HashValue) -> Option<Block<T>> {
-        //:TODO
-        unimplemented!()
+    pub fn get_block_by_hash<T: Payload>(&self, hash: &HashValue) -> Option<Block<T>> {
+        match self.db
+            .get::<BlockSchema<T>>(&hash) {
+            Ok(block) => {
+                match block {
+                    Some(b) => {
+                        Some(b.borrow_into_block().clone())
+                    },
+                    None => None
+                }
+            },
+            _ => { None }
+        }
     }
 }

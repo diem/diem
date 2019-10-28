@@ -129,7 +129,7 @@ where
         let transaction_accumulator = Rc::new(
             Accumulator::new(
                 startup_info.ledger_frozen_subtree_hashes,
-                (startup_info.latest_version + 1),
+                startup_info.latest_version + 1,
             )
             .expect("The startup info read from storage should be valid."),
         );
@@ -254,6 +254,27 @@ where
                         let block = self
                             .block_tree
                             .get_block_mut(id)
+                            .expect("Block must exist if mark_as_committed succeeded.");
+                        // We have successfully marked the block as committed, but the real
+                        // response will not be sent to consensus until the block is successfully
+                        // persisted in storage. So we just save the sender in the block.
+                        block.set_commit_response_sender(resp_sender);
+                    }
+                    Err(err) => resp_sender
+                        .send(Err(format_err!("{}", err)))
+                        .expect("Failed to send error message."),
+                }
+            }
+            Command::CommitBlockWithId {
+                block_id,
+                ledger_info_with_sigs,
+                resp_sender,
+            } => {
+                match self.block_tree.mark_as_committed(block_id, ledger_info_with_sigs) {
+                    Ok(()) => {
+                        let block = self
+                            .block_tree
+                            .get_block_mut(block_id)
                             .expect("Block must exist if mark_as_committed succeeded.");
                         // We have successfully marked the block as committed, but the real
                         // response will not be sent to consensus until the block is successfully

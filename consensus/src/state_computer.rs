@@ -115,6 +115,35 @@ impl StateComputer for ExecutionProxy {
             .boxed()
     }
 
+    /// Send a successful commit. A future is fulfilled when the state is finalized.
+    fn commit_with_id(
+        &self,
+        block_id: HashValue,
+        commit: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+        let version = commit.ledger_info().version();
+        counters::LAST_COMMITTED_VERSION.set(version as i64);
+
+        let pre_commit_instant = Instant::now();
+        let synchronizer = Arc::clone(&self.synchronizer);
+        let commit_future = self.executor.commit_block_with_id(block_id, commit);
+        async move {
+            match commit_future.await {
+                Ok(Ok(())) => {
+                    counters::BLOCK_COMMIT_DURATION_S
+                        .observe_duration(pre_commit_instant.elapsed());
+                    if let Err(e) = synchronizer.commit(version).await {
+                        error!("failed to notify state synchronizer: {:?}", e);
+                    }
+                    Ok(())
+                }
+                Ok(Err(e)) => Err(e),
+                Err(e) => Err(e.into()),
+            }
+        }
+            .boxed()
+    }
+
     fn rollback(
         &self,
         block_id: HashValue,

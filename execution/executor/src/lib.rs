@@ -271,7 +271,6 @@ impl<V> Executor<V>
         resp_receiver
     }
 
-    /// Commits a block and all its ancestors. Returns `Ok(())` if successful.
     pub fn commit_block(
         &self,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
@@ -290,6 +289,38 @@ impl<V> Executor<V>
             {
                 Some(sender) => sender
                     .send(Command::CommitBlock {
+                        ledger_info_with_sigs,
+                        resp_sender,
+                    })
+                    .expect("Did block processor thread panic?"),
+                None => resp_sender
+                    .send(Err(format_err!("Executor is shutting down.")))
+                    .expect("Failed to send error message."),
+            }
+        resp_receiver
+    }
+
+    /// Commits a block and all its ancestors. Returns `Ok(())` if successful.
+    pub fn commit_block_with_id(
+        &self,
+        block_id:HashValue,
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
+    ) -> oneshot::Receiver<Result<()>> {
+        debug!(
+            "Received request to commit block {:x}.",
+            ledger_info_with_sigs.ledger_info().consensus_block_id()
+        );
+
+        let (resp_sender, resp_receiver) = oneshot::channel();
+        match self
+            .command_sender
+            .lock()
+            .expect("Failed to lock mutex.")
+            .as_ref()
+            {
+                Some(sender) => sender
+                    .send(Command::CommitBlockWithId {
+                        block_id,
                         ledger_info_with_sigs,
                         resp_sender,
                     })
@@ -387,6 +418,11 @@ enum Command {
         resp_sender: oneshot::Sender<Result<StateComputeResult>>,
     },
     CommitBlock {
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        resp_sender: oneshot::Sender<Result<()>>,
+    },
+    CommitBlockWithId {
+        block_id: HashValue,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
         resp_sender: oneshot::Sender<Result<()>>,
     },
