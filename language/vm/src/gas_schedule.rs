@@ -6,13 +6,12 @@
 //! It is important to note that the cost schedule defined in this file does not track hashing
 //! operations or other native operations; the cost of each native operation will be returned by the
 //! native function itself.
-use crate::{
-    file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex, FunctionHandleIndex,
-        StructDefinitionIndex, UserStringIndex, NO_TYPE_ACTUALS, NUMBER_OF_BYTECODE_INSTRUCTIONS,
-    },
-    file_format_common::Opcodes,
+use crate::file_format::{
+    AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex, FunctionHandleIndex,
+    StructDefinitionIndex, UserStringIndex, NO_TYPE_ACTUALS, NUMBER_OF_BYTECODE_INSTRUCTIONS,
+    NUMBER_OF_NATIVE_FUNCTIONS,
 };
+pub use crate::file_format_common::Opcodes;
 use lazy_static::lazy_static;
 use libra_types::{identifier::Identifier, transaction::MAX_TRANSACTION_SIZE_IN_BYTES};
 use serde::{Deserialize, Serialize};
@@ -256,12 +255,11 @@ pub fn instruction_key(instruction: &Bytecode) -> u8 {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CostTable {
     pub instruction_table: Vec<GasCost>,
-    // TODO: The native table needs to be populated
     pub native_table: Vec<GasCost>,
 }
 
 impl CostTable {
-    pub fn new(mut instrs: Vec<(Bytecode, GasCost)>) -> Self {
+    pub fn new(mut instrs: Vec<(Bytecode, GasCost)>, native_table: Vec<GasCost>) -> Self {
         instrs.sort_by_key(|cost| instruction_key(&cost.0));
 
         if cfg!(debug_assertions) {
@@ -282,11 +280,20 @@ impl CostTable {
             .into_iter()
             .map(|(_, cost)| cost)
             .collect::<Vec<GasCost>>();
-        // TODO: populate the native table
         Self {
             instruction_table,
-            native_table: Vec::new(),
+            native_table,
         }
+    }
+
+    #[inline]
+    pub fn instruction_cost(&self, instr_index: u8) -> &GasCost {
+        &self.instruction_table[(instr_index - 1) as usize]
+    }
+
+    #[inline]
+    pub fn native_cost(&self, native_index: NativeCostIndex) -> &GasCost {
+        &self.native_table[native_index as usize]
     }
 
     pub fn get_gas(
@@ -399,7 +406,10 @@ impl CostTable {
                 GasCost::new(0, 0),
             ),
         ];
-        CostTable::new(instrs)
+        let native_table = (0..NUMBER_OF_NATIVE_FUNCTIONS)
+            .map(|_| GasCost::new(0, 0))
+            .collect::<Vec<GasCost>>();
+        CostTable::new(instrs, native_table)
     }
 }
 
@@ -418,6 +428,15 @@ impl GasCost {
             instruction_gas: GasUnits::new(instr_gas),
             memory_gas: GasUnits::new(mem_gas),
         }
+    }
+
+    /// Take a GasCost from our gas schedule and convert it to a total gas charge in `GasUnits`.
+    ///
+    /// This is used internally for converting from a `GasCost` which is a triple of numbers
+    /// represeing instruction, stack, and memory consumption into a number of `GasUnits`.
+    #[inline]
+    pub fn total(&self) -> GasUnits<GasCarrier> {
+        self.instruction_gas.add(self.memory_gas)
     }
 }
 
@@ -443,4 +462,27 @@ pub fn calculate_intrinsic_gas(
     } else {
         min_transaction_fee.unitary_cast()
     }
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[repr(u8)]
+pub enum NativeCostIndex {
+    SHA2_256 = 0,
+    SHA3_256 = 1,
+    ED25519_VERIFY = 2,
+    ED25519_THRESHOLD_VERIFY = 3,
+    ADDRESS_TO_BYTES = 4,
+    U64_TO_BYTES = 5,
+    BYTEARRAY_CONCAT = 6,
+    LENGTH = 7,
+    EMPTY = 8,
+    BORROW = 9,
+    BORROW_MUT = 10,
+    PUSH_BACK = 11,
+    POP_BACK = 12,
+    DESTROY_EMPTY = 13,
+    SWAP = 14,
+    WRITE_TO_EVENT_STORE = 15,
+    SAVE_ACCOUNT = 16,
 }

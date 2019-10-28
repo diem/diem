@@ -9,7 +9,7 @@ use crate::{
     },
     counters::*,
     data_cache::{BlockDataCache, RemoteCache, TransactionDataCache},
-    gas_meter::load_gas_schedule,
+    gas_meter::{load_gas_schedule, GasMeter},
     interpreter::Interpreter,
     loaded_data::function::FunctionRef,
 };
@@ -92,12 +92,13 @@ where
         data_cache: &'txn dyn RemoteCache,
         txn_data: TransactionMetadata,
     ) -> Self {
+        let gas_meter = GasMeter::new(txn_data.max_gas_amount(), gas_schedule);
         TransactionExecutor {
             interpreter: Interpreter::new(
                 module_cache,
                 txn_data,
                 TransactionDataCache::new(data_cache),
-                gas_schedule,
+                gas_meter,
             ),
         }
     }
