@@ -133,7 +133,7 @@ impl Account {
     ///
     /// This is the most generic way to create a transaction for testing.
     /// Max gas amount and gas unit price are ignored for WriteSet transactions.
-    pub fn create_signed_txn(
+    pub fn create_user_txn(
         &self,
         payload: TransactionPayload,
         sequence_number: u64,

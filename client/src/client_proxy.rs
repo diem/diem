@@ -18,7 +18,7 @@ use libra_types::{
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
     transaction::{
-        helpers::{create_signed_txn, create_unsigned_txn, TransactionSigner},
+        helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
         parse_as_transaction_argument, RawTransaction, Script, SignedTransaction, Transaction,
         TransactionArgument, TransactionPayload, Version,
     },
@@ -1014,7 +1014,7 @@ impl ClientProxy {
             Some(key_pair) => Box::new(key_pair),
             None => Box::new(&self.wallet),
         };
-        let signed_txn = create_signed_txn(
+        let transaction = create_user_txn(
             *signer,
             program,
             sender_account.address,
@@ -1025,7 +1025,7 @@ impl ClientProxy {
         )
         .unwrap();
         let mut req = SubmitTransactionRequest::default();
-        req.transaction = Some(signed_txn.into());
+        req.transaction = Some(transaction.into());
         Ok(req)
     }
 

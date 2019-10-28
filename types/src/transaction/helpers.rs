@@ -51,7 +51,7 @@ pub trait TransactionSigner {
 }
 
 /// Craft a transaction request.
-pub fn create_signed_txn<T: TransactionSigner + ?Sized>(
+pub fn create_user_txn<T: TransactionSigner + ?Sized>(
     signer: &T,
     payload: TransactionPayload,
     sender_address: AccountAddress,

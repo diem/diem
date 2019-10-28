@@ -401,7 +401,7 @@ pub fn test_no_publishing() {
     let random_module = compile_module_with_address(sender.address(), &module);
     let txn = sender
         .account()
-        .create_signed_txn(random_module, 10, 100_000, 1);
+        .create_user_txn(random_module, 10, 100_000, 1);
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
         executor.execute_transaction(txn).status(),
@@ -444,7 +444,7 @@ pub fn test_open_publishing_invalid_address() {
     let random_module = compile_module_with_address(receiver.address(), &module);
     let txn = sender
         .account()
-        .create_signed_txn(random_module, 10, 100_000, 1);
+        .create_user_txn(random_module, 10, 100_000, 1);
 
     // verify and fail because the addresses don't match
     let vm_status = executor.verify_transaction(txn.clone()).unwrap();
@@ -494,7 +494,7 @@ pub fn test_open_publishing() {
     let random_module = compile_module_with_address(sender.address(), &program);
     let txn = sender
         .account()
-        .create_signed_txn(random_module, 10, 100_000, 1);
+        .create_user_txn(random_module, 10, 100_000, 1);
     assert_eq!(executor.verify_transaction(txn.clone()), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
@@ -552,7 +552,7 @@ fn test_dependency_fails_verification() {
         ..Compiler::default()
     };
     let script = compiler.into_script_blob(code).expect("Failed to compile");
-    let txn = sender.account().create_signed_txn(
+    let txn = sender.account().create_user_txn(
         TransactionPayload::Script(Script::new(script, vec![])),
         10,
         100_000,
