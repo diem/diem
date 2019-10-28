@@ -73,6 +73,7 @@ resource "aws_ecs_service" "faucet" {
   task_definition                    = aws_ecs_task_definition.faucet.arn
   desired_count                      = 1
   deployment_minimum_healthy_percent = 0
+  count                              = var.cluster_test ? 0 : 1
 
   tags = {
     Role      = "faucet"
