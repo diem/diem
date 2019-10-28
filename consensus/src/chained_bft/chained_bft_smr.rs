@@ -121,7 +121,9 @@ impl<T: Payload> ChainedBftSMR<T> {
                         idle_duration = pre_select_instant.elapsed();
                         event_processor.process_sync_info_msg(sync_info_msg.0, sync_info_msg.1).await;
                     }
-                    // TODO: with epoch changes populated , event_processor = epoch_mgr.start_epoch(..)
+                    epoch_change = network_receivers.epoch_change.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
+                    }
                     complete => {
                         break;
                     }

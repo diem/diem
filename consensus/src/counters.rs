@@ -66,6 +66,11 @@ pub static ref SYNC_INFO_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("sync_in
 pub static ref SYNC_INFO_ENQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("sync_info_enqueued_msgs_count");
 pub static ref SYNC_INFO_DEQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("sync_info_dequeued_msgs_count");
 
+/// Count of number of messages dropped by epoch change channel
+pub static ref EPOCH_CHANGE_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("epoch_change_dropped_msgs_count");
+pub static ref EPOCH_CHANGE_ENQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("epoch_change_enqueued_msgs_count");
+pub static ref EPOCH_CHANGE_DEQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("epoch_change_dequeued_msgs_count");
+
 
 //////////////////////
 // PROPOSAL ELECTION
