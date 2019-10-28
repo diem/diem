@@ -19,7 +19,8 @@ use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryS
 use libra_logger::prelude::*;
 use libra_prost_ext::MessageExt;
 use libra_types::account_address::AccountAddress;
-use libra_types::crypto_proxies::ValidatorVerifier;
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
+use libra_types::proto::types::LedgerInfoWithSignatures as LedgerInfoWithSignaturesProto;
 use network::{
     proto::{
         ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock,
@@ -49,6 +50,7 @@ pub struct NetworkReceivers<T> {
     pub block_retrieval:
         libra_channel::Receiver<PerValidatorQueue<IncomingBlockRetrievalRequest<T>>>,
     pub sync_info_msgs: libra_channel::Receiver<PerValidatorQueue<(SyncInfo, AccountAddress)>>,
+    pub epoch_change: libra_channel::Receiver<PerValidatorQueue<LedgerInfoWithSignatures>>,
 }
 
 /// Implements the actual networking support for all consensus messaging.
@@ -221,6 +223,14 @@ impl NetworkSender {
             );
         }
     }
+
+    /// Broadcast about epoch changes with proof to the current validator set (including self)
+    pub async fn send_epoch_change(&mut self, ledger_info: LedgerInfoWithSignatures) {
+        let msg = ConsensusMsg {
+            message: Some(ConsensusMsg_oneof::LedgerInfo(ledger_info.into())),
+        };
+        self.broadcast(msg).await
+    }
 }
 
 pub struct NetworkTask<T> {
@@ -228,6 +238,7 @@ pub struct NetworkTask<T> {
     vote_tx: libra_channel::Sender<PerValidatorQueue<VoteMsg>>,
     block_request_tx: libra_channel::Sender<PerValidatorQueue<IncomingBlockRetrievalRequest<T>>>,
     sync_info_tx: libra_channel::Sender<PerValidatorQueue<(SyncInfo, AccountAddress)>>,
+    epoch_change_tx: libra_channel::Sender<PerValidatorQueue<LedgerInfoWithSignatures>>,
     all_events: Box<dyn Stream<Item = failure::Result<Event<ConsensusMsg>>> + Send + Unpin>,
     validators: Arc<ValidatorVerifier>,
 }
@@ -275,6 +286,15 @@ impl<T: Payload> NetworkTask<T> {
                 dequeued_msgs_counter: &counters::SYNC_INFO_DEQUEUED_MSGS,
             }),
         ));
+        let (epoch_change_tx, epoch_change_rx) = libra_channel::new(PerValidatorQueue::new(
+            QueueStyle::LIFO,
+            1,
+            Some(message_queues::Counters {
+                dropped_msgs_counter: &counters::EPOCH_CHANGE_DROPPED_MSGS,
+                enqueued_msgs_counter: &counters::EPOCH_CHANGE_ENQUEUED_MSGS,
+                dequeued_msgs_counter: &counters::EPOCH_CHANGE_DEQUEUED_MSGS,
+            }),
+        ));
         let network_events = network_events.map_err(Into::<failure::Error>::into);
         let all_events = Box::new(select(network_events, self_receiver));
         (
@@ -283,6 +303,7 @@ impl<T: Payload> NetworkTask<T> {
                 vote_tx,
                 block_request_tx,
                 sync_info_tx,
+                epoch_change_tx,
                 all_events,
                 validators,
             },
@@ -291,6 +312,7 @@ impl<T: Payload> NetworkTask<T> {
                 votes: vote_rx,
                 block_retrieval: block_request_rx,
                 sync_info_msgs: sync_info_rx,
+                epoch_change: epoch_change_rx,
             },
         )
     }
@@ -320,6 +342,9 @@ impl<T: Payload> NetworkTask<T> {
                         }
                         VoteMsg(vote_msg) => self.process_vote(peer_id, vote_msg).await,
                         SyncInfo(sync_info) => self.process_sync_info(sync_info, peer_id).await,
+                        LedgerInfo(ledger_info) => {
+                            self.process_epoch_change(peer_id, ledger_info).await
+                        }
                         _ => {
                             warn!("Unexpected msg from {}: {:?}", peer_id, msg);
                             continue;
@@ -425,5 +450,19 @@ impl<T: Payload> NetworkTask<T> {
         callback
             .send(Ok(response_data))
             .map_err(|_| format_err!("handling inbound rpc call timed out"))
+    }
+
+    async fn process_epoch_change(
+        &mut self,
+        peer_id: AccountAddress,
+        ledger_info: LedgerInfoWithSignaturesProto,
+    ) -> failure::Result<()> {
+        let ledger_info = LedgerInfoWithSignatures::try_from(ledger_info)?;
+        ensure!(
+            ledger_info.ledger_info().next_validator_set().is_some(),
+            "Epoch change doesn't carry next validator set"
+        );
+        ledger_info.verify(&self.validators)?;
+        Ok(self.epoch_change_tx.put(peer_id, ledger_info))
     }
 }

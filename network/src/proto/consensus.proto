@@ -6,8 +6,6 @@ syntax = "proto3";
 package consensus;
 
 import "ledger_info.proto";
-import "transaction.proto";
-import "validator_set.proto";
 
 message ConsensusMsg {
   oneof message {
@@ -15,7 +13,8 @@ message ConsensusMsg {
     VoteMsg vote_msg = 2;
     RequestBlock request_block = 3;
     RespondBlock respond_block = 4;
-    SyncInfo sync_info = 6;
+    SyncInfo sync_info = 5;
+    types.LedgerInfoWithSignatures ledger_info = 6;
   }
 }
 
