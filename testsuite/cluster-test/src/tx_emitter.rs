@@ -314,7 +314,7 @@ fn gen_submit_transaction_request(
     )
     .expect("Failed to create signed transaction");
     let mut req = SubmitTransactionRequest::default();
-    req.signed_txn = Some(signed_txn.into());
+    req.transaction = Some(signed_txn.into());
     sender_account.sequence_number += 1;
     req
 }

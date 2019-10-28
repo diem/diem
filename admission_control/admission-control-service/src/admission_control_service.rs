@@ -110,14 +110,14 @@ where
             return Ok(response);
         }
 
-        let signed_txn_proto = req.signed_txn.clone().unwrap_or_else(Default::default);
+        let txn_proto = req.transaction.clone().unwrap_or_else(Default::default);
 
-        let signed_txn = match SignedTransaction::try_from(signed_txn_proto.clone()) {
+        let signed_txn = match SignedTransaction::try_from(txn_proto.clone()) {
             Ok(t) => t,
             Err(e) => {
                 security_log(SecurityEvent::InvalidTransactionAC)
                     .error(&e)
-                    .data(&signed_txn_proto)
+                    .data(&txn_proto)
                     .log();
                 let mut response = SubmitTransactionResponse::default();
                 response.status = Some(Status::AcStatus(
@@ -153,7 +153,7 @@ where
         let sender = signed_txn.sender();
         let account_state = block_on(get_account_state(self.storage_read_client.clone(), sender));
         let mut add_transaction_request = AddTransactionWithValidationRequest::default();
-        add_transaction_request.signed_txn = req.signed_txn.clone();
+        add_transaction_request.signed_txn = req.transaction.clone();
         add_transaction_request.max_gas_cost = gas_cost;
 
         if let Ok((sequence_number, balance)) = account_state {
