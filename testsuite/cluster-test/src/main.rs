@@ -97,7 +97,11 @@ struct Args {
         help = "Percent of instances in which packet loss should be introduced"
     )]
     packet_loss_percent_instances: f32,
-    #[structopt(long, default_value = "10", help = "Percent of packet loss for each instance")]
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Percent of packet loss for each instance"
+    )]
     packet_loss_percent: f32,
     #[structopt(
         long,

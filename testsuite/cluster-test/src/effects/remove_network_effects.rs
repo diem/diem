@@ -1,6 +1,7 @@
 /// RemoveNetworkEffect deletes all network effects introduced on an instance
 use crate::{effects::Action, instance::Instance};
 use failure;
+use slog_scope::info;
 use std::fmt;
 
 pub struct RemoveNetworkEffects {
@@ -15,7 +16,7 @@ impl RemoveNetworkEffects {
 
 impl Action for RemoveNetworkEffects {
     fn apply(&self) -> failure::Result<()> {
-        println!("RemoveNetworkEffects for {}", self.instance);
+        info!("RemoveNetworkEffects for {}", self.instance);
         self.instance
             .run_cmd(vec!["sudo tc qdisc delete dev eth0 root".to_string()])
     }

@@ -1,6 +1,7 @@
 /// PacketLoss introduces a given percentage of PacketLoss for a given instance
 use crate::{effects::Action, instance::Instance};
 use failure;
+use slog_scope::info;
 use std::fmt;
 
 pub struct PacketLoss {
@@ -16,9 +17,9 @@ impl PacketLoss {
 
 impl Action for PacketLoss {
     fn apply(&self) -> failure::Result<()> {
-        println!("PacketLoss {:.*}% for {}", 2, self.percent, self.instance);
+        info!("PacketLoss {:.*}% for {}", 2, self.percent, self.instance);
         self.instance.run_cmd(vec![format!(
-            "sudo tc qdisc add dev eth0 root netem loss {:.*}%",
+            "sudo tc qdisc delete dev eth0 root; sudo tc qdisc add dev eth0 root netem loss {:.*}%",
             2, self.percent
         )])
     }
