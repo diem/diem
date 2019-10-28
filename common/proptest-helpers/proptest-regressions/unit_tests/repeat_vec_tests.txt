@@ -1,8 +1,0 @@
-# Seeds for failure cases proptest has generated in the past. It is
-# automatically read and these particular cases re-run before any
-# novel cases are generated.
-#
-# It is recommended to check this file in to source control so that
-# everyone who runs the test benefits from these saved cases.
-cc bed7b5b3625868c27a6c5c41149a5a33d499f9d8eb3c5c63345246135f4c4040 # shrinks to item_sizes = [], ok_queries = [Index(0)]
-cc 7b5ab398a2ae837e253aee9685848a8b3dc7402484173431621ff55cdda47e9f # shrinks to item_sizes = [], ops = [Get(Index(0))]

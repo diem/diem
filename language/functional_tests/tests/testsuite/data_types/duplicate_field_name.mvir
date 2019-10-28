@@ -1,6 +1,0 @@
-module M {
-    struct T{f: u64, f: u64}
-}
-
-// check: VerificationFailure
-// check: DUPLICATE_ELEMENT

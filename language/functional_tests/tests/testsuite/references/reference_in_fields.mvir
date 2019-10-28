@@ -1,5 +1,0 @@
-module M {
-    struct Foo { x: &u64 }
-}
-
-// check: INVALID_FIELD_DEF

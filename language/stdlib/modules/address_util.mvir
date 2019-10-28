@@ -1,3 +1,0 @@
-module AddressUtil {
-    native public address_to_bytes(addr: address): bytearray;
-}

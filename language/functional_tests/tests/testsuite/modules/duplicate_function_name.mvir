@@ -1,7 +1,0 @@
-// check: VerificationFailure
-// check: DUPLICATE_ELEMENT
-
-module M {
-    f() {}
-    f() {}
-}

@@ -1,9 +1,0 @@
-module M {
-    resource R {}
-    struct S<T1: resource, T2: unrestricted> {}
-
-    foo() {
-        let x: Self.S<Self.R, bool>;
-        return;
-    }
-}

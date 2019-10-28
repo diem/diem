@@ -1,7 +1,0 @@
-main() {
-    let gas_price: u64;
-    gas_price = get_txn_gas_unit_price();
-    assert(move(gas_price) > 0, 42);
-
-    return;
-}

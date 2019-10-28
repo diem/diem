@@ -1,9 +1,0 @@
-// check: VerificationFailure
-
-main() {
-    let x: u64;
-    let y: u64;
-    x = 3;
-    y = move(x);
-    return move(x);
-}

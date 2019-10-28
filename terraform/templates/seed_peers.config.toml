@@ -1,4 +1,0 @@
-[seed_peers]
-%{ for validator in split(",", validators) ~}
-${element(split(":", validator), 0)} = ["/ip4/${element(split(":", validator), 1)}/tcp/${port}"]
-%{ endfor ~}

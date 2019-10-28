@@ -1,8 +1,0 @@
-// no arg to main(u64) is an error
-
-main(x: u64) {
-    return;
-}
-
-// check: Discard
-// check: TYPE_MISMATCH
