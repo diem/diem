@@ -37,7 +37,7 @@ impl Mempool for MempoolService {
         trace!("[GRPC] Mempool::add_transaction_with_validation");
         let _timer = SVC_COUNTERS.req(&ctx);
         let mut success = true;
-        let proto_transaction = req.signed_txn.unwrap_or_else(Default::default);
+        let proto_transaction = req.transaction.unwrap_or_else(Default::default);
         match SignedTransaction::try_from(proto_transaction) {
             Err(e) => {
                 success = false;

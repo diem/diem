@@ -53,7 +53,7 @@ fn create_add_transaction_request(expiration_time: u64) -> AddTransactionWithVal
         None,
     )
     .into();
-    req.signed_txn = Some(transaction);
+    req.transaction = Some(transaction);
     req.max_gas_cost = 10;
     req.account_balance = 1000;
     req
@@ -88,7 +88,7 @@ fn test_get_block() {
     let response = client.get_block(&GetBlockRequest::default()).unwrap();
     let block = response.block.unwrap();
     assert_eq!(block.transactions.len(), 1);
-    assert_eq!(block.transactions[0], req.signed_txn.unwrap(),);
+    assert_eq!(block.transactions[0], req.transaction.unwrap(),);
 }
 
 #[test]
@@ -105,7 +105,7 @@ fn test_consensus_callbacks() {
 
     // remove: transaction is committed
     let mut transaction = CommittedTransaction::default();
-    let signed_txn = SignedTransaction::try_from(add_req.signed_txn.unwrap().clone()).unwrap();
+    let signed_txn = SignedTransaction::try_from(add_req.transaction.unwrap().clone()).unwrap();
     let sender = signed_txn.sender().as_ref().to_vec();
     transaction.sender = sender;
     transaction.sequence_number = 0;

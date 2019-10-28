@@ -153,7 +153,7 @@ where
         let sender = signed_txn.sender();
         let account_state = block_on(get_account_state(self.storage_read_client.clone(), sender));
         let mut add_transaction_request = AddTransactionWithValidationRequest::default();
-        add_transaction_request.signed_txn = req.transaction.clone();
+        add_transaction_request.transaction = req.transaction.clone();
         add_transaction_request.max_gas_cost = gas_cost;
 
         if let Ok((sequence_number, balance)) = account_state {
@@ -196,7 +196,7 @@ where
                     } else {
                         debug!(
                             "txn failed in mempool, status: {:?}, txn: {:?}",
-                            status, add_transaction_request.signed_txn
+                            status, add_transaction_request.transaction
                         );
                         OP_COUNTERS.inc_by("submit_txn.mempool.failure", 1);
                         response.status = Some(Status::MempoolStatus(status));
