@@ -23,8 +23,8 @@ message TransactionArgument {
 
 // A generic structure that represents signed RawTransaction
 message SignedTransaction {
-    // LCS byte code representation of a SignedTransaction
-    bytes signed_txn = 5;
+    // LCS bytes representation of a SignedTransaction.
+    bytes txn_bytes = 5;
 }
 
 // A generic structure that represents a transaction, covering all possible
