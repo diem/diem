@@ -8,6 +8,7 @@ extern crate prometheus;
 
 pub mod counters;
 mod json_encoder;
+mod json_metrics;
 pub mod metric_server;
 mod public_metrics;
 

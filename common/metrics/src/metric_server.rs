@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::json_encoder::JsonEncoder;
+use crate::json_metrics::get_json_metrics;
 use crate::public_metrics::PUBLIC_METRICS;
 use futures::future;
 use hyper::{
@@ -11,6 +12,7 @@ use hyper::{
 };
 use libra_logger::prelude::*;
 use prometheus::{proto::MetricFamily, Encoder, TextEncoder};
+use std::collections::HashMap;
 use std::net::{SocketAddr, ToSocketAddrs};
 
 fn encode_metrics(encoder: impl Encoder, whitelist: Vec<String>) -> Vec<u8> {
@@ -39,6 +41,21 @@ fn whitelist_metrics(
     whitelist_metrics
 }
 
+// filtering metrics from the Json format metrics
+// only return the whitelisted metrics
+fn whitelist_json_metrics(
+    json_metrics: HashMap<String, String>,
+    whitelist: Vec<String>,
+) -> HashMap<String, String> {
+    let mut whitelist_metrics: HashMap<String, String> = HashMap::new();
+    for (key, val) in json_metrics.iter() {
+        if whitelist.contains(&key) {
+            whitelist_metrics.insert(key.to_string(), val.to_string());
+        }
+    }
+    whitelist_metrics
+}
+
 fn serve_metrics(req: Request<Body>) -> impl Future<Item = Response<Body>, Error = hyper::Error> {
     let mut resp = Response::new(Body::empty());
     match (req.method(), req.uri().path()) {
@@ -47,6 +64,12 @@ fn serve_metrics(req: Request<Body>) -> impl Future<Item = Response<Body>, Error
             let encoder = TextEncoder::new();
             let buffer = encode_metrics(encoder, Vec::new());
             *resp.body_mut() = Body::from(buffer);
+        }
+        // expose non-numeric metrics to host:port/json_metrics
+        (&Method::GET, "/json_metrics") => {
+            let json_metrics = get_json_metrics();
+            let encoded_metrics = serde_json::to_string(&json_metrics).unwrap();
+            *resp.body_mut() = Body::from(encoded_metrics);
         }
         (&Method::GET, "/counters") => {
             // Json encoded libra_metrics;
@@ -72,6 +95,13 @@ fn serve_public_metrics(
             // encode public metrics defined in common/metrics/src/public_metrics.rs
             let buffer = encode_metrics(encoder, PUBLIC_METRICS.to_vec());
             *resp.body_mut() = Body::from(buffer);
+        }
+        (&Method::GET, "/json_metrics") => {
+            let json_metrics = get_json_metrics();
+            let whitelist_json_metrics =
+                whitelist_json_metrics(json_metrics, PUBLIC_METRICS.to_vec());
+            let encoded_metrics = serde_json::to_string(&whitelist_json_metrics).unwrap();
+            *resp.body_mut() = Body::from(encoded_metrics);
         }
         _ => {
             *resp.status_mut() = StatusCode::NOT_FOUND;
