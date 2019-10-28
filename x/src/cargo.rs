@@ -1,4 +1,4 @@
-use crate::Result;
+use crate::{utils::project_root, Result};
 use anyhow::anyhow;
 use std::{
     ffi::{OsStr, OsString},
@@ -90,5 +90,87 @@ impl Cargo {
             return Err(anyhow!("failed to run cargo command"));
         }
         Ok(output)
+    }
+}
+
+pub enum CargoCommand {
+    Test,
+}
+
+impl CargoCommand {
+    pub fn run_on_local_package(
+        &self,
+        all_features: bool,
+        pass_through_args: &[OsString],
+    ) -> Result<()> {
+        let mut cargo = Cargo::new(self.as_str());
+        if all_features {
+            cargo.all_features();
+        }
+        cargo.pass_through(pass_through_args).run()
+    }
+
+    pub fn run_on_packages_separate<I, S>(
+        &self,
+        packages: I,
+        pass_through_args: &[OsString],
+    ) -> Result<()>
+    where
+        I: IntoIterator<Item = (S, bool)>,
+        S: AsRef<OsStr>,
+    {
+        for (name, all_features) in packages {
+            let mut cargo = Cargo::new(self.as_str());
+            if all_features {
+                cargo.all_features();
+            }
+            cargo
+                .packages(&[name])
+                .current_dir(project_root())
+                .pass_through(pass_through_args)
+                .run()?;
+        }
+        Ok(())
+    }
+
+    pub fn run_on_packages_together<I, S>(
+        &self,
+        packages: I,
+        pass_through_args: &[OsString],
+    ) -> Result<()>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        Cargo::new(self.as_str())
+            .current_dir(project_root())
+            .all_features()
+            .packages(packages)
+            .pass_through(pass_through_args)
+            .run()
+    }
+
+    pub fn run_with_exclusions<I, S>(
+        &self,
+        exclusions: I,
+        pass_through_args: &[OsString],
+    ) -> Result<()>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        Cargo::new(self.as_str())
+            .current_dir(project_root())
+            .all()
+            .all_features()
+            .exclusions(exclusions)
+            .pass_through(pass_through_args)
+            .run()
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            CargoCommand::Test => "test",
+        }
     }
 }
