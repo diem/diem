@@ -112,7 +112,7 @@ where
 
         let txn_proto = req.transaction.clone().unwrap_or_else(Default::default);
 
-        let signed_txn = match SignedTransaction::try_from(txn_proto.clone()) {
+        let transaction = match SignedTransaction::try_from(txn_proto.clone()) {
             Ok(t) => t,
             Err(e) => {
                 security_log(SecurityEvent::InvalidTransactionAC)
@@ -128,15 +128,15 @@ where
             }
         };
 
-        let gas_cost = signed_txn.max_gas_amount();
+        let gas_cost = transaction.max_gas_amount();
         let validation_status = self
             .vm_validator
-            .validate_transaction(signed_txn.clone())
+            .validate_transaction(transaction.clone())
             .wait()
             .map_err(|e| {
                 security_log(SecurityEvent::InvalidTransactionAC)
                     .error(&e)
-                    .data(&signed_txn)
+                    .data(&transaction)
                     .log();
                 e
             })?;
@@ -145,12 +145,12 @@ where
             OP_COUNTERS.inc_by("submit_txn.vm_validation.failure", 1);
             debug!(
                 "txn failed in vm validation, status: {:?}, txn: {:?}",
-                validation_status, signed_txn
+                validation_status, transaction
             );
             response.status = Some(Status::VmStatus(validation_status.into()));
             return Ok(response);
         }
-        let sender = signed_txn.sender();
+        let sender = transaction.sender();
         let account_state = block_on(get_account_state(self.storage_read_client.clone(), sender));
         let mut add_transaction_request = AddTransactionWithValidationRequest::default();
         add_transaction_request.transaction = req.transaction.clone();

@@ -93,7 +93,7 @@ fn test_validate_transaction() {
 
     let address = account_config::association_address();
     let program = encode_transfer_script(&address, 100);
-    let signed_txn = transaction_test_helpers::get_test_signed_txn(
+    let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
         keypair.private_key,
@@ -101,7 +101,7 @@ fn test_validate_transaction() {
         Some(program),
     );
     let ret = vm_validator
-        .validate_transaction(signed_txn)
+        .validate_transaction(transaction)
         .wait()
         .unwrap();
     assert_eq!(ret, None);
@@ -118,7 +118,7 @@ fn test_validate_invalid_signature() {
 
     let address = account_config::association_address();
     let program = encode_transfer_script(&address, 100);
-    let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
+    let transaction = transaction_test_helpers::get_test_unchecked_txn(
         address,
         1,
         other_private_key,
@@ -126,7 +126,7 @@ fn test_validate_invalid_signature() {
         Some(program),
     );
     let ret = vm_validator
-        .validate_transaction(signed_txn)
+        .validate_transaction(transaction)
         .wait()
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::INVALID_SIGNATURE);
@@ -262,7 +262,7 @@ fn test_validate_unknown_script() {
     let vm_validator = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let signed_txn = transaction_test_helpers::get_test_signed_txn(
+    let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
         keypair.private_key,
@@ -270,7 +270,7 @@ fn test_validate_unknown_script() {
         None,
     );
     let ret = vm_validator
-        .validate_transaction(signed_txn)
+        .validate_transaction(transaction)
         .wait()
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::UNKNOWN_SCRIPT);
@@ -285,7 +285,7 @@ fn test_validate_module_publishing() {
     let vm_validator = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let signed_txn = transaction_test_helpers::get_test_signed_module_publishing_transaction(
+    let transaction = transaction_test_helpers::get_test_signed_module_publishing_transaction(
         address,
         1,
         keypair.private_key,
@@ -293,7 +293,7 @@ fn test_validate_module_publishing() {
         Module::new(vec![]),
     );
     let ret = vm_validator
-        .validate_transaction(signed_txn)
+        .validate_transaction(transaction)
         .wait()
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::UNKNOWN_MODULE);
@@ -310,7 +310,7 @@ fn test_validate_invalid_auth_key() {
 
     let address = account_config::association_address();
     let program = encode_transfer_script(&address, 100);
-    let signed_txn = transaction_test_helpers::get_test_signed_txn(
+    let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
         other_private_key,
@@ -318,7 +318,7 @@ fn test_validate_invalid_auth_key() {
         Some(program),
     );
     let ret = vm_validator
-        .validate_transaction(signed_txn)
+        .validate_transaction(transaction)
         .wait()
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::INVALID_AUTH_KEY);
@@ -331,7 +331,7 @@ fn test_validate_balance_below_gas_fee() {
 
     let address = account_config::association_address();
     let program = encode_transfer_script(&address, 100);
-    let signed_txn = transaction_test_helpers::get_test_signed_transaction(
+    let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
         keypair.private_key.clone(),
@@ -344,7 +344,7 @@ fn test_validate_balance_below_gas_fee() {
         Some(1_000_000),
     );
     let ret = vm_validator
-        .validate_transaction(signed_txn)
+        .validate_transaction(transaction)
         .wait()
         .unwrap();
     assert_eq!(
@@ -361,7 +361,7 @@ fn test_validate_account_doesnt_exist() {
     let address = account_config::association_address();
     let random_account_addr = account_address::AccountAddress::random();
     let program = encode_transfer_script(&address, 100);
-    let signed_txn = transaction_test_helpers::get_test_signed_transaction(
+    let transaction = transaction_test_helpers::get_test_signed_transaction(
         random_account_addr,
         1,
         keypair.private_key,
@@ -372,7 +372,7 @@ fn test_validate_account_doesnt_exist() {
         None,
     );
     let ret = vm_validator
-        .validate_transaction(signed_txn)
+        .validate_transaction(transaction)
         .wait()
         .unwrap();
     assert_eq!(
@@ -388,7 +388,7 @@ fn test_validate_sequence_number_too_new() {
 
     let address = account_config::association_address();
     let program = encode_transfer_script(&address, 100);
-    let signed_txn = transaction_test_helpers::get_test_signed_txn(
+    let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
         keypair.private_key,
@@ -396,7 +396,7 @@ fn test_validate_sequence_number_too_new() {
         Some(program),
     );
     let ret = vm_validator
-        .validate_transaction(signed_txn)
+        .validate_transaction(transaction)
         .wait()
         .unwrap();
     assert_eq!(ret, None);
@@ -410,7 +410,7 @@ fn test_validate_invalid_arguments() {
     let address = account_config::association_address();
     let (program_script, _) = encode_transfer_script(&address, 100).into_inner();
     let program = Script::new(program_script, vec![TransactionArgument::U64(42)]);
-    let signed_txn = transaction_test_helpers::get_test_signed_txn(
+    let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
         keypair.private_key,
@@ -418,7 +418,7 @@ fn test_validate_invalid_arguments() {
         Some(program),
     );
     let ret = vm_validator
-        .validate_transaction(signed_txn)
+        .validate_transaction(transaction)
         .wait()
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::TYPE_MISMATCH);
@@ -430,7 +430,7 @@ fn test_validate_non_genesis_write_set() {
     let vm_validator = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let signed_txn = transaction_test_helpers::get_write_set_txn(
+    let transaction = transaction_test_helpers::get_write_set_txn(
         address,
         1,
         keypair.private_key,
@@ -439,7 +439,7 @@ fn test_validate_non_genesis_write_set() {
     )
     .into_inner();
     let ret = vm_validator
-        .validate_transaction(signed_txn)
+        .validate_transaction(transaction)
         .wait()
         .unwrap();
     assert_eq!(ret.unwrap().major_status, StatusCode::REJECTED_WRITE_SET);

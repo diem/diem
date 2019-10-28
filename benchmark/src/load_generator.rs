@@ -93,7 +93,7 @@ fn gen_submit_transaction_request<T: TransactionSigner>(
 ) -> Result<Request> {
     // If generation fails here, sequence number will not be increased,
     // so it is fine to continue later generation.
-    let signed_txn = create_user_txn(
+    let transaction = create_user_txn(
         signer,
         TransactionPayload::Script(program),
         sender_account.address,
@@ -107,7 +107,7 @@ fn gen_submit_transaction_request<T: TransactionSigner>(
         Err(e)
     })?;
     let mut req = SubmitTransactionRequest::default();
-    req.transaction = Some(signed_txn.into());
+    req.transaction = Some(transaction.into());
     sender_account.sequence_number += 1;
     OP_COUNTER.inc("create_txn_request.success");
     Ok(Request::WriteRequest(req))

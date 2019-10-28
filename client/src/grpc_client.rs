@@ -222,12 +222,12 @@ impl GRPCClient {
         };
 
         let mut response = self.get_with_proof_sync(vec![req_item])?;
-        let (signed_txn_with_proof, _) = response
+        let (txn_with_proof, _) = response
             .response_items
             .remove(0)
             .into_get_account_txn_by_seq_num_response()?;
 
-        Ok(signed_txn_with_proof.map(|t| (t.transaction, t.events)))
+        Ok(txn_with_proof.map(|t| (t.transaction, t.events)))
     }
 
     /// Get transactions in range (start_version..start_version + limit - 1) from validator.
