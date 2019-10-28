@@ -87,6 +87,14 @@ impl<T> ExecutedBlock<T> {
     pub fn timestamp_usecs(&self) -> u64 {
         self.block().timestamp_usecs()
     }
+
+    pub fn transaction_info_hashes(&self) -> Vec<HashValue> {
+        self.output
+            .transaction_data()
+            .iter()
+            .filter_map(|x| x.txn_info_hash())
+            .collect()
+    }
 }
 
 impl<T> ExecutedBlock<T>

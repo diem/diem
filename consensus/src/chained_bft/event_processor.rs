@@ -19,6 +19,7 @@ use crate::{
     },
 };
 use consensus_types::{
+    accumulator_extension_proof::AccumulatorExtensionProof,
     block::Block,
     common::{Author, Payload, Round},
     proposal_msg::ProposalMsg,
@@ -30,6 +31,7 @@ use consensus_types::{
     vote_proposal::VoteProposal,
 };
 use failure::ResultExt;
+use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
 use mirai_annotations::{
@@ -604,6 +606,7 @@ impl<T: Payload> EventProcessor<T> {
             .await
             .with_context(|e| format!("Failed to execute_and_insert the block: {:?}", e))?;
         let block = executed_block.block();
+
         // Checking pacemaker round again, because multiple proposed_block can now race
         // during async block retrieval
         ensure!(
@@ -613,13 +616,26 @@ impl<T: Payload> EventProcessor<T> {
             self.pacemaker.current_round(),
             block.round(),
         );
+
+        let parent_block = self
+            .block_store
+            .get_block(executed_block.parent_id())
+            .ok_or_else(|| format_err!("Parent block not found in block store"))?;
+
         self.wait_before_vote_if_needed(block.timestamp_usecs())
             .await?;
 
         let vote_proposal = VoteProposal::new(
+            AccumulatorExtensionProof::<TransactionAccumulatorHasher>::new(
+                parent_block
+                    .executed_trees()
+                    .txn_accumulator()
+                    .frozen_subtree_roots()
+                    .clone(),
+                parent_block.executed_trees().txn_accumulator().num_leaves(),
+                executed_block.transaction_info_hashes(),
+            ),
             block.clone(),
-            executed_block.compute_result().executed_state.state_id,
-            executed_block.compute_result().executed_state.version,
             executed_block
                 .compute_result()
                 .executed_state
