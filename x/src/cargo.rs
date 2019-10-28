@@ -21,8 +21,8 @@ impl Cargo {
         }
     }
 
-    pub fn all(&mut self) -> &mut Self {
-        self.inner.arg("--all");
+    pub fn workspace(&mut self) -> &mut Self {
+        self.inner.arg("--workspace");
         self
     }
 
@@ -161,7 +161,7 @@ impl CargoCommand {
     {
         Cargo::new(self.as_str())
             .current_dir(project_root())
-            .all()
+            .workspace()
             .all_features()
             .exclusions(exclusions)
             .pass_through(pass_through_args)
