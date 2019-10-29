@@ -1076,17 +1076,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 Ok(())
             }
 
-            Bytecode::CreateAccount => {
-                let operand = self.stack.pop().unwrap();
-                if operand.signature == SignatureToken::Address {
-                    Ok(())
-                } else {
-                    Err(err_at_offset(
-                        StatusCode::CREATEACCOUNT_TYPE_MISMATCH_ERROR,
-                        offset,
-                    ))
-                }
-            }
+            Bytecode::CreateAccountDeprecated => Err(err_at_offset(
+                StatusCode::UNVERIFIABLE_REMOVED_OPCODE,
+                offset,
+            )),
         }
     }
 }

@@ -740,10 +740,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     .push(StacklessBytecode::GetTxnPublicKey(temp_index));
                 self.temp_count += 1;
             }
-            Bytecode::CreateAccount => {
-                let temp_index = self.temp_stack.pop().unwrap();
-                self.code.push(StacklessBytecode::CreateAccount(temp_index));
-            }
+
+            Bytecode::CreateAccountDeprecated => panic!("CreateAccount has been removed"),
         }
     }
 }

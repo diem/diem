@@ -27,8 +27,7 @@ pub fn run_instruction(instruction: Bytecode, initial_state: AbstractState) -> A
             | Bytecode::ImmBorrowField(_)
             | Bytecode::MutBorrowGlobal(_, _)
             | Bytecode::ImmBorrowGlobal(_, _)
-            | Bytecode::MoveToSender(_, _)
-            | Bytecode::CreateAccount => {
+            | Bytecode::MoveToSender(_, _) => {
                 let len = summary.preconditions.len();
                 summary.preconditions[..(len - 1)]
                     .iter()
@@ -40,6 +39,7 @@ pub fn run_instruction(instruction: Bytecode, initial_state: AbstractState) -> A
                     .iter()
                     .any(|precondition| !precondition(&initial_state))
             }
+            Bytecode::CreateAccountDeprecated => panic!("CreateAccount has been deprecated"),
             _ => summary
                 .preconditions
                 .iter()

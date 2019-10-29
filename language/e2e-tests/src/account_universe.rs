@@ -79,8 +79,12 @@ pub(crate) fn default_num_transactions() -> usize {
 /// Represents any sort of transaction that can be done in an account universe.
 pub trait AUTransactionGen: fmt::Debug {
     /// Applies this transaction onto the universe, updating balances within the universe as
-    /// necessary. Returns a signed transaction that can be run on the VM and the expected output.
-    fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus);
+    /// necessary. Returns a signed transaction that can be run on the VM and the expected values:
+    /// the transaction status and the gas used.
+    fn apply(
+        &self,
+        universe: &mut AccountUniverse,
+    ) -> (SignedTransaction, (TransactionStatus, u64));
 
     /// Creates an arced version of this transaction, suitable for dynamic dispatch.
     fn arced(self) -> Arc<dyn AUTransactionGen>
@@ -92,7 +96,10 @@ pub trait AUTransactionGen: fmt::Debug {
 }
 
 impl AUTransactionGen for Arc<dyn AUTransactionGen> {
-    fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus) {
+    fn apply(
+        &self,
+        universe: &mut AccountUniverse,
+    ) -> (SignedTransaction, (TransactionStatus, u64)) {
         (**self).apply(universe)
     }
 }
@@ -106,6 +113,8 @@ pub struct AccountCurrent {
     sequence_number: u64,
     sent_events_count: u64,
     received_events_count: u64,
+    // creation of event counter affects gas usage in create account. This tracks it
+    event_counter_created: bool,
 }
 
 impl AccountCurrent {
@@ -120,6 +129,7 @@ impl AccountCurrent {
             sequence_number,
             sent_events_count,
             received_events_count,
+            event_counter_created: false,
         }
     }
 
@@ -155,6 +165,67 @@ impl AccountCurrent {
     /// so far are applied.
     pub fn received_events_count(&self) -> u64 {
         self.received_events_count
+    }
+
+    /// Returns the gas cost of a create-account transaction.
+    pub fn create_account_gas_cost(&self) -> u64 {
+        if self.event_counter_created {
+            *gas_costs::CREATE_ACCOUNT_NEXT
+        } else {
+            *gas_costs::CREATE_ACCOUNT_FIRST
+        }
+    }
+
+    /// Returns the gas cost of a create-account transaction where the sender has an
+    /// insufficient balance.
+    pub fn create_account_low_balance_gas_cost(&self) -> u64 {
+        if self.event_counter_created {
+            *gas_costs::CREATE_ACCOUNT_TOO_LOW_NEXT
+        } else {
+            *gas_costs::CREATE_ACCOUNT_TOO_LOW_FIRST
+        }
+    }
+
+    /// Returns the gas cost of a create-account transaction where the account exists already.
+    pub fn create_existing_account_gas_cost(&self) -> u64 {
+        if self.event_counter_created {
+            *gas_costs::CREATE_EXISTING_ACCOUNT_NEXT
+        } else {
+            *gas_costs::CREATE_EXISTING_ACCOUNT_FIRST
+        }
+    }
+
+    /// Returns the gas cost of a peer-to-peer transaction.
+    pub fn peer_to_peer_gas_cost(&self) -> u64 {
+        *gas_costs::PEER_TO_PEER
+    }
+
+    /// Returns the gas cost of a peer-to-peer transaction with an insufficient balance.
+    pub fn peer_to_peer_too_low_gas_cost(&self) -> u64 {
+        *gas_costs::PEER_TO_PEER_TOO_LOW
+    }
+
+    /// Returns the gas cost of a create-account transaction where the account exists already.
+    pub fn peer_to_peer_new_receiver_gas_cost(&self) -> u64 {
+        if self.event_counter_created {
+            *gas_costs::PEER_TO_PEER_NEW_RECEIVER_NEXT
+        } else {
+            *gas_costs::PEER_TO_PEER_NEW_RECEIVER_FIRST
+        }
+    }
+
+    /// Returns the gas cost of a create-account transaction where the account exists already.
+    pub fn peer_to_peer_new_receiver_too_low_gas_cost(&self) -> u64 {
+        if self.event_counter_created {
+            *gas_costs::PEER_TO_PEER_NEW_RECEIVER_TOO_LOW_NEXT
+        } else {
+            *gas_costs::PEER_TO_PEER_NEW_RECEIVER_TOO_LOW_FIRST
+        }
+    }
+
+    /// Returns the gas cost of a peer-to-peer transaction with an insufficient balance.
+    pub fn rotate_key_gas_cost(&self) -> u64 {
+        *gas_costs::ROTATE_KEY
     }
 }
 

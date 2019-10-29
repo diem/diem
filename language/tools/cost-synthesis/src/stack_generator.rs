@@ -116,9 +116,8 @@ where
     /// Cursor into the user string pool. Used for the generation of random user strings.
     user_string_index: TableIndex,
 
-    /// Cursor into the address pool. Used for the generation of random addresses.  We use this
-    /// since we need the addresses to be unique for e.g. CreateAccount, and we don't want a
-    /// mutable reference into the underlying `root_module`.
+    /// Cursor into the address pool. Used for the generation of random addresses.  We use this since we need the
+    /// addresses to be unique, and we don't want a mutable reference into the underlying `root_module`.
     address_pool_index: TableIndex,
 
     /// A reverse lookup table to find the struct definition for a struct handle. Needed for
@@ -192,11 +191,7 @@ where
     // Certain operations are only valid if their values come from module-specific data. In
     // particular, CreateLibraAccount. But, they may eventually be more of these as well.
     fn points_to_module_data(&self) -> bool {
-        use Bytecode::*;
-        match self.op {
-            CreateAccount => true,
-            _ => false,
-        }
+        false
     }
 
     fn next_int(&mut self, stk: &[Value]) -> u64 {

@@ -1164,12 +1164,8 @@ pub enum Bytecode {
     ///
     /// ```..., value -> ...```
     MoveToSender(StructDefinitionIndex, LocalsSignatureIndex),
-    /// Create an account at the address specified. Does not return anything.
-    ///
-    /// Stack transition:
-    ///
-    /// ```..., address_value -> ...```
-    CreateAccount,
+    /// Deprecated: it will be removed in a later release...
+    CreateAccountDeprecated,
     /// Get the sequence number submitted with the transaction and pushes it on the stack.
     ///
     /// Stack transition:
@@ -1243,7 +1239,7 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::Exists(a, b) => write!(f, "Exists({}, {:?})", a, b),
             Bytecode::MoveFrom(a, b) => write!(f, "MoveFrom({}, {:?})", a, b),
             Bytecode::MoveToSender(a, b) => write!(f, "MoveToSender({}, {:?})", a, b),
-            Bytecode::CreateAccount => write!(f, "CreateAccount"),
+            Bytecode::CreateAccountDeprecated => write!(f, "CreateAccountDeprecated"),
             Bytecode::GetTxnSequenceNumber => write!(f, "GetTxnSequenceNumber"),
             Bytecode::GetTxnPublicKey => write!(f, "GetTxnPublicKey"),
         }

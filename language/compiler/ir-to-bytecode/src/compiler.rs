@@ -1256,12 +1256,6 @@ fn compile_call(
                         InferredType::Reference(inner)
                     }]
                 }
-                Builtin::CreateAccount => {
-                    push_instr!(call.span, Bytecode::CreateAccount);
-                    function_frame.pop()?;
-                    function_frame.push()?;
-                    vec_deque![]
-                }
                 Builtin::MoveFrom(name, tys) => {
                     let tokens = LocalsSignature(compile_types(context, &tys)?);
                     let type_actuals_id = context.locals_signature_index(tokens)?;

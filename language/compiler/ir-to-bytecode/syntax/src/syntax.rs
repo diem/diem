@@ -341,8 +341,7 @@ fn parse_qualified_function_name_<'input>(
 ) -> Result<FunctionCall_, ParseError<usize, Token<'input>, failure::Error>> {
     let start_loc = tokens.start_loc();
     let call = match tokens.peek() {
-        Tok::CreateAccount
-        | Tok::Exists
+        Tok::Exists
         | Tok::BorrowGlobal
         | Tok::BorrowGlobalMut
         | Tok::GetTxnGasUnitPrice
@@ -478,8 +477,7 @@ fn parse_call_or_term<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<Exp, ParseError<usize, Token<'input>, failure::Error>> {
     match tokens.peek() {
-        Tok::CreateAccount
-        | Tok::Exists
+        Tok::Exists
         | Tok::BorrowGlobal
         | Tok::BorrowGlobalMut
         | Tok::GetTxnGasUnitPrice
@@ -642,7 +640,6 @@ fn parse_module_name<'input>(
 }
 
 // Builtin: Builtin = {
-//     "create_account" => Builtin::CreateAccount,
 //     "exists<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
 //     "borrow_global<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
 //     "borrow_global_mut<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
@@ -661,10 +658,6 @@ fn parse_builtin<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<Builtin, ParseError<usize, Token<'input>, failure::Error>> {
     match tokens.peek() {
-        Tok::CreateAccount => {
-            tokens.advance()?;
-            Ok(Builtin::CreateAccount)
-        }
         Tok::Exists => {
             tokens.advance()?;
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
@@ -923,8 +916,7 @@ fn parse_cmd<'input>(
             tokens.advance()?;
             Ok(Cmd::Break)
         }
-        Tok::CreateAccount
-        | Tok::Exists
+        Tok::Exists
         | Tok::BorrowGlobal
         | Tok::BorrowGlobalMut
         | Tok::GetTxnGasUnitPrice

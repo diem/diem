@@ -384,6 +384,7 @@ pub enum StatusCode {
     LOOP_IN_INSTANTIATION_GRAPH = 1076,
     UNUSED_LOCALS_SIGNATURE = 1077,
     UNUSED_TYPE_SIGNATURE = 1078,
+    UNVERIFIABLE_REMOVED_OPCODE = 1079,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

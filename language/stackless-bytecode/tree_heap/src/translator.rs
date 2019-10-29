@@ -541,7 +541,6 @@ impl<'a> ModuleTranslator<'a> {
                 "call tmp := GetTxnGasUnitPrice();".to_string(),
                 format!("ls[old_size+{}] := tmp;", idx),
             ],
-            CreateAccount(idx) => vec![format!("call CreateAccount(t{});", idx)],
             _ => vec!["// unimplemented instruction".into()],
         };
         for code in stmts {

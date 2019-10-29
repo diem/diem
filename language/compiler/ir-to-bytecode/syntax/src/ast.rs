@@ -325,9 +325,6 @@ pub enum Builtin {
     /// Returns the unit of gas remain to be used for now.
     GetGasRemaining,
 
-    /// Publishing,
-    /// Initialize a previously empty address by publishing a resource of type Account
-    CreateAccount,
     /// Remove a resource of the given type from the account with the given address
     MoveFrom(StructName, Vec<Type>),
     /// Publish an instantiated struct object into sender's account.
@@ -1347,7 +1344,6 @@ impl fmt::Display for Var {
 impl fmt::Display for Builtin {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Builtin::CreateAccount => write!(f, "create_account"),
             Builtin::Exists(t, tys) => write!(f, "exists<{}{}>", t, format_type_actuals(tys)),
             Builtin::BorrowGlobal(mut_, t, tys) => {
                 let mut_flag = if *mut_ { "_mut" } else { "" };

@@ -690,7 +690,7 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             write_u16_as_uleb128(binary, class_idx.0)?;
             write_u16_as_uleb128(binary, types_idx.0)
         }
-        Bytecode::CreateAccount => binary.push(Opcodes::CREATE_ACCOUNT as u8),
+        Bytecode::CreateAccountDeprecated => binary.push(Opcodes::CREATE_ACCOUNT_DEPRECATED as u8),
         Bytecode::GetTxnSequenceNumber => binary.push(Opcodes::GET_TXN_SEQUENCE_NUMBER as u8),
         Bytecode::GetTxnPublicKey => binary.push(Opcodes::GET_TXN_PUBLIC_KEY as u8),
     };

@@ -376,7 +376,6 @@ fn transform_code_with_txn_builtins() {
                 gas_price = get_txn_gas_unit_price();
                 addr = get_txn_sender();
                 pk = get_txn_public_key();
-                create_account(move(addr));
                 return;
             }
         }
@@ -396,8 +395,6 @@ fn transform_code_with_txn_builtins() {
         StLoc(0, 10),
         GetTxnPublicKey(11),
         StLoc(5, 11),
-        MoveLoc(12, 0),
-        CreateAccount(12),
         Ret(vec![]),
     ];
     let expected_types = vec![
@@ -413,7 +410,6 @@ fn transform_code_with_txn_builtins() {
         SignatureToken::U64,
         SignatureToken::Address,
         SignatureToken::ByteArray,
-        SignatureToken::Address,
     ];
     assert_eq!(actual_code, expected_code);
     assert_eq!(actual_types, expected_types);

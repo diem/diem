@@ -119,22 +119,6 @@ fn test_reference() {
 }
 
 #[test]
-fn test_special_instr() {
-    let mut file_names = vec![];
-    let name = "test_mvir/test-special-instr.mvir".to_string();
-    file_names.push(name);
-    let (modules, source_maps) = compile_files(file_names.to_vec());
-
-    let mut ts = BoogieTranslator::new(&modules, &source_maps);
-    let mut res = String::new();
-
-    // handwritten boogie code
-    let written_code = fs::read_to_string("src/bytecode_instrs.bpl").unwrap();
-    res.push_str(&written_code);
-    res.push_str(&ts.translate());
-}
-
-#[test]
 fn test_struct() {
     let mut file_names = vec![];
     let name = "test_mvir/test-struct.mvir".to_string();

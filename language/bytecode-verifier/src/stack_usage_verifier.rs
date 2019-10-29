@@ -78,7 +78,6 @@ impl<'a> StackUsageVerifier<'a> {
             Bytecode::Pop
             | Bytecode::BrTrue(_)
             | Bytecode::BrFalse(_)
-            | Bytecode::CreateAccount
             | Bytecode::Abort
             | Bytecode::MoveToSender(_, _)
             | Bytecode::StLoc(_) => (1, 0),
@@ -174,6 +173,10 @@ impl<'a> StackUsageVerifier<'a> {
                 let num_fields = u32::from(field_count);
                 (1, num_fields)
             }
+
+            // TODO: This is an impossible opcode that would fail in later steps anyway,
+            // remove once the breaking change has been published
+            Bytecode::CreateAccountDeprecated => (0, 0),
         }
     }
 }
