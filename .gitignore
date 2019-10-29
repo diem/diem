@@ -15,6 +15,7 @@
 .DS_Store
 .AppleDouble
 .LSOverride
+.idea/
 
 # Thumbnails
 ._*
@@ -51,3 +52,5 @@ language/vm/vm_genesis/genesis/vm_config.toml
 
 /target
 #**/*.rs.bk
+Cargo.toml
+*.iml
