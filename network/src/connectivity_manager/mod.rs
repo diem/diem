@@ -313,7 +313,7 @@ where
         // Cancel dials to peers that are no longer eligible.
         self.cancel_stale_dials().await;
         // Disconnect from connected peers that are no longer eligible.
-        self.close_stale_connections().await;
+        //self.close_stale_connections().await;
         // Dial peers which are eligible but are neither connected nor queued for dialing in the
         // future.
         self.dial_eligible_peers(pending_dials).await;
