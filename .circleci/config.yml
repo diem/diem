@@ -139,11 +139,43 @@ jobs:
           name: Terraform validate
           command: terraform validate
           working_directory: terraform/
+  build-docker:
+    machine:
+      image: ubuntu-1604:201903-01
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Check if the docker build job should run
+          command: .circleci/should_build_docker.sh
+      - run:
+          name: Get the list of updated docker files
+          command: |
+            echo 'export DOCKER_FILES=$(
+              for commit in $(git rev-list origin/master..HEAD) ; do
+                git diff-tree --no-commit-id --name-only -r "$commit" -- "*.Dockerfile";
+              done
+            )' >> $BASH_ENV
+      - run:
+          name: Build each of the updated docker files
+          command: |
+            # Use the dockerfile own build.sh script if it has one.
+            for docker_file in $DOCKER_FILES; do
+              build_script=$(dirname $docker_file)/build.sh
+              if [ -f "$build_script" ]; then
+                $build_script
+              else
+                file_no_ext=$(basename $docker_file)
+                module=${file_no_ext%.Dockerfile}
+                docker build -f $docker_file --tag commit_verify_${CIRCLE_BUILD_NUM}_$module .
+              fi
+            done
 
 workflows:
   commit-workflow:
     jobs:
       - build
+      - build-docker
       - validate-config
       - terraform
 
