@@ -389,7 +389,7 @@ impl<T: Payload> NetworkTask<T> {
             .validate_signatures(self.validators.as_ref())?
             .verify_well_formed()?;
         debug!("Received proposal {}", proposal);
-        Ok(self.proposal_tx.put(peer_id, proposal))
+        Ok(self.proposal_tx.push(peer_id, proposal)?)
     }
 
     async fn process_vote(
@@ -409,7 +409,7 @@ impl<T: Payload> NetworkTask<T> {
                     .log();
                 e
             })?;
-        Ok(self.vote_tx.put(peer_id, vote_msg))
+        Ok(self.vote_tx.push(peer_id, vote_msg)?)
     }
 
     async fn process_sync_info(
@@ -425,7 +425,7 @@ impl<T: Payload> NetworkTask<T> {
                 .log();
             e
         })?;
-        Ok(self.sync_info_tx.put(peer, (sync_info, peer)))
+        Ok(self.sync_info_tx.push(peer, (sync_info, peer))?)
     }
 
     async fn process_request_block(
@@ -441,7 +441,7 @@ impl<T: Payload> NetworkTask<T> {
             req,
             response_sender: tx,
         };
-        self.block_request_tx.put(peer_id, req_with_callback);
+        self.block_request_tx.push(peer_id, req_with_callback)?;
         let response = rx.await?;
         let response_serialized = RespondBlock::try_from(response)?;
         let response_msg = ConsensusMsg {
@@ -465,6 +465,8 @@ impl<T: Payload> NetworkTask<T> {
             None => bail!("Epoch change doesn't carry next validator set"),
         };
         self.validators = Arc::new(validators);
-        Ok(self.epoch_change_tx.put(peer_id, ledger_info))
+        self.epoch_change_tx
+            .push(peer_id, ledger_info)
+            .map_err(|e| format_err!("Failed to push to epoch_change channel: {}", e))
     }
 }

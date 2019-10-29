@@ -500,10 +500,12 @@ version = "0.1.0"
 dependencies = [
  "futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-failure-ext 0.1.0",
  "libra-logger 0.1.0",
  "libra-metrics 0.1.0",
  "libra-types 0.1.0",
  "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio 0.2.0-alpha.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
