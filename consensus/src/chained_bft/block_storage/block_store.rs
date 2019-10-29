@@ -53,7 +53,6 @@ pub mod sync_manager;
 pub struct BlockStore<T> {
     inner: Arc<RwLock<BlockTree<T>>>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
-    enforce_increasing_timestamps: bool,
     /// The persistent storage backing up the in-memory data structure, every write should go
     /// through this before in-memory tree.
     storage: Arc<dyn PersistentStorage<T>>,
@@ -64,7 +63,6 @@ impl<T: Payload> BlockStore<T> {
         storage: Arc<dyn PersistentStorage<T>>,
         initial_data: RecoveryData<T>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
-        enforce_increasing_timestamps: bool,
         max_pruned_blocks_in_mem: usize,
     ) -> Self {
         let highest_tc = initial_data.highest_timeout_certificate();
@@ -83,7 +81,6 @@ impl<T: Payload> BlockStore<T> {
         BlockStore {
             inner,
             state_computer,
-            enforce_increasing_timestamps,
             storage,
         }
     }
@@ -399,8 +396,7 @@ impl<T: Payload> BlockStore<T> {
             .ok_or_else(|| format_err!("Block with missing parent {}", block.parent_id()))?;
         ensure!(parent.round() < block.round(), "Block with invalid round");
         ensure!(
-            !self.enforce_increasing_timestamps
-                || block.timestamp_usecs() > parent.timestamp_usecs(),
+            block.timestamp_usecs() > parent.timestamp_usecs(),
             "Block with non-increasing timestamp"
         );
 

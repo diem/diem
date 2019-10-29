@@ -144,7 +144,6 @@ impl NodeSetup {
             storage.clone(),
             initial_data,
             state_computer.clone(),
-            true,
             10, // max pruned blocks in mem
         )));
 
@@ -156,7 +155,6 @@ impl NodeSetup {
             Arc::new(MockTransactionManager::new()),
             time_service.clone(),
             1,
-            true,
         );
 
         let safety_rules = SafetyRules::new(consensus_state, signer.clone());
@@ -175,7 +173,6 @@ impl NodeSetup {
             network,
             storage.clone(),
             time_service,
-            true,
             validators.clone(),
         );
         block_on(event_processor.start());

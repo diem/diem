@@ -63,7 +63,6 @@ fn build_empty_store(
         storage,
         initial_data,
         Arc::new(EmptyStateComputer),
-        true,
         10, // max pruned blocks in mem
     )))
 }
@@ -119,7 +118,6 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         Arc::new(MockTransactionManager::new()),
         time_service.clone(),
         1,
-        true,
     );
 
     //
@@ -127,9 +125,6 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
 
     // TODO: have two different nodes, one for proposing, one for accepting a proposal
     let proposer_election = Box::new(RotatingProposer::new(vec![signer.author()], 1));
-
-    // We do not want to care about the time
-    let enforce_increasing_timestamps = false;
 
     // event processor
     EventProcessor::new(
@@ -143,7 +138,6 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         network,
         storage.clone(),
         time_service,
-        enforce_increasing_timestamps,
         validator,
     )
 }

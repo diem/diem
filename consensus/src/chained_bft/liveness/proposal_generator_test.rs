@@ -32,7 +32,6 @@ fn test_proposal_generation_empty_tree() {
         Arc::new(MockTransactionManager::new()),
         Arc::new(SimulatedTimeService::new()),
         1,
-        true,
     );
     let genesis = block_store.root();
 
@@ -59,7 +58,6 @@ fn test_proposal_generation_parent() {
         Arc::new(MockTransactionManager::new()),
         Arc::new(SimulatedTimeService::new()),
         1,
-        true,
     );
     let genesis = block_store.root();
     let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
@@ -101,7 +99,6 @@ fn test_old_proposal_generation() {
         Arc::new(MockTransactionManager::new()),
         Arc::new(SimulatedTimeService::new()),
         1,
-        true,
     );
     let genesis = block_store.root();
     let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
@@ -121,7 +118,6 @@ fn test_empty_proposal_after_reconfiguration() {
         Arc::new(MockTransactionManager::new()),
         Arc::new(SimulatedTimeService::new()),
         1,
-        true,
     );
     let genesis = block_store.root();
     let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
