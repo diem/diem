@@ -1,5 +1,6 @@
 use cluster_test::effects::RemoveNetworkEffects;
 use cluster_test::experiments::{MultiRegionSimulation, PacketLossRandomValidators};
+use cluster_test::github::GitHub;
 use cluster_test::instance::Instance;
 use cluster_test::prometheus::Prometheus;
 use cluster_test::thread_pool_executor::ThreadPoolExecutor;
@@ -8,7 +9,7 @@ use cluster_test::util::unix_timestamp_now;
 use cluster_test::{
     aws::Aws,
     cluster::Cluster,
-    deployment::{DeploymentManager, SOURCE_TAG, TESTED_TAG},
+    deployment::{DeploymentManager, SOURCE_TAG},
     effects::{Action, Effect, Reboot, StopContainer},
     experiments::{Experiment, RebootRandomValidators},
     health::{DebugPortLogThread, HealthCheckRunner, LogTail},
@@ -23,8 +24,9 @@ use failure::{
 };
 use rand::prelude::ThreadRng;
 use rand::Rng;
+use reqwest::Url;
 use slog::{o, Drain};
-use slog_scope::info;
+use slog_scope::{info, warn};
 use std::{
     collections::HashSet,
     env,
@@ -83,6 +85,8 @@ struct Args {
     cleanup: bool,
     #[structopt(long, group = "action")]
     multi_region_simulation: bool,
+    #[structopt(long, group = "action")]
+    changelog: Option<String>,
 
     // emit_tx options
     #[structopt(long, default_value = "10")]
@@ -221,6 +225,14 @@ pub fn main() {
         runner.perf_run();
     } else if args.cleanup {
         runner.cleanup();
+    } else if let Some(commit) = args.changelog {
+        let prev_commit = runner
+            .deployment_manager
+            .get_tested_upstream_commit()
+            .map_err(|e| warn!("Failed to get prev_commit: {:?}", e))
+            .ok();
+        println!("Prev commit: {:?}", prev_commit);
+        println!("{}", runner.get_changelog(prev_commit.as_ref(), &commit));
     }
 }
 
@@ -253,10 +265,13 @@ struct ClusterTestRunner {
     health_check_runner: HealthCheckRunner,
     deployment_manager: DeploymentManager,
     experiment_interval: Duration,
-    slack: Option<SlackClient>,
     thread_pool_executor: ThreadPoolExecutor,
+    slack: SlackClient,
+    slack_log_url: Option<Url>,
+    slack_changelog_url: Option<Url>,
     tx_emitter: TxEmitter,
     prometheus: Prometheus,
+    github: GitHub,
 }
 
 fn parse_host_port(s: &str) -> failure::Result<(String, u32)> {
@@ -452,7 +467,13 @@ impl ClusterTestRunner {
         };
         let experiment_interval = Duration::from_secs(experiment_interval_sec);
         let deployment_manager = DeploymentManager::new(aws.clone(), cluster.clone());
-        let slack = SlackClient::try_new_from_environment();
+        let slack = SlackClient::new();
+        let slack_log_url = env::var("SLACK_LOG_URL")
+            .map(|u| u.parse().expect("Failed to parse SLACK_LOG_URL"))
+            .ok();
+        let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
+            .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
+            .ok();
         let thread_pool_executor = ThreadPoolExecutor::new("ssh-pool".into());
         let tx_emitter = TxEmitter::new(&cluster);
         let prometheus = Prometheus::new(
@@ -460,6 +481,7 @@ impl ClusterTestRunner {
                 .prometheus_ip()
                 .expect("Failed to discover prometheus ip in aws"),
         );
+        let github = GitHub::new();
         Self {
             logs,
             cluster,
@@ -468,8 +490,11 @@ impl ClusterTestRunner {
             experiment_interval,
             slack,
             thread_pool_executor,
+            slack_log_url,
+            slack_changelog_url,
             tx_emitter,
             prometheus,
+            github,
         }
     }
 
@@ -488,10 +513,7 @@ impl ClusterTestRunner {
                         return;
                     }
                     Ok(true) => {
-                        self.slack_message(format!(
-                            "Deployed new version `{}`, running test suite",
-                            hash
-                        ));
+                        info!("Deployed new version `{}`, running test suite", hash);
                         hash_to_tag = Some(hash);
                     }
                     Ok(false) => {}
@@ -504,26 +526,67 @@ impl ClusterTestRunner {
             }
             if let Some(hash_to_tag) = hash_to_tag.take() {
                 info!("Test suite succeed first time for `{}`", hash_to_tag);
-                if let Err(e) = self
+                let prev_commit = self
+                    .deployment_manager
+                    .get_tested_upstream_commit()
+                    .map_err(|e| warn!("Failed to get prev_commit: {:?}", e))
+                    .ok();
+                let upstream_commit = match self
                     .deployment_manager
                     .tag_tested_image(hash_to_tag.clone())
                 {
-                    self.report_failure(format!("Failed to tag tested image: {}", e));
-                    return;
-                }
+                    Err(e) => {
+                        self.report_failure(format!("Failed to tag tested image: {}", e));
+                        return;
+                    }
+                    Ok(upstream_commit) => upstream_commit,
+                };
                 let perf_msg = match self.measure_performance() {
                     Ok(report) => format!(
                         "Performance report:\n```\n{}\n```",
                         report.to_slack_message()
                     ),
-                    Err(err) => format!("No performance data:\n```\n{}\n```", err),
+                    Err(err) => {
+                        warn!("No performance data: {}", err);
+                        "No performance data".to_string()
+                    }
                 };
-                self.slack_message(format!(
-                    "Test suite passed. Tagged `{}` as `{}`\n{}",
-                    hash_to_tag, TESTED_TAG, perf_msg
-                ));
+                info!(
+                    "prev_commit: {:?}, upstream_commit: {}",
+                    prev_commit, upstream_commit
+                );
+                let changelog = self.get_changelog(prev_commit.as_ref(), &upstream_commit);
+                self.slack_changelog_message(format!("{}\n\n{}", changelog, perf_msg));
             }
             thread::sleep(self.experiment_interval);
+        }
+    }
+
+    fn get_changelog(&self, prev_commit: Option<&String>, upstream_commit: &str) -> String {
+        let commits = self.github.get_commits("libra/libra", &upstream_commit);
+        match commits {
+            Err(e) => {
+                info!("Failed to get github commits: {:?}", e);
+                format!("*Revision upstream_{}*", upstream_commit)
+            }
+            Ok(commits) => {
+                let mut msg = format!("*Revision {}*", upstream_commit);
+                for commit in commits {
+                    if let Some(prev_commit) = prev_commit {
+                        if commit.sha.starts_with(prev_commit) {
+                            break;
+                        }
+                    }
+                    let commit_lines: Vec<_> = commit.commit.message.split('\n').collect();
+                    let commit_head = commit_lines[0];
+                    let short_sha = &commit.sha[..6];
+                    let email_parts: Vec<_> = commit.commit.author.email.split('@').collect();
+                    let author = email_parts[0];
+                    let line = format!("\n>\u{2022} {} _{}_ {}", short_sha, author, commit_head);
+                    msg.push_str(&line);
+                }
+                msg
+            }
         }
     }
 
@@ -547,6 +610,7 @@ impl ClusterTestRunner {
         thread::sleep(Duration::from_secs(60));
         self.logs.recv_all();
         self.health_check_runner.clear();
+        self.tx_emitter.clear();
         self.start();
         info!("Waiting until all validators healthy after deployment");
         self.wait_until_all_healthy()?;
@@ -579,7 +643,7 @@ impl ClusterTestRunner {
         info!("Starting warm up job");
         self.emit_txn_for(Duration::from_secs(60), self.cluster.instances().clone())?;
         info!("Warm up done, measuring tps");
-        let window = Duration::from_secs(60);
+        let window = Duration::from_secs(180);
         self.emit_txn_for(
             window + Duration::from_secs(30),
             self.cluster.instances().clone(),
@@ -766,8 +830,17 @@ impl ClusterTestRunner {
 
     fn slack_message(&self, msg: String) {
         info!("{}", msg);
-        if let Some(ref slack) = self.slack {
-            if let Err(e) = slack.send_message(&msg) {
+        if let Some(ref log_url) = self.slack_log_url {
+            if let Err(e) = self.slack.send_message(log_url, &msg) {
+                info!("Failed to send slack message: {}", e);
+            }
+        }
+    }
+
+    fn slack_changelog_message(&self, msg: String) {
+        info!("{}", msg);
+        if let Some(ref changelog_url) = self.slack_changelog_url {
+            if let Err(e) = self.slack.send_message(changelog_url, &msg) {
                 info!("Failed to send slack message: {}", e);
             }
         }

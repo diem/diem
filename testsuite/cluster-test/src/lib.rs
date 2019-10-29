@@ -3,6 +3,7 @@ pub mod cluster;
 pub mod deployment;
 pub mod effects;
 pub mod experiments;
+pub mod github;
 pub mod health;
 pub mod instance;
 pub mod log_prune;

@@ -86,6 +86,10 @@ impl TxEmitter {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.accounts.clear();
+    }
+
     fn pick_mint_client(instances: &[Instance]) -> AdmissionControlClient {
         let mut rng = ThreadRng::default();
         let mint_instance = instances
