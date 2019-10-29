@@ -28,10 +28,14 @@ use crate::{
     ProtocolId,
 };
 use channel;
+use futures::channel::oneshot;
 use futures::{future::BoxFuture, FutureExt, SinkExt, StreamExt};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
+use parity_multiaddr::Multiaddr;
 use std::{collections::HashMap, fmt::Debug, time::Duration};
+
+pub use crate::peer_manager::PeerManagerError;
 
 pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
 pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
@@ -47,6 +51,18 @@ pub enum NetworkRequest {
     SendMessage(PeerId, Message),
     /// Update set of nodes eligible to join the network.
     UpdateEligibleNodes(HashMap<PeerId, NetworkPublicKeys>),
+    /// Dial the peer at the given `Multiaddr` to establish a connection. When
+    /// the dial attempt succeeds or fails, the result will be returned over the
+    /// oneshot channel.
+    DialPeer(
+        PeerId,
+        Multiaddr,
+        oneshot::Sender<Result<(), PeerManagerError>>,
+    ),
+    /// Disconnect from the peer with `PeerId`. The disconnect request could fail
+    /// if, for example, we are not currently connected with the peer. Results
+    /// are sent back to the caller via the oneshot channel.
+    DisconnectPeer(PeerId, oneshot::Sender<Result<(), PeerManagerError>>),
 }
 
 /// Notifications that [`NetworkProvider`] sends to consumers of its API. The
@@ -320,6 +336,8 @@ where
                     .await
                     .unwrap();
             }
+            NetworkRequest::DialPeer(_peer_id, _addr, _sender) => {}
+            NetworkRequest::DisconnectPeer(_peer_id, _sender) => {}
         }
     }
 
