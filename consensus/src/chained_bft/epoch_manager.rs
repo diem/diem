@@ -13,13 +13,16 @@ use crate::chained_bft::network::NetworkSender;
 use crate::chained_bft::persistent_storage::{PersistentStorage, RecoveryData};
 use crate::state_replication::{StateComputer, TxnManager};
 use crate::util::time_service::{ClockTimeService, TimeService};
+use consensus_types::block::Block;
 use consensus_types::common::{Payload, Round};
+use consensus_types::quorum_cert::QuorumCert;
 use futures::executor::block_on;
 use libra_config::config::ConsensusProposerType;
-use libra_types::crypto_proxies::{ValidatorSigner, ValidatorVerifier};
+use libra_logger::prelude::*;
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 use network::proto::ConsensusMsg;
 use network::validator_network::{ConsensusNetworkSender, Event};
-use safety_rules::SafetyRules;
+use safety_rules::{ConsensusState, SafetyRules};
 use std::sync::Arc;
 
 // Manager the components that shared across epoch and spawn per-epoch EventProcessor with
@@ -35,6 +38,9 @@ pub struct EpochManager<T> {
     txn_manager: Arc<dyn TxnManager<Payload = T>>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
     storage: Arc<dyn PersistentStorage<T>>,
+    // TODO: remove once we have separate key management structure, and we'll share a slim client
+    // across epoch
+    signer: Arc<ValidatorSigner>,
 }
 
 impl<T: Payload> EpochManager<T> {
@@ -48,6 +54,7 @@ impl<T: Payload> EpochManager<T> {
         txn_manager: Arc<dyn TxnManager<Payload = T>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         storage: Arc<dyn PersistentStorage<T>>,
+        signer: Arc<ValidatorSigner>,
     ) -> Self {
         Self {
             epoch,
@@ -59,6 +66,7 @@ impl<T: Payload> EpochManager<T> {
             txn_manager,
             state_computer,
             storage,
+            signer,
         }
     }
 
@@ -102,9 +110,39 @@ impl<T: Payload> EpochManager<T> {
         }
     }
 
+    pub fn start_new_epoch(&self, ledger_info: LedgerInfoWithSignatures) -> EventProcessor<T> {
+        // make sure storage is on this ledger_info too, it should be no-op if it's already committed
+        self.state_computer.sync_to_or_bail(ledger_info.clone());
+        let validators = ledger_info
+            .ledger_info()
+            .next_validator_set()
+            .expect("should have ValidatorSet when start new epoch")
+            .into();
+        let genesis_block = Block::make_genesis_block_from_ledger_info(ledger_info.ledger_info());
+        let genesis_qc = QuorumCert::certificate_for_genesis_from_ledger_info(
+            ledger_info.ledger_info(),
+            genesis_block.id(),
+        );
+        info!(
+            "Start new epoch with genesis {}, validators {}",
+            genesis_block, validators,
+        );
+        // storage should sync to the ledger info prior to this function call
+        let initial_data = RecoveryData::new(
+            ConsensusState::new(genesis_block.epoch(), 0, 0),
+            None,
+            vec![genesis_block],
+            vec![genesis_qc],
+            ledger_info.ledger_info(),
+            None,
+        )
+        .expect("should be able to build new epoch RecoveryData");
+        self.start_epoch(self.signer.clone(), Arc::new(validators), initial_data)
+    }
+
     pub fn start_epoch(
         &self,
-        signer: ValidatorSigner,
+        signer: Arc<ValidatorSigner>,
         validators: Arc<ValidatorVerifier>,
         initial_data: RecoveryData<T>,
     ) -> EventProcessor<T> {

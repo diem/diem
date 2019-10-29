@@ -11,6 +11,7 @@ use libra_types::{
     crypto_proxies::ValidatorSigner,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
 };
+use std::sync::Arc;
 use std::{
     collections::BTreeMap,
     time::{SystemTime, UNIX_EPOCH},
@@ -94,7 +95,10 @@ fn test_initial_state() {
     // Start from scratch, verify the state
     let block = Block::<Round>::make_genesis_block();
 
-    let safety_rules = SafetyRules::new(ConsensusState::default(), ValidatorSigner::from_int(0));
+    let safety_rules = SafetyRules::new(
+        ConsensusState::default(),
+        Arc::new(ValidatorSigner::from_int(0)),
+    );
     let state = safety_rules.consensus_state();
     assert_eq!(state.last_vote_round(), block.round());
     assert_eq!(state.preferred_block_round(), block.round());
@@ -104,7 +108,10 @@ fn test_initial_state() {
 fn test_preferred_block_rule() {
     // Preferred block is the highest 2-chain head.
     let validator_signer = ValidatorSigner::from_int(0);
-    let mut safety_rules = SafetyRules::new(ConsensusState::default(), validator_signer.clone());
+    let mut safety_rules = SafetyRules::new(
+        ConsensusState::default(),
+        Arc::new(validator_signer.clone()),
+    );
 
     // build a tree of the following form:
     //             _____    _____
@@ -172,7 +179,10 @@ fn test_preferred_block_rule() {
 /// Test the potential ledger info that we're going to use in case of voting
 fn test_voting_potential_commit_id() {
     let validator_signer = ValidatorSigner::from_int(0);
-    let mut safety_rules = SafetyRules::new(ConsensusState::default(), validator_signer.clone());
+    let mut safety_rules = SafetyRules::new(
+        ConsensusState::default(),
+        Arc::new(validator_signer.clone()),
+    );
 
     // build a tree of the following form:
     //            _____
@@ -223,7 +233,10 @@ fn test_voting_potential_commit_id() {
 #[test]
 fn test_voting() {
     let validator_signer = ValidatorSigner::from_int(0);
-    let mut safety_rules = SafetyRules::new(ConsensusState::default(), validator_signer.clone());
+    let mut safety_rules = SafetyRules::new(
+        ConsensusState::default(),
+        Arc::new(validator_signer.clone()),
+    );
 
     // build a tree of the following form:
     //             _____    __________
@@ -309,7 +322,10 @@ fn test_voting() {
 #[test]
 fn test_commit_rule_consecutive_rounds() {
     let validator_signer = ValidatorSigner::from_int(0);
-    let safety_rules = SafetyRules::new(ConsensusState::default(), validator_signer.clone());
+    let safety_rules = SafetyRules::new(
+        ConsensusState::default(),
+        Arc::new(validator_signer.clone()),
+    );
 
     // build a tree of the following form:
     //             ___________

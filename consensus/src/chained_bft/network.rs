@@ -459,11 +459,12 @@ impl<T: Payload> NetworkTask<T> {
         ledger_info: LedgerInfoWithSignaturesProto,
     ) -> failure::Result<()> {
         let ledger_info = LedgerInfoWithSignatures::try_from(ledger_info)?;
-        ensure!(
-            ledger_info.ledger_info().next_validator_set().is_some(),
-            "Epoch change doesn't carry next validator set"
-        );
         ledger_info.verify(&self.validators)?;
+        let validators = match ledger_info.ledger_info().next_validator_set() {
+            Some(v) => v.into(),
+            None => bail!("Epoch change doesn't carry next validator set"),
+        };
+        self.validators = Arc::new(validators);
         Ok(self.epoch_change_tx.put(peer_id, ledger_info))
     }
 }

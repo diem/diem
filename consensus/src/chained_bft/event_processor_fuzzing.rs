@@ -92,7 +92,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     let consensus_state = initial_data.state();
 
     // TODO: remove
-    let safety_rules = SafetyRules::new(consensus_state, signer.clone());
+    let safety_rules = SafetyRules::new(consensus_state, Arc::new(signer.clone()));
 
     // TODO: mock channels
     let (network_reqs_tx, _network_reqs_rx) = channel::new_test(8);

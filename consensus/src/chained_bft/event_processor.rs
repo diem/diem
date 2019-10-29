@@ -737,8 +737,8 @@ impl<T: Payload> EventProcessor<T> {
     /// 1. Commit the blocks via block store.
     /// 2. After the state is finalized, update the txn manager with the status of the committed
     /// transactions.
-    async fn process_commit(&self, finality_proof: LedgerInfoWithSignatures) {
-        let blocks_to_commit = match self.block_store.commit(finality_proof).await {
+    async fn process_commit(&mut self, finality_proof: LedgerInfoWithSignatures) {
+        let blocks_to_commit = match self.block_store.commit(finality_proof.clone()).await {
             Ok(blocks) => blocks,
             Err(e) => {
                 error!("{}", e);
@@ -764,6 +764,9 @@ impl<T: Payload> EventProcessor<T> {
                     error!("Failed to notify mempool: {:?}", e);
                 }
             }
+        }
+        if finality_proof.ledger_info().next_validator_set().is_some() {
+            self.network.send_epoch_change(finality_proof).await
         }
     }
 

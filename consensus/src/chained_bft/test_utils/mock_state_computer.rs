@@ -6,7 +6,6 @@ use crate::{
     state_replication::StateComputer,
 };
 use consensus_types::block::Block;
-use consensus_types::quorum_cert::QuorumCert;
 use executor::{ExecutedTrees, ProcessedVMOutput};
 use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
@@ -61,17 +60,20 @@ impl StateComputer for MockStateComputer {
         future::ok(()).boxed()
     }
 
-    fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
+    fn sync_to(
+        &self,
+        commit: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
         debug!(
             "{}Fake sync{} to block id {}",
             Fg(Blue),
             Fg(Reset),
-            commit.ledger_info().ledger_info().consensus_block_id()
+            commit.ledger_info().consensus_block_id()
         );
         self.consensus_db
-            .commit_to_storage(commit.ledger_info().ledger_info().clone());
+            .commit_to_storage(commit.ledger_info().clone());
         self.commit_callback
-            .unbounded_send(commit.ledger_info().clone())
+            .unbounded_send(commit.clone())
             .expect("Fail to notify about sync");
         async { Ok(true) }.boxed()
     }
@@ -106,7 +108,10 @@ impl StateComputer for EmptyStateComputer {
         future::ok(()).boxed()
     }
 
-    fn sync_to(&self, _commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
+    fn sync_to(
+        &self,
+        _commit: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
         async { Ok(true) }.boxed()
     }
 
