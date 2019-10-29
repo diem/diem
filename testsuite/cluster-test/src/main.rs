@@ -156,7 +156,7 @@ pub fn main() {
         runner.run_suite_in_loop();
     } else if args.run_once {
         let experiment = RebootRandomValidators::new(3, &runner.cluster);
-        runner.run_single_experiment(Box::new(experiment)).unwrap();
+        runner.cleanup_and_run(Box::new(experiment)).unwrap();
     } else if args.tail_logs {
         runner.tail_logs();
     } else if args.health_check {
@@ -185,7 +185,7 @@ pub fn main() {
             Duration::from_secs(args.packet_loss_duration_secs),
             &runner.cluster,
         );
-        runner.run_single_experiment(Box::new(experiment)).unwrap();
+        runner.cleanup_and_run(Box::new(experiment)).unwrap();
     } else if args.perf_run {
         runner.perf_run();
     } else if args.cleanup {
@@ -591,11 +591,15 @@ impl ClusterTestRunner {
         Ok(())
     }
 
+    pub fn cleanup_and_run(&mut self, experiment: Box<dyn Experiment>) -> failure::Result<()> {
+        self.cleanup();
+        self.run_single_experiment(experiment)
+    }
+
     pub fn run_single_experiment(
         &mut self,
         experiment: Box<dyn Experiment>,
     ) -> failure::Result<()> {
-        self.cleanup();
         let events = self.logs.recv_all();
         if let Err(s) = self.health_check_runner.run(&events, &HashSet::new(), true) {
             bail!(
