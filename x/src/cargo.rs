@@ -31,6 +31,11 @@ impl Cargo {
         self
     }
 
+    pub fn all_targets(&mut self) -> &mut Self {
+        self.inner.arg("--all-targets");
+        self
+    }
+
     pub fn current_dir<P: AsRef<Path>>(&mut self, dir: P) -> &mut Self {
         self.inner.current_dir(dir);
         self
@@ -96,9 +101,11 @@ impl Cargo {
 #[derive(Debug, Default)]
 pub struct CargoArgs {
     pub all_features: bool,
+    pub all_targets: bool,
 }
 
 pub enum CargoCommand<'a> {
+    Check,
     Test(&'a [OsString]),
 }
 
@@ -157,12 +164,14 @@ impl<'a> CargoCommand<'a> {
 
     pub fn as_str(&self) -> &'static str {
         match self {
+            CargoCommand::Check => "check",
             CargoCommand::Test(_) => "test",
         }
     }
 
     fn pass_through_args(&self) -> &[OsString] {
         match self {
+            CargoCommand::Check => &[],
             CargoCommand::Test(args) => args,
         }
     }
@@ -170,6 +179,9 @@ impl<'a> CargoCommand<'a> {
     fn apply_args(cargo: &mut Cargo, args: &CargoArgs) {
         if args.all_features {
             cargo.all_features();
+        }
+        if args.all_targets {
+            cargo.all_targets();
         }
     }
 }

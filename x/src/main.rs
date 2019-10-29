@@ -1,6 +1,7 @@
 use structopt::StructOpt;
 
 mod cargo;
+mod check;
 mod config;
 mod test;
 mod utils;
@@ -15,6 +16,9 @@ struct Args {
 
 #[derive(Debug, StructOpt)]
 enum Command {
+    #[structopt(name = "check")]
+    /// Run `cargo check`
+    Check(check::Args),
     #[structopt(name = "test")]
     /// Run tests
     Test(test::Args),
@@ -26,5 +30,6 @@ fn main() -> Result<()> {
 
     match args.cmd {
         Command::Test(args) => test::run(args, config),
+        Command::Check(args) => check::run(args, config),
     }
 }

@@ -1,3 +1,4 @@
 [alias]
 x = "run --package x --bin x --"
+xcheck = "run --package x --bin x -- check"
 xtest = "run --package x --bin x -- test"
