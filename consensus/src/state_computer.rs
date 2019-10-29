@@ -3,7 +3,6 @@
 
 use crate::{counters, state_replication::StateComputer};
 use consensus_types::block::Block;
-use consensus_types::quorum_cert::QuorumCert;
 use executor::{CommittableBlock, ExecutedTrees, Executor, ProcessedVMOutput};
 use failure::Result;
 use futures::{Future, FutureExt};
@@ -135,11 +134,12 @@ impl StateComputer for ExecutionProxy {
     }
 
     /// Synchronize to a commit that not present locally.
-    fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
+    fn sync_to(
+        &self,
+        commit: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
         counters::STATE_SYNC_COUNT.inc();
-        self.synchronizer
-            .sync_to_deprecated(commit.ledger_info().clone())
-            .boxed()
+        self.synchronizer.sync_to_deprecated(commit).boxed()
     }
 
     fn committed_trees(&self) -> ExecutedTrees {

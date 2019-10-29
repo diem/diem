@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use consensus_types::block::Block;
-use consensus_types::quorum_cert::QuorumCert;
 use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
 use failure::Result;
 use futures::Future;
@@ -57,11 +56,14 @@ pub trait StateComputer: Send + Sync {
         finality_proof: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
-    fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>>;
+    fn sync_to(
+        &self,
+        commit: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>>;
 
     fn committed_trees(&self) -> ExecutedTrees;
 
-    fn sync_to_or_bail(&self, commit: QuorumCert) {
+    fn sync_to_or_bail(&self, commit: LedgerInfoWithSignatures) {
         let status = futures::executor::block_on(self.sync_to(commit));
         match status {
             Ok(true) => (),

@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
+use crate::validator_set::ValidatorSet;
 use failure::prelude::*;
+use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_crypto::*;
 use libra_logger::prelude::*;
 use std::collections::BTreeMap;
+use std::fmt;
 
 /// Errors possible during signature verification.
 #[derive(Debug, Fail, PartialEq)]
@@ -272,6 +275,34 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
     /// Returns quorum voting power.
     pub fn quorum_voting_power(&self) -> u64 {
         self.quorum_voting_power
+    }
+}
+
+impl<PublicKey> fmt::Display for ValidatorVerifier<PublicKey> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        write!(f, "ValidatorSet: [")?;
+        for (addr, info) in &self.address_to_validator_info {
+            writeln!(f, "{}: {}", addr.short_str(), info.voting_power)?;
+        }
+        write!(f, "]")
+    }
+}
+
+impl From<&ValidatorSet> for ValidatorVerifier<Ed25519PublicKey> {
+    fn from(validator_set: &ValidatorSet) -> Self {
+        ValidatorVerifier::new(validator_set.payload().iter().fold(
+            BTreeMap::new(),
+            |mut map, key| {
+                map.insert(
+                    key.account_address().clone(),
+                    ValidatorInfo::new(
+                        key.consensus_public_key().clone(),
+                        key.consensus_voting_power(),
+                    ),
+                );
+                map
+            },
+        ))
     }
 }
 

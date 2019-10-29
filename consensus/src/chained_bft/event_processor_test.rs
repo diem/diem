@@ -158,7 +158,7 @@ impl NodeSetup {
             1,
         );
 
-        let safety_rules = SafetyRules::new(consensus_state, signer.clone());
+        let safety_rules = SafetyRules::new(consensus_state, Arc::new(signer.clone()));
 
         let pacemaker = Self::create_pacemaker(time_service.clone());
 

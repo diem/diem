@@ -64,6 +64,11 @@ impl ValidatorPublicKeys {
         &self.consensus_public_key
     }
 
+    /// Returns the voting power for this validator
+    pub fn consensus_voting_power(&self) -> u64 {
+        self.consensus_voting_power
+    }
+
     /// Returns the key for validating signed messages at the network layers
     pub fn network_signing_public_key(&self) -> &Ed25519PublicKey {
         &self.network_signing_public_key

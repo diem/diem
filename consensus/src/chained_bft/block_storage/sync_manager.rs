@@ -172,7 +172,7 @@ impl<T: Payload> BlockStore<T> {
             .save_tree(blocks.clone(), quorum_certs.clone())?;
         let pre_sync_instance = Instant::now();
         self.state_computer
-            .sync_to_or_bail(highest_ledger_info.clone());
+            .sync_to_or_bail(highest_ledger_info.ledger_info().clone());
         counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());
         let root = (
             blocks.pop().expect("should have 3-chain"),

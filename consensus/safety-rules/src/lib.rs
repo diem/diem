@@ -20,6 +20,7 @@ use libra_types::{
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 
 #[cfg(test)]
 #[path = "safety_rules_test.rs"]
@@ -125,12 +126,12 @@ impl ConsensusState {
 pub struct SafetyRules {
     // Keeps the state.
     state: ConsensusState,
-    validator_signer: ValidatorSigner,
+    validator_signer: Arc<ValidatorSigner>,
 }
 
 impl SafetyRules {
     /// Constructs a new instance of SafetyRules given the BlockTree and ConsensusState.
-    pub fn new(state: ConsensusState, validator_signer: ValidatorSigner) -> Self {
+    pub fn new(state: ConsensusState, validator_signer: Arc<ValidatorSigner>) -> Self {
         Self {
             state,
             validator_signer,

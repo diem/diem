@@ -90,6 +90,7 @@ impl<T: Payload> ChainedBftSMR<T> {
 
     fn start_event_processing(
         executor: TaskExecutor,
+        epoch_manager: EpochManager<T>,
         mut event_processor: EventProcessor<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
         network_task: NetworkTask<T>,
@@ -121,8 +122,9 @@ impl<T: Payload> ChainedBftSMR<T> {
                         idle_duration = pre_select_instant.elapsed();
                         event_processor.process_sync_info_msg(sync_info_msg.0, sync_info_msg.1).await;
                     }
-                    epoch_change = network_receivers.epoch_change.select_next_some() => {
+                    ledger_info = network_receivers.epoch_change.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
+                        event_processor = epoch_manager.start_new_epoch(ledger_info);
                     }
                     complete => {
                         break;
@@ -162,7 +164,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         // Step 1
         if initial_data.need_sync() {
             // make sure we sync to the root state in case we're not
-            state_computer.sync_to_or_bail(initial_data.root_ledger_info());
+            state_computer.sync_to_or_bail(initial_data.root_ledger_info().ledger_info().clone());
         }
 
         // Step 2 TODO: read validators from libradb instead of config
@@ -177,6 +179,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         let (timeout_sender, timeout_receiver) =
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
+        let signer = Arc::new(initial_setup.signer);
         let epoch_mgr = EpochManager::new(
             initial_setup.epoch,
             self.config.take().expect("already started, config is None"),
@@ -187,11 +190,11 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             txn_manager,
             state_computer,
             self.storage.clone(),
+            signer.clone(),
         );
 
         // Step 3
-        let event_processor =
-            epoch_mgr.start_epoch(initial_setup.signer, validator.clone(), initial_data);
+        let event_processor = epoch_mgr.start_epoch(signer, validator.clone(), initial_data);
 
         // TODO: this is test only, we should remove this
         self.block_store = Some(event_processor.block_store());
@@ -201,6 +204,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
 
         Self::start_event_processing(
             executor,
+            epoch_mgr,
             event_processor,
             timeout_receiver,
             network_task,
