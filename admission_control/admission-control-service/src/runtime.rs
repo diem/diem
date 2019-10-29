@@ -5,11 +5,8 @@ use crate::{
     admission_control_service::AdmissionControlService,
     upstream_proxy::{process_network_messages, UpstreamProxyData},
 };
-use admission_control_proto::proto::admission_control::{
-    create_admission_control, AdmissionControlClient, SubmitTransactionRequest,
-    SubmitTransactionResponse,
-};
-use futures::channel::{mpsc, oneshot};
+use admission_control_proto::proto::admission_control::create_admission_control;
+use futures::channel::mpsc;
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
 use libra_config::config::NodeConfig;
@@ -35,51 +32,8 @@ impl AdmissionControlRuntime {
         network_sender: AdmissionControlNetworkSender,
         network_events: Vec<AdmissionControlNetworkEvents>,
     ) -> Self {
-        let (upstream_proxy_sender, upstream_proxy_receiver) = mpsc::unbounded();
+        let (ac_sender, ac_receiver) = mpsc::channel(1_024);
 
-        let (grpc_server, client) = Self::setup_ac(&config, upstream_proxy_sender);
-
-        let upstream_proxy_runtime = Builder::new()
-            .name_prefix("ac-upstream-proxy-")
-            .build()
-            .expect("[admission control] failed to create runtime");
-
-        let executor = upstream_proxy_runtime.executor();
-
-        let upstream_peer_ids = config.get_upstream_peer_ids();
-        let peer_info: HashMap<_, _> = upstream_peer_ids
-            .iter()
-            .map(|peer_id| (*peer_id, true))
-            .collect();
-
-        let upstream_proxy_data = UpstreamProxyData::new(
-            config.admission_control.clone(),
-            network_sender,
-            config.get_role(),
-            client,
-        );
-        executor.spawn(process_network_messages(
-            upstream_proxy_data,
-            network_events,
-            peer_info,
-            executor.clone(),
-            upstream_proxy_receiver,
-        ));
-
-        Self {
-            _grpc_server: ServerHandle::setup(grpc_server),
-            _upstream_proxy: upstream_proxy_runtime,
-        }
-    }
-
-    /// setup Admission Control gRPC service
-    pub fn setup_ac(
-        config: &NodeConfig,
-        upstream_proxy_sender: mpsc::UnboundedSender<(
-            SubmitTransactionRequest,
-            oneshot::Sender<failure::Result<SubmitTransactionResponse>>,
-        )>,
-    ) -> (::grpcio::Server, AdmissionControlClient) {
         let env = Arc::new(
             EnvBuilder::new()
                 .name_prefix("grpc-ac-")
@@ -106,26 +60,53 @@ impl AdmissionControlRuntime {
             config.storage.port,
         ));
 
+        let admission_control_service =
+            AdmissionControlService::new(ac_sender, Arc::clone(&storage_client));
+
         let vm_validator = Arc::new(VMValidator::new(&config, Arc::clone(&storage_client)));
 
-        let handle = AdmissionControlService::new(
-            mempool_client,
-            storage_client,
-            vm_validator,
-            config
-                .admission_control
-                .need_to_check_mempool_before_validation,
-            upstream_proxy_sender,
-        );
-        let service = create_admission_control(handle);
+        let service = create_admission_control(admission_control_service);
         let server = ServerBuilder::new(Arc::clone(&env))
             .register_service(service)
             .bind(config.admission_control.address.clone(), port)
             .build()
             .expect("Unable to create grpc server");
 
-        let connection_str = format!("localhost:{}", port);
-        let client = AdmissionControlClient::new(ChannelBuilder::new(env).connect(&connection_str));
-        (server, client)
+        let upstream_proxy_runtime = Builder::new()
+            .name_prefix("ac-upstream-proxy-")
+            .build()
+            .expect("[admission control] failed to create runtime");
+
+        let executor = upstream_proxy_runtime.executor();
+
+        let upstream_peer_ids = config.get_upstream_peer_ids();
+        let peer_info: HashMap<_, _> = upstream_peer_ids
+            .iter()
+            .map(|peer_id| (*peer_id, true))
+            .collect();
+
+        let upstream_proxy_data = UpstreamProxyData::new(
+            config.admission_control.clone(),
+            network_sender,
+            config.get_role(),
+            mempool_client,
+            storage_client,
+            vm_validator,
+            config
+                .admission_control
+                .need_to_check_mempool_before_validation,
+        );
+        executor.spawn(process_network_messages(
+            upstream_proxy_data,
+            network_events,
+            peer_info,
+            executor.clone(),
+            ac_receiver,
+        ));
+
+        Self {
+            _grpc_server: ServerHandle::setup(server),
+            _upstream_proxy: upstream_proxy_runtime,
+        }
     }
 }
