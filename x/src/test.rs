@@ -20,16 +20,16 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
     args.args.extend(args.testname.clone());
 
     if args.unit {
+        CargoCommand::Test.run_with_exclusions(
+            config.package_exceptions().iter().map(|(p, _)| p),
+            &args.args,
+        )?;
         CargoCommand::Test.run_on_packages_separate(
             config
                 .package_exceptions()
                 .iter()
                 .filter(|(_, pkg)| !pkg.system)
                 .map(|(name, pkg)| (name, pkg.all_features)),
-            &args.args,
-        )?;
-        CargoCommand::Test.run_with_exclusions(
-            config.package_exceptions().iter().map(|(p, _)| p),
             &args.args,
         )?;
         Ok(())
@@ -41,21 +41,21 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
                 .get(p)
                 .map(|e| (p, e.all_features))
         });
-        CargoCommand::Test.run_on_packages_separate(run_separate, &args.args)?;
         CargoCommand::Test.run_on_packages_together(run_together, &args.args)?;
+        CargoCommand::Test.run_on_packages_separate(run_separate, &args.args)?;
         Ok(())
     } else if utils::project_is_root()? {
         // TODO Maybe only run a subest of tests if we're not inside
         // a package but not at the project root (e.g. language)
+        CargoCommand::Test.run_with_exclusions(
+            config.package_exceptions().iter().map(|(p, _)| p),
+            &args.args,
+        )?;
         CargoCommand::Test.run_on_packages_separate(
             config
                 .package_exceptions()
                 .iter()
                 .map(|(name, pkg)| (name, pkg.all_features)),
-            &args.args,
-        )?;
-        CargoCommand::Test.run_with_exclusions(
-            config.package_exceptions().iter().map(|(p, _)| p),
             &args.args,
         )?;
         Ok(())
