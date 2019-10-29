@@ -25,6 +25,7 @@ const FAUCET_IMAGE_REPO: &str = "libra_faucet";
 pub const SOURCE_TAG: &str = "nightly";
 pub const RUNNING_TAG: &str = "cluster_test";
 pub const TESTED_TAG: &str = "nightly_tested";
+const UPSTREAM_PREFIX: &str = "upstream_";
 
 impl DeploymentManager {
     pub fn new(aws: Aws, cluster: Cluster) -> Self {
@@ -50,7 +51,7 @@ impl DeploymentManager {
     }
 
     pub fn latest_hash_changed(&self) -> Option<String> {
-        let hash = self.latest_nightly_image_digest();
+        let hash = self.image_digest_by_tag(SOURCE_TAG);
         if let Some(last) = &self.last_deployed_digest {
             if last == &hash {
                 info!("Last deployed digest matches latest digest we expect, not doing redeploy");
@@ -98,10 +99,14 @@ impl DeploymentManager {
         Ok(())
     }
 
-    fn latest_nightly_image_digest(&self) -> String {
+    fn image_digest_by_tag(&self, tag: &str) -> String {
         let mut request = DescribeImagesRequest::default();
         request.repository_name = VALIDATOR_IMAGE_REPO.into();
-        request.image_ids = Some(vec![Self::nightly_image_id()]);
+        let image_id = ImageIdentifier {
+            image_digest: None,
+            image_tag: Some(tag.to_string()),
+        };
+        request.image_ids = Some(vec![image_id]);
         let result = self
             .aws
             .ecr()
@@ -118,20 +123,19 @@ impl DeploymentManager {
         image.image_digest.expect("No image_digest")
     }
 
-    fn nightly_image_id() -> ImageIdentifier {
-        ImageIdentifier {
-            image_digest: None,
-            image_tag: Some(SOURCE_TAG.to_string()),
-        }
+    pub fn get_tested_upstream_commit(&self) -> failure::Result<String> {
+        let digest = self.image_digest_by_tag(TESTED_TAG);
+        let prev_upstream_tag = self.get_upstream_tag(&digest)?;
+        Ok(prev_upstream_tag[UPSTREAM_PREFIX.len()..].to_string())
     }
 
-    pub fn tag_tested_image(&mut self, hash: String) -> failure::Result<()> {
+    pub fn tag_tested_image(&mut self, hash: String) -> failure::Result<String> {
         let image_id = ImageIdentifier {
             image_digest: Some(hash.clone()),
             image_tag: None,
         };
         self.tag_image(VALIDATOR_IMAGE_REPO, &image_id, TESTED_TAG)?;
-        let upstream_tag = self.get_upstream_tag(&image_id)?;
+        let upstream_tag = self.get_upstream_tag(&hash)?;
         self.tag_image(
             CLIENT_IMAGE_REPO,
             &ImageIdentifier {
@@ -144,18 +148,23 @@ impl DeploymentManager {
             FAUCET_IMAGE_REPO,
             &ImageIdentifier {
                 image_digest: None,
-                image_tag: Some(upstream_tag),
+                image_tag: Some(upstream_tag.clone()),
             },
             TESTED_TAG,
         )?;
 
         fs::write(LAST_DEPLOYED_FILE, &hash).expect("Failed to write .last_deployed_digest");
         self.last_deployed_digest = Some(hash);
-        Ok(())
+        let upstream_commit = upstream_tag[UPSTREAM_PREFIX.len()..].to_string();
+        Ok(upstream_commit)
     }
 
-    fn get_upstream_tag(&self, image_id: &ImageIdentifier) -> failure::Result<String> {
-        let images = self.get_images(VALIDATOR_IMAGE_REPO, image_id)?;
+    fn get_upstream_tag(&self, digest: &str) -> failure::Result<String> {
+        let image_id = ImageIdentifier {
+            image_digest: Some(digest.to_string()),
+            image_tag: None,
+        };
+        let images = self.get_images(VALIDATOR_IMAGE_REPO, &image_id)?;
         for image in images {
             let image_id = match image.image_id {
                 Some(image_id) => image_id,
@@ -165,7 +174,7 @@ impl DeploymentManager {
                 Some(tag) => tag,
                 None => continue,
             };
-            if tag.starts_with("upstream_") {
+            if tag.starts_with(UPSTREAM_PREFIX) {
                 return Ok(tag);
             }
         }

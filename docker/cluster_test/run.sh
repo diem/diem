@@ -1,4 +1,5 @@
-# export SLACK_URL="<fill for slack integration>"
+# export SLACK_LOG_URL="<fill for slack integration>"
+# export SLACK_CHANGELOG_URL="<fill for slack integration>"
 export ALLOW_DEPLOY=yes
 unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
 
