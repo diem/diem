@@ -1,14 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::AdmissionControlService;
-use crate::{
-    admission_control_service::SubmitTransactionRequest,
-    mocks::local_mock_mempool::LocalMockMempool,
-};
-use futures::channel::mpsc;
+use crate::{mocks::local_mock_mempool::LocalMockMempool, upstream_proxy};
+use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
+use channel;
+use futures::executor::block_on;
+use libra_config::config::{AdmissionControlConfig, RoleType};
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::transaction::SignedTransaction;
+use network::validator_network::AdmissionControlNetworkSender;
 use proptest;
 use prost::Message;
 use std::sync::Arc;
@@ -48,19 +48,25 @@ pub fn fuzzer(data: &[u8]) {
             return;
         }
     };
-    let (upstream_proxy_sender, _) = mpsc::unbounded();
 
-    // create service to receive it
-    let ac_service = AdmissionControlService::new(
+    let (network_reqs_tx, _) = channel::new_test(8);
+    let network_sender = AdmissionControlNetworkSender::new(network_reqs_tx);
+
+    let upstream_proxy_data = upstream_proxy::UpstreamProxyData::new(
+        AdmissionControlConfig::default(),
+        network_sender,
+        RoleType::Validator,
         Some(Arc::new(LocalMockMempool::new())),
         Arc::new(MockStorageReadClient),
         Arc::new(MockVMValidator),
         false,
-        upstream_proxy_sender,
     );
 
     // process the request
-    let res = ac_service.submit_transaction_inner(req);
+    let res = block_on(upstream_proxy::submit_transaction_to_mempool(
+        upstream_proxy_data,
+        req,
+    ));
     if cfg!(test) && res.is_err() {
         panic!();
     }

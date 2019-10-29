@@ -12,7 +12,6 @@ edition = "2018"
 [dependencies]
 bytes = "0.4.12"
 prost = "0.5.0"
-futures_01 = {version = "0.1.28", package = "futures"}
 futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["compat"] }
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["protobuf-codec"] }
 num_cpus = "1.10.1"
@@ -37,6 +36,7 @@ vm-validator = { path = "../../vm-validator", version = "0.1.0" }
 libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
 network = { path = "../../network", version = "0.1.0" }
 bounded-executor = { path = "../../common/bounded-executor", version = "0.1.0" }
+channel = { path = "../../common/channel", version = "0.1.0" }
 
 proptest = { version = "0.9.4", optional = true }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", optional = true }
