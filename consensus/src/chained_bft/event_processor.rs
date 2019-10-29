@@ -67,7 +67,6 @@ pub struct EventProcessor<T> {
     network: NetworkSender,
     storage: Arc<dyn PersistentStorage<T>>,
     time_service: Arc<dyn TimeService>,
-    enforce_increasing_timestamps: bool,
     // Cache of the last sent vote message.
     last_vote_sent: Option<(Vote, Round)>,
     validators: Arc<ValidatorVerifier>,
@@ -85,7 +84,6 @@ impl<T: Payload> EventProcessor<T> {
         network: NetworkSender,
         storage: Arc<dyn PersistentStorage<T>>,
         time_service: Arc<dyn TimeService>,
-        enforce_increasing_timestamps: bool,
         validators: Arc<ValidatorVerifier>,
     ) -> Self {
         counters::BLOCK_RETRIEVAL_COUNT.get();
@@ -104,7 +102,6 @@ impl<T: Payload> EventProcessor<T> {
             network,
             storage,
             time_service,
-            enforce_increasing_timestamps,
             last_vote_sent,
             validators,
         }
@@ -525,53 +522,51 @@ impl<T: Payload> EventProcessor<T> {
         block_timestamp_us: u64,
     ) -> Result<(), WaitingError> {
         let current_round_deadline = self.pacemaker.current_round_deadline();
-        if self.enforce_increasing_timestamps {
-            match wait_if_possible(
-                self.time_service.as_ref(),
-                Duration::from_micros(block_timestamp_us),
-                current_round_deadline,
-            )
-            .await
-            {
-                Ok(waiting_success) => {
-                    debug!("Success with {:?} for being able to vote", waiting_success);
+        match wait_if_possible(
+            self.time_service.as_ref(),
+            Duration::from_micros(block_timestamp_us),
+            current_round_deadline,
+        )
+        .await
+        {
+            Ok(waiting_success) => {
+                debug!("Success with {:?} for being able to vote", waiting_success);
 
-                    match waiting_success {
-                        WaitingSuccess::WaitWasRequired { wait_duration, .. } => {
-                            counters::VOTE_SUCCESS_WAIT_S.observe_duration(wait_duration);
-                            counters::VOTE_WAIT_WAS_REQUIRED_COUNT.inc();
-                        }
-                        WaitingSuccess::NoWaitRequired { .. } => {
-                            counters::VOTE_SUCCESS_WAIT_S.observe_duration(Duration::new(0, 0));
-                            counters::VOTE_NO_WAIT_REQUIRED_COUNT.inc();
-                        }
+                match waiting_success {
+                    WaitingSuccess::WaitWasRequired { wait_duration, .. } => {
+                        counters::VOTE_SUCCESS_WAIT_S.observe_duration(wait_duration);
+                        counters::VOTE_WAIT_WAS_REQUIRED_COUNT.inc();
+                    }
+                    WaitingSuccess::NoWaitRequired { .. } => {
+                        counters::VOTE_SUCCESS_WAIT_S.observe_duration(Duration::new(0, 0));
+                        counters::VOTE_NO_WAIT_REQUIRED_COUNT.inc();
                     }
                 }
-                Err(waiting_error) => {
-                    match waiting_error {
-                        WaitingError::MaxWaitExceeded => {
-                            error!(
-                                    "Waiting until proposal block timestamp usecs {:?} would exceed the round duration {:?}, hence will not vote for this round",
-                                    block_timestamp_us,
-                                    current_round_deadline);
-                            counters::VOTE_FAILURE_WAIT_S.observe_duration(Duration::new(0, 0));
-                            counters::VOTE_MAX_WAIT_EXCEEDED_COUNT.inc();
-                        }
-                        WaitingError::WaitFailed {
-                            current_duration_since_epoch,
-                            wait_duration,
-                        } => {
-                            error!(
-                                    "Even after waiting for {:?}, proposal block timestamp usecs {:?} >= current timestamp usecs {:?}, will not vote for this round",
-                                    wait_duration,
-                                    block_timestamp_us,
-                                    current_duration_since_epoch);
-                            counters::VOTE_FAILURE_WAIT_S.observe_duration(wait_duration);
-                            counters::VOTE_WAIT_FAILED_COUNT.inc();
-                        }
-                    };
-                    return Err(waiting_error);
-                }
+            }
+            Err(waiting_error) => {
+                match waiting_error {
+                    WaitingError::MaxWaitExceeded => {
+                        error!(
+                                "Waiting until proposal block timestamp usecs {:?} would exceed the round duration {:?}, hence will not vote for this round",
+                                block_timestamp_us,
+                                current_round_deadline);
+                        counters::VOTE_FAILURE_WAIT_S.observe_duration(Duration::new(0, 0));
+                        counters::VOTE_MAX_WAIT_EXCEEDED_COUNT.inc();
+                    }
+                    WaitingError::WaitFailed {
+                        current_duration_since_epoch,
+                        wait_duration,
+                    } => {
+                        error!(
+                                "Even after waiting for {:?}, proposal block timestamp usecs {:?} >= current timestamp usecs {:?}, will not vote for this round",
+                                wait_duration,
+                                block_timestamp_us,
+                                current_duration_since_epoch);
+                        counters::VOTE_FAILURE_WAIT_S.observe_duration(wait_duration);
+                        counters::VOTE_WAIT_FAILED_COUNT.inc();
+                    }
+                };
+                return Err(waiting_error);
             }
         }
         Ok(())

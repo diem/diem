@@ -45,8 +45,6 @@ pub struct ProposalGenerator<T> {
     time_service: Arc<dyn TimeService>,
     // Max number of transactions to be added to a proposed block.
     max_block_size: u64,
-    // Support increasing block timestamps
-    enforce_increasing_timestamps: bool,
     // Last round that a proposal was generated
     last_round_generated: Mutex<Round>,
 }
@@ -58,7 +56,6 @@ impl<T: Payload> ProposalGenerator<T> {
         txn_manager: Arc<dyn TxnManager<Payload = T>>,
         time_service: Arc<dyn TimeService>,
         max_block_size: u64,
-        enforce_increasing_timestamps: bool,
     ) -> Self {
         Self {
             author,
@@ -66,7 +63,6 @@ impl<T: Payload> ProposalGenerator<T> {
             txn_manager,
             time_service,
             max_block_size,
-            enforce_increasing_timestamps,
             last_round_generated: Mutex::new(0),
         }
     }
@@ -123,68 +119,62 @@ impl<T: Payload> ProposalGenerator<T> {
             .collect();
 
         let block_timestamp = {
-            if self.enforce_increasing_timestamps {
-                match wait_if_possible(
-                    self.time_service.as_ref(),
-                    Duration::from_micros(hqc.certified_block().timestamp_usecs()),
-                    round_deadline,
-                )
-                .await
-                {
-                    Ok(waiting_success) => {
-                        debug!(
-                            "Success with {:?} for getting a valid timestamp for the next proposal",
-                            waiting_success
-                        );
+            match wait_if_possible(
+                self.time_service.as_ref(),
+                Duration::from_micros(hqc.certified_block().timestamp_usecs()),
+                round_deadline,
+            )
+            .await
+            {
+                Ok(waiting_success) => {
+                    debug!(
+                        "Success with {:?} for getting a valid timestamp for the next proposal",
+                        waiting_success
+                    );
 
-                        match waiting_success {
-                            WaitingSuccess::WaitWasRequired {
-                                current_duration_since_epoch,
-                                wait_duration,
-                            } => {
-                                counters::PROPOSAL_SUCCESS_WAIT_S.observe_duration(wait_duration);
-                                counters::PROPOSAL_WAIT_WAS_REQUIRED_COUNT.inc();
-                                current_duration_since_epoch
-                            }
-                            WaitingSuccess::NoWaitRequired {
-                                current_duration_since_epoch,
-                                ..
-                            } => {
-                                counters::PROPOSAL_SUCCESS_WAIT_S
-                                    .observe_duration(Duration::new(0, 0));
-                                counters::PROPOSAL_NO_WAIT_REQUIRED_COUNT.inc();
-                                current_duration_since_epoch
-                            }
+                    match waiting_success {
+                        WaitingSuccess::WaitWasRequired {
+                            current_duration_since_epoch,
+                            wait_duration,
+                        } => {
+                            counters::PROPOSAL_SUCCESS_WAIT_S.observe_duration(wait_duration);
+                            counters::PROPOSAL_WAIT_WAS_REQUIRED_COUNT.inc();
+                            current_duration_since_epoch
+                        }
+                        WaitingSuccess::NoWaitRequired {
+                            current_duration_since_epoch,
+                            ..
+                        } => {
+                            counters::PROPOSAL_SUCCESS_WAIT_S.observe_duration(Duration::new(0, 0));
+                            counters::PROPOSAL_NO_WAIT_REQUIRED_COUNT.inc();
+                            current_duration_since_epoch
                         }
                     }
-                    Err(waiting_error) => {
-                        match waiting_error {
-                            WaitingError::MaxWaitExceeded => {
-                                counters::PROPOSAL_FAILURE_WAIT_S
-                                    .observe_duration(Duration::new(0, 0));
-                                counters::PROPOSAL_MAX_WAIT_EXCEEDED_COUNT.inc();
-                                bail!(
-                                    "Waiting until parent block timestamp usecs {:?} would exceed the round duration {:?}, hence will not create a proposal for this round",
-                                    hqc.certified_block().timestamp_usecs(),
-                                    round_deadline);
-                            }
-                            WaitingError::WaitFailed {
-                                current_duration_since_epoch,
-                                wait_duration,
-                            } => {
-                                counters::PROPOSAL_FAILURE_WAIT_S.observe_duration(wait_duration);
-                                counters::PROPOSAL_WAIT_FAILED_COUNT.inc();
-                                bail!(
-                                    "Even after waiting for {:?}, parent block timestamp usecs {:?} >= current timestamp usecs {:?}, will not create a proposal for this round",
-                                    wait_duration,
-                                    hqc.certified_block().timestamp_usecs(),
-                                    current_duration_since_epoch);
-                            }
-                        };
-                    }
                 }
-            } else {
-                self.time_service.get_current_timestamp()
+                Err(waiting_error) => {
+                    match waiting_error {
+                        WaitingError::MaxWaitExceeded => {
+                            counters::PROPOSAL_FAILURE_WAIT_S.observe_duration(Duration::new(0, 0));
+                            counters::PROPOSAL_MAX_WAIT_EXCEEDED_COUNT.inc();
+                            bail!(
+                                "Waiting until parent block timestamp usecs {:?} would exceed the round duration {:?}, hence will not create a proposal for this round",
+                                hqc.certified_block().timestamp_usecs(),
+                                round_deadline);
+                        }
+                        WaitingError::WaitFailed {
+                            current_duration_since_epoch,
+                            wait_duration,
+                        } => {
+                            counters::PROPOSAL_FAILURE_WAIT_S.observe_duration(wait_duration);
+                            counters::PROPOSAL_WAIT_FAILED_COUNT.inc();
+                            bail!(
+                                "Even after waiting for {:?}, parent block timestamp usecs {:?} >= current timestamp usecs {:?}, will not create a proposal for this round",
+                                wait_duration,
+                                hqc.certified_block().timestamp_usecs(),
+                                current_duration_since_epoch);
+                        }
+                    };
+                }
             }
         };
 

@@ -80,7 +80,6 @@ pub fn build_empty_tree() -> Arc<BlockStore<TestPayload>> {
         storage,
         initial_data,
         Arc::new(EmptyStateComputer),
-        true,
         10, // max pruned blocks in mem
     )))
 }

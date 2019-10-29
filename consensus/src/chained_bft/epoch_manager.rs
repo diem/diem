@@ -116,7 +116,6 @@ impl<T: Payload> EpochManager<T> {
             Arc::clone(&self.storage),
             initial_data,
             Arc::clone(&self.state_computer),
-            true,
             self.config.max_pruned_blocks_in_mem,
         )));
 
@@ -128,7 +127,6 @@ impl<T: Payload> EpochManager<T> {
             Arc::clone(&self.txn_manager),
             self.time_service.clone(),
             self.config.max_block_size,
-            true,
         );
 
         let pacemaker =
@@ -153,7 +151,6 @@ impl<T: Payload> EpochManager<T> {
             network_sender,
             self.storage.clone(),
             self.time_service.clone(),
-            true,
             validators,
         )
     }
