@@ -761,35 +761,40 @@ impl EventHandle {
                                 QuorumCert::certificate_for_genesis()
                             };
 
-                            let vote_data = VoteData::new(quorum_cert.certified_block_id(), quorum_cert.certified_state_id(), quorum_cert.certified_block_round(), quorum_cert.parent_block_id(), quorum_cert.parent_block_round());
-                            let parent_li = quorum_cert.ledger_info().ledger_info().clone();
-                            let li = LedgerInfo::new_by_version((txns.len() as u64) + parent_li.version(), parent_li);
-                            let signer = ValidatorSigner::genesis();
-                            let signature = signer.sign_message(li.hash()).expect("Fail to sign genesis ledger info");
-                            let mut signatures = BTreeMap::new();
-                            signatures.insert(signer.author(), signature);
-                            let new_qc = QuorumCert::new(vote_data, LedgerInfoWithSignatures::new(li.clone(), signatures));
+                            //compute current block state id
+                            match mint_state_computer.pre_compute(quorum_cert.certified_state_id(), &txns).await {
+                                Ok(state) => {
+                                    println!("----222222------>{:?}", quorum_cert.certified_state_id());
+                                    let vote_data = VoteData::new(quorum_cert.certified_block_id(),quorum_cert.certified_state_id(), quorum_cert.certified_block_round(), quorum_cert.parent_block_id(), quorum_cert.parent_block_round());
+                                    let parent_li = quorum_cert.ledger_info().ledger_info().clone();
+                                    let li = LedgerInfo::new_by_version((txns.len() as u64) + parent_li.version(), state.root_hash(), parent_li);
+                                    let signer = ValidatorSigner::genesis();//TODO:change signer
+                                    let signature = signer.sign_message(li.hash()).expect("Fail to sign genesis ledger info");
+                                    let mut signatures = BTreeMap::new();
+                                    signatures.insert(signer.author(), signature);
+                                    let new_qc = QuorumCert::new(vote_data, LedgerInfoWithSignatures::new(li, signatures));
 
-                            let block = Block::<Vec<SignedTransaction>>::new_internal(
-                                txns,
-                                0,
-                                height + 1,
-                                0,
-                                new_qc,
-                                &ValidatorSigner::from_int(1),
-                            );
+                                    let block = Block::<Vec<SignedTransaction>>::new_internal(
+                                        txns,
+                                        0,
+                                        height + 1,
+                                        0,
+                                        new_qc,
+                                        &ValidatorSigner::from_int(1),
+                                    );
 
-                            let block_pb = Into::<BlockProto>::into(block);
-                            let pow = Pow::new(6, 8);
-                            let nonce = generate_nonce();
-                            let proof = pow.solve(li.hash().as_ref(), nonce);
+                                    let block_pb = Into::<BlockProto>::into(block);
 
-                            // send block
-                            let msg = ConsensusMsg {
-                                message: Some(ConsensusMsg_oneof::NewBlock(block_pb)),
-                            };
-
-                            Self::broadcast_consensus_msg(consensus_peers.clone(), &mut mint_network_sender, true, mint_author, &mut self_sender, msg).await;
+                                    // send block
+                                    let msg = ConsensusMsg {
+                                        message: Some(ConsensusMsg_oneof::NewBlock(block_pb)),
+                                    };
+                                    Self::broadcast_consensus_msg(consensus_peers.clone(), &mut mint_network_sender, true, mint_author, &mut self_sender, msg).await;
+                                },
+                                Err(e) => {
+                                    println!("{:?}", e);
+                                },
+                            }
                         }
                     }
                     _ => {}
@@ -797,7 +802,7 @@ impl EventHandle {
 
                 let mut r = rand::thread_rng();
                 r.gen::<i32>();
-                let sleep_time = r.gen_range(5, 10);
+                let sleep_time = r.gen_range(30, 60);
                 println!("sleep begin.");
                 sleep(Duration::from_secs(sleep_time));
                 println!("sleep end.");

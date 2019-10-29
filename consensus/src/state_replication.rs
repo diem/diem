@@ -54,6 +54,15 @@ pub trait StateComputer: Send + Sync {
         transactions: &Self::Payload,
     ) -> Pin<Box<dyn Future<Output = Result<StateComputeResult>> + Send>>;
 
+    /// Pre compute
+    fn pre_compute(
+        &self,
+        // The state id of a parent block, on top of which the given transactions should be executed.
+        parent_state_id: HashValue,
+        // Transactions to execute.
+        transactions: &Self::Payload,
+    ) -> Pin<Box<dyn Future<Output = Result<StateComputeResult>> + Send>>;
+
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,

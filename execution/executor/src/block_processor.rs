@@ -36,6 +36,8 @@ use std::{
 };
 use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
 use vm_runtime::VMExecutor;
+use libra_types::transaction::SignedTransaction;
+use crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 
 #[derive(Debug)]
 enum Mode {
@@ -237,6 +239,84 @@ where
                             block.send_execute_block_response(resp);
                         }
                     }
+                }
+            }
+            Command::PreExecuteBlock {
+                transactions,
+                parent_state_id,
+                resp_sender,
+            } => {
+                let res = if parent_state_id == *ACCUMULATOR_PLACEHOLDER_HASH || parent_state_id == self.committed_trees.state_tree().root_hash() {
+                    let transactions:Vec<SignedTransaction> = transactions.iter()
+                        .map(|txn| {
+                            txn.as_signed_user_txn()
+                                .expect("All should be user transactions for now.")
+                        })
+                        .cloned()
+                        .collect();
+
+                    let tmp_committed_trees = Rc::new(SparseMerkleTree::new(parent_state_id));
+                    // Construct a StateView and pass the transactions to VM.
+                    let state_view = VerifiedStateView::new(
+                        Arc::clone(&self.storage_read_client),
+                        self.committed_trees.version_and_state_root(),
+                        &tmp_committed_trees,
+                    );
+                    let vm_outputs = {
+                        V::execute_block(transactions.clone(), &self.vm_config, &state_view)
+                    };
+
+                    // Since other validators have committed these transactions, their status should all be
+                    // TransactionStatus::Keep.
+                    for output in &vm_outputs {
+                        if let TransactionStatus::Discard(_) = output.status() {
+                            println!("Syncing transactions that should be discarded.");
+                        }
+                    }
+
+                    let (account_to_btree, account_to_proof) = state_view.into();
+                    // TODO: Remove once `TransactionListWithProof` carries `enum Transaction`
+                    let transactions = transactions
+                        .into_iter()
+                        .map(Transaction::UserTransaction)
+                        .collect::<Vec<_>>();
+                    let vm_output = match Self::process_vm_outputs(
+                        account_to_btree,
+                        account_to_proof,
+                        &transactions,
+                        vm_outputs,
+                        &self.committed_trees,
+                    ) {
+                        Ok(output) => {
+                            let accu_root_hash = output.executed_trees().txn_accumulator().root_hash();
+                            let version =
+                                (output.executed_trees().txn_accumulator().num_leaves() - 1) as Version;
+
+                            // Now that we have the root hash and execution status we can send the response to
+                            // consensus.
+                            // TODO: The VM will support a special transaction to set the validators for the
+                            // next epoch that is part of a block execution.
+                            let state_compute_result = StateComputeResult {
+                                executed_state: ExecutedState {
+                                    state_id: accu_root_hash,
+                                    version,
+                                    validators: None,
+                                },
+                                compute_status: vec![],
+                            };
+                            Ok(state_compute_result)
+                        },
+                        Err(e) => {
+                            Err(format_err!("{}", e))
+                        }
+                    };
+                    vm_output
+                } else {
+                    Err(format_err!("match parent_state_id err."))
+                };
+
+                if let Err(_err) = resp_sender.send(res) {
+                    warn!("Failed to send pre execute block response.");
                 }
             }
             Command::CommitBlock {
@@ -606,12 +686,15 @@ where
                 "storage_save_transactions.count",
                 txns_to_commit.len() as f64,
             );
+            println!("-------------->>>>>>: {}", (version + 1 - num_txns_to_commit));
             self.storage_write_client.save_transactions(
                 txns_to_commit,
                 version + 1 - num_txns_to_commit, /* first_version */
                 Some(ledger_info_with_sigs.clone()),
             )?;
+            println!("-------------->>>>>>: 111111");
         }
+        println!("-------------->>>>>>: 222222");
         // Only bump the counter when the commit succeeds.
         OP_COUNTERS.inc_by("num_accounts", num_accounts_created);
 

@@ -271,6 +271,38 @@ impl<V> Executor<V>
         resp_receiver
     }
 
+    /// Executes a block.
+    pub fn pre_execute_block(
+        &self,
+        transactions: Vec<Transaction>,
+        parent_state_id: HashValue,
+    ) -> oneshot::Receiver<Result<StateComputeResult>> {
+        debug!(
+            "Received request to pre execute block. Parent state id: {:x}.",
+            parent_state_id
+        );
+
+        let (resp_sender, resp_receiver) = oneshot::channel();
+        match self
+            .command_sender
+            .lock()
+            .expect("Failed to lock mutex.")
+            .as_ref()
+            {
+                Some(sender) => sender
+                    .send(Command::PreExecuteBlock {
+                        transactions,
+                        parent_state_id,
+                        resp_sender,
+                    })
+                    .expect("Did block processor thread panic?"),
+                None => resp_sender
+                    .send(Err(format_err!("Executor is shutting down.")))
+                    .expect("Failed to send error message."),
+            }
+        resp_receiver
+    }
+
     pub fn commit_block(
         &self,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
@@ -415,6 +447,11 @@ enum Command {
         transactions: Vec<Transaction>,
         parent_id: HashValue,
         id: HashValue,
+        resp_sender: oneshot::Sender<Result<StateComputeResult>>,
+    },
+    PreExecuteBlock {
+        transactions: Vec<Transaction>,
+        parent_state_id: HashValue,
         resp_sender: oneshot::Sender<Result<StateComputeResult>>,
     },
     CommitBlock {

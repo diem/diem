@@ -87,6 +87,50 @@ impl StateComputer for ExecutionProxy {
             .boxed()
     }
 
+    fn pre_compute(
+        &self,
+        // The id of a parent block, on top of which the given transactions should be executed.
+        parent_state_id: HashValue,
+        // Transactions to execute.
+        transactions: &Self::Payload,
+    ) -> Pin<Box<dyn Future<Output = Result<StateComputeResult>> + Send>> {
+        let pre_execution_instant = Instant::now();
+        let execute_future = self.executor.pre_execute_block(
+            transactions
+                .iter()
+                .map(|txn| Transaction::UserTransaction(txn.clone()))
+                .collect(),
+            parent_state_id,
+        );
+        async move {
+            match execute_future.await {
+                Ok(Ok(state_compute_result)) => {
+                    let execution_duration = pre_execution_instant.elapsed();
+                    let num_txns = state_compute_result.compute_status.len();
+                    if num_txns == 0 {
+                        // no txns in that block
+                        counters::EMPTY_BLOCK_EXECUTION_DURATION_S
+                            .observe_duration(execution_duration);
+                    } else {
+                        counters::BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
+                        if let Ok(nanos_per_txn) =
+                        u64::try_from(execution_duration.as_nanos() / num_txns as u128)
+                        {
+                            // TODO: use duration_float once it's stable
+                            // Tracking: https://github.com/rust-lang/rust/issues/54361
+                            counters::TXN_EXECUTION_DURATION_S
+                                .observe_duration(Duration::from_nanos(nanos_per_txn));
+                        }
+                    }
+                    Ok(state_compute_result)
+                }
+                Ok(Err(e)) => Err(e),
+                Err(e) => Err(e.into()),
+            }
+        }
+            .boxed()
+    }
+
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
