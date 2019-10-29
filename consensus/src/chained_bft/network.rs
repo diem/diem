@@ -7,24 +7,23 @@ use channel::{
     self, libra_channel,
     message_queues::{self, PerValidatorQueue, QueueStyle},
 };
+use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse};
 use consensus_types::{
-    block::Block,
     common::{Author, Payload},
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
 };
-use failure::{self, ResultExt};
+use failure::{self};
 use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
-use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_prost_ext::MessageExt;
 use libra_types::account_address::AccountAddress;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use network::{
     proto::{
-        BlockRetrievalStatus, ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock,
-        RespondBlock, SyncInfo as SyncInfoProto, VoteMsg as VoteMsgProto,
+        ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock,
+        SyncInfo as SyncInfoProto, VoteMsg as VoteMsgProto,
     },
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
 };
@@ -34,43 +33,11 @@ use std::{
     time::{Duration, Instant},
 };
 
-/// The response sent back from EventProcessor for the BlockRetrievalRequest.
+/// The block retrieval request is used internally for implementing RPC: the callback is executed
+/// for carrying the response
 #[derive(Debug)]
-pub struct BlockRetrievalResponse<T> {
-    pub status: BlockRetrievalStatus,
-    pub blocks: Vec<Block<T>>,
-}
-
-impl<T: Payload> BlockRetrievalResponse<T> {
-    pub fn verify(&self, block_id: HashValue, num_blocks: u64) -> failure::Result<()> {
-        ensure!(
-            self.status != BlockRetrievalStatus::Succeeded
-                || self.blocks.len() as u64 == num_blocks,
-            "not enough blocks returned, expect {}, get {}",
-            num_blocks,
-            self.blocks.len(),
-        );
-        self.blocks
-            .iter()
-            .try_fold(block_id, |expected_id, block| {
-                ensure!(
-                    block.id() == expected_id,
-                    "blocks doesn't form a chain: expect {}, get {}",
-                    expected_id,
-                    block.id()
-                );
-                Ok(block.parent_id())
-            })
-            .map(|_| ())
-    }
-}
-
-/// BlockRetrievalRequest carries a block id for the requested block as well as the
-/// oneshot sender to deliver the response.
-#[derive(Debug)]
-pub struct BlockRetrievalRequest<T> {
-    pub block_id: HashValue,
-    pub num_blocks: u64,
+pub struct IncomingBlockRetrievalRequest<T> {
+    pub req: BlockRetrievalRequest,
     pub response_sender: oneshot::Sender<BlockRetrievalResponse<T>>,
 }
 
@@ -79,7 +46,8 @@ pub struct BlockRetrievalRequest<T> {
 pub struct NetworkReceivers<T> {
     pub proposals: libra_channel::Receiver<PerValidatorQueue<ProposalMsg<T>>>,
     pub votes: libra_channel::Receiver<PerValidatorQueue<VoteMsg>>,
-    pub block_retrieval: libra_channel::Receiver<PerValidatorQueue<BlockRetrievalRequest<T>>>,
+    pub block_retrieval:
+        libra_channel::Receiver<PerValidatorQueue<IncomingBlockRetrievalRequest<T>>>,
     pub sync_info_msgs: libra_channel::Receiver<PerValidatorQueue<(SyncInfo, AccountAddress)>>,
 }
 
@@ -111,43 +79,28 @@ impl NetworkSender {
     }
 
     /// Tries to retrieve num of blocks backwards starting from id from the given peer: the function
-    /// returns a future that is either fulfilled with BlockRetrievalResponse, or with a
-    /// BlockRetrievalFailure.
+    /// returns a future that is fulfilled with BlockRetrievalResponse.
     pub async fn request_block<T: Payload>(
         &mut self,
-        block_id: HashValue,
-        num_blocks: u64,
+        retrieval_request: BlockRetrievalRequest,
         from: Author,
         timeout: Duration,
     ) -> failure::Result<BlockRetrievalResponse<T>> {
         ensure!(from != self.author, "Retrieve block from self");
-        let mut req_msg = RequestBlock::default();
-        req_msg.block_id = block_id.to_vec();
-        req_msg.num_blocks = num_blocks;
-        counters::BLOCK_RETRIEVAL_COUNT.inc_by(num_blocks as i64);
+        counters::BLOCK_RETRIEVAL_COUNT.inc_by(retrieval_request.num_blocks() as i64);
         let pre_retrieval_instant = Instant::now();
-
-        let res_block = self
+        let req_msg = RequestBlock::try_from(retrieval_request.clone())?;
+        let response_msg = self
             .network_sender
             .request_block(from, req_msg, timeout)
             .await?;
-        let mut blocks = vec![];
-        let status = res_block.status();
-        for block in res_block.blocks.into_iter() {
-            match Block::try_from(block) {
-                Ok(block) => {
-                    block
-                        .validate_signatures(self.validators.as_ref())
-                        .and_then(|_| block.verify_well_formed())
-                        .with_context(|e| format_err!("Invalid block because of {:?}", e))?;
-                    blocks.push(block);
-                }
-                Err(e) => bail!("Failed to deserialize block because of {:?}", e),
-            };
-        }
         counters::BLOCK_RETRIEVAL_DURATION_S.observe_duration(pre_retrieval_instant.elapsed());
-        let response = BlockRetrievalResponse { status, blocks };
-        response.verify(block_id, num_blocks)?;
+        let response = BlockRetrievalResponse::<T>::try_from(response_msg)?;
+        response.verify(
+            retrieval_request.block_id(),
+            retrieval_request.num_blocks(),
+            self.validators.as_ref(),
+        )?;
         Ok(response)
     }
 
@@ -273,7 +226,7 @@ impl NetworkSender {
 pub struct NetworkTask<T> {
     proposal_tx: libra_channel::Sender<PerValidatorQueue<ProposalMsg<T>>>,
     vote_tx: libra_channel::Sender<PerValidatorQueue<VoteMsg>>,
-    block_request_tx: libra_channel::Sender<PerValidatorQueue<BlockRetrievalRequest<T>>>,
+    block_request_tx: libra_channel::Sender<PerValidatorQueue<IncomingBlockRetrievalRequest<T>>>,
     sync_info_tx: libra_channel::Sender<PerValidatorQueue<(SyncInfo, AccountAddress)>>,
     all_events: Box<dyn Stream<Item = failure::Result<Event<ConsensusMsg>>> + Send + Unpin>,
     validators: Arc<ValidatorVerifier>,
@@ -452,30 +405,21 @@ impl<T: Payload> NetworkTask<T> {
     async fn process_request_block(
         &mut self,
         peer_id: AccountAddress,
-        request: RequestBlock,
+        request_msg: RequestBlock,
         callback: oneshot::Sender<Result<Bytes, RpcError>>,
     ) -> failure::Result<()> {
-        let block_id = HashValue::from_slice(&request.block_id[..])?;
-        let num_blocks = request.num_blocks;
-        debug!(
-            "Received request_block RPC for {} blocks from {:?}",
-            num_blocks, block_id
-        );
+        let req = BlockRetrievalRequest::try_from(request_msg)?;
+        debug!("Received block retrieval request {}", req);
         let (tx, rx) = oneshot::channel();
-        let request = BlockRetrievalRequest {
-            block_id,
-            num_blocks,
+        let req_with_callback = IncomingBlockRetrievalRequest {
+            req,
             response_sender: tx,
         };
-        self.block_request_tx.put(peer_id, request);
-        let BlockRetrievalResponse { status, blocks } = rx.await?;
-        let mut response = RespondBlock::default();
-        response.set_status(status);
-        for b in blocks {
-            response.blocks.push(b.try_into()?);
-        }
+        self.block_request_tx.put(peer_id, req_with_callback);
+        let response = rx.await?;
+        let response_serialized = RespondBlock::try_from(response)?;
         let response_msg = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::RespondBlock(response)),
+            message: Some(ConsensusMsg_oneof::RespondBlock(response_serialized)),
         };
         let response_data = response_msg.to_bytes()?;
         callback

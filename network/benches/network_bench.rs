@@ -23,7 +23,7 @@ use libra_config::config::RoleType;
 use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use libra_prost_ext::MessageExt;
 use network::{
-    proto::{Block, ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock},
+    proto::{ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock},
     protocols::rpc::error::RpcError,
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
@@ -329,17 +329,13 @@ async fn request_block(
 }
 
 fn compose_request_block() -> RequestBlock {
-    let mut req = RequestBlock::default();
-    req.block_id = vec![0u8; 32];
-    req
+    RequestBlock::default()
 }
 
 fn compose_respond_block(msg_len: usize) -> ConsensusMsg {
     let mut msg = ConsensusMsg::default();
     let mut res = RespondBlock::default();
-    let mut block = Block::default();
-    block.bytes = vec![0u8; msg_len];
-    res.blocks.push(block);
+    res.bytes = vec![0u8; msg_len];
     msg.message = Some(ConsensusMsg_oneof::RespondBlock(res));
     msg
 }

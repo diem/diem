@@ -4,6 +4,7 @@
 pub mod block;
 pub mod block_data;
 pub mod block_info;
+pub mod block_retrieval;
 pub mod common;
 pub mod executed_block;
 pub mod proposal_msg;

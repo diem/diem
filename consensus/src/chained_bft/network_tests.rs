@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::{
-    network::{BlockRetrievalResponse, NetworkReceivers, NetworkSender},
+    network::{NetworkReceivers, NetworkSender},
     test_utils::{self, consensus_runtime, placeholder_ledger_info},
 };
 use channel;
@@ -14,7 +14,7 @@ use consensus_types::{
 use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
-    proto::{BlockRetrievalStatus, ConsensusMsg, ConsensusMsg_oneof},
+    proto::{ConsensusMsg, ConsensusMsg_oneof},
     protocols::rpc::InboundRpcRequest,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
@@ -319,6 +319,9 @@ impl DropConfig {
 }
 
 use crate::chained_bft::network::NetworkTask;
+use consensus_types::block_retrieval::{
+    BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
+};
 #[cfg(test)]
 use libra_types::crypto_proxies::random_validator_verifier;
 use std::convert::TryFrom;
@@ -426,10 +429,10 @@ fn test_rpc() {
         while let Some(request) = block_retrieval.next().await {
             request
                 .response_sender
-                .send(BlockRetrievalResponse {
-                    status: BlockRetrievalStatus::Succeeded,
-                    blocks: vec![Block::clone(genesis_clone.as_ref())],
-                })
+                .send(BlockRetrievalResponse::new(
+                    BlockRetrievalStatus::Succeeded,
+                    vec![Block::clone(genesis_clone.as_ref())],
+                ))
                 .unwrap();
         }
     };
@@ -437,9 +440,13 @@ fn test_rpc() {
     let peer = peers[1];
     block_on(async move {
         let response = nodes[0]
-            .request_block(genesis.id(), 1, peer, Duration::from_secs(5))
+            .request_block(
+                BlockRetrievalRequest::new(genesis.id(), 1),
+                peer,
+                Duration::from_secs(5),
+            )
             .await
             .unwrap();
-        assert_eq!(response.blocks[0], *genesis);
+        assert_eq!(response.blocks()[0], *genesis);
     });
 }

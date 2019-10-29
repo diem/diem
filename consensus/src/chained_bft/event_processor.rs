@@ -9,7 +9,7 @@ use crate::{
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
         },
-        network::{BlockRetrievalRequest, BlockRetrievalResponse, NetworkSender},
+        network::NetworkSender,
         persistent_storage::PersistentStorage,
     },
     counters,
@@ -36,7 +36,9 @@ use mirai_annotations::{
     debug_checked_precondition, debug_checked_precondition_eq, debug_checked_verify,
     debug_checked_verify_eq,
 };
-use network::proto::BlockRetrievalStatus;
+
+use crate::chained_bft::network::IncomingBlockRetrievalRequest;
+use consensus_types::block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus};
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::SafetyRules;
@@ -771,11 +773,11 @@ impl<T: Payload> EventProcessor<T> {
     ///
     /// The current version of the function is not really async, but keeping it this way for
     /// future possible changes.
-    pub async fn process_block_retrieval(&self, request: BlockRetrievalRequest<T>) {
+    pub async fn process_block_retrieval(&self, request: IncomingBlockRetrievalRequest<T>) {
         let mut blocks = vec![];
         let mut status = BlockRetrievalStatus::Succeeded;
-        let mut id = request.block_id;
-        while (blocks.len() as u64) < request.num_blocks {
+        let mut id = request.req.block_id();
+        while (blocks.len() as u64) < request.req.num_blocks() {
             if let Some(executed_block) = self.block_store.get_block(id) {
                 id = executed_block.parent_id();
                 blocks.push(executed_block.block().clone());
@@ -791,7 +793,7 @@ impl<T: Payload> EventProcessor<T> {
 
         if let Err(e) = request
             .response_sender
-            .send(BlockRetrievalResponse { status, blocks })
+            .send(BlockRetrievalResponse::new(status, blocks))
         {
             error!("Failed to return the requested block: {:?}", e);
         }
