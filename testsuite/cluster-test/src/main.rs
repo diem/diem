@@ -1,3 +1,4 @@
+use cluster_test::effects::RemoveNetworkEffects;
 use cluster_test::experiments::PacketLossRandomValidators;
 use cluster_test::instance::Instance;
 use cluster_test::prometheus::Prometheus;
@@ -78,6 +79,8 @@ struct Args {
     packet_loss_experiment: bool,
     #[structopt(long, group = "action")]
     perf_run: bool,
+    #[structopt(long, group = "action")]
+    cleanup: bool,
 
     // emit_tx options
     #[structopt(long, default_value = "10")]
@@ -185,6 +188,8 @@ pub fn main() {
         runner.run_single_experiment(Box::new(experiment)).unwrap();
     } else if args.perf_run {
         runner.perf_run();
+    } else if args.cleanup {
+        runner.cleanup();
     }
 }
 
@@ -441,6 +446,7 @@ impl ClusterTestRunner {
     }
 
     pub fn run_suite_in_loop(&mut self) {
+        self.cleanup();
         let mut hash_to_tag = None;
         loop {
             if let Some(hash) = self.deployment_manager.latest_hash_changed() {
@@ -588,6 +594,7 @@ impl ClusterTestRunner {
         &mut self,
         experiment: Box<dyn Experiment>,
     ) -> failure::Result<()> {
+        self.cleanup();
         let events = self.logs.recv_all();
         if let Err(s) = self.health_check_runner.run(&events, &HashSet::new(), true) {
             bail!(
@@ -781,6 +788,26 @@ impl ClusterTestRunner {
         self.stop();
         self.start();
         info!("Completed");
+    }
+
+    fn cleanup(&self) {
+        let cleanup_all_instances: Vec<_> = self
+            .cluster
+            .instances()
+            .clone()
+            .into_iter()
+            .map(|instance| {
+                move || {
+                    if let Err(e) = RemoveNetworkEffects::new(instance.clone()).apply() {
+                        info!(
+                            "Failed to remove network effects for {}. Error: {}",
+                            instance, e
+                        );
+                    }
+                }
+            })
+            .collect();
+        self.execute_jobs(cleanup_all_instances);
     }
 
     pub fn stop(&self) {

@@ -18,7 +18,7 @@ impl Action for RemoveNetworkEffects {
     fn apply(&self) -> failure::Result<()> {
         info!("RemoveNetworkEffects for {}", self.instance);
         self.instance
-            .run_cmd(vec!["sudo tc qdisc delete dev eth0 root".to_string()])
+            .run_cmd(vec!["sudo tc qdisc delete dev eth0 root; true".to_string()])
     }
 
     fn is_complete(&self) -> bool {
