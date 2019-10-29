@@ -348,7 +348,7 @@ fn process_successful_proposal_test() {
         );
         assert_eq!(
             *node.storage.shared_storage.state.lock().unwrap(),
-            ConsensusState::new(1, 0),
+            ConsensusState::new(0, 1, 0),
         );
     });
 }
@@ -781,7 +781,7 @@ fn basic_restart_test() {
     node = node.restart(&mut playground, runtime.executor());
     assert_eq!(
         node.event_processor.consensus_state(),
-        ConsensusState::new(num_proposals, num_proposals - 2),
+        ConsensusState::new(0, num_proposals, num_proposals - 2),
     );
     for block in proposals {
         assert_eq!(node.block_store.block_exists(block.id()), true);
