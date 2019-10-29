@@ -430,9 +430,7 @@ fn test_consensus_rpc() {
         network_provider.add_consensus(vec![rpc_protocol.clone()]);
     runtime.executor().spawn(network_provider.start());
 
-    let block_id = vec![0_u8; 32];
-    let mut req_block_msg = RequestBlock::default();
-    req_block_msg.block_id = block_id;
+    let req_block_msg = RequestBlock::default();
 
     let res_block_msg = RespondBlock::default();
 

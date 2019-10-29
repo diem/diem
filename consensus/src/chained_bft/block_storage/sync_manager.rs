@@ -8,6 +8,7 @@ use crate::{
     },
     counters,
 };
+use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus};
 use consensus_types::{
     block::Block,
     common::{Author, Payload},
@@ -19,7 +20,6 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
 use mirai_annotations::checked_precondition;
-use network::proto::BlockRetrievalStatus;
 use rand::{prelude::*, Rng};
 use std::{
     clone::Clone,
@@ -248,7 +248,11 @@ impl BlockRetriever {
             );
             let response = self
                 .network
-                .request_block(block_id, num_blocks, peer, timeout)
+                .request_block(
+                    BlockRetrievalRequest::new(block_id, num_blocks),
+                    peer,
+                    timeout,
+                )
                 .await;
             let response = match response {
                 Err(e) => {
@@ -262,16 +266,16 @@ impl BlockRetriever {
                 }
                 Ok(response) => response,
             };
-            if response.status != BlockRetrievalStatus::Succeeded {
+            if response.status() != BlockRetrievalStatus::Succeeded {
                 warn!(
                     "Failed to fetch block {} from {}: {:?}, trying another peer",
                     block_id,
                     peer.short_str(),
-                    response.status
+                    response.status()
                 );
                 continue;
             }
-            return Ok(response.blocks);
+            return Ok(response.blocks().clone());
         }
     }
 

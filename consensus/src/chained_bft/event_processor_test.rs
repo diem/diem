@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::network::NetworkTask;
+use crate::chained_bft::network::{IncomingBlockRetrievalRequest, NetworkTask};
 use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
@@ -12,7 +12,7 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::RotatingProposer,
         },
-        network::{BlockRetrievalRequest, BlockRetrievalResponse, NetworkSender},
+        network::NetworkSender,
         network_tests::NetworkPlayground,
         persistent_storage::RecoveryData,
         test_utils::{
@@ -23,6 +23,7 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
+use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus};
 use consensus_types::{
     block::{
         block_test_utils::{placeholder_certificate_for_block, placeholder_ledger_info},
@@ -48,7 +49,7 @@ use libra_types::crypto_proxies::{
     random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
 };
 use network::{
-    proto::{BlockRetrievalStatus, ConsensusMsg_oneof},
+    proto::ConsensusMsg_oneof,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use safety_rules::{ConsensusState, SafetyRules};
@@ -690,55 +691,56 @@ fn process_block_retrieval() {
 
         // first verify that we can retrieve the block if it's in the tree
         let (tx1, rx1) = oneshot::channel();
-        let single_block_request = BlockRetrievalRequest {
-            block_id,
-            num_blocks: 1,
+        let single_block_request = IncomingBlockRetrievalRequest {
+            req: BlockRetrievalRequest::new(block_id, 1),
             response_sender: tx1,
         };
         node.event_processor
             .process_block_retrieval(single_block_request)
             .await;
         match rx1.await {
-            Ok(BlockRetrievalResponse { status, blocks }) => {
-                assert_eq!(status, BlockRetrievalStatus::Succeeded);
-                assert_eq!(block_id, blocks.get(0).unwrap().id());
+            Ok(response) => {
+                assert_eq!(response.status(), BlockRetrievalStatus::Succeeded);
+                assert_eq!(response.blocks().get(0).unwrap().id(), block_id);
             }
             _ => panic!("block retrieval failure"),
         }
 
         // verify that if a block is not there, return ID_NOT_FOUND
         let (tx2, rx2) = oneshot::channel();
-        let missing_block_request = BlockRetrievalRequest {
-            block_id: HashValue::random(),
-            num_blocks: 1,
+        let missing_block_request = IncomingBlockRetrievalRequest {
+            req: BlockRetrievalRequest::new(HashValue::random(), 1),
             response_sender: tx2,
         };
+
         node.event_processor
             .process_block_retrieval(missing_block_request)
             .await;
         match rx2.await {
-            Ok(BlockRetrievalResponse { status, blocks }) => {
-                assert_eq!(status, BlockRetrievalStatus::IdNotFound);
-                assert!(blocks.is_empty());
+            Ok(response) => {
+                assert_eq!(response.status(), BlockRetrievalStatus::IdNotFound);
+                assert!(response.blocks().is_empty());
             }
             _ => panic!("block retrieval failure"),
         }
 
         // if asked for many blocks, return NOT_ENOUGH_BLOCKS
         let (tx3, rx3) = oneshot::channel();
-        let many_block_request = BlockRetrievalRequest {
-            block_id,
-            num_blocks: 3,
+        let many_block_request = IncomingBlockRetrievalRequest {
+            req: BlockRetrievalRequest::new(block_id, 3),
             response_sender: tx3,
         };
         node.event_processor
             .process_block_retrieval(many_block_request)
             .await;
         match rx3.await {
-            Ok(BlockRetrievalResponse { status, blocks }) => {
-                assert_eq!(status, BlockRetrievalStatus::NotEnoughBlocks);
-                assert_eq!(block_id, blocks.get(0).unwrap().id());
-                assert_eq!(node.block_store.root().id(), blocks.get(1).unwrap().id());
+            Ok(response) => {
+                assert_eq!(response.status(), BlockRetrievalStatus::NotEnoughBlocks);
+                assert_eq!(block_id, response.blocks().get(0).unwrap().id());
+                assert_eq!(
+                    node.block_store.root().id(),
+                    response.blocks().get(1).unwrap().id()
+                );
             }
             _ => panic!("block retrieval failure"),
         }
