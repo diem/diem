@@ -52,6 +52,7 @@ pub enum Error {
 /// (e.g., last vote round and preferred block round).
 #[derive(Serialize, Default, Deserialize, Debug, Eq, PartialEq, Clone)]
 pub struct ConsensusState {
+    epoch: u64,
     last_vote_round: Round,
 
     // A "preferred block" is the two-chain head with the highest block round.
@@ -71,17 +72,19 @@ impl Display for ConsensusState {
         write!(
             f,
             "ConsensusState: [\n\
+             \tepoch = {},
              \tlast_vote_round = {},\n\
              \tpreferred_block_round = {}\n\
              ]",
-            self.last_vote_round, self.preferred_block_round
+            self.epoch, self.last_vote_round, self.preferred_block_round
         )
     }
 }
 
 impl ConsensusState {
-    pub fn new(last_vote_round: Round, preferred_block_round: Round) -> Self {
+    pub fn new(epoch: u64, last_vote_round: Round, preferred_block_round: Round) -> Self {
         Self {
+            epoch,
             last_vote_round,
             preferred_block_round,
         }
