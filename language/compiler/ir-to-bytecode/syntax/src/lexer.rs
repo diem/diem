@@ -288,7 +288,7 @@ fn get_name_len(text: &str) -> usize {
             'a'..='z' | 'A'..='Z' | '$' | '_' | '0'..='9' => false,
             _ => true,
         })
-        .unwrap_or(text.len())
+        .unwrap_or_else(|| text.len())
 }
 
 // Return the length of the substring containing characters in [0-9].
@@ -298,7 +298,7 @@ fn get_decimal_digits_len(text: &str) -> usize {
             '0'..='9' => false,
             _ => true,
         })
-        .unwrap_or(text.len())
+        .unwrap_or_else(|| text.len())
 }
 
 // Return the length of the substring containing characters in [0-9a-fA-F].
@@ -308,7 +308,7 @@ fn get_hex_digits_len(text: &str) -> usize {
             'a'..='f' | 'A'..='F' | '0'..='9' => false,
             _ => true,
         })
-        .unwrap_or(text.len())
+        .unwrap_or_else(|| text.len())
 }
 
 // Check for an optional sequence of hex digits following by a double quote, and return
