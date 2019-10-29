@@ -15,7 +15,7 @@ use crate::{
     common::NetworkPublicKeys,
     connectivity_manager::ConnectivityRequest,
     counters,
-    peer_manager::PeerManagerNotification,
+    peer_manager::{PeerManagerNotification, PeerManagerRequest},
     protocols::{
         direct_send::{DirectSendNotification, DirectSendRequest, Message},
         rpc::{InboundRpcRequest, OutboundRpcRequest, RpcNotification, RpcRequest},
@@ -104,6 +104,8 @@ pub trait LibraNetworkProvider {
 pub struct NetworkProvider<TSubstream> {
     /// Map from protocol to upstream handlers for events of that protocol type.
     upstream_handlers: HashMap<ProtocolId, channel::Sender<NetworkNotification>>,
+    /// Channel to send requests to the PeerManager actor.
+    peer_mgr_reqs_tx: channel::Sender<PeerManagerRequest<TSubstream>>,
     /// Channel over which we receive notifications from PeerManager.
     peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
     /// Channel over which we send requets to RPC actor.
@@ -211,6 +213,7 @@ where
 
     fn start(self: Box<Self>) -> BoxFuture<'static, ()> {
         let f = async move {
+            let peer_mgr_reqs_tx = self.peer_mgr_reqs_tx.clone();
             let rpc_reqs_tx = self.rpc_reqs_tx.clone();
             let ds_reqs_tx = self.ds_reqs_tx.clone();
             let conn_mgr_reqs_tx = self.conn_mgr_reqs_tx.clone();
@@ -219,6 +222,7 @@ where
                 .map(move |req| {
                     Self::handle_network_request(
                         req,
+                        peer_mgr_reqs_tx.clone(),
                         rpc_reqs_tx.clone(),
                         ds_reqs_tx.clone(),
                         conn_mgr_reqs_tx.clone(),
@@ -271,6 +275,7 @@ where
     TSubstream: Debug + Send,
 {
     pub fn new(
+        peer_mgr_reqs_tx: channel::Sender<PeerManagerRequest<TSubstream>>,
         peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
         rpc_reqs_tx: channel::Sender<RpcRequest>,
         rpc_notifs_rx: channel::Receiver<RpcNotification>,
@@ -285,6 +290,7 @@ where
     ) -> Self {
         Self {
             upstream_handlers: HashMap::new(),
+            peer_mgr_reqs_tx,
             peer_mgr_notifs_rx,
             rpc_reqs_tx,
             rpc_notifs_rx,
@@ -301,6 +307,7 @@ where
 
     async fn handle_network_request(
         req: NetworkRequest,
+        mut peer_mgr_reqs_tx: channel::Sender<PeerManagerRequest<TSubstream>>,
         mut rpc_reqs_tx: channel::Sender<RpcRequest>,
         mut ds_reqs_tx: channel::Sender<DirectSendRequest>,
         conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
@@ -329,15 +336,24 @@ where
             }
             NetworkRequest::UpdateEligibleNodes(nodes) => {
                 let mut conn_mgr_reqs_tx = conn_mgr_reqs_tx
-                    .clone()
                     .expect("Received requst to update eligible nodes in permissionless network");
                 conn_mgr_reqs_tx
                     .send(ConnectivityRequest::UpdateEligibleNodes(nodes))
                     .await
                     .unwrap();
             }
-            NetworkRequest::DialPeer(_peer_id, _addr, _sender) => {}
-            NetworkRequest::DisconnectPeer(_peer_id, _sender) => {}
+            NetworkRequest::DialPeer(peer_id, addr, sender) => {
+                peer_mgr_reqs_tx
+                    .send(PeerManagerRequest::DialPeer(peer_id, addr, sender))
+                    .await
+                    .unwrap();
+            }
+            NetworkRequest::DisconnectPeer(peer_id, sender) => {
+                peer_mgr_reqs_tx
+                    .send(PeerManagerRequest::DisconnectPeer(peer_id, sender))
+                    .await
+                    .unwrap();
+            }
         }
     }
 
