@@ -44,13 +44,14 @@ impl Instance {
     {
         let ssh_dest = format!("ec2-user@{}", self.ip);
         let ssh_args = vec![
+            "ssh",
             "-i",
             "/libra_rsa",
             "-oStrictHostKeyChecking=no",
             ssh_dest.as_str(),
         ];
-        let mut ssh_cmd = Command::new("ssh");
-        ssh_cmd.args(ssh_args).args(args);
+        let mut ssh_cmd = Command::new("timeout");
+        ssh_cmd.arg("15").args(ssh_args).args(args);
         if no_std_err {
             ssh_cmd.stderr(Stdio::null());
         }
