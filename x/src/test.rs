@@ -58,15 +58,15 @@ pub fn run(args: Args, config: Config) -> Result<()> {
     } else if utils::project_is_root()? {
         // TODO Maybe only run a subest of tests if we're not inside
         // a package but not at the project root (e.g. language)
+        run_cargo_test_with_exclusions(
+            config.package_exceptions().iter().map(|(p, _)| p.as_str()),
+            pass_through_args.clone(),
+        )?;
         run_cargo_test_on_packages_separate(
             config
                 .package_exceptions()
                 .iter()
                 .map(|(p, pkg)| (p.as_str(), pkg)),
-            pass_through_args.clone(),
-        )?;
-        run_cargo_test_with_exclusions(
-            config.package_exceptions().iter().map(|(p, _)| p.as_str()),
             pass_through_args,
         )?;
         Ok(())
