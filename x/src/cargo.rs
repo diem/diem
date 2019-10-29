@@ -93,84 +93,83 @@ impl Cargo {
     }
 }
 
-pub enum CargoCommand {
-    Test,
+#[derive(Debug, Default)]
+pub struct CargoArgs {
+    pub all_features: bool,
 }
 
-impl CargoCommand {
-    pub fn run_on_local_package(
-        &self,
-        all_features: bool,
-        pass_through_args: &[OsString],
-    ) -> Result<()> {
+pub enum CargoCommand<'a> {
+    Test(&'a [OsString]),
+}
+
+impl<'a> CargoCommand<'a> {
+    pub fn run_on_local_package(&self, args: &CargoArgs) -> Result<()> {
         let mut cargo = Cargo::new(self.as_str());
-        if all_features {
-            cargo.all_features();
-        }
-        cargo.pass_through(pass_through_args).run()
+        Self::apply_args(&mut cargo, args);
+        cargo.pass_through(self.pass_through_args()).run()
     }
 
-    pub fn run_on_packages_separate<I, S>(
-        &self,
-        packages: I,
-        pass_through_args: &[OsString],
-    ) -> Result<()>
+    pub fn run_on_packages_separate<I, S>(&self, packages: I) -> Result<()>
     where
-        I: IntoIterator<Item = (S, bool)>,
+        I: IntoIterator<Item = (S, CargoArgs)>,
         S: AsRef<OsStr>,
     {
-        for (name, all_features) in packages {
+        for (name, args) in packages {
             let mut cargo = Cargo::new(self.as_str());
-            if all_features {
-                cargo.all_features();
-            }
+            Self::apply_args(&mut cargo, &args);
             cargo
                 .packages(&[name])
                 .current_dir(project_root())
-                .pass_through(pass_through_args)
+                .pass_through(self.pass_through_args())
                 .run()?;
         }
         Ok(())
     }
 
-    pub fn run_on_packages_together<I, S>(
-        &self,
-        packages: I,
-        pass_through_args: &[OsString],
-    ) -> Result<()>
+    pub fn run_on_packages_together<I, S>(&self, packages: I, args: &CargoArgs) -> Result<()>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
-        Cargo::new(self.as_str())
+        let mut cargo = Cargo::new(self.as_str());
+        Self::apply_args(&mut cargo, args);
+        cargo
             .current_dir(project_root())
-            .all_features()
             .packages(packages)
-            .pass_through(pass_through_args)
+            .pass_through(self.pass_through_args())
             .run()
     }
 
-    pub fn run_with_exclusions<I, S>(
-        &self,
-        exclusions: I,
-        pass_through_args: &[OsString],
-    ) -> Result<()>
+    pub fn run_with_exclusions<I, S>(&self, exclusions: I, args: &CargoArgs) -> Result<()>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
-        Cargo::new(self.as_str())
+        let mut cargo = Cargo::new(self.as_str());
+        Self::apply_args(&mut cargo, args);
+        cargo
             .current_dir(project_root())
             .workspace()
-            .all_features()
             .exclusions(exclusions)
-            .pass_through(pass_through_args)
+            .pass_through(self.pass_through_args())
             .run()
     }
 
     pub fn as_str(&self) -> &'static str {
         match self {
-            CargoCommand::Test => "test",
+            CargoCommand::Test(_) => "test",
+        }
+    }
+
+    fn pass_through_args(&self) -> &[OsString] {
+        match self {
+            CargoCommand::Test(args) => args,
+        }
+    }
+
+    fn apply_args(cargo: &mut Cargo, args: &CargoArgs) {
+        if args.all_features {
+            cargo.all_features();
         }
     }
 }

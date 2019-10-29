@@ -1,4 +1,8 @@
-use crate::{cargo::CargoCommand, config::Config, utils, Result};
+use crate::{
+    cargo::{CargoArgs, CargoCommand},
+    config::Config,
+    utils, Result,
+};
 use std::ffi::OsString;
 use structopt::StructOpt;
 
@@ -19,45 +23,58 @@ pub struct Args {
 pub fn run(mut args: Args, config: Config) -> Result<()> {
     args.args.extend(args.testname.clone());
 
+    let cmd = CargoCommand::Test(&args.args);
+
     if args.unit {
-        CargoCommand::Test.run_with_exclusions(
+        cmd.run_with_exclusions(
             config.package_exceptions().iter().map(|(p, _)| p),
-            &args.args,
+            &CargoArgs { all_features: true },
         )?;
-        CargoCommand::Test.run_on_packages_separate(
+        cmd.run_on_packages_separate(
             config
                 .package_exceptions()
                 .iter()
                 .filter(|(_, pkg)| !pkg.system)
-                .map(|(name, pkg)| (name, pkg.all_features)),
-            &args.args,
+                .map(|(name, pkg)| {
+                    (
+                        name,
+                        CargoArgs {
+                            all_features: pkg.all_features,
+                        },
+                    )
+                }),
         )?;
         Ok(())
     } else if !args.package.is_empty() {
         let run_together = args.package.iter().filter(|p| !config.is_exception(p));
         let run_separate = args.package.iter().filter_map(|p| {
-            config
-                .package_exceptions()
-                .get(p)
-                .map(|e| (p, e.all_features))
+            config.package_exceptions().get(p).map(|e| {
+                (
+                    p,
+                    CargoArgs {
+                        all_features: e.all_features,
+                    },
+                )
+            })
         });
-        CargoCommand::Test.run_on_packages_together(run_together, &args.args)?;
-        CargoCommand::Test.run_on_packages_separate(run_separate, &args.args)?;
+        cmd.run_on_packages_together(run_together, &CargoArgs { all_features: true })?;
+        cmd.run_on_packages_separate(run_separate)?;
         Ok(())
     } else if utils::project_is_root()? {
         // TODO Maybe only run a subest of tests if we're not inside
         // a package but not at the project root (e.g. language)
-        CargoCommand::Test.run_with_exclusions(
+        cmd.run_with_exclusions(
             config.package_exceptions().iter().map(|(p, _)| p),
-            &args.args,
+            &CargoArgs { all_features: true },
         )?;
-        CargoCommand::Test.run_on_packages_separate(
-            config
-                .package_exceptions()
-                .iter()
-                .map(|(name, pkg)| (name, pkg.all_features)),
-            &args.args,
-        )?;
+        cmd.run_on_packages_separate(config.package_exceptions().iter().map(|(name, pkg)| {
+            (
+                name,
+                CargoArgs {
+                    all_features: pkg.all_features,
+                },
+            )
+        }))?;
         Ok(())
     } else {
         let package = utils::get_local_package()?;
@@ -67,7 +84,7 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
             .map(|pkg| pkg.all_features)
             .unwrap_or(true);
 
-        CargoCommand::Test.run_on_local_package(all_features, &args.args)?;
+        cmd.run_on_local_package(&CargoArgs { all_features })?;
         Ok(())
     }
 }
