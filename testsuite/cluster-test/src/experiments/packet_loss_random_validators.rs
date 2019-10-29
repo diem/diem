@@ -8,7 +8,6 @@ use crate::{
     instance::Instance,
 };
 use failure;
-use rand::Rng;
 use std::{collections::HashSet, fmt, thread, time::Duration};
 
 pub struct PacketLossRandomValidators {
@@ -19,23 +18,9 @@ pub struct PacketLossRandomValidators {
 
 impl PacketLossRandomValidators {
     pub fn new(count: usize, percent: f32, duration: Duration, cluster: &Cluster) -> Self {
-        if count > cluster.instances().len() {
-            panic!(
-                "count {} should be <= number of instances {}",
-                count,
-                cluster.instances().len()
-            );
-        }
-        let mut instances = Vec::with_capacity(count);
-        let mut all_instances = cluster.instances().clone();
-        let mut rnd = rand::thread_rng();
-        for _i in 0..count {
-            let instance = all_instances.remove(rnd.gen_range(0, all_instances.len()));
-            instances.push(instance);
-        }
-
+        let (test_cluster, _) = cluster.split_n_random(count);
         Self {
-            instances,
+            instances: test_cluster.into_instances(),
             percent,
             duration,
         }
