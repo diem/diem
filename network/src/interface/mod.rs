@@ -28,10 +28,10 @@ use crate::{
     ProtocolId,
 };
 use channel;
-use futures::{future::BoxFuture, FutureExt, SinkExt, StreamExt};
+use futures::{future::BoxFuture, FutureExt, SinkExt, StreamExt,lock::Mutex};
 use libra_types::PeerId;
 use logger::prelude::*;
-use std::{collections::HashMap, fmt::Debug, time::Duration};
+use std::{collections::{HashMap,HashSet}, fmt::Debug, time::Duration,sync::{Arc}};
 
 pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
 pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
@@ -47,6 +47,8 @@ pub enum NetworkRequest {
     SendMessage(PeerId, Message),
     /// Update set of nodes eligible to join the network.
     UpdateEligibleNodes(HashMap<PeerId, NetworkPublicKeys>),
+
+    BroadCastMessage(Message),
 }
 
 /// Notifications that [`NetworkProvider`] sends to consumers of its API. The
@@ -113,6 +115,7 @@ pub struct NetworkProvider<TSubstream> {
     max_concurrent_notifs: u32,
     /// Size of channels between different actors.
     channel_size: usize,
+    peer_ids:Arc<Mutex<HashSet<PeerId>>>,
 }
 
 impl<TSubstream> LibraNetworkProvider for NetworkProvider<TSubstream>
@@ -198,6 +201,7 @@ where
             let rpc_reqs_tx = self.rpc_reqs_tx.clone();
             let ds_reqs_tx = self.ds_reqs_tx.clone();
             let conn_mgr_reqs_tx = self.conn_mgr_reqs_tx.clone();
+            let peer_ids = self.peer_ids.clone();
             let mut reqs = self
                 .requests_rx
                 .map(move |req| {
@@ -206,6 +210,7 @@ where
                         rpc_reqs_tx.clone(),
                         ds_reqs_tx.clone(),
                         conn_mgr_reqs_tx.clone(),
+                        peer_ids.clone(),
                     )
                     .boxed()
                 })
@@ -266,6 +271,7 @@ where
         max_concurrent_reqs: u32,
         max_concurrent_notifs: u32,
         channel_size: usize,
+        peer_ids:Arc<Mutex<HashSet<PeerId>>>,
     ) -> Self {
         Self {
             upstream_handlers: HashMap::new(),
@@ -280,6 +286,7 @@ where
             max_concurrent_reqs,
             max_concurrent_notifs,
             channel_size,
+            peer_ids,
         }
     }
 
@@ -288,6 +295,7 @@ where
         mut rpc_reqs_tx: channel::Sender<RpcRequest>,
         mut ds_reqs_tx: channel::Sender<DirectSendRequest>,
         conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
+        peer_ids:Arc<Mutex<HashSet<PeerId>>>,
     ) {
         trace!("NetworkRequest::{:?}", req);
         match req {
@@ -304,6 +312,17 @@ where
                     .send(DirectSendRequest::SendMessage(peer_id, msg))
                     .await
                     .unwrap();
+            }
+            NetworkRequest::BroadCastMessage( msg) => {
+                let len= msg.mdata.len() as i64;
+                for peer_id in peer_ids.lock().await.iter() {
+                    counters::DIRECT_SEND_MESSAGES_SENT.inc();
+                    counters::DIRECT_SEND_BYTES_SENT.inc_by(len);
+                    ds_reqs_tx
+                        .send(DirectSendRequest::SendMessage(peer_id.clone(), msg.clone()))
+                        .await
+                        .unwrap();
+                }
             }
             NetworkRequest::UpdateEligibleNodes(nodes) => {
                 let mut conn_mgr_reqs_tx = conn_mgr_reqs_tx

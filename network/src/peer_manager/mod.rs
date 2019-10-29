@@ -19,6 +19,7 @@ use futures::{
     future::{BoxFuture, FutureExt},
     sink::SinkExt,
     stream::{Fuse, FuturesUnordered, StreamExt},
+    lock::Mutex,
 };
 use libra_types::PeerId;
 use logger::prelude::*;
@@ -28,14 +29,16 @@ use netcore::{
     transport::{ConnectionOrigin, Transport},
 };
 use parity_multiaddr::Multiaddr;
-use std::{collections::HashMap, marker::PhantomData};
+use std::{collections::{HashMap,HashSet}, marker::PhantomData};
 use tokio::runtime::TaskExecutor;
+use std::sync::{Arc};
 
 mod error;
 #[cfg(test)]
 mod tests;
 
 pub use self::error::PeerManagerError;
+use failure::_core::hash::Hash;
 
 /// Notifications about new/lost peers.
 #[derive(Debug)]
@@ -169,6 +172,7 @@ where
     outstanding_disconnect_requests: HashMap<PeerId, oneshot::Sender<Result<(), PeerManagerError>>>,
     /// Pin the transport type corresponding to this PeerManager instance
     phantom_transport: PhantomData<TTransport>,
+    peer_ids:Arc<Mutex<HashSet<PeerId>>>,
 }
 
 impl<TTransport, TMuxer> PeerManager<TTransport, TMuxer>
@@ -188,6 +192,7 @@ where
             channel::Sender<PeerManagerNotification<TMuxer::Substream>>,
         >,
         peer_event_handlers: Vec<channel::Sender<PeerManagerNotification<TMuxer::Substream>>>,
+        peer_ids:Arc<Mutex<HashSet<PeerId>>>
     ) -> Self {
         let (internal_event_tx, internal_event_rx) =
             channel::new(1024, &counters::PENDING_PEER_MANAGER_INTERNAL_EVENTS);
@@ -214,6 +219,7 @@ where
             internal_event_rx,
             outstanding_disconnect_requests: HashMap::new(),
             phantom_transport: PhantomData,
+            peer_ids
         }
     }
 
@@ -266,12 +272,15 @@ where
                     .remove(&peer_id)
                     .expect("Should have a handle to Peer");
 
+                self.peer_ids.lock().await.remove(&peer.peer_id());
+
                 // If we receive a PeerDisconnected event and the connection origin isn't the same
                 // as the one we have stored in PeerManager this particular event is from a Peer
                 // actor which is being shutdown due to simultaneous dial tie-breaking and we don't
                 // need to send a LostPeer notification to all subscribers.
                 if peer.origin != origin {
-                    self.active_peers.insert(peer_id, peer);
+                    self.active_peers.insert(peer_id.clone(), peer);
+                    self.peer_ids.lock().await.insert(peer_id);
                     return;
                 }
                 info!("Disconnected from peer: {}", peer_id.short_str());
@@ -393,6 +402,7 @@ where
 
         // Check for and handle simultaneous dialing
         if let Some(mut peer) = self.active_peers.remove(&peer_id) {
+            self.peer_ids.lock().await.remove(&peer_id);
             if Self::simultaneous_dial_tie_breaking(
                 self.own_peer_id,
                 peer.peer_id(),
@@ -420,7 +430,9 @@ where
                     peer_id.short_str()
                 );
                 // Put the existing connection back
-                self.active_peers.insert(peer.peer_id(), peer);
+                let peer_id = peer.peer_id();
+                self.active_peers.insert(peer_id.clone(), peer);
+                self.peer_ids.lock().await.insert(peer_id);
                 return;
             }
         }
@@ -444,7 +456,8 @@ where
             origin,
             peer_id.short_str()
         );
-        self.active_peers.insert(peer_id, peer_handle);
+        self.active_peers.insert(peer_id.clone(), peer_handle);
+        self.peer_ids.lock().await.insert(peer_id);
         self.executor.spawn(peer.start());
 
         if send_new_peer_notification {
