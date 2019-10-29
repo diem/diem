@@ -201,6 +201,70 @@ mod test {
     use std::io;
 
     #[test]
+    fn substream_within_substream() -> io::Result<()> {
+        let (dialer, listener) = MemorySocket::new_pair();
+        let msg = b"Too fast too furious";
+        let msg2 = b"Mission Impossible";
+
+        let dialer = async move {
+            let muxer = Yamux::new(dialer, Mode::Client);
+            // Open outer substream.
+            let substream = muxer.open_outbound().await?;
+            // Create multiplexer over substream.
+            let muxer = Yamux::new(substream, Mode::Client);
+            // Open new inner outbound substream over outer substream.
+            let mut substream = muxer.open_outbound().await?;
+            // Send data over inner substream.
+            substream.write_all(msg).await?;
+            substream.flush().await?;
+            // We have to close the substream to unblock the read end if it uses `read_to_end`.
+            substream.close().await?;
+            // Listen for new inbound inner substreams over outer substream.
+            let (maybe_substream, _) = muxer.listen_for_inbound().into_future().await;
+            let mut substream = maybe_substream
+                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no substream"))??;
+            // Receive data over inner substream.
+            let mut buf = Vec::new();
+            substream.read_to_end(&mut buf).await?;
+            assert_eq!(buf, msg2);
+            // Force return type of the async block
+            let result: io::Result<()> = Ok(());
+            result
+        };
+
+        let listener = async move {
+            let muxer = Yamux::new(listener, Mode::Server);
+            // Listen for inbound outer substream.
+            let (maybe_substream, _) = muxer.listen_for_inbound().into_future().await;
+            let substream = maybe_substream
+                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no substream"))??;
+            // Create multiplexer over substream.
+            let muxer = Yamux::new(substream, Mode::Server);
+            // Listen for inbound inner substream over outer substream.
+            let (maybe_substream, _listener) = muxer.listen_for_inbound().into_future().await;
+            let mut substream = maybe_substream
+                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no substream"))??;
+            // Receive data over inner substream.
+            let mut buf = Vec::new();
+            substream.read_to_end(&mut buf).await?;
+            assert_eq!(buf, msg);
+            // Open new inner outbound substream over outer substream.
+            let mut substream = muxer.open_outbound().await?;
+            // Send data over inner substream.
+            substream.write_all(msg2).await?;
+            substream.flush().await?;
+            // Force return type of the async block
+            let result: io::Result<()> = Ok(());
+            result
+        };
+
+        let (dialer_result, listener_result) = block_on(join(dialer, listener));
+        dialer_result?;
+        listener_result?;
+        Ok(())
+    }
+
+    #[test]
     fn open_substream() -> io::Result<()> {
         let (dialer, listener) = MemorySocket::new_pair();
         let msg = b"The Way of Kings";
