@@ -569,6 +569,7 @@ impl ClusterTestRunner {
         let stats_10_down = print_stat(&self.prometheus, window)
             .map_err(|e| format_err!("Failed to query stats: {}", e))?;
         self.deactivate_all(&mut stop_effects);
+        self.wait_until_all_healthy()?;
         Ok(SuiteReport {
             stats_all_up,
             stats_10_down,

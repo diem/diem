@@ -39,7 +39,7 @@ use rand::{
     seq::SliceRandom,
     Rng, SeedableRng,
 };
-use slog_scope::{debug, info};
+use slog_scope::{debug, info, warn};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 
@@ -47,7 +47,6 @@ const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempoo
 
 pub struct TxEmitter {
     accounts: Vec<AccountData>,
-    mint_client: AdmissionControlClient,
     faucet_account: AccountData,
 }
 
@@ -79,27 +78,42 @@ pub struct EmitJobRequest {
 
 impl TxEmitter {
     pub fn new(cluster: &Cluster) -> Self {
-        let mint_client = Self::make_client(&cluster.instances()[0]);
+        let mint_client = Self::pick_mint_client(cluster.instances());
         let faucet_account = load_faucet_account(&mint_client, cluster.mint_file());
         Self {
             accounts: vec![],
-            mint_client,
             faucet_account,
         }
+    }
+
+    fn pick_mint_client(instances: &[Instance]) -> AdmissionControlClient {
+        let mut rng = ThreadRng::default();
+        let mint_instance = instances
+            .choose(&mut rng)
+            .expect("Instances can not be empty");
+        Self::make_client(&mint_instance)
     }
 
     pub fn start_job(&mut self, req: EmitJobRequest) -> failure::Result<EmitJob> {
         let num_clients = req.instances.len();
         let num_accounts = req.accounts_per_client * num_clients;
+        let mut mint_client = Self::pick_mint_client(&req.instances);
+        let mut mint_failures = 0;
         info!("Minting accounts");
         while self.accounts.len() < num_accounts {
             let mut accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
             let mint_requests = gen_mint_txn_requests(&mut self.faucet_account, &accounts);
-            execute_and_wait_transactions(
-                &self.mint_client,
-                &mut self.faucet_account,
-                mint_requests,
-            )?;
+            if let Err(e) =
+                execute_and_wait_transactions(&mint_client, &mut self.faucet_account, mint_requests)
+            {
+                mint_failures += 1;
+                if mint_failures > 5 {
+                    return Err(e);
+                }
+                warn!("Mint attempt {} failed, retrying", mint_failures);
+                mint_client = Self::pick_mint_client(&req.instances);
+                continue;
+            }
             self.accounts.append(&mut accounts);
         }
         let all_accounts = self.accounts.split_off(self.accounts.len() - num_accounts);
