@@ -1,5 +1,5 @@
 [package]
-name = "pow"
+name = "cuckoo"
 version = "0.1.0"
 authors = ["Starcoin Core Dev <dev@starcoin.org>"]
 license = "Apache-2.0"
@@ -7,7 +7,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-logger = { path = "../common/logger" }
+logger = { path = "../../common/logger" }
 byteorder = "1.3.1"
 blake2b-rs = "0.1.4"
 

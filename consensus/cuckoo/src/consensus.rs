@@ -16,7 +16,7 @@ pub struct Pow {
 }
 
 impl Pow {
-    fn new(edge_bits: u8, cycle_length: usize) -> Self {
+    pub fn new(edge_bits: u8, cycle_length: usize) -> Self {
         Self {
             cuckoo: Cuckoo::new(edge_bits, cycle_length),
         }

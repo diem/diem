@@ -43,3 +43,11 @@ language/vm/vm_genesis/genesis/vm_config.toml
 
 # Terraform
 .terraform/
+
+
+#Added by cargo
+#
+#already existing elements are commented out
+
+/target
+#**/*.rs.bk
