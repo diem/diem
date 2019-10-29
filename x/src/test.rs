@@ -24,11 +24,17 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
     args.args.extend(args.testname.clone());
 
     let cmd = CargoCommand::Test(&args.args);
+    // When testing, by deafult we want to turn on all features to ensure that the fuzzing features
+    // are flipped on
+    let base_args = CargoArgs {
+        all_features: true,
+        ..CargoArgs::default()
+    };
 
     if args.unit {
         cmd.run_with_exclusions(
             config.package_exceptions().iter().map(|(p, _)| p),
-            &CargoArgs { all_features: true },
+            &base_args,
         )?;
         cmd.run_on_packages_separate(
             config
@@ -40,6 +46,7 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
                         name,
                         CargoArgs {
                             all_features: pkg.all_features,
+                            ..base_args
                         },
                     )
                 }),
@@ -53,11 +60,12 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
                     p,
                     CargoArgs {
                         all_features: e.all_features,
+                        ..base_args
                     },
                 )
             })
         });
-        cmd.run_on_packages_together(run_together, &CargoArgs { all_features: true })?;
+        cmd.run_on_packages_together(run_together, &base_args)?;
         cmd.run_on_packages_separate(run_separate)?;
         Ok(())
     } else if utils::project_is_root()? {
@@ -65,13 +73,14 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
         // a package but not at the project root (e.g. language)
         cmd.run_with_exclusions(
             config.package_exceptions().iter().map(|(p, _)| p),
-            &CargoArgs { all_features: true },
+            &base_args,
         )?;
         cmd.run_on_packages_separate(config.package_exceptions().iter().map(|(name, pkg)| {
             (
                 name,
                 CargoArgs {
                     all_features: pkg.all_features,
+                    ..base_args
                 },
             )
         }))?;
@@ -84,7 +93,10 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
             .map(|pkg| pkg.all_features)
             .unwrap_or(true);
 
-        cmd.run_on_local_package(&CargoArgs { all_features })?;
+        cmd.run_on_local_package(&CargoArgs {
+            all_features,
+            ..base_args
+        })?;
         Ok(())
     }
 }
