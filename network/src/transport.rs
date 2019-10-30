@@ -147,9 +147,10 @@ pub fn build_permissionless_memory_noise_transport(
         .and_then(move |(peer_id, muxer), origin| {
             async move {
                 let (identity, muxer) = exchange_identity(&own_identity, muxer, origin).await?;
-                match_peer_id(identity, peer_id)
-                    .and_then(|identity| check_role(&own_identity, identity))
-                    .and_then(|identity| Ok((identity, muxer)))
+//                match_peer_id(identity, peer_id)
+//                    .and_then(|identity| check_role(&own_identity, identity))
+//                    .and_then(|identity| Ok((identity, muxer)))
+                check_role(&own_identity, identity).and_then(|identity| Ok((identity, muxer)))
             }
         })
         .with_timeout(TRANSPORT_TIMEOUT)
