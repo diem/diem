@@ -320,7 +320,7 @@ impl DropConfig {
 
 use crate::chained_bft::network::NetworkTask;
 use consensus_types::block_retrieval::{
-    BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
+    BlockRetrievalMode, BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };
 #[cfg(test)]
 use libra_types::crypto_proxies::random_validator_verifier;
@@ -441,7 +441,7 @@ fn test_rpc() {
     block_on(async move {
         let response = nodes[0]
             .request_block(
-                BlockRetrievalRequest::new(genesis.id(), 1),
+                BlockRetrievalRequest::new(genesis.id(), BlockRetrievalMode::Ancestors(1)),
                 peer,
                 Duration::from_secs(5),
             )

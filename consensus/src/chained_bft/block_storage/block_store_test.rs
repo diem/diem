@@ -477,3 +477,95 @@ fn test_empty_reconfiguration_suffix() {
     // If reconfiguration is committed, the child block can carry payload
     let _a6 = inserter.insert_block(&a3, 4, None);
 }
+
+#[test]
+fn test_descendants_for_committed_id() {
+    // Use the following tree:
+    // Genesis<--a1<--a2<--a3<------a5<-----a7
+    //                  `-------a4<------a6<-----a8<--a9<--a10<--a11
+    let mut inserter = TreeInserter::default();
+    let block_store = inserter.block_store();
+    let genesis = block_store.root();
+    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a2 = inserter.insert_block(&a1, 2, None);
+    let a3 = inserter.insert_block(&a2, 3, None);
+    let a4 = inserter.insert_block(&a2, 4, None);
+    let a5 = inserter.insert_block(&a3, 5, Some(a1.id()));
+    let a6 = inserter.insert_block(&a4, 6, None);
+    let a7 = inserter.insert_block(&a5, 7, None);
+    let a8 = inserter.insert_block(&a6, 8, None);
+
+    // Just verify that the quorum certificate carried by a5 is a proof of commit for a1
+    assert_eq!(
+        block_store
+            .get_block(a5.id())
+            .unwrap()
+            .quorum_cert()
+            .committed_block_id(),
+        Some(a1.id())
+    );
+
+    assert_eq!(
+        block_store.get_descendants_for_committed_id(a2.id()),
+        vec![]
+    );
+    assert_eq!(
+        block_store.get_descendants_for_committed_id(a4.id()),
+        vec![]
+    );
+    assert_eq!(
+        block_store.get_descendants_for_committed_id(HashValue::random()),
+        vec![]
+    );
+
+    let descendants_for_a1 = block_store
+        .get_descendants_for_committed_id(a1.id())
+        .iter()
+        .map(|b| b.id())
+        .collect::<Vec<HashValue>>();
+    assert_eq!(
+        descendants_for_a1,
+        vec![a7.id(), a5.id(), a3.id(), a2.id(), a1.id()]
+    );
+    // Verify that the tree is working fine after pruning: add more nodes to commit the whole a2
+    // and prune the tree to get to the root
+    let a9 = inserter.insert_block(&a8, 9, None);
+    let a10 = inserter.insert_block(&a9, 10, None);
+    let a11 = inserter.insert_block(&a10, 11, Some(a8.id()));
+    block_store.prune_tree(a8.id());
+
+    // Descendants of the root
+    let descendants_for_a8 = block_store
+        .get_descendants_for_committed_id(a8.id())
+        .iter()
+        .map(|b| b.id())
+        .collect::<Vec<HashValue>>();
+    assert_eq!(
+        descendants_for_a8,
+        vec![a11.id(), a10.id(), a9.id(), a8.id()]
+    );
+
+    // Descendants of a1 are still in another branch (not the highest QC one) because it carries
+    // the ledger info with the commit of a1.
+    let descendants_for_a1 = block_store
+        .get_descendants_for_committed_id(a1.id())
+        .iter()
+        .map(|b| b.id())
+        .collect::<Vec<HashValue>>();
+    assert_eq!(
+        descendants_for_a1,
+        vec![a7.id(), a5.id(), a3.id(), a2.id(), a1.id()]
+    );
+
+    // No descendants of a2: even though it's committed there is no direct proof.
+    assert_eq!(
+        block_store.get_descendants_for_committed_id(a2.id()),
+        vec![]
+    );
+
+    // Descendants of a node that has not been committed eventually
+    assert_eq!(
+        block_store.get_descendants_for_committed_id(a3.id()),
+        vec![]
+    );
+}

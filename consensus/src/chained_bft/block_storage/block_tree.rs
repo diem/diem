@@ -406,6 +406,65 @@ where
     pub(super) fn get_all_block_id(&self) -> Vec<HashValue> {
         self.id_to_block.keys().cloned().collect()
     }
+
+    /// Returns a chain that certifies a commit of the given block id.
+    /// In case there is no such a chain return an empty vector.
+    /// For example, for the given tree:
+    ///
+    /// b1<--b2<--b3<-------b5<-----b7
+    ///       `--------b4<------b6<------b8
+    ///
+    /// `get_descendants_for_committed_id`(b1) returns [b7, b5, b3, b2, b1]
+    /// `get_descendants_for_committed_id`(b2) returns []
+    pub(super) fn get_descendants_for_committed_id(
+        &self,
+        target_id: HashValue,
+    ) -> Vec<Arc<ExecutedBlock<T>>> {
+        // TODO: max num of blocks should be a function of max message size / max block size
+        let max_num_blocks = 10_u32;
+        // Find the first block in the response chain via DFS traversal.
+        let mut highest_block_in_response = None;
+        // The stack of (id, bool, u64) tuples:
+        // * id is the block id
+        // * bool is for the fact that this chain is known to commit the target
+        // * u64 measures the length of the chain (including the target)
+        let mut to_visit = VecDeque::new();
+        to_visit.push_back((target_id, false, 1));
+
+        while let Some((id, mut commits_target, len)) = to_visit.pop_back() {
+            if len > max_num_blocks {
+                continue;
+            }
+            if let Some(linkable_block) = self.get_linkable_block(&id) {
+                let block = linkable_block.executed_block.block();
+                if !commits_target && block.quorum_cert().committed_block_id() == Some(target_id) {
+                    commits_target = true;
+                }
+                let new_block_higher = highest_block_in_response.map_or(true, |prev_block: &Arc<ExecutedBlock<T>>|
+                    // Choose the highest child of the highest certified block.
+                    prev_block.quorum_cert().certified_block().round() <= block.quorum_cert().certified_block().round() &&
+                        prev_block.round() < block.round()
+                );
+                if commits_target && new_block_higher {
+                    highest_block_in_response.replace(linkable_block.executed_block());
+                }
+                for child_id in linkable_block.children() {
+                    to_visit.push_back((*child_id, commits_target, len + 1));
+                }
+            }
+        }
+
+        let mut res = vec![];
+        let mut next_block = highest_block_in_response.take().cloned();
+        while let Some(b) = next_block {
+            res.push(Arc::clone(&b));
+            if b.id() == target_id {
+                break;
+            }
+            next_block = self.get_block(&b.parent_id());
+        }
+        res
+    }
 }
 
 #[cfg(any(test, feature = "fuzzing"))]

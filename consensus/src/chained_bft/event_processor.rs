@@ -38,7 +38,9 @@ use mirai_annotations::{
 };
 
 use crate::chained_bft::network::IncomingBlockRetrievalRequest;
-use consensus_types::block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus};
+use consensus_types::block_retrieval::{
+    BlockRetrievalMode, BlockRetrievalResponse, BlockRetrievalStatus,
+};
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::SafetyRules;
@@ -774,22 +776,33 @@ impl<T: Payload> EventProcessor<T> {
     /// The current version of the function is not really async, but keeping it this way for
     /// future possible changes.
     pub async fn process_block_retrieval(&self, request: IncomingBlockRetrievalRequest<T>) {
-        let mut blocks = vec![];
         let mut status = BlockRetrievalStatus::Succeeded;
-        let mut id = request.req.block_id();
-        while (blocks.len() as u64) < request.req.num_blocks() {
-            if let Some(executed_block) = self.block_store.get_block(id) {
-                id = executed_block.parent_id();
-                blocks.push(executed_block.block().clone());
-            } else {
-                status = BlockRetrievalStatus::NotEnoughBlocks;
-                break;
+        let blocks = match request.req.retrieval_mode() {
+            BlockRetrievalMode::Ancestors(num_blocks) => {
+                let blocks = self
+                    .block_store
+                    .get_ancestors(request.req.block_id(), num_blocks);
+                if blocks.is_empty() {
+                    status = BlockRetrievalStatus::IdNotFound;
+                } else if (blocks.len() as u64) < num_blocks {
+                    status = BlockRetrievalStatus::NotEnoughBlocks;
+                }
+                blocks
             }
-        }
-
-        if blocks.is_empty() {
-            status = BlockRetrievalStatus::IdNotFound;
-        }
+            BlockRetrievalMode::Descendants => {
+                let blocks = self
+                    .block_store
+                    .get_descendants_for_committed_id(request.req.block_id());
+                // In case of success the last block should have the target id.
+                if !blocks
+                    .last()
+                    .map_or(false, |b| b.id() == request.req.block_id())
+                {
+                    status = BlockRetrievalStatus::IdNotFound;
+                }
+                blocks
+            }
+        };
 
         if let Err(e) = request
             .response_sender
