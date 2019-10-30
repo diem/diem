@@ -5,7 +5,7 @@ use crate::counters;
 use bytes::Bytes;
 use channel::{
     self, libra_channel,
-    message_queues::{self, PerValidatorQueue, QueueStyle},
+    message_queues::{self, QueueStyle},
 };
 use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse};
 use consensus_types::{
@@ -45,12 +45,11 @@ pub struct IncomingBlockRetrievalRequest<T> {
 /// Just a convenience struct to keep all the network proxy receiving queues in one place.
 /// Will be returned by the networking trait upon startup.
 pub struct NetworkReceivers<T> {
-    pub proposals: libra_channel::Receiver<PerValidatorQueue<ProposalMsg<T>>>,
-    pub votes: libra_channel::Receiver<PerValidatorQueue<VoteMsg>>,
-    pub block_retrieval:
-        libra_channel::Receiver<PerValidatorQueue<IncomingBlockRetrievalRequest<T>>>,
-    pub sync_info_msgs: libra_channel::Receiver<PerValidatorQueue<(SyncInfo, AccountAddress)>>,
-    pub epoch_change: libra_channel::Receiver<PerValidatorQueue<LedgerInfoWithSignatures>>,
+    pub proposals: libra_channel::Receiver<AccountAddress, ProposalMsg<T>>,
+    pub votes: libra_channel::Receiver<AccountAddress, VoteMsg>,
+    pub block_retrieval: libra_channel::Receiver<AccountAddress, IncomingBlockRetrievalRequest<T>>,
+    pub sync_info_msgs: libra_channel::Receiver<AccountAddress, (SyncInfo, AccountAddress)>,
+    pub epoch_change: libra_channel::Receiver<AccountAddress, LedgerInfoWithSignatures>,
 }
 
 /// Implements the actual networking support for all consensus messaging.
@@ -235,11 +234,11 @@ impl NetworkSender {
 }
 
 pub struct NetworkTask<T> {
-    proposal_tx: libra_channel::Sender<PerValidatorQueue<ProposalMsg<T>>>,
-    vote_tx: libra_channel::Sender<PerValidatorQueue<VoteMsg>>,
-    block_request_tx: libra_channel::Sender<PerValidatorQueue<IncomingBlockRetrievalRequest<T>>>,
-    sync_info_tx: libra_channel::Sender<PerValidatorQueue<(SyncInfo, AccountAddress)>>,
-    epoch_change_tx: libra_channel::Sender<PerValidatorQueue<LedgerInfoWithSignatures>>,
+    proposal_tx: libra_channel::Sender<AccountAddress, ProposalMsg<T>>,
+    vote_tx: libra_channel::Sender<AccountAddress, VoteMsg>,
+    block_request_tx: libra_channel::Sender<AccountAddress, IncomingBlockRetrievalRequest<T>>,
+    sync_info_tx: libra_channel::Sender<AccountAddress, (SyncInfo, AccountAddress)>,
+    epoch_change_tx: libra_channel::Sender<AccountAddress, LedgerInfoWithSignatures>,
     all_events: Box<dyn Stream<Item = failure::Result<Event<ConsensusMsg>>> + Send + Unpin>,
     validators: Arc<ValidatorVerifier>,
 }
@@ -251,7 +250,7 @@ impl<T: Payload> NetworkTask<T> {
         self_receiver: channel::Receiver<failure::Result<Event<ConsensusMsg>>>,
         validators: Arc<ValidatorVerifier>,
     ) -> (NetworkTask<T>, NetworkReceivers<T>) {
-        let (proposal_tx, proposal_rx) = libra_channel::new(PerValidatorQueue::new(
+        let (proposal_tx, proposal_rx) = libra_channel::new(
             QueueStyle::LIFO,
             1,
             Some(message_queues::Counters {
@@ -259,8 +258,8 @@ impl<T: Payload> NetworkTask<T> {
                 enqueued_msgs_counter: &counters::PROPOSAL_ENQUEUED_MSGS,
                 dequeued_msgs_counter: &counters::PROPOSAL_DEQUEUED_MSGS,
             }),
-        ));
-        let (vote_tx, vote_rx) = libra_channel::new(PerValidatorQueue::new(
+        );
+        let (vote_tx, vote_rx) = libra_channel::new(
             QueueStyle::LIFO,
             1,
             Some(message_queues::Counters {
@@ -268,8 +267,8 @@ impl<T: Payload> NetworkTask<T> {
                 enqueued_msgs_counter: &counters::VOTES_ENQUEUED_MSGS,
                 dequeued_msgs_counter: &counters::VOTES_DEQUEUED_MSGS,
             }),
-        ));
-        let (block_request_tx, block_request_rx) = libra_channel::new(PerValidatorQueue::new(
+        );
+        let (block_request_tx, block_request_rx) = libra_channel::new(
             QueueStyle::LIFO,
             1,
             Some(message_queues::Counters {
@@ -277,8 +276,8 @@ impl<T: Payload> NetworkTask<T> {
                 enqueued_msgs_counter: &counters::BLOCK_RETRIEVAL_ENQUEUED_MSGS,
                 dequeued_msgs_counter: &counters::BLOCK_RETRIEVAL_DEQUEUED_MSGS,
             }),
-        ));
-        let (sync_info_tx, sync_info_rx) = libra_channel::new(PerValidatorQueue::new(
+        );
+        let (sync_info_tx, sync_info_rx) = libra_channel::new(
             QueueStyle::LIFO,
             1,
             Some(message_queues::Counters {
@@ -286,8 +285,8 @@ impl<T: Payload> NetworkTask<T> {
                 enqueued_msgs_counter: &counters::SYNC_INFO_ENQUEUED_MSGS,
                 dequeued_msgs_counter: &counters::SYNC_INFO_DEQUEUED_MSGS,
             }),
-        ));
-        let (epoch_change_tx, epoch_change_rx) = libra_channel::new(PerValidatorQueue::new(
+        );
+        let (epoch_change_tx, epoch_change_rx) = libra_channel::new(
             QueueStyle::LIFO,
             1,
             Some(message_queues::Counters {
@@ -295,7 +294,7 @@ impl<T: Payload> NetworkTask<T> {
                 enqueued_msgs_counter: &counters::EPOCH_CHANGE_ENQUEUED_MSGS,
                 dequeued_msgs_counter: &counters::EPOCH_CHANGE_DEQUEUED_MSGS,
             }),
-        ));
+        );
         let network_events = network_events.map_err(Into::<failure::Error>::into);
         let all_events = Box::new(select(network_events, self_receiver));
         (
