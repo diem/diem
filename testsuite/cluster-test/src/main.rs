@@ -2,6 +2,7 @@ use cluster_test::effects::RemoveNetworkEffects;
 use cluster_test::experiments::PacketLossRandomValidators;
 use cluster_test::instance::Instance;
 use cluster_test::prometheus::Prometheus;
+use cluster_test::thread_pool_executor::ThreadPoolExecutor;
 use cluster_test::tx_emitter::{EmitJobRequest, EmitThreadParams};
 use cluster_test::util::unix_timestamp_now;
 use cluster_test::{
@@ -26,14 +27,13 @@ use slog::{o, Drain};
 use slog_scope::info;
 use std::{
     collections::HashSet,
-    env, mem,
+    env,
     sync::mpsc::{self, TryRecvError},
     thread,
     time::{Duration, Instant},
 };
 use structopt::{clap::ArgGroup, StructOpt};
 use termion::{color, style};
-use threadpool;
 
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -223,7 +223,7 @@ struct ClusterTestRunner {
     deployment_manager: DeploymentManager,
     experiment_interval: Duration,
     slack: Option<SlackClient>,
-    thread_pool: threadpool::ThreadPool,
+    thread_pool_executor: ThreadPoolExecutor,
     tx_emitter: TxEmitter,
     prometheus: Prometheus,
 }
@@ -422,10 +422,7 @@ impl ClusterTestRunner {
         let experiment_interval = Duration::from_secs(experiment_interval_sec);
         let deployment_manager = DeploymentManager::new(aws.clone(), cluster.clone());
         let slack = SlackClient::try_new_from_environment();
-        let thread_pool = threadpool::Builder::new()
-            .num_threads(10)
-            .thread_name("ssh-pool".to_string())
-            .build();
+        let thread_pool_executor = ThreadPoolExecutor::new("ssh-pool".into());
         let tx_emitter = TxEmitter::new(&cluster);
         let prometheus = Prometheus::new(
             cluster
@@ -439,7 +436,7 @@ impl ClusterTestRunner {
             deployment_manager,
             experiment_interval,
             slack,
-            thread_pool,
+            thread_pool_executor,
             tx_emitter,
             prometheus,
         }
@@ -767,7 +764,7 @@ impl ClusterTestRunner {
                 }
             })
             .collect();
-        self.execute_jobs(jobs);
+        self.thread_pool_executor.execute_jobs(jobs);
         info!("Done");
     }
 
@@ -812,7 +809,8 @@ impl ClusterTestRunner {
                 }
             })
             .collect();
-        self.execute_jobs(cleanup_all_instances);
+        self.thread_pool_executor
+            .execute_jobs(cleanup_all_instances);
     }
 
     pub fn stop(&self) {
@@ -843,7 +841,7 @@ impl ClusterTestRunner {
                 }
             })
             .collect();
-        self.execute_jobs(jobs);
+        self.thread_pool_executor.execute_jobs(jobs);
     }
 
     fn deactivate_all<T: Effect>(&self, effects: &mut [T]) {
@@ -857,41 +855,7 @@ impl ClusterTestRunner {
                 }
             })
             .collect();
-        self.execute_jobs(jobs);
-    }
-
-    /// Executes jobs, wait for them to complete and return results
-    /// Note: Results in vector do not match order of input jobs
-    fn execute_jobs<'a, R, J>(&self, jobs: Vec<J>) -> Vec<R>
-    where
-        R: Send + 'a,
-        J: FnOnce() -> R + Send + 'a,
-    {
-        let (sender, recv) = mpsc::channel();
-        let size = jobs.len();
-        for job in jobs {
-            let sender = sender.clone();
-            let closure = move || {
-                let r = job();
-                sender
-                    .send(r)
-                    .expect("main execute_jobs thread terminated before worker");
-            };
-            let closure: Box<dyn FnOnce() + Send + 'a> = Box::new(closure);
-            // Using mem::transmute to cast from 'a to 'static lifetime
-            // This is safe because we ensure lifetime of current stack frame
-            // is longer then lifetime of closure
-            // Even if one of worker threads panics, we still going to wait in recv loop below
-            // until every single thread completes
-            let closure: Box<dyn FnOnce() + Send + 'static> = unsafe { mem::transmute(closure) };
-            self.thread_pool.execute(closure);
-        }
-        let mut result = Vec::with_capacity(size);
-        for _ in 0..size {
-            let r = recv.recv().expect("One of job threads had panic");
-            result.push(r);
-        }
-        result
+        self.thread_pool_executor.execute_jobs(jobs);
     }
 }
 
