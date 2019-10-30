@@ -93,7 +93,7 @@ impl StateComputer for ExecutionProxy {
         parent_state_id: HashValue,
         // Transactions to execute.
         transactions: &Self::Payload,
-    ) -> Pin<Box<dyn Future<Output = Result<StateComputeResult>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(StateComputeResult, HashValue)>> + Send>> {
         let pre_execution_instant = Instant::now();
         let execute_future = self.executor.pre_execute_block(
             transactions
@@ -104,7 +104,7 @@ impl StateComputer for ExecutionProxy {
         );
         async move {
             match execute_future.await {
-                Ok(Ok(state_compute_result)) => {
+                Ok(Ok((state_compute_result, state_id))) => {
                     let execution_duration = pre_execution_instant.elapsed();
                     let num_txns = state_compute_result.compute_status.len();
                     if num_txns == 0 {
@@ -122,7 +122,7 @@ impl StateComputer for ExecutionProxy {
                                 .observe_duration(Duration::from_nanos(nanos_per_txn));
                         }
                     }
-                    Ok(state_compute_result)
+                    Ok((state_compute_result, state_id))
                 }
                 Ok(Err(e)) => Err(e),
                 Err(e) => Err(e.into()),

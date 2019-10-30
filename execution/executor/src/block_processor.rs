@@ -246,7 +246,8 @@ where
                 parent_state_id,
                 resp_sender,
             } => {
-                let res = if parent_state_id == *ACCUMULATOR_PLACEHOLDER_HASH || parent_state_id == self.committed_trees.state_tree().root_hash() {
+                let res = if (parent_state_id == *ACCUMULATOR_PLACEHOLDER_HASH && self.committed_trees.version_and_state_root().0.unwrap() == 0)
+                    || parent_state_id == self.committed_trees.state_tree().root_hash() {
                     let transactions:Vec<SignedTransaction> = transactions.iter()
                         .map(|txn| {
                             txn.as_signed_user_txn()
@@ -291,6 +292,7 @@ where
                             let accu_root_hash = output.executed_trees().txn_accumulator().root_hash();
                             let version =
                                 (output.executed_trees().txn_accumulator().num_leaves() - 1) as Version;
+                            let state_id = output.executed_trees().state_tree().root_hash();
 
                             // Now that we have the root hash and execution status we can send the response to
                             // consensus.
@@ -304,7 +306,7 @@ where
                                 },
                                 compute_status: vec![],
                             };
-                            Ok(state_compute_result)
+                            Ok((state_compute_result, state_id))
                         },
                         Err(e) => {
                             Err(format_err!("{}", e))
@@ -686,15 +688,12 @@ where
                 "storage_save_transactions.count",
                 txns_to_commit.len() as f64,
             );
-            println!("-------------->>>>>>: {}", (version + 1 - num_txns_to_commit));
             self.storage_write_client.save_transactions(
                 txns_to_commit,
                 version + 1 - num_txns_to_commit, /* first_version */
                 Some(ledger_info_with_sigs.clone()),
             )?;
-            println!("-------------->>>>>>: 111111");
         }
-        println!("-------------->>>>>>: 222222");
         // Only bump the counter when the commit succeeds.
         OP_COUNTERS.inc_by("num_accounts", num_accounts_created);
 

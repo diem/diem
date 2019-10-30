@@ -276,7 +276,7 @@ impl<V> Executor<V>
         &self,
         transactions: Vec<Transaction>,
         parent_state_id: HashValue,
-    ) -> oneshot::Receiver<Result<StateComputeResult>> {
+    ) -> oneshot::Receiver<Result<(StateComputeResult, HashValue)>> {
         debug!(
             "Received request to pre execute block. Parent state id: {:x}.",
             parent_state_id
@@ -452,7 +452,7 @@ enum Command {
     PreExecuteBlock {
         transactions: Vec<Transaction>,
         parent_state_id: HashValue,
-        resp_sender: oneshot::Sender<Result<StateComputeResult>>,
+        resp_sender: oneshot::Sender<Result<(StateComputeResult, HashValue)>>,
     },
     CommitBlock {
         ledger_info_with_sigs: LedgerInfoWithSignatures,

@@ -389,7 +389,6 @@ impl LibraDB {
             self.pruner.wake(last_version);
         }
 
-        println!("-----6666---->");
         Ok(())
     }
 

@@ -461,14 +461,14 @@ impl EventHandle {
         }
         let msg_raw = msg.to_bytes().unwrap();
         for peer in consensus_peers_config.get_validator_verifier().get_ordered_account_addresses() {
-            if peer != self_peer_id {
+//            if self_flag || peer != self_peer_id {
                 if let Err(err) = network_sender.send_bytes(peer, msg_raw.clone()).await {
                     error!(
                         "Error broadcasting proposal to peer: {:?}, error: {:?}, msg: {:?}",
                         peer, err, msg
                     );
                 }
-            }
+//            }
         }
     }
 
@@ -503,20 +503,18 @@ impl EventHandle {
         }
     }
 
-    fn sync_height(&mut self) {
+    fn sync_height(&mut self, executor: TaskExecutor) {
         let mut sync_height_sender = self.sync_height_sender.clone();
         let task = Interval::new(Instant::now(), Duration::from_secs(10))
             .for_each(move |_| {
-                sync_height_sender.send(());
 
+                if let Err(err) = block_on(sync_height_sender.send(())) {
+                    error!("send sync block err: {:?}", err);
+                }
                 future::ready(())
             });
 
-        thread::spawn(move || {
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.spawn(task);
-            rt.shutdown_on_idle();
-        });
+        executor.spawn(task);
     }
 
     fn save_block(&mut self, executor: TaskExecutor) {
@@ -592,7 +590,7 @@ impl EventHandle {
                                 drop(chain_lock);
                                 println!("save block drop chain lock");
                             }
-                            _ => {}
+                            Err(err) => {}
                         }
                     }
                 }
@@ -650,7 +648,8 @@ impl EventHandle {
             loop {
                 ::futures::select! {
                     (_) = sync_height_receiver.select_next_some() => {
-                        let chain_info_msg = Self::chain_info_msg(10);
+                        let height = sync_block_chain.lock().compat().await.unwrap().longest_chain_height();
+                        let chain_info_msg = Self::chain_info_msg(height);
                         Self::broadcast_consensus_msg(consensus_peers.clone(), &mut sync_network_sender.clone(), false, self_peer_id.clone(), &mut sync_self_sender.clone(), chain_info_msg).await;
                     },
                     (peer_id, height) = sync_signal_receiver.select_next_some() => {
@@ -763,11 +762,10 @@ impl EventHandle {
 
                             //compute current block state id
                             match mint_state_computer.pre_compute(quorum_cert.certified_state_id(), &txns).await {
-                                Ok(state) => {
-                                    println!("----222222------>{:?}", quorum_cert.certified_state_id());
-                                    let vote_data = VoteData::new(quorum_cert.certified_block_id(),quorum_cert.certified_state_id(), quorum_cert.certified_block_round(), quorum_cert.parent_block_id(), quorum_cert.parent_block_round());
+                                Ok((compute_state, state_id)) => {
+                                    let vote_data = VoteData::new(parent_block_id,state_id, quorum_cert.certified_block_round(), parent_block_id, quorum_cert.parent_block_round());
                                     let parent_li = quorum_cert.ledger_info().ledger_info().clone();
-                                    let li = LedgerInfo::new_by_version((txns.len() as u64) + parent_li.version(), state.root_hash(), parent_li);
+                                    let li = LedgerInfo::new_by_version((txns.len() as u64) + parent_li.version(), compute_state.root_hash(), parent_li);
                                     let signer = ValidatorSigner::genesis();//TODO:change signer
                                     let signature = signer.sign_message(li.hash()).expect("Fail to sign genesis ledger info");
                                     let mut signatures = BTreeMap::new();
@@ -876,10 +874,10 @@ impl PowConsensusProvider {
                 handle.save_block(executor.clone());
 
                 //sync
-                handle.sync_block_msg(executor);
+                handle.sync_block_msg(executor.clone());
 
                 //sync height
-                handle.sync_height();
+                handle.sync_height(executor);
 
                 //TODO:orphan
             }

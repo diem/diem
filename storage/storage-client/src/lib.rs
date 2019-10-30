@@ -266,7 +266,6 @@ impl StorageWrite for StorageWriteServiceClient {
         first_version: Version,
         ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
     ) -> Result<()> {
-        println!("-----1111---->");
         block_on(self.save_transactions_async(txns_to_commit, first_version, ledger_info_with_sigs))
     }
 
