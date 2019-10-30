@@ -17,6 +17,11 @@ RUN rustup install $(cat rust-toolchain)
 FROM toolchain AS builder
 
 COPY . /libra
+
+ARG BUILD_DATE
+ARG GIT_REV
+ARG GIT_UPSTREAM
+
 RUN cargo build --release -p libra-node -p client -p benchmark && cd target/release && rm -r build deps incremental
 
 ### Production Image ###
@@ -46,11 +51,6 @@ CMD cd /opt/libra/etc && echo "$MINT_KEY" | \
     base64 -d > mint.key && \
     cd /opt/libra/bin && \
     exec gunicorn --bind 0.0.0.0:8000 --access-logfile - --error-logfile - --log-level $LOG_LEVEL server
-
-
-ARG BUILD_DATE
-ARG GIT_REV
-ARG GIT_UPSTREAM
 
 LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.build-date=$BUILD_DATE

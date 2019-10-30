@@ -17,6 +17,11 @@ RUN rustup install $(cat rust-toolchain)
 FROM toolchain AS builder
 
 COPY . /libra
+
+ARG BUILD_DATE
+ARG GIT_REV
+ARG GIT_UPSTREAM
+
 RUN cargo build --release -p libra-node -p client -p benchmark && cd target/release && rm -r build deps incremental
 
 ### Production Image ###
@@ -33,11 +38,6 @@ EXPOSE 9101
 
 # Define MINT_KEY, AC_HOST and AC_DEBUG environment variables when running
 ENTRYPOINT ["/opt/libra/bin/bench_init.sh"]
-
-
-ARG BUILD_DATE
-ARG GIT_REV
-ARG GIT_UPSTREAM
 
 LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.build-date=$BUILD_DATE
