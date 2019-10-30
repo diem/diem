@@ -83,7 +83,7 @@ impl BlockInfo {
 
     pub fn random(round: Round) -> Self {
         Self {
-            epoch: 0,
+            epoch: 1,
             round,
             id: HashValue::zero(),
             executed_state_id: HashValue::zero(),

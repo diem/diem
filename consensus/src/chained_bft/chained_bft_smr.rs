@@ -126,6 +126,9 @@ impl<T: Payload> ChainedBftSMR<T> {
                         idle_duration = pre_select_instant.elapsed();
                         event_processor = epoch_manager.start_new_epoch(ledger_info);
                     }
+                    future_epoch = network_receivers.future_epoch.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
+                    }
                     complete => {
                         break;
                     }
@@ -199,8 +202,12 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         // TODO: this is test only, we should remove this
         self.block_store = Some(event_processor.block_store());
 
-        let (network_task, network_receiver) =
-            NetworkTask::new(initial_setup.network_events, self_receiver, validator);
+        let (network_task, network_receiver) = NetworkTask::new(
+            initial_setup.epoch,
+            initial_setup.network_events,
+            self_receiver,
+            validator,
+        );
 
         Self::start_event_processing(
             executor,

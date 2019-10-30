@@ -354,7 +354,7 @@ fn test_network_api() {
         let (self_sender, self_receiver) = channel::new_test(8);
         let node = NetworkSender::new(*peer, network_sender, self_sender, Arc::clone(&validators));
         let (task, receiver) =
-            NetworkTask::new(network_events, self_receiver, Arc::clone(&validators));
+            NetworkTask::new(1, network_events, self_receiver, Arc::clone(&validators));
         receivers.push(receiver);
         runtime.executor().spawn(task.start());
         nodes.push(node);
@@ -421,7 +421,7 @@ fn test_rpc() {
             Arc::clone(&validators),
         );
         let (task, receiver) =
-            NetworkTask::new(network_events, self_receiver, Arc::clone(&validators));
+            NetworkTask::new(1, network_events, self_receiver, Arc::clone(&validators));
         senders.push(network_sender);
         receivers.push(receiver);
         runtime.executor().spawn(task.start());

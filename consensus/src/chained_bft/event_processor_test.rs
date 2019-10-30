@@ -131,7 +131,7 @@ impl NodeSetup {
             validators.clone(),
         );
         let (task, _receiver) =
-            NetworkTask::<TestPayload>::new(network_events, self_receiver, validators.clone());
+            NetworkTask::<TestPayload>::new(0, network_events, self_receiver, validators.clone());
         executor.spawn(task.start());
         let consensus_state = initial_data.state();
         let last_vote_sent = initial_data.last_vote();
