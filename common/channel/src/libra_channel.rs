@@ -9,26 +9,12 @@ use std::sync::{Arc, Mutex};
 use std::task::Waker;
 
 use crate::message_queues::{Counters, PerKeyQueue, QueueStyle};
+use failure::prelude::*;
 use futures::async_await::FusedStream;
 use futures::stream::Stream;
 use futures::task::Context;
 use futures::Poll;
 use std::hash::Hash;
-
-#[derive(Debug)]
-pub enum SendError {
-    Closed,
-}
-
-impl std::fmt::Display for SendError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SendError::Closed => write!(f, "Channel is Closed"),
-        }
-    }
-}
-
-impl std::error::Error for SendError {}
 
 /// SharedState is a data structure private to this module which is
 /// shared by the sender and receiver.
@@ -61,11 +47,9 @@ impl<K: Eq + Hash + Clone, M> Sender<K, M> {
     /// This adds the message into the internal queue data structure. This is a
     /// synchronous call.
     /// TODO: We can have this return a boolean if the queue of a key is capacity
-    pub fn push(&mut self, key: K, message: M) -> Result<(), SendError> {
+    pub fn push(&mut self, key: K, message: M) -> failure::Result<()> {
         let mut shared_state = self.shared_state.lock().unwrap();
-        if shared_state.receiver_dropped {
-            return Err(SendError::Closed);
-        }
+        ensure!(!shared_state.receiver_dropped, "Channel is closed");
         shared_state.internal_queue.push(key, message);
         if let Some(w) = shared_state.waker.take() {
             w.wake();

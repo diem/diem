@@ -94,6 +94,10 @@ impl SyncInfo {
             .with_context(|e| format!("Fail to verify SyncInfo: {:?}", e))?;
         Ok(())
     }
+
+    pub fn epoch(&self) -> u64 {
+        self.highest_quorum_cert.certified_block().epoch()
+    }
 }
 
 impl TryFrom<network::proto::SyncInfo> for SyncInfo {

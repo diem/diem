@@ -81,7 +81,7 @@ impl QuorumCert {
         genesis_id: HashValue,
     ) -> QuorumCert {
         let ancestor = BlockInfo::new(
-            ledger_info.epoch(),
+            ledger_info.epoch() + 1,
             0,
             genesis_id,
             ledger_info.transaction_accumulator_hash(),

@@ -44,6 +44,10 @@ impl VoteMsg {
     pub fn sync_info(&self) -> &SyncInfo {
         &self.sync_info
     }
+
+    pub fn epoch(&self) -> u64 {
+        self.vote.epoch()
+    }
 }
 
 #[cfg(any(test, feature = "fuzzing"))]

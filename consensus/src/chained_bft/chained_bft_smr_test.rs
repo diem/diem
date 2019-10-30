@@ -85,7 +85,7 @@ impl SMRNode {
         let initial_setup = InitialSetup {
             author,
             signer: signer.clone(),
-            epoch: 0,
+            epoch: 1,
             validator: validators.as_ref().clone(),
             network_sender,
             network_events,

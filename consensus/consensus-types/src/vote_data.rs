@@ -22,8 +22,8 @@ impl Display for VoteData {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
-            "VoteData: [block id: {}, round: {:02}, parent_block_id: {}, parent_block_round: {:02}]",
-            self.proposed().id(), self.proposed().round(), self.parent().id(), self.parent().round(),
+            "VoteData: [block id: {}, epoch: {}, round: {:02}, parent_block_id: {}, parent_block_round: {:02}]",
+            self.proposed().id(), self.proposed().epoch(), self.proposed().round(), self.parent().id(), self.parent().round(),
         )
     }
 }

@@ -119,7 +119,7 @@ impl ChainedBftProvider {
         InitialSetup {
             author,
             // TODO: this is placeholder for now, replace with reconfiguration
-            epoch: 0,
+            epoch: 1,
             signer,
             validator,
             network_sender,
