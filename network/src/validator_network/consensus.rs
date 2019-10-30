@@ -123,6 +123,21 @@ impl ConsensusNetworkSender {
         Ok(())
     }
 
+    pub async fn broadcast_bytes(
+        &mut self,
+        message_bytes: Bytes,
+    ) -> Result<(), NetworkError> {
+        self.inner
+            .send(NetworkRequest::BroadCastMessage(
+                Message {
+                    protocol: ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
+                    mdata: message_bytes,
+                },
+            ))
+            .await?;
+        Ok(())
+    }
+
     /// Send a RequestBlock RPC request to remote peer `recipient`. Returns the
     /// future `RespondBlock` returned by the remote peer.
     ///
