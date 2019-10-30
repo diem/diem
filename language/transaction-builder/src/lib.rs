@@ -8,7 +8,7 @@ use libra_types::block_metadata::BlockMetadata;
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
-    transaction::{Script, TransactionArgument, SCRIPT_HASH_LENGTH},
+    transaction::{Script, Transaction, TransactionArgument, SCRIPT_HASH_LENGTH},
 };
 use std::{collections::HashSet, iter::FromIterator};
 use stdlib::{
@@ -143,18 +143,8 @@ pub fn encode_mint_script(sender: &AccountAddress, amount: u64) -> Script {
 }
 
 // TODO: this should go away once we are no longer using it in tests
-/// Encode a program creating `amount` coins for sender
-pub fn encode_block_prologue_script(block_metadata: BlockMetadata) -> Script {
-    let (id, timestamp, previous_vote, proposer) = block_metadata.into_inner().unwrap();
-    Script::new(
-        BLOCK_PROLOGUE_TXN.clone(),
-        vec![
-            TransactionArgument::U64(timestamp),
-            TransactionArgument::ByteArray(id),
-            TransactionArgument::ByteArray(previous_vote),
-            TransactionArgument::Address(proposer),
-        ],
-    )
+pub fn encode_block_prologue_script(block_metadata: BlockMetadata) -> Transaction {
+    Transaction::BlockMetadata(block_metadata)
 }
 
 /// Returns a user friendly mnemonic for the transaction type if the transaction is
