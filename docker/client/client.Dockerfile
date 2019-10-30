@@ -17,6 +17,11 @@ RUN rustup install $(cat rust-toolchain)
 FROM toolchain AS builder
 
 COPY . /libra
+
+ARG BUILD_DATE
+ARG GIT_REV
+ARG GIT_UPSTREAM
+
 RUN cargo build --release -p libra-node -p client -p benchmark && cd target/release && rm -r build deps incremental
 RUN strip target/release/client
 
@@ -29,10 +34,6 @@ COPY scripts/cli/consensus_peers.config.toml /opt/libra/etc/consensus_peers.conf
 
 ENTRYPOINT ["/opt/libra/bin/libra_client"]
 CMD ["--host", "ac.testnet.libra.org", "--port", "8000", "-s", "/opt/libra/etc/consensus_peers.config.toml"]
-
-ARG BUILD_DATE
-ARG GIT_REV
-ARG GIT_UPSTREAM
 
 LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.build-date=$BUILD_DATE
