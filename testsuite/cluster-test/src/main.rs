@@ -1,5 +1,5 @@
 use cluster_test::effects::RemoveNetworkEffects;
-use cluster_test::experiments::PacketLossRandomValidators;
+use cluster_test::experiments::{MultiRegionSimulation, PacketLossRandomValidators};
 use cluster_test::instance::Instance;
 use cluster_test::prometheus::Prometheus;
 use cluster_test::thread_pool_executor::ThreadPoolExecutor;
@@ -81,6 +81,8 @@ struct Args {
     perf_run: bool,
     #[structopt(long, group = "action")]
     cleanup: bool,
+    #[structopt(long, group = "action")]
+    multi_region_simulation: bool,
 
     // emit_tx options
     #[structopt(long, default_value = "10")]
@@ -95,6 +97,26 @@ struct Args {
     //stop_experiment options
     #[structopt(long, default_value = "10")]
     max_stopped: usize,
+
+    // multi_region_simulation: options
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Number of instances which should be in region1. The remaining instances are in region 2."
+    )]
+    multi_region_split: usize,
+    #[structopt(
+        long,
+        default_value = "50",
+        help = "Delay in ms between the two regions"
+    )]
+    multi_region_delay_ms: u64,
+    #[structopt(
+        long,
+        default_value = "60",
+        help = "Duration in secs for which multi region experiment happens"
+    )]
+    multi_region_exp_duration_secs: u64,
 
     //packet_loss_experiment options
     #[structopt(
@@ -184,6 +206,15 @@ pub fn main() {
             args.packet_loss_percent,
             Duration::from_secs(args.packet_loss_duration_secs),
             &runner.cluster,
+        );
+        runner.cleanup_and_run(Box::new(experiment)).unwrap();
+    } else if args.multi_region_simulation {
+        let experiment = MultiRegionSimulation::new(
+            args.multi_region_split,
+            Duration::from_millis(args.multi_region_delay_ms),
+            Duration::from_secs(args.multi_region_exp_duration_secs),
+            &runner.cluster,
+            runner.thread_pool_executor.clone(),
         );
         runner.cleanup_and_run(Box::new(experiment)).unwrap();
     } else if args.perf_run {
