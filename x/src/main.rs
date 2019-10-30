@@ -2,6 +2,7 @@ use structopt::StructOpt;
 
 mod cargo;
 mod check;
+mod clippy;
 mod config;
 mod test;
 mod utils;
@@ -19,6 +20,9 @@ enum Command {
     #[structopt(name = "check")]
     /// Run `cargo check`
     Check(check::Args),
+    #[structopt(name = "clippy")]
+    /// Run `cargo clippy`
+    Clippy(clippy::Args),
     #[structopt(name = "test")]
     /// Run tests
     Test(test::Args),
@@ -31,5 +35,6 @@ fn main() -> Result<()> {
     match args.cmd {
         Command::Test(args) => test::run(args, config),
         Command::Check(args) => check::run(args, config),
+        Command::Clippy(args) => clippy::run(args, config),
     }
 }

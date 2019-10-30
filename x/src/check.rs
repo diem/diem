@@ -20,6 +20,10 @@ pub struct Args {
 
 pub fn run(args: Args, config: Config) -> Result<()> {
     let cmd = CargoCommand::Check;
+    run_with(cmd, args, config)
+}
+
+pub fn run_with(cmd: CargoCommand<'_>, args: Args, config: Config) -> Result<()> {
     // If we've been asked to build all targets then we need to enable all_features so that
     // building the testing targets works
     let base_args = CargoArgs {

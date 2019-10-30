@@ -11,6 +11,8 @@ use std::{
 pub struct Config {
     /// Package exceptions which need to be run special
     package_exceptions: HashMap<String, Package>,
+    /// Clippy configureation
+    clippy: Clippy,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -26,6 +28,12 @@ pub struct Package {
 // Workaround for https://github.com/serde-rs/serde/issues/368
 fn default_as_true() -> bool {
     true
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Clippy {
+    allowed: Vec<String>,
 }
 
 impl Config {
@@ -48,5 +56,9 @@ impl Config {
 
     pub fn package_exceptions(&self) -> &HashMap<String, Package> {
         &self.package_exceptions
+    }
+
+    pub fn allowed_clippy_lints(&self) -> &[String] {
+        &self.clippy.allowed
     }
 }
