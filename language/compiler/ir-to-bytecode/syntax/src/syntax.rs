@@ -240,7 +240,11 @@ fn parse_copyable_val_<'input>(
     Ok(spanned(start_loc, end_loc, val))
 }
 
-// Get the precedence of a binary operator.
+// Get the precedence of a binary operator. The minimum precedence value
+// is 1, and larger values have higher precedence. For tokens that are not
+// binary operators, this returns a value of zero so that they will be
+// below the minimum value and will mark the end of the binary expression
+// for the code in parse_rhs_of_binary_exp.
 fn get_precedence(token: &Tok) -> u32 {
     match token {
         // Reserved minimum precedence value is 1 (specified in parse_exp_)
