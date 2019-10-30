@@ -9,6 +9,6 @@ fn main() {
         .args(&["rev-parse", "--short", "HEAD"])
         .output()
         .unwrap();
-    let git_rev = &String::from_utf8(output.stdout).unwrap();
+    let git_rev = String::from_utf8(output.stdout).unwrap();
     println!("cargo:rustc-env=GIT_REVISION={}", git_rev);
 }
