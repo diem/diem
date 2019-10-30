@@ -275,6 +275,14 @@ impl NetworkPlayground {
         }
     }
 
+    pub fn epoch_change_only(msg_copy: &(Author, ConsensusMsg)) -> bool {
+        if let Some(ConsensusMsg_oneof::LedgerInfo(_)) = msg_copy.1.message {
+            true
+        } else {
+            false
+        }
+    }
+
     fn is_message_dropped(&self, src: &Author, net_req: &NetworkRequest) -> bool {
         self.drop_config
             .read()

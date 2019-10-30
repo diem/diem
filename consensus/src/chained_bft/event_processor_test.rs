@@ -139,6 +139,7 @@ impl NodeSetup {
         let state_computer = Arc::new(MockStateComputer::new(
             commit_cb_sender,
             Arc::clone(&storage),
+            None,
         ));
 
         let block_store = Arc::new(block_on(BlockStore::new(

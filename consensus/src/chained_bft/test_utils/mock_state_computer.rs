@@ -11,22 +11,26 @@ use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
+use libra_types::validator_set::ValidatorSet;
 use std::{pin::Pin, sync::Arc};
 use termion::color::*;
 
 pub struct MockStateComputer {
     commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>,
     consensus_db: Arc<MockStorage<TestPayload>>,
+    reconfig: Option<ValidatorSet>,
 }
 
 impl MockStateComputer {
     pub fn new(
         commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>,
         consensus_db: Arc<MockStorage<TestPayload>>,
+        reconfig: Option<ValidatorSet>,
     ) -> Self {
         MockStateComputer {
             commit_callback,
             consensus_db,
+            reconfig,
         }
     }
 }
@@ -41,7 +45,7 @@ impl StateComputer for MockStateComputer {
         future::ok(ProcessedVMOutput::new(
             vec![],
             ExecutedTrees::new_empty(),
-            None,
+            self.reconfig.clone(),
         ))
         .boxed()
     }
