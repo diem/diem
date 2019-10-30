@@ -225,6 +225,7 @@ impl NetworkSender {
     }
 
     /// Broadcast about epoch changes with proof to the current validator set (including self)
+    #[allow(dead_code)]
     pub async fn send_epoch_change(&mut self, ledger_info: LedgerInfoWithSignatures) {
         let msg = ConsensusMsg {
             message: Some(ConsensusMsg_oneof::LedgerInfo(ledger_info.into())),
