@@ -3,6 +3,10 @@
 
 use crate::account_address::AccountAddress;
 use failure::Result;
+#[cfg(any(test, feature = "fuzzing"))]
+use libra_crypto::ed25519::compat::generate_keypair as generate_ed25519_keypair;
+#[cfg(any(test, feature = "fuzzing"))]
+use libra_crypto::x25519::compat::generate_keypair as generate_x25519_keypair;
 use libra_crypto::{ed25519::*, traits::ValidKey, x25519::X25519StaticPublicKey};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -44,6 +48,23 @@ impl ValidatorPublicKeys {
         network_signing_public_key: Ed25519PublicKey,
         network_identity_public_key: X25519StaticPublicKey,
     ) -> Self {
+        ValidatorPublicKeys {
+            account_address,
+            consensus_public_key,
+            consensus_voting_power,
+            network_signing_public_key,
+            network_identity_public_key,
+        }
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn new_with_random_network_keys(
+        account_address: AccountAddress,
+        consensus_public_key: Ed25519PublicKey,
+        consensus_voting_power: u64,
+    ) -> Self {
+        let (_, network_signing_public_key) = generate_ed25519_keypair(None);
+        let (_, network_identity_public_key) = generate_x25519_keypair(None);
         ValidatorPublicKeys {
             account_address,
             consensus_public_key,
