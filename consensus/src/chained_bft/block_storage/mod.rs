@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use consensus_types::{
-    executed_block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
+    block::Block, executed_block::ExecutedBlock, quorum_cert::QuorumCert,
+    timeout_certificate::TimeoutCertificate,
 };
 use libra_crypto::HashValue;
 use std::sync::Arc;
@@ -67,4 +68,16 @@ pub trait BlockReader: Send + Sync {
 
     /// Return the highest timeout certificate if available.
     fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>>;
+
+    /// Retrieve the chain of ancestors starting with the given `block_id`.
+    /// Return the max possible chain up to `num_blocks` (including the starting block).
+    /// The returned vector is empty if the given block id is not found.
+    /// The vector is ordered by round in descending order (starts with the `block_id`).
+    fn get_ancestors(&self, block_id: HashValue, num_blocks: u64) -> Vec<Block<Self::Payload>>;
+
+    /// Retrieve the chain of descendants of a committed block.
+    /// The chain ends with the given block id, and includes the LedgerInfo certifying the commit of
+    /// the target block (max size of chain is constrained by the max message size constraints).
+    /// In case no such chain can be found, an empty vector is returned.
+    fn get_descendants_for_committed_id(&self, block_id: HashValue) -> Vec<Block<Self::Payload>>;
 }

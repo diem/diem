@@ -445,6 +445,31 @@ impl<T: Payload> BlockReader for BlockStore<T> {
     fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>> {
         self.inner.read().unwrap().highest_timeout_cert()
     }
+
+    fn get_ancestors(&self, block_id: HashValue, num_blocks: u64) -> Vec<Block<T>> {
+        let block_tree = self.inner.read().unwrap();
+        let mut blocks = vec![];
+        let mut id = block_id;
+        while (blocks.len() as u64) < num_blocks {
+            if let Some(executed_block) = block_tree.get_block(&id) {
+                id = executed_block.parent_id();
+                blocks.push(executed_block.block().clone());
+            } else {
+                break;
+            }
+        }
+        blocks
+    }
+
+    fn get_descendants_for_committed_id(&self, block_id: HashValue) -> Vec<Block<Self::Payload>> {
+        self.inner
+            .read()
+            .unwrap()
+            .get_descendants_for_committed_id(block_id)
+            .iter()
+            .map(|b| b.block().clone())
+            .collect()
+    }
 }
 
 #[cfg(any(test, feature = "fuzzing"))]

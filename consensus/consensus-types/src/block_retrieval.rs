@@ -9,25 +9,39 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::fmt;
 
-/// RPC to get a chain of block of the given length starting from the given block id.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum BlockRetrievalMode {
+    /// Retrieve the chain of ancestors with the given length.
+    Ancestors(u64),
+    /// Retrieve the chain of descendants of a committed block.
+    /// The chain ends with the given block id and must carry a LedgerInfo to this id.
+    /// In case no such chain can be found, the response status is `IdNotFound`.
+    /// The number of the blocks in the chain is limited by the max message size constraints at the
+    /// sender.
+    Descendants,
+}
+
+/// RPC to get a chain of blocks for the given block id.
+/// There are two modes of the block retrieval requests: ancestors or descendants, see
+/// `BlockRetrievalMode`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct BlockRetrievalRequest {
     block_id: HashValue,
-    num_blocks: u64,
+    retrieval_mode: BlockRetrievalMode,
 }
 
 impl BlockRetrievalRequest {
-    pub fn new(block_id: HashValue, num_blocks: u64) -> Self {
+    pub fn new(block_id: HashValue, retrieval_mode: BlockRetrievalMode) -> Self {
         Self {
             block_id,
-            num_blocks,
+            retrieval_mode,
         }
     }
     pub fn block_id(&self) -> HashValue {
         self.block_id
     }
-    pub fn num_blocks(&self) -> u64 {
-        self.num_blocks
+    pub fn retrieval_mode(&self) -> BlockRetrievalMode {
+        self.retrieval_mode.clone()
     }
 }
 
@@ -35,8 +49,8 @@ impl fmt::Display for BlockRetrievalRequest {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "[BlockRetrievalRequest starting from id {} with {} blocks]",
-            self.block_id, self.num_blocks
+            "[BlockRetrievalRequest starting from id {}, retrieval mode {:?}]",
+            self.block_id, self.retrieval_mode
         )
     }
 }
@@ -92,6 +106,23 @@ impl<T: Payload> BlockRetrievalResponse<T> {
 
     pub fn verify(
         &self,
+        retrieval_request: &BlockRetrievalRequest,
+        sig_verifier: &ValidatorVerifier,
+    ) -> failure::Result<()> {
+        match retrieval_request.retrieval_mode {
+            BlockRetrievalMode::Ancestors(num_blocks) => self.verify_ancestors_retrieval(
+                retrieval_request.block_id(),
+                num_blocks,
+                sig_verifier,
+            ),
+            BlockRetrievalMode::Descendants => {
+                self.verify_descendants_retrieval(retrieval_request.block_id(), sig_verifier)
+            }
+        }
+    }
+
+    fn verify_ancestors_retrieval(
+        &self,
         block_id: HashValue,
         num_blocks: u64,
         sig_verifier: &ValidatorVerifier,
@@ -103,9 +134,56 @@ impl<T: Payload> BlockRetrievalResponse<T> {
             num_blocks,
             self.blocks.len(),
         );
+        self.verify_chain(block_id, sig_verifier)
+    }
+
+    fn verify_descendants_retrieval(
+        &self,
+        target_id: HashValue,
+        sig_verifier: &ValidatorVerifier,
+    ) -> failure::Result<()> {
+        if self.status != BlockRetrievalStatus::Succeeded {
+            ensure!(
+                self.blocks.is_empty(),
+                "Non-empty chain in a failed retrieval response."
+            );
+            return Ok(());
+        }
+        // Things to verify:
+        // 1) the chain is well formed
+        // 2) the last block is the target
+        // 3) the chain carries a ledger info to the target
+        ensure!(
+            self.blocks.last().map_or(false, |b| b.id() == target_id),
+            "Descendants block retrieval does not end with target id {}",
+            target_id
+        );
+        ensure!(
+            self.blocks()
+                .iter()
+                .any(|b| b.quorum_cert().committed_block_id() == Some(target_id)),
+            "Descendants block retrieval does not carry a commit for target id {}",
+            target_id
+        );
+
+        let highest_block_id = match self.blocks.first() {
+            Some(b) => b.id(),
+            None => {
+                bail!("No blocks retrieved but status is Success");
+            }
+        };
+        self.verify_chain(highest_block_id, sig_verifier)
+    }
+
+    // Verifies that the blocks are well-formed and form a valid chain.
+    fn verify_chain(
+        &self,
+        first_id: HashValue,
+        sig_verifier: &ValidatorVerifier,
+    ) -> failure::Result<()> {
         self.blocks
             .iter()
-            .try_fold(block_id, |expected_id, block| {
+            .try_fold(first_id, |expected_id, block| {
                 block.validate_signatures(sig_verifier)?;
                 block.verify_well_formed()?;
                 ensure!(

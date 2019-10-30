@@ -89,7 +89,6 @@ impl NetworkSender {
         timeout: Duration,
     ) -> failure::Result<BlockRetrievalResponse<T>> {
         ensure!(from != self.author, "Retrieve block from self");
-        counters::BLOCK_RETRIEVAL_COUNT.inc_by(retrieval_request.num_blocks() as i64);
         let pre_retrieval_instant = Instant::now();
         let req_msg = RequestBlock::try_from(retrieval_request.clone())?;
         let response_msg = self
@@ -98,11 +97,8 @@ impl NetworkSender {
             .await?;
         counters::BLOCK_RETRIEVAL_DURATION_S.observe_duration(pre_retrieval_instant.elapsed());
         let response = BlockRetrievalResponse::<T>::try_from(response_msg)?;
-        response.verify(
-            retrieval_request.block_id(),
-            retrieval_request.num_blocks(),
-            self.validators.as_ref(),
-        )?;
+        response.verify(&retrieval_request, self.validators.as_ref())?;
+        counters::BLOCK_RETRIEVAL_COUNT.inc_by(response.blocks().len() as i64);
         Ok(response)
     }
 
