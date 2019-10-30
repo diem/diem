@@ -13,6 +13,7 @@ use crate::{
     gas_meter::load_gas_schedule,
     loaded_data::loaded_module::LoadedModule,
     process_txn::{validate::ValidationMode, ProcessTransaction},
+    system_txn::block_metadata_processor::process_block_metadata,
 };
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_logger::prelude::*;
@@ -137,19 +138,24 @@ impl<'alloc> VMRuntime<'alloc> {
     ) -> VMResult<Vec<TransactionOutput>> {
         let mut result = vec![];
         let blocks = chunk_block_transactions(txn_block);
+        let mut data_cache = BlockDataCache::new(data_view);
+        let code_cache = BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(data_view));
+
         for block in blocks {
             match block {
                 TransactionBlock::UserTransaction(txns) => {
                     result.append(&mut execute_user_transaction_block(
                         txns,
-                        &self.code_cache,
+                        &code_cache,
                         &self.script_cache,
-                        data_view,
+                        &mut data_cache,
                         &self.publishing_option,
                     )?)
                 }
                 // TODO: Implement the logic for processing system transactions.
-                TransactionBlock::BlockPrologue(_) => unimplemented!(""),
+                TransactionBlock::BlockPrologue(block_metadata) => result.push(
+                    process_block_metadata(block_metadata, &code_cache, &mut data_cache),
+                ),
                 TransactionBlock::WriteSet(_) => unimplemented!(""),
             }
         }

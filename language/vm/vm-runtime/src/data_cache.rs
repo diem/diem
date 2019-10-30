@@ -65,6 +65,10 @@ impl<'block> BlockDataCache<'block> {
             }
         }
     }
+
+    pub fn is_genesis(&self) -> bool {
+        self.data_view.is_genesis() && self.data_map.is_empty()
+    }
 }
 
 /// Trait for the StateVersionView or a mock implementation of the remote cache.

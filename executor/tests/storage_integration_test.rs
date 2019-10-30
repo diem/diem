@@ -139,16 +139,7 @@ fn test_reconfiguration() {
         )),
     );
     // Create a dummy block prologue transaction that will emit a ValidatorSetChanged event
-    let txn3 = get_test_signed_transaction(
-        genesis_account,
-        /* sequence_number = */ 2,
-        genesis_keypair.private_key.clone(),
-        genesis_keypair.public_key.clone(),
-        Some(encode_block_prologue_script(gen_block_metadata(
-            1,
-            *validator_account,
-        ))),
-    );
+    let txn3 = encode_block_prologue_script(gen_block_metadata(1, *validator_account));
     let txn_block = vec![txn1, txn2, txn3];
     let block1_id = gen_block_id(1);
     let vm_output = block_on(executor.execute_block(
@@ -176,16 +167,7 @@ fn test_reconfiguration() {
             new_pubkey.to_bytes().to_vec(),
         )),
     );
-    let txn5 = get_test_signed_transaction(
-        genesis_account,
-        /* sequence_number = */ 3,
-        genesis_keypair.private_key.clone(),
-        genesis_keypair.public_key.clone(),
-        Some(encode_block_prologue_script(gen_block_metadata(
-            2,
-            *validator_account,
-        ))),
-    );
+    let txn5 = encode_block_prologue_script(gen_block_metadata(2, *validator_account));
     let txn_block = vec![txn4, txn5];
     let block2_id = gen_block_id(2);
     let output = block_on(executor.execute_block(

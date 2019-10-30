@@ -2,11 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    code_cache::{
-        module_adapter::ModuleFetcherImpl,
-        module_cache::{BlockModuleCache, ModuleCache, VMModuleCache},
-        script_cache::ScriptCache,
-    },
+    code_cache::{module_cache::ModuleCache, script_cache::ScriptCache},
     counters::*,
     data_cache::BlockDataCache,
     gas_meter::load_gas_schedule,
@@ -14,7 +10,6 @@ use crate::{
 };
 use libra_config::config::VMPublishingOption;
 use libra_logger::prelude::*;
-use libra_state_view::StateView;
 use libra_types::{
     transaction::{
         SignatureCheckedTransaction, SignedTransaction, TransactionOutput, TransactionStatus,
@@ -25,17 +20,20 @@ use rayon::prelude::*;
 use vm::gas_schedule::CostTable;
 use vm_cache_map::Arena;
 
-pub fn execute_user_transaction_block<'alloc>(
+pub fn execute_user_transaction_block<'alloc, P>(
     txn_block: Vec<SignedTransaction>,
-    code_cache: &VMModuleCache<'alloc>,
+    module_cache: P,
     script_cache: &ScriptCache<'alloc>,
-    data_view: &dyn StateView,
+    data_cache: &mut BlockDataCache<'_>,
     publishing_option: &VMPublishingOption,
-) -> Result<Vec<TransactionOutput>, VMStatus> {
+) -> Result<Vec<TransactionOutput>, VMStatus>
+where
+    P: ModuleCache<'alloc>,
+{
     trace!("[VM] Execute block, transaction count: {}", txn_block.len());
     report_block_count(txn_block.len());
 
-    let mode = if data_view.is_genesis() {
+    let mode = if data_cache.is_genesis() {
         // The genesis transaction must be in a block of its own.
         if txn_block.len() != 1 {
             return Err(VMStatus::new(StatusCode::REJECTED_WRITE_SET));
@@ -46,8 +44,6 @@ pub fn execute_user_transaction_block<'alloc>(
         ValidationMode::Executing
     };
 
-    let module_cache = BlockModuleCache::new(code_cache, ModuleFetcherImpl::new(data_view));
-    let mut data_cache = BlockDataCache::new(data_view);
     let mut result = vec![];
 
     // If we fail to load the gas schedule, then we fail to process the block.
@@ -77,7 +73,7 @@ pub fn execute_user_transaction_block<'alloc>(
                         t,
                         &module_cache,
                         script_cache,
-                        &data_cache,
+                        data_cache,
                         mode,
                         publishing_option,
                         &gas_schedule,
