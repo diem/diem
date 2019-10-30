@@ -3,15 +3,12 @@
 //! What makes it different from existing mpsc channels is that we have full control
 //! over how the internal queueing in the channel happens and how we schedule messages
 //! to be sent out from this channel.
-//! Note that libra_channel does not provide an implementation of this internal queueing
-//! mechanism, but provides a trait (`MessageQueue`) which the consumers of this channel
-//! can use to create libra_channels' according to their needs.
-
+//! Internally, it uses the `PerKeyQueue` to store messages
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::Waker;
 
-//use failure::_core::fmt::{Error, Formatter};
+use crate::message_queues::{Counters, PerKeyQueue, QueueStyle};
 use futures::async_await::FusedStream;
 use futures::stream::Stream;
 use futures::task::Context;
@@ -33,25 +30,11 @@ impl std::fmt::Display for SendError {
 
 impl std::error::Error for SendError {}
 
-/// MessageQueue is a trait which provides a very simple set of methods for implementing
-/// a queue which will be used as the internal queue libra_channel.
-pub trait MessageQueue {
-    type Key: Eq + Hash;
-    /// The actual type of the messages stored in this MessageQueue
-    type Message;
-
-    /// Push a message with the given key to this queue
-    fn push(&mut self, key: Self::Key, message: Self::Message);
-
-    /// Pop a message from this queue
-    fn pop(&mut self) -> Option<Self::Message>;
-}
-
 /// SharedState is a data structure private to this module which is
 /// shared by the sender and receiver.
-struct SharedState<T> {
+struct SharedState<K: Eq + Hash + Clone, M> {
     /// The internal queue of messages in this Channel
-    internal_queue: T,
+    internal_queue: PerKeyQueue<K, M>,
 
     /// Waker is needed so that the Sender can notify the task executor/scheduler
     /// that something has been pushed to the internal_queue and it ready for
@@ -70,15 +53,15 @@ struct SharedState<T> {
 }
 
 /// The sending end of the libra_channel.
-pub struct Sender<T> {
-    shared_state: Arc<Mutex<SharedState<T>>>,
+pub struct Sender<K: Eq + Hash + Clone, M> {
+    shared_state: Arc<Mutex<SharedState<K, M>>>,
 }
 
-impl<T: MessageQueue> Sender<T> {
+impl<K: Eq + Hash + Clone, M> Sender<K, M> {
     /// This adds the message into the internal queue data structure. This is a
     /// synchronous call.
-    /// TODO: We can have this return a boolean if the queue of a validator is capacity
-    pub fn push(&mut self, key: T::Key, message: T::Message) -> Result<(), SendError> {
+    /// TODO: We can have this return a boolean if the queue of a key is capacity
+    pub fn push(&mut self, key: K, message: M) -> Result<(), SendError> {
         let mut shared_state = self.shared_state.lock().unwrap();
         if shared_state.receiver_dropped {
             return Err(SendError::Closed);
@@ -91,7 +74,7 @@ impl<T: MessageQueue> Sender<T> {
     }
 }
 
-impl<T> Drop for Sender<T> {
+impl<K: Eq + Hash + Clone, M> Drop for Sender<K, M> {
     fn drop(&mut self) {
         let mut shared_state = self.shared_state.lock().unwrap();
         shared_state.sender_dropped = true;
@@ -102,20 +85,19 @@ impl<T> Drop for Sender<T> {
 }
 
 /// The receiving end of the libra_channel.
-pub struct Receiver<T> {
-    shared_state: Arc<Mutex<SharedState<T>>>,
+pub struct Receiver<K: Eq + Hash + Clone, M> {
+    shared_state: Arc<Mutex<SharedState<K, M>>>,
 }
 
-impl<T> Drop for Receiver<T> {
+impl<K: Eq + Hash + Clone, M> Drop for Receiver<K, M> {
     fn drop(&mut self) {
         let mut shared_state = self.shared_state.lock().unwrap();
         shared_state.receiver_dropped = true;
     }
 }
 
-impl<T: MessageQueue> Stream for Receiver<T> {
-    type Item = <T as MessageQueue>::Message;
-
+impl<K: Eq + Hash + Clone, M> Stream for Receiver<K, M> {
+    type Item = M;
     /// poll_next checks whether there is something ready for consumption from the internal
     /// queue. If there is, then it returns immediately. If the internal_queue is empty,
     /// it sets the waker passed to it by the scheduler/executor and returns Pending
@@ -133,19 +115,20 @@ impl<T: MessageQueue> Stream for Receiver<T> {
     }
 }
 
-impl<T: MessageQueue> FusedStream for Receiver<T> {
+impl<K: Eq + Hash + Clone, M> FusedStream for Receiver<K, M> {
     fn is_terminated(&self) -> bool {
         self.shared_state.lock().unwrap().stream_terminated
     }
 }
 
 /// Create a new Libra Channel and returns the two ends of the channel.
-pub fn new<T>(queue: T) -> (Sender<T>, Receiver<T>)
-where
-    T: MessageQueue,
-{
+pub fn new<K: Eq + Hash + Clone, M>(
+    queue_style: QueueStyle,
+    max_queue_size_per_key: usize,
+    counters: Option<Counters>,
+) -> (Sender<K, M>, Receiver<K, M>) {
     let shared_state = Arc::new(Mutex::new(SharedState {
-        internal_queue: queue,
+        internal_queue: PerKeyQueue::new(queue_style, max_queue_size_per_key, counters),
         waker: None,
         receiver_dropped: false,
         sender_dropped: false,

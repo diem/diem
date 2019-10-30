@@ -1,39 +1,15 @@
-use crate::{
-    libra_channel::{self, MessageQueue},
-    message_queues::{PerValidatorQueue, QueueStyle},
-};
+use crate::{libra_channel, message_queues::QueueStyle};
 use futures::{executor::block_on, future::join};
 use libra_types::account_address::AccountAddress;
 use libra_types::account_address::ADDRESS_LENGTH;
-use std::collections::VecDeque;
 use std::time::Duration;
 use tokio::prelude::*;
 use tokio::runtime::Runtime;
 use tokio::timer::delay_for;
 
-struct TestMessageQueue {
-    queue: VecDeque<u8>,
-}
-
-impl MessageQueue for TestMessageQueue {
-    type Key = u8;
-    type Message = u8;
-
-    fn push(&mut self, _key: Self::Key, message: Self::Message) {
-        self.queue.push_back(message);
-    }
-
-    fn pop(&mut self) -> Option<Self::Message> {
-        self.queue.pop_front()
-    }
-}
-
 #[test]
 fn test_send_recv_order() {
-    let mq = TestMessageQueue {
-        queue: VecDeque::new(),
-    };
-    let (mut sender, mut receiver) = libra_channel::new(mq);
+    let (mut sender, mut receiver) = libra_channel::new(QueueStyle::FIFO, 10, None);
     sender.push(0, 0).unwrap();
     sender.push(0, 1).unwrap();
     sender.push(0, 2).unwrap();
@@ -52,20 +28,14 @@ fn test_send_recv_order() {
 
 #[test]
 fn test_empty() {
-    let mq = TestMessageQueue {
-        queue: VecDeque::new(),
-    };
-    let (_, mut receiver) = libra_channel::new(mq);
+    let (_, mut receiver) = libra_channel::new::<u8, u8>(QueueStyle::FIFO, 10, None);
     // Ensures that there is no other value which is ready
     assert_eq!(receiver.select_next_some().now_or_never(), None);
 }
 
 #[test]
 fn test_waker() {
-    let mq = TestMessageQueue {
-        queue: VecDeque::new(),
-    };
-    let (mut sender, mut receiver) = libra_channel::new(mq);
+    let (mut sender, mut receiver) = libra_channel::new(QueueStyle::FIFO, 10, None);
     // Ensures that there is no other value which is ready
     assert_eq!(receiver.select_next_some().now_or_never(), None);
     let f1 = async move {
@@ -90,8 +60,7 @@ fn test_multiple_validators_helper(
     num_messages_per_validator: usize,
     expected_last_message: usize,
 ) {
-    let (mut sender, mut receiver) =
-        libra_channel::new(PerValidatorQueue::new(queue_style, 1, None));
+    let (mut sender, mut receiver) = libra_channel::new(queue_style, 1, None);
     let num_validators = 128;
     for message in 0..num_messages_per_validator {
         for validator in 0..num_validators {
