@@ -39,9 +39,18 @@ pub use state_synchronizer::{
 /// consumer of this API there's a singleton message type, `TMessage`,  which encapsulates all the
 /// messages and RPCs that are received by that consumer.
 ///
+
+#[derive(Debug)]
+pub struct PowContext {
+    pub header_hash: Vec<u8>,
+    pub nonce: u64,
+    pub solve: Vec<u32>,
+}
+
 /// [`NetworkNotification`]: crate::interface::NetworkNotification
 #[derive(Debug)]
 pub enum Event<TMessage> {
+    PowMessage((PeerId, PowContext, TMessage)),
     /// New inbound direct-send message from peer.
     Message((PeerId, TMessage)),
     /// New inbound rpc request. The request is fulfilled by sending the

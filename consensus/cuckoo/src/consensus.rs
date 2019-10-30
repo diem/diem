@@ -2,20 +2,20 @@ use crate::cuckoo::Cuckoo;
 use byteorder::{ByteOrder, LittleEndian};
 use crate::util::blake2b_256;
 
-pub trait PowContext: Send + Sync {
+pub trait PowService: Send + Sync {
     fn verify(&self, header_hash: &[u8], nonce: u64, proof: Proof) -> bool;
     fn solve(&self, header_hash: &[u8], nonce: u64) -> Option<Proof>;
 }
 
 pub struct Proof {
-    solve: Vec<u32>
+    pub solve: Vec<u32>
 }
 
-pub struct Pow {
+pub struct PowCuckoo {
     cuckoo: Cuckoo,
 }
 
-impl Pow {
+impl PowCuckoo {
     pub fn new(edge_bits: u8, cycle_length: usize) -> Self {
         Self {
             cuckoo: Cuckoo::new(edge_bits, cycle_length),
@@ -23,7 +23,7 @@ impl Pow {
     }
 }
 
-impl PowContext for Pow {
+impl PowService for PowCuckoo {
     fn verify(&self, header_hash: &[u8], nonce: u64, proof: Proof) -> bool {
         let input = pow_input(header_hash, nonce);
         self.cuckoo.verify(&input, &proof.solve)
@@ -54,7 +54,7 @@ mod test {
             68, 84, 248, 105, 201, 162, 182, 95, 189, 145, 108, 234, 173, 81, 191, 109, 56,
             192, 59, 176, 113, 85, 75, 254, 237, 161, 177, 189, 22, 219, 131, 24, 67, 96, 12,
             22, 192, 108, 1, 189, 243, 22, 31];
-        let pow = Pow::new(6, 8);
+        let pow = PowCuckoo::new(6, 8);
         let nonce = 21000;
         let proof = pow.solve(&header_hash, nonce).expect("no solution found");
         println!("find solve");
