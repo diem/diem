@@ -15,7 +15,7 @@ use prometheus::{proto::MetricFamily, Encoder, TextEncoder};
 use std::collections::HashMap;
 use std::net::{SocketAddr, ToSocketAddrs};
 
-fn encode_metrics(encoder: impl Encoder, whitelist: Vec<String>) -> Vec<u8> {
+fn encode_metrics(encoder: impl Encoder, whitelist: &'static [&'static str]) -> Vec<u8> {
     let mut metric_families = prometheus::gather();
     if !whitelist.is_empty() {
         metric_families = whitelist_metrics(metric_families, whitelist);
@@ -29,12 +29,12 @@ fn encode_metrics(encoder: impl Encoder, whitelist: Vec<String>) -> Vec<u8> {
 // only return the whitelisted metrics
 fn whitelist_metrics(
     metric_families: Vec<MetricFamily>,
-    whitelist: Vec<String>,
+    whitelist: &'static [&'static str],
 ) -> Vec<MetricFamily> {
     let mut whitelist_metrics = Vec::new();
     for mf in metric_families {
         let name = mf.get_name();
-        if whitelist.contains(&name.to_string()) {
+        if whitelist.contains(&name) {
             whitelist_metrics.push(mf.clone());
         }
     }
@@ -45,12 +45,12 @@ fn whitelist_metrics(
 // only return the whitelisted metrics
 fn whitelist_json_metrics(
     json_metrics: HashMap<String, String>,
-    whitelist: Vec<String>,
-) -> HashMap<String, String> {
-    let mut whitelist_metrics: HashMap<String, String> = HashMap::new();
-    for (key, val) in json_metrics.iter() {
-        if whitelist.contains(&key) {
-            whitelist_metrics.insert(key.to_string(), val.to_string());
+    whitelist: &'static [&'static str],
+) -> HashMap<&'static str, String> {
+    let mut whitelist_metrics: HashMap<&'static str, String> = HashMap::new();
+    for key in whitelist {
+        if let Some(metric) = json_metrics.get(*key) {
+            whitelist_metrics.insert(key, metric.clone());
         }
     }
     whitelist_metrics
@@ -62,7 +62,7 @@ fn serve_metrics(req: Request<Body>) -> impl Future<Item = Response<Body>, Error
         (&Method::GET, "/metrics") => {
             //Prometheus server expects metrics to be on host:port/metrics
             let encoder = TextEncoder::new();
-            let buffer = encode_metrics(encoder, Vec::new());
+            let buffer = encode_metrics(encoder, &[]);
             *resp.body_mut() = Body::from(buffer);
         }
         // expose non-numeric metrics to host:port/json_metrics
@@ -74,7 +74,7 @@ fn serve_metrics(req: Request<Body>) -> impl Future<Item = Response<Body>, Error
         (&Method::GET, "/counters") => {
             // Json encoded libra_metrics;
             let encoder = JsonEncoder;
-            let buffer = encode_metrics(encoder, Vec::new());
+            let buffer = encode_metrics(encoder, &[]);
             *resp.body_mut() = Body::from(buffer);
         }
         _ => {
@@ -93,13 +93,12 @@ fn serve_public_metrics(
         (&Method::GET, "/metrics") => {
             let encoder = TextEncoder::new();
             // encode public metrics defined in common/metrics/src/public_metrics.rs
-            let buffer = encode_metrics(encoder, PUBLIC_METRICS.to_vec());
+            let buffer = encode_metrics(encoder, PUBLIC_METRICS);
             *resp.body_mut() = Body::from(buffer);
         }
         (&Method::GET, "/json_metrics") => {
             let json_metrics = get_json_metrics();
-            let whitelist_json_metrics =
-                whitelist_json_metrics(json_metrics, PUBLIC_METRICS.to_vec());
+            let whitelist_json_metrics = whitelist_json_metrics(json_metrics, PUBLIC_METRICS);
             let encoded_metrics = serde_json::to_string(&whitelist_json_metrics).unwrap();
             *resp.body_mut() = Body::from(encoded_metrics);
         }
