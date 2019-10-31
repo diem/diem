@@ -362,7 +362,6 @@ impl SwarmConfig {
             state_sync: template.state_sync.clone(),
             log_collector: template.log_collector.clone(),
             vm_config: template.vm_config.clone(),
-            secret_service: template.secret_service.clone(),
         };
         NodeConfigHelpers::randomize_config_ports(&mut config);
         config.vm_config.publishing_options = VMPublishingOption::Open;

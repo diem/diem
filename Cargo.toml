@@ -31,7 +31,6 @@ members = [
     "consensus/safety-rules",
     "crypto/crypto",
     "crypto/crypto-derive",
-    "crypto/secret-service",
     "executor",
     "language/benchmarks",
     "language/bytecode-verifier",
@@ -88,7 +87,6 @@ members = [
 # test-only code included.
 default-members = [
     "client",
-    "crypto/secret-service",
     "language/compiler",
     "language/vm/vm-genesis",
     "libra-node",
