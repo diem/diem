@@ -11,6 +11,7 @@ pub mod network_builder;
 
 mod admission_control;
 mod consensus;
+mod health_checker;
 mod mempool;
 mod state_synchronizer;
 #[cfg(test)]
@@ -25,6 +26,7 @@ pub use consensus::{
     ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
     CONSENSUS_RPC_PROTOCOL,
 };
+pub use health_checker::HealthCheckerNetworkEvents;
 use libra_types::PeerId;
 pub use mempool::{MempoolNetworkEvents, MempoolNetworkSender, MEMPOOL_DIRECT_SEND_PROTOCOL};
 pub use state_synchronizer::{
@@ -45,7 +47,7 @@ pub enum Event<TMessage> {
     /// New inbound direct-send message from peer.
     Message((PeerId, TMessage)),
     /// New inbound rpc request. The request is fulfilled by sending the
-    /// serialized response `Bytes` over the `onshot::Sender`, where the network
+    /// serialized response `Bytes` over the `oneshot::Sender`, where the network
     /// layer will handle sending the response over-the-wire.
     RpcRequest((PeerId, TMessage, oneshot::Sender<Result<Bytes, RpcError>>)),
     /// Peer which we have a newly established connection with.
