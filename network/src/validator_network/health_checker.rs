@@ -4,23 +4,15 @@
 //! Interface between HealthChecker and Network layers.
 
 use crate::{
-    error::NetworkError,
-    interface::{NetworkNotification, NetworkRequest},
+    interface::NetworkRequest,
     proto::{HealthCheckerMsg, HealthCheckerMsg_oneof, Ping2, Pong2},
     protocols::rpc::{self, error::RpcError},
-    validator_network::Event,
+    validator_network::NetworkEvents,
     ProtocolId,
 };
 use channel;
-use futures::{
-    stream::Map,
-    task::{Context, Poll},
-    Stream, StreamExt,
-};
 use libra_types::PeerId;
-use pin_project::pin_project;
-use prost::Message as _;
-use std::{pin::Pin, time::Duration};
+use std::time::Duration;
 
 /// Protocol id for HealthChecker RPC calls
 #[allow(dead_code)]
@@ -32,40 +24,7 @@ pub const HEALTH_CHECKER_RPC_PROTOCOL: &[u8] = b"/libra/health-checker/rpc/0.1.0
 /// raw `Bytes` rpc messages are deserialized into
 /// `HealthCheckerMsg` types. `HealthCheckerNetworkEvents` is a thin wrapper
 /// around an `channel::Receiver<NetworkNotification>`.
-#[pin_project]
-pub struct HealthCheckerNetworkEvents {
-    #[pin]
-    inner: Map<
-        channel::Receiver<NetworkNotification>,
-        fn(NetworkNotification) -> Result<Event<HealthCheckerMsg>, NetworkError>,
-    >,
-}
-
-impl HealthCheckerNetworkEvents {
-    pub fn new(receiver: channel::Receiver<NetworkNotification>) -> Self {
-        let inner = receiver.map::<_, fn(_) -> _>(|notification| match notification {
-            NetworkNotification::NewPeer(peer_id) => Ok(Event::NewPeer(peer_id)),
-            NetworkNotification::LostPeer(peer_id) => Ok(Event::LostPeer(peer_id)),
-            NetworkNotification::RecvRpc(peer_id, rpc_req) => {
-                let req_msg = HealthCheckerMsg::decode(rpc_req.data.as_ref())?;
-                Ok(Event::RpcRequest((peer_id, req_msg, rpc_req.res_tx)))
-            }
-            NetworkNotification::RecvMessage(_, _) => {
-                unreachable!("HealthChecker does not currently use DirectSend");
-            }
-        });
-
-        Self { inner }
-    }
-}
-
-impl Stream for HealthCheckerNetworkEvents {
-    type Item = Result<Event<HealthCheckerMsg>, NetworkError>;
-
-    fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
-        self.project().inner.poll_next(context)
-    }
-}
+pub type HealthCheckerNetworkEvents = NetworkEvents<HealthCheckerMsg>;
 
 /// The interface from HealthChecker to Networking layer.
 ///
@@ -123,8 +82,15 @@ impl HealthCheckerNetworkSender {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{protocols::rpc::InboundRpcRequest, utils::MessageExt};
-    use futures::{channel::oneshot, executor::block_on, future::try_join, sink::SinkExt};
+    use crate::{
+        protocols::rpc::InboundRpcRequest,
+        utils::MessageExt,
+        validator_network::{Event, NetworkNotification},
+    };
+    use futures::{
+        channel::oneshot, executor::block_on, future::try_join, sink::SinkExt, stream::StreamExt,
+    };
+    use prost::Message as _;
 
     // `HealthCheckerNetworkEvents` should deserialize inbound RPC requests
     #[test]

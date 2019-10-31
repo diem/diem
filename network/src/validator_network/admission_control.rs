@@ -4,10 +4,9 @@
 //! Interface between Admission Control and Network layers.
 
 use crate::{
-    error::NetworkError,
-    interface::{NetworkNotification, NetworkRequest},
+    interface::NetworkRequest,
     protocols::rpc::{self, error::RpcError},
-    validator_network::Event,
+    validator_network::NetworkEvents,
     ProtocolId,
 };
 use admission_control_proto::proto::admission_control::{
@@ -15,15 +14,8 @@ use admission_control_proto::proto::admission_control::{
     SubmitTransactionRequest, SubmitTransactionResponse,
 };
 use channel;
-use futures::{
-    stream::Map,
-    task::{Context, Poll},
-    Stream, StreamExt,
-};
 use libra_types::PeerId;
-use pin_project::pin_project;
-use prost::Message as _;
-use std::{pin::Pin, time::Duration};
+use std::time::Duration;
 
 /// Protocol id for admission control RPC calls
 pub const ADMISSION_CONTROL_RPC_PROTOCOL: &[u8] = b"/libra/admission_control/rpc/0.1.0";
@@ -34,41 +26,7 @@ pub const ADMISSION_CONTROL_RPC_PROTOCOL: &[u8] = b"/libra/admission_control/rpc
 /// raw `Bytes` direct-send and rpc messages are deserialized into
 /// `AdmissionControlMsg` types. `AdmissionControlNetworkEvents` is a thin wrapper around
 /// an `channel::Receiver<NetworkNotification>`.
-#[pin_project]
-pub struct AdmissionControlNetworkEvents {
-    #[pin]
-    inner: Map<
-        channel::Receiver<NetworkNotification>,
-        fn(NetworkNotification) -> Result<Event<AdmissionControlMsg>, NetworkError>,
-    >,
-}
-
-impl AdmissionControlNetworkEvents {
-    pub fn new(receiver: channel::Receiver<NetworkNotification>) -> Self {
-        let inner = receiver.map::<_, fn(_) -> _>(|notification| match notification {
-            NetworkNotification::NewPeer(peer_id) => Ok(Event::NewPeer(peer_id)),
-            NetworkNotification::LostPeer(peer_id) => Ok(Event::LostPeer(peer_id)),
-            NetworkNotification::RecvRpc(peer_id, rpc_req) => {
-                let req_msg = AdmissionControlMsg::decode(rpc_req.data.as_ref())?;
-                Ok(Event::RpcRequest((peer_id, req_msg, rpc_req.res_tx)))
-            }
-            NetworkNotification::RecvMessage(peer_id, msg) => {
-                let msg = AdmissionControlMsg::decode(msg.mdata.as_ref())?;
-                Ok(Event::Message((peer_id, msg)))
-            }
-        });
-
-        Self { inner }
-    }
-}
-
-impl Stream for AdmissionControlNetworkEvents {
-    type Item = Result<Event<AdmissionControlMsg>, NetworkError>;
-
-    fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
-        self.project().inner.poll_next(context)
-    }
-}
+pub type AdmissionControlNetworkEvents = NetworkEvents<AdmissionControlMsg>;
 
 /// The interface from Admission Control to Network layer.
 ///
@@ -127,9 +85,14 @@ impl AdmissionControlNetworkSender {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocols::rpc::InboundRpcRequest;
-    use crate::utils::MessageExt;
-    use futures::{channel::oneshot, executor::block_on, future::try_join, SinkExt};
+    use crate::{
+        interface::NetworkNotification, protocols::rpc::InboundRpcRequest, utils::MessageExt,
+        validator_network::Event,
+    };
+    use futures::{
+        channel::oneshot, executor::block_on, future::try_join, sink::SinkExt, stream::StreamExt,
+    };
+    use prost::Message as _;
 
     // `AdmissionControlNetworkEvents` should deserialize inbound RPC requests
     #[test]

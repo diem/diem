@@ -4,8 +4,17 @@
 //! Network API for [`Consensus`](/consensus/index.html) and [`Mempool`](/mempool/index.html)
 
 pub use crate::protocols::rpc::error::RpcError;
+use crate::{error::NetworkError, interface::NetworkNotification};
 use bytes::Bytes;
-use futures::channel::oneshot;
+use futures::{
+    channel::oneshot,
+    ready,
+    stream::{FusedStream, Stream},
+    task::{Context, Poll},
+};
+use pin_project::pin_project;
+use prost::Message;
+use std::{default::Default, marker::PhantomData, pin::Pin};
 
 pub mod network_builder;
 
@@ -70,5 +79,63 @@ impl<TMessage: PartialEq> PartialEq for Event<TMessage> {
             (LostPeer(pid1), LostPeer(pid2)) => pid1 == pid2,
             _ => false,
         }
+    }
+}
+
+/// A `Stream` of `Event<TMessage>` from the lower network layer to an upper
+/// network application that deserializes inbound network direct-send and rpc
+/// messages into `TMessage`, which is some protobuf format implementing
+/// the `prost::Message` trait.
+///
+/// `NetworkEvents` is really just a thin wrapper around a
+/// `channel::Receiver<NetworkNotification>` that deserializes inbound messages.
+#[pin_project]
+pub struct NetworkEvents<TMessage: Message + Default> {
+    #[pin]
+    inner: channel::Receiver<NetworkNotification>,
+    _marker: PhantomData<TMessage>,
+}
+
+impl<TMessage: Message + Default> NetworkEvents<TMessage> {
+    pub fn new(inner: channel::Receiver<NetworkNotification>) -> Self {
+        Self {
+            inner,
+            _marker: PhantomData,
+        }
+    }
+
+    pub fn into_inner(self) -> channel::Receiver<NetworkNotification> {
+        self.inner
+    }
+}
+
+impl<TMessage: Message + Default> Stream for NetworkEvents<TMessage> {
+    type Item = Result<Event<TMessage>, NetworkError>;
+
+    fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
+        let maybe_notif = ready!(self.project().inner.poll_next(context));
+
+        Poll::Ready(maybe_notif.map(|notif| match notif {
+            NetworkNotification::NewPeer(peer_id) => Ok(Event::NewPeer(peer_id)),
+            NetworkNotification::LostPeer(peer_id) => Ok(Event::LostPeer(peer_id)),
+            NetworkNotification::RecvRpc(peer_id, rpc_req) => {
+                let req_msg = TMessage::decode(rpc_req.data)?;
+                Ok(Event::RpcRequest((peer_id, req_msg, rpc_req.res_tx)))
+            }
+            NetworkNotification::RecvMessage(peer_id, msg) => {
+                let msg = TMessage::decode(msg.mdata)?;
+                Ok(Event::Message((peer_id, msg)))
+            }
+        }))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+impl<TMessage: Message + Default> FusedStream for NetworkEvents<TMessage> {
+    fn is_terminated(&self) -> bool {
+        self.inner.is_terminated()
     }
 }
