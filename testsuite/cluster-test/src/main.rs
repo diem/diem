@@ -1,3 +1,4 @@
+use chrono::{Datelike, Timelike, Utc};
 use cluster_test::effects::RemoveNetworkEffects;
 use cluster_test::experiments::{MultiRegionSimulation, PacketLossRandomValidators};
 use cluster_test::github::GitHub;
@@ -853,6 +854,18 @@ impl ClusterTestRunner {
             thread::sleep(Duration::from_secs(10));
             info!("Starting...");
         }
+        let now = Utc::now();
+        let suffix = format!(
+            ".{:04}{:02}{:02}-{:02}{:02}{:02}.gz",
+            now.year(),
+            now.month(),
+            now.day(),
+            now.hour(),
+            now.minute(),
+            now.second()
+        );
+        let suffix = &suffix;
+        info!("Will use suffix {} for log rotation", suffix);
         let jobs = self
             .cluster
             .instances()
@@ -860,11 +873,20 @@ impl ClusterTestRunner {
             .map(|instance| {
                 let instance = instance.clone();
                 move || {
-                    if let Err(e) =
-                        instance.run_cmd_tee_err(vec!["sudo", "rm", "-rf", "/data/libra/"])
-                    {
-                        info!("Failed to wipe {}: {:?}", instance, e);
-                    }
+                    instance
+                        .run_cmd_tee_err(vec!["sudo", "rm", "-rf", "/data/libra/*db"])
+                        .map_err(|e| info!("Failed to wipe {}: {:?}", instance, e))
+                        .ok();
+                    instance
+                        .run_cmd_tee_err(vec![
+                            "sudo",
+                            "gzip",
+                            "-S",
+                            suffix,
+                            "/data/libra/libra.log",
+                        ])
+                        .map_err(|e| info!("Failed to gzip log file {}: {:?}", instance, e))
+                        .ok();
                 }
             })
             .collect();
