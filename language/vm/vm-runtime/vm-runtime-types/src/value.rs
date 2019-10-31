@@ -3,7 +3,9 @@
 
 use crate::{
     loaded_data::{struct_def::StructDef, types::Type},
-    native_structs::{serializer::deserialize_native, NativeStructValue},
+    native_structs::{
+        def::NativeStructTag, vector::NativeVector, NativeStructType, NativeStructValue,
+    },
 };
 use libra_types::{
     access_path::AccessPath,
@@ -11,9 +13,10 @@ use libra_types::{
     byte_array::ByteArray,
     vm_error::{StatusCode, VMStatus},
 };
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 use std::{
     cell::{Ref, RefCell},
+    fmt,
     mem::replace,
     ops::Add,
     rc::Rc,
@@ -1043,52 +1046,139 @@ impl Value {
 
     /// Deserialize this value using `lcs::Deserializer` and a provided struct definition.
     pub fn simple_deserialize(blob: &[u8], resource: StructDef) -> VMResult<Value> {
+        use de::DeserializeSeed;
+
         let mut deserializer = lcs::Deserializer::new(blob);
-        let s = deserialize_struct(&mut deserializer, &resource)?;
+        let s = resource
+            .deserialize(&mut deserializer)
+            .map_err(|_| vm_error(Location::new(), StatusCode::INVALID_DATA))?;
         deserializer
             .end()
             .map(move |_| s)
-            .map_err(|_| vm_error(Location::new(), StatusCode::INVALID_DATA))
+            .map_err(|e| VMStatus::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
     }
 }
 
-pub(crate) fn deserialize_value(
-    deserializer: &mut lcs::Deserializer<'_>,
-    ty: &Type,
-) -> VMResult<Value> {
-    match ty {
-        Type::Bool => bool::deserialize(deserializer).map(Value::bool),
-        Type::U64 => u64::deserialize(deserializer).map(Value::u64),
-        Type::String => VMString::deserialize(deserializer).map(Value::string),
-        Type::ByteArray => ByteArray::deserialize(deserializer).map(Value::byte_array),
-        Type::Address => AccountAddress::deserialize(deserializer).map(Value::address),
-        Type::Struct(s_fields) => Ok(deserialize_struct(deserializer, s_fields)?),
-        Type::Reference(_) | Type::MutableReference(_) | Type::TypeVariable(_) => {
-            // Case TypeVariable is not possible as all type variable has to be materialized before
-            // serialization.
-            return Err(vm_error(Location::new(), StatusCode::INVALID_DATA));
-        }
-    }
-    .map_err(|_| vm_error(Location::new(), StatusCode::INVALID_DATA))
-}
+impl<'de> de::DeserializeSeed<'de> for &StructDef {
+    type Value = Value;
 
-fn deserialize_struct(
-    deserializer: &mut lcs::Deserializer<'_>,
-    struct_def: &StructDef,
-) -> VMResult<Value> {
-    match struct_def {
-        StructDef::Struct(s) => {
-            let mut s_vals = Vec::new();
-            for field_type in s.field_definitions() {
-                s_vals.push(deserialize_value(deserializer, field_type)?);
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        use de::Error;
+
+        struct StructVisitor<'a>(&'a [Type]);
+        impl<'de, 'a> de::Visitor<'de> for StructVisitor<'a> {
+            type Value = Struct;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("Struct")
             }
-            Ok(Value::struct_(Struct::new(s_vals)))
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: de::SeqAccess<'de>,
+            {
+                let mut val = Vec::new();
+
+                for (i, field_type) in self.0.iter().enumerate() {
+                    if let Some(elem) = seq.next_element_seed(field_type)? {
+                        val.push(elem)
+                    } else {
+                        return Err(A::Error::invalid_length(i, &self));
+                    }
+                }
+                Ok(Struct::new(val))
+            }
         }
-        StructDef::Native(ty) => Ok(Value::native_struct(deserialize_native(deserializer, ty)?)),
+
+        match self {
+            StructDef::Struct(s) => {
+                let fields = s.field_definitions();
+                Ok(Value::struct_(
+                    deserializer.deserialize_tuple(fields.len(), StructVisitor(fields))?,
+                ))
+            }
+            StructDef::Native(ty) => Ok(Value::native_struct(ty.deserialize(deserializer)?)),
+        }
     }
 }
 
-// TODO(#1307)
+impl<'de> de::DeserializeSeed<'de> for &Type {
+    type Value = Value;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        use de::Error;
+
+        match self {
+            Type::Bool => bool::deserialize(deserializer).map(Value::bool),
+            Type::U64 => u64::deserialize(deserializer).map(Value::u64),
+            Type::String => VMString::deserialize(deserializer).map(Value::string),
+            Type::ByteArray => ByteArray::deserialize(deserializer).map(Value::byte_array),
+            Type::Address => AccountAddress::deserialize(deserializer).map(Value::address),
+            Type::Struct(s_fields) => s_fields.deserialize(deserializer),
+            Type::Reference(_) | Type::MutableReference(_) | Type::TypeVariable(_) => {
+                // Case TypeVariable is not possible as all type variable has to be materialized
+                // before serialization.
+                Err(D::Error::custom(
+                    VMStatus::new(StatusCode::INVALID_DATA)
+                        .with_message(format!("Value type {:?} not possible", self)),
+                ))
+            }
+        }
+    }
+}
+
+impl<'de> de::DeserializeSeed<'de> for &NativeStructType {
+    type Value = NativeStructValue;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        use de::Error;
+
+        struct NativeVectorVisitor<'a>(&'a Type);
+        impl<'de, 'a> de::Visitor<'de> for NativeVectorVisitor<'a> {
+            type Value = NativeVector;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("NativeVector")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: de::SeqAccess<'de>,
+            {
+                let mut val = Vec::new();
+                while let Some(elem) = seq.next_element_seed(self.0)? {
+                    val.push(MutVal::new(elem))
+                }
+                Ok(NativeVector(val))
+            }
+        }
+
+        match self.tag {
+            NativeStructTag::Vector => {
+                if self.type_actuals().len() != 1 {
+                    return Err(D::Error::custom(
+                        VMStatus::new(StatusCode::DATA_FORMAT_ERROR)
+                            .with_message("NaitiveVector must have uniform types".into()),
+                    ));
+                };
+                let elem_type = &self.type_actuals()[0];
+                Ok(NativeStructValue::Vector(
+                    deserializer.deserialize_seq(NativeVectorVisitor(elem_type))?,
+                ))
+            }
+        }
+    }
+}
+
 impl Serialize for ValueImpl {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
