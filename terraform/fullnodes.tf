@@ -96,6 +96,7 @@ data "template_file" "fullnode_ecs_task_definition" {
     log_region       = var.region
     log_prefix       = "fullnode-${substr(var.fullnode_ids[count.index], 0, 8)}"
     capabilities     = jsonencode(var.validator_linux_capabilities)
+    command          = local.validator_command
   }
 }
 

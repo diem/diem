@@ -3,6 +3,9 @@
         "name": "validator",
         "image": "${image}${image_version}",
         "cpu": ${cpu},
+        %{ if command != "" }
+            "command": ${command},
+        %{ endif }
         "memory": ${mem},
         "essential": true,
         "portMappings": [

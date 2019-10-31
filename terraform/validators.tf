@@ -251,6 +251,16 @@ data "template_file" "seed_peers" {
   }
 }
 
+variable "log_to_file" {
+  type        = bool
+  default     = false
+  description = "Set to true to log to /opt/libra/data/libra.log (in container) and /data/libra/libra.log (on host). This file won't be log rotated, you need to handle log rotation on your own if you choose this option"
+}
+
+locals {
+  validator_command = var.log_to_file ? jsonencode(["bash", "-c", "/docker-run.sh >> /opt/libra/data/libra.log 2>&1"]) : ""
+}
+
 data "template_file" "ecs_task_definition" {
   count    = length(var.peer_ids)
   template = file("templates/validator.json")
@@ -272,6 +282,7 @@ data "template_file" "ecs_task_definition" {
     log_region       = var.region
     log_prefix       = "validator-${substr(var.peer_ids[count.index], 0, 8)}"
     capabilities     = jsonencode(var.validator_linux_capabilities)
+    command          = local.validator_command
   }
 }
 
