@@ -74,9 +74,6 @@ pub struct NodeConfig {
     pub log_collector: LoggerConfig,
     #[serde(default)]
     pub vm_config: VMConfig,
-
-    #[serde(default)]
-    pub secret_service: SecretServiceConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -224,22 +221,6 @@ impl Default for LoggerConfig {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
-pub struct SecretServiceConfig {
-    pub address: String,
-    pub secret_service_port: u16,
-}
-
-impl Default for SecretServiceConfig {
-    fn default() -> SecretServiceConfig {
-        SecretServiceConfig {
-            address: "localhost".to_string(),
-            secret_service_port: 6185,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(default)]
 pub struct AdmissionControlConfig {
     pub address: String,
     pub admission_control_service_port: u16,
@@ -264,7 +245,6 @@ impl Default for AdmissionControlConfig {
 #[serde(default)]
 pub struct DebugInterfaceConfig {
     pub admission_control_node_debug_port: u16,
-    pub secret_service_node_debug_port: u16,
     pub storage_node_debug_port: u16,
     // This has similar use to the core-node-debug-server itself
     pub metrics_server_port: u16,
@@ -277,7 +257,6 @@ impl Default for DebugInterfaceConfig {
         DebugInterfaceConfig {
             admission_control_node_debug_port: 6191,
             storage_node_debug_port: 6194,
-            secret_service_node_debug_port: 6195,
             metrics_server_port: 9101,
             public_metrics_server_port: 9102,
             address: "localhost".to_string(),
@@ -738,11 +717,9 @@ impl NodeConfigHelpers {
         config.debug_interface.admission_control_node_debug_port = get_available_port();
         config.debug_interface.metrics_server_port = get_available_port();
         config.debug_interface.public_metrics_server_port = get_available_port();
-        config.debug_interface.secret_service_node_debug_port = get_available_port();
         config.debug_interface.storage_node_debug_port = get_available_port();
         config.execution.port = get_available_port();
         config.mempool.mempool_service_port = get_available_port();
-        config.secret_service.secret_service_port = get_available_port();
         config.storage.port = get_available_port();
     }
 }
