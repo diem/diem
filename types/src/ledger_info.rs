@@ -118,7 +118,7 @@ impl LedgerInfo {
         };
         LedgerInfo {
             version,
-            transaction_accumulator_hash:transaction_accumulator_hash,
+            transaction_accumulator_hash,
             consensus_data_hash:li.consensus_data_hash(),
             consensus_block_id:li.consensus_block_id(),
             epoch_num:li.epoch_num(),

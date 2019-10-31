@@ -46,6 +46,10 @@ service Storage {
     rpc GetStartupInfo(GetStartupInfoRequest)
     returns (GetStartupInfoResponse);
 
+    // Returns history information needed for libra core to start up for pre compute.
+    rpc GetHistoryStartupInfoByBlockId(GetHistoryStartupInfoByBlockIdRequest)
+    returns (GetStartupInfoResponse);
+
     // Returns latest ledger infos per epoch.
     rpc GetLatestLedgerInfosPerEpoch(GetLatestLedgerInfosPerEpochRequest)
     returns (GetLatestLedgerInfosPerEpochResponse);
@@ -103,6 +107,10 @@ message GetAccountStateWithProofByVersionResponse {
 }
 
 message GetStartupInfoRequest {}
+
+message GetHistoryStartupInfoByBlockIdRequest {
+    bytes block_id = 1;
+}
 
 message GetStartupInfoResponse {
     // When this is empty, Storage needs to be bootstrapped via the bootstrap API

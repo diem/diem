@@ -274,12 +274,12 @@ impl<V> Executor<V>
     /// Executes a block.
     pub fn pre_execute_block(
         &self,
-        transactions: Vec<Transaction>,
-        parent_state_id: HashValue,
+        transactions_vec: Vec<Vec<Transaction>>,
+        ancestor_id: HashValue,
     ) -> oneshot::Receiver<Result<(StateComputeResult, HashValue)>> {
         debug!(
-            "Received request to pre execute block. Parent state id: {:x}.",
-            parent_state_id
+            "Received request to pre execute block. Ancestor id: {:x}.",
+            ancestor_id
         );
 
         let (resp_sender, resp_receiver) = oneshot::channel();
@@ -291,8 +291,8 @@ impl<V> Executor<V>
             {
                 Some(sender) => sender
                     .send(Command::PreExecuteBlock {
-                        transactions,
-                        parent_state_id,
+                        transactions_vec,
+                        ancestor_id,
                         resp_sender,
                     })
                     .expect("Did block processor thread panic?"),
@@ -450,8 +450,8 @@ enum Command {
         resp_sender: oneshot::Sender<Result<StateComputeResult>>,
     },
     PreExecuteBlock {
-        transactions: Vec<Transaction>,
-        parent_state_id: HashValue,
+        transactions_vec: Vec<Vec<Transaction>>,
+        ancestor_id: HashValue,
         resp_sender: oneshot::Sender<Result<(StateComputeResult, HashValue)>>,
     },
     CommitBlock {

@@ -46,7 +46,7 @@ use libra_types::validator_set::ValidatorSet;
 use libra_types::PeerId;
 use std::collections::HashMap;
 use bytes::Bytes;
-use futures_locks::Mutex;
+use futures_locks::{Mutex, RwLock};
 use {
     futures::{
         compat::Future01CompatExt,
@@ -74,8 +74,8 @@ pub struct EventHandle {
 //    sync_model: Arc<AtomicBool>,
 
     //    sync_blocks:Arc<Mutex<Vec<Block<Vec<SignedTransaction>>>>>,
-    sync_block_sender: mpsc::Sender<BlockRetrievalResponse<Vec<SignedTransaction>>>,
-    sync_block_receiver: Option<mpsc::Receiver<BlockRetrievalResponse<Vec<SignedTransaction>>>>,
+    sync_block_sender: mpsc::Sender<(PeerId, BlockRetrievalResponse<Vec<SignedTransaction>>)>,
+    sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<Vec<SignedTransaction>>)>>,
     sync_signal_sender: mpsc::Sender<(PeerId, u64)>,
     sync_signal_receiver: Option<mpsc::Receiver<(PeerId, u64)>>,
     sync_state_sender: mpsc::Sender<SyncState>,
@@ -90,7 +90,7 @@ pub struct EventHandle {
 }
 
 enum SyncState {
-    GOON(HashValue),
+    GOON((PeerId, HashValue)),
     END,
 }
 
@@ -110,6 +110,7 @@ pub struct BlockChain {
     pub height: u64,
     pub indexs: HashMap<u64, Vec<BlockIndex>>,
     pub hash_height_index: HashMap<HashValue, (u64, usize)>,
+    pub main_chain: HashMap<u64, HashValue>,
 }
 
 impl BlockChain {
@@ -163,6 +164,13 @@ impl BlockChain {
             None => {
                 (false, None)
             }
+        }
+    }
+
+    pub fn update_main_chain(&mut self, main_chain_hashs:Vec<&HashValue>) {
+        for hash in main_chain_hashs {
+            let (index, _) = self.find_height_index_by_block_hash(hash).expect("block index not exist.");
+            self.main_chain.insert(index.clone(), hash.clone());
         }
     }
 
@@ -227,14 +235,16 @@ impl EventHandle {
         let indexs = index_map;
         let mut hash_height_index = HashMap::new();
         hash_height_index.insert(*GENESIS_BLOCK_ID, (0, 0));
-        let init_block_chain = BlockChain { height: genesis_height, indexs, hash_height_index };
-        let block_chain = Arc::new(Mutex::new(init_block_chain));
+        let mut main_chain = HashMap::new();
+        main_chain.insert(0, *GENESIS_BLOCK_ID);
+        let init_block_chain = BlockChain { height: genesis_height, indexs, hash_height_index, main_chain };
+        let block_chain = Arc::new(RwLock::new(init_block_chain));
         let mint_block_vec = Arc::new(AtomicRefCell::new(vec![*GENESIS_BLOCK_ID]));
         let block_store = Arc::new(ConsensusDB::new(storage_dir));
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         let orphan_blocks = Arc::new(Mutex::new(HashMap::new()));
-        // TODO: config it
         let pow_srv = Arc::new(PowCuckoo::new(6, 8));
+
         EventHandle {
             block_cache_sender,
             block_cache_receiver: Some(block_cache_receiver),
@@ -317,11 +327,12 @@ impl EventHandle {
                         match msg.clone() {
                             ConsensusMsg_oneof::NewBlock(new_block) => Self::process_new_block_msg(&mut block_cache_sender, new_block, pow_ctx, pow_srv.clone()).await,
                             ConsensusMsg_oneof::ChainInfo(chain_info) => {
-                                let height = block_chain.clone().lock().compat().await.unwrap().longest_chain_height();
-                                println!("ChainInfo get chain lock:{}", height);
-                                println!("ChainInfo drop chain lock:{}", height);
+                                let height = block_chain.clone().read().compat().await.unwrap().longest_chain_height();
+                                println!("ChainInfo get chain lock:{:?}", self_peer_id);
+                                println!("ChainInfo myself : {} :{:?}, other: {} :{:?} ", height, self_peer_id, chain_info.height, AccountAddress::try_from(chain_info.author).expect("author to bytes err."));
+                                println!("ChainInfo drop chain lock:{:?}", self_peer_id);
                                 if height > chain_info.height {
-                                    let chain_info_msg = Self::chain_info_msg(height);
+                                    let chain_info_msg = Self::chain_info_msg(height, self_peer_id.clone());
                                     Self::send_consensus_msg(peer_id, &mut network_sender.clone(), self_peer_id.clone(), &mut self_sender.clone(), chain_info_msg).await;
                                 } else {
                                     if height < chain_info.height {
@@ -337,7 +348,7 @@ impl EventHandle {
                                 let mut latest_block = if req_block.block_id.len() > 0 {
                                     Some(HashValue::from_slice(req_block.block_id.as_ref()).unwrap())
                                 } else { None };
-                                let block_chain_lock = block_chain.clone().lock().compat().await.unwrap();
+                                let block_chain_lock = block_chain.clone().read().compat().await.unwrap();
                                 println!("RequestBlock get chain lock");
                                 let mut exist_flag = false;
                                 for i in 0..req_block.num_blocks {
@@ -346,7 +357,7 @@ impl EventHandle {
                                             let child = block_db.get_block_by_hash::<Vec<SignedTransaction>>(&child_hash);
                                             match child {
                                                 Some(c) => {
-                                                    c.parent_id()
+                                                    child_hash
                                                 }
                                                 None => {
                                                     exist_flag = true;
@@ -363,6 +374,7 @@ impl EventHandle {
                                     }
 
                                     let block = block_db.get_block_by_hash::<Vec<SignedTransaction>>(&hash).expect("block not exist.");
+                                    latest_block = Some(block.parent_id());
                                     blocks.push(block.into());
 
                                     if hash == *GENESIS_BLOCK_ID {
@@ -375,7 +387,8 @@ impl EventHandle {
 
                                 let status = if exist_flag {
                                     //BlockRetrievalStatus::IDNOTFOUND
-                                    1
+                                    //1
+                                    0
                                 } else {
                                     if (blocks.len() as u64) == req_block.num_blocks {
                                         //BlockRetrievalStatus::SUCCEEDED
@@ -406,7 +419,7 @@ impl EventHandle {
                                 }
                                 let response = BlockRetrievalResponse { status, blocks };
 
-                                if let Err(err) = sync_block_sender.send(response).await {
+                                if let Err(err) = sync_block_sender.send((peer_id, response)).await {
                                     error!("send sync block err: {:?}", err);
                                 };
                                 ()
@@ -431,10 +444,10 @@ impl EventHandle {
                     }
                     Event::NewPeer(peer_id) => {
                         //TODO:
-                        let height = block_chain.clone().lock().compat().await.unwrap().longest_chain_height();
+                        let height = block_chain.clone().read().compat().await.unwrap().longest_chain_height();
                         println!("NewPeer get chain lock");
                         println!("NewPeer drop chain lock");
-                        let chain_info_msg = Self::chain_info_msg(height);
+                        let chain_info_msg = Self::chain_info_msg(height, self_peer_id.clone());
                         Self::send_consensus_msg(peer_id, &mut network_sender.clone(), self_peer_id.clone(), &mut self_sender.clone(), chain_info_msg).await;
 //                        let msg = Self::chain_info_msg(block_chain.clone().lock().unwrap().height as u64);
 //                        Self::broadcast_consensus_msg(consensus_peers.clone(), &mut network_sender, self_peer_id, &mut self_sender, msg).await;
@@ -456,9 +469,10 @@ impl EventHandle {
         //TODO:orphan
     }
 
-    fn chain_info_msg(height: u64) -> ConsensusMsg {
+    fn chain_info_msg(height: u64, author:AccountAddress) -> ConsensusMsg {
         let mut info = LongestChainInfo::default();
         info.height = height;
+        info.author = AccountAddress::try_into(author).expect("author to bytes err.");
         ConsensusMsg {
             message: Some(ConsensusMsg_oneof::ChainInfo(info)),
         }
@@ -493,7 +507,7 @@ impl EventHandle {
     }
 
     async fn send_consensus_msg(send_peer_id: PeerId, network_sender: &mut ConsensusNetworkSender, self_peer_id: PeerId,
-                                self_sender: &mut channel::Sender<failure::Result<Event<ConsensusMsg>>>, msg: ConsensusMsg) {
+        self_sender: &mut channel::Sender<failure::Result<Event<ConsensusMsg>>>, msg: ConsensusMsg) {
         if send_peer_id == self_peer_id {
             let event_msg = Ok(Event::Message((self_peer_id, msg.clone())));
             if let Err(err) = self_sender.send(event_msg).await {
@@ -547,6 +561,8 @@ impl EventHandle {
             loop {
                 ::futures::select! {
                     block = block_cache_receiver.select_next_some() => {
+                        //TODO:Verify block
+
                         // 2. compute with state_computer
                         let payload = match block.payload() {
                             Some(txns) => txns.clone(),
@@ -556,7 +572,7 @@ impl EventHandle {
                             Ok(_) => {
                                 //save index
                                 let block_index = BlockIndex { id: block.id(), parent_block_id: block.parent_id() };
-                                let mut chain_lock = block_chain.lock().compat().await.unwrap();
+                                let mut chain_lock = block_chain.write().compat().await.unwrap();
                                 println!("save block get chain lock");
                                 let (orphan_flag, old) = chain_lock.connect_block(block_index.clone());
 
@@ -567,8 +583,10 @@ impl EventHandle {
                                 } else {
                                     match old {
                                         Some(old_root) => {
+                                            let mut main_chain_indexs:Vec<&HashValue> = Vec::new();
+
                                             if old_root !=  block.parent_id() {//rollback
-                                                let (rollback_vec, commit_vec) = chain_lock.find_ancestor(&old_root, &block.parent_id()).expect("find ancestor err.");
+                                                let (rollback_vec, mut commit_vec) = chain_lock.find_ancestor(&old_root, &block.parent_id()).expect("find ancestor err.");
                                                 let rollback_len = rollback_vec.len();
                                                 let ancestor_block_id = chain_lock.find_index_by_block_hash(rollback_vec.get(rollback_len - 1).expect("latest_block_id err.")).expect("block index is none err.").parent_block_id;
 
@@ -591,12 +609,21 @@ impl EventHandle {
                                                 for commit in commit_vec.iter().rev() {
                                                     // 1. query block
                                                     let commit_block = block_db.get_block_by_hash::<Vec<SignedTransaction>>(commit).expect("block not find in database err.");
+                                                    // 2. commit block
                                                     Self::execut_and_commit_block(block_db.clone(), commit_block, txn_manager.clone(), state_computer.clone()).await;
                                                 }
+
+//                                              // 4. update main chain
+                                                main_chain_indexs.append(&mut commit_vec);
                                             }
 
                                             //4.save latest block
-                                            Self::execut_and_commit_block(block_db.clone(), block, txn_manager.clone(), state_computer.clone()).await;
+                                            let id = block.id();
+                                            Self::execut_and_commit_block(block_db.clone(), block.clone(), txn_manager.clone(), state_computer.clone()).await;
+                                            //5. update main chain
+                                            let mut chain_lock = block_chain.write().compat().await.unwrap();
+                                            main_chain_indexs.append(&mut vec![&id].to_vec());
+                                            chain_lock.update_main_chain(main_chain_indexs);
                                         }
                                         None => {
                                             // save latest block
@@ -608,7 +635,7 @@ impl EventHandle {
                                 drop(chain_lock);
                                 println!("save block drop chain lock");
                             }
-                            Err(err) => {}
+                            Err(err) => {println!("------->>>>>");}
                         }
                     }
                 }
@@ -666,8 +693,8 @@ impl EventHandle {
             loop {
                 ::futures::select! {
                     (_) = sync_height_receiver.select_next_some() => {
-                        let height = sync_block_chain.lock().compat().await.unwrap().longest_chain_height();
-                        let chain_info_msg = Self::chain_info_msg(height);
+                        let height = sync_block_chain.read().compat().await.unwrap().longest_chain_height();
+                        let chain_info_msg = Self::chain_info_msg(height, self_peer_id.clone());
                         Self::broadcast_consensus_msg(consensus_peers.clone(), &mut sync_network_sender.clone(), false, self_peer_id.clone(), &mut sync_self_sender.clone(), chain_info_msg, None).await;
                     },
                     (peer_id, height) = sync_signal_receiver.select_next_some() => {
@@ -676,20 +703,20 @@ impl EventHandle {
                         let sync_block_req_msg = Self::sync_block_req(None);
 
                         Self::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
-                        while let Ok(Some(state)) = sync_state_receiver.try_next() {
-                            match state {
-                                SyncState::END => {
-                                    break;
-                                },
-                                SyncState::GOON(hash) => {
-                                    let sync_block_req_msg = Self::sync_block_req(Some(hash));
-                                    Self::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
-                                }
+                    },
+                    (sync_state) = sync_state_receiver.select_next_some() => {
+                        match sync_state {
+                            SyncState::END => {
+                                println!("----------4444-----------");
+                            },
+                            SyncState::GOON((peer_id, hash)) => {
+                                println!("----------3333-----------");
+                                let sync_block_req_msg = Self::sync_block_req(Some(hash));
+                                Self::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
                             }
-
                         }
-                    }
-                    sync_block_resp = sync_block_receiver.select_next_some() => {
+                    },
+                    (peer_id, sync_block_resp) = sync_block_receiver.select_next_some() => {
                         // 2. save data to cache
                         let status = sync_block_resp.status;
                         let blocks = sync_block_resp.blocks;
@@ -697,7 +724,7 @@ impl EventHandle {
                         let mut flag = false;
                         let mut end_block = None;
                         if blocks.len() > 0 {
-                            let sync_block_chain_lock = sync_block_chain.lock().compat().await.unwrap();
+                            let sync_block_chain_lock = sync_block_chain.read().compat().await.unwrap();
                             println!("sync block get chain lock");
                             for block in blocks {
                                 let hash = block.hash();
@@ -719,7 +746,7 @@ impl EventHandle {
                                 if flag {
                                     SyncState::END
                                 } else {
-                                    SyncState::GOON(end_block.unwrap())
+                                    SyncState::GOON((peer_id, end_block.unwrap()))
                                 }
                             }
                             BlockRetrievalStatus::IdNotFound => {
@@ -762,7 +789,7 @@ impl EventHandle {
                     Ok(txns) => {
                         if txns.len() > 0 {
                             //create block
-                            let block_read_lock = block_chain_clone.lock().compat().await.unwrap();
+                            let block_read_lock = block_chain_clone.read().compat().await.unwrap();
                             println!("mint block get chain lock");
                             let height = &block_read_lock.longest_chain_height();
                             let parent_block = block_read_lock.indexs.get(height).unwrap()[0].clone();
@@ -828,7 +855,7 @@ impl EventHandle {
 
                 let mut r = rand::thread_rng();
                 r.gen::<i32>();
-                let sleep_time = r.gen_range(30, 60);
+                let sleep_time = r.gen_range(10, 20);
                 println!("sleep begin.");
                 sleep(Duration::from_secs(sleep_time));
                 println!("sleep end.");

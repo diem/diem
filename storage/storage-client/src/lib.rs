@@ -32,7 +32,7 @@ use storage_proto::{
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
     GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
     GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    SaveTransactionsRequest, StartupInfo, RollbackRequest, RollbackResponse
+    SaveTransactionsRequest, StartupInfo, RollbackRequest, RollbackResponse, GetHistoryStartupInfoByBlockIdRequest
 };
 
 pub use crate::state_view::VerifiedStateView;
@@ -198,6 +198,13 @@ impl StorageRead for StorageReadServiceClient {
 
     fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
         block_on(self.get_startup_info_async())
+    }
+
+    fn get_history_startup_info_by_block_id(&self, block_id:HashValue) -> Result<Option<StartupInfo>> {
+        let req = GetHistoryStartupInfoByBlockIdRequest{block_id};
+        let startup_info_resp = self.client().get_history_startup_info_by_block_id(&req.into());
+        let resp = GetStartupInfoResponse::try_from(startup_info_resp?)?;
+        Ok(resp.info)
     }
 
     fn get_startup_info_async(
@@ -377,6 +384,9 @@ pub trait StorageRead: Send + Sync {
     /// [`LibraDB::get_startup_info`]:
     /// ../libradb/struct.LibraDB.html#method.get_startup_info
     fn get_startup_info(&self) -> Result<Option<StartupInfo>>;
+
+    /// history startup info
+    fn get_history_startup_info_by_block_id(&self, block_id:HashValue) -> Result<Option<StartupInfo>>;
 
     /// See [`LibraDB::get_startup_info`].
     ///

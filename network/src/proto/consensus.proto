@@ -151,4 +151,5 @@ message RespondBlock {
 
 message LongestChainInfo{
     uint64 height = 1;
+    bytes author = 2;
 }

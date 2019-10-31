@@ -89,18 +89,22 @@ impl StateComputer for ExecutionProxy {
 
     fn pre_compute(
         &self,
-        // The id of a parent block, on top of which the given transactions should be executed.
-        parent_state_id: HashValue,
+        // The id of a ancestor block which is main chain block.
+        ancestor_id: HashValue,
         // Transactions to execute.
-        transactions: &Self::Payload,
+        transactions_vec: &Vec<Self::Payload>,
     ) -> Pin<Box<dyn Future<Output = Result<(StateComputeResult, HashValue)>> + Send>> {
         let pre_execution_instant = Instant::now();
-        let execute_future = self.executor.pre_execute_block(
-            transactions
+        let mut txns = vec![];
+        for transactions in transactions_vec {
+            txns.push(transactions
                 .iter()
                 .map(|txn| Transaction::UserTransaction(txn.clone()))
-                .collect(),
-            parent_state_id,
+                .collect())
+        }
+        let execute_future = self.executor.pre_execute_block(
+            txns,
+            ancestor_id,
         );
         async move {
             match execute_future.await {

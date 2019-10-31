@@ -169,6 +169,13 @@ impl StorageRead for StorageService {
         block_on(self.get_startup_info_async())
     }
 
+    fn get_history_startup_info_by_block_id(&self, block_id:HashValue) -> Result<Option<storage_proto::StartupInfo>> {
+        let info = self.get_history_startup_info_by_block_id_inner(&block_id)
+            .and_then(|resp| storage_proto::GetStartupInfoResponse::try_from(resp))
+            .unwrap();
+        Ok(info.info)
+    }
+
     fn get_startup_info_async(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Option<storage_proto::StartupInfo>>> + Send>> {

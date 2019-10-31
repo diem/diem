@@ -37,7 +37,7 @@ use std::{
 use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
 use vm_runtime::VMExecutor;
 use libra_types::transaction::SignedTransaction;
-use crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
+use crypto::hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH,};
 
 #[derive(Debug)]
 enum Mode {
@@ -242,13 +242,84 @@ where
                 }
             }
             Command::PreExecuteBlock {
-                transactions,
-                parent_state_id,
+                transactions_vec,
+                ancestor_id,
                 resp_sender,
             } => {
-                let res = if (parent_state_id == *ACCUMULATOR_PLACEHOLDER_HASH && self.committed_trees.version_and_state_root().0.unwrap() == 0)
-                    || parent_state_id == self.committed_trees.state_tree().root_hash() {
-                    let transactions:Vec<SignedTransaction> = transactions.iter()
+//                self.storage_write_client.rollback_by_block_id(block_id);
+//
+//                // 2. get StartInfo
+//                let startup_info = self.storage_read_client
+//                    .get_startup_info()
+//                    .expect("Failed to read startup info from storage.").expect("block not exist err.");
+//
+//                // 3. Reset ExecutedTrees
+//                let state_tree = Rc::new(SparseMerkleTree::new(startup_info.account_state_root_hash));
+//                let transaction_accumulator = Rc::new(
+//                    Accumulator::new(
+//                        startup_info.ledger_frozen_subtree_hashes,
+//                        startup_info.latest_version + 1,
+//                    )
+//                        .expect("The startup info read from storage should be valid."),
+//                );
+
+                let first_len = transactions_vec[0].len() as u64;
+                let (
+                    state_root_hash,
+                    frozen_subtrees_in_accumulator,
+                    ver,
+                    committed_timestamp_usecs,
+                    committed_block_id,
+                ) = if ancestor_id == *PRE_GENESIS_BLOCK_ID {
+                    info!("Startup info is empty. Will start from GENESIS.");
+                    (
+                        *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                        vec![],
+                        first_len + 1,// genesis tx
+                        0,
+                        *PRE_GENESIS_BLOCK_ID,
+                    )
+                } else {
+                    let info = self.storage_read_client.get_history_startup_info_by_block_id(ancestor_id)
+                        .expect("Failed to read startup info from storage.").expect("startup info is none.");
+
+                    info!("Startup info read from DB: {:?}.", info);
+                    let ledger_info = info.ledger_info;
+                    (
+                        info.account_state_root_hash,
+                        info.ledger_frozen_subtree_hashes,
+                        info.latest_version + 1,
+                        ledger_info.timestamp_usecs(),
+                        ledger_info.consensus_block_id(),
+                    )
+                };
+
+//                let res = if (ancestor_id == *ACCUMULATOR_PLACEHOLDER_HASH && self.committed_trees.version_and_state_root().0.unwrap() == 0)
+//                    || parent_state_id == self.committed_trees.state_tree().root_hash() {
+
+                let tmp_committed_trees = Rc::new(SparseMerkleTree::new(state_root_hash));
+                let tmp_committed_trees = ExecutedTrees {
+                    state_tree: tmp_committed_trees,
+                    transaction_accumulator: Rc::new(
+                        Accumulator::new(
+                            frozen_subtrees_in_accumulator,
+                            ver,
+                        )
+                            .expect("The startup info read from storage should be valid."),
+                    ),
+                };
+
+                // Construct a StateView and pass the transactions to VM.
+                let state_view = VerifiedStateView::new(
+                    Arc::clone(&self.storage_read_client),
+                    tmp_committed_trees.version_and_state_root(),
+                    tmp_committed_trees.state_tree(),
+                );
+
+                let mut vm_outputs = vec![];
+                let mut latest_transactions = vec![];
+                for transactions in transactions_vec {
+                    let transactions: Vec<SignedTransaction> = transactions.iter()
                         .map(|txn| {
                             txn.as_signed_user_txn()
                                 .expect("All should be user transactions for now.")
@@ -256,14 +327,7 @@ where
                         .cloned()
                         .collect();
 
-                    let tmp_committed_trees = Rc::new(SparseMerkleTree::new(parent_state_id));
-                    // Construct a StateView and pass the transactions to VM.
-                    let state_view = VerifiedStateView::new(
-                        Arc::clone(&self.storage_read_client),
-                        self.committed_trees.version_and_state_root(),
-                        &tmp_committed_trees,
-                    );
-                    let vm_outputs = {
+                    vm_outputs = {
                         V::execute_block(transactions.clone(), &self.vm_config, &state_view)
                     };
 
@@ -275,51 +339,53 @@ where
                         }
                     }
 
-                    let (account_to_btree, account_to_proof) = state_view.into();
-                    // TODO: Remove once `TransactionListWithProof` carries `enum Transaction`
-                    let transactions = transactions
+                    latest_transactions = transactions
                         .into_iter()
                         .map(Transaction::UserTransaction)
                         .collect::<Vec<_>>();
-                    let vm_output = match Self::process_vm_outputs(
-                        account_to_btree,
-                        account_to_proof,
-                        &transactions,
-                        vm_outputs,
-                        &self.committed_trees,
-                    ) {
-                        Ok(output) => {
-                            let accu_root_hash = output.executed_trees().txn_accumulator().root_hash();
-                            let version =
-                                (output.executed_trees().txn_accumulator().num_leaves() - 1) as Version;
-                            let state_id = output.executed_trees().state_tree().root_hash();
+                }
 
-                            // Now that we have the root hash and execution status we can send the response to
-                            // consensus.
-                            // TODO: The VM will support a special transaction to set the validators for the
-                            // next epoch that is part of a block execution.
-                            let state_compute_result = StateComputeResult {
-                                executed_state: ExecutedState {
-                                    state_id: accu_root_hash,
-                                    version,
-                                    validators: None,
-                                },
-                                compute_status: vec![],
-                            };
-                            Ok((state_compute_result, state_id))
-                        },
-                        Err(e) => {
-                            Err(format_err!("{}", e))
-                        }
-                    };
-                    vm_output
-                } else {
-                    Err(format_err!("match parent_state_id err."))
+                let (account_to_btree, account_to_proof) = state_view.into();
+                // TODO: Remove once `TransactionListWithProof` carries `enum Transaction`
+
+                let vm_output = match Self::process_vm_outputs(
+                    account_to_btree,
+                    account_to_proof,
+                    &latest_transactions,
+                    vm_outputs,
+                    &tmp_committed_trees,
+                ) {
+                    Ok(output) => {
+                        let accu_root_hash = output.executed_trees().txn_accumulator().root_hash();
+                        let version =
+                            (output.executed_trees().txn_accumulator().num_leaves() - 1) as Version;
+                        let state_id = output.executed_trees().state_tree().root_hash();
+
+                        // Now that we have the root hash and execution status we can send the response to
+                        // consensus.
+                        // TODO: The VM will support a special transaction to set the validators for the
+                        // next epoch that is part of a block execution.
+                        let state_compute_result = StateComputeResult {
+                            executed_state: ExecutedState {
+                                state_id: accu_root_hash,
+                                version,
+                                validators: None,
+                            },
+                            compute_status: vec![],
+                        };
+                        Ok((state_compute_result, state_id))
+                    },
+                    Err(e) => {
+                        Err(format_err!("{}", e))
+                    }
                 };
 
-                if let Err(_err) = resp_sender.send(res) {
+                if let Err(_err) = resp_sender.send(vm_output) {
                     warn!("Failed to send pre execute block response.");
                 }
+//                } else {
+//                    Err(format_err!("match parent_state_id err."))
+//                };
             }
             Command::CommitBlock {
                 ledger_info_with_sigs,

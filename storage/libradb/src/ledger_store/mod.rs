@@ -188,6 +188,14 @@ impl LedgerStore {
         Accumulator::get_frozen_subtree_hashes(self, version + 1)
     }
 
+    /// Get ledger info by block id
+    pub fn get_ledger_info_by_block_id(&self, block_id: &HashValue) -> Result<LedgerInfoWithSignatures> {
+        self
+            .db
+            .get::<LedgerInfoHistorySchema>(block_id)?
+            .ok_or_else(|| LibraDbError::NotFound(format!("LedgerInfo by {}", block_id)).into())
+    }
+
     /// Rollback
     pub fn rollback_by_block_id(&self, block_id: &HashValue, cs: &mut ChangeSet,) -> Result<()> {
         let ledger_info = self
