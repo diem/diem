@@ -186,6 +186,24 @@ impl HashValue {
         HashValueBitIterator::new(self)
     }
 
+    /// Constructs a `HashValue` from an iterator of bits.
+    pub fn from_bit_iter(iter: impl ExactSizeIterator<Item = bool>) -> Result<Self> {
+        ensure!(
+            iter.len() == Self::LENGTH_IN_BITS,
+            "The iterator should yield exactly {} bits. Actual number of bits: {}.",
+            Self::LENGTH_IN_BITS,
+            iter.len(),
+        );
+
+        let mut buf = [0; Self::LENGTH];
+        for (i, bit) in iter.enumerate() {
+            if bit {
+                buf[i / 8] |= 1 << (7 - i % 8);
+            }
+        }
+        Ok(Self::new(buf))
+    }
+
     /// Returns the length of common prefix of `self` and `other` in bits.
     pub fn common_prefix_bits_len(&self, other: HashValue) -> usize {
         self.iter_bits()
