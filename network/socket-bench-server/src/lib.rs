@@ -14,7 +14,7 @@ use netcore::{
     transport::{
         memory::MemoryTransport,
         tcp::{TcpSocket, TcpTransport},
-        Transport, TransportExt,
+        ConnectionOrigin, Transport, TransportExt,
     },
 };
 use noise::{NoiseConfig, NoiseSocket};
@@ -92,6 +92,26 @@ pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseSocket<
 /// Build a MemorySocket + Muxer transport
 pub fn build_memsocket_muxer_transport() -> impl Transport<Output = impl StreamMultiplexer> {
     MemoryTransport::default().and_then(Yamux::upgrade_connection)
+}
+
+/// Build a MemorySocket + Muxer + Muxer transport
+pub fn build_memsocket_dual_muxed_transport() -> impl Transport<Output = impl StreamMultiplexer> {
+    MemoryTransport::default()
+        .and_then(Yamux::upgrade_connection)
+        .and_then(move |socket, origin| {
+            async move {
+                let substream;
+                if origin == ConnectionOrigin::Outbound {
+                    // Open outbound substream.
+                    substream = socket.open_outbound().await.unwrap();
+                } else {
+                    // Wait for inbound client substream.
+                    let mut inbounds = socket.listen_for_inbound();
+                    substream = inbounds.next().await.unwrap().unwrap();
+                }
+                Yamux::upgrade_connection(substream, origin).await
+            }
+        })
 }
 
 /// Build a MemorySocket + Noise + Muxer transport
