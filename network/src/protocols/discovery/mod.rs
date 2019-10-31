@@ -341,9 +341,10 @@ where
                 }
                 _ => {
                     info!(
-                        "Received updated note for peer: {} from peer: {}",
+                        "Received updated note for peer: {} from peer: {} myself is: {}",
                         peer_id.short_str(),
-                        remote_peer.short_str()
+                        remote_peer.short_str(),
+                        self_peer_id.short_str(),
                     );
                     // We can never receive a note with a higher epoch number on us than what we
                     // ourselves have broadcasted.
@@ -464,17 +465,17 @@ where
     // Check that all received `Note`s are valid -- reject the whole message
     // if any `Note` is invalid.
     let res_notes = res_msg.and_then(|msg| {
-        msg.notes.iter().try_for_each(|note| {
-            is_valid(&note, &trusted_peers).map_err(|err| {
-                security_log(SecurityEvent::InvalidDiscoveryMsg)
-                    .error(&err)
-                    .data(&peer_id)
-                    .data(&note)
-                    .data(&trusted_peers)
-                    .log();
-                err
-            })
-        })?;
+//        msg.notes.iter().try_for_each(|note| {
+//            is_valid(&note, &trusted_peers).map_err(|err| {
+//                security_log(SecurityEvent::InvalidDiscoveryMsg)
+//                    .error(&err)
+//                    .data(&peer_id)
+//                    .data(&note)
+//                    .data(&trusted_peers)
+//                    .log();
+//                err
+//            })
+//        })?;
         Ok(msg.notes)
     });
 

@@ -473,16 +473,23 @@ impl EventHandle {
             }
         }
         let msg_raw = msg.to_bytes().unwrap();
-        for peer in consensus_peers_config.get_validator_verifier().get_ordered_account_addresses() {
-//            if self_flag || peer != self_peer_id {
-            if let Err(err) = network_sender.send_bytes(peer, msg_raw.clone()).await {
+            if let Err(err) = network_sender.broadcast_bytes(msg_raw.clone()).await {
                 error!(
-                    "Error broadcasting proposal to peer: {:?}, error: {:?}, msg: {:?}",
-                    peer, err, msg
+                    "Error broadcasting proposal  error: {:?}, msg: {:?}",
+                     err, msg
                 );
             }
+
+//        for peer in consensus_peers_config.get_validator_verifier().get_ordered_account_addresses() {
+////            if self_flag || peer != self_peer_id {
+//            if let Err(err) = network_sender.send_bytes(peer, msg_raw.clone()).await {
+//                error!(
+//                    "Error broadcasting proposal to peer: {:?}, error: {:?}, msg: {:?}",
+//                    peer, err, msg
+//                );
 //            }
-        }
+////            }
+//        }
     }
 
     async fn send_consensus_msg(send_peer_id: PeerId, network_sender: &mut ConsensusNetworkSender, self_peer_id: PeerId,

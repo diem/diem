@@ -26,6 +26,7 @@ use libra_types::{validator_public_keys::ValidatorPublicKeys, PeerId};
 use pin_project::pin_project;
 use prost::Message as _;
 use std::{pin::Pin, time::Duration};
+use logger::prelude::*;
 
 /// Protocol id for consensus RPC calls
 pub const CONSENSUS_RPC_PROTOCOL: &[u8] = b"/libra/consensus/rpc/0.1.0";
@@ -127,6 +128,7 @@ impl ConsensusNetworkSender {
         &mut self,
         message_bytes: Bytes,
     ) -> Result<(), NetworkError> {
+        warn!("broadcast message");
         self.inner
             .send(NetworkRequest::BroadCastMessage(
                 Message {
