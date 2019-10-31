@@ -5,27 +5,21 @@
 
 use crate::{
     error::NetworkError,
-    interface::{NetworkNotification, NetworkRequest},
+    interface::NetworkRequest,
     proto::{ConsensusMsg, ConsensusMsg_oneof, RequestBlock, RespondBlock},
     protocols::{
         direct_send::Message,
         rpc::{self, error::RpcError},
     },
     utils::MessageExt,
-    validator_network::Event,
+    validator_network::NetworkEvents,
     NetworkPublicKeys, ProtocolId,
 };
 use bytes::Bytes;
 use channel;
-use futures::{
-    stream::Map,
-    task::{Context, Poll},
-    SinkExt, Stream, StreamExt,
-};
+use futures::SinkExt;
 use libra_types::{validator_public_keys::ValidatorPublicKeys, PeerId};
-use pin_project::pin_project;
-use prost::Message as _;
-use std::{pin::Pin, time::Duration};
+use std::time::Duration;
 
 /// Protocol id for consensus RPC calls
 pub const CONSENSUS_RPC_PROTOCOL: &[u8] = b"/libra/consensus/rpc/0.1.0";
@@ -38,41 +32,7 @@ pub const CONSENSUS_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/consensus/direct-send
 /// raw `Bytes` direct-send and rpc messages are deserialized into
 /// `ConsensusMessage` types. `ConsensusNetworkEvents` is a thin wrapper around
 /// an `channel::Receiver<NetworkNotification>`.
-#[pin_project]
-pub struct ConsensusNetworkEvents {
-    #[pin]
-    inner: Map<
-        channel::Receiver<NetworkNotification>,
-        fn(NetworkNotification) -> Result<Event<ConsensusMsg>, NetworkError>,
-    >,
-}
-
-impl ConsensusNetworkEvents {
-    pub fn new(receiver: channel::Receiver<NetworkNotification>) -> Self {
-        let inner = receiver.map::<_, fn(_) -> _>(|notification| match notification {
-            NetworkNotification::NewPeer(peer_id) => Ok(Event::NewPeer(peer_id)),
-            NetworkNotification::LostPeer(peer_id) => Ok(Event::LostPeer(peer_id)),
-            NetworkNotification::RecvRpc(peer_id, rpc_req) => {
-                let req_msg = ConsensusMsg::decode(rpc_req.data.as_ref())?;
-                Ok(Event::RpcRequest((peer_id, req_msg, rpc_req.res_tx)))
-            }
-            NetworkNotification::RecvMessage(peer_id, msg) => {
-                let msg = ConsensusMsg::decode(msg.mdata.as_ref())?;
-                Ok(Event::Message((peer_id, msg)))
-            }
-        });
-
-        Self { inner }
-    }
-}
-
-impl Stream for ConsensusNetworkEvents {
-    type Item = Result<Event<ConsensusMsg>, NetworkError>;
-
-    fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
-        self.project().inner.poll_next(context)
-    }
-}
+pub type ConsensusNetworkEvents = NetworkEvents<ConsensusMsg>;
 
 /// The interface from Consensus to Networking layer.
 ///
@@ -182,8 +142,14 @@ impl ConsensusNetworkSender {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{proto::VoteMsg, protocols::rpc::InboundRpcRequest};
-    use futures::{channel::oneshot, executor::block_on, future::try_join};
+    use crate::{
+        interface::NetworkNotification, proto::VoteMsg, protocols::rpc::InboundRpcRequest,
+        validator_network::Event,
+    };
+    use futures::{
+        channel::oneshot, executor::block_on, future::try_join, sink::SinkExt, stream::StreamExt,
+    };
+    use prost::Message as _;
 
     fn new_test_vote() -> ConsensusMsg {
         let mut vote_msg = VoteMsg::default();

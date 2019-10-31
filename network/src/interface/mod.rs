@@ -28,8 +28,7 @@ use crate::{
     ProtocolId,
 };
 use channel;
-use futures::channel::oneshot;
-use futures::{future::BoxFuture, FutureExt, SinkExt, StreamExt};
+use futures::{channel::oneshot, future::BoxFuture, FutureExt, SinkExt, StreamExt};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;

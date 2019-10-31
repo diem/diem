@@ -4,60 +4,24 @@
 //! Interface between StateSynchronizer and Network layers.
 
 use crate::{
-    error::NetworkError,
-    interface::{NetworkNotification, NetworkRequest},
-    proto::StateSynchronizerMsg,
-    protocols::direct_send::Message,
-    utils::MessageExt,
-    validator_network::Event,
+    error::NetworkError, interface::NetworkRequest, proto::StateSynchronizerMsg,
+    protocols::direct_send::Message, utils::MessageExt, validator_network::NetworkEvents,
     ProtocolId,
 };
 use channel;
-use futures::{
-    stream::Map,
-    task::{Context, Poll},
-    SinkExt, Stream, StreamExt,
-};
+use futures::SinkExt;
 use libra_types::PeerId;
-use pin_project::pin_project;
-use prost::Message as _;
-use std::pin::Pin;
 
+/// Protocol id for state-synchronizer direct-send calls
 pub const STATE_SYNCHRONIZER_MSG_PROTOCOL: &[u8] = b"/libra/state-synchronizer/direct-send/0.1.0";
 
-#[pin_project]
-pub struct StateSynchronizerEvents {
-    #[pin]
-    inner: Map<
-        channel::Receiver<NetworkNotification>,
-        fn(NetworkNotification) -> Result<Event<StateSynchronizerMsg>, NetworkError>,
-    >,
-}
-impl StateSynchronizerEvents {
-    pub fn new(receiver: channel::Receiver<NetworkNotification>) -> Self {
-        let inner = receiver.map::<_, fn(_) -> _>(|notification| match notification {
-            NetworkNotification::NewPeer(peer_id) => Ok(Event::NewPeer(peer_id)),
-            NetworkNotification::LostPeer(peer_id) => Ok(Event::LostPeer(peer_id)),
-            NetworkNotification::RecvRpc(_, _) => {
-                unimplemented!("StateSynchronizer does not currently use RPC");
-            }
-            NetworkNotification::RecvMessage(peer_id, msg) => {
-                let msg = StateSynchronizerMsg::decode(msg.mdata.as_ref())?;
-                Ok(Event::Message((peer_id, msg)))
-            }
-        });
-
-        Self { inner }
-    }
-}
-
-impl Stream for StateSynchronizerEvents {
-    type Item = Result<Event<StateSynchronizerMsg>, NetworkError>;
-
-    fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
-        self.project().inner.poll_next(context)
-    }
-}
+/// The interface from Network to StateSynchronizer layer.
+///
+/// `StateSynchronizerEvents` is a `Stream` of `NetworkNotification` where the
+/// raw `Bytes` direct-send messages are deserialized into `StateSynchronizerMsg`
+/// types. `StateSynchronizerEvents` is a thin wrapper around an
+/// `channel::Receiver<NetworkNotification>`.
+pub type StateSynchronizerEvents = NetworkEvents<StateSynchronizerMsg>;
 
 #[derive(Clone)]
 pub struct StateSynchronizerSender {
@@ -90,10 +54,14 @@ impl StateSynchronizerSender {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
-    use crate::proto::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg_oneof};
-    use futures::executor::block_on;
+    use crate::{
+        interface::NetworkNotification,
+        proto::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg_oneof},
+        validator_network::Event,
+    };
+    use futures::{executor::block_on, stream::StreamExt};
+    use prost::Message as _;
 
     // `StateSynchronizerSender` should serialize outbound messages
     #[test]
