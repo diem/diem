@@ -253,4 +253,16 @@ proptest! {
         let hash2 = HashValue::from_slice(&bytes).unwrap();
         prop_assert_eq!(hash, hash2);
     }
+
+    #[test]
+    fn test_hashvalue_from_bit_iter(hash in any::<HashValue>()) {
+        let hash2 = HashValue::from_bit_iter(hash.iter_bits()).unwrap();
+        prop_assert_eq!(hash, hash2);
+
+        let bits1 = vec![false; HashValue::LENGTH_IN_BITS - 10];
+        prop_assert!(HashValue::from_bit_iter(bits1.into_iter()).is_err());
+
+        let bits2 = vec![false; HashValue::LENGTH_IN_BITS + 10];
+        prop_assert!(HashValue::from_bit_iter(bits2.into_iter()).is_err());
+    }
 }
