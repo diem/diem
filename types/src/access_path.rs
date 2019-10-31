@@ -49,7 +49,7 @@ use crate::{
 use failure::prelude::*;
 use hex;
 use lazy_static::lazy_static;
-use libra_crypto::hash::{CryptoHash, HashValue};
+use libra_crypto::hash::HashValue;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use radix_trie::TrieKey;
@@ -277,10 +277,10 @@ impl DataPath {
     pub fn from(path: &[u8]) -> Result<Self> {
         match path[0] {
             DataPath::CODE_TAG => Ok(DataPath::Code {
-                module_id: SimpleDeserializer::deserialize(&path[1..])?,
+                module_id: lcs::from_bytes(&path[1..])?,
             }),
             DataPath::RESOURCE_TAG => Ok(DataPath::Resource {
-                tag: SimpleDeserializer::deserialize(&path[1..])?,
+                tag: lcs::from_bytes(&path[1..])?,
             }),
             DataPath::CHANNEL_RESOURCE_TAG => {
                 ensure!(
@@ -292,7 +292,7 @@ impl DataPath {
                 let tag_bytes = &path[(1 + ADDRESS_LENGTH)..];
                 Ok(DataPath::ChannelResource {
                     participant: AccountAddress::try_from(address_bytes)?,
-                    tag: SimpleDeserializer::deserialize(tag_bytes)?,
+                    tag: lcs::from_bytes(tag_bytes)?,
                 })
             }
             _ => bail!("invalid access path."),
@@ -372,20 +372,20 @@ impl From<&DataPath> for Vec<u8> {
             DataPath::Code { module_id } => {
                 let mut key = vec![];
                 key.push(DataPath::CODE_TAG);
-                key.append(&mut SimpleSerializer::serialize(module_id).unwrap());
+                key.append(&mut lcs::to_bytes(module_id).unwrap());
                 key
             }
             DataPath::Resource { tag } => {
                 let mut key = vec![];
                 key.push(DataPath::RESOURCE_TAG);
-                key.append(&mut SimpleSerializer::serialize(tag).unwrap());
+                key.append(&mut lcs::to_bytes(tag).unwrap());
                 key
             }
             DataPath::ChannelResource { participant, tag } => {
                 let mut key = vec![];
                 key.push(DataPath::CHANNEL_RESOURCE_TAG);
                 key.append(&mut participant.to_vec());
-                key.append(&mut SimpleSerializer::serialize(tag).unwrap());
+                key.append(&mut lcs::to_bytes(tag).unwrap());
                 key
             }
         }

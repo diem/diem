@@ -3,7 +3,6 @@
 
 use crate::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, GasUnits};
 use libra_crypto::ed25519::{compat, Ed25519PublicKey};
-use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use libra_types::{
     account_address::AccountAddress,
     transaction::{SignedTransaction, TransactionPayload},

@@ -1,4 +1,4 @@
-use config::config::NodeConfig;
+use libra_config::config::NodeConfig;
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use std::{
     collections::HashSet,
@@ -52,7 +52,7 @@ impl MempoolClientTrait for CoreMemPoolClient {
         req: &AddTransactionWithValidationRequest,
     ) -> ::grpcio::Result<AddTransactionWithValidationResponse> {
         //TODO fix unwrap
-        let transaction = SignedTransaction::try_from(req.signed_txn.clone().unwrap())
+        let transaction = SignedTransaction::try_from(req.transaction.clone().unwrap())
             .expect("SignedTransaction from proto err.");
         let insertion_result = self
             .core_mempool

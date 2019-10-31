@@ -1,17 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-    SimpleSerializer,
-};
-use crypto::{
+use failure::prelude::*;
+use libra_crypto::{
     hash::{CryptoHash, CryptoHasher, TestOnlyHasher},
     HashValue, SigningKey, VerifyingKey,
 };
-use failure::prelude::*;
 
 use crate::{account_address::AccountAddress, transaction::Script, write_set::WriteSet};
-use crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
+use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ChannelTransactionPayloadBody {
@@ -43,60 +39,6 @@ impl ChannelTransactionPayloadBody {
             ChannelTransactionPayloadBody::Script(script_body) => script_body.hash(),
         };
         public_key.verify_signature(&hash, &signature)
-    }
-}
-
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-enum ChannelTransactionPayloadBodyType {
-    WriteSet = 0,
-    Script = 1,
-}
-
-impl ChannelTransactionPayloadBodyType {
-    fn from_u32(value: u32) -> Option<ChannelTransactionPayloadBodyType> {
-        match value {
-            0 => Some(ChannelTransactionPayloadBodyType::WriteSet),
-            1 => Some(ChannelTransactionPayloadBodyType::Script),
-            _ => None,
-        }
-    }
-}
-
-impl CanonicalSerialize for ChannelTransactionPayloadBody {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        match self {
-            ChannelTransactionPayloadBody::WriteSet(write_set) => {
-                serializer.encode_u32(ChannelTransactionPayloadBodyType::WriteSet as u32)?;
-                serializer.encode_struct(write_set)?;
-            }
-            ChannelTransactionPayloadBody::Script(script) => {
-                serializer.encode_u32(ChannelTransactionPayloadBodyType::Script as u32)?;
-                serializer.encode_struct(script)?;
-            }
-        }
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for ChannelTransactionPayloadBody {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let decoded_body_type = deserializer.decode_u32()?;
-        let body_type = ChannelTransactionPayloadBodyType::from_u32(decoded_body_type);
-        match body_type {
-            Some(ChannelTransactionPayloadBodyType::WriteSet) => Ok(
-                ChannelTransactionPayloadBody::WriteSet(deserializer.decode_struct()?),
-            ),
-            Some(ChannelTransactionPayloadBodyType::Script) => Ok(
-                ChannelTransactionPayloadBody::Script(deserializer.decode_struct()?),
-            ),
-            _ => Err(format_err!(
-                "ParseError: Unable to decode ChannelTransactionPayloadBody, found {}",
-                decoded_body_type
-            )),
-        }
     }
 }
 
@@ -177,31 +119,6 @@ impl ChannelTransactionPayload {
     }
 }
 
-impl CanonicalSerialize for ChannelTransactionPayload {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_struct(&self.body)?;
-        serializer.encode_struct(&self.receiver_public_key)?;
-        serializer.encode_struct(&self.receiver_signature)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for ChannelTransactionPayload {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let body = deserializer.decode_struct()?;
-        let receiver_public_key = deserializer.decode_struct()?;
-        let receiver_signature = deserializer.decode_struct()?;
-        Ok(Self {
-            body,
-            receiver_public_key,
-            receiver_signature,
-        })
-    }
-}
-
 impl CryptoHash for ChannelTransactionPayload {
     //TODO use special hasher
     type Hasher = TestOnlyHasher;
@@ -209,7 +126,7 @@ impl CryptoHash for ChannelTransactionPayload {
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
         state.write(
-            SimpleSerializer::<Vec<u8>>::serialize(self)
+            lcs::to_bytes(self)
                 .expect("Failed to serialize ChannelTransactionPayload")
                 .as_slice(),
         );
@@ -256,31 +173,6 @@ impl ChannelWriteSetBody {
     }
 }
 
-impl CanonicalSerialize for ChannelWriteSetBody {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_u64(self.channel_sequence_number)?;
-        serializer.encode_struct(&self.write_set)?;
-        serializer.encode_struct(&self.receiver)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for ChannelWriteSetBody {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let channel_sequence_number = deserializer.decode_u64()?;
-        let write_set = deserializer.decode_struct()?;
-        let receiver = deserializer.decode_struct()?;
-        Ok(Self {
-            channel_sequence_number,
-            write_set,
-            receiver,
-        })
-    }
-}
-
 impl CryptoHash for ChannelWriteSetBody {
     //TODO use special hasher
     type Hasher = TestOnlyHasher;
@@ -288,7 +180,7 @@ impl CryptoHash for ChannelWriteSetBody {
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
         state.write(
-            SimpleSerializer::<Vec<u8>>::serialize(self)
+            lcs::to_bytes(self)
                 .expect("Failed to serialize ChannelWriteSetBody")
                 .as_slice(),
         );
@@ -342,34 +234,6 @@ impl ChannelScriptBody {
     }
 }
 
-impl CanonicalSerialize for ChannelScriptBody {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_u64(self.channel_sequence_number)?;
-        serializer.encode_struct(&self.write_set)?;
-        serializer.encode_struct(&self.receiver)?;
-        serializer.encode_struct(&self.script)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for ChannelScriptBody {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let channel_sequence_number = deserializer.decode_u64()?;
-        let write_set = deserializer.decode_struct()?;
-        let receiver = deserializer.decode_struct()?;
-        let script = deserializer.decode_struct()?;
-        Ok(Self {
-            channel_sequence_number,
-            write_set,
-            receiver,
-            script,
-        })
-    }
-}
-
 impl CryptoHash for ChannelScriptBody {
     //TODO use special hasher
     type Hasher = TestOnlyHasher;
@@ -377,7 +241,7 @@ impl CryptoHash for ChannelScriptBody {
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
         state.write(
-            SimpleSerializer::<Vec<u8>>::serialize(self)
+            lcs::to_bytes(self)
                 .expect("Failed to serialize ChannelScriptBody")
                 .as_slice(),
         );

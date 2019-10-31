@@ -12,6 +12,7 @@ use crate::{
         loaded_module::LoadedModule,
     },
 };
+use libra_config::config::VMMode;
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
@@ -97,6 +98,7 @@ where
     data_view: TransactionDataCache<'txn>,
     /// Code cache, this is effectively the loader.
     module_cache: P,
+    vm_mode: VMMode,
     phantom: PhantomData<&'alloc ()>,
 }
 
@@ -169,6 +171,26 @@ where
             event_data: vec![],
             data_view,
             module_cache,
+            vm_mode: VMMode::Onchain,
+            phantom: PhantomData,
+        }
+    }
+
+    pub fn new_with_vm_mode(
+        module_cache: P,
+        txn_data: TransactionMetadata,
+        data_view: TransactionDataCache<'txn>,
+        vm_mode: VMMode,
+    ) -> Self {
+        Interpreter {
+            operand_stack: Stack::new(),
+            call_stack: CallStack::new(),
+            gas_meter: GasMeter::new(txn_data.max_gas_amount()),
+            txn_data,
+            event_data: vec![],
+            data_view,
+            module_cache,
+            vm_mode,
             phantom: PhantomData,
         }
     }
@@ -606,6 +628,9 @@ where
                     Bytecode::GetGasRemaining => {
                         let remaining_gas = self.gas_meter.remaining_gas().get();
                         self.operand_stack.push(Value::u64(remaining_gas))?;
+                    }
+                    _ => {
+                        unimplemented!();
                     }
                 }
             }

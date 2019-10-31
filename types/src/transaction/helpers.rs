@@ -73,14 +73,14 @@ pub trait TransactionSigner {
 
 pub trait ChannelPayloadSigner {
     fn sign_script_payload(&self, channel_payload: &ChannelScriptBody) -> Result<Ed25519Signature> {
-        self.sign_bytes(SimpleSerializer::serialize(channel_payload)?)
+        self.sign_bytes(lcs::to_bytes(channel_payload)?)
     }
 
     fn sign_write_set_payload(
         &self,
         channel_payload: &ChannelWriteSetBody,
     ) -> Result<Ed25519Signature> {
-        self.sign_bytes(SimpleSerializer::serialize(channel_payload)?)
+        self.sign_bytes(lcs::to_bytes(channel_payload)?)
     }
 
     fn sign_bytes(&self, bytes: Vec<u8>) -> Result<Ed25519Signature>;

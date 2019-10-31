@@ -124,7 +124,7 @@ pub struct Config<'a> {
     pub args: Vec<TransactionArgument>,
     pub max_gas: Option<u64>,
     pub sequence_number: Option<u64>,
-    pub receiver: Option<String>,
+    pub receiver: Option<&'a Account>,
 }
 
 impl<'a> Config<'a> {
@@ -144,17 +144,7 @@ impl<'a> Config<'a> {
                     _ => return Err(ErrorKind::Other("sender already set".to_string()).into()),
                 },
                 Entry::Receiver(name) => match receiver {
-                    None => {
-                        if config.accounts.contains_key(name) {
-                            receiver = Some(name.to_string())
-                        } else {
-                            return Err(ErrorKind::Other(format!(
-                                "account '{}' does not exist",
-                                name
-                            ))
-                            .into());
-                        }
-                    }
+                    None => receiver = Some(config.get_account_for_name(name)?),
                     _ => return Err(ErrorKind::Other("receiver already set".to_string()).into()),
                 },
                 Entry::Arguments(raw_args) => match args {

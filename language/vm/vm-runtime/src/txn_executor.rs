@@ -13,6 +13,7 @@ use crate::{
     },
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
+use libra_config::config::VMMode;
 use libra_types::{
     account_address::AccountAddress,
     account_config,
@@ -92,6 +93,23 @@ where
                 module_cache,
                 txn_data,
                 TransactionDataCache::new(data_cache),
+            ),
+        }
+    }
+
+    pub fn new_with_vm_mode(
+        module_cache: P,
+        data_cache: &'txn dyn RemoteCache,
+        txn_data: TransactionMetadata,
+        pre_cache_write_set: Option<WriteSet>,
+        vm_mode: VMMode,
+    ) -> Self {
+        TransactionExecutor {
+            interpreter: Interpreter::new_with_vm_mode(
+                module_cache,
+                txn_data,
+                TransactionDataCache::new_with_write_set(data_cache, pre_cache_write_set),
+                vm_mode,
             ),
         }
     }

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::test_helpers::assert_canonical_encode_decode;
-use crate::write_set::WriteSet;
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,

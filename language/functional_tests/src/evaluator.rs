@@ -13,12 +13,13 @@ use ir_to_bytecode::{
     parser::parse_script_or_module,
 };
 use ir_to_bytecode_syntax::ast::ScriptOrModule;
+use language_e2e_tests::account::Account;
 use language_e2e_tests::executor::FakeExecutor;
 use libra_config::config::VMPublishingOption;
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_types::{
+    access_path::AccessPath,
     account_address::AccountAddress,
-    :access_path::AccessPath,
     channel_account::{channel_account_struct_tag, ChannelAccountResource},
     transaction::{
         ChannelScriptBody, Module as TransactionModule, RawTransaction,
@@ -237,17 +238,6 @@ fn make_script_transaction(
     let script = TransactionScript::new(blob, config.args.clone());
 
     let params = get_transaction_parameters(exec, config);
-    Ok(RawTransaction::new_script(
-        params.sender_addr,
-        params.sequence_number,
-        script,
-        params.max_gas_amount,
-        params.gas_unit_price,
-        params.expiration_time,
-    )
-    .sign(params.privkey, params.pubkey.clone())?
-    .into_inner())
-    let account_resource = exec.read_account_resource(&account).unwrap();
     let txn = match receiver {
         //TODO support channel sequence number
         Some((receiver, channel_sequence_number)) => {
@@ -259,36 +249,26 @@ fn make_script_transaction(
             );
             let payload = body.sign(&receiver.privkey, receiver.pubkey.clone());
             let txn = RawTransaction::new_channel(
-                *account.address(),
-                account_resource.sequence_number(),
+                params.sender_addr,
+                params.sequence_number,
                 payload,
-                std::cmp::min(
-                    MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
-                    account_resource.balance(),
-                ),
-                1,
-                Duration::from_secs(u64::max_value()),
+                params.max_gas_amount,
+                params.gas_unit_price,
+                params.expiration_time,
             )
-            .sign(&account.privkey, account.pubkey.clone())?
+            .sign(params.privkey, params.pubkey.clone())?
             .into_inner();
             txn
         }
         None => RawTransaction::new_script(
-            *account.address(),
-            config
-                .sequence_number
-                .unwrap_or_else(|| account_resource.sequence_number()),
+            params.sender_addr,
+            params.sequence_number,
             script,
-            config.max_gas.unwrap_or_else(|| {
-                std::cmp::min(
-                    MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
-                    account_resource.balance(),
-                )
-            }),
-            1,
-            Duration::from_secs(u64::max_value()),
+            params.max_gas_amount,
+            params.gas_unit_price,
+            params.expiration_time,
         )
-        .sign(&account.privkey, account.pubkey.clone())?
+        .sign(params.privkey, params.pubkey.clone())?
         .into_inner(),
     };
     Ok(txn)
@@ -396,27 +376,22 @@ fn eval_transaction(
     let sender_addr = *transaction.config.sender.address();
 
     // Start processing a new transaction.
-    let receiver = transaction
-        .config
-        .receiver
-        .as_ref()
-        .and_then(|receiver| config.accounts.get(receiver))
-        .and_then(|receiver_account| {
-            let access_path = AccessPath::channel_resource_access_path(
-                *account.address(),
-                *receiver_account.address(),
-                channel_account_struct_tag(),
-            );
-            let channel_sequence_number = exec
-                .read_from_access_path(&access_path)
-                .map(|bytes| {
-                    ChannelAccountResource::make_from(bytes)
-                        .unwrap()
-                        .channel_sequence_number()
-                })
-                .unwrap_or(0);
-            Some((receiver_account.account(), channel_sequence_number))
-        });
+    let receiver = transaction.config.receiver.and_then(|receiver_account| {
+        let access_path = AccessPath::channel_resource_access_path(
+            sender_addr,
+            *receiver_account.address(),
+            channel_account_struct_tag(),
+        );
+        let channel_sequence_number = exec
+            .read_from_access_path(&access_path)
+            .map(|bytes| {
+                ChannelAccountResource::make_from(bytes)
+                    .unwrap()
+                    .channel_sequence_number()
+            })
+            .unwrap_or(0);
+        Some((receiver_account, channel_sequence_number))
+    });
 
     // start processing a new transaction
     // insert a barrier in the output

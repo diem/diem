@@ -1,3 +1,4 @@
+use crate::process_txn::balance_checker::BalanceChecker;
 use crate::{
     code_cache::{
         module_cache::{ModuleCache, TransactionModuleCache},
@@ -13,7 +14,10 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
-    transaction::{SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES},
+    transaction::{
+        ChannelTransactionPayloadBody, SignatureCheckedTransaction, TransactionPayload,
+        MAX_TRANSACTION_SIZE_IN_BYTES,
+    },
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
@@ -23,20 +27,6 @@ use vm::{
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
-
-use crate::{
-    code_cache::{
-        module_cache::{ModuleCache, TransactionModuleCache},
-        script_cache::ScriptCache,
-    },
-    data_cache::RemoteCache,
-    loaded_data::loaded_module::LoadedModule,
-    process_txn::{
-        balance_checker::BalanceChecker, verify::VerifiedTransaction, ProcessTransaction,
-    },
-    txn_executor::TransactionExecutor,
-};
-use libra_types::transaction::ChannelTransactionPayloadBody;
 
 pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8]) -> bool {
     match publishing_option {

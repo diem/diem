@@ -4,6 +4,7 @@ use std::{
     fmt::{Display, Formatter},
 };
 
+use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_config::coin_struct_tag,
@@ -11,7 +12,6 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet},
 };
-use logger::prelude::*;
 use vm::{
     access::ModuleAccess,
     errors::VMResult,
@@ -105,8 +105,8 @@ impl<'alloc, 'txn> StructFieldScanner<'alloc, 'txn> {
                                     format!("get module by id: {:?} fail.", field_type_module_id),
                                 ))?;
                             let struct_value: Struct = match field_value.into() {
-                                Some(s) => s,
-                                None => {
+                                Ok(s) => s,
+                                Err(_e) => {
                                     //TODO(jole) support native struct, such as Vector.
                                     return Ok(());
                                 }
