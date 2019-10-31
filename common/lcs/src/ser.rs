@@ -59,7 +59,7 @@ where
 }
 
 /// Serialization implementation for LCS
-pub(crate) struct Serializer {
+struct Serializer {
     output: Vec<u8>,
 }
 
@@ -347,7 +347,7 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
 }
 
 #[doc(hidden)]
-pub(crate) struct MapSerializer<'a> {
+struct MapSerializer<'a> {
     ser: &'a mut Serializer,
     map: BTreeMap<Vec<u8>, Vec<u8>>,
     next_key: Option<Vec<u8>>,

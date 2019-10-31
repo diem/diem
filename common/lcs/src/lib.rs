@@ -249,6 +249,6 @@ mod ser;
 /// Variable length sequences in LCS are limited to max length of 2^31
 pub const MAX_SEQUENCE_LENGTH: usize = 1 << 31;
 
-pub use de::{from_bytes, Deserializer};
+pub use de::{from_bytes, from_bytes_seed};
 pub use error::{Error, Result};
 pub use ser::to_bytes;
