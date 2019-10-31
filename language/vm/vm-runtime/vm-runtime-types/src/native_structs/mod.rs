@@ -3,6 +3,5 @@
 
 pub mod def;
 pub mod dispatch;
-pub mod serializer;
 pub mod vector;
 pub use def::{NativeStructType, NativeStructValue};
