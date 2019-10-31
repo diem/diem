@@ -1046,15 +1046,7 @@ impl Value {
 
     /// Deserialize this value using `lcs::Deserializer` and a provided struct definition.
     pub fn simple_deserialize(blob: &[u8], resource: StructDef) -> VMResult<Value> {
-        use de::DeserializeSeed;
-
-        let mut deserializer = lcs::Deserializer::new(blob);
-        let s = resource
-            .deserialize(&mut deserializer)
-            .map_err(|_| vm_error(Location::new(), StatusCode::INVALID_DATA))?;
-        deserializer
-            .end()
-            .map(move |_| s)
+        lcs::from_bytes_seed(&resource, blob)
             .map_err(|e| VMStatus::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
     }
 }
