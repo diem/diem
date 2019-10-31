@@ -1,0 +1,21 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package health_checker;
+
+message HealthCheckerMsg {
+  oneof message {
+    Ping ping = 1;
+    Pong pong = 2;
+  }
+}
+
+message Ping {
+  uint32 nonce = 1;
+}
+
+message Pong {
+  uint32 nonce = 1;
+}
