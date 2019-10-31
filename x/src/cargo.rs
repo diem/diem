@@ -136,9 +136,14 @@ impl<'a> CargoCommand<'a> {
 
     pub fn run_on_packages_together<I, S>(&self, packages: I, args: &CargoArgs) -> Result<()>
     where
-        I: IntoIterator<Item = S>,
+        I: IntoIterator<Item = S> + Clone,
         S: AsRef<OsStr>,
     {
+        // Early return if we have no packages to run
+        if packages.clone().into_iter().count() == 0 {
+            return Ok(());
+        }
+
         let mut cargo = Cargo::new(self.as_str());
         Self::apply_args(&mut cargo, args);
         cargo
