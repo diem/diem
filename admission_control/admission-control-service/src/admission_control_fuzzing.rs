@@ -7,9 +7,9 @@ use crate::{
     mocks::local_mock_mempool::LocalMockMempool,
 };
 use futures::channel::mpsc;
+use libra_proptest_helpers::ValueGenerator;
 use libra_types::transaction::SignedTransaction;
 use proptest;
-use proptest_helpers::ValueGenerator;
 use prost::Message;
 use std::sync::Arc;
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
@@ -28,7 +28,7 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
     let signed_txn = gen.generate(proptest::arbitrary::any::<SignedTransaction>());
     // wrap it in a SubmitTransactionRequest
     let mut req = SubmitTransactionRequest::default();
-    req.signed_txn = Some(signed_txn.into());
+    req.transaction = Some(signed_txn.into());
 
     let mut bytes = bytes::BytesMut::with_capacity(req.encoded_len());
     req.encode(&mut bytes).unwrap();

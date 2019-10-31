@@ -12,30 +12,32 @@ use crate::{
     contract_event::ContractEvent,
     event::{EventHandle, EventKey},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
+    identifier::Identifier,
+    language_storage::{StructTag, TypeTag},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    proof::{AccumulatorConsistencyProof, TransactionAccumulatorProof},
+    proof::{AccumulatorConsistencyProof, TransactionListProof},
     transaction::{
         Module, Program, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction,
-        TransactionArgument, TransactionInfo, TransactionListWithProof, TransactionPayload,
-        TransactionStatus, TransactionToCommit, Version,
+        TransactionArgument, TransactionListWithProof, TransactionPayload, TransactionStatus,
+        TransactionToCommit, Version,
     },
     validator_change::ValidatorChangeEventWithProof,
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use crypto::{
+use libra_crypto::{
     ed25519::{compat::keypair_strategy, *},
     hash::CryptoHash,
     traits::*,
     HashValue,
 };
+use libra_proptest_helpers::Index;
 use proptest::{
     collection::{vec, SizeRange},
     option,
     prelude::*,
 };
 use proptest_derive::Arbitrary;
-use proptest_helpers::Index;
 use std::time::Duration;
 
 prop_compose! {
@@ -588,6 +590,7 @@ impl Arbitrary for UpdateToLatestLedgerResponse<Ed25519Signature> {
 
 #[derive(Arbitrary, Debug)]
 pub struct ContractEventGen {
+    type_tag: TypeTag,
     payload: Vec<u8>,
     use_sent_key: bool,
 }
@@ -608,7 +611,7 @@ impl ContractEventGen {
         *event_handle.count_mut() += 1;
         let event_key = event_handle.key();
 
-        ContractEvent::new(*event_key, sequence_number, self.payload)
+        ContractEvent::new(*event_key, sequence_number, self.type_tag, self.payload)
     }
 }
 
@@ -657,16 +660,6 @@ impl AccountStateBlobGen {
     }
 }
 
-impl ContractEvent {
-    pub fn strategy_impl(
-        event_key_strategy: impl Strategy<Value = EventKey>,
-    ) -> impl Strategy<Value = Self> {
-        (event_key_strategy, any::<u64>(), vec(any::<u8>(), 1..10)).prop_map(
-            |(event_key, seq_num, event_data)| ContractEvent::new(event_key, seq_num, event_data),
-        )
-    }
-}
-
 impl EventHandle {
     pub fn strategy_impl(
         event_key_strategy: impl Strategy<Value = EventKey>,
@@ -683,6 +676,54 @@ impl Arbitrary for EventHandle {
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         EventHandle::strategy_impl(any::<EventKey>()).boxed()
+    }
+}
+
+impl Arbitrary for TypeTag {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        use TypeTag::*;
+        let leaf = prop_oneof![Just(Bool), Just(U64), Just(ByteArray), Just(Address),];
+        leaf.prop_recursive(
+            8,  // levels deep
+            16, // max size
+            4,  // max number of items per collection
+            |inner| {
+                (
+                    any::<AccountAddress>(),
+                    any::<Identifier>(),
+                    any::<Identifier>(),
+                    vec(inner.clone(), 0..4),
+                )
+                    .prop_map(|(address, module, name, type_params)| {
+                        Struct(StructTag {
+                            address,
+                            module,
+                            name,
+                            type_params,
+                        })
+                    })
+            },
+        )
+        .boxed()
+    }
+}
+
+impl ContractEvent {
+    pub fn strategy_impl(
+        event_key_strategy: impl Strategy<Value = EventKey>,
+    ) -> impl Strategy<Value = Self> {
+        (
+            event_key_strategy,
+            any::<u64>(),
+            any::<TypeTag>(),
+            vec(any::<u8>(), 1..10),
+        )
+            .prop_map(|(event_key, seq_num, type_tag, event_data)| {
+                ContractEvent::new(event_key, seq_num, type_tag, event_data)
+            })
     }
 }
 
@@ -735,7 +776,7 @@ impl TransactionToCommitGen {
     /// Materialize considering current states in the universe.
     pub fn materialize(self, universe: &mut AccountInfoUniverse) -> TransactionToCommit {
         let (sender_index, txn_gen) = self.transaction_gen;
-        let signed_txn = txn_gen.materialize(sender_index, universe).into_inner();
+        let transaction = txn_gen.materialize(sender_index, universe).into_inner();
 
         let events = self
             .event_gens
@@ -756,7 +797,7 @@ impl TransactionToCommitGen {
             .collect();
 
         TransactionToCommit::new(
-            Transaction::UserTransaction(signed_txn),
+            Transaction::UserTransaction(transaction),
             account_states,
             events,
             self.gas_used,
@@ -816,60 +857,41 @@ impl Arbitrary for TransactionToCommitGen {
 }
 
 fn arb_transaction_list_with_proof() -> impl Strategy<Value = TransactionListWithProof> {
-    vec(
-        (
-            any::<SignedTransaction>(),
-            any::<TransactionInfo>(),
-            vec(any::<ContractEvent>(), 0..10),
+    (
+        vec(
+            (
+                any::<SignedTransaction>(),
+                vec(any::<ContractEvent>(), 0..10),
+            ),
+            0..10,
         ),
-        0..10,
+        any::<TransactionListProof>(),
     )
-    .prop_flat_map(|transaction_and_infos_and_events| {
-        let transaction_and_infos: Vec<_> = transaction_and_infos_and_events
-            .clone()
-            .into_iter()
-            .map(|(transaction, info, _event)| (transaction, info))
-            .collect();
-        let events: Vec<_> = transaction_and_infos_and_events
-            .into_iter()
-            .map(|(_transaction, _info, event)| event)
-            .collect();
+        .prop_flat_map(|(transaction_and_events, proof)| {
+            let transactions: Vec<_> = transaction_and_events
+                .clone()
+                .into_iter()
+                .map(|(transaction, _event)| Transaction::UserTransaction(transaction))
+                .collect();
+            let events: Vec<_> = transaction_and_events
+                .into_iter()
+                .map(|(_transaction, event)| event)
+                .collect();
 
-        (
-            Just(transaction_and_infos),
-            option::of(Just(events)),
-            any::<Version>(),
-            any::<TransactionAccumulatorProof>(),
-            any::<TransactionAccumulatorProof>(),
-        )
-    })
-    .prop_map(
-        |(
-            transaction_and_infos,
-            events,
-            first_txn_version,
-            proof_of_first_txn,
-            proof_of_last_txn,
-        )| {
-            match transaction_and_infos.len() {
-                0 => TransactionListWithProof::new_empty(),
-                1 => TransactionListWithProof::new(
-                    transaction_and_infos,
-                    events,
-                    Some(first_txn_version),
-                    Some(proof_of_first_txn),
-                    None,
-                ),
-                _ => TransactionListWithProof::new(
-                    transaction_and_infos,
-                    events,
-                    Some(first_txn_version),
-                    Some(proof_of_first_txn),
-                    Some(proof_of_last_txn),
-                ),
-            }
-        },
-    )
+            (
+                Just(transactions.clone()),
+                option::of(Just(events)),
+                if transactions.is_empty() {
+                    Just(None).boxed()
+                } else {
+                    any::<Version>().prop_map(Some).boxed()
+                },
+                Just(proof),
+            )
+        })
+        .prop_map(|(transactions, events, first_txn_version, proof)| {
+            TransactionListWithProof::new(transactions, events, first_txn_version, proof)
+        })
 }
 
 impl Arbitrary for TransactionListWithProof {

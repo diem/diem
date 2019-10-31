@@ -15,7 +15,7 @@
 pub mod admission_control_mock_client;
 /// AC gRPC service.
 pub mod admission_control_service;
-#[cfg(any(test, feature = "fuzzing"))]
+#[cfg(feature = "fuzzing")]
 /// Useful Mocks
 pub mod mocks;
 /// AC runtime to launch gRPC and network service
@@ -23,7 +23,7 @@ pub mod runtime;
 /// Handler for sending transaction write requests upstream if needed
 mod upstream_proxy;
 use lazy_static::lazy_static;
-use metrics::OpMetrics;
+use libra_metrics::OpMetrics;
 
 use libra_types::account_address::AccountAddress;
 type PeerId = AccountAddress;

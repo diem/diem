@@ -6,12 +6,12 @@ use crate::{
     shared_mempool::{start_shared_mempool, SharedMempoolNotification, SyncEvent},
 };
 use channel;
-use config::config::{NodeConfig, NodeConfigHelpers};
 use futures::{
     sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
     Stream,
 };
 use futures_preview::{compat::Stream01CompatExt, executor::block_on, SinkExt, StreamExt};
+use libra_config::config::{NodeConfig, NodeConfigHelpers};
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     interface::{NetworkNotification, NetworkRequest},

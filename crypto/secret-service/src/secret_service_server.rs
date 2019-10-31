@@ -12,11 +12,11 @@ use crate::{
         PublicKeyResponse, SecretService, SignRequest, SignResponse,
     },
 };
-use crypto::{
-    bls12381::BLS12381PrivateKey, ed25519::Ed25519PrivateKey, hash::HashValue, traits::*,
-};
 use failure::prelude::*;
 use grpc_helpers::provide_grpc_response;
+use libra_crypto::{
+    bls12381::BLS12381PrivateKey, ed25519::Ed25519PrivateKey, hash::HashValue, traits::*,
+};
 use rand::{rngs::EntropyRng, Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
 use std::{

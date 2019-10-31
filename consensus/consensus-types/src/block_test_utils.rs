@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    block::{Block, BlockType},
-    common::Round,
-    quorum_cert::QuorumCert,
+    block::Block, block_data::BlockData, block_info::BlockInfo, common::Round,
+    quorum_cert::QuorumCert, vote_data::VoteData,
 };
-
-use crypto::HashValue;
+use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::{
     crypto_proxies::{SecretKey, ValidatorSigner},
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     validator_signer::proptests,
 };
 use proptest::prelude::*;
+use std::collections::BTreeMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 type LinearizedBlockForest<T> = Vec<Block<T>>;
@@ -22,7 +22,7 @@ prop_compose! {
     /// dependent on signer, round, parent and ancestor_id.
     /// Note that the quorum certificate carried by this block is still placeholder: one will have
     /// to generate it later on when adding to the tree.
-    pub fn make_block(
+    pub fn new_proposal(
         _ancestor_id: HashValue,
         round_strategy: impl Strategy<Value = Round>,
         signer_strategy: impl Strategy<Value = ValidatorSigner>,
@@ -33,9 +33,8 @@ prop_compose! {
         signer in signer_strategy,
         parent_qc in Just(parent_qc)
     ) -> Block<Vec<usize>> {
-        Block::new_internal(
+        Block::new_proposal(
             vec![payload],
-            0,
             round,
             get_current_timestamp().as_micros() as u64,
             parent_qc,
@@ -54,7 +53,7 @@ prop_compose! {
     pub fn unmoored_block(ancestor_id_strategy: impl Strategy<Value = HashValue>)(
         ancestor_id in ancestor_id_strategy,
     )(
-        block in make_block(
+        block in new_proposal(
             ancestor_id,
             Round::arbitrary(),
             proptests::arb_signer(),
@@ -77,16 +76,15 @@ prop_compose! {
         (fake_id in HashValue::arbitrary(),
          block in block_strategy) -> Block<Vec<usize>> {
             Block {
-                timestamp_usecs: get_current_timestamp().as_micros() as u64,
                 id: fake_id,
-                epoch: block.epoch(),
-                round: block.round(),
-                quorum_cert: block.quorum_cert().clone(),
-                block_type: BlockType::Proposal {
-                    payload: block.payload().unwrap().clone(),
-                    author: block.author().unwrap(),
-                    signature: block.signature().unwrap().clone(),
-                },
+                block_data: BlockData::new_proposal(
+                    block.payload().unwrap().clone(),
+                    block.author().unwrap(),
+                    block.round(),
+                    get_current_timestamp().as_micros() as u64,
+                    block.quorum_cert().clone(),
+                ),
+                signature: Some(block.signature().unwrap().clone()),
             }
         }
 }
@@ -126,7 +124,7 @@ prop_compose! {
             .prop_flat_map(|(forest_vec, parent_idx)| {
                 (Just(forest_vec), Just(parent_idx), 0..=parent_idx)
             }),
-    )( block in make_block(
+    )( block in new_proposal(
         // ancestor_id
         forest_vec[qc_idx].id(),
         // round
@@ -178,4 +176,70 @@ pub fn get_current_timestamp() -> Duration {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Timestamp generated is before the UNIX_EPOCH!")
+}
+
+pub fn placeholder_ledger_info() -> LedgerInfo {
+    LedgerInfo::new(
+        0,
+        HashValue::zero(),
+        HashValue::zero(),
+        HashValue::zero(),
+        0,
+        0,
+        None,
+    )
+}
+
+pub fn placeholder_certificate_for_block(
+    signers: Vec<&ValidatorSigner>,
+    certified_block_id: HashValue,
+    certified_block_round: u64,
+    certified_parent_block_id: HashValue,
+    certified_parent_block_round: u64,
+    consensus_block_id: Option<HashValue>,
+) -> QuorumCert {
+    // Assuming executed state to be Genesis state.
+    let genesis_ledger_info = LedgerInfo::genesis();
+    let vote_data = VoteData::new(
+        BlockInfo::new(
+            genesis_ledger_info.epoch(),
+            certified_block_round,
+            certified_block_id,
+            genesis_ledger_info.transaction_accumulator_hash(),
+            genesis_ledger_info.version(),
+            genesis_ledger_info.timestamp_usecs(),
+            genesis_ledger_info.next_validator_set().cloned(),
+        ),
+        BlockInfo::new(
+            genesis_ledger_info.epoch(),
+            certified_parent_block_round,
+            certified_parent_block_id,
+            genesis_ledger_info.transaction_accumulator_hash(),
+            genesis_ledger_info.version(),
+            genesis_ledger_info.timestamp_usecs(),
+            genesis_ledger_info.next_validator_set().cloned(),
+        ),
+    );
+
+    // This ledger info doesn't carry any meaningful information: it is all zeros except for
+    // the consensus data hash that carries the actual vote.
+    let mut ledger_info_placeholder = placeholder_ledger_info();
+    ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
+
+    if let Some(bid) = consensus_block_id {
+        ledger_info_placeholder.set_consensus_block_id(bid)
+    }
+
+    let mut signatures = BTreeMap::new();
+    for signer in signers {
+        let li_sig = signer
+            .sign_message(ledger_info_placeholder.hash())
+            .expect("Failed to sign LedgerInfo");
+        signatures.insert(signer.author(), li_sig);
+    }
+
+    QuorumCert::new(
+        vote_data,
+        LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures),
+    )
 }

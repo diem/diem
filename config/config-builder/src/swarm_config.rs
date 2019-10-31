@@ -3,7 +3,8 @@
 
 //! Convenience structs and functions for generating configuration for a swarm of libra nodes
 use crate::util::gen_genesis_transaction_bytes;
-use config::{
+use failure::prelude::*;
+use libra_config::{
     config::{
         BaseConfig, ConsensusConfig, NetworkConfig, NodeConfig, NodeConfigHelpers,
         PersistableConfig, RoleType, VMPublishingOption,
@@ -16,10 +17,9 @@ use config::{
     },
     utils::get_available_port,
 };
-use crypto::{ed25519::*, test_utils::KeyPair};
-use failure::prelude::*;
+use libra_crypto::{ed25519::*, test_utils::KeyPair};
+use libra_logger::prelude::*;
 use libra_types::PeerId;
-use logger::prelude::*;
 use parity_multiaddr::{Multiaddr, Protocol};
 use std::{
     collections::BTreeMap,

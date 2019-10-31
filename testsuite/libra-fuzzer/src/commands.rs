@@ -3,7 +3,7 @@
 
 use crate::FuzzTarget;
 use failure::prelude::*;
-use proptest_helpers::ValueGenerator;
+use libra_proptest_helpers::ValueGenerator;
 use sha1::{Digest, Sha1};
 use std::{
     env,
@@ -97,6 +97,10 @@ pub fn fuzz_target(
         .args(args)
         .current_dir(manifest_dir)
         .env(FuzzTarget::ENV_VAR, target.name())
+        // We want to fuzz with the same version of the compiler as production, but cargo-fuzz only
+        // runs on nightly. This is a test-only environment so this use of RUSTC_BOOTSTRAP seems
+        // appropriate.
+        .env("RUSTC_BOOTSTRAP", "1")
         .status()
         .context("cargo fuzz run errored")?;
     if !status.success() {

@@ -17,7 +17,7 @@
 //!
 //! - An `EmptyNode` represents an empty subtree with zero leaf.
 
-use crypto::{
+use libra_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };

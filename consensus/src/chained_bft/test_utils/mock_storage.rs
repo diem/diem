@@ -1,17 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
-    liveness::pacemaker_timeout_manager::HighestTimeoutCertificates,
-    persistent_storage::{PersistentLivenessStorage, PersistentStorage, RecoveryData},
-    safety::safety_rules::ConsensusState,
+use crate::chained_bft::persistent_storage::{
+    PersistentLivenessStorage, PersistentStorage, RecoveryData,
 };
 
-use config::config::{NodeConfig, NodeConfigHelpers};
-use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert, vote_msg::VoteMsg};
-use crypto::HashValue;
+use consensus_types::{
+    block::Block, common::Payload, quorum_cert::QuorumCert,
+    timeout_certificate::TimeoutCertificate, vote::Vote,
+};
 use failure::Result;
+use libra_config::config::{NodeConfig, NodeConfigHelpers};
+use libra_crypto::HashValue;
 use libra_types::ledger_info::LedgerInfo;
+use safety_rules::ConsensusState;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -22,10 +24,10 @@ pub struct MockSharedStorage<T> {
     pub block: Mutex<HashMap<HashValue, Block<T>>>,
     pub qc: Mutex<HashMap<HashValue, QuorumCert>>,
     pub state: Mutex<ConsensusState>,
-    pub last_vote: Mutex<Option<VoteMsg>>,
+    pub last_vote: Mutex<Option<Vote>>,
 
     // Liveness state
-    pub highest_timeout_certificates: Mutex<HighestTimeoutCertificates>,
+    pub highest_timeout_certificate: Mutex<Option<TimeoutCertificate>>,
 }
 
 /// A storage that simulates the operations in-memory, used in the tests that cares about storage
@@ -75,7 +77,7 @@ impl<T: Payload> MockStorage<T> {
             quorum_certs,
             &self.storage_ledger.lock().unwrap(),
             self.shared_storage
-                .highest_timeout_certificates
+                .highest_timeout_certificate
                 .lock()
                 .unwrap()
                 .clone(),
@@ -102,13 +104,13 @@ impl<T: Payload> MockStorage<T> {
 impl<T: Payload> PersistentLivenessStorage for MockStorage<T> {
     fn save_highest_timeout_cert(
         &self,
-        highest_timeout_certificates: HighestTimeoutCertificates,
+        highest_timeout_certificate: TimeoutCertificate,
     ) -> Result<()> {
-        *self
-            .shared_storage
-            .highest_timeout_certificates
+        self.shared_storage
+            .highest_timeout_certificate
             .lock()
-            .unwrap() = highest_timeout_certificates;
+            .unwrap()
+            .replace(highest_timeout_certificate);
         Ok(())
     }
 }
@@ -132,7 +134,7 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
                 .qc
                 .lock()
                 .unwrap()
-                .insert(qc.certified_block_id(), qc);
+                .insert(qc.certified_block().id(), qc);
         }
         if let Err(e) = self.verify_consistency() {
             panic!("invalid db after save tree: {}", e);
@@ -151,13 +153,13 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
         Ok(())
     }
 
-    fn save_consensus_state(&self, state: ConsensusState, last_vote: VoteMsg) -> Result<()> {
+    fn save_consensus_state(&self, state: ConsensusState, last_vote: &Vote) -> Result<()> {
         *self.shared_storage.state.lock().unwrap() = state;
         self.shared_storage
             .last_vote
             .lock()
             .unwrap()
-            .replace(last_vote);
+            .replace(last_vote.clone());
         Ok(())
     }
 
@@ -167,7 +169,7 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
             qc: Mutex::new(HashMap::new()),
             state: Mutex::new(ConsensusState::default()),
             last_vote: Mutex::new(None),
-            highest_timeout_certificates: Mutex::new(HighestTimeoutCertificates::new(None, None)),
+            highest_timeout_certificate: Mutex::new(None),
         });
         let storage = MockStorage::new(Arc::clone(&shared_storage));
 
@@ -195,7 +197,7 @@ impl EmptyStorage {
 }
 
 impl PersistentLivenessStorage for EmptyStorage {
-    fn save_highest_timeout_cert(&self, _: HighestTimeoutCertificates) -> Result<()> {
+    fn save_highest_timeout_cert(&self, _: TimeoutCertificate) -> Result<()> {
         Ok(())
     }
 }
@@ -213,14 +215,13 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
         Ok(())
     }
 
-    fn save_consensus_state(&self, _: ConsensusState, _: VoteMsg) -> Result<()> {
+    fn save_consensus_state(&self, _: ConsensusState, _: &Vote) -> Result<()> {
         Ok(())
     }
 
     fn start(_: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
         let genesis = Block::make_genesis_block();
         let genesis_qc = QuorumCert::certificate_for_genesis();
-        let htc = HighestTimeoutCertificates::new(None, None);
         (
             Arc::new(EmptyStorage),
             RecoveryData::new(
@@ -229,7 +230,7 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
                 vec![genesis],
                 vec![genesis_qc.clone()],
                 genesis_qc.ledger_info().ledger_info(),
-                htc,
+                None,
             )
             .unwrap(),
         )

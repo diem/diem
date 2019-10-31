@@ -13,9 +13,9 @@
 use crate::schema::{ensure_slice_len_eq, EVENT_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use failure::prelude::*;
+use libra_prost_ext::MessageExt;
 use libra_types::{contract_event::ContractEvent, transaction::Version};
 use prost::Message;
-use prost_ext::MessageExt;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, SeekKeyCodec, ValueCodec},

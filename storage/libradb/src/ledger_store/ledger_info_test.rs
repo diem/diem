@@ -3,9 +3,9 @@
 
 use super::*;
 use crate::{change_set::ChangeSet, LibraDB};
+use libra_tools::tempdir::TempPath;
 use libra_types::ledger_info::LedgerInfo;
 use proptest::{collection::vec, prelude::*};
-use tools::tempdir::TempPath;
 
 prop_compose! {
     fn arb_partial_ledger_info()(accu_hash in any::<HashValue>(),
@@ -33,7 +33,7 @@ prop_compose! {
                         ledger_info.transaction_accumulator_hash(),
                         ledger_info.consensus_data_hash(),
                         HashValue::zero(),
-                        start_epoch + i as u64 /* epoch_num */,
+                        start_epoch + i as u64 /* epoch */,
                         ledger_info.timestamp_usecs(),
                         None,
                     ),
@@ -54,7 +54,7 @@ proptest! {
         let tmp_dir = TempPath::new();
         let db = LibraDB::new(&tmp_dir);
         let store = &db.ledger_store;
-        let start_epoch = ledger_infos_with_sigs.first().unwrap().ledger_info().epoch_num();
+        let start_epoch = ledger_infos_with_sigs.first().unwrap().ledger_info().epoch();
 
         let mut cs = ChangeSet::new();
         ledger_infos_with_sigs

@@ -23,8 +23,8 @@ message AdmissionControlMsg {
 // -----------------------------------------------------------------------------
 // The request for transaction submission.
 message SubmitTransactionRequest {
-  // Transaction signed by wallet.
-  types.SignedTransaction signed_txn = 1;
+  // Transaction submitted by user.
+  types.SignedTransaction transaction = 1;
 }
 
 // AC response status containing code and optionally an error message.

@@ -13,17 +13,14 @@ edition = "2018"
 mirai-annotations = "1.4.0"
 petgraph = "0.4"
 
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-vm = { path = "../vm" }
-libra-types = { path = "../../types" }
-vm_runtime_types = { path = "../vm/vm_runtime/vm_runtime_types" }
-
+failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+vm = { path = "../vm", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+vm-runtime-types = { path = "../vm/vm-runtime/vm-runtime-types", version = "0.1.0" }
 
 [dev-dependencies]
-invalid-mutations = { path = "invalid-mutations" }
-libra-types = { path = "../../types", features = ["testing"]}
-vm = { path = "../vm", features = ["testing"]}
+invalid-mutations = { path = "invalid-mutations", version = "0.1.0" }
 
 [features]
 default = []
-testing = ["vm/testing", "libra-types/testing"]
+fuzzing = ["libra-types/fuzzing"]

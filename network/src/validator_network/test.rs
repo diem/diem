@@ -12,9 +12,9 @@ use crate::{
     },
     ProtocolId,
 };
-use config::config::RoleType;
-use crypto::{ed25519::compat, test_utils::TEST_SEED, traits::ValidKey, x25519};
 use futures::{executor::block_on, future::join, StreamExt};
+use libra_config::config::RoleType;
+use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, traits::ValidKey, x25519};
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     proto::types::SignedTransaction,
@@ -75,7 +75,7 @@ fn test_network_builder() {
 
 #[test]
 fn test_mempool_sync() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let runtime = Runtime::new().unwrap();
     let mempool_sync_protocol = ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL);
 
@@ -211,7 +211,7 @@ fn test_mempool_sync() {
 // correctly configured.
 #[test]
 fn test_permissionless_mempool_sync() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let runtime = Runtime::new().unwrap();
     let mempool_sync_protocol = ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL);
 
@@ -350,7 +350,7 @@ fn test_permissionless_mempool_sync() {
 
 #[test]
 fn test_consensus_rpc() {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
     let runtime = Runtime::new().unwrap();
     let rpc_protocol = ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL);
 
@@ -430,9 +430,7 @@ fn test_consensus_rpc() {
         network_provider.add_consensus(vec![rpc_protocol.clone()]);
     runtime.executor().spawn(network_provider.start());
 
-    let block_id = vec![0_u8; 32];
-    let mut req_block_msg = RequestBlock::default();
-    req_block_msg.block_id = block_id;
+    let req_block_msg = RequestBlock::default();
 
     let res_block_msg = RespondBlock::default();
 

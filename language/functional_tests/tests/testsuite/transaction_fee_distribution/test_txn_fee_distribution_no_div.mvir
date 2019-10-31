@@ -1,6 +1,6 @@
 // Number of validators does not evenly divide the transaction fees collected.
 
-import 0x0.ValidatorSet;
+import 0x0.LibraSystem;
 import 0x0.TransactionFeeDistribution;
 import 0x0.LibraAccount;
 import 0x0.LibraCoin;
@@ -13,14 +13,14 @@ main() {
 
   index = 0;
 
-  number_of_validators = ValidatorSet.size();
+  number_of_validators = LibraSystem.validator_set_size();
 
   lib_coin = LibraAccount.withdraw_from_sender(copy(number_of_validators) * 10 + 1);
   LibraAccount.deposit({{fees}}, move(lib_coin));
   TransactionFeeDistribution.distribute_transaction_fees();
 
   while (copy(index) < copy(number_of_validators)) {
-     addr = ValidatorSet.get_ith_validator_address(copy(index));
+     addr = LibraSystem.get_ith_validator_address(copy(index));
      // The first validator is paid the remainder if the number of
      // validators does not evenly divide the transactions fees pot.
      if (copy(index) == 0) {

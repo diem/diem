@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use libra_types::{transaction::TransactionInfo, vm_error::StatusCode};
 use schemadb::schema::assert_encode_decode;
 

@@ -1,7 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{config::global::Config as GlobalConfig, errors::*, evaluator::Stage};
+use crate::{
+    config::{global::Config as GlobalConfig, strip},
+    errors::*,
+    evaluator::Stage,
+};
+use language_e2e_tests::account::Account;
 use libra_types::transaction::{parse_as_transaction_argument, TransactionArgument};
 use std::{collections::BTreeSet, str::FromStr};
 
@@ -42,14 +47,11 @@ impl FromStr for Entry {
 
     fn from_str(s: &str) -> Result<Self> {
         let s = s.split_whitespace().collect::<String>();
-        if !s.starts_with("//!") {
-            return Err(
-                ErrorKind::Other("txn config entry must start with //!".to_string()).into(),
-            );
-        }
-        let s = s[3..].trim_start();
-        if s.starts_with("sender:") {
-            let s = s[7..].trim_start().trim_end();
+        let s = strip(&s, "//!")
+            .ok_or_else(|| ErrorKind::Other("txn config entry must start with //!".to_string()))?
+            .trim_start();
+
+        if let Some(s) = strip(s, "sender:") {
             if s.is_empty() {
                 return Err(ErrorKind::Other("sender cannot be empty".to_string()).into());
             }
@@ -62,8 +64,8 @@ impl FromStr for Entry {
             }
             return Ok(Entry::Receiver(s.to_ascii_lowercase()));
         }
-        if s.starts_with("args:") {
-            let res: Result<Vec<_>> = s[5..]
+        if let Some(s) = strip(s, "args:") {
+            let res: Result<Vec<_>> = s
                 .split(',')
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
@@ -71,8 +73,8 @@ impl FromStr for Entry {
                 .collect();
             return Ok(Entry::Arguments(res?));
         }
-        if s.starts_with("no-run:") {
-            let res: Result<Vec<_>> = s[7..]
+        if let Some(s) = strip(s, "no-run:") {
+            let res: Result<Vec<_>> = s
                 .split(',')
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
@@ -80,11 +82,11 @@ impl FromStr for Entry {
                 .collect();
             return Ok(Entry::DisableStages(res?));
         }
-        if s.starts_with("max-gas:") {
-            return Ok(Entry::MaxGas(s[8..].parse::<u64>()?));
+        if let Some(s) = strip(s, "max-gas:") {
+            return Ok(Entry::MaxGas(s.parse::<u64>()?));
         }
-        if s.starts_with("sequence-number:") {
-            return Ok(Entry::SequenceNumber(s[16..].parse::<u64>()?));
+        if let Some(s) = strip(s, "sequence-number:") {
+            return Ok(Entry::SequenceNumber(s.parse::<u64>()?));
         }
         Err(ErrorKind::Other(format!(
             "failed to parse '{}' as transaction config entry",
@@ -116,18 +118,18 @@ impl Entry {
 /// A table of options specific to one transaction, fine tweaking how the transaction
 /// is handled by the testing infra.
 #[derive(Debug)]
-pub struct Config {
+pub struct Config<'a> {
     pub disabled_stages: BTreeSet<Stage>,
-    pub sender: String,
+    pub sender: &'a Account,
     pub args: Vec<TransactionArgument>,
     pub max_gas: Option<u64>,
     pub sequence_number: Option<u64>,
     pub receiver: Option<String>,
 }
 
-impl Config {
+impl<'a> Config<'a> {
     /// Builds a transaction config table from raw entries.
-    pub fn build(config: &GlobalConfig, entries: &[Entry]) -> Result<Self> {
+    pub fn build(config: &'a GlobalConfig, entries: &[Entry]) -> Result<Self> {
         let mut disabled_stages = BTreeSet::new();
         let mut sender = None;
         let mut args = None;
@@ -138,19 +140,7 @@ impl Config {
         for entry in entries {
             match entry {
                 Entry::Sender(name) => match sender {
-                    None => {
-                        if config.accounts.contains_key(name)
-                            || config.genesis_accounts.contains_key(name)
-                        {
-                            sender = Some(name.to_string())
-                        } else {
-                            return Err(ErrorKind::Other(format!(
-                                "account '{}' does not exist",
-                                name
-                            ))
-                            .into());
-                        }
-                    }
+                    None => sender = Some(config.get_account_for_name(name)?),
                     _ => return Err(ErrorKind::Other("sender already set".to_string()).into()),
                 },
                 Entry::Receiver(name) => match receiver {
@@ -173,16 +163,9 @@ impl Config {
                             raw_args
                                 .iter()
                                 .map(|arg| match arg {
-                                    Argument::AddressOf(name) => match config.accounts.get(name) {
-                                        Some(data) => {
-                                            Ok(TransactionArgument::Address(*data.address()))
-                                        }
-                                        None => Err(ErrorKind::Other(format!(
-                                            "account '{}' does not exist",
-                                            name
-                                        ))
-                                        .into()),
-                                    },
+                                    Argument::AddressOf(name) => Ok(TransactionArgument::Address(
+                                        *config.get_account_for_name(name)?.address(),
+                                    )),
                                     Argument::SelfContained(arg) => Ok(arg.clone()),
                                 })
                                 .collect::<Result<Vec<_>>>()?,
@@ -225,9 +208,9 @@ impl Config {
             }
         }
 
-        Ok(Config {
+        Ok(Self {
             disabled_stages,
-            sender: sender.unwrap_or_else(|| "default".to_string()),
+            sender: sender.unwrap_or_else(|| config.accounts.get("default").unwrap().account()),
             args: args.unwrap_or_else(|| vec![]),
             max_gas,
             sequence_number,

@@ -288,7 +288,7 @@ fn bench_tcp_noise_muxer_send(b: &mut Bencher, msg_len: &usize, server_addr: Mul
 ///    benchmarks `remote_tcp`, `remote_tcp+noise`, `remote_tcp+muxer`, and
 ///    `remote_tcp+noise+muxer` respectively.
 fn socket_muxer_bench(c: &mut Criterion) {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     let rt = Runtime::new().unwrap();
     let executor = rt.executor();
@@ -410,7 +410,7 @@ fn socket_muxer_bench(c: &mut Criterion) {
         .throughput(|msg_len| {
             let msg_len = *msg_len as u32;
             let num_msgs = SENDS_PER_ITER as u32;
-            Throughput::Bytes(msg_len * num_msgs)
+            Throughput::Bytes(u64::from(msg_len * num_msgs))
         });
 
     c.bench("socket_muxer_send_throughput", bench);

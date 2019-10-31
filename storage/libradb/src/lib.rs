@@ -10,7 +10,7 @@
 // Used in other crates for testing.
 pub mod mock_genesis;
 // Used in this and other crates for testing.
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub mod test_helper;
 
 pub mod errors;
@@ -40,10 +40,12 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use crypto::hash::{CryptoHash, HashValue};
 use failure::prelude::*;
 use itertools::{izip, zip_eq};
 use lazy_static::lazy_static;
+use libra_crypto::hash::{CryptoHash, HashValue};
+use libra_logger::prelude::*;
+use libra_metrics::OpMetrics;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -53,16 +55,14 @@ use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     get_with_proof::{RequestItem, ResponseItem},
     proof::{
-        AccountStateProof, AccumulatorConsistencyProof, EventProof, SignedTransactionProof,
-        SparseMerkleProof,
+        AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
+        TransactionListProof, TransactionProof,
     },
     transaction::{
-        SignedTransactionWithProof, TransactionInfo, TransactionListWithProof, TransactionToCommit,
+        TransactionInfo, TransactionListWithProof, TransactionToCommit, TransactionWithProof,
         Version,
     },
 };
-use logger::prelude::*;
-use metrics::OpMetrics;
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{convert::TryInto, iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_proto::StartupInfo;
@@ -278,15 +278,15 @@ impl LibraDB {
         Ok((events_with_proof, account_state))
     }
 
-    /// Returns a signed transaction that is the `seq_num`-th one associated with the given account.
-    /// If the signed transaction with given `seq_num` doesn't exist, returns `None`.
+    /// Returns a transaction that is the `seq_num`-th one associated with the given account. If
+    /// the transaction with given `seq_num` doesn't exist, returns `None`.
     fn get_txn_by_account(
         &self,
         address: AccountAddress,
         seq_num: u64,
         ledger_version: Version,
         fetch_events: bool,
-    ) -> Result<Option<SignedTransactionWithProof>> {
+    ) -> Result<Option<TransactionWithProof>> {
         self.transaction_store
             .lookup_transaction_by_account(address, seq_num, ledger_version)?
             .map(|version| self.get_transaction_with_proof(version, ledger_version, fetch_events))
@@ -429,7 +429,7 @@ impl LibraDB {
         let txn_infos = izip!(txns_to_commit, state_root_hashes, event_root_hashes)
             .map(|(t, s, e)| {
                 Ok(TransactionInfo::new(
-                    t.as_signed_user_txn()?.hash(),
+                    t.transaction().hash(),
                     s,
                     e,
                     t.gas_used(),
@@ -481,14 +481,14 @@ impl LibraDB {
                     sequence_number,
                     fetch_events,
                 } => {
-                    let signed_transaction_with_proof = self.get_txn_by_account(
+                    let transaction_with_proof = self.get_txn_by_account(
                         account,
                         sequence_number,
                         ledger_version,
                         fetch_events,
                     )?;
 
-                    let proof_of_current_sequence_number = match signed_transaction_with_proof {
+                    let proof_of_current_sequence_number = match transaction_with_proof {
                         Some(_) => None,
                         None => Some(self.get_account_state_with_proof(
                             account,
@@ -498,7 +498,7 @@ impl LibraDB {
                     };
 
                     Ok(ResponseItem::GetAccountTransactionBySequenceNumber {
-                        signed_transaction_with_proof,
+                        transaction_with_proof,
                         proof_of_current_sequence_number,
                     })
                 }
@@ -610,26 +610,13 @@ impl LibraDB {
         }
 
         let limit = std::cmp::min(limit, ledger_version - start_version + 1);
-        let txn_and_txn_info_list = (start_version..start_version + limit)
-            .map(|version| {
-                Ok((
-                    self.transaction_store.get_transaction(version)?,
-                    self.ledger_store.get_transaction_info(version)?,
-                ))
-            })
+
+        let txns = (start_version..start_version + limit)
+            .map(|version| Ok(self.transaction_store.get_transaction(version)?))
             .collect::<Result<Vec<_>>>()?;
-        let proof_of_first_transaction = Some(
-            self.ledger_store
-                .get_transaction_proof(start_version, ledger_version)?,
-        );
-        let proof_of_last_transaction = if limit == 1 {
-            None
-        } else {
-            Some(
-                self.ledger_store
-                    .get_transaction_proof(start_version + limit - 1, ledger_version)?,
-            )
-        };
+        let txn_infos = (start_version..start_version + limit)
+            .map(|version| Ok(self.ledger_store.get_transaction_info(version)?))
+            .collect::<Result<Vec<_>>>()?;
         let events = if fetch_events {
             Some(
                 (start_version..start_version + limit)
@@ -639,13 +626,20 @@ impl LibraDB {
         } else {
             None
         };
+        let proof = TransactionListProof::new(
+            self.ledger_store.get_transaction_range_proof(
+                Some(start_version),
+                limit,
+                ledger_version,
+            )?,
+            txn_infos,
+        );
 
         Ok(TransactionListWithProof::new(
-            txn_and_txn_info_list,
+            txns,
             events,
             Some(start_version),
-            proof_of_first_transaction,
-            proof_of_last_transaction,
+            proof,
         ))
     }
 
@@ -701,14 +695,14 @@ impl LibraDB {
         version: Version,
         ledger_version: Version,
         fetch_events: bool,
-    ) -> Result<SignedTransactionWithProof> {
+    ) -> Result<TransactionWithProof> {
         let proof = {
             let (txn_info, txn_info_accumulator_proof) = self
                 .ledger_store
                 .get_transaction_info_with_proof(version, ledger_version)?;
-            SignedTransactionProof::new(txn_info_accumulator_proof, txn_info)
+            TransactionProof::new(txn_info_accumulator_proof, txn_info)
         };
-        let signed_transaction = self.transaction_store.get_transaction(version)?;
+        let transaction = self.transaction_store.get_transaction(version)?;
 
         // If events were requested, also fetch those.
         let events = if fetch_events {
@@ -717,9 +711,9 @@ impl LibraDB {
             None
         };
 
-        Ok(SignedTransactionWithProof {
+        Ok(TransactionWithProof {
             version,
-            signed_transaction,
+            transaction,
             events,
             proof,
         })

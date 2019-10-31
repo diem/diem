@@ -2,20 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use consensus_types::{
-    block::{Block, ExecutedBlock},
-    common::Round,
-    quorum_cert::QuorumCert,
-    timeout_certificate::TimeoutCertificate,
+    executed_block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
 };
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use std::sync::Arc;
 
 mod block_store;
 mod block_tree;
 mod pending_votes;
 
-pub use block_store::{BlockStore, NeedFetchResult};
-use executor::StateComputeResult;
+pub use block_store::{sync_manager::BlockRetriever, BlockStore};
 
 /// Result of the vote processing. The failure case (Verification error) is returned
 /// as the Error part of the result.
@@ -45,12 +41,6 @@ pub trait BlockReader: Send + Sync {
     /// Try to get a block with the block_id, return an Arc of it if found.
     fn get_block(&self, block_id: HashValue) -> Option<Arc<ExecutedBlock<Self::Payload>>>;
 
-    /// Try to get a compute result given the specified block id.
-    ///
-    /// Returns an option since all blocks should have a compute result or None for root block
-    /// since it has already been committed.
-    fn get_compute_result(&self, block_id: HashValue) -> Option<Arc<StateComputeResult>>;
-
     /// Get the current root block of the BlockTree.
     fn root(&self) -> Arc<ExecutedBlock<Self::Payload>>;
 
@@ -66,22 +56,6 @@ pub trait BlockReader: Send + Sync {
     fn path_from_root(&self, block_id: HashValue)
         -> Option<Vec<Arc<ExecutedBlock<Self::Payload>>>>;
 
-    /// Generates and returns a block with the given parent and payload.
-    /// Note that it does not add the block to the tree, just generates it.
-    /// The main reason we want this function in the BlockStore is the fact that the signer required
-    /// for signing the newly created block is held by the block store.
-    /// The function panics in the following cases:
-    /// * If the parent or its quorum certificate are not present in the tree,
-    /// * If the given round (which is typically calculated by Pacemaker) is not greater than that
-    ///   of a parent.
-    fn create_block(
-        &self,
-        parent: &Block<Self::Payload>,
-        payload: Self::Payload,
-        round: Round,
-        timestamp_usecs: u64,
-    ) -> Block<Self::Payload>;
-
     /// Return the certified block with the highest round.
     fn highest_certified_block(&self) -> Arc<ExecutedBlock<Self::Payload>>;
 
@@ -90,4 +64,7 @@ pub trait BlockReader: Send + Sync {
 
     /// Return the quorum certificate that carries ledger info with the highest round
     fn highest_ledger_info(&self) -> Arc<QuorumCert>;
+
+    /// Return the highest timeout certificate if available.
+    fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>>;
 }

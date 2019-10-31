@@ -9,10 +9,11 @@ use admission_control_proto::{
     },
     AdmissionControlStatus, SubmitTransactionResponse,
 };
-use crypto::ed25519::*;
 use failure::prelude::*;
 use futures::Future;
 use grpcio::{CallOption, ChannelBuilder, EnvBuilder};
+use libra_crypto::ed25519::*;
+use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -23,10 +24,9 @@ use libra_types::{
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
-    transaction::{SignedTransaction, Version},
+    transaction::{Transaction, Version},
     vm_error::StatusCode,
 };
-use logger::prelude::*;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
@@ -214,7 +214,7 @@ impl GRPCClient {
         account: AccountAddress,
         sequence_number: u64,
         fetch_events: bool,
-    ) -> Result<Option<(SignedTransaction, Option<Vec<ContractEvent>>)>> {
+    ) -> Result<Option<(Transaction, Option<Vec<ContractEvent>>)>> {
         let req_item = RequestItem::GetAccountTransactionBySequenceNumber {
             account,
             sequence_number,
@@ -222,12 +222,12 @@ impl GRPCClient {
         };
 
         let mut response = self.get_with_proof_sync(vec![req_item])?;
-        let (signed_txn_with_proof, _) = response
+        let (txn_with_proof, _) = response
             .response_items
             .remove(0)
             .into_get_account_txn_by_seq_num_response()?;
 
-        Ok(signed_txn_with_proof.map(|t| (t.signed_transaction, t.events)))
+        Ok(txn_with_proof.map(|t| (t.transaction, t.events)))
     }
 
     /// Get transactions in range (start_version..start_version + limit - 1) from validator.
@@ -236,7 +236,7 @@ impl GRPCClient {
         start_version: u64,
         limit: u64,
         fetch_events: bool,
-    ) -> Result<Vec<(SignedTransaction, Option<Vec<ContractEvent>>)>> {
+    ) -> Result<Vec<(Transaction, Option<Vec<ContractEvent>>)>> {
         // Make the request.
         let req_item = RequestItem::GetTransactions {
             start_version,
@@ -250,16 +250,13 @@ impl GRPCClient {
             .into_get_transactions_response()?;
 
         // Transform the response.
-        let num_txns = txn_list_with_proof.transaction_and_infos.len();
+        let num_txns = txn_list_with_proof.transactions.len();
         let event_lists = txn_list_with_proof
             .events
             .map(|event_lists| event_lists.into_iter().map(Some).collect())
             .unwrap_or_else(|| vec![None; num_txns]);
 
-        let res = itertools::zip_eq(txn_list_with_proof.transaction_and_infos, event_lists)
-            .map(|((signed_txn, _), events)| (signed_txn, events))
-            .collect();
-        Ok(res)
+        Ok(itertools::zip_eq(txn_list_with_proof.transactions, event_lists).collect())
     }
 
     /// Get event by access path from validator. AccountStateWithProof will be returned if

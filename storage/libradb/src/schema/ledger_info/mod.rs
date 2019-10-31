@@ -3,21 +3,21 @@
 
 //! This module defines physical storage schema for LedgerInfoWithSignatures structure.
 //!
-//! Serialized LedgerInfoWithSignatures identified by `epoch_num`.
+//! Serialized LedgerInfoWithSignatures identified by `epoch`.
 //! ```text
 //! |<---key--->|<---------------value------------->|
-//! | epoch_num | ledger_info_with_signatures bytes |
+//! | epoch | ledger_info_with_signatures bytes |
 //! ```
 //!
-//! `epoch_num` is serialized in big endian so that records in RocksDB will be in order of it's
+//! `epoch` is serialized in big endian so that records in RocksDB will be in order of their
 //! numeric value.
 
 use crate::schema::ensure_slice_len_eq;
 use byteorder::{BigEndian, ReadBytesExt};
 use failure::prelude::*;
+use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use prost::Message;
-use prost_ext::MessageExt;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},

@@ -8,15 +8,17 @@ use crate::OP_COUNTER;
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use client::{AccountData, AccountStatus};
 use failure::prelude::*;
+use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     get_with_proof::{RequestItem, UpdateToLatestLedgerRequest},
     proto::types::UpdateToLatestLedgerRequest as ProtoUpdateToLatestLedgerRequest,
-    transaction::{Script, TransactionPayload},
-    transaction_helpers::{create_signed_txn, TransactionSigner},
+    transaction::{
+        helpers::{create_user_txn, TransactionSigner},
+        Script, TransactionPayload,
+    },
 };
 use libra_wallet::wallet_library::WalletLibrary;
-use logger::prelude::*;
 
 /// Placeholder values used to generate offline TXNs.
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
@@ -91,7 +93,7 @@ fn gen_submit_transaction_request<T: TransactionSigner>(
 ) -> Result<Request> {
     // If generation fails here, sequence number will not be increased,
     // so it is fine to continue later generation.
-    let signed_txn = create_signed_txn(
+    let transaction = create_user_txn(
         signer,
         TransactionPayload::Script(program),
         sender_account.address,
@@ -105,7 +107,7 @@ fn gen_submit_transaction_request<T: TransactionSigner>(
         Err(e)
     })?;
     let mut req = SubmitTransactionRequest::default();
-    req.signed_txn = Some(signed_txn.into());
+    req.transaction = Some(transaction.into());
     sender_account.sequence_number += 1;
     OP_COUNTER.inc("create_txn_request.success");
     Ok(Request::WriteRequest(req))

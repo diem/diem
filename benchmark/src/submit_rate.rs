@@ -1,4 +1,4 @@
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use std::{thread, time, vec::IntoIter};
 
 /// Items are returned in the world of microseconds.

@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::{NodeConfig, PersistableConfig};
 use failure::prelude::*;
-use logger::prelude::*;
+use libra_config::config::{NodeConfig, PersistableConfig};
+use libra_logger::prelude::*;
 use std::{ffi::OsStr, fs, net::IpAddr, path::PathBuf, str::FromStr};
 use structopt::{clap::arg_enum, StructOpt};
 use walkdir::WalkDir;

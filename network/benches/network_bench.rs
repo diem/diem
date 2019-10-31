@@ -8,21 +8,22 @@
 // Allow writing 1 * KiB or 1 * MiB
 #![allow(clippy::identity_op)]
 
-use config::config::RoleType;
 use core::str::FromStr;
 use criterion::{
     criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
     PlotConfiguration, Throughput,
 };
-use crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
 use futures::{
     channel::mpsc,
     executor::block_on,
     sink::SinkExt,
     stream::{FuturesUnordered, StreamExt},
 };
+use libra_config::config::RoleType;
+use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
+use libra_prost_ext::MessageExt;
 use network::{
-    proto::{Block, ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock},
+    proto::{ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock},
     protocols::rpc::error::RpcError,
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
@@ -31,7 +32,6 @@ use network::{
     NetworkPublicKeys, ProtocolId,
 };
 use parity_multiaddr::Multiaddr;
-use prost_ext::MessageExt;
 
 use libra_types::PeerId;
 use rand::{rngs::StdRng, SeedableRng};
@@ -182,9 +182,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
 fn compose_proposal(msg_len: usize) -> ConsensusMsg {
     let mut msg = ConsensusMsg::default();
     let mut proposal = Proposal::default();
-    let mut block = Block::default();
-    block.payload = vec![0u8; msg_len];
-    proposal.proposed_block = Some(block);
+    proposal.bytes = vec![0u8; msg_len];
     msg.message = Some(ConsensusMsg_oneof::Proposal(proposal));
     msg
 }
@@ -331,23 +329,19 @@ async fn request_block(
 }
 
 fn compose_request_block() -> RequestBlock {
-    let mut req = RequestBlock::default();
-    req.block_id = vec![0u8; 32];
-    req
+    RequestBlock::default()
 }
 
 fn compose_respond_block(msg_len: usize) -> ConsensusMsg {
     let mut msg = ConsensusMsg::default();
     let mut res = RespondBlock::default();
-    let mut block = Block::default();
-    block.payload = vec![0u8; msg_len];
-    res.blocks.push(block);
+    res.bytes = vec![0u8; msg_len];
     msg.message = Some(ConsensusMsg_oneof::RespondBlock(res));
     msg
 }
 
 fn network_crate_benchmark(c: &mut Criterion) {
-    ::logger::try_init_for_testing();
+    ::libra_logger::try_init_for_testing();
 
     // Parameterize benchmarks over the message length.
     let msg_lens = vec![32usize, 256, 1 * KiB, 4 * KiB, 64 * KiB, 256 * KiB, 1 * MiB];
@@ -358,7 +352,7 @@ fn network_crate_benchmark(c: &mut Criterion) {
             .with_function("rpc", rpc_bench)
             .sample_size(10)
             .plot_config(PlotConfiguration::default().summary_scale(AxisScale::Logarithmic))
-            .throughput(|msg_len| Throughput::Bytes((*msg_len as u32) * NUM_MSGS)),
+            .throughput(|msg_len| Throughput::Bytes(((*msg_len as u32) * NUM_MSGS).into())),
     );
 }
 

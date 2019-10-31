@@ -43,9 +43,9 @@ impl MempoolClientTrait for LocalMockMempool {
         let sys_error_add = [102_u8; ADDRESS_LENGTH];
         let accepted_add = [103_u8; ADDRESS_LENGTH];
         let mempool_full = [104_u8; ADDRESS_LENGTH];
-        let signed_txn =
-            SignedTransaction::try_from(req.clone().signed_txn.unwrap().clone()).unwrap();
-        let sender = signed_txn.sender();
+        let transaction =
+            SignedTransaction::try_from(req.clone().transaction.unwrap().clone()).unwrap();
+        let sender = transaction.sender();
         if sender.as_ref() == insufficient_balance_add {
             status.set_code(MempoolAddTransactionStatusCode::InsufficientBalance);
         } else if sender.as_ref() == invalid_seq_add {

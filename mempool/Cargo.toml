@@ -22,24 +22,27 @@ prost = "0.5.0"
 tokio = "=0.2.0-alpha.6"
 ttl_cache = "0.4.2"
 
-libra-mempool-shared-proto = { path = "mempool-shared-proto" }
-bounded-executor = { path = "../common/bounded-executor" }
-config = { path = "../config" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
-grpc_helpers = { path = "../common/grpc_helpers" }
-logger = { path = "../common/logger" }
-metrics = { path = "../common/metrics" }
-network = { path = "../network" }
-crypto = { path = "../crypto/crypto" }
-storage-client = { path = "../storage/storage-client" }
-libra-types = { path = "../types" }
-vm_validator = { path = "../vm_validator" }
+libra-mempool-shared-proto = { path = "mempool-shared-proto", version = "0.1.0" }
+bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }
+libra-config = { path = "../config", version = "0.1.0" }
+failure = { path = "../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+grpc-helpers = { path = "../common/grpc-helpers", version = "0.1.0" }
+libra-logger = { path = "../common/logger", version = "0.1.0" }
+libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+network = { path = "../network", version = "0.1.0" }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+storage-client = { path = "../storage/storage-client", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0" }
+vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
 [dev-dependencies]
 rand = "0.6.5"
-channel = { path = "../common/channel" }
-storage-service = { path = "../storage/storage-service" }
-libra-types = { path = "../types", features = ["testing"] }
+channel = { path = "../common/channel", version = "0.1.0" }
+storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 
 [build-dependencies]
 grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }
+
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing", "storage-service/fuzzing"]

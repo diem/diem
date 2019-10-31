@@ -9,7 +9,7 @@ pub use failure::Error;
 /// Defines all errors in this crate.
 #[derive(Clone, Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "an error occurred when executing the program")]
+    #[fail(display = "an error occurred when executing the transaction")]
     VMExecutionFailure(TransactionOutput),
     #[fail(display = "the transaction was discarded")]
     DiscardedTransaction(TransactionOutput),

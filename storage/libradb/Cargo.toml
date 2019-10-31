@@ -16,31 +16,34 @@ itertools = "0.8.0"
 lazy_static = "1.2.0"
 num-derive = "0.2"
 num-traits = "0.2"
-proptest = "0.9.2"
-proptest-derive = "0.1.2"
+proptest = { version = "0.9.2", optional = true }
+proptest-derive = { version = "0.1.2", optional = true }
 prost = "0.5.0"
 rand = "0.6.5"
 rusty-fork = "0.2.1"
 strum = "0.15.0"
 strum_macros = "0.15.0"
+serde = "1.0.96"
 
-accumulator = { path = "../accumulator" }
-canonical-serialization = { path = "../../common/canonical-serialization" }
-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-jellyfish-merkle = { path = "../jellyfish-merkle" }
-logger = { path = "../../common/logger" }
-metrics = { path = "../../common/metrics" }
-prost-ext = { path = "../../common/prost-ext" }
-schemadb = { path = "../schemadb" }
-storage_proto = { path = "../storage_proto" }
-tools = { path = "../../common/tools" }
-libra-types = { path = "../../types" }
+accumulator = { path = "../accumulator", version = "0.1.0" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+jellyfish-merkle = { path = "../jellyfish-merkle", version = "0.1.0" }
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
+libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
+schemadb = { path = "../schemadb", version = "0.1.0" }
+storage-proto = { path = "../storage-proto", version = "0.1.0" }
+libra-tools = { path = "../../common/tools", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
 
 [dev-dependencies]
-proptest-helpers = { path = "../../common/proptest-helpers" }
-libra-types = { path = "../../types", features = ["testing"]}
+proptest = "0.9.2"
+proptest-derive = "0.1.2"
+libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
 
 [features]
 default = []
-testing = ["libra-types/testing"]
+fuzzing = ["proptest", "proptest-derive", "libra-proptest-helpers", "libra-crypto/fuzzing", "jellyfish-merkle/fuzzing", "libra-types/fuzzing"]

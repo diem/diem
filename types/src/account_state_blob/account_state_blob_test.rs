@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::collection::vec;
-use prost_ext::test_helpers::assert_protobuf_encode_decode;
 
 fn hash_blob(blob: &[u8]) -> HashValue {
     let mut hasher = AccountStateBlobHasher::default();

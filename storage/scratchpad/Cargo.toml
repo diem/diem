@@ -12,10 +12,12 @@ edition = "2018"
 [dependencies]
 itertools = "0.8.0"
 
-crypto = { path = "../../crypto/crypto" }
-libra-types = { path = "../../types" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.9.4"
 
-libra-types = { path = "../../types", features = ["testing"] }
+[features]
+default = []
+fuzzing = ["libra-types/fuzzing"]

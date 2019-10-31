@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use tools::tempdir::TempPath;
+use libra_tools::tempdir::TempPath;
 
 #[test]
 fn test_put_get() {
@@ -44,7 +44,7 @@ fn test_delete_block_and_qc() {
     let block_id = blocks[0].id();
 
     let qcs = vec![QuorumCert::certificate_for_genesis()];
-    let qc_id = qcs[0].certified_block_id();
+    let qc_id = qcs[0].certified_block().id();
 
     db.save_blocks_and_quorum_certificates(blocks, qcs).unwrap();
     assert_eq!(db.get_blocks::<i64>().unwrap().len(), 1);

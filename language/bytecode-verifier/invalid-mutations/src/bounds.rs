@@ -1,12 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_proptest_helpers::pick_slice_idxs;
 use libra_types::vm_error::{StatusCode, VMStatus};
 use proptest::{
     prelude::*,
     sample::{self, Index as PropIndex},
 };
-use proptest_helpers::pick_slice_idxs;
 use std::collections::BTreeMap;
 use vm::{
     errors::{append_err_info, bounds_error},

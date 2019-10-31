@@ -1,8 +1,8 @@
 [package]
-name = "config"
+name = "libra-config"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra config"
+description = "Libra libra-config"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"
@@ -19,15 +19,11 @@ serde = { version = "1.0.99", default-features = false }
 toml = { version = "0.5.3", default-features = false }
 prost = "0.5.0"
 
-crypto = { path = "../crypto/crypto" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
-tools = { path = "../common/tools" }
-libra-types = { path = "../types" }
-
-[dev-dependencies]
-libra-types = { path = "../types", features = ["testing"] }
-crypto = { path = "../crypto/crypto", features = ["testing"] }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+failure = { path = "../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+libra-tools = { path = "../common/tools", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0" }
 
 [features]
 default = []
-testing = ["crypto/testing", "libra-types/testing"]
+fuzzing = ["libra-crypto/fuzzing", "libra-types/fuzzing"]

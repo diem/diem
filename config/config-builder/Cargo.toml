@@ -2,7 +2,7 @@
 name = "config-builder"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra config builder"
+description = "Libra libra-config builder"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"
@@ -15,14 +15,15 @@ parity-multiaddr = { version = "0.5.0", default-features = false }
 rand = "0.6.5"
 structopt = "0.3.2"
 
-config = { path = ".." }
-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-generate-keypair = { path = "../generate-keypair" }
-logger = { path = "../../common/logger" }
-prost-ext = { path = "../../common/prost-ext" }
-libra-types = { path = "../../types" }
-vm_genesis = { path = "../../language/vm/vm_genesis" }
+libra-config = { path = "..", version = "0.1.0" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+generate-keypair = { path = "../generate-keypair", version = "0.1.0" }
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+vm-genesis = { path = "../../language/vm/vm-genesis", version = "0.1.0" }
 
-[dev-dependencies]
-libra-types = { path = "../../types", features = ["testing"]}
+[features]
+default = []
+fuzzing = ["libra-config/fuzzing"]

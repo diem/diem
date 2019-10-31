@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::FuzzTargetImpl;
+use libra_proptest_helpers::ValueGenerator;
 use proptest::prelude::*;
-use proptest_helpers::ValueGenerator;
 use vm::file_format::{CompiledModule, CompiledModuleMut};
 
 #[derive(Clone, Debug, Default)]

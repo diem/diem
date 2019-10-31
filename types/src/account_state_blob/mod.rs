@@ -1,25 +1,20 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use crate::account_config::{account_resource_path, AccountResource};
 use crate::{
-    account_address::AccountAddress,
-    account_config::get_account_resource_or_default,
-    ledger_info::LedgerInfo,
-    proof::{verify_account_state, AccountStateProof},
-    transaction::Version,
+    account_address::AccountAddress, account_config::get_account_resource_or_default,
+    ledger_info::LedgerInfo, proof::AccountStateProof, transaction::Version,
 };
-
-use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
-use crypto::{
+use failure::prelude::*;
+use libra_crypto::{
     hash::{AccountStateBlobHasher, CryptoHash, CryptoHasher},
     HashValue,
 };
-use failure::prelude::*;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest::{arbitrary::Arbitrary, prelude::*};
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -74,7 +69,7 @@ impl TryFrom<&BTreeMap<Vec<u8>, Vec<u8>>> for AccountStateBlob {
 
     fn try_from(map: &BTreeMap<Vec<u8>, Vec<u8>>) -> Result<Self> {
         Ok(Self {
-            blob: SimpleSerializer::serialize(map)?,
+            blob: lcs::to_bytes(map)?,
         })
     }
 }
@@ -93,13 +88,13 @@ impl From<AccountStateBlob> for crate::proto::types::AccountStateBlob {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 impl From<AccountResource> for AccountStateBlob {
     fn from(account_resource: AccountResource) -> Self {
         let mut account_state: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
         account_state.insert(
             account_resource_path(),
-            SimpleSerializer::<Vec<u8>>::serialize(&account_resource).unwrap(),
+            lcs::to_bytes(&account_resource).unwrap(),
         );
         AccountStateBlob::try_from(&account_state).unwrap()
     }
@@ -109,7 +104,7 @@ impl TryFrom<&AccountStateBlob> for BTreeMap<Vec<u8>, Vec<u8>> {
     type Error = failure::Error;
 
     fn try_from(account_state_blob: &AccountStateBlob) -> Result<Self> {
-        SimpleDeserializer::deserialize(&account_state_blob.blob)
+        lcs::from_bytes(&account_state_blob.blob).map_err(Into::into)
     }
 }
 
@@ -123,14 +118,14 @@ impl CryptoHash for AccountStateBlob {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 prop_compose! {
     pub fn account_state_blob_strategy()(account_resource in any::<AccountResource>()) -> AccountStateBlob {
         AccountStateBlob::from(account_resource)
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for AccountStateBlob {
     type Parameters = ();
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
@@ -141,7 +136,7 @@ impl Arbitrary for AccountStateBlob {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountStateWithProof {
     /// The transaction version at which this account state is seen.
     pub version: Version,
@@ -182,13 +177,8 @@ impl AccountStateWithProof {
             version,
         );
 
-        verify_account_state(
-            ledger_info,
-            version,
-            address.hash(),
-            self.blob.as_ref(),
-            &self.proof,
-        )
+        self.proof
+            .verify(ledger_info, version, address.hash(), self.blob.as_ref())
     }
 }
 

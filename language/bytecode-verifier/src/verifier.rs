@@ -22,8 +22,8 @@ use vm::{
     IndexKind,
 };
 use vm_runtime_types::{
-    native_functions::dispatch::dispatch_native_function,
-    native_structs::dispatch::dispatch_native_struct,
+    native_functions::dispatch::resolve_native_function,
+    native_structs::dispatch::resolve_native_struct,
 };
 
 /// A program that has been verified for internal consistency.
@@ -375,7 +375,7 @@ fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<VMSt
         .filter(|fdv| fdv.1.is_native())
     {
         let function_name = native_function_definition_view.name();
-        match dispatch_native_function(&module_id, function_name) {
+        match resolve_native_function(&module_id, function_name) {
             None => errors.push(verification_error(
                 IndexKind::FunctionHandle,
                 idx,
@@ -409,7 +409,7 @@ fn verify_native_structs(module_view: &ModuleView<VerifiedModule>) -> Vec<VMStat
     {
         let struct_name = native_struct_definition_view.name();
 
-        match dispatch_native_struct(&module_id, struct_name) {
+        match resolve_native_struct(&module_id, struct_name) {
             None => errors.push(verification_error(
                 IndexKind::StructHandle,
                 idx,

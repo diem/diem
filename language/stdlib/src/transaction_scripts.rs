@@ -14,6 +14,11 @@ pub fn create_account() -> &'static str {
     include_str!("../transaction_scripts/create_account.mvir")
 }
 
+/// Returns the source code for the rotate-consensus-pubkey script.
+pub fn rotate_consensus_pubkey() -> &'static str {
+    include_str!("../transaction_scripts/rotate_consensus_pubkey.mvir")
+}
+
 /// Returns the source code for the rotate-key transaction script.
 pub fn rotate_key() -> &'static str {
     include_str!("../transaction_scripts/rotate_authentication_key.mvir")
@@ -22,6 +27,11 @@ pub fn rotate_key() -> &'static str {
 /// Returns the source code for the mint transaction script.
 pub fn mint() -> &'static str {
     include_str!("../transaction_scripts/mint.mvir")
+}
+
+/// Returns the source code for the block prologue script
+pub fn block_prologue() -> &'static str {
+    include_str!("../transaction_scripts/block_prologue.mvir")
 }
 
 lazy_static! {
@@ -34,10 +44,19 @@ lazy_static! {
 }
 
 lazy_static! {
+    pub static ref ROTATE_CONSENSUS_PUBKEY_TXN_BODY: Program =
+        { parse_program(rotate_consensus_pubkey()).unwrap() };
+}
+
+lazy_static! {
     pub static ref ROTATE_AUTHENTICATION_KEY_TXN_BODY: Program =
         { parse_program(rotate_key()).unwrap() };
 }
 
 lazy_static! {
     pub static ref MINT_TXN_BODY: Program = parse_program(mint()).unwrap();
+}
+
+lazy_static! {
+    pub static ref BLOCK_PROLOGUE_TXN_BODY: Program = parse_program(block_prologue()).unwrap();
 }

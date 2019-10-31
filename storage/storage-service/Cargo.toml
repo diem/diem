@@ -14,28 +14,27 @@ futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features =
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 structopt = "0.3.2"
 
-canonical-serialization = { path = "../../common/canonical-serialization" }
-config = { path = "../../config" }
-crypto = { path = "../../crypto/crypto" }
-debug-interface = { path = "../../common/debug-interface" }
-executable-helpers = { path = "../../common/executable-helpers" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-grpc_helpers = { path = "../../common/grpc_helpers" }
-libradb = { path = "../libradb" }
-logger = { path = "../../common/logger" }
-metrics = { path = "../../common/metrics" }
-storage-client = { path = "../storage-client" }
-storage_proto = { path = "../storage_proto" }
-libra-types = { path = "../../types" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-config = { path = "../../config", version = "0.1.0" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+debug-interface = { path = "../../common/debug-interface", version = "0.1.0" }
+executable-helpers = { path = "../../common/executable-helpers", version = "0.1.0" }
+failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+grpc-helpers = { path = "../../common/grpc-helpers", version = "0.1.0" }
+libradb = { path = "../libradb", version = "0.1.0" }
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
+storage-client = { path = "../storage-client", version = "0.1.0" }
+storage-proto = { path = "../storage-proto", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
 rand = "0.6.5"
+proptest = { version = "0.9.2", optional = true }
 
 [dev-dependencies]
 itertools = "0.8.0"
+libra-tools = { path = "../../common/tools", version = "0.1.0" }
 proptest = "0.9.2"
-tools = { path = "../../common/tools" }
-libradb = { path = "../libradb", features = ["testing"] }
-libra-types = { path = "../../types", features = ["testing"] }
 
 [features]
 default = []
-testing = ["libradb/testing", "libra-types/testing"]
+fuzzing = ["proptest", "libradb/fuzzing"]

@@ -31,8 +31,8 @@ use futures::{
     sink::SinkExt,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
+use libra_logger::prelude::*;
 use libra_types::PeerId;
-use logger::prelude::*;
 use netcore::compat::IoCompat;
 use rand::{rngs::SmallRng, seq::SliceRandom, FromEntropy};
 use std::{collections::HashMap, fmt::Debug, time::Duration};
@@ -241,11 +241,7 @@ where
             ping_result
                 .timeout(ping_timeout)
                 .map_err(Into::<NetworkError>::into)
-                .map(|r| match r {
-                    Ok(Ok(())) => Ok(()),
-                    Ok(Err(e)) => Err(e),
-                    Err(e) => Err(e),
-                })
+                .map(|r| r.and_then(|x| x))
                 .await,
         )
     }

@@ -6,8 +6,8 @@ use crate::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_config::{account_struct_tag, coin_struct_tag},
 };
+use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;
-use prost_ext::test_helpers::assert_protobuf_encode_decode;
 use std::convert::TryFrom;
 
 #[test]

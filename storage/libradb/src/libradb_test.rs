@@ -6,7 +6,8 @@ use crate::{
     mock_genesis::{db_with_mock_genesis, GENESIS_INFO},
     test_helper::arb_blocks_to_commit,
 };
-use crypto::hash::CryptoHash;
+use libra_crypto::hash::CryptoHash;
+use libra_tools::tempdir::TempPath;
 use libra_types::{
     account_config::get_account_resource_or_default, contract_event::ContractEvent,
     ledger_info::LedgerInfo,
@@ -14,7 +15,6 @@ use libra_types::{
 use proptest::prelude::*;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::collections::HashMap;
-use tools::tempdir::TempPath;
 
 fn test_save_blocks_impl(
     input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
@@ -306,19 +306,29 @@ fn verify_committed_transactions(
 
         // Verify transaction hash.
         assert_eq!(
-            txn_info.signed_transaction_hash(),
-            txn_to_commit.as_signed_user_txn()?.hash()
+            txn_info.transaction_hash(),
+            txn_to_commit.transaction().hash()
         );
 
         // Fetch and verify transaction itself.
-        let txn = txn_to_commit.as_signed_user_txn()?;
+        let txn = txn_to_commit.transaction().as_signed_user_txn()?;
         let txn_with_proof = db.get_transaction_with_proof(cur_ver, ledger_version, true)?;
-        txn_with_proof.verify(ledger_info, cur_ver, txn.sender(), txn.sequence_number())?;
+        txn_with_proof.verify_user_txn(
+            ledger_info,
+            cur_ver,
+            txn.sender(),
+            txn.sequence_number(),
+        )?;
 
         let txn_with_proof = db
             .get_txn_by_account(txn.sender(), txn.sequence_number(), ledger_version, true)?
             .expect("Should exist.");
-        txn_with_proof.verify(ledger_info, cur_ver, txn.sender(), txn.sequence_number())?;
+        txn_with_proof.verify_user_txn(
+            ledger_info,
+            cur_ver,
+            txn.sender(),
+            txn.sequence_number(),
+        )?;
 
         let txn_list_with_proof =
             db.get_transactions(cur_ver, 1, ledger_version, true /* fetch_events */)?;

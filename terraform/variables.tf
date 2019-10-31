@@ -41,7 +41,22 @@ variable "image_tag" {
 
 variable "peer_ids" {
   type        = list(string)
-  description = "List of PeerIds"
+  description = "List of validator PeerIds"
+}
+
+variable "fullnode_ids" {
+  type        = list(string)
+  description = "List of full node PeerIds"
+}
+
+variable "validator_fullnode_id" {
+  type        = string
+  description = "PeerId of the validator on the full node network"
+}
+
+variable "num_fullnodes" {
+  default     = 1
+  description = "Number of full nodes to run (attached to first validator)"
 }
 
 variable "validator_type" {

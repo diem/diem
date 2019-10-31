@@ -16,23 +16,25 @@ mod node_type_test;
 use crate::nibble_path::NibblePath;
 use bincode::{deserialize, serialize};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-use crypto::{
+use failure::{Fail, Result, *};
+use libra_crypto::{
     hash::{
         CryptoHash, SparseMerkleInternalHasher, SparseMerkleLeafHasher,
         SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
-use failure::{Fail, Result, *};
+use libra_nibble::Nibble;
 use libra_types::{
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
     transaction::Version,
 };
-use nibble::Nibble;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::cast::FromPrimitive;
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::hash_map, prelude::*};
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -42,7 +44,8 @@ use std::{
 };
 
 /// The unique key of each node.
-#[derive(Arbitrary, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct NodeKey {
     // The version at which the node is created.
     version: Version,
@@ -128,7 +131,8 @@ impl NodeKey {
 }
 
 /// Each child of [`InternalNode`] encapsulates a nibble forking at this node.
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct Child {
     // The hash value of this child node.
     pub hash: HashValue,
@@ -282,6 +286,7 @@ impl From<LeafNode> for Node {
     }
 }
 
+#[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for InternalNode {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;

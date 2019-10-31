@@ -11,7 +11,7 @@ use crate::{
 use failure::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
-    transaction::{SignedTransaction, Transaction, Version},
+    transaction::{Transaction, Version},
 };
 use schemadb::DB;
 use std::sync::Arc;
@@ -45,17 +45,10 @@ impl TransactionStore {
     }
 
     /// Get signed transaction given `version`
-    pub fn get_transaction(&self, version: Version) -> Result<SignedTransaction> {
-        let txn = self
-            .db
+    pub fn get_transaction(&self, version: Version) -> Result<Transaction> {
+        self.db
             .get::<TransactionSchema>(&version)?
-            .ok_or_else(|| LibraDbError::NotFound(format!("Txn {}", version)))?;
-
-        match txn {
-            Transaction::UserTransaction(user_txn) => Ok(user_txn),
-            // TODO: support other variants after API change
-            _ => unreachable!("Currently only supports user transactions."),
-        }
+            .ok_or_else(|| LibraDbError::NotFound(format!("Txn {}", version)).into())
     }
 
     /// Save signed transaction at `version`

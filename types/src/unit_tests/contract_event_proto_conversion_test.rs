@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::contract_event::{ContractEvent, EventWithProof};
+use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;
-use prost_ext::test_helpers::assert_protobuf_encode_decode;
 
 proptest! {
     #[test]

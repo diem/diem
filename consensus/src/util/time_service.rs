@@ -3,7 +3,7 @@
 
 use channel;
 use futures::{Future, FutureExt, SinkExt};
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use std::{
     pin::Pin,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},

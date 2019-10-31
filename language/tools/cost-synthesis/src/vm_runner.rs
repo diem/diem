@@ -39,12 +39,10 @@ macro_rules! with_loaded_vm {
         for (access_path, blob) in $root_account.generate_resources(&mut inhabitor).into_iter() {
             data_cache.set(access_path, blob);
         }
-        let mut $vm =
-            TransactionExecutor::new(&$module_cache, &data_cache, TransactionMetadata::default());
+        let txn_data = TransactionMetadata::default();
+        let data_cache = TransactionDataCache::new(&data_cache);
+        let mut $vm = InterpreterForCostSynthesis::new(&$module_cache, txn_data, data_cache);
         $vm.turn_off_gas_metering();
-        match $vm.execution_stack.push_frame(entry_func) {
-            Ok(_) => {}
-            Err(e) => panic!("Unexpected Runtime Error: {:?}", e),
-        }
+        $vm.push_frame(entry_func, vec![]);
     };
 }

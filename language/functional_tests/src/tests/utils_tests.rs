@@ -1,4 +1,15 @@
-use crate::utils::parse_input;
+use crate::{
+    config::global::Config as GlobalConfig,
+    errors::*,
+    utils::{build_transactions, split_input},
+};
+
+fn parse_input(input: &str) -> Result<()> {
+    let (config, _, transactions) = split_input(&input)?;
+    let config = GlobalConfig::build(&config)?;
+    build_transactions(&config, &transactions)?;
+    Ok(())
+}
 
 #[test]
 fn parse_input_no_transactions() {
@@ -34,7 +45,7 @@ fn parse_input_config_before_first_empty_transaction() {
 fn parse_input_empty_transaction() {
     parse_input(r"
         main() {}
-        
+
         //! new-transaction
 
         //! new-transaction

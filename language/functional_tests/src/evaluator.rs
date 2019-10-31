@@ -8,16 +8,18 @@ use crate::{
 use bytecode_verifier::verifier::{
     verify_module_dependencies, verify_script_dependencies, VerifiedModule, VerifiedScript,
 };
-use config::config::VMPublishingOption;
 use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
     parser::parse_script_or_module,
 };
 use ir_to_bytecode_syntax::ast::ScriptOrModule;
-use language_e2e_tests::{account::Account, executor::FakeExecutor};
-use libra_types::access_path::AccessPath;
-use libra_types::channel_account::{channel_account_struct_tag, ChannelAccountResource};
+use language_e2e_tests::executor::FakeExecutor;
+use libra_config::config::VMPublishingOption;
+use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_types::{
+    account_address::AccountAddress,
+    :access_path::AccessPath,
+    channel_account::{channel_account_struct_tag, ChannelAccountResource},
     transaction::{
         ChannelScriptBody, Module as TransactionModule, RawTransaction,
         Script as TransactionScript, SignedTransaction, TransactionOutput, TransactionStatus,
@@ -33,8 +35,8 @@ use vm::gas_schedule::{GasAlgebra, MAXIMUM_NUMBER_OF_GAS_UNITS};
 /// A transaction to be evaluated by the testing infra.
 /// Contains code and a transaction config.
 #[derive(Debug)]
-pub struct Transaction {
-    pub config: TransactionConfig,
+pub struct Transaction<'a> {
+    pub config: TransactionConfig<'a>,
     pub input: String,
 }
 
@@ -187,10 +189,45 @@ fn do_verify_module(module: CompiledModule, deps: &[VerifiedModule]) -> Result<V
     Ok(verified_module)
 }
 
+/// A set of common parameters required to create transactions.
+struct TransactionParameters<'a> {
+    pub sender_addr: AccountAddress,
+    pub pubkey: &'a Ed25519PublicKey,
+    pub privkey: &'a Ed25519PrivateKey,
+    pub sequence_number: u64,
+    pub max_gas_amount: u64,
+    pub gas_unit_price: u64,
+    pub expiration_time: Duration,
+}
+
+/// Gets the transaction parameters from the current execution environment and the config.
+fn get_transaction_parameters<'a>(
+    exec: &'a FakeExecutor,
+    config: &'a TransactionConfig,
+) -> TransactionParameters<'a> {
+    let account_resource = exec.read_account_resource(config.sender).unwrap();
+
+    TransactionParameters {
+        sender_addr: *config.sender.address(),
+        pubkey: &config.sender.pubkey,
+        privkey: &config.sender.privkey,
+        sequence_number: config
+            .sequence_number
+            .unwrap_or_else(|| account_resource.sequence_number()),
+        max_gas_amount: config.max_gas.unwrap_or_else(|| {
+            std::cmp::min(
+                MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+                account_resource.balance(),
+            )
+        }),
+        gas_unit_price: 1,
+        expiration_time: Duration::from_secs(u64::max_value()),
+    }
+}
+
 /// Creates and signs a script transaction.
 fn make_script_transaction(
     exec: &FakeExecutor,
-    account: &Account,
     config: &TransactionConfig,
     script: CompiledScript,
     receiver: Option<(&Account, u64)>,
@@ -199,6 +236,17 @@ fn make_script_transaction(
     script.serialize(&mut blob)?;
     let script = TransactionScript::new(blob, config.args.clone());
 
+    let params = get_transaction_parameters(exec, config);
+    Ok(RawTransaction::new_script(
+        params.sender_addr,
+        params.sequence_number,
+        script,
+        params.max_gas_amount,
+        params.gas_unit_price,
+        params.expiration_time,
+    )
+    .sign(params.privkey, params.pubkey.clone())?
+    .into_inner())
     let account_resource = exec.read_account_resource(&account).unwrap();
     let txn = match receiver {
         //TODO support channel sequence number
@@ -249,7 +297,6 @@ fn make_script_transaction(
 /// Creates and signs a module transaction.
 fn make_module_transaction(
     exec: &FakeExecutor,
-    account: &Account,
     config: &TransactionConfig,
     module: CompiledModule,
 ) -> Result<SignedTransaction> {
@@ -257,23 +304,16 @@ fn make_module_transaction(
     module.serialize(&mut blob)?;
     let module = TransactionModule::new(blob);
 
-    let account_resource = exec.read_account_resource(&account).unwrap();
+    let params = get_transaction_parameters(exec, config);
     Ok(RawTransaction::new_module(
-        *account.address(),
-        config
-            .sequence_number
-            .unwrap_or_else(|| account_resource.sequence_number()),
+        params.sender_addr,
+        params.sequence_number,
         module,
-        config.max_gas.unwrap_or_else(|| {
-            std::cmp::min(
-                MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
-                account_resource.balance(),
-            )
-        }),
-        1,
-        Duration::from_secs(u64::max_value()),
+        params.max_gas_amount,
+        params.gas_unit_price,
+        params.expiration_time,
     )
-    .sign(&account.privkey, account.pubkey.clone())?
+    .sign(params.privkey, params.pubkey.clone())?
     .into_inner())
 }
 
@@ -297,7 +337,7 @@ fn run_transaction(
             TransactionStatus::Discard(_) => Err(ErrorKind::DiscardedTransaction(output).into()),
         }
     } else {
-        panic!("transaction outputs size mismatch");
+        unreachable!("transaction outputs size mismatch")
     }
 }
 
@@ -333,33 +373,29 @@ fn serialize_and_deserialize_module(module: &CompiledModule) -> Result<()> {
     Ok(())
 }
 
-/// Tries to unwrap the given result. Upon failure, log the error and aborts.
-macro_rules! unwrap_or_abort {
-    ($res: expr, $log: expr) => {{
-        match $res {
-            Ok(r) => r,
-            Err(e) => {
-                $log.append(EvaluationOutput::Error(Box::new(e)));
-                return Ok(Status::Failure);
-            }
-        }
-    }};
-}
-
 fn eval_transaction(
-    config: &GlobalConfig,
     exec: &mut FakeExecutor,
     deps: &mut Vec<VerifiedModule>,
     idx: usize,
     transaction: &Transaction,
     log: &mut EvaluationLog,
 ) -> Result<Status> {
-    // get the account of the sender
-    let account = config
-        .get_account_for_name(&transaction.config.sender)
-        .unwrap();
-    let addr = account.address();
+    /// Unwrap the given results. Upon failure, logs the error and aborts.
+    macro_rules! unwrap_or_abort {
+        ($res: expr) => {{
+            match $res {
+                Ok(r) => r,
+                Err(e) => {
+                    log.append(EvaluationOutput::Error(Box::new(e)));
+                    return Ok(Status::Failure);
+                }
+            }
+        }};
+    }
 
+    let sender_addr = *transaction.config.sender.address();
+
+    // Start processing a new transaction.
     let receiver = transaction
         .config
         .receiver
@@ -391,7 +427,7 @@ fn eval_transaction(
         return Ok(Status::Success);
     }
     log.append(EvaluationOutput::Stage(Stage::Parser));
-    let parsed_script_or_module = unwrap_or_abort!(parse_script_or_module(&transaction.input), log);
+    let parsed_script_or_module = unwrap_or_abort!(parse_script_or_module(&transaction.input));
     log.append(EvaluationOutput::Output(Box::new(OutputType::Ast(
         parsed_script_or_module.clone(),
     ))));
@@ -405,7 +441,7 @@ fn eval_transaction(
             log.append(EvaluationOutput::Stage(Stage::Compiler));
 
             let compiled_script =
-                unwrap_or_abort!(compile_script(*addr, parsed_script, &*deps), log).0;
+                unwrap_or_abort!(compile_script(sender_addr, parsed_script, &*deps)).0;
             log.append(EvaluationOutput::Output(Box::new(
                 OutputType::CompiledScript(compiled_script.clone()),
             )));
@@ -416,12 +452,12 @@ fn eval_transaction(
             }
             log.append(EvaluationOutput::Stage(Stage::Verifier));
             let compiled_script =
-                unwrap_or_abort!(do_verify_script(compiled_script, &*deps), log).into_inner();
+                unwrap_or_abort!(do_verify_script(compiled_script, &*deps)).into_inner();
 
             // stage 4: serializer round trip
             if !transaction.config.is_stage_disabled(Stage::Serializer) {
                 log.append(EvaluationOutput::Stage(Stage::Serializer));
-                unwrap_or_abort!(serialize_and_deserialize_script(&compiled_script), log);
+                unwrap_or_abort!(serialize_and_deserialize_script(&compiled_script));
             }
 
             // stage 5: execute the script
@@ -429,14 +465,9 @@ fn eval_transaction(
                 return Ok(Status::Success);
             }
             log.append(EvaluationOutput::Stage(Stage::Runtime));
-            let script_transaction = make_script_transaction(
-                &exec,
-                account,
-                &transaction.config,
-                compiled_script,
-                receiver,
-            )?;
-            let txn_output = unwrap_or_abort!(run_transaction(exec, script_transaction), log);
+            let script_transaction =
+                make_script_transaction(&exec, &transaction.config, compiled_script, receiver)?;
+            let txn_output = unwrap_or_abort!(run_transaction(exec, script_transaction));
             log.append(EvaluationOutput::Output(Box::new(
                 OutputType::TransactionOutput(txn_output),
             )));
@@ -449,7 +480,7 @@ fn eval_transaction(
             log.append(EvaluationOutput::Stage(Stage::Compiler));
 
             let compiled_module =
-                unwrap_or_abort!(compile_module(*addr, parsed_module, &*deps), log).0;
+                unwrap_or_abort!(compile_module(sender_addr, parsed_module, &*deps)).0;
             log.append(EvaluationOutput::Output(Box::new(
                 OutputType::CompiledModule(compiled_module.clone()),
             )));
@@ -466,12 +497,12 @@ fn eval_transaction(
             }
             log.append(EvaluationOutput::Stage(Stage::Verifier));
             let compiled_module =
-                unwrap_or_abort!(do_verify_module(compiled_module, &*deps), log).into_inner();
+                unwrap_or_abort!(do_verify_module(compiled_module, &*deps)).into_inner();
 
             // stage 4: serializer round trip
             if !transaction.config.is_stage_disabled(Stage::Serializer) {
                 log.append(EvaluationOutput::Stage(Stage::Serializer));
-                unwrap_or_abort!(serialize_and_deserialize_module(&compiled_module), log);
+                unwrap_or_abort!(serialize_and_deserialize_module(&compiled_module));
             }
 
             // stage 5: publish the module
@@ -480,8 +511,8 @@ fn eval_transaction(
             }
             log.append(EvaluationOutput::Stage(Stage::Runtime));
             let module_transaction =
-                make_module_transaction(&exec, account, &transaction.config, compiled_module)?;
-            let txn_output = unwrap_or_abort!(run_transaction(exec, module_transaction), log);
+                make_module_transaction(&exec, &transaction.config, compiled_module)?;
+            let txn_output = unwrap_or_abort!(run_transaction(exec, module_transaction));
             log.append(EvaluationOutput::Output(Box::new(
                 OutputType::TransactionOutput(txn_output),
             )));
@@ -494,18 +525,24 @@ fn eval_transaction(
 pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<EvaluationLog> {
     let mut log = EvaluationLog { outputs: vec![] };
 
-    // set up a fake executor with the genesis block and create the accounts
-    let mut exec = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
+    // Set up a fake executor with the genesis block and create the accounts.
+    let mut exec = if config.validator_set.payload().is_empty() {
+        // use the default validator set. this uses a precomputed validator set and is cheap
+        FakeExecutor::from_genesis_with_options(VMPublishingOption::Open)
+    } else {
+        // use custom validator set. this requires dynamically generating a new genesis tx and
+        // is thus more expensive.
+        FakeExecutor::from_validator_set(config.validator_set.clone(), VMPublishingOption::Open)
+    };
     for data in config.accounts.values() {
         exec.add_account_data(&data);
     }
 
-    // set up standard library
-    // needed to compile transaction programs
+    // Get the standard library modules (compiled & verified).
     let mut deps = stdlib_modules().to_vec();
 
     for (idx, transaction) in transactions.iter().enumerate() {
-        let status = eval_transaction(config, &mut exec, &mut deps, idx, transaction, &mut log)?;
+        let status = eval_transaction(&mut exec, &mut deps, idx, transaction, &mut log)?;
         log.append(EvaluationOutput::Status(status));
     }
 

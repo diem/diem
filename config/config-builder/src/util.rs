@@ -1,15 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::{
+use libra_config::{
     config::{NodeConfig, NodeConfigHelpers},
-    trusted_peers::{ConfigHelpers, ConsensusPeersConfig, NetworkPeersConfig},
+    trusted_peers::{
+        ConfigHelpers, ConsensusPeersConfig, ConsensusPrivateKey, NetworkPeersConfig,
+        NetworkPrivateKeys,
+    },
 };
-use crypto::{ed25519::*, test_utils::KeyPair};
-use libra_types::transaction::SignatureCheckedTransaction;
-use prost_ext::MessageExt;
+use libra_crypto::{ed25519::*, test_utils::KeyPair};
+use libra_prost_ext::MessageExt;
+use libra_types::{account_address::AccountAddress, transaction::SignatureCheckedTransaction};
 use rand::{Rng, SeedableRng};
-use std::{fs::File, io::prelude::*};
+use std::{collections::HashMap, fs::File, io::prelude::*};
 use vm_genesis::encode_genesis_transaction_with_validator;
 
 pub fn gen_genesis_transaction(
@@ -39,8 +42,13 @@ pub fn gen_genesis_transaction_bytes(
     genesis_transaction.to_vec().unwrap()
 }
 
-/// Returns the config as well as the genesis keyapir
-pub fn get_test_config() -> (NodeConfig, KeyPair<Ed25519PrivateKey, Ed25519PublicKey>) {
+/// Returns the validator keys, consensus peers, config, and the genesis keyapir
+pub fn get_test_config_with_validators() -> (
+    HashMap<AccountAddress, (ConsensusPrivateKey, NetworkPrivateKeys)>,
+    ConsensusPeersConfig,
+    NodeConfig,
+    KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+) {
     // TODO: test config should be moved here instead of config crate
     let config = NodeConfigHelpers::get_single_node_test_config(true);
     // Those configs should be different on every call. We bypass the
@@ -50,7 +58,8 @@ pub fn get_test_config() -> (NodeConfig, KeyPair<Ed25519PrivateKey, Ed25519Publi
     let mut rng = rand::rngs::StdRng::from_seed(seed_buf);
     let (private_key, _) = compat::generate_keypair(&mut rng);
     let keypair = KeyPair::from(private_key);
-    let (_, test_consensus_peers, test_network_peers) = ConfigHelpers::gen_validator_nodes(1, None);
+    let (validator_keys, test_consensus_peers, test_network_peers) =
+        ConfigHelpers::gen_validator_nodes(1, None);
     let genesis_transaction =
         gen_genesis_transaction_bytes(&keypair, &test_consensus_peers, &test_network_peers);
     let mut genesis_transaction_file = File::create(config.get_genesis_transaction_file())
@@ -58,5 +67,12 @@ pub fn get_test_config() -> (NodeConfig, KeyPair<Ed25519PrivateKey, Ed25519Publi
     genesis_transaction_file
         .write_all(&genesis_transaction)
         .expect("[config] Failed to write genesis txn to file");
+    (validator_keys, test_consensus_peers, config, keypair)
+}
+
+/// Returns the config as well as the genesis keyapir
+pub fn get_test_config() -> (NodeConfig, KeyPair<Ed25519PrivateKey, Ed25519PublicKey>) {
+    let (_validator_keys, _test_consensus_peers, config, keypair) =
+        get_test_config_with_validators();
     (config, keypair)
 }

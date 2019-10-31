@@ -29,26 +29,28 @@ siphasher = { version = "0.3.0", default-features = false }
 termion = { version = "1.5.3", default-features = false }
 tokio = "=0.2.0-alpha.6"
 prometheus = { version = "0.7.0", default-features = false }
+proptest = { version = "0.9.4", optional = true }
 
-canonical-serialization = { path = "../common/canonical-serialization" }
-channel = { path = "../common/channel" }
-config = { path = "../config" }
-consensus-types = { path = "consensus-types", default-features = false }
-crypto = { path = "../crypto/crypto" }
-debug-interface = { path = "../common/debug-interface" }
-executor = { path = "../execution/executor" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
-logger = { path = "../common/logger" }
-libra-mempool = { path = "../mempool" }
-metrics = { path = "../common/metrics" }
-network = { path = "../network" }
-prost-ext = { path = "../common/prost-ext" }
-state-synchronizer = { path = "../state-synchronizer" }
-schemadb = { path = "../storage/schemadb" }
-storage-client = { path = "../storage/storage-client" }
-tools = { path = "../common/tools" }
-libra-types = { path = "../types" }
-vm_runtime = { path = "../language/vm/vm_runtime" }
+channel = { path = "../common/channel", version = "0.1.0" }
+libra-config = { path = "../config", version = "0.1.0" }
+consensus-types = { path = "consensus-types", version = "0.1.0", default-features = false }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
+executor = { path = "../executor", version = "0.1.0" }
+lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+failure = { path = "../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+libra-logger = { path = "../common/logger", version = "0.1.0" }
+libra-mempool = { path = "../mempool", version = "0.1.0" }
+libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+network = { path = "../network", version = "0.1.0" }
+libra-prost-ext = { path = "../common/prost-ext", version = "0.1.0" }
+safety-rules = { path = "safety-rules", version = "0.1.0" }
+state-synchronizer = { path = "../state-synchronizer", version = "0.1.0" }
+schemadb = { path = "../storage/schemadb", version = "0.1.0" }
+storage-client = { path = "../storage/storage-client", version = "0.1.0" }
+libra-tools = { path = "../common/tools", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0" }
+vm-runtime = { path = "../language/vm/vm-runtime", version = "0.1.0" }
 
 [dev-dependencies]
 cached = "0.9.0"
@@ -56,12 +58,9 @@ parity-multiaddr = "0.5.0"
 proptest = "0.9.4"
 rusty-fork = "0.2.2"
 
-consensus-types = { path = "consensus-types", features = ["fuzzing", "testing"]}
-crypto = { path = "../crypto/crypto", features = ["testing"]}
-libra-types = { path = "../types", features = ["testing"]}
-vm_genesis = { path = "../language/vm/vm_genesis" }
-vm_validator = { path = "../vm_validator" }
+vm-genesis = { path = "../language/vm/vm-genesis", version = "0.1.0" }
+vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
 [features]
 default = []
-fuzzing = []
+fuzzing = ["proptest", "consensus-types/fuzzing", "libra-crypto/fuzzing", "libra-types/fuzzing"]

@@ -1,21 +1,21 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{admission_control_service::AdmissionControlService, upstream_proxy::UpstreamProxy};
+use crate::{
+    admission_control_service::AdmissionControlService,
+    upstream_proxy::{process_network_messages, UpstreamProxyData},
+};
 use admission_control_proto::proto::admission_control::{
     create_admission_control, AdmissionControlClient, SubmitTransactionRequest,
     SubmitTransactionResponse,
 };
-use config::config::NodeConfig;
-use futures::{
-    channel::{mpsc, oneshot},
-    future::{FutureExt, TryFutureExt},
-};
+use futures::channel::{mpsc, oneshot};
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
+use libra_config::config::NodeConfig;
 use libra_mempool::proto::mempool::MempoolClient;
 use network::validator_network::{AdmissionControlNetworkEvents, AdmissionControlNetworkSender};
-use std::{cmp::min, sync::Arc};
+use std::{cmp::min, collections::HashMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::{Builder, Runtime};
 use vm_validator::vm_validator::VMValidator;
@@ -46,16 +46,25 @@ impl AdmissionControlRuntime {
 
         let executor = upstream_proxy_runtime.executor();
 
-        let upstream_proxy =
-            UpstreamProxy::new(config, network_sender, upstream_proxy_receiver, client);
+        let upstream_peer_ids = config.get_upstream_peer_ids();
+        let peer_info: HashMap<_, _> = upstream_peer_ids
+            .iter()
+            .map(|peer_id| (*peer_id, true))
+            .collect();
 
-        executor.spawn(
-            upstream_proxy
-                .process_network_messages(network_events)
-                .boxed()
-                .unit_error()
-                .compat(),
+        let upstream_proxy_data = UpstreamProxyData::new(
+            config.admission_control.clone(),
+            network_sender,
+            config.get_role(),
+            client,
         );
+        executor.spawn(process_network_messages(
+            upstream_proxy_data,
+            network_events,
+            peer_info,
+            executor.clone(),
+            upstream_proxy_receiver,
+        ));
 
         Self {
             _grpc_server: ServerHandle::setup(grpc_server),

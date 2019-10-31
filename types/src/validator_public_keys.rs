@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
-use crypto::{ed25519::*, traits::ValidKey, x25519::X25519StaticPublicKey};
 use failure::Result;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
+use libra_crypto::ed25519::compat::generate_keypair as generate_ed25519_keypair;
+#[cfg(any(test, feature = "fuzzing"))]
+use libra_crypto::x25519::compat::generate_keypair as generate_x25519_keypair;
+use libra_crypto::{ed25519::*, traits::ValidKey, x25519::X25519StaticPublicKey};
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
@@ -18,7 +19,7 @@ use std::{convert::TryFrom, fmt};
 /// keys for creating secure channels of communication between validators.  The validators and
 /// their public keys and voting power may or may not change between epochs.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct ValidatorPublicKeys {
     // Hash value of the current public key of the account address
     account_address: AccountAddress,
@@ -56,6 +57,23 @@ impl ValidatorPublicKeys {
         }
     }
 
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn new_with_random_network_keys(
+        account_address: AccountAddress,
+        consensus_public_key: Ed25519PublicKey,
+        consensus_voting_power: u64,
+    ) -> Self {
+        let (_, network_signing_public_key) = generate_ed25519_keypair(None);
+        let (_, network_identity_public_key) = generate_x25519_keypair(None);
+        ValidatorPublicKeys {
+            account_address,
+            consensus_public_key,
+            consensus_voting_power,
+            network_signing_public_key,
+            network_identity_public_key,
+        }
+    }
+
     /// Returns the id of this validator (hash of the current public key of the
     /// validator associated account address)
     pub fn account_address(&self) -> &AccountAddress {
@@ -65,6 +83,11 @@ impl ValidatorPublicKeys {
     /// Returns the key for validating signed messages from this validator
     pub fn consensus_public_key(&self) -> &Ed25519PublicKey {
         &self.consensus_public_key
+    }
+
+    /// Returns the voting power for this validator
+    pub fn consensus_voting_power(&self) -> u64 {
+        self.consensus_voting_power
     }
 
     /// Returns the key for validating signed messages at the network layers
@@ -108,34 +131,5 @@ impl From<ValidatorPublicKeys> for crate::proto::types::ValidatorPublicKeys {
             network_signing_public_key: keys.network_signing_public_key.to_bytes().to_vec(),
             network_identity_public_key: keys.network_identity_public_key.to_bytes().to_vec(),
         }
-    }
-}
-
-impl CanonicalSerialize for ValidatorPublicKeys {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_struct(&self.account_address)?
-            .encode_struct(&self.consensus_public_key)?
-            .encode_u64(self.consensus_voting_power)?
-            .encode_struct(&self.network_signing_public_key)?
-            .encode_struct(&self.network_identity_public_key)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for ValidatorPublicKeys {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let account_address: AccountAddress = deserializer.decode_struct()?;
-        let consensus_public_key: Ed25519PublicKey = deserializer.decode_struct()?;
-        let consensus_voting_power: u64 = deserializer.decode_u64()?;
-        let network_signing_public_key: Ed25519PublicKey = deserializer.decode_struct()?;
-        let network_identity_public_key: X25519StaticPublicKey = deserializer.decode_struct()?;
-        Ok(ValidatorPublicKeys::new(
-            account_address,
-            consensus_public_key,
-            consensus_voting_power,
-            network_signing_public_key,
-            network_identity_public_key,
-        ))
     }
 }

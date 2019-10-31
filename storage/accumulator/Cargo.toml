@@ -10,12 +10,14 @@ publish = false
 edition = "2018"
 
 [dependencies]
-proptest = "0.9.1"
-
-crypto = { path = "../../crypto/crypto" }
-failure = { path = "../../common/failure_ext", package = "failure_ext" }
-libra-types = { path = "../../types" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+libra-types = { path = "../../types", version = "0.1.0" }
 
 [dev-dependencies]
 rand = "0.6.5"
-libra-types = { path = "../../types", features = ["testing"] }
+proptest = "0.9.1"
+
+[features]
+default = []
+fuzzing = ["libra-crypto/fuzzing", "libra-types/fuzzing"]

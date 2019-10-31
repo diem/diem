@@ -1,14 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::test_helpers::assert_canonical_encode_decode;
 use crate::{
     account_address::AccountAddress,
     transaction::{RawTransaction, Script, SignedTransaction, Transaction, TransactionPayload},
 };
-use canonical_serialization::{
-    CanonicalDeserializer, CanonicalSerializer, SimpleDeserializer, SimpleSerializer,
-};
-use crypto::ed25519::*;
+use libra_crypto::ed25519::*;
 use proptest::prelude::*;
 use std::convert::TryFrom;
 
@@ -44,30 +42,16 @@ proptest! {
 
     #[test]
     fn transaction_payload_round_trip_canonical_serialization(txn_payload in any::<TransactionPayload>()) {
-        let mut serializer = SimpleSerializer::<Vec<u8>>::new();
-        serializer.encode_struct(&txn_payload).unwrap();
-        let serialized_bytes = serializer.get_output();
-
-        let mut deserializer = SimpleDeserializer::new(&serialized_bytes);
-        let output: TransactionPayload = deserializer.decode_struct().unwrap();
-        assert_eq!(txn_payload, output);
+        assert_canonical_encode_decode(txn_payload);
     }
 
     #[test]
     fn raw_transaction_round_trip_canonical_serialization(raw_txn in any::<RawTransaction>()) {
-        let mut serializer = SimpleSerializer::<Vec<u8>>::new();
-        serializer.encode_struct(&raw_txn).unwrap();
-        let serialized_bytes = serializer.get_output();
-
-        let mut deserializer = SimpleDeserializer::new(&serialized_bytes);
-        let output: RawTransaction = deserializer.decode_struct().unwrap();
-        assert_eq!(raw_txn, output);
+        assert_canonical_encode_decode(raw_txn);
     }
 
     #[test]
     fn transaction_round_trip_canonical_serialization(txn in any::<Transaction>()) {
-        let serialized_bytes = SimpleSerializer::<Vec<u8>>::serialize(&txn).unwrap();
-        let deserialized: Transaction = SimpleDeserializer::deserialize(&serialized_bytes).unwrap();
-        assert_eq!(txn, deserialized);
+        assert_canonical_encode_decode(txn);
     }
 }

@@ -8,7 +8,9 @@ extern crate prometheus;
 
 pub mod counters;
 mod json_encoder;
+mod json_metrics;
 pub mod metric_server;
+mod public_metrics;
 
 mod service_metrics;
 pub use service_metrics::ServiceMetrics;
@@ -23,7 +25,7 @@ mod unit_tests;
 pub use prometheus::{Histogram, IntCounter, IntCounterVec, IntGauge, IntGaugeVec};
 
 use failure::Result;
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use prometheus::{
     core::{Collector, Metric},
     proto::MetricType,

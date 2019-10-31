@@ -5,18 +5,20 @@
 //!
 //! The user of storage service is supposed to use it via client lib provided in
 //! [`storage-client`](../storage-client/index.html) instead of via
-//! [`StorageClient`](../storage_proto/proto/storage_grpc/struct.StorageClient.html) directly.
+//! [`StorageClient`](../storage-proto/proto/storage_grpc/struct.StorageClient.html) directly.
+
+#[cfg(feature = "fuzzing")]
 pub mod mocks;
 mod storage_service;
 pub use storage_service::start_storage_service_and_return_service;
 
-use config::config::NodeConfig;
 use failure::prelude::*;
 use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle};
+use libra_config::config::NodeConfig;
+use libra_logger::prelude::*;
+use libra_metrics::counters::SVC_COUNTERS;
 use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
 use libradb::LibraDB;
-use logger::prelude::*;
-use metrics::counters::SVC_COUNTERS;
 use std::{
     convert::TryFrom,
     ops::Deref,
@@ -50,7 +52,7 @@ pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
 
 /// The implementation of the storage [GRPC](http://grpc.io) service.
 ///
-/// It serves [`LibraDB`] APIs over the network. See API documentation in [`storage_proto`] and
+/// It serves [`LibraDB`] APIs over the network. See API documentation in [`storage-proto`] and
 /// [`LibraDB`].
 #[derive(Clone)]
 pub struct StorageService {

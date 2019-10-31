@@ -1,19 +1,56 @@
 import 0x0.ValidatorConfig;
-import 0x0.ValidatorSet;
+import 0x0.LibraSystem;
 
-// register Alice as a validator candidate, then rotate a key + check that it worked
+//! account: alice
+//! account: vivian, 100000, 0, validator
+//! account: viola, 100000, 0, validator
+
+// check that the validator account config works
+import 0x0.LibraSystem;
+
+main() {
+    assert(!LibraSystem.is_validator(get_txn_sender()), 1);
+    assert(!LibraSystem.is_validator({{alice}}), 2);
+    assert(LibraSystem.is_validator({{vivian}}), 3);
+    assert(LibraSystem.is_validator({{viola}}), 4);
+    // number of validators should equal the number we declared
+    assert(LibraSystem.validator_set_size() == 2, 5);
+    assert(LibraSystem.get_ith_validator_address(1) == {{vivian}}, 6);
+    assert(LibraSystem.get_ith_validator_address(0) == {{viola}}, 7);
+
+    return;
+}
+
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraSystem;
+
+// check that sending from validator accounts works
+main() {
+    assert(LibraSystem.is_validator(get_txn_sender()), 8);
+
+    return;
+}
+
+// check: EXECUTED
+
+//! new-transaction
+//! sender: alice
+import 0x0.ValidatorConfig;
+
+// register Alice as a validator candidate, then rotate a key + check that it worked.
 main() {
     let config: ValidatorConfig.Config;
 
     ValidatorConfig.register_candidate_validator(h"10", h"20", h"30");
-
     config = ValidatorConfig.config(get_txn_sender());
-
     assert(ValidatorConfig.consensus_pubkey(&config) == h"30", 77);
-
     ValidatorConfig.rotate_consensus_pubkey(h"40");
-
     assert(ValidatorConfig.consensus_pubkey(&config) == h"40", 88);
 
     return;
 }
+
+// check: EXECUTED

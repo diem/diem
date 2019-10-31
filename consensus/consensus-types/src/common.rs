@@ -1,13 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalSerialize, CanonicalSerializer, SimpleSerializer,
-};
-use crypto::{
-    hash::{CryptoHasher, RoundHasher},
-    HashValue,
-};
 use libra_types::account_address::AccountAddress;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
@@ -21,18 +14,7 @@ pub type Author = AccountAddress;
 
 /// Trait alias for the Block Payload.
 pub trait Payload:
-    Clone
-    + Send
-    + Sync
-    + CanonicalSerialize
-    + CanonicalDeserialize
-    + DeserializeOwned
-    + Serialize
-    + Default
-    + Debug
-    + PartialEq
-    + Eq
-    + 'static
+    Clone + Send + Sync + DeserializeOwned + Serialize + Default + Debug + PartialEq + Eq + 'static
 {
 }
 
@@ -40,8 +22,6 @@ impl<T> Payload for T where
     T: Clone
         + Send
         + Sync
-        + CanonicalSerialize
-        + CanonicalDeserialize
         + DeserializeOwned
         + Serialize
         + Default
@@ -50,13 +30,4 @@ impl<T> Payload for T where
         + Eq
         + 'static
 {
-}
-
-pub fn round_hash(round: Round) -> HashValue {
-    let mut serializer = SimpleSerializer::<Vec<u8>>::new();
-    serializer.encode_u64(round).expect("Should serialize.");
-    let digest = serializer.get_output();
-    let mut state = RoundHasher::default();
-    state.write(digest.as_ref());
-    state.finish()
 }

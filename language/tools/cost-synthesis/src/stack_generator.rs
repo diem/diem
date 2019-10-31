@@ -19,6 +19,7 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
 use vm::{
     access::*,
+    errors::VMResult,
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, FieldDefinitionIndex,
         FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex, FunctionSignature,
@@ -30,7 +31,7 @@ use vm::{
     vm_string::VMString,
 };
 use vm_runtime::{
-    code_cache::module_cache::ModuleCache, execution_stack::ExecutionStack,
+    code_cache::module_cache::ModuleCache, interpreter::InterpreterForCostSynthesis,
     loaded_data::loaded_module::LoadedModule,
 };
 use vm_runtime_types::value::*;
@@ -200,7 +201,7 @@ where
 
     fn next_int(&mut self, stk: &[Value]) -> u64 {
         if self.op == Bytecode::Sub && !stk.is_empty() {
-            let peek: Option<u64> = stk
+            let peek: VMResult<u64> = stk
                 .last()
                 .expect("[Next Integer] The impossible happened: the value stack became empty while still full.")
                 .clone()
@@ -844,7 +845,7 @@ where
     /// since we are grabbing ownership of the other fields of the struct and return it to be
     /// used elsewhere.
     pub fn stack_transition<P>(
-        stk: &mut ExecutionStack<'alloc, 'txn, P>,
+        interpreter: &mut InterpreterForCostSynthesis<'alloc, 'txn, P>,
         stack_state: StackState<'alloc>,
     ) -> (Bytecode, AbstractMemorySize<GasCarrier>)
     where
@@ -852,18 +853,13 @@ where
     {
         // Set the value stack
         // This needs to happen before the frame transition.
-        stk.set_stack(stack_state.stack);
+        interpreter.set_stack(stack_state.stack);
 
         // Perform the frame transition (if there is any needed)
-        frame_transitions(stk, &stack_state.instr, stack_state.module_info);
+        frame_transitions(interpreter, &stack_state.instr, stack_state.module_info);
 
         // Populate the locals of the frame
-        for (local_index, local) in stack_state.local_mapping.into_iter() {
-            stk.top_frame_mut()
-                .expect("[Stack Transition] Unable to get top frame on execution stack.")
-                .store_loc(local_index, local)
-                .unwrap();
-        }
+        interpreter.load_call(stack_state.local_mapping);
         (stack_state.instr, stack_state.size)
     }
 }

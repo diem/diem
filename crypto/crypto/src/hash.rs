@@ -25,7 +25,7 @@
 //! # Examples
 //!
 //! ```
-//! use crypto::hash::{CryptoHasher, TestOnlyHasher};
+//! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
 //!
 //! let mut hasher = TestOnlyHasher::default();
 //! hasher.write("Test message".as_bytes());
@@ -48,7 +48,7 @@
 //!
 //! Then, the `CryptoHash` trait should be implemented:
 //! ```
-//! # use crypto::hash::*;
+//! # use libra_crypto::hash::*;
 //! # #[derive(Default)]
 //! # struct MyNewStructHasher;
 //! # impl CryptoHasher for MyNewStructHasher {
@@ -71,10 +71,11 @@
 use bytes::Bytes;
 use failure::prelude::*;
 use lazy_static::lazy_static;
-use nibble::Nibble;
+use libra_nibble::Nibble;
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use rand::{rngs::EntropyRng, Rng};
-use serde::{Deserialize, Serialize};
+use serde::{de, ser};
 use std::{self, convert::AsRef, fmt};
 use tiny_keccak::Keccak;
 
@@ -87,7 +88,8 @@ mod hash_test;
 const SHORT_STRING_LENGTH: usize = 4;
 
 /// Output value of our hash function. Intentionally opaque for safety and modularity.
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize, PartialOrd, Ord, Arbitrary)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct HashValue {
     hash: [u8; HashValue::LENGTH],
 }
@@ -209,6 +211,41 @@ impl HashValue {
     /// Returns first SHORT_STRING_LENGTH bytes as String in hex
     pub fn short_str(&self) -> String {
         hex::encode(&self.hash[0..SHORT_STRING_LENGTH]).to_string()
+    }
+}
+
+// TODO(#1307)
+impl ser::Serialize for HashValue {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        serializer.serialize_bytes(&self.hash[..])
+    }
+}
+
+impl<'de> de::Deserialize<'de> for HashValue {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct HashValueVisitor;
+        impl<'de> de::Visitor<'de> for HashValueVisitor {
+            type Value = HashValue;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("HashValue in bytes")
+            }
+
+            fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<HashValue, E>
+            where
+                E: de::Error,
+            {
+                HashValue::from_slice(value).map_err(E::custom)
+            }
+        }
+
+        deserializer.deserialize_bytes(HashValueVisitor)
     }
 }
 
@@ -523,11 +560,11 @@ define_hasher! {
 }
 
 define_hasher! {
-    /// The hasher used to compute the hash of a SignedTransaction object.
+    /// The hasher used to complete the hash of a Transaction object.
     (
-        SignedTransactionHasher,
-        SIGNED_TRANSACTION_HASHER,
-        b"SignedTransaction"
+        TransactionHasher,
+        TRANSACTION_HASHER,
+        b"TRANSACTION"
     )
 }
 
@@ -537,18 +574,8 @@ define_hasher! {
 }
 
 define_hasher! {
-    /// The hasher used to compute the hash of a PacemakerTimeout object.
-    (PacemakerTimeoutHasher, PACEMAKER_TIMEOUT_HASHER, b"PacemakerTimeout")
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a TimeoutMsgHasher object.
-    (TimeoutMsgHasher, TIMEOUT_MSG_HASHER, b"TimeoutMsg")
-}
-
-define_hasher! {
-    /// The hasher used to compute the hash of a Round
-    (RoundHasher, ROUND_HASHER, b"Round")
+    /// The hasher used to compute the hash of a TimeoutProposal
+    (TimeoutHasher, ROUND_HASHER, b"Timeout")
 }
 
 define_hasher! {
@@ -595,11 +622,11 @@ lazy_static! {
     pub static ref GENESIS_BLOCK_ID: HashValue =
         // This maintains the invariant that block.id() == block.hash(), for
         // the genesis block and allows us to (de/)serialize it consistently
-        HashValue::new(
-            [0x10, 0x78, 0xfa, 0x2e, 0x6d, 0x13, 0x81, 0x95,
-             0x4c, 0x98, 0x63, 0xf9, 0xaa, 0xf0, 0x94, 0xbe,
-             0xf5, 0x19, 0x7f, 0x01, 0x9e, 0xe3, 0xc6, 0x6d,
-             0xd9, 0xa6, 0x9f, 0x61, 0x39, 0x1c, 0xa6, 0xba]);
+        HashValue::new([
+            0x29, 0x15, 0xfe, 0x15, 0xa9, 0x01, 0x56, 0x3b, 0x40, 0x3a, 0x80,
+            0x89, 0xf8, 0xd5, 0xd5, 0x86, 0x8a, 0xac, 0x69, 0xae, 0x72, 0x6c,
+            0xeb, 0x85, 0xe1, 0x1d, 0xe5, 0x70, 0xd0, 0x05, 0xd2, 0x62,
+        ]);
 }
 
 /// Provides a test_only_hash() method that can be used in tests on types that implement
@@ -607,7 +634,7 @@ lazy_static! {
 ///
 /// # Example
 /// ```
-/// use crypto::hash::TestOnlyHash;
+/// use libra_crypto::hash::TestOnlyHash;
 ///
 /// b"hello world".test_only_hash();
 /// ```
@@ -616,9 +643,9 @@ pub trait TestOnlyHash {
     fn test_only_hash(&self) -> HashValue;
 }
 
-impl<T: Serialize + ?Sized> TestOnlyHash for T {
+impl<T: ser::Serialize + ?Sized> TestOnlyHash for T {
     fn test_only_hash(&self) -> HashValue {
-        let bytes = ::bincode::serialize(self).expect("serialize failed during hash.");
+        let bytes = lcs::to_bytes(self).expect("serialize failed during hash.");
         let mut hasher = TestOnlyHasher::default();
         hasher.write(&bytes);
         hasher.finish()

@@ -1,0 +1,472 @@
+use crate::{
+    code_cache::{
+        module_cache::{ModuleCache, TransactionModuleCache},
+        script_cache::ScriptCache,
+    },
+    data_cache::RemoteCache,
+    loaded_data::loaded_module::LoadedModule,
+    process_txn::{verify::VerifiedTransaction, ProcessTransaction},
+    txn_executor::TransactionExecutor,
+};
+use libra_config::config::{VMMode, VMPublishingOption};
+use libra_crypto::HashValue;
+use libra_logger::prelude::*;
+use libra_types::{
+    account_address::AccountAddress,
+    transaction::{SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES},
+    vm_error::{StatusCode, VMStatus},
+    write_set::WriteSet,
+};
+use vm::{
+    errors::convert_prologue_runtime_error,
+    gas_schedule::{self, AbstractMemorySize, GasAlgebra, GasCarrier},
+    transaction_metadata::TransactionMetadata,
+};
+use vm_cache_map::Arena;
+
+use crate::{
+    code_cache::{
+        module_cache::{ModuleCache, TransactionModuleCache},
+        script_cache::ScriptCache,
+    },
+    data_cache::RemoteCache,
+    loaded_data::loaded_module::LoadedModule,
+    process_txn::{
+        balance_checker::BalanceChecker, verify::VerifiedTransaction, ProcessTransaction,
+    },
+    txn_executor::TransactionExecutor,
+};
+use libra_types::transaction::ChannelTransactionPayloadBody;
+
+pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8]) -> bool {
+    match publishing_option {
+        VMPublishingOption::Open | VMPublishingOption::CustomScripts => true,
+        VMPublishingOption::Locked(whitelist) => {
+            let hash_value = HashValue::from_sha3_256(program);
+            whitelist.contains(hash_value.as_ref())
+        }
+    }
+}
+
+/// Represents a [`SignedTransaction`] that has been *validated*. This includes all the steps
+/// required to ensure that a transaction is valid, other than verifying the submitted program.
+pub struct ValidatedTransaction<'alloc, 'txn, P>
+where
+    'alloc: 'txn,
+    P: ModuleCache<'alloc>,
+{
+    txn: SignatureCheckedTransaction,
+    txn_state: Option<ValidatedTransactionState<'alloc, 'txn, P>>,
+}
+
+/// The mode to validate transactions in.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ValidationMode {
+    /// This is the genesis transaction. At the moment it is the only mode that allows for
+    /// write-set transactions.
+    Genesis,
+    /// We're only validating a transaction, not executing it. This tolerates the sequence number
+    /// being too new.
+    Validating,
+    /// We're executing a transaction. This runs the full suite of checks.
+    #[allow(dead_code)]
+    Executing,
+}
+
+impl<'alloc, 'txn, P> ValidatedTransaction<'alloc, 'txn, P>
+where
+    'alloc: 'txn,
+    P: ModuleCache<'alloc>,
+{
+    /// Creates a new instance by validating a `SignedTransaction`.
+    ///
+    /// This should be called through [`ProcessTransaction::validate`].
+    pub(super) fn new(
+        process_txn: ProcessTransaction<'alloc, 'txn, P>,
+        mode: ValidationMode,
+        publishing_option: &VMPublishingOption,
+        vm_mode: VMMode,
+    ) -> Result<Self, VMStatus> {
+        let ProcessTransaction {
+            txn,
+            module_cache,
+            data_cache,
+            allocator,
+            ..
+        } = process_txn;
+
+        let txn_state = match txn.payload() {
+            TransactionPayload::Program(program) => {
+                Some(ValidatedTransaction::validate(
+                    &txn,
+                    module_cache,
+                    data_cache,
+                    allocator,
+                    mode,
+                    vm_mode,
+                    || {
+                        // Verify against whitelist if we are locked. Otherwise allow.
+                        if !is_allowed_script(&publishing_option, &program.code()) {
+                            warn!("[VM] Custom scripts not allowed: {:?}", &program.code());
+                            return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT));
+                        }
+
+                        if !publishing_option.is_open() {
+                            // Not allowing module publishing for now.
+                            if !program.modules().is_empty() {
+                                warn!("[VM] Custom modules not allowed");
+                                return Err(VMStatus::new(StatusCode::UNKNOWN_MODULE));
+                            }
+                        }
+                        Ok(())
+                    },
+                )?)
+            }
+            TransactionPayload::Script(script) => {
+                Some(ValidatedTransaction::validate(
+                    &txn,
+                    module_cache,
+                    data_cache,
+                    allocator,
+                    mode,
+                    vm_mode,
+                    || {
+                        // Verify against whitelist if we are locked. Otherwise allow.
+                        if !is_allowed_script(&publishing_option, &script.code()) {
+                            warn!("[VM] Custom scripts not allowed: {:?}", &script.code());
+                            return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT));
+                        }
+                        Ok(())
+                    },
+                )?)
+            }
+            TransactionPayload::Module(module) => {
+                debug!("validate module {:?}", module);
+                Some(ValidatedTransaction::validate(
+                    &txn,
+                    module_cache,
+                    data_cache,
+                    allocator,
+                    mode,
+                    vm_mode,
+                    || {
+                        if !publishing_option.is_open() {
+                            warn!("[VM] Custom modules not allowed");
+                            Err(VMStatus::new(StatusCode::UNKNOWN_MODULE))
+                        } else {
+                            Ok(())
+                        }
+                    },
+                )?)
+            }
+            TransactionPayload::WriteSet(write_set) => {
+                // The only acceptable write-set transaction for now is for the genesis
+                // transaction.
+                // XXX figure out a story for hard forks.
+                if mode != ValidationMode::Genesis {
+                    warn!("[VM] Attempt to process genesis after initialization");
+                    return Err(VMStatus::new(StatusCode::REJECTED_WRITE_SET));
+                }
+
+                for (_access_path, write_op) in write_set {
+                    // Genesis transactions only add entries, never delete them.
+                    if write_op.is_deletion() {
+                        error!("[VM] Bad genesis block");
+                        // TODO: return more detailed error somehow?
+                        return Err(VMStatus::new(StatusCode::INVALID_WRITE_SET));
+                    }
+                }
+
+                None
+            }
+            TransactionPayload::Channel(channel_payload) => {
+                match &channel_payload.body {
+                    ChannelTransactionPayloadBody::WriteSet(write_set_body) => {
+                        //channel write_set transaction only accept in onchain vm.
+                        //TODO channel write_set transaction should execute prologue and epilogue
+                        if vm_mode != VMMode::Onchain {
+                            warn!("[VM] Attempt to process channel write set in Offchain VM");
+                            return Err(VMStatus::new(StatusCode::REJECTED_WRITE_SET));
+                        }
+                        Self::check_channel_write_set(
+                            write_set_body.write_set(),
+                            txn.sender(),
+                            write_set_body.receiver,
+                        )?;
+                        //TODO(jole) do more validate
+                        None
+                    }
+                    ChannelTransactionPayloadBody::Script(script_body) => {
+                        Some(ValidatedTransaction::validate(
+                            &txn,
+                            module_cache,
+                            data_cache,
+                            allocator,
+                            mode,
+                            vm_mode,
+                            || {
+                                // Verify against whitelist if we are locked. Otherwise allow.
+                                if !is_allowed_script(
+                                    &publishing_option,
+                                    script_body.script().code(),
+                                ) {
+                                    warn!(
+                                        "[VM] Custom scripts not allowed: {:?}",
+                                        script_body.script().code()
+                                    );
+                                    return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT));
+                                }
+                                Self::check_channel_write_set(
+                                    script_body.write_set(),
+                                    txn.sender(),
+                                    script_body.receiver,
+                                )?;
+                                Ok(())
+                            },
+                        )?)
+                    }
+                }
+            }
+        };
+
+        Ok(Self { txn, txn_state })
+    }
+
+    fn check_channel_write_set(
+        write_set: &WriteSet,
+        sender: AccountAddress,
+        receiver: AccountAddress,
+    ) -> Result<(), VMStatus> {
+        // check write_set resource ownership
+        for (ap, _op) in write_set {
+            if &ap.address != &sender && &ap.address != &receiver {
+                warn!("[VM] Attempt to access other address's resource.");
+                return Err(VMStatus::new(StatusCode::INVALID_WRITE_SET));
+            }
+        }
+        Ok(())
+    }
+
+    /// Verifies the bytecode in this transaction.
+    pub fn verify(
+        self,
+        script_cache: &'txn ScriptCache<'alloc>,
+    ) -> Result<VerifiedTransaction<'alloc, 'txn, P>, VMStatus> {
+        VerifiedTransaction::new(self, script_cache)
+    }
+
+    /// Returns a reference to the `SignatureCheckedTransaction` within.
+    pub fn as_inner(&self) -> &SignatureCheckedTransaction {
+        &self.txn
+    }
+
+    /// Consumes `self` and returns the `SignatureCheckedTransaction` within.
+    #[allow(dead_code)]
+    pub fn into_inner(self) -> SignatureCheckedTransaction {
+        self.txn
+    }
+
+    /// Returns the `ValidatedTransactionState` within.
+    pub(super) fn take_state(&mut self) -> Option<ValidatedTransactionState<'alloc, 'txn, P>> {
+        self.txn_state.take()
+    }
+
+    fn validate(
+        txn: &SignatureCheckedTransaction,
+        module_cache: P,
+        data_cache: &'txn dyn RemoteCache,
+        allocator: &'txn Arena<LoadedModule>,
+        mode: ValidationMode,
+        vm_mode: VMMode,
+        payload_check: impl Fn() -> Result<(), VMStatus>,
+    ) -> Result<ValidatedTransactionState<'alloc, 'txn, P>, VMStatus> {
+        let raw_bytes_len = AbstractMemorySize::new(txn.raw_txn_bytes_len() as GasCarrier);
+        // The transaction is too large.
+        if txn.raw_txn_bytes_len() > MAX_TRANSACTION_SIZE_IN_BYTES {
+            let error_str = format!(
+                "max size: {}, txn size: {}",
+                MAX_TRANSACTION_SIZE_IN_BYTES,
+                raw_bytes_len.get()
+            );
+            warn!(
+                "[VM] Transaction size too big {} (max {})",
+                raw_bytes_len.get(),
+                MAX_TRANSACTION_SIZE_IN_BYTES
+            );
+            return Err(
+                VMStatus::new(StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE).with_message(error_str)
+            );
+        }
+
+        // Check is performed on `txn.raw_txn_bytes_len()` which is the same as
+        // `raw_bytes_len`
+        assume!(raw_bytes_len.get() <= MAX_TRANSACTION_SIZE_IN_BYTES as u64);
+
+        // The submitted max gas units that the transaction can consume is greater than the
+        // maximum number of gas units bound that we have set for any
+        // transaction.
+        // Only Onchain vm limit max gas.
+        if vm_mode == VMMode::Onchain
+            && txn.max_gas_amount() > gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get()
+        {
+            let error_str = format!(
+                "max gas units: {}, gas units submitted: {}",
+                gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+                txn.max_gas_amount()
+            );
+            warn!(
+                "[VM] Gas unit error; max {}, submitted {}",
+                gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+                txn.max_gas_amount()
+            );
+            return Err(
+                VMStatus::new(StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND)
+                    .with_message(error_str),
+            );
+        }
+
+        // The submitted transactions max gas units needs to be at least enough to cover the
+        // intrinsic cost of the transaction as calculated against the size of the
+        // underlying `RawTransaction`
+        let min_txn_fee = gas_schedule::calculate_intrinsic_gas(raw_bytes_len);
+        if txn.max_gas_amount() < min_txn_fee.get() {
+            let error_str = format!(
+                "min gas required for txn: {}, gas submitted: {}",
+                min_txn_fee.get(),
+                txn.max_gas_amount()
+            );
+            warn!(
+                "[VM] Gas unit error; min {}, submitted {}",
+                min_txn_fee.get(),
+                txn.max_gas_amount()
+            );
+            return Err(
+                VMStatus::new(StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS)
+                    .with_message(error_str),
+            );
+        }
+
+        // The submitted gas price is less than the minimum gas unit price set by the VM.
+        // NB: MIN_PRICE_PER_GAS_UNIT may equal zero, but need not in the future. Hence why
+        // we turn off the clippy warning.
+        #[allow(clippy::absurd_extreme_comparisons)]
+        let below_min_bound = txn.gas_unit_price() < gas_schedule::MIN_PRICE_PER_GAS_UNIT.get();
+        if below_min_bound {
+            let error_str = format!(
+                "gas unit min price: {}, submitted price: {}",
+                gas_schedule::MIN_PRICE_PER_GAS_UNIT.get(),
+                txn.gas_unit_price()
+            );
+            warn!(
+                "[VM] Gas unit error; min {}, submitted {}",
+                gas_schedule::MIN_PRICE_PER_GAS_UNIT.get(),
+                txn.gas_unit_price()
+            );
+            return Err(
+                VMStatus::new(StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND).with_message(error_str)
+            );
+        }
+
+        // The submitted gas price is greater than the maximum gas unit price set by the VM.
+        if txn.gas_unit_price() > gas_schedule::MAX_PRICE_PER_GAS_UNIT.get() {
+            let error_str = format!(
+                "gas unit max price: {}, submitted price: {}",
+                gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+                txn.gas_unit_price()
+            );
+            warn!(
+                "[VM] Gas unit error; min {}, submitted {}",
+                gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+                txn.gas_unit_price()
+            );
+            return Err(
+                VMStatus::new(StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND).with_message(error_str)
+            );
+        }
+
+        payload_check()?;
+
+        // Check channel write_set asset balance, offchain channel transaction should keep asset
+        // balance, then cache the write_set to transaction cache for Move script to use.
+        let pre_cache_write_set = match txn.payload() {
+            TransactionPayload::Channel(channel_payload) => {
+                let balance_checker = BalanceChecker::new(data_cache, &module_cache);
+                balance_checker.check_balance(channel_payload.write_set())?;
+                Some(channel_payload.write_set().clone())
+            }
+            _ => None,
+        };
+
+        let metadata = TransactionMetadata::new(&txn);
+        let mut txn_state = ValidatedTransactionState::new(
+            metadata,
+            module_cache,
+            data_cache,
+            allocator,
+            pre_cache_write_set,
+            vm_mode,
+        );
+
+        // Run the prologue to ensure that clients have enough gas and aren't tricking us by
+        // sending us garbage.
+        // TODO: write-set transactions (other than genesis??) should also run the prologue.
+        match txn_state.txn_executor.run_prologue() {
+            Ok(_) => {}
+            Err(err) => {
+                let vm_status = convert_prologue_runtime_error(&err, &txn.sender());
+
+                // In validating mode, accept transactions with sequence number greater
+                // or equal to the current sequence number.
+                match (mode, vm_status.major_status) {
+                    (ValidationMode::Validating, StatusCode::SEQUENCE_NUMBER_TOO_NEW) => {
+                        trace!("[VM] Sequence number too new error ignored");
+                    }
+                    (_, _) => {
+                        warn!("[VM] Error in prologue: {:?}", err);
+                        return Err(vm_status);
+                    }
+                }
+            }
+        };
+
+        Ok(txn_state)
+    }
+}
+
+/// State for program-based [`ValidatedTransaction`] instances.
+pub(super) struct ValidatedTransactionState<'alloc, 'txn, P>
+where
+    'alloc: 'txn,
+    P: ModuleCache<'alloc>,
+{
+    // <'txn, 'txn> looks weird, but it just means that the module cache passed in (the
+    // TransactionModuleCache) allocates for that long.
+    pub(super) txn_executor:
+        TransactionExecutor<'txn, 'txn, TransactionModuleCache<'alloc, 'txn, P>>,
+}
+
+impl<'alloc, 'txn, P> ValidatedTransactionState<'alloc, 'txn, P>
+where
+    'alloc: 'txn,
+    P: ModuleCache<'alloc>,
+{
+    fn new(
+        metadata: TransactionMetadata,
+        module_cache: P,
+        data_cache: &'txn dyn RemoteCache,
+        allocator: &'txn Arena<LoadedModule>,
+        pre_cache_write_set: Option<WriteSet>,
+        vm_mode: VMMode,
+    ) -> Self {
+        // This temporary cache is used for modules published by a single transaction.
+        let txn_module_cache = TransactionModuleCache::new(module_cache, allocator);
+        let txn_executor = TransactionExecutor::new_with_vm_mode(
+            txn_module_cache,
+            data_cache,
+            metadata,
+            pre_cache_write_set,
+            vm_mode,
+        );
+        Self { txn_executor }
+    }
+}

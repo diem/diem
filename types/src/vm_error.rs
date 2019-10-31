@@ -5,11 +5,11 @@
 
 use failure::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
-use serde::{Deserialize, Serialize};
+use serde::{de, ser};
 use std::{convert::TryFrom, fmt};
 
 /// The minimum status code for validation statuses
@@ -45,8 +45,8 @@ pub static EXECUTION_STATUS_MAX_CODE: u64 = 4999;
 /// A `VMStatus` is represented as a required major status that is semantic coupled with with
 /// an optional sub status and message.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
-#[cfg_attr(any(test, feature = "testing"), proptest(no_params))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 pub struct VMStatus {
     /// The major status, e.g. ABORTED, OUT_OF_GAS, etc.
     pub major_status: StatusCode,
@@ -250,18 +250,7 @@ impl From<VMStatus> for crate::proto::types::VmStatus {
 
 #[allow(non_camel_case_types)]
 #[derive(
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Hash,
-    PartialEq,
-    PartialOrd,
-    Ord,
-    IntoPrimitive,
-    TryFromPrimitive,
-    Serialize,
-    Deserialize,
+    Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, IntoPrimitive, TryFromPrimitive,
 )]
 #[repr(u64)]
 /// We don't derive Arbitrary on this enum because it is too large and breaks proptest. It is
@@ -410,6 +399,7 @@ pub enum StatusCode {
     STORAGE_ERROR = 2008,
     INTERNAL_TYPE_ERROR = 2009,
     EVENT_KEY_MISMATCH = 2010,
+    UNREACHABLE = 2011,
 
     // Errors that can arise from binary decoding (deserialization)
     // Deserializtion Errors: 3000-3999
@@ -461,6 +451,41 @@ pub enum StatusCode {
 
     // A reserved status to represent an unknown vm status.
     UNKNOWN_STATUS = std::u64::MAX,
+}
+
+// TODO(#1307)
+impl ser::Serialize for StatusCode {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        serializer.serialize_u64((*self).into())
+    }
+}
+
+impl<'de> de::Deserialize<'de> for StatusCode {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct StatusCodeVisitor;
+        impl<'de> de::Visitor<'de> for StatusCodeVisitor {
+            type Value = StatusCode;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("StatusCode as u64")
+            }
+
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<StatusCode, E>
+            where
+                E: de::Error,
+            {
+                Ok(StatusCode::try_from(v).unwrap_or(StatusCode::UNKNOWN_STATUS))
+            }
+        }
+
+        deserializer.deserialize_u64(StatusCodeVisitor)
+    }
 }
 
 pub mod sub_status {
