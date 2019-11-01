@@ -204,4 +204,17 @@ impl ConsensusDB {
             _ => { None }
         }
     }
+
+    /// Get blocks by hashs
+    pub fn get_blocks_by_hashs<T: Payload>(&self, hashs: Vec<HashValue>) -> Option<Vec<Block<T>>> {
+        let mut blocks = vec![];
+        for hash in hashs {
+            match self.get_block_by_hash(&hash) {
+                Some(b) => blocks.push(b),
+                None => return None,
+            }
+        }
+
+        return Some(blocks)
+    }
 }

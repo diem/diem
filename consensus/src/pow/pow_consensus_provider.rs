@@ -85,7 +85,7 @@ pub struct EventHandle {
 
     block_chain: Arc<RwLock<BlockChain>>,
     orphan_blocks: Arc<Mutex<HashMap<HashValue, Vec<HashValue>>>>,//key -> parent_block_id, value -> block_id
-    genesis_txn: Transaction,
+    genesis_txn: Vec<SignedTransaction>,
     pow_srv: Arc<PowService>,
 }
 
@@ -110,7 +110,7 @@ pub struct BlockChain {
     pub height: u64,
     pub indexs: HashMap<u64, Vec<BlockIndex>>,
     pub hash_height_index: HashMap<HashValue, (u64, usize)>,
-    pub main_chain: HashMap<u64, HashValue>,
+    pub main_chain: AtomicRefCell<HashMap<u64, HashValue>>,
 }
 
 impl BlockChain {
@@ -120,6 +120,13 @@ impl BlockChain {
 
     pub fn find_height_index_by_block_hash(&self, block_hash: &HashValue) -> Option<&(u64, usize)> {
         self.hash_height_index.get(block_hash)
+    }
+
+    pub fn print_block_chain_root(&self, peer_id:PeerId) {
+        let height = ((self.hash_height_index.len() - 1) as u64);
+        for index in 0..height {
+            println!("----->{:?}------>{}----->{:?}", peer_id, height, self.main_chain.borrow().get(&index).expect("eeeee"));
+        }
     }
 
     fn find_index_by_block_hash(&self, block_hash: &HashValue) -> Option<&BlockIndex> {
@@ -158,22 +165,53 @@ impl BlockChain {
                     (None, current_index)
                 };
 
-                println!("-----1111----->{:?}", current_block_id);
-                self.hash_height_index.insert(current_block_id, (self.height, current_index));
-                (true, old)
+                self.hash_height_index.insert(current_block_id, ({height + 1}, current_index));
+                (false, old)
             }
             None => {
-                (false, None)
+                (true, None)
             }
         }
     }
 
-    pub fn update_main_chain(&mut self, main_chain_hashs:Vec<&HashValue>) {
+    pub fn update_main_chain(&self, main_chain_hashs:Vec<&HashValue>) {
         for hash in main_chain_hashs {
-            println!("------222---->{:?}", hash);
             let (index, _) = self.find_height_index_by_block_hash(hash).expect("block index not exist.");
-            self.main_chain.insert(index.clone(), hash.clone());
+            self.main_chain.borrow_mut().insert(index.clone(), hash.clone());
         }
+    }
+
+    pub fn find_ancestor_from_main_chain(&self, hash: &HashValue) -> Option<(Vec<HashValue>, BlockIndex)> {
+        let mut ancestors = vec![];
+        let mut latest_hash = hash;
+        let mut block_index = None;
+        for i in 0..100 {
+            let (height, index) = match self.find_height_index_by_block_hash(latest_hash) {
+                Some(h_i) => h_i,
+                None => return None
+            };
+
+            let tmp_index = self.indexs.get(height).expect("block hash not exist.");
+            let tmp_block_index = tmp_index.get(index.clone());
+
+            match tmp_block_index {
+                Some(b_i) => {
+                    let current_id = b_i.id;
+                    latest_hash = &b_i.parent_block_id;
+                    block_index = Some(b_i.clone());
+
+                    if self.main_chain.borrow().get(height).expect("get block index from main chain err.").clone() == current_id {
+                        break;
+                    } else {
+                        ancestors.push(current_id);
+                    }
+                },
+                None => return None,
+            }
+        }
+
+        ancestors.reverse();
+        Some((ancestors, block_index.expect("block_index is none.")))
     }
 
     fn find_ancestor(&self, first_hash: &HashValue, second_hash: &HashValue) -> Option<(Vec<&HashValue>, Vec<&HashValue>)> {
@@ -237,8 +275,8 @@ impl EventHandle {
         let indexs = index_map;
         let mut hash_height_index = HashMap::new();
         hash_height_index.insert(*GENESIS_BLOCK_ID, (0, 0));
-        let mut main_chain = HashMap::new();
-        main_chain.insert(0, *GENESIS_BLOCK_ID);
+        let mut main_chain = AtomicRefCell::new(HashMap::new());
+        main_chain.borrow_mut().insert(0, *GENESIS_BLOCK_ID);
         let init_block_chain = BlockChain { height: genesis_height, indexs, hash_height_index, main_chain };
         let block_chain = Arc::new(RwLock::new(init_block_chain));
         let mint_block_vec = Arc::new(AtomicRefCell::new(vec![*GENESIS_BLOCK_ID]));
@@ -247,6 +285,12 @@ impl EventHandle {
         let orphan_blocks = Arc::new(Mutex::new(HashMap::new()));
         let pow_srv = Arc::new(PowCuckoo::new(6, 8));
 
+        let genesis_txn_vec = match genesis_txn {
+            Transaction::UserTransaction(signed_txn) => {
+                vec![signed_txn].to_vec()
+            },
+            _ => {vec![]}
+        };
         EventHandle {
             block_cache_sender,
             block_cache_receiver: Some(block_cache_receiver),
@@ -269,7 +313,7 @@ impl EventHandle {
             sync_height_receiver: Some(sync_height_receiver),
             block_chain,
             orphan_blocks,
-            genesis_txn,
+            genesis_txn:genesis_txn_vec,
             pow_srv,
         }
     }
@@ -560,6 +604,8 @@ impl EventHandle {
         let mut block_cache_receiver = self.block_cache_receiver.take().expect("block_cache_receiver is none.");
         let txn_manager = self.txn_manager.clone();
         let state_computer = self.state_computer.clone();
+        let genesis_txn_vec = self.genesis_txn.clone();
+        let self_peer_id = self.author;
         let chain_fut = async move {
             loop {
                 ::futures::select! {
@@ -571,63 +617,103 @@ impl EventHandle {
                             Some(txns) => txns.clone(),
                             None => vec![],
                         };
-                        match state_computer.compute(block.parent_id(), block.id(), &payload).await {
-                            Ok(_) => {
-                                //save index
-                                let block_index = BlockIndex { id: block.id(), parent_block_id: block.parent_id() };
-                                let mut chain_lock = block_chain.write().compat().await.unwrap();
-                                println!("save block get chain lock");
-                                let (orphan_flag, old) = chain_lock.connect_block(block_index.clone());
 
-                                //save orphan block
-                                if !orphan_flag {
-                                    let mut write_lock = orphan_blocks.lock().compat().await.unwrap();
-                                    write_lock.insert(block_index.parent_block_id, vec![block_index.id]);
-                                } else {
-                                    match old {
-                                        Some(old_root) => {
-                                            let mut main_chain_indexs:Vec<&HashValue> = Vec::new();
+                        // Pre compute
+                        // 1. orphan block
+                        let parent_block_id = block.parent_id();
+                        let block_index = BlockIndex { id: block.id(), parent_block_id };
+                        let mut chain_lock = block_chain.write().compat().await.unwrap();
+                        let mut save_flag = false;
+                        if chain_lock.block_exist(&parent_block_id) {
+                            let mut commit_txn_vec = Vec::<Vec<SignedTransaction>>::new();
+                            let mut pre_compute_parent_block_id = *PRE_GENESIS_BLOCK_ID;
+                            if parent_block_id == *GENESIS_BLOCK_ID {
+                                commit_txn_vec.push(genesis_txn_vec.clone());
+                            } else {
+                                // 2. find ancestors
+                                let (ancestors, block_index) = chain_lock.find_ancestor_from_main_chain(&parent_block_id).expect("find ancestors err.");
 
-                                            if old_root !=  block.parent_id() {//rollback
-                                                let (rollback_vec, mut commit_vec) = chain_lock.find_ancestor(&old_root, &block.parent_id()).expect("find ancestor err.");
-                                                let rollback_len = rollback_vec.len();
-                                                let ancestor_block_id = chain_lock.find_index_by_block_hash(rollback_vec.get(rollback_len - 1).expect("latest_block_id err.")).expect("block index is none err.").parent_block_id;
+                                // 3. find blocks
+                                let blocks = block_db.get_blocks_by_hashs::<Vec<SignedTransaction>>(ancestors).expect("find blocks err.");
 
-                                                //1. reset exector
-                                                state_computer.rollback(ancestor_block_id).await;
+                                for b in blocks {
+                                    let tmp_txns = match b.payload() {
+                                        Some(t) => t.clone(),
+                                        None => vec![],
+                                    };
+                                    commit_txn_vec.push(tmp_txns);
+                                }
 
-                                                //3. commit
-                                                for commit in commit_vec.iter().rev() {
-                                                    // 1. query block
-                                                    let commit_block = block_db.get_block_by_hash::<Vec<SignedTransaction>>(commit).expect("block not find in database err.");
-                                                    // 2. commit block
-                                                    Self::execut_and_commit_block(block_db.clone(), commit_block, txn_manager.clone(), state_computer.clone()).await;
-                                                }
+                                pre_compute_parent_block_id = block_index.parent_block_id;
+                            }
+                            commit_txn_vec.push(payload.clone());
 
-//                                              // 4. update main chain
-                                                main_chain_indexs.append(&mut commit_vec);
+                            // 4. call pre_compute
+                            match state_computer.pre_compute(pre_compute_parent_block_id, commit_txn_vec).await {
+                                Ok((compute_state, state_id)) => {
+                                    if state_id == block.quorum_cert().certified_state_id() && compute_state.root_hash() == block.quorum_cert().ledger_info().ledger_info().transaction_accumulator_hash() {
+                                        save_flag = true;
+                                    }
+                                }
+                                Err(e) => {println!("{:?}", e)},
+                            }
+                        } else {
+                            //save orphan block
+                            let mut write_lock = orphan_blocks.lock().compat().await.unwrap();
+                            write_lock.insert(block_index.parent_block_id, vec![block_index.id]);
+                        }
+
+                        if save_flag {
+                            //save index
+                            let (orphan_flag, old) = chain_lock.connect_block(block_index.clone());
+
+                            if !orphan_flag {
+                                //update main chain
+                                match old {
+                                    Some(old_root) => {
+                                        let mut main_chain_indexs:Vec<&HashValue> = Vec::new();
+
+                                        if old_root != parent_block_id {//rollback
+                                            let (rollback_vec, mut commit_vec) = chain_lock.find_ancestor(&old_root, &parent_block_id).expect("find ancestor err.");
+                                            let rollback_len = rollback_vec.len();
+                                            let ancestor_block_id = chain_lock.find_index_by_block_hash(rollback_vec.get(rollback_len - 1).expect("latest_block_id err.")).expect("block index is none err.").parent_block_id;
+
+                                            //1. reset exector
+                                            state_computer.rollback(ancestor_block_id).await;
+
+                                            //2. add txn to mempool
+
+                                            //3. commit
+                                            for commit in commit_vec.iter().rev() {
+                                                // 1. query block
+                                                let commit_block = block_db.get_block_by_hash::<Vec<SignedTransaction>>(commit).expect("block not find in database err.");
+                                                // 2. commit block
+                                                Self::execut_and_commit_block(block_db.clone(), commit_block, txn_manager.clone(), state_computer.clone()).await;
                                             }
 
-                                            //4.save latest block
-                                            let id = block.id();
-                                            Self::execut_and_commit_block(block_db.clone(), block.clone(), txn_manager.clone(), state_computer.clone()).await;
+    //                                      // 4. update main chain
+                                            main_chain_indexs.append(&mut commit_vec);
+                                        }
 
-                                            //5. update main chain
-                                            main_chain_indexs.append(&mut vec![&id].to_vec());
-                                            let mut chain_lock = chain_lock.clone();
-                                            chain_lock.update_main_chain(main_chain_indexs);
-                                        }
-                                        None => {
-                                            // save latest block
-                                            Self::execut_and_commit_block(block_db.clone(), block, txn_manager.clone(), state_computer.clone()).await;
-                                        }
+                                        //4.save latest block
+                                        let id = block.id();
+                                        Self::execut_and_commit_block(block_db.clone(), block.clone(), txn_manager.clone(), state_computer.clone()).await;
+
+                                        //5. update main chain
+                                        main_chain_indexs.append(&mut vec![&id].to_vec());
+                                        chain_lock.update_main_chain(main_chain_indexs);
+                                    }
+                                    None => {
+                                        // save latest block
+                                        Self::execut_and_commit_block(block_db.clone(), block, txn_manager.clone(), state_computer.clone()).await;
                                     }
                                 }
 
-                                drop(chain_lock);
-                                println!("save block drop chain lock");
+                                chain_lock.print_block_chain_root(self_peer_id);
                             }
-                            Err(err) => {println!("------->>>>>{:?}", err);}
+
+                            drop(chain_lock);
+                            println!("save block drop chain lock");
                         }
                     }
                 }
@@ -699,10 +785,8 @@ impl EventHandle {
                     (sync_state) = sync_state_receiver.select_next_some() => {
                         match sync_state {
                             SyncState::END => {
-                                println!("----------4444-----------");
                             },
                             SyncState::GOON((peer_id, hash)) => {
-                                println!("----------3333-----------");
                                 let sync_block_req_msg = Self::sync_block_req(Some(hash));
                                 Self::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
                             }
@@ -711,11 +795,12 @@ impl EventHandle {
                     (peer_id, sync_block_resp) = sync_block_receiver.select_next_some() => {
                         // 2. save data to cache
                         let status = sync_block_resp.status;
-                        let blocks = sync_block_resp.blocks;
+                        let mut blocks = sync_block_resp.blocks;
 
                         let mut flag = false;
                         let mut end_block = None;
                         if blocks.len() > 0 {
+                            blocks.reverse();
                             let sync_block_chain_lock = sync_block_chain.read().compat().await.unwrap();
                             println!("sync block get chain lock");
                             for block in blocks {
@@ -774,12 +859,7 @@ impl EventHandle {
         let mut self_sender = self.self_sender.clone();
         let block_db = self.block_store.clone();
         let pow_srv = self.pow_srv.clone();
-        let genesis_txn_vec = match self.genesis_txn.clone() {
-            Transaction::UserTransaction(signed_txn) => {
-                vec![signed_txn].to_vec()
-            },
-            _ => {vec![]}
-        };
+        let genesis_txn_vec = self.genesis_txn.clone();
         let mint_fut = async move {
             let block_chain_clone = block_chain.clone();
             loop {
@@ -790,6 +870,8 @@ impl EventHandle {
                             let block_read_lock = block_chain_clone.read().compat().await.unwrap();
                             println!("mint block get chain lock");
                             let height = &block_read_lock.longest_chain_height();
+                            let root = block_read_lock.root_hash();
+                            println!("--------6666--------{:?}===={}------>{:?}", mint_author, height, root);
                             let parent_block = block_read_lock.indexs.get(height).unwrap()[0].clone();
                             println!("mint block drop chain lock:{}", height);
                             drop(block_read_lock);
@@ -804,12 +886,11 @@ impl EventHandle {
                             };
 
                             let mut tmp = vec![];
-                            let genesis_txn_vec_clone = genesis_txn_vec.clone();
-                            tmp.push(&genesis_txn_vec_clone);
+                            tmp.push(genesis_txn_vec.clone());
                             let (pre_compute_parent_block_id, commit_txn_vec) = if parent_block_id != *GENESIS_BLOCK_ID {
-                                (grandpa_block_id, vec![&txns].to_vec())
+                                (grandpa_block_id, vec![txns.clone()].to_vec())
                             } else {
-                                tmp.push(&txns);
+                                tmp.push(txns.clone());
                                 (*PRE_GENESIS_BLOCK_ID, tmp)
                             };
 

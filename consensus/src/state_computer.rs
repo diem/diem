@@ -92,7 +92,7 @@ impl StateComputer for ExecutionProxy {
         // The id of a ancestor block which is main chain block.
         ancestor_id: HashValue,
         // Transactions to execute.
-        transactions_vec: Vec<&Self::Payload>,
+        transactions_vec: Vec<Self::Payload>,
     ) -> Pin<Box<dyn Future<Output = Result<(StateComputeResult, HashValue)>> + Send>> {
         let pre_execution_instant = Instant::now();
         let mut txns = vec![];

@@ -295,19 +295,12 @@ where
                 for transactions in transactions_vec {
                     count = count + 1;
                     totle = totle + transactions.len();
-                    println!("----11111---->{}", totle);
                     // Construct a StateView and pass the transactions to VM.
                     let state_view = VerifiedStateView::new(
                         Arc::clone(&self.storage_read_client),
                         tmp_committed_trees.version_and_state_root(),
                         tmp_committed_trees.state_tree(),
                     );
-
-                    match tmp_committed_trees.version_and_state_root().0 {
-                        Some(t) => println!("----2222---->{}", t),
-                        None => println!("----2222---->"),
-                    };
-
 
                     let transactions: Vec<SignedTransaction> = transactions.iter()
                         .map(|txn| {
@@ -344,12 +337,11 @@ where
                         &tmp_committed_trees,
                     ) {
                         Ok(output) => {
-                            println!("-------33333------>{}", output.executed_trees().clone().version_and_state_root().0.unwrap());
                             tmp_committed_trees = output.executed_trees().clone();
                         },
                         Err(e) => {
                             //Err(format_err!("{}", e));
-                            println!("-----4444----->{:?}", e);
+                            println!("{:?}", e);
                             break;
                         }
                     };
@@ -360,8 +352,6 @@ where
                     let version =
                         (tmp_committed_trees.txn_accumulator().num_leaves() - 1) as Version;
                     let state_id = tmp_committed_trees.state_tree().root_hash();
-
-                    println!("----2222---->{:?}----->{:?}", accu_root_hash, state_id);
 
                     // Now that we have the root hash and execution status we can send the response to
                     // consensus.
@@ -941,7 +931,6 @@ where
                         vm_output.gas_used(),
                         status.major_status,
                     );
-                    println!("--------55555----->");
                     txn_info_hashes.push(txn_info.hash());
                 }
                 TransactionStatus::Discard(_) => {
@@ -970,7 +959,6 @@ where
 
         let current_transaction_accumulator =
             parent_trees.transaction_accumulator.append(txn_info_hashes);
-        println!("--------66666----->{}", current_transaction_accumulator.num_leaves());
         Ok(ProcessedVMOutput::new(
             txn_data,
             ExecutedTrees {

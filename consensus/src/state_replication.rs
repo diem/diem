@@ -60,7 +60,7 @@ pub trait StateComputer: Send + Sync {
         // The id of a ancestor block which is main chain block.
         ancestor_id: HashValue,
         // Transactions to execute.
-        transactions_vec: Vec<&Self::Payload>,
+        transactions_vec: Vec<Self::Payload>,
     ) -> Pin<Box<dyn Future<Output = Result<(StateComputeResult, HashValue)>> + Send>>;
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
