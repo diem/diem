@@ -455,7 +455,7 @@ impl LibraDB {
     ) -> Result<(
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
-        Vec<ValidatorChangeEventWithProof>,
+        ValidatorChangeEventWithProof,
         AccumulatorConsistencyProof,
     )> {
         error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
@@ -543,7 +543,7 @@ impl LibraDB {
         Ok((
             response_items,
             ledger_info_with_sigs,
-            vec![], /* TODO: validator_change_events */
+            ValidatorChangeEventWithProof::new(vec![]),
             ledger_consistency_proof,
         ))
     }
