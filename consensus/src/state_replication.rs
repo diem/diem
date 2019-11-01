@@ -56,22 +56,22 @@ pub trait StateComputer: Send + Sync {
         finality_proof: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
+    /// Best effort state synchronization to the given target LedgerInfo.
+    /// In case of success (`Result::Ok`) the LI of storage is at the given target.
+    /// In case of failure (`Result::Error`) the LI of storage remains unchanged, and the validator
+    /// can assume there were no modifications to the storage made.
     fn sync_to(
         &self,
-        commit: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>>;
+        target: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
     fn committed_trees(&self) -> ExecutedTrees;
 
     fn sync_to_or_bail(&self, commit: LedgerInfoWithSignatures) {
         let status = futures::executor::block_on(self.sync_to(commit));
         match status {
-            Ok(true) => (),
-            Ok(false) => panic!(
-                "state synchronizer failure, this validator will be killed as it can not \
-                 recover from this error.  After the validator is restarted, synchronization will \
-                 be retried.",
-            ),
+            Ok(()) => (),
+            // TODO: this is going to change after https://github.com/libra/libra/issues/1590
             Err(e) => panic!(
                 "state synchronizer failure: {:?}, this validator will be killed as it can not \
                  recover from this error.  After the validator is restarted, synchronization will \

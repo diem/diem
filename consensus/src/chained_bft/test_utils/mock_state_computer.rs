@@ -67,7 +67,7 @@ impl StateComputer for MockStateComputer {
     fn sync_to(
         &self,
         commit: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         debug!(
             "{}Fake sync{} to block id {}",
             Fg(Blue),
@@ -79,7 +79,7 @@ impl StateComputer for MockStateComputer {
         self.commit_callback
             .unbounded_send(commit.clone())
             .expect("Fail to notify about sync");
-        async { Ok(true) }.boxed()
+        async { Ok(()) }.boxed()
     }
 
     fn committed_trees(&self) -> ExecutedTrees {
@@ -115,8 +115,8 @@ impl StateComputer for EmptyStateComputer {
     fn sync_to(
         &self,
         _commit: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
-        async { Ok(true) }.boxed()
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+        async { Ok(()) }.boxed()
     }
 
     fn committed_trees(&self) -> ExecutedTrees {
