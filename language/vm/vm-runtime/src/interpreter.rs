@@ -629,8 +629,147 @@ where
                         let remaining_gas = self.gas_meter.remaining_gas().get();
                         self.operand_stack.push(Value::u64(remaining_gas))?;
                     }
-                    _ => {
-                        unimplemented!();
+                    Bytecode::IsOffchain => {
+                        let is_offchain = self.vm_mode.is_offchain();
+                        self.operand_stack.push(Value::bool(is_offchain))?;
+                    }
+                    Bytecode::GetTxnReceiverAddress => {
+                        if let Some(receiver) = self.txn_data.receiver() {
+                            self.operand_stack.push(Value::address(receiver))?;
+                        } else {
+                            return Err(VMStatus::new(StatusCode::LINKER_ERROR));
+                        }
+                    }
+                    Bytecode::ExistSenderChannel(idx, _) => {
+                        let size =
+                            self.channel_data_op(true, *idx, frame.module(), Self::exists)?;
+                        self.gas_meter.calculate_and_consume(
+                            &instruction,
+                            InterpreterForGasCost::new(
+                                &self.operand_stack,
+                                &self.module_cache,
+                                frame,
+                            ),
+                            size,
+                        )?;
+                    }
+                    Bytecode::ExistReceiverChannel(idx, _) => {
+                        let size =
+                            self.channel_data_op(false, *idx, frame.module(), Self::exists)?;
+                        self.gas_meter.calculate_and_consume(
+                            &instruction,
+                            InterpreterForGasCost::new(
+                                &self.operand_stack,
+                                &self.module_cache,
+                                frame,
+                            ),
+                            size,
+                        )?;
+                    }
+                    Bytecode::BorrowSenderChannel(idx, _) => {
+                        let size =
+                            self.channel_data_op(true, *idx, frame.module(), Self::borrow_global)?;
+
+                        self.gas_meter.calculate_and_consume(
+                            &instruction,
+                            InterpreterForGasCost::new(
+                                &self.operand_stack,
+                                &self.module_cache,
+                                frame,
+                            ),
+                            size,
+                        )?;
+                    }
+                    Bytecode::BorrowReceiverChannel(idx, _) => {
+                        let size =
+                            self.channel_data_op(false, *idx, frame.module(), Self::borrow_global)?;
+
+                        self.gas_meter.calculate_and_consume(
+                            &instruction,
+                            InterpreterForGasCost::new(
+                                &self.operand_stack,
+                                &self.module_cache,
+                                frame,
+                            ),
+                            size,
+                        )?;
+                    }
+                    Bytecode::MoveFromSenderChannel(idx, _) => {
+                        let size =
+                            self.channel_data_op(true, *idx, frame.module(), Self::move_from)?;
+                        self.gas_meter.calculate_and_consume(
+                            &instruction,
+                            InterpreterForGasCost::new(
+                                &self.operand_stack,
+                                &self.module_cache,
+                                frame,
+                            ),
+                            size,
+                        )?;
+                    }
+                    Bytecode::MoveFromReceiverChannel(idx, _) => {
+                        let size =
+                            self.channel_data_op(false, *idx, frame.module(), Self::move_from)?;
+                        self.gas_meter.calculate_and_consume(
+                            &instruction,
+                            InterpreterForGasCost::new(
+                                &self.operand_stack,
+                                &self.module_cache,
+                                frame,
+                            ),
+                            size,
+                        )?;
+                    }
+                    Bytecode::MoveToSenderChannel(idx, _) => {
+                        let size =
+                            self.channel_data_op(true, *idx, frame.module(), Self::move_to_sender)?;
+                        self.gas_meter.calculate_and_consume(
+                            &instruction,
+                            InterpreterForGasCost::new(
+                                &self.operand_stack,
+                                &self.module_cache,
+                                frame,
+                            ),
+                            size,
+                        )?;
+                    }
+                    Bytecode::MoveToReceiverChannel(idx, _) => {
+                        let size = self.channel_data_op(
+                            false,
+                            *idx,
+                            frame.module(),
+                            Self::move_to_sender,
+                        )?;
+                        self.gas_meter.calculate_and_consume(
+                            &instruction,
+                            InterpreterForGasCost::new(
+                                &self.operand_stack,
+                                &self.module_cache,
+                                frame,
+                            ),
+                            size,
+                        )?;
+                    }
+                    Bytecode::IsChannelTxn => {
+                        let is_channel_txn = self.txn_data.is_channel_txn();
+                        self.operand_stack.push(Value::bool(is_channel_txn))?;
+                    }
+                    Bytecode::GetTxnReceiverPublicKey => {
+                        if let Some(channel_metadata) = self.txn_data.channel_metadata() {
+                            self.operand_stack.push(Value::byte_array(ByteArray::new(
+                                channel_metadata.receiver_public_key.to_bytes().to_vec(),
+                            )))?;
+                        } else {
+                            return Err(VMStatus::new(StatusCode::LINKER_ERROR));
+                        }
+                    }
+                    Bytecode::GetTxnChannelSequenceNumber => {
+                        if let Some(channel_metadata) = self.txn_data.channel_metadata() {
+                            self.operand_stack
+                                .push(Value::u64(channel_metadata.channel_sequence_number))?;
+                        } else {
+                            return Err(VMStatus::new(StatusCode::LINKER_ERROR));
+                        }
                     }
                 }
             }
@@ -1001,6 +1140,60 @@ where
     fn unreachable(&self, msg: &str, current_frame: &Frame<'txn, FunctionRef<'txn>>) -> VMStatus {
         let err = VMStatus::new(StatusCode::UNREACHABLE).with_message(msg.to_string());
         self.maybe_core_dump(err, current_frame)
+    }
+
+    fn make_channel_access_path(
+        module: &impl ModuleAccess,
+        idx: StructDefinitionIndex,
+        address: AccountAddress,
+        participant: AccountAddress,
+    ) -> AccessPath {
+        let struct_tag = resource_storage_key(module, idx);
+        AccessPath::channel_resource_access_path(address, participant, struct_tag)
+    }
+
+    fn get_channel_address_pair(
+        txn_data: &TransactionMetadata,
+        is_sender: bool,
+    ) -> VMResult<(AccountAddress, AccountAddress)> {
+        let address: AccountAddress;
+        let participant: AccountAddress;
+        if is_sender {
+            address = txn_data.sender;
+            participant = match txn_data.channel_metadata() {
+                Some(p) => p.receiver,
+                None => return Err(VMStatus::new(StatusCode::LINKER_ERROR)),
+            };
+        } else {
+            participant = txn_data.sender;
+            address = match txn_data.channel_metadata() {
+                Some(p) => p.receiver,
+                None => return Err(VMStatus::new(StatusCode::LINKER_ERROR)),
+            };
+        }
+        Ok((address, participant))
+    }
+
+    fn channel_data_op<F>(
+        &mut self,
+        is_sender: bool,
+        idx: StructDefinitionIndex,
+        module: &LoadedModule,
+        op: F,
+    ) -> VMResult<AbstractMemorySize<GasCarrier>>
+    where
+        F: FnOnce(&mut Self, AccessPath, StructDef) -> VMResult<AbstractMemorySize<GasCarrier>>,
+    {
+        let (address, participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
+        let ap = Self::make_channel_access_path(module, idx, address, participant);
+        if let Some(struct_def) =
+            self.module_cache
+                .resolve_struct_def(module, idx, &self.gas_meter)?
+        {
+            op(self, ap, struct_def)
+        } else {
+            Err(VMStatus::new(StatusCode::LINKER_ERROR))
+        }
     }
 }
 
