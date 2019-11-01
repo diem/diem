@@ -18,10 +18,11 @@ use libra_types::{account_address::AccountAddress, transaction::SignedTransactio
 pub const TXN_RESERVED: u64 = 140_000;
 
 lazy_static! {
-    /// The gas cost of a create-account transaction.
+    /// The gas cost of a first time create-account transaction.
     ///
-    /// All such transactions are expected to cost the same gas.
-    pub static ref CREATE_ACCOUNT: u64 = {
+    /// This includes the cost of the event counter creation which makes the transaction more
+    /// expensive. All such transactions are expected to cost the same gas.
+    pub static ref CREATE_ACCOUNT_FIRST: u64 = {
         let mut executor = FakeExecutor::from_genesis_file();
         let sender = AccountData::new(1_000_000, 10);
         executor.add_account_data(&sender);
@@ -31,10 +32,29 @@ lazy_static! {
         compute_gas_used(txn, &mut executor)
     };
 
+    /// The gas cost of a create-account transaction.
+    ///
+    /// This is the cost after the event counter has been created.
+    /// All such transactions are expected to cost the same gas.
+    pub static ref CREATE_ACCOUNT_NEXT: u64 = {
+        let mut executor = FakeExecutor::from_genesis_file();
+        let sender = AccountData::new(1_000_000, 10);
+        executor.add_account_data(&sender);
+
+        let txns = vec![
+            create_account_txn(sender.account(), &Account::new(), 10, 20_000),
+            create_account_txn(sender.account(), &Account::new(), 11, 20_000),
+        ];
+        let output = &executor.execute_block(txns);
+        output[1].gas_used()
+    };
+
     /// The gas cost of a create-account transaction where the sender has an insufficient balance.
     ///
+    /// This includes the cost of the event counter creation. As such the cost of the transaction
+    /// would be higher and the balance required must be higher.
     /// All such transactions are expected to cost the same gas.
-    pub static ref CREATE_ACCOUNT_TOO_LOW: u64 = {
+    pub static ref CREATE_ACCOUNT_TOO_LOW_FIRST: u64 = {
         let mut executor = FakeExecutor::from_genesis_file();
         // The gas amount is the minimum that needs to be reserved, so use a value that's
         // clearly higher than that.
@@ -47,10 +67,32 @@ lazy_static! {
         compute_gas_used(txn, &mut executor)
     };
 
+    /// The gas cost of a create-account transaction where the sender has an insufficient balance.
+    ///
+    /// This is the cost after the event counter has been created.
+    /// All such transactions are expected to cost the same gas.
+    pub static ref CREATE_ACCOUNT_TOO_LOW_NEXT: u64 = {
+        let mut executor = FakeExecutor::from_genesis_file();
+        // The gas amount is the minimum that needs to be reserved, so use a value that's
+        // clearly higher than that.
+        let balance = (2 * TXN_RESERVED) + 10_000;
+        let sender = AccountData::new(balance, 10);
+        executor.add_account_data(&sender);
+
+        let txns = vec![
+            create_account_txn(sender.account(), &Account::new(), 10, 10),
+            create_account_txn(sender.account(), &Account::new(), 11, balance),
+        ];
+        let output = &executor.execute_block(txns);
+        output[1].gas_used()
+    };
+
     /// The gas cost of a create-account transaction where the receiver already exists.
     ///
+    /// This includes the cost of the event counter creation. As such the cost of the transaction
+    /// would be higher and the balance required must be higher.
     /// All such transactions are expected to cost the same gas.
-    pub static ref CREATE_EXISTING_ACCOUNT: u64 = {
+    pub static ref CREATE_EXISTING_ACCOUNT_FIRST: u64 = {
         let mut executor = FakeExecutor::from_genesis_file();
         let sender = AccountData::new(1_000_000, 10);
         let receiver = AccountData::new(1_000_000, 10);
@@ -59,6 +101,25 @@ lazy_static! {
 
         let txn = create_account_txn(sender.account(), receiver.account(), 10, 20_000);
         compute_gas_used(txn, &mut executor)
+    };
+
+    /// The gas cost of a create-account transaction where the receiver already exists.
+    ///
+    /// This is the cost after the event counter has been created.
+    /// All such transactions are expected to cost the same gas.
+    pub static ref CREATE_EXISTING_ACCOUNT_NEXT: u64 = {
+        let mut executor = FakeExecutor::from_genesis_file();
+        let sender = AccountData::new(1_000_000, 10);
+        let receiver = AccountData::new(1_000_000, 10);
+        executor.add_account_data(&sender);
+        executor.add_account_data(&receiver);
+
+        let txns = vec![
+            create_account_txn(sender.account(), &Account::new(), 10, 20_000),
+            create_account_txn(sender.account(), receiver.account(), 11, 20_000),
+        ];
+        let output = &executor.execute_block(txns);
+        output[1].gas_used()
     };
 
     /// The gas cost of a peer-to-peer transaction.
@@ -95,8 +156,10 @@ lazy_static! {
 
     /// The gas cost of a peer-to-peer transaction that creates a new account.
     ///
+    /// This includes the cost of the event counter creation. As such the cost of the transaction
+    /// would be higher and the balance required must be higher.
     /// All such transactions are expected to cost the same gas.
-    pub static ref PEER_TO_PEER_NEW_RECEIVER: u64 = {
+    pub static ref PEER_TO_PEER_NEW_RECEIVER_FIRST: u64 = {
         // Compute gas used by running a placeholder transaction.
         let mut executor = FakeExecutor::from_genesis_file();
         let sender = AccountData::new(1_000_000, 10);
@@ -107,11 +170,31 @@ lazy_static! {
         compute_gas_used(txn, &mut executor)
     };
 
+    /// The gas cost of a peer-to-peer transaction that creates a new account.
+    ///
+    /// This is the cost after the event counter has been created.
+    /// All such transactions are expected to cost the same gas.
+    pub static ref PEER_TO_PEER_NEW_RECEIVER_NEXT: u64 = {
+        // Compute gas used by running a placeholder transaction.
+        let mut executor = FakeExecutor::from_genesis_file();
+        let sender = AccountData::new(1_000_000, 10);
+        executor.add_account_data(&sender);
+
+        let txns = vec![
+            peer_to_peer_txn(sender.account(), &Account::new(), 10, 20_000),
+            peer_to_peer_txn(sender.account(), &Account::new(), 11, 20_000),
+        ];
+        let output = &executor.execute_block(txns);
+        output[1].gas_used()
+    };
+
     /// The gas cost of a peer-to-peer transaction that tries to create a new account, but fails
     /// because of an insufficient balance.
     ///
+    /// This includes the cost of the event counter creation. As such the cost of the transaction
+    /// would be higher and the balance required must be higher.
     /// All such transactions are expected to cost the same gas.
-    pub static ref PEER_TO_PEER_NEW_RECEIVER_TOO_LOW: u64 = {
+    pub static ref PEER_TO_PEER_NEW_RECEIVER_TOO_LOW_FIRST: u64 = {
         let mut executor = FakeExecutor::from_genesis_file();
         // The gas amount is the minimum that needs to be reserved, so use a value that's
         // clearly higher than that.
@@ -122,6 +205,27 @@ lazy_static! {
 
         let txn = peer_to_peer_txn(sender.account(), &receiver, 10, balance + 1);
         compute_gas_used(txn, &mut executor)
+    };
+
+    /// The gas cost of a peer-to-peer transaction that tries to create a new account, but fails
+    /// because of an insufficient balance.
+    ///
+    /// This is the cost after the event counter has been created.
+    /// All such transactions are expected to cost the same gas.
+    pub static ref PEER_TO_PEER_NEW_RECEIVER_TOO_LOW_NEXT: u64 = {
+        let mut executor = FakeExecutor::from_genesis_file();
+        // The gas amount is the minimum that needs to be reserved, so use a value that's
+        // clearly higher than that.
+        let balance = (2 * TXN_RESERVED) + 20_000;
+        let sender = AccountData::new(balance, 10);
+        executor.add_account_data(&sender);
+
+        let txns = vec![
+            peer_to_peer_txn(sender.account(), &Account::new(), 10, 10_000),
+            peer_to_peer_txn(sender.account(), &Account::new(), 11, balance),
+        ];
+        let output = &executor.execute_block(txns);
+        output[1].gas_used()
     };
 
     /// The gas cost of a rotate-key transaction.

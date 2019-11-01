@@ -192,8 +192,7 @@ pub enum BuiltinFunction_ {
      * GetSender,
      * GetSequenceNumber,
      * GetGasRemaining,
-     * EmitEvent,
-     * CreateAccount, */
+     * EmitEvent, */
 }
 pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 
@@ -335,7 +334,6 @@ impl BuiltinFunction_ {
     // pub const GET_SEQUENCE_NUMBER: &'static str = "get_sequence_number";
     // pub const GET_GAS_REMAINING: &'static str = "get_gas_remaining";
     // pub const EMIT_EVENT: &'static str = "emit_event";
-    // pub const CREATE_ACCOUNT: &'static str = "create_account";
 }
 
 impl BaseType_ {

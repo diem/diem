@@ -78,7 +78,6 @@ impl<'a> StackUsageVerifier<'a> {
             Bytecode::Pop
             | Bytecode::BrTrue(_)
             | Bytecode::BrFalse(_)
-            | Bytecode::CreateAccount
             | Bytecode::Abort
             | Bytecode::MoveToSender(_, _)
             | Bytecode::StLoc(_) => (1, 0),

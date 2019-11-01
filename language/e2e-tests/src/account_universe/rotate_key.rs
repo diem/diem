@@ -26,17 +26,22 @@ pub struct RotateKeyGen {
 }
 
 impl AUTransactionGen for RotateKeyGen {
-    fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus) {
+    fn apply(
+        &self,
+        universe: &mut AccountUniverse,
+    ) -> (SignedTransaction, (TransactionStatus, u64)) {
         let sender = universe.pick(&self.sender).1;
 
         let new_key_hash = AccountAddress::from_public_key(&self.new_key.1);
         let txn = rotate_key_txn(sender.account(), new_key_hash, sender.sequence_number);
 
         // This should work all the time except for if the balance is too low for gas.
+        let mut gas_cost = 0;
         let enough_max_gas = sender.balance >= gas_costs::TXN_RESERVED;
         let status = if enough_max_gas {
             sender.sequence_number += 1;
-            sender.balance -= *gas_costs::ROTATE_KEY;
+            gas_cost = sender.rotate_key_gas_cost();
+            sender.balance -= gas_cost;
             let (privkey, pubkey) = (self.new_key.0.clone(), self.new_key.1.clone());
             sender.rotate_key(privkey, pubkey);
 
@@ -47,6 +52,6 @@ impl AUTransactionGen for RotateKeyGen {
             ))
         };
 
-        (txn, status)
+        (txn, (status, gas_cost))
     }
 }

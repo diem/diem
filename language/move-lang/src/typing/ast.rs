@@ -129,8 +129,7 @@ pub enum BuiltinFunction_ {
      * GetSender,
      * GetSequenceNumber,
      * GetGasRemaining,
-     * EmitEvent,
-     * CreateAccount, */
+     * EmitEvent, */
 }
 pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 

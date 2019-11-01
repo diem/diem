@@ -68,7 +68,6 @@ pub enum StacklessBytecode {
     GetTxnSenderAddress(TempIndex),
     GetTxnMaxGasUnits(TempIndex),
     GetTxnGasUnitPrice(TempIndex),
-    CreateAccount(TempIndex),
 
     LdTrue(TempIndex),
     LdFalse(TempIndex),

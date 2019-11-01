@@ -507,10 +507,6 @@ impl<'a> ModuleTranslator<'a> {
             GetTxnSenderAddress(idx) => vec![format!("call t{} := GetTxnSenderAddress();", idx)],
             GetTxnMaxGasUnits(idx) => vec![format!("call t{} := GetTxnMaxGasUnits();", idx)],
             GetTxnGasUnitPrice(idx) => vec![format!("call t{} := GetTxnGasUnitPrice();", idx)],
-            CreateAccount(idx) => vec![format!(
-                "call addr_exists' := CreateAccount(t{}, addr_exists');",
-                idx
-            )],
             _ => vec!["// unimplemented instruction".into()],
         };
         for code in stmts {
