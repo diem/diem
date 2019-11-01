@@ -1,5 +1,6 @@
 use structopt::StructOpt;
 
+mod bench;
 mod cargo;
 mod check;
 mod clippy;
@@ -17,6 +18,9 @@ struct Args {
 
 #[derive(Debug, StructOpt)]
 enum Command {
+    #[structopt(name = "bench")]
+    /// Run `cargo bench`
+    Bench(bench::Args),
     #[structopt(name = "check")]
     /// Run `cargo check`
     Check(check::Args),
@@ -36,5 +40,6 @@ fn main() -> Result<()> {
         Command::Test(args) => test::run(args, config),
         Command::Check(args) => check::run(args, config),
         Command::Clippy(args) => clippy::run(args, config),
+        Command::Bench(args) => bench::run(args, config),
     }
 }
