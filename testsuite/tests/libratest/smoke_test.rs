@@ -605,6 +605,13 @@ fn test_full_node_basic_flow() {
         Decimal::from_f64(10.0),
         Decimal::from_str(&full_node_client.get_balance(&["b", "3"]).unwrap()).ok()
     );
+    let sequence = full_node_client
+        .get_sequence_number(&["sequence", sender_account, "true"])
+        .unwrap();
+    validator_ac_client.wait_for_transaction(
+        validator_ac_client.faucet_account.clone().unwrap().address,
+        sequence,
+    );
     assert_eq!(
         Decimal::from_f64(10.0),
         Decimal::from_str(&validator_ac_client.get_balance(&["b", "3"]).unwrap()).ok()
