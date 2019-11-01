@@ -83,9 +83,9 @@ pub struct EventHandle {
     sync_height_sender: mpsc::Sender<()>,
     sync_height_receiver: Option<mpsc::Receiver<()>>,
 
-    block_chain: Arc<Mutex<BlockChain>>,
-    orphan_blocks: Arc<Mutex<HashMap<HashValue, Vec<HashValue>>>>,
-    //key -> parent_block_id, value -> block_id
+    block_chain: Arc<RwLock<BlockChain>>,
+    orphan_blocks: Arc<Mutex<HashMap<HashValue, Vec<HashValue>>>>,//key -> parent_block_id, value -> block_id
+    genesis_txn: Transaction,
     pow_srv: Arc<PowService>,
 }
 
@@ -158,6 +158,7 @@ impl BlockChain {
                     (None, current_index)
                 };
 
+                println!("-----1111----->{:?}", current_block_id);
                 self.hash_height_index.insert(current_block_id, (self.height, current_index));
                 (true, old)
             }
@@ -169,6 +170,7 @@ impl BlockChain {
 
     pub fn update_main_chain(&mut self, main_chain_hashs:Vec<&HashValue>) {
         for hash in main_chain_hashs {
+            println!("------222---->{:?}", hash);
             let (index, _) = self.find_height_index_by_block_hash(hash).expect("block index not exist.");
             self.main_chain.insert(index.clone(), hash.clone());
         }
@@ -217,7 +219,7 @@ impl EventHandle {
                state_computer: Arc<dyn StateComputer<Payload=Vec<SignedTransaction>>>,
                author: AccountAddress,
                peers: ConsensusPeersConfig,
-               storage_dir: PathBuf, sync_model: AtomicBool) -> Self {
+               storage_dir: PathBuf, sync_model: AtomicBool, genesis_txn: Transaction) -> Self {
         let (block_cache_sender, block_cache_receiver) = mpsc::channel(10);
 
         //sync
@@ -267,6 +269,7 @@ impl EventHandle {
             sync_height_receiver: Some(sync_height_receiver),
             block_chain,
             orphan_blocks,
+            genesis_txn,
             pow_srv,
         }
     }
@@ -593,18 +596,6 @@ impl EventHandle {
                                                 //1. reset exector
                                                 state_computer.rollback(ancestor_block_id).await;
 
-                                                //2. add txn to mempool
-                                                for rollback in rollback_vec {
-                                                    let rollback_block = block_db.get_block_by_hash::<Vec<SignedTransaction>>(rollback).expect("block not find in database err.");
-                                                    let txn_vec = rollback_block.payload();
-                                                    match txn_vec {
-                                                        Some(txns) => {
-                                                            //TODO::txn_manager
-                                                        }
-                                                        None => {}
-                                                    }
-                                                }
-
                                                 //3. commit
                                                 for commit in commit_vec.iter().rev() {
                                                     // 1. query block
@@ -620,9 +611,10 @@ impl EventHandle {
                                             //4.save latest block
                                             let id = block.id();
                                             Self::execut_and_commit_block(block_db.clone(), block.clone(), txn_manager.clone(), state_computer.clone()).await;
+
                                             //5. update main chain
-                                            let mut chain_lock = block_chain.write().compat().await.unwrap();
                                             main_chain_indexs.append(&mut vec![&id].to_vec());
+                                            let mut chain_lock = chain_lock.clone();
                                             chain_lock.update_main_chain(main_chain_indexs);
                                         }
                                         None => {
@@ -635,7 +627,7 @@ impl EventHandle {
                                 drop(chain_lock);
                                 println!("save block drop chain lock");
                             }
-                            Err(err) => {println!("------->>>>>");}
+                            Err(err) => {println!("------->>>>>{:?}", err);}
                         }
                     }
                 }
@@ -782,6 +774,12 @@ impl EventHandle {
         let mut self_sender = self.self_sender.clone();
         let block_db = self.block_store.clone();
         let pow_srv = self.pow_srv.clone();
+        let genesis_txn_vec = match self.genesis_txn.clone() {
+            Transaction::UserTransaction(signed_txn) => {
+                vec![signed_txn].to_vec()
+            },
+            _ => {vec![]}
+        };
         let mint_fut = async move {
             let block_chain_clone = block_chain.clone();
             loop {
@@ -793,9 +791,10 @@ impl EventHandle {
                             println!("mint block get chain lock");
                             let height = &block_read_lock.longest_chain_height();
                             let parent_block = block_read_lock.indexs.get(height).unwrap()[0].clone();
-                            println!("mint block drop chain lock");
+                            println!("mint block drop chain lock:{}", height);
                             drop(block_read_lock);
                             let parent_block_id = parent_block.id;
+                            let grandpa_block_id = parent_block.parent_block_id;
                             //QC with parent block id
                             let quorum_cert = if parent_block_id != *GENESIS_BLOCK_ID {
                                 let parent_block = block_db.get_block_by_hash::<Vec<SignedTransaction>>(&parent_block_id).expect("block not find in database err.");
@@ -804,12 +803,30 @@ impl EventHandle {
                                 QuorumCert::certificate_for_genesis()
                             };
 
+                            let mut tmp = vec![];
+                            let genesis_txn_vec_clone = genesis_txn_vec.clone();
+                            tmp.push(&genesis_txn_vec_clone);
+                            let (pre_compute_parent_block_id, commit_txn_vec) = if parent_block_id != *GENESIS_BLOCK_ID {
+                                (grandpa_block_id, vec![&txns].to_vec())
+                            } else {
+                                tmp.push(&txns);
+                                (*PRE_GENESIS_BLOCK_ID, tmp)
+                            };
+
                             //compute current block state id
-                            match mint_state_computer.pre_compute(quorum_cert.certified_state_id(), &txns).await {
+                            match mint_state_computer.pre_compute(pre_compute_parent_block_id, commit_txn_vec).await {
                                 Ok((compute_state, state_id)) => {
-                                    let vote_data = VoteData::new(parent_block_id, state_id, quorum_cert.certified_block_round(), parent_block_id, quorum_cert.parent_block_round());
+                                    let vote_data = VoteData::new(parent_block_id,state_id, quorum_cert.certified_block_round(), parent_block_id, quorum_cert.parent_block_round());
                                     let parent_li = quorum_cert.ledger_info().ledger_info().clone();
-                                    let li = LedgerInfo::new_by_version((txns.len() as u64) + parent_li.version(), compute_state.root_hash(), parent_li);
+                                    let v_s = match parent_li.next_validator_set() {
+                                        Some(n_v_s) => {
+                                            Some(n_v_s.clone())
+                                        }
+                                        None => {
+                                            None
+                                        }
+                                    };
+                                    let li = LedgerInfo::new((txns.len() as u64) + parent_li.version(), compute_state.root_hash(), vote_data.hash(), parent_block_id, parent_li.epoch_num(), parent_li.timestamp_usecs(), v_s);
                                     let signer = ValidatorSigner::genesis();//TODO:change signer
                                     let signature = signer.sign_message(li.hash()).expect("Fail to sign genesis ledger info");
                                     let mut signatures = BTreeMap::new();
@@ -846,7 +863,7 @@ impl EventHandle {
                                 }
                                 Err(e) => {
                                     println!("{:?}", e);
-                                }
+                                },
                             }
                         }
                     }
@@ -909,7 +926,11 @@ impl PowConsensusProvider {
             AtomicBool::new(true)
         };
 
-        let event_handle = EventHandle::new(network_sender, network_events, txn_manager, state_computer, author, peers_config, node_config.get_storage_dir(), sync_flag);
+        let genesis_transaction = node_config
+            .get_genesis_transaction()
+            .expect("failed to load genesis transaction!");
+
+        let event_handle = EventHandle::new(network_sender, network_events, txn_manager, state_computer, author, peers_config, node_config.get_storage_dir(), sync_flag, genesis_transaction);
         Self {
             runtime,
             event_handle: Some(event_handle),

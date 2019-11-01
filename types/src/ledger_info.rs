@@ -109,24 +109,6 @@ impl LedgerInfo {
         }
     }
 
-    pub fn new_by_version(version: Version, transaction_accumulator_hash:HashValue, li:LedgerInfo) -> Self {
-        let v_s = match li.next_validator_set() {
-            Some(n_v_s) => {
-                Some(n_v_s.clone())
-            },
-            None => None
-        };
-        LedgerInfo {
-            version,
-            transaction_accumulator_hash,
-            consensus_data_hash:li.consensus_data_hash(),
-            consensus_block_id:li.consensus_block_id(),
-            epoch_num:li.epoch_num(),
-            timestamp_usecs:li.timestamp_usecs(),
-            next_validator_set:v_s,
-        }
-    }
-
     /// Returns the version of this `LedgerInfo`.
     pub fn version(&self) -> Version {
         self.version

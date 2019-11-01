@@ -246,23 +246,6 @@ where
                 ancestor_id,
                 resp_sender,
             } => {
-//                self.storage_write_client.rollback_by_block_id(block_id);
-//
-//                // 2. get StartInfo
-//                let startup_info = self.storage_read_client
-//                    .get_startup_info()
-//                    .expect("Failed to read startup info from storage.").expect("block not exist err.");
-//
-//                // 3. Reset ExecutedTrees
-//                let state_tree = Rc::new(SparseMerkleTree::new(startup_info.account_state_root_hash));
-//                let transaction_accumulator = Rc::new(
-//                    Accumulator::new(
-//                        startup_info.ledger_frozen_subtree_hashes,
-//                        startup_info.latest_version + 1,
-//                    )
-//                        .expect("The startup info read from storage should be valid."),
-//                );
-
                 let first_len = transactions_vec[0].len() as u64;
                 let (
                     state_root_hash,
@@ -275,7 +258,7 @@ where
                     (
                         *SPARSE_MERKLE_PLACEHOLDER_HASH,
                         vec![],
-                        first_len + 1,// genesis tx
+                        0,
                         0,
                         *PRE_GENESIS_BLOCK_ID,
                     )
@@ -294,11 +277,8 @@ where
                     )
                 };
 
-//                let res = if (ancestor_id == *ACCUMULATOR_PLACEHOLDER_HASH && self.committed_trees.version_and_state_root().0.unwrap() == 0)
-//                    || parent_state_id == self.committed_trees.state_tree().root_hash() {
-
-                let tmp_committed_trees = Rc::new(SparseMerkleTree::new(state_root_hash));
-                let tmp_committed_trees = ExecutedTrees {
+                let mut tmp_committed_trees = Rc::new(SparseMerkleTree::new(state_root_hash));
+                let mut tmp_committed_trees = ExecutedTrees {
                     state_tree: tmp_committed_trees,
                     transaction_accumulator: Rc::new(
                         Accumulator::new(
@@ -309,16 +289,26 @@ where
                     ),
                 };
 
-                // Construct a StateView and pass the transactions to VM.
-                let state_view = VerifiedStateView::new(
-                    Arc::clone(&self.storage_read_client),
-                    tmp_committed_trees.version_and_state_root(),
-                    tmp_committed_trees.state_tree(),
-                );
-
-                let mut vm_outputs = vec![];
-                let mut latest_transactions = vec![];
+                let mut count = 0;
+                let mut vec_len = transactions_vec.len();
+                let mut totle = 0;
                 for transactions in transactions_vec {
+                    count = count + 1;
+                    totle = totle + transactions.len();
+                    println!("----11111---->{}", totle);
+                    // Construct a StateView and pass the transactions to VM.
+                    let state_view = VerifiedStateView::new(
+                        Arc::clone(&self.storage_read_client),
+                        tmp_committed_trees.version_and_state_root(),
+                        tmp_committed_trees.state_tree(),
+                    );
+
+                    match tmp_committed_trees.version_and_state_root().0 {
+                        Some(t) => println!("----2222---->{}", t),
+                        None => println!("----2222---->"),
+                    };
+
+
                     let transactions: Vec<SignedTransaction> = transactions.iter()
                         .map(|txn| {
                             txn.as_signed_user_txn()
@@ -327,7 +317,7 @@ where
                         .cloned()
                         .collect();
 
-                    vm_outputs = {
+                    let vm_outputs = {
                         V::execute_block(transactions.clone(), &self.vm_config, &state_view)
                     };
 
@@ -339,53 +329,60 @@ where
                         }
                     }
 
-                    latest_transactions = transactions
+                    let latest_transactions = transactions
                         .into_iter()
                         .map(Transaction::UserTransaction)
                         .collect::<Vec<_>>();
+
+                    let (account_to_btree, account_to_proof) = state_view.into();
+
+                    match Self::process_vm_outputs(
+                        account_to_btree,
+                        account_to_proof,
+                        &latest_transactions,
+                        vm_outputs,
+                        &tmp_committed_trees,
+                    ) {
+                        Ok(output) => {
+                            println!("-------33333------>{}", output.executed_trees().clone().version_and_state_root().0.unwrap());
+                            tmp_committed_trees = output.executed_trees().clone();
+                        },
+                        Err(e) => {
+                            //Err(format_err!("{}", e));
+                            println!("-----4444----->{:?}", e);
+                            break;
+                        }
+                    };
                 }
 
-                let (account_to_btree, account_to_proof) = state_view.into();
-                // TODO: Remove once `TransactionListWithProof` carries `enum Transaction`
+                let vm_output = if count == vec_len {
+                    let accu_root_hash = tmp_committed_trees.txn_accumulator().root_hash();
+                    let version =
+                        (tmp_committed_trees.txn_accumulator().num_leaves() - 1) as Version;
+                    let state_id = tmp_committed_trees.state_tree().root_hash();
 
-                let vm_output = match Self::process_vm_outputs(
-                    account_to_btree,
-                    account_to_proof,
-                    &latest_transactions,
-                    vm_outputs,
-                    &tmp_committed_trees,
-                ) {
-                    Ok(output) => {
-                        let accu_root_hash = output.executed_trees().txn_accumulator().root_hash();
-                        let version =
-                            (output.executed_trees().txn_accumulator().num_leaves() - 1) as Version;
-                        let state_id = output.executed_trees().state_tree().root_hash();
+                    println!("----2222---->{:?}----->{:?}", accu_root_hash, state_id);
 
-                        // Now that we have the root hash and execution status we can send the response to
-                        // consensus.
-                        // TODO: The VM will support a special transaction to set the validators for the
-                        // next epoch that is part of a block execution.
-                        let state_compute_result = StateComputeResult {
-                            executed_state: ExecutedState {
-                                state_id: accu_root_hash,
-                                version,
-                                validators: None,
-                            },
-                            compute_status: vec![],
-                        };
-                        Ok((state_compute_result, state_id))
-                    },
-                    Err(e) => {
-                        Err(format_err!("{}", e))
-                    }
+                    // Now that we have the root hash and execution status we can send the response to
+                    // consensus.
+                    // TODO: The VM will support a special transaction to set the validators for the
+                    // next epoch that is part of a block execution.
+                    let state_compute_result = StateComputeResult {
+                        executed_state: ExecutedState {
+                            state_id: accu_root_hash,
+                            version,
+                            validators: None,
+                        },
+                        compute_status: vec![],
+                    };
+                    Ok((state_compute_result, state_id))
+                } else {
+                    Err(format_err!("pre compute err."))
                 };
 
                 if let Err(_err) = resp_sender.send(vm_output) {
                     warn!("Failed to send pre execute block response.");
                 }
-//                } else {
-//                    Err(format_err!("match parent_state_id err."))
-//                };
             }
             Command::CommitBlock {
                 ledger_info_with_sigs,
@@ -944,6 +941,7 @@ where
                         vm_output.gas_used(),
                         status.major_status,
                     );
+                    println!("--------55555----->");
                     txn_info_hashes.push(txn_info.hash());
                 }
                 TransactionStatus::Discard(_) => {
@@ -972,6 +970,7 @@ where
 
         let current_transaction_accumulator =
             parent_trees.transaction_accumulator.append(txn_info_hashes);
+        println!("--------66666----->{}", current_transaction_accumulator.num_leaves());
         Ok(ProcessedVMOutput::new(
             txn_data,
             ExecutedTrees {
