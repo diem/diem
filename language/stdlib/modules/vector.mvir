@@ -74,4 +74,17 @@ module Vector {
     return Self.length<Element>(move(v)) == 0;
   }
 
+  // Return the `i`th element of the vector. Only available for vectors that contain unrestricted
+  // values.
+  public get<Element: unrestricted>(v: &Self.T<Element>, i: u64): Element {
+    return *Self.borrow<Element>(move(v), move(i));
+  }
+
+  // Replace the `i`th element of the vector with the value `v`. Only available for vectors that
+  // contain unrestricted values.
+  public set<Element: unrestricted>(v: &mut Self.T<Element>, i: u64, e: Element) {
+    *(Self.borrow_mut<Element>(move(v), move(i))) = move(e);
+    return;
+  }
+
 }
