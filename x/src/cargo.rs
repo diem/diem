@@ -105,6 +105,7 @@ pub struct CargoArgs {
 }
 
 pub enum CargoCommand<'a> {
+    Bench(&'a [OsString]),
     Check,
     Clippy(&'a [OsString]),
     Test(&'a [OsString]),
@@ -170,6 +171,7 @@ impl<'a> CargoCommand<'a> {
 
     pub fn as_str(&self) -> &'static str {
         match self {
+            CargoCommand::Bench(_) => "bench",
             CargoCommand::Check => "check",
             CargoCommand::Clippy(_) => "clippy",
             CargoCommand::Test(_) => "test",
@@ -178,6 +180,7 @@ impl<'a> CargoCommand<'a> {
 
     fn pass_through_args(&self) -> &[OsString] {
         match self {
+            CargoCommand::Bench(args) => args,
             CargoCommand::Check => &[],
             CargoCommand::Clippy(args) => args,
             CargoCommand::Test(args) => args,
