@@ -6,7 +6,6 @@ use crate::{
         default_num_accounts, default_num_transactions, log_balance_strategy, AUTransactionGen,
         AccountUniverseGen, P2PNewReceiverGen, P2PTransferGen,
     },
-    gas_costs,
     tests::account_universe::{run_and_assert_gas_cost_stability, run_and_assert_universe},
 };
 use proptest::{collection::vec, prelude::*};
@@ -23,7 +22,7 @@ proptest! {
         universe in AccountUniverseGen::success_strategy(2),
         transfers in vec(any_with::<P2PTransferGen>((1, 10_000)), 0..default_num_transactions()),
     ) {
-        run_and_assert_gas_cost_stability(universe, transfers, *gas_costs::PEER_TO_PEER)?;
+        run_and_assert_gas_cost_stability(universe, transfers)?;
     }
 
     #[test]
@@ -53,11 +52,7 @@ proptest! {
         universe in AccountUniverseGen::success_strategy(1),
         transfers in vec(any_with::<P2PNewReceiverGen>((1, 10_000)), 0..default_num_transactions()),
     ) {
-        run_and_assert_gas_cost_stability(
-            universe,
-            transfers,
-            *gas_costs::PEER_TO_PEER_NEW_RECEIVER,
-        )?;
+        run_and_assert_gas_cost_stability(universe, transfers)?;
     }
 
     /// Test that p2p transfers can be done to new accounts.

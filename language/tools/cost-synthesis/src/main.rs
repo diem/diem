@@ -119,7 +119,6 @@ fn stack_instructions(options: &Opt) {
         Unpack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         Pack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS),
-        CreateAccount,
         Sub,
         Ret,
         Add,

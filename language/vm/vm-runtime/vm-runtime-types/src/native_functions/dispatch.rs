@@ -16,7 +16,7 @@ use libra_types::{
 use std::collections::{HashMap, VecDeque};
 use vm::{
     errors::VMResult,
-    file_format::{FunctionSignature, Kind, SignatureToken},
+    file_format::{FunctionSignature, Kind, SignatureToken, StructHandleIndex},
 };
 
 /// Result of a native function execution that requires charges for execution cost.
@@ -232,6 +232,17 @@ lazy_static! {
             ],
             vec![]
         );
+
+        //
+        // TODO: both API bolow are directly implemented in the interepreter as we lack a
+        // good mechanism to expose certain API to native functions.
+        // Specifically we need access to some frame information (e.g. type instantiations) and
+        // access to the data store.
+        // Maybe marking native functions in a certain way (e.g `system` or similar) may
+        // be a way for the VM to force a given argument to the native implementation.
+        // Alternative models are fine too...
+        //
+
         // Event
         add!(m, addr, "Event", "write_to_event_store",
             |_| {
@@ -241,6 +252,24 @@ lazy_static! {
              },
             vec![Kind::Unrestricted],
             vec![ByteArray, U64, TypeParameter(0)],
+            vec![]
+        );
+        // LibraAccount
+        add!(m, addr, "LibraAccount", "save_account",
+            |_| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                    "save_account does not have a native implementation".to_string()))
+            },
+            vec![
+                Address,
+                // this is LibraAccount.T which happens to be the first struct handle in the
+                // binary.
+                // TODO: current plan is to rework the description of the native function
+                // by using the binary directly and have functions that fetch the arguments
+                // go through the signature for extra verification. That is the plan if perf
+                // and the model look good.
+                Struct(StructHandleIndex::new(0), vec![]),
+            ],
             vec![]
         );
         m

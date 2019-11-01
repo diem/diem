@@ -116,9 +116,8 @@ where
     /// Cursor into the user string pool. Used for the generation of random user strings.
     user_string_index: TableIndex,
 
-    /// Cursor into the address pool. Used for the generation of random addresses.  We use this
-    /// since we need the addresses to be unique for e.g. CreateAccount, and we don't want a
-    /// mutable reference into the underlying `root_module`.
+    /// Cursor into the address pool. Used for the generation of random addresses.  We use this since we need the
+    /// addresses to be unique, and we don't want a mutable reference into the underlying `root_module`.
     address_pool_index: TableIndex,
 
     /// A reverse lookup table to find the struct definition for a struct handle. Needed for
@@ -189,16 +188,6 @@ where
         }
     }
 
-    // Certain operations are only valid if their values come from module-specific data. In
-    // particular, CreateLibraAccount. But, they may eventually be more of these as well.
-    fn points_to_module_data(&self) -> bool {
-        use Bytecode::*;
-        match self.op {
-            CreateAccount => true,
-            _ => false,
-        }
-    }
-
     fn next_int(&mut self, stk: &[Value]) -> u64 {
         if self.op == Bytecode::Sub && !stk.is_empty() {
             let peek: VMResult<u64> = stk
@@ -232,7 +221,7 @@ where
     // the stack, or where the instructions semantics don't require having an address in the
     // address pool, we don't waste our pools and generate a random value.
     fn next_vm_string(&mut self, is_padding: bool) -> VMString {
-        if !self.points_to_module_data() || is_padding {
+        if is_padding {
             let len: usize = self.gen.gen_range(1, MAX_STRING_SIZE);
             (0..len)
                 .map(|_| self.gen.gen::<char>())
@@ -251,7 +240,7 @@ where
     }
 
     fn next_addr(&mut self, is_padding: bool) -> AccountAddress {
-        if !self.points_to_module_data() || is_padding {
+        if is_padding {
             AccountAddress::new(self.gen.gen())
         } else {
             let address = self

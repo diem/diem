@@ -183,10 +183,6 @@ impl BytecodeGenerator {
                 BytecodeType::NoArg(Bytecode::GetTxnPublicKey),
             ),
             (
-                StackEffect::Sub,
-                BytecodeType::NoArg(Bytecode::CreateAccount),
-            ),
-            (
                 StackEffect::Nop,
                 BytecodeType::StructAndLocalIndex(Bytecode::Pack),
             ),

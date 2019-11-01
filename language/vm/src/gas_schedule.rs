@@ -301,7 +301,6 @@ lazy_static! {
             (Not, 35,1),
             (Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS), 197, 1),
             (Le, 47, 1),
-            (CreateAccount, 1119, 1),
             (Branch(0), 10, 1),
             (Unpack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 94, 1),
             (Or, 43, 1),

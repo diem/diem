@@ -6,7 +6,6 @@ use crate::{
         default_num_accounts, default_num_transactions, log_balance_strategy, AUTransactionGen,
         AccountUniverseGen, CreateAccountGen, CreateExistingAccountGen,
     },
-    gas_costs,
     tests::account_universe::{run_and_assert_gas_cost_stability, run_and_assert_universe},
 };
 use proptest::{collection::vec, prelude::*};
@@ -23,7 +22,7 @@ proptest! {
         universe in AccountUniverseGen::success_strategy(1),
         transfers in vec(any_with::<CreateAccountGen>((1, 10_000)), 0..default_num_transactions()),
     ) {
-        run_and_assert_gas_cost_stability(universe, transfers, *gas_costs::CREATE_ACCOUNT)?;
+        run_and_assert_gas_cost_stability(universe, transfers)?;
     }
 
     #[test]
@@ -53,7 +52,7 @@ proptest! {
             0..default_num_transactions(),
         ),
     ) {
-        run_and_assert_gas_cost_stability(universe, transfers, *gas_costs::CREATE_EXISTING_ACCOUNT)?;
+        run_and_assert_gas_cost_stability(universe, transfers)?;
     }
 
     #[test]

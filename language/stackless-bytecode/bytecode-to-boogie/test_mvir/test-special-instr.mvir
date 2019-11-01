@@ -1,6 +1,0 @@
-module TestSpecialInstr {
-	public test_create_account() {
-        create_account(0x42);
-        return;
-    }
-}
