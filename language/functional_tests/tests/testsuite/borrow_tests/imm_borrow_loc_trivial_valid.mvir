@@ -22,6 +22,3 @@ module Tester {
         return;
     }
 }
-
-// check: VerificationFailure
-// check: BORROWLOC_EXISTS_BORROW_ERROR
