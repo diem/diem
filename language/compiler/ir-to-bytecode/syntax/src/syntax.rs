@@ -353,7 +353,20 @@ fn parse_qualified_function_name_<'input>(
         | Tok::MoveFrom
         | Tok::MoveToSender
         | Tok::GetGasRemaining
-        | Tok::Freeze => {
+        | Tok::Freeze
+        | Tok::IsOffchain
+        | Tok::GetTxnReceiver
+        | Tok::ExistSenderChannel
+        | Tok::ExistReceiverChannel
+        | Tok::BorrowSenderChannel
+        | Tok::BorrowReceiverChannel
+        | Tok::MoveFromSenderChannel
+        | Tok::MoveFromReceiverChannel
+        | Tok::MoveToSenderChannel
+        | Tok::MoveToReceiverChannel
+        | Tok::IsChannelTxn
+        | Tok::GetTxnReceiverPublicKey
+        | Tok::GetTxnChannelSequenceNumber => {
             let f = parse_builtin(tokens)?;
             FunctionCall::Builtin(f)
         }
@@ -491,6 +504,19 @@ fn parse_call_or_term<'input>(
         | Tok::MoveToSender
         | Tok::GetGasRemaining
         | Tok::Freeze
+        | Tok::IsOffchain
+        | Tok::GetTxnReceiver
+        | Tok::ExistSenderChannel
+        | Tok::ExistReceiverChannel
+        | Tok::BorrowSenderChannel
+        | Tok::BorrowReceiverChannel
+        | Tok::MoveFromSenderChannel
+        | Tok::MoveFromReceiverChannel
+        | Tok::MoveToSenderChannel
+        | Tok::MoveToReceiverChannel
+        | Tok::IsChannelTxn
+        | Tok::GetTxnReceiverPublicKey
+        | Tok::GetTxnChannelSequenceNumber
         | Tok::DotNameValue => {
             let f = parse_qualified_function_name_(tokens)?;
             let exp = parse_call_or_term_(tokens)?;
@@ -734,6 +760,98 @@ fn parse_builtin<'input>(
             tokens.advance()?;
             Ok(Builtin::Freeze)
         }
+        Tok::IsOffchain => {
+            tokens.advance()?;
+            Ok(Builtin::IsOffchain)
+        }
+        Tok::GetTxnReceiver => {
+            tokens.advance()?;
+            Ok(Builtin::GetTxnReceiver)
+        }
+        Tok::ExistSenderChannel => {
+            tokens.advance()?;
+            let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
+            consume_token(tokens, Tok::Greater)?;
+            Ok(Builtin::ExistSenderChannel(
+                StructName::parse(name)?,
+                type_actuals,
+            ))
+        }
+        Tok::ExistReceiverChannel => {
+            tokens.advance()?;
+            let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
+            consume_token(tokens, Tok::Greater)?;
+            Ok(Builtin::ExistReceiverChannel(
+                StructName::parse(name)?,
+                type_actuals,
+            ))
+        }
+        Tok::BorrowSenderChannel => {
+            tokens.advance()?;
+            let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
+            consume_token(tokens, Tok::Greater)?;
+            Ok(Builtin::BorrowSenderChannel(
+                StructName::parse(name)?,
+                type_actuals,
+            ))
+        }
+        Tok::BorrowReceiverChannel => {
+            tokens.advance()?;
+            let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
+            consume_token(tokens, Tok::Greater)?;
+            Ok(Builtin::BorrowReceiverChannel(
+                StructName::parse(name)?,
+                type_actuals,
+            ))
+        }
+        Tok::MoveFromSenderChannel => {
+            tokens.advance()?;
+            let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
+            consume_token(tokens, Tok::Greater)?;
+            Ok(Builtin::MoveFromSenderChannel(
+                StructName::parse(name)?,
+                type_actuals,
+            ))
+        }
+        Tok::MoveFromReceiverChannel => {
+            tokens.advance()?;
+            let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
+            consume_token(tokens, Tok::Greater)?;
+            Ok(Builtin::MoveFromReceiverChannel(
+                StructName::parse(name)?,
+                type_actuals,
+            ))
+        }
+        Tok::MoveToSenderChannel => {
+            tokens.advance()?;
+            let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
+            consume_token(tokens, Tok::Greater)?;
+            Ok(Builtin::MoveToSenderChannel(
+                StructName::parse(name)?,
+                type_actuals,
+            ))
+        }
+        Tok::MoveToReceiverChannel => {
+            tokens.advance()?;
+            let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
+            consume_token(tokens, Tok::Greater)?;
+            Ok(Builtin::MoveToReceiverChannel(
+                StructName::parse(name)?,
+                type_actuals,
+            ))
+        }
+        Tok::IsChannelTxn => {
+            tokens.advance()?;
+            Ok(Builtin::IsChannelTxn)
+        }
+        Tok::GetTxnReceiverPublicKey => {
+            tokens.advance()?;
+            Ok(Builtin::GetTxnReceiverPublicKey)
+        }
+        Tok::GetTxnChannelSequenceNumber => {
+            tokens.advance()?;
+            Ok(Builtin::GetTxnChannelSequenceNumber)
+        }
         _ => Err(ParseError::InvalidToken {
             location: tokens.start_loc(),
         }),
@@ -936,6 +1054,19 @@ fn parse_cmd<'input>(
         | Tok::MoveToSender
         | Tok::GetGasRemaining
         | Tok::Freeze
+        | Tok::IsOffchain
+        | Tok::GetTxnReceiver
+        | Tok::ExistSenderChannel
+        | Tok::ExistReceiverChannel
+        | Tok::BorrowSenderChannel
+        | Tok::BorrowReceiverChannel
+        | Tok::MoveFromSenderChannel
+        | Tok::MoveFromReceiverChannel
+        | Tok::MoveToSenderChannel
+        | Tok::MoveToReceiverChannel
+        | Tok::IsChannelTxn
+        | Tok::GetTxnReceiverPublicKey
+        | Tok::GetTxnChannelSequenceNumber
         | Tok::DotNameValue => Ok(Cmd::Exp(Box::new(parse_call_(tokens)?))),
         Tok::LParen => {
             tokens.advance()?;

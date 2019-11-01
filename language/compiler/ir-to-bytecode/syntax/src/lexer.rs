@@ -84,6 +84,19 @@ pub enum Tok {
     Pipe,
     PipePipe,
     RBrace,
+    IsOffchain,
+    GetTxnReceiver,
+    ExistSenderChannel,
+    ExistReceiverChannel,
+    BorrowSenderChannel,
+    BorrowReceiverChannel,
+    MoveFromSenderChannel,
+    MoveFromReceiverChannel,
+    MoveToSenderChannel,
+    MoveToReceiverChannel,
+    IsChannelTxn,
+    GetTxnReceiverPublicKey,
+    GetTxnChannelSequenceNumber,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -185,6 +198,14 @@ impl<'input> Lexer<'input> {
                         "exists" => (Tok::Exists, len + 1),
                         "move_from" => (Tok::MoveFrom, len + 1),
                         "move_to_sender" => (Tok::MoveToSender, len + 1),
+                        "exist_sender_channel" => (Tok::ExistSenderChannel, len + 1),
+                        "exist_receiver_channel" => (Tok::ExistReceiverChannel, len + 1),
+                        "borrow_sender_channel" => (Tok::BorrowSenderChannel, len + 1),
+                        "borrow_receiver_channel" => (Tok::BorrowReceiverChannel, len + 1),
+                        "move_from_sender_channel" => (Tok::MoveFromSenderChannel, len + 1),
+                        "move_from_receiver_channel" => (Tok::MoveFromReceiverChannel, len + 1),
+                        "move_to_sender_channel" => (Tok::MoveToSenderChannel, len + 1),
+                        "move_to_receiver_channel" => (Tok::MoveToReceiverChannel, len + 1),
                         _ => (Tok::NameBeginTyValue, len + 1),
                     },
                     Some('(') => match name {
@@ -358,6 +379,11 @@ fn get_name_token(name: &str) -> Tok {
         "u64" => Tok::U64,
         "unrestricted" => Tok::Unrestricted,
         "while" => Tok::While,
+        "is_offchain" => Tok::IsOffchain,
+        "get_txn_receiver" => Tok::GetTxnReceiver,
+        "is_channel_txn" => Tok::IsChannelTxn,
+        "get_txn_receiver_public_key" => Tok::GetTxnReceiverPublicKey,
+        "get_txn_channel_sequence_number" => Tok::GetTxnChannelSequenceNumber,
         _ => Tok::NameValue,
     }
 }
