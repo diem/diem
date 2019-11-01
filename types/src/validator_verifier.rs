@@ -306,6 +306,26 @@ impl From<&ValidatorSet> for ValidatorVerifier<Ed25519PublicKey> {
     }
 }
 
+#[cfg(any(test, feature = "fuzzing"))]
+impl From<&ValidatorVerifier<Ed25519PublicKey>> for ValidatorSet {
+    fn from(verifier: &ValidatorVerifier<Ed25519PublicKey>) -> Self {
+        use crate::validator_public_keys::ValidatorPublicKeys;
+        ValidatorSet::new(
+            verifier
+                .get_ordered_account_addresses()
+                .into_iter()
+                .map(|addr| {
+                    ValidatorPublicKeys::new_with_random_network_keys(
+                        addr,
+                        verifier.get_public_key(&addr).unwrap(),
+                        verifier.get_voting_power(&addr).unwrap(),
+                    )
+                })
+                .collect(),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::crypto_proxies::random_validator_verifier;

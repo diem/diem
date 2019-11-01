@@ -33,7 +33,6 @@ use libra_config::config::ConsensusProposerType::{
 use libra_types::crypto_proxies::{
     random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
 };
-use libra_types::validator_public_keys::ValidatorPublicKeys;
 use libra_types::validator_set::ValidatorSet;
 use std::time::Duration;
 use tokio::runtime;
@@ -151,18 +150,7 @@ impl SMRNode {
         let (mut signers, validator_verifier) =
             random_validator_verifier(num_nodes, Some(quorum_voting_power), true);
         let validator_set = if executor_with_reconfig {
-            let addr = validator_verifier.get_ordered_account_addresses();
-            Some(ValidatorSet::new(
-                addr.into_iter()
-                    .map(|addr| {
-                        ValidatorPublicKeys::new_with_random_network_keys(
-                            addr,
-                            validator_verifier.get_public_key(&addr).unwrap(),
-                            validator_verifier.get_voting_power(&addr).unwrap(),
-                        )
-                    })
-                    .collect(),
-            ))
+            Some((&validator_verifier).into())
         } else {
             None
         };

@@ -171,7 +171,7 @@ message UpdateToLatestLedgerResponse {
     // Validator change events from what the client last knew.  This is used to
     // inform the client of validator changes from the client's last known version
     // until the current version
-    repeated ValidatorChangeEventWithProof validator_change_events = 3;
+    ValidatorChangeEventWithProof validator_change_events = 3;
 
     // A proof that shows the latest ledger accumulator is consistent with the
     // old accumulator at "client_known_version".
