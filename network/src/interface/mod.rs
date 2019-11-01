@@ -326,7 +326,7 @@ where
                     .inc();
                 counters::LIBRA_NETWORK_DIRECT_SEND_BYTES
                     .with_label_values(&["sent"])
-                    .inc_by(msg.mdata.len() as i64);
+                    .observe(msg.mdata.len() as f64);
                 ds_reqs_tx
                     .send(DirectSendRequest::SendMessage(peer_id, msg))
                     .await
@@ -411,7 +411,7 @@ where
                     .inc();
                 counters::LIBRA_NETWORK_DIRECT_SEND_BYTES
                     .with_label_values(&["received"])
-                    .inc_by(msg.mdata.len() as i64);
+                    .observe(msg.mdata.len() as f64);
                 let ch = upstream_handlers
                     .get_mut(&msg.protocol)
                     .expect("DirectSend protocol not registered");

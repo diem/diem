@@ -371,7 +371,7 @@ where
         .inc();
     counters::LIBRA_NETWORK_RPC_BYTES
         .with_label_values(&["request", "sent"])
-        .inc_by(req_len as i64);
+        .observe(req_len as f64);
 
     // Wait for listener's response.
     let res_data = match substream.next().await {
@@ -488,7 +488,7 @@ where
         .inc();
     counters::LIBRA_NETWORK_RPC_BYTES
         .with_label_values(&["response", "sent"])
-        .inc_by(res_len as i64);
+        .observe(res_len as f64);
 
     Ok(())
 }
