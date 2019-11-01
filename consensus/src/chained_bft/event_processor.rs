@@ -33,7 +33,9 @@ use consensus_types::{
 use failure::ResultExt;
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
-use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
+use libra_types::crypto_proxies::{
+    LedgerInfoWithSignatures, ValidatorChangeEventWithProof, ValidatorVerifier,
+};
 use mirai_annotations::{
     debug_checked_precondition, debug_checked_precondition_eq, debug_checked_verify,
     debug_checked_verify_eq,
@@ -782,7 +784,9 @@ impl<T: Payload> EventProcessor<T> {
             }
         }
         if finality_proof.ledger_info().next_validator_set().is_some() {
-            self.network.send_epoch_change(finality_proof).await
+            self.network
+                .send_epoch_change(ValidatorChangeEventWithProof::new(vec![finality_proof]))
+                .await
         }
     }
 

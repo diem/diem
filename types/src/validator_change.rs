@@ -9,6 +9,8 @@ use libra_crypto::*;
 use std::convert::{TryFrom, TryInto};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+/// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of
+/// validator changes from the first LedgerInfo's epoch.
 pub struct ValidatorChangeEventWithProof<Sig> {
     ledger_info_with_sigs: Vec<LedgerInfoWithSignatures<Sig>>,
 }
@@ -19,32 +21,43 @@ impl<Sig: Signature> ValidatorChangeEventWithProof<Sig> {
             ledger_info_with_sigs,
         }
     }
+
+    /// The first/lowest epoch of the proof to indicate which epoch this proof is helping with
+    pub fn epoch(&self) -> Result<u64> {
+        self.ledger_info_with_sigs
+            .first()
+            .map(|li| li.ledger_info().epoch())
+            .ok_or_else(|| format_err!("Empty ValidatorChangeEventWithProof"))
+    }
 }
 impl ValidatorChangeEventWithProof<Ed25519Signature> {
     /// Verify the proof is correctly chained with known epoch and validator verifier
-    pub fn verify(&self, epoch: u64, validator_verifier: &ValidatorVerifier) -> Result<()> {
+    /// and return the LedgerInfo to start target epoch
+    pub fn verify(
+        &self,
+        epoch: u64,
+        validator_verifier: &ValidatorVerifier,
+    ) -> Result<LedgerInfoWithSignatures<Ed25519Signature>> {
         ensure!(
             !self.ledger_info_with_sigs.is_empty(),
             "Empty ValidatorChangeEventWithProof"
         );
-        self.ledger_info_with_sigs
-            .iter()
-            .try_fold(
-                (epoch, validator_verifier.clone()),
-                |(epoch, validator_verifier), ledger_info| {
-                    ensure!(
-                        epoch == ledger_info.ledger_info().epoch(),
-                        "LedgerInfo has unexpected epoch"
-                    );
-                    ledger_info.verify(&validator_verifier)?;
-                    ledger_info
-                        .ledger_info()
-                        .next_validator_set()
-                        .map(|v| (epoch + 1, v.into()))
-                        .ok_or_else(|| format_err!("LedgerInfo doesn't carry ValidatorSet"))
-                },
-            )
-            .map(|_| ())
+        self.ledger_info_with_sigs.iter().try_fold(
+            (epoch, validator_verifier.clone()),
+            |(epoch, validator_verifier), ledger_info| {
+                ensure!(
+                    epoch == ledger_info.ledger_info().epoch(),
+                    "LedgerInfo has unexpected epoch"
+                );
+                ledger_info.verify(&validator_verifier)?;
+                ledger_info
+                    .ledger_info()
+                    .next_validator_set()
+                    .map(|v| (epoch + 1, v.into()))
+                    .ok_or_else(|| format_err!("LedgerInfo doesn't carry ValidatorSet"))
+            },
+        )?;
+        Ok(self.ledger_info_with_sigs.last().unwrap().clone())
     }
 }
 
