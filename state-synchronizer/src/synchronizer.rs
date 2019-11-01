@@ -79,33 +79,19 @@ pub struct StateSyncClient {
 }
 
 impl StateSyncClient {
-    /// Sync validator's state up to given `version`
-    pub fn sync_to_deprecated(
-        &self,
-        target: LedgerInfoWithSignatures,
-    ) -> impl Future<Output = Result<bool>> {
-        let mut sender = self.coordinator_sender.clone();
-        let (cb_sender, cb_receiver) = oneshot::channel();
-        async move {
-            sender
-                .send(CoordinatorMessage::RequestedDeprecated(target, cb_sender))
-                .await?;
-            let sync_status = cb_receiver.await?;
-            Ok(sync_status)
-        }
-    }
-
-    /// Sync validator's state to target
-    pub fn sync_to(
-        &self,
-        target: LedgerInfoWithSignatures,
-    ) -> impl Future<Output = Result<LedgerInfoWithSignatures>> {
+    /// Sync validator's state to target.
+    /// In case of success (`Result::Ok`) the LI of storage is at the given target.
+    /// In case of failure (`Result::Error`) the LI of storage remains unchanged, and the validator
+    /// can assume there were no modifications to the storage made.
+    /// It is up to state synchronizer to decide about the specific criteria for the failure
+    /// (e.g., lack of progress with all of the peer validators).
+    pub fn sync_to(&self, target: LedgerInfoWithSignatures) -> impl Future<Output = Result<()>> {
         let mut sender = self.coordinator_sender.clone();
         let (callback, cb_receiver) = oneshot::channel();
         let request = SyncRequest { callback, target };
         async move {
             sender.send(CoordinatorMessage::Request(request)).await?;
-            Ok(cb_receiver.await?)
+            cb_receiver.await?
         }
     }
 

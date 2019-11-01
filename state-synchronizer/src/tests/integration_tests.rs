@@ -252,15 +252,9 @@ impl SynchronizerEnv {
         Box::new(|resp| -> Result<GetChunkResponse> { Ok(resp) })
     }
 
-    fn sync_to(&self, peer_id: usize, version: u64) -> bool {
+    fn sync_to(&self, peer_id: usize, version: u64) {
         let target = MockExecutorProxy::mock_ledger_info(self.peers[1], version);
-        block_on(self.clients[peer_id].sync_to_deprecated(target)).unwrap()
-    }
-
-    fn sync_to_new_flow(&self, peer_id: usize, version: u64) -> bool {
-        let target = MockExecutorProxy::mock_ledger_info(self.peers[1], version);
-        let li = block_on(self.clients[peer_id].sync_to(target)).unwrap();
-        li.ledger_info().version() == version
+        block_on(self.clients[peer_id].sync_to(target)).unwrap()
     }
 
     fn commit(&self, peer_id: usize, version: u64) {
@@ -286,18 +280,10 @@ fn test_basic_catch_up() {
 
     // test small sequential syncs
     for version in 1..5 {
-        assert!(env.sync_to(0, version));
+        env.sync_to(0, version);
     }
     // test batch sync for multiple transactions
-    assert!(env.sync_to(0, 10));
-}
-
-#[test]
-fn test_basic_catch_up_new_flow() {
-    let env = SynchronizerEnv::new(SynchronizerEnv::default_handler(), RoleType::Validator);
-    for version in 1..5 {
-        assert!(env.sync_to_new_flow(0, version));
-    }
+    env.sync_to(0, 10);
 }
 
 #[test]
@@ -314,7 +300,7 @@ fn test_flaky_peer_sync() {
         }
     });
     let env = SynchronizerEnv::new(handler, RoleType::Validator);
-    assert!(env.sync_to(0, 1));
+    env.sync_to(0, 1);
 }
 
 #[test]

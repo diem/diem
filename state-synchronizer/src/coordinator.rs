@@ -32,7 +32,9 @@ use std::{
 use tokio::timer::Interval;
 
 pub(crate) struct SyncRequest {
-    pub callback: oneshot::Sender<LedgerInfoWithSignatures>,
+    // The Result value returned to the caller is Error in case the StateSynchronizer failed to
+    // reach the target (the LI in the storage remains unchanged as if nothing happened).
+    pub callback: oneshot::Sender<Result<()>>,
     pub target: LedgerInfoWithSignatures,
 }
 
@@ -43,8 +45,6 @@ pub(crate) enum CoordinatorMessage {
     // used to notify about new txn commit
     Commit(u64),
     GetState(oneshot::Sender<u64>),
-    // used to initiate new sync [deprecated]
-    RequestedDeprecated(LedgerInfo, oneshot::Sender<bool>),
 }
 
 /// used to coordinate synchronization process
@@ -54,17 +54,13 @@ pub(crate) struct SyncCoordinator<T> {
     client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
     // last committed version that validator is aware of
     known_version: u64,
-    // target state to sync to [deprecated]
-    target: Option<LedgerInfo>,
     // config
     config: StateSyncConfig,
     // role of node
     role: RoleType,
     // peers used for synchronization. TBD: value is meta information about peer sync quality
     peer_manager: PeerManager,
-    // option callback. Called when state sync reaches target version
-    callback_deprecated: Option<oneshot::Sender<bool>>,
-    // optional sync request
+    // Optional sync request to be called when the target sync is reached
     sync_request: Option<SyncRequest>,
     // queue of incoming long polling requests
     // peer will be notified about new chunk of transactions if it's available before expiry time
@@ -93,13 +89,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         Self {
             client_events,
             known_version: 0,
-            target: None,
             config,
             role,
             peer_manager: PeerManager::new(upstream_peers),
             subscriptions: HashMap::new(),
             sync_request: None,
-            callback_deprecated: None,
             executor_proxy,
         }
     }
@@ -128,9 +122,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             ::futures::select! {
                 msg = self.client_events.select_next_some() => {
                     match msg {
-                        CoordinatorMessage::RequestedDeprecated(target, subscription) => {
-                            self.request_sync_deprecated(target, subscription).await;
-                        }
                         CoordinatorMessage::Request(request) => {
                             self.request_sync(request).await;
                         }
@@ -187,21 +178,18 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
     }
 
-    fn target_version(&self) -> u64 {
-        self.target
-            .as_ref()
-            .map_or(0, |target| target.ledger_info().version())
-    }
-
     async fn request_sync(&mut self, request: SyncRequest) {
         self.known_version = self
             .executor_proxy
             .get_latest_version()
             .await
             .expect("[state sync] failed to fetch latest version from storage");
-
         let target_version = request.target.ledger_info().version();
         counters::TARGET_VERSION.set(target_version as i64);
+        debug!(
+            "[state sync] sync requested. Known version: {}, requested_version: {}",
+            self.known_version, target_version
+        );
 
         if target_version <= self.known_version {
             debug!("[state sync] sync contains only empty blocks");
@@ -211,74 +199,16 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             )
             .await
             .expect("[state sync] failed to execute empty blocks");
-            self.sync_request = Some(request);
-            self.check_client_request().await;
-        } else {
-            let peers = request.target.signatures().keys().copied().collect();
-            self.peer_manager.set_peers(peers);
-            self.sync_request = Some(request);
-            self.request_next_chunk(0).await;
-        }
-    }
-
-    async fn check_client_request(&mut self) {
-        if let Some(request) = &mut self.sync_request {
-            if request.target.ledger_info().version() <= self.known_version {
-                if let Some(SyncRequest { callback, .. }) =
-                    std::mem::replace(&mut self.sync_request, None)
-                {
-                    match self.executor_proxy.get_latest_ledger_info().await {
-                        Ok(li) => {
-                            if callback.send(li).is_err() {
-                                error!("[state sync] failed to notify subscriber");
-                            }
-                        }
-                        Err(err) => {
-                            error!("[state sync] failed to fetch latest ledger_info {:?}", err);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    async fn request_sync_deprecated(
-        &mut self,
-        target: LedgerInfo,
-        callback: oneshot::Sender<bool>,
-    ) {
-        let requested_version = target.ledger_info().version();
-        counters::TARGET_VERSION.set(requested_version as i64);
-        self.known_version = self
-            .executor_proxy
-            .get_latest_version()
-            .await
-            .expect("[state sync] failed to fetch latest version from storage");
-
-        debug!(
-            "[state sync] sync requested. Known version: {}, requested_version: {}",
-            self.known_version, requested_version
-        );
-
-        // if requested version equals to current committed, just pass ledger info to executor
-        // there might be still empty blocks between committed state and requested
-        if requested_version <= self.known_version {
-            debug!("[state sync] sync contains only empty blocks");
-            self.store_transactions(TransactionListWithProof::new_empty(), target.clone())
-                .await
-                .expect("[state sync] failed to execute empty blocks");
-            if callback.send(true).is_err() {
+            if request.callback.send(Ok(())).is_err() {
                 error!("[state sync] coordinator failed to notify subscriber");
             }
             return;
         }
 
-        // TODO: Should we be changing peer manager peer set for every target?
-        self.peer_manager
-            .set_peers(target.signatures().keys().copied().collect());
-        self.target = Some(target);
+        let peers = request.target.signatures().keys().copied().collect();
+        self.peer_manager.set_peers(peers);
+        self.sync_request = Some(request);
         self.request_next_chunk(0).await;
-        self.callback_deprecated = Some(callback);
     }
 
     async fn commit(&mut self, version: u64) {
@@ -300,10 +230,17 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 error!("[state sync] failed to check subscriptions: {:?}", err);
             }
         }
-        if self.known_version == self.target_version() {
-            debug!("[state sync] synchronization is finished");
-            if let Some(cb) = self.callback_deprecated.take() {
-                if cb.send(true).is_err() {
+        let sync_request_complete = self.sync_request.as_ref().map_or(false, |sync_req| {
+            sync_req.target.ledger_info().version() == self.known_version
+        });
+
+        if sync_request_complete {
+            debug!(
+                "[state sync] synchronization to {} is finished",
+                self.known_version
+            );
+            if let Some(sync_request) = self.sync_request.take() {
+                if sync_request.callback.send(Ok(())).is_err() {
                     error!("[state sync] failed to notify subscriber");
                 }
             }
@@ -450,11 +387,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         } else {
             self.commit(latest_version).await;
         }
-
-        if self.known_version == target.ledger_info().version() {
-            self.check_client_request().await;
-        }
-
         debug!(
             "[state sync] applied chunk. Previous version: {}, new version: {}, chunk size: {}",
             previous_version, self.known_version, chunk_size
@@ -489,9 +421,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// if peer is not responding, issues new sync request
     async fn check_progress(&mut self) {
         if !self.peer_manager.is_empty()
-            && (self.role == RoleType::FullNode
-                || self.sync_request.is_some()
-                || self.callback_deprecated.is_some())
+            && (self.role == RoleType::FullNode || self.sync_request.is_some())
         {
             let last_request_tst = self
                 .peer_manager
@@ -517,10 +447,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     }
 
     async fn request_next_chunk(&mut self, offset: u64) {
-        if self.role == RoleType::FullNode
-            || self.sync_request.is_some()
-            || self.callback_deprecated.is_some()
-        {
+        if self.role == RoleType::FullNode || self.sync_request.is_some() {
             if let Some((peer_id, mut sender)) = self.peer_manager.pick_peer() {
                 let mut req = GetChunkRequest::default();
                 req.known_version = self.known_version + offset;
@@ -529,8 +456,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     .process_request(self.known_version + offset + 1, peer_id);
                 let timeout = match self.role {
                     RoleType::Validator => {
-                        if let Some(target) = &self.target {
-                            req.ledger_info_with_sigs = Some(target.clone().into());
+                        if let Some(sync_req) = &self.sync_request {
+                            req.ledger_info_with_sigs = Some(sync_req.target.clone().into());
                         }
                         0
                     }
