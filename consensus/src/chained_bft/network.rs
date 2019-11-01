@@ -19,8 +19,9 @@ use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryS
 use libra_logger::prelude::*;
 use libra_prost_ext::MessageExt;
 use libra_types::account_address::AccountAddress;
+use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
-use libra_types::proto::types::LedgerInfoWithSignatures as LedgerInfoWithSignaturesProto;
+use libra_types::proto::types::ValidatorChangeEventWithProof as ValidatorChangeEventWithProofProto;
 use network::{
     proto::{
         ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock,
@@ -226,9 +227,9 @@ impl NetworkSender {
     }
 
     /// Broadcast about epoch changes with proof to the current validator set (including self)
-    pub async fn send_epoch_change(&mut self, ledger_info: LedgerInfoWithSignatures) {
+    pub async fn send_epoch_change(&mut self, proof: ValidatorChangeEventWithProof) {
         let msg = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::LedgerInfo(ledger_info.into())),
+            message: Some(ConsensusMsg_oneof::EpochChange(proof.into())),
         };
         self.broadcast(msg).await
     }
@@ -350,9 +351,7 @@ impl<T: Payload> NetworkTask<T> {
                         }
                         VoteMsg(vote_msg) => self.process_vote(peer_id, vote_msg).await,
                         SyncInfo(sync_info) => self.process_sync_info(sync_info, peer_id).await,
-                        LedgerInfo(ledger_info) => {
-                            self.process_epoch_change(peer_id, ledger_info).await
-                        }
+                        EpochChange(proof) => self.process_epoch_change(peer_id, proof).await,
                         _ => {
                             warn!("Unexpected msg from {}: {:?}", peer_id, msg);
                             continue;
@@ -487,24 +486,23 @@ impl<T: Payload> NetworkTask<T> {
     async fn process_epoch_change(
         &mut self,
         peer_id: AccountAddress,
-        ledger_info: LedgerInfoWithSignaturesProto,
+        proof: ValidatorChangeEventWithProofProto,
     ) -> failure::Result<()> {
-        let ledger_info = LedgerInfoWithSignatures::try_from(ledger_info)?;
-        match ledger_info.ledger_info().epoch().cmp(&self.epoch) {
+        let proof = ValidatorChangeEventWithProof::try_from(proof)?;
+        let msg_epoch = proof.epoch()?;
+        match msg_epoch.cmp(&self.epoch) {
             Ordering::Less => Ok(()),
             Ordering::Equal => {
-                ledger_info.verify(&self.validators)?;
-                let validators = match ledger_info.ledger_info().next_validator_set() {
+                let target_ledger_info = proof.verify(self.epoch, &self.validators)?;
+                let validators = match target_ledger_info.ledger_info().next_validator_set() {
                     Some(v) => v.into(),
                     None => bail!("Epoch change doesn't carry next validator set"),
                 };
-                self.epoch = ledger_info.ledger_info().epoch() + 1;
+                self.epoch = target_ledger_info.ledger_info().epoch() + 1;
                 self.validators = Arc::new(validators);
-                Ok(self.epoch_change_tx.push(peer_id, ledger_info)?)
+                Ok(self.epoch_change_tx.push(peer_id, target_ledger_info)?)
             }
-            Ordering::Greater => Ok(self
-                .future_epoch_tx
-                .push(peer_id, (ledger_info.ledger_info().epoch(), peer_id))?),
+            Ordering::Greater => Ok(self.future_epoch_tx.push(peer_id, (msg_epoch, peer_id))?),
         }
     }
 }
