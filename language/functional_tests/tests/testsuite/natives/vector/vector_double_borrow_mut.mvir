@@ -10,4 +10,4 @@ main() {
     contents_ref_2 = Vector.borrow_mut<u64>(&mut v, 0);
     return;
 }
-// check: BORROWLOC_EXISTS_BORROW_ERROR
+// check: CALL_BORROWED_MUTABLE_REFERENCE_ERROR
