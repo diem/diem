@@ -8,6 +8,7 @@ use channel::{
     message_queues::{self, QueueStyle},
 };
 use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse};
+use consensus_types::epoch_retrieval::EpochRetrievalRequest;
 use consensus_types::{
     common::{Author, Payload},
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
@@ -24,7 +25,7 @@ use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
 use libra_types::proto::types::ValidatorChangeEventWithProof as ValidatorChangeEventWithProofProto;
 use network::{
     proto::{
-        ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RespondBlock,
+        ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RequestEpoch, RespondBlock,
         SyncInfo as SyncInfoProto, VoteMsg as VoteMsgProto,
     },
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
@@ -53,6 +54,7 @@ pub struct NetworkReceivers<T> {
     pub sync_info_msgs: libra_channel::Receiver<AccountAddress, (SyncInfo, AccountAddress)>,
     pub epoch_change: libra_channel::Receiver<AccountAddress, LedgerInfoWithSignatures>,
     pub future_epoch: libra_channel::Receiver<AccountAddress, (u64, AccountAddress)>,
+    pub epoch_retrieval: libra_channel::Receiver<AccountAddress, (u64, AccountAddress)>,
 }
 
 /// Implements the actual networking support for all consensus messaging.
@@ -227,7 +229,8 @@ impl NetworkSender {
     }
 
     /// Broadcast about epoch changes with proof to the current validator set (including self)
-    pub async fn send_epoch_change(&mut self, proof: ValidatorChangeEventWithProof) {
+    /// when we commit the reconfiguration block
+    pub async fn broadcast_epoch_change(&mut self, proof: ValidatorChangeEventWithProof) {
         let msg = ConsensusMsg {
             message: Some(ConsensusMsg_oneof::EpochChange(proof.into())),
         };
@@ -243,6 +246,7 @@ pub struct NetworkTask<T> {
     sync_info_tx: libra_channel::Sender<AccountAddress, (SyncInfo, AccountAddress)>,
     epoch_change_tx: libra_channel::Sender<AccountAddress, LedgerInfoWithSignatures>,
     future_epoch_tx: libra_channel::Sender<AccountAddress, (u64, AccountAddress)>,
+    epoch_retrieval_tx: libra_channel::Sender<AccountAddress, (u64, AccountAddress)>,
     all_events: Box<dyn Stream<Item = failure::Result<Event<ConsensusMsg>>> + Send + Unpin>,
     validators: Arc<ValidatorVerifier>,
 }
@@ -301,6 +305,8 @@ impl<T: Payload> NetworkTask<T> {
             }),
         );
         let (future_epoch_tx, future_epoch_rx) = libra_channel::new(QueueStyle::LIFO, 1, None);
+        let (epoch_retrieval_tx, epoch_retrieval_rx) =
+            libra_channel::new(QueueStyle::LIFO, 1, None);
         let network_events = network_events.map_err(Into::<failure::Error>::into);
         let all_events = Box::new(select(network_events, self_receiver));
         (
@@ -312,6 +318,7 @@ impl<T: Payload> NetworkTask<T> {
                 sync_info_tx,
                 epoch_change_tx,
                 future_epoch_tx,
+                epoch_retrieval_tx,
                 all_events,
                 validators,
             },
@@ -322,6 +329,7 @@ impl<T: Payload> NetworkTask<T> {
                 sync_info_msgs: sync_info_rx,
                 epoch_change: epoch_change_rx,
                 future_epoch: future_epoch_rx,
+                epoch_retrieval: epoch_retrieval_rx,
             },
         )
     }
@@ -352,6 +360,7 @@ impl<T: Payload> NetworkTask<T> {
                         VoteMsg(vote_msg) => self.process_vote(peer_id, vote_msg).await,
                         SyncInfo(sync_info) => self.process_sync_info(sync_info, peer_id).await,
                         EpochChange(proof) => self.process_epoch_change(peer_id, proof).await,
+                        RequestEpoch(request) => self.process_epoch_request(peer_id, request).await,
                         _ => {
                             warn!("Unexpected msg from {}: {:?}", peer_id, msg);
                             continue;
@@ -503,6 +512,23 @@ impl<T: Payload> NetworkTask<T> {
                 Ok(self.epoch_change_tx.push(peer_id, target_ledger_info)?)
             }
             Ordering::Greater => Ok(self.future_epoch_tx.push(peer_id, (msg_epoch, peer_id))?),
+        }
+    }
+
+    async fn process_epoch_request(
+        &mut self,
+        peer_id: AccountAddress,
+        request: RequestEpoch,
+    ) -> failure::Result<()> {
+        let request = EpochRetrievalRequest::try_from(request)?;
+        match request.target_epoch.cmp(&self.epoch) {
+            Ordering::Less | Ordering::Equal => self
+                .epoch_retrieval_tx
+                .push(peer_id, (request.start_epoch, peer_id)),
+            Ordering::Greater => {
+                warn!("Received EpochRetrievalRequest beyond what we have locally");
+                Ok(())
+            }
         }
     }
 }
