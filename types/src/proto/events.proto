@@ -17,6 +17,7 @@ message Event {
     bytes key = 1;
     uint64 sequence_number = 2;
     bytes event_data = 3;
+    bytes type_tag = 4;
 }
 
 // An event along with the proof for the event

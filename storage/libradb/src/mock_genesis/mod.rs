@@ -4,13 +4,13 @@
 //! This module provides helpers to initialize [`LibraDB`] with fake generic state in tests.
 
 use crate::LibraDB;
-use crypto::{
+use failure::Result;
+use lazy_static::lazy_static;
+use libra_crypto::{
     ed25519::*,
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
 };
-use failure::Result;
-use lazy_static::lazy_static;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -44,11 +44,13 @@ fn gen_mock_genesis() -> (
         /* gas_unit_price = */ 0,
         /* expiration_time = */ std::time::Duration::new(0, 0),
     );
-    let signed_txn = raw_txn
-        .sign(&privkey, pubkey)
-        .expect("Signing failed.")
-        .into_inner();
-    let signed_txn_hash = signed_txn.hash();
+    let genesis_txn = Transaction::UserTransaction(
+        raw_txn
+            .sign(&privkey, pubkey)
+            .expect("Signing failed.")
+            .into_inner(),
+    );
+    let txn_hash = genesis_txn.hash();
 
     let some_blob = AccountStateBlob::from(vec![1u8]);
     let account_states = vec![(some_addr, some_blob.clone())]
@@ -56,7 +58,7 @@ fn gen_mock_genesis() -> (
         .collect::<HashMap<_, _>>();
 
     let txn_to_commit = TransactionToCommit::new(
-        Transaction::UserTransaction(signed_txn),
+        genesis_txn,
         account_states.clone(),
         vec![], /* events */
         0,      /* gas_used */
@@ -66,7 +68,7 @@ fn gen_mock_genesis() -> (
     // The genesis state tree has a single leaf node, so the root hash is the hash of that node.
     let state_root_hash = SparseMerkleLeafNode::new(some_addr.hash(), some_blob.hash()).hash();
     let txn_info = TransactionInfo::new(
-        signed_txn_hash,
+        txn_hash,
         state_root_hash,
         *ACCUMULATOR_PLACEHOLDER_HASH,
         0,

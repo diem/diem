@@ -20,6 +20,7 @@ use futures::{
 };
 use futures_01::future::Future;
 use grpc_helpers::provide_grpc_response;
+use libra_logger::prelude::*;
 use libra_mempool::proto::{
     mempool::{AddTransactionWithValidationRequest, HealthCheckRequest},
     mempool_client::MempoolClientTrait,
@@ -28,12 +29,11 @@ use libra_mempool_shared_proto::proto::mempool_status::{
     MempoolAddTransactionStatus,
     MempoolAddTransactionStatusCode::{self, MempoolIsFull},
 };
+use libra_metrics::counters::SVC_COUNTERS;
 use libra_types::{
     proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
     transaction::SignedTransaction,
 };
-use logger::prelude::*;
-use metrics::counters::SVC_COUNTERS;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use storage_client::StorageRead;
@@ -43,7 +43,7 @@ use vm_validator::vm_validator::{get_account_state, TransactionValidation};
 #[path = "unit_tests/admission_control_service_test.rs"]
 mod admission_control_service_test;
 
-#[cfg(any(feature = "fuzzing", test))]
+#[cfg(feature = "fuzzing")]
 #[path = "admission_control_fuzzing.rs"]
 /// fuzzing module for admission control
 pub mod fuzzing;
@@ -110,14 +110,14 @@ where
             return Ok(response);
         }
 
-        let signed_txn_proto = req.signed_txn.clone().unwrap_or_else(Default::default);
+        let txn_proto = req.transaction.clone().unwrap_or_else(Default::default);
 
-        let signed_txn = match SignedTransaction::try_from(signed_txn_proto.clone()) {
+        let transaction = match SignedTransaction::try_from(txn_proto.clone()) {
             Ok(t) => t,
             Err(e) => {
                 security_log(SecurityEvent::InvalidTransactionAC)
                     .error(&e)
-                    .data(&signed_txn_proto)
+                    .data(&txn_proto)
                     .log();
                 let mut response = SubmitTransactionResponse::default();
                 response.status = Some(Status::AcStatus(
@@ -128,15 +128,15 @@ where
             }
         };
 
-        let gas_cost = signed_txn.max_gas_amount();
+        let gas_cost = transaction.max_gas_amount();
         let validation_status = self
             .vm_validator
-            .validate_transaction(signed_txn.clone())
+            .validate_transaction(transaction.clone())
             .wait()
             .map_err(|e| {
                 security_log(SecurityEvent::InvalidTransactionAC)
                     .error(&e)
-                    .data(&signed_txn)
+                    .data(&transaction)
                     .log();
                 e
             })?;
@@ -145,15 +145,15 @@ where
             OP_COUNTERS.inc_by("submit_txn.vm_validation.failure", 1);
             debug!(
                 "txn failed in vm validation, status: {:?}, txn: {:?}",
-                validation_status, signed_txn
+                validation_status, transaction
             );
             response.status = Some(Status::VmStatus(validation_status.into()));
             return Ok(response);
         }
-        let sender = signed_txn.sender();
+        let sender = transaction.sender();
         let account_state = block_on(get_account_state(self.storage_read_client.clone(), sender));
         let mut add_transaction_request = AddTransactionWithValidationRequest::default();
-        add_transaction_request.signed_txn = req.signed_txn.clone();
+        add_transaction_request.transaction = req.transaction.clone();
         add_transaction_request.max_gas_cost = gas_cost;
 
         if let Ok((sequence_number, balance)) = account_state {
@@ -196,7 +196,7 @@ where
                     } else {
                         debug!(
                             "txn failed in mempool, status: {:?}, txn: {:?}",
-                            status, add_transaction_request.signed_txn
+                            status, add_transaction_request.transaction
                         );
                         OP_COUNTERS.inc_by("submit_txn.mempool.failure", 1);
                         response.status = Some(Status::MempoolStatus(status));
@@ -255,13 +255,12 @@ where
                 match sent_result {
                     Ok(()) => {
                         let result = block_on(res_receiver);
-                        match result {
-                            Ok(res) => res,
-                            Err(e) => Err(format_err!(
+                        result.unwrap_or_else(|e| {
+                            Err(format_err!(
                                 "[admission-control] Upstream transaction failed with error: {:?}",
                                 e
-                            )),
-                        }
+                            ))
+                        })
                     }
                     Err(e) => Err(format_err!(
                         "[admission-control] Failed to submit write request with error: {:?}",

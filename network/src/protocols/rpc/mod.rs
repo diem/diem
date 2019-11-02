@@ -73,8 +73,8 @@ use futures::{
     stream::StreamExt,
     task::Context,
 };
+use libra_logger::prelude::*;
 use libra_types::PeerId;
-use logger::prelude::*;
 use netcore::compat::IoCompat;
 use std::{fmt::Debug, io, time::Duration};
 use tokio::{
@@ -304,11 +304,7 @@ async fn handle_outbound_rpc<TSubstream>(
             let mut f_rpc_res = handle_outbound_rpc_inner(peer_mgr_tx, peer_id, protocol, req_data)
                 .timeout(timeout)
                 .map_err(Into::<RpcError>::into)
-                .map(|r| match r {
-                    Ok(Ok(x)) => Ok(x),
-                    Ok(Err(e)) => Err(e),
-                    Err(e) => Err(e),
-                })
+                .map(|r| r.and_then(|x| x))
                 .boxed()
                 .fuse();
 
@@ -321,7 +317,9 @@ async fn handle_outbound_rpc<TSubstream>(
                 res = f_rpc_res => {
                     // Log any errors.
                     if let Err(err) = &res {
-                        counters::RPC_REQUESTS_FAILED.inc();
+                        counters::LIBRA_NETWORK_RPC_MESSAGES
+                            .with_label_values(&["request", "failed"])
+                            .inc();
                         warn!(
                             "Error making outbound rpc request to {}: {:?}",
                             peer_id.short_str(), err
@@ -330,13 +328,17 @@ async fn handle_outbound_rpc<TSubstream>(
 
                     // Propagate the results to the rpc client layer.
                     if res_tx.send(res).is_err() {
-                        counters::RPC_REQUESTS_CANCELLED.inc();
+                        counters::LIBRA_NETWORK_RPC_MESSAGES
+                            .with_label_values(&["request", "cancelled"])
+                            .inc();
                         debug!("Rpc client canceled outbound rpc call to {}", peer_id.short_str());
                     }
                 },
                 // The rpc client canceled the request
                 cancel = f_rpc_cancel => {
-                    counters::RPC_REQUESTS_CANCELLED.inc();
+                    counters::LIBRA_NETWORK_RPC_MESSAGES
+                        .with_label_values(&["request", "cancelled"])
+                        .inc();
                     debug!("Rpc client canceled outbound rpc call to {}", peer_id.short_str());
                 },
             }
@@ -353,7 +355,7 @@ async fn handle_outbound_rpc_inner<TSubstream>(
 where
     TSubstream: AsyncRead + AsyncWrite + Send + Unpin,
 {
-    let _timer = counters::RPC_LATENCY.start_timer();
+    let _timer = counters::LIBRA_NETWORK_RPC_LATENCY.start_timer();
     // Request a new substream with the peer.
     let substream = peer_mgr_tx.open_substream(peer_id, protocol).await?;
     // Rpc messages are length-prefixed.
@@ -364,8 +366,12 @@ where
     // We won't send anything else on this substream, so we can half-close our
     // output side.
     substream.close().await?;
-    counters::RPC_REQUESTS_SENT.inc();
-    counters::RPC_REQUEST_BYTES_SENT.inc_by(req_len as i64);
+    counters::LIBRA_NETWORK_RPC_MESSAGES
+        .with_label_values(&["request", "sent"])
+        .inc();
+    counters::LIBRA_NETWORK_RPC_BYTES
+        .with_label_values(&["request", "sent"])
+        .inc_by(req_len as i64);
 
     // Wait for listener's response.
     let res_data = match substream.next().await {
@@ -402,16 +408,14 @@ async fn handle_inbound_substream<TSubstream>(
             )
             .timeout(timeout)
             .map_err(Into::<RpcError>::into)
-            .map(|r| match r {
-                Ok(Ok(x)) => Ok(x),
-                Ok(Err(e)) => Err(e),
-                Err(e) => Err(e),
-            })
+            .map(|r| r.and_then(|x| x))
             .await;
 
             // Log any errors.
             if let Err(err) = res {
-                counters::RPC_RESPONSES_FAILED.inc();
+                counters::LIBRA_NETWORK_RPC_MESSAGES
+                    .with_label_values(&["response", "failed"])
+                    .inc();
                 warn!(
                     "Error handling inbound rpc request from {}: {:?}",
                     peer_id.short_str(),
@@ -443,7 +447,9 @@ where
         Some(req_data) => req_data?.freeze(),
         None => return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into()),
     };
-    counters::RPC_REQUESTS_RECEIVED.inc();
+    counters::LIBRA_NETWORK_RPC_MESSAGES
+        .with_label_values(&["request", "received"])
+        .inc();
 
     // Wait for dialer to half-close their side.
     if substream.next().await.is_some() {
@@ -477,8 +483,12 @@ where
     // our output. The initiator will have also half-closed their side before
     // this, so this should gracefully shutdown the socket.
     substream.close().await?;
-    counters::RPC_RESPONSES_SENT.inc();
-    counters::RPC_RESPONSE_BYTES_SENT.inc_by(res_len as i64);
+    counters::LIBRA_NETWORK_RPC_MESSAGES
+        .with_label_values(&["response", "sent"])
+        .inc();
+    counters::LIBRA_NETWORK_RPC_BYTES
+        .with_label_values(&["response", "sent"])
+        .inc_by(res_len as i64);
 
     Ok(())
 }

@@ -31,6 +31,7 @@ def create_client():
             "/opt/libra/etc/consensus_peers.config.toml")
 
         application.client = pexpect.spawn(cmd)
+        application.client.delaybeforesend = 0.1
         application.client.expect("Please, input commands")
 
 

@@ -73,8 +73,8 @@ use crate::{
     node_type::{Node, NodeKey},
     StaleNodeIndex, TreeReader, TreeUpdateBatch,
 };
-use crypto::HashValue;
 use failure::prelude::*;
+use libra_crypto::HashValue;
 use libra_types::transaction::Version;
 use std::{
     collections::{hash_map::Entry, BTreeMap, BTreeSet, HashMap, HashSet},

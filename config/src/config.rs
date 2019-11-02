@@ -11,8 +11,9 @@ use crate::{
     },
     utils::{deserialize_whitelist, get_available_port, get_local_ip, serialize_whitelist},
 };
-use crypto::ValidKey;
 use failure::prelude::*;
+use libra_crypto::ValidKey;
+use libra_tools::tempdir::TempPath;
 use libra_types::{
     transaction::{SignedTransaction, Transaction, SCRIPT_HASH_LENGTH},
     PeerId,
@@ -23,6 +24,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     collections::HashSet,
     convert::TryFrom,
+    fmt,
     fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
@@ -31,7 +33,6 @@ use std::{
     time::Duration,
 };
 use toml;
-use tools::tempdir::TempPath;
 
 #[cfg(test)]
 #[path = "unit_tests/config_test.rs"]
@@ -45,7 +46,7 @@ static CONFIG_TEMPLATE: &[u8] = include_bytes!("../data/configs/node.config.toml
 /// The config file is broken up into sections for each module
 /// so that only that module can be passed around
 #[derive(Debug, Deserialize, Serialize)]
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 pub struct NodeConfig {
     //TODO Add configuration for multiple chain's in a future diff
     #[serde(default)]
@@ -124,6 +125,15 @@ where
     }
 }
 
+impl fmt::Display for RoleType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            RoleType::Validator => write!(f, "validator"),
+            RoleType::FullNode => write!(f, "full_node"),
+        }
+    }
+}
+
 impl BaseConfig {
     /// Constructs a new BaseConfig with an empty temp directory
     pub fn new(
@@ -142,7 +152,7 @@ impl BaseConfig {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 impl Clone for BaseConfig {
     fn clone(&self) -> Self {
         Self {
@@ -234,6 +244,7 @@ pub struct AdmissionControlConfig {
     pub address: String,
     pub admission_control_service_port: u16,
     pub need_to_check_mempool_before_validation: bool,
+    pub max_concurrent_inbound_syncs: usize,
     pub upstream_proxy_timeout: Duration,
 }
 
@@ -243,6 +254,7 @@ impl Default for AdmissionControlConfig {
             address: "0.0.0.0".to_string(),
             admission_control_service_port: 8000,
             need_to_check_mempool_before_validation: false,
+            max_concurrent_inbound_syncs: 100,
             upstream_proxy_timeout: Duration::from_secs(1),
         }
     }
@@ -256,6 +268,7 @@ pub struct DebugInterfaceConfig {
     pub storage_node_debug_port: u16,
     // This has similar use to the core-node-debug-server itself
     pub metrics_server_port: u16,
+    pub public_metrics_server_port: u16,
     pub address: String,
 }
 
@@ -266,6 +279,7 @@ impl Default for DebugInterfaceConfig {
             storage_node_debug_port: 6194,
             secret_service_node_debug_port: 6195,
             metrics_server_port: 9101,
+            public_metrics_server_port: 9102,
             address: "localhost".to_string(),
         }
     }
@@ -291,7 +305,7 @@ impl Default for StorageConfig {
     }
 }
 
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct NetworkConfig {
@@ -386,7 +400,7 @@ impl NetworkConfig {
     }
 }
 
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct ConsensusConfig {
@@ -620,12 +634,14 @@ impl NodeConfig {
         }
     }
 
-    pub fn get_metrics_dir(&self) -> PathBuf {
-        let path = self.metrics.dir.clone();
-        if path.is_relative() {
-            self.base.data_dir_path.join(path)
+    pub fn get_metrics_dir(&self) -> Option<PathBuf> {
+        let path = self.metrics.dir.as_path();
+        if path.as_os_str().is_empty() {
+            None
+        } else if path.is_relative() {
+            Some(self.base.data_dir_path.join(path))
         } else {
-            path
+            Some(path.to_owned())
         }
     }
 
@@ -724,6 +740,7 @@ impl NodeConfigHelpers {
         config.admission_control.admission_control_service_port = get_available_port();
         config.debug_interface.admission_control_node_debug_port = get_available_port();
         config.debug_interface.metrics_server_port = get_available_port();
+        config.debug_interface.public_metrics_server_port = get_available_port();
         config.debug_interface.secret_service_node_debug_port = get_available_port();
         config.debug_interface.storage_node_debug_port = get_available_port();
         config.execution.port = get_available_port();
@@ -837,7 +854,7 @@ impl VMConfig {
     /// Creates a new `VMConfig` where the whitelist is empty. This should only be used for testing.
     #[allow(non_snake_case)]
     #[doc(hidden)]
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "fuzzing"))]
     pub fn empty_whitelist_FOR_TESTING() -> Self {
         VMConfig {
             publishing_options: VMPublishingOption::Locked(HashSet::new()),

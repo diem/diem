@@ -7,8 +7,8 @@
 //! # Example
 //!
 //! ```
-//! use crypto::hash::{CryptoHasher, TestOnlyHasher};
-//! use crypto::{
+//! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
+//! use libra_crypto::{
 //!     bls12381::*,
 //!     traits::{Signature, SigningKey, Uniform},
 //! };
@@ -31,10 +31,9 @@
 //! performance in consensus.
 
 use crate::{traits::*, HashValue};
-use bincode::{deserialize, serialize};
 use core::convert::TryFrom;
-use crypto_derive::{Deref, SilentDebug, SilentDisplay};
 use failure::prelude::*;
+use libra_crypto_derive::{Deref, SilentDebug, SilentDisplay};
 use pairing::{
     bls12_381::{Fr, FrRepr},
     PrimeField,
@@ -136,7 +135,7 @@ impl Uniform for BLS12381PrivateKey {
 
 impl std::cmp::PartialEq<Self> for BLS12381PrivateKey {
     fn eq(&self, other: &Self) -> bool {
-        serialize(self).unwrap() == serialize(other).unwrap()
+        lcs::to_bytes(self).unwrap() == lcs::to_bytes(other).unwrap()
     }
 }
 
@@ -150,7 +149,7 @@ impl TryFrom<&[u8]> for BLS12381PrivateKey {
             return Err(CryptoMaterialError::WrongLengthError);
         }
         // First we deserialize raw bytes, which may or may not work.
-        let key_res = deserialize::<BLS12381PrivateKey>(bytes);
+        let key_res = lcs::from_bytes(bytes);
         // Note that the underlying implementation of SerdeSecret checks for validation during
         // deserialization. Also, we don't need to check for validity of the derived PublicKey, as a
         // correct SerdeSecret (checked during deserialization that is in field) will always produce
@@ -161,7 +160,7 @@ impl TryFrom<&[u8]> for BLS12381PrivateKey {
 impl ValidKey for BLS12381PrivateKey {
     fn to_bytes(&self) -> Vec<u8> {
         // This is expected to succeed as we just return the bytes of an existing key.
-        bincode::serialize(&self.0).unwrap()
+        lcs::to_bytes(&self.0).unwrap()
     }
 }
 

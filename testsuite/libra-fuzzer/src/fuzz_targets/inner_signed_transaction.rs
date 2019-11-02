@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::FuzzTargetImpl;
-use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
-use failure::prelude::Result;
+use libra_proptest_helpers::ValueGenerator;
 use libra_types::transaction::SignedTransaction;
 use proptest::prelude::*;
-use proptest_helpers::ValueGenerator;
 
 #[derive(Clone, Debug, Default)]
 pub struct SignedTransactionTarget;
@@ -22,10 +20,10 @@ impl FuzzTargetImpl for SignedTransactionTarget {
 
     fn generate(&self, _idx: usize, gen: &mut ValueGenerator) -> Option<Vec<u8>> {
         let value = gen.generate(any_with::<SignedTransaction>(()));
-        Some(SimpleSerializer::serialize(&value).expect("serialization should work"))
+        Some(lcs::to_bytes(&value).expect("serialization should work"))
     }
 
     fn fuzz(&self, data: &[u8]) {
-        let _: Result<SignedTransaction> = SimpleDeserializer::deserialize(&data);
+        let _: Result<SignedTransaction, _> = lcs::from_bytes(&data);
     }
 }

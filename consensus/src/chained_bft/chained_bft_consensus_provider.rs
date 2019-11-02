@@ -13,17 +13,17 @@ use crate::{
     state_replication::StateMachineReplication,
     txn_manager::MempoolProxy,
 };
-use config::config::NodeConfig;
 use consensus_types::common::Author;
 use executor::Executor;
 use failure::prelude::*;
+use libra_config::config::NodeConfig;
+use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
 use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::{ValidatorSigner, ValidatorVerifier},
     transaction::SignedTransaction,
 };
-use logger::prelude::*;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
 use std::{convert::TryFrom, sync::Arc};
@@ -66,10 +66,10 @@ impl ChainedBftProvider {
         let config = ChainedBftSMRConfig::from_node_config(&node_config.consensus);
         let (storage, initial_data) = StorageWriteProxy::start(node_config);
         info!(
-            "Starting up the consensus state machine with recovery data - [consensus state {:?}], [last_vote {}], [highest timeout certificates: {}]",
+            "Starting up the consensus state machine with recovery data - [consensus state {:?}], [last_vote {}], [highest timeout certificate: {}]",
             initial_data.state(),
-            initial_data.last_vote().map_or("None".to_string(), |v| format!("{}", v)),
-            initial_data.highest_timeout_certificates()
+            initial_data.last_vote().map_or("None".to_string(), |v| v.to_string()),
+            initial_data.highest_timeout_certificate().map_or("None".to_string(), |v| v.to_string()),
         );
         let txn_manager = Arc::new(MempoolProxy::new(mempool_client.clone()));
         let state_computer = Arc::new(ExecutionProxy::new(executor, synchronizer_client.clone()));
@@ -109,8 +109,8 @@ impl ChainedBftProvider {
             .consensus
             .consensus_peers
             .get_validator_verifier();
-        counters::EPOCH_NUM.set(0); // No reconfiguration yet, so it is always zero
-        counters::CURRENT_EPOCH_NUM_VALIDATORS.set(validator.len() as i64);
+        counters::EPOCH.set(0); // No reconfiguration yet, so it is always zero
+        counters::CURRENT_EPOCH_VALIDATORS.set(validator.len() as i64);
         counters::CURRENT_EPOCH_QUORUM_SIZE.set(validator.quorum_voting_power() as i64);
         debug!(
             "[Consensus]: quorum_size = {:?}",

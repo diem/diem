@@ -15,7 +15,6 @@
 use super::LEDGER_COUNTERS_CF_NAME;
 use crate::{ledger_counters::LedgerCounters, schema::ensure_slice_len_eq};
 use byteorder::{BigEndian, ReadBytesExt};
-use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
 use failure::prelude::*;
 use libra_types::transaction::Version;
 use schemadb::{
@@ -44,11 +43,11 @@ impl KeyCodec<LedgerCountersSchema> for Version {
 
 impl ValueCodec<LedgerCountersSchema> for LedgerCounters {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        SimpleSerializer::serialize(self)
+        lcs::to_bytes(self).map_err(Into::into)
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
-        SimpleDeserializer::deserialize::<Self>(data)
+        lcs::from_bytes(data).map_err(Into::into)
     }
 }
 

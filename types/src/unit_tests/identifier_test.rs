@@ -1,13 +1,74 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::identifier::{IdentStr, Identifier};
-use canonical_serialization::test_helper::assert_canonical_encode_decode;
+use crate::identifier::{IdentStr, Identifier, ALLOWED_IDENTIFIERS};
+use crate::test_helpers::assert_canonical_encode_decode;
+use lazy_static::lazy_static;
 use proptest::prelude::*;
+use regex::Regex;
 use serde_json;
 use std::borrow::Borrow;
 
+#[test]
+fn valid_identifiers() {
+    let valid_identifiers = [
+        "foo",
+        "FOO",
+        "Foo",
+        "foo0",
+        "FOO_0",
+        "_Foo1",
+        "FOO2_",
+        "foo_bar_baz",
+        "_0",
+        "__",
+        "____________________",
+        // TODO: <SELF> is an exception. It should be removed once CompiledScript goes away.
+        "<SELF>",
+    ];
+    for identifier in &valid_identifiers {
+        assert!(
+            Identifier::is_valid(identifier),
+            "Identifier '{}' should be valid",
+            identifier
+        );
+    }
+}
+
+#[test]
+fn invalid_identifiers() {
+    let invalid_identifiers = [
+        "",
+        "_",
+        "0",
+        "01",
+        "9876",
+        "0foo",
+        ":foo",
+        "fo\\o",
+        "fo/o",
+        "foo.",
+        "foo-bar",
+        "foo\u{1f389}",
+    ];
+    for identifier in &invalid_identifiers {
+        assert!(
+            !Identifier::is_valid(identifier),
+            "Identifier '{}' should be invalid",
+            identifier
+        );
+    }
+}
+
 proptest! {
+    #[test]
+    fn invalid_identifiers_proptest(identifier in invalid_identifier_strategy()) {
+        // This effectively checks that if a string doesn't match the ALLOWED_IDENTIFIERS regex, it
+        // will be rejected by the is_valid validator. Note that the converse is checked by the
+        // Arbitrary impl for Identifier.
+        prop_assert!(!Identifier::is_valid(&identifier));
+    }
+
     #[test]
     fn identifier_string_roundtrip(identifier in any::<Identifier>()) {
         let s = identifier.clone().into_string();
@@ -34,14 +95,28 @@ proptest! {
 
     #[test]
     fn identifier_canonical_serialization(identifier in any::<Identifier>()) {
-        assert_canonical_encode_decode(&identifier);
+        assert_canonical_encode_decode(identifier);
     }
 }
 
-/// Ensure that UserString instances serialize into strings directly, with no wrapper.
+fn invalid_identifier_strategy() -> impl Strategy<Value = String> {
+    lazy_static! {
+        static ref ALLOWED_IDENTIFIERS_REGEX: Regex = {
+            // Need to add anchors to ensure the entire string is matched.
+            Regex::new(&format!("^(?:{})$", ALLOWED_IDENTIFIERS)).unwrap()
+        };
+    }
+
+    ".*".prop_filter("Valid identifiers should not be generated", |s| {
+        // Most strings won't match the regex above, so local rejects are OK.
+        !ALLOWED_IDENTIFIERS_REGEX.is_match(s)
+    })
+}
+
+/// Ensure that Identifier instances serialize into strings directly, with no wrapper.
 #[test]
 fn serde_serialize_no_wrapper() {
     let foobar = Identifier::new("foobar").expect("should parse correctly");
-    let s = serde_json::to_string(&foobar).expect("UserString should serialize correctly");
+    let s = serde_json::to_string(&foobar).expect("Identifier should serialize correctly");
     assert_eq!(s, "\"foobar\"");
 }

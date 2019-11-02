@@ -1,8 +1,8 @@
 use crate::StorageService;
-use config::config::NodeConfig;
 use failure::prelude::*;
 use futures::{executor::block_on, prelude::*};
 use grpc_helpers::{spawn_service_thread_with_drop_closure, ServerHandle};
+use libra_config::config::NodeConfig;
 use libra_types::proof::AccumulatorConsistencyProof;
 use libra_types::{
     account_address::AccountAddress,

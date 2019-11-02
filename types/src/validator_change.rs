@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{contract_event::EventWithProof, ledger_info::LedgerInfoWithSignatures};
-use crypto::*;
 use failure::*;
+use libra_crypto::*;
 use std::convert::{TryFrom, TryInto};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -44,12 +44,12 @@ impl<Sig: Signature> From<ValidatorChangeEventWithProof<Sig>>
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
-use crypto::ed25519::*;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
+use libra_crypto::ed25519::*;
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 prop_compose! {
     fn arb_validator_change_event_with_proof()(
         ledger_info_with_sigs in any::<LedgerInfoWithSignatures<Ed25519Signature>>(),
@@ -61,7 +61,7 @@ prop_compose! {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for ValidatorChangeEventWithProof<Ed25519Signature> {
     type Parameters = ();
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {

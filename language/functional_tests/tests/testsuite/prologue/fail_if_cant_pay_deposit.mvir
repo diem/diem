@@ -1,0 +1,8 @@
+//! account: default, 5000
+
+//! max-gas: 5001
+main() {
+    return;
+}
+
+// check: INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE

@@ -3,20 +3,64 @@
 
 //! An identifier is the name of an entity (module, resource, function, etc) in Move.
 //!
+//! A valid identifier consists of an ASCII string which satisfies any of the conditions:
+//!
+//! * The first character is a letter and the remaining characters are letters, digits or
+//!   underscores.
+//! * The first character is an underscore, and there is at least one further letter, digit or
+//!   underscore.
+//!
+//! The spec for allowed identifiers is similar to Rust's spec
+//! ([as of version 1.38](https://doc.rust-lang.org/1.38.0/reference/identifiers.html)).
+//!
+//! Allowed identifiers are currently restricted to ASCII due to unresolved issues with Unicode
+//! normalization. See [Rust issue #55467](https://github.com/rust-lang/rust/issues/55467) and the
+//! associated RFC for some discussion. Unicode identifiers may eventually be supported once these
+//! issues are worked out.
+//!
+//! This module only determines allowed identifiers at the bytecode level. Move source code will
+//! likely be more restrictive than even this, with a "raw identifier" escape hatch similar to
+//! Rust's `r#` identifiers.
+//!
 //! Among other things, identifiers are used to:
 //! * specify keys for lookups in storage
 //! * do cross-module lookups while executing transactions
 
-// TODO: restrict identifiers to a subset of ASCII
-
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
 use failure::prelude::*;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Borrow, fmt, ops::Deref};
+
+/// Describes what identifiers are allowed.
+///
+/// For now this is deliberately restrictive -- we would like to evolve this in the future.
+// TODO: "<SELF>" is coded as an exception. It should be removed once CompiledScript goes away.
+fn is_valid(s: &str) -> bool {
+    fn is_underscore_alpha_or_digit(c: char) -> bool {
+        match c {
+            '_' | 'a'..='z' | 'A'..='Z' | '0'..='9' => true,
+            _ => false,
+        }
+    }
+
+    if s == "<SELF>" {
+        return true;
+    }
+    let len = s.len();
+    let mut chars = s.chars();
+    match chars.next() {
+        Some('a'..='z') | Some('A'..='Z') => chars.all(is_underscore_alpha_or_digit),
+        Some('_') if len > 1 => chars.all(is_underscore_alpha_or_digit),
+        _ => false,
+    }
+}
+
+/// A regex describing what identifiers are allowed. Used for proptests.
+// TODO: "<SELF>" is coded as an exception. It should be removed once CompiledScript goes away.
+#[cfg(any(test, feature = "fuzzing"))]
+pub(crate) static ALLOWED_IDENTIFIERS: &str =
+    r"(?:[a-zA-Z][a-zA-Z0-9_]*)|(?:_[a-zA-Z0-9_]+)|(?:<SELF>)";
 
 /// An owned identifier.
 ///
@@ -28,8 +72,17 @@ pub struct Identifier(Box<str>);
 impl Identifier {
     /// Creates a new `Identifier` instance.
     pub fn new(s: impl Into<Box<str>>) -> Result<Self> {
-        // TODO: restrict identifiers to a subset of ASCII
-        Ok(Self(s.into()))
+        let s = s.into();
+        if Self::is_valid(&s) {
+            Ok(Self(s))
+        } else {
+            bail!("Invalid identifier '{}'", s);
+        }
+    }
+
+    /// Returns true if this string is a valid identifier.
+    pub fn is_valid(s: impl AsRef<str>) -> bool {
+        is_valid(s.as_ref())
     }
 
     /// Converts a vector of bytes to an `Identifier`.
@@ -94,8 +147,16 @@ pub struct IdentStr(str);
 
 impl IdentStr {
     pub fn new(s: &str) -> Result<&IdentStr> {
-        // TODO: restrict identifiers to a subset of ASCII.
-        Ok(str_to_ident_str(s))
+        if Self::is_valid(s) {
+            Ok(str_to_ident_str(s))
+        } else {
+            bail!("Invalid identifier '{}'", s);
+        }
+    }
+
+    /// Returns true if this string is a valid identifier.
+    pub fn is_valid(s: impl AsRef<str>) -> bool {
+        is_valid(s.as_ref())
     }
 
     /// Returns the length of `self` in bytes.
@@ -150,37 +211,17 @@ fn str_to_ident_str(s: &str) -> &IdentStr {
     unsafe { &*(s as *const str as *const IdentStr) }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for Identifier {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with((): ()) -> Self::Strategy {
-        // TODO: restrict identifiers to a subset of ASCII
-        ".*".prop_map(|s| Identifier::new(s).unwrap()).boxed()
-    }
-}
-
-/// LCS does not define any sort of extra annotation for identifiers -- they're serialized exactly
-/// the same way regular strings are, and are represented only within the type system for now.
-impl CanonicalSerialize for Identifier {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_string(&self.0)?;
-        Ok(())
-    }
-}
-
-/// LCS does not define any sort of extra annotation for user strings -- they're serialized exactly
-/// the same way regular strings are, and are represented only within the type system for now.
-impl CanonicalSerialize for IdentStr {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_string(&self.0)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for Identifier {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        Identifier::new(deserializer.decode_string()?)
+        ALLOWED_IDENTIFIERS
+            .prop_map(|s| {
+                // Identifier::new will verify that generated identifiers are correct.
+                Identifier::new(s).unwrap()
+            })
+            .boxed()
     }
 }

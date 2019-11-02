@@ -2,41 +2,30 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{
-        liveness::pacemaker_timeout_manager::{
-            HighestTimeoutCertificates, PacemakerTimeoutManager,
-        },
-        persistent_storage::PersistentLivenessStorage,
-    },
     counters,
     util::time_service::{SendTask, TimeService},
 };
 use channel;
-use consensus_types::{
-    common::Round,
-    timeout_msg::{PacemakerTimeout, PacemakerTimeoutCertificate},
-};
-use libra_types::crypto_proxies::ValidatorVerifier;
-use logger::prelude::*;
+use consensus_types::common::Round;
+use libra_logger::prelude::*;
 use std::{
     fmt,
     sync::Arc,
     time::{Duration, Instant},
 };
-use termion::color::*;
 
 /// A reason for starting a new round: introduced for monitoring / debug purposes.
 #[derive(Eq, Debug, PartialEq)]
 pub enum NewRoundReason {
     QCReady,
-    Timeout { cert: PacemakerTimeoutCertificate },
+    Timeout,
 }
 
 impl fmt::Display for NewRoundReason {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             NewRoundReason::QCReady => write!(f, "QCReady"),
-            NewRoundReason::Timeout { cert } => write!(f, "{}", cert),
+            NewRoundReason::Timeout => write!(f, "TCReady"),
         }
     }
 }
@@ -94,6 +83,7 @@ pub struct ExponentialTimeInterval {
     max_exponent: usize,
 }
 
+#[allow(dead_code)]
 impl ExponentialTimeInterval {
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn fixed(duration: Duration) -> Self {
@@ -126,53 +116,45 @@ impl PacemakerTimeInterval for ExponentialTimeInterval {
     }
 }
 
-/// `Pacemaker` is a Pacemaker implementation that relies on increasing local timeouts
-/// in order to eventually come up with the timeout that is large enough to guarantee overlap of the
-/// "current round" of multiple participants.
+/// `Pacemaker` is a Pacemaker implementation that is responsible for generating the new round
+/// and local timeout events.
 ///
-/// The protocol is as follows:
-/// * `Pacemaker` manages the `highest_certified_round` that is keeping the round of the
-/// highest certified block known to the validator.
-/// * Once a new QC arrives with a round larger than that of `highest_certified_round`,
-/// local pacemaker is going to increment a round with a default timeout.
-/// * Upon every timeout `Pacemaker` increments a round and doubles the timeout.
+/// A round `r` starts in the following cases:
+/// * there is a QuorumCert for round `r-1`,
+/// * there is a TimeoutCertificate for round `r-1`.
 ///
-/// `Pacemaker` does not require clock synchronization to maintain the property of
-/// liveness - although clock synchronization can improve the time necessary to get a large enough
-/// timeout overlap.
-/// It does rely on an assumption that when an honest replica receives a quorum certificate
-/// indicating to move to the next round, all other honest replicas will move to the next round
-/// within a bounded time. This can be guaranteed via all honest replicas gossiping their highest
-/// QC to f+1 other replicas for instance.
+/// Round interval calculation is the responsibility of the PacemakerTimeoutInterval trait. It
+/// depends on the delta between the current round and the highest committed round (the intuition is
+/// that we want to exponentially grow the interval the further the current round is from the last
+/// committed round).
+///
+/// Whenever a new round starts a local timeout is set following the round interval. This local
+/// timeout is going to send the timeout events once in interval until the new round starts.
 pub struct Pacemaker {
-    // Determines the time interval for a round interval
+    // Determines the time interval for a round given the number of non-committed rounds since
+    // last commit.
     time_interval: Box<dyn PacemakerTimeInterval>,
-    // Highest round that a block was committed
+    // Highest known committed round as reported by the caller. The caller might choose not to
+    // inform the Pacemaker about certain committed rounds (e.g., NIL blocks): in this case the
+    // committed round in Pacemaker might lag behind the committed round of a block tree.
     highest_committed_round: Round,
-    // Highest round known certified by QC.
-    highest_qc_round: Round,
-    // Current round (current_round - highest_qc_round determines the timeout).
-    // Current round is basically max(highest_qc_round, highest_received_tc, highest_local_tc) + 1
-    // update_current_round take care of updating current_round and sending new round event if
-    // it changes
+    // Current round is max{highest_qc, highest_tc} + 1.
     current_round: Round,
-    // Approximate deadline when current round ends
+    // The deadline for the next local timeout event. It is reset every time a new round start, or
+    // a previous deadline expires.
     current_round_deadline: Instant,
     // Service for timer
     time_service: Arc<dyn TimeService>,
-    // To send timeout events to other pacemakers
+    // To send local timeout events to the subscriber (e.g., SMR)
     timeout_sender: channel::Sender<Round>,
-    // Manages the PacemakerTimeout and PacemakerTimeoutCertificate structs
-    pacemaker_timeout_manager: PacemakerTimeoutManager,
 }
 
+#[allow(dead_code)]
 impl Pacemaker {
     pub fn new(
-        persistent_liveness_storage: Box<dyn PersistentLivenessStorage>,
         time_interval: Box<dyn PacemakerTimeInterval>,
         time_service: Arc<dyn TimeService>,
         timeout_sender: channel::Sender<Round>,
-        highest_timeout_certificate: HighestTimeoutCertificates,
     ) -> Self {
         // Our counters are initialized via lazy_static, so they're not going to appear in
         // Prometheus if some conditions never happen. Invoking get() function enforces creation.
@@ -183,24 +165,76 @@ impl Pacemaker {
         Self {
             time_interval,
             highest_committed_round: 0,
-            highest_qc_round: 0,
             current_round: 0,
             current_round_deadline: Instant::now(),
             time_service,
             timeout_sender,
-            pacemaker_timeout_manager: PacemakerTimeoutManager::new(
-                highest_timeout_certificate,
-                persistent_liveness_storage,
-            ),
         }
+    }
+
+    /// Return the current round.
+    pub fn current_round(&self) -> Round {
+        self.current_round
+    }
+
+    /// Returns deadline for current round
+    pub fn current_round_deadline(&self) -> Instant {
+        self.current_round_deadline
+    }
+
+    /// In case the local timeout corresponds to the current round, reset the timeout and
+    /// return true. Otherwise ignore and return false.
+    pub fn process_local_timeout(&mut self, round: Round) -> bool {
+        if round != self.current_round {
+            return false;
+        }
+        warn!("Local timeout for round {}", round);
+        counters::TIMEOUT_COUNT.inc();
+        self.setup_timeout();
+        true
+    }
+
+    /// Notify the Pacemaker about the potentially new QC, TC, and highest committed round.
+    /// Note that some of these values might not be available by the caller.
+    pub fn process_certificates(
+        &mut self,
+        hqc_round: Option<Round>,
+        htc_round: Option<Round>,
+        highest_committed_round: Option<Round>,
+    ) -> Option<NewRoundEvent> {
+        let qc_round = hqc_round.unwrap_or(0);
+        let tc_round = htc_round.unwrap_or(0);
+        if let Some(committed_round) = highest_committed_round {
+            if committed_round > self.highest_committed_round {
+                self.highest_committed_round = committed_round;
+            }
+        }
+        let new_round = std::cmp::max(qc_round, tc_round) + 1;
+        if new_round > self.current_round {
+            // Start a new round.
+            self.current_round = new_round;
+            let timeout = self.setup_timeout();
+            // The new round reason is QCReady in case both QC and TC are equal
+            let new_round_reason = if qc_round >= tc_round {
+                NewRoundReason::QCReady
+            } else {
+                NewRoundReason::Timeout
+            };
+            let new_round_event = NewRoundEvent {
+                round: self.current_round,
+                reason: new_round_reason,
+                timeout,
+            };
+            debug!("Starting new round: {}", new_round_event);
+            return Some(new_round_event);
+        }
+        None
     }
 
     /// Setup the timeout task and return the duration of the current timeout
     fn setup_timeout(&mut self) -> Duration {
         let timeout_sender = self.timeout_sender.clone();
         let timeout = self.setup_deadline();
-        // Note that the timeout should not be driven sequentially with any other events as it can
-        // become the head of the line blocker.
         trace!(
             "Scheduling timeout of {} ms for round {}",
             timeout.as_millis(),
@@ -236,132 +270,5 @@ impl Pacemaker {
         debug!("Set round deadline to {:?} from now", timeout);
         self.current_round_deadline = now + timeout;
         timeout
-    }
-
-    /// Attempts to update highest_qc_certified_round when receiving QC for given round.
-    /// Returns true if highest_qc_certified_round of this pacemaker has changed
-    fn update_highest_qc_round(&mut self, round: Round) {
-        if round > self.highest_qc_round {
-            debug!(
-                "{}QuorumCertified at {}{}",
-                Fg(LightBlack),
-                round,
-                Fg(Reset)
-            );
-            self.highest_qc_round = round;
-        }
-    }
-
-    /// Combines highest_qc_certified_round, highest_local_tc and highest_received_tc into
-    /// effective round of this pacemaker.
-    /// Generates new_round event if effective round changes and ensures it is
-    /// monotonically increasing
-    fn update_current_round(&mut self) -> Option<NewRoundEvent> {
-        let (mut best_round, mut best_reason) = (self.highest_qc_round, NewRoundReason::QCReady);
-        if let Some(highest_timeout_certificate) =
-            self.pacemaker_timeout_manager.highest_timeout_certificate()
-        {
-            if highest_timeout_certificate.round() > best_round {
-                best_round = highest_timeout_certificate.round();
-                best_reason = NewRoundReason::Timeout {
-                    cert: highest_timeout_certificate.clone(),
-                };
-            }
-        }
-
-        let new_round = best_round + 1;
-        if self.current_round == new_round {
-            return None;
-        }
-        assert!(
-            new_round > self.current_round,
-            "Round illegally decreased from {} to {}",
-            self.current_round,
-            new_round
-        );
-        self.current_round = new_round;
-        let timeout = self.setup_timeout();
-        Some(NewRoundEvent {
-            round: self.current_round,
-            reason: best_reason,
-            timeout,
-        })
-    }
-
-    /// Validate timeout certificate and update local state if it's correct
-    fn check_and_update_highest_received_tc(&mut self, tc: Option<&PacemakerTimeoutCertificate>) {
-        if let Some(tc) = tc {
-            self.pacemaker_timeout_manager
-                .update_highest_received_timeout_certificate(tc);
-        }
-    }
-
-    /// Returns deadline for current round
-    pub fn current_round_deadline(&self) -> Instant {
-        self.current_round_deadline
-    }
-
-    /// Synchronous function to return the current round.
-    pub fn current_round(&self) -> Round {
-        self.current_round
-    }
-
-    /// Return a optional reference to the highest timeout certificate (locally generated or
-    /// remotely received)
-    pub fn highest_timeout_certificate(&self) -> Option<PacemakerTimeoutCertificate> {
-        self.pacemaker_timeout_manager
-            .highest_timeout_certificate()
-            .cloned()
-    }
-
-    /// Function to update current round based on received certificates.
-    /// Both round of latest received QC and timeout certificates are taken into account.
-    /// This function guarantees to update pacemaker state when promise that it returns is fulfilled
-    pub fn process_certificates(
-        &mut self,
-        qc_round: Round,
-        highest_committed_round: Option<Round>,
-        timeout_certificate: Option<&PacemakerTimeoutCertificate>,
-    ) -> Option<NewRoundEvent> {
-        self.check_and_update_highest_received_tc(timeout_certificate);
-        self.update_highest_qc_round(qc_round);
-        match highest_committed_round {
-            Some(commit_round) if (commit_round > self.highest_committed_round) => {
-                self.highest_committed_round = commit_round;
-            }
-            _ => (),
-        }
-        self.update_current_round()
-    }
-
-    /// The function is invoked upon receiving a remote timeout message from another validator.
-    pub fn process_remote_timeout(
-        &mut self,
-        pacemaker_timeout: PacemakerTimeout,
-        validator_verifier: &ValidatorVerifier,
-    ) -> Option<NewRoundEvent> {
-        if self
-            .pacemaker_timeout_manager
-            .update_received_timeout(pacemaker_timeout, validator_verifier)
-        {
-            self.update_current_round()
-        } else {
-            None
-        }
-    }
-
-    /// To process the local round timeout triggered by TimeService and return whether it's the
-    /// current round.
-    pub fn process_local_timeout(&mut self, round: Round) -> bool {
-        if round != self.current_round {
-            return false;
-        }
-        warn!(
-            "Round {} has timed out, broadcasting new round message to all replicas",
-            round
-        );
-        counters::TIMEOUT_COUNT.inc();
-        self.setup_timeout();
-        true
     }
 }

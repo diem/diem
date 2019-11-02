@@ -20,24 +20,17 @@ structopt = "0.3.2"
 num_cpus = "1.10.1"
 walkdir = "2.2.9"
 
-admission-control-proto = { path = "../admission_control/admission-control-proto" }
-client = { path = "../client" }
-config = { path = "../config" }
-failure = { package = "failure_ext", path = "../common/failure_ext" }
-generate-keypair = { path = "../config/generate-keypair" }
-libra_wallet = { path = "../client/libra_wallet" }
-libra-swarm = { path = "../libra-swarm" }
-logger = { path = "../common/logger" }
-metrics = { path = "../common/metrics" }
-crypto = { path = "../crypto/crypto" }
+admission-control-proto = { path = "../admission_control/admission-control-proto", version = "0.1.0" }
+client = { path = "../client", version = "0.1.0" }
+libra-config = { path = "../config", version = "0.1.0" }
+failure = { package = "libra-failure-ext", path = "../common/failure-ext", version = "0.1.0" }
+generate-keypair = { path = "../config/generate-keypair", version = "0.1.0" }
+libra-wallet = { path = "../client/libra_wallet", version = "0.1.0" }
+libra-swarm = { path = "../libra-swarm", version = "0.1.0" }
+libra-logger = { path = "../common/logger", version = "0.1.0" }
+libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["cloneable-private-keys"] }
 rusty-fork = "0.2.1"
-tools = { path = "../common/tools" }
-libra-types = { path = "../types" }
-transaction_builder = { path = "../language/transaction_builder" }
-
-[dev-dependencies]
-crypto = { path = "../crypto/crypto", features = ["testing"] }
-
-[features]
-default = []
-testing = ["crypto/testing", "libra-swarm/testing"]
+libra-tools = { path = "../common/tools", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0", features = ["fuzzing"] }
+transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }

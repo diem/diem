@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use admission_control_service::runtime::AdmissionControlRuntime;
-use config::config::{NetworkConfig, NodeConfig, RoleType};
 use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
-use crypto::{ed25519::*, ValidKey};
 use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use executor::Executor;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
+use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
+use libra_crypto::{ed25519::*, ValidKey};
+use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
+use libra_metrics::metric_server;
 use libra_types::account_address::AccountAddress as PeerId;
-use logger::prelude::*;
-use metrics::metric_server;
 use network::{
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
@@ -245,7 +245,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     let metrics_port = node_config.debug_interface.metrics_server_port;
     let metric_host = node_config.debug_interface.address.clone();
-    thread::spawn(move || metric_server::start_server((metric_host.as_str(), metrics_port)));
+    thread::spawn(move || metric_server::start_server(metric_host, metrics_port, false));
+    let public_metrics_port = node_config.debug_interface.public_metrics_server_port;
+    let public_metric_host = node_config.debug_interface.address.clone();
+    thread::spawn(move || {
+        metric_server::start_server(public_metric_host, public_metrics_port, true)
+    });
 
     let state_synchronizer = StateSynchronizer::bootstrap(
         state_sync_network_handles,

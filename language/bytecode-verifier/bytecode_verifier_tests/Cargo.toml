@@ -12,8 +12,9 @@ edition = "2018"
 [dev-dependencies]
 petgraph = "0.4"
 proptest = "0.9.2"
-bytecode-verifier = {path = "../", features = ["testing"]}
-failure = { path = "../../../common/failure_ext", package = "failure_ext" }
-libra-types = { path = "../../../types", features = ["testing"]}
-invalid-mutations = { path = "../invalid-mutations" }
-vm = { path = "../../vm", features = ["testing"]}
+
+bytecode-verifier = { path = "../", version = "0.1.0" }
+failure = { path = "../../../common/failure-ext", package = "libra-failure-ext" }
+libra-types = { path = "../../../types", version = "0.1.0", features = ["fuzzing"] }
+invalid-mutations = { path = "../invalid-mutations", version = "0.1.0" }
+vm = { path = "../../vm", version = "0.1.0", features = ["fuzzing"] }

@@ -19,17 +19,18 @@ rand_chacha = "0.1.1"
 serde = { version = "1.0.96", features = ["derive"] }
 structopt = "0.3.2"
 
-config = { path = "../../config" }
-crypto = { path = "../crypto" }
-crypto_derive = { path = "../crypto_derive" }
-debug-interface = { path = "../../common/debug-interface" }
-executable-helpers = { path = "../../common/executable-helpers" }
-failure = { package = "failure_ext", path = "../../common/failure_ext" }
-grpc_helpers = { path = "../../common/grpc_helpers" }
-logger = { path = "../../common/logger" }
-
-[dev-dependencies]
-config = { path = "../../config", features = ["testing"]}
+libra-config = { path = "../../config", version = "0.1.0" }
+libra-crypto = { path = "../crypto", version = "0.1.0" }
+libra-crypto-derive = { path = "../crypto-derive", version = "0.1.0" }
+debug-interface = { path = "../../common/debug-interface", version = "0.1.0" }
+executable-helpers = { path = "../../common/executable-helpers", version = "0.1.0" }
+failure = { package = "libra-failure-ext", path = "../../common/failure-ext", version = "0.1.0" }
+grpc-helpers = { path = "../../common/grpc-helpers", version = "0.1.0" }
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
 
 [build-dependencies]
 grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }
+
+[features]
+default = []
+fuzzing = ["libra-config/fuzzing"]

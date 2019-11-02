@@ -12,8 +12,8 @@ use crate::{
     node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey},
     NodeBatch, TreeReader, TreeWriter, ROOT_NIBBLE_HEIGHT,
 };
-use crypto::{hash::CryptoHash, HashValue};
 use failure::prelude::*;
+use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 
 #[derive(Clone, Debug, Eq, PartialEq)]

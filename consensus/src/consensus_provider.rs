@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::NodeConfig;
 use failure::prelude::*;
+use libra_config::config::NodeConfig;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 
 use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;
@@ -44,6 +44,7 @@ pub fn make_consensus_provider(
         state_sync_client,
     ))
 }
+
 /// Create a mempool client assuming the mempool is running on localhost
 fn create_mempool_client(config: &NodeConfig) -> Arc<MempoolClient> {
     let port = config.mempool.mempool_service_port;

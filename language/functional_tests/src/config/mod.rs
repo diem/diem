@@ -3,3 +3,11 @@
 
 pub mod global;
 pub mod transaction;
+
+fn strip<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
+    if s.starts_with(prefix) {
+        Some(&s[prefix.len()..])
+    } else {
+        None
+    }
+}

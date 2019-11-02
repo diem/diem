@@ -109,7 +109,7 @@ resource "aws_security_group_rule" "validator-node" {
   security_group_id = aws_security_group.validator.id
   type              = "ingress"
   from_port         = 6180
-  to_port           = 6180
+  to_port           = 6181
   protocol          = "tcp"
   cidr_blocks       = concat(var.validator_node_sources_ipv4, [aws_vpc.testnet.cidr_block])
   ipv6_cidr_blocks  = concat(var.validator_node_sources_ipv6, [aws_vpc.testnet.ipv6_cidr_block])
@@ -119,7 +119,7 @@ resource "aws_security_group_rule" "validator-ac" {
   security_group_id = aws_security_group.validator.id
   type              = "ingress"
   from_port         = 8000
-  to_port           = 8000
+  to_port           = 8001
   protocol          = "tcp"
   cidr_blocks       = concat(var.api_sources_ipv4, [aws_vpc.testnet.cidr_block])
 }

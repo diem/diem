@@ -1,0 +1,51 @@
+module Test3 {
+
+	struct T {
+		f: u64,
+		g: u64,
+	}
+
+	public test3(flag: bool) {
+		let x: Self.T;
+		let x_ref: &mut Self.T;
+		let f_or_g_ref: &mut u64;
+		let f_or_g_ref2: &mut u64;
+		let f_ref: &u64;
+		let g_ref: &u64;
+		let f: u64;
+		let g: u64;
+
+		x = T { f: 0, g:0 };
+		x_ref = &mut x;
+
+		if (copy(flag)) {
+			f_or_g_ref = &mut copy(x_ref).f;
+		} else {
+			f_or_g_ref = &mut copy(x_ref).g;
+		}
+
+		*move(f_or_g_ref) = 10;
+
+		if (!copy(flag)) {
+			f_or_g_ref2 = &mut copy(x_ref).f;
+		} else {
+			f_or_g_ref2 = &mut copy(x_ref).g;
+		}
+
+		*move(f_or_g_ref2) = 20;
+
+		f_ref = &copy(x_ref).f;
+		g_ref = &move(x_ref).g;
+		f = *move(f_ref);
+		g = *move(g_ref);
+
+		if (copy(flag)) {
+			assert(move(f) == 10, 42);
+			assert(move(g) == 20, 42);
+		} else {
+			assert(move(f) == 20, 42);
+			assert(move(g) == 10, 42);
+		}
+		return;
+	}
+}

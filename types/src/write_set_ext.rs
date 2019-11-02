@@ -4,7 +4,6 @@
 use crate::access_path::AccessPath;
 use crate::account_address::AccountAddress;
 use crate::write_set::{WriteOp, WriteSet, WriteSetMut};
-use canonical_serialization::{SimpleDeserializer, SimpleSerializer};
 use failure::{Error, Result};
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
@@ -17,7 +16,7 @@ impl TryFrom<&WriteSet> for BTreeMap<AccountAddress, BTreeMap<Vec<u8>, Vec<u8>>>
 
         for (ap, wp) in ws.iter() {
             let AccessPath { address, path } = ap;
-            let write_op_blob = SimpleSerializer::<Vec<u8>>::serialize(wp)?;
+            let write_op_blob = lcs::to_bytes(wp)?;
             match account_state.entry(*address) {
                 ::std::collections::btree_map::Entry::Vacant(e) => {
                     let mut state = BTreeMap::new();
@@ -42,7 +41,7 @@ impl TryFrom<&BTreeMap<AccountAddress, BTreeMap<Vec<u8>, Vec<u8>>>> for WriteSet
             for (data_path, data) in state.into_iter() {
                 ws.push((
                     AccessPath::new(*account, data_path.clone()),
-                    SimpleDeserializer::deserialize::<WriteOp>(data)?,
+                    lcs::from_bytes::<WriteOp>(data)?,
                 ));
             }
         }

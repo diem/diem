@@ -119,8 +119,12 @@ impl Cluster {
         &self.instances
     }
 
-    pub fn prometheus_ip(&self) -> &Option<String> {
-        &self.prometheus_ip
+    pub fn into_instances(self) -> Vec<Instance> {
+        self.instances
+    }
+
+    pub fn prometheus_ip(&self) -> Option<&String> {
+        self.prometheus_ip.as_ref()
     }
 
     pub fn mint_file(&self) -> &str {
@@ -133,6 +137,32 @@ impl Cluster {
             .find(|instance| instance.short_hash() == name)
     }
 
+    /// Splits this cluster into two
+    ///
+    /// Returns tuple of two clusters:
+    /// First element in tuple contains cluster with c random instances from self
+    /// Second element in tuple contains cluster with remaining instances from self
+    pub fn split_n_random(&self, c: usize) -> (Self, Self) {
+        assert!(c <= self.instances.len());
+        let mut rng = ThreadRng::default();
+        let mut sub = vec![];
+        let mut rem = self.instances.clone();
+        for _ in 0..c {
+            let idx_remove = rng.gen_range(0, rem.len());
+            let instance = rem.remove(idx_remove);
+            sub.push(instance);
+        }
+        (self.new_sub_cluster(sub), self.new_sub_cluster(rem))
+    }
+
+    fn new_sub_cluster(&self, instances: Vec<Instance>) -> Self {
+        Cluster {
+            instances,
+            prometheus_ip: self.prometheus_ip.clone(),
+            mint_file: self.mint_file.clone(),
+        }
+    }
+
     pub fn sub_cluster(&self, ids: Vec<String>) -> Cluster {
         let mut instances = Vec::with_capacity(ids.len());
         for id in ids {
@@ -143,11 +173,7 @@ impl Cluster {
             }
         }
         assert!(!instances.is_empty(), "No instances for subcluster");
-        Cluster {
-            instances,
-            prometheus_ip: self.prometheus_ip.clone(),
-            mint_file: self.mint_file.clone(),
-        }
+        self.new_sub_cluster(instances)
     }
 }
 

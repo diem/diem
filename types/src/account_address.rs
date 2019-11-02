@@ -3,16 +3,13 @@
 
 use bech32::{Bech32, FromBase32, ToBase32};
 use bytes::Bytes;
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
-use crypto::{
+use failure::prelude::*;
+use hex;
+use libra_crypto::{
     hash::{AccountAddressHasher, CryptoHash, CryptoHasher},
     HashValue, VerifyingKey,
 };
-use failure::prelude::*;
-use hex;
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
@@ -26,8 +23,8 @@ const LIBRA_NETWORK_ID_SHORT: &str = "lb";
 
 /// A struct that represents an account address.
 /// Currently Public Key is used.
-#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Serialize, Deserialize, Copy)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Copy, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountAddress([u8; ADDRESS_LENGTH]);
 
 impl AccountAddress {
@@ -214,19 +211,5 @@ impl TryFrom<AccountAddress> for Bech32 {
     fn try_from(addr: AccountAddress) -> Result<Bech32> {
         let base32_hash = addr.0.to_base32();
         bech32::Bech32::new(LIBRA_NETWORK_ID_SHORT.into(), base32_hash).map_err(Into::into)
-    }
-}
-
-impl CanonicalSerialize for AccountAddress {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_bytes(&self.0)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for AccountAddress {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let bytes = deserializer.decode_bytes()?;
-        Self::try_from(bytes)
     }
 }

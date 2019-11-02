@@ -4,19 +4,20 @@
 use crate::{
     executor_proxy::ExecutorProxyTrait, LedgerInfo, PeerId, StateSyncClient, StateSynchronizer,
 };
-use config::config::RoleType;
 use config_builder::util::get_test_config;
-use crypto::{ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, HashValue, SigningKey};
 use failure::{prelude::*, Result};
 use futures::{executor::block_on, future::FutureExt, Future};
+use libra_config::config::RoleType;
+use libra_crypto::{
+    ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, HashValue, SigningKey,
+};
 use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo as TypesLedgerInfo,
-    proof::AccumulatorProof,
+    proof::TransactionListProof,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{TransactionInfo, TransactionListWithProof},
-    vm_error::StatusCode,
+    transaction::{Transaction, TransactionListWithProof},
 };
 use network::{
     proto::GetChunkResponse,
@@ -81,29 +82,16 @@ impl MockExecutorProxy {
         let sender = AccountAddress::from_public_key(&GENESIS_KEYPAIR.1);
         let receiver = AccountAddress::new([0xff; 32]);
         let program = encode_transfer_script(&receiver, 1);
-        let transaction = get_test_signed_txn(
+        let transaction = Transaction::UserTransaction(get_test_signed_txn(
             sender,
             version + 1,
             GENESIS_KEYPAIR.0.clone(),
             GENESIS_KEYPAIR.1.clone(),
             Some(program),
-        );
+        ));
 
-        let txn_info = TransactionInfo::new(
-            HashValue::zero(),
-            HashValue::zero(),
-            HashValue::zero(),
-            0,
-            StatusCode::EXECUTED,
-        );
-        let accumulator_proof = AccumulatorProof::new(vec![]);
-        let txns = TransactionListWithProof::new(
-            vec![(transaction, txn_info)],
-            None,
-            Some(version + 1),
-            Some(accumulator_proof),
-            None,
-        );
+        let proof = TransactionListProof::new_empty();
+        let txns = TransactionListWithProof::new(vec![transaction], None, Some(version + 1), proof);
 
         GetChunkResponse {
             txn_list_with_proof: Some(txns.into()),
@@ -239,11 +227,13 @@ impl SynchronizerEnv {
         let synchronizers: Vec<StateSynchronizer> = vec![
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_a, events_a)],
+                role,
                 &config.state_sync,
                 MockExecutorProxy::new(peers[0], Self::default_handler()),
             ),
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_b, events_b)],
+                role,
                 &get_test_config().0.state_sync,
                 MockExecutorProxy::new(peers[1], handler),
             ),
@@ -264,7 +254,13 @@ impl SynchronizerEnv {
 
     fn sync_to(&self, peer_id: usize, version: u64) -> bool {
         let target = MockExecutorProxy::mock_ledger_info(self.peers[1], version);
-        block_on(self.clients[peer_id].sync_to(target)).unwrap()
+        block_on(self.clients[peer_id].sync_to_deprecated(target)).unwrap()
+    }
+
+    fn sync_to_new_flow(&self, peer_id: usize, version: u64) -> bool {
+        let target = MockExecutorProxy::mock_ledger_info(self.peers[1], version);
+        let li = block_on(self.clients[peer_id].sync_to(target)).unwrap();
+        li.ledger_info().version() == version
     }
 
     fn commit(&self, peer_id: usize, version: u64) {
@@ -294,6 +290,14 @@ fn test_basic_catch_up() {
     }
     // test batch sync for multiple transactions
     assert!(env.sync_to(0, 10));
+}
+
+#[test]
+fn test_basic_catch_up_new_flow() {
+    let env = SynchronizerEnv::new(SynchronizerEnv::default_handler(), RoleType::Validator);
+    for version in 1..5 {
+        assert!(env.sync_to_new_flow(0, version));
+    }
 }
 
 #[test]

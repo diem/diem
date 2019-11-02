@@ -9,8 +9,8 @@ use crate::{
 use admission_control_proto::proto::admission_control::AdmissionControlClient;
 use client::AccountData;
 use grpcio::{ChannelBuilder, EnvBuilder};
-use logger::{self, prelude::*};
-use metrics::metric_server::start_server;
+use libra_logger::{self, prelude::*};
+use libra_metrics::metric_server::start_server;
 use std::{sync::Arc, time};
 
 const COMMIT_RATIO_THRESHOLD: f64 = 0.7;
@@ -62,7 +62,7 @@ pub fn try_start_metrics_server(args: &BenchOpt) {
     if let Some(metrics_server_address) = &args.metrics_server_address {
         let address = metrics_server_address.clone();
         std::thread::spawn(move || {
-            start_server(address);
+            start_server(address, 9101, false);
         });
     }
 }

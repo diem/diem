@@ -69,7 +69,7 @@ pub enum SecurityEvent {
 ///
 /// # Example:
 /// ```rust
-/// use logger::prelude::*;
+/// use libra_logger::prelude::*;
 /// use std::fmt::Debug;
 ///
 /// #[derive(Debug)]

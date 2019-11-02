@@ -2,32 +2,33 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{
-        consensusdb::ConsensusDB, liveness::pacemaker_timeout_manager::HighestTimeoutCertificates,
-        safety::safety_rules::ConsensusState,
-    },
-    consensus_provider::create_storage_read_client,
+    chained_bft::consensusdb::ConsensusDB, consensus_provider::create_storage_read_client,
 };
-use config::config::NodeConfig;
-use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert, vote_msg::VoteMsg};
-use crypto::HashValue;
+use consensus_types::{
+    block::Block, common::Payload, quorum_cert::QuorumCert,
+    timeout_certificate::TimeoutCertificate, vote::Vote,
+};
 use failure::{Result, ResultExt};
+use libra_config::config::NodeConfig;
+use libra_crypto::HashValue;
+use libra_logger::prelude::*;
 use libra_types::ledger_info::LedgerInfo;
-use logger::prelude::*;
 use rmp_serde::{from_slice, to_vec_named};
+use safety_rules::ConsensusState;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
 
+#[cfg(test)]
+#[path = "persistent_storage_test.rs"]
+mod persistent_storage_test;
+
 /// Persistent storage for liveness data
 pub trait PersistentLivenessStorage: Send + Sync {
     /// Persist the highest timeout certificate for improved liveness - proof for other replicas
     /// to jump to this round
-    fn save_highest_timeout_cert(
-        &self,
-        highest_timeout_certs: HighestTimeoutCertificates,
-    ) -> Result<()>;
+    fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()>;
 }
 
 /// Persistent storage is essential for maintaining safety when a node crashes.  Specifically,
@@ -48,7 +49,7 @@ pub trait PersistentStorage<T>: PersistentLivenessStorage + Send + Sync {
     fn prune_tree(&self, block_ids: Vec<HashValue>) -> Result<()>;
 
     /// Persist the consensus state.
-    fn save_consensus_state(&self, state: ConsensusState, vote_msg: VoteMsg) -> Result<()>;
+    fn save_consensus_state(&self, state: ConsensusState, vote: &Vote) -> Result<()>;
 
     /// When the node restart, construct the instance and returned the data read from db.
     /// This could guarantee we only read once during start, and we would panic if the
@@ -66,7 +67,7 @@ pub struct RecoveryData<T> {
     // Safety data
     state: ConsensusState,
     // The last vote message sent by this validator.
-    last_vote: Option<VoteMsg>,
+    last_vote: Option<Vote>,
     root: (Block<T>, QuorumCert, QuorumCert),
     // 1. the blocks guarantee the topological ordering - parent <- child.
     // 2. all blocks are children of the root.
@@ -75,7 +76,7 @@ pub struct RecoveryData<T> {
     blocks_to_prune: Option<Vec<HashValue>>,
 
     // Liveness data
-    highest_timeout_certificates: HighestTimeoutCertificates,
+    highest_timeout_certificate: Option<TimeoutCertificate>,
 
     // If root is not consistent with StateComputer, need to state synchronize before
     // starting
@@ -85,16 +86,16 @@ pub struct RecoveryData<T> {
 impl<T: Payload> RecoveryData<T> {
     pub fn new(
         state: ConsensusState,
-        last_vote: Option<VoteMsg>,
+        last_vote: Option<Vote>,
         mut blocks: Vec<Block<T>>,
         mut quorum_certs: Vec<QuorumCert>,
         storage_ledger: &LedgerInfo,
-        highest_timeout_certificates: HighestTimeoutCertificates,
+        highest_timeout_certificate: Option<TimeoutCertificate>,
     ) -> Result<Self> {
         let root =
             Self::find_root(&mut blocks, &mut quorum_certs, storage_ledger).with_context(|e| {
                 // for better readability
-                quorum_certs.sort_by_key(QuorumCert::certified_block_round);
+                quorum_certs.sort_by_key(|qc| qc.certified_block().round());
                 format!(
                     "Blocks in db: {}\nQuorum Certs in db: {}\nerror: {}",
                     blocks
@@ -125,7 +126,7 @@ impl<T: Payload> RecoveryData<T> {
             blocks,
             quorum_certs,
             blocks_to_prune,
-            highest_timeout_certificates,
+            highest_timeout_certificate,
             need_sync,
         })
     }
@@ -134,7 +135,7 @@ impl<T: Payload> RecoveryData<T> {
         self.state.clone()
     }
 
-    pub fn last_vote(&self) -> Option<VoteMsg> {
+    pub fn last_vote(&self) -> Option<Vote> {
         self.last_vote.clone()
     }
 
@@ -154,8 +155,8 @@ impl<T: Payload> RecoveryData<T> {
             .expect("blocks_to_prune already taken")
     }
 
-    pub fn highest_timeout_certificates(&self) -> &HighestTimeoutCertificates {
-        &self.highest_timeout_certificates
+    pub fn highest_timeout_certificate(&self) -> Option<TimeoutCertificate> {
+        self.highest_timeout_certificate.clone()
     }
 
     pub fn root_ledger_info(&self) -> QuorumCert {
@@ -242,7 +243,7 @@ impl<T: Payload> RecoveryData<T> {
         let root_block = blocks.remove(root_idx);
         let root_quorum_cert = quorum_certs
             .iter()
-            .find(|qc| qc.certified_block_id() == root_block.id())
+            .find(|qc| qc.certified_block().id() == root_block.id())
             .ok_or_else(|| format_err!("No QC found for root: {}", root_id))?
             .clone();
         let root_ledger_info = quorum_certs
@@ -283,7 +284,7 @@ impl<T: Payload> RecoveryData<T> {
                 false
             }
         });
-        quorum_certs.retain(|qc| tree.contains(&qc.certified_block_id()));
+        quorum_certs.retain(|qc| tree.contains(&qc.certified_block().id()));
         to_remove
     }
 }
@@ -300,12 +301,9 @@ impl StorageWriteProxy {
 }
 
 impl PersistentLivenessStorage for StorageWriteProxy {
-    fn save_highest_timeout_cert(
-        &self,
-        highest_timeout_certs: HighestTimeoutCertificates,
-    ) -> Result<()> {
+    fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()> {
         self.db
-            .save_highest_timeout_certificates(to_vec_named(&highest_timeout_certs)?)
+            .save_highest_timeout_certificate(to_vec_named(&highest_timeout_cert)?)
     }
 }
 
@@ -328,9 +326,9 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         Ok(())
     }
 
-    fn save_consensus_state(&self, state: ConsensusState, vote_msg: VoteMsg) -> Result<()> {
+    fn save_consensus_state(&self, state: ConsensusState, vote: &Vote) -> Result<()> {
         self.db
-            .save_state(to_vec_named(&state)?, to_vec_named(&vote_msg)?)
+            .save_state(to_vec_named(&state)?, to_vec_named(vote)?)
     }
 
     fn start(config: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
@@ -344,26 +342,34 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         });
         debug!("Recovered consensus state: {}", consensus_state);
 
-        let last_vote_msg = initial_data.1.map(|vote_msg_data| {
-            from_slice(&vote_msg_data[..]).expect("unable to deserialize last vote msg")
+        let last_vote = initial_data.1.map(|vote_data| {
+            from_slice(&vote_data[..]).expect("unable to deserialize last vote msg")
         });
-        let last_vote_repr = match &last_vote_msg {
-            Some(vote_msg) => format!("{}", vote_msg),
+        let last_vote_repr = match &last_vote {
+            Some(vote) => format!("{}", vote),
             None => "None".to_string(),
         };
         debug!("Recovered last vote msg: {}", last_vote_repr);
 
-        let highest_timeout_certificates = initial_data
-            .2
-            .map_or_else(HighestTimeoutCertificates::default, |s| {
-                from_slice(&s[..]).expect("unable to deserialize highest timeout certificates")
-            });
+        let highest_timeout_certificate = initial_data.2.map(|ts| {
+            from_slice(&ts[..]).expect("unable to deserialize highest timeout certificate")
+        });
         let mut blocks = initial_data.3;
         let mut quorum_certs: Vec<_> = initial_data.4;
         // bootstrap the empty store with genesis block and qc.
         if blocks.is_empty() && quorum_certs.is_empty() {
-            blocks.push(Block::make_genesis_block());
-            quorum_certs.push(QuorumCert::certificate_for_genesis());
+            let genesis_ledger_info = read_client
+                .get_latest_ledger_infos_per_epoch(0)
+                .expect("Storage should commit genesis before start consensus")
+                .pop()
+                .expect("Storage should commit genesis before start consensus");
+            let genesis =
+                Block::make_genesis_block_from_ledger_info(genesis_ledger_info.ledger_info());
+            quorum_certs.push(QuorumCert::certificate_for_genesis_from_ledger_info(
+                genesis_ledger_info.ledger_info(),
+                genesis.id(),
+            ));
+            blocks.push(genesis);
             proxy
                 .save_tree(vec![blocks[0].clone()], vec![quorum_certs[0].clone()])
                 .expect("unable to bootstrap the storage with genesis block");
@@ -388,11 +394,11 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             .expect("unable to read ledger info from storage");
         let mut initial_data = RecoveryData::new(
             consensus_state,
-            last_vote_msg,
+            last_vote,
             blocks,
             quorum_certs,
             ledger_info.ledger_info(),
-            highest_timeout_certificates,
+            highest_timeout_certificate,
         )
         .unwrap_or_else(|e| panic!("Can not construct recovery data due to {}", e));
 

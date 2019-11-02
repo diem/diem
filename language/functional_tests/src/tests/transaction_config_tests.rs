@@ -104,7 +104,7 @@ fn parse_new_transaction() {
     assert!(!is_new_transaction("//! transaction"));
 }
 
-fn parse_and_build_config(global_config: &GlobalConfig, s: &str) -> Result<Config> {
+fn parse_and_build_config<'a>(global_config: &'a GlobalConfig, s: &str) -> Result<Config<'a>> {
     Config::build(&global_config, &parse_each_line_as::<Entry>(s)?)
 }
 

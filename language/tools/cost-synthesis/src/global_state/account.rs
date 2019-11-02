@@ -1,6 +1,6 @@
 use crate::global_state::inhabitor::RandomInhabitor;
 use bytecode_verifier::VerifiedModule;
-use crypto::ed25519::{compat, Ed25519PrivateKey, Ed25519PublicKey};
+use libra_crypto::ed25519::{compat, Ed25519PrivateKey, Ed25519PublicKey};
 use libra_types::{
     access_path::AccessPath, account_address::AccountAddress, account_config, byte_array::ByteArray,
 };

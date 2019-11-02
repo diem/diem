@@ -6,14 +6,14 @@ use consensus_types::{
     common::{Author, Round},
     quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate,
-    vote_msg::VoteMsg,
+    vote::Vote,
 };
-use crypto::{hash::CryptoHash, HashValue};
+use libra_crypto::{hash::CryptoHash, HashValue};
+use libra_logger::prelude::*;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
     validator_verifier::VerifyError,
 };
-use logger::prelude::*;
 use std::collections::BTreeMap;
 use std::{collections::HashMap, sync::Arc};
 
@@ -61,17 +61,17 @@ impl PendingVotes {
     /// TimeoutCertificate if either can can be formed
     pub fn insert_vote(
         &mut self,
-        vote_msg: &VoteMsg,
+        vote: &Vote,
         validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
-        if let Err(e) = self.replace_prev_vote(vote_msg) {
+        if let Err(e) = self.replace_prev_vote(vote) {
             return e;
         }
-        let vote_aggr_res = self.aggregate_qc(vote_msg, validator_verifier);
+        let vote_aggr_res = self.aggregate_qc(vote, validator_verifier);
         if let VoteReceptionResult::NewQuorumCertificate(_) = vote_aggr_res {
             return vote_aggr_res;
         }
-        match self.aggregate_tc(vote_msg, &validator_verifier) {
+        match self.aggregate_tc(vote, &validator_verifier) {
             Some(VoteReceptionResult::NewTimeoutCertificate(tc)) => {
                 VoteReceptionResult::NewTimeoutCertificate(tc)
             }
@@ -82,31 +82,30 @@ impl PendingVotes {
     /// Check whether the newly inserted vote completes a QC
     fn aggregate_qc(
         &mut self,
-        vote_msg: &VoteMsg,
+        vote: &Vote,
         validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
         // Note that the digest covers the ledger info information, which is also indirectly
         // covering vote data hash (in its `consensus_data_hash` field).
-        let li_digest = vote_msg.ledger_info().hash();
+        let li_digest = vote.ledger_info().hash();
         let li_with_sig = self.li_digest_to_votes.entry(li_digest).or_insert_with(|| {
-            LedgerInfoWithSignatures::new(vote_msg.ledger_info().clone(), BTreeMap::new())
+            LedgerInfoWithSignatures::new(vote.ledger_info().clone(), BTreeMap::new())
         });
         // TODO: we'd prefer to use LedgerInfoWithSignatures::add_signature instead, but the
         // CryptoProxy types should be properly updated first.
-        vote_msg
-            .signature()
+        vote.signature()
             .clone()
-            .add_to_li(vote_msg.author(), li_with_sig);
+            .add_to_li(vote.author(), li_with_sig);
 
         match validator_verifier.check_voting_power(li_with_sig.signatures().keys()) {
             Ok(_) => VoteReceptionResult::NewQuorumCertificate(Arc::new(QuorumCert::new(
-                vote_msg.vote_data().clone(),
+                vote.vote_data().clone(),
                 li_with_sig.clone(),
             ))),
             Err(VerifyError::TooLittleVotingPower { voting_power, .. }) => {
                 VoteReceptionResult::VoteAdded(voting_power)
             }
-            _ => panic!("Unexpected verification error, vote_msg = {}", vote_msg),
+            _ => panic!("Unexpected verification error, vote = {}", vote),
         }
     }
 
@@ -114,33 +113,33 @@ impl PendingVotes {
     /// new TimeoutCertificate, otherwise, return None.
     fn aggregate_tc(
         &mut self,
-        vote_msg: &VoteMsg,
+        vote: &Vote,
         validator_verifier: &ValidatorVerifier,
     ) -> Option<VoteReceptionResult> {
-        let round_signature = vote_msg.round_signature().cloned()?;
-        let round = vote_msg.vote_data().block_round();
+        let timeout_signature = vote.timeout_signature().cloned()?;
+        let timeout = vote.timeout();
         let tc = self
             .round_to_tc
-            .entry(round)
-            .or_insert_with(|| TimeoutCertificate::new(round, HashMap::new()));
-        tc.add_signature(vote_msg.author(), round_signature);
+            .entry(timeout.round())
+            .or_insert_with(|| TimeoutCertificate::new(timeout, HashMap::new()));
+        tc.add_signature(vote.author(), timeout_signature);
         match validator_verifier.check_voting_power(tc.signatures().keys()) {
             Ok(_) => Some(VoteReceptionResult::NewTimeoutCertificate(Arc::new(
                 tc.clone(),
             ))),
             Err(VerifyError::TooLittleVotingPower { .. }) => None,
-            _ => panic!("Unexpected verification error, vote_msg = {}", vote_msg),
+            _ => panic!("Unexpected verification error, vote = {}", vote),
         }
     }
 
     /// If this is the first vote from Author, add it to map. If Author has
     /// already voted on same block then return DuplicateVote error. If Author has already voted
     /// on some other result, prune the last vote and insert new one in map.
-    fn replace_prev_vote(&mut self, vote_msg: &VoteMsg) -> Result<(), VoteReceptionResult> {
-        let author = vote_msg.author();
-        let round = vote_msg.vote_data().block_round();
-        let li_digest = vote_msg.ledger_info().hash();
-        let is_timeout = vote_msg.round_signature().is_some();
+    fn replace_prev_vote(&mut self, vote: &Vote) -> Result<(), VoteReceptionResult> {
+        let author = vote.author();
+        let round = vote.vote_data().proposed().round();
+        let li_digest = vote.ledger_info().hash();
+        let is_timeout = vote.is_timeout();
         let vote_info = LastVoteInfo {
             li_digest,
             round,
@@ -159,7 +158,7 @@ impl PendingVotes {
                 // Author has already voted for the very same LedgerInfo
                 return Err(VoteReceptionResult::DuplicateVote);
             } else {
-                // Author has already voted for this LedgerInfo, but this time the VoteMsg's
+                // Author has already voted for this LedgerInfo, but this time the Vote's
                 // round signature is different.
                 // Do not replace the prev vote, try to may be gather a TC.
                 return Ok(());

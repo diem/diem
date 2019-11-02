@@ -2,13 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod block;
+pub mod block_data;
+pub mod block_info;
+pub mod block_retrieval;
 pub mod common;
+pub mod executed_block;
 pub mod proposal_msg;
 pub mod quorum_cert;
 pub mod sync_info;
-#[cfg(any(test, feature = "testing"))]
-pub mod test_utils;
+pub mod timeout;
 pub mod timeout_certificate;
-pub mod timeout_msg;
+pub mod vote;
 pub mod vote_data;
 pub mod vote_msg;
+pub mod vote_proposal;

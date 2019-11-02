@@ -56,8 +56,8 @@ use futures::{
     sink::SinkExt,
     stream::StreamExt,
 };
+use libra_logger::prelude::*;
 use libra_types::PeerId;
-use logger::prelude::*;
 use netcore::compat::IoCompat;
 use std::{
     collections::{hash_map::Entry, HashMap},
@@ -246,14 +246,16 @@ where
                 );
             }
             // The messages in queue will be dropped
-            counters::DIRECT_SEND_MESSAGES_DROPPED.inc_by(
-                counters::OP_COUNTERS
-                    .peer_gauge(
-                        &counters::PENDING_DIRECT_SEND_OUTBOUND_MESSAGES,
-                        &peer_id.short_str(),
-                    )
-                    .get(),
-            );
+            counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
+                .with_label_values(&["dropped"])
+                .inc_by(
+                    counters::OP_COUNTERS
+                        .peer_gauge(
+                            &counters::PENDING_DIRECT_SEND_OUTBOUND_MESSAGES,
+                            &peer_id.short_str(),
+                        )
+                        .get(),
+                );
         };
         executor.spawn(f_substream);
 
@@ -302,7 +304,9 @@ where
                     .try_send_msg(peer_id, msg.clone(), self.peer_mgr_reqs_tx.clone())
                     .await
                 {
-                    counters::DIRECT_SEND_MESSAGES_DROPPED.inc();
+                    counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
+                        .with_label_values(&["dropped"])
+                        .inc();
                     warn!("DirectSend to peer {} failed: {}", peer_id.short_str(), e);
                 }
             }

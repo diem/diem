@@ -6,10 +6,10 @@
 //! ## Usage
 //!
 //! ```rust, no_run
-//! use logger::prelude::*;
+//! use libra_logger::prelude::*;
 //!
 //! pub fn main() {
-//!     let _g = logger::set_default_global_logger(false /* async */, Some(256));
+//!     let _g = libra_logger::set_default_global_logger(false /* async */, Some(256));
 //!     info!("Starting...");
 //! }
 //! ```

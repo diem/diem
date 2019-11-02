@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::{NodeConfig, RoleType};
+use libra_config::config::{NodeConfig, RoleType};
 use libra_swarm::{client, swarm::LibraSwarm};
+use libra_tools::tempdir::TempPath;
 use std::path::Path;
 use structopt::StructOpt;
-use tools::tempdir::TempPath;
 
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Libra swarm to start local nodes")]
@@ -75,11 +75,11 @@ fn main() {
         None
     };
     validator_swarm
-        .launch_attempt(!args.enable_logging)
+        .launch_attempt(RoleType::Validator, !args.enable_logging)
         .expect("Failed to launch validator swarm");
     if let Some(ref mut swarm) = full_node_swarm {
         swarm
-            .launch_attempt(!args.enable_logging)
+            .launch_attempt(RoleType::FullNode, !args.enable_logging)
             .expect("Failed to launch full node swarm");
     }
 

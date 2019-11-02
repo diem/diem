@@ -2,58 +2,54 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lazy_static;
-use metrics::{Histogram, IntCounter, IntGauge, OpMetrics};
+use libra_metrics::{Histogram, IntGauge, OpMetrics};
+use prometheus::{IntCounterVec, IntGaugeVec};
+
+lazy_static::lazy_static! {
+    pub static ref LIBRA_NETWORK_PEERS: IntGaugeVec = register_int_gauge_vec!(
+        // metric name
+        "libra_network_peers",
+        // metric description
+        "Libra network peers counter",
+        // metric labels (dimensions)
+        &["role_type", "state"]
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_RPC_MESSAGES: IntCounterVec = register_int_counter_vec!(
+        "libra_network_rpc_messages",
+        "Libra network rpc messages counters",
+        &["type", "state"]
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_RPC_BYTES: IntCounterVec = register_int_counter_vec!(
+        "libra_network_rpc_bytes",
+        "Libra network rpc bytes counters",
+        &["type", "state"]
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_RPC_LATENCY: Histogram = register_histogram!(
+        "libra_network_rpc_latency_seconds",
+        "Libra network rpc latency histogram"
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_DIRECT_SEND_MESSAGES: IntCounterVec = register_int_counter_vec!(
+        "libra_network_direct_send_messages",
+        "Libra network direct send protocol counters, measured by messages",
+        &["state"]
+    ).unwrap();
+
+    pub static ref LIBRA_NETWORK_DIRECT_SEND_BYTES: IntCounterVec = register_int_counter_vec!(
+        "libra_network_direct_send_bytes",
+        "Libra network direct send protocol counters, measured by bytes",
+        &["state"]
+    ).unwrap();
+}
 
 lazy_static::lazy_static! {
     pub static ref OP_COUNTERS: OpMetrics = OpMetrics::new_and_registered("network");
 }
 
 lazy_static::lazy_static! {
-    /// Counter of currently connected peers
-    pub static ref CONNECTED_PEERS: IntGauge = OP_COUNTERS.gauge("connected_peers");
-
-    /// Counter of rpc requests sent
-    pub static ref RPC_REQUESTS_SENT: IntCounter = OP_COUNTERS.counter("rpc_requests_sent");
-
-    /// Counter of rpc request bytes sent
-    pub static ref RPC_REQUEST_BYTES_SENT: IntCounter = OP_COUNTERS.counter("rpc_request_bytes_sent");
-
-    /// Counter of rpc requests failed
-    pub static ref RPC_REQUESTS_FAILED: IntCounter = OP_COUNTERS.counter("rpc_requests_failed");
-
-    /// Counter of rpc requests cancelled
-    pub static ref RPC_REQUESTS_CANCELLED: IntCounter = OP_COUNTERS.counter("rpc_requests_cancelled");
-
-    /// Counter of rpc requests received
-    pub static ref RPC_REQUESTS_RECEIVED: IntCounter = OP_COUNTERS.counter("rpc_requests_received");
-
-    /// Counter of rpc responses sent
-    pub static ref RPC_RESPONSES_SENT: IntCounter = OP_COUNTERS.counter("rpc_responses_sent");
-
-    /// Counter of rpc response bytes sent
-    pub static ref RPC_RESPONSE_BYTES_SENT: IntCounter = OP_COUNTERS.counter("rpc_response_bytes_sent");
-
-    /// Counter of rpc responses failed
-    pub static ref RPC_RESPONSES_FAILED: IntCounter = OP_COUNTERS.counter("rpc_responses_failed");
-
-    /// Histogram of rpc latency
-    pub static ref RPC_LATENCY: Histogram = OP_COUNTERS.histogram("rpc_latency");
-
-    /// Counter of messages sent via the direct send protocol
-    pub static ref DIRECT_SEND_MESSAGES_SENT: IntCounter = OP_COUNTERS.counter("direct_send_messages_sent");
-
-    /// Counter of bytes sent via the direct send protocol
-    pub static ref DIRECT_SEND_BYTES_SENT: IntCounter = OP_COUNTERS.counter("direct_send_bytes_sent");
-
-    /// Counter of messages dropped via the direct send protocol
-    pub static ref DIRECT_SEND_MESSAGES_DROPPED: IntCounter = OP_COUNTERS.counter("direct_send_messages_dropped");
-
-    /// Counter of messages received via the direct send protocol
-    pub static ref DIRECT_SEND_MESSAGES_RECEIVED: IntCounter = OP_COUNTERS.counter("direct_send_messages_received");
-
-    /// Counter of bytes received via the direct send protocol
-    pub static ref DIRECT_SEND_BYTES_RECEIVED: IntCounter = OP_COUNTERS.counter("direct_send_bytes_received");
-
     ///
     /// Channel Counters
     ///

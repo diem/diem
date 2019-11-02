@@ -9,8 +9,8 @@
 //! # Examples
 //!
 //! ```
-//! use crypto::hash::{CryptoHasher, TestOnlyHasher};
-//! use crypto::{
+//! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
+//! use libra_crypto::{
 //!     ed25519::*,
 //!     traits::{Signature, SigningKey, Uniform},
 //! };
@@ -30,14 +30,11 @@
 //! testing purposes. Production code should find an alternate means for secure key generation.
 
 use crate::{traits::*, HashValue};
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-};
 use core::convert::TryFrom;
-use crypto_derive::{SilentDebug, SilentDisplay};
 use ed25519_dalek;
 use failure::prelude::*;
-use serde::{de, export, ser};
+use libra_crypto_derive::{SilentDebug, SilentDisplay};
+use serde::{de, ser};
 use std::fmt;
 
 /// The length of the Ed25519PrivateKey
@@ -399,12 +396,12 @@ fn check_s_lt_l(s: &[u8]) -> bool {
 /// disappear after
 pub mod compat {
     use crate::ed25519::*;
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(feature = "fuzzing")]
     use proptest::strategy::LazyJust;
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(feature = "fuzzing")]
     use proptest::{prelude::*, strategy::Strategy};
 
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(any(test, feature = "cloneable-private-keys"))]
     impl Clone for Ed25519PrivateKey {
         fn clone(&self) -> Self {
             let serialized: &[u8] = &(self.to_bytes());
@@ -419,7 +416,7 @@ pub mod compat {
     ///
     /// Warning: if you pass in None, this will not return distinct
     /// results every time! Should you want to write non-deterministic
-    /// tests, look at config::config_builder::util::get_test_config
+    /// tests, look at libra_config::config_builder::util::get_test_config
     pub fn generate_keypair<'a, T>(opt_rng: T) -> (Ed25519PrivateKey, Ed25519PublicKey)
     where
         T: Into<Option<&'a mut StdRng>> + Sized,
@@ -433,7 +430,7 @@ pub mod compat {
     }
 
     /// Used to produce keypairs from a seed for testing purposes
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(feature = "fuzzing")]
     pub fn keypair_strategy() -> impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)> {
         // The no_shrink is because keypairs should be fixed -- shrinking would cause a different
         // keypair to be generated, which appears to not be very useful.
@@ -457,7 +454,7 @@ pub mod compat {
         (private_key, public_key)
     }
 
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(feature = "fuzzing")]
     impl Arbitrary for Ed25519PublicKey {
         type Parameters = ();
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
@@ -468,49 +465,11 @@ pub mod compat {
 }
 
 //////////////////////////////
-// Canonical Serialization  //
-//////////////////////////////
-
-impl CanonicalSerialize for Ed25519PublicKey {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_bytes(&self.to_bytes())?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for Ed25519PublicKey {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let public_key_bytes = deserializer.decode_bytes()?;
-        Ok(Ed25519PublicKey::try_from(&public_key_bytes[..])?)
-    }
-}
-
-impl CanonicalSerialize for Ed25519Signature {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer.encode_bytes(&self.to_bytes())?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for Ed25519Signature {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        let signature_bytes = deserializer.decode_bytes()?;
-        Ok(Ed25519Signature::try_from(&signature_bytes[..])?)
-    }
-}
-
-//////////////////////////////
 // Compact Serialization    //
 //////////////////////////////
 
 impl ser::Serialize for Ed25519PrivateKey {
-    fn serialize<S>(&self, serializer: S) -> export::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
     {
@@ -519,7 +478,7 @@ impl ser::Serialize for Ed25519PrivateKey {
 }
 
 impl ser::Serialize for Ed25519PublicKey {
-    fn serialize<S>(&self, serializer: S) -> export::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
     {
@@ -528,7 +487,7 @@ impl ser::Serialize for Ed25519PublicKey {
 }
 
 impl ser::Serialize for Ed25519Signature {
-    fn serialize<S>(&self, serializer: S) -> export::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
     {
@@ -547,7 +506,7 @@ impl<'de> de::Visitor<'de> for Ed25519PrivateKeyVisitor {
         formatter.write_str("ed25519_dalek private key in bytes")
     }
 
-    fn visit_bytes<E>(self, value: &[u8]) -> export::Result<Ed25519PrivateKey, E>
+    fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<Ed25519PrivateKey, E>
     where
         E: de::Error,
     {
@@ -562,7 +521,7 @@ impl<'de> de::Visitor<'de> for Ed25519PublicKeyVisitor {
         formatter.write_str("public key in bytes")
     }
 
-    fn visit_bytes<E>(self, value: &[u8]) -> export::Result<Ed25519PublicKey, E>
+    fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<Ed25519PublicKey, E>
     where
         E: de::Error,
     {
@@ -577,7 +536,7 @@ impl<'de> de::Visitor<'de> for Ed25519SignatureVisitor {
         formatter.write_str("ed25519_dalek signature in compact encoding")
     }
 
-    fn visit_bytes<E>(self, value: &[u8]) -> export::Result<Ed25519Signature, E>
+    fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<Ed25519Signature, E>
     where
         E: de::Error,
     {
@@ -586,7 +545,7 @@ impl<'de> de::Visitor<'de> for Ed25519SignatureVisitor {
 }
 
 impl<'de> de::Deserialize<'de> for Ed25519PrivateKey {
-    fn deserialize<D>(deserializer: D) -> export::Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
     {
@@ -595,7 +554,7 @@ impl<'de> de::Deserialize<'de> for Ed25519PrivateKey {
 }
 
 impl<'de> de::Deserialize<'de> for Ed25519PublicKey {
-    fn deserialize<D>(deserializer: D) -> export::Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
     {
@@ -604,7 +563,7 @@ impl<'de> de::Deserialize<'de> for Ed25519PublicKey {
 }
 
 impl<'de> de::Deserialize<'de> for Ed25519Signature {
-    fn deserialize<D>(deserializer: D) -> export::Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
     {

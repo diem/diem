@@ -31,7 +31,7 @@ Libra Core components interact with the language component through the VM. Speci
 * You can find many small Move IR examples in the [tests](functional_tests/tests/testsuite) directory. The easiest way to experiment with Move IR is to create a new test in this directory and follow the instructions for running the tests.
 * More substantial examples can be found in the [standard library](stdlib/modules) directory. The two notable ones are [LibraAccount.mvir](stdlib/modules/libra_account.mvir), which implements accounts on the Libra blockchain, and [LibraCoin.mvir](stdlib/modules/libra_coin.mvir), which implements Libra coin.
 * The four transaction scripts supported in the Libra testnet are also in the standard library directory. They are [peer-to-peer transfer](stdlib/transaction_scripts/peer_to_peer_transfer.mvir), [account creation](stdlib/transaction_scripts/create_account.mvir), [minting new Libra](stdlib/transaction_scripts/mint.mvir), and [key rotation](language/stdlib/transaction_scripts/rotate_authentication_key.mvir). The transaction script for minting new Libra will only work for an account with proper privileges.
-* The most complete documentation of the Move IR syntax is the [grammar](compiler/ir_to_bytecode/src/parser.rs). You can also take a look at the [parser for the Move IR](compiler/ir_to_bytecode/syntax/src/syntax.lalrpop).
+* The most complete documentation of the Move IR syntax is the [grammar](compiler/ir-to-bytecode/src/parser.rs). You can also take a look at the [parser for the Move IR](compiler/ir-to-bytecode/syntax/src/syntax.lalrpop).
 * Refer to the [IR compiler README](compiler/README.md) for more details on writing Move IR code.
 
 ## How is this folder organized?
@@ -40,7 +40,7 @@ Libra Core components interact with the language component through the VM. Speci
 ├── README.md          # This README
 ├── benchmarks         # Benchmarks for the Move language VM and surrounding code
 ├── bytecode-verifier  # The bytecode verifier
-├── e2e_tests          # Infrastructure and tests for the end-to-end flow
+├── e2e-tests          # Infrastructure and tests for the end-to-end flow
 ├── functional_tests   # Testing framework for the Move language
 ├── compiler           # The IR to Move bytecode compiler
 ├── stdlib             # Core Move modules and transaction scripts
@@ -49,6 +49,6 @@ Libra Core components interact with the language component through the VM. Speci
     ├── cost-synthesis # Cost synthesis for bytecode instructions
     ├── src            # Bytecode language definitions, serializer, and deserializer
     ├── tests          # VM tests
-    ├── vm_genesis     # The genesis state creation, and blockchain genesis writeset
-    └── vm_runtime     # The bytecode interpreter
+    ├── vm-genesis     # The genesis state creation, and blockchain genesis writeset
+    └── vm-runtime     # The bytecode interpreter
 ```

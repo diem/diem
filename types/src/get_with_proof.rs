@@ -15,13 +15,13 @@ use crate::{
         GetAccountTransactionBySequenceNumberResponse, GetEventsByEventAccessPathRequest,
         GetEventsByEventAccessPathResponse, GetTransactionsRequest, GetTransactionsResponse,
     },
-    transaction::{SignedTransactionWithProof, TransactionListWithProof, Version},
+    transaction::{TransactionListWithProof, TransactionWithProof, Version},
     validator_change::ValidatorChangeEventWithProof,
     validator_verifier::ValidatorVerifier,
 };
-use crypto::{hash::CryptoHash, *};
 use failure::prelude::*;
-#[cfg(any(test, feature = "testing"))]
+use libra_crypto::{hash::CryptoHash, *};
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use std::{
     cmp,
@@ -31,7 +31,7 @@ use std::{
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct UpdateToLatestLedgerRequest {
     pub client_known_version: u64,
     pub requested_items: Vec<RequestItem>,
@@ -240,7 +240,7 @@ fn verify_response_item(
                 fetch_events,
             },
             ResponseItem::GetAccountTransactionBySequenceNumber {
-                signed_transaction_with_proof,
+                transaction_with_proof,
                 proof_of_current_sequence_number,
             },
         ) => verify_get_txn_by_seq_num_resp(
@@ -248,7 +248,7 @@ fn verify_response_item(
             *account,
             *sequence_number,
             *fetch_events,
-            signed_transaction_with_proof.as_ref(),
+            transaction_with_proof.as_ref(),
             proof_of_current_sequence_number.as_ref(),
         ),
         // GetEventsByEventAccessPath
@@ -303,20 +303,20 @@ fn verify_get_txn_by_seq_num_resp(
     req_account: AccountAddress,
     req_sequence_number: u64,
     req_fetch_events: bool,
-    signed_transaction_with_proof: Option<&SignedTransactionWithProof>,
+    transaction_with_proof: Option<&TransactionWithProof>,
     proof_of_current_sequence_number: Option<&AccountStateWithProof>,
 ) -> Result<()> {
-    match (signed_transaction_with_proof, proof_of_current_sequence_number) {
-        (Some(signed_transaction_with_proof), None) => {
+    match (transaction_with_proof, proof_of_current_sequence_number) {
+        (Some(transaction_with_proof), None) => {
             ensure!(
-                req_fetch_events == signed_transaction_with_proof.events.is_some(),
+                req_fetch_events == transaction_with_proof.events.is_some(),
                 "Bad GetAccountTxnBySeqNum response. Events requested: {}, events returned: {}.",
                 req_fetch_events,
-                signed_transaction_with_proof.events.is_some(),
+                transaction_with_proof.events.is_some(),
             );
-            signed_transaction_with_proof.verify(
+            transaction_with_proof.verify_user_txn(
                 ledger_info,
-                signed_transaction_with_proof.version,
+                transaction_with_proof.version,
                 req_account,
                 req_sequence_number,
             )
@@ -335,7 +335,7 @@ fn verify_get_txn_by_seq_num_resp(
         },
         _ => bail!(
             "Bad GetAccountTxnBySeqNum response. txn_proof.is_none():{}, cur_seq_num_proof.is_none():{}",
-            signed_transaction_with_proof.is_none(),
+            transaction_with_proof.is_none(),
             proof_of_current_sequence_number.is_none(),
         )
     }
@@ -420,11 +420,11 @@ fn verify_get_txns_resp(
             req_fetch_events,
             txn_list_with_proof.events.is_some(),
         );
-        let num_txns = txn_list_with_proof.transaction_and_infos.len();
+        let num_txns = txn_list_with_proof.transactions.len();
         ensure!(
-            cmp::min(req_limit, ledger_info.version() - req_start_version + 1)
-                == txn_list_with_proof.transaction_and_infos.len() as u64,
-            "Number of transactions returned not expected. num_txns: {}, start version: {}, latest version: {}",
+            cmp::min(req_limit, ledger_info.version() - req_start_version + 1) == num_txns as u64,
+            "Number of transactions returned not expected. num_txns: {}, start version: {}, \
+             latest version: {}",
             num_txns,
             req_start_version,
             ledger_info.version(),
@@ -434,7 +434,7 @@ fn verify_get_txns_resp(
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum RequestItem {
     GetAccountTransactionBySequenceNumber {
         account: AccountAddress,
@@ -570,10 +570,10 @@ impl From<RequestItem> for crate::proto::types::RequestItem {
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum ResponseItem {
     GetAccountTransactionBySequenceNumber {
-        signed_transaction_with_proof: Option<SignedTransactionWithProof>,
+        transaction_with_proof: Option<TransactionWithProof>,
         proof_of_current_sequence_number: Option<AccountStateWithProof>,
     },
     // this can't be the first variant, tracked here https://github.com/AltSysrq/proptest/issues/141
@@ -602,18 +602,12 @@ impl ResponseItem {
 
     pub fn into_get_account_txn_by_seq_num_response(
         self,
-    ) -> Result<(
-        Option<SignedTransactionWithProof>,
-        Option<AccountStateWithProof>,
-    )> {
+    ) -> Result<(Option<TransactionWithProof>, Option<AccountStateWithProof>)> {
         match self {
             ResponseItem::GetAccountTransactionBySequenceNumber {
-                signed_transaction_with_proof,
+                transaction_with_proof,
                 proof_of_current_sequence_number,
-            } => Ok((
-                signed_transaction_with_proof,
-                proof_of_current_sequence_number,
-            )),
+            } => Ok((transaction_with_proof, proof_of_current_sequence_number)),
             _ => bail!("Not ResponseItem::GetAccountTransactionBySequenceNumber."),
         }
     }
@@ -661,8 +655,8 @@ impl TryFrom<crate::proto::types::ResponseItem> for ResponseItem {
                 }
             }
             GetAccountTransactionBySequenceNumberResponse(response) => {
-                let signed_transaction_with_proof = response
-                    .signed_transaction_with_proof
+                let transaction_with_proof = response
+                    .transaction_with_proof
                     .map(TryInto::try_into)
                     .transpose()?;
                 let proof_of_current_sequence_number = response
@@ -671,7 +665,7 @@ impl TryFrom<crate::proto::types::ResponseItem> for ResponseItem {
                     .transpose()?;
 
                 ResponseItem::GetAccountTransactionBySequenceNumber {
-                    signed_transaction_with_proof,
+                    transaction_with_proof,
                     proof_of_current_sequence_number,
                 }
             }
@@ -718,11 +712,11 @@ impl From<ResponseItem> for crate::proto::types::ResponseItem {
                 account_state_with_proof: Some(account_state_with_proof.into()),
             }),
             ResponseItem::GetAccountTransactionBySequenceNumber {
-                signed_transaction_with_proof,
+                transaction_with_proof,
                 proof_of_current_sequence_number,
             } => ResponseItems::GetAccountTransactionBySequenceNumberResponse(
                 GetAccountTransactionBySequenceNumberResponse {
-                    signed_transaction_with_proof: signed_transaction_with_proof.map(Into::into),
+                    transaction_with_proof: transaction_with_proof.map(Into::into),
                     proof_of_current_sequence_number: proof_of_current_sequence_number
                         .map(Into::into),
                 },

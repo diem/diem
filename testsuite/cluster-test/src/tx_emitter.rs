@@ -12,17 +12,17 @@ use std::{
 };
 
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
-use crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::KeyPair,
-    traits::Uniform,
-};
 use failure::{
     self,
     prelude::{bail, format_err},
 };
 use generate_keypair::load_key_from_file;
 use itertools::zip;
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    test_utils::KeyPair,
+    traits::Uniform,
+};
 use libra_types::{
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},
@@ -31,8 +31,7 @@ use libra_types::{
         request_item::RequestedItems, GetAccountStateRequest, RequestItem,
         UpdateToLatestLedgerRequest,
     },
-    transaction::{Script, TransactionPayload},
-    transaction_helpers::create_signed_txn,
+    transaction::{helpers::create_user_txn, Script, TransactionPayload},
 };
 use rand::{
     prelude::ThreadRng,
@@ -40,7 +39,7 @@ use rand::{
     seq::SliceRandom,
     Rng, SeedableRng,
 };
-use slog_scope::{debug, info};
+use slog_scope::{debug, info, warn};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 
@@ -48,7 +47,6 @@ const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempoo
 
 pub struct TxEmitter {
     accounts: Vec<AccountData>,
-    mint_client: AdmissionControlClient,
     faucet_account: AccountData,
 }
 
@@ -80,27 +78,46 @@ pub struct EmitJobRequest {
 
 impl TxEmitter {
     pub fn new(cluster: &Cluster) -> Self {
-        let mint_client = Self::make_client(&cluster.instances()[0]);
+        let mint_client = Self::pick_mint_client(cluster.instances());
         let faucet_account = load_faucet_account(&mint_client, cluster.mint_file());
         Self {
             accounts: vec![],
-            mint_client,
             faucet_account,
         }
     }
 
-    pub fn start_job(&mut self, req: EmitJobRequest) -> EmitJob {
+    pub fn clear(&mut self) {
+        self.accounts.clear();
+    }
+
+    fn pick_mint_client(instances: &[Instance]) -> AdmissionControlClient {
+        let mut rng = ThreadRng::default();
+        let mint_instance = instances
+            .choose(&mut rng)
+            .expect("Instances can not be empty");
+        Self::make_client(&mint_instance)
+    }
+
+    pub fn start_job(&mut self, req: EmitJobRequest) -> failure::Result<EmitJob> {
         let num_clients = req.instances.len();
         let num_accounts = req.accounts_per_client * num_clients;
+        let mut mint_client = Self::pick_mint_client(&req.instances);
+        let mut mint_failures = 0;
         info!("Minting accounts");
         while self.accounts.len() < num_accounts {
             let mut accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
             let mint_requests = gen_mint_txn_requests(&mut self.faucet_account, &accounts);
-            execute_and_wait_transactions(
-                &self.mint_client,
-                &mut self.faucet_account,
-                mint_requests,
-            );
+            if let Err(e) =
+                execute_and_wait_transactions(&mint_client, &mut self.faucet_account, mint_requests)
+            {
+                mint_failures += 1;
+                if mint_failures > 5 {
+                    return Err(e);
+                }
+                warn!("Mint attempt {} failed, retrying", mint_failures);
+                mint_client = Self::pick_mint_client(&req.instances);
+                continue;
+            }
             self.accounts.append(&mut accounts);
         }
         let all_accounts = self.accounts.split_off(self.accounts.len() - num_accounts);
@@ -132,7 +149,7 @@ impl TxEmitter {
             workers.push(Worker { join_handle });
             thread::sleep(Duration::from_millis(10)); // Small stagger between starting threads
         }
-        EmitJob { workers, stop }
+        Ok(EmitJob { workers, stop })
     }
 
     pub fn stop_job(&mut self, job: EmitJob) {
@@ -304,7 +321,7 @@ fn gen_submit_transaction_request(
     script: Script,
     sender_account: &mut AccountData,
 ) -> SubmitTransactionRequest {
-    let signed_txn = create_signed_txn(
+    let transaction = create_user_txn(
         &sender_account.key_pair,
         TransactionPayload::Script(script),
         sender_account.address,
@@ -315,7 +332,7 @@ fn gen_submit_transaction_request(
     )
     .expect("Failed to create signed transaction");
     let mut req = SubmitTransactionRequest::default();
-    req.signed_txn = Some(signed_txn.into());
+    req.transaction = Some(transaction.into());
     sender_account.sequence_number += 1;
     req
 }
@@ -368,7 +385,7 @@ fn execute_and_wait_transactions(
     client: &AdmissionControlClient,
     account: &mut AccountData,
     txn: Vec<SubmitTransactionRequest>,
-) {
+) -> failure::Result<()> {
     for request in txn {
         let resp = client.submit_transaction(&request);
         match resp {
@@ -383,7 +400,7 @@ fn execute_and_wait_transactions(
         }
     }
     wait_for_accounts_sequence(client, slice::from_mut(account))
-        .expect("Mint transactions was not committed before expiration");
+        .map_err(|_| format_err!("Mint transactions was not committed before expiration"))
 }
 
 fn load_faucet_account(client: &AdmissionControlClient, faucet_account_path: &str) -> AccountData {

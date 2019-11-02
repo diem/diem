@@ -4,14 +4,13 @@
 //! Internal module containing convenience utility functions mainly for testing
 
 use crate::traits::Uniform;
-use bincode::serialize;
 use serde::{Deserialize, Serialize};
 
 /// A deterministic seed for PRNGs related to keys
 pub const TEST_SEED: [u8; 32] = [0u8; 32];
 
 /// A keypair consisting of a private and public key
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(feature = "cloneable-private-keys", derive(Clone))]
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct KeyPair<S, P>
 where
@@ -71,8 +70,8 @@ where
     Pub: Serialize + for<'a> From<&'a Priv>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut v = serialize(&self.private_key).unwrap();
-        v.extend(&serialize(&self.public_key).unwrap());
+        let mut v = lcs::to_bytes(&self.private_key).unwrap();
+        v.extend(&lcs::to_bytes(&self.public_key).unwrap());
         write!(f, "{}", hex::encode(&v[..]))
     }
 }

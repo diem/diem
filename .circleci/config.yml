@@ -66,28 +66,36 @@ jobs:
       - run:
           name: Linting
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [123] ]] || ./scripts/clippy.sh
+            [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo xclippy --workspace --all-targets
             [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo fmt -- --check
       - run:
           name: Build Release
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [023] ]] || RUST_BACKTRACE=1 cargo build -j 16 --all --release
+            [[ $CIRCLE_NODE_INDEX =~ [023] ]] || RUST_BACKTRACE=1 cargo build -j 16 --release
       - run:
           name: Build Dev
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [01] ]] || RUST_BACKTRACE=1 cargo build -j 16 --all
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p benchmark
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p libra-swarm
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p cluster-test
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p libra-fuzzer
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p language_benchmarks
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p bytecode-to-boogie
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p cost-synthesis
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p test-generation
       - run:
           name: Run All Unit Tests
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || RUST_BACKTRACE=1 cargo test -j 16 --all --exclude testsuite
+            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || RUST_BACKTRACE=1 cargo x test --unit
       - run:
           name: Run Cryptography Unit Tests with the formally verified backend
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || RUST_BACKTRACE=1 cargo test -j 16 -p crypto -p secret-service --features='std fiat_u64_backend' --no-default-features
+            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || ( RUST_BACKTRACE=1 cd crypto/crypto && cargo test --features='std fiat_u64_backend fuzzing' --no-default-features )
       - run:
           name: Run All End to End Tests
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo test -j 16 --package testsuite -- --test-threads 1
+            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo x test --package testsuite -- --test-threads 1
       - build_teardown
   validate-config:
     description: Validate that committed docker configs are up to date

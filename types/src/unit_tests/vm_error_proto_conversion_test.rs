@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_error::{StatusCode, VMStatus};
-use prost_ext::test_helpers::assert_protobuf_encode_decode;
+use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use std::convert::TryFrom;
 
 #[test]

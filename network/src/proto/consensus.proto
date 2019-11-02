@@ -6,143 +6,42 @@ syntax = "proto3";
 package consensus;
 
 import "ledger_info.proto";
-import "transaction.proto";
 
 message ConsensusMsg {
   oneof message {
     Proposal proposal = 1;
-    Vote vote = 2;
+    VoteMsg vote_msg = 2;
     RequestBlock request_block = 3;
     RespondBlock respond_block = 4;
-    TimeoutMsg timeout_msg = 5;
-    SyncInfo sync_info = 6;
+    SyncInfo sync_info = 5;
+    types.LedgerInfoWithSignatures ledger_info = 6;
   }
 }
 
 message Proposal {
-  // The proposed block
-  Block proposed_block = 1;
-  // Information about the highest QC, LedgerInfo, TimeoutCertificate, etc.
-  SyncInfo sync_info = 2;
-}
-
-message PacemakerTimeout {
-  // Round that has timed out (e.g. we propose to switch to round + 1)
-  uint64 round = 1;
-  // Author of timeout
-  bytes author = 2;
-  // Signature that this timeout was authored by owner
-  bytes signature = 3;
-  // Optional vote for the given round
-  Vote vote = 4;
-}
-
-message TimeoutMsg {
-  // Information about the highest QC, LedgerInfo, TimeoutCertificate, etc.
-  SyncInfo sync_info = 1;
-  // Timeout
-  PacemakerTimeout pacemaker_timeout = 2;
-  // Signature that this timeout was authored by owner
-  bytes signature = 3;
+  bytes bytes = 1;
 }
 
 message SyncInfo {
-  // Highest quorum certificate
-  QuorumCert highest_quorum_cert = 1;
-  // Highest ledger info
-  QuorumCert highest_ledger_info = 2;
-  // Optional highest timeout certificate if available
-  PacemakerTimeoutCertificate highest_timeout_cert = 3;
-}
-
-message PacemakerTimeoutCertificate {
-  // Round for which this certificate was created
-  uint64 round = 1;
-  // List of certified timeouts
-  repeated PacemakerTimeout timeouts = 2;
-}
-
-message TimeoutCertificate {
-  // Round certified by this timeout certificate.
-  uint64 round = 1;
-  // List of signatures certifying the timeout.
-  repeated types.ValidatorSignature signatures = 2;
+  bytes bytes = 1;
 }
 
 message Block {
-  // Payload of the block (e.g. one or more transaction(s)
-  bytes payload = 1;
-  // Epoch number corresponds to the set of validators that are active for this block.
-  uint64 epoch = 2;
-  // The round of the block (internal monotonically increasing counter).
-  uint64 round = 3;
-  // The approximate physical microseconds since the epoch when the block was proposed
-  uint64 timestamp_usecs = 4;
-  // Contains the quorum certified ancestor and whether the quorum certified
-  // ancestor was voted on successfully
-  QuorumCert quorum_cert = 5;
-  // Author of the block that can be validated by the author's public key and
-  // the signature
-  bytes author = 6;
-  // Signature that the hash of this block has been authored by the owner of the
-  // private key
-  bytes signature = 7;
+  bytes bytes = 1;
 }
 
-message QuorumCert {
-  // The vote information certified by the quorum.
-  VoteData vote_data = 1;
-  // LedgerInfo with at least 2f+1 signatures. The LedgerInfo's consensus data
-  // hash is a digest that covers vote data hash.
-  types.LedgerInfoWithSignatures signed_ledger_info = 2;
+message VoteMsg {
+  bytes bytes = 1;
 }
 
-message VoteData {
-  // The id of the block being vote for.
-  bytes block_id = 1;
-  // The id and the version of the state after executing the block.
-  bytes executed_state_id = 2;
-  // The round of the block being voted for
-  uint64 round = 3;
-  // The id of the parent block
-  bytes parent_block_id = 4;
-  // The round of the parent block
-  uint64 parent_block_round = 5;
-}
-
-message Vote {
-  // The actual vote information.
-  VoteData vote_data = 1;
-  // Author of the vote.
-  bytes author = 2;
-  // The ledger info carried with the vote (corresponding to the block of a
-  // potentially committed txn).
-  types.LedgerInfo ledger_info = 3;
-  // Signature of the ledger info.
-  bytes signature = 4;
-  // The round signatures can be aggregated into the timeout certificate.
-  bytes round_signature = 5;
-  // Sync info for exchanging information about highest QC, TC and LedgerInfo
-  SyncInfo sync_info = 6;
+message VoteProposal {
+  bytes bytes = 1;
 }
 
 message RequestBlock {
-  // The id of the requested block.
-  bytes block_id = 1;
-  uint64 num_blocks = 2;
-}
-
-enum BlockRetrievalStatus {
-  // Successfully fill in the request.
-  SUCCEEDED = 0;
-  // Can not find the block corresponding to block_id.
-  ID_NOT_FOUND = 1;
-  // Can not find enough blocks but find some.
-  NOT_ENOUGH_BLOCKS = 2;
+  bytes bytes = 1;
 }
 
 message RespondBlock {
-  BlockRetrievalStatus status = 1;
-  // The responded block.
-  repeated Block blocks = 2;
+  bytes bytes = 1;
 }

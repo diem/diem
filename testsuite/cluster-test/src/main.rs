@@ -1,10 +1,15 @@
+use cluster_test::effects::RemoveNetworkEffects;
+use cluster_test::experiments::{MultiRegionSimulation, PacketLossRandomValidators};
+use cluster_test::github::GitHub;
+use cluster_test::instance::Instance;
 use cluster_test::prometheus::Prometheus;
+use cluster_test::thread_pool_executor::ThreadPoolExecutor;
 use cluster_test::tx_emitter::{EmitJobRequest, EmitThreadParams};
 use cluster_test::util::unix_timestamp_now;
 use cluster_test::{
     aws::Aws,
     cluster::Cluster,
-    deployment::{DeploymentManager, SOURCE_TAG, TESTED_TAG},
+    deployment::{DeploymentManager, SOURCE_TAG},
     effects::{Action, Effect, Reboot, StopContainer},
     experiments::{Experiment, RebootRandomValidators},
     health::{DebugPortLogThread, HealthCheckRunner, LogTail},
@@ -19,18 +24,18 @@ use failure::{
 };
 use rand::prelude::ThreadRng;
 use rand::Rng;
+use reqwest::Url;
 use slog::{o, Drain};
-use slog_scope::info;
+use slog_scope::{info, warn};
 use std::{
     collections::HashSet,
-    env, mem,
+    env,
     sync::mpsc::{self, TryRecvError},
     thread,
     time::{Duration, Instant},
 };
 use structopt::{clap::ArgGroup, StructOpt};
 use termion::{color, style};
-use threadpool;
 
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -72,6 +77,16 @@ struct Args {
     emit_tx: bool,
     #[structopt(long, group = "action")]
     stop_experiment: bool,
+    #[structopt(long, group = "action")]
+    packet_loss_experiment: bool,
+    #[structopt(long, group = "action")]
+    perf_run: bool,
+    #[structopt(long, group = "action")]
+    cleanup: bool,
+    #[structopt(long, group = "action")]
+    multi_region_simulation: bool,
+    #[structopt(long, group = "action")]
+    changelog: Option<String>,
 
     // emit_tx options
     #[structopt(long, default_value = "10")]
@@ -86,6 +101,46 @@ struct Args {
     //stop_experiment options
     #[structopt(long, default_value = "10")]
     max_stopped: usize,
+
+    // multi_region_simulation: options
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Number of instances which should be in region1. The remaining instances are in region 2."
+    )]
+    multi_region_split: usize,
+    #[structopt(
+        long,
+        default_value = "50",
+        help = "Delay in ms between the two regions"
+    )]
+    multi_region_delay_ms: u64,
+    #[structopt(
+        long,
+        default_value = "60",
+        help = "Duration in secs for which multi region experiment happens"
+    )]
+    multi_region_exp_duration_secs: u64,
+
+    //packet_loss_experiment options
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Percent of instances in which packet loss should be introduced"
+    )]
+    packet_loss_percent_instances: f32,
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Percent of packet loss for each instance"
+    )]
+    packet_loss_percent: f32,
+    #[structopt(
+        long,
+        default_value = "60",
+        help = "Duration in secs for which packet loss happens"
+    )]
+    packet_loss_duration_secs: u64,
 }
 
 pub fn main() {
@@ -127,7 +182,7 @@ pub fn main() {
         runner.run_suite_in_loop();
     } else if args.run_once {
         let experiment = RebootRandomValidators::new(3, &runner.cluster);
-        runner.run_single_experiment(Box::new(experiment)).unwrap();
+        runner.cleanup_and_run(Box::new(experiment)).unwrap();
     } else if args.tail_logs {
         runner.tail_logs();
     } else if args.health_check {
@@ -144,6 +199,40 @@ pub fn main() {
         runner.stop();
     } else if args.start {
         runner.start();
+    } else if args.packet_loss_experiment {
+        let total_instances = runner.cluster.instances().len();
+        let packet_loss_num_instances: usize = std::cmp::min(
+            ((args.packet_loss_percent_instances / 100.0) * total_instances as f32).ceil() as usize,
+            total_instances,
+        );
+        let experiment = PacketLossRandomValidators::new(
+            packet_loss_num_instances,
+            args.packet_loss_percent,
+            Duration::from_secs(args.packet_loss_duration_secs),
+            &runner.cluster,
+        );
+        runner.cleanup_and_run(Box::new(experiment)).unwrap();
+    } else if args.multi_region_simulation {
+        let experiment = MultiRegionSimulation::new(
+            args.multi_region_split,
+            Duration::from_millis(args.multi_region_delay_ms),
+            Duration::from_secs(args.multi_region_exp_duration_secs),
+            &runner.cluster,
+            runner.thread_pool_executor.clone(),
+        );
+        runner.cleanup_and_run(Box::new(experiment)).unwrap();
+    } else if args.perf_run {
+        runner.perf_run();
+    } else if args.cleanup {
+        runner.cleanup();
+    } else if let Some(commit) = args.changelog {
+        let prev_commit = runner
+            .deployment_manager
+            .get_tested_upstream_commit()
+            .map_err(|e| warn!("Failed to get prev_commit: {:?}", e))
+            .ok();
+        println!("Prev commit: {:?}", prev_commit);
+        println!("{}", runner.get_changelog(prev_commit.as_ref(), &commit));
     }
 }
 
@@ -176,8 +265,13 @@ struct ClusterTestRunner {
     health_check_runner: HealthCheckRunner,
     deployment_manager: DeploymentManager,
     experiment_interval: Duration,
-    slack: Option<SlackClient>,
-    thread_pool: threadpool::ThreadPool,
+    thread_pool_executor: ThreadPoolExecutor,
+    slack: SlackClient,
+    slack_log_url: Option<Url>,
+    slack_changelog_url: Option<Url>,
+    tx_emitter: TxEmitter,
+    prometheus: Prometheus,
+    github: GitHub,
 }
 
 fn parse_host_port(s: &str) -> failure::Result<(String, u32)> {
@@ -207,11 +301,13 @@ impl BasicSwarmUtil {
 
     pub fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
         let mut emitter = TxEmitter::new(&self.cluster);
-        let _job = emitter.start_job(EmitJobRequest {
-            instances: self.cluster.instances().to_vec(),
-            accounts_per_client,
-            thread_params,
-        });
+        emitter
+            .start_job(EmitJobRequest {
+                instances: self.cluster.instances().to_vec(),
+                accounts_per_client,
+                thread_params,
+            })
+            .expect("Failed to start emit job");
         thread::park();
     }
 }
@@ -233,7 +329,6 @@ impl ClusterUtil {
         let prometheus = Prometheus::new(
             cluster
                 .prometheus_ip()
-                .as_ref()
                 .expect("Failed to discover prometheus ip in aws"),
         );
         info!("Discovered {} peers", cluster.instances().len());
@@ -251,11 +346,13 @@ impl ClusterUtil {
 
     pub fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
         let mut emitter = TxEmitter::new(&self.cluster);
-        let _job = emitter.start_job(EmitJobRequest {
-            instances: self.cluster.instances().to_vec(),
-            accounts_per_client,
-            thread_params,
-        });
+        emitter
+            .start_job(EmitJobRequest {
+                instances: self.cluster.instances().to_vec(),
+                accounts_per_client,
+                thread_params,
+            })
+            .expect("Failed to start emit job");
         self.run_stat_loop();
     }
 
@@ -268,13 +365,15 @@ impl ClusterUtil {
         let mut results = vec![];
         let window = Duration::from_secs(60);
         loop {
-            let job = emitter.start_job(EmitJobRequest {
-                instances: instances.clone(),
-                accounts_per_client: 10,
-                thread_params: EmitThreadParams::default(),
-            });
+            let job = emitter
+                .start_job(EmitJobRequest {
+                    instances: instances.clone(),
+                    accounts_per_client: 10,
+                    thread_params: EmitThreadParams::default(),
+                })
+                .expect("Failed to start emit job");
             thread::sleep(Duration::from_secs(30) + window);
-            match self.print_stat(window) {
+            match print_stat(&self.prometheus, window) {
                 Err(e) => info!("Failed to get stats: {:?}", e),
                 Ok((tps, lat)) => results.push((stop_effects.len(), tps, lat)),
             }
@@ -312,40 +411,40 @@ impl ClusterUtil {
         thread::sleep(Duration::from_secs(30)); // warm up
         loop {
             thread::sleep(Duration::from_secs(10));
-            if let Err(err) = self.print_stat(window) {
+            if let Err(err) = print_stat(&self.prometheus, window) {
                 info!("Stat error: {:?}", err);
             }
         }
     }
+}
 
-    fn print_stat(&self, window: Duration) -> failure::Result<(f64, f64)> {
-        let step = 10;
-        let end = unix_timestamp_now();
-        let start = end - window;
-        let tps = self.prometheus.query_range(
-            "irate(consensus_gauge{op='last_committed_version'}[1m])".to_string(),
-            &start,
-            &end,
-            step,
-        )?;
-        let avg_tps = tps.avg().ok_or_else(|| format_err!("No tps data"))?;
-        let latency = self.prometheus.query_range(
-            "irate(mempool_duration_sum{op='e2e.latency'}[1m])/irate(mempool_duration_count{op='e2e.latency'}[1m])"
-                .to_string(),
-            &start,
-            &end,
-            step,
-        )?;
-        let avg_latency = latency
-            .avg()
-            .ok_or_else(|| format_err!("No latency data"))?;
-        info!(
-            "Tps: {:.0}, latency: {:.0} ms",
-            avg_tps,
-            avg_latency * 1000.
-        );
-        Ok((avg_tps, avg_latency))
-    }
+fn print_stat(prometheus: &Prometheus, window: Duration) -> failure::Result<(f64, f64)> {
+    let step = 10;
+    let end = unix_timestamp_now();
+    let start = end - window;
+    let tps = prometheus.query_range(
+        "irate(consensus_gauge{op='last_committed_version'}[1m])".to_string(),
+        &start,
+        &end,
+        step,
+    )?;
+    let avg_tps = tps.avg().ok_or_else(|| format_err!("No tps data"))?;
+    let latency = prometheus.query_range(
+        "irate(mempool_duration_sum{op='e2e.latency'}[1m])/irate(mempool_duration_count{op='e2e.latency'}[1m])"
+            .to_string(),
+        &start,
+        &end,
+        step,
+    )?;
+    let avg_latency = latency
+        .avg()
+        .ok_or_else(|| format_err!("No latency data"))?;
+    info!(
+        "Tps: {:.0}, latency: {:.0} ms",
+        avg_tps,
+        avg_latency * 1000.
+    );
+    Ok((avg_tps, avg_latency))
 }
 
 impl ClusterTestRunner {
@@ -368,11 +467,21 @@ impl ClusterTestRunner {
         };
         let experiment_interval = Duration::from_secs(experiment_interval_sec);
         let deployment_manager = DeploymentManager::new(aws.clone(), cluster.clone());
-        let slack = SlackClient::try_new_from_environment();
-        let thread_pool = threadpool::Builder::new()
-            .num_threads(10)
-            .thread_name("ssh-pool".to_string())
-            .build();
+        let slack = SlackClient::new();
+        let slack_log_url = env::var("SLACK_LOG_URL")
+            .map(|u| u.parse().expect("Failed to parse SLACK_LOG_URL"))
+            .ok();
+        let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
+            .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
+            .ok();
+        let thread_pool_executor = ThreadPoolExecutor::new("ssh-pool".into());
+        let tx_emitter = TxEmitter::new(&cluster);
+        let prometheus = Prometheus::new(
+            cluster
+                .prometheus_ip()
+                .expect("Failed to discover prometheus ip in aws"),
+        );
+        let github = GitHub::new();
         Self {
             logs,
             cluster,
@@ -380,11 +489,17 @@ impl ClusterTestRunner {
             deployment_manager,
             experiment_interval,
             slack,
-            thread_pool,
+            thread_pool_executor,
+            slack_log_url,
+            slack_changelog_url,
+            tx_emitter,
+            prometheus,
+            github,
         }
     }
 
     pub fn run_suite_in_loop(&mut self) {
+        self.cleanup();
         let mut hash_to_tag = None;
         loop {
             if let Some(hash) = self.deployment_manager.latest_hash_changed() {
@@ -398,10 +513,7 @@ impl ClusterTestRunner {
                         return;
                     }
                     Ok(true) => {
-                        self.slack_message(format!(
-                            "Deployed new version `{}`, running test suite",
-                            hash
-                        ));
+                        info!("Deployed new version `{}`, running test suite", hash);
                         hash_to_tag = Some(hash);
                     }
                     Ok(false) => {}
@@ -414,19 +526,67 @@ impl ClusterTestRunner {
             }
             if let Some(hash_to_tag) = hash_to_tag.take() {
                 info!("Test suite succeed first time for `{}`", hash_to_tag);
-                if let Err(e) = self
+                let prev_commit = self
+                    .deployment_manager
+                    .get_tested_upstream_commit()
+                    .map_err(|e| warn!("Failed to get prev_commit: {:?}", e))
+                    .ok();
+                let upstream_commit = match self
                     .deployment_manager
                     .tag_tested_image(hash_to_tag.clone())
                 {
-                    self.report_failure(format!("Failed to tag tested image: {}", e));
-                    return;
-                }
-                self.slack_message(format!(
-                    "Test suite passed. Tagged `{}` as `{}`",
-                    hash_to_tag, TESTED_TAG
-                ));
+                    Err(e) => {
+                        self.report_failure(format!("Failed to tag tested image: {}", e));
+                        return;
+                    }
+                    Ok(upstream_commit) => upstream_commit,
+                };
+                let perf_msg = match self.measure_performance() {
+                    Ok(report) => format!(
+                        "Performance report:\n```\n{}\n```",
+                        report.to_slack_message()
+                    ),
+                    Err(err) => {
+                        warn!("No performance data: {}", err);
+                        "No performance data".to_string()
+                    }
+                };
+                info!(
+                    "prev_commit: {:?}, upstream_commit: {}",
+                    prev_commit, upstream_commit
+                );
+                let changelog = self.get_changelog(prev_commit.as_ref(), &upstream_commit);
+                self.slack_changelog_message(format!("{}\n\n{}", changelog, perf_msg));
             }
             thread::sleep(self.experiment_interval);
+        }
+    }
+
+    fn get_changelog(&self, prev_commit: Option<&String>, upstream_commit: &str) -> String {
+        let commits = self.github.get_commits("libra/libra", &upstream_commit);
+        match commits {
+            Err(e) => {
+                info!("Failed to get github commits: {:?}", e);
+                format!("*Revision upstream_{}*", upstream_commit)
+            }
+            Ok(commits) => {
+                let mut msg = format!("*Revision {}*", upstream_commit);
+                for commit in commits {
+                    if let Some(prev_commit) = prev_commit {
+                        if commit.sha.starts_with(prev_commit) {
+                            break;
+                        }
+                    }
+                    let commit_lines: Vec<_> = commit.commit.message.split('\n').collect();
+                    let commit_head = commit_lines[0];
+                    let short_sha = &commit.sha[..6];
+                    let email_parts: Vec<_> = commit.commit.author.email.split('@').collect();
+                    let author = email_parts[0];
+                    let line = format!("\n>\u{2022} {} _{}_ {}", short_sha, author, commit_head);
+                    msg.push_str(&line);
+                }
+                msg
+            }
         }
     }
 
@@ -450,6 +610,7 @@ impl ClusterTestRunner {
         thread::sleep(Duration::from_secs(60));
         self.logs.recv_all();
         self.health_check_runner.clear();
+        self.tx_emitter.clear();
         self.start();
         info!("Waiting until all validators healthy after deployment");
         self.wait_until_all_healthy()?;
@@ -473,13 +634,70 @@ impl ClusterTestRunner {
         Ok(())
     }
 
+    pub fn perf_run(&mut self) {
+        let results = self.measure_performance().unwrap();
+        println!("{}", results.to_slack_message())
+    }
+
+    fn measure_performance(&mut self) -> failure::Result<SuiteReport> {
+        info!("Starting warm up job");
+        self.emit_txn_for(Duration::from_secs(60), self.cluster.instances().clone())?;
+        info!("Warm up done, measuring tps");
+        let window = Duration::from_secs(180);
+        self.emit_txn_for(
+            window + Duration::from_secs(30),
+            self.cluster.instances().clone(),
+        )?;
+        let stats_all_up = print_stat(&self.prometheus, window)
+            .map_err(|e| format_err!("Failed to query stats: {}", e))?;
+        let (stop, keep) = self.cluster.split_n_random(10);
+        let mut stop_effects: Vec<_> = stop
+            .into_instances()
+            .into_iter()
+            .map(StopContainer::new)
+            .collect();
+        self.activate_all(&mut stop_effects);
+        self.emit_txn_for(window + Duration::from_secs(30), keep.instances().clone())?;
+        let stats_10_down = print_stat(&self.prometheus, window)
+            .map_err(|e| format_err!("Failed to query stats: {}", e))?;
+        self.deactivate_all(&mut stop_effects);
+        self.wait_until_all_healthy()?;
+        Ok(SuiteReport {
+            stats_all_up,
+            stats_10_down,
+        })
+    }
+
+    fn emit_txn_for(
+        &mut self,
+        duration: Duration,
+        instances: Vec<Instance>,
+    ) -> failure::Result<()> {
+        let job = self.tx_emitter.start_job(EmitJobRequest {
+            instances,
+            accounts_per_client: 10,
+            thread_params: EmitThreadParams::default(),
+        })?;
+        thread::sleep(duration);
+        self.tx_emitter.stop_job(job);
+        Ok(())
+    }
+
+    pub fn cleanup_and_run(&mut self, experiment: Box<dyn Experiment>) -> failure::Result<()> {
+        self.cleanup();
+        self.run_single_experiment(experiment)
+    }
+
     pub fn run_single_experiment(
         &mut self,
         experiment: Box<dyn Experiment>,
     ) -> failure::Result<()> {
         let events = self.logs.recv_all();
-        if !self.health_check_runner.run(&events).is_empty() {
-            bail!("Some validators are unhealthy before experiment started");
+        if let Err(s) = self.health_check_runner.run(&events, &HashSet::new(), true) {
+            bail!(
+                "Some validators are unhealthy before experiment started : {}",
+                s
+            );
         }
 
         info!(
@@ -511,14 +729,11 @@ impl ClusterTestRunner {
             // This assumes so far that event propagation time is << 1s, this need to be refined
             // in future to account for actual event propagation delay
             let events = self.logs.recv_all_until_deadline(deadline);
-            let failed_validators = self.health_check_runner.run(&events);
-            for failed in failed_validators {
-                if !affected_validators.contains(&failed) {
-                    bail!(
-                        "Validator {} failed, not expected for this experiment",
-                        failed
-                    );
-                }
+            if let Err(s) = self
+                .health_check_runner
+                .run(&events, &affected_validators, true)
+            {
+                bail!("Validators which were not under experiment failed : {}", s);
             }
             match exp_result_recv.try_recv() {
                 Ok(result) => {
@@ -553,18 +768,16 @@ impl ClusterTestRunner {
             // This assumes so far that event propagation time is << 1s, this need to be refined
             // in future to account for actual event propagation delay
             let events = self.logs.recv_all_until_deadline(deadline);
-            let failed_validators = self.health_check_runner.run(&events);
-            let mut still_affected_validator = HashSet::new();
-            for failed in failed_validators {
-                if !affected_validators.contains(&failed) {
-                    bail!(
-                        "Validator {} failed, not expected for this experiment",
-                        failed
-                    );
-                }
-                still_affected_validator.insert(failed);
+
+            let unhealthy_validators;
+            match self
+                .health_check_runner
+                .run(&events, &affected_validators, true)
+            {
+                Err(s) => bail!("Validators which were not under experiment failed : {}", s),
+                Ok(r) => unhealthy_validators = r,
             }
-            if still_affected_validator.is_empty() {
+            if unhealthy_validators.is_empty() {
                 break;
             }
         }
@@ -580,7 +793,9 @@ impl ClusterTestRunner {
             // This assumes so far that event propagation time is << 1s, this need to be refined
             // in future to account for actual event propagation delay
             let events = self.logs.recv_all_until_deadline(deadline);
-            self.health_check_runner.run(&events);
+            let _ignore = self
+                .health_check_runner
+                .run(&events, &HashSet::new(), false);
         }
     }
 
@@ -596,8 +811,12 @@ impl ClusterTestRunner {
             }
             let deadline = now + HEALTH_POLL_INTERVAL;
             let events = self.logs.recv_all_until_deadline(deadline);
-            if self.health_check_runner.run(&events).is_empty() {
-                break;
+            if let Ok(failed_instances) =
+                self.health_check_runner.run(&events, &HashSet::new(), true)
+            {
+                if failed_instances.is_empty() {
+                    break;
+                }
             }
         }
         Ok(())
@@ -611,8 +830,17 @@ impl ClusterTestRunner {
 
     fn slack_message(&self, msg: String) {
         info!("{}", msg);
-        if let Some(ref slack) = self.slack {
-            if let Err(e) = slack.send_message(&msg) {
+        if let Some(ref log_url) = self.slack_log_url {
+            if let Err(e) = self.slack.send_message(log_url, &msg) {
+                info!("Failed to send slack message: {}", e);
+            }
+        }
+    }
+
+    fn slack_changelog_message(&self, msg: String) {
+        info!("{}", msg);
+        if let Some(ref changelog_url) = self.slack_changelog_url {
+            if let Err(e) = self.slack.send_message(changelog_url, &msg) {
                 info!("Failed to send slack message: {}", e);
             }
         }
@@ -640,7 +868,7 @@ impl ClusterTestRunner {
                 }
             })
             .collect();
-        self.execute_jobs(jobs);
+        self.thread_pool_executor.execute_jobs(jobs);
         info!("Done");
     }
 
@@ -666,6 +894,27 @@ impl ClusterTestRunner {
         self.stop();
         self.start();
         info!("Completed");
+    }
+
+    fn cleanup(&self) {
+        let cleanup_all_instances: Vec<_> = self
+            .cluster
+            .instances()
+            .clone()
+            .into_iter()
+            .map(|instance| {
+                move || {
+                    if let Err(e) = RemoveNetworkEffects::new(instance.clone()).apply() {
+                        info!(
+                            "Failed to remove network effects for {}. Error: {}",
+                            instance, e
+                        );
+                    }
+                }
+            })
+            .collect();
+        self.thread_pool_executor
+            .execute_jobs(cleanup_all_instances);
     }
 
     pub fn stop(&self) {
@@ -696,7 +945,7 @@ impl ClusterTestRunner {
                 }
             })
             .collect();
-        self.execute_jobs(jobs);
+        self.thread_pool_executor.execute_jobs(jobs);
     }
 
     fn deactivate_all<T: Effect>(&self, effects: &mut [T]) {
@@ -710,40 +959,20 @@ impl ClusterTestRunner {
                 }
             })
             .collect();
-        self.execute_jobs(jobs);
+        self.thread_pool_executor.execute_jobs(jobs);
     }
+}
 
-    /// Executes jobs, wait for them to complete and return results
-    /// Note: Results in vector do not match order of input jobs
-    fn execute_jobs<'a, R, J>(&self, jobs: Vec<J>) -> Vec<R>
-    where
-        R: Send + 'a,
-        J: FnOnce() -> R + Send + 'a,
-    {
-        let (sender, recv) = mpsc::channel();
-        let size = jobs.len();
-        for job in jobs {
-            let sender = sender.clone();
-            let closure = move || {
-                let r = job();
-                sender
-                    .send(r)
-                    .expect("main execute_jobs thread terminated before worker");
-            };
-            let closure: Box<dyn FnOnce() + Send + 'a> = Box::new(closure);
-            // Using mem::transmute to cast from 'a to 'static lifetime
-            // This is safe because we ensure lifetime of current stack frame
-            // is longer then lifetime of closure
-            // Even if one of worker threads panics, we still going to wait in recv loop below
-            // until every single thread completes
-            let closure: Box<dyn FnOnce() + Send + 'static> = unsafe { mem::transmute(closure) };
-            self.thread_pool.execute(closure);
-        }
-        let mut result = Vec::with_capacity(size);
-        for _ in 0..size {
-            let r = recv.recv().expect("One of job threads had panic");
-            result.push(r);
-        }
-        result
+struct SuiteReport {
+    stats_all_up: (f64, f64),
+    stats_10_down: (f64, f64),
+}
+
+impl SuiteReport {
+    pub fn to_slack_message(&self) -> String {
+        format!(
+            "all up: {:.0} TPS, {:.1} s latency\n10% down: {:.0} TPS, {:.1} s latency",
+            self.stats_all_up.0, self.stats_all_up.1, self.stats_10_down.0, self.stats_10_down.1,
+        )
     }
 }

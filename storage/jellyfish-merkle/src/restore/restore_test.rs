@@ -5,7 +5,7 @@ use crate::{
     mock_tree_store::MockTreeStore, restore::JellyfishMerkleRestore, JellyfishMerkleTree,
     TreeReader,
 };
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 use proptest::{collection::btree_map, prelude::*};
 use std::collections::BTreeMap;

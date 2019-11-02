@@ -6,13 +6,13 @@ use crate::{
     chained_bft::block_storage::VoteReceptionResult, counters,
     util::time_service::duration_since_epoch,
 };
-
-use canonical_serialization::CanonicalSerialize;
-use consensus_types::{block::ExecutedBlock, quorum_cert::QuorumCert, vote_msg::VoteMsg};
-use crypto::HashValue;
-use executor::StateComputeResult;
+use consensus_types::{
+    executed_block::ExecutedBlock, quorum_cert::QuorumCert,
+    timeout_certificate::TimeoutCertificate, vote::Vote,
+};
+use libra_crypto::HashValue;
+use libra_logger::prelude::*;
 use libra_types::crypto_proxies::ValidatorVerifier;
-use logger::prelude::*;
 use mirai_annotations::{checked_verify_eq, precondition};
 use serde::Serialize;
 use std::{
@@ -58,7 +58,7 @@ impl<T> LinkableBlock<T> {
 
 impl<T> LinkableBlock<T>
 where
-    T: Serialize + Default + CanonicalSerialize + PartialEq,
+    T: Serialize + Default + PartialEq,
 {
     pub fn id(&self) -> HashValue {
         self.executed_block().id()
@@ -78,6 +78,8 @@ pub struct BlockTree<T> {
 
     /// The quorum certificate of highest_certified_block
     highest_quorum_cert: Arc<QuorumCert>,
+    /// The highest timeout certificate (if any).
+    highest_timeout_cert: Option<Arc<TimeoutCertificate>>,
     /// The quorum certificate that carries a highest ledger info
     highest_ledger_info: Arc<QuorumCert>,
     /// Manages pending votes to be aggregated.
@@ -92,13 +94,14 @@ pub struct BlockTree<T> {
 
 impl<T> BlockTree<T>
 where
-    T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,
+    T: Serialize + Default + Debug + PartialEq,
 {
     pub(super) fn new(
         root: ExecutedBlock<T>,
         root_quorum_cert: QuorumCert,
         root_ledger_info: QuorumCert,
         max_pruned_blocks_in_mem: usize,
+        highest_timeout_cert: Option<Arc<TimeoutCertificate>>,
     ) -> Self {
         assert_eq!(
             root.id(),
@@ -117,7 +120,7 @@ where
         let root_quorum_cert = Arc::new(root_quorum_cert);
         let mut id_to_quorum_cert = HashMap::new();
         id_to_quorum_cert.insert(
-            root_quorum_cert.certified_block_id(),
+            root_quorum_cert.certified_block().id(),
             Arc::clone(&root_quorum_cert),
         );
 
@@ -128,6 +131,7 @@ where
             root_id,
             highest_certified_block_id: root_id,
             highest_quorum_cert: Arc::clone(&root_quorum_cert),
+            highest_timeout_cert,
             highest_ledger_info: Arc::new(root_ledger_info),
             pending_votes: PendingVotes::new(),
             id_to_quorum_cert,
@@ -167,17 +171,6 @@ where
             .map(|lb| Arc::clone(lb.executed_block()))
     }
 
-    pub(super) fn get_compute_result(
-        &self,
-        block_id: &HashValue,
-    ) -> Option<Arc<StateComputeResult>> {
-        if self.root_id == *block_id {
-            None
-        } else {
-            self.get_block(block_id).map(|b| b.compute_result().clone())
-        }
-    }
-
     pub(super) fn root(&self) -> Arc<ExecutedBlock<T>> {
         self.get_block(&self.root_id).expect("Root must exist")
     }
@@ -189,6 +182,15 @@ where
 
     pub(super) fn highest_quorum_cert(&self) -> Arc<QuorumCert> {
         Arc::clone(&self.highest_quorum_cert)
+    }
+
+    pub(super) fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>> {
+        self.highest_timeout_cert.clone()
+    }
+
+    /// Replace highest timeout cert with the given value.
+    pub(super) fn replace_timeout_cert(&mut self, tc: Arc<TimeoutCertificate>) {
+        self.highest_timeout_cert.replace(tc);
     }
 
     pub(super) fn highest_ledger_info(&self) -> Arc<QuorumCert> {
@@ -228,7 +230,7 @@ where
     }
 
     pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> failure::Result<()> {
-        let block_id = qc.certified_block_id();
+        let block_id = qc.certified_block().id();
         let qc = Arc::new(qc);
 
         // Safety invariant: For any two quorum certificates qc1, qc2 in the block store,
@@ -236,11 +238,11 @@ where
         // The invariant is quadratic but can be maintained in linear time by the check
         // below.
         precondition!({
-            let qc_round = qc.certified_block_round();
+            let qc_round = qc.certified_block().round();
             self.id_to_quorum_cert.values().all(|x| {
                 (*(*x).ledger_info()).ledger_info().consensus_data_hash()
                     == (*(*qc).ledger_info()).ledger_info().consensus_data_hash()
-                    || x.certified_block_round() != qc_round
+                    || x.certified_block().round() != qc_round
             })
         });
 
@@ -280,14 +282,14 @@ where
 
     pub(super) fn insert_vote(
         &mut self,
-        vote_msg: &VoteMsg,
+        vote: &Vote,
         validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
-        let block_id = vote_msg.vote_data().block_id();
+        let block_id = vote.vote_data().proposed().id();
         if let Some(old_qc) = self.id_to_quorum_cert.get(&block_id) {
             return VoteReceptionResult::OldQuorumCertificate(Arc::clone(old_qc));
         }
-        let res = self.pending_votes.insert_vote(vote_msg, validator_verifier);
+        let res = self.pending_votes.insert_vote(vote, validator_verifier);
         if let VoteReceptionResult::NewQuorumCertificate(_) = res {
             // Note that the block might not be present locally, in which case we cannot calculate
             // time between block creation and qc
@@ -392,6 +394,8 @@ where
         if cur_block_id != self.root_id {
             return None;
         }
+        // Called `.reverse()` to get the chronically increased order.
+        res.reverse();
         Some(res)
     }
 
@@ -407,7 +411,7 @@ where
 #[cfg(any(test, feature = "fuzzing"))]
 impl<T> BlockTree<T>
 where
-    T: Serialize + Default + Debug + CanonicalSerialize + PartialEq,
+    T: Serialize + Default + Debug + PartialEq,
 {
     /// Returns the number of blocks in the tree
     pub(super) fn len(&self) -> usize {

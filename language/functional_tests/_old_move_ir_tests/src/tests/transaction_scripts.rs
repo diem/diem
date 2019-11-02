@@ -79,7 +79,7 @@ fn create_account_script() {
 
     // make sure the account has been created by sending a transaction from it
     let sequence_number = 0;
-    let txn = test_env.create_signed_txn(
+    let txn = test_env.create_user_txn(
         to_script(b"main() { return; }", vec![]),
         fresh_address.clone(),
         fresh_account,
@@ -113,7 +113,7 @@ fn rotate_authentication_key_script() {
 
     // make sure rotation worked by sending with the new key
     let sequence_number = 1;
-    let txn = test_env.create_signed_txn(
+    let txn = test_env.create_user_txn(
         to_standalone_script(b"main() { return; }"),
         old_account.addr,
         new_account,

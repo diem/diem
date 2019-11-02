@@ -5,12 +5,9 @@ use crate::{
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-    SimpleDeserializer, SimpleSerializer,
-};
 use failure::prelude::*;
 use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
 
 lazy_static! {
     // ChannelAccount
@@ -42,7 +39,7 @@ pub fn channel_account_resource_path(participant: AccountAddress) -> Vec<u8> {
 /// A Rust representation of an ChannelAccount resource.
 /// This is not how the ChannelAccount is represented in the VM but it's a convenient
 /// representation.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ChannelAccountResource {
     balance: u64,
     channel_sequence_number: u64,
@@ -66,7 +63,7 @@ impl ChannelAccountResource {
     }
 
     pub fn make_from(bytes: Vec<u8>) -> Result<Self> {
-        SimpleDeserializer::deserialize(bytes.as_slice())
+        lcs::from_bytes(bytes.as_slice()).map_err(|e| Into::into(e))
     }
 
     pub fn balance(&self) -> u64 {
@@ -86,33 +83,6 @@ impl ChannelAccountResource {
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        SimpleSerializer::serialize(self).unwrap()
-    }
-}
-
-impl CanonicalSerialize for ChannelAccountResource {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_u64(self.balance)?
-            .encode_u64(self.channel_sequence_number)?
-            .encode_bool(self.closed)?
-            .encode_struct(&self.participant)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for ChannelAccountResource {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let balance = deserializer.decode_u64()?;
-        let channel_sequence_number = deserializer.decode_u64()?;
-        let closed = deserializer.decode_bool()?;
-        let participant = deserializer.decode_struct()?;
-
-        Ok(ChannelAccountResource {
-            balance,
-            channel_sequence_number,
-            closed,
-            participant,
-        })
+        lcs::to_bytes(self).unwrap()
     }
 }

@@ -5,7 +5,7 @@
 
 # This script runs `cargo test` for each crate in the subdir
 
-base_cmd="cargo test"
+base_cmd="cargo test --all-features"
 dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 while read line; do
     echo $line;

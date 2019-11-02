@@ -14,7 +14,7 @@
 //!
 //! `TCP_ADDR=/ip6/::1/tcp/12345 cargo bench -p network remote_tcp`
 
-use logger::{prelude::*, set_default_global_logger};
+use libra_logger::{prelude::*, set_default_global_logger};
 use netcore::transport::tcp::TcpTransport;
 use socket_bench_server::{
     build_tcp_muxer_transport, build_tcp_noise_muxer_transport, build_tcp_noise_transport,

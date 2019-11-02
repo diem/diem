@@ -46,15 +46,11 @@ use crate::{
     language_storage::{ModuleId, ResourceKey, StructTag},
     validator_set::validator_set_path,
 };
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-    SimpleDeserializer, SimpleSerializer,
-};
-use crypto::hash::HashValue;
 use failure::prelude::*;
 use hex;
 use lazy_static::lazy_static;
-#[cfg(any(test, feature = "testing"))]
+use libra_crypto::hash::HashValue;
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use radix_trie::TrieKey;
 use serde::{Deserialize, Serialize};
@@ -281,10 +277,10 @@ impl DataPath {
     pub fn from(path: &[u8]) -> Result<Self> {
         match path[0] {
             DataPath::CODE_TAG => Ok(DataPath::Code {
-                module_id: SimpleDeserializer::deserialize(&path[1..])?,
+                module_id: lcs::from_bytes(&path[1..])?,
             }),
             DataPath::RESOURCE_TAG => Ok(DataPath::Resource {
-                tag: SimpleDeserializer::deserialize(&path[1..])?,
+                tag: lcs::from_bytes(&path[1..])?,
             }),
             DataPath::CHANNEL_RESOURCE_TAG => {
                 ensure!(
@@ -296,7 +292,7 @@ impl DataPath {
                 let tag_bytes = &path[(1 + ADDRESS_LENGTH)..];
                 Ok(DataPath::ChannelResource {
                     participant: AccountAddress::try_from(address_bytes)?,
-                    tag: SimpleDeserializer::deserialize(tag_bytes)?,
+                    tag: lcs::from_bytes(tag_bytes)?,
                 })
             }
             _ => bail!("invalid access path."),
@@ -376,20 +372,20 @@ impl From<&DataPath> for Vec<u8> {
             DataPath::Code { module_id } => {
                 let mut key = vec![];
                 key.push(DataPath::CODE_TAG);
-                key.append(&mut SimpleSerializer::serialize(module_id).unwrap());
+                key.append(&mut lcs::to_bytes(module_id).unwrap());
                 key
             }
             DataPath::Resource { tag } => {
                 let mut key = vec![];
                 key.push(DataPath::RESOURCE_TAG);
-                key.append(&mut SimpleSerializer::serialize(tag).unwrap());
+                key.append(&mut lcs::to_bytes(tag).unwrap());
                 key
             }
             DataPath::ChannelResource { participant, tag } => {
                 let mut key = vec![];
                 key.push(DataPath::CHANNEL_RESOURCE_TAG);
                 key.append(&mut participant.to_vec());
-                key.append(&mut SimpleSerializer::serialize(tag).unwrap());
+                key.append(&mut lcs::to_bytes(tag).unwrap());
                 key
             }
         }
@@ -403,7 +399,7 @@ impl From<DataPath> for Vec<u8> {
 }
 
 #[derive(Clone, Eq, PartialEq, Default, Hash, Serialize, Deserialize, Ord, PartialOrd)]
-#[cfg_attr(any(test, feature = "testing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccessPath {
     pub address: AccountAddress,
     pub path: Vec<u8>,
@@ -567,24 +563,6 @@ impl fmt::Display for AccessPath {
                 String::from_utf8_lossy(&self.path[1 + HashValue::LENGTH..])
             )
         }
-    }
-}
-
-impl CanonicalSerialize for AccessPath {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_struct(&self.address)?
-            .encode_bytes(&self.path)?;
-        Ok(())
-    }
-}
-
-impl CanonicalDeserialize for AccessPath {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let address = deserializer.decode_struct::<AccountAddress>()?;
-        let path = deserializer.decode_bytes()?;
-
-        Ok(Self { address, path })
     }
 }
 

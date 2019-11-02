@@ -3,8 +3,8 @@
 
 use super::*;
 use crate::LibraDB;
+use libra_tools::tempdir::TempPath;
 use proptest::{collection::vec, prelude::*};
-use tools::tempdir::TempPath;
 
 fn verify(
     store: &LedgerStore,

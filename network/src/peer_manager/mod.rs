@@ -20,8 +20,9 @@ use futures::{
     sink::SinkExt,
     stream::{Fuse, FuturesUnordered, StreamExt},
 };
+use libra_config::config::RoleType;
+use libra_logger::prelude::*;
 use libra_types::PeerId;
-use logger::prelude::*;
 use netcore::{
     multiplexing::StreamMultiplexer,
     negotiate::{negotiate_inbound, negotiate_outbound_interactive, negotiate_outbound_select},
@@ -132,7 +133,7 @@ where
 {
     NewConnection(Identity, Multiaddr, ConnectionOrigin, TMuxer),
     NewSubstream(PeerId, NegotiatedSubstream<TMuxer::Substream>),
-    PeerDisconnected(PeerId, ConnectionOrigin, DisconnectReason),
+    PeerDisconnected(PeerId, RoleType, ConnectionOrigin, DisconnectReason),
 }
 
 /// Responsible for handling and maintaining connections to other Peers
@@ -260,7 +261,7 @@ where
                 let event = PeerManagerNotification::NewInboundSubstream(peer_id, substream);
                 ch.send(event).await.unwrap();
             }
-            InternalEvent::PeerDisconnected(peer_id, origin, _reason) => {
+            InternalEvent::PeerDisconnected(peer_id, role, origin, _reason) => {
                 let peer = self
                     .active_peers
                     .remove(&peer_id)
@@ -280,6 +281,10 @@ where
                         error!("oneshot channel receiver dropped");
                     }
                 }
+                // update libra_network_peer counter
+                counters::LIBRA_NETWORK_PEERS
+                    .with_label_values(&[&role.to_string(), "connected"])
+                    .dec();
                 // Send LostPeer notifications to subscribers
                 for ch in &mut self.peer_event_handlers {
                     ch.send(PeerManagerNotification::LostPeer(
@@ -387,6 +392,7 @@ where
         connection: TMuxer,
     ) {
         let peer_id = identity.peer_id();
+        let role = identity.role();
         assert_ne!(self.own_peer_id, peer_id);
 
         let mut send_new_peer_notification = true;
@@ -446,8 +452,13 @@ where
         );
         self.active_peers.insert(peer_id, peer_handle);
         self.executor.spawn(peer.start());
-
+        // Send NewPeer notifications to subscribers
         if send_new_peer_notification {
+            // update libra_network_peer counter
+            counters::LIBRA_NETWORK_PEERS
+                .with_label_values(&[&role.to_string(), "connected"])
+                .inc();
+
             for ch in &mut self.peer_event_handlers {
                 ch.send(PeerManagerNotification::NewPeer(peer_id, address.clone()))
                     .await
@@ -1040,6 +1051,7 @@ where
         self.internal_event_tx
             .send(InternalEvent::PeerDisconnected(
                 self.identity.peer_id(),
+                self.identity.role(),
                 self.origin,
                 reason,
             ))

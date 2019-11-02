@@ -6,9 +6,9 @@
 
 use crate::proof::{
     definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccumulatorConsistencyProof, AccumulatorProof,
-    SparseMerkleProof,
+    AccumulatorRangeProof, SparseMerkleProof,
 };
-use crypto::{
+use libra_crypto::{
     hash::{CryptoHasher, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
@@ -54,12 +54,11 @@ where
                     Just(vec![]).boxed()
                 } else {
                     (
-                        arb_non_placeholder_accumulator_sibling(),
                         vec(arb_accumulator_sibling(), len - 1),
+                        arb_non_placeholder_accumulator_sibling(),
                     )
-                        .prop_map(|(first_sibling, other_siblings)| {
-                            let mut siblings = vec![first_sibling];
-                            siblings.extend(other_siblings.into_iter());
+                        .prop_map(|(mut siblings, last_sibling)| {
+                            siblings.push(last_sibling);
                             siblings
                         })
                         .boxed()
@@ -82,12 +81,11 @@ impl Arbitrary for SparseMerkleProof {
                     Just(vec![]).boxed()
                 } else {
                     (
-                        vec(arb_sparse_merkle_sibling(), len - 1),
                         arb_non_placeholder_sparse_merkle_sibling(),
+                        vec(arb_sparse_merkle_sibling(), len),
                     )
-                        .prop_map(|(other_siblings, last_sibling)| {
-                            let mut siblings = other_siblings;
-                            siblings.push(last_sibling);
+                        .prop_map(|(first_sibling, mut siblings)| {
+                            siblings[0] = first_sibling;
                             siblings
                         })
                         .boxed()
@@ -110,5 +108,27 @@ impl Arbitrary for AccumulatorConsistencyProof {
         )
         .prop_map(AccumulatorConsistencyProof::new)
         .boxed()
+    }
+}
+
+impl<H> Arbitrary for AccumulatorRangeProof<H>
+where
+    H: CryptoHasher,
+{
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (
+            vec(
+                arb_non_placeholder_accumulator_sibling(),
+                0..MAX_ACCUMULATOR_PROOF_DEPTH,
+            ),
+            vec(arb_accumulator_sibling(), 0..MAX_ACCUMULATOR_PROOF_DEPTH),
+        )
+            .prop_map(|(left_siblings, right_siblings)| {
+                AccumulatorRangeProof::new(left_siblings, right_siblings)
+            })
+            .boxed()
     }
 }

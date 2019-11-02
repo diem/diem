@@ -8,13 +8,15 @@ use crate::{
 };
 use failure::prelude::*;
 use libra_types::crypto_proxies::ValidatorVerifier;
+use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 
 /// ProposalMsg contains the required information for the proposer election protocol to make its
 /// choice (typically depends on round and proposer info).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ProposalMsg<T> {
+    #[serde(bound(deserialize = "Block<T>: Deserialize<'de>"))]
     proposal: Block<T>,
     sync_info: SyncInfo,
 }
@@ -27,17 +29,7 @@ impl<T: Payload> TryFrom<network::proto::Proposal> for ProposalUncheckedSignatur
     type Error = failure::Error;
 
     fn try_from(proto: network::proto::Proposal) -> failure::Result<Self> {
-        let proposal = proto
-            .proposed_block
-            .ok_or_else(|| format_err!("Missing proposed_block"))?
-            .try_into()?;
-        let sync_info = proto
-            .sync_info
-            .ok_or_else(|| format_err!("Missing sync_info"))?
-            .try_into()?;
-        Ok(ProposalUncheckedSignatures(ProposalMsg::new(
-            proposal, sync_info,
-        )))
+        Ok(ProposalUncheckedSignatures(lcs::from_bytes(&proto.bytes)?))
     }
 }
 
@@ -108,33 +100,25 @@ impl<T: Payload> ProposalMsg<T> {
             self.proposal,
         );
         ensure!(
-            self.proposal.parent_id() == self.sync_info.highest_quorum_cert().certified_block_id(),
+            self.proposal.parent_id()
+                == self.sync_info.highest_quorum_cert().certified_block().id(),
             "Proposal HQC in SyncInfo certifies {}, but block parent id is {}",
-            self.sync_info.highest_quorum_cert().certified_block_id(),
+            self.sync_info.highest_quorum_cert().certified_block().id(),
             self.proposal.parent_id(),
         );
         let previous_round = self.proposal.round() - 1;
-        if let Some(tc) = self.sync_info.highest_timeout_certificate() {
-            let previous_round = self.proposal.round() - 1;
-            ensure!(
-                tc.round() == previous_round,
-                "Proposal for {} has a timeout certificate with an incorrect round={}",
-                self.proposal,
-                tc.round(),
-            );
-            ensure!(
-                self.proposal.quorum_cert().certified_block_round() != tc.round(),
-                "Proposal for {} has a timeout certificate and a quorum certificate that have the same round",
-                self.proposal,
-            );
-        } else {
-            ensure!(
-                self.proposal.quorum_cert().certified_block_round() == previous_round,
-                "Proposal for {} has a timeout certificate with an incorrect round={}",
-                self.proposal,
-                self.proposal.quorum_cert().certified_block_round(),
-            );
-        }
+        let highest_certified_round = std::cmp::max(
+            self.proposal.quorum_cert().certified_block().round(),
+            self.sync_info
+                .highest_timeout_certificate()
+                .map_or(0, |tc| tc.round()),
+        );
+        ensure!(
+            previous_round == highest_certified_round,
+            "Proposal {} does not have a certified round {}",
+            self.proposal,
+            previous_round
+        );
         ensure!(
             self.proposal.author().is_some(),
             "Proposal {} does not define an author",
@@ -176,11 +160,12 @@ impl<T: Payload> fmt::Display for ProposalMsg<T> {
     }
 }
 
-impl<T: Payload> From<ProposalMsg<T>> for network::proto::Proposal {
-    fn from(proposal: ProposalMsg<T>) -> Self {
-        Self {
-            proposed_block: Some(proposal.proposal.into()),
-            sync_info: Some(proposal.sync_info.into()),
-        }
+impl<T: Payload> TryFrom<ProposalMsg<T>> for network::proto::Proposal {
+    type Error = failure::Error;
+
+    fn try_from(proposal: ProposalMsg<T>) -> failure::Result<Self> {
+        Ok(Self {
+            bytes: lcs::to_bytes(&proposal)?,
+        })
     }
 }

@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crypto::HashValue;
+use libra_crypto::HashValue;
+use libra_nibble::Nibble;
 use mock_tree_store::MockTreeStore;
-use nibble::Nibble;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
 

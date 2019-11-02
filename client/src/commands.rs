@@ -7,8 +7,8 @@ use crate::{
 };
 
 use failure::prelude::*;
+use libra_metrics::counters::*;
 use libra_types::account_address::ADDRESS_LENGTH;
-use metrics::counters::*;
 use std::{collections::HashMap, sync::Arc};
 
 /// Print the error and bump up error counter.

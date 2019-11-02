@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
-use crypto::{test_utils::TEST_SEED, HashValue, *};
 use failure::Error;
+use libra_crypto::{test_utils::TEST_SEED, HashValue, *};
 use rand::{rngs::StdRng, SeedableRng};
 use std::convert::TryFrom;
 
@@ -11,7 +11,7 @@ use std::convert::TryFrom;
 /// validating. This struct can be used for all signing operations including block and network
 /// signing, respectively.
 #[derive(Debug)]
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 pub struct ValidatorSigner<PrivateKey: SigningKey> {
     author: AccountAddress,
     public_key: PrivateKey::VerifyingKeyMaterial,
@@ -81,11 +81,11 @@ impl<PrivateKey: SigningKey + Uniform> ValidatorSigner<PrivateKey> {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
 pub mod proptests {
     use super::*;
     #[cfg(test)]
-    use crypto::ed25519::*;
+    use libra_crypto::ed25519::*;
     use proptest::{prelude::*, sample, strategy::LazyJust};
 
     #[allow(clippy::redundant_closure)]

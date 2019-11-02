@@ -1922,7 +1922,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "network_gauge{op='connected_peers',role='validator',peer_id='$peer_id'}",
+          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -2600,7 +2600,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "network_gauge{op='connected_peers',role='validator',peer_id='$peer_id'}",
+          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -3278,7 +3278,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "network_gauge{op='connected_peers',role='validator',peer_id='$peer_id'}",
+          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -3956,7 +3956,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "network_gauge{op='connected_peers',role='validator',peer_id='$peer_id'}",
+          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -4634,7 +4634,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "network_gauge{op='connected_peers',role='validator',peer_id='$peer_id'}",
+          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -5312,7 +5312,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "network_gauge{op='connected_peers',role='validator',peer_id='$peer_id'}",
+          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -5990,7 +5990,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "network_gauge{op='connected_peers',role='validator',peer_id='$peer_id'}",
+          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -6668,7 +6668,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "network_gauge{op='connected_peers',role='validator',peer_id='$peer_id'}",
+          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -7346,7 +7346,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "network_gauge{op='connected_peers',role='validator',peer_id='$peer_id'}",
+          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -8024,7 +8024,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "network_gauge{op='connected_peers',role='validator',peer_id='$peer_id'}",
+          "expr": "libra_network_peers{role_type='validator',state='connected',peer_id='$peer_id',role='validator'}",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,

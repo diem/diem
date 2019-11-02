@@ -11,13 +11,13 @@ use crate::{
     },
     OP_COUNTERS,
 };
-use config::config::MempoolConfig;
 use failure::prelude::*;
+use libra_config::config::MempoolConfig;
+use libra_logger::prelude::*;
 use libra_mempool_shared_proto::{
     proto::mempool_status::MempoolAddTransactionStatusCode, MempoolAddTransactionStatus,
 };
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
-use logger::prelude::*;
 use std::{
     collections::HashMap,
     ops::Bound,

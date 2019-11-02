@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config::config::{NodeConfig, NodeConfigHelpers};
-use logger::prelude::*;
+use libra_config::config::{NodeConfig, NodeConfigHelpers};
+use libra_logger::prelude::*;
 use slog_scope::GlobalLoggerGuard;
 use std::path::Path;
 
@@ -24,9 +24,8 @@ pub fn load_config_from_path(config: Option<&Path>) -> NodeConfig {
 }
 
 pub fn setup_metrics(peer_id: &str, node_config: &NodeConfig) {
-    let metrics_dir = node_config.get_metrics_dir();
-    if !metrics_dir.as_os_str().is_empty() {
-        metrics::dump_all_metrics_to_file_periodically(
+    if let Some(metrics_dir) = node_config.get_metrics_dir() {
+        libra_metrics::dump_all_metrics_to_file_periodically(
             &metrics_dir,
             &format!("{}.metrics", peer_id),
             node_config.metrics.collection_interval_ms,
@@ -62,7 +61,7 @@ fn set_default_global_logger(
         return None;
     }
 
-    Some(logger::set_default_global_logger(
+    Some(libra_logger::set_default_global_logger(
         true,      /* async */
         chan_size, /* chan_size */
     ))

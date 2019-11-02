@@ -1,14 +1,14 @@
 use crate::LedgerInfo;
-use config::config::NodeConfig;
 use executor::Executor;
 use failure::prelude::*;
 use futures::{channel::oneshot, Future, FutureExt};
 use grpcio::EnvBuilder;
+use libra_config::config::NodeConfig;
+use libra_logger::prelude::*;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
     transaction::TransactionListWithProof,
 };
-use logger::prelude::*;
 use network::proto::GetChunkResponse;
 use std::{pin::Pin, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
@@ -101,7 +101,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         convert_to_future(
             self.executor
-                .execute_chunk(txn_list_with_proof, ledger_info_with_sigs),
+                .execute_and_commit_chunk(txn_list_with_proof, ledger_info_with_sigs),
         )
     }
 
@@ -121,7 +121,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
                     false,
                 )
                 .await?;
-            if transactions.transaction_and_infos.is_empty() {
+            if transactions.transactions.is_empty() {
                 error!(
                     "[state sync] can't get {} txns from version {}",
                     limit, known_version

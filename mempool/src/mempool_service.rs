@@ -8,12 +8,12 @@ use crate::{
 };
 use futures::Future;
 use grpc_helpers::{create_grpc_invalid_arg_status, default_reply_error_logger};
+use libra_logger::prelude::*;
+use libra_metrics::counters::SVC_COUNTERS;
 use libra_types::{
     account_address::AccountAddress, proto::types::SignedTransactionsBlock,
     transaction::SignedTransaction,
 };
-use logger::prelude::*;
-use metrics::counters::SVC_COUNTERS;
 use std::{
     cmp,
     collections::HashSet,
@@ -37,7 +37,7 @@ impl Mempool for MempoolService {
         trace!("[GRPC] Mempool::add_transaction_with_validation");
         let _timer = SVC_COUNTERS.req(&ctx);
         let mut success = true;
-        let proto_transaction = req.signed_txn.unwrap_or_else(Default::default);
+        let proto_transaction = req.transaction.unwrap_or_else(Default::default);
         match SignedTransaction::try_from(proto_transaction) {
             Err(e) => {
                 success = false;

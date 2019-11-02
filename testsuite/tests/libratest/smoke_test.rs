@@ -4,15 +4,16 @@
 use cli::{
     client_proxy::ClientProxy, AccountAddress, CryptoHash, TransactionArgument, TransactionPayload,
 };
-use config::config::{NodeConfig, RoleType};
-use crypto::{ed25519::*, test_utils::KeyPair, SigningKey};
+use libra_config::config::{NodeConfig, RoleType};
+use libra_crypto::{ed25519::*, test_utils::KeyPair, SigningKey};
+use libra_logger::prelude::*;
 use libra_swarm::{swarm::LibraSwarm, utils};
-use logger::prelude::*;
+use libra_tools::tempdir::TempPath;
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::fs;
 use std::str::FromStr;
-use tools::tempdir::TempPath;
+use std::{thread, time};
 
 struct TestEnvironment {
     validator_swarm: LibraSwarm,
@@ -27,7 +28,7 @@ struct TestEnvironment {
 
 impl TestEnvironment {
     fn new(num_validators: usize) -> Self {
-        ::logger::init_for_e2e_testing();
+        ::libra_logger::init_for_e2e_testing();
         let faucet_key = generate_keypair::load_faucet_key_or_create_default(None);
         let validator_swarm = LibraSwarm::configure_swarm(
             num_validators,
@@ -39,7 +40,7 @@ impl TestEnvironment {
         )
         .unwrap();
 
-        let mnemonic_file = tools::tempdir::TempPath::new();
+        let mnemonic_file = libra_tools::tempdir::TempPath::new();
         mnemonic_file
             .create_as_file()
             .expect("could not create temporary mnemonic_file_path");
@@ -79,7 +80,7 @@ impl TestEnvironment {
         };
         let num_attempts = 5;
         for _ in 0..num_attempts {
-            match swarm.launch_attempt(false) {
+            match swarm.launch_attempt(role, false) {
                 Ok(_) => {
                     return;
                 }
@@ -301,7 +302,10 @@ fn test_basic_restartability() {
     let peer_to_restart = 0;
     // restart node
     env.validator_swarm.kill_node(peer_to_restart);
-    assert!(env.validator_swarm.add_node(peer_to_restart, false).is_ok());
+    assert!(env
+        .validator_swarm
+        .add_node(peer_to_restart, RoleType::Validator, false)
+        .is_ok());
     assert_eq!(
         Decimal::from_f64(90.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
@@ -359,7 +363,24 @@ fn test_startup_sync_state() {
     // behind consensus db and forcing a state sync
     // during a node startup
     fs::remove_dir_all(state_db_path).unwrap();
-    assert!(env.validator_swarm.add_node(peer_to_stop, false).is_ok());
+    assert!(env
+        .validator_swarm
+        .add_node(peer_to_stop, RoleType::Validator, false)
+        .is_ok());
+    let max_tries = 60;
+    for retry in 0..max_tries {
+        if retry == max_tries - 1 {
+            panic!("Sync failed to complete");
+        }
+        let expected_balance = Decimal::from_f64(90.0);
+        let actual_balance =
+            Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok();
+        if actual_balance == expected_balance {
+            break;
+        }
+        println!("Sync not complete. Retrying...");
+        thread::sleep(time::Duration::from_secs(1));
+    }
     assert_eq!(
         Decimal::from_f64(90.0),
         Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
@@ -422,7 +443,10 @@ fn test_basic_state_synchronization() {
     }
 
     // Reconnect and synchronize the state
-    assert!(env.validator_swarm.add_node(node_to_restart, false).is_ok());
+    assert!(env
+        .validator_swarm
+        .add_node(node_to_restart, RoleType::Validator, false)
+        .is_ok());
 
     // Wait for all the nodes to catch up
     assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
@@ -495,7 +519,7 @@ fn test_external_transaction_signer() {
     assert!(submit_txn_result.is_ok());
 
     // query the transaction and check it contains the same values as requested
-    let submitted_signed_txn = client_proxy
+    let txn = client_proxy
         .get_committed_txn_by_acc_seq(&[
             "txn_acc_seq",
             &format!("{}", sender_address),
@@ -505,6 +529,9 @@ fn test_external_transaction_signer() {
         .unwrap()
         .unwrap()
         .0;
+    let submitted_signed_txn = txn
+        .as_signed_user_txn()
+        .expect("Query should get user transaction.");
 
     assert_eq!(submitted_signed_txn.sender(), sender_address);
     assert_eq!(submitted_signed_txn.sequence_number(), sequence_number);

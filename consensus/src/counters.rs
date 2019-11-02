@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lazy_static;
-use metrics::{DurationHistogram, OpMetrics};
+use libra_metrics::{DurationHistogram, OpMetrics};
 use prometheus::{Histogram, IntCounter, IntGauge};
 
 lazy_static::lazy_static! {
@@ -41,8 +41,36 @@ pub static ref SUCCESS_TXNS_COUNT: IntCounter = OP_COUNTERS.counter("success_txn
 /// FAILED_TXNS_COUNT + SUCCESS_TXN_COUNT == COMMITTED_TXNS_COUNT
 pub static ref FAILED_TXNS_COUNT: IntCounter = OP_COUNTERS.counter("failed_txns_count");
 
-/// Count of how many messages dropped between network task and main consensus task
-pub static ref DROP_NETWORK_TO_CONSENSUS: IntCounter = OP_COUNTERS.counter("drop_network_to_consensus");
+/// Histogram of idle time (ms) of spent in event processing loop
+pub static ref EVENT_PROCESSING_LOOP_IDLE_DURATION_S: DurationHistogram = OP_COUNTERS.duration_histogram("event_processing_loop_idle_duration_s");
+/// Histogram of busy time (ms) of spent in event processing loop
+pub static ref EVENT_PROCESSING_LOOP_BUSY_DURATION_S: DurationHistogram = OP_COUNTERS.duration_histogram("event_processing_loop_busy_duration_s");
+
+/// Counters(queued,dequeued,dropped) related to proposals channel
+pub static ref PROPOSAL_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("proposal_dropped_msgs_count");
+pub static ref PROPOSAL_ENQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("proposal_enqueued_msgs_count");
+pub static ref PROPOSAL_DEQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("proposal_dequeued_msgs_count");
+
+/// Counters(queued,dequeued,dropped) related to votes channel
+pub static ref VOTES_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("votes_dropped_msgs_count");
+pub static ref VOTES_ENQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("votes_enqueued_msgs_count");
+pub static ref VOTES_DEQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("votes_dequeued_msgs_count");
+
+/// Counters(queued,dequeued,dropped) related to block retrieval channel
+pub static ref BLOCK_RETRIEVAL_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("block_retrieval_dropped_msgs_count");
+pub static ref BLOCK_RETRIEVAL_ENQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("block_retrieval_enqueued_msgs_count");
+pub static ref BLOCK_RETRIEVAL_DEQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("block_retrieval_dequeued_msgs_count");
+
+/// Counters(queued,dequeued,dropped) related to sync info channel
+pub static ref SYNC_INFO_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("sync_info_dropped_msgs_count");
+pub static ref SYNC_INFO_ENQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("sync_info_enqueued_msgs_count");
+pub static ref SYNC_INFO_DEQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("sync_info_dequeued_msgs_count");
+
+/// Count of number of messages dropped by epoch change channel
+pub static ref EPOCH_CHANGE_DROPPED_MSGS: IntCounter = OP_COUNTERS.counter("epoch_change_dropped_msgs_count");
+pub static ref EPOCH_CHANGE_ENQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("epoch_change_enqueued_msgs_count");
+pub static ref EPOCH_CHANGE_DEQUEUED_MSGS: IntCounter = OP_COUNTERS.counter("epoch_change_dequeued_msgs_count");
+
 
 //////////////////////
 // PROPOSAL ELECTION
@@ -102,9 +130,9 @@ pub static ref SYNC_INFO_MSGS_RECEIVED_COUNT: IntCounter = OP_COUNTERS.counter("
 // RECONFIGURATION COUNTERS
 //////////////////////
 /// Current epoch num
-pub static ref EPOCH_NUM: IntGauge = OP_COUNTERS.gauge("epoch_num");
+pub static ref EPOCH: IntGauge = OP_COUNTERS.gauge("epoch");
 /// The number of validators in the current epoch
-pub static ref CURRENT_EPOCH_NUM_VALIDATORS: IntGauge = OP_COUNTERS.gauge("current_epoch_num_validators");
+pub static ref CURRENT_EPOCH_VALIDATORS: IntGauge = OP_COUNTERS.gauge("current_epoch_validators");
 /// Quorum size in the current epoch
 pub static ref CURRENT_EPOCH_QUORUM_SIZE: IntGauge = OP_COUNTERS.gauge("current_epoch_quorum_size");
 
@@ -200,9 +228,6 @@ pub static ref PENDING_VOTES: IntGauge = OP_COUNTERS.gauge("pending_votes");
 
 /// Count of the pending inbound block requests
 pub static ref PENDING_BLOCK_REQUESTS: IntGauge = OP_COUNTERS.gauge("pending_block_requests");
-
-/// Count of the pending inbound new round messages
-pub static ref PENDING_NEW_ROUND_MESSAGES: IntGauge = OP_COUNTERS.gauge("pending_new_round_messages");
 
 /// Count of the pending outbound pacemaker timeouts
 pub static ref PENDING_PACEMAKER_TIMEOUTS: IntGauge = OP_COUNTERS.gauge("pending_pacemaker_timeouts");

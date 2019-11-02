@@ -27,14 +27,14 @@ use crate::{
     ProtocolId,
 };
 use channel;
-use config::config::RoleType;
-use crypto::{
+use futures::StreamExt;
+use libra_config::config::RoleType;
+use libra_crypto::{
     ed25519::*,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
-use futures::StreamExt;
+use libra_logger::prelude::*;
 use libra_types::{validator_signer::ValidatorSigner, PeerId};
-use logger::prelude::*;
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
 use parity_multiaddr::Multiaddr;
 use std::{
@@ -490,6 +490,7 @@ impl NetworkBuilder {
             debug!("Started discovery protocol actor");
         }
 
+        let pm_net_reqs_tx = pm_reqs_tx.clone();
         let (pm_net_notifs_tx, pm_net_notifs_rx) = channel::new(
             self.channel_size,
             &counters::PENDING_PEER_MANAGER_NET_NOTIFICATIONS,
@@ -512,6 +513,7 @@ impl NetworkBuilder {
         let (network_reqs_tx, network_reqs_rx) =
             channel::new(self.channel_size, &counters::PENDING_NETWORK_REQUESTS);
         let validator_network = NetworkProvider::new(
+            pm_net_reqs_tx,
             pm_net_notifs_rx,
             rpc_reqs_tx,
             rpc_net_notifs_rx,
