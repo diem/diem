@@ -13,8 +13,16 @@ use crate::{
     NodeBatch, TreeReader, TreeWriter, ROOT_NIBBLE_HEIGHT,
 };
 use failure::prelude::*;
-use libra_crypto::{hash::CryptoHash, HashValue};
-use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
+use libra_crypto::{
+    hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
+    HashValue,
+};
+use libra_nibble::Nibble;
+use libra_types::{
+    account_state_blob::AccountStateBlob,
+    proof::{SparseMerkleInternalNode, SparseMerkleRangeProof},
+    transaction::Version,
+};
 use mirai_annotations::*;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -129,26 +137,29 @@ pub struct JellyfishMerkleRestore<'a, S> {
     /// The nodes that have been fully restored and are ready to be written to storage.
     frozen_nodes: NodeBatch,
 
-    /// The most recently added key. With this we are able to ensure the keys come in increasing
-    /// order.
-    previous_key: Option<HashValue>,
+    /// The most recently added leaf. This is used to ensure the keys come in increasing order and
+    /// do proof verification.
+    previous_leaf: Option<LeafNode>,
 
     /// The number of keys we have received since the most recent restart.
     num_keys_received: u64,
+
+    /// When the restoration process finishes, we expect the tree to have this root hash.
+    expected_root_hash: HashValue,
 }
 
 impl<'a, S> JellyfishMerkleRestore<'a, S>
 where
     S: 'a + TreeReader + TreeWriter,
 {
-    pub fn new(store: &'a S, version: Version) -> Result<Self> {
-        let (partial_nodes, previous_key) = match store.get_rightmost_leaf()? {
+    pub fn new(store: &'a S, version: Version, expected_root_hash: HashValue) -> Result<Self> {
+        let (partial_nodes, previous_leaf) = match store.get_rightmost_leaf()? {
             Some((node_key, leaf_node)) => {
                 // If the system crashed in the middle of the previous restoration attempt, we need
                 // to recover the partial nodes to the state right before the crash.
                 (
                     Self::recover_partial_nodes(store, version, node_key)?,
-                    Some(leaf_node.account_key()),
+                    Some(leaf_node),
                 )
             }
             None => {
@@ -166,8 +177,9 @@ where
             version,
             partial_nodes,
             frozen_nodes: NodeBatch::new(),
-            previous_key,
+            previous_leaf,
             num_keys_received: 0,
+            expected_root_hash,
         })
     }
 
@@ -238,20 +250,30 @@ where
         Ok(partial_nodes)
     }
 
-    /// Restores a chunk of accounts. This function assumes that the given chunk has been validated
-    /// and comes in the correct order.
-    pub fn add_chunk(&mut self, chunk: Vec<(HashValue, AccountStateBlob)>) -> Result<()> {
+    /// Restores a chunk of accounts. This function will verify that the given chunk is correct
+    /// using the proof and root hash, then write things to storage. If the chunk is invalid, an
+    /// error will be returned and nothing will be written to storage.
+    pub fn add_chunk(
+        &mut self,
+        chunk: Vec<(HashValue, AccountStateBlob)>,
+        proof: SparseMerkleRangeProof,
+    ) -> Result<()> {
+        ensure!(!chunk.is_empty(), "Should not add empty chunks.");
+
         for (key, value) in chunk {
-            if let Some(ref prev_key) = self.previous_key {
+            if let Some(ref prev_leaf) = self.previous_leaf {
                 ensure!(
-                    key > *prev_key,
+                    key > prev_leaf.account_key(),
                     "Account keys must come in increasing order.",
                 )
             }
-            self.add_one(key, value);
-            self.previous_key.replace(key);
+            self.add_one(key, value.clone());
+            self.previous_leaf.replace(LeafNode::new(key, value));
             self.num_keys_received += 1;
         }
+
+        // Verify what we have added so far is all correct.
+        self.verify(proof)?;
 
         // Write the frozen nodes to storage.
         self.store.write_node_batch(&self.frozen_nodes)?;
@@ -450,6 +472,152 @@ where
                         "Must have at least one child and the rightmost child must not be a leaf."
                     ),
                 }
+            }
+        }
+    }
+
+    /// Verifies that all accounts that have been added so far (from the leftmost one to
+    /// `self.previous_leaf`) are correct, i.e., we are able to construct `self.expected_root_hash`
+    /// by combining existing accounts and `proof`.
+    #[allow(clippy::collapsible_if)]
+    fn verify(&self, proof: SparseMerkleRangeProof) -> Result<()> {
+        let previous_leaf = self
+            .previous_leaf
+            .as_ref()
+            .expect("The previous leaf must exist.");
+        let previous_key = previous_leaf.account_key();
+
+        // If we have all siblings on the path from root to `previous_key`, we should be able to
+        // compute the root hash. The siblings on the right are already in the proof. Now we
+        // compute the siblings on the left side.
+        let mut left_siblings = vec![];
+
+        // The following process might add some extra placeholder siblings on the left, but it is
+        // nontrivial to determine when the loop should stop. So instead we just add these
+        // siblings for now and get rid of them in the next step.
+        let mut num_visited_right_siblings = 0;
+        for (i, bit) in previous_key.iter_bits().enumerate() {
+            if bit {
+                // This node is a right child and there should be a sibling on the left.
+                let sibling = if i >= self.partial_nodes.len() * 4 {
+                    *SPARSE_MERKLE_PLACEHOLDER_HASH
+                } else {
+                    Self::compute_left_sibling(
+                        &self.partial_nodes[i / 4],
+                        previous_key.get_nibble(i / 4),
+                        3 - i % 4,
+                    )
+                };
+                left_siblings.push(sibling);
+            } else {
+                // This node is a left child and there should be a sibling on the right.
+                num_visited_right_siblings += 1;
+            }
+        }
+        ensure!(
+            num_visited_right_siblings >= proof.siblings().len(),
+            "Too many right siblings in the proof.",
+        );
+
+        // Now we remove any extra placeholder siblings at the bottom.
+        for bit in previous_key.iter_bits().rev() {
+            if bit {
+                if *left_siblings.last().expect("This sibling must exist.")
+                    == *SPARSE_MERKLE_PLACEHOLDER_HASH
+                {
+                    // Remove a sibling if it's a placeholder on the lowest level.
+                    left_siblings.pop();
+                } else {
+                    // Stop if we have seen a non-placeholder sibling.
+                    break;
+                }
+            } else {
+                if num_visited_right_siblings > proof.siblings().len() {
+                    num_visited_right_siblings -= 1;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // Compute the root hash now that we have all the siblings.
+        let num_siblings = left_siblings.len() + proof.siblings().len();
+        let mut left_sibling_iter = left_siblings.iter().rev();
+        let mut right_sibling_iter = proof.siblings().iter();
+        let mut current_hash = previous_leaf.hash();
+        for bit in previous_key
+            .iter_bits()
+            .rev()
+            .skip(HashValue::LENGTH_IN_BITS - num_siblings)
+        {
+            let left_hash;
+            let right_hash;
+            if bit {
+                left_hash = *left_sibling_iter
+                    .next()
+                    .ok_or_else(|| format_err!("Missing left sibling."))?;
+                right_hash = current_hash;
+            } else {
+                left_hash = current_hash;
+                right_hash = *right_sibling_iter
+                    .next()
+                    .ok_or_else(|| format_err!("Missing right sibling."))?;
+            }
+            current_hash = SparseMerkleInternalNode::new(left_hash, right_hash).hash();
+        }
+
+        ensure!(
+            current_hash == self.expected_root_hash,
+            "Root hashes do not match. Actual root hash: {:x}. Expected root hash: {:x}.",
+            current_hash,
+            self.expected_root_hash,
+        );
+
+        Ok(())
+    }
+
+    /// Computes the sibling on the left for the `n`-th child.
+    fn compute_left_sibling(partial_node: &InternalInfo, n: Nibble, height: usize) -> HashValue {
+        assert!(height < 4);
+
+        // This is similar to InternalNode::get_child_with_siblings.
+        let width = 1usize << height;
+        let child_half_start = (0xff << height) & u8::from(n) as usize;
+        let start = child_half_start ^ (1 << height);
+        assert!(start < child_half_start);
+
+        Self::compute_left_sibling_impl(&partial_node.children[start..start + width]).0
+    }
+
+    /// Returns the hash for given portion of the subtree and whether this part is a leaf node.
+    fn compute_left_sibling_impl(children: &[Option<ChildInfo>]) -> (HashValue, bool) {
+        assert!(!children.is_empty());
+
+        let num_children = children.len();
+        assert!(num_children.is_power_of_two());
+
+        if num_children == 1 {
+            match &children[0] {
+                Some(ChildInfo::Internal { hash }) => {
+                    (*hash.as_ref().expect("The hash must be known."), false)
+                }
+                Some(ChildInfo::Leaf { node }) => (node.hash(), true),
+                None => (*SPARSE_MERKLE_PLACEHOLDER_HASH, true),
+            }
+        } else {
+            let (left_hash, is_leaf_left) =
+                Self::compute_left_sibling_impl(&children[..num_children / 2]);
+            let (right_hash, is_leaf_right) =
+                Self::compute_left_sibling_impl(&children[num_children / 2..]);
+            if left_hash == *SPARSE_MERKLE_PLACEHOLDER_HASH && is_leaf_right {
+                (right_hash, true)
+            } else if is_leaf_left && right_hash == *SPARSE_MERKLE_PLACEHOLDER_HASH {
+                (left_hash, true)
+            } else {
+                (
+                    SparseMerkleInternalNode::new(left_hash, right_hash).hash(),
+                    false,
+                )
             }
         }
     }
