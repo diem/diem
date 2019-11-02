@@ -1,5 +1,4 @@
 *~
-.git/
 **/.terraform/
 terraform/
 target/
