@@ -11,6 +11,7 @@ use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, HashValue, SigningKey,
 };
+use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::LedgerInfoWithSignatures,
@@ -134,6 +135,10 @@ impl ExecutorProxyTrait for MockExecutorProxy {
 
     fn validate_ledger_info(&self, _target: &LedgerInfo) -> Result<()> {
         Ok(())
+    }
+
+    fn get_epoch_proof(&self, _start_epoch: u64) -> Result<ValidatorChangeEventWithProof> {
+        unimplemented!("get epoch proof not supported for mock executor proxy");
     }
 }
 

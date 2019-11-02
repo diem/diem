@@ -7,6 +7,7 @@ pub mod block_data;
 pub mod block_info;
 pub mod block_retrieval;
 pub mod common;
+pub mod epoch_retrieval;
 pub mod executed_block;
 pub mod proposal_msg;
 pub mod quorum_cert;

@@ -16,6 +16,7 @@ use futures::{
 use libra_config::config::RoleType;
 use libra_config::config::StateSyncConfig;
 use libra_logger::prelude::*;
+use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures, transaction::TransactionListWithProof,
 };
@@ -38,6 +39,11 @@ pub(crate) struct SyncRequest {
     pub target: LedgerInfoWithSignatures,
 }
 
+pub(crate) struct EpochRetrievalRequest {
+    pub start_epoch: u64,
+    pub callback: oneshot::Sender<Result<ValidatorChangeEventWithProof>>,
+}
+
 /// message used by StateSyncClient for communication with Coordinator
 pub(crate) enum CoordinatorMessage {
     // used to initiate new sync
@@ -45,6 +51,8 @@ pub(crate) enum CoordinatorMessage {
     // used to notify about new txn commit
     Commit(u64),
     GetState(oneshot::Sender<u64>),
+    // used to generate epoch proof
+    GetEpochProof(EpochRetrievalRequest),
 }
 
 /// used to coordinate synchronization process
@@ -130,6 +138,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         }
                         CoordinatorMessage::GetState(callback) => {
                             self.get_state(callback);
+                        }
+                        CoordinatorMessage::GetEpochProof(request) => {
+                            self.get_epoch_proof(request).await;
                         }
                     };
                 },
@@ -532,5 +543,15 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             }
         }
         Ok(())
+    }
+
+    async fn get_epoch_proof(&self, request: EpochRetrievalRequest) {
+        if request
+            .callback
+            .send(self.executor_proxy.get_epoch_proof(request.start_epoch))
+            .is_err()
+        {
+            error!("[state sync] coordinator failed to send back epoch proof");
+        }
     }
 }

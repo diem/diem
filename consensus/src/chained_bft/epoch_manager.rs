@@ -15,20 +15,23 @@ use crate::state_replication::{StateComputer, TxnManager};
 use crate::util::time_service::{ClockTimeService, TimeService};
 use consensus_types::block::Block;
 use consensus_types::common::{Payload, Round};
+use consensus_types::epoch_retrieval::EpochRetrievalRequest;
 use consensus_types::quorum_cert::QuorumCert;
 use futures::executor::block_on;
 use libra_config::config::ConsensusProposerType;
 use libra_logger::prelude::*;
+use libra_types::account_address::AccountAddress;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 use network::proto::ConsensusMsg;
+use network::proto::ConsensusMsg_oneof;
 use network::validator_network::{ConsensusNetworkSender, Event};
 use safety_rules::{ConsensusState, SafetyRules};
+use std::convert::TryInto;
 use std::sync::Arc;
 
 // Manager the components that shared across epoch and spawn per-epoch EventProcessor with
 // epoch-specific input.
 pub struct EpochManager<T> {
-    #[allow(dead_code)]
     epoch: u64,
     config: ChainedBftSMRConfig,
     time_service: Arc<ClockTimeService>,
@@ -110,7 +113,48 @@ impl<T: Payload> EpochManager<T> {
         }
     }
 
-    pub fn start_new_epoch(&self, ledger_info: LedgerInfoWithSignatures) -> EventProcessor<T> {
+    pub async fn process_epoch_retrieval(&mut self, start_epoch: u64, peer_id: AccountAddress) {
+        let proof = match self.state_computer.get_epoch_proof(start_epoch).await {
+            Ok(proof) => proof,
+            Err(e) => {
+                warn!("Failed to get epoch proof from storage: {:?}", e);
+                return;
+            }
+        };
+        let msg = ConsensusMsg {
+            message: Some(ConsensusMsg_oneof::EpochChange(proof.into())),
+        };
+        if let Err(e) = self.network_sender.send_to(peer_id, msg).await {
+            warn!(
+                "Failed to send a epoch retrieval to peer {}: {:?}",
+                peer_id, e
+            );
+        };
+    }
+
+    pub async fn process_future_epoch(&mut self, target_epoch: u64, peer_id: AccountAddress) {
+        let request = EpochRetrievalRequest {
+            start_epoch: self.epoch,
+            target_epoch,
+        };
+        let msg = match request.try_into() {
+            Ok(bytes) => ConsensusMsg {
+                message: Some(ConsensusMsg_oneof::RequestEpoch(bytes)),
+            },
+            Err(e) => {
+                warn!("Fail to serialize EpochRetrievalRequest: {:?}", e);
+                return;
+            }
+        };
+        if let Err(e) = self.network_sender.send_to(peer_id, msg).await {
+            warn!(
+                "Failed to send a epoch retrieval to peer {}: {:?}",
+                peer_id, e
+            );
+        }
+    }
+
+    pub fn start_new_epoch(&mut self, ledger_info: LedgerInfoWithSignatures) -> EventProcessor<T> {
         // make sure storage is on this ledger_info too, it should be no-op if it's already committed
         self.state_computer.sync_to_or_bail(ledger_info.clone());
         let validators = ledger_info
@@ -127,6 +171,7 @@ impl<T: Payload> EpochManager<T> {
             "Start new epoch with genesis {}, validators {}",
             genesis_block, validators,
         );
+        self.epoch = genesis_block.epoch();
         // storage should sync to the ledger info prior to this function call
         let initial_data = RecoveryData::new(
             ConsensusState::new(genesis_block.epoch(), 0, 0),

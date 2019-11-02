@@ -10,7 +10,7 @@ use executor::{ExecutedTrees, ProcessedVMOutput};
 use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
 use libra_logger::prelude::*;
-use libra_types::crypto_proxies::LedgerInfoWithSignatures;
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof};
 use libra_types::validator_set::ValidatorSet;
 use std::{pin::Pin, sync::Arc};
 use termion::color::*;
@@ -85,6 +85,13 @@ impl StateComputer for MockStateComputer {
     fn committed_trees(&self) -> ExecutedTrees {
         ExecutedTrees::new_empty()
     }
+
+    fn get_epoch_proof(
+        &self,
+        _start_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>> {
+        unimplemented!("epoch proof not supported in mock state computer");
+    }
 }
 
 pub struct EmptyStateComputer;
@@ -121,5 +128,12 @@ impl StateComputer for EmptyStateComputer {
 
     fn committed_trees(&self) -> ExecutedTrees {
         ExecutedTrees::new_empty()
+    }
+
+    fn get_epoch_proof(
+        &self,
+        _start_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>> {
+        unimplemented!("epoch proof not supported in empty state computer");
     }
 }

@@ -1,5 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+use crate::coordinator::EpochRetrievalRequest;
 use crate::{
     coordinator::{CoordinatorMessage, SyncCoordinator, SyncRequest},
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
@@ -13,6 +14,7 @@ use futures::{
 };
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
+use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
@@ -112,6 +114,24 @@ impl StateSyncClient {
             sender.send(CoordinatorMessage::GetState(cb_sender)).await?;
             let info = cb_receiver.await?;
             Ok(info)
+        }
+    }
+
+    pub fn get_epoch_proof(
+        &self,
+        start_epoch: u64,
+    ) -> impl Future<Output = Result<ValidatorChangeEventWithProof>> {
+        let mut sender = self.coordinator_sender.clone();
+        let (cb_sender, cb_receiver) = oneshot::channel();
+        let request = EpochRetrievalRequest {
+            start_epoch,
+            callback: cb_sender,
+        };
+        async move {
+            sender
+                .send(CoordinatorMessage::GetEpochProof(request))
+                .await?;
+            cb_receiver.await?
         }
     }
 }

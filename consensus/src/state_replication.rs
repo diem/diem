@@ -5,7 +5,7 @@ use consensus_types::block::Block;
 use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
 use failure::Result;
 use futures::Future;
-use libra_types::crypto_proxies::LedgerInfoWithSignatures;
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof};
 use std::{pin::Pin, sync::Arc};
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
@@ -80,6 +80,12 @@ pub trait StateComputer: Send + Sync {
             ),
         }
     }
+
+    /// Generate the epoch change proof from start_epoch to the latest epoch.
+    fn get_epoch_proof(
+        &self,
+        start_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>>;
 }
 
 pub trait StateMachineReplication {

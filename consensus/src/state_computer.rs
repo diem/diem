@@ -7,6 +7,7 @@ use executor::{CommittableBlock, ExecutedTrees, Executor, ProcessedVMOutput};
 use failure::Result;
 use futures::{Future, FutureExt};
 use libra_logger::prelude::*;
+use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Transaction},
@@ -144,5 +145,12 @@ impl StateComputer for ExecutionProxy {
 
     fn committed_trees(&self) -> ExecutedTrees {
         self.executor.committed_trees()
+    }
+
+    fn get_epoch_proof(
+        &self,
+        start_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>> {
+        self.synchronizer.get_epoch_proof(start_epoch).boxed()
     }
 }

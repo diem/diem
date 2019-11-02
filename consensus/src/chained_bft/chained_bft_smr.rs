@@ -90,7 +90,7 @@ impl<T: Payload> ChainedBftSMR<T> {
 
     fn start_event_processing(
         executor: TaskExecutor,
-        epoch_manager: EpochManager<T>,
+        mut epoch_manager: EpochManager<T>,
         mut event_processor: EventProcessor<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
         network_task: NetworkTask<T>,
@@ -126,8 +126,13 @@ impl<T: Payload> ChainedBftSMR<T> {
                         idle_duration = pre_select_instant.elapsed();
                         event_processor = epoch_manager.start_new_epoch(ledger_info);
                     }
-                    future_epoch = network_receivers.future_epoch.select_next_some() => {
+                    future_epoch_and_peer = network_receivers.future_epoch.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
+                        epoch_manager.process_future_epoch(future_epoch_and_peer.0, future_epoch_and_peer.1).await
+                    }
+                    epoch_retrieval_and_peer = network_receivers.epoch_retrieval.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
+                        epoch_manager.process_epoch_retrieval(epoch_retrieval_and_peer.0, epoch_retrieval_and_peer.1).await
                     }
                     complete => {
                         break;

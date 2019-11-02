@@ -785,7 +785,7 @@ impl<T: Payload> EventProcessor<T> {
         }
         if finality_proof.ledger_info().next_validator_set().is_some() {
             self.network
-                .send_epoch_change(ValidatorChangeEventWithProof::new(vec![finality_proof]))
+                .broadcast_epoch_change(ValidatorChangeEventWithProof::new(vec![finality_proof]))
                 .await
         }
     }
