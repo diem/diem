@@ -203,17 +203,16 @@ impl<'alloc> VMModuleCache<'alloc> {
         let callee_name = caller_module.identifier_at(function_handle.name);
         let callee_module_id = FunctionHandleView::new(caller_module, function_handle).module_id();
 
-        match self.get_loaded_module_with_fetcher(&callee_module_id, fetcher) {
-            Ok(Some(callee_module)) => {
-                let callee_func_id = callee_module
-                    .function_defs_table
-                    .get(callee_name)
-                    .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
-                Ok(Some(FunctionRef::new(callee_module, *callee_func_id)))
-            }
-            Ok(None) => Ok(None),
-            Err(errors) => Err(errors),
-        }
+        self.get_loaded_module_with_fetcher(&callee_module_id, fetcher)
+            .and_then(|opt_module| {
+                opt_module.map_or(Ok(None), |callee_module| {
+                    let callee_func_id = callee_module
+                        .function_defs_table
+                        .get(callee_name)
+                        .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
+                    Ok(Some(FunctionRef::new(callee_module, *callee_func_id)))
+                })
+            })
     }
 
     /// Resolve a StructHandle into a StructDef recursively in either the cache or the `fetcher`.
@@ -227,17 +226,21 @@ impl<'alloc> VMModuleCache<'alloc> {
         let struct_handle = module.struct_handle_at(idx);
         let struct_name = module.identifier_at(struct_handle.name);
         let struct_def_module_id = StructHandleView::new(module, struct_handle).module_id();
-        match self.get_loaded_module_with_fetcher(&struct_def_module_id, fetcher) {
-            Ok(Some(module)) => {
-                let struct_def_idx = module
-                    .struct_defs_table
-                    .get(struct_name)
-                    .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
-                self.resolve_struct_def_with_fetcher(module, *struct_def_idx, gas_meter, fetcher)
-            }
-            Ok(None) => Ok(None),
-            Err(errors) => Err(errors),
-        }
+        self.get_loaded_module_with_fetcher(&struct_def_module_id, fetcher)
+            .and_then(|opt_module| {
+                opt_module.map_or(Ok(None), |module| {
+                    let struct_def_idx = module
+                        .struct_defs_table
+                        .get(struct_name)
+                        .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
+                    self.resolve_struct_def_with_fetcher(
+                        module,
+                        *struct_def_idx,
+                        gas_meter,
+                        fetcher,
+                    )
+                })
+            })
     }
 
     /// Resolve a SignatureToken into a Type recursively in either the cache or the `fetcher`.
