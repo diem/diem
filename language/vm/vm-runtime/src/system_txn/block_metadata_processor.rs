@@ -45,6 +45,7 @@ where
     //       time by a reasonable amount.
     let gas_schedule = CostTable::zero();
 
+    // The transaction executor failed to start
     let mut txn_executor =
         TransactionExecutor::new(&module_cache, &gas_schedule, data_cache, txn_data);
     let result = if let Ok((id, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {

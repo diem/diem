@@ -7,7 +7,8 @@ use crate::{
         module_adapter::FakeFetcher,
         module_cache::{BlockModuleCache, ModuleCache, VMModuleCache},
     },
-    gas_meter::GasMeter,
+    data_cache::BlockDataCache,
+    execution_context::TransactionExecutionContext,
     loaded_data::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
@@ -15,8 +16,11 @@ use crate::{
 };
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use compiler::Compiler;
+use failure::*;
 use hex;
+use libra_state_view::StateView;
 use libra_types::{
+    access_path::AccessPath,
     account_address::AccountAddress,
     language_storage::ModuleId,
     vm_error::{StatusCode, StatusType},
@@ -24,7 +28,7 @@ use libra_types::{
 use vm::{
     access::ModuleAccess,
     file_format::*,
-    gas_schedule::{CostTable, GasAlgebra, GasUnits},
+    gas_schedule::{GasAlgebra, GasUnits},
 };
 use vm_cache_map::Arena;
 use vm_runtime_types::loaded_data::{struct_def::StructDef, types::Type};
@@ -453,6 +457,22 @@ fn parse_and_compile_modules(s: impl AsRef<str>) -> Vec<CompiledModule> {
         .modules
 }
 
+struct NullStateView;
+
+impl StateView for NullStateView {
+    fn get(&self, _ap: &AccessPath) -> Result<Option<Vec<u8>>> {
+        Err(format_err!("no get on null state view"))
+    }
+
+    fn multi_get(&self, _ap: &[AccessPath]) -> Result<Vec<Option<Vec<u8>>>> {
+        Err(format_err!("no get on null state view"))
+    }
+
+    fn is_genesis(&self) -> bool {
+        false
+    }
+}
+
 #[test]
 fn test_same_module_struct_resolution() {
     let allocator = Arena::new();
@@ -472,17 +492,18 @@ fn test_same_module_struct_resolution() {
 
     let module = parse_and_compile_modules(code);
     let fetcher = FakeFetcher::new(module);
+    let block_data_cache = BlockDataCache::new(&NullStateView);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
         let module_id = ModuleId::new(AccountAddress::default(), ident("M1"));
         let module_ref = block_cache.get_loaded_module(&module_id).unwrap();
-        let gas_schedule = CostTable::zero();
-        let gas = GasMeter::new(GasUnits::new(100_000_000), &gas_schedule);
+        let mut context =
+            TransactionExecutionContext::new(GasUnits::new(100_000_000), &block_data_cache);
         let struct_x = block_cache
-            .resolve_struct_def(module_ref, StructDefinitionIndex::new(0), &gas)
+            .resolve_struct_def(module_ref, StructDefinitionIndex::new(0), &mut context)
             .unwrap();
         let struct_t = block_cache
-            .resolve_struct_def(module_ref, StructDefinitionIndex::new(1), &gas)
+            .resolve_struct_def(module_ref, StructDefinitionIndex::new(1), &mut context)
             .unwrap();
         assert_eq!(struct_x, StructDef::new(vec![]));
         assert_eq!(
@@ -517,15 +538,16 @@ fn test_multi_module_struct_resolution() {
 
     let module = parse_and_compile_modules(&code);
     let fetcher = FakeFetcher::new(module);
+    let block_data_cache = BlockDataCache::new(&NullStateView);
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
-    let gas_schedule = CostTable::zero();
     {
         let module_id_2 = ModuleId::new(AccountAddress::default(), ident("M2"));
         let module2_ref = block_cache.get_loaded_module(&module_id_2).unwrap();
 
-        let gas = GasMeter::new(GasUnits::new(100_000_000), &gas_schedule);
+        let mut context =
+            TransactionExecutionContext::new(GasUnits::new(100_000_000), &block_data_cache);
         let struct_t = block_cache
-            .resolve_struct_def(module2_ref, StructDefinitionIndex::new(0), &gas)
+            .resolve_struct_def(module2_ref, StructDefinitionIndex::new(0), &mut context)
             .unwrap();
         assert_eq!(
             struct_t,

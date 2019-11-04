@@ -246,7 +246,8 @@ module GasSchedule {
           Cost { cpu: 10, storage: 1 }
         );
 
-        // Native table. Do not change the order of these
+        // Native table. Each of these represent a cost that is used by a
+        // native function. Do not change the order of these.
         Vector.push_back<Self.Cost>(
           &mut native_table,
           Cost { cpu: 30, storage: 1 }
