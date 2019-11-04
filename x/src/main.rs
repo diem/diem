@@ -5,6 +5,7 @@ mod cargo;
 mod check;
 mod clippy;
 mod config;
+mod lint;
 mod test;
 mod utils;
 
@@ -30,6 +31,9 @@ enum Command {
     #[structopt(name = "test")]
     /// Run tests
     Test(test::Args),
+    #[structopt(name = "lint")]
+    /// Run lints
+    Lint(lint::Args),
 }
 
 fn main() -> Result<()> {
@@ -41,5 +45,6 @@ fn main() -> Result<()> {
         Command::Check(args) => check::run(args, config),
         Command::Clippy(args) => clippy::run(args, config),
         Command::Bench(args) => bench::run(args, config),
+        Command::Lint(args) => lint::run(args, config),
     }
 }
