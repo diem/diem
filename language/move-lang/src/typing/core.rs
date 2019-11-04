@@ -188,15 +188,15 @@ impl Context {
 // Type utils
 //**************************************************************************************************
 
-pub fn infer_kind(subst: &Subst, s: SingleType) -> Kind {
+pub fn infer_kind(context: &Context, subst: &Subst, s: SingleType) -> Kind {
     use SingleType_ as S;
     match s.value {
         S::Ref(_, _) => sp(s.loc, Kind_::Unrestricted),
-        S::Base(b) => infer_kind_base(subst, b),
+        S::Base(b) => infer_kind_base(context, subst, b),
     }
 }
 
-pub fn infer_kind_base(subst: &Subst, b: BaseType) -> Kind {
+pub fn infer_kind_base(context: &Context, subst: &Subst, b: BaseType) -> Kind {
     use BaseType_ as B;
     match unfold_type_base(&subst, b) {
         sp!(_, B::Var(_)) => panic!("ICE unfold_type_base failed, which is impossible"),
@@ -208,13 +208,13 @@ pub fn infer_kind_base(subst: &Subst, b: BaseType) -> Kind {
             // else if any resource, give resource
             // else affine
             tyl.into_iter()
-                .map(|t| infer_kind_base(subst, t))
+                .map(|t| infer_kind_base(context, subst, t))
                 .map(|k| match k {
                     sp!(loc, Kind_::Unrestricted) => sp(loc, Kind_::Affine),
                     k => k,
                 })
                 .max_by(most_general_kind)
-                .unwrap_or_else(|| sp(n.loc, Kind_::Affine))
+                .unwrap_or_else(|| sp(type_name_declared_loc(context, &n), Kind_::Affine))
         }
     }
 }
@@ -234,6 +234,13 @@ fn most_general_kind(k1: &Kind, k2: &Kind) -> std::cmp::Ordering {
         (_, K::Resource) => O::Less,
 
         (K::Affine, K::Affine) => O::Equal,
+    }
+}
+
+fn type_name_declared_loc(context: &Context, sp!(loc, n_): &TypeName) -> Loc {
+    match n_ {
+        TypeName_::Builtin(_) => *loc,
+        TypeName_::ModuleType(m, n) => context.struct_declared_loc(m, n),
     }
 }
 
@@ -429,7 +436,7 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) 
     if let BaseType_::Anything = &b_ {
         return;
     }
-    let b_kind = infer_kind_base(&context.subst, sp(bloc, b_.clone()));
+    let b_kind = infer_kind_base(&context, &context.subst, sp(bloc, b_.clone()));
     match (b_kind.value, &k.value) {
             (_, K::Unrestricted) => panic!("ICE tparams cannot have unrestricted constraints"),
             // _ <: all
@@ -447,7 +454,7 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) 
             (K::Affine, K::Resource) |
             // all </: linear
             (K::Unknown, K::Resource) => {
-                let ty_str = b_.subst_format(&Subst::new());
+                let ty_str = b_.subst_format(&context.subst);
                 context.error(vec![
                     (loc, format!("Constraint not satisfied. The {} type '{}' does not satisfy the constraint '{}'", Kind_::VALUE_CONSTRAINT, ty_str, Kind_::RESOURCE_CONSTRAINT)),
                     (b_kind.loc, "The type's constraint information was declared here".into()),
@@ -456,15 +463,15 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) 
             }
 
             // all </: affine
-            (K::Unknown, K::Affine) |
+            (bk @ K::Unknown, K::Affine) |
             // linear </: affine
-            (K::Resource, K::Affine) => {
-                let resource_msg = match &k.value {
+            (bk @ K::Resource, K::Affine) => {
+                let resource_msg = match bk {
                     K::Unrestricted | K::Affine => panic!("ICE covered above"),
                     K::Resource => "resource ",
                     K::Unknown => "",
                 };
-                let ty_str = b_.subst_format(&Subst::new());
+                let ty_str = b_.subst_format(&context.subst);
                 context.error(vec![
                     (loc, format!("Constraint not satisfied. The {}type '{}' does not satisfy the constraint '{}'", resource_msg, ty_str, Kind_::VALUE_CONSTRAINT)),
                     (b_kind.loc, "The type's constraint information was declared here".into()),
@@ -480,10 +487,10 @@ fn solve_copyable_constraint(context: &mut Context, loc: Loc, msg: String, s: Si
     if let SingleType_::Base(sp!(_, BaseType_::Anything)) = &s.value {
         return;
     }
-    match infer_kind(&context.subst, s.clone()) {
+    match infer_kind(&context, &context.subst, s.clone()) {
         sp!(_, Kind_::Unrestricted) | sp!(_, Kind_::Affine) => (),
         sp!(rloc, Kind_::Unknown) | sp!(rloc, Kind_::Resource) => {
-            let ty_str = s.value.subst_format(&Subst::new());
+            let ty_str = s.value.subst_format(&context.subst);
             context.error(vec![
                 (loc, msg),
                 (
@@ -500,7 +507,7 @@ fn solve_implicitly_copyable_constraint(context: &mut Context, loc: Loc, msg: St
     if let BaseType_::Anything = &b.value {
         return;
     }
-    match infer_kind_base(&context.subst, b) {
+    match infer_kind_base(&context, &context.subst, b) {
         sp!(_, Kind_::Unrestricted) => (),
         sp!(_, Kind_::Affine) => context.error(vec![(loc, msg)]),
         sp!(rloc, Kind_::Unknown) | sp!(rloc, Kind_::Resource) => context.error(vec![
