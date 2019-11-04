@@ -55,4 +55,3 @@ simple abstraction over the file format. Additionally, a set of
 ├── vm-genesis      # Helpers to generate a genesis block, the initial state of the blockchain
 └── vm-runtime      # Interpreter and runtime data types (see README in that folder)
 ```
-

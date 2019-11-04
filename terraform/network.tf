@@ -213,4 +213,3 @@ resource "aws_security_group_rule" "faucet-lb-application" {
   protocol          = "tcp"
   cidr_blocks       = var.api_sources_ipv4
 }
-

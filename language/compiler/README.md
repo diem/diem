@@ -8,7 +8,7 @@ custom_edit_url: https://github.com/libra/libra/edit/master/language/compiler/RE
 
 ## Summary
 
-The Move IR compiler compiles the Move IR down to its bytecode representation. 
+The Move IR compiler compiles the Move IR down to its bytecode representation.
 
 ## Overview
 

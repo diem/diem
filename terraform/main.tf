@@ -11,4 +11,3 @@ data "aws_availability_zones" "available" {
   state             = "available"
   blacklisted_names = ["us-west-2d", "us-east-1e"]
 }
-
