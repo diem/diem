@@ -193,7 +193,7 @@ impl LedgerStore {
         self
             .db
             .get::<LedgerInfoHistorySchema>(block_id)?
-            .ok_or_else(|| LibraDbError::NotFound(format!("LedgerInfo by {}", block_id)).into())
+            .ok_or_else(|| LibraDbError::NotFound(format!("LedgerInfo by {:?}", block_id)).into())
     }
 
     /// Rollback
@@ -201,7 +201,7 @@ impl LedgerStore {
         let ledger_info = self
             .db
             .get::<LedgerInfoHistorySchema>(block_id)?
-            .ok_or_else(|| LibraDbError::NotFound(format!("LedgerInfo by {}", block_id)))?;
+            .ok_or_else(|| LibraDbError::NotFound(format!("LedgerInfo by {:?}", block_id)))?;
         self.put_ledger_info(&ledger_info, cs)
     }
 }

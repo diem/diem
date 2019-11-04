@@ -5,6 +5,8 @@
 mod consensusdb_test;
 mod schema;
 
+pub use schema::block_index::BlockIndex;
+
 use crate::chained_bft::consensusdb::schema::{
     block::{BlockSchema, SchemaBlock},
     quorum_certificate::QCSchema,
@@ -14,7 +16,7 @@ use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert};
 use crypto::HashValue;
 use failure::prelude::*;
 use logger::prelude::*;
-use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
+use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME, BLOCK_INDEX_CF_NAME};
 use schemadb::{
     ColumnFamilyOptions, ColumnFamilyOptionsMap, ReadOptions, SchemaBatch, DB, DEFAULT_CF_NAME,
 };
@@ -38,6 +40,7 @@ impl ConsensusDB {
             (BLOCK_CF_NAME, ColumnFamilyOptions::default()),
             (QC_CF_NAME, ColumnFamilyOptions::default()),
             (SINGLE_ENTRY_CF_NAME, ColumnFamilyOptions::default()),
+            (BLOCK_INDEX_CF_NAME, ColumnFamilyOptions::default()),
         ]
             .iter()
             .cloned()
@@ -216,5 +219,15 @@ impl ConsensusDB {
         }
 
         return Some(blocks)
+    }
+
+    /// Insert BlockIndex
+    pub fn insert_block_index(&self) -> Result<()> {
+        unimplemented!()
+    }
+
+    /// Load BlockIndex
+    pub fn load_block_index(&self) -> Result<Vec<BlockIndex>> {
+        unimplemented!()
     }
 }

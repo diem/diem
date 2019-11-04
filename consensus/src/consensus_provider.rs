@@ -73,6 +73,7 @@ pub fn make_pow_consensus_provider(
     network_receiver: ConsensusNetworkEvents,
     executor: Arc<Executor<MoveVM>>,
     state_sync_client: Arc<StateSyncClient>,
+    rollback_flag: bool
 ) -> Box<dyn ConsensusProvider> {
     Box::new(PowConsensusProvider::new(
         node_config,
@@ -81,5 +82,6 @@ pub fn make_pow_consensus_provider(
         create_mempool_client(node_config),
         executor,
         state_sync_client,
+        rollback_flag
     ))
 }
