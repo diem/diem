@@ -512,8 +512,10 @@ where
                     let queried_child_index = nibble_iter
                         .next()
                         .ok_or_else(|| format_err!("ran out of nibbles"))?;
-                    let (child_node_key, mut siblings_in_internal) =
-                        internal_node.get_child_with_siblings(&next_node_key, queried_child_index);
+                    let child_node_key = internal_node.child(queried_child_index).map(|child| {
+                        next_node_key.gen_child_node_key(child.version, queried_child_index)
+                    });
+                    let mut siblings_in_internal = internal_node.get_siblings(queried_child_index);
                     siblings.append(&mut siblings_in_internal);
                     next_node_key = match child_node_key {
                         Some(node_key) => node_key,

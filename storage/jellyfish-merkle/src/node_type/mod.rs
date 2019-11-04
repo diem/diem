@@ -459,11 +459,9 @@ impl InternalNode {
         }
     }
 
-    /// Gets the child and its corresponding siblings that are necessary to generate the proof for
-    /// the `n`-th child. If it is an existence proof, the returned child must be the `n`-th
-    /// child; otherwise, the returned child may be another child. See inline explanation for
-    /// details. When calling this function with n = 11 (node `b` in the following graph), the
-    /// range at each level is illustrated as a pair of square brackets:
+    /// Gets the siblings that are necessary to generate the proof for the `n`-th child. See inline
+    /// explanation for details. When calling this function with n = 11 (node `b` in the following
+    /// graph), the range at each level is illustrated as a pair of square brackets:
     ///
     /// ```text
     ///     4      [f   e   d   c   b   a   9   8   7   6   5   4   3   2   1   0] -> root level
@@ -479,11 +477,7 @@ impl InternalNode {
     ///     |   MSB|<---------------------- uint 16 ---------------------------->|LSB
     ///  height    chs: `child_half_start`         shs: `sibling_half_start`
     /// ```
-    pub fn get_child_with_siblings(
-        &self,
-        node_key: &NodeKey,
-        n: Nibble,
-    ) -> (Option<NodeKey>, Vec<HashValue>) {
+    pub fn get_siblings(&self, n: Nibble) -> Vec<HashValue> {
         let mut siblings = vec![];
         let (existence_bitmap, leaf_bitmap) = self.generate_bitmaps();
 
@@ -512,33 +506,13 @@ impl InternalNode {
                 (existence_bitmap, leaf_bitmap),
             );
 
-            if range_existence_bitmap == 0 {
-                // No child in this range.
-                return (None, siblings);
-            } else if range_existence_bitmap.count_ones() == 1
-                && (range_leaf_bitmap.count_ones() == 1 || width == 1)
+            // If there is no child in this range, or there is only one leaf under this subtree, or
+            // we have reached the lowest level.
+            if range_existence_bitmap == 0
+                || (range_existence_bitmap.count_ones() == 1
+                    && (range_leaf_bitmap.count_ones() == 1 || width == 1))
             {
-                // Return the only 1 leaf child under this subtree or reach the lowest level
-                // Even this leaf child is not the n-th child, it should be returned instead of
-                // `None` because it's existence indirectly proves the n-th child doesn't exist.
-                // Please read proof format for details.
-                let only_child_index = Nibble::from(range_existence_bitmap.trailing_zeros() as u8);
-                return (
-                    {
-                        let only_child_version = self
-                            .child(only_child_index)
-                            .unwrap_or_else(|| {
-                                panic!(
-                                    "Corrupted internal node: child_bitmap indicates \
-                                     the existence of a non-exist child at index {:x}",
-                                    only_child_index
-                                )
-                            })
-                            .version;
-                        Some(node_key.gen_child_node_key(only_child_version, only_child_index))
-                    },
-                    siblings,
-                );
+                return siblings;
             }
         }
         unreachable!("Impossible to get here without returning even at the lowest level.")

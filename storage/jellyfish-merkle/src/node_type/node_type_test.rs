@@ -136,11 +136,8 @@ fn test_leaf_hash() {
 proptest! {
     #[test]
     fn two_leaves_test1(index1 in (0..8u8).prop_map(Nibble::from), index2 in (8..16u8).prop_map(Nibble::from)) {
-        let internal_node_key = random_63nibbles_node_key();
         let mut children = Children::default();
 
-        let leaf1_node_key = gen_leaf_keys(0 /* version */, internal_node_key.nibble_path(), index1).0;
-        let leaf2_node_key = gen_leaf_keys(1 /* version */, internal_node_key.nibble_path(), index2).0;
         let hash1 = HashValue::random();
         let hash2 = HashValue::random();
 
@@ -159,27 +156,18 @@ proptest! {
         prop_assert_eq!(internal_node.hash(), root_hash);
 
         for i in 0..8 {
-            prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (Some(leaf1_node_key.clone()), vec![hash2])
-            );
+            prop_assert_eq!(internal_node.get_siblings(i.into()), vec![hash2]);
         }
         for i in 8..16 {
-            prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (Some(leaf2_node_key.clone()), vec![hash1])
-            );
+            prop_assert_eq!(internal_node.get_siblings(i.into()), vec![hash1]);
         }
 
     }
 
     #[test]
     fn two_leaves_test2(index1 in (4..6u8).prop_map(Nibble::from), index2 in (6..8u8).prop_map(Nibble::from)) {
-        let internal_node_key = random_63nibbles_node_key();
         let mut children = Children::default();
 
-        let leaf1_node_key = gen_leaf_keys(0 /* version */, internal_node_key.nibble_path(), index1).0;
-        let leaf2_node_key = gen_leaf_keys(1 /* version */, internal_node_key.nibble_path(), index2).0;
         let hash1 = HashValue::random();
         let hash2 = HashValue::random();
 
@@ -207,56 +195,42 @@ proptest! {
 
         for i in 0..4 {
             prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (None, vec![*SPARSE_MERKLE_PLACEHOLDER_HASH, hash_x1])
+                internal_node.get_siblings(i.into()),
+                vec![*SPARSE_MERKLE_PLACEHOLDER_HASH, hash_x1]
             );
         }
 
         for i in 4..6 {
             prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (
-                    Some(leaf1_node_key.clone()),
-                    vec![
-                        *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                        *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                        hash2
-                    ]
-                )
+                internal_node.get_siblings(i.into()),
+                vec![
+                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                    hash2
+                ]
             );
         }
 
         for i in 6..8 {
             prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (
-                    Some(leaf2_node_key.clone()),
-                    vec![
-                        *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                        *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                        hash1
-                    ]
-                )
+                internal_node.get_siblings(i.into()),
+                vec![
+                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                    hash1
+                ]
             );
         }
 
         for i in 8..16 {
-            prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (None, vec![hash_x2])
-            );
+            prop_assert_eq!(internal_node.get_siblings(i.into()), vec![hash_x2]);
         }
 
     }
 
     #[test]
     fn three_leaves_test1(index1 in (0..4u8).prop_map(Nibble::from), index2 in (4..8u8).prop_map(Nibble::from), index3 in (8..16u8).prop_map(Nibble::from)) {
-        let internal_node_key = random_63nibbles_node_key();
         let mut children = Children::default();
-
-        let leaf1_node_key = gen_leaf_keys(0 /* version */, internal_node_key.nibble_path(), index1).0;
-        let leaf2_node_key = gen_leaf_keys(1 /* version */, internal_node_key.nibble_path(), index2).0;
-        let leaf3_node_key = gen_leaf_keys(2 /* version */, internal_node_key.nibble_path(), index3).0;
 
         let hash1 = HashValue::random();
         let hash2 = HashValue::random();
@@ -280,36 +254,21 @@ proptest! {
         prop_assert_eq!(internal_node.hash(), root_hash);
 
         for i in 0..4 {
-            prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (Some(leaf1_node_key.clone()),vec![hash3, hash2])
-            );
+            prop_assert_eq!(internal_node.get_siblings(i.into()), vec![hash3, hash2]);
         }
 
         for i in 4..8 {
-            prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (Some(leaf2_node_key.clone()),vec![hash3, hash1])
-            );
+            prop_assert_eq!(internal_node.get_siblings(i.into()), vec![hash3, hash1]);
         }
 
         for i in 8..16 {
-            prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (Some(leaf3_node_key.clone()),vec![hash_x])
-            );
+            prop_assert_eq!(internal_node.get_siblings(i.into()), vec![hash_x]);
         }
     }
 
     #[test]
     fn mixed_nodes_test(index1 in (0..2u8).prop_map(Nibble::from), index2 in (8..16u8).prop_map(Nibble::from)) {
-        let internal_node_key = random_63nibbles_node_key();
         let mut children = Children::default();
-
-        let leaf1_node_key = gen_leaf_keys(0 /* version */, internal_node_key.nibble_path(), index1).0;
-        let internal2_node_key = gen_leaf_keys(1 /* version */, internal_node_key.nibble_path(), 2.into()).0;
-        let internal3_node_key = gen_leaf_keys(2 /* version */, internal_node_key.nibble_path(), 7.into()).0;
-        let leaf4_node_key = gen_leaf_keys(3 /* version */, internal_node_key.nibble_path(), index2).0;
 
         let hash1 = HashValue::random();
         let hash2 = HashValue::random();
@@ -346,77 +305,52 @@ proptest! {
 
         for i in 0..2 {
             prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (
-                    Some(leaf1_node_key.clone()),
-                    vec![hash4, hash_x4, hash_x1]
-                )
+                internal_node.get_siblings(i.into()),
+                vec![hash4, hash_x4, hash_x1]
             );
         }
 
         prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, 2.into()),
-            (
-                Some(internal2_node_key),
-                vec![
-                    hash4,
-                    hash_x4,
-                    hash1,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                ]
-            )
+            internal_node.get_siblings(2.into()),
+            vec![
+                hash4,
+                hash_x4,
+                hash1,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+            ]
         );
 
-        prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, 3.into()),
-
-            (
-                None,
-                vec![hash4, hash_x4, hash1, hash2,]
-            )
-        );
+        prop_assert_eq!(internal_node.get_siblings(3.into()), vec![hash4, hash_x4, hash1, hash2]);
 
         for i in 4..6 {
             prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (
-                    None,
-                    vec![hash4, hash_x2, hash_x3]
-                )
+                internal_node.get_siblings(i.into()),
+                vec![hash4, hash_x2, hash_x3]
             );
         }
 
         prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, 6.into()),
-            (
-                None,
-                vec![
-                    hash4,
-                    hash_x2,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    hash3,
-                ]
-            )
+            internal_node.get_siblings(6.into()),
+            vec![
+                hash4,
+                hash_x2,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                hash3,
+            ]
         );
 
         prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, 7.into()),
-            (
-                Some(internal3_node_key),
-                vec![
-                    hash4,
-                    hash_x2,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                ]
-            )
+            internal_node.get_siblings(7.into()),
+            vec![
+                hash4,
+                hash_x2,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+            ]
         );
 
         for i in 8..16 {
-            prop_assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (Some(leaf4_node_key.clone()), vec![hash_x5])
-            );
+            prop_assert_eq!(internal_node.get_siblings(i.into()), vec![hash_x5]);
         }
     }
 }
@@ -425,25 +359,12 @@ proptest! {
 fn test_internal_hash_and_proof() {
     // non-leaf case 1
     {
-        let internal_node_key = random_63nibbles_node_key();
         let mut children = Children::default();
 
         let index1 = Nibble::from(4);
         let index2 = Nibble::from(15);
         let hash1 = HashValue::random();
         let hash2 = HashValue::random();
-        let child1_node_key = gen_leaf_keys(
-            0, /* version */
-            internal_node_key.nibble_path(),
-            index1,
-        )
-        .0;
-        let child2_node_key = gen_leaf_keys(
-            1, /* version */
-            internal_node_key.nibble_path(),
-            index2,
-        )
-        .0;
         children.insert(index1, Child::new(hash1, 0 /* version */, false));
         children.insert(index2, Child::new(hash2, 1 /* version */, false));
         let internal_node = InternalNode::new(children);
@@ -473,110 +394,73 @@ fn test_internal_hash_and_proof() {
         assert_eq!(internal_node.hash(), root_hash);
 
         for i in 0..4 {
-            assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (None, vec![hash_x6, hash_x2])
-            );
+            assert_eq!(internal_node.get_siblings(i.into()), vec![hash_x6, hash_x2]);
         }
 
         assert_eq!(
-            internal_node.get_child_with_siblings(&internal_node_key, index1),
-            (
-                Some(child1_node_key.clone()),
-                vec![
-                    hash_x6,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH
-                ]
-            )
+            internal_node.get_siblings(index1),
+            vec![
+                hash_x6,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH
+            ],
         );
 
         assert_eq!(
-            internal_node.get_child_with_siblings(&internal_node_key, 5.into()),
-            (
-                None,
-                vec![
-                    hash_x6,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    hash1
-                ]
-            )
+            internal_node.get_siblings(5.into()),
+            vec![
+                hash_x6,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                hash1
+            ],
         );
         for i in 6..8 {
             assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (
-                    None,
-                    vec![hash_x6, *SPARSE_MERKLE_PLACEHOLDER_HASH, hash_x1]
-                )
+                internal_node.get_siblings(i.into()),
+                vec![hash_x6, *SPARSE_MERKLE_PLACEHOLDER_HASH, hash_x1],
             );
         }
 
         for i in 8..12 {
-            assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (None, vec![hash_x3, hash_x5])
-            );
+            assert_eq!(internal_node.get_siblings(i.into()), vec![hash_x3, hash_x5]);
         }
 
         for i in 12..14 {
             assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (
-                    None,
-                    vec![hash_x3, *SPARSE_MERKLE_PLACEHOLDER_HASH, hash_x4]
-                )
+                internal_node.get_siblings(i.into()),
+                vec![hash_x3, *SPARSE_MERKLE_PLACEHOLDER_HASH, hash_x4],
             );
         }
         assert_eq!(
-            internal_node.get_child_with_siblings(&internal_node_key, 14.into()),
-            (
-                None,
-                vec![
-                    hash_x3,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    hash2
-                ]
-            )
+            internal_node.get_siblings(14.into()),
+            vec![
+                hash_x3,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                hash2
+            ],
         );
         assert_eq!(
-            internal_node.get_child_with_siblings(&internal_node_key, index2),
-            (
-                Some(child2_node_key.clone()),
-                vec![
-                    hash_x3,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH
-                ]
-            )
+            internal_node.get_siblings(index2),
+            vec![
+                hash_x3,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH
+            ],
         );
     }
 
     // non-leaf case 2
     {
-        let internal_node_key = random_63nibbles_node_key();
         let mut children = Children::default();
 
         let index1 = Nibble::from(0);
         let index2 = Nibble::from(7);
         let hash1 = HashValue::random();
         let hash2 = HashValue::random();
-        let child1_node_key = gen_leaf_keys(
-            0, /* version */
-            internal_node_key.nibble_path(),
-            index1,
-        )
-        .0;
-        let child2_node_key = gen_leaf_keys(
-            1, /* version */
-            internal_node_key.nibble_path(),
-            index2,
-        )
-        .0;
 
         children.insert(index1, Child::new(hash1, 0 /* version */, false));
         children.insert(index2, Child::new(hash2, 1 /* version */, false));
@@ -606,82 +490,61 @@ fn test_internal_hash_and_proof() {
         assert_eq!(internal_node.hash(), root_hash);
 
         assert_eq!(
-            internal_node.get_child_with_siblings(&internal_node_key, 0.into()),
-            (
-                Some(child1_node_key.clone()),
-                vec![
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    hash_x4,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                ]
-            )
+            internal_node.get_siblings(0.into()),
+            vec![
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                hash_x4,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+            ],
         );
 
         assert_eq!(
-            internal_node.get_child_with_siblings(&internal_node_key, 1.into()),
-            (
-                None,
-                vec![
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    hash_x4,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    hash1,
-                ]
-            )
+            internal_node.get_siblings(1.into()),
+            vec![
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                hash_x4,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                hash1,
+            ],
         );
 
         for i in 2..4 {
             assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (
-                    None,
-                    vec![*SPARSE_MERKLE_PLACEHOLDER_HASH, hash_x4, hash_x1]
-                )
+                internal_node.get_siblings(i.into()),
+                vec![*SPARSE_MERKLE_PLACEHOLDER_HASH, hash_x4, hash_x1],
             );
         }
 
         for i in 4..6 {
             assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (
-                    None,
-                    vec![*SPARSE_MERKLE_PLACEHOLDER_HASH, hash_x2, hash_x3]
-                )
+                internal_node.get_siblings(i.into()),
+                vec![*SPARSE_MERKLE_PLACEHOLDER_HASH, hash_x2, hash_x3],
             );
         }
 
         assert_eq!(
-            internal_node.get_child_with_siblings(&internal_node_key, 6.into()),
-            (
-                None,
-                vec![
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    hash_x2,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    hash2
-                ]
-            )
+            internal_node.get_siblings(6.into()),
+            vec![
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                hash_x2,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                hash2
+            ],
         );
 
         assert_eq!(
-            internal_node.get_child_with_siblings(&internal_node_key, 7.into()),
-            (
-                Some(child2_node_key.clone()),
-                vec![
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    hash_x2,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                    *SPARSE_MERKLE_PLACEHOLDER_HASH,
-                ]
-            )
+            internal_node.get_siblings(7.into()),
+            vec![
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                hash_x2,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+                *SPARSE_MERKLE_PLACEHOLDER_HASH,
+            ],
         );
 
         for i in 8..16 {
-            assert_eq!(
-                internal_node.get_child_with_siblings(&internal_node_key, i.into()),
-                (None, vec![hash_x5])
-            );
+            assert_eq!(internal_node.get_siblings(i.into()), vec![hash_x5]);
         }
     }
 }
@@ -693,10 +556,8 @@ enum BinaryTreeNode {
 }
 
 impl BinaryTreeNode {
-    fn new_child(index: u8, child: &Child) -> Self {
+    fn new_child(child: &Child) -> Self {
         Self::Child(BinaryTreeChildNode {
-            index,
-            version: child.version,
             hash: child.hash,
             is_leaf: child.is_leaf,
         })
@@ -761,13 +622,10 @@ impl BinaryTreeInternalNode {
 
 /// A child node, corresponding to one that is in the corresponding `InternalNode` being tested.
 ///
-/// `index` is its key in `InternalNode::children`.
 /// N.B. when `is_leaf` is true, in the binary tree represented by a `NaiveInternalNode`, the child
 /// node will be brought up to the root of the highest subtree that has only that leaf.
 #[derive(Clone, Copy)]
 struct BinaryTreeChildNode {
-    version: Version,
-    index: u8,
     hash: HashValue,
     is_leaf: bool,
 }
@@ -788,7 +646,7 @@ impl NaiveInternalNode {
             return children
                 .get(&begin.into())
                 .map_or(BinaryTreeNode::Null, |child| {
-                    BinaryTreeNode::new_child(begin, &child)
+                    BinaryTreeNode::new_child(&child)
                 });
         }
 
@@ -812,11 +670,7 @@ impl NaiveInternalNode {
         BinaryTreeNode::new_internal(begin, width, left, right)
     }
 
-    fn get_child_with_siblings(
-        &self,
-        node_key: &NodeKey,
-        n: u8,
-    ) -> (Option<NodeKey>, Vec<HashValue>) {
+    fn get_siblings(&self, n: u8) -> Vec<HashValue> {
         let mut current_node = Rc::clone(&self.root);
         let mut siblings = Vec::new();
 
@@ -831,13 +685,7 @@ impl NaiveInternalNode {
                         current_node = Rc::clone(&node.right);
                     }
                 }
-                BinaryTreeNode::Child(node) => {
-                    return (
-                        Some(node_key.gen_child_node_key(node.version, node.index.into())),
-                        siblings,
-                    )
-                }
-                BinaryTreeNode::Null => return (None, siblings),
+                BinaryTreeNode::Child(_) | BinaryTreeNode::Null => return siblings,
             }
         }
     }
@@ -846,17 +694,11 @@ impl NaiveInternalNode {
 proptest! {
     #[test]
     #[allow(clippy::unnecessary_operation)]
-    fn test_get_child_with_siblings(
-        node_key in any::<NodeKey>().prop_filter(
-            "Filter out keys for leaves.",
-            |k| k.nibble_path().num_nibbles() < 64
-        ).no_shrink(),
-        node in any::<InternalNode>(),
-    ) {
+    fn test_get_child_with_siblings(node in any::<InternalNode>()) {
         for n in 0..16u8 {
             prop_assert_eq!(
-                node.get_child_with_siblings(&node_key, n.into()),
-                NaiveInternalNode::from_clever_node(&node).get_child_with_siblings(&node_key, n)
+                node.get_siblings(n.into()),
+                NaiveInternalNode::from_clever_node(&node).get_siblings(n)
             )
         }
     }
