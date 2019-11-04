@@ -66,6 +66,7 @@ jobs:
       - run:
           name: Linting
           command: |
+            [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo x lint
             [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo xclippy --workspace --all-targets
             [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo fmt -- --check
       - run:
