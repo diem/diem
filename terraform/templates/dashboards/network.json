@@ -73,7 +73,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(libra_network_direct_send_bytes{state=\"sent\"}[1m])",
+          "expr": "irate(libra_network_direct_send_bytes_sum{state=\"sent\"}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -162,7 +162,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(libra_network_direct_send_bytes{state=\"received\"}[1m])",
+          "expr": "irate(libra_network_direct_send_bytes_sum{state=\"received\"}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
