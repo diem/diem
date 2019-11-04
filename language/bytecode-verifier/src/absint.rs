@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::control_flow_graph::{BlockId, ControlFlowGraph};
 use std::collections::HashMap;
 use vm::{

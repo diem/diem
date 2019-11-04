@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use lazy_static::lazy_static;
 use serde_json::{self, value as json};
 use std::{collections::VecDeque, sync::Mutex, time::SystemTime};

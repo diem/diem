@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use bytecode_source_map::source_map::SourceMap;
 use bytecode_to_boogie::translator::BoogieTranslator;
 use bytecode_verifier::VerifiedModule;

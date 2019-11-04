@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 /// NetworkDelay introduces network delay from a given instance to a provided list of instances
 /// If no instances are provided, network delay is introduced on all outgoing packets
 use crate::{effects::Action, instance::Instance};

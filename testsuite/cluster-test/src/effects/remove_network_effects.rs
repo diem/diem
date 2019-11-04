@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 /// RemoveNetworkEffect deletes all network effects introduced on an instance
 use crate::{effects::Action, instance::Instance};
 use failure;

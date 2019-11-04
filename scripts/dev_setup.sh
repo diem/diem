@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (c) The Libra Core Contributors
+# SPDX-License-Identifier: Apache-2.0
 # This script sets up the environment for the Libra build by installing necessary dependencies.
 #
 # Usage ./dev_setup.sh <options>

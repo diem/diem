@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use chrono::{Datelike, Timelike, Utc};
 use cluster_test::effects::RemoveNetworkEffects;
 use cluster_test::experiments::{MultiRegionSimulation, PacketLossRandomValidators};

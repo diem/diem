@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{health::ValidatorEvent, util::unix_timestamp_now};
 use std::{
     sync::{

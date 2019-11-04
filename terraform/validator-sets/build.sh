@@ -1,4 +1,6 @@
 #!/bin/sh
+# Copyright (c) The Libra Core Contributors
+# SPDX-License-Identifier: Apache-2.0
 set -e
 
 OUT_DIR="${1?[Specify relative output directory]}"

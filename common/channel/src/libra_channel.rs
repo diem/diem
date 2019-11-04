@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //! libra_channel provides an mpsc channel which has two ends `libra_channel::Receiver`
 //! and `libra_channel::Sender` similar to existing mpsc data structures.
 //! What makes it different from existing mpsc channels is that we have full control

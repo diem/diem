@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 mod aws_log_tail;
 mod commit_check;
 mod debug_interface_log_tail;

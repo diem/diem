@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
 use libra_types::account_address::AccountAddress;

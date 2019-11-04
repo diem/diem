@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //! This module generates the Boogie version of bytecode instructions in the format of Boogie
 //! procedures.
 use crate::translator::*;

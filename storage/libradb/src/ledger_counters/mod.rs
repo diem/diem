@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::OP_COUNTER;
 use num_derive::ToPrimitive;
 use num_traits::ToPrimitive;

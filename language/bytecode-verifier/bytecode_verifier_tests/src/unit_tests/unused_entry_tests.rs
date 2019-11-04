@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use bytecode_verifier::UnusedEntryChecker;
 use libra_types::{identifier::Identifier, vm_error::StatusCode};
 use proptest::prelude::*;

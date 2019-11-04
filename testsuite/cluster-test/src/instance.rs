@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use failure::{self, prelude::*};
 use std::{
     ffi::OsStr,
