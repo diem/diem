@@ -52,13 +52,8 @@ fn gen_ledger_info_with_sigs(
     LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
 }
 
-fn gen_block_metadata(index: u8) -> BlockMetadata {
-    BlockMetadata::new(
-        gen_block_id(index),
-        index as u64,
-        BTreeMap::new(),
-        AccountAddress::random(),
-    )
+fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
+    BlockMetadata::new(gen_block_id(index), index as u64, BTreeMap::new(), proposer)
 }
 
 fn create_storage_service_and_executor(config: &NodeConfig) -> (ServerHandle, Executor<MoveVM>) {
@@ -149,7 +144,10 @@ fn test_reconfiguration() {
         /* sequence_number = */ 2,
         genesis_keypair.private_key.clone(),
         genesis_keypair.public_key.clone(),
-        Some(encode_block_prologue_script(gen_block_metadata(1))),
+        Some(encode_block_prologue_script(gen_block_metadata(
+            1,
+            *validator_account,
+        ))),
     );
     let txn_block = vec![txn1, txn2, txn3];
     let block1_id = gen_block_id(1);
@@ -183,7 +181,10 @@ fn test_reconfiguration() {
         /* sequence_number = */ 3,
         genesis_keypair.private_key.clone(),
         genesis_keypair.public_key.clone(),
-        Some(encode_block_prologue_script(gen_block_metadata(2))),
+        Some(encode_block_prologue_script(gen_block_metadata(
+            2,
+            *validator_account,
+        ))),
     );
     let txn_block = vec![txn4, txn5];
     let block2_id = gen_block_id(2);
