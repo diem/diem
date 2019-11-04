@@ -36,7 +36,6 @@ use vm::{
 use vm_cache_map::Arena;
 use vm_runtime::{
     code_cache::module_cache::{ModuleCache, VMModuleCache},
-    data_cache::TransactionDataCache,
     interpreter::InterpreterForCostSynthesis,
     loaded_data::function::{FunctionRef, FunctionReference},
 };
