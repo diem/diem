@@ -1,0 +1,32 @@
+//! account: bob
+//! account: alice
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+//! args: 100000, 50000
+
+import 0x0.ChannelAccount;
+//open channel
+main(sender_amount:u64, receiver_amount:u64) {
+    ChannelAccount.open(move(sender_amount), move(receiver_amount));
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+import 0x0.ChannelAccount;
+main() {
+    let x: bool;
+    let alice_sequence_number: u64;
+    let bob_sequence_number: u64;
+
+    alice_sequence_number = ChannelAccount.sender_sequence_number();
+    bob_sequence_number = ChannelAccount.receiver_sequence_number();
+
+    assert(copy(alice_sequence_number) == 1, 1024);
+    assert(move(alice_sequence_number) == move(bob_sequence_number), 1025);
+    return;
+}

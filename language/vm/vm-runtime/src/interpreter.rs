@@ -1195,6 +1195,10 @@ where
             Err(VMStatus::new(StatusCode::LINKER_ERROR))
         }
     }
+
+    pub(crate) fn txn_data(&self) -> &TransactionMetadata {
+        &self.txn_data
+    }
 }
 
 // TODO Determine stack size limits based on gas limit
