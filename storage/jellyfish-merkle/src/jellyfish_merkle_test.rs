@@ -5,6 +5,10 @@ use super::*;
 use libra_crypto::HashValue;
 use libra_nibble::Nibble;
 use mock_tree_store::MockTreeStore;
+use proptest::{
+    collection::{btree_map, vec},
+    prelude::*,
+};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
 
@@ -577,4 +581,55 @@ fn many_versions_get_proof_and_verify_tree_root(seed: &[u8], num_versions: usize
 fn test_1000_versions() {
     let seed: &[_] = &[1, 2, 3, 4];
     many_versions_get_proof_and_verify_tree_root(seed, 1000);
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(10))]
+
+    #[test]
+    fn test_get_with_proof(
+        (existent_kvs, nonexistent_keys) in btree_map(
+            any::<HashValue>(),
+            any::<AccountStateBlob>(),
+            1..1000,
+        )
+            .prop_flat_map(|btree| {
+                let btree_clone = btree.clone();
+                (
+                    Just(btree),
+                    vec(
+                        any::<HashValue>().prop_filter(
+                            "Make sure these keys do not exist in the tree.",
+                            move |key| !btree_clone.contains_key(key),
+                        ),
+                        100,
+                    ),
+                )
+            })
+    ) {
+        let db = MockTreeStore::default();
+        let tree = JellyfishMerkleTree::new(&db);
+
+        for (i, (key, value)) in existent_kvs.iter().enumerate() {
+            let (_root_hash, write_batch) = tree
+                .put_blob_set(vec![(*key, value.clone())], i as Version)
+                .unwrap();
+            db.write_tree_update_batch(write_batch).unwrap();
+        }
+
+        let version = (existent_kvs.len() - 1) as Version;
+        let root_hash = tree.get_root_hash(version).unwrap();
+
+        for (key, value) in existent_kvs {
+            let (account, proof) = tree.get_with_proof(key, version).unwrap();
+            prop_assert!(proof.verify(root_hash, key, account.as_ref()).is_ok());
+            prop_assert_eq!(account.unwrap(), value);
+        }
+
+        for key in nonexistent_keys {
+            let (account, proof) = tree.get_with_proof(key, version).unwrap();
+            prop_assert!(proof.verify(root_hash, key, account.as_ref()).is_ok());
+            prop_assert!(account.is_none());
+        }
+    }
 }
