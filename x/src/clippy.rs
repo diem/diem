@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{cargo::CargoCommand, check, config::Config, Result};
 use std::ffi::OsString;
 use structopt::StructOpt;

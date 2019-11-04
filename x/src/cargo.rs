@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{utils::project_root, Result};
 use anyhow::anyhow;
 use std::{

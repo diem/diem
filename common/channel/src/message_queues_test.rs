@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::message_queues::{PerKeyQueue, QueueStyle};
 use libra_types::account_address::AccountAddress;
 use libra_types::account_address::ADDRESS_LENGTH;

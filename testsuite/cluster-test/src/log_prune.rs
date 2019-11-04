@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{aws::Aws, util::unix_timestamp_now};
 use rusoto_core::Region;
 use rusoto_logs::{

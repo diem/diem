@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::stackless_bytecode::StacklessBytecode;
 use vm::{
     access::ModuleAccess,

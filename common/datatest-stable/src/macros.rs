@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 /// `datatest-stable` test harness entry point. Should be declared in the test module.
 ///
 /// Also, `harness` should be set to `false` for that test module in `Cargo.toml` (see [Configuring

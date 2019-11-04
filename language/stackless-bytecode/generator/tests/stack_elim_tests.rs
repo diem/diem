@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
 use libra_types::account_address::AccountAddress;
 use stackless_bytecode_generator::{

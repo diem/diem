@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 mod multi_region_network_simulation;
 mod packet_loss_random_validators;
 mod reboot_random_validator;

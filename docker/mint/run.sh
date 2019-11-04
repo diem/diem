@@ -1,4 +1,6 @@
 #!/bin/sh
+# Copyright (c) The Libra Core Contributors
+# SPDX-License-Identifier: Apache-2.0
 
 # Example Usage:
 # ./run.sh <IMAGE> <AC_HOST> <AC_PORT> <LOG_LEVEL>

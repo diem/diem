@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //! This file defines system store APIs that operates data not part of the Libra core data
 //! structures but information with regard to system running status, statistics, etc.
 

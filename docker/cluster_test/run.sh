@@ -1,3 +1,7 @@
+#!/bin/sh
+# Copyright (c) The Libra Core Contributors
+# SPDX-License-Identifier: Apache-2.0
+
 # export SLACK_LOG_URL="<fill for slack integration>"
 # export SLACK_CHANGELOG_URL="<fill for slack integration>"
 export ALLOW_DEPLOY=yes

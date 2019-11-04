@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 /// This module provides an experiment which simulates a multi-region environment.
 /// It undoes the simulation in the cluster after the given duration
 use crate::effects::NetworkDelay;

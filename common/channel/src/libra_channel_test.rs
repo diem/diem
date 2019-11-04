@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{libra_channel, message_queues::QueueStyle};
 use futures::{executor::block_on, future::join};
 use libra_types::account_address::AccountAddress;

@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (c) The Libra Core Contributors
+# SPDX-License-Identifier: Apache-2.0
 
 if [ -e /dev/nvme1n1 ]; then
 	if ! file -s /dev/nvme1n1 | grep -q filesystem; then
