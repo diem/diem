@@ -1,0 +1,44 @@
+error: 
+
+   ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:2:5 ───
+   │
+ 5 │         R{};
+   │         ^^^ Cannot ignore resource values. The value must be used
+   ·
+ 2 │     resource struct R {}
+   │     -------- 0000000000000000000000000000000000000000000000000000000008675309.M.R is found to be a non-copyable type here
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:2:5 ───
+    │
+ 10 │         r;
+    │         ^ Cannot ignore resource values. The value must be used
+    ·
+ 2 │     resource struct R {}
+    │     -------- 0000000000000000000000000000000000000000000000000000000008675309.M.R is found to be a non-copyable type here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:2:5 ───
+    │
+ 14 │         (0, false, R{});
+    │         ^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+    ·
+ 2 │     resource struct R {}
+    │     -------- 0000000000000000000000000000000000000000000000000000000008675309.M.R is found to be a non-copyable type here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:2:5 ───
+    │
+ 19 │         if (true) (0, false, R{}) else (0, false, r);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+    ·
+ 2 │     resource struct R {}
+    │     -------- 0000000000000000000000000000000000000000000000000000000008675309.M.R is found to be a non-copyable type here
+    │
+

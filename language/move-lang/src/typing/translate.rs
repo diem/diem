@@ -599,11 +599,11 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                 &Type_::bool(bloc),
             );
             let (ty, eloop) = loop_body(context, *nloop);
-            (ty, TE::While(eb, eloop))
+            (sp(eloc, ty.value), TE::While(eb, eloop))
         }
         NE::Loop(nloop) => {
             let (ty, eloop) = loop_body(context, *nloop);
-            (ty, TE::Loop(eloop))
+            (sp(eloc, ty.value), TE::Loop(eloop))
         }
         NE::Block(nseq) => {
             let seq = sequence(context, nseq);
@@ -772,9 +772,20 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                     sp!(_, Single(t)) => t.clone()
                 }
             }).collect();
-            let ty = sp(eloc, Type_::Multiple(tys));
-            let items = es.into_iter().map(T::single_item).collect();
-            (ty, TE::ExpList(items))
+            let items_opt = es
+                .into_iter()
+                .map(T::single_item_opt)
+                .collect::<Option<Vec<_>>>();
+            match items_opt {
+                Some(items) => {
+                    let ty = sp(eloc, Type_::Multiple(tys));
+                    (ty, TE::ExpList(items))
+                }
+                None => {
+                    assert!(context.has_errors());
+                    (Type_::anything(eloc), TE::UnresolvedError)
+                }
+            }
         }
         NE::Pack(m, n, ty_args_opt, nfields) => {
             let current_module = context.current_module.clone().unwrap();
@@ -916,6 +927,13 @@ fn close_scope(
     sp!(_, bs_): &mut T::BindList,
 ) {
     bs_.iter_mut().for_each(|b| close_scope_bind(context, b));
+
+    // remove new locals from inner scope
+    for (new_local, _) in declared.iter().filter(|(v, _)| !old_locals.contains_key(v)) {
+        context.locals.remove(&new_local);
+    }
+
+    // return old status
     let shadowed = old_locals
         .into_iter()
         .filter(|(k, _)| declared.contains_key(k));
