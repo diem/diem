@@ -51,6 +51,10 @@ lazy_static! {
     /// The ModuleId for the transaction fee distribution module
     pub static ref TRANSACTION_FEE_DISTRIBUTION_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("TransactionFeeDistribution").unwrap()) };
+
+    /// The ModuleId for the ChannelAccount module
+    pub static ref CHANNEL_ACCOUNT_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), Identifier::new("ChannelAccount").unwrap()) };
 }
 
 // Names for special functions.
@@ -130,7 +134,13 @@ where
     pub(crate) fn run_prologue(&mut self) -> VMResult<()> {
         record_stats! {time_hist | TXN_PROLOGUE_TIME_TAKEN | {
                 self.interpreter.disable_metering();
-                let result = self.execute_function(&ACCOUNT_MODULE, &PROLOGUE_NAME, vec![]);
+                let result = self.execute_function(&ACCOUNT_MODULE, &PROLOGUE_NAME, vec![]).and_then(|_| {
+                    if self.interpreter.txn_data().is_channel_txn() {
+                        self.execute_function(&CHANNEL_ACCOUNT_MODULE, &PROLOGUE_NAME, vec![])
+                    } else {
+                        Ok(())
+                    }
+                });
                 self.interpreter.enable_metering();
                 result
             }
@@ -142,7 +152,13 @@ where
     fn run_epilogue(&mut self) -> VMResult<()> {
         record_stats! {time_hist | TXN_EPILOGUE_TIME_TAKEN | {
                 self.interpreter.disable_metering();
-                let result = self.execute_function(&ACCOUNT_MODULE, &EPILOGUE_NAME, vec![]);
+                let result = self.execute_function(&ACCOUNT_MODULE, &EPILOGUE_NAME, vec![]).and_then(|_| {
+                    if self.interpreter.txn_data().is_channel_txn() {
+                        self.execute_function(&CHANNEL_ACCOUNT_MODULE, &EPILOGUE_NAME, vec![])
+                    } else {
+                        Ok(())
+                    }
+                });
                 self.interpreter.enable_metering();
                 result
             }
