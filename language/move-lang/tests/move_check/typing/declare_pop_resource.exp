@@ -1,0 +1,44 @@
+error: 
+
+   ┌── tests/move_check/typing/declare_pop_resource.move:2:5 ───
+   │
+ 5 │         let _: R;
+   │             ^ Cannot ignore resource values. The value must be used
+   ·
+ 2 │     resource struct R {f: u64}
+   │     -------- 0000000000000000000000000000000000000000000000000000000008675309.M.R is found to be a non-copyable type here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/declare_pop_resource.move:2:5 ───
+   │
+ 6 │         let _r: R;
+   │             ^^ Cannot ignore resource values. The value must be used
+   ·
+ 2 │     resource struct R {f: u64}
+   │     -------- 0000000000000000000000000000000000000000000000000000000008675309.M.R is found to be a non-copyable type here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/declare_pop_resource.move:2:5 ───
+   │
+ 7 │         let (_, _):(R, R);
+   │              ^ Cannot ignore resource values. The value must be used
+   ·
+ 2 │     resource struct R {f: u64}
+   │     -------- 0000000000000000000000000000000000000000000000000000000008675309.M.R is found to be a non-copyable type here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/declare_pop_resource.move:2:5 ───
+   │
+ 7 │         let (_, _):(R, R);
+   │                 ^ Cannot ignore resource values. The value must be used
+   ·
+ 2 │     resource struct R {f: u64}
+   │     -------- 0000000000000000000000000000000000000000000000000000000008675309.M.R is found to be a non-copyable type here
+   │
+

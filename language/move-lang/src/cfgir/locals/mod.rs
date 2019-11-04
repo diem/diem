@@ -7,6 +7,7 @@ use super::{absint::*, ast::*};
 use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::*,
+    hlir::translate::{display_var, DisplayVar},
     parser::ast::{Kind_, Var},
     shared::*,
 };
@@ -121,9 +122,18 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
                                 LocalState::MaybeUnavailable { .. } => "might contain",
                             };
                             let available = *available;
+                            let stmt = match display_var(local.value()) {
+                                DisplayVar::Tmp => {
+                                    "The resource is created but not used".to_owned()
+                                }
+                                DisplayVar::Orig(l) => format!(
+                                    "The local {} still {} a resource value due to this assignment",
+                                    l, verb
+                                ),
+                            };
                             errors.push(vec![
                                 (*loc, "Invalid return".into()),
-                                (available, format!("The local {} still {} a resource value due to this assignment. The resource must be used before the function returns", local, verb))
+                                (available, format!("{}. The resource must be consumed before the function returns", stmt))
                             ])
                         }
                     }
@@ -158,8 +168,12 @@ fn lvalue(context: &mut Context, sp!(loc, l_): &LValue) {
                             LocalState::MaybeUnavailable { .. } => "might contain",
                         };
                         let available = *available;
+                        let vstr = match display_var(v.value()) {
+                            DisplayVar::Tmp => panic!("ICE invalid assign tmp local"),
+                            DisplayVar::Orig(s) => s,
+                        };
                         context.error(vec![
-                            (*loc, format!("Invalid assignment to local '{}'", v)),
+                            (*loc, format!("Invalid assignment to local '{}'", vstr)),
                             (available, format!("The local {} a resource value due to this assignment. The resource must be used before you assign this to this local again", verb))
                         ])
                     }
@@ -220,8 +234,12 @@ fn use_local(context: &mut Context, loc: &Loc, local: &Var) {
                 LocalState::MaybeUnavailable { .. } => "might have been moved",
             };
             let unavailable = *unavailable;
+            let vstr = match display_var(local.value()) {
+                DisplayVar::Tmp => panic!("ICE invalid use tmp local"),
+                DisplayVar::Orig(s) => s,
+            };
             context.error(vec![
-                    (*loc, format!("Invalid usage of local '{}'", local)),
+                    (*loc, format!("Invalid usage of local '{}'", vstr)),
                     (unavailable, format!("The value {} out of the local. The local must be assigned a new value before being used", verb))
                 ])
         }

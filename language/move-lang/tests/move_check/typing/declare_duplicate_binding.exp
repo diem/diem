@@ -1,0 +1,33 @@
+error: 
+
+   ┌── tests/move_check/typing/declare_duplicate_binding.move:5:14 ───
+   │
+ 5 │         let (x, x);
+   │                 ^ Duplicate declaration for local 'x' in a given 'let'
+   ·
+ 5 │         let (x, x);
+   │              - Previously declared here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/declare_duplicate_binding.move:6:14 ───
+   │
+ 6 │         let (f, R{f}, f);
+   │                   ^ Duplicate declaration for local 'f' in a given 'let'
+   ·
+ 6 │         let (f, R{f}, f);
+   │              - Previously declared here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/declare_duplicate_binding.move:6:19 ───
+   │
+ 6 │         let (f, R{f}, f);
+   │                       ^ Duplicate declaration for local 'f' in a given 'let'
+   ·
+ 6 │         let (f, R{f}, f);
+   │                   - Previously declared here
+   │
+
