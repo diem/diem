@@ -93,4 +93,3 @@ resource "aws_key_pair" "libra" {
   key_name   = "${terraform.workspace}-libra"
   public_key = var.ssh_pub_key
 }
-
