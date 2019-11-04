@@ -124,6 +124,7 @@ mod unit_tests;
 
 pub mod code_cache;
 pub mod data_cache;
+pub mod execution_context;
 pub mod identifier;
 pub mod interpreter;
 pub mod loaded_data;

@@ -40,10 +40,8 @@ macro_rules! with_loaded_vm {
         }
         let gas_schedule = CostTable::zero();
         let txn_data = TransactionMetadata::default();
-        let data_cache = TransactionDataCache::new(&data_cache);
         let mut $vm =
-            InterpreterForCostSynthesis::new(&$module_cache, txn_data, data_cache, &gas_schedule);
-        $vm.turn_off_gas_metering();
+            InterpreterForCostSynthesis::new(&$module_cache, &txn_data, &data_cache, &gas_schedule);
         $vm.push_frame(entry_func, vec![]);
     };
 }

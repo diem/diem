@@ -4,7 +4,7 @@
 
 use crate::{
     code_cache::module_adapter::{ModuleFetcher, NullFetcher},
-    gas_meter::GasMeter,
+    execution_context::InterpreterContext,
     loaded_data::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
@@ -63,7 +63,7 @@ pub trait ModuleCache<'alloc> {
         &self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
-        gas_meter: &GasMeter,
+        context: &mut dyn InterpreterContext,
     ) -> VMResult<StructDef>;
 
     /// Resolve a ModuleId into a LoadedModule if the module has been cached already.
@@ -94,9 +94,9 @@ where
         &self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
-        gas_meter: &GasMeter,
+        context: &mut dyn InterpreterContext,
     ) -> VMResult<StructDef> {
-        (*self).resolve_struct_def(module, idx, gas_meter)
+        (*self).resolve_struct_def(module, idx, context)
     }
 
     fn get_loaded_module(&self, id: &ModuleId) -> VMResult<&'alloc LoadedModule> {
@@ -210,7 +210,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         &self,
         module: &LoadedModule,
         idx: StructHandleIndex,
-        gas_meter: &GasMeter,
+        context: &mut dyn InterpreterContext,
         fetcher: &F,
     ) -> VMResult<StructDef> {
         let struct_handle = module.struct_handle_at(idx);
@@ -219,7 +219,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         match self.get_loaded_module_with_fetcher(&struct_def_module_id, fetcher) {
             Ok(module) => {
                 let struct_def_idx = module.get_struct_def_index(struct_name)?;
-                self.resolve_struct_def_with_fetcher(module, *struct_def_idx, gas_meter, fetcher)
+                self.resolve_struct_def_with_fetcher(module, *struct_def_idx, context, fetcher)
             }
             Err(errors) => Err(errors),
         }
@@ -231,7 +231,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         module: &LoadedModule,
         tok: &SignatureToken,
         type_context: &TypeContext,
-        gas_meter: &GasMeter,
+        context: &mut dyn InterpreterContext,
         fetcher: &F,
     ) -> VMResult<Type> {
         match tok {
@@ -249,17 +249,16 @@ impl<'alloc> VMModuleCache<'alloc> {
                             module,
                             ty,
                             type_context,
-                            gas_meter,
+                            context,
                             fetcher,
                         )?;
                         ctx.push(resolved_type);
                     }
                     TypeContext::new(ctx)
                 };
-                let struct_def = ctx
-                    .subst_struct_def(&self.resolve_struct_handle_with_fetcher(
-                        module, *sh_idx, gas_meter, fetcher,
-                    )?)?;
+                let struct_def = ctx.subst_struct_def(
+                    &self.resolve_struct_handle_with_fetcher(module, *sh_idx, context, fetcher)?,
+                )?;
                 Ok(Type::Struct(struct_def))
             }
             SignatureToken::Reference(sub_tok) => {
@@ -267,7 +266,7 @@ impl<'alloc> VMModuleCache<'alloc> {
                     module,
                     sub_tok,
                     type_context,
-                    gas_meter,
+                    context,
                     fetcher,
                 )?;
                 Ok(Type::Reference(Box::new(inner_ty)))
@@ -277,7 +276,7 @@ impl<'alloc> VMModuleCache<'alloc> {
                     module,
                     sub_tok,
                     type_context,
-                    gas_meter,
+                    context,
                     fetcher,
                 )?;
                 Ok(Type::MutableReference(Box::new(inner_ty)))
@@ -291,7 +290,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         &'txn self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
-        gas_meter: &GasMeter,
+        context: &mut dyn InterpreterContext,
         fetcher: &F,
     ) -> VMResult<StructDef> {
         if let Some(def) = module.cached_struct_def_at(idx) {
@@ -325,7 +324,7 @@ impl<'alloc> VMModuleCache<'alloc> {
                             module,
                             &module.type_signature_at(field.signature).0,
                             &type_context,
-                            gas_meter,
+                            context,
                             fetcher,
                         )?;
                         // `field_types` is initally empty, a single element is pushed
@@ -361,9 +360,9 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
         &self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
-        gas_meter: &GasMeter,
+        context: &mut dyn InterpreterContext,
     ) -> VMResult<StructDef> {
-        self.resolve_struct_def_with_fetcher(module, idx, gas_meter, &NullFetcher())
+        self.resolve_struct_def_with_fetcher(module, idx, context, &NullFetcher())
     }
 
     fn get_loaded_module(&self, id: &ModuleId) -> VMResult<&'alloc LoadedModule> {
@@ -428,10 +427,10 @@ impl<'alloc, 'blk, F: ModuleFetcher> ModuleCache<'alloc> for BlockModuleCache<'a
         &self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
-        gas_meter: &GasMeter,
+        context: &mut dyn InterpreterContext,
     ) -> VMResult<StructDef> {
         self.vm_cache
-            .resolve_struct_def_with_fetcher(module, idx, gas_meter, &self.storage)
+            .resolve_struct_def_with_fetcher(module, idx, context, &self.storage)
     }
 
     fn get_loaded_module(&self, id: &ModuleId) -> VMResult<&'alloc LoadedModule> {
