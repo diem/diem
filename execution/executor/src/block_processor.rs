@@ -349,8 +349,9 @@ where
 
                 let vm_output = if count == vec_len {
                     let accu_root_hash = tmp_committed_trees.txn_accumulator().root_hash();
-                    let version =
-                        (tmp_committed_trees.txn_accumulator().num_leaves() - 1) as Version;
+                    let version = if tmp_committed_trees.txn_accumulator().num_leaves() > 0 {
+                        (tmp_committed_trees.txn_accumulator().num_leaves() - 1) as Version
+                    } else {0};
                     let state_id = tmp_committed_trees.state_tree().root_hash();
 
                     // Now that we have the root hash and execution status we can send the response to

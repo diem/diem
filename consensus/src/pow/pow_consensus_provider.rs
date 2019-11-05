@@ -627,9 +627,8 @@ impl EventHandle {
                             let (orphan_flag, old) = chain_lock.connect_block(block_index.clone());
 
                             if !orphan_flag {
-                                //update main chain
                                 match old {
-                                    Some(old_root) => {
+                                    Some(old_root) => {//update main chain
                                         let mut main_chain_indexs:Vec<&HashValue> = Vec::new();
                                         let height = chain_lock.longest_chain_height();
 
@@ -656,7 +655,7 @@ impl EventHandle {
                                                 // 1. query block
                                                 let commit_block = block_db.get_block_by_hash::<Vec<SignedTransaction>>(commit).expect("block not find in database err.");
                                                 // 2. commit block
-                                                Self::execut_and_commit_block(block_db.clone(), commit_block, txn_manager.clone(), state_computer.clone()).await;
+                                                Self::execut_and_commit_block(self_peer_id.clone(), block_db.clone(), commit_block, txn_manager.clone(), state_computer.clone()).await;
                                             }
 
     //                                      // 4. update main chain
@@ -665,7 +664,7 @@ impl EventHandle {
 
                                         //4.save latest block
                                         let id = block.id();
-                                        Self::execut_and_commit_block(block_db.clone(), block.clone(), txn_manager.clone(), state_computer.clone()).await;
+                                        Self::execut_and_commit_block(self_peer_id.clone(), block_db.clone(), block.clone(), txn_manager.clone(), state_computer.clone()).await;
 
                                         //5. update main chain
                                         main_chain_indexs.append(&mut vec![&id].to_vec());
@@ -676,8 +675,12 @@ impl EventHandle {
                                         }
                                     }
                                     None => {
-                                        // save latest block
-                                        Self::execut_and_commit_block(block_db.clone(), block, txn_manager.clone(), state_computer.clone()).await;
+                                        // save block, not commit
+                                        let mut blocks: Vec<Block<Vec<SignedTransaction>>> = Vec::new();
+                                        blocks.push(block.clone());
+                                        let mut qcs = Vec::new();
+                                        qcs.push(block.quorum_cert().clone());
+                                        block_db.save_blocks_and_quorum_certificates(blocks, qcs);
                                     }
                                 }
 
@@ -695,12 +698,13 @@ impl EventHandle {
         executor.spawn(chain_fut);
     }
 
-    async fn execut_and_commit_block(block_db: Arc<ConsensusDB>, block: Block<Vec<SignedTransaction>>, txn_manager: Arc<dyn TxnManager<Payload=Vec<SignedTransaction>>>, state_computer: Arc<dyn StateComputer<Payload=Vec<SignedTransaction>>>) {
+    async fn execut_and_commit_block(self_peer_id: AccountAddress, block_db: Arc<ConsensusDB>, block: Block<Vec<SignedTransaction>>, txn_manager: Arc<dyn TxnManager<Payload=Vec<SignedTransaction>>>, state_computer: Arc<dyn StateComputer<Payload=Vec<SignedTransaction>>>) {
         // 2. compute with state_computer
         let payload = match block.payload() {
             Some(txns) => txns.clone(),
             None => vec![],
         };
+        println!(".........{:?}.......{:?}........{:?}......{}...", self_peer_id, block.parent_id(), block.id(), block.round());
         let compute_res = state_computer.compute(block.parent_id(), block.id(), &payload).await.expect("compute block err.");
 
         // 3. remove tx from mempool
