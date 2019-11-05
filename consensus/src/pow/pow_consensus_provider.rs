@@ -2,7 +2,7 @@ use failure::prelude::*;
 use config::config::NodeConfig;
 use network::{
     proto::{
-        ConsensusMsg, ConsensusMsg_oneof::{self, *}, Block as BlockProto, LongestChainInfo, RequestBlock, RespondBlock, BlockRetrievalStatus,
+        ConsensusMsg, ConsensusMsg_oneof::{self, *}, Block as BlockProto, RequestBlock, RespondBlock, BlockRetrievalStatus,
     },
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError}};
 use std::{sync::Arc, thread};
@@ -72,17 +72,14 @@ pub struct EventHandle {
     self_receiver: Option<channel::Receiver<failure::Result<Event<ConsensusMsg>>>>,
     author: AccountAddress,
     peers: ConsensusPeersConfig,
-//    sync_model: Arc<AtomicBool>,
 
-    //    sync_blocks:Arc<Mutex<Vec<Block<Vec<SignedTransaction>>>>>,
+    //sync
     sync_block_sender: mpsc::Sender<(PeerId, BlockRetrievalResponse<Vec<SignedTransaction>>)>,
     sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<Vec<SignedTransaction>>)>>,
     sync_signal_sender: mpsc::Sender<(PeerId, u64)>,
     sync_signal_receiver: Option<mpsc::Receiver<(PeerId, u64)>>,
     sync_state_sender: mpsc::Sender<SyncState>,
     sync_state_receiver: Option<mpsc::Receiver<SyncState>>,
-    sync_height_sender: mpsc::Sender<()>,
-    sync_height_receiver: Option<mpsc::Receiver<()>>,
 
     block_chain: Arc<RwLock<BlockChain>>,
     orphan_blocks: Arc<Mutex<HashMap<HashValue, Vec<HashValue>>>>,//key -> parent_block_id, value -> block_id
@@ -255,15 +252,13 @@ impl EventHandle {
                txn_manager: Arc<dyn TxnManager<Payload=Vec<SignedTransaction>>>,
                state_computer: Arc<dyn StateComputer<Payload=Vec<SignedTransaction>>>,
                author: AccountAddress, peers: ConsensusPeersConfig, storage_dir: PathBuf,
-               sync_model: AtomicBool, genesis_txn: Transaction, rollback_flag: bool) -> Self {
+               genesis_txn: Transaction, rollback_flag: bool) -> Self {
         let (block_cache_sender, block_cache_receiver) = mpsc::channel(10);
 
         //sync
-//        let sync_blocks = Arc::new(Mutex::new(vec![]));
         let (sync_block_sender, sync_block_receiver) = mpsc::channel(10);
         let (sync_signal_sender, sync_signal_receiver) = mpsc::channel(1024);
         let (sync_state_sender, sync_state_receiver) = mpsc::channel(10);
-        let (sync_height_sender, sync_height_receiver) = mpsc::channel(10);
 
         //longest chain
         let genesis_block_index = BlockIndex { id: *GENESIS_BLOCK_ID, parent_block_id: *PRE_GENESIS_BLOCK_ID };
@@ -309,8 +304,6 @@ impl EventHandle {
             sync_signal_receiver: Some(sync_signal_receiver),
             sync_state_sender,
             sync_state_receiver: Some(sync_state_receiver),
-            sync_height_sender,
-            sync_height_receiver: Some(sync_height_receiver),
             block_chain,
             orphan_blocks,
             genesis_txn:genesis_txn_vec,
@@ -319,16 +312,14 @@ impl EventHandle {
         }
     }
 
-    async fn process_new_block_msg(block_cache_sender: &mut mpsc::Sender<Block<Vec<SignedTransaction>>>, new_block: BlockProto, pow_ctx: PowContext, pow_srv: Arc<PowService>) {
-        let block: Block<Vec<SignedTransaction>> = new_block.try_into().expect("parse block pb err.");
-
-        let verify = pow_srv.verify(&pow_ctx.header_hash, pow_ctx.nonce, Proof { solve: pow_ctx.solve });
-        if verify == false {
-            // Not valid block, pass it.
-        }
+    async fn process_new_block_msg(block_cache_sender: &mut mpsc::Sender<Block<Vec<SignedTransaction>>>, new_block: Block<Vec<SignedTransaction>>, pow_srv: Arc<PowService>) {
+//        let verify = pow_srv.verify(&pow_ctx.header_hash, pow_ctx.nonce, Proof { solve: pow_ctx.solve });
+//        if verify == false {
+//            // Not valid block, pass it.
+//        }
         // insert into block_cache_sender
-        debug!("parent block hash: {:?}, new block hash: {:?}", block.parent_id(), block.id());
-        if let Err(err) = block_cache_sender.send(block).await {
+        debug!("parent block hash: {:?}, new block hash: {:?}", new_block.parent_id(), new_block.id());
+        if let Err(err) = block_cache_sender.send(new_block).await {
             error!("send new block err: {:?}", err);
         }
 
@@ -354,7 +345,7 @@ impl EventHandle {
         let mut network_sender = self.network_sender.clone();
         let self_peer_id = self.author;
         let mut self_sender = self.self_sender.clone();
-//        let sync_model = self.sync_model.clone();
+
         let orphan_blocks = self.orphan_blocks.clone();
         let mut sync_signal_sender = self.sync_signal_sender.clone();
         let mut sync_block_sender = self.sync_block_sender.clone();
@@ -363,7 +354,7 @@ impl EventHandle {
         let fut = async move {
             while let Some(Ok(message)) = all_events.next().await {
                 match message {
-                    Event::PowMessage((peer_id, pow_ctx, msg)) => {
+                    Event::Message((peer_id, msg)) => {
                         let msg = match msg.message {
                             Some(msg) => msg,
                             None => {
@@ -373,24 +364,19 @@ impl EventHandle {
                         };
 
                         match msg.clone() {
-                            ConsensusMsg_oneof::NewBlock(new_block) => Self::process_new_block_msg(&mut block_cache_sender, new_block, pow_ctx, pow_srv.clone()).await,
-                            ConsensusMsg_oneof::ChainInfo(chain_info) => {
-                                let height = block_chain.clone().read().compat().await.unwrap().longest_chain_height();
-                                println!("ChainInfo get chain lock:{:?}", self_peer_id);
-                                println!("ChainInfo myself : {} :{:?}, other: {} :{:?} ", height, self_peer_id, chain_info.height, AccountAddress::try_from(chain_info.author).expect("author to bytes err."));
-                                println!("ChainInfo drop chain lock:{:?}", self_peer_id);
-                                if height > chain_info.height {
-                                    let chain_info_msg = Self::chain_info_msg(height, self_peer_id.clone());
-                                    Self::send_consensus_msg(peer_id, &mut network_sender.clone(), self_peer_id.clone(), &mut self_sender.clone(), chain_info_msg).await;
-                                } else {
-                                    if height < chain_info.height {
-                                        if let Err(err) = sync_signal_sender.clone().send((peer_id, chain_info.height)).await {
+                            ConsensusMsg_oneof::NewBlock(new_block) => {
+                                //TODO:verify block
+                                let block: Block<Vec<SignedTransaction>> = new_block.try_into().expect("parse block pb err.");
+                                if self_peer_id != peer_id {
+                                    let height = block_chain.clone().read().compat().await.unwrap().longest_chain_height();
+                                    if height < block.round() {
+                                        if let Err(err) = sync_signal_sender.clone().send((peer_id, block.round())).await {
                                             error!("send sync signal err: {:?}", err);
                                         }
                                     }
-                                };
-                                ()
-                            }
+                                }
+                                Self::process_new_block_msg(&mut block_cache_sender, block, pow_srv.clone()).await
+                            },
                             ConsensusMsg_oneof::RequestBlock(req_block) => {
                                 let mut blocks = vec![];
                                 let mut latest_block = if req_block.block_id.len() > 0 {
@@ -436,7 +422,7 @@ impl EventHandle {
                                 let status = if exist_flag {
                                     //BlockRetrievalStatus::IDNOTFOUND
                                     //1
-                                    0
+                                    1
                                 } else {
                                     if (blocks.len() as u64) == req_block.num_blocks {
                                         //BlockRetrievalStatus::SUCCEEDED
@@ -491,18 +477,12 @@ impl EventHandle {
 //                        };
                     }
                     Event::NewPeer(peer_id) => {
-                        //TODO:
-                        let height = block_chain.clone().read().compat().await.unwrap().longest_chain_height();
-                        println!("NewPeer get chain lock");
-                        println!("NewPeer drop chain lock");
-                        let chain_info_msg = Self::chain_info_msg(height, self_peer_id.clone());
-                        Self::send_consensus_msg(peer_id, &mut network_sender.clone(), self_peer_id.clone(), &mut self_sender.clone(), chain_info_msg).await;
-                        debug!("Peer {} connected", peer_id);
+                        debug!("Peer {:?} connected", peer_id);
                     }
                     Event::LostPeer(peer_id) => {
-                        debug!("Peer {} disconnected", peer_id);
+                        debug!("Peer {:?} disconnected", peer_id);
                     }
-                    Event::Message((peer_id, message)) => {
+                    Event::PowMessage((peer_id, pow_ctx, message)) => {
                         debug!("Recive message without handle");
                     }
                 }
@@ -515,30 +495,22 @@ impl EventHandle {
         //TODO:orphan
     }
 
-    fn chain_info_msg(height: u64, author:AccountAddress) -> ConsensusMsg {
-        let mut info = LongestChainInfo::default();
-        info.height = height;
-        info.author = AccountAddress::try_into(author).expect("author to bytes err.");
-        ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::ChainInfo(info)),
-        }
-    }
-
     async fn broadcast_consensus_msg(consensus_peers_config: ConsensusPeersConfig, network_sender: &mut ConsensusNetworkSender, self_flag: bool,
                                      self_peer_id: PeerId, self_sender: &mut channel::Sender<failure::Result<Event<ConsensusMsg>>>, msg: ConsensusMsg, pow_ctx: Option<PowContext>) {
         if self_flag {
-            let event_msg = Ok(Event::PowMessage((self_peer_id, pow_ctx.expect("Pow context not set"), msg.clone())));
+            //let event_msg = Ok(Event::PowMessage((self_peer_id, pow_ctx.expect("Pow context not set"), msg.clone())));
+            let event_msg = Ok(Event::Message((self_peer_id, msg.clone())));
             if let Err(err) = self_sender.send(event_msg).await {
                 error!("Error delivering a self proposal: {:?}", err);
             }
         }
         let msg_raw = msg.to_bytes().unwrap();
-            if let Err(err) = network_sender.broadcast_bytes(msg_raw.clone()).await {
-                error!(
-                    "Error broadcasting proposal  error: {:?}, msg: {:?}",
-                     err, msg
-                );
-            }
+        if let Err(err) = network_sender.broadcast_bytes(msg_raw.clone()).await {
+            error!(
+                "Error broadcasting proposal  error: {:?}, msg: {:?}",
+                 err, msg
+            );
+        }
 
 //        for peer in consensus_peers_config.get_validator_verifier().get_ordered_account_addresses() {
 ////            if self_flag || peer != self_peer_id {
@@ -581,19 +553,6 @@ impl EventHandle {
         ConsensusMsg {
             message: Some(ConsensusMsg_oneof::RequestBlock(req)),
         }
-    }
-
-    fn sync_height(&mut self, executor: TaskExecutor) {
-        let mut sync_height_sender = self.sync_height_sender.clone();
-        let task = Interval::new(Instant::now(), Duration::from_secs(10))
-            .for_each(move |_| {
-                if let Err(err) = block_on(sync_height_sender.send(())) {
-                    error!("send sync block err: {:?}", err);
-                }
-                future::ready(())
-            });
-
-        executor.spawn(task);
     }
 
     fn save_block(&mut self, executor: TaskExecutor) {
@@ -774,7 +733,6 @@ impl EventHandle {
         let mut sync_network_sender = self.network_sender.clone();
         let mut sync_state_sender = self.sync_state_sender.clone();
         let mut sync_state_receiver = self.sync_state_receiver.take().expect("sync_state_receiver is none.");
-        let mut sync_height_receiver = self.sync_height_receiver.take().expect("sync_height_receiver is none.");
         let mut sync_block_cache_sender = self.block_cache_sender.clone();
         let self_peer_id = self.author.clone();
         let mut sync_self_sender = self.self_sender.clone();
@@ -783,11 +741,6 @@ impl EventHandle {
         let sync_fut = async move {
             loop {
                 ::futures::select! {
-                    (_) = sync_height_receiver.select_next_some() => {
-                        let height = sync_block_chain.read().compat().await.unwrap().longest_chain_height();
-                        let chain_info_msg = Self::chain_info_msg(height, self_peer_id.clone());
-                        Self::broadcast_consensus_msg(consensus_peers.clone(), &mut sync_network_sender.clone(), false, self_peer_id.clone(), &mut sync_self_sender.clone(), chain_info_msg, None).await;
-                    },
                     (peer_id, height) = sync_signal_receiver.select_next_some() => {
                         //sync data from latest block
                         //TODO:timeout
@@ -1018,17 +971,11 @@ impl PowConsensusProvider {
             .consensus
             .consensus_peers.clone();
 
-        let sync_flag = if peers_config.peers.len() == 0 || peers_config.peers.contains_key(&peer_id_str) {
-            AtomicBool::new(false)
-        } else {
-            AtomicBool::new(true)
-        };
-
         let genesis_transaction = node_config
             .get_genesis_transaction()
             .expect("failed to load genesis transaction!");
 
-        let event_handle = EventHandle::new(network_sender, network_events, txn_manager, state_computer, author, peers_config, node_config.get_storage_dir(), sync_flag, genesis_transaction, rollback_flag);
+        let event_handle = EventHandle::new(network_sender, network_events, txn_manager, state_computer, author, peers_config, node_config.get_storage_dir(), genesis_transaction, rollback_flag);
         Self {
             runtime,
             event_handle: Some(event_handle),
@@ -1049,9 +996,6 @@ impl PowConsensusProvider {
 
                 //sync
                 handle.sync_block_msg(executor.clone());
-
-                //sync height
-                handle.sync_height(executor);
 
                 //TODO:orphan
             }
