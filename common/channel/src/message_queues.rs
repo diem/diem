@@ -134,4 +134,10 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
         }
         message
     }
+
+    /// Clears all the pending messages and cleans up the queue from the previous metadata.
+    pub(crate) fn clear(&mut self) {
+        self.per_key_queue.clear();
+        self.round_robin_queue.clear();
+    }
 }

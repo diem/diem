@@ -273,3 +273,34 @@ fn test_lifo_round_robin() {
     );
     assert_eq!(q.pop(), None);
 }
+
+#[test]
+fn test_message_queue_clear() {
+    let mut q = PerKeyQueue::new(QueueStyle::LIFO, 3, None);
+    let validator = AccountAddress::new([0u8; ADDRESS_LENGTH]);
+
+    q.push(
+        validator,
+        ProposalMsg {
+            msg: "msg1".to_string(),
+        },
+    );
+    q.push(
+        validator,
+        ProposalMsg {
+            msg: "msg2".to_string(),
+        },
+    );
+    assert_eq!(q.pop().unwrap().msg, "msg2".to_string());
+
+    q.clear();
+    assert_eq!(q.pop(), None);
+
+    q.push(
+        validator,
+        ProposalMsg {
+            msg: "msg3".to_string(),
+        },
+    );
+    assert_eq!(q.pop().unwrap().msg, "msg3".to_string());
+}

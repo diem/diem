@@ -125,6 +125,8 @@ impl<T: Payload> ChainedBftSMR<T> {
                     ledger_info = network_receivers.epoch_change.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
                         event_processor = epoch_manager.start_new_epoch(ledger_info);
+                        // clean up all the previous messages from the old epochs
+                        network_receivers.clear_prev_epoch_msgs();
                     }
                     future_epoch_and_peer = network_receivers.future_epoch.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
