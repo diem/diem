@@ -53,7 +53,7 @@ pub struct NetworkReceivers<T> {
     pub block_retrieval: libra_channel::Receiver<AccountAddress, IncomingBlockRetrievalRequest<T>>,
     pub sync_info_msgs: libra_channel::Receiver<AccountAddress, (SyncInfo, AccountAddress)>,
     pub epoch_change: libra_channel::Receiver<AccountAddress, LedgerInfoWithSignatures>,
-    pub future_epoch: libra_channel::Receiver<AccountAddress, (u64, AccountAddress)>,
+    pub different_epoch: libra_channel::Receiver<AccountAddress, (u64, AccountAddress)>,
     pub epoch_retrieval: libra_channel::Receiver<AccountAddress, (u64, AccountAddress)>,
 }
 
@@ -260,7 +260,7 @@ pub struct NetworkTask<T> {
     block_request_tx: libra_channel::Sender<AccountAddress, IncomingBlockRetrievalRequest<T>>,
     sync_info_tx: libra_channel::Sender<AccountAddress, (SyncInfo, AccountAddress)>,
     epoch_change_tx: libra_channel::Sender<AccountAddress, LedgerInfoWithSignatures>,
-    future_epoch_tx: libra_channel::Sender<AccountAddress, (u64, AccountAddress)>,
+    different_epoch_tx: libra_channel::Sender<AccountAddress, (u64, AccountAddress)>,
     epoch_retrieval_tx: libra_channel::Sender<AccountAddress, (u64, AccountAddress)>,
     all_events: Box<dyn Stream<Item = failure::Result<Event<ConsensusMsg>>> + Send + Unpin>,
     validators: Arc<ValidatorVerifier>,
@@ -319,7 +319,8 @@ impl<T: Payload> NetworkTask<T> {
                 dequeued_msgs_counter: &counters::EPOCH_CHANGE_DEQUEUED_MSGS,
             }),
         );
-        let (future_epoch_tx, future_epoch_rx) = libra_channel::new(QueueStyle::LIFO, 1, None);
+        let (different_epoch_tx, different_epoch_rx) =
+            libra_channel::new(QueueStyle::LIFO, 1, None);
         let (epoch_retrieval_tx, epoch_retrieval_rx) =
             libra_channel::new(QueueStyle::LIFO, 1, None);
         let network_events = network_events.map_err(Into::<failure::Error>::into);
@@ -332,7 +333,7 @@ impl<T: Payload> NetworkTask<T> {
                 block_request_tx,
                 sync_info_tx,
                 epoch_change_tx,
-                future_epoch_tx,
+                different_epoch_tx,
                 epoch_retrieval_tx,
                 all_events,
                 validators,
@@ -343,7 +344,7 @@ impl<T: Payload> NetworkTask<T> {
                 block_retrieval: block_request_rx,
                 sync_info_msgs: sync_info_rx,
                 epoch_change: epoch_change_rx,
-                future_epoch: future_epoch_rx,
+                different_epoch: different_epoch_rx,
                 epoch_retrieval: epoch_retrieval_rx,
             },
         )
@@ -416,17 +417,16 @@ impl<T: Payload> NetworkTask<T> {
     ) -> failure::Result<()> {
         let proposal = ProposalUncheckedSignatures::<T>::try_from(proposal)?;
         match proposal.epoch().cmp(&self.epoch) {
-            Ordering::Less => Ok(()),
             Ordering::Equal => {
                 let proposal = proposal
                     .validate_signatures(self.validators.as_ref())?
                     .verify_well_formed()?;
                 debug!("Received proposal {}", proposal);
-                Ok(self.proposal_tx.push(peer_id, proposal)?)
+                self.proposal_tx.push(peer_id, proposal)
             }
-            Ordering::Greater => Ok(self
-                .future_epoch_tx
-                .push(peer_id, (proposal.epoch(), peer_id))?),
+            Ordering::Less | Ordering::Greater => self
+                .different_epoch_tx
+                .push(peer_id, (proposal.epoch(), peer_id)),
         }
     }
 
@@ -437,7 +437,6 @@ impl<T: Payload> NetworkTask<T> {
     ) -> failure::Result<()> {
         let vote_msg = VoteMsg::try_from(vote_msg)?;
         match vote_msg.epoch().cmp(&self.epoch) {
-            Ordering::Less => Ok(()),
             Ordering::Equal => {
                 debug!("Received {}", vote_msg);
                 vote_msg
@@ -450,11 +449,11 @@ impl<T: Payload> NetworkTask<T> {
                             .log();
                         e
                     })?;
-                Ok(self.vote_tx.push(peer_id, vote_msg)?)
+                self.vote_tx.push(peer_id, vote_msg)
             }
-            Ordering::Greater => Ok(self
-                .future_epoch_tx
-                .push(peer_id, (vote_msg.epoch(), peer_id))?),
+            Ordering::Less | Ordering::Greater => self
+                .different_epoch_tx
+                .push(peer_id, (vote_msg.epoch(), peer_id)),
         }
     }
 
@@ -465,7 +464,6 @@ impl<T: Payload> NetworkTask<T> {
     ) -> failure::Result<()> {
         let sync_info = SyncInfo::try_from(sync_info)?;
         match sync_info.epoch().cmp(&self.epoch) {
-            Ordering::Less => Ok(()),
             Ordering::Equal => {
                 sync_info.verify(self.validators.as_ref()).map_err(|e| {
                     security_log(SecurityEvent::InvalidSyncInfoMsg)
@@ -474,11 +472,11 @@ impl<T: Payload> NetworkTask<T> {
                         .log();
                     e
                 })?;
-                Ok(self.sync_info_tx.push(peer_id, (sync_info, peer_id))?)
+                self.sync_info_tx.push(peer_id, (sync_info, peer_id))
             }
-            Ordering::Greater => Ok(self
-                .future_epoch_tx
-                .push(peer_id, (sync_info.epoch(), peer_id))?),
+            Ordering::Less | Ordering::Greater => self
+                .different_epoch_tx
+                .push(peer_id, (sync_info.epoch(), peer_id)),
         }
     }
 
@@ -515,7 +513,6 @@ impl<T: Payload> NetworkTask<T> {
         let proof = ValidatorChangeEventWithProof::try_from(proof)?;
         let msg_epoch = proof.epoch()?;
         match msg_epoch.cmp(&self.epoch) {
-            Ordering::Less => Ok(()),
             Ordering::Equal => {
                 let target_ledger_info = proof.verify(self.epoch, &self.validators)?;
                 let validators = match target_ledger_info.ledger_info().next_validator_set() {
@@ -524,9 +521,11 @@ impl<T: Payload> NetworkTask<T> {
                 };
                 self.epoch = target_ledger_info.ledger_info().epoch() + 1;
                 self.validators = Arc::new(validators);
-                Ok(self.epoch_change_tx.push(peer_id, target_ledger_info)?)
+                self.epoch_change_tx.push(peer_id, target_ledger_info)
             }
-            Ordering::Greater => Ok(self.future_epoch_tx.push(peer_id, (msg_epoch, peer_id))?),
+            Ordering::Less | Ordering::Greater => {
+                self.different_epoch_tx.push(peer_id, (msg_epoch, peer_id))
+            }
         }
     }
 
