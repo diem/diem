@@ -152,10 +152,10 @@ impl<'alloc> VMRuntime<'alloc> {
                         &self.publishing_option,
                     )?)
                 }
-                // TODO: Implement the logic for processing system transactions.
                 TransactionBlock::BlockPrologue(block_metadata) => result.push(
                     process_block_metadata(block_metadata, &code_cache, &mut data_cache),
                 ),
+                // TODO: Implement the logic for processing writeset transactions.
                 TransactionBlock::WriteSet(_) => unimplemented!(""),
             }
         }

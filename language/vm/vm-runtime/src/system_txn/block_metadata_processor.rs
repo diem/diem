@@ -26,7 +26,12 @@ pub(crate) fn process_block_metadata<'alloc, P>(
 where
     P: ModuleCache<'alloc>,
 {
-    // TODO: How should we setup the metadata here?
+    // TODO: How should we setup the metadata here? A couple of thoughts here:
+    // 1. We might make the txn_data to be poisoned so that reading anything will result in a panic.
+    // 2. The most important consideration is figuring out the sender address.  Having a notion of a
+    //    "null address" (probably 0x0...0) that is prohibited from containing modules or resources
+    //    might be useful here.
+    // 3. The max gas can be set to u64::max()
     let txn_data = TransactionMetadata::default();
 
     let mut txn_executor = TransactionExecutor::new(&module_cache, data_cache, txn_data);
