@@ -43,6 +43,9 @@ use rand::{
     Rng, SeedableRng,
 };
 use slog_scope::{debug, info, warn};
+use std::env;
+use std::fmt;
+use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 
@@ -93,38 +96,19 @@ impl TxEmitter {
         self.accounts.clear();
     }
 
-    fn pick_mint_client(instances: &[Instance]) -> AdmissionControlClient {
+    fn pick_mint_client(instances: &[Instance]) -> NamedAdmissionControlClient {
         let mut rng = ThreadRng::default();
         let mint_instance = instances
             .choose(&mut rng)
             .expect("Instances can not be empty");
-        Self::make_client(&mint_instance)
+        NamedAdmissionControlClient(mint_instance.clone(), Self::make_client(mint_instance))
     }
 
     pub fn start_job(&mut self, req: EmitJobRequest) -> failure::Result<EmitJob> {
         let num_clients = req.instances.len();
         let num_accounts = req.accounts_per_client * num_clients;
-        let mut mint_client = Self::pick_mint_client(&req.instances);
-        let mut mint_failures = 0;
-        info!("Minting accounts");
-        while self.accounts.len() < num_accounts {
-            let mut accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
-            let mint_requests = gen_mint_txn_requests(&mut self.faucet_account, &accounts);
-            if let Err(e) =
-                execute_and_wait_transactions(&mint_client, &mut self.faucet_account, mint_requests)
-            {
-                mint_failures += 1;
-                if mint_failures > 5 {
-                    return Err(e);
-                }
-                warn!("Mint attempt {} failed, retrying", mint_failures);
-                mint_client = Self::pick_mint_client(&req.instances);
-                continue;
-            }
-            self.accounts.append(&mut accounts);
-        }
+        self.mint_accounts(&req, num_accounts)?;
         let all_accounts = self.accounts.split_off(self.accounts.len() - num_accounts);
-        info!("Mint is done");
         let mut workers = vec![];
         let all_addresses: Vec<_> = all_accounts.iter().map(|d| d.address).collect();
         let all_addresses = Arc::new(all_addresses);
@@ -153,6 +137,38 @@ impl TxEmitter {
             thread::sleep(Duration::from_millis(10)); // Small stagger between starting threads
         }
         Ok(EmitJob { workers, stop })
+    }
+
+    fn mint_accounts(&mut self, req: &EmitJobRequest, num_accounts: usize) -> failure::Result<()> {
+        if self.accounts.len() >= num_accounts {
+            info!("Not minting accounts");
+            return Ok(()); // Early return to skip printing 'Minting ...' logs
+        }
+        let mut mint_client = Self::pick_mint_client(&req.instances);
+        let mut mint_failures = 0;
+        info!("Minting accounts on {}", mint_client);
+        let retry_mint = env::var_os("NO_MINT_RETRY").is_none();
+        while self.accounts.len() < num_accounts {
+            let mut accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
+            let mint_requests = gen_mint_txn_requests(&mut self.faucet_account, &accounts);
+            if let Err(e) =
+                execute_and_wait_transactions(&mint_client, &mut self.faucet_account, mint_requests)
+            {
+                mint_failures += 1;
+                if retry_mint && mint_failures > 5 {
+                    return Err(e);
+                }
+                mint_client = Self::pick_mint_client(&req.instances);
+                warn!(
+                    "Mint attempt {} failed, retrying on {}",
+                    mint_failures, mint_client
+                );
+                continue;
+            }
+            self.accounts.append(&mut accounts);
+        }
+        info!("Mint is done");
+        Ok(())
     }
 
     pub fn stop_job(&mut self, job: EmitJob) {
@@ -199,13 +215,13 @@ impl SubmissionThread {
                 let resp = self.client.submit_transaction(&request);
                 match resp {
                     Err(e) => {
-                        info!("Failed to submit request to {}: {:?}", self.instance, e);
+                        info!("[{}] Failed to submit request: {:?}", self.instance, e);
                     }
                     Ok(r) => {
                         let r = SubmitTransactionResponse::try_from(r)
                             .expect("Failed to parse SubmitTransactionResponse");
                         if !is_accepted(&r) {
-                            info!("Request declined: {:?}", r);
+                            info!("[{}] Request declined: {:?}", self.instance, r);
                         }
                     }
                 }
@@ -213,13 +229,13 @@ impl SubmissionThread {
                 if wait_util > now {
                     thread::sleep(wait_util - now);
                 } else {
-                    debug!("Thread for {} won't sleep", self.instance);
+                    debug!("[{}] Thread won't sleep", self.instance);
                 }
             }
             if self.params.wait_committed {
                 if wait_for_accounts_sequence(&self.client, &mut self.accounts).is_err() {
                     info!(
-                        "Some transactions was not committed before expiration {}",
+                        "[{}] Some transactions was not committed before expiration",
                         self.instance
                     );
                 }
@@ -385,25 +401,37 @@ fn gen_mint_txn_requests(
 }
 
 fn execute_and_wait_transactions(
-    client: &AdmissionControlClient,
+    client: &NamedAdmissionControlClient,
     account: &mut AccountData,
     txn: Vec<SubmitTransactionRequest>,
 ) -> failure::Result<()> {
+    debug!(
+        "[{}] Submitting transactions {} - {} for {}",
+        client,
+        account.sequence_number - txn.len() as u64,
+        account.sequence_number,
+        account.address
+    );
     for request in txn {
         let resp = client.submit_transaction(&request);
         match resp {
-            Err(e) => info!("Failed to submit request: {:?}", e),
+            Err(e) => info!("[{}] Failed to submit request: {:?}", client, e),
             Ok(r) => {
                 let r = SubmitTransactionResponse::try_from(r)
                     .expect("Failed to parse SubmitTransactionResponse");
                 if !is_accepted(&r) {
-                    info!("Request declined: {:?}", r);
+                    info!("[{}] Request declined: {:?}", client, r);
                 }
             }
         }
     }
-    wait_for_accounts_sequence(client, slice::from_mut(account))
-        .map_err(|_| format_err!("Mint transactions was not committed before expiration"))
+    let r = wait_for_accounts_sequence(client, slice::from_mut(account))
+        .map_err(|_| format_err!("Mint transactions was not committed before expiration"));
+    debug!(
+        "[{}] Account {} is at sequence number {} now",
+        client, account.address, account.sequence_number
+    );
+    r
 }
 
 fn load_faucet_account(client: &AdmissionControlClient, faucet_account_path: &str) -> AccountData {
@@ -430,4 +458,20 @@ fn is_accepted(resp: &SubmitTransactionResponse) -> bool {
         return *status == AdmissionControlStatus::Accepted;
     }
     false
+}
+
+struct NamedAdmissionControlClient(Instance, AdmissionControlClient);
+
+impl fmt::Display for NamedAdmissionControlClient {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Deref for NamedAdmissionControlClient {
+    type Target = AdmissionControlClient;
+
+    fn deref(&self) -> &Self::Target {
+        &self.1
+    }
 }
