@@ -23,7 +23,7 @@ use network::{
         CONSENSUS_DIRECT_SEND_PROTOCOL,
         CONSENSUS_RPC_PROTOCOL,
         MEMPOOL_DIRECT_SEND_PROTOCOL,
-        STATE_SYNCHRONIZER_MSG_PROTOCOL,
+        STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
     },
     NetworkPublicKeys, ProtocolId,
 };
@@ -115,7 +115,7 @@ pub fn setup_network(
         .direct_send_protocols(vec![
             ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
-            ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
+            ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
         ])
         .rpc_protocols(vec![
             ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
@@ -205,7 +205,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             PeerId::try_from(node_config.networks[i].peer_id.clone()).expect("Invalid PeerId");
         let (runtime, mut network_provider) = setup_network(peer_id, &mut node_config.networks[i]);
         state_sync_network_handles.push(network_provider.add_state_synchronizer(vec![
-            ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
+            ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
         ]));
 
         let (ac_sender, ac_events) =
