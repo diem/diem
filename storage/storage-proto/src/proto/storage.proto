@@ -105,17 +105,27 @@ message GetStartupInfoResponse {
     StartupInfo info = 1;
 }
 
-message StartupInfo {
-    // The latest LedgerInfo. Note that at start up storage can have more
-    // transactions than the latest LedgerInfo indicates due to an incomplete
-    // start up sync.
-    types.LedgerInfo ledger_info = 1;
-    // The latest version. All fields below are based on this version.
-    uint64 latest_version = 2;
+message TreeState {
+    // The version of the tree state. All fields below are based on this version.
+    uint64 version = 1;
+    // From left to right, root hashes of all frozen subtrees.
+    repeated bytes ledger_frozen_subtree_hashes = 2;
     // The latest account state root hash.
     bytes account_state_root_hash = 3;
-    // From left to right, root hashes of all frozen subtrees.
-    repeated bytes ledger_frozen_subtree_hashes = 4;
+}
+
+message StartupInfo {
+    // The latest committed LedgerInfo. Note that at start up storage can have more
+    // transactions than the latest committed LedgerInfo indicates due to an incomplete
+    // start up sync.
+    types.LedgerInfo ledger_info = 1;
+
+    // The latest committed tree state matching the ledger info above.
+    TreeState committed_tree_state = 2;
+
+    // The latest synced tree state when the number of transactions is more than ledger_info
+    // indicates.
+    TreeState synced_tree_state = 3;
 }
 
 message GetLatestLedgerInfosPerEpochRequest {

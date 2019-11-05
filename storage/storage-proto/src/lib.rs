@@ -294,22 +294,32 @@ impl From<GetTransactionsResponse> for crate::proto::storage::GetTransactionsRes
     }
 }
 
-/// Helper to construct and parse [`proto::storage::StartupInfo`]
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct StartupInfo {
-    pub ledger_info: LedgerInfo,
-    pub latest_version: Version,
-    pub account_state_root_hash: HashValue,
+pub struct TreeState {
+    pub version: Version,
     pub ledger_frozen_subtree_hashes: Vec<HashValue>,
+    pub account_state_root_hash: HashValue,
 }
 
-impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
+impl TreeState {
+    pub fn new(
+        version: Version,
+        ledger_frozen_subtree_hashes: Vec<HashValue>,
+        account_state_root_hash: HashValue,
+    ) -> Self {
+        Self {
+            version,
+            ledger_frozen_subtree_hashes,
+            account_state_root_hash,
+        }
+    }
+}
+
+impl TryFrom<crate::proto::storage::TreeState> for TreeState {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::StartupInfo) -> Result<Self> {
-        let ledger_info = LedgerInfo::try_from(proto.ledger_info.unwrap_or_else(Default::default))?;
-        let latest_version = proto.latest_version;
+    fn try_from(proto: crate::proto::storage::TreeState) -> Result<Self> {
         let account_state_root_hash = HashValue::from_slice(&proto.account_state_root_hash[..])?;
         let ledger_frozen_subtree_hashes = proto
             .ledger_frozen_subtree_hashes
@@ -317,12 +327,64 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
             .map(|x| &x[..])
             .map(HashValue::from_slice)
             .collect::<Result<Vec<_>>>()?;
+        let version = proto.version;
+
+        Ok(Self::new(
+            version,
+            ledger_frozen_subtree_hashes,
+            account_state_root_hash,
+        ))
+    }
+}
+
+impl From<TreeState> for crate::proto::storage::TreeState {
+    fn from(info: TreeState) -> Self {
+        let account_state_root_hash = info.account_state_root_hash.to_vec();
+        let ledger_frozen_subtree_hashes = info
+            .ledger_frozen_subtree_hashes
+            .into_iter()
+            .map(|x| x.to_vec())
+            .collect();
+        let version = info.version;
+
+        Self {
+            version,
+            ledger_frozen_subtree_hashes,
+            account_state_root_hash,
+        }
+    }
+}
+
+/// Helper to construct and parse [`proto::storage::StartupInfo`]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct StartupInfo {
+    pub ledger_info: LedgerInfo,
+    pub committed_tree_state: TreeState,
+    pub synced_tree_state: Option<TreeState>,
+}
+
+impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::StartupInfo) -> Result<Self> {
+        let ledger_info = proto
+            .ledger_info
+            .ok_or_else(|| format_err!("Missing ledger_info"))?
+            .try_into()?;
+        let committed_tree_state = proto
+            .committed_tree_state
+            .ok_or_else(|| format_err!("Missing committed_tree_state"))?
+            .try_into()?;
+        let synced_tree_state = proto
+            .synced_tree_state
+            .map(TreeState::try_from)
+            .transpose()?;
 
         Ok(Self {
             ledger_info,
-            latest_version,
-            account_state_root_hash,
-            ledger_frozen_subtree_hashes,
+            committed_tree_state,
+            synced_tree_state,
         })
     }
 }
@@ -330,19 +392,13 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
 impl From<StartupInfo> for crate::proto::storage::StartupInfo {
     fn from(info: StartupInfo) -> Self {
         let ledger_info = Some(info.ledger_info.into());
-        let latest_version = info.latest_version;
-        let account_state_root_hash = info.account_state_root_hash.to_vec();
-        let ledger_frozen_subtree_hashes = info
-            .ledger_frozen_subtree_hashes
-            .into_iter()
-            .map(|x| x.to_vec())
-            .collect();
+        let committed_tree_state = Some(info.committed_tree_state.into());
+        let synced_tree_state = info.synced_tree_state.map(Into::into);
 
         Self {
             ledger_info,
-            latest_version,
-            account_state_root_hash,
-            ledger_frozen_subtree_hashes,
+            committed_tree_state,
+            synced_tree_state,
         }
     }
 }
