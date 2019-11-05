@@ -11,7 +11,10 @@ use libra_types::{
     transaction::TransactionOutput,
     vm_error::{StatusCode, VMStatus},
 };
-use vm::transaction_metadata::TransactionMetadata;
+use vm::{
+    gas_schedule::{GasAlgebra, GasUnits},
+    transaction_metadata::TransactionMetadata
+};
 use vm_runtime_types::value::Value;
 
 lazy_static! {
@@ -31,8 +34,9 @@ where
     // 2. The most important consideration is figuring out the sender address.  Having a notion of a
     //    "null address" (probably 0x0...0) that is prohibited from containing modules or resources
     //    might be useful here.
-    // 3. The max gas can be set to u64::max()
-    let txn_data = TransactionMetadata::default();
+    // 3. We set the max gas to a big number just to get rid of the potential out of gas error.
+    let mut txn_data = TransactionMetadata::default();
+    txn_data.max_gas_amount = GasUnits::new(std::u64::MAX);
 
     let mut txn_executor = TransactionExecutor::new(&module_cache, data_cache, txn_data);
     let result = if let Ok((id, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {
