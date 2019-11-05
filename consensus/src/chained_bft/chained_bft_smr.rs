@@ -128,9 +128,9 @@ impl<T: Payload> ChainedBftSMR<T> {
                         // clean up all the previous messages from the old epochs
                         network_receivers.clear_prev_epoch_msgs();
                     }
-                    future_epoch_and_peer = network_receivers.future_epoch.select_next_some() => {
+                    different_epoch_and_peer = network_receivers.different_epoch.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
-                        epoch_manager.process_future_epoch(future_epoch_and_peer.0, future_epoch_and_peer.1).await
+                        epoch_manager.process_different_epoch(different_epoch_and_peer.0, different_epoch_and_peer.1).await
                     }
                     epoch_retrieval_and_peer = network_receivers.epoch_retrieval.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();

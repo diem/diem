@@ -26,6 +26,7 @@ use network::proto::ConsensusMsg;
 use network::proto::ConsensusMsg_oneof;
 use network::validator_network::{ConsensusNetworkSender, Event};
 use safety_rules::{ConsensusState, SafetyRules};
+use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::sync::Arc;
 
@@ -132,25 +133,35 @@ impl<T: Payload> EpochManager<T> {
         };
     }
 
-    pub async fn process_future_epoch(&mut self, target_epoch: u64, peer_id: AccountAddress) {
-        let request = EpochRetrievalRequest {
-            start_epoch: self.epoch,
-            target_epoch,
-        };
-        let msg = match request.try_into() {
-            Ok(bytes) => ConsensusMsg {
-                message: Some(ConsensusMsg_oneof::RequestEpoch(bytes)),
-            },
-            Err(e) => {
-                warn!("Fail to serialize EpochRetrievalRequest: {:?}", e);
-                return;
+    pub async fn process_different_epoch(&mut self, different_epoch: u64, peer_id: AccountAddress) {
+        match different_epoch.cmp(&self.epoch) {
+            // We try to help nodes that have lower epoch than us
+            Ordering::Less => self.process_epoch_retrieval(different_epoch, peer_id).await,
+            // We request proof to join higher epoch
+            Ordering::Greater => {
+                let request = EpochRetrievalRequest {
+                    start_epoch: self.epoch,
+                    target_epoch: different_epoch,
+                };
+                let msg = match request.try_into() {
+                    Ok(bytes) => ConsensusMsg {
+                        message: Some(ConsensusMsg_oneof::RequestEpoch(bytes)),
+                    },
+                    Err(e) => {
+                        warn!("Fail to serialize EpochRetrievalRequest: {:?}", e);
+                        return;
+                    }
+                };
+                if let Err(e) = self.network_sender.send_to(peer_id, msg).await {
+                    warn!(
+                        "Failed to send a epoch retrieval to peer {}: {:?}",
+                        peer_id, e
+                    );
+                }
             }
-        };
-        if let Err(e) = self.network_sender.send_to(peer_id, msg).await {
-            warn!(
-                "Failed to send a epoch retrieval to peer {}: {:?}",
-                peer_id, e
-            );
+            Ordering::Equal => {
+                warn!("Same epoch should not come to process_different_epoch");
+            }
         }
     }
 
