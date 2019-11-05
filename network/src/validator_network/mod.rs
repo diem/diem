@@ -4,17 +4,26 @@
 //! Network API for [`Consensus`](/consensus/index.html) and [`Mempool`](/mempool/index.html)
 
 pub use crate::protocols::rpc::error::RpcError;
-use crate::{error::NetworkError, interface::NetworkNotification};
+use crate::{
+    common::NetworkPublicKeys,
+    error::NetworkError,
+    interface::{NetworkNotification, NetworkRequest},
+    protocols::{direct_send, rpc::OutboundRpcRequest},
+    utils::MessageExt,
+    ProtocolId,
+};
 use bytes::Bytes;
 use futures::{
     channel::oneshot,
     ready,
+    sink::SinkExt,
     stream::{FusedStream, Stream},
     task::{Context, Poll},
 };
+use parity_multiaddr::Multiaddr;
 use pin_project::pin_project;
 use prost::Message;
-use std::{default::Default, marker::PhantomData, pin::Pin};
+use std::{collections::HashMap, default::Default, marker::PhantomData, pin::Pin, time::Duration};
 
 pub mod network_builder;
 
@@ -137,5 +146,183 @@ impl<TMessage: Message + Default> Stream for NetworkEvents<TMessage> {
 impl<TMessage: Message + Default> FusedStream for NetworkEvents<TMessage> {
     fn is_terminated(&self) -> bool {
         self.inner.is_terminated()
+    }
+}
+
+/// `NetworkSender` is the generic interface from upper network applications to
+/// the lower network layer. It provides the full API for network applications,
+/// including sending direct-send messages, sending rpc requests, as well as
+/// dialing or disconnecting from peers and updating the list of accepted public
+/// keys.
+///
+/// `NetworkSender` is in fact a thin wrapper around a
+/// `channel::Sender<NetworkRequest>`, mostly focused on providing a more
+/// ergonomic API. However, network applications will usually provide their own
+/// thin wrapper around `NetworkSender` that narrows the API to the specific
+/// interface they need. For instance, `mempool` only requires direct-send
+/// functionality so its `MempoolNetworkSender` only exposes a `send_to` function.
+///
+/// The `TMessage` generic is a protobuf message type (`prost::Message`).
+#[derive(Clone)]
+pub struct NetworkSender<TMessage: Message + Default> {
+    inner: channel::Sender<NetworkRequest>,
+    _marker: PhantomData<TMessage>,
+}
+
+impl<TMessage: Message + Default> NetworkSender<TMessage> {
+    #[allow(dead_code)]
+    pub fn new(inner: channel::Sender<NetworkRequest>) -> Self {
+        Self {
+            inner,
+            _marker: PhantomData,
+        }
+    }
+
+    /// Send a fire-and-forget direct-send message to remote peer `recipient`.
+    ///
+    /// The returned Future simply resolves when the message has been enqueued on
+    /// the network actor's event queue. It therefore makes no reliable delivery
+    /// guarantees.
+    ///
+    /// The Future will resolve to an `Err` if the event queue is unexpectedly
+    /// shutdown.
+    #[allow(dead_code)]
+    pub async fn send_to(
+        &mut self,
+        recipient: PeerId,
+        protocol: ProtocolId,
+        message: TMessage,
+    ) -> Result<(), NetworkError> {
+        self.inner
+            .send(NetworkRequest::SendMessage(
+                recipient,
+                direct_send::Message {
+                    protocol,
+                    mdata: message.to_bytes().unwrap(),
+                },
+            ))
+            .await?;
+
+        Ok(())
+    }
+
+    /// Send the _same_ message to many `recipients` using the direct-send
+    /// protocol.
+    ///
+    /// This method is an optimization so that we can avoid serializing and
+    /// copying the same message many times when we want to sent a single message
+    /// to many peers. Note that the `Bytes` the messages is serialized into is a
+    /// ref-counted byte buffer, so we can avoid excess copies as all direct-sends
+    /// will share the same underlying byte buffer.
+    ///
+    /// The returned Future simply resolves when all send requests have been
+    /// enqueued on the network actor's event queue. It therefore makes no
+    /// reliable delivery guarantees.
+    ///
+    /// The Future will resolve to an `Err` if the event queue is unexpectedly
+    /// shutdown.
+    #[allow(dead_code)]
+    pub async fn send_to_many(
+        &mut self,
+        recipients: impl Iterator<Item = PeerId>,
+        protocol: ProtocolId,
+        message: TMessage,
+    ) -> Result<(), NetworkError> {
+        let msg_bytes = message.to_bytes().unwrap();
+        let msg = direct_send::Message {
+            protocol,
+            mdata: msg_bytes,
+        };
+
+        for recipient in recipients {
+            // We return `Err` early here if the send fails. Since sending will
+            // only fail if the queue is unexpectedly shutdown (i.e., receiver
+            // dropped early), we know that we can't make further progress if
+            // this send fails.
+            self.inner
+                .send(NetworkRequest::SendMessage(recipient, msg.clone()))
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    /// Send a unary rpc request to remote peer `recipient`. Handles
+    /// serialization and deserialization of the message types, assuming that the
+    /// request and response both have the same message type.
+    #[allow(dead_code)]
+    pub async fn unary_rpc(
+        &mut self,
+        recipient: PeerId,
+        protocol: ProtocolId,
+        req_msg: TMessage,
+        timeout: Duration,
+    ) -> Result<TMessage, RpcError> {
+        // serialize request
+        let req_data = req_msg.to_bytes().unwrap();
+
+        // ask network to fulfill rpc request
+        let (res_tx, res_rx) = oneshot::channel();
+        let req = OutboundRpcRequest {
+            protocol,
+            data: req_data,
+            res_tx,
+            timeout,
+        };
+        self.inner
+            .send(NetworkRequest::SendRpc(recipient, req))
+            .await?;
+
+        // wait for response and deserialize
+        let res_data = res_rx.await??;
+        let res_msg = TMessage::decode(res_data)?;
+        Ok(res_msg)
+    }
+
+    /// Update the set of eligible nodes that the network should accept
+    /// connections from.
+    #[allow(dead_code)]
+    pub async fn update_eligible_nodes(
+        &mut self,
+        nodes: HashMap<PeerId, NetworkPublicKeys>,
+    ) -> Result<(), NetworkError> {
+        self.inner
+            .send(NetworkRequest::UpdateEligibleNodes(nodes))
+            .await?;
+        Ok(())
+    }
+
+    /// Dial the peer with the given `PeerId` at a `Multiaddr`.
+    #[allow(dead_code)]
+    pub async fn dial_peer(&mut self, peer: PeerId, addr: Multiaddr) -> Result<(), NetworkError> {
+        let (res_tx, res_rx) = oneshot::channel();
+        self.inner
+            .send(NetworkRequest::DialPeer(peer, addr, res_tx))
+            .await?;
+        Ok(res_rx.await??)
+    }
+
+    /// Disconnect from the peer with the given `PeerId`.
+    #[allow(dead_code)]
+    pub async fn disconnect_peer(&mut self, peer: PeerId) -> Result<(), NetworkError> {
+        let (res_tx, res_rx) = oneshot::channel();
+        self.inner
+            .send(NetworkRequest::DisconnectPeer(peer, res_tx))
+            .await?;
+        Ok(res_rx.await??)
+    }
+
+    /// Unwrap the `NetworkSender` into the underlying
+    /// `channel::Sender<NetworkRequest>`.
+    #[allow(dead_code)]
+    pub fn into_inner(self) -> channel::Sender<NetworkRequest> {
+        self.inner
+    }
+
+    /// Get a mutable reference to the underlying
+    /// `channel::Sender<NetworkRequest>`.
+    #[allow(dead_code)]
+    pub fn get_mut(&mut self) -> &mut channel::Sender<NetworkRequest> {
+        &mut self.inner
     }
 }
