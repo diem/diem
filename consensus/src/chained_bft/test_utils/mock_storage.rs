@@ -6,8 +6,8 @@ use crate::chained_bft::persistent_storage::{
 };
 
 use consensus_types::{
-    block::block_test_utils::certificate_for_genesis, block::Block, common::Payload,
-    quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate, vote::Vote,
+    block::Block, common::Payload, quorum_cert::QuorumCert,
+    timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use failure::Result;
 use libra_config::config::{NodeConfig, NodeConfigHelpers};
@@ -41,12 +41,7 @@ impl<T: Payload> MockStorage<T> {
     pub fn new(shared_storage: Arc<MockSharedStorage<T>>) -> Self {
         MockStorage {
             shared_storage,
-            storage_ledger: Mutex::new(
-                certificate_for_genesis()
-                    .ledger_info()
-                    .ledger_info()
-                    .clone(),
-            ),
+            storage_ledger: Mutex::new(LedgerInfo::genesis()),
         }
     }
 
@@ -173,13 +168,6 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
         });
         let storage = MockStorage::new(Arc::clone(&shared_storage));
 
-        // The current assumption is that the genesis block version is 0.
-        storage
-            .save_tree(
-                vec![Block::make_genesis_block()],
-                vec![certificate_for_genesis()],
-            )
-            .unwrap();
         (
             Arc::new(Self::new(shared_storage)),
             storage.get_recovery_data().unwrap(),
@@ -220,16 +208,14 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
     }
 
     fn start(_: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
-        let genesis = Block::make_genesis_block();
-        let genesis_qc = certificate_for_genesis();
         (
             Arc::new(EmptyStorage),
             RecoveryData::new(
                 ConsensusState::default(),
                 None,
-                vec![genesis],
-                vec![genesis_qc.clone()],
-                genesis_qc.ledger_info().ledger_info(),
+                vec![],
+                vec![],
+                &LedgerInfo::genesis(),
                 None,
             )
             .unwrap(),

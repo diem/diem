@@ -202,7 +202,7 @@ pub fn placeholder_certificate_for_block(
     let genesis_ledger_info = LedgerInfo::genesis();
     let vote_data = VoteData::new(
         BlockInfo::new(
-            genesis_ledger_info.epoch(),
+            genesis_ledger_info.epoch() + 1,
             certified_block_round,
             certified_block_id,
             genesis_ledger_info.transaction_accumulator_hash(),
@@ -211,7 +211,7 @@ pub fn placeholder_certificate_for_block(
             genesis_ledger_info.next_validator_set().cloned(),
         ),
         BlockInfo::new(
-            genesis_ledger_info.epoch(),
+            genesis_ledger_info.epoch() + 1,
             certified_parent_block_round,
             certified_parent_block_id,
             genesis_ledger_info.transaction_accumulator_hash(),

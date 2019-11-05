@@ -11,12 +11,11 @@ use crate::chained_bft::liveness::proposer_election::ProposerElection;
 use crate::chained_bft::liveness::rotating_proposer_election::{choose_leader, RotatingProposer};
 use crate::chained_bft::network::NetworkSender;
 use crate::chained_bft::persistent_storage::{PersistentStorage, RecoveryData};
+use crate::counters;
 use crate::state_replication::{StateComputer, TxnManager};
 use crate::util::time_service::{ClockTimeService, TimeService};
-use consensus_types::block::Block;
 use consensus_types::common::{Payload, Round};
 use consensus_types::epoch_retrieval::EpochRetrievalRequest;
-use consensus_types::quorum_cert::QuorumCert;
 use futures::executor::block_on;
 use libra_config::config::ConsensusProposerType;
 use libra_logger::prelude::*;
@@ -155,33 +154,29 @@ impl<T: Payload> EpochManager<T> {
     }
 
     pub fn start_new_epoch(&mut self, ledger_info: LedgerInfoWithSignatures) -> EventProcessor<T> {
-        // make sure storage is on this ledger_info too, it should be no-op if it's already committed
-        self.state_computer.sync_to_or_bail(ledger_info.clone());
         let validators = ledger_info
             .ledger_info()
             .next_validator_set()
             .expect("should have ValidatorSet when start new epoch")
             .into();
-        let genesis_block = Block::make_genesis_block_from_ledger_info(ledger_info.ledger_info());
-        let genesis_qc = QuorumCert::certificate_for_genesis_from_ledger_info(
-            ledger_info.ledger_info(),
-            genesis_block.id(),
-        );
-        info!(
-            "Start new epoch with genesis {}, validators {}",
-            genesis_block, validators,
-        );
-        self.epoch = genesis_block.epoch();
-        // storage should sync to the ledger info prior to this function call
+        // make sure storage is on this ledger_info too, it should be no-op if it's already committed
+        self.state_computer.sync_to_or_bail(ledger_info.clone());
         let initial_data = RecoveryData::new(
-            ConsensusState::new(genesis_block.epoch(), 0, 0),
+            ConsensusState::new(ledger_info.ledger_info().epoch() + 1, 0, 0),
             None,
-            vec![genesis_block],
-            vec![genesis_qc],
+            vec![],
+            vec![],
             ledger_info.ledger_info(),
             None,
         )
         .expect("should be able to build new epoch RecoveryData");
+        self.epoch = initial_data.epoch();
+        info!(
+            "Start new epoch {} with genesis {}, validators {}",
+            self.epoch,
+            initial_data.root_block(),
+            validators,
+        );
         self.start_epoch(self.signer.clone(), Arc::new(validators), initial_data)
     }
 
@@ -191,6 +186,7 @@ impl<T: Payload> EpochManager<T> {
         validators: Arc<ValidatorVerifier>,
         initial_data: RecoveryData<T>,
     ) -> EventProcessor<T> {
+        counters::EPOCH.set(self.epoch as i64);
         let last_vote = initial_data.last_vote();
         let author = signer.author();
         let safety_rules = SafetyRules::new(initial_data.state(), signer);

@@ -154,9 +154,8 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
     type Payload = T;
 
     /// We're following the steps to start
-    /// 1. Align initial data with libradb (sync if necessary) (We need initial trusting peers to connect to)
-    /// 2. Construct the EpochManager from the latest libradb state
-    /// 3. Construct per-epoch component with the fixed Validators provided by EpochManager including
+    /// 1. Construct the EpochManager from the latest libradb state
+    /// 2. Construct per-epoch component with the fixed Validators provided by EpochManager including
     /// ProposerElection, Pacemaker, SafetyRules, Network(Populate with known validators), EventProcessor
     fn start(
         &mut self,
@@ -171,13 +170,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             .initial_data
             .take()
             .expect("already started, initial data is None");
-        // Step 1
-        if initial_data.need_sync() {
-            // make sure we sync to the root state in case we're not
-            state_computer.sync_to_or_bail(initial_data.root_ledger_info().ledger_info().clone());
-        }
-
-        // Step 2 TODO: read validators from libradb instead of config
+        // Step 1 TODO: read validators from libradb instead of config
         let validator = Arc::new(initial_setup.validator);
         let executor = self
             .runtime
@@ -190,8 +183,9 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         let signer = Arc::new(initial_setup.signer);
+        let epoch = initial_data.epoch();
         let epoch_mgr = EpochManager::new(
-            initial_setup.epoch,
+            epoch,
             self.config.take().expect("already started, config is None"),
             time_service,
             self_sender,
@@ -203,14 +197,14 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             signer.clone(),
         );
 
-        // Step 3
+        // Step 2
         let event_processor = epoch_mgr.start_epoch(signer, validator.clone(), initial_data);
 
         // TODO: this is test only, we should remove this
         self.block_store = Some(event_processor.block_store());
 
         let (network_task, network_receiver) = NetworkTask::new(
-            initial_setup.epoch,
+            epoch,
             initial_setup.network_events,
             self_receiver,
             validator,
