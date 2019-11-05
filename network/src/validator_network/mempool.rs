@@ -4,12 +4,13 @@
 //! Interface between Mempool and Network layers.
 
 use crate::{
-    error::NetworkError, interface::NetworkRequest, proto::MempoolSyncMsg,
-    protocols::direct_send::Message, utils::MessageExt, validator_network::NetworkEvents,
+    error::NetworkError,
+    interface::NetworkRequest,
+    proto::MempoolSyncMsg,
+    validator_network::{NetworkEvents, NetworkSender},
     ProtocolId,
 };
 use channel;
-use futures::SinkExt;
 use libra_types::PeerId;
 
 /// Protocol id for mempool direct-send calls
@@ -25,7 +26,8 @@ pub type MempoolNetworkEvents = NetworkEvents<MempoolSyncMsg>;
 
 /// The interface from Mempool to Networking layer.
 ///
-/// This is a thin wrapper around an `channel::Sender<NetworkRequest>`, so it is
+/// This is a thin wrapper around a `NetworkSender<MempoolSyncMsg>`, which is in
+/// turn a thin wrapper around a `channel::Sender<NetworkRequest>`, so it is
 /// easy to clone and send off to a separate task. For example, the rpc requests
 /// return Futures that encapsulate the whole flow, from sending the request to
 /// remote, to finally receiving the response and deserializing. It therefore
@@ -33,43 +35,34 @@ pub type MempoolNetworkEvents = NetworkEvents<MempoolSyncMsg>;
 /// requires the `MempoolNetworkSender` to be `Clone` and `Send`.
 #[derive(Clone)]
 pub struct MempoolNetworkSender {
-    // TODO(philiphayes): remove pub
-    pub inner: channel::Sender<NetworkRequest>,
+    inner: NetworkSender<MempoolSyncMsg>,
 }
 
 impl MempoolNetworkSender {
     pub fn new(inner: channel::Sender<NetworkRequest>) -> Self {
-        Self { inner }
+        Self {
+            inner: NetworkSender::new(inner),
+        }
     }
 
-    /// Send a fire-and-forget "direct-send" message to remote peer `recipient`.
-    ///
-    /// Currently, the returned Future simply resolves when the message has been
-    /// enqueued on the network actor's event queue. It therefore makes no
-    /// reliable delivery guarantees.
     pub async fn send_to(
         &mut self,
         recipient: PeerId,
         message: MempoolSyncMsg,
     ) -> Result<(), NetworkError> {
-        self.inner
-            .send(NetworkRequest::SendMessage(
-                recipient,
-                Message {
-                    protocol: ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
-                    mdata: message.to_bytes().unwrap(),
-                },
-            ))
-            .await?;
-        Ok(())
+        let protocol = ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL);
+        self.inner.send_to(recipient, protocol, message).await
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{interface::NetworkNotification, validator_network::Event};
-    use futures::{executor::block_on, stream::StreamExt};
+    use crate::{
+        interface::NetworkNotification, protocols::direct_send::Message, utils::MessageExt,
+        validator_network::Event,
+    };
+    use futures::{executor::block_on, sink::SinkExt, stream::StreamExt};
 
     fn new_test_sync_msg(peer_id: PeerId) -> MempoolSyncMsg {
         let mut mempool_msg = MempoolSyncMsg::default();
