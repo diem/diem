@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 
+mod persistent_storage;
 #[cfg(test)]
 #[path = "safety_rules_test.rs"]
 mod safety_rules_test;
