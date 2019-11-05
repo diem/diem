@@ -25,7 +25,7 @@ use network::{
     proto::GetChunkResponse,
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
-        STATE_SYNCHRONIZER_MSG_PROTOCOL,
+        STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
     },
     NetworkPublicKeys, ProtocolId,
 };
@@ -152,7 +152,9 @@ impl SynchronizerEnv {
 
         // setup network
         let addr: Multiaddr = "/memory/0".parse().unwrap();
-        let protocols = vec![ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL)];
+        let protocols = vec![ProtocolId::from_static(
+            STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
+        )];
 
         // Setup signing public keys.
         let mut rng = StdRng::from_seed(TEST_SEED);

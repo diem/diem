@@ -4,16 +4,18 @@
 //! Interface between StateSynchronizer and Network layers.
 
 use crate::{
-    error::NetworkError, interface::NetworkRequest, proto::StateSynchronizerMsg,
-    protocols::direct_send::Message, utils::MessageExt, validator_network::NetworkEvents,
+    error::NetworkError,
+    interface::NetworkRequest,
+    proto::StateSynchronizerMsg,
+    validator_network::{NetworkEvents, NetworkSender},
     ProtocolId,
 };
 use channel;
-use futures::SinkExt;
 use libra_types::PeerId;
 
 /// Protocol id for state-synchronizer direct-send calls
-pub const STATE_SYNCHRONIZER_MSG_PROTOCOL: &[u8] = b"/libra/state-synchronizer/direct-send/0.1.0";
+pub const STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL: &[u8] =
+    b"/libra/state-synchronizer/direct-send/0.1.0";
 
 /// The interface from Network to StateSynchronizer layer.
 ///
@@ -23,32 +25,34 @@ pub const STATE_SYNCHRONIZER_MSG_PROTOCOL: &[u8] = b"/libra/state-synchronizer/d
 /// `channel::Receiver<NetworkNotification>`.
 pub type StateSynchronizerEvents = NetworkEvents<StateSynchronizerMsg>;
 
+/// The interface from StateSynchronizer to Networking layer.
+///
+/// This is a thin wrapper around a `NetworkSender<StateSynchronizerMsg>`, which
+/// is in turn a thin wrapper around a `channel::Sender<NetworkRequest>`, so it
+/// is easy to clone and send off to a separate task. For example, the rpc
+/// requests return Futures that encapsulate the whole flow, from sending the
+/// request to remote, to finally receiving the response and deserializing. It
+/// therefore makes the most sense to make the rpc call on a separate async task,
+/// which requires the `StateSynchronizerSender` to be `Clone` and `Send`.
 #[derive(Clone)]
 pub struct StateSynchronizerSender {
-    inner: channel::Sender<NetworkRequest>,
+    inner: NetworkSender<StateSynchronizerMsg>,
 }
 
 impl StateSynchronizerSender {
     pub fn new(inner: channel::Sender<NetworkRequest>) -> Self {
-        Self { inner }
+        Self {
+            inner: NetworkSender::new(inner),
+        }
     }
 
     pub async fn send_to(
         &mut self,
         recipient: PeerId,
-        msg: StateSynchronizerMsg,
+        message: StateSynchronizerMsg,
     ) -> Result<(), NetworkError> {
-        let protocol = ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL);
-        self.inner
-            .send(NetworkRequest::SendMessage(
-                recipient,
-                Message {
-                    protocol,
-                    mdata: msg.to_bytes().unwrap(),
-                },
-            ))
-            .await?;
-        Ok(())
+        let protocol = ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL);
+        self.inner.send_to(recipient, protocol, message).await
     }
 }
 
@@ -58,9 +62,11 @@ mod tests {
     use crate::{
         interface::NetworkNotification,
         proto::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg_oneof},
+        protocols::direct_send::Message,
+        utils::MessageExt,
         validator_network::Event,
     };
-    use futures::{executor::block_on, stream::StreamExt};
+    use futures::{executor::block_on, sink::SinkExt, stream::StreamExt};
     use prost::Message as _;
 
     // `StateSynchronizerSender` should serialize outbound messages
@@ -84,7 +90,10 @@ mod tests {
         match event {
             NetworkRequest::SendMessage(recv_peer_id, msg) => {
                 assert_eq!(recv_peer_id, peer_id);
-                assert_eq!(msg.protocol.as_ref(), STATE_SYNCHRONIZER_MSG_PROTOCOL);
+                assert_eq!(
+                    msg.protocol.as_ref(),
+                    STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL
+                );
                 // check request deserializes
                 let recv_msg = StateSynchronizerMsg::decode(msg.mdata.as_ref()).unwrap();
                 assert_eq!(recv_msg, send_msg);
@@ -109,7 +118,7 @@ mod tests {
         let event = NetworkNotification::RecvMessage(
             peer_id,
             Message {
-                protocol: ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
+                protocol: ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
                 mdata: state_sync_msg.clone().to_bytes().unwrap(),
             },
         );
