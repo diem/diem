@@ -184,4 +184,8 @@ impl FakeExecutor {
         let vm = MoveVM::new(&self.config.vm_config);
         vm.validate_transaction(txn, &self.data_store)
     }
+
+    pub fn get_state_view(&self) -> &FakeDataStore {
+        &self.data_store
+    }
 }

@@ -318,7 +318,7 @@ fn decode_transaction(txn: &SignedTransaction) -> MockVMTransaction {
         TransactionPayload::WriteSet(_) => {
             unimplemented!("MockVM does not support WriteSet transaction payload.")
         }
-        TransactionPayload::Program(_) => {
+        TransactionPayload::Program => {
             unimplemented!("MockVM does not support Program transaction payload.")
         }
         TransactionPayload::Module(_) => {

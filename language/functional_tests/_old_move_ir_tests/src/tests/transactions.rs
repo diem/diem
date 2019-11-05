@@ -17,7 +17,7 @@ fn write_set_txn_roundtrip() {
     proptest!(|(signed_txn in SignedTransaction::genesis_strategy())| {
         let write_set = match signed_txn.payload() {
             TransactionPayload::WriteSet(write_set) => write_set.clone(),
-            TransactionPayload::Program(_) | TransactionPayload::Script(_) | TransactionPayload::Module(_) => unreachable!(
+            TransactionPayload::Program | TransactionPayload::Script(_) | TransactionPayload::Module(_) => unreachable!(
                 "write set strategy should only generate write set transactions",
             ),
         };
