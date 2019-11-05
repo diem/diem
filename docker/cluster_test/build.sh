@@ -21,7 +21,7 @@ else
   docker run --name libra_cluster_test_builder_container -d -i -t -v $DIR/../..:/libra libra_cluster_test_builder bash
 fi
 
-docker exec -i -t libra_cluster_test_builder_container bash -c 'source /root/.cargo/env; export GIT_REV=""; cargo build -p cluster-test --target-dir /target && /bin/cp /target/debug/cluster-test target/cluster_test_docker_builder/'
+docker exec -i -t libra_cluster_test_builder_container bash -c 'source /root/.cargo/env; cargo build -p cluster-test --target-dir /target && /bin/cp /target/debug/cluster-test target/cluster_test_docker_builder/'
 
 if [ "$1" = "--build-docker-image" ]; then
   ln target/cluster_test_docker_builder/cluster_test cluster_test_docker_builder_cluster_test
