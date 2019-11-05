@@ -262,6 +262,11 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
         account_addresses
     }
 
+    /// Returns an ordered list of account addresses as an `Iterator`.
+    pub fn get_account_addresses_iter(&self) -> impl Iterator<Item = AccountAddress> + '_ {
+        self.address_to_validator_info.keys().copied()
+    }
+
     /// Returns the number of authors to be validated.
     pub fn len(&self) -> usize {
         self.address_to_validator_info.len()

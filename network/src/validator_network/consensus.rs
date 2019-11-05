@@ -7,17 +7,11 @@ use crate::{
     error::NetworkError,
     interface::NetworkRequest,
     proto::{ConsensusMsg, ConsensusMsg_oneof, RequestBlock, RespondBlock},
-    protocols::{
-        direct_send::Message,
-        rpc::{self, error::RpcError},
-    },
-    utils::MessageExt,
-    validator_network::NetworkEvents,
+    protocols::rpc::error::RpcError,
+    validator_network::{NetworkEvents, NetworkSender},
     NetworkPublicKeys, ProtocolId,
 };
-use bytes::Bytes;
 use channel;
-use futures::SinkExt;
 use libra_types::{validator_public_keys::ValidatorPublicKeys, PeerId};
 use std::time::Duration;
 
@@ -44,50 +38,34 @@ pub type ConsensusNetworkEvents = NetworkEvents<ConsensusMsg>;
 /// requires the `ConsensusNetworkSender` to be `Clone` and `Send`.
 #[derive(Clone)]
 pub struct ConsensusNetworkSender {
-    inner: channel::Sender<NetworkRequest>,
+    inner: NetworkSender<ConsensusMsg>,
 }
 
 impl ConsensusNetworkSender {
     pub fn new(inner: channel::Sender<NetworkRequest>) -> Self {
-        Self { inner }
+        Self {
+            inner: NetworkSender::new(inner),
+        }
     }
 
-    /// Send a fire-and-forget "direct-send" message to remote peer `recipient`.
-    ///
-    /// Currently, the returned Future simply resolves when the message has been
-    /// enqueued on the network actor's event queue. It therefore makes no
-    /// reliable delivery guarantees.
     pub async fn send_to(
         &mut self,
         recipient: PeerId,
         message: ConsensusMsg,
     ) -> Result<(), NetworkError> {
-        self.send_bytes(recipient, message.to_bytes().unwrap())
-            .await
+        let protocol = ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL);
+        self.inner.send_to(recipient, protocol, message).await
     }
 
-    pub async fn send_bytes(
+    pub async fn send_to_many(
         &mut self,
-        recipient: PeerId,
-        message_bytes: Bytes,
+        recipients: impl Iterator<Item = PeerId>,
+        message: ConsensusMsg,
     ) -> Result<(), NetworkError> {
-        self.inner
-            .send(NetworkRequest::SendMessage(
-                recipient,
-                Message {
-                    protocol: ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
-                    mdata: message_bytes,
-                },
-            ))
-            .await?;
-        Ok(())
+        let protocol = ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL);
+        self.inner.send_to_many(recipients, protocol, message).await
     }
 
-    /// Send a RequestBlock RPC request to remote peer `recipient`. Returns the
-    /// future `RespondBlock` returned by the remote peer.
-    ///
-    /// The rpc request can be canceled at any point by dropping the returned
-    /// future.
     pub async fn request_block(
         &mut self,
         recipient: PeerId,
@@ -98,14 +76,11 @@ impl ConsensusNetworkSender {
         let req_msg_enum = ConsensusMsg {
             message: Some(ConsensusMsg_oneof::RequestBlock(req_msg)),
         };
-        let res_msg_enum = rpc::utils::unary_rpc(
-            self.inner.clone(),
-            recipient,
-            protocol,
-            req_msg_enum,
-            timeout,
-        )
-        .await?;
+
+        let res_msg_enum = self
+            .inner
+            .unary_rpc(recipient, protocol, req_msg_enum, timeout)
+            .await?;
 
         if let Some(ConsensusMsg_oneof::RespondBlock(response)) = res_msg_enum.message {
             Ok(response)
@@ -120,7 +95,7 @@ impl ConsensusNetworkSender {
         validators: Vec<ValidatorPublicKeys>,
     ) -> Result<(), NetworkError> {
         self.inner
-            .send(NetworkRequest::UpdateEligibleNodes(
+            .update_eligible_nodes(
                 validators
                     .into_iter()
                     .map(|keys| {
@@ -133,9 +108,8 @@ impl ConsensusNetworkSender {
                         )
                     })
                     .collect(),
-            ))
-            .await?;
-        Ok(())
+            )
+            .await
     }
 }
 
@@ -143,7 +117,10 @@ impl ConsensusNetworkSender {
 mod tests {
     use super::*;
     use crate::{
-        interface::NetworkNotification, proto::VoteMsg, protocols::rpc::InboundRpcRequest,
+        interface::NetworkNotification,
+        proto::VoteMsg,
+        protocols::{direct_send::Message, rpc::InboundRpcRequest},
+        utils::MessageExt,
         validator_network::Event,
     };
     use futures::{
