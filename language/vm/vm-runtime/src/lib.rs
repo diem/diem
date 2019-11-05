@@ -128,8 +128,7 @@ pub mod loaded_data;
 pub mod txn_executor;
 
 pub use move_vm::MoveVM;
-pub use process_txn::verify::static_verify_program;
-pub use txn_executor::execute_function;
+pub use txn_executor::execute_function_in_module;
 
 use libra_config::config::VMConfig;
 use libra_state_view::StateView;

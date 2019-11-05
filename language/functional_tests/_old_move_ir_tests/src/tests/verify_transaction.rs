@@ -124,7 +124,7 @@ fn verify_txn_rejects_genesis_deletion() {
     proptest!(|(txn in SignedTransaction::write_set_strategy())| {
         let write_set = match txn.payload() {
             TransactionPayload::WriteSet(write_set) => write_set,
-            TransactionPayload::Program(_) | TransactionPayload::Script(_) | TransactionPayload::Module(_) => panic!(
+            TransactionPayload::Program | TransactionPayload::Script(_) | TransactionPayload::Module(_) => panic!(
                 "write_set_strategy shouldn't generate other transactions",
             ),
         };

@@ -83,32 +83,7 @@ where
         } = process_txn;
 
         let txn_state = match txn.payload() {
-            TransactionPayload::Program(program) => {
-                Some(ValidatedTransaction::validate(
-                    &txn,
-                    gas_schedule,
-                    module_cache,
-                    data_cache,
-                    allocator,
-                    mode,
-                    || {
-                        // Verify against whitelist if we are locked. Otherwise allow.
-                        if !is_allowed_script(&publishing_option, &program.code()) {
-                            warn!("[VM] Custom scripts not allowed: {:?}", &program.code());
-                            return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT));
-                        }
-
-                        if !publishing_option.is_open() {
-                            // Not allowing module publishing for now.
-                            if !program.modules().is_empty() {
-                                warn!("[VM] Custom modules not allowed");
-                                return Err(VMStatus::new(StatusCode::UNKNOWN_MODULE));
-                            }
-                        }
-                        Ok(())
-                    },
-                )?)
-            }
+            TransactionPayload::Program => return Err(VMStatus::new(StatusCode::MALFORMED)),
             TransactionPayload::Script(script) => {
                 Some(ValidatedTransaction::validate(
                     &txn,

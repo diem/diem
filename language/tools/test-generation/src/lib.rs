@@ -20,18 +20,19 @@ use crate::config::{Args, EXECUTE_UNVERIFIED_MODULE, RUN_ON_VM};
 use bytecode_generator::BytecodeGenerator;
 use bytecode_verifier::VerifiedModule;
 use cost_synthesis::module_generator::ModuleBuilder;
-use language_e2e_tests::{execute, verify};
+use language_e2e_tests::executor::FakeExecutor;
 use libra_types::{
     account_address::AccountAddress, byte_array::ByteArray, transaction::TransactionArgument,
 };
 use std::{fs, io::Write, panic};
 use vm::{
-    access::ScriptAccess,
+    access::ModuleAccess,
     file_format::{
-        Bytecode, CompiledModule, CompiledModuleMut, FunctionSignature, SignatureToken,
-        StructDefinitionIndex,
+        Bytecode, CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, FunctionSignature,
+        SignatureToken, StructDefinitionIndex,
     },
 };
+use vm_runtime::execute_function_in_module;
 
 /// This function calls the Bytecode verifier to test it
 fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
@@ -44,22 +45,12 @@ fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
 
 /// This function runs a verified module in the VM runtime
 fn run_vm(module: VerifiedModule) -> Result<(), String> {
-    let modules = ::stdlib::stdlib_modules().to_vec();
-    // The standard library modules are bounded
-    assume!(modules.len() < usize::max_value());
-
-    let script = module.into_inner().into_script();
-    let (script, modules) = verify(
-        &AccountAddress::default(),
-        script,
-        modules
-            .into_iter()
-            .map(|module| module.into_inner())
-            .collect(),
-    );
-    let main = script.main();
-    let main_handle = script.function_handle_at(main.function);
-    let function_signature = script.function_signature_at(main_handle.signature);
+    let entry_idx = FunctionDefinitionIndex::new(0);
+    let function_signature = {
+        let handle = module.function_def_at(entry_idx).function;
+        let sig_idx = module.function_handle_at(handle).signature;
+        module.function_signature_at(sig_idx).clone()
+    };
 
     let main_args: Vec<TransactionArgument> = function_signature
         .arg_types
@@ -74,7 +65,8 @@ fn run_vm(module: VerifiedModule) -> Result<(), String> {
         })
         .collect();
 
-    match execute(script, main_args, modules) {
+    let executor = FakeExecutor::from_genesis_file();
+    match execute_function_in_module(executor.get_state_view(), module, entry_idx, main_args) {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Runtime error: {:?}", e)),
     }
