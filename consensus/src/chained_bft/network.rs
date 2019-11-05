@@ -57,6 +57,16 @@ pub struct NetworkReceivers<T> {
     pub epoch_retrieval: libra_channel::Receiver<AccountAddress, (u64, AccountAddress)>,
 }
 
+impl<T> NetworkReceivers<T> {
+    pub fn clear_prev_epoch_msgs(&mut self) {
+        // clear all the channels that are relevant for the previous epoch event processor
+        self.proposals.clear();
+        self.votes.clear();
+        self.block_retrieval.clear();
+        self.sync_info_msgs.clear();
+    }
+}
+
 /// Implements the actual networking support for all consensus messaging.
 #[derive(Clone)]
 pub struct NetworkSender {

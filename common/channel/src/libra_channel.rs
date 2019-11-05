@@ -73,6 +73,15 @@ pub struct Receiver<K: Eq + Hash + Clone, M> {
     shared_state: Arc<Mutex<SharedState<K, M>>>,
 }
 
+impl<K: Eq + Hash + Clone, M> Receiver<K, M> {
+    /// Removes all the previously sent transactions that have not been consumed yet and cleans up
+    /// the internal queue structure (GC of the previous keys).
+    pub fn clear(&mut self) {
+        let mut shared_state = self.shared_state.lock().unwrap();
+        shared_state.internal_queue.clear();
+    }
+}
+
 impl<K: Eq + Hash + Clone, M> Drop for Receiver<K, M> {
     fn drop(&mut self) {
         let mut shared_state = self.shared_state.lock().unwrap();
