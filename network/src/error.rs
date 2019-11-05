@@ -3,7 +3,7 @@
 
 use crate::peer_manager::PeerManagerError;
 use failure::{Backtrace, Context, Fail};
-use futures::channel::mpsc;
+use futures::channel::{mpsc, oneshot};
 use libra_types::validator_verifier::VerifyError;
 use std::{
     fmt::{self, Display},
@@ -33,6 +33,9 @@ pub enum NetworkErrorKind {
 
     #[fail(display = "Error sending on mpsc channel")]
     MpscSendError,
+
+    #[fail(display = "Oneshot channel unexpectedly dropped")]
+    OneshotCanceled,
 
     #[fail(display = "Error setting timeout")]
     TimerError,
@@ -122,6 +125,12 @@ impl From<parity_multiaddr::Error> for NetworkError {
 impl From<mpsc::SendError> for NetworkError {
     fn from(err: mpsc::SendError) -> NetworkError {
         err.context(NetworkErrorKind::MpscSendError).into()
+    }
+}
+
+impl From<oneshot::Canceled> for NetworkError {
+    fn from(err: oneshot::Canceled) -> NetworkError {
+        err.context(NetworkErrorKind::OneshotCanceled).into()
     }
 }
 
