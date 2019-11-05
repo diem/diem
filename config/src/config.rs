@@ -396,6 +396,7 @@ pub struct ConsensusConfig {
     #[serde(skip)]
     pub consensus_peers: ConsensusPeersConfig,
     pub consensus_peers_file: PathBuf,
+    pub safety_rules: SafetyRulesConfig,
 }
 
 impl Default for ConsensusConfig {
@@ -410,6 +411,7 @@ impl Default for ConsensusConfig {
             consensus_keypair_file: PathBuf::from("consensus_keypair.config.toml"),
             consensus_peers: ConsensusPeersConfig::default(),
             consensus_peers_file: PathBuf::from("consensus_peers.config.toml"),
+            safety_rules: SafetyRulesConfig::default(),
         }
     }
 }
@@ -435,6 +437,11 @@ impl ConsensusConfig {
             self.consensus_peers = ConsensusPeersConfig::load_config(
                 path.as_ref().with_file_name(&self.consensus_peers_file),
             );
+        }
+        if !self.safety_rules.path.as_os_str().is_empty() && self.safety_rules.path.is_relative() {
+            // If the file is relative, it means it is in the same directory as this config,
+            // unfortunately this is meaningless to the process that would load the config.
+            self.safety_rules.path = path.as_ref().with_file_name(&self.safety_rules.path);
         }
         Ok(())
     }
@@ -496,6 +503,33 @@ impl Default for MempoolConfig {
             system_transaction_gc_interval_ms: 180_000,
         }
     }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
+pub struct SafetyRulesConfig {
+    pub backend: SafetyRulesBackend,
+    // Required path for on disk storage
+    pub path: PathBuf,
+    // In testing scenarios this implies that the default state is okay if
+    // a state is not specified. Primarily used by on disk storage.
+    pub default: bool,
+}
+
+impl Default for SafetyRulesConfig {
+    fn default() -> Self {
+        Self {
+            backend: SafetyRulesBackend::InMemoryStorage,
+            default: false,
+            path: PathBuf::new(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum SafetyRulesBackend {
+    InMemoryStorage,
+    OnDiskStorage,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

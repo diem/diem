@@ -7,7 +7,7 @@ use failure::prelude::*;
 use libra_config::{
     config::{
         BaseConfig, ConsensusConfig, NetworkConfig, NodeConfig, NodeConfigHelpers,
-        PersistableConfig, RoleType, VMPublishingOption,
+        PersistableConfig, RoleType, SafetyRulesBackend, SafetyRulesConfig, VMPublishingOption,
     },
     keys::{ConsensusKeyPair, NetworkKeyPairs},
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
@@ -296,6 +296,14 @@ impl SwarmConfig {
             consensus_keys_file_name = format!("{}.node.consensus.keys.toml", node_id.to_string());
             consenus_keypair.save_config(&output_dir.join(&consensus_keys_file_name));
         }
+        // Prepare safety rules
+        let mut safety_rules_config = SafetyRulesConfig::default();
+        if role == RoleType::Validator {
+            safety_rules_config.default = true;
+            safety_rules_config.backend = SafetyRulesBackend::OnDiskStorage;
+            safety_rules_config.path =
+                PathBuf::from(format!("{}.node.safety_rules.toml", node_id.to_string()));
+        }
         // Save network keys.
         let network_keys_file_name = format!("{}.node.network.keys.toml", node_id.to_string());
         network_keypairs.save_config(&output_dir.join(&network_keys_file_name));
@@ -348,6 +356,7 @@ impl SwarmConfig {
             // Dummy values - will be loaded from corresponding files.
             consensus_keypair: ConsensusKeyPair::default(),
             consensus_peers: template.consensus.consensus_peers.clone(),
+            safety_rules: safety_rules_config,
         };
         let mut config = NodeConfig {
             base: base_config,
