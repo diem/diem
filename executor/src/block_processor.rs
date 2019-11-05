@@ -43,12 +43,6 @@ enum Mode {
     Syncing,
 }
 
-fn error_when_syncing(id: HashValue) -> Error {
-    let message = format!("Syncing. Unable to serve request for block {:x}.", id);
-    warn!("{}", message);
-    format_err!("{}", message)
-}
-
 pub(crate) struct BlockProcessor<V> {
     /// Where the processor receives commands.
     command_receiver: mpsc::Receiver<Command>,
@@ -56,10 +50,10 @@ pub(crate) struct BlockProcessor<V> {
     /// The timestamp of the last committed ledger info.
     committed_timestamp_usecs: u64,
 
-    /// The latest committed trees that is associated with a ledger info.
+    /// The latest committed merkle trees.
     committed_trees: Arc<Mutex<ExecutedTrees>>,
 
-    /// The latest synced trees. If not `None`, it is ahead of `committed_trees`.
+    /// The latest merkle trees synced to storage but not committed. `synced_trees` are always ahead of committed_trees or be `None`.
     synced_trees: Option<ExecutedTrees>,
 
     /// The cached executable blocks.
@@ -224,13 +218,8 @@ where
                 resp_sender,
             } => {
                 if let Mode::Syncing = self.mode {
-                    if let Err(_err) =
-                        resp_sender.send(Err(error_when_syncing(executable_block.id)))
-                    {
-                        warn!("Failed to send execute block error (sync mode).");
-                    };
-                    return;
-                }
+                    info!("execute block {} in sync mode.", executable_block.id);
+                };
                 self.blocks_to_execute
                     .push_back((executable_block, resp_sender));
             }
@@ -243,11 +232,12 @@ where
                     .ledger_info()
                     .consensus_block_id();
                 if let Mode::Syncing = self.mode {
-                    if let Err(_err) = resp_sender.send(Err(error_when_syncing(id))) {
-                        warn!("Failed to send commit blocks error (sync mode).");
-                    };
-                    return;
-                }
+                    info!(
+                        "Commit block {} in sync mode. Switch back to Normal mode.",
+                        id
+                    );
+                    self.mode = Mode::Normal;
+                };
                 assert!(self
                     .block_batch_to_commit
                     .replace((committable_block_batch, resp_sender))
@@ -387,6 +377,7 @@ where
         if let Some(ledger_info_with_sigs) = ledger_info_to_commit {
             self.committed_timestamp_usecs = ledger_info_with_sigs.ledger_info().timestamp_usecs();
             self.mode = Mode::Normal;
+            assert!(self.synced_trees.is_some());
             *self.committed_trees.lock().unwrap() =
                 self.synced_trees.take().expect("synced trees must exist.");
             info!(
@@ -441,6 +432,56 @@ where
     /// and only `C` and `E` have signatures, we will send `A`, `B` and `C` in the first batch,
     /// then `D` and `E` later in the another batch.
     fn commit_block_batch(&mut self, block_batch: CommittableBlockBatch) -> Result<()> {
+        let last_block = block_batch
+            .blocks
+            .last()
+            .expect("CommittableBlockBatch has at least 1 block.");
+
+        // Check that the version in ledger info (computed by consensus) matches the version
+        // computed by us. TODO: we should also verify signatures and check that timestamp is
+        // strictly increasing.
+        let ledger_info_with_sigs = block_batch.finality_proof;
+        let version = ledger_info_with_sigs.ledger_info().version();
+        let num_txns_in_speculative_accumulator = last_block
+            .output
+            .executed_trees()
+            .txn_accumulator()
+            .num_leaves();
+        assert_eq!(
+            version + 1,
+            num_txns_in_speculative_accumulator as Version,
+            "Number of transactions in ledger info ({}) does not match number of transactions \
+             in accumulator ({}).",
+            version + 1,
+            num_txns_in_speculative_accumulator,
+        );
+
+        // Skip txns that are already committed to allow failures in state sync process.
+        let num_txns_in_batch = block_batch
+            .blocks
+            .iter()
+            .map(|b| b.transactions.len())
+            .sum::<usize>() as u64;
+        let batch_first_version = version + 1 - num_txns_in_batch;
+        let num_committed_txns = self
+            .committed_trees
+            .lock()
+            .unwrap()
+            .txn_accumulator()
+            .num_leaves();
+        assert!(
+            batch_first_version <= num_committed_txns,
+            "first_version in commit_block_batch cannot exceed # of committed txns."
+        );
+
+        let num_txns_to_skip = num_committed_txns - batch_first_version;
+        if num_txns_to_skip != 0 {
+            info!(
+                "Skipping the first {} transactions when committing",
+                num_txns_to_skip
+            );
+        }
+
         // All transactions that need to go to storage. In the above example, this means all the
         // transactions in A, B and C whose status == TransactionStatus::Keep.
         let mut txns_to_commit = vec![];
@@ -448,6 +489,7 @@ where
         for block in &block_batch.blocks {
             for (txn, txn_data) in
                 itertools::zip_eq(&block.transactions, block.output.transaction_data())
+                    .skip(num_txns_to_skip as usize)
             {
                 if let TransactionStatus::Keep(_) = txn_data.status() {
                     txns_to_commit.push(TransactionToCommit::new(
@@ -462,40 +504,18 @@ where
             }
         }
 
-        let last_block = block_batch
-            .blocks
-            .last()
-            .expect("CommittableBlockBatch has at least 1 block.");
-
-        // Check that the version in ledger info (computed by consensus) matches the version
-        // computed by us. TODO: we should also verify signatures and check that timestamp is
-        // strictly increasing.
-        let ledger_info_with_sigs = block_batch.finality_proof;
-        let version = ledger_info_with_sigs.ledger_info().version();
-        let num_txns_in_accumulator = last_block
-            .output
-            .executed_trees()
-            .txn_accumulator()
-            .num_leaves();
-        assert_eq!(
-            version + 1,
-            num_txns_in_accumulator as Version,
-            "Number of transactions in ledger info ({}) does not match number of transactions \
-             in accumulator ({}).",
-            version + 1,
-            num_txns_in_accumulator,
-        );
-
         let num_txns_to_commit = txns_to_commit.len() as u64;
+
         {
             let _timer = OP_COUNTERS.timer("storage_save_transactions_time_s");
             OP_COUNTERS.observe(
                 "storage_save_transactions.count",
                 txns_to_commit.len() as f64,
             );
+            let first_version = version + 1 - num_txns_to_commit;
             self.storage_write_client.save_transactions(
                 txns_to_commit,
-                version + 1 - num_txns_to_commit, /* first_version */
+                first_version,
                 Some(ledger_info_with_sigs.clone()),
             )?;
         }
