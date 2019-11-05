@@ -878,19 +878,22 @@ fn reconfiguration_test() {
 
     let _nodes = SMRNode::start_num_nodes(3, 2, &mut playground, MultipleOrderedProposers, true);
     block_on(async move {
-        // The first proposal would result in a reconfiguration and it takes two more rounds
-        // to commit it.
-        for _ in 0..3 {
+        // Test we can survive a few epochs
+        for _ in 0..10 {
+            // The first proposal would result in a reconfiguration and it takes two more rounds
+            // to commit it.
+            for _ in 0..3 {
+                playground
+                    .wait_for_messages(2, NetworkPlayground::proposals_only)
+                    .await;
+                playground
+                    .wait_for_messages(2, NetworkPlayground::votes_only)
+                    .await;
+            }
+            // Once the reconfiguration committed, we'll see epoch change messages.
             playground
-                .wait_for_messages(2, NetworkPlayground::proposals_only)
-                .await;
-            playground
-                .wait_for_messages(2, NetworkPlayground::votes_only)
+                .wait_for_messages(2, NetworkPlayground::epoch_change_only)
                 .await;
         }
-        // Once the reconfiguration committed, we'll see epoch change messages.
-        playground
-            .wait_for_messages(2, NetworkPlayground::epoch_change_only)
-            .await;
     });
 }

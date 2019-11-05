@@ -127,6 +127,7 @@ impl<T: Payload> ChainedBftSMR<T> {
                         event_processor = epoch_manager.start_new_epoch(ledger_info);
                         // clean up all the previous messages from the old epochs
                         network_receivers.clear_prev_epoch_msgs();
+                        event_processor.start().await;
                     }
                     different_epoch_and_peer = network_receivers.different_epoch.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
