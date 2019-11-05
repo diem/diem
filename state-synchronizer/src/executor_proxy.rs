@@ -89,7 +89,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
         let client = Arc::clone(&self.storage_read_client);
         async move {
             let resp = client.get_startup_info_async().await?;
-            resp.map(|r| r.latest_version)
+            resp.map(|r| r.ledger_info.version())
                 .ok_or_else(|| format_err!("failed to fetch startup info"))
         }
             .boxed()
