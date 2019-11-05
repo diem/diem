@@ -143,21 +143,26 @@ impl NetworkSender {
     }
 
     async fn broadcast(&mut self, msg: ConsensusMsg) {
-        let msg_raw = msg.to_bytes().unwrap();
-        for peer in self.validators.get_ordered_account_addresses() {
-            if self.author == peer {
-                let self_msg = Event::Message((self.author, msg.clone()));
-                if let Err(err) = self.self_sender.send(Ok(self_msg)).await {
-                    error!("Error delivering a self proposal: {:?}", err);
-                }
-                continue;
-            }
-            if let Err(err) = self.network_sender.send_bytes(peer, msg_raw.clone()).await {
-                error!(
-                    "Error broadcasting proposal to peer: {:?}, error: {:?}, msg: {:?}",
-                    peer, err, msg
-                );
-            }
+        // Directly send the message to ourself without going through network.
+        let self_msg = Event::Message((self.author, msg.clone()));
+        if let Err(err) = self.self_sender.send(Ok(self_msg)).await {
+            error!("Error broadcasting to self: {:?}", err);
+        }
+
+        // Get the list of validators excluding our own account address.
+        let self_author = self.author;
+        let other_validators = self
+            .validators
+            .get_account_addresses_iter()
+            .filter(|author| author != &self_author);
+
+        // Broadcast message over direct-send to all other validators.
+        if let Err(err) = self
+            .network_sender
+            .send_to_many(other_validators, msg)
+            .await
+        {
+            error!("Error broadcasting message: {:?}", err);
         }
     }
 
