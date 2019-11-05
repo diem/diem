@@ -83,7 +83,7 @@ impl QuorumCert {
             ledger_info.transaction_accumulator_hash(),
             ledger_info.version(),
             ledger_info.timestamp_usecs(),
-            ledger_info.next_validator_set().cloned(),
+            None,
         );
         let vote_data = VoteData::new(ancestor.clone(), ancestor.clone());
         let li = LedgerInfo::new(ancestor, vote_data.hash());

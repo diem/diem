@@ -33,7 +33,6 @@ use vm_runtime::MoveVM;
 ///  The state necessary to begin state machine replication including ValidatorSet, networking etc.
 pub struct InitialSetup {
     pub author: Author,
-    pub epoch: u64,
     pub signer: ValidatorSigner,
     pub validator: ValidatorVerifier,
     pub network_sender: ConsensusNetworkSender,
@@ -109,7 +108,6 @@ impl ChainedBftProvider {
             .consensus
             .consensus_peers
             .get_validator_verifier();
-        counters::EPOCH.set(0); // No reconfiguration yet, so it is always zero
         counters::CURRENT_EPOCH_VALIDATORS.set(validator.len() as i64);
         counters::CURRENT_EPOCH_QUORUM_SIZE.set(validator.quorum_voting_power() as i64);
         debug!(
@@ -118,8 +116,6 @@ impl ChainedBftProvider {
         );
         InitialSetup {
             author,
-            // TODO: this is placeholder for now, replace with reconfiguration
-            epoch: 1,
             signer,
             validator,
             network_sender,
