@@ -106,7 +106,7 @@ pub struct BlockChain {
     pub height: u64,
     pub indexs: HashMap<u64, Vec<BlockIndex>>,
     pub hash_height_index: HashMap<HashValue, (u64, usize)>,
-    pub main_chain: AtomicRefCell<HashMap<u64, HashValue>>,
+    pub main_chain: AtomicRefCell<HashMap<u64, BlockIndex>>,
 }
 
 impl BlockChain {
@@ -170,14 +170,17 @@ impl BlockChain {
         }
     }
 
-    pub fn update_main_chain(&self, main_chain_hashs:Vec<&HashValue>) {
-        for hash in main_chain_hashs {
-            let (index, _) = self.find_height_index_by_block_hash(hash).expect("block index not exist.");
-            self.main_chain.borrow_mut().insert(index.clone(), hash.clone());
-        }
+    pub fn update_main_chain(&self, height: &u64, block_index: &BlockIndex) {
+        self.main_chain.borrow_mut().insert(height.clone(), block_index.clone());
     }
 
-    pub fn find_ancestor_from_main_chain(&self, hash: &HashValue) -> Option<(Vec<HashValue>, BlockIndex)> {
+    pub fn find_height_and_block_index(&self, hash: &HashValue) -> (&u64, &BlockIndex) {
+        let (index, _) = self.find_height_index_by_block_hash(hash).expect("block height not exist.");
+        let block_index = self.find_index_by_block_hash(hash).expect("block index not exist.");
+        (index, block_index)
+    }
+
+    pub fn find_ancestor_until_main_chain(&self, hash: &HashValue) -> Option<(Vec<HashValue>, BlockIndex)> {
         let mut ancestors = vec![];
         let mut latest_hash = hash;
         let mut block_index = None;
@@ -196,7 +199,7 @@ impl BlockChain {
                     latest_hash = &b_i.parent_block_id;
                     block_index = Some(b_i.clone());
 
-                    if self.main_chain.borrow().get(height).expect("get block index from main chain err.").clone() == current_id {
+                    if self.main_chain.borrow().get(height).expect("get block index from main chain err.").clone().id == current_id {
                         break;
                     } else {
                         ancestors.push(current_id);
@@ -266,12 +269,12 @@ impl EventHandle {
         let genesis_block_index = BlockIndex { id: *GENESIS_BLOCK_ID, parent_block_id: *PRE_GENESIS_BLOCK_ID };
         let genesis_height = 0;
         let mut index_map = HashMap::new();
-        index_map.insert(genesis_height, vec![genesis_block_index]);
+        index_map.insert(genesis_height, vec![genesis_block_index.clone()]);
         let indexs = index_map;
         let mut hash_height_index = HashMap::new();
-        hash_height_index.insert(*GENESIS_BLOCK_ID, (0, 0));
+        hash_height_index.insert(*GENESIS_BLOCK_ID, (genesis_height, 0));
         let mut main_chain = AtomicRefCell::new(HashMap::new());
-        main_chain.borrow_mut().insert(0, *GENESIS_BLOCK_ID);
+        main_chain.borrow_mut().insert(genesis_height, genesis_block_index);
         let init_block_chain = BlockChain { height: genesis_height, indexs, hash_height_index, main_chain };
         let block_chain = Arc::new(RwLock::new(init_block_chain));
         let mint_block_vec = Arc::new(AtomicRefCell::new(vec![*GENESIS_BLOCK_ID]));
@@ -628,7 +631,7 @@ impl EventHandle {
                                 commit_txn_vec.push(genesis_txn_vec.clone());
                             } else {
                                 // 2. find ancestors
-                                let (ancestors, block_index) = chain_lock.find_ancestor_from_main_chain(&parent_block_id).expect("find ancestors err.");
+                                let (ancestors, block_index) = chain_lock.find_ancestor_until_main_chain(&parent_block_id).expect("find ancestors err.");
 
                                 // 3. find blocks
                                 let blocks = block_db.get_blocks_by_hashs::<Vec<SignedTransaction>>(ancestors).expect("find blocks err.");
@@ -707,7 +710,11 @@ impl EventHandle {
 
                                         //5. update main chain
                                         main_chain_indexs.append(&mut vec![&id].to_vec());
-                                        chain_lock.update_main_chain(main_chain_indexs);
+                                        for hash in main_chain_indexs {
+                                            let (h, b_i) = chain_lock.find_height_and_block_index(hash);
+                                            chain_lock.update_main_chain(h, b_i);
+                                            block_db.insert_block_index(h, b_i);
+                                        }
                                     }
                                     None => {
                                         // save latest block

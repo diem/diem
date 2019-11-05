@@ -9,6 +9,7 @@ pub use schema::block_index::BlockIndex;
 
 use crate::chained_bft::consensusdb::schema::{
     block::{BlockSchema, SchemaBlock},
+    block_index::BlockIndexSchema,
     quorum_certificate::QCSchema,
     single_entry::{SingleEntryKey, SingleEntrySchema},
 };
@@ -222,8 +223,10 @@ impl ConsensusDB {
     }
 
     /// Insert BlockIndex
-    pub fn insert_block_index(&self) -> Result<()> {
-        unimplemented!()
+    pub fn insert_block_index(&self, height:&u64, block_index:&BlockIndex) -> Result<()> {
+        let mut batch = SchemaBatch::new();
+        batch.put::<BlockIndexSchema>(&height, &block_index)?;
+        self.commit(batch)
     }
 
     /// Load BlockIndex
