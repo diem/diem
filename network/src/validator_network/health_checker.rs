@@ -6,8 +6,8 @@
 use crate::{
     interface::NetworkRequest,
     proto::{HealthCheckerMsg, HealthCheckerMsg_oneof, Ping2, Pong2},
-    protocols::rpc::{self, error::RpcError},
-    validator_network::NetworkEvents,
+    protocols::rpc::error::RpcError,
+    validator_network::{NetworkEvents, NetworkSender},
     ProtocolId,
 };
 use channel;
@@ -28,7 +28,8 @@ pub type HealthCheckerNetworkEvents = NetworkEvents<HealthCheckerMsg>;
 
 /// The interface from HealthChecker to Networking layer.
 ///
-/// This is a thin wrapper around an `channel::Sender<NetworkRequest>`, so it is
+/// This is a thin wrapper around a `NetworkSender<HealthCheckerMsg>`, which is
+/// in turn a thin wrapper around a `channel::Sender<NetworkRequest>`, so it is
 /// easy to clone and send off to a separate task. For example, the rpc requests
 /// return Futures that encapsulate the whole flow, from sending the request to
 /// remote, to finally receiving the response and deserializing. It therefore
@@ -36,13 +37,15 @@ pub type HealthCheckerNetworkEvents = NetworkEvents<HealthCheckerMsg>;
 /// requires the `HealthCheckerNetworkSender` to be `Clone` and `Send`.
 #[derive(Clone)]
 pub struct HealthCheckerNetworkSender {
-    inner: channel::Sender<NetworkRequest>,
+    inner: NetworkSender<HealthCheckerMsg>,
 }
 
 impl HealthCheckerNetworkSender {
     #[allow(dead_code)]
     pub fn new(inner: channel::Sender<NetworkRequest>) -> Self {
-        Self { inner }
+        Self {
+            inner: NetworkSender::new(inner),
+        }
     }
 
     /// Send a HealthChecker Ping RPC request to remote peer `recipient`. Returns
@@ -61,14 +64,11 @@ impl HealthCheckerNetworkSender {
         let req_msg_enum = HealthCheckerMsg {
             message: Some(HealthCheckerMsg_oneof::Ping(req_msg)),
         };
-        let res_msg_enum = rpc::utils::unary_rpc(
-            self.inner.clone(),
-            recipient,
-            protocol,
-            req_msg_enum,
-            timeout,
-        )
-        .await?;
+
+        let res_msg_enum = self
+            .inner
+            .unary_rpc(recipient, protocol, req_msg_enum, timeout)
+            .await?;
 
         if let Some(HealthCheckerMsg_oneof::Pong(response)) = res_msg_enum.message {
             Ok(response)
