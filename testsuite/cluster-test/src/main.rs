@@ -59,6 +59,12 @@ struct Args {
     #[structopt(long, group = "action")]
     wipe_all_db: bool,
     #[structopt(long, group = "action")]
+    discovery: bool,
+    #[structopt(long, group = "action")]
+    pssh: bool,
+    #[structopt(last = true, requires = "pssh")]
+    last: Vec<String>,
+    #[structopt(long, group = "action")]
     run: bool,
     #[structopt(long, group = "action")]
     run_once: bool,
@@ -170,6 +176,14 @@ pub fn main() {
     } else if args.stop_experiment {
         let util = ClusterUtil::setup(&args);
         util.stop_experiment(args.max_stopped);
+        return;
+    } else if args.discovery {
+        let util = ClusterUtil::setup(&args);
+        util.discovery();
+        return;
+    } else if args.pssh {
+        let util = ClusterUtil::setup(&args);
+        util.pssh(args.last);
         return;
     }
 
@@ -334,6 +348,30 @@ impl ClusterUtil {
             aws,
             prometheus,
         }
+    }
+
+    pub fn discovery(&self) {
+        for instance in self.cluster.instances() {
+            println!("{} {}", instance.short_hash(), instance.ip());
+        }
+    }
+
+    pub fn pssh(&self, cmd: Vec<String>) {
+        let executor = ThreadPoolExecutor::new("pssh".to_string());
+        let jobs = self
+            .cluster
+            .instances()
+            .iter()
+            .map(|x| {
+                let cmd = &cmd;
+                move || {
+                    if let Err(e) = x.run_cmd_tee_err(cmd) {
+                        warn!("Failed on {}: {}", x, e)
+                    }
+                }
+            })
+            .collect();
+        executor.execute_jobs(jobs);
     }
 
     pub fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {

@@ -11,7 +11,10 @@ pub struct ThreadPoolExecutor {
 
 impl ThreadPoolExecutor {
     pub fn new(thread_name: String) -> Self {
-        let inner = threadpool::Builder::new().thread_name(thread_name).build();
+        let inner = threadpool::Builder::new()
+            .num_threads(100)
+            .thread_name(thread_name)
+            .build();
         Self { inner }
     }
 
