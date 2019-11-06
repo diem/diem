@@ -17,7 +17,6 @@ use cluster_test::{
     effects::{Action, Effect, Reboot, StopContainer},
     experiments::{Experiment, RebootRandomValidators},
     health::{DebugPortLogThread, HealthCheckRunner, LogTail},
-    log_prune::LogPruner,
     slack::SlackClient,
     suite::ExperimentSuite,
     tx_emitter::TxEmitter,
@@ -48,7 +47,7 @@ const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 struct Args {
     #[structopt(short = "w", long, conflicts_with = "swarm")]
     workplace: Option<String>,
-    #[structopt(short = "p", long, use_delimiter = true, conflicts_with = "prune-logs")]
+    #[structopt(short = "p", long, use_delimiter = true)]
     peers: Vec<String>,
 
     #[structopt(
@@ -67,8 +66,6 @@ struct Args {
     tail_logs: bool,
     #[structopt(long, group = "action")]
     health_check: bool,
-    #[structopt(long, group = "action")]
-    prune_logs: bool,
     #[structopt(long, group = "action")]
     reboot: bool,
     #[structopt(long, group = "action")]
@@ -156,11 +153,7 @@ pub fn main() {
         panic!("Can only use --emit-tx option in --swarm mode");
     }
 
-    if args.prune_logs {
-        let util = ClusterUtil::setup(&args);
-        util.prune_logs();
-        return;
-    } else if args.emit_tx {
+    if args.emit_tx {
         let thread_params = EmitThreadParams {
             wait_millis: args.wait_millis,
             wait_committed: !args.burst,
@@ -341,11 +334,6 @@ impl ClusterUtil {
             aws,
             prometheus,
         }
-    }
-
-    pub fn prune_logs(&self) {
-        let log_prune = LogPruner::new(self.aws.clone());
-        log_prune.prune_logs();
     }
 
     pub fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
