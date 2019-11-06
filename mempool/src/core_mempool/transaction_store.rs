@@ -115,6 +115,8 @@ impl TransactionStore {
             .entry(address)
             .or_insert_with(AccountTransactions::new);
 
+        self.clean_committed_transactions(&address, current_sequence_number);
+
         if let Some(txns) = self.transactions.get_mut(&address) {
             // capacity check
             if txns.len() >= self.capacity_per_user {
@@ -228,20 +230,13 @@ impl TransactionStore {
         }
     }
 
-    /// handles transaction commit
-    /// it includes deletion of all transactions with sequence number <= `account_sequence_number`
-    /// and potential promotion of sequential txns to PriorityIndex/TimelineIndex
-    pub(crate) fn commit_transaction(
-        &mut self,
-        account: &AccountAddress,
-        account_sequence_number: u64,
-    ) {
-        if let Some(txns) = self.transactions.get_mut(&account) {
-            // remove all previous seq number transactions for this account
-            // This can happen if transactions are sent to multiple nodes and one of
-            // nodes has sent the transaction to consensus but this node still has the
-            // transaction sitting in mempool
-            let mut active = txns.split_off(&account_sequence_number);
+    fn clean_committed_transactions(&mut self, address: &AccountAddress, sequence_number: u64) {
+        // remove all previous seq number transactions for this account
+        // This can happen if transactions are sent to multiple nodes and one of
+        // nodes has sent the transaction to consensus but this node still has the
+        // transaction sitting in mempool
+        if let Some(txns) = self.transactions.get_mut(&address) {
+            let mut active = txns.split_off(&sequence_number);
             let txns_for_removal = txns.clone();
             txns.clear();
             txns.append(&mut active);
@@ -250,6 +245,17 @@ impl TransactionStore {
                 self.index_remove(transaction);
             }
         }
+    }
+
+    /// handles transaction commit
+    /// it includes deletion of all transactions with sequence number <= `account_sequence_number`
+    /// and potential promotion of sequential txns to PriorityIndex/TimelineIndex
+    pub(crate) fn commit_transaction(
+        &mut self,
+        account: &AccountAddress,
+        account_sequence_number: u64,
+    ) {
+        self.clean_committed_transactions(account, account_sequence_number);
         self.process_ready_transactions(account, account_sequence_number);
     }
 
