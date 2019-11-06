@@ -804,7 +804,7 @@ impl ClusterTestRunner {
     }
 
     fn wait_until_all_healthy(&mut self) -> failure::Result<()> {
-        let wait_deadline = Instant::now() + Duration::from_secs(10 * 60);
+        let wait_deadline = Instant::now() + Duration::from_secs(20 * 60);
         for instance in self.cluster.instances() {
             self.health_check_runner.invalidate(instance.short_hash());
         }
