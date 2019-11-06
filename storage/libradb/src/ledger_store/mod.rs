@@ -4,6 +4,7 @@
 //! This file defines ledger store APIs that are related to the main ledger accumulator, from the
 //! root(LedgerInfo) to leaf(TransactionInfo).
 
+use crate::schema::epoch_by_version::EpochByVersionSchema;
 use crate::{
     change_set::ChangeSet,
     errors::LibraDbError,
@@ -58,6 +59,26 @@ impl LedgerStore {
             db,
             latest_ledger_info: ArcSwap::from(Arc::new(ledger_info)),
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn get_epoch(&self, version: Version) -> Result<u64> {
+        let mut iter = self
+            .db
+            .iter::<EpochByVersionSchema>(ReadOptions::default())?;
+        iter.seek_for_prev(&version)?;
+        let (epoch_start_version, epoch) = iter
+            .next()
+            .transpose()?
+            .ok_or_else(|| LibraDbError::NotFound(format!("version {}", version)))?;
+        ensure!(
+            epoch_start_version <= version,
+            "DB corruption: looking for epoch at version {}, got epoch {} started at version {}",
+            version,
+            epoch,
+            epoch_start_version
+        );
+        Ok(epoch)
     }
 
     /// Return the ledger infos with their least 2f+1 signatures starting from `start_epoch` to
@@ -192,6 +213,14 @@ impl LedgerStore {
         ledger_info_with_sigs: &LedgerInfoWithSignatures,
         cs: &mut ChangeSet,
     ) -> Result<()> {
+        let ledger_info = ledger_info_with_sigs.ledger_info();
+
+        if ledger_info.next_validator_set().is_some() {
+            let epoch = ledger_info_with_sigs.ledger_info().epoch();
+            let version = ledger_info_with_sigs.ledger_info().version();
+            cs.batch
+                .put::<EpochByVersionSchema>(&(version + 1), &(epoch + 1))?;
+        }
         cs.batch.put::<LedgerInfoSchema>(
             &ledger_info_with_sigs.ledger_info().epoch(),
             ledger_info_with_sigs,
