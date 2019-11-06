@@ -26,13 +26,13 @@ use channel;
 use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus};
 use consensus_types::{
     block::{
-        block_test_utils::{placeholder_certificate_for_block, placeholder_ledger_info},
+        block_test_utils::{
+            certificate_for_genesis, placeholder_certificate_for_block, placeholder_ledger_info,
+        },
         Block,
     },
-    block_info::BlockInfo,
     common::Author,
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
-    quorum_cert::QuorumCert,
     sync_info::SyncInfo,
     timeout::Timeout,
     timeout_certificate::TimeoutCertificate,
@@ -45,6 +45,7 @@ use futures::{
     executor::block_on,
 };
 use libra_crypto::HashValue;
+use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::{
     random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
 };
@@ -214,7 +215,7 @@ fn basic_new_rank_event_test() {
     let node = &nodes[0];
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     block_on(async move {
         let new_round = 1;
         node.event_processor
@@ -256,8 +257,7 @@ fn basic_new_rank_event_test() {
         // should be a child of a1 and carry its QC.
         let vote = Vote::new(
             VoteData::new(
-                BlockInfo::from_block(
-                    a1.block(),
+                a1.block().gen_block_info(
                     executed_state.state_id,
                     executed_state.version,
                     executed_state.validators.clone(),
@@ -319,7 +319,7 @@ fn process_successful_proposal_test() {
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
     let node = &mut nodes[1];
 
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     block_on(async move {
         let proposal = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
         let proposal_id = proposal.id();
@@ -365,7 +365,7 @@ fn process_old_proposal_test() {
     // node (which will send the votes to the proposer).
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
     let node = &mut nodes[1];
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let new_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let new_block_id = new_block.id();
     let old_block = Block::new_proposal(vec![1], 1, 2, genesis_qc.clone(), &node.signer);
@@ -414,7 +414,7 @@ fn process_round_mismatch_test() {
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
         .pop()
         .unwrap();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_skip_round = Block::new_proposal(vec![1], 2, 2, genesis_qc.clone(), &node.signer);
     block_on(async move {
@@ -512,11 +512,7 @@ fn process_vote_timeout_msg_test() {
 
     let vote_msg_on_timeout = VoteMsg::new(
         vote_on_timeout,
-        SyncInfo::new(
-            block_0_quorum_cert,
-            QuorumCert::certificate_for_genesis(),
-            None,
-        ),
+        SyncInfo::new(block_0_quorum_cert, certificate_for_genesis(), None),
     );
     block_on(
         static_proposer
@@ -544,7 +540,7 @@ fn process_proposer_mismatch_test() {
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
     let incorrect_proposer = nodes.pop().unwrap();
     let mut node = nodes.pop().unwrap();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_incorrect_proposer = Block::new_proposal(
         vec![1],
@@ -588,7 +584,7 @@ fn process_timeout_certificate_test() {
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
         .pop()
         .unwrap();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_skip_round = Block::new_proposal(vec![1], 2, 2, genesis_qc.clone(), &node.signer);
     let tc = TimeoutCertificate::new(Timeout::new(1, 1), HashMap::new());
@@ -628,7 +624,7 @@ fn process_votes_basic_test() {
         .unwrap();
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     let executed_state = &a1.compute_result().executed_state;
 
     let vote_data = VoteData::new(
@@ -676,7 +672,7 @@ fn process_block_retrieval() {
         .pop()
         .unwrap();
 
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_id = block.id();
 
@@ -760,7 +756,7 @@ fn basic_restart_test() {
     let mut proposals = Vec::new();
     let num_proposals = 100;
     // insert a few successful proposals
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     proposals.push(a1);
     for i in 2..=num_proposals {
         let parent = proposals.last().unwrap();

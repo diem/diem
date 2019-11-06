@@ -4,6 +4,7 @@
 use super::*;
 use crate::{change_set::ChangeSet, LibraDB};
 use libra_tools::tempdir::TempPath;
+use libra_types::block_info::BlockInfo;
 use libra_types::ledger_info::LedgerInfo;
 use proptest::{collection::vec, prelude::*};
 
@@ -29,13 +30,16 @@ prop_compose! {
                 let ledger_info = p.ledger_info();
                 LedgerInfoWithSignatures::new(
                     LedgerInfo::new(
-                        start_epoch + i as Version,
-                        ledger_info.transaction_accumulator_hash(),
+                        BlockInfo::new(
+                            start_epoch + i as u64,
+                            start_epoch + i as u64,
+                            ledger_info.consensus_block_id(),
+                            ledger_info.transaction_accumulator_hash(),
+                            start_epoch + i as Version,
+                            ledger_info.timestamp_usecs(),
+                            None,
+                        ),
                         ledger_info.consensus_data_hash(),
-                        HashValue::zero(),
-                        start_epoch + i as u64 /* epoch */,
-                        ledger_info.timestamp_usecs(),
-                        None,
                     ),
                     p.signatures().clone(),
                 )

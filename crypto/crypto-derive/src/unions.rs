@@ -24,9 +24,7 @@ pub fn parse_newtype_fields(item: &syn::DeriveInput) -> (syn::Type, proc_macro2:
     };
 
     match field_ty {
-        syn::Type::Reference(syn::TypeReference { elem, .. }) => {
-            (*elem.clone(), quote!(self.#field_name))
-        }
+        syn::Type::Reference(syn::TypeReference { elem, .. }) => (*elem, quote!(self.#field_name)),
         x => (x, quote!(&self.#field_name)),
     }
 }

@@ -11,6 +11,7 @@ use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, HashValue, SigningKey,
 };
+use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use libra_types::{
     account_address::AccountAddress,
@@ -62,13 +63,8 @@ impl MockExecutorProxy {
 
     fn mock_ledger_info(peer_id: PeerId, version: u64) -> LedgerInfo {
         let ledger_info = TypesLedgerInfo::new(
-            version,
+            BlockInfo::new(0, 0, HashValue::zero(), HashValue::zero(), version, 0, None),
             HashValue::zero(),
-            HashValue::zero(),
-            HashValue::zero(),
-            0,
-            0,
-            None,
         );
         let mut signatures = BTreeMap::new();
         let private_key = Ed25519PrivateKey::genesis();

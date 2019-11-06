@@ -1,10 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::test_utils::{placeholder_ledger_info, TestPayload};
+use crate::chained_bft::test_utils::TestPayload;
 use crate::chained_bft::{
     persistent_storage::RecoveryData,
     test_utils::{build_chain, build_simple_tree},
+};
+use consensus_types::block::block_test_utils::{
+    certificate_for_genesis, placeholder_ledger_with_id,
 };
 use consensus_types::{block::Block, executed_block::ExecutedBlock, quorum_cert::QuorumCert};
 use libra_crypto::HashValue;
@@ -37,8 +40,8 @@ fn is_correct_root(
 fn is_genesis_root(found_root: (Block<TestPayload>, QuorumCert, QuorumCert)) -> bool {
     let genesis = Block::make_genesis_block();
     genesis == found_root.0
-        && QuorumCert::certificate_for_genesis() == found_root.1
-        && QuorumCert::certificate_for_genesis() == found_root.2
+        && certificate_for_genesis() == found_root.1
+        && certificate_for_genesis() == found_root.2
 }
 
 /// Testing strategy for `RecoveryData::find_root()`
@@ -76,8 +79,7 @@ fn test_chain_restartability_root_from_consensusdb() {
 
     // Define ledger info for storage.
     let li_storage = &blocks[0];
-    let mut storage_ledger = placeholder_ledger_info();
-    storage_ledger.set_consensus_block_id(li_storage.id());
+    let storage_ledger = placeholder_ledger_with_id(li_storage.id());
 
     // The root of the chain of blocks must have a parent, a grandparent, a child, and a grandchild.
     for b_idx_start in 2..blocks.len() - 3 {
@@ -115,8 +117,7 @@ fn test_chain_restartability_root_from_storage() {
     for committed_b_idx in 2..blocks.len() - 4 {
         // Define ledger info for storage.
         let li_storage = &blocks[committed_b_idx];
-        let mut storage_ledger = placeholder_ledger_info();
-        storage_ledger.set_consensus_block_id(li_storage.id());
+        let storage_ledger = placeholder_ledger_with_id(li_storage.id());
 
         for b_idx_end in committed_b_idx + 4..blocks.len() {
             let mut blocks_advanced = blocks[committed_b_idx..=b_idx_end].to_vec();
@@ -150,8 +151,7 @@ fn test_chain_restartability_same_root() {
     for committed_b_idx in 2..blocks.len() - 4 {
         // Define ledger info for storage.
         let li_storage = &blocks[committed_b_idx];
-        let mut storage_ledger = placeholder_ledger_info();
-        storage_ledger.set_consensus_block_id(li_storage.id());
+        let storage_ledger = placeholder_ledger_with_id(li_storage.id());
         let b_idx_end = committed_b_idx + 3;
 
         let mut blocks_advanced = blocks[committed_b_idx..=b_idx_end].to_vec();
@@ -182,8 +182,7 @@ fn test_tree_restartability_root_from_consensusdb() {
 
     // Use a random hash value as the consensus block id.
     // (i.e. LI(S) does not exist.)
-    let mut storage_ledger = placeholder_ledger_info();
-    storage_ledger.set_consensus_block_id(HashValue::random());
+    let storage_ledger = placeholder_ledger_with_id(HashValue::random());
 
     // Verify that LI(C) is the root.
     // If B0 <- [C0 <- B1] <- [C1 <- B2] <- [C2 <- B3], then `find_root` returns (B0, C0, C0).
@@ -208,8 +207,7 @@ fn test_tree_restartability_same_root() {
 
     // Construct the storage ledger such that LI(S) is the ancestor of LI(C).
     // In this case LI(S) and LI(C) are equal.
-    let mut storage_ledger = placeholder_ledger_info();
-    storage_ledger.set_consensus_block_id(executed_blocks[0].block().id());
+    let storage_ledger = placeholder_ledger_with_id(executed_blocks[0].block().id());
 
     // Verify that LI(S) is the root.
     // If B0 <- [C0 <- B1] <- [C1 <- B2] <- [C2 <- B3], then `find_root` returns (B0, C0, C0).
@@ -233,8 +231,7 @@ fn test_not_restartable_too_short() {
 
     // Set a random storage ledger parameter for `RecoveryData::find_root()`.
     // `find_root()` will panic regardless of the storage ledger.
-    let mut storage_ledger = placeholder_ledger_info();
-    storage_ledger.set_consensus_block_id(HashValue::random());
+    let storage_ledger = placeholder_ledger_with_id(HashValue::random());
 
     let mut blocks_shortened = blocks[5..].to_vec();
     let mut qc_shortened = quorum_certs[5..].to_vec();

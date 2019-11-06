@@ -9,6 +9,7 @@ use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_config::config::{NodeConfig, VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue};
+use libra_types::block_info::BlockInfo;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -41,13 +42,8 @@ fn gen_ledger_info_with_sigs(
     commit_block_id: HashValue,
 ) -> LedgerInfoWithSignatures<Ed25519Signature> {
     let ledger_info = LedgerInfo::new(
-        version,
-        root_hash,
-        /* consensus_data_hash = */ HashValue::zero(),
-        commit_block_id,
-        0,
-        /* timestamp = */ 0,
-        None,
+        BlockInfo::new(0, 0, commit_block_id, root_hash, version, 0, None),
+        HashValue::zero(),
     );
     LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
 }

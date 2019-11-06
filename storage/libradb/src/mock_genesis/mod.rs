@@ -11,6 +11,7 @@ use libra_crypto::{
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
 };
+use libra_types::block_info::BlockInfo;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -76,13 +77,8 @@ fn gen_mock_genesis() -> (
     );
 
     let ledger_info = LedgerInfo::new(
-        0,
-        txn_info.hash(),
+        BlockInfo::new(0, 0, *GENESIS_BLOCK_ID, txn_info.hash(), 0, 0, None),
         HashValue::random(),
-        *GENESIS_BLOCK_ID,
-        0,
-        0,
-        None,
     );
     let ledger_info_with_sigs =
         LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new() /* signatures */);

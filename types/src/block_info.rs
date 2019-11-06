@@ -1,23 +1,28 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::block::Block;
+use crate::{transaction::Version, validator_set::ValidatorSet};
 use libra_crypto::hash::HashValue;
-use libra_types::{transaction::Version, validator_set::ValidatorSet};
+#[cfg(any(test, feature = "fuzzing"))]
+use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 
 /// The round of a block is a consensus-internal counter, which starts with 0 and increases
-/// monotonically. It is used for the protocol safety and liveness (please see the detailed protocol description).
+/// monotonically.
 pub type Round = u64;
 
 /// This structure contains all the information needed for tracking a block
 /// without having access to the block or its execution output state. It
 /// assumes that the block is the last block executed within the ledger.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct BlockInfo {
     /// Epoch number corresponds to the set of validators that are active for this block.
     epoch: u64,
-    /// The consensus protocol executes proposals (blocks) in rounds, which monotically increase per epoch.
+    /// The consensus protocol is executed in rounds, which monotonically increase per epoch.
     round: Round,
     /// The identifier (hash) of the block.
     id: HashValue,
@@ -64,23 +69,6 @@ impl BlockInfo {
         }
     }
 
-    pub fn from_block<T>(
-        block: &Block<T>,
-        executed_state_id: HashValue,
-        version: Version,
-        next_validator_set: Option<ValidatorSet>,
-    ) -> Self {
-        Self {
-            epoch: block.epoch(),
-            round: block.round(),
-            id: block.id(),
-            executed_state_id,
-            version,
-            timestamp_usecs: block.timestamp_usecs(),
-            next_validator_set,
-        }
-    }
-
     pub fn random(round: Round) -> Self {
         Self {
             epoch: 1,
@@ -90,6 +78,19 @@ impl BlockInfo {
             version: 0,
             timestamp_usecs: 0,
             next_validator_set: None,
+        }
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn genesis() -> Self {
+        Self {
+            epoch: 0,
+            round: 0,
+            id: HashValue::zero(),
+            executed_state_id: *ACCUMULATOR_PLACEHOLDER_HASH,
+            version: 0,
+            timestamp_usecs: 0,
+            next_validator_set: Some(ValidatorSet::new(vec![])),
         }
     }
 
@@ -123,5 +124,20 @@ impl BlockInfo {
 
     pub fn version(&self) -> Version {
         self.version
+    }
+}
+
+impl Display for BlockInfo {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "BlockInfo: [epoch: {}, round: {}, id: {}, version: {}, timestamp (us): {}, next_validator_set: {}]",
+            self.epoch(),
+            self.round(),
+            self.id(),
+            self.version(),
+            self.timestamp_usecs(),
+            self.next_validator_set.as_ref().map_or("None".to_string(), |validator_set| format!("{}", validator_set)),
+        )
     }
 }

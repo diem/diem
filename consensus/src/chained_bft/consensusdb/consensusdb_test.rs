@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use consensus_types::block::block_test_utils::certificate_for_genesis;
 use libra_tools::tempdir::TempPath;
 
 #[test]
@@ -22,7 +23,7 @@ fn test_put_get() {
     db.save_state(vec![0x01, 0x02, 0x03], vec![0x01, 0x02, 0x03])
         .unwrap();
 
-    let qcs = vec![QuorumCert::certificate_for_genesis()];
+    let qcs = vec![certificate_for_genesis()];
 
     db.save_blocks_and_quorum_certificates(blocks, qcs).unwrap();
 
@@ -43,7 +44,7 @@ fn test_delete_block_and_qc() {
     let blocks = vec![Block::<i64>::make_genesis_block()];
     let block_id = blocks[0].id();
 
-    let qcs = vec![QuorumCert::certificate_for_genesis()];
+    let qcs = vec![certificate_for_genesis()];
     let qc_id = qcs[0].certified_block().id();
 
     db.save_blocks_and_quorum_certificates(blocks, qcs).unwrap();

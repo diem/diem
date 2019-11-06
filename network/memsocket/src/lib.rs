@@ -257,9 +257,7 @@ impl MemorySocket {
     /// ```rust
     /// use memsocket::MemorySocket;
     ///
-    /// # fn main() {
     /// let (socket_a, socket_b) = MemorySocket::new_pair();
-    /// # }
     /// ```
     pub fn new_pair() -> (Self, Self) {
         let (a_tx, a_rx) = mpsc::unbounded();

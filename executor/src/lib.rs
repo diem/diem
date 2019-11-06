@@ -21,6 +21,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_logger::prelude::*;
+use libra_types::block_info::BlockInfo;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -383,15 +384,18 @@ where
         .expect("Failed to execute genesis block.");
 
         let root_hash = output.accu_root();
+        // TODO: once genesis emit the event, next_validator_set should be parsed from vm output
         let ledger_info = LedgerInfo::new(
-            /* version = */ 0,
-            root_hash,
-            /* consensus_data_hash = */ HashValue::zero(),
-            /* consensus_block_id */ *PRE_GENESIS_BLOCK_ID,
-            /* epoch = */ 0,
-            /* timestamp_usecs = */ 0,
-            // TODO: once genesis emit the event, this should be parsed from vm output
-            Some(ValidatorSet::new(vec![])),
+            BlockInfo::new(
+                0,
+                0,
+                *PRE_GENESIS_BLOCK_ID,
+                root_hash,
+                0,
+                0,
+                Some(ValidatorSet::new(vec![])),
+            ),
+            HashValue::zero(),
         );
         let ledger_info_with_sigs =
             LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ BTreeMap::new());
