@@ -9,7 +9,6 @@ syntax = "proto3";
 
 package types;
 
-import "access_path.proto";
 import "proof.proto";
 
 // An event emitted from a smart contract
