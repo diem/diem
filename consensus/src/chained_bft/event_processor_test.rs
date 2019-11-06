@@ -53,9 +53,9 @@ use network::{
     proto::ConsensusMsg_oneof,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
-use safety_rules::{ConsensusState, InMemoryStorage, SafetyRules};
-use std::convert::TryFrom;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use safety_rules::{ConsensusState, OnDiskStorage, SafetyRules};
+use std::{collections::HashMap, convert::TryFrom, path::PathBuf, sync::Arc, time::Duration};
+use tempfile::NamedTempFile;
 use tokio::runtime::TaskExecutor;
 
 /// Auxiliary struct that is setting up node environment for the test.
@@ -67,6 +67,7 @@ pub struct NodeSetup {
     signer: ValidatorSigner,
     proposer_author: Author,
     validators: Arc<ValidatorVerifier>,
+    safety_rules_file: PathBuf,
 }
 
 impl NodeSetup {
@@ -94,6 +95,10 @@ impl NodeSetup {
         let mut nodes = vec![];
         for signer in signers.iter().take(num_nodes) {
             let (storage, initial_data) = MockStorage::<TestPayload>::start_for_testing();
+
+            let safety_rules_file = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
+            OnDiskStorage::default_storage(safety_rules_file.clone());
+
             nodes.push(Self::new(
                 playground,
                 executor.clone(),
@@ -102,6 +107,7 @@ impl NodeSetup {
                 storage,
                 initial_data,
                 Arc::clone(&validators),
+                safety_rules_file,
             ));
         }
         nodes
@@ -115,6 +121,7 @@ impl NodeSetup {
         storage: Arc<MockStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
         validators: Arc<ValidatorVerifier>,
+        safety_rules_file: PathBuf,
     ) -> Self {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -134,7 +141,6 @@ impl NodeSetup {
         let (task, _receiver) =
             NetworkTask::<TestPayload>::new(0, network_events, self_receiver, validators.clone());
         executor.spawn(task.start());
-        let consensus_state = initial_data.state();
         let last_vote_sent = initial_data.last_vote();
         let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let state_computer = Arc::new(MockStateComputer::new(
@@ -161,11 +167,7 @@ impl NodeSetup {
         );
 
         let safety_rules = SafetyRules::new(
-            Box::new(InMemoryStorage::new(
-                consensus_state.epoch(),
-                consensus_state.last_voted_round(),
-                consensus_state.preferred_round(),
-            )),
+            OnDiskStorage::new_storage(safety_rules_file.clone()),
             Arc::new(signer.clone()),
         );
 
@@ -194,6 +196,7 @@ impl NodeSetup {
             signer,
             proposer_author,
             validators,
+            safety_rules_file,
         }
     }
 
@@ -210,6 +213,7 @@ impl NodeSetup {
             self.storage,
             recover_data,
             self.validators,
+            self.safety_rules_file,
         )
     }
 }
@@ -356,8 +360,8 @@ fn process_successful_proposal_test() {
             proposal_id
         );
         assert_eq!(
-            *node.storage.shared_storage.state.lock().unwrap(),
-            ConsensusState::new(0, 1, 0),
+            node.event_processor.safety_rules.consensus_state(),
+            ConsensusState::new(1, 1, 0),
         );
     });
 }
@@ -787,7 +791,7 @@ fn basic_restart_test() {
     node = node.restart(&mut playground, runtime.executor());
     assert_eq!(
         node.event_processor.consensus_state(),
-        ConsensusState::new(0, num_proposals, num_proposals - 2),
+        ConsensusState::new(1, num_proposals, num_proposals - 2),
     );
     for block in proposals {
         assert_eq!(node.block_store.block_exists(block.id()), true);

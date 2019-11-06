@@ -501,8 +501,7 @@ impl<T: Payload> EventProcessor<T> {
         // Safety invariant: qc_parent <-- qc
         // the preferred block round must be at least as large as qc_parent's round.
         debug_checked_verify!(
-            (*self).safety_rules.consensus_state().preferred_round()
-                >= certified_parent_block_round
+            self.safety_rules.consensus_state().preferred_round() >= certified_parent_block_round
         );
 
         let recipients = self
@@ -651,7 +650,7 @@ impl<T: Payload> EventProcessor<T> {
         counters::LAST_VOTE_ROUND.set(consensus_state.last_voted_round() as i64);
 
         self.storage
-            .save_consensus_state(consensus_state, &vote)
+            .save_state(&vote)
             .with_context(|e| format!("Fail to persist consensus state: {:?}", e))?;
         self.last_vote_sent.replace((vote.clone(), block.round()));
         Ok(vote)

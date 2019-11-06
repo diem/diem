@@ -21,7 +21,6 @@ use schemadb::{
 use std::{collections::HashMap, iter::Iterator, path::Path, time::Instant};
 
 type HighestTimeoutCertificate = Vec<u8>;
-type ConsensusStateData = Vec<u8>;
 type VoteMsgData = Vec<u8>;
 
 pub struct ConsensusDB {
@@ -61,13 +60,11 @@ impl ConsensusDB {
     pub fn get_data<T: Payload>(
         &self,
     ) -> Result<(
-        Option<ConsensusStateData>,
         Option<VoteMsgData>,
         Option<HighestTimeoutCertificate>,
         Vec<Block<T>>,
         Vec<QuorumCert>,
     )> {
-        let consensus_state = self.get_state()?;
         let last_vote_msg_data = self.get_last_vote_msg_data()?;
         let highest_timeout_certificate = self.get_highest_timeout_certificate()?;
         let consensus_blocks = self
@@ -81,7 +78,6 @@ impl ConsensusDB {
             .map(|(_block_hash, qc)| qc)
             .collect::<Vec<_>>();
         Ok((
-            consensus_state,
             last_vote_msg_data,
             highest_timeout_certificate,
             consensus_blocks,
@@ -101,9 +97,8 @@ impl ConsensusDB {
         self.commit(batch)
     }
 
-    pub fn save_state(&self, state: ConsensusStateData, last_vote: VoteMsgData) -> Result<()> {
+    pub fn save_state(&self, last_vote: VoteMsgData) -> Result<()> {
         let mut batch = SchemaBatch::new();
-        batch.put::<SingleEntrySchema>(&SingleEntryKey::ConsensusState, &state)?;
         batch.put::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg, &last_vote)?;
         self.commit(batch)
     }
@@ -160,12 +155,6 @@ impl ConsensusDB {
     fn get_highest_timeout_certificate(&self) -> Result<Option<Vec<u8>>> {
         self.db
             .get::<SingleEntrySchema>(&SingleEntryKey::HighestTimeoutCertificate)
-    }
-
-    /// Get latest consensus state (we only store the latest state).
-    fn get_state(&self) -> Result<Option<Vec<u8>>> {
-        self.db
-            .get::<SingleEntrySchema>(&SingleEntryKey::ConsensusState)
     }
 
     /// Get latest vote message data (if available)

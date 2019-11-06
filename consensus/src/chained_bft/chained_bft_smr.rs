@@ -18,7 +18,7 @@ use channel;
 use consensus_types::common::{Payload, Round};
 use failure::prelude::*;
 use futures::{select, stream::StreamExt};
-use libra_config::config::{ConsensusConfig, ConsensusProposerType};
+use libra_config::config::{ConsensusConfig, ConsensusProposerType, SafetyRulesConfig};
 use libra_logger::prelude::*;
 use std::{
     sync::Arc,
@@ -38,6 +38,8 @@ pub struct ChainedBftSMRConfig {
     pub contiguous_rounds: u32,
     /// Max block size (number of transactions) that consensus pulls from mempool
     pub max_block_size: u64,
+    /// Path to SafetyRulesConfig
+    pub safety_rules: SafetyRulesConfig,
 }
 
 impl ChainedBftSMRConfig {
@@ -49,6 +51,7 @@ impl ChainedBftSMRConfig {
             proposer_type: cfg.get_proposer_type(),
             contiguous_rounds: cfg.contiguous_rounds(),
             max_block_size: cfg.max_block_size(),
+            safety_rules: cfg.safety_rules().clone(),
         }
     }
 }

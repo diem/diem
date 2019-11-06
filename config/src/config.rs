@@ -438,10 +438,19 @@ impl ConsensusConfig {
                 path.as_ref().with_file_name(&self.consensus_peers_file),
             );
         }
-        if !self.safety_rules.path.as_os_str().is_empty() && self.safety_rules.path.is_relative() {
+        if let SafetyRulesBackend::OnDiskStorage {
+            default,
+            path: sr_path,
+        } = &self.safety_rules.backend
+        {
             // If the file is relative, it means it is in the same directory as this config,
             // unfortunately this is meaningless to the process that would load the config.
-            self.safety_rules.path = path.as_ref().with_file_name(&self.safety_rules.path);
+            if !sr_path.as_os_str().is_empty() && sr_path.is_relative() {
+                self.safety_rules.backend = SafetyRulesBackend::OnDiskStorage {
+                    default: *default,
+                    path: path.as_ref().with_file_name(sr_path),
+                };
+            }
         }
         Ok(())
     }
@@ -469,6 +478,10 @@ impl ConsensusConfig {
 
     pub fn pacemaker_initial_timeout_ms(&self) -> &Option<u64> {
         &self.pacemaker_initial_timeout_ms
+    }
+
+    pub fn safety_rules(&self) -> &SafetyRulesConfig {
+        &self.safety_rules
     }
 }
 
@@ -509,27 +522,27 @@ impl Default for MempoolConfig {
 #[serde(default)]
 pub struct SafetyRulesConfig {
     pub backend: SafetyRulesBackend,
-    // Required path for on disk storage
-    pub path: PathBuf,
-    // In testing scenarios this implies that the default state is okay if
-    // a state is not specified. Primarily used by on disk storage.
-    pub default: bool,
 }
 
 impl Default for SafetyRulesConfig {
     fn default() -> Self {
         Self {
             backend: SafetyRulesBackend::InMemoryStorage,
-            default: false,
-            path: PathBuf::new(),
         }
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(tag = "type")]
 pub enum SafetyRulesBackend {
     InMemoryStorage,
-    OnDiskStorage,
+    OnDiskStorage {
+        // In testing scenarios this implies that the default state is okay if
+        // a state is not specified.
+        default: bool,
+        // Required path for on disk storage
+        path: PathBuf,
+    },
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

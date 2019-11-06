@@ -134,7 +134,13 @@ impl SafetyRules {
     /// committed block, might panic otherwise.
     /// The update function is invoked whenever a system learns about a potentially high QC.
     pub fn update(&mut self, qc: &QuorumCert) {
-        // Preferred block rule: choose the highest 2-chain head.
+        if qc.ledger_info().ledger_info().epoch() > self.persistent_storage.epoch() {
+            self.persistent_storage
+                .set_epoch(qc.ledger_info().ledger_info().epoch());
+            self.persistent_storage.set_last_voted_round(0);
+            self.persistent_storage.set_preferred_round(0);
+        }
+
         if qc.parent_block().round() > self.persistent_storage.preferred_round() {
             self.persistent_storage
                 .set_preferred_round(qc.parent_block().round());
@@ -154,7 +160,10 @@ impl SafetyRules {
 
         let commit = block0 + 1 == block1 && block1 + 1 == block2;
         match commit {
-            true => LedgerInfo::new(proposed_block.quorum_cert().parent_block().clone(), HashValue::zero()),
+            true => LedgerInfo::new(
+                proposed_block.quorum_cert().parent_block().clone(),
+                HashValue::zero(),
+            ),
             false => LedgerInfo::new(BlockInfo::empty(), HashValue::zero()),
         }
     }

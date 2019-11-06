@@ -14,7 +14,6 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::ledger_info::LedgerInfo;
 use rmp_serde::{from_slice, to_vec_named};
-use safety_rules::ConsensusState;
 use std::{collections::HashSet, sync::Arc};
 
 /// Persistent storage for liveness data
@@ -41,8 +40,8 @@ pub trait PersistentStorage<T>: PersistentLivenessStorage + Send + Sync {
     /// Delete the corresponding blocks and quorum certs atomically.
     fn prune_tree(&self, block_ids: Vec<HashValue>) -> Result<()>;
 
-    /// Persist the consensus state.
-    fn save_consensus_state(&self, state: ConsensusState, vote: &Vote) -> Result<()>;
+    /// Persist consensus' state
+    fn save_state(&self, vote: &Vote) -> Result<()>;
 
     /// When the node restart, construct the instance and returned the data read from db.
     /// This could guarantee we only read once during start, and we would panic if the
@@ -58,8 +57,6 @@ pub trait PersistentStorage<T>: PersistentLivenessStorage + Send + Sync {
 #[derive(Debug)]
 pub struct RecoveryData<T> {
     epoch: u64,
-    // Safety data
-    state: ConsensusState,
     // The last vote message sent by this validator.
     last_vote: Option<Vote>,
     root: (Block<T>, QuorumCert, QuorumCert),
@@ -75,7 +72,6 @@ pub struct RecoveryData<T> {
 
 impl<T: Payload> RecoveryData<T> {
     pub fn new(
-        state: ConsensusState,
         last_vote: Option<Vote>,
         mut blocks: Vec<Block<T>>,
         mut quorum_certs: Vec<QuorumCert>,
@@ -109,7 +105,6 @@ impl<T: Payload> RecoveryData<T> {
         ));
         Ok(RecoveryData {
             epoch: root.0.epoch(),
-            state,
             last_vote,
             root,
             blocks,
@@ -125,10 +120,6 @@ impl<T: Payload> RecoveryData<T> {
 
     pub fn root_block(&self) -> &Block<T> {
         &self.root.0
-    }
-
-    pub fn state(&self) -> ConsensusState {
-        self.state.clone()
     }
 
     pub fn last_vote(&self) -> Option<Vote> {
@@ -270,9 +261,8 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         Ok(())
     }
 
-    fn save_consensus_state(&self, state: ConsensusState, vote: &Vote) -> Result<()> {
-        self.db
-            .save_state(to_vec_named(&state)?, to_vec_named(vote)?)
+    fn save_state(&self, vote: &Vote) -> Result<()> {
+        self.db.save_state(to_vec_named(vote)?)
     }
 
     fn start(config: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
@@ -281,12 +271,8 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         let db = Arc::new(ConsensusDB::new(config.get_storage_dir()));
         let proxy = Arc::new(Self::new(Arc::clone(&db)));
         let initial_data = db.get_data().expect("unable to recover consensus data");
-        let consensus_state = initial_data.0.map_or_else(ConsensusState::default, |s| {
-            from_slice(&s[..]).expect("unable to deserialize consensus state")
-        });
-        debug!("Recovered consensus state: {}", consensus_state);
 
-        let last_vote = initial_data.1.map(|vote_data| {
+        let last_vote = initial_data.0.map(|vote_data| {
             from_slice(&vote_data[..]).expect("unable to deserialize last vote msg")
         });
         let last_vote_repr = match &last_vote {
@@ -295,11 +281,11 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         };
         debug!("Recovered last vote msg: {}", last_vote_repr);
 
-        let highest_timeout_certificate = initial_data.2.map(|ts| {
+        let highest_timeout_certificate = initial_data.1.map(|ts| {
             from_slice(&ts[..]).expect("unable to deserialize highest timeout certificate")
         });
-        let blocks = initial_data.3;
-        let quorum_certs: Vec<_> = initial_data.4;
+        let blocks = initial_data.2;
+        let quorum_certs: Vec<_> = initial_data.3;
         let blocks_repr: Vec<String> = blocks.iter().map(|b| format!("\n\t{}", b)).collect();
         info!(
             "The following blocks were restored from ConsensusDB : {}",
@@ -319,7 +305,6 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             .update_to_latest_ledger(0, vec![])
             .expect("unable to read ledger info from storage");
         let mut initial_data = RecoveryData::new(
-            consensus_state,
             last_vote,
             blocks,
             quorum_certs,

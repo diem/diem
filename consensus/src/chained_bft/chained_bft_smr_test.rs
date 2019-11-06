@@ -4,9 +4,14 @@
 use crate::{
     chained_bft::{
         block_storage::BlockReader,
+        chained_bft_consensus_provider::InitialSetup,
         chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
         network_tests::NetworkPlayground,
-        test_utils::{MockStateComputer, MockStorage, MockTransactionManager, TestPayload},
+        persistent_storage::RecoveryData,
+        test_utils::{
+            consensus_runtime, with_smr_id, MockStateComputer, MockStorage, MockTransactionManager,
+            TestPayload,
+        },
     },
     state_replication::StateMachineReplication,
 };
@@ -16,25 +21,24 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::{channel::mpsc, executor::block_on, prelude::*};
+use libra_config::config::{
+    ConsensusProposerType::{self, FixedProposer, MultipleOrderedProposers, RotatingProposer},
+    {SafetyRulesBackend, SafetyRulesConfig},
+};
 use libra_crypto::hash::CryptoHash;
-use network::proto::ConsensusMsg_oneof;
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
-use std::convert::TryFrom;
-use std::sync::Arc;
-
-use crate::chained_bft::chained_bft_consensus_provider::InitialSetup;
-use crate::chained_bft::{
-    persistent_storage::RecoveryData,
-    test_utils::{consensus_runtime, with_smr_id},
+use libra_types::{
+    crypto_proxies::{
+        random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
+    },
+    validator_set::ValidatorSet,
 };
-use libra_config::config::ConsensusProposerType::{
-    self, FixedProposer, MultipleOrderedProposers, RotatingProposer,
+use network::{
+    proto::ConsensusMsg_oneof,
+    validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
-use libra_types::crypto_proxies::{
-    random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
-};
-use libra_types::validator_set::ValidatorSet;
-use std::time::Duration;
+use safety_rules::OnDiskStorage;
+use std::{convert::TryFrom, path::PathBuf, sync::Arc, time::Duration};
+use tempfile::NamedTempFile;
 use tokio::runtime;
 
 /// Auxiliary struct that is preparing SMR for the test
@@ -48,6 +52,7 @@ struct SMRNode {
     mempool: Arc<MockTransactionManager>,
     mempool_notif_receiver: mpsc::Receiver<usize>,
     storage: Arc<MockStorage<TestPayload>>,
+    safety_rules_path: PathBuf,
 }
 
 impl SMRNode {
@@ -60,6 +65,7 @@ impl SMRNode {
         initial_data: RecoveryData<TestPayload>,
         proposer_type: ConsensusProposerType,
         executor_with_reconfig: Option<ValidatorSet>,
+        safety_rules_path: PathBuf,
     ) -> Self {
         let author = signer.author();
 
@@ -74,12 +80,19 @@ impl SMRNode {
             .build()
             .expect("Failed to create Tokio runtime!");
 
+        let mut safety_rules_config = SafetyRulesConfig::default();
+        safety_rules_config.backend = SafetyRulesBackend::OnDiskStorage {
+            default: false,
+            path: safety_rules_path.clone(),
+        };
+
         let config = ChainedBftSMRConfig {
             max_pruned_blocks_in_mem: 10000,
             pacemaker_initial_timeout: Duration::from_secs(3),
             proposer_type,
             contiguous_rounds: 2,
             max_block_size: 50,
+            safety_rules: safety_rules_config,
         };
         let initial_setup = InitialSetup {
             author,
@@ -118,6 +131,7 @@ impl SMRNode {
             mempool,
             mempool_notif_receiver: commit_receiver,
             storage,
+            safety_rules_path,
         }
     }
 
@@ -136,6 +150,7 @@ impl SMRNode {
             recover_data,
             self.proposer_type,
             None,
+            self.safety_rules_path,
         )
     }
 
@@ -157,6 +172,8 @@ impl SMRNode {
         let mut nodes = vec![];
         for smr_id in 0..num_nodes {
             let (storage, initial_data) = MockStorage::start_for_testing();
+            let safety_rules_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
+            OnDiskStorage::default_storage(safety_rules_path.clone());
             nodes.push(Self::start(
                 playground,
                 signers.remove(0),
@@ -166,6 +183,7 @@ impl SMRNode {
                 initial_data,
                 proposer_type,
                 validator_set.clone(),
+                safety_rules_path,
             ));
         }
         nodes

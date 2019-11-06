@@ -4,10 +4,11 @@
 use super::*;
 use schemadb::schema::assert_encode_decode;
 
+// Tests that the DB can encode / decode data
 #[test]
 fn test_single_entry_schema() {
     assert_encode_decode::<SingleEntrySchema>(
-        &SingleEntryKey::ConsensusState,
+        &SingleEntryKey::HighestTimeoutCertificate,
         &vec![1u8, 2u8, 3u8],
     );
 }

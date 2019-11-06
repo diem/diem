@@ -20,7 +20,7 @@ pub trait PersistentStorage: Send + Sync {
     fn set_preferred_round(&mut self, last_voted_round: Round);
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct InMemoryStorage {
     epoch: u64,
     last_voted_round: Round,
@@ -38,7 +38,7 @@ impl InMemoryStorage {
 
     pub fn default() -> Self {
         Self {
-            epoch: 0,
+            epoch: 1,
             last_voted_round: 0,
             preferred_round: 0,
         }
@@ -78,7 +78,7 @@ impl PersistentStorage for InMemoryStorage {
 #[test]
 fn test_in_memory_storage() {
     let mut storage: Box<dyn PersistentStorage> = InMemoryStorage::default_storage();
-    assert_eq!(storage.epoch(), 0);
+    assert_eq!(storage.epoch(), 1);
     assert_eq!(storage.last_voted_round(), 0);
     assert_eq!(storage.preferred_round(), 0);
     storage.set_epoch(9);
@@ -95,7 +95,6 @@ pub struct OnDiskStorage {
 }
 
 impl OnDiskStorage {
-    #[allow(dead_code)]
     pub fn new_storage(file_path: PathBuf) -> Box<dyn PersistentStorage> {
         let internal_data = InMemoryStorage::load_config(file_path.clone());
         Box::new(Self {
@@ -104,7 +103,6 @@ impl OnDiskStorage {
         })
     }
 
-    #[allow(dead_code)]
     pub fn default_storage(file_path: PathBuf) -> Box<dyn PersistentStorage> {
         if file_path.exists() {
             return Self::new_storage(file_path);
@@ -152,7 +150,7 @@ impl PersistentStorage for OnDiskStorage {
 fn test_on_disk_storage() {
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
     let mut storage: Box<dyn PersistentStorage> = OnDiskStorage::default_storage(file_path.clone());
-    assert_eq!(storage.epoch(), 0);
+    assert_eq!(storage.epoch(), 1);
     assert_eq!(storage.last_voted_round(), 0);
     assert_eq!(storage.preferred_round(), 0);
     storage.set_epoch(9);
