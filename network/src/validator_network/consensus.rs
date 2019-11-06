@@ -30,8 +30,9 @@ pub type ConsensusNetworkEvents = NetworkEvents<ConsensusMsg>;
 
 /// The interface from Consensus to Networking layer.
 ///
-/// This is a thin wrapper around an `channel::Sender<NetworkRequest>`, so it is
-/// easy to clone and send off to a separate task. For example, the rpc requests
+/// This is a thin wrapper around a `NetworkSender<ConsensusMsg>`, which is in
+/// turn a thin wrapper around a `channel::Sender<NetworkRequest>`, so it is easy
+/// to clone and send off to a separate task. For example, the rpc requests
 /// return Futures that encapsulate the whole flow, from sending the request to
 /// remote, to finally receiving the response and deserializing. It therefore
 /// makes the most sense to make the rpc call on a separate async task, which
