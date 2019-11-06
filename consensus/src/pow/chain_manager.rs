@@ -46,10 +46,14 @@ impl ChainManager {
         hash_height_index.insert(*GENESIS_BLOCK_ID, (genesis_height, 0));
         let mut main_chain = AtomicRefCell::new(HashMap::new());
         main_chain.borrow_mut().insert(genesis_height, genesis_block_index);
-        let init_block_chain = BlockChain { height: genesis_height, indexs:index_map, hash_height_index, main_chain };
+        let init_block_chain = BlockChain { height: genesis_height, indexes:index_map, hash_height_index, main_chain };
         let block_chain = Arc::new(RwLock::new(init_block_chain));
         let orphan_blocks = Arc::new(Mutex::new(HashMap::new()));
         ChainManager {block_cache_receiver, block_store, txn_manager, state_computer, block_chain, orphan_blocks, genesis_txn, rollback_flag}
+    }
+
+    pub fn process_orphan_blocks(&self) {
+        //TODO:orphan
     }
 
     pub fn save_block(&mut self, executor: TaskExecutor) {
@@ -125,7 +129,7 @@ impl ChainManager {
                             if !orphan_flag {
                                 match old {
                                     Some(old_root) => {//update main chain
-                                        let mut main_chain_indexs:Vec<&HashValue> = Vec::new();
+                                        let mut main_chain_indexes:Vec<&HashValue> = Vec::new();
                                         let height = chain_lock.longest_chain_height();
 
                                         if (rollback_flag && height > 2) || old_root != parent_block_id {//rollback
@@ -155,7 +159,7 @@ impl ChainManager {
                                             }
 
     //                                      // 4. update main chain
-                                            main_chain_indexs.append(&mut commit_vec);
+                                            main_chain_indexes.append(&mut commit_vec);
                                         }
 
                                         //4.save latest block
@@ -163,8 +167,8 @@ impl ChainManager {
                                         Self::execut_and_commit_block(block_db.clone(), block.clone(), txn_manager.clone(), state_computer.clone()).await;
 
                                         //5. update main chain
-                                        main_chain_indexs.append(&mut vec![&id].to_vec());
-                                        for hash in main_chain_indexs {
+                                        main_chain_indexes.append(&mut vec![&id].to_vec());
+                                        for hash in main_chain_indexes {
                                             let (h, b_i) = chain_lock.find_height_and_block_index(hash);
                                             chain_lock.update_main_chain(h, b_i);
                                             block_db.insert_block_index(h, b_i);
@@ -236,7 +240,7 @@ impl ChainManager {
     }
 
     pub async fn get_block_index_by_height(&self, height:&u64) -> BlockIndex {
-        self.block_chain.clone().read().compat().await.unwrap().indexs.get(height).unwrap()[0].clone()
+        self.block_chain.clone().read().compat().await.unwrap().indexes.get(height).unwrap()[0].clone()
     }
 
     pub async fn chain_height_and_root(&self) -> (u64, BlockIndex) {
@@ -251,7 +255,7 @@ impl ChainManager {
 #[derive(Clone)]
 pub struct BlockChain {
     pub height: u64,
-    pub indexs: HashMap<u64, Vec<BlockIndex>>,
+    pub indexes: HashMap<u64, Vec<BlockIndex>>,
     pub hash_height_index: HashMap<HashValue, (u64, usize)>,
     pub main_chain: AtomicRefCell<HashMap<u64, BlockIndex>>,
 }
@@ -268,14 +272,14 @@ impl BlockChain {
     pub fn print_block_chain_root(&self, peer_id:PeerId) {
         let height = ((self.hash_height_index.len() - 1) as u64);
         for index in 0..height {
-            info!("Main Chain Block, PeerId: {:?} , Htight: {} , Block Root: {:?}", peer_id, height, self.main_chain.borrow().get(&index).expect("print block err."));
+            info!("Main Chain Block, PeerId: {:?} , Height: {} , Block Root: {:?}", peer_id, height, self.main_chain.borrow().get(&index).expect("print block err."));
         }
     }
 
     fn find_index_by_block_hash(&self, block_hash: &HashValue) -> Option<&BlockIndex> {
         match self.find_height_index_by_block_hash(block_hash) {
             Some((height, index)) => {
-                let tmp_index = self.indexs.get(height).expect("block hash not exist.");
+                let tmp_index = self.indexes.get(height).expect("block hash not exist.");
                 tmp_index.get(index.clone())
             }
             None => None
@@ -292,7 +296,7 @@ impl BlockChain {
 
     pub fn chain_height_and_root(&self) -> (u64, BlockIndex) {
         let height = self.height;
-        let block_index = self.indexs.get(&height).expect("get root hash err.")[0].clone();
+        let block_index = self.indexes.get(&height).expect("get root hash err.")[0].clone();
         (height, block_index)
     }
 
@@ -305,12 +309,12 @@ impl BlockChain {
                 let (old, current_index) = if self.height == height {
                     let old_root_hash = self.root_hash();
                     self.height = self.height + 1;
-                    self.indexs.insert(self.height, vec![block_index.clone()]);
+                    self.indexes.insert(self.height, vec![block_index.clone()]);
                     (Some(old_root_hash), 0)
                 } else {
-                    let tmp_indexs = self.indexs.get_mut(&(height + 1)).expect("height block index not exist.");
-                    let current_index = tmp_indexs.len();
-                    tmp_indexs.push(block_index);
+                    let tmp_indexes = self.indexes.get_mut(&(height + 1)).expect("height block index not exist.");
+                    let current_index = tmp_indexes.len();
+                    tmp_indexes.push(block_index);
                     (None, current_index)
                 };
 
@@ -343,7 +347,7 @@ impl BlockChain {
                 None => return None
             };
 
-            let tmp_index = self.indexs.get(height).expect("block hash not exist.");
+            let tmp_index = self.indexes.get(height).expect("block hash not exist.");
             let tmp_block_index = tmp_index.get(index.clone());
 
             match tmp_block_index {
