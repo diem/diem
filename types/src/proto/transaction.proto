@@ -17,8 +17,10 @@ message TransactionArgument {
         U64 = 0;
         ADDRESS = 1;
         STRING = 2;
-        BYTEARRAY = 3;
+        BYTE_ARRAY = 3;
     }
+    ArgType arg_type = 1;
+    bytes arg_value = 2;
 }
 
 // A generic structure that represents signed RawTransaction
