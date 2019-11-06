@@ -53,7 +53,7 @@ use network::{
     proto::ConsensusMsg_oneof,
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
-use safety_rules::{ConsensusState, SafetyRules};
+use safety_rules::{ConsensusState, InMemoryStorage, SafetyRules};
 use std::convert::TryFrom;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::runtime::TaskExecutor;
@@ -160,7 +160,14 @@ impl NodeSetup {
             1,
         );
 
-        let safety_rules = SafetyRules::new(consensus_state, Arc::new(signer.clone()));
+        let safety_rules = SafetyRules::new(
+            Box::new(InMemoryStorage::new(
+                consensus_state.epoch(),
+                consensus_state.last_voted_round(),
+                consensus_state.preferred_round(),
+            )),
+            Arc::new(signer.clone()),
+        );
 
         let pacemaker = Self::create_pacemaker(time_service.clone());
 

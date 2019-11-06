@@ -11,7 +11,7 @@ use tempfile::NamedTempFile;
 /// SafetyRules needs an abstract storage interface to act as a common utility for storing
 /// persistent data to local disk, cloud, secrets managers, or even memory (for tests)
 /// Any set function is expected to sync to the remote system before returning.
-pub trait PersistentStorage {
+pub trait PersistentStorage: Send + Sync {
     fn epoch(&self) -> u64;
     fn set_epoch(&mut self, epoch: u64);
     fn last_voted_round(&self) -> Round;
@@ -28,7 +28,6 @@ pub struct InMemoryStorage {
 }
 
 impl InMemoryStorage {
-    #[allow(dead_code)]
     pub fn new(epoch: u64, last_voted_round: Round, preferred_round: Round) -> Self {
         Self {
             epoch,
@@ -45,7 +44,6 @@ impl InMemoryStorage {
         }
     }
 
-    #[allow(dead_code)]
     pub fn default_storage() -> Box<dyn PersistentStorage> {
         Box::new(Self::default())
     }

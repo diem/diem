@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{ConsensusState, Error, SafetyRules};
+use crate::{Error, InMemoryStorage, SafetyRules};
 use consensus_types::{
     accumulator_extension_proof::AccumulatorExtensionProof,
     block::block_test_utils::certificate_for_genesis, block::Block, common::Round,
@@ -137,12 +137,12 @@ fn test_initial_state() {
     let block = Block::<Round>::make_genesis_block();
 
     let safety_rules = SafetyRules::new(
-        ConsensusState::default(),
+        InMemoryStorage::default_storage(),
         Arc::new(ValidatorSigner::from_int(0)),
     );
     let state = safety_rules.consensus_state();
-    assert_eq!(state.last_vote_round(), block.round());
-    assert_eq!(state.preferred_block_round(), block.round());
+    assert_eq!(state.last_voted_round(), block.round());
+    assert_eq!(state.preferred_round(), block.round());
 }
 
 #[test]
@@ -150,7 +150,7 @@ fn test_preferred_block_rule() {
     // Preferred block is the highest 2-chain head.
     let validator_signer = ValidatorSigner::from_int(0);
     let mut safety_rules = SafetyRules::new(
-        ConsensusState::default(),
+        InMemoryStorage::default_storage(),
         Arc::new(validator_signer.clone()),
     );
 
@@ -175,43 +175,43 @@ fn test_preferred_block_rule() {
 
     safety_rules.update(a1.block().quorum_cert());
     assert_eq!(
-        safety_rules.consensus_state().preferred_block_round(),
+        safety_rules.consensus_state().preferred_round(),
         genesis_block.round()
     );
 
     safety_rules.update(b1.block().quorum_cert());
     assert_eq!(
-        safety_rules.consensus_state().preferred_block_round(),
+        safety_rules.consensus_state().preferred_round(),
         genesis_block.round()
     );
 
     safety_rules.update(a2.block().quorum_cert());
     assert_eq!(
-        safety_rules.consensus_state().preferred_block_round(),
+        safety_rules.consensus_state().preferred_round(),
         genesis_block.round()
     );
 
     safety_rules.update(b2.block().quorum_cert());
     assert_eq!(
-        safety_rules.consensus_state().preferred_block_round(),
+        safety_rules.consensus_state().preferred_round(),
         genesis_block.round()
     );
 
     safety_rules.update(a3.block().quorum_cert());
     assert_eq!(
-        safety_rules.consensus_state().preferred_block_round(),
+        safety_rules.consensus_state().preferred_round(),
         b1.block().round()
     );
 
     safety_rules.update(b3.block().quorum_cert());
     assert_eq!(
-        safety_rules.consensus_state().preferred_block_round(),
+        safety_rules.consensus_state().preferred_round(),
         b1.block().round()
     );
 
     safety_rules.update(a4.block().quorum_cert());
     assert_eq!(
-        safety_rules.consensus_state().preferred_block_round(),
+        safety_rules.consensus_state().preferred_round(),
         a2.block().round()
     );
 }
@@ -221,7 +221,7 @@ fn test_preferred_block_rule() {
 fn test_voting_potential_commit_id() {
     let validator_signer = ValidatorSigner::from_int(0);
     let mut safety_rules = SafetyRules::new(
-        ConsensusState::default(),
+        InMemoryStorage::default_storage(),
         Arc::new(validator_signer.clone()),
     );
 
@@ -275,7 +275,7 @@ fn test_voting_potential_commit_id() {
 fn test_voting() {
     let validator_signer = ValidatorSigner::from_int(0);
     let mut safety_rules = SafetyRules::new(
-        ConsensusState::default(),
+        InMemoryStorage::default_storage(),
         Arc::new(validator_signer.clone()),
     );
 
@@ -326,7 +326,7 @@ fn test_voting() {
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b2),
         Err(Error::OldProposal {
-            last_vote_round: 4,
+            last_voted_round: 4,
             proposal_round: 3,
         })
     );
@@ -347,16 +347,14 @@ fn test_voting() {
     assert_eq!(
         safety_rules.construct_and_sign_vote(&a4),
         Err(Error::OldProposal {
-            last_vote_round: 7,
+            last_voted_round: 7,
             proposal_round: 7,
         })
     );
     safety_rules.update(b4.block().quorum_cert());
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b4),
-        Err(Error::ProposalRoundLowerThenPreferredBlock {
-            preferred_block_round: 4,
-        })
+        Err(Error::ProposalRoundLowerThenPreferredBlock { preferred_round: 4 })
     );
 }
 
@@ -364,7 +362,7 @@ fn test_voting() {
 fn test_commit_rule_consecutive_rounds() {
     let validator_signer = ValidatorSigner::from_int(0);
     let safety_rules = SafetyRules::new(
-        ConsensusState::default(),
+        InMemoryStorage::default_storage(),
         Arc::new(validator_signer.clone()),
     );
 
@@ -428,7 +426,10 @@ fn test_commit_rule_consecutive_rounds() {
 #[test]
 fn test_bad_execution_output() {
     let validator_signer = Arc::new(ValidatorSigner::from_int(0));
-    let mut safety_rules = SafetyRules::new(ConsensusState::default(), validator_signer.clone());
+    let mut safety_rules = SafetyRules::new(
+        InMemoryStorage::default_storage(),
+        validator_signer.clone(),
+    );
 
     // build a tree of the following form:
     //                 _____
