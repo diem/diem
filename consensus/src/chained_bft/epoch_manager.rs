@@ -17,14 +17,14 @@ use crate::util::time_service::{ClockTimeService, TimeService};
 use consensus_types::common::{Payload, Round};
 use consensus_types::epoch_retrieval::EpochRetrievalRequest;
 use futures::executor::block_on;
-use libra_config::config::ConsensusProposerType;
+use libra_config::config::{ConsensusProposerType, SafetyRulesBackend};
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 use network::proto::ConsensusMsg;
 use network::proto::ConsensusMsg_oneof;
 use network::validator_network::{ConsensusNetworkSender, Event};
-use safety_rules::{ConsensusState, InMemoryStorage, SafetyRules};
+use safety_rules::{InMemoryStorage, OnDiskStorage, SafetyRules};
 use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::sync::Arc;
@@ -172,15 +172,8 @@ impl<T: Payload> EpochManager<T> {
             .into();
         // make sure storage is on this ledger_info too, it should be no-op if it's already committed
         self.state_computer.sync_to_or_bail(ledger_info.clone());
-        let initial_data = RecoveryData::new(
-            ConsensusState::new(ledger_info.ledger_info().epoch() + 1, 0, 0),
-            None,
-            vec![],
-            vec![],
-            ledger_info.ledger_info(),
-            None,
-        )
-        .expect("should be able to build new epoch RecoveryData");
+        let initial_data = RecoveryData::new(None, vec![], vec![], ledger_info.ledger_info(), None)
+            .expect("should be able to build new epoch RecoveryData");
         self.epoch = initial_data.epoch();
         info!(
             "Start new epoch {} with genesis {}, validators {}",
@@ -200,12 +193,14 @@ impl<T: Payload> EpochManager<T> {
         counters::EPOCH.set(self.epoch as i64);
         let last_vote = initial_data.last_vote();
         let author = signer.author();
-        let storage = Box::new(InMemoryStorage::new(
-            initial_data.state().epoch(),
-            initial_data.state().last_voted_round(),
-            initial_data.state().preferred_round(),
-        ));
-        let safety_rules = SafetyRules::new(storage, signer);
+        let safety_rules_storage = match &self.config.safety_rules.backend {
+            SafetyRulesBackend::InMemoryStorage => InMemoryStorage::default_storage(),
+            SafetyRulesBackend::OnDiskStorage { default, path } => match *default {
+                true => OnDiskStorage::default_storage(path.clone()),
+                false => OnDiskStorage::new_storage(path.clone()),
+            },
+        };
+        let safety_rules = SafetyRules::new(safety_rules_storage, signer);
 
         let block_store = Arc::new(block_on(BlockStore::new(
             Arc::clone(&self.storage),

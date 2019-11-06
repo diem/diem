@@ -13,7 +13,6 @@ use failure::Result;
 use libra_config::config::{NodeConfig, NodeConfigHelpers};
 use libra_crypto::HashValue;
 use libra_types::ledger_info::LedgerInfo;
-use safety_rules::ConsensusState;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -23,7 +22,6 @@ pub struct MockSharedStorage<T> {
     // Safety state
     pub block: Mutex<HashMap<HashValue, Block<T>>>,
     pub qc: Mutex<HashMap<HashValue, QuorumCert>>,
-    pub state: Mutex<ConsensusState>,
     pub last_vote: Mutex<Option<Vote>>,
 
     // Liveness state
@@ -66,7 +64,6 @@ impl<T: Payload> MockStorage<T> {
             .collect();
         blocks.sort_by_key(Block::round);
         RecoveryData::new(
-            self.shared_storage.state.lock().unwrap().clone(),
             self.shared_storage.last_vote.lock().unwrap().clone(),
             blocks,
             quorum_certs,
@@ -148,8 +145,7 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
         Ok(())
     }
 
-    fn save_consensus_state(&self, state: ConsensusState, last_vote: &Vote) -> Result<()> {
-        *self.shared_storage.state.lock().unwrap() = state;
+    fn save_state(&self, last_vote: &Vote) -> Result<()> {
         self.shared_storage
             .last_vote
             .lock()
@@ -162,7 +158,6 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
         let shared_storage = Arc::new(MockSharedStorage {
             block: Mutex::new(HashMap::new()),
             qc: Mutex::new(HashMap::new()),
-            state: Mutex::new(ConsensusState::default()),
             last_vote: Mutex::new(None),
             highest_timeout_certificate: Mutex::new(None),
         });
@@ -203,22 +198,14 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
         Ok(())
     }
 
-    fn save_consensus_state(&self, _: ConsensusState, _: &Vote) -> Result<()> {
+    fn save_state(&self, _: &Vote) -> Result<()> {
         Ok(())
     }
 
     fn start(_: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
         (
             Arc::new(EmptyStorage),
-            RecoveryData::new(
-                ConsensusState::default(),
-                None,
-                vec![],
-                vec![],
-                &LedgerInfo::genesis(),
-                None,
-            )
-            .unwrap(),
+            RecoveryData::new(None, vec![], vec![], &LedgerInfo::genesis(), None).unwrap(),
         )
     }
 }

@@ -299,10 +299,10 @@ impl SwarmConfig {
         // Prepare safety rules
         let mut safety_rules_config = SafetyRulesConfig::default();
         if role == RoleType::Validator {
-            safety_rules_config.default = true;
-            safety_rules_config.backend = SafetyRulesBackend::OnDiskStorage;
-            safety_rules_config.path =
-                PathBuf::from(format!("{}.node.safety_rules.toml", node_id.to_string()));
+            safety_rules_config.backend = SafetyRulesBackend::OnDiskStorage {
+                default: true,
+                path: PathBuf::from(format!("{}.node.safety_rules.toml", node_id.to_string())),
+            }
         }
         // Save network keys.
         let network_keys_file_name = format!("{}.node.network.keys.toml", node_id.to_string());

@@ -5,7 +5,7 @@ mod persistent_storage;
 mod safety_rules;
 
 pub use crate::{
-    persistent_storage::InMemoryStorage,
+    persistent_storage::{InMemoryStorage, OnDiskStorage},
     safety_rules::{ConsensusState, Error, SafetyRules},
 };
 

@@ -426,10 +426,8 @@ fn test_commit_rule_consecutive_rounds() {
 #[test]
 fn test_bad_execution_output() {
     let validator_signer = Arc::new(ValidatorSigner::from_int(0));
-    let mut safety_rules = SafetyRules::new(
-        InMemoryStorage::default_storage(),
-        validator_signer.clone(),
-    );
+    let mut safety_rules =
+        SafetyRules::new(InMemoryStorage::default_storage(), validator_signer.clone());
 
     // build a tree of the following form:
     //                 _____
