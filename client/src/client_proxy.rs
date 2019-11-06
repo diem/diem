@@ -100,6 +100,7 @@ pub struct ClientProxy {
     sync_on_wallet_recovery: bool,
     /// temp files (alive for duration of program)
     temp_files: Vec<PathBuf>,
+    verbose: bool,
 }
 
 impl ClientProxy {
@@ -112,6 +113,7 @@ impl ClientProxy {
         sync_on_wallet_recovery: bool,
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
+        verbose: bool,
     ) -> Result<Self> {
         let validator_verifier = Arc::new(
             ConsensusPeersConfig::load_config(validator_set_file).get_validator_verifier(),
@@ -137,6 +139,7 @@ impl ClientProxy {
                 Some(KeyPair::<Ed25519PrivateKey, _>::from(
                     faucet_account_keypair.private_key,
                 )),
+                verbose,
             )?;
             // Load the keypair from file
             Some(faucet_account_data)
@@ -162,6 +165,7 @@ impl ClientProxy {
             wallet: Self::get_libra_wallet(mnemonic_file)?,
             sync_on_wallet_recovery,
             temp_files: vec![],
+            verbose,
         })
     }
 
@@ -182,8 +186,13 @@ impl ClientProxy {
     pub fn create_next_account(&mut self, sync_with_validator: bool) -> Result<AddressAndIndex> {
         let (address, _) = self.wallet.new_address()?;
 
-        let account_data =
-            Self::get_account_data_from_address(&self.client, address, sync_with_validator, None)?;
+        let account_data = Self::get_account_data_from_address(
+            &self.client,
+            address,
+            sync_with_validator,
+            None,
+            self.verbose,
+        )?;
 
         Ok(self.insert_account_data(account_data))
     }
@@ -771,6 +780,7 @@ impl ClientProxy {
                 address,
                 self.sync_on_wallet_recovery,
                 None,
+                self.verbose,
             )?);
         }
         self.set_wallet(wallet);
@@ -835,6 +845,7 @@ impl ClientProxy {
         address: AccountAddress,
         sync_with_validator: bool,
         key_pair: Option<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
+        verbose: bool,
     ) -> Result<AccountData> {
         let (sequence_number, status) = if sync_with_validator {
             match client.get_account_blob(address) {
@@ -848,16 +859,19 @@ impl ClientProxy {
                 },
                 Err(e) => {
                     // try downcasting error to ProofError
-
                     let proof_error = e.downcast_ref::<ProofError>();
                     if proof_error.is_some() {
                         let proof_error = proof_error.unwrap();
                         match proof_error {
                             ProofError { .. } => {
-                                error!(
-                                    "Proof failure (msg: {:?}, failed proof: {:?})",
-                                    proof_error.msg, proof_error.proof
-                                );
+                                if verbose {
+                                    error!(
+                                        "Proof failure (msg: {:?}, failed proof: {:?})",
+                                        proof_error.msg, proof_error.proof
+                                    );
+                                } else {
+                                    error!("Proof failure (msg: {:?})", proof_error.msg,);
+                                }
                             }
                         }
                     } else {
@@ -1135,6 +1149,7 @@ mod tests {
             false,
             None,
             Some(mnemonic_path),
+            false,
         )
         .unwrap();
         for _ in 0..count {

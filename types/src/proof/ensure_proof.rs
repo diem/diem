@@ -14,7 +14,7 @@ macro_rules! ensure_proof {
         match $proof {
             SparseMerkleProof { .. } => {
                 if !($cond) {
-                    return Err(ProofError { proof: $proof.to_string(), msg: $e.to_string() })?;
+                    return Err(ProofError::new($proof.to_string(), $e.to_string()))?;
                 }
                 return Ok(());
             }
@@ -30,6 +30,6 @@ macro_rules! ensure_proof {
                 return Ok(());
             }
         }
-        ensure!($cond, $fmt, $($arg:tt)+)
+        ensure!($cond, $fmt, $($arg)+)
     };
 }

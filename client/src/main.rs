@@ -71,6 +71,7 @@ fn main() -> std::io::Result<()> {
         args.sync,
         args.faucet_server,
         args.mnemonic_file,
+        args.verbose,
     )
     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, &format!("{}", e)[..]))?;
 

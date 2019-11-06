@@ -118,6 +118,7 @@ impl TestEnvironment {
             false,
             /* faucet server */ None,
             Some(mnemonic_file_path),
+            false,
         )
         .unwrap()
     }
