@@ -6,6 +6,7 @@
 //!
 //! All schemas are `pub(crate)` so not shown in rustdoc, refer to the source code to see details.
 
+pub(crate) mod epoch_by_version;
 pub(crate) mod event;
 pub(crate) mod event_accumulator;
 pub(crate) mod event_by_key;
@@ -22,6 +23,7 @@ pub(crate) mod validator;
 use failure::prelude::*;
 use schemadb::ColumnFamilyName;
 
+pub(super) const EPOCH_BY_VERSION_CF_NAME: ColumnFamilyName = "epoch_by_version";
 pub(super) const EVENT_ACCUMULATOR_CF_NAME: ColumnFamilyName = "event_accumulator";
 pub(super) const EVENT_BY_KEY_CF_NAME: ColumnFamilyName = "event_by_key";
 pub(super) const EVENT_CF_NAME: ColumnFamilyName = "event";
