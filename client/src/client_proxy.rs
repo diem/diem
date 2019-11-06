@@ -674,26 +674,25 @@ impl ClientProxy {
     /// Get account address from parameter. If the parameter is string of address, try to convert
     /// it to address, otherwise, try to convert to u64 and looking at TestClient::accounts.
     pub fn get_account_address_from_parameter(&self, para: &str) -> Result<AccountAddress> {
-        match is_address(para) {
-            true => ClientProxy::address_from_strings(para),
-            false => {
-                let account_ref_id = para.parse::<usize>().map_err(|error| {
-                    format_parse_data_error(
-                        "account_reference_id/account_address",
-                        InputType::Usize,
-                        para,
-                        error,
-                    )
-                })?;
-                let account_data = self.accounts.get(account_ref_id).ok_or_else(|| {
-                    format_err!(
-                        "Unable to find account by account reference id: {}, to see all existing \
-                         accounts, run: 'account list'",
-                        account_ref_id
-                    )
-                })?;
-                Ok(account_data.address)
-            }
+        if is_address(para) {
+            ClientProxy::address_from_strings(para)
+        } else {
+            let account_ref_id = para.parse::<usize>().map_err(|error| {
+                format_parse_data_error(
+                    "account_reference_id/account_address",
+                    InputType::Usize,
+                    para,
+                    error,
+                )
+            })?;
+            let account_data = self.accounts.get(account_ref_id).ok_or_else(|| {
+                format_err!(
+                    "Unable to find account by account reference id: {}, to see all existing \
+                     accounts, run: 'account list'",
+                    account_ref_id
+                )
+            })?;
+            Ok(account_data.address)
         }
     }
 
@@ -1030,20 +1029,19 @@ impl ClientProxy {
     }
 
     fn mut_account_from_parameter(&mut self, para: &str) -> Result<&mut AccountData> {
-        let account_ref_id = match is_address(para) {
-            true => {
-                let account_address = ClientProxy::address_from_strings(para)?;
-                *self
-                    .address_to_ref_id
-                    .get(&account_address)
-                    .ok_or_else(|| {
-                        format_err!(
-                            "Unable to find local account by address: {:?}",
-                            account_address
-                        )
-                    })?
-            }
-            false => para.parse::<usize>()?,
+        let account_ref_id = if is_address(para) {
+            let account_address = ClientProxy::address_from_strings(para)?;
+            *self
+                .address_to_ref_id
+                .get(&account_address)
+                .ok_or_else(|| {
+                    format_err!(
+                        "Unable to find local account by address: {:?}",
+                        account_address
+                    )
+                })?
+        } else {
+            para.parse::<usize>()?
         };
         let account_data = self
             .accounts
