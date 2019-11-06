@@ -48,7 +48,6 @@ impl ValueCodec<EpochByVersionSchema> for u64 {
 
     fn decode_value(data: &[u8]) -> Result<Self> {
         ensure_slice_len_eq(data, size_of::<Self>())?;
-
         Ok((&data[..]).read_u64::<BigEndian>()?)
     }
 }
