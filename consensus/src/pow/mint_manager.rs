@@ -32,11 +32,12 @@ use tokio::runtime::{self, TaskExecutor};
 use crate::pow::event_processor::EventProcessor;
 use rand::Rng;
 use crypto::hash::CryptoHash;
+use crate::pow::payload_ext::BlockPayloadExt;
 
 pub struct MintManager {
     txn_manager: Arc<dyn TxnManager<Payload=Vec<SignedTransaction>>>,
     state_computer: Arc<dyn StateComputer<Payload=Vec<SignedTransaction>>>,
-    block_cache_sender: mpsc::Sender<Block<Vec<SignedTransaction>>>,
+    block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
     network_sender: ConsensusNetworkSender,
     author: AccountAddress,
     self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
@@ -50,7 +51,7 @@ impl MintManager {
 
     pub fn new(txn_manager: Arc<dyn TxnManager<Payload=Vec<SignedTransaction>>>,
                state_computer: Arc<dyn StateComputer<Payload=Vec<SignedTransaction>>>,
-               block_cache_sender: mpsc::Sender<Block<Vec<SignedTransaction>>>,
+               block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
                network_sender: ConsensusNetworkSender,
                author: AccountAddress,
                self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
@@ -87,7 +88,7 @@ impl MintManager {
                             let grandpa_block_id = parent_block.parent_block_id;
                             //QC with parent block id
                             let quorum_cert = if parent_block_id != *GENESIS_BLOCK_ID {
-                                let parent_block = block_db.get_block_by_hash::<Vec<SignedTransaction>>(&parent_block_id).expect("block not find in database err.");
+                                let parent_block = block_db.get_block_by_hash::<BlockPayloadExt>(&parent_block_id).expect("block not find in database err.");
                                 parent_block.quorum_cert().clone()
                             } else {
                                 QuorumCert::certificate_for_genesis()
@@ -123,8 +124,21 @@ impl MintManager {
                                     signatures.insert(signer.author(), signature);
                                     let new_qc = QuorumCert::new(vote_data, LedgerInfoWithSignatures::new(li.clone(), signatures));
 
-                                    let block = Block::<Vec<SignedTransaction>>::new_internal(
-                                        txns,
+                                    let nonce = generate_nonce();
+                                    let proof = pow_srv.solve(li.hash().as_ref(), nonce);
+                                    let solve = match proof {
+                                        Some(proof) => proof.solve,
+                                        None => vec![10]
+                                    };
+//                                    let pow_ctx = PowContext {
+//                                        header_hash: li.hash().to_vec(),
+//                                        nonce,
+//                                        solve,
+//                                    };
+                                    let mint_data = BlockPayloadExt{txns, nonce, solve};
+
+                                    let block = Block::<BlockPayloadExt>::new_internal(
+                                        mint_data,
                                         0,
                                         height + 1,
                                         0,
@@ -138,18 +152,8 @@ impl MintManager {
                                     let msg = ConsensusMsg {
                                         message: Some(ConsensusMsg_oneof::NewBlock(block_pb)),
                                     };
-                                    let nonce = generate_nonce();
-                                    let proof = pow_srv.solve(li.hash().as_ref(), nonce);
-                                    let solve = match proof {
-                                        Some(proof) => proof.solve,
-                                        None => vec![]
-                                    };
-                                    let pow_ctx = PowContext {
-                                        header_hash: li.hash().to_vec(),
-                                        nonce,
-                                        solve,
-                                    };
-                                    EventProcessor::broadcast_consensus_msg(&mut mint_network_sender, true, mint_author, &mut self_sender, msg, Some(pow_ctx)).await;
+
+                                    EventProcessor::broadcast_consensus_msg(&mut mint_network_sender, true, mint_author, &mut self_sender, msg).await;
                                 }
                                 Err(e) => {
                                     println!("{:?}", e);

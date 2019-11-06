@@ -20,9 +20,10 @@ use {
 use channel;
 use logger::prelude::*;
 use crypto::hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID};
+use crate::pow::payload_ext::BlockPayloadExt;
 
 pub struct ChainManager {
-    block_cache_receiver: Option<mpsc::Receiver<Block<Vec<SignedTransaction>>>>,
+    block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
     block_store: Arc<ConsensusDB>,
     txn_manager: Arc<dyn TxnManager<Payload=Vec<SignedTransaction>>>,
     state_computer: Arc<dyn StateComputer<Payload=Vec<SignedTransaction>>>,
@@ -34,7 +35,7 @@ pub struct ChainManager {
 
 impl ChainManager {
 
-    pub fn new(block_cache_receiver: Option<mpsc::Receiver<Block<Vec<SignedTransaction>>>>,
+    pub fn new(block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
            block_store: Arc<ConsensusDB>, txn_manager: Arc<dyn TxnManager<Payload=Vec<SignedTransaction>>>,
            state_computer: Arc<dyn StateComputer<Payload=Vec<SignedTransaction>>>,
            genesis_txn: Vec<SignedTransaction>, rollback_flag: bool) -> Self {
@@ -73,7 +74,7 @@ impl ChainManager {
 
                         // 2. compute with state_computer
                         let payload = match block.payload() {
-                            Some(txns) => txns.clone(),
+                            Some(p) => p.get_txns(),
                             None => vec![],
                         };
 
@@ -93,11 +94,11 @@ impl ChainManager {
                                 let (ancestors, block_index) = chain_lock.find_ancestor_until_main_chain(&parent_block_id).expect("find ancestors err.");
 
                                 // 3. find blocks
-                                let blocks = block_db.get_blocks_by_hashs::<Vec<SignedTransaction>>(ancestors).expect("find blocks err.");
+                                let blocks = block_db.get_blocks_by_hashs::<BlockPayloadExt>(ancestors).expect("find blocks err.");
 
                                 for b in blocks {
                                     let tmp_txns = match b.payload() {
-                                        Some(t) => t.clone(),
+                                        Some(t) => t.get_txns(),
                                         None => vec![],
                                     };
                                     commit_txn_vec.push(tmp_txns);
@@ -105,7 +106,7 @@ impl ChainManager {
 
                                 pre_compute_parent_block_id = block_index.parent_block_id;
                             }
-                            commit_txn_vec.push(payload.clone());
+                            commit_txn_vec.push(payload);
 
                             // 4. call pre_compute
                             match state_computer.pre_compute(pre_compute_parent_block_id, commit_txn_vec).await {
@@ -133,8 +134,6 @@ impl ChainManager {
                                         let height = chain_lock.longest_chain_height();
 
                                         if (rollback_flag && height > 2) || old_root != parent_block_id {//rollback
-                                            println!("--------7777----rollback----");
-
                                             let (rollback_vec, mut commit_vec) = if rollback_flag {
                                                 (vec![&old_root], vec![&old_root])
                                             } else {
@@ -145,15 +144,14 @@ impl ChainManager {
 
                                             //1. reset exector
                                             state_computer.rollback(ancestor_block_id).await;
-                                            println!("--------8888----rollback----{:?}-----{:?}", old_root, ancestor_block_id);
+                                            println!("rollback[ old root : {:?} , ancestor block id : {:?}]", old_root, ancestor_block_id);
 
                                             //2. add txn to mempool
 
                                             //3. commit
                                             for commit in commit_vec.iter().rev() {
-                                                println!("--------9999----rollback----");
                                                 // 1. query block
-                                                let commit_block = block_db.get_block_by_hash::<Vec<SignedTransaction>>(commit).expect("block not find in database err.");
+                                                let commit_block = block_db.get_block_by_hash::<BlockPayloadExt>(commit).expect("block not find in database err.");
                                                 // 2. commit block
                                                 Self::execut_and_commit_block(block_db.clone(), commit_block, txn_manager.clone(), state_computer.clone()).await;
                                             }
@@ -176,7 +174,7 @@ impl ChainManager {
                                     }
                                     None => {
                                         // save block, not commit
-                                        let mut blocks: Vec<Block<Vec<SignedTransaction>>> = Vec::new();
+                                        let mut blocks: Vec<Block<BlockPayloadExt>> = Vec::new();
                                         blocks.push(block.clone());
                                         let mut qcs = Vec::new();
                                         qcs.push(block.quorum_cert().clone());
@@ -196,22 +194,19 @@ impl ChainManager {
         executor.spawn(chain_fut);
     }
 
-    async fn execut_and_commit_block(block_db: Arc<ConsensusDB>, block: Block<Vec<SignedTransaction>>, txn_manager: Arc<dyn TxnManager<Payload=Vec<SignedTransaction>>>, state_computer: Arc<dyn StateComputer<Payload=Vec<SignedTransaction>>>) {
+    async fn execut_and_commit_block(block_db: Arc<ConsensusDB>, block: Block<BlockPayloadExt>, txn_manager: Arc<dyn TxnManager<Payload=Vec<SignedTransaction>>>, state_computer: Arc<dyn StateComputer<Payload=Vec<SignedTransaction>>>) {
         // 2. compute with state_computer
         let payload = match block.payload() {
-            Some(txns) => txns.clone(),
+            Some(txns) => txns.get_txns(),
             None => vec![],
         };
         let compute_res = state_computer.compute(block.parent_id(), block.id(), &payload).await.expect("compute block err.");
 
         // 3. remove tx from mempool
-        match block.payload() {
-            Some(txns) => {
-                if let Err(e) = txn_manager.commit_txns(txns, &compute_res, block.timestamp_usecs()).await {
-                    error!("Failed to notify mempool: {:?}", e);
-                }
+        if payload.len() > 0 {
+            if let Err(e) = txn_manager.commit_txns(&payload, &compute_res, block.timestamp_usecs()).await {
+                error!("Failed to notify mempool: {:?}", e);
             }
-            None => {}
         }
 
         // 4. commit to state_computer
@@ -220,7 +215,7 @@ impl ChainManager {
         }
 
         // 5. save block
-        let mut blocks: Vec<Block<Vec<SignedTransaction>>> = Vec::new();
+        let mut blocks: Vec<Block<BlockPayloadExt>> = Vec::new();
         blocks.push(block.clone());
         let mut qcs = Vec::new();
         qcs.push(block.quorum_cert().clone());

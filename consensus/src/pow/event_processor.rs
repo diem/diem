@@ -16,7 +16,7 @@ use crate::{
     state_computer::ExecutionProxy,
     txn_manager::MempoolProxy,
 };
-use consensus_types::{block::Block, quorum_cert::QuorumCert, vote_data::VoteData};
+use consensus_types::{block::{Block, BlockType}, quorum_cert::QuorumCert, vote_data::VoteData};
 use std::collections::{HashSet, BTreeMap};
 use crypto::HashValue;
 use futures::{executor::block_on, stream::select, SinkExt, StreamExt, TryStreamExt};
@@ -61,9 +61,10 @@ use crate::chained_bft::consensusdb::BlockIndex;
 use crate::pow::chain_manager::{ChainManager, BlockChain};
 use crate::pow::sync_manager::{SyncManager, BlockRetrievalResponse};
 use crate::pow::mint_manager::MintManager;
+use crate::pow::payload_ext::BlockPayloadExt;
 
 pub struct EventProcessor {
-    block_cache_sender: mpsc::Sender<Block<Vec<SignedTransaction>>>,
+    block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
     block_store: Arc<ConsensusDB>,
     network_sender: ConsensusNetworkSender,
     network_events: Option<ConsensusNetworkEvents>,
@@ -74,7 +75,7 @@ pub struct EventProcessor {
     author: AccountAddress,
 
     //sync
-    sync_block_sender: mpsc::Sender<(PeerId, BlockRetrievalResponse<Vec<SignedTransaction>>)>,
+    sync_block_sender: mpsc::Sender<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>,
     sync_signal_sender: mpsc::Sender<(PeerId, u64)>,
     pub sync_manager: Arc<AtomicRefCell<SyncManager>>,
 
@@ -107,8 +108,8 @@ impl EventProcessor {
         let genesis_txn_vec = match genesis_txn {
             Transaction::UserTransaction(signed_txn) => {
                 vec![signed_txn].to_vec()
-            },
-            _ => {vec![]}
+            }
+            _ => { vec![] }
         };
 
         let chain_manager = Arc::new(AtomicRefCell::new(ChainManager::new(Some(block_cache_receiver), Arc::clone(&block_store),
@@ -134,18 +135,14 @@ impl EventProcessor {
             sync_block_sender,
             sync_signal_sender,
             sync_manager,
-            genesis_txn:genesis_txn_vec,
+            genesis_txn: genesis_txn_vec,
             pow_srv,
             chain_manager,
             mint_manager,
         }
     }
 
-    async fn process_new_block_msg(block_cache_sender: &mut mpsc::Sender<Block<Vec<SignedTransaction>>>, new_block: Block<Vec<SignedTransaction>>, pow_srv: Arc<PowService>) {
-//        let verify = pow_srv.verify(&pow_ctx.header_hash, pow_ctx.nonce, Proof { solve: pow_ctx.solve });
-//        if verify == false {
-//            // Not valid block, pass it.
-//        }
+    async fn process_new_block_msg(block_cache_sender: &mut mpsc::Sender<Block<BlockPayloadExt>>, new_block: Block<BlockPayloadExt>, pow_srv: Arc<PowService>) {
         // insert into block_cache_sender
         debug!("parent block hash: {:?}, new block hash: {:?}", new_block.parent_id(), new_block.id());
         if let Err(err) = block_cache_sender.send(new_block).await {
@@ -192,8 +189,13 @@ impl EventProcessor {
 
                         match msg.clone() {
                             ConsensusMsg_oneof::NewBlock(new_block) => {
-                                //TODO:verify block
-                                let block: Block<Vec<SignedTransaction>> = new_block.try_into().expect("parse block pb err.");
+                                //TODO:verify block and sign
+                                let block: Block<BlockPayloadExt> = Block::try_from(new_block).expect("parse block pb err.");
+
+                                let payload = block.payload().expect("payload is none");
+                                let verify = pow_srv.verify(block.quorum_cert().ledger_info().ledger_info().hash().as_ref(),
+                                               payload.nonce, Proof { solve: payload.solve.clone() });
+
                                 if self_peer_id != peer_id {
                                     let height = chain_manager.borrow().chain_height().await;
                                     if height < block.round() {
@@ -203,7 +205,7 @@ impl EventProcessor {
                                     }
                                 }
                                 Self::process_new_block_msg(&mut block_cache_sender, block, pow_srv.clone()).await
-                            },
+                            }
                             ConsensusMsg_oneof::RequestBlock(req_block) => {
                                 let mut blocks = vec![];
                                 let mut latest_block = if req_block.block_id.len() > 0 {
@@ -214,7 +216,7 @@ impl EventProcessor {
                                 for i in 0..req_block.num_blocks {
                                     let hash = match latest_block {
                                         Some(child_hash) => {
-                                            let child = block_db.get_block_by_hash::<Vec<SignedTransaction>>(&child_hash);
+                                            let child = block_db.get_block_by_hash::<BlockPayloadExt>(&child_hash);
                                             match child {
                                                 Some(c) => {
                                                     child_hash
@@ -232,7 +234,7 @@ impl EventProcessor {
                                     if hash == *PRE_GENESIS_BLOCK_ID {
                                         break;
                                     }
-                                    let block = block_db.get_block_by_hash::<Vec<SignedTransaction>>(&hash).expect("block not exist.");
+                                    let block = block_db.get_block_by_hash::<BlockPayloadExt>(&hash).expect("block not exist.");
                                     latest_block = Some(block.parent_id());
                                     blocks.push(block.into());
 
@@ -307,7 +309,7 @@ impl EventProcessor {
     }
 
     pub async fn broadcast_consensus_msg(network_sender: &mut ConsensusNetworkSender, self_flag: bool,
-                                         self_peer_id: PeerId, self_sender: &mut channel::Sender<failure::Result<Event<ConsensusMsg>>>, msg: ConsensusMsg, pow_ctx: Option<PowContext>) {
+                                         self_peer_id: PeerId, self_sender: &mut channel::Sender<failure::Result<Event<ConsensusMsg>>>, msg: ConsensusMsg) {
         if self_flag {
             //let event_msg = Ok(Event::PowMessage((self_peer_id, pow_ctx.expect("Pow context not set"), msg.clone())));
             let event_msg = Ok(Event::Message((self_peer_id, msg.clone())));

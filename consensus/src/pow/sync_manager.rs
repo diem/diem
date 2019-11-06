@@ -31,13 +31,14 @@ use network::{
 };
 use futures::SinkExt;
 use crypto::hash::CryptoHash;
+use crate::pow::payload_ext::BlockPayloadExt;
 
 pub struct SyncManager {
     author: AccountAddress,
     self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
     network_sender: ConsensusNetworkSender,
-    block_cache_sender: mpsc::Sender<Block<Vec<SignedTransaction>>>,
-    sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<Vec<SignedTransaction>>)>>,
+    block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
+    sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>>,
     sync_signal_receiver: Option<mpsc::Receiver<(PeerId, u64)>>,
     sync_state_sender: mpsc::Sender<SyncState>,
     sync_state_receiver: Option<mpsc::Receiver<SyncState>>,
@@ -49,8 +50,8 @@ impl SyncManager {
     pub fn new(author: AccountAddress,
                self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
                network_sender: ConsensusNetworkSender,
-               block_cache_sender: mpsc::Sender<Block<Vec<SignedTransaction>>>,
-               sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<Vec<SignedTransaction>>)>>,
+               block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
+               sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>>,
                sync_signal_receiver: Option<mpsc::Receiver<(PeerId, u64)>>,
                chain_manager: Arc<AtomicRefCell<ChainManager>>) -> Self {
         let (sync_state_sender, sync_state_receiver) = mpsc::channel(10);
