@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod accumulator;
+pub mod proof_error;
+#[macro_use]
+pub mod ensure_proof;
 pub mod definition;
 pub mod position;
 #[cfg(any(test, feature = "fuzzing"))]

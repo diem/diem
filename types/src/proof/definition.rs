@@ -14,6 +14,7 @@ use super::{
 use crate::{
     account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfo,
+    proof::proof_error::ProofError,
     transaction::{TransactionInfo, Version},
 };
 use failure::prelude::*;
@@ -220,6 +221,16 @@ pub struct SparseMerkleProof {
     /// All siblings in this proof, including the default ones. Siblings are ordered from the bottom
     /// level to the root level.
     siblings: Vec<HashValue>,
+}
+
+impl std::fmt::Display for SparseMerkleProof {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "SparseMerkleProof (leaf: {:?}, siblings: {:?})",
+            self.leaf, self.siblings
+        )
+    }
 }
 
 impl SparseMerkleProof {
