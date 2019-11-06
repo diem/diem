@@ -16,10 +16,9 @@ macro_rules! ensure_proof {
                 if !($cond) {
                     return Err(ProofError::new($proof.to_string(), $e.to_string()))?;
                 }
-                return Ok(());
             }
         }
-        ensure!($cond, $e)
+        ensure!($cond, $e);
     };
     ($proof:ident, $cond:expr, $fmt:expr, $($arg:tt)+) => {
         match $proof {
@@ -27,9 +26,8 @@ macro_rules! ensure_proof {
                 if !($cond) {
                     return Err(ProofError::new($proof.to_string(), format!($fmt, $($arg)+)))?;
                 }
-                return Ok(());
             }
         }
-        ensure!($cond, $fmt, $($arg)+)
+        ensure!($cond, $fmt, $($arg)+);
     };
 }

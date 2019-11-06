@@ -266,7 +266,8 @@ impl SparseMerkleProof {
         element_key: HashValue,
         element_blob: Option<&AccountStateBlob>,
     ) -> Result<()> {
-        ensure!(
+        ensure_proof!(
+            self,
             self.siblings.len() <= HashValue::LENGTH_IN_BITS,
             "Sparse Merkle Tree proof has more than {} ({}) siblings.",
             HashValue::LENGTH_IN_BITS,
@@ -278,14 +279,16 @@ impl SparseMerkleProof {
                 // This is an inclusion proof, so the key and value hash provided in the proof
                 // should match element_key and element_value_hash. `siblings` should prove the
                 // route from the leaf node to the root.
-                ensure!(
+                ensure_proof!(
+                    self,
                     element_key == proof_key,
                     "Keys do not match. Key in proof: {:x}. Expected key: {:x}.",
                     proof_key,
                     element_key
                 );
                 let hash = blob.hash();
-                ensure!(
+                ensure_proof!(
+                    self,
                     hash == proof_value_hash,
                     "Value hashes do not match. Value hash in proof: {:x}. \
                      Expected value hash: {:x}",
@@ -299,15 +302,17 @@ impl SparseMerkleProof {
                 // representing `element_key` is inserted, it will break a currently existing leaf
                 // node represented by `proof_key` into a branch. `siblings` should prove the
                 // route from that leaf node to the root.
-                ensure!(
+                ensure_proof!(
+                    self,
                     element_key != proof_key,
-                    "Expected non-inclusion proof, but key exists in proof.",
+                    "Expected non-inclusion proof, but key exists in proof."
                 );
-                ensure!(
+                ensure_proof!(
+                    self,
                     element_key.common_prefix_bits_len(proof_key) >= self.siblings.len(),
                     "Key would not have ended up in the subtree where the provided key in proof \
                      is the only existing key, if it existed. So this is not a valid \
-                     non-inclusion proof.",
+                     non-inclusion proof."
                 );
             }
             (None, None) => {
@@ -338,7 +343,8 @@ impl SparseMerkleProof {
                     SparseMerkleInternalNode::new(hash, *sibling_hash).hash()
                 }
             });
-        ensure!(
+        ensure_proof!(
+            self,
             actual_root_hash == expected_root_hash,
             "Root hashes do not match. Actual root hash: {:x}. Expected root hash: {:x}.",
             actual_root_hash,
