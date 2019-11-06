@@ -1,10 +1,9 @@
 use libra_types::transaction::SignedTransaction;
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-    SimpleDeserializer, SimpleSerializer,
+    SimpleSerializer,
 };
 use failure::prelude::*;
-use std::convert::TryFrom;
 use std::fmt;
 use serde::{Deserialize, Serialize};
 

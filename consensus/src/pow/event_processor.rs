@@ -1,64 +1,30 @@
 use failure::prelude::*;
-use config::config::NodeConfig;
 use network::{
     proto::{
-        ConsensusMsg, ConsensusMsg_oneof::{self, *}, Block as BlockProto, RequestBlock, RespondBlock, BlockRetrievalStatus,
+        ConsensusMsg, ConsensusMsg_oneof::{self}, RequestBlock, RespondBlock,
     },
-    validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError}};
-use std::{sync::Arc, thread};
-use vm_runtime::MoveVM;
-use executor::Executor;
-use state_synchronizer::StateSyncClient;
+    validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event}};
+use std::{sync::Arc};
 use crate::state_replication::{StateComputer, TxnManager};
 use libra_types::transaction::{SignedTransaction, Transaction};
-use crate::{
-    consensus_provider::ConsensusProvider,
-    state_computer::ExecutionProxy,
-    txn_manager::MempoolProxy,
-};
-use consensus_types::{block::{Block, BlockType}, quorum_cert::QuorumCert, vote_data::VoteData};
-use std::collections::{HashSet, BTreeMap};
+use consensus_types::block::Block;
 use crypto::HashValue;
-use futures::{executor::block_on, stream::select, SinkExt, StreamExt, TryStreamExt};
-use libra_types::ledger_info::{LedgerInfo, LedgerInfoWithSignatures};
+use futures::{stream::select, SinkExt, StreamExt, TryStreamExt};
 use crate::chained_bft::consensusdb::ConsensusDB;
-use std::time::{Duration, Instant};
-use rand::{self, Rng};
-use tokio::runtime::{self, TaskExecutor};
+use tokio::runtime::{TaskExecutor};
 use logger::prelude::*;
-use libra_mempool::proto::mempool::MempoolClient;
-use executor::{StateComputeResult, ExecutedState};
-use libra_types::transaction::TransactionStatus;
-use libra_types::vm_error::{VMStatus, StatusCode};
 use crate::counters;
-use std::{convert::{TryFrom, From}, path::PathBuf};
+use std::{convert::TryFrom, path::PathBuf};
 use crypto::hash::CryptoHash;
-use libra_types::crypto_proxies::ValidatorSigner;
 use libra_types::account_address::AccountAddress;
 use channel;
 use atomic_refcell::AtomicRefCell;
 use prost_ext::MessageExt;
 use crypto::hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID};
 use futures::{channel::mpsc};
-use std::sync::atomic::{AtomicBool, Ordering};
-use libra_types::validator_set::ValidatorSet;
 use libra_types::PeerId;
-use std::collections::HashMap;
-use bytes::Bytes;
-use futures_locks::{Mutex, RwLock};
-use {
-    futures::{
-        compat::Future01CompatExt,
-        future::{self, FutureExt, TryFutureExt},
-    },
-};
-use std::thread::sleep;
-use tokio::timer::Interval;
-use std::convert::TryInto;
 use cuckoo::consensus::{PowCuckoo, PowService, Proof};
-use network::validator_network::PowContext;
-use crate::chained_bft::consensusdb::BlockIndex;
-use crate::pow::chain_manager::{ChainManager, BlockChain};
+use crate::pow::chain_manager::{ChainManager};
 use crate::pow::sync_manager::{SyncManager, BlockRetrievalResponse};
 use crate::pow::mint_manager::MintManager;
 use crate::pow::payload_ext::BlockPayloadExt;
@@ -68,8 +34,6 @@ pub struct EventProcessor {
     block_store: Arc<ConsensusDB>,
     network_sender: ConsensusNetworkSender,
     network_events: Option<ConsensusNetworkEvents>,
-    txn_manager: Arc<dyn TxnManager<Payload=Vec<SignedTransaction>>>,
-    state_computer: Arc<dyn StateComputer<Payload=Vec<SignedTransaction>>>,
     self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
     self_receiver: Option<channel::Receiver<failure::Result<Event<ConsensusMsg>>>>,
     author: AccountAddress,
@@ -79,8 +43,7 @@ pub struct EventProcessor {
     sync_signal_sender: mpsc::Sender<(PeerId, u64)>,
     pub sync_manager: Arc<AtomicRefCell<SyncManager>>,
 
-    genesis_txn: Vec<SignedTransaction>,
-    pow_srv: Arc<PowService>,
+    pow_srv: Arc<dyn PowService>,
     pub chain_manager: Arc<AtomicRefCell<ChainManager>>,
 
     pub mint_manager: Arc<MintManager>,
@@ -100,7 +63,6 @@ impl EventProcessor {
         let (sync_block_sender, sync_block_receiver) = mpsc::channel(10);
         let (sync_signal_sender, sync_signal_receiver) = mpsc::channel(1024);
 
-        let mint_block_vec = Arc::new(AtomicRefCell::new(vec![*GENESIS_BLOCK_ID]));
         let block_store = Arc::new(ConsensusDB::new(storage_dir));
 
         let pow_srv = Arc::new(PowCuckoo::new(6, 8));
@@ -119,7 +81,7 @@ impl EventProcessor {
                                                                         block_cache_sender.clone(), Some(sync_block_receiver),
                                                                         Some(sync_signal_receiver), chain_manager.clone())));
 
-        let mint_manager = Arc::new(MintManager::new(txn_manager.clone(), state_computer.clone(), block_cache_sender.clone(), network_sender.clone(), author.clone(),
+        let mint_manager = Arc::new(MintManager::new(txn_manager.clone(), state_computer.clone(), network_sender.clone(), author.clone(),
                                                      self_sender.clone(), block_store.clone(), pow_srv.clone(), genesis_txn_vec.clone(), chain_manager.clone()));
 
         EventProcessor {
@@ -127,29 +89,16 @@ impl EventProcessor {
             block_store,
             network_sender,
             network_events: Some(network_events),
-            txn_manager,
-            state_computer,
             self_sender,
             self_receiver: Some(self_receiver),
             author,
             sync_block_sender,
             sync_signal_sender,
             sync_manager,
-            genesis_txn: genesis_txn_vec,
             pow_srv,
             chain_manager,
             mint_manager,
         }
-    }
-
-    async fn process_new_block_msg(block_cache_sender: &mut mpsc::Sender<Block<BlockPayloadExt>>, new_block: Block<BlockPayloadExt>, pow_srv: Arc<PowService>) {
-        // insert into block_cache_sender
-        debug!("parent block hash: {:?}, new block hash: {:?}", new_block.parent_id(), new_block.id());
-        if let Err(err) = block_cache_sender.send(new_block).await {
-            error!("send new block err: {:?}", err);
-        }
-
-        //TODO:send other peers
     }
 
     pub fn event_process(&mut self, executor: TaskExecutor) {
@@ -166,12 +115,12 @@ impl EventProcessor {
 
         let mut all_events = select(network_events, own_msgs);
         let block_db = self.block_store.clone();
-        let mut network_sender = self.network_sender.clone();
+        let network_sender = self.network_sender.clone();
         let self_peer_id = self.author;
-        let mut self_sender = self.self_sender.clone();
+        let self_sender = self.self_sender.clone();
         let chain_manager = self.chain_manager.clone();
 
-        let mut sync_signal_sender = self.sync_signal_sender.clone();
+        let sync_signal_sender = self.sync_signal_sender.clone();
         let mut sync_block_sender = self.sync_block_sender.clone();
         let mut block_cache_sender = self.block_cache_sender.clone();
         let pow_srv = self.pow_srv.clone();
@@ -193,7 +142,7 @@ impl EventProcessor {
                                 let block: Block<BlockPayloadExt> = Block::try_from(new_block).expect("parse block pb err.");
 
                                 let payload = block.payload().expect("payload is none");
-                                let verify = pow_srv.verify(block.quorum_cert().ledger_info().ledger_info().hash().as_ref(),
+                                let _verify = pow_srv.verify(block.quorum_cert().ledger_info().ledger_info().hash().as_ref(),
                                                payload.nonce, Proof { solve: payload.solve.clone() });
 
                                 if self_peer_id != peer_id {
@@ -204,21 +153,23 @@ impl EventProcessor {
                                         }
                                     }
                                 }
-                                Self::process_new_block_msg(&mut block_cache_sender, block, pow_srv.clone()).await
+
+                                if let Err(err) = (&mut block_cache_sender).send(block).await {
+                                    error!("send new block err: {:?}", err);
+                                }
                             }
                             ConsensusMsg_oneof::RequestBlock(req_block) => {
                                 let mut blocks = vec![];
                                 let mut latest_block = if req_block.block_id.len() > 0 {
                                     Some(HashValue::from_slice(req_block.block_id.as_ref()).unwrap())
                                 } else { None };
-                                println!("RequestBlock get chain lock");
                                 let mut exist_flag = false;
-                                for i in 0..req_block.num_blocks {
+                                for _i in 0..req_block.num_blocks {
                                     let hash = match latest_block {
                                         Some(child_hash) => {
                                             let child = block_db.get_block_by_hash::<BlockPayloadExt>(&child_hash);
                                             match child {
-                                                Some(c) => {
+                                                Some(_c) => {
                                                     child_hash
                                                 }
                                                 None => {
@@ -242,8 +193,6 @@ impl EventProcessor {
                                         break;
                                     }
                                 }
-
-                                println!("RequestBlock drop chain lock");
 
                                 let status = if exist_flag {
                                     //BlockRetrievalStatus::IDNOTFOUND
@@ -290,7 +239,7 @@ impl EventProcessor {
                             }
                         }
                     }
-                    Event::RpcRequest((peer_id, msg, callback)) => {
+                    Event::RpcRequest((peer_id, _msg, _callback)) => {
                         debug!("RpcRequest from {:?} ", peer_id);
                     }
                     Event::NewPeer(peer_id) => {
@@ -298,9 +247,6 @@ impl EventProcessor {
                     }
                     Event::LostPeer(peer_id) => {
                         debug!("Peer {:?} disconnected", peer_id);
-                    }
-                    Event::PowMessage((peer_id, pow_ctx, message)) => {
-                        debug!("Recive message without handle");
                     }
                 }
             }

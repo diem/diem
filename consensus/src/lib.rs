@@ -16,7 +16,6 @@ extern crate failure;
 #[macro_use]
 extern crate debug_interface;
 
-mod base;
 mod chained_bft;
 mod pow;
 

@@ -366,7 +366,6 @@ impl<T, S> NetworkTask<T, S>
                 Event::LostPeer(peer_id) => {
                     debug!("Peer {} disconnected", peer_id);
                 }
-                _ => { debug!("Event not handle"); }
             }
         }
     }

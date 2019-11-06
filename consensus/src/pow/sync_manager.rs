@@ -1,31 +1,19 @@
 use failure::prelude::*;
 use std::sync::Arc;
-use futures_locks::{Mutex, RwLock};
-use std::collections::HashMap;
 use crypto::HashValue;
-use libra_types::transaction::SignedTransaction;
-use crate::chained_bft::consensusdb::{BlockIndex, ConsensusDB};
 use atomic_refcell::AtomicRefCell;
 use libra_types::PeerId;
-use tokio::runtime::{self, TaskExecutor};
-use crate::state_replication::{StateComputer, TxnManager};
+use tokio::runtime::{TaskExecutor};
 use futures::{channel::mpsc, StreamExt};
 use consensus_types::block::Block;
-use {
-    futures::{
-        compat::Future01CompatExt,
-        future::{self, FutureExt, TryFutureExt},
-    },
-};
 use channel;
 use logger::prelude::*;
-use crypto::hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID};
 use crate::pow::chain_manager::ChainManager;
 use libra_types::account_address::AccountAddress;
 use crate::pow::event_processor::EventProcessor;
 use network::{
     proto::{
-        ConsensusMsg, ConsensusMsg_oneof::{self, *}, Block as BlockProto, RequestBlock, RespondBlock, BlockRetrievalStatus,
+        ConsensusMsg, ConsensusMsg_oneof::{self}, RequestBlock, BlockRetrievalStatus,
     },
     validator_network::{Event, ConsensusNetworkSender}
 };
@@ -62,12 +50,12 @@ impl SyncManager {
     pub fn sync_block_msg(&mut self, executor: TaskExecutor) {
         let mut sync_block_receiver = self.sync_block_receiver.take().expect("sync_block_receiver is none.");
         let mut sync_signal_receiver = self.sync_signal_receiver.take().expect("sync_signal_receiver is none.");
-        let mut sync_network_sender = self.network_sender.clone();
-        let mut sync_state_sender = self.sync_state_sender.clone();
+        let sync_network_sender = self.network_sender.clone();
+        let sync_state_sender = self.sync_state_sender.clone();
         let mut sync_state_receiver = self.sync_state_receiver.take().expect("sync_state_receiver is none.");
         let mut sync_block_cache_sender = self.block_cache_sender.clone();
         let self_peer_id = self.author.clone();
-        let mut sync_self_sender = self.self_sender.clone();
+        let sync_self_sender = self.self_sender.clone();
         let chain_manager = self.chain_manager.clone();
 
         let sync_fut = async move {
@@ -99,7 +87,6 @@ impl SyncManager {
                         let mut end_block = None;
                         if blocks.len() > 0 {
                             blocks.reverse();
-                            println!("sync block get chain lock");
                             for block in blocks {
                                 let hash = block.hash();
                                 if chain_manager.borrow().block_exist(&hash).await {
@@ -107,10 +94,9 @@ impl SyncManager {
                                     break;
                                 } else {
                                     end_block = Some(hash);
-                                    sync_block_cache_sender.send(block).await;
+                                    sync_block_cache_sender.send(block).await.expect("send block err.");
                                 }
                             }
-                            println!("sync block drop chain lock");
                         }
 
                         let state = match status {

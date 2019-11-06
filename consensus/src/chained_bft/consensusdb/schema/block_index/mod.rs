@@ -5,12 +5,9 @@ use schemadb::{
 };
 use super::ensure_slice_len_eq;
 use failure::prelude::*;
-use std::convert::TryInto;
 use std::mem::size_of;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use std::convert::TryFrom;
+use byteorder::{BigEndian, ReadBytesExt};
 use std::io::Write;
-use std::convert::Into;
 use super::BLOCK_INDEX_CF_NAME;
 
 define_schema!(

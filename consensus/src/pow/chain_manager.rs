@@ -7,17 +7,15 @@ use libra_types::transaction::SignedTransaction;
 use crate::chained_bft::consensusdb::{BlockIndex, ConsensusDB};
 use atomic_refcell::AtomicRefCell;
 use libra_types::PeerId;
-use tokio::runtime::{self, TaskExecutor};
+use tokio::runtime::{TaskExecutor};
 use crate::state_replication::{StateComputer, TxnManager};
 use futures::{channel::mpsc, StreamExt};
 use consensus_types::block::Block;
 use {
     futures::{
         compat::Future01CompatExt,
-        future::{self, FutureExt, TryFutureExt},
     },
 };
-use channel;
 use logger::prelude::*;
 use crypto::hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID};
 use crate::pow::payload_ext::BlockPayloadExt;
@@ -45,7 +43,7 @@ impl ChainManager {
         index_map.insert(genesis_height, vec![genesis_block_index.clone()]);
         let mut hash_height_index = HashMap::new();
         hash_height_index.insert(*GENESIS_BLOCK_ID, (genesis_height, 0));
-        let mut main_chain = AtomicRefCell::new(HashMap::new());
+        let main_chain = AtomicRefCell::new(HashMap::new());
         main_chain.borrow_mut().insert(genesis_height, genesis_block_index);
         let init_block_chain = BlockChain { height: genesis_height, indexes:index_map, hash_height_index, main_chain };
         let block_chain = Arc::new(RwLock::new(init_block_chain));
@@ -115,7 +113,7 @@ impl ChainManager {
                                         save_flag = true;
                                     }
                                 }
-                                Err(e) => {println!("{:?}", e)},
+                                Err(e) => {error!("{:?}", e)},
                             }
                         } else {
                             //save orphan block
@@ -142,9 +140,9 @@ impl ChainManager {
                                             let rollback_len = rollback_vec.len();
                                             let ancestor_block_id = chain_lock.find_index_by_block_hash(rollback_vec.get(rollback_len - 1).expect("latest_block_id err.")).expect("block index is none err.").parent_block_id;
 
-                                            //1. reset exector
-                                            state_computer.rollback(ancestor_block_id).await;
-                                            println!("rollback[ old root : {:?} , ancestor block id : {:?}]", old_root, ancestor_block_id);
+                                            //1. reset executor
+                                            state_computer.rollback(ancestor_block_id).await.expect("rollback failed.");
+                                            info!("rollback[ old root : {:?} , ancestor block id : {:?}]", old_root, ancestor_block_id);
 
                                             //2. add txn to mempool
 
@@ -169,7 +167,7 @@ impl ChainManager {
                                         for hash in main_chain_indexes {
                                             let (h, b_i) = chain_lock.find_height_and_block_index(hash);
                                             chain_lock.update_main_chain(h, b_i);
-                                            block_db.insert_block_index(h, b_i);
+                                            block_db.insert_block_index(h, b_i).expect("insert_block_index err.");
                                         }
                                     }
                                     None => {
@@ -178,13 +176,13 @@ impl ChainManager {
                                         blocks.push(block.clone());
                                         let mut qcs = Vec::new();
                                         qcs.push(block.quorum_cert().clone());
-                                        block_db.save_blocks_and_quorum_certificates(blocks, qcs);
+                                        block_db.save_blocks_and_quorum_certificates(blocks, qcs).expect("save_blocks err.");
                                     }
                                 }
                             }
 
                             drop(chain_lock);
-                            println!("save block drop chain lock");
+                            debug!("save block drop chain lock");
                         }
                     }
                 }
@@ -219,7 +217,7 @@ impl ChainManager {
         blocks.push(block.clone());
         let mut qcs = Vec::new();
         qcs.push(block.quorum_cert().clone());
-        block_db.save_blocks_and_quorum_certificates(blocks, qcs);
+        block_db.save_blocks_and_quorum_certificates(blocks, qcs).expect("save_blocks err.");
     }
 
     pub async fn chain_height(&self) -> u64 {
@@ -265,7 +263,7 @@ impl BlockChain {
     }
 
     pub fn print_block_chain_root(&self, peer_id:PeerId) {
-        let height = ((self.hash_height_index.len() - 1) as u64);
+        let height = (self.hash_height_index.len() - 1) as u64;
         for index in 0..height {
             info!("Main Chain Block, PeerId: {:?} , Height: {} , Block Root: {:?}", peer_id, height, self.main_chain.borrow().get(&index).expect("print block err."));
         }
@@ -336,7 +334,7 @@ impl BlockChain {
         let mut ancestors = vec![];
         let mut latest_hash = hash;
         let mut block_index = None;
-        for i in 0..100 {
+        for _i in 0..100 {
             let (height, index) = match self.find_height_index_by_block_hash(latest_hash) {
                 Some(h_i) => h_i,
                 None => return None
