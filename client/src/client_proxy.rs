@@ -17,6 +17,7 @@ use libra_types::{
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
+    proof::proof_error::ProofError,
     transaction::{
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
         parse_as_transaction_argument, RawTransaction, Script, SignedTransaction, Transaction,
@@ -846,7 +847,22 @@ impl ClientProxy {
                     None => (0, AccountStatus::Local),
                 },
                 Err(e) => {
-                    error!("Failed to get account state from validator, error: {:?}", e);
+                    // try downcasting error to ProofError
+
+                    let proof_error = e.downcast_ref::<ProofError>();
+                    if proof_error.is_some() {
+                        let proof_error = proof_error.unwrap();
+                        match proof_error {
+                            ProofError { .. } => {
+                                error!(
+                                    "Proof failure (msg: {:?}, failed proof: {:?})",
+                                    proof_error.msg, proof_error.proof
+                                );
+                            }
+                        }
+                    } else {
+                        error!("Failed to get account state from validator, error: {:?}", e);
+                    }
                     (0, AccountStatus::Unknown)
                 }
             }
