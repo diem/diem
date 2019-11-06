@@ -101,33 +101,33 @@ pub fn impl_enum_validkey(name: &Ident, variants: &DataEnum) -> TokenStream {
 }
 
 pub fn get_type_from_attrs(attrs: &[syn::Attribute], attr_name: &str) -> syn::Result<syn::LitStr> {
-    for attr in attrs {
-        if !attr.path.is_ident(attr_name) {
-            continue;
-        }
-        match attr.parse_meta()? {
-            syn::Meta::NameValue(meta) => {
-                if let syn::Lit::Str(lit) = &meta.lit {
-                    return Ok(lit.clone());
-                } else {
-                    return Err(syn::Error::new_spanned(
-                        meta,
-                        &format!("Could not parse {} attribute", attr_name)[..],
-                    ));
+    attrs
+        .iter()
+        .find(|attr| attr.path.is_ident(attr_name))
+        .map_or_else(
+            || {
+                Err(syn::Error::new(
+                    proc_macro2::Span::call_site(),
+                    format!("Could not find attribute {}", attr_name),
+                ))
+            },
+            |attr| match attr.parse_meta()? {
+                syn::Meta::NameValue(meta) => {
+                    if let syn::Lit::Str(lit) = &meta.lit {
+                        Ok(lit.clone())
+                    } else {
+                        Err(syn::Error::new_spanned(
+                            meta,
+                            &format!("Could not parse {} attribute", attr_name)[..],
+                        ))
+                    }
                 }
-            }
-            bad => {
-                return Err(syn::Error::new_spanned(
+                bad => Err(syn::Error::new_spanned(
                     bad,
                     &format!("Could not parse {} attribute", attr_name)[..],
-                ))
-            }
-        }
-    }
-    Err(syn::Error::new(
-        proc_macro2::Span::call_site(),
-        format!("Could not find attribute {}", attr_name),
-    ))
+                )),
+            },
+        )
 }
 
 pub fn impl_enum_publickey(
