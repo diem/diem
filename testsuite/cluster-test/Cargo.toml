@@ -21,7 +21,6 @@ rusoto_core = {version = "0.41.0", features=["rustls"], default_features = false
 rusoto_ec2 = {version = "0.41.0", features=["rustls"], default_features = false}
 rusoto_ecr = {version = "0.41.0", features=["rustls"], default_features = false}
 rusoto_ecs = {version = "0.41.0", features=["rustls"], default_features = false}
-rusoto_kinesis = {version = "0.41.0", features=["rustls"], default_features = false}
 rusoto_logs = {version = "0.41.0", features=["rustls"], default_features = false}
 serde_json = "1.0"
 termion = "1.5.3"
