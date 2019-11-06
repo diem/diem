@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{borrow::Cow, path::Path};
+use std::{borrow::Cow, convert, ffi::OsStr, path::Path};
 
 static LICENSE_HEADER: &str = "Copyright (c) The Libra Core Contributors\n\
                                SPDX-License-Identifier: Apache-2.0\n\
@@ -14,18 +14,15 @@ pub(super) fn has_license_header(file: &Path, contents: &str) -> Result<(), Cow<
         Proto,
     }
 
-    let file_type = if let Some(extension) = file.extension() {
-        if extension == "rs" {
-            FileType::Rust
-        } else if extension == "sh" {
-            FileType::Shell
-        } else if extension == "proto" {
-            FileType::Proto
-        } else {
-            return Ok(());
-        }
-    } else {
-        return Ok(());
+    let file_type = match file
+        .extension()
+        .map(OsStr::to_str)
+        .and_then(convert::identity)
+    {
+        Some("rs") => FileType::Rust,
+        Some("sh") => FileType::Shell,
+        Some("proto") => FileType::Proto,
+        _ => return Ok(()),
     };
 
     // Determine if the file is missing the license header
