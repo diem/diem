@@ -1,9 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{borrow::Cow, path::Path};
+use std::{borrow::Cow, convert, ffi::OsStr, path::Path, str};
 
-pub(super) fn has_newline_at_eof(_file: &Path, contents: &str) -> Result<(), Cow<'static, str>> {
+pub(super) fn has_newline_at_eof(file: &Path, contents: &str) -> Result<(), Cow<'static, str>> {
+    if skip_whitespace_checks(file) {
+        return Ok(());
+    }
+
     if !contents.ends_with('\n') {
         Err("missing a newline at EOF".into())
     } else {
@@ -12,9 +16,13 @@ pub(super) fn has_newline_at_eof(_file: &Path, contents: &str) -> Result<(), Cow
 }
 
 pub(super) fn has_trailing_whitespace(
-    _file: &Path,
+    file: &Path,
     contents: &str,
 ) -> Result<(), Cow<'static, str>> {
+    if skip_whitespace_checks(file) {
+        return Ok(());
+    }
+
     for (ln, line) in contents
         .lines()
         .enumerate()
@@ -36,4 +44,15 @@ pub(super) fn has_trailing_whitespace(
     }
 
     Ok(())
+}
+
+fn skip_whitespace_checks(file: &Path) -> bool {
+    match file
+        .extension()
+        .map(OsStr::to_str)
+        .and_then(convert::identity)
+    {
+        Some("exp") => true,
+        _ => false,
+    }
 }
