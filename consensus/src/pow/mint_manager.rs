@@ -29,7 +29,7 @@ use atomic_refcell::AtomicRefCell;
 use crate::pow::chain_manager::ChainManager;
 use crypto::hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID};
 use tokio::runtime::{self, TaskExecutor};
-use crate::pow::pow_consensus_provider::EventHandle;
+use crate::pow::event_processor::EventProcessor;
 use rand::Rng;
 use crypto::hash::CryptoHash;
 
@@ -149,7 +149,7 @@ impl MintManager {
                                         nonce,
                                         solve,
                                     };
-                                    EventHandle::broadcast_consensus_msg(&mut mint_network_sender, true, mint_author, &mut self_sender, msg, Some(pow_ctx)).await;
+                                    EventProcessor::broadcast_consensus_msg(&mut mint_network_sender, true, mint_author, &mut self_sender, msg, Some(pow_ctx)).await;
                                 }
                                 Err(e) => {
                                     println!("{:?}", e);

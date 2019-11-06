@@ -65,7 +65,6 @@ crypto = { path = "../crypto/crypto", features = ["testing"]}
 libra-types = { path = "../types", features = ["testing"]}
 vm_genesis = { path = "../language/vm/vm_genesis" }
 vm_validator = { path = "../vm_validator" }
-miner = { path = "miner" }
 [features]
 default = []
 fuzzing = []

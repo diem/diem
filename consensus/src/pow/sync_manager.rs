@@ -22,7 +22,7 @@ use logger::prelude::*;
 use crypto::hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID};
 use crate::pow::chain_manager::ChainManager;
 use libra_types::account_address::AccountAddress;
-use crate::pow::pow_consensus_provider::EventHandle;
+use crate::pow::event_processor::EventProcessor;
 use network::{
     proto::{
         ConsensusMsg, ConsensusMsg_oneof::{self, *}, Block as BlockProto, RequestBlock, RespondBlock, BlockRetrievalStatus,
@@ -77,7 +77,7 @@ impl SyncManager {
                         //TODO:timeout
                         let sync_block_req_msg = Self::sync_block_req(None);
 
-                        EventHandle::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
+                        EventProcessor::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
                     },
                     (sync_state) = sync_state_receiver.select_next_some() => {
                         match sync_state {
@@ -85,7 +85,7 @@ impl SyncManager {
                             },
                             SyncState::GOON((peer_id, hash)) => {
                                 let sync_block_req_msg = Self::sync_block_req(Some(hash));
-                                EventHandle::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
+                                EventProcessor::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
                             }
                         }
                     },
