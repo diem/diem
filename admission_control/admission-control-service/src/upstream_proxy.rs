@@ -172,7 +172,7 @@ fn pick_peer(peer_info: &HashMap<PeerId, bool>) -> Option<PeerId> {
 
 async fn submit_transaction<M, V>(
     request: SubmitTransactionRequest,
-    upstream_proxy_data: UpstreamProxyData<M, V>,
+    mut upstream_proxy_data: UpstreamProxyData<M, V>,
     peer_id: Option<PeerId>,
     callback: oneshot::Sender<failure::Result<SubmitTransactionResponse>>,
 ) where
@@ -223,7 +223,7 @@ async fn submit_transaction<M, V>(
 
 async fn submit_transaction_upstream<M, V>(
     request: SubmitTransactionRequest,
-    upstream_proxy_data: &UpstreamProxyData<M, V>,
+    upstream_proxy_data: &mut UpstreamProxyData<M, V>,
     peer_id: Option<PeerId>,
 ) -> failure::Result<SubmitTransactionResponse> {
     if let Some(peer_id) = peer_id {
@@ -241,7 +241,7 @@ async fn submit_transaction_upstream<M, V>(
 }
 
 async fn process_submit_transaction_request<M, V>(
-    upstream_proxy_data: UpstreamProxyData<M, V>,
+    mut upstream_proxy_data: UpstreamProxyData<M, V>,
     peer_id: Option<PeerId>,
     request: SubmitTransactionRequest,
     callback: oneshot::Sender<Result<Bytes, RpcError>>,
@@ -265,7 +265,7 @@ async fn process_submit_transaction_request<M, V>(
         RoleType::FullNode => {
             // node is not a validator, so send the transaction to upstream AC via networking stack
             if let Ok(response) =
-                submit_transaction_upstream(request, &upstream_proxy_data, peer_id).await
+                submit_transaction_upstream(request, &mut upstream_proxy_data, peer_id).await
             {
                 let ac_control_msg = AdmissionControlMsg {
                     message: Some(AdmissionControlMsg_oneof::SubmitTransactionResponse(
