@@ -9,7 +9,6 @@ pub mod experiments;
 pub mod github;
 pub mod health;
 pub mod instance;
-pub mod log_prune;
 pub mod prometheus;
 pub mod slack;
 pub mod suite;
