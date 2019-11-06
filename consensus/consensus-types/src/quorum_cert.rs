@@ -1,13 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{block_info::BlockInfo, vote_data::VoteData};
+use crate::vote_data::VoteData;
 use failure::prelude::*;
 use libra_crypto::{
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
 };
 use libra_types::{
+    block_info::BlockInfo,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
 };
@@ -66,11 +67,6 @@ impl QuorumCert {
         }
     }
 
-    #[cfg(any(test, feature = "fuzzing"))]
-    pub fn certificate_for_genesis() -> QuorumCert {
-        Self::certificate_for_genesis_from_ledger_info(&LedgerInfo::genesis(), *GENESIS_BLOCK_ID)
-    }
-
     /// QuorumCert for the genesis block deterministically generated from end-epoch LedgerInfo:
     /// - the ID of the block is determined by the generated genesis block.
     /// - the accumulator root hash of the LedgerInfo is set to the last executed state of previous
@@ -89,17 +85,8 @@ impl QuorumCert {
             ledger_info.timestamp_usecs(),
             ledger_info.next_validator_set().cloned(),
         );
-        let vote_data = VoteData::new(ancestor.clone(), ancestor);
-
-        let li = LedgerInfo::new(
-            ledger_info.version(),
-            ledger_info.transaction_accumulator_hash(),
-            vote_data.hash(),
-            genesis_id,
-            ledger_info.epoch() + 1,
-            ledger_info.timestamp_usecs(),
-            ledger_info.next_validator_set().cloned(),
-        );
+        let vote_data = VoteData::new(ancestor.clone(), ancestor.clone());
+        let li = LedgerInfo::new(ancestor, vote_data.hash());
 
         let signer = ValidatorSigner::genesis();
         let signature = signer

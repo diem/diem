@@ -4,7 +4,7 @@
 use crate::chained_bft::liveness::{
     proposer_election::ProposerElection, rotating_proposer_election::RotatingProposer,
 };
-use consensus_types::{block::Block, quorum_cert::QuorumCert};
+use consensus_types::{block::block_test_utils::certificate_for_genesis, block::Block};
 use libra_types::validator_signer::ValidatorSigner;
 
 #[test]
@@ -20,7 +20,7 @@ fn test_rotating_proposer() {
     // follow the round-robin rotation.
 
     // Test genesis and the next block
-    let quorum_cert = QuorumCert::certificate_for_genesis();
+    let quorum_cert = certificate_for_genesis();
 
     let good_proposal =
         Block::new_proposal(1, 1, 1, quorum_cert.clone(), &another_validator_signer);
@@ -60,7 +60,7 @@ fn test_rotating_proposer_with_three_contiguous_rounds() {
     // follow the round-robin rotation with 3 contiguous rounds.
 
     // Test genesis and the next block
-    let quorum_cert = QuorumCert::certificate_for_genesis();
+    let quorum_cert = certificate_for_genesis();
 
     let good_proposal = Block::new_proposal(1, 1, 1, quorum_cert.clone(), &chosen_validator_signer);
     let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &another_validator_signer);
@@ -96,7 +96,7 @@ fn test_fixed_proposer() {
     // from the chosen author.
 
     // Test genesis and the next block
-    let quorum_cert = QuorumCert::certificate_for_genesis();
+    let quorum_cert = certificate_for_genesis();
 
     let good_proposal = Block::new_proposal(1, 1, 1, quorum_cert.clone(), &chosen_validator_signer);
     let bad_proposal = Block::new_proposal(2, 1, 2, quorum_cert.clone(), &another_validator_signer);

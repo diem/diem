@@ -79,13 +79,16 @@ fn verify_validator_set_change_proof() {
             random_validator_verifier((*epoch + 1) as usize, None, true);
         let validator_set = Some((&next_verifier).into());
         let ledger_info = LedgerInfo::new(
-            42,
+            BlockInfo::new(
+                *epoch,
+                0,
+                HashValue::zero(),
+                HashValue::zero(),
+                42,
+                0,
+                validator_set,
+            ),
             HashValue::zero(),
-            HashValue::zero(),
-            HashValue::zero(),
-            *epoch,
-            0,
-            validator_set,
         );
         let signatures = current_signers
             .iter()
@@ -166,11 +169,12 @@ impl<Sig: Signature> From<ValidatorChangeEventWithProof<Sig>>
     }
 }
 
+#[allow(unused_imports)]
+use crate::block_info::BlockInfo;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::collection::vec;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
-
 #[cfg(any(test, feature = "fuzzing"))]
 prop_compose! {
     fn arb_validator_change_event_with_proof()(

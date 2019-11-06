@@ -3,12 +3,14 @@
 
 use crate::{ConsensusState, Error, SafetyRules};
 use consensus_types::{
-    accumulator_extension_proof::AccumulatorExtensionProof, block::Block, block_info::BlockInfo,
-    common::Round, quorum_cert::QuorumCert, timeout::Timeout, vote::Vote, vote_data::VoteData,
+    accumulator_extension_proof::AccumulatorExtensionProof,
+    block::block_test_utils::certificate_for_genesis, block::Block, common::Round,
+    quorum_cert::QuorumCert, timeout::Timeout, vote::Vote, vote_data::VoteData,
     vote_proposal::VoteProposal,
 };
 use libra_crypto::hash::{CryptoHash, HashValue, TransactionAccumulatorHasher};
 use libra_types::{
+    block_info::BlockInfo,
     crypto_proxies::ValidatorSigner,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
 };
@@ -78,12 +80,9 @@ fn make_proposal_with_parent(
     );
 
     let vote_data = VoteData::new(
-        BlockInfo::from_block(
-            parent.block(),
-            parent_output.root_hash(),
-            parent_output.version(),
-            None,
-        ),
+        parent
+            .block()
+            .gen_block_info(parent_output.root_hash(), parent_output.version(), None),
         parent.block().quorum_cert().certified_block().clone(),
     );
 
@@ -99,26 +98,18 @@ fn make_proposal_with_parent(
                         .executed_state_id(),
                 )
                 .unwrap();
-
-            LedgerInfo::new(
-                tree.version(),
-                tree.root_hash(),
-                vote_data.hash(),
-                committed.block().id(),
+            let commit_block_info = BlockInfo::new(
                 committed.block().epoch(),
+                committed.block().round(),
+                committed.block().id(),
+                tree.root_hash(),
+                tree.version(),
                 committed.block().timestamp_usecs(),
                 None,
-            )
+            );
+            LedgerInfo::new(commit_block_info, vote_data.hash())
         }
-        None => LedgerInfo::new(
-            0,
-            HashValue::zero(),
-            vote_data.hash(),
-            HashValue::zero(),
-            0,
-            0,
-            None,
-        ),
+        None => LedgerInfo::new(BlockInfo::empty(), vote_data.hash()),
     };
 
     let vote = Vote::new(
@@ -171,7 +162,7 @@ fn test_preferred_block_rule() {
     //
     // PB should change from genesis to b1 and then a2.
     let genesis_block = Block::<Round>::make_genesis_block();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let round = genesis_block.round();
 
     let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
@@ -243,7 +234,7 @@ fn test_voting_potential_commit_id() {
     // All the votes before a4 cannot produce any potential commits.
     // A potential commit for proposal a4 is a2, a potential commit for proposal a5 is a3.
     let genesis_block = Block::<Round>::make_genesis_block();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let round = genesis_block.round();
 
     let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
@@ -307,7 +298,7 @@ fn test_voting() {
     // a4 (old proposal)
     // b4 (round lower then round of pb. PB: a2, parent(b4)=b2)
     let genesis_block = Block::<Round>::make_genesis_block();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let round = genesis_block.round();
 
     let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
@@ -386,7 +377,7 @@ fn test_commit_rule_consecutive_rounds() {
     // a1 cannot be committed after a3 gathers QC because a1 and a2 are not consecutive
     // a2 can be committed after a4 gathers QC
     let genesis_block = Block::<Round>::make_genesis_block();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let round = genesis_block.round();
 
     let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);
@@ -447,7 +438,7 @@ fn test_bad_execution_output() {
     // evil_a3 attempts to append to a1 but fails append only check
     // a3 works as it properly extends a2
     let genesis_block = Block::<Round>::make_genesis_block();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let round = genesis_block.round();
 
     let a1 = make_proposal_with_qc(round + 1, genesis_qc.clone(), &validator_signer);

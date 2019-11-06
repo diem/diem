@@ -42,7 +42,6 @@
 //!     SilentDebug, PrivateKey, PublicKey, Signature, SigningKey, ValidKey, VerifyingKey,
 //! };
 //!
-//! # fn main() {
 //! /// Generic public key enum
 //! #[derive(
 //!     Debug, Clone, PartialEq, Eq, Hash, ValidKey, PublicKey, VerifyingKey,
@@ -76,7 +75,6 @@
 //!     /// BLS12-381 signature
 //!     BLS(BLS12381Signature),
 //! }
-//! # }
 //! ```
 
 extern crate proc_macro;

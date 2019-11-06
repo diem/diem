@@ -4,7 +4,6 @@
 use consensus_types::{
     block::Block,
     block_data::BlockData,
-    block_info::BlockInfo,
     common::{Payload, Round},
     quorum_cert::QuorumCert,
     timeout::Timeout,
@@ -15,6 +14,7 @@ use consensus_types::{
 use failure::Fail;
 use libra_crypto::hash::HashValue;
 use libra_types::{
+    block_info::BlockInfo,
     crypto_proxies::{Signature, ValidatorSigner},
     ledger_info::LedgerInfo,
 };
@@ -163,30 +163,6 @@ impl SafetyRules {
         }
     }
 
-    fn ledger_info_from_block_info(block_info: &BlockInfo) -> LedgerInfo {
-        LedgerInfo::new(
-            block_info.version(),
-            block_info.executed_state_id(),
-            HashValue::zero(),
-            block_info.id(),
-            block_info.epoch(),
-            block_info.timestamp_usecs(),
-            block_info.next_validator_set().cloned(),
-        )
-    }
-
-    fn empty_ledger_info() -> LedgerInfo {
-        LedgerInfo::new(
-            0,
-            HashValue::zero(),
-            HashValue::zero(),
-            HashValue::zero(),
-            0,
-            0,
-            None,
-        )
-    }
-
     /// Produces a LedgerInfo that either commits a block based upon the 3-chain commit rule
     /// or an empty LedgerInfo for no commit. The 3-chain commit rule is: B0 (as well as its
     /// prefix) can be committed if there exist certified blocks B1 and B2 that satisfy:
@@ -200,8 +176,11 @@ impl SafetyRules {
 
         let commit = block0 + 1 == block1 && block1 + 1 == block2;
         match commit {
-            true => Self::ledger_info_from_block_info(proposed_block.quorum_cert().parent_block()),
-            false => Self::empty_ledger_info(),
+            true => LedgerInfo::new(
+                proposed_block.quorum_cert().parent_block().clone(),
+                HashValue::zero(),
+            ),
+            false => LedgerInfo::new(BlockInfo::empty(), HashValue::zero()),
         }
     }
 
@@ -254,8 +233,7 @@ impl SafetyRules {
 
         Ok(Vote::new(
             VoteData::new(
-                BlockInfo::from_block(
-                    proposed_block,
+                proposed_block.gen_block_info(
                     new_tree.root_hash(),
                     new_tree.version(),
                     vote_proposal.next_validator_set().cloned(),

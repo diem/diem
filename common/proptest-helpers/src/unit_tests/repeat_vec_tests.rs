@@ -133,7 +133,7 @@ impl Counter {
     fn strategy() -> impl Strategy<Value = Self> {
         // Note that this isn't Just(Self::next()) because that will keep generating a
         // single value over and over again.
-        Self::next as (fn() -> Self)
+        Self::next as fn() -> Self
     }
 }
 

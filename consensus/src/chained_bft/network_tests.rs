@@ -7,11 +7,12 @@ use crate::chained_bft::{
 };
 use channel;
 use consensus_types::{
-    block::Block, block_info::BlockInfo, common::Author, proposal_msg::ProposalMsg,
-    quorum_cert::QuorumCert, sync_info::SyncInfo, vote::Vote, vote_data::VoteData,
+    block::block_test_utils::certificate_for_genesis, block::Block, common::Author,
+    proposal_msg::ProposalMsg, sync_info::SyncInfo, vote::Vote, vote_data::VoteData,
     vote_msg::VoteMsg,
 };
 use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};
+use libra_types::block_info::BlockInfo;
 use network::{
     interface::{NetworkNotification, NetworkRequest},
     proto::{ConsensusMsg, ConsensusMsg_oneof},
@@ -368,7 +369,7 @@ fn test_network_api() {
         ),
         test_utils::placeholder_sync_info(),
     );
-    let previous_qc = QuorumCert::certificate_for_genesis();
+    let previous_qc = certificate_for_genesis();
     let proposal = ProposalMsg::new(
         Block::new_proposal(0, 1, 0, previous_qc.clone(), &signers[0]),
         SyncInfo::new(previous_qc.clone(), previous_qc.clone(), None),

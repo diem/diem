@@ -6,8 +6,8 @@ use crate::chained_bft::persistent_storage::{
 };
 
 use consensus_types::{
-    block::Block, common::Payload, quorum_cert::QuorumCert,
-    timeout_certificate::TimeoutCertificate, vote::Vote,
+    block::block_test_utils::certificate_for_genesis, block::Block, common::Payload,
+    quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use failure::Result;
 use libra_config::config::{NodeConfig, NodeConfigHelpers};
@@ -42,7 +42,7 @@ impl<T: Payload> MockStorage<T> {
         MockStorage {
             shared_storage,
             storage_ledger: Mutex::new(
-                QuorumCert::certificate_for_genesis()
+                certificate_for_genesis()
                     .ledger_info()
                     .ledger_info()
                     .clone(),
@@ -177,7 +177,7 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
         storage
             .save_tree(
                 vec![Block::make_genesis_block()],
-                vec![QuorumCert::certificate_for_genesis()],
+                vec![certificate_for_genesis()],
             )
             .unwrap();
         (
@@ -221,7 +221,7 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
 
     fn start(_: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
         let genesis = Block::make_genesis_block();
-        let genesis_qc = QuorumCert::certificate_for_genesis();
+        let genesis_qc = certificate_for_genesis();
         (
             Arc::new(EmptyStorage),
             RecoveryData::new(

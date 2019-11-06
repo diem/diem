@@ -12,6 +12,7 @@ use grpcio::{EnvBuilder, ServerBuilder};
 use libra_config::config::{NodeConfig, NodeConfigHelpers};
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
 use libra_prost_ext::MessageExt;
+use libra_types::block_info::BlockInfo;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     crypto_proxies::LedgerInfoWithSignatures,
@@ -178,13 +179,16 @@ fn gen_ledger_info(
     timestamp_usecs: u64,
 ) -> LedgerInfoWithSignatures {
     let ledger_info = LedgerInfo::new(
-        version,
-        root_hash,
-        /* consensus_data_hash = */ HashValue::zero(),
-        commit_block_id,
-        /* epoch = */ 0,
-        timestamp_usecs,
-        None,
+        BlockInfo::new(
+            0,
+            0,
+            commit_block_id,
+            root_hash,
+            version,
+            timestamp_usecs,
+            None,
+        ),
+        HashValue::zero(),
     );
     LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
 }

@@ -83,7 +83,6 @@ pub enum SecurityEvent {
 ///     Error,
 /// }
 ///
-/// pub fn main() {
 ///     security_log(SecurityEvent::InvalidTransactionAC)
 ///         .error(&TestError::Error)
 ///         .data(&SampleData {
@@ -93,7 +92,6 @@ pub enum SecurityEvent {
 ///         .data("additional payload")
 ///         .backtrace(100)
 ///         .log();
-/// }
 /// ```
 /// In this example, `security_log()` logs an event of type `SecurityEvent::InvalidTransactionAC`,
 /// having `TestError::Error` as application error, a `SimpleData` struct and a `String` as
