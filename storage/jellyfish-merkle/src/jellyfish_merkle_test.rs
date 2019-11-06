@@ -6,11 +6,12 @@ use libra_crypto::HashValue;
 use libra_nibble::Nibble;
 use mock_tree_store::MockTreeStore;
 use proptest::{
-    collection::{btree_map, vec},
+    collection::{hash_map, vec},
     prelude::*,
 };
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
+use test_helper::init_mock_db;
 
 fn update_nibble(original_key: &HashValue, n: usize, nibble: u8) -> HashValue {
     assert!(nibble < 16);
@@ -588,48 +589,57 @@ proptest! {
 
     #[test]
     fn test_get_with_proof(
-        (existent_kvs, nonexistent_keys) in btree_map(
+        (existent_kvs, nonexistent_keys) in hash_map(
             any::<HashValue>(),
             any::<AccountStateBlob>(),
             1..1000,
         )
-            .prop_flat_map(|btree| {
-                let btree_clone = btree.clone();
+            .prop_flat_map(|kvs| {
+                let kvs_clone = kvs.clone();
                 (
-                    Just(btree),
+                    Just(kvs),
                     vec(
                         any::<HashValue>().prop_filter(
                             "Make sure these keys do not exist in the tree.",
-                            move |key| !btree_clone.contains_key(key),
+                            move |key| !kvs_clone.contains_key(key),
                         ),
                         100,
                     ),
                 )
             })
     ) {
-        let db = MockTreeStore::default();
+        let (db, version) = init_mock_db(&existent_kvs);
         let tree = JellyfishMerkleTree::new(&db);
 
-        for (i, (key, value)) in existent_kvs.iter().enumerate() {
-            let (_root_hash, write_batch) = tree
-                .put_blob_set(vec![(*key, value.clone())], i as Version)
-                .unwrap();
-            db.write_tree_update_batch(write_batch).unwrap();
-        }
+        test_existent_keys_impl(&tree, version, &existent_kvs);
+        test_nonexistent_keys_impl(&tree, version, &nonexistent_keys);
+    }
+}
 
-        let version = (existent_kvs.len() - 1) as Version;
-        let root_hash = tree.get_root_hash(version).unwrap();
+fn test_existent_keys_impl<'a>(
+    tree: &JellyfishMerkleTree<'a, MockTreeStore>,
+    version: Version,
+    existent_kvs: &HashMap<HashValue, AccountStateBlob>,
+) {
+    let root_hash = tree.get_root_hash(version).unwrap();
 
-        for (key, value) in existent_kvs {
-            let (account, proof) = tree.get_with_proof(key, version).unwrap();
-            prop_assert!(proof.verify(root_hash, key, account.as_ref()).is_ok());
-            prop_assert_eq!(account.unwrap(), value);
-        }
+    for (key, value) in existent_kvs {
+        let (account, proof) = tree.get_with_proof(*key, version).unwrap();
+        assert!(proof.verify(root_hash, *key, account.as_ref()).is_ok());
+        assert_eq!(account.unwrap(), *value);
+    }
+}
 
-        for key in nonexistent_keys {
-            let (account, proof) = tree.get_with_proof(key, version).unwrap();
-            prop_assert!(proof.verify(root_hash, key, account.as_ref()).is_ok());
-            prop_assert!(account.is_none());
-        }
+fn test_nonexistent_keys_impl<'a>(
+    tree: &JellyfishMerkleTree<'a, MockTreeStore>,
+    version: Version,
+    nonexistent_keys: &[HashValue],
+) {
+    let root_hash = tree.get_root_hash(version).unwrap();
+
+    for key in nonexistent_keys {
+        let (account, proof) = tree.get_with_proof(*key, version).unwrap();
+        assert!(proof.verify(root_hash, *key, account.as_ref()).is_ok());
+        assert!(account.is_none());
     }
 }

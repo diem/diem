@@ -74,6 +74,8 @@ mod mock_tree_store;
 mod nibble_path;
 pub mod node_type;
 pub mod restore;
+#[cfg(test)]
+mod test_helper;
 mod tree_cache;
 
 use failure::prelude::*;
