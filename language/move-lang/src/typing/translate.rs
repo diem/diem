@@ -67,10 +67,7 @@ fn main_function(
     main: Option<(Address, FunctionName, N::Function)>,
 ) -> Option<(Address, FunctionName, T::Function)> {
     context.current_module = None;
-    match main {
-        None => None,
-        Some((addr, name, f)) => Some((addr, name.clone(), function(context, name, f))),
-    }
+    main.map(|(addr, name, f)| (addr, name.clone(), function(context, name, f)))
 }
 
 //**************************************************************************************************

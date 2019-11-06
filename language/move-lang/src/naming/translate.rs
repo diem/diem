@@ -305,16 +305,15 @@ fn type_parameters(context: &mut Context, type_parameters: Vec<(Name, Kind)>) ->
             let id = N::TParamID::next();
             let debug = name.clone();
             let tp = N::TParam { id, debug, kind };
-            match context.tparams.add(name.clone(), tp.clone()) {
-                Ok(()) => (),
-                Err(old_loc) => context.error(vec![
+            if let Err(old_loc) = context.tparams.add(name.clone(), tp.clone()) {
+                context.error(vec![
                     (
                         name.loc,
                         format!("Duplicate type parameter declared with name '{}'", name),
                     ),
                     (old_loc, "Previously defined here".to_string()),
-                ]),
-            };
+                ])
+            }
             tp
         })
         .collect()
