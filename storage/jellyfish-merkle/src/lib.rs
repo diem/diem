@@ -507,7 +507,7 @@ where
 
         // We limit the number of loops here deliberately to avoid potential cyclic graph bugs
         // in the tree structure.
-        for nibble_depth in 0..ROOT_NIBBLE_HEIGHT {
+        for nibble_depth in 0..=ROOT_NIBBLE_HEIGHT {
             let next_node = self.reader.get_node(&next_node_key)?;
             match next_node {
                 Node::Internal(internal_node) => {

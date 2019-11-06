@@ -11,7 +11,7 @@ use proptest::{
 };
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
-use test_helper::init_mock_db;
+use test_helper::{init_mock_db, plus_one};
 
 fn update_nibble(original_key: &HashValue, n: usize, nibble: u8) -> HashValue {
     assert!(nibble < 16);
@@ -588,7 +588,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
 
     #[test]
-    fn test_get_with_proof(
+    fn test_get_with_proof1(
         (existent_kvs, nonexistent_keys) in hash_map(
             any::<HashValue>(),
             any::<AccountStateBlob>(),
@@ -613,6 +613,27 @@ proptest! {
 
         test_existent_keys_impl(&tree, version, &existent_kvs);
         test_nonexistent_keys_impl(&tree, version, &nonexistent_keys);
+    }
+
+    #[test]
+    fn test_get_with_proof2(
+        key1 in any::<HashValue>()
+            .prop_filter(
+                "Can't be 0xffffff...",
+                |key| *key != HashValue::new([0xff; HashValue::LENGTH]),
+            ),
+        accounts in vec(any::<AccountStateBlob>(), 2),
+    ) {
+        let key2 = plus_one(key1);
+
+        let mut kvs = HashMap::new();
+        kvs.insert(key1, accounts[0].clone());
+        kvs.insert(key2, accounts[1].clone());
+
+        let (db, version) = init_mock_db(&kvs);
+        let tree = JellyfishMerkleTree::new(&db);
+
+        test_existent_keys_impl(&tree, version, &kvs);
     }
 }
 

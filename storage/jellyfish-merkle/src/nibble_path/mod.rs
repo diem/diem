@@ -218,6 +218,7 @@ impl<'a> DoubleEndedIterator for BitIterator<'a> {
 }
 
 /// NibbleIterator iterates a nibble path by nibble.
+#[derive(Debug)]
 pub struct NibbleIterator<'a> {
     /// The underlying nibble path that stores the nibbles
     nibble_path: &'a NibblePath,
