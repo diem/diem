@@ -15,6 +15,14 @@ executors:
     resource_class: small
 
 commands:
+  rust_setup:
+    description: Set rustc version
+    steps:
+      - run:
+          name: Set rustc version
+          command: |
+            rustup toolchain install beta-2019-10-03
+            rustup override set beta-2019-10-03
   print_versions:
     description: Version Info
     steps:
@@ -45,6 +53,7 @@ commands:
   build_setup:
     steps:
       - checkout
+      - rust_setup
       - print_versions
       - env_setup
       - install_deps
