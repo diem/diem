@@ -13,7 +13,7 @@ use libra_types::{
 };
 use vm::{
     gas_schedule::{GasAlgebra, GasUnits},
-    transaction_metadata::TransactionMetadata
+    transaction_metadata::TransactionMetadata,
 };
 use vm_runtime_types::value::Value;
 
