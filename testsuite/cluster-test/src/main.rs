@@ -240,7 +240,7 @@ fn setup_log() {
     let decorator = slog_term::PlainDecorator::new(std::io::stdout());
     let drain = slog_term::CompactFormat::new(decorator).build().fuse();
     let drain = slog_envlogger::new(drain);
-    let drain = slog_async::Async::new(drain).build().fuse();
+    let drain = std::sync::Mutex::new(drain).fuse();
     let logger = slog::Logger::root(drain, o!());
     let logger_guard = slog_scope::set_global_logger(logger);
     std::mem::forget(logger_guard);
