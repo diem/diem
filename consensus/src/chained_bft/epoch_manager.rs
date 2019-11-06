@@ -24,7 +24,7 @@ use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, Val
 use network::proto::ConsensusMsg;
 use network::proto::ConsensusMsg_oneof;
 use network::validator_network::{ConsensusNetworkSender, Event};
-use safety_rules::{ConsensusState, SafetyRules};
+use safety_rules::{ConsensusState, InMemoryStorage, SafetyRules};
 use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::sync::Arc;
@@ -200,7 +200,12 @@ impl<T: Payload> EpochManager<T> {
         counters::EPOCH.set(self.epoch as i64);
         let last_vote = initial_data.last_vote();
         let author = signer.author();
-        let safety_rules = SafetyRules::new(initial_data.state(), signer);
+        let storage = Box::new(InMemoryStorage::new(
+            initial_data.state().epoch(),
+            initial_data.state().last_voted_round(),
+            initial_data.state().preferred_round(),
+        ));
+        let safety_rules = SafetyRules::new(storage, signer);
 
         let block_store = Arc::new(block_on(BlockStore::new(
             Arc::clone(&self.storage),

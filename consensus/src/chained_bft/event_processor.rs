@@ -347,11 +347,11 @@ impl<T: Payload> EventProcessor<T> {
             // The timeout event is late: the node has already moved to another round.
             return;
         }
-        let last_vote_round = self.safety_rules.consensus_state().last_vote_round();
+        let last_voted_round = self.safety_rules.consensus_state().last_voted_round();
         warn!(
             "Round {} timed out: {}, expected round proposer was {:?}, broadcasting the vote to all replicas",
             round,
-            if last_vote_round == round { "already executed and voted at this round" } else { "will try to generate a backup vote" },
+            if last_voted_round == round { "already executed and voted at this round" } else { "will try to generate a backup vote" },
             self.proposer_election.get_valid_proposers(round).iter().map(|p| p.short_str()).collect::<Vec<String>>(),
         );
 
@@ -416,7 +416,7 @@ impl<T: Payload> EventProcessor<T> {
     ) -> failure::Result<()> {
         self.safety_rules.update(qc);
         let consensus_state = self.safety_rules.consensus_state();
-        counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_block_round() as i64);
+        counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
 
         let mut highest_committed_proposal_round = None;
         if let Some(block) = qc
@@ -495,16 +495,13 @@ impl<T: Payload> EventProcessor<T> {
         // Safety invariant: The last voted round is updated to be the same as the proposed block's
         // round. At this point, the replica has decided to vote for the proposed block.
         debug_checked_verify_eq!(
-            self.safety_rules.consensus_state().last_vote_round(),
+            self.safety_rules.consensus_state().last_voted_round(),
             proposal_round
         );
         // Safety invariant: qc_parent <-- qc
         // the preferred block round must be at least as large as qc_parent's round.
         debug_checked_verify!(
-            (*self)
-                .safety_rules
-                .consensus_state()
-                .preferred_block_round()
+            (*self).safety_rules.consensus_state().preferred_round()
                 >= certified_parent_block_round
         );
 
@@ -651,7 +648,7 @@ impl<T: Payload> EventProcessor<T> {
             .with_context(|e| format!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e))?;
 
         let consensus_state = self.safety_rules.consensus_state();
-        counters::LAST_VOTE_ROUND.set(consensus_state.last_vote_round() as i64);
+        counters::LAST_VOTE_ROUND.set(consensus_state.last_voted_round() as i64);
 
         self.storage
             .save_consensus_state(consensus_state, &vote)
