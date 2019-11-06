@@ -327,6 +327,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "borrow-graph"
+version = "0.0.1"
+
+[[package]]
 name = "bounded-executor"
 version = "0.1.0"
 dependencies = [
@@ -2586,6 +2590,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "move-lang"
 version = "0.0.1"
 dependencies = [
+ "borrow-graph 0.0.1",
  "bytecode-verifier 0.1.0",
  "codespan 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",

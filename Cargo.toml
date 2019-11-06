@@ -34,6 +34,7 @@ members = [
     "executor",
     "language/move-lang",
     "language/benchmarks",
+    "language/borrow-graph",
     "language/bytecode-verifier",
     "language/bytecode-verifier/invalid-mutations",
     "language/bytecode-verifier/bytecode_verifier_tests",

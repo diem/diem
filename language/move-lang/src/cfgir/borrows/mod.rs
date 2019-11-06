@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-mod borrow_map;
 mod state;
 
 use super::{absint::*, ast::*};
