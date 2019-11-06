@@ -15,7 +15,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use vm::{
-    gas_schedule::{GasAlgebra, GasUnits, CostTable},
+    gas_schedule::{CostTable, GasAlgebra, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
 use vm_runtime_types::value::Value;
@@ -45,7 +45,8 @@ where
     //       time by a reasonable amount.
     let gas_schedule = CostTable::zero();
 
-    let mut txn_executor = TransactionExecutor::new(&module_cache, &gas_schedule, data_cache, txn_data);
+    let mut txn_executor =
+        TransactionExecutor::new(&module_cache, &gas_schedule, data_cache, txn_data);
     let result = if let Ok((id, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {
         let args = vec![
             Value::u64(timestamp),
