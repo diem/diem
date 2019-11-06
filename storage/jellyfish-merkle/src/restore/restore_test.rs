@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    mock_tree_store::MockTreeStore, restore::JellyfishMerkleRestore, JellyfishMerkleTree,
-    TreeReader,
+    mock_tree_store::MockTreeStore, restore::JellyfishMerkleRestore, test_helper::init_mock_db,
+    JellyfishMerkleTree, TreeReader,
 };
 use libra_crypto::HashValue;
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
@@ -72,16 +72,9 @@ proptest! {
 }
 
 fn get_expected_root_hash(btree: &BTreeMap<HashValue, AccountStateBlob>) -> HashValue {
-    let db = MockTreeStore::default();
+    let (db, version) = init_mock_db(&btree.clone().into_iter().collect());
     let tree = JellyfishMerkleTree::new(&db);
-
-    for (i, (key, value)) in btree.iter().enumerate() {
-        let (_root_hash, batch) = tree
-            .put_blob_set(vec![(*key, value.clone())], i as Version)
-            .unwrap();
-        db.write_tree_update_batch(batch).unwrap();
-    }
-    tree.get_root_hash((btree.len() - 1) as Version).unwrap()
+    tree.get_root_hash(version).unwrap()
 }
 
 fn assert_success(
