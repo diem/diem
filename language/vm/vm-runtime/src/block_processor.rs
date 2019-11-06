@@ -47,10 +47,10 @@ where
     let mut result = vec![];
 
     // If we fail to load the gas schedule, then we fail to process the block.
-    let gas_schedule = match load_gas_schedule(&module_cache, &data_cache) {
+    let gas_schedule = match load_gas_schedule(&module_cache, data_cache) {
         // TODO/XXX: This is a hack to get around not having proper writesets yet. Once that gets
         // in remove this line.
-        Err(_) if data_view.is_genesis() => CostTable::zero(),
+        Err(_) if data_cache.is_genesis() => CostTable::zero(),
         Err(_) => {
             return Err(VMStatus::new(StatusCode::VM_STARTUP_FAILURE)
                 .with_sub_status(sub_status::VSF_GAS_SCHEDULE_NOT_FOUND))

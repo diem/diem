@@ -15,7 +15,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use vm::{
-    gas_schedule::{GasAlgebra, GasUnits},
+    gas_schedule::{GasAlgebra, GasUnits, CostTable},
     transaction_metadata::TransactionMetadata,
 };
 use vm_runtime_types::value::Value;
@@ -39,9 +39,13 @@ where
     //    might be useful here.
     // 3. We set the max gas to a big number just to get rid of the potential out of gas error.
     let mut txn_data = TransactionMetadata::default();
-    txn_data.max_gas_amount = GasUnits::new(std::u64::MAX);
 
-    let mut txn_executor = TransactionExecutor::new(&module_cache, data_cache, txn_data);
+    txn_data.max_gas_amount = GasUnits::new(std::u64::MAX);
+    // TODO: We might need a non zero cost table here so that we can at least bound the execution
+    //       time by a reasonable amount.
+    let gas_schedule = CostTable::zero();
+
+    let mut txn_executor = TransactionExecutor::new(&module_cache, &gas_schedule, data_cache, txn_data);
     let result = if let Ok((id, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {
         let args = vec![
             Value::u64(timestamp),
