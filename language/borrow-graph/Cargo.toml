@@ -1,0 +1,9 @@
+[package]
+name = "borrow-graph"
+version = "0.0.1"
+authors = ["Libra <oncall+libra@xmail.facebook.com>"]
+publish = false
+edition = "2018"
+
+[dependencies]
+mirai-annotations = "1.4.0"
