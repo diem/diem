@@ -60,7 +60,8 @@ use cuckoo::consensus::{PowCuckoo, PowService, Proof};
 use network::validator_network::PowContext;
 use crate::chained_bft::consensusdb::BlockIndex;
 use crate::pow::chain_manager::{ChainManager, BlockChain};
-use std::cell::RefCell;
+use crate::pow::sync_manager::SyncManager;
+use crate::pow::sync_manager::BlockRetrievalResponse;
 
 pub struct EventHandle {
     block_cache_sender: mpsc::Sender<Block<Vec<SignedTransaction>>>,
@@ -76,25 +77,12 @@ pub struct EventHandle {
 
     //sync
     sync_block_sender: mpsc::Sender<(PeerId, BlockRetrievalResponse<Vec<SignedTransaction>>)>,
-    sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<Vec<SignedTransaction>>)>>,
     sync_signal_sender: mpsc::Sender<(PeerId, u64)>,
-    sync_signal_receiver: Option<mpsc::Receiver<(PeerId, u64)>>,
-    sync_state_sender: mpsc::Sender<SyncState>,
-    sync_state_receiver: Option<mpsc::Receiver<SyncState>>,
+    sync_manager: Arc<AtomicRefCell<SyncManager>>,
 
     genesis_txn: Vec<SignedTransaction>,
     pow_srv: Arc<PowService>,
     chain_manager: Arc<AtomicRefCell<ChainManager>>,
-}
-
-enum SyncState {
-    GOON((PeerId, HashValue)),
-    END,
-}
-
-struct BlockRetrievalResponse<T> {
-    pub status: BlockRetrievalStatus,
-    pub blocks: Vec<Block<T>>,
 }
 
 impl EventHandle {
@@ -106,15 +94,14 @@ impl EventHandle {
                genesis_txn: Transaction, rollback_flag: bool) -> Self {
         let (block_cache_sender, block_cache_receiver) = mpsc::channel(10);
 
+        let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         //sync
         let (sync_block_sender, sync_block_receiver) = mpsc::channel(10);
         let (sync_signal_sender, sync_signal_receiver) = mpsc::channel(1024);
-        let (sync_state_sender, sync_state_receiver) = mpsc::channel(10);
 
         let mint_block_vec = Arc::new(AtomicRefCell::new(vec![*GENESIS_BLOCK_ID]));
         let block_store = Arc::new(ConsensusDB::new(storage_dir));
-        //TODO:init block index
-        let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
+
         let pow_srv = Arc::new(PowCuckoo::new(6, 8));
 
         let genesis_txn_vec = match genesis_txn {
@@ -127,6 +114,9 @@ impl EventHandle {
         let chain_manager = Arc::new(AtomicRefCell::new(ChainManager::new(Some(block_cache_receiver), Arc::clone(&block_store),
                                               txn_manager.clone(), state_computer.clone(), genesis_txn_vec.clone(), rollback_flag)));
 
+        let sync_manager = Arc::new(AtomicRefCell::new(SyncManager::new(author.clone(), self_sender.clone(), network_sender.clone(),
+                                                                        block_cache_sender.clone(), Some(sync_block_receiver),
+                                                                         Some(sync_signal_receiver), chain_manager.clone())));
         EventHandle {
             block_cache_sender,
             block_store,
@@ -139,11 +129,8 @@ impl EventHandle {
             author,
             peers,
             sync_block_sender,
-            sync_block_receiver: Some(sync_block_receiver),
             sync_signal_sender,
-            sync_signal_receiver: Some(sync_signal_receiver),
-            sync_state_sender,
-            sync_state_receiver: Some(sync_state_receiver),
+            sync_manager,
             genesis_txn:genesis_txn_vec,
             pow_srv,
             chain_manager,
@@ -358,7 +345,7 @@ impl EventHandle {
 //        }
     }
 
-    async fn send_consensus_msg(send_peer_id: PeerId, network_sender: &mut ConsensusNetworkSender, self_peer_id: PeerId,
+    pub async fn send_consensus_msg(send_peer_id: PeerId, network_sender: &mut ConsensusNetworkSender, self_peer_id: PeerId,
         self_sender: &mut channel::Sender<failure::Result<Event<ConsensusMsg>>>, msg: ConsensusMsg) {
         if send_peer_id == self_peer_id {
             let event_msg = Ok(Event::Message((self_peer_id, msg.clone())));
@@ -389,91 +376,6 @@ impl EventHandle {
         }
     }
 
-    fn sync_block_msg(&mut self, executor: TaskExecutor) {
-        let mut sync_block_receiver = self.sync_block_receiver.take().expect("sync_block_receiver is none.");
-        let mut sync_signal_receiver = self.sync_signal_receiver.take().expect("sync_signal_receiver is none.");
-        let mut sync_network_sender = self.network_sender.clone();
-        let mut sync_state_sender = self.sync_state_sender.clone();
-        let mut sync_state_receiver = self.sync_state_receiver.take().expect("sync_state_receiver is none.");
-        let mut sync_block_cache_sender = self.block_cache_sender.clone();
-        let self_peer_id = self.author.clone();
-        let mut sync_self_sender = self.self_sender.clone();
-        let consensus_peers = self.peers.clone();
-        let chain_manager = self.chain_manager.clone();
-
-        let sync_fut = async move {
-            loop {
-                ::futures::select! {
-                    (peer_id, height) = sync_signal_receiver.select_next_some() => {
-                        //sync data from latest block
-                        //TODO:timeout
-                        let sync_block_req_msg = Self::sync_block_req(None);
-
-                        Self::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
-                    },
-                    (sync_state) = sync_state_receiver.select_next_some() => {
-                        match sync_state {
-                            SyncState::END => {
-                            },
-                            SyncState::GOON((peer_id, hash)) => {
-                                let sync_block_req_msg = Self::sync_block_req(Some(hash));
-                                Self::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
-                            }
-                        }
-                    },
-                    (peer_id, sync_block_resp) = sync_block_receiver.select_next_some() => {
-                        // 2. save data to cache
-                        let status = sync_block_resp.status;
-                        let mut blocks = sync_block_resp.blocks;
-
-                        let mut flag = false;
-                        let mut end_block = None;
-                        if blocks.len() > 0 {
-                            blocks.reverse();
-                            println!("sync block get chain lock");
-                            for block in blocks {
-                                let hash = block.hash();
-                                if chain_manager.borrow().block_exist(&hash).await {
-                                    flag = true;
-                                    break;
-                                } else {
-                                    end_block = Some(hash);
-                                    sync_block_cache_sender.send(block).await;
-                                }
-                            }
-
-                            println!("sync block drop chain lock");
-                        }
-
-                        let state = match status {
-                            BlockRetrievalStatus::Succeeded => {
-                                if flag {
-                                    SyncState::END
-                                } else {
-                                    SyncState::GOON((peer_id, end_block.unwrap()))
-                                }
-                            }
-                            BlockRetrievalStatus::IdNotFound => {
-                                //end
-                                SyncState::END
-                            }
-                            BlockRetrievalStatus::NotEnoughBlocks => {
-                                SyncState::END
-                            }
-                        };
-                        if let Err(err) = sync_state_sender.clone().send(state).await {
-                            error!("send sync block err: {:?}", err);
-                        }
-                    }
-                    complete => {
-                        break;
-                    }
-                }
-            }
-        };
-        executor.spawn(sync_fut);
-    }
-
     pub fn mint(&self, executor: TaskExecutor) {
         let mint_txn_manager = self.txn_manager.clone();
         let mut block_cache_sender = self.block_cache_sender.clone();
@@ -494,7 +396,7 @@ impl EventHandle {
                 match mint_txn_manager.pull_txns(1, vec![]).await {
                     Ok(txns) => {
                         let (height, parent_block) = chain_manager_clone.borrow().chain_height_and_root().await;
-                        println!("--------6666--------{:?}===={}------>{:?}", mint_author, height, parent_block.id);
+                        chain_manager_clone.borrow().print_block_chain_root(mint_author.clone()).await;
                         if txns.len() > 0 {
                             //create block
                             let parent_block_id = parent_block.id;
@@ -641,22 +543,17 @@ impl PowConsensusProvider {
     pub fn event_handle(&mut self, executor: TaskExecutor) {
         match self.event_handle.take() {
             Some(mut handle) => {
-//                println!("========5555==========");
-//                //mint
+                //mint
                 handle.mint(executor.clone());
-//                println!("========6666==========");
-//
-//                //msg
+
+                //msg
                 handle.event_process(executor.clone());
-//                println!("========7777==========");
-//
-//                //save
+
+                //save
                 handle.chain_manager.borrow_mut().save_block(executor.clone());
-//                println!("========8888==========");
-//
-//                //sync
-                handle.sync_block_msg(executor.clone());
-//                println!("========9999==========");
+
+                //sync
+                handle.sync_manager.borrow_mut().sync_block_msg(executor.clone());
 
                 //TODO:orphan
             }

@@ -242,6 +242,10 @@ impl ChainManager {
     pub async fn chain_height_and_root(&self) -> (u64, BlockIndex) {
         self.block_chain.clone().read().compat().await.unwrap().chain_height_and_root()
     }
+
+    pub async fn print_block_chain_root(&self, peer_id:PeerId) {
+        self.block_chain.clone().read().compat().await.unwrap().print_block_chain_root(peer_id);
+    }
 }
 
 #[derive(Clone)]
@@ -264,7 +268,7 @@ impl BlockChain {
     pub fn print_block_chain_root(&self, peer_id:PeerId) {
         let height = ((self.hash_height_index.len() - 1) as u64);
         for index in 0..height {
-            println!("----->{:?}------>{}----->{:?}", peer_id, height, self.main_chain.borrow().get(&index).expect("eeeee"));
+            info!("Main Chain Block, PeerId: {:?} , Htight: {} , Block Root: {:?}", peer_id, height, self.main_chain.borrow().get(&index).expect("print block err."));
         }
     }
 
