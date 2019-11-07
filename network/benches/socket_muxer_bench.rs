@@ -226,6 +226,21 @@ fn bench_tcp_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
         bench_client_stream_send(b, *msg_len, &mut runtime, server_addr, client_transport);
 }
 
+/// Benchmark the throughput of sending messages of size `msg_len` over tcp to
+/// server at multiaddr `server_addr` with TCP_NODELAY set.
+fn bench_tcp_send_with_nodelay(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
+    let mut runtime = Runtime::new().unwrap();
+
+    let client_transport = TcpTransport {
+        nodelay: Some(true),
+        ..TcpTransport::default()
+    };
+
+    // Benchmark sending some data to the server.
+    let _client_stream =
+        bench_client_stream_send(b, *msg_len, &mut runtime, server_addr, client_transport);
+}
+
 /// Benchmark the throughput of sending messages of size `msg_len` over tcp with
 /// Noise encryption to server at multiaddr `server_addr`.
 fn bench_tcp_noise_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
@@ -348,6 +363,14 @@ fn socket_muxer_bench(c: &mut Criterion) {
         TcpTransport::default(),
         "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
     );
+    let local_tcp_nodelay_addr = start_stream_server(
+        &executor,
+        TcpTransport {
+            nodelay: Some(true),
+            ..TcpTransport::default()
+        },
+        "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
+    );
     let local_tcp_noise_addr = start_stream_server(
         &executor,
         build_tcp_noise_transport(),
@@ -394,6 +417,9 @@ fn socket_muxer_bench(c: &mut Criterion) {
     })
     .with_function("local_tcp+noise+muxer", move |b, msg_len| {
         bench_tcp_noise_muxer_send(b, msg_len, local_tcp_noise_muxer_addr.clone())
+    })
+    .with_function("local_tcp_nodelay", move |b, msg_len| {
+        bench_tcp_send_with_nodelay(b, msg_len, local_tcp_nodelay_addr.clone())
     });
 
     // optionally enable remote benches if the env variables are set
