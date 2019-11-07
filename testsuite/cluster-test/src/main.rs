@@ -598,6 +598,11 @@ impl ClusterTestRunner {
         } else {
             info!("WIPE_ON_DEPLOY is set to no, keeping database");
         }
+        let marker = self
+            .deployment_manager
+            .get_upstream_tag(&hash)
+            .map_err(|e| format_err!("Failed to get upstream tag: {}", e))?;
+        self.fetch_genesis(&marker)?;
         self.deployment_manager.redeploy(hash)?;
         thread::sleep(Duration::from_secs(60));
         self.logs.recv_all();
@@ -607,6 +612,33 @@ impl ClusterTestRunner {
         info!("Waiting until all validators healthy after deployment");
         self.wait_until_all_healthy()?;
         Ok(true)
+    }
+
+    fn fetch_genesis(&self, marker: &str) -> failure::Result<()> {
+        let cmd = format!(
+            "aws s3 cp s3://toro-validator-sets/{}/100/genesis.blob /opt/libra/genesis.blob",
+            marker
+        );
+        let jobs = self
+            .cluster
+            .instances()
+            .iter()
+            .map(|instance| {
+                let cmd = &cmd;
+                move || instance.run_cmd_tee_err(vec![cmd])
+            })
+            .collect();
+        if self
+            .thread_pool_executor
+            .execute_jobs(jobs)
+            .iter()
+            .any(Result::is_err)
+        {
+            return Err(format_err!(
+                "Failed to update genesis.blob on one of validators"
+            ));
+        }
+        Ok(())
     }
 
     fn run_suite(&mut self, suite: ExperimentSuite) -> failure::Result<()> {
