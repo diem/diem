@@ -445,6 +445,10 @@ pub fn words_in(size: AbstractMemorySize<GasCarrier>) -> AbstractMemorySize<GasC
     precondition!(size.get() <= MAX_ABSTRACT_MEMORY_SIZE.get() - (WORD_SIZE.get() + 1));
     // round-up div truncate
     size.map2(*WORD_SIZE, |size, word_size| {
+        // static invariant
+        assume!(word_size > 0);
+        // follows from the precondition
+        assume!(size <= u64::max_value() - word_size);
         (size + (word_size - 1)) / word_size
     })
 }
