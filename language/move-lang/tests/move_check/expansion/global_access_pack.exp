@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/expansion/global_access_pack.move:3:9 ───
+   │
+ 3 │         .S { }
+   │         ^^^^^^ Unexpected construction. Found a global-identifier access, and thus expected a function call
+   │
+

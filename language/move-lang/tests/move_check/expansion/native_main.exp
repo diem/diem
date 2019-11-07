@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/native_main.move:1:1 ───
+   │
+ 1 │ native main();
+   │ ^^^^^^ Unrecognized Token: native
+   ·
+ 1 │ native main();
+   │ ------ Expected:  "module", "public", "use", r#"[a-z_][a-zA-Z0-9_]*"#, r#"[a-z_][a-zA-Z0-9_]*<"#,
+   │
+

@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/duplicate_function_in_module.move:2:5 ───
+   │
+ 3 │     foo() { }
+   │     ^^^ Duplicate definition for function 'foo' in module 'M'
+   ·
+ 2 │     foo() { }
+   │     --- Previously defined here
+   │
+

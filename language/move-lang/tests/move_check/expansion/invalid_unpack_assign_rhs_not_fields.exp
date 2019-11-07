@@ -1,0 +1,24 @@
+error: 
+
+   ┌── tests/move_check/expansion/invalid_unpack_assign_rhs_not_fields.move:9:13 ───
+   │
+ 9 │         X.S () = 0;
+   │             ^^ Invalid fields for deconstructing assignment. Expected: named arguments
+   │
+
+error: 
+
+    ┌── tests/move_check/expansion/invalid_unpack_assign_rhs_not_fields.move:11:13 ───
+    │
+ 11 │         X.S 0 = 0;
+    │             ^ Invalid fields for deconstructing assignment. Expected: named arguments
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/invalid_unpack_assign_rhs_not_fields.move:13:13 ───
+    │
+ 13 │         X.S { 0 } = 0;
+    │             ^^^^^ Invalid fields for deconstructing assignment. Expected: named arguments
+    │
+
