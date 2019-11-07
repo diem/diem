@@ -654,7 +654,7 @@ impl ClusterTestRunner {
 
     fn fetch_genesis(&self, marker: &str) -> failure::Result<()> {
         let cmd = format!(
-            "aws s3 cp s3://toro-validator-sets/{}/100/genesis.blob /opt/libra/genesis.blob",
+            "sudo aws s3 cp s3://toro-validator-sets/{}/100/genesis.blob /opt/libra/genesis.blob",
             marker
         );
         let jobs = self
