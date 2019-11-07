@@ -42,9 +42,9 @@ pub trait ModuleCache<'alloc> {
     ///
     /// Returns:
     ///
-    /// * `Ok(Some(FunctionRef))` if such function exists.
-    /// * `Ok(None)` if such function doesn't exists.
-    /// * `Err(...)` for a verification issue in a resolved dependency or VM invariant violation.
+    /// * `Ok(FunctionRef)` if such function exists.
+    /// * `Err(...)` for a verification issue in a resolved dependency, VM invariant violation, or
+    ///   function not found.
     fn resolve_function_ref(
         &self,
         caller_module: &LoadedModule,
@@ -56,8 +56,7 @@ pub trait ModuleCache<'alloc> {
     ///
     /// Returns:
     ///
-    /// * `Ok(Some(StructDef))` if such struct exists.
-    /// * `Ok(None)` if such function doesn't exists.
+    /// * `Ok(StructDef)` if such struct exists.
     /// * `Err(...)` for a verification or other issue in a resolved dependency, out of gas, or for
     ///   a VM invariant violation.
     fn resolve_struct_def(
@@ -71,8 +70,7 @@ pub trait ModuleCache<'alloc> {
     ///
     /// Returns:
     ///
-    /// * `Ok(Some(LoadedModule))` if such module exists.
-    /// * `Ok(None)` if such module doesn't exists.
+    /// * `Ok(LoadedModule)` if such module exists.
     /// * `Err(...)` for a verification issue in the module or for a VM invariant violation.
     fn get_loaded_module(&self, id: &ModuleId) -> VMResult<&'alloc LoadedModule>;
 
