@@ -8,6 +8,7 @@ use crate::validator_set::ValidatorSet;
 use failure::prelude::*;
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_crypto::*;
+use mirai_annotations::*;
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -101,9 +102,11 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
         address_to_validator_info: BTreeMap<AccountAddress, ValidatorInfo<PublicKey>>,
         quorum_voting_power: u64,
     ) -> Result<Self> {
-        let total_voting_power = address_to_validator_info
-            .values()
-            .fold(0, |sum, x| sum + x.voting_power);
+        let total_voting_power = address_to_validator_info.values().fold(0, |sum, x| {
+            // The voting power of any node is assumed to be small relative to u64::max_value()
+            assume!(sum <= u64::max_value() - x.voting_power);
+            sum + x.voting_power
+        });
         ensure!(
             quorum_voting_power <= total_voting_power,
             "Quorum voting power is greater than the sum of all voting power of authors: {}, \
