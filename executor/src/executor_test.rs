@@ -692,12 +692,13 @@ proptest! {
 
     #[test]
     fn test_idempotent_commits(chunk_size in 1..2u64, overlap_size in 1..2u64, num_new_txns in 1..2u64) {
-        let (mut chunks, ledger_info) = {
+        let (chunk_start, chunk_end) = (1, chunk_size + 1);
+        let (overlap_start, overlap_end) = (chunk_size + 1, chunk_size + overlap_size + 1);
+        let (mut chunks, ledger_info) =
             create_transaction_chunks(vec![
-                1..chunk_size + 1,
-                chunk_size + 1..chunk_size + overlap_size + 1
-            ])
-        };
+                chunk_start..chunk_end,
+                overlap_start..overlap_end
+            ]);
 
         let mut config = get_config();
         let (storage_server, shutdown_receiver) = create_storage_server(&mut config);
@@ -717,7 +718,7 @@ proptest! {
         let parent_block_id = HashValue::zero();
         let block_id = gen_block_id(1);
         txns_to_write.extend(overlap_txn_list_with_proof.transactions);
-        txns_to_write.extend((chunk_size + overlap_size + 1 .. chunk_size + overlap_size + num_new_txns + 1)
+        txns_to_write.extend((chunk_size + overlap_size + 1..=chunk_size + overlap_size + num_new_txns)
                              .map(|i| encode_mint_transaction(gen_address(i), 100)));
 
         let execute_block_future = executor.execute_block(
