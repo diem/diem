@@ -39,7 +39,7 @@ pub fn channel_account_resource_path(participant: AccountAddress) -> Vec<u8> {
 /// A Rust representation of an ChannelAccount resource.
 /// This is not how the ChannelAccount is represented in the VM but it's a convenient
 /// representation.
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 pub struct ChannelAccountResource {
     balance: u64,
     channel_sequence_number: u64,
