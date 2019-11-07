@@ -407,8 +407,7 @@ where
         let module = self
             .module_cache
             .get_loaded_module(&module_id)
-            .expect("[Module Lookup] Runtime error while looking up module")
-            .expect("[Module Lookup] Unable to find module");
+            .expect("[Module Lookup] Runtime error while looking up module");
         let struct_def_idx = self
             .struct_handle_table
             .entry(module_id)
@@ -453,8 +452,7 @@ where
         let module = self
             .module_cache
             .get_loaded_module(&module_id)
-            .expect("[Module Lookup] Runtime error while looking up module")
-            .expect("[Module Lookup] Unable to find module");
+            .expect("[Module Lookup] Runtime error while looking up module");
         let function_def_idx = *self
             .function_handle_table
             .entry(module_id)

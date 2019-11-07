@@ -38,8 +38,8 @@ where
 {
     let address = account_config::association_address();
     let gas_module = module_cache
-        .get_loaded_module(&GAS_SCHEDULE_MODULE)?
-        .ok_or_else(|| {
+        .get_loaded_module(&GAS_SCHEDULE_MODULE)
+        .map_err(|_| {
             VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
                 .with_sub_status(sub_status::GSE_UNABLE_TO_LOAD_MODULE)
         })?;
@@ -254,8 +254,7 @@ impl<'txn> GasMeter<'txn> {
             Bytecode::Call(call_idx, _) => {
                 let function_ref = interpreter
                     .module_cache()
-                    .resolve_function_ref(interpreter.module(), *call_idx)?
-                    .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
+                    .resolve_function_ref(interpreter.module(), *call_idx)?;
                 if function_ref.is_native() {
                     GasUnits::new(0) // This will be costed at the call site/by the native function
                 } else {

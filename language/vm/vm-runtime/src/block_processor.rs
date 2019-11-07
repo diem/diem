@@ -11,14 +11,11 @@ use crate::{
 use libra_config::config::VMPublishingOption;
 use libra_logger::prelude::*;
 use libra_types::{
-    transaction::{
-        SignatureCheckedTransaction, SignedTransaction, TransactionOutput, TransactionStatus,
-    },
+    transaction::{SignatureCheckedTransaction, SignedTransaction, TransactionOutput},
     vm_error::{sub_status, StatusCode, VMStatus},
 };
 use rayon::prelude::*;
 use vm::gas_schedule::CostTable;
-use vm_cache_map::Arena;
 
 pub fn execute_user_transaction_block<'alloc, P>(
     txn_block: Vec<SignedTransaction>,
@@ -120,8 +117,7 @@ fn transaction_flow<'alloc, P>(
 where
     P: ModuleCache<'alloc>,
 {
-    let arena = Arena::new();
-    let process_txn = ProcessTransaction::new(txn, gas_schedule, &module_cache, data_cache, &arena);
+    let process_txn = ProcessTransaction::new(txn, gas_schedule, &module_cache, data_cache);
 
     let validated_txn = record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
     match process_txn.validate(mode, publishing_option) {
@@ -150,12 +146,5 @@ where
 
     // On success, publish the modules into the cache so that future transactions can refer to them
     // directly.
-    let output = executed_txn.into_output();
-    match output.status() {
-        TransactionStatus::Keep(status) if status.major_status == StatusCode::EXECUTED => {
-            module_cache.reclaim_cached_module(arena.into_vec());
-        }
-        _ => (),
-    };
-    output
+    executed_txn.into_output()
 }

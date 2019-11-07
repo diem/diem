@@ -104,6 +104,16 @@ impl<'txn> TransactionDataCache<'txn> {
         }
     }
 
+    pub fn exists_module(&self, m: &ModuleId) -> bool {
+        let ap = AccessPath::from(m);
+        self.data_map.contains_key(&ap) || {
+            match self.data_cache.get(&ap) {
+                Ok(Some(_)) => true,
+                _ => false,
+            }
+        }
+    }
+
     // Retrieve data from the local cache or loads it from the remote cache into the local cache.
     // All operations on the global data are based on this API and they all load the data
     // into the cache.
