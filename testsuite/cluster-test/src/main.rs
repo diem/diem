@@ -657,6 +657,7 @@ impl ClusterTestRunner {
             "sudo aws s3 cp s3://toro-validator-sets/{}/100/genesis.blob /opt/libra/genesis.blob",
             marker
         );
+        info!("Running {} to fetch genesis blob", cmd);
         let jobs = self
             .cluster
             .instances()
