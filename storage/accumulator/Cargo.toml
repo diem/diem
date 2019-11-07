@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+mirai-annotations = "1.5.0"
 failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
 libra-types = { path = "../../types", version = "0.1.0" }
 
