@@ -1,0 +1,24 @@
+error: 
+
+    ┌── tests/move_check/expansion/unpack_all_field_cases.move:11:16 ───
+    │
+ 11 │         S { f: 0, g: 0} = copy s;
+    │                ^ Invalid assignment lvalue. Expected: a local, a field write, or a deconstructing assignment
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/unpack_all_field_cases.move:12:16 ───
+    │
+ 12 │         S { g: 0, f } = copy s;
+    │                ^ Invalid assignment lvalue. Expected: a local, a field write, or a deconstructing assignment
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/unpack_all_field_cases.move:13:19 ───
+    │
+ 13 │         S { g, f: 0 } = copy s;
+    │                   ^ Invalid assignment lvalue. Expected: a local, a field write, or a deconstructing assignment
+    │
+

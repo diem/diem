@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/expansion/standalone_fields.move:3:9 ───
+   │
+ 3 │         {f: 1, g: 0};
+   │         ^^^^^^^^^^^^ Unexpected field arguments. Fields are used only to instantiate a struct
+   │
+

@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/duplicate_struct.move:2:12 ───
+   │
+ 3 │     struct S {}
+   │            ^ Duplicate definition for struct 'S' in module 'M'
+   ·
+ 2 │     struct S {}
+   │            - Previously defined here
+   │
+

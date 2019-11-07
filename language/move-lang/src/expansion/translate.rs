@@ -213,7 +213,7 @@ fn main(
     let (fname, function) = function_def(context, pfunction);
     if fname.value() != FunctionName::MAIN_NAME {
         context.error(vec![
-                    (fname.loc(), format!("Invalid top level function. Fund a function named '{}', but all top level functions must be named '{}'", fname.value(),FunctionName::MAIN_NAME))
+                    (fname.loc(), format!("Invalid top level function. Found a function named '{}', but all top level functions must be named '{}'", fname.value(),FunctionName::MAIN_NAME))
                 ]);
     }
     match &function.visibility {
@@ -482,7 +482,7 @@ fn type_name(context: &mut Context, sp!(loc, ptn_): P::TypeName) -> Option<E::Ty
                     context.error(vec![
                         (n.loc, format!("Unexpected module alias '{}'", n)),
                         (loc, "Modules are not types. Try accessing a struct inside the module instead".into())
-                    ]                  );
+                    ]);
                     return None;
                 }
                 None => EN::Name(n),
@@ -587,7 +587,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
             Some(EE::Pack(_, _, _)) => {
                 context.error(vec![(
                     loc,
-                    "Unexpected construction. Found a global-identifier access, and expected function call",
+                    "Unexpected construction. Found a global-identifier access, and thus expected a function call",
                 )]);
                 EE::UnresolvedError
             }
@@ -671,7 +671,7 @@ fn exp_dotted(context: &mut Context, pdotted: P::Exp) -> Option<E::ExpDotted> {
     if let Some(_tys) = tys_opt {
         context.error(vec![(
             edotted.loc,
-            "Unexpected type arguments. Expected a function applied to its arguments",
+            "Unexpected type arguments. Thus, expected a function applied to its arguments",
         )]);
         None
     } else {
@@ -694,10 +694,11 @@ fn exp_dotted_rec(
         PE::MDot(maybe_addr, m, ptys_opt) => {
             let addr = match *maybe_addr {
                 sp!(_, P::Exp_::Value(sp!(_, V::Address(addr)))) => addr,
-                _ => {
+                sp!(aloc, _) => {
                     context.error(vec![
-                        (loc, "Invalid dot access. Expected a field name".into()),
-                        (m.loc, format!("Found a module or type identifier: '{}'", m)),
+                        (loc, "Invalid access. Expected a qualified module access"),
+                        (aloc, "Or an struct value or reference"),
+                        (m.loc, "Followed by a field access"),
                     ]);
                     return None;
                 }
@@ -774,10 +775,10 @@ fn exp_dotted_to_type_name(
                 let tn_ = type_name(context, sp(loc, P::TypeName_::ModuleType(mn, sn)))?.value;
                 (sp(loc, tn_), ptys_opt)
             }
-            sp!(loc, _) => {
+            _ => {
                 context.error(vec![(
                     loc,
-                    "Invalid module type name access. Expected: a struct name",
+                    "Invalid module type name access. Expected: a (possibly qualified) struct name",
                 )]);
                 return None;
             }
