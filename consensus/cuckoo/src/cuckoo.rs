@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use byteorder::{ByteOrder, LittleEndian};
 use crate::util::blake2b_256;
+use byteorder::{ByteOrder, LittleEndian};
+use std::collections::HashMap;
 
 extern "C" {
     pub fn c_solve(output: *mut u32, input: *const u8, edge_bits: u64, cycle_length: u32) -> u32;
@@ -81,7 +81,6 @@ impl Cuckoo {
     }
 
     pub fn find_solve(&self, input: &[u8]) -> Option<Vec<u32>> {
-
         let input = blake2b_256(input.as_ref());
         unsafe {
             let mut output = vec![0u32; self.cycle_length];
@@ -89,7 +88,9 @@ impl Cuckoo {
                 output.as_mut_ptr(),
                 input.as_ptr(),
                 self.max_edge,
-                self.cycle_length as u32) > 0 {
+                self.cycle_length as u32,
+            ) > 0
+            {
                 return Some(output);
             }
             return None;
@@ -171,11 +172,13 @@ mod test {
 
     #[test]
     fn test_pow() {
-        let header_hash = [24, 75, 179, 121, 98, 241, 250, 124, 100, 197, 125, 237, 29, 128, 222, 12, 134, 5,
-            241, 148, 87, 86, 159, 53, 217, 6, 202, 87, 71, 169, 8, 6, 202, 47, 50, 214, 18,
-            68, 84, 248, 105, 201, 162, 182, 95, 189, 145, 108, 234, 173, 81, 191, 109, 56,
-            192, 59, 176, 113, 85, 75, 254, 237, 161, 177, 189, 22, 219, 131, 24, 67, 96, 12,
-            22, 192, 108, 1, 189, 243, 22, 31];
+        let header_hash = [
+            24, 75, 179, 121, 98, 241, 250, 124, 100, 197, 125, 237, 29, 128, 222, 12, 134, 5, 241,
+            148, 87, 86, 159, 53, 217, 6, 202, 87, 71, 169, 8, 6, 202, 47, 50, 214, 18, 68, 84,
+            248, 105, 201, 162, 182, 95, 189, 145, 108, 234, 173, 81, 191, 109, 56, 192, 59, 176,
+            113, 85, 75, 254, 237, 161, 177, 189, 22, 219, 131, 24, 67, 96, 12, 22, 192, 108, 1,
+            189, 243, 22, 31,
+        ];
         let pow = &Cuckoo::new(6, 8);
         let proof = pow.find_solve(&header_hash).expect("not find solve");
         println!("find solve");

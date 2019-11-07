@@ -663,11 +663,11 @@ impl NodeConfigHelpers {
     }
 
     /// times
-    pub fn get_single_node_test_config_times(random_ports: bool, times:usize) -> NodeConfig {
+    pub fn get_single_node_test_config_times(random_ports: bool, times: usize) -> NodeConfig {
         Self::get_single_node_test_config_publish_options_times(
             random_ports,
             Some(VMPublishingOption::Open),
-            times
+            times,
         )
     }
 
@@ -685,7 +685,7 @@ impl NodeConfigHelpers {
     pub fn get_single_node_test_config_publish_options_times(
         random_ports: bool,
         publishing_options: Option<VMPublishingOption>,
-        times:usize,
+        times: usize,
     ) -> NodeConfig {
         let config_string = String::from_utf8_lossy(CONFIG_TEMPLATE);
         let mut config =

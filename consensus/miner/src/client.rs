@@ -4,12 +4,7 @@ use std::env;
 use std::sync::Arc;
 
 use grpcio::{ChannelBuilder, EnvBuilder};
-use proto::{
-    miner::{
-        MineCtxRequest,
-        MinerProxyClient,
-    }
-};
+use proto::miner::{MineCtxRequest, MinerProxyClient};
 
 fn main() {
     let env = Arc::new(EnvBuilder::new().build());

@@ -1,29 +1,31 @@
-use failure::prelude::*;
-use std::sync::Arc;
-use crypto::HashValue;
-use atomic_refcell::AtomicRefCell;
-use libra_types::PeerId;
-use tokio::runtime::{TaskExecutor};
-use futures::{channel::mpsc, StreamExt};
-use consensus_types::block::Block;
-use channel;
-use logger::prelude::*;
 use crate::pow::chain_manager::ChainManager;
-use libra_types::account_address::AccountAddress;
 use crate::pow::event_processor::EventProcessor;
-use network::{
-    proto::{
-        ConsensusMsg, ConsensusMsg_oneof::{self}, RequestBlock, BlockRetrievalStatus,
-    },
-    validator_network::{Event, ConsensusNetworkSender}
-};
+use crate::pow::payload_ext::BlockPayloadExt;
+use atomic_refcell::AtomicRefCell;
+use channel;
+use consensus_types::block::Block;
+use crypto::hash::CryptoHash;
+use crypto::HashValue;
+use failure::prelude::*;
 use futures::compat::Future01CompatExt;
 use futures::SinkExt;
-use crypto::hash::CryptoHash;
-use crate::pow::payload_ext::BlockPayloadExt;
+use futures::{channel::mpsc, StreamExt};
 use futures_locks::Mutex;
+use libra_types::account_address::AccountAddress;
+use libra_types::PeerId;
+use logger::prelude::*;
+use network::{
+    proto::{
+        BlockRetrievalStatus, ConsensusMsg,
+        ConsensusMsg_oneof::{self},
+        RequestBlock,
+    },
+    validator_network::{ConsensusNetworkSender, Event},
+};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+use tokio::runtime::TaskExecutor;
 
 pub struct SyncManager {
     author: AccountAddress,
@@ -38,21 +40,39 @@ pub struct SyncManager {
 }
 
 impl SyncManager {
-
-    pub fn new(author: AccountAddress,
-               self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
-               network_sender: ConsensusNetworkSender,
-               block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
-               sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>>,
-               sync_signal_receiver: Option<mpsc::Receiver<(PeerId, u64)>>,
-               chain_manager: Arc<AtomicRefCell<ChainManager>>) -> Self {
-        SyncManager{author, self_sender, network_sender, block_cache_sender, sync_block_receiver, sync_signal_receiver,
-            chain_manager, sync_block_cache:Arc::new(Mutex::new(HashMap::new())), sync_block_height:Arc::new(AtomicU64::new(0))}
+    pub fn new(
+        author: AccountAddress,
+        self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+        network_sender: ConsensusNetworkSender,
+        block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
+        sync_block_receiver: Option<
+            mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>,
+        >,
+        sync_signal_receiver: Option<mpsc::Receiver<(PeerId, u64)>>,
+        chain_manager: Arc<AtomicRefCell<ChainManager>>,
+    ) -> Self {
+        SyncManager {
+            author,
+            self_sender,
+            network_sender,
+            block_cache_sender,
+            sync_block_receiver,
+            sync_signal_receiver,
+            chain_manager,
+            sync_block_cache: Arc::new(Mutex::new(HashMap::new())),
+            sync_block_height: Arc::new(AtomicU64::new(0)),
+        }
     }
 
     pub fn sync_block_msg(&mut self, executor: TaskExecutor) {
-        let mut sync_block_receiver = self.sync_block_receiver.take().expect("sync_block_receiver is none.");
-        let mut sync_signal_receiver = self.sync_signal_receiver.take().expect("sync_signal_receiver is none.");
+        let mut sync_block_receiver = self
+            .sync_block_receiver
+            .take()
+            .expect("sync_block_receiver is none.");
+        let mut sync_signal_receiver = self
+            .sync_signal_receiver
+            .take()
+            .expect("sync_signal_receiver is none.");
         let sync_network_sender = self.network_sender.clone();
         let mut sync_block_cache_sender = self.block_cache_sender.clone();
         let self_peer_id = self.author.clone();
@@ -64,66 +84,66 @@ impl SyncManager {
         let sync_fut = async move {
             loop {
                 ::futures::select! {
-                    (peer_id, height) = sync_signal_receiver.select_next_some() => {
-                        //1. sync data from latest block
-                        //TODO:timeout
-                        if max_height.load(Ordering::Relaxed) < height {
-                            max_height.store(height, Ordering::Relaxed);
-                            let sync_block_req_msg = Self::sync_block_req(None);
+                                    (peer_id, height) = sync_signal_receiver.select_next_some() => {
+                                        //1. sync data from latest block
+                                        //TODO:timeout
+                                        if max_height.load(Ordering::Relaxed) < height {
+                                            max_height.store(height, Ordering::Relaxed);
+                                            let sync_block_req_msg = Self::sync_block_req(None);
 
-                            EventProcessor::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
-                        }
-                    },
-                    (peer_id, sync_block_resp) = sync_block_receiver.select_next_some() => {
-                        // 2. save data to cache
-                        let status = sync_block_resp.status;
-                        let mut blocks = sync_block_resp.blocks;
+                                            EventProcessor::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
+                                        }
+                                    },
+                                    (peer_id, sync_block_resp) = sync_block_receiver.select_next_some() => {
+                                        // 2. save data to cache
+                                        let status = sync_block_resp.status;
+                                        let mut blocks = sync_block_resp.blocks;
 
-                        let mut end_flag = false;
-                        let mut end_block_hash = None;
-                        let mut sync_block_cache_lock = sync_block_cache.clone().lock().compat().await.unwrap();
-                        if blocks.len() > 0 {
-                            if !sync_block_cache_lock.contains_key(&peer_id) {
-                                let block_vec = Vec::new();
-                                sync_block_cache_lock.insert(peer_id, block_vec);
-                            }
-                            for block in blocks {
-                                let tmp_hash = block.hash();
-                                if chain_manager.borrow().block_exist(&tmp_hash).await {
-                                    end_flag = true;
-                                    break;
-                                };
+                                        let mut end_flag = false;
+                                        let mut end_block_hash = None;
+                                        let mut sync_block_cache_lock = sync_block_cache.clone().lock().compat().await.unwrap();
+                                        if blocks.len() > 0 {
+                                            if !sync_block_cache_lock.contains_key(&peer_id) {
+                                                let block_vec = Vec::new();
+                                                sync_block_cache_lock.insert(peer_id, block_vec);
+                                            }
+                                            for block in blocks {
+                                                let tmp_hash = block.hash();
+                                                if chain_manager.borrow().block_exist(&tmp_hash).await {
+                                                    end_flag = true;
+                                                    break;
+                                                };
 
-                                // add to sync_block_cache
-                                end_block_hash = Some(block.parent_id());
-                                sync_block_cache_lock.get_mut(&peer_id).expect("peer block not exist.").push(block);
-                            }
-                        }
+                                                // add to sync_block_cache
+                                                end_block_hash = Some(block.parent_id());
+                                                sync_block_cache_lock.get_mut(&peer_id).expect("peer block not exist.").push(block);
+                                            }
+                                        }
 
-                        if end_flag {
-                            let mut block_vec = sync_block_cache_lock.remove(&peer_id).expect("peer block not exist.");
-                            block_vec.reverse();
-                            for b in block_vec {
-                                sync_block_cache_sender.send(b).await.expect("send block err.");
-                            }
-                        } else {
-                            match status {
-                                BlockRetrievalStatus::Succeeded => {
-                                    let sync_block_req_msg = Self::sync_block_req(end_block_hash);
-                                    EventProcessor::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
+                                        if end_flag {
+                                            let mut block_vec = sync_block_cache_lock.remove(&peer_id).expect("peer block not exist.");
+                                            block_vec.reverse();
+                                            for b in block_vec {
+                                                sync_block_cache_sender.send(b).await.expect("send block err.");
+                                            }
+                                        } else {
+                                            match status {
+                                                BlockRetrievalStatus::Succeeded => {
+                                                    let sync_block_req_msg = Self::sync_block_req(end_block_hash);
+                                                    EventProcessor::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
+                                                }
+                                                _ => {
+                //                                    BlockRetrievalStatus::IdNotFound
+                //                                    BlockRetrievalStatus::NotEnoughBlocks
+                                                    let _ = sync_block_cache_lock.remove(&peer_id);
+                                                }
+                                            };
+                                        }
+                                    }
+                                    complete => {
+                                        break;
+                                    }
                                 }
-                                _ => {
-//                                    BlockRetrievalStatus::IdNotFound
-//                                    BlockRetrievalStatus::NotEnoughBlocks
-                                    let _ = sync_block_cache_lock.remove(&peer_id);
-                                }
-                            };
-                        }
-                    }
-                    complete => {
-                        break;
-                    }
-                }
             }
         };
         executor.spawn(sync_fut);
@@ -132,10 +152,14 @@ impl SyncManager {
     fn sync_block_req(hash: Option<HashValue>) -> ConsensusMsg {
         let num_blocks = 100;
         let req = match hash {
-            None => RequestBlock { block_id: vec![], num_blocks },
-            Some(h) => {
-                RequestBlock { block_id: h.to_vec(), num_blocks }
-            }
+            None => RequestBlock {
+                block_id: vec![],
+                num_blocks,
+            },
+            Some(h) => RequestBlock {
+                block_id: h.to_vec(),
+                num_blocks,
+            },
         };
         ConsensusMsg {
             message: Some(ConsensusMsg_oneof::RequestBlock(req)),

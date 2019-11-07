@@ -155,7 +155,7 @@ impl ConsensusNetworkImpl {
                 all_events,
                 epoch_mgr: Arc::clone(&self.epoch_mgr),
             }
-                .run(),
+            .run(),
         );
         NetworkReceivers {
             proposals: proposal_rx,
@@ -309,9 +309,9 @@ struct NetworkTask<T, S> {
 }
 
 impl<T, S> NetworkTask<T, S>
-    where
-        S: Stream<Item=failure::Result<Event<ConsensusMsg>>> + Unpin,
-        T: Payload,
+where
+    S: Stream<Item = failure::Result<Event<ConsensusMsg>>> + Unpin,
+    T: Payload,
 {
     pub async fn run(mut self) {
         use ConsensusMsg_oneof::*;

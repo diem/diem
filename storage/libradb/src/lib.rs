@@ -594,7 +594,10 @@ impl LibraDB {
     }
 
     /// Get for pre compute
-    pub fn get_history_startup_info_by_block_id(&self, block_id:&HashValue) -> Result<Option<StartupInfo>> {
+    pub fn get_history_startup_info_by_block_id(
+        &self,
+        block_id: &HashValue,
+    ) -> Result<Option<StartupInfo>> {
         let ledger_info_with_sigs = match self.ledger_store.get_ledger_info_by_block_id(block_id) {
             Ok(x) => x,
             Err(err) => return Ok(None),
@@ -612,7 +615,7 @@ impl LibraDB {
 
         Ok(Some(StartupInfo {
             ledger_info,
-            latest_version:version,
+            latest_version: version,
             account_state_root_hash,
             ledger_frozen_subtree_hashes,
         }))
@@ -751,7 +754,7 @@ impl LibraDB {
         })
     }
 
-    pub fn rollback_by_block_id(&self, block_id:&HashValue) -> Result<()> {
+    pub fn rollback_by_block_id(&self, block_id: &HashValue) -> Result<()> {
         let mut cs = ChangeSet::new();
         self.ledger_store.rollback_by_block_id(block_id, &mut cs)
     }

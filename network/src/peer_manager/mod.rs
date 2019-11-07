@@ -17,9 +17,9 @@ use channel;
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt},
+    lock::Mutex,
     sink::SinkExt,
     stream::{Fuse, FuturesUnordered, StreamExt},
-    lock::Mutex,
 };
 use libra_types::PeerId;
 use logger::prelude::*;
@@ -29,9 +29,12 @@ use netcore::{
     transport::{ConnectionOrigin, Transport},
 };
 use parity_multiaddr::Multiaddr;
-use std::{collections::{HashMap,HashSet}, marker::PhantomData};
+use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    marker::PhantomData,
+};
 use tokio::runtime::TaskExecutor;
-use std::sync::{Arc};
 
 mod error;
 #[cfg(test)]
@@ -172,7 +175,7 @@ where
     outstanding_disconnect_requests: HashMap<PeerId, oneshot::Sender<Result<(), PeerManagerError>>>,
     /// Pin the transport type corresponding to this PeerManager instance
     phantom_transport: PhantomData<TTransport>,
-    peer_ids:Arc<Mutex<HashSet<PeerId>>>,
+    peer_ids: Arc<Mutex<HashSet<PeerId>>>,
 }
 
 impl<TTransport, TMuxer> PeerManager<TTransport, TMuxer>
@@ -192,7 +195,7 @@ where
             channel::Sender<PeerManagerNotification<TMuxer::Substream>>,
         >,
         peer_event_handlers: Vec<channel::Sender<PeerManagerNotification<TMuxer::Substream>>>,
-        peer_ids:Arc<Mutex<HashSet<PeerId>>>
+        peer_ids: Arc<Mutex<HashSet<PeerId>>>,
     ) -> Self {
         let (internal_event_tx, internal_event_rx) =
             channel::new(1024, &counters::PENDING_PEER_MANAGER_INTERNAL_EVENTS);
@@ -219,7 +222,7 @@ where
             internal_event_rx,
             outstanding_disconnect_requests: HashMap::new(),
             phantom_transport: PhantomData,
-            peer_ids
+            peer_ids,
         }
     }
 

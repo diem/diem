@@ -134,7 +134,12 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!()
     }
 
-    fn get_history_startup_info_by_block_id(&self, block_id:HashValue) -> Result<Option<StartupInfo>> {unimplemented!()}
+    fn get_history_startup_info_by_block_id(
+        &self,
+        block_id: HashValue,
+    ) -> Result<Option<StartupInfo>> {
+        unimplemented!()
+    }
 
     fn get_startup_info_async(
         &self,

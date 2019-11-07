@@ -3,8 +3,8 @@ pub use blake2b_rs::{Blake2b, Blake2bBuilder};
 pub const BLAKE2B_LEN: usize = 32;
 pub const HASH_PERSONALIZATION: &[u8] = b"ckb-default-hash";
 pub const BLANK_HASH: [u8; 32] = [
-    68, 244, 198, 151, 68, 213, 248, 197, 93, 100, 32, 98, 148, 157, 202, 228, 155, 196,
-    231, 239, 67, 211, 136, 197, 161, 47, 66, 181, 99, 61, 22, 62
+    68, 244, 198, 151, 68, 213, 248, 197, 93, 100, 32, 98, 148, 157, 202, 228, 155, 196, 231, 239,
+    67, 211, 136, 197, 161, 47, 66, 181, 99, 61, 22, 62,
 ];
 
 pub fn new_blake2b() -> Blake2b {

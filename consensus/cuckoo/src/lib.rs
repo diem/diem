@@ -1,3 +1,3 @@
+pub mod consensus;
 mod cuckoo;
 mod util;
-pub mod consensus;

@@ -6,6 +6,7 @@ use failure::prelude::*;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 
 use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;
+use crate::pow::pow_consensus_provider::PowConsensusProvider;
 use executor::Executor;
 use grpcio::{ChannelBuilder, EnvBuilder};
 use libra_mempool::proto::mempool::MempoolClient;
@@ -13,7 +14,6 @@ use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
 use vm_runtime::MoveVM;
-use crate::pow::pow_consensus_provider::PowConsensusProvider;
 
 /// Public interface to a consensus protocol.
 pub trait ConsensusProvider {
@@ -73,7 +73,7 @@ pub fn make_pow_consensus_provider(
     network_receiver: ConsensusNetworkEvents,
     executor: Arc<Executor<MoveVM>>,
     state_sync_client: Arc<StateSyncClient>,
-    rollback_flag: bool
+    rollback_flag: bool,
 ) -> Box<dyn ConsensusProvider> {
     Box::new(PowConsensusProvider::new(
         node_config,
@@ -82,6 +82,6 @@ pub fn make_pow_consensus_provider(
         create_mempool_client(node_config),
         executor,
         state_sync_client,
-        rollback_flag
+        rollback_flag,
     ))
 }

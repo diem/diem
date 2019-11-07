@@ -11,6 +11,7 @@ mod storage_service;
 pub use storage_service::start_storage_service_and_return_service;
 
 use config::config::NodeConfig;
+use crypto::HashValue;
 use failure::prelude::*;
 use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle};
 use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
@@ -25,12 +26,11 @@ use std::{
 };
 use storage_proto::proto::storage::{
     create_storage, GetAccountStateWithProofByVersionRequest,
-    GetAccountStateWithProofByVersionResponse, GetLatestLedgerInfosPerEpochRequest,
-    GetLatestLedgerInfosPerEpochResponse, GetStartupInfoRequest, GetStartupInfoResponse,
-    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
-    SaveTransactionsResponse, Storage, RollbackRequest, RollbackResponse, GetHistoryStartupInfoByBlockIdRequest
+    GetAccountStateWithProofByVersionResponse, GetHistoryStartupInfoByBlockIdRequest,
+    GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
+    GetStartupInfoRequest, GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
+    RollbackRequest, RollbackResponse, SaveTransactionsRequest, SaveTransactionsResponse, Storage,
 };
-use crypto::HashValue;
 
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
@@ -218,7 +218,10 @@ impl StorageService {
         Ok(rust_resp.into())
     }
 
-    fn get_history_startup_info_by_block_id_inner(&self, block_id:&HashValue) -> Result<GetStartupInfoResponse> {
+    fn get_history_startup_info_by_block_id_inner(
+        &self,
+        block_id: &HashValue,
+    ) -> Result<GetStartupInfoResponse> {
         let info = self.db.get_history_startup_info_by_block_id(block_id)?;
         let rust_resp = storage_proto::GetStartupInfoResponse { info };
         Ok(rust_resp.into())
@@ -236,7 +239,7 @@ impl StorageService {
         Ok(rust_resp.into())
     }
 
-    fn rollback_by_block_id_inner(&self, block_id:&HashValue) -> Result<()> {
+    fn rollback_by_block_id_inner(&self, block_id: &HashValue) -> Result<()> {
         self.db.rollback_by_block_id(block_id)
     }
 }
@@ -310,7 +313,9 @@ impl Storage for StorageService {
     ) {
         debug!("[GRPC] Storage::get_history_startup_info_by_block_id");
         let _timer = SVC_COUNTERS.req(&ctx);
-        let resp = self.get_history_startup_info_by_block_id_inner(&HashValue::from_slice(req.block_id.as_ref()).expect("parse err."));
+        let resp = self.get_history_startup_info_by_block_id_inner(
+            &HashValue::from_slice(req.block_id.as_ref()).expect("parse err."),
+        );
         provide_grpc_response(resp, ctx, sink);
     }
 
@@ -333,8 +338,11 @@ impl Storage for StorageService {
         sink: grpcio::UnarySink<RollbackResponse>,
     ) {
         debug!("[GRPC] Storage::rollback_by_block_id");
-        self.rollback_by_block_id_inner(&HashValue::from_slice(req.block_id.as_ref()).expect("parse err.")).expect("rollback err.");
-        let resp = RollbackResponse{};
+        self.rollback_by_block_id_inner(
+            &HashValue::from_slice(req.block_id.as_ref()).expect("parse err."),
+        )
+        .expect("rollback err.");
+        let resp = RollbackResponse {};
         provide_grpc_response(Ok(resp), ctx, sink);
     }
 }

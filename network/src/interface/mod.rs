@@ -28,10 +28,15 @@ use crate::{
     ProtocolId,
 };
 use channel;
-use futures::{future::BoxFuture, FutureExt, SinkExt, StreamExt,lock::Mutex};
+use futures::{future::BoxFuture, lock::Mutex, FutureExt, SinkExt, StreamExt};
 use libra_types::PeerId;
 use logger::prelude::*;
-use std::{collections::{HashMap,HashSet}, fmt::Debug, time::Duration,sync::{Arc}};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+    sync::Arc,
+    time::Duration,
+};
 
 pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
 pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
@@ -115,7 +120,7 @@ pub struct NetworkProvider<TSubstream> {
     max_concurrent_notifs: u32,
     /// Size of channels between different actors.
     channel_size: usize,
-    peer_ids:Arc<Mutex<HashSet<PeerId>>>,
+    peer_ids: Arc<Mutex<HashSet<PeerId>>>,
 }
 
 impl<TSubstream> LibraNetworkProvider for NetworkProvider<TSubstream>
@@ -271,7 +276,7 @@ where
         max_concurrent_reqs: u32,
         max_concurrent_notifs: u32,
         channel_size: usize,
-        peer_ids:Arc<Mutex<HashSet<PeerId>>>,
+        peer_ids: Arc<Mutex<HashSet<PeerId>>>,
     ) -> Self {
         Self {
             upstream_handlers: HashMap::new(),
@@ -295,7 +300,7 @@ where
         mut rpc_reqs_tx: channel::Sender<RpcRequest>,
         mut ds_reqs_tx: channel::Sender<DirectSendRequest>,
         conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
-        peer_ids:Arc<Mutex<HashSet<PeerId>>>,
+        peer_ids: Arc<Mutex<HashSet<PeerId>>>,
     ) {
         trace!("NetworkRequest::{:?}", req);
         match req {
@@ -313,8 +318,8 @@ where
                     .await
                     .unwrap();
             }
-            NetworkRequest::BroadCastMessage( msg) => {
-                let len= msg.mdata.len() as i64;
+            NetworkRequest::BroadCastMessage(msg) => {
+                let len = msg.mdata.len() as i64;
                 let peer_ids_clone = peer_ids.lock().await;
                 for peer_id in peer_ids_clone.iter() {
                     counters::DIRECT_SEND_MESSAGES_SENT.inc();

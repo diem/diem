@@ -1,11 +1,11 @@
-use libra_types::transaction::SignedTransaction;
 use canonical_serialization::{
     CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
     SimpleSerializer,
 };
 use failure::prelude::*;
-use std::fmt;
+use libra_types::transaction::SignedTransaction;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(Clone, Eq, PartialEq, Default, Hash, Serialize, Deserialize)]
 pub struct BlockPayloadExt {
@@ -56,12 +56,6 @@ impl CanonicalDeserialize for BlockPayloadExt {
         let nonce = deserializer.decode_u64()?;
         let solve = deserializer.decode_vec()?;
 
-        Ok(BlockPayloadExt {
-            txns,
-            nonce,
-            solve,
-        })
+        Ok(BlockPayloadExt { txns, nonce, solve })
     }
 }
-
-

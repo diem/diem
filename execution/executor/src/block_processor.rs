@@ -8,12 +8,17 @@ use crate::{
 };
 use backoff::{ExponentialBackoff, Operation};
 use config::config::VMConfig;
+use crypto::hash::{
+    ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID,
+    SPARSE_MERKLE_PLACEHOLDER_HASH,
+};
 use crypto::{
     hash::{CryptoHash, EventAccumulatorHasher},
     HashValue,
 };
 use failure::prelude::*;
 use futures::channel::oneshot;
+use libra_types::transaction::SignedTransaction;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -36,8 +41,6 @@ use std::{
 };
 use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
 use vm_runtime::VMExecutor;
-use libra_types::transaction::SignedTransaction;
-use crypto::hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH,};
 
 #[derive(Debug)]
 enum Mode {
@@ -122,9 +125,11 @@ where
         self.storage_write_client.rollback_by_block_id(block_id);
 
         // 2. get StartInfo
-        let startup_info = self.storage_read_client
+        let startup_info = self
+            .storage_read_client
             .get_startup_info()
-            .expect("Failed to read startup info from storage.").expect("block not exist err.");
+            .expect("Failed to read startup info from storage.")
+            .expect("block not exist err.");
 
         // 3. Reset ExecutedTrees
         let state_tree = Rc::new(SparseMerkleTree::new(startup_info.account_state_root_hash));
@@ -135,7 +140,8 @@ where
             )
             .expect("The startup info read from storage should be valid."),
         );
-        self.committed_trees.reset(state_tree, transaction_accumulator);
+        self.committed_trees
+            .reset(state_tree, transaction_accumulator);
 
         // 4. Reset BlockTree
         self.block_tree.reset(block_id);
@@ -263,8 +269,11 @@ where
                         *PRE_GENESIS_BLOCK_ID,
                     )
                 } else {
-                    let info = self.storage_read_client.get_history_startup_info_by_block_id(ancestor_id)
-                        .expect("Failed to read startup info from storage.").expect("startup info is none.");
+                    let info = self
+                        .storage_read_client
+                        .get_history_startup_info_by_block_id(ancestor_id)
+                        .expect("Failed to read startup info from storage.")
+                        .expect("startup info is none.");
 
                     info!("Startup info read from DB: {:?}.", info);
                     let ledger_info = info.ledger_info;
@@ -281,10 +290,7 @@ where
                 let mut tmp_committed_trees = ExecutedTrees {
                     state_tree: tmp_committed_trees,
                     transaction_accumulator: Rc::new(
-                        Accumulator::new(
-                            frozen_subtrees_in_accumulator,
-                            ver,
-                        )
+                        Accumulator::new(frozen_subtrees_in_accumulator, ver)
                             .expect("The startup info read from storage should be valid."),
                     ),
                 };
@@ -302,7 +308,8 @@ where
                         tmp_committed_trees.state_tree(),
                     );
 
-                    let transactions: Vec<SignedTransaction> = transactions.iter()
+                    let transactions: Vec<SignedTransaction> = transactions
+                        .iter()
                         .map(|txn| {
                             txn.as_signed_user_txn()
                                 .expect("All should be user transactions for now.")
@@ -310,9 +317,8 @@ where
                         .cloned()
                         .collect();
 
-                    let vm_outputs = {
-                        V::execute_block(transactions.clone(), &self.vm_config, &state_view)
-                    };
+                    let vm_outputs =
+                        { V::execute_block(transactions.clone(), &self.vm_config, &state_view) };
 
                     // Since other validators have committed these transactions, their status should all be
                     // TransactionStatus::Keep.
@@ -338,7 +344,7 @@ where
                     ) {
                         Ok(output) => {
                             tmp_committed_trees = output.executed_trees().clone();
-                        },
+                        }
                         Err(e) => {
                             //Err(format_err!("{}", e));
                             println!("{:?}", e);
@@ -405,7 +411,10 @@ where
                 ledger_info_with_sigs,
                 resp_sender,
             } => {
-                match self.block_tree.mark_as_committed(block_id, ledger_info_with_sigs) {
+                match self
+                    .block_tree
+                    .mark_as_committed(block_id, ledger_info_with_sigs)
+                {
                     Ok(()) => {
                         let block = self
                             .block_tree
@@ -443,16 +452,17 @@ where
                     .send(res)
                     .expect("Failed to send execute chunk response.");
             }
-            Command::RollbackBlock{block_id, resp_sender} => {
-                let res = self
-                    .rollback(block_id)
-                    .map_err(|e| {
-                        security_log(SecurityEvent::InvalidBlock)
-                            .error(&e)
-                            .data(block_id)
-                            .log();
-                        e
-                    });
+            Command::RollbackBlock {
+                block_id,
+                resp_sender,
+            } => {
+                let res = self.rollback(block_id).map_err(|e| {
+                    security_log(SecurityEvent::InvalidBlock)
+                        .error(&e)
+                        .data(block_id)
+                        .log();
+                    e
+                });
                 resp_sender
                     .send(res)
                     .expect("Failed to send rollback response.");

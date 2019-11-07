@@ -14,6 +14,7 @@
 
 use crate::schema::ensure_slice_len_eq;
 use byteorder::{BigEndian, ReadBytesExt};
+use crypto::HashValue;
 use failure::prelude::*;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use prost::Message;
@@ -25,7 +26,6 @@ use schemadb::{
 };
 use std::convert::TryInto;
 use std::mem::size_of;
-use crypto::HashValue;
 
 define_schema!(
     LedgerInfoSchema,

@@ -97,15 +97,14 @@ impl StateComputer for ExecutionProxy {
         let pre_execution_instant = Instant::now();
         let mut txns = vec![];
         for transactions in transactions_vec {
-            txns.push(transactions
-                .iter()
-                .map(|txn| Transaction::UserTransaction(txn.clone()))
-                .collect())
+            txns.push(
+                transactions
+                    .iter()
+                    .map(|txn| Transaction::UserTransaction(txn.clone()))
+                    .collect(),
+            )
         }
-        let execute_future = self.executor.pre_execute_block(
-            txns,
-            ancestor_id,
-        );
+        let execute_future = self.executor.pre_execute_block(txns, ancestor_id);
         async move {
             match execute_future.await {
                 Ok(Ok((state_compute_result, state_id))) => {
@@ -118,7 +117,7 @@ impl StateComputer for ExecutionProxy {
                     } else {
                         counters::BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
                         if let Ok(nanos_per_txn) =
-                        u64::try_from(execution_duration.as_nanos() / num_txns as u128)
+                            u64::try_from(execution_duration.as_nanos() / num_txns as u128)
                         {
                             // TODO: use duration_float once it's stable
                             // Tracking: https://github.com/rust-lang/rust/issues/54361
@@ -192,10 +191,7 @@ impl StateComputer for ExecutionProxy {
             .boxed()
     }
 
-    fn rollback(
-        &self,
-        block_id: HashValue,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+    fn rollback(&self, block_id: HashValue) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         let pre_rollback_instant = Instant::now();
         let rollback_future = self.executor.rollback_by_block_id(block_id);
         async move {

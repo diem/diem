@@ -32,13 +32,13 @@ use crypto::{
     ed25519::*,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
-use futures::{StreamExt,lock::Mutex};
+use futures::{lock::Mutex, StreamExt};
 use libra_types::{validator_signer::ValidatorSigner, PeerId};
 use logger::prelude::*;
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
 use parity_multiaddr::Multiaddr;
 use std::{
-    collections::{HashMap,HashSet},
+    collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
     time::Duration,
 };

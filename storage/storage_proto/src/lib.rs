@@ -57,7 +57,7 @@ impl GetAccountStateWithProofByVersionRequest {
 }
 
 impl TryFrom<crate::proto::storage::GetAccountStateWithProofByVersionRequest>
-for GetAccountStateWithProofByVersionRequest
+    for GetAccountStateWithProofByVersionRequest
 {
     type Error = Error;
 
@@ -72,7 +72,7 @@ for GetAccountStateWithProofByVersionRequest
 }
 
 impl From<GetAccountStateWithProofByVersionRequest>
-for crate::proto::storage::GetAccountStateWithProofByVersionRequest
+    for crate::proto::storage::GetAccountStateWithProofByVersionRequest
 {
     fn from(version: GetAccountStateWithProofByVersionRequest) -> Self {
         Self {
@@ -106,7 +106,7 @@ impl GetAccountStateWithProofByVersionResponse {
 }
 
 impl TryFrom<crate::proto::storage::GetAccountStateWithProofByVersionResponse>
-for GetAccountStateWithProofByVersionResponse
+    for GetAccountStateWithProofByVersionResponse
 {
     type Error = Error;
 
@@ -127,7 +127,7 @@ for GetAccountStateWithProofByVersionResponse
 }
 
 impl From<GetAccountStateWithProofByVersionResponse>
-for crate::proto::storage::GetAccountStateWithProofByVersionResponse
+    for crate::proto::storage::GetAccountStateWithProofByVersionResponse
 {
     fn from(response: GetAccountStateWithProofByVersionResponse) -> Self {
         Self {
@@ -138,7 +138,7 @@ for crate::proto::storage::GetAccountStateWithProofByVersionResponse
 }
 
 impl Into<(Option<AccountStateBlob>, SparseMerkleProof)>
-for GetAccountStateWithProofByVersionResponse
+    for GetAccountStateWithProofByVersionResponse
 {
     fn into(self) -> (Option<AccountStateBlob>, SparseMerkleProof) {
         (self.account_state_blob, self.sparse_merkle_proof)
@@ -387,7 +387,7 @@ impl GetLatestLedgerInfosPerEpochRequest {
 }
 
 impl TryFrom<crate::proto::storage::GetLatestLedgerInfosPerEpochRequest>
-for GetLatestLedgerInfosPerEpochRequest
+    for GetLatestLedgerInfosPerEpochRequest
 {
     type Error = Error;
 
@@ -399,7 +399,7 @@ for GetLatestLedgerInfosPerEpochRequest
 }
 
 impl From<GetLatestLedgerInfosPerEpochRequest>
-for crate::proto::storage::GetLatestLedgerInfosPerEpochRequest
+    for crate::proto::storage::GetLatestLedgerInfosPerEpochRequest
 {
     fn from(request: GetLatestLedgerInfosPerEpochRequest) -> Self {
         Self {
@@ -425,7 +425,7 @@ impl GetLatestLedgerInfosPerEpochResponse {
 }
 
 impl TryFrom<crate::proto::storage::GetLatestLedgerInfosPerEpochResponse>
-for GetLatestLedgerInfosPerEpochResponse
+    for GetLatestLedgerInfosPerEpochResponse
 {
     type Error = Error;
 
@@ -443,7 +443,7 @@ for GetLatestLedgerInfosPerEpochResponse
 }
 
 impl From<GetLatestLedgerInfosPerEpochResponse>
-for crate::proto::storage::GetLatestLedgerInfosPerEpochResponse
+    for crate::proto::storage::GetLatestLedgerInfosPerEpochResponse
 {
     fn from(response: GetLatestLedgerInfosPerEpochResponse) -> Self {
         Self {
@@ -468,24 +468,20 @@ pub struct RollbackRequest {
     pub block_id: HashValue,
 }
 
-impl TryFrom<crate::proto::storage::RollbackRequest>
-for RollbackRequest
-{
+impl TryFrom<crate::proto::storage::RollbackRequest> for RollbackRequest {
     type Error = Error;
 
-    fn try_from(
-        proto: crate::proto::storage::RollbackRequest,
-    ) -> Result<Self> {
+    fn try_from(proto: crate::proto::storage::RollbackRequest) -> Result<Self> {
         let block_id = HashValue::from_slice(&proto.block_id)?;
         Ok(Self { block_id })
     }
 }
 
-impl From<RollbackRequest>
-for crate::proto::storage::RollbackRequest
-{
+impl From<RollbackRequest> for crate::proto::storage::RollbackRequest {
     fn from(response: RollbackRequest) -> Self {
-        Self { block_id: response.block_id.to_vec() }
+        Self {
+            block_id: response.block_id.to_vec(),
+        }
     }
 }
 
@@ -500,7 +496,7 @@ pub struct GetHistoryStartupInfoByBlockIdRequest {
 }
 
 impl TryFrom<crate::proto::storage::GetHistoryStartupInfoByBlockIdRequest>
-for GetHistoryStartupInfoByBlockIdRequest
+    for GetHistoryStartupInfoByBlockIdRequest
 {
     type Error = Error;
 
@@ -513,10 +509,12 @@ for GetHistoryStartupInfoByBlockIdRequest
 }
 
 impl From<GetHistoryStartupInfoByBlockIdRequest>
-for crate::proto::storage::GetHistoryStartupInfoByBlockIdRequest
+    for crate::proto::storage::GetHistoryStartupInfoByBlockIdRequest
 {
     fn from(request: GetHistoryStartupInfoByBlockIdRequest) -> Self {
-        Self { block_id: request.block_id.to_vec() }
+        Self {
+            block_id: request.block_id.to_vec(),
+        }
     }
 }
 

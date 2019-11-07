@@ -1,21 +1,16 @@
+use super::ensure_slice_len_eq;
+use super::BLOCK_INDEX_CF_NAME;
+use byteorder::{BigEndian, ReadBytesExt};
 use crypto::HashValue;
+use failure::prelude::*;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
 };
-use super::ensure_slice_len_eq;
-use failure::prelude::*;
-use std::mem::size_of;
-use byteorder::{BigEndian, ReadBytesExt};
 use std::io::Write;
-use super::BLOCK_INDEX_CF_NAME;
+use std::mem::size_of;
 
-define_schema!(
-    BlockIndexSchema,
-    Height,
-    BlockIndex,
-    BLOCK_INDEX_CF_NAME
-);
+define_schema!(BlockIndexSchema, Height, BlockIndex, BLOCK_INDEX_CF_NAME);
 
 type Height = u64;
 
@@ -39,7 +34,10 @@ impl ValueCodec<BlockIndexSchema> for BlockIndex {
         let block_id = HashValue::from_slice(&data[..HashValue::LENGTH])?;
         let parent_block_id = HashValue::from_slice(&data[HashValue::LENGTH..])?;
 
-        Ok(BlockIndex{id:block_id, parent_block_id})
+        Ok(BlockIndex {
+            id: block_id,
+            parent_block_id,
+        })
     }
 }
 

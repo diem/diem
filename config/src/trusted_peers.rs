@@ -157,7 +157,7 @@ impl ConfigHelpers {
     pub fn gen_validator_nodes_times(
         num_peers: usize,
         seed: Option<[u8; 32]>,
-        times:usize,
+        times: usize,
     ) -> (
         HashMap<AccountAddress, (ConsensusPrivateKey, NetworkPrivateKeys)>,
         ConsensusPeersConfig,

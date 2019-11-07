@@ -8,7 +8,8 @@ use crate::{
     change_set::ChangeSet,
     errors::LibraDbError,
     schema::{
-        ledger_info::{LedgerInfoSchema, LedgerInfoHistorySchema}, transaction_accumulator::TransactionAccumulatorSchema,
+        ledger_info::{LedgerInfoHistorySchema, LedgerInfoSchema},
+        transaction_accumulator::TransactionAccumulatorSchema,
         transaction_info::TransactionInfoSchema,
     },
 };
@@ -189,15 +190,17 @@ impl LedgerStore {
     }
 
     /// Get ledger info by block id
-    pub fn get_ledger_info_by_block_id(&self, block_id: &HashValue) -> Result<LedgerInfoWithSignatures> {
-        self
-            .db
+    pub fn get_ledger_info_by_block_id(
+        &self,
+        block_id: &HashValue,
+    ) -> Result<LedgerInfoWithSignatures> {
+        self.db
             .get::<LedgerInfoHistorySchema>(block_id)?
             .ok_or_else(|| LibraDbError::NotFound(format!("LedgerInfo by {:?}", block_id)).into())
     }
 
     /// Rollback
-    pub fn rollback_by_block_id(&self, block_id: &HashValue, cs: &mut ChangeSet,) -> Result<()> {
+    pub fn rollback_by_block_id(&self, block_id: &HashValue, cs: &mut ChangeSet) -> Result<()> {
         let ledger_info = self
             .db
             .get::<LedgerInfoHistorySchema>(block_id)?

@@ -17,7 +17,7 @@ use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert};
 use crypto::HashValue;
 use failure::prelude::*;
 use logger::prelude::*;
-use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME, BLOCK_INDEX_CF_NAME};
+use schema::{BLOCK_CF_NAME, BLOCK_INDEX_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
 use schemadb::{
     ColumnFamilyOptions, ColumnFamilyOptionsMap, ReadOptions, SchemaBatch, DB, DEFAULT_CF_NAME,
 };
@@ -43,9 +43,9 @@ impl ConsensusDB {
             (SINGLE_ENTRY_CF_NAME, ColumnFamilyOptions::default()),
             (BLOCK_INDEX_CF_NAME, ColumnFamilyOptions::default()),
         ]
-            .iter()
-            .cloned()
-            .collect();
+        .iter()
+        .cloned()
+        .collect();
 
         let path = db_root_path.as_ref().join("consensusdb");
         let instant = Instant::now();
@@ -195,17 +195,12 @@ impl ConsensusDB {
 
     /// Get block by hash
     pub fn get_block_by_hash<T: Payload>(&self, hash: &HashValue) -> Option<Block<T>> {
-        match self.db
-            .get::<BlockSchema<T>>(&hash) {
-            Ok(block) => {
-                match block {
-                    Some(b) => {
-                        Some(b.borrow_into_block().clone())
-                    },
-                    None => None
-                }
+        match self.db.get::<BlockSchema<T>>(&hash) {
+            Ok(block) => match block {
+                Some(b) => Some(b.borrow_into_block().clone()),
+                None => None,
             },
-            _ => { None }
+            _ => None,
         }
     }
 
@@ -219,11 +214,11 @@ impl ConsensusDB {
             }
         }
 
-        return Some(blocks)
+        return Some(blocks);
     }
 
     /// Insert BlockIndex
-    pub fn insert_block_index(&self, height:&u64, block_index:&BlockIndex) -> Result<()> {
+    pub fn insert_block_index(&self, height: &u64, block_index: &BlockIndex) -> Result<()> {
         let mut batch = SchemaBatch::new();
         batch.put::<BlockIndexSchema>(&height, &block_index)?;
         self.commit(batch)

@@ -465,17 +465,17 @@ where
     // Check that all received `Note`s are valid -- reject the whole message
     // if any `Note` is invalid.
     let res_notes = res_msg.and_then(|msg| {
-//        msg.notes.iter().try_for_each(|note| {
-//            is_valid(&note, &trusted_peers).map_err(|err| {
-//                security_log(SecurityEvent::InvalidDiscoveryMsg)
-//                    .error(&err)
-//                    .data(&peer_id)
-//                    .data(&note)
-//                    .data(&trusted_peers)
-//                    .log();
-//                err
-//            })
-//        })?;
+        //        msg.notes.iter().try_for_each(|note| {
+        //            is_valid(&note, &trusted_peers).map_err(|err| {
+        //                security_log(SecurityEvent::InvalidDiscoveryMsg)
+        //                    .error(&err)
+        //                    .data(&peer_id)
+        //                    .data(&note)
+        //                    .data(&trusted_peers)
+        //                    .log();
+        //                err
+        //            })
+        //        })?;
         Ok(msg.notes)
     });
 
@@ -548,24 +548,24 @@ fn verify_signature(
     signature: &[u8],
     msg: &[u8],
 ) -> Result<(), NetworkError> {
-//    let verifier = SignatureValidator::new_with_quorum_voting_power(
-//        trusted_peers
-//            .read()
-//            .unwrap()
-//            .iter()
-//            .map(|(peer_id, network_public_keys)| {
-//                (
-//                    *peer_id,
-//                    SignatureInfo::new(network_public_keys.signing_public_key.clone(), 1),
-//                )
-//            })
-//            .collect(),
-//        1, /* quorum size */
-//    )
-//    .expect("Quorum size should be valid.");
-//    let signature = Ed25519Signature::try_from(signature)
-//        .map_err(|err| err.context(NetworkErrorKind::SignatureError))?;
-//    verifier.verify_signature(signer, get_hash(msg), &signature)?;
+    //    let verifier = SignatureValidator::new_with_quorum_voting_power(
+    //        trusted_peers
+    //            .read()
+    //            .unwrap()
+    //            .iter()
+    //            .map(|(peer_id, network_public_keys)| {
+    //                (
+    //                    *peer_id,
+    //                    SignatureInfo::new(network_public_keys.signing_public_key.clone(), 1),
+    //                )
+    //            })
+    //            .collect(),
+    //        1, /* quorum size */
+    //    )
+    //    .expect("Quorum size should be valid.");
+    //    let signature = Ed25519Signature::try_from(signature)
+    //        .map_err(|err| err.context(NetworkErrorKind::SignatureError))?;
+    //    verifier.verify_signature(signer, get_hash(msg), &signature)?;
     Ok(())
 }
 

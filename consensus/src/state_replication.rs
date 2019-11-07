@@ -77,10 +77,7 @@ pub trait StateComputer: Send + Sync {
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
     /// Rollback
-    fn rollback(
-        &self,
-        block_id: HashValue,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
+    fn rollback(&self, block_id: HashValue) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
     fn sync_to(&self, commit: QuorumCert) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>>;
 

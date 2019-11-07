@@ -1,5 +1,6 @@
 use crate::StorageService;
 use config::config::NodeConfig;
+use crypto::HashValue;
 use failure::prelude::*;
 use futures::{executor::block_on, prelude::*};
 use grpc_helpers::{spawn_service_thread_with_drop_closure, ServerHandle};
@@ -20,10 +21,7 @@ use std::{
     sync::Arc,
 };
 use storage_client::{StorageRead, StorageWrite};
-use storage_proto::proto::storage::{
-    create_storage, GetAccountStateWithProofByVersionRequest,
-};
-use crypto::HashValue;
+use storage_proto::proto::storage::{create_storage, GetAccountStateWithProofByVersionRequest};
 
 pub fn start_storage_service_and_return_service(
     config: &NodeConfig,
@@ -169,8 +167,12 @@ impl StorageRead for StorageService {
         block_on(self.get_startup_info_async())
     }
 
-    fn get_history_startup_info_by_block_id(&self, block_id:HashValue) -> Result<Option<storage_proto::StartupInfo>> {
-        let info = self.get_history_startup_info_by_block_id_inner(&block_id)
+    fn get_history_startup_info_by_block_id(
+        &self,
+        block_id: HashValue,
+    ) -> Result<Option<storage_proto::StartupInfo>> {
+        let info = self
+            .get_history_startup_info_by_block_id_inner(&block_id)
             .and_then(|resp| storage_proto::GetStartupInfoResponse::try_from(resp))
             .unwrap();
         Ok(info.info)
@@ -239,7 +241,7 @@ impl StorageWrite for StorageService {
             .boxed()
     }
 
-    fn rollback_by_block_id(&self, block_id:HashValue) {
+    fn rollback_by_block_id(&self, block_id: HashValue) {
         self.rollback_by_block_id_inner(&block_id);
     }
 }
