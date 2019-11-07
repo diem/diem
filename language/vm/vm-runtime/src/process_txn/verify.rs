@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    code_cache::{
-        module_cache::ModuleCache,
-        script_cache::ScriptCache,
-    },
+    code_cache::{module_cache::ModuleCache, script_cache::ScriptCache},
     loaded_data::function::{FunctionRef, FunctionReference},
     process_txn::{execute::ExecutedTransaction, validate::ValidatedTransaction},
     txn_executor::TransactionExecutor,
@@ -168,8 +165,7 @@ where
     'alloc: 'txn,
     P: ModuleCache<'alloc>,
 {
-    pub(super) txn_executor:
-        TransactionExecutor<'alloc, 'txn, P>,
+    pub(super) txn_executor: TransactionExecutor<'alloc, 'txn, P>,
     pub(super) verified_txn: VerTxn<'alloc>,
 }
 

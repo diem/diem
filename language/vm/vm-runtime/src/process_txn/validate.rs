@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    code_cache::{
-        module_cache::ModuleCache,
-        script_cache::ScriptCache,
-    },
+    code_cache::{module_cache::ModuleCache, script_cache::ScriptCache},
     data_cache::RemoteCache,
     process_txn::{verify::VerifiedTransaction, ProcessTransaction},
     txn_executor::TransactionExecutor,
@@ -277,12 +274,8 @@ where
         payload_check()?;
 
         let metadata = TransactionMetadata::new(&txn);
-        let mut txn_state = ValidatedTransactionState::new(
-            metadata,
-            gas_schedule,
-            module_cache,
-            data_cache,
-        );
+        let mut txn_state =
+            ValidatedTransactionState::new(metadata, gas_schedule, module_cache, data_cache);
 
         // Run the prologue to ensure that clients have enough gas and aren't tricking us by
         // sending us garbage.
@@ -316,8 +309,7 @@ where
     'alloc: 'txn,
     P: ModuleCache<'alloc>,
 {
-    pub(super) txn_executor:
-        TransactionExecutor<'alloc, 'txn, P>,
+    pub(super) txn_executor: TransactionExecutor<'alloc, 'txn, P>,
 }
 
 impl<'alloc, 'txn, P> ValidatedTransactionState<'alloc, 'txn, P>

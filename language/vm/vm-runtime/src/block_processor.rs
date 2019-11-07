@@ -11,9 +11,7 @@ use crate::{
 use libra_config::config::VMPublishingOption;
 use libra_logger::prelude::*;
 use libra_types::{
-    transaction::{
-        SignatureCheckedTransaction, SignedTransaction, TransactionOutput,
-    },
+    transaction::{SignatureCheckedTransaction, SignedTransaction, TransactionOutput},
     vm_error::{sub_status, StatusCode, VMStatus},
 };
 use rayon::prelude::*;

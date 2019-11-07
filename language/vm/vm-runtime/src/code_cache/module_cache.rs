@@ -201,7 +201,7 @@ impl<'alloc> VMModuleCache<'alloc> {
                     .get(callee_name)
                     .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
                 Ok(FunctionRef::new(callee_module, *callee_func_id))
-            },
+            }
             Err(errors) => Err(errors),
         }
     }
@@ -221,7 +221,7 @@ impl<'alloc> VMModuleCache<'alloc> {
             Ok(module) => {
                 let struct_def_idx = module.get_struct_def_index(struct_name)?;
                 self.resolve_struct_def_with_fetcher(module, *struct_def_idx, gas_meter, fetcher)
-            },
+            }
             Err(errors) => Err(errors),
         }
     }
@@ -257,8 +257,10 @@ impl<'alloc> VMModuleCache<'alloc> {
                     }
                     TypeContext::new(ctx)
                 };
-                let struct_def = ctx.subst_struct_def(&self
-                    .resolve_struct_handle_with_fetcher(module, *sh_idx, gas_meter, fetcher)?)?;
+                let struct_def = ctx
+                    .subst_struct_def(&self.resolve_struct_handle_with_fetcher(
+                        module, *sh_idx, gas_meter, fetcher,
+                    )?)?;
                 Ok(Type::Struct(struct_def))
             }
             SignatureToken::Reference(sub_tok) => {
@@ -327,13 +329,13 @@ impl<'alloc> VMModuleCache<'alloc> {
                             gas_meter,
                             fetcher,
                         )?;
-                            // `field_types` is initally empty, a single element is pushed
-                            // per loop iteration and the number of iterations is bound to
-                            // the max size of `module.field_def_range()`.
-                            // MIRAI cannot currently check this bound in terms of
-                            // `field_count`.
-                            assume!(field_types.len() < usize::max_value());
-                            field_types.push(ty);
+                        // `field_types` is initally empty, a single element is pushed
+                        // per loop iteration and the number of iterations is bound to
+                        // the max size of `module.field_def_range()`.
+                        // MIRAI cannot currently check this bound in terms of
+                        // `field_count`.
+                        assume!(field_types.len() < usize::max_value());
+                        field_types.push(ty);
                     }
                     StructDef::new(field_types)
                 }
@@ -366,7 +368,9 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
     }
 
     fn get_loaded_module(&self, id: &ModuleId) -> VMResult<&'alloc LoadedModule> {
-        self.map.get(id).ok_or_else(||VMStatus::new(StatusCode::LINKER_ERROR))
+        self.map
+            .get(id)
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))
     }
 
     fn cache_module(&self, module: VerifiedModule) {

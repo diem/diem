@@ -78,10 +78,10 @@ where
             //       global storage or from the local data cache (which means that this module is
             //       published within the same block).
             if txn_executor.exists_module(&module_id) {
-               return txn_executor.failed_transaction_cleanup(Err(vm_error(
-                        Location::default(),
-                        StatusCode::DUPLICATE_MODULE_NAME,
-                    )));
+                return txn_executor.failed_transaction_cleanup(Err(vm_error(
+                    Location::default(),
+                    StatusCode::DUPLICATE_MODULE_NAME,
+                )));
             };
             let module_bytes = module.into_inner();
             let output = txn_executor.transaction_cleanup(vec![(module_id, module_bytes)]);

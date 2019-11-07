@@ -231,7 +231,9 @@ where
         self.data_view.make_write_set(to_be_published_modules)
     }
 
-    pub(crate) fn exists_module(&self, m: &ModuleId) -> bool { self.data_view.exists_module(m) }
+    pub(crate) fn exists_module(&self, m: &ModuleId) -> bool {
+        self.data_view.exists_module(m)
+    }
 
     /// Execute a function.
     /// `module` is an identifier for the name the module is stored in. `function_name` is the name
@@ -248,9 +250,7 @@ where
         function_name: &IdentStr,
         args: Vec<Value>,
     ) -> VMResult<()> {
-        let loaded_module = self
-            .module_cache
-            .get_loaded_module(module)?;
+        let loaded_module = self.module_cache.get_loaded_module(module)?;
         let func_idx = loaded_module
             .function_defs_table
             .get(function_name)
@@ -618,9 +618,7 @@ where
         idx: FunctionHandleIndex,
         type_actual_tags: Vec<TypeTag>,
     ) -> VMResult<Option<Frame<'txn, FunctionRef<'txn>>>> {
-        let func = self
-            .module_cache
-            .resolve_function_ref(module, idx)?;
+        let func = self.module_cache.resolve_function_ref(module, idx)?;
         if func.is_native() {
             self.call_native(func, type_actual_tags)?;
             Ok(None)
@@ -703,9 +701,7 @@ where
 
     /// Save an account into the data store.
     fn call_save_account(&mut self) -> VMResult<()> {
-        let account_module = self
-            .module_cache
-            .get_loaded_module(&ACCOUNT_MODULE)?;
+        let account_module = self.module_cache.get_loaded_module(&ACCOUNT_MODULE)?;
 
         let account_resource = self.operand_stack.pop_as::<Struct>()?;
         let address = self.operand_stack.pop_as::<AccountAddress>()?;
@@ -762,9 +758,9 @@ where
         F: FnOnce(&mut Self, AccessPath, StructDef) -> VMResult<AbstractMemorySize<GasCarrier>>,
     {
         let ap = Self::make_access_path(module, idx, address);
-        let struct_def =
-            self.module_cache
-                .resolve_struct_def(module, idx, &self.gas_meter)?;
+        let struct_def = self
+            .module_cache
+            .resolve_struct_def(module, idx, &self.gas_meter)?;
         op(self, ap, struct_def)
     }
 
@@ -835,9 +831,11 @@ where
             .struct_defs_table
             .get(&*ACCOUNT_STRUCT_NAME)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
-        let account_struct_def = self
-            .module_cache
-            .resolve_struct_def(account_module, *account_struct_id, &self.gas_meter)?;
+        let account_struct_def = self.module_cache.resolve_struct_def(
+            account_module,
+            *account_struct_id,
+            &self.gas_meter,
+        )?;
 
         // TODO: Adding the freshly created account's expiration date to the TransactionOutput here.
         let account_path = Self::make_access_path(account_module, *account_struct_id, addr);
@@ -849,9 +847,7 @@ where
     /// in the `ACCOUNT_MODULE` on chain.
     // REVIEW: this should not live here
     pub fn create_account_entry(&mut self, addr: AccountAddress) -> VMResult<()> {
-        let account_module = self
-            .module_cache
-            .get_loaded_module(&ACCOUNT_MODULE)?;
+        let account_module = self.module_cache.get_loaded_module(&ACCOUNT_MODULE)?;
 
         // TODO: Currently the event counter will cause the gas cost for create account be flexible.
         //       We either need to fix the gas stability test cases in tests or we need to come up
