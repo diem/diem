@@ -1,6 +1,3 @@
-// check: VerificationFailure
-// check: MOVELOC_UNAVAILABLE_ERROR
-
 main() {
     let x: u64;
     let y: u64;
@@ -17,3 +14,8 @@ main() {
     }
     return;
 }
+
+// TODO: fix verifier remove identical errors
+// check: MOVELOC_UNAVAILABLE_ERROR
+// check: MOVELOC_UNAVAILABLE_ERROR
+// check: MOVELOC_UNAVAILABLE_ERROR

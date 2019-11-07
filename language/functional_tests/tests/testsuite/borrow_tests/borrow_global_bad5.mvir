@@ -10,5 +10,4 @@ module A {
     }
 }
 
-// check: VerificationFailure
 // check: JOIN_FAILURE

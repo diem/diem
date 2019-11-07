@@ -1,6 +1,3 @@
-// check: VerificationFailure
-// check: CALL_TYPE_MISMATCH_ERROR
-
 module B {
     struct T{g: u64}
 
@@ -15,8 +12,8 @@ module B {
     }
 }
 
-//! new-transaction
 
+//! new-transaction
 module A {
     import {{default}}.B;
     struct T{f: B.T}
@@ -36,19 +33,4 @@ module A {
         return;
     }
 }
-
-//! new-transaction
-
-import {{default}}.A;
-import {{default}}.B;
-
-main() {
-    let b: B.T;
-    let x: A.T;
-    let x_ref: &mut A.T;
-    b = B.new(0);
-    x = A.new(move(b));
-    x_ref = &mut x;
-    A.t(move(x_ref));
-    return;
-}
+// check: CALL_TYPE_MISMATCH_ERROR

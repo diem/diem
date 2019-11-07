@@ -10,5 +10,6 @@ main() {
     return;
 }
 
-// check: VerificationFailure
+// TODO: duplicated errors
+// check: COPYLOC_UNAVAILABLE_ERROR
 // check: COPYLOC_UNAVAILABLE_ERROR

@@ -1,6 +1,3 @@
-// check: VerificationFailure
-// check: WRITEREF_EXISTS_BORROW_ERROR
-
 module B {
     struct T{g: u64}
 
@@ -9,8 +6,8 @@ module B {
     }
 }
 
-//! new-transaction
 
+//! new-transaction
 module A {
     import Transaction.B;
     struct T{value: B.T}
@@ -33,20 +30,4 @@ module A {
         return;
     }
 }
-
-//! new-transaction
-
-import {{default}}.A;
-import {{default}}.B;
-
-main() {
-    let b: B.T;
-    let a: A.T;
-    let a_ref: &mut A.T;
-    b = B.new(1);
-    a = A.new(move(b));
-    a_ref = &mut a;
-    A.t(move(a_ref));
-
-    return;
-}
+// check: WRITEREF_EXISTS_BORROW_ERROR

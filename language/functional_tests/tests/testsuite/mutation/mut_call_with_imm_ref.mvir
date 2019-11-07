@@ -1,6 +1,3 @@
-// check: VerificationFailure
-// check: CALL_TYPE_MISMATCH_ERROR
-
 module Token {
     resource T{value: u64}
     public new(m: u64): Self.T {
@@ -28,17 +25,4 @@ module Token {
         return;
     }
 }
-
-//! new-transaction
-
-import {{default}}.Token;
-
-main() {
-    let t: Token.T;
-    let i: u64;
-    t = Token.new(42);
-    i = Token.read_value(&t);
-    Token.destroy(move(t));
-
-    return;
-}
+// check: CALL_TYPE_MISMATCH_ERROR

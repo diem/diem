@@ -13,5 +13,4 @@ main(b: bool) {
   return;
 }
 
-// check: VerificationFailure
 // check: STLOC_TYPE_MISMATCH_ERROR

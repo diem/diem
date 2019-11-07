@@ -3,15 +3,15 @@ module ResourceHandle {
     import 0x0.LibraCoin;
     resource T {
         foo: LibraAccount.EventHandle<LibraCoin.T>
+        // check: INVALID_FIELD_DEF
+        // check: CONTRAINT_KIND_MISMATCH
     }
 
     public new(): Self.T {
         let handle: LibraAccount.EventHandle<LibraCoin.T>;
+        // check: CONTRAINT_KIND_MISMATCH
         handle = LibraAccount.new_event_handle<LibraCoin.T>();
+        // check: CONTRAINT_KIND_MISMATCH
         return T { foo: move(handle) };
     }
 }
-
-// check: INVALID_FIELD_DEF
-// check: CONTRAINT_KIND_MISMATCH
-// check: CONTRAINT_KIND_MISMATCH

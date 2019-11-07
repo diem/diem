@@ -13,5 +13,4 @@ module M {
     }
 }
 
-// check: VerificationFailure
 // check: RET_BORROWED_MUTABLE_REFERENCE_ERROR

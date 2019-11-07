@@ -10,5 +10,4 @@ main() {
     return;
 }
 
-// check: VerificationFailure
 // check: JOIN_FAILURE

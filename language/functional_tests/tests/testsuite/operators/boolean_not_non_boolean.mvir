@@ -4,5 +4,4 @@ main() {
     return;
 }
 
-// check: VerificationFailure
 // check: BOOLEAN_OP_TYPE_MISMATCH_ERROR
