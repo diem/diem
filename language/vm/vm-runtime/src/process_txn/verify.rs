@@ -3,7 +3,7 @@
 
 use crate::{
     code_cache::{
-        module_cache::{ModuleCache, TransactionModuleCache},
+        module_cache::ModuleCache,
         script_cache::ScriptCache,
     },
     loaded_data::function::{FunctionRef, FunctionReference},
@@ -169,7 +169,7 @@ where
     P: ModuleCache<'alloc>,
 {
     pub(super) txn_executor:
-        TransactionExecutor<'txn, 'txn, TransactionModuleCache<'alloc, 'txn, P>>,
+        TransactionExecutor<'alloc, 'txn, P>,
     pub(super) verified_txn: VerTxn<'alloc>,
 }
 
@@ -177,7 +177,6 @@ where
 ///
 /// It can be a program, a script or a module. A transaction script gets executed by the VM.
 /// A module script publishes the module provided.
-// TODO: A Script will be a FunctionRef once we remove the ability to publish in scripts.
 pub enum VerTxn<'alloc> {
     Script(FunctionRef<'alloc>),
     Module(Box<VerifiedModule>),

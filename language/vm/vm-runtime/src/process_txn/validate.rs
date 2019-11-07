@@ -3,11 +3,10 @@
 
 use crate::{
     code_cache::{
-        module_cache::{ModuleCache, TransactionModuleCache},
+        module_cache::ModuleCache,
         script_cache::ScriptCache,
     },
     data_cache::RemoteCache,
-    loaded_data::loaded_module::LoadedModule,
     process_txn::{verify::VerifiedTransaction, ProcessTransaction},
     txn_executor::TransactionExecutor,
 };
@@ -23,7 +22,6 @@ use vm::{
     gas_schedule::{self, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier},
     transaction_metadata::TransactionMetadata,
 };
-use vm_cache_map::Arena;
 
 pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8]) -> bool {
     match publishing_option {
@@ -78,7 +76,6 @@ where
             gas_schedule,
             module_cache,
             data_cache,
-            allocator,
             ..
         } = process_txn;
 
@@ -90,7 +87,6 @@ where
                     gas_schedule,
                     module_cache,
                     data_cache,
-                    allocator,
                     mode,
                     || {
                         // Verify against whitelist if we are locked. Otherwise allow.
@@ -109,7 +105,6 @@ where
                     gas_schedule,
                     module_cache,
                     data_cache,
-                    allocator,
                     mode,
                     || {
                         if !publishing_option.is_open() {
@@ -175,7 +170,6 @@ where
         gas_schedule: &'txn CostTable,
         module_cache: P,
         data_cache: &'txn dyn RemoteCache,
-        allocator: &'txn Arena<LoadedModule>,
         mode: ValidationMode,
         payload_check: impl Fn() -> Result<(), VMStatus>,
     ) -> Result<ValidatedTransactionState<'alloc, 'txn, P>, VMStatus> {
@@ -288,7 +282,6 @@ where
             gas_schedule,
             module_cache,
             data_cache,
-            allocator,
         );
 
         // Run the prologue to ensure that clients have enough gas and aren't tricking us by
@@ -323,10 +316,8 @@ where
     'alloc: 'txn,
     P: ModuleCache<'alloc>,
 {
-    // <'txn, 'txn> looks weird, but it just means that the module cache passed in (the
-    // TransactionModuleCache) allocates for that long.
     pub(super) txn_executor:
-        TransactionExecutor<'txn, 'txn, TransactionModuleCache<'alloc, 'txn, P>>,
+        TransactionExecutor<'alloc, 'txn, P>,
 }
 
 impl<'alloc, 'txn, P> ValidatedTransactionState<'alloc, 'txn, P>
@@ -339,12 +330,9 @@ where
         gas_schedule: &'txn CostTable,
         module_cache: P,
         data_cache: &'txn dyn RemoteCache,
-        allocator: &'txn Arena<LoadedModule>,
     ) -> Self {
-        // This temporary cache is used for modules published by a single transaction.
-        let txn_module_cache = TransactionModuleCache::new(module_cache, allocator);
         let txn_executor =
-            TransactionExecutor::new(txn_module_cache, gas_schedule, data_cache, metadata);
+            TransactionExecutor::new(module_cache, gas_schedule, data_cache, metadata);
         Self { txn_executor }
     }
 }

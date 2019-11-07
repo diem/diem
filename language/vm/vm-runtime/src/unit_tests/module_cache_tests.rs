@@ -5,7 +5,7 @@ use super::*;
 use crate::{
     code_cache::{
         module_adapter::FakeFetcher,
-        module_cache::{BlockModuleCache, ModuleCache, TransactionModuleCache, VMModuleCache},
+        module_cache::{BlockModuleCache, ModuleCache, VMModuleCache},
     },
     gas_meter::GasMeter,
     loaded_data::{
@@ -443,45 +443,7 @@ fn test_multi_level_cache_write_back() {
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     let entry_module = entry_func.module();
 
-    {
-        let txn_allocator = Arena::new();
-        {
-            let txn_cache = TransactionModuleCache::new(&vm_cache, &txn_allocator);
-
-            // We should be able to read existing modules in both cache.
-            let func1_vm_ref = vm_cache
-                .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
-                .unwrap()
-                .unwrap();
-            let func1_txn_ref = txn_cache
-                .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
-                .unwrap()
-                .unwrap();
-            assert_eq!(func1_vm_ref, func1_txn_ref);
-
-            txn_cache.cache_module(test_module("module"));
-
-            // We should not read the new module in the vm cache, but we should read it from the txn
-            // cache.
-            assert!(vm_cache
-                .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
-                .unwrap()
-                .is_none());
-            let func2_txn_ref = txn_cache
-                .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
-                .unwrap()
-                .unwrap();
-            assert_eq!(func2_txn_ref.arg_count(), 1);
-            assert_eq!(func2_txn_ref.return_count(), 0);
-            assert_eq!(
-                func2_txn_ref.code_definition(),
-                vec![Bytecode::Ret].as_slice()
-            );
-        }
-
-        // Drop the transactional arena
-        vm_cache.reclaim_cached_module(txn_allocator.into_vec());
-    }
+    vm_cache.cache_module(test_module("module"));
 
     // After reclaiming we should see it from the
     let func2_ref = vm_cache

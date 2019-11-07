@@ -249,6 +249,8 @@ where
             },
         ))
     }
+
+    pub fn exists_module(&self, m: &ModuleId) -> bool { self.interpreter.exists_module(m) }
 }
 
 #[inline]

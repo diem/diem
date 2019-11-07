@@ -91,7 +91,6 @@ impl<'alloc> VMRuntime<'alloc> {
             }
         };
 
-        let arena = Arena::new();
         let signature_verified_txn = match txn.check_signature() {
             Ok(t) => t,
             Err(_) => return Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
@@ -102,7 +101,6 @@ impl<'alloc> VMRuntime<'alloc> {
             &gas_schedule,
             module_cache,
             &data_cache,
-            &arena,
         );
         let mode = if data_view.is_genesis() {
             ValidationMode::Genesis

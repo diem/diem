@@ -74,37 +74,24 @@ where
             let module_id = ver_module.self_id();
             // Make sure that there is not already a module with this name published
             // under the transaction sender's account.
-            // Note: although this reads from the "module cache", `get_loaded_module`
-            // will read through the cache to fetch the module from the global storage
-            // if it is not already cached.
-            match txn_executor.module_cache().get_loaded_module(&module_id) {
-                Ok(None) => (), // No module with this name exists. safe to publish one
-                Err(ref err) if err.is(StatusType::InvariantViolation) => {
-                    error!(
-                        "[VM] VM internal error while checking for duplicate module {:?}: {:?}",
-                        module_id, err
-                    );
-                    return ExecutedTransaction::discard_error_output(err.clone());
-                }
-                Ok(Some(_)) | Err(_) => {
-                    // A module with this name already exists (the error case is when the module
-                    // couldn't be verified, but it still exists so we should fail similarly).
-                    // It is not safe to publish another one; it would clobber the old module.
-                    // This would break code that links against the module and make published
-                    // resources from the old module inaccessible (or worse, accessible and not
-                    // typesafe).
-                    //
-                    // We are currently developing a versioning scheme for safe updates of
-                    // modules and resources.
-                    warn!("[VM] VM error duplicate module {:?}", module_id);
-                    return txn_executor.failed_transaction_cleanup(Err(vm_error(
+            // Note: `exists_module` will fetch the module from either the
+            //       global storage or from the local data cache (which means that this module is
+            //       published within the same block).
+            if txn_executor.exists_module(&module_id) {
+               return txn_executor.failed_transaction_cleanup(Err(vm_error(
                         Location::default(),
                         StatusCode::DUPLICATE_MODULE_NAME,
                     )));
-                }
-            }
+            };
             let module_bytes = module.into_inner();
-            txn_executor.transaction_cleanup(vec![(module_id, module_bytes)])
+            let output = txn_executor.transaction_cleanup(vec![(module_id, module_bytes)]);
+            match output.status() {
+                TransactionStatus::Keep(status) if status.major_status == StatusCode::EXECUTED => {
+                    txn_executor.module_cache().cache_module(*ver_module);
+                }
+                _ => (),
+            };
+            output
         }
         TransactionPayload::Script(script) => {
             let VerifiedTransactionState {
