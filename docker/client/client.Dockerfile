@@ -7,17 +7,13 @@ RUN echo "deb http://deb.debian.org/debian buster-backports main" > /etc/apt/sou
     && apt-get update && apt-get install -y protobuf-compiler/buster cmake curl clang git \
     && apt-get clean && rm -r /var/lib/apt/lists/*
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
 ENV PATH "$PATH:/root/.cargo/bin"
-
-WORKDIR /libra
-COPY rust-toolchain /libra/rust-toolchain
-RUN rustup install $(cat rust-toolchain)
 
 FROM toolchain AS builder
 
+WORKDIR /libra
 COPY . /libra
-
 RUN cargo build --release -p libra-node -p client -p benchmark && cd target/release && rm -r build deps incremental
 RUN strip target/release/client
 
