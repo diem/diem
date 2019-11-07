@@ -21,8 +21,8 @@ commands:
       - run:
           name: Set rustc version
           command: |
-            rustup toolchain install beta-2019-10-03
-            rustup override set beta-2019-10-03
+            rustup default stable
+            rustup update stable
   print_versions:
     description: Version Info
     steps:
