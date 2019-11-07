@@ -151,6 +151,18 @@ impl KeyFactory {
 
         Ok(ExtendedPrivKey::new(child, sk))
     }
+
+    pub fn private_child_raw(&self, child: ChildNumber) -> Result<Ed25519PrivateKey> {
+        let mut le_n = [0u8; 8];
+        LittleEndian::write_u64(&mut le_n, child.0);
+        let mut info = KeyFactory::INFO_PREFIX.to_vec();
+        info.extend_from_slice(&le_n);
+
+        let hkdf_expand = Hkdf::<Sha3_256>::expand(&self.master(), Some(&info), 32)?;
+        let sk = Ed25519PrivateKey::try_from(hkdf_expand.as_slice())
+            .expect("Unable to convert into private key");
+        Ok(sk)
+    }
 }
 
 /// Seed is the output of a one-way function, which accepts a Mnemonic as input
