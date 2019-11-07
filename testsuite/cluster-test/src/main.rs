@@ -113,19 +113,19 @@ struct Args {
     #[structopt(
         long,
         default_value = "10",
-        help = "Number of instances which should be in region1. The remaining instances are in region 2."
+        help = "Space separated list of various split sizes"
     )]
-    multi_region_split: usize,
+    multi_region_splits: Vec<usize>,
     #[structopt(
         long,
         default_value = "50",
-        help = "Delay in ms between the two regions"
+        help = "Space separated list of various delays in ms between the two regions"
     )]
-    multi_region_delay_ms: u64,
+    multi_region_delays_ms: Vec<u64>,
     #[structopt(
         long,
-        default_value = "60",
-        help = "Duration in secs for which multi region experiment happens"
+        default_value = "300",
+        help = "Duration in secs (per config) for which multi region experiment happens"
     )]
     multi_region_exp_duration_secs: u64,
 
@@ -225,11 +225,12 @@ pub fn main() {
         runner.cleanup_and_run(Box::new(experiment)).unwrap();
     } else if args.multi_region_simulation {
         let experiment = MultiRegionSimulation::new(
-            args.multi_region_split,
-            Duration::from_millis(args.multi_region_delay_ms),
+            args.multi_region_splits.clone(),
+            args.multi_region_delays_ms.clone(),
             Duration::from_secs(args.multi_region_exp_duration_secs),
-            &runner.cluster,
+            runner.cluster.clone(),
             runner.thread_pool_executor.clone(),
+            runner.prometheus.clone(),
         );
         runner.cleanup_and_run(Box::new(experiment)).unwrap();
     } else if args.perf_run {
@@ -452,23 +453,21 @@ fn print_stat(prometheus: &Prometheus, window: Duration) -> failure::Result<(f64
     let step = 10;
     let end = unix_timestamp_now();
     let start = end - window;
-    let tps = prometheus.query_range(
-        "irate(consensus_gauge{op='last_committed_version'}[1m])".to_string(),
-        &start,
-        &end,
-        step,
-    )?;
-    let avg_tps = tps.avg().ok_or_else(|| format_err!("No tps data"))?;
-    let latency = prometheus.query_range(
+    let avg_tps = prometheus
+        .query_range_avg(
+            "irate(consensus_gauge{op='last_committed_version'}[1m])".to_string(),
+            &start,
+            &end,
+            step,
+        )
+        .map_err(|_| format_err!("No tps data"))?;
+    let avg_latency = prometheus.query_range_avg(
         "irate(mempool_duration_sum{op='e2e.latency'}[1m])/irate(mempool_duration_count{op='e2e.latency'}[1m])"
             .to_string(),
         &start,
         &end,
         step,
-    )?;
-    let avg_latency = latency
-        .avg()
-        .ok_or_else(|| format_err!("No latency data"))?;
+    ).map_err(|_| format_err!("No latency data"))?;
     info!(
         "Tps: {:.0}, latency: {:.0} ms",
         avg_tps,
