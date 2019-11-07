@@ -675,9 +675,15 @@ impl NodeConfigHelpers {
     /// consensus_peers_file, network_keypairs_file, consensus_keypair_file, and seed_peers_file
     /// set. It is expected that the callee will provide these.
     pub fn get_single_node_test_config(random_ports: bool) -> NodeConfig {
-        Self::get_single_node_test_config_publish_options(
+        Self::get_single_node_test_config_times(random_ports, 0)
+    }
+
+    /// times
+    pub fn get_single_node_test_config_times(random_ports: bool, times: usize) -> NodeConfig {
+        Self::get_single_node_test_config_publish_options_times(
             random_ports,
             Some(VMPublishingOption::Open),
+            times,
         )
     }
 
@@ -688,6 +694,14 @@ impl NodeConfigHelpers {
     pub fn get_single_node_test_config_publish_options(
         random_ports: bool,
         publishing_options: Option<VMPublishingOption>,
+    ) -> NodeConfig {
+        Self::get_single_node_test_config_publish_options_times(random_ports, publishing_options, 0)
+    }
+
+    pub fn get_single_node_test_config_publish_options_times(
+        random_ports: bool,
+        publishing_options: Option<VMPublishingOption>,
+        times: usize,
     ) -> NodeConfig {
         let config_string = String::from_utf8_lossy(CONFIG_TEMPLATE);
         let mut config =
@@ -704,7 +718,7 @@ impl NodeConfigHelpers {
             config.vm_config.publishing_options = vm_publishing_option;
         }
         let (mut private_keys, test_consensus_peers, test_network_peers) =
-            ConfigHelpers::gen_validator_nodes(1, None);
+            ConfigHelpers::gen_validator_nodes_times(1, None, times);
         let peer_id = *private_keys.keys().nth(0).unwrap();
         let (
             ConsensusPrivateKey {

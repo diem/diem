@@ -15,6 +15,7 @@ message ConsensusMsg {
     RespondBlock respond_block = 4;
     SyncInfo sync_info = 5;
     types.LedgerInfoWithSignatures ledger_info = 6;
+    Block new_block = 7;
   }
 }
 

@@ -112,6 +112,7 @@ impl LibraDB {
                 JELLYFISH_MERKLE_NODE_CF_NAME,
                 ColumnFamilyOptions::default(),
             ),
+            (LEDGER_HISTORY_CF_NAME, ColumnFamilyOptions::default()),
             (LEDGER_COUNTERS_CF_NAME, ColumnFamilyOptions::default()),
             (STALE_NODE_INDEX_CF_NAME, ColumnFamilyOptions::default()),
             (TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
@@ -592,6 +593,34 @@ impl LibraDB {
         }))
     }
 
+    /// Get for pre compute
+    pub fn get_history_startup_info_by_block_id(
+        &self,
+        block_id: &HashValue,
+    ) -> Result<Option<StartupInfo>> {
+        let ledger_info_with_sigs = match self.ledger_store.get_ledger_info_by_block_id(block_id) {
+            Ok(x) => x,
+            Err(err) => return Ok(None),
+        };
+        let ledger_info = ledger_info_with_sigs.ledger_info().clone();
+
+        let version = ledger_info.version();
+        let txn_info = self.ledger_store.get_transaction_info(version)?;
+
+        let account_state_root_hash = txn_info.state_root_hash();
+
+        let ledger_frozen_subtree_hashes = self
+            .ledger_store
+            .get_ledger_frozen_subtree_hashes(version)?;
+
+        Ok(Some(StartupInfo {
+            ledger_info,
+            latest_version: version,
+            account_state_root_hash,
+            ledger_frozen_subtree_hashes,
+        }))
+    }
+
     // ======================= State Synchronizer Internal APIs ===================================
     /// Gets a batch of transactions for the purpose of synchronizing state to another node.
     ///
@@ -717,6 +746,11 @@ impl LibraDB {
             events,
             proof,
         })
+    }
+
+    pub fn rollback_by_block_id(&self, block_id: &HashValue) -> Result<()> {
+        let mut cs = ChangeSet::new();
+        self.ledger_store.rollback_by_block_id(block_id, &mut cs)
     }
 }
 

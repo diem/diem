@@ -49,12 +49,31 @@ pub trait StateComputer: Send + Sync {
         executed_trees: ExecutedTrees,
     ) -> Pin<Box<dyn Future<Output = Result<ProcessedVMOutput>> + Send>>;
 
+    /// Pre compute
+    fn pre_compute(
+        &self,
+        // The id of a ancestor block which is main chain block.
+        ancestor_id: HashValue,
+        // Transactions to execute.
+        transactions_vec: Vec<Self::Payload>,
+    ) -> Pin<Box<dyn Future<Output = Result<(StateComputeResult, HashValue)>> + Send>>;
+
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
         blocks: Vec<(Self::Payload, Arc<ProcessedVMOutput>)>,
         finality_proof: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
+
+    /// Send a successful commit. A future is fulfilled when the state is finalized.
+    fn commit_with_id(
+        &self,
+        block_id: HashValue,
+        commit: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
+
+    /// Rollback
+    fn rollback(&self, block_id: HashValue) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
     fn sync_to(
         &self,

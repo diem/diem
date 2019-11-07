@@ -23,6 +23,7 @@ use futures::{
     SinkExt, Stream, StreamExt,
 };
 use libra_types::{validator_public_keys::ValidatorPublicKeys, PeerId};
+use logger::prelude::*;
 use pin_project::pin_project;
 use prost::Message as _;
 use std::{pin::Pin, time::Duration};
@@ -119,6 +120,17 @@ impl ConsensusNetworkSender {
                     mdata: message_bytes,
                 },
             ))
+            .await?;
+        Ok(())
+    }
+
+    pub async fn broadcast_bytes(&mut self, message_bytes: Bytes) -> Result<(), NetworkError> {
+        warn!("broadcast message");
+        self.inner
+            .send(NetworkRequest::BroadCastMessage(Message {
+                protocol: ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
+                mdata: message_bytes,
+            }))
             .await?;
         Ok(())
     }

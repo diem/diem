@@ -5,8 +5,11 @@
 mod consensusdb_test;
 mod schema;
 
+pub use schema::block_index::BlockIndex;
+
 use crate::chained_bft::consensusdb::schema::{
     block::{BlockSchema, SchemaBlock},
+    block_index::BlockIndexSchema,
     quorum_certificate::QCSchema,
     single_entry::{SingleEntryKey, SingleEntrySchema},
 };
@@ -14,7 +17,7 @@ use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert};
 use failure::prelude::*;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
+use schema::{BLOCK_CF_NAME, BLOCK_INDEX_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
 use schemadb::{
     ColumnFamilyOptions, ColumnFamilyOptionsMap, ReadOptions, SchemaBatch, DB, DEFAULT_CF_NAME,
 };
@@ -38,6 +41,7 @@ impl ConsensusDB {
             (BLOCK_CF_NAME, ColumnFamilyOptions::default()),
             (QC_CF_NAME, ColumnFamilyOptions::default()),
             (SINGLE_ENTRY_CF_NAME, ColumnFamilyOptions::default()),
+            (BLOCK_INDEX_CF_NAME, ColumnFamilyOptions::default()),
         ]
         .iter()
         .cloned()
@@ -187,5 +191,41 @@ impl ConsensusDB {
         let mut iter = self.db.iter::<QCSchema>(ReadOptions::default())?;
         iter.seek_to_first();
         iter.collect::<Result<HashMap<HashValue, QuorumCert>>>()
+    }
+
+    /// Get block by hash
+    pub fn get_block_by_hash<T: Payload>(&self, hash: &HashValue) -> Option<Block<T>> {
+        match self.db.get::<BlockSchema<T>>(&hash) {
+            Ok(block) => match block {
+                Some(b) => Some(b.borrow_into_block().clone()),
+                None => None,
+            },
+            _ => None,
+        }
+    }
+
+    /// Get blocks by hashs
+    pub fn get_blocks_by_hashs<T: Payload>(&self, hashs: Vec<HashValue>) -> Option<Vec<Block<T>>> {
+        let mut blocks = vec![];
+        for hash in hashs {
+            match self.get_block_by_hash(&hash) {
+                Some(b) => blocks.push(b),
+                None => return None,
+            }
+        }
+
+        return Some(blocks);
+    }
+
+    /// Insert BlockIndex
+    pub fn insert_block_index(&self, height: &u64, block_index: &BlockIndex) -> Result<()> {
+        let mut batch = SchemaBatch::new();
+        batch.put::<BlockIndexSchema>(&height, &block_index)?;
+        self.commit(batch)
+    }
+
+    /// Load BlockIndex
+    pub fn load_block_index(&self) -> Result<Vec<BlockIndex>> {
+        unimplemented!()
     }
 }

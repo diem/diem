@@ -70,7 +70,7 @@ where
 // NetworkKeyPairs is used to store a node's Network specific keypairs.
 // It is filled via a config file at the moment.
 #[derive(Debug, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
+#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
 pub struct NetworkKeyPairs {
     network_signing_private_key: PrivateKeyContainer<Ed25519PrivateKey>,
     #[serde(serialize_with = "serialize_key")]

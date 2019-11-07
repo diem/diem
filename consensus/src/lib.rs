@@ -9,7 +9,7 @@
 
 #![cfg_attr(not(feature = "fuzzing"), deny(missing_docs))]
 #![cfg_attr(feature = "fuzzing", allow(dead_code))]
-#![recursion_limit = "512"]
+#![recursion_limit = "1024"]
 extern crate failure;
 
 #[allow(unused_imports)]
@@ -17,6 +17,7 @@ extern crate failure;
 extern crate debug_interface;
 
 mod chained_bft;
+mod pow;
 
 mod util;
 

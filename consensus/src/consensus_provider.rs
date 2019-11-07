@@ -6,6 +6,7 @@ use libra_config::config::NodeConfig;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 
 use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;
+use crate::pow::pow_consensus_provider::PowConsensusProvider;
 use executor::Executor;
 use grpcio::{ChannelBuilder, EnvBuilder};
 use libra_mempool::proto::mempool::MempoolClient;
@@ -63,5 +64,25 @@ pub fn create_storage_read_client(config: &NodeConfig) -> Arc<dyn StorageRead> {
         env,
         &config.storage.address,
         config.storage.port,
+    ))
+}
+
+/// pow provider
+pub fn make_pow_consensus_provider(
+    node_config: &mut NodeConfig,
+    network_sender: ConsensusNetworkSender,
+    network_receiver: ConsensusNetworkEvents,
+    executor: Arc<Executor<MoveVM>>,
+    state_sync_client: Arc<StateSyncClient>,
+    rollback_flag: bool,
+) -> Box<dyn ConsensusProvider> {
+    Box::new(PowConsensusProvider::new(
+        node_config,
+        network_sender,
+        network_receiver,
+        create_mempool_client(node_config),
+        executor,
+        state_sync_client,
+        rollback_flag,
     ))
 }

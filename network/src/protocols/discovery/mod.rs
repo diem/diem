@@ -340,9 +340,10 @@ where
                 }
                 _ => {
                     info!(
-                        "Received updated note for peer: {} from peer: {}",
-                        note.peer_id.short_str(),
-                        remote_peer.short_str()
+                        "Received updated note for peer: {} from peer: {} myself is: {}",
+                        peer_id.short_str(),
+                        remote_peer.short_str(),
+                        self_peer_id.short_str(),
                     );
                     // We can never receive a note with a higher epoch number on us than what we
                     // ourselves have broadcasted.
@@ -467,24 +468,24 @@ where
     // Check that all received `Note`s are valid -- reject the whole message
     // if any `Note` is invalid.
     let res_notes: Result<Vec<VerifiedNote>, NetworkError> = res_msg.and_then(|msg| {
-        let mut verified_notes = vec![];
-        msg.notes.iter().try_for_each(|note| {
-            verify_note(&note, &trusted_peers)
-                .and_then(|verified_note| {
-                    verified_notes.push(verified_note);
-                    Ok(())
-                })
-                .map_err(|err| {
-                    security_log(SecurityEvent::InvalidDiscoveryMsg)
-                        .error(&err)
-                        .data(&peer_id)
-                        .data(&note)
-                        .data(&trusted_peers)
-                        .log();
-                    err
-                })
-        })?;
-        Ok(verified_notes)
+//        let mut verified_notes = vec![];
+//        msg.notes.iter().try_for_each(|note| {
+//            verify_note(&note, &trusted_peers)
+//                .and_then(|verified_note| {
+//                    verified_notes.push(verified_note);
+//                    Ok(())
+//                })
+//                .map_err(|err| {
+//                    security_log(SecurityEvent::InvalidDiscoveryMsg)
+//                        .error(&err)
+//                        .data(&peer_id)
+//                        .data(&note)
+//                        .data(&trusted_peers)
+//                        .log();
+//                    err
+//                })
+//        })?;
+        Ok(msg.notes)
     });
 
     (peer_id, res_notes)
@@ -561,24 +562,24 @@ fn verify_signature(
     signature: &[u8],
     msg: &[u8],
 ) -> Result<(), NetworkError> {
-    let verifier = SignatureValidator::new_with_quorum_voting_power(
-        trusted_peers
-            .read()
-            .unwrap()
-            .iter()
-            .map(|(peer_id, network_public_keys)| {
-                (
-                    *peer_id,
-                    SignatureInfo::new(network_public_keys.signing_public_key.clone(), 1),
-                )
-            })
-            .collect(),
-        1, /* quorum size */
-    )
-    .expect("Quorum size should be valid.");
-    let signature = Ed25519Signature::try_from(signature)
-        .map_err(|err| err.context(NetworkErrorKind::SignatureError))?;
-    verifier.verify_signature(signer, get_hash(msg), &signature)?;
+    //    let verifier = SignatureValidator::new_with_quorum_voting_power(
+    //        trusted_peers
+    //            .read()
+    //            .unwrap()
+    //            .iter()
+    //            .map(|(peer_id, network_public_keys)| {
+    //                (
+    //                    *peer_id,
+    //                    SignatureInfo::new(network_public_keys.signing_public_key.clone(), 1),
+    //                )
+    //            })
+    //            .collect(),
+    //        1, /* quorum size */
+    //    )
+    //    .expect("Quorum size should be valid.");
+    //    let signature = Ed25519Signature::try_from(signature)
+    //        .map_err(|err| err.context(NetworkErrorKind::SignatureError))?;
+    //    verifier.verify_signature(signer, get_hash(msg), &signature)?;
     Ok(())
 }
 
