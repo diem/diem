@@ -624,8 +624,8 @@ pub type TransactionAccumulatorRangeProof = AccumulatorRangeProof<TransactionAcc
 #[cfg(any(test, feature = "fuzzing"))]
 pub type TestAccumulatorRangeProof = AccumulatorRangeProof<TestOnlyHasher>;
 
-/// A proof that but can be used authenticate a range of consecutive leaves, from the leftmost leaf
-/// to a certain one, in a sparse Merkle tree. For example, given the following sparse Merkle tree:
+/// A proof that can be used authenticate a range of consecutive leaves, from the leftmost leaf to
+/// a certain one, in a sparse Merkle tree. For example, given the following sparse Merkle tree:
 ///
 /// ```text
 ///                   root

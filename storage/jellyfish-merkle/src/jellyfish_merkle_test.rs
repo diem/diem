@@ -754,7 +754,7 @@ fn verify_range_proof(
     }
 
     // Now we do the transformation (removing the suffixes) described above.
-    let mut btree2 = BTreeMap::new();
+    let mut kvs = vec![];
     for (key, value) in &btree1 {
         // The length of the common prefix of the previous key and the current key.
         let prev_common_prefix_len =
@@ -772,64 +772,59 @@ fn verify_range_proof(
             (None, None) => 0,
         };
         let transformed_key: Vec<_> = key.iter_bits().take(len + 1).collect();
-        btree2.insert(transformed_key, *value);
+        kvs.push((transformed_key, *value));
     }
 
-    // As the last step, we just keep shrinking the tree until it has only one element. Every
-    // iteration we find two adjacent keys that have the longest common prefix, then we know that
-    // these two are left child and right child of the same parent. We then replace these two keys
-    // with their parent/ancestor and repeat.
-    while btree2.len() > 1 {
-        // Compute the common prefix length for every two adjacent keys.
-        let common_prefix_lengths: Vec<_> = btree2
-            .keys()
-            .skip(1)
-            .map(|k| {
-                let pkey = prev_key(&btree2, k).expect("The previous key must exist.");
-                common_prefix_len(k, &pkey)
-            })
-            .collect();
-        let (index, _len) = common_prefix_lengths
-            .iter()
-            .enumerate()
-            .max_by_key(|(_i, len)| *len)
-            .unwrap();
-        // Now the `index`-th key and the next one form the longest common prefix.
-        let (left_key, left_hash) = btree2
-            .iter()
-            .nth(index)
-            .map(|(k, v)| (k.clone(), *v))
-            .unwrap();
-        let (right_key, right_hash) = btree2
-            .iter()
-            .nth(index + 1)
-            .map(|(k, v)| (k.clone(), *v))
-            .unwrap();
+    assert_eq!(compute_root_hash(kvs), expected_root_hash);
+}
 
-        // How many levels we can shrink depends on the keys beside `left_key` and `right_key`.
-        let remaining_len = match (prev_key(&btree2, &left_key), next_key(&btree2, &right_key)) {
-            (Some(_), Some(_)) => {
-                std::cmp::max(
-                    common_prefix_lengths[index - 1],
-                    common_prefix_lengths[index + 1],
-                ) + 1
-            }
-            (Some(_), None) => common_prefix_lengths[index - 1] + 1,
-            (None, Some(_)) => common_prefix_lengths[index + 1] + 1,
-            (None, None) => 0,
-        };
+/// Computes the root hash of a sparse Merkle tree. `kvs` consists of the entire set of key-value
+/// pairs stored in the tree.
+fn compute_root_hash(kvs: Vec<(Vec<bool>, HashValue)>) -> HashValue {
+    let mut kv_ref = vec![];
+    for (key, value) in &kvs {
+        kv_ref.push((&key[..], *value));
+    }
+    compute_root_hash_impl(kv_ref)
+}
 
-        let (ancestor_key, ancestor_hash) =
-            compute_ancestor(&left_key, left_hash, &right_key, right_hash, remaining_len);
+fn compute_root_hash_impl(kvs: Vec<(&[bool], HashValue)>) -> HashValue {
+    assert!(!kvs.is_empty());
 
-        // Now we remove both existing entries and add the new entry.
-        assert_eq!(btree2.remove(&left_key).unwrap(), left_hash);
-        assert_eq!(btree2.remove(&right_key).unwrap(), right_hash);
-        assert!(btree2.insert(ancestor_key, ancestor_hash).is_none());
+    // If there is only one entry, it is the root.
+    if kvs.len() == 1 {
+        return kvs[0].1;
     }
 
-    // When the set has only one element, it is the root hash.
-    assert_eq!(*btree2.values().next().unwrap(), expected_root_hash);
+    // Otherwise the tree has more than one leaves, which means we can find which ones are in the
+    // left subtree and which ones are in the right subtree. So we find the first key that starts
+    // with a 1-bit.
+    let left_hash;
+    let right_hash;
+    match kvs.iter().position(|(key, _value)| key[0]) {
+        Some(0) => {
+            // Every key starts with a 1-bit, i.e., they are all in the right subtree.
+            left_hash = *SPARSE_MERKLE_PLACEHOLDER_HASH;
+            right_hash = compute_root_hash_impl(reduce(&kvs));
+        }
+        Some(index) => {
+            // Both left subtree and right subtree have some keys.
+            left_hash = compute_root_hash_impl(reduce(&kvs[0..index]));
+            right_hash = compute_root_hash_impl(reduce(&kvs[index..]));
+        }
+        None => {
+            // Every key starts with a 0-bit, i.e., they are all in the left subtree.
+            left_hash = compute_root_hash_impl(reduce(&kvs));
+            right_hash = *SPARSE_MERKLE_PLACEHOLDER_HASH;
+        }
+    }
+
+    SparseMerkleInternalNode::new(left_hash, right_hash).hash()
+}
+
+/// Reduces the problem by removing the first bit of every key.
+fn reduce<'a>(kvs: &'a [(&[bool], HashValue)]) -> Vec<(&'a [bool], HashValue)> {
+    kvs.iter().map(|(key, value)| (&key[1..], *value)).collect()
 }
 
 /// Returns the key immediately before `key` in `btree`.
@@ -852,69 +847,4 @@ where
         .range((Bound::Excluded(key), Bound::Unbounded))
         .next()
         .map(|(k, _v)| k.clone())
-}
-
-/// Computes the length of the common prefix of two keys.
-fn common_prefix_len(key1: &[bool], key2: &[bool]) -> usize {
-    key1.iter()
-        .zip(key2.iter())
-        .take_while(|(x, y)| x == y)
-        .count()
-}
-
-/// Computes the ancestor of the two given nodes so the new key is `remaining_len` long. For
-/// example, when we shrink the following tree, we would pass in `b` and `c`, and output `X`'s key
-/// and hash.
-///
-/// ```text
-///
-///                   root
-///                  /     \
-///                 /       \
-///                /         \
-///               o           d
-///              / \
-///             a   X
-///                / \
-///               o   placeholder
-///              / \
-///             o   placeholder
-///            / \
-///           b   c
-/// ```
-fn compute_ancestor(
-    key1: &[bool],
-    hash1: HashValue,
-    key2: &[bool],
-    hash2: HashValue,
-    remaining_len: usize,
-) -> (Vec<bool>, HashValue) {
-    assert_eq!(
-        key1.len(),
-        key2.len(),
-        "Both keys must have the same length.",
-    );
-    assert!(!*key1.last().unwrap(), "The last bit of key1 must be 0.");
-    assert!(*key2.last().unwrap(), "The last bit of key2 must be 1.");
-
-    let len = key1.len();
-    assert_eq!(
-        key1[0..len - 1],
-        key2[0..len - 1],
-        "Only the last bit should be different.",
-    );
-
-    let mut current_hash = SparseMerkleInternalNode::new(hash1, hash2).hash();
-    if len > remaining_len {
-        for bit in key1.iter().rev().skip(1).take(len - remaining_len - 1) {
-            current_hash = if *bit {
-                SparseMerkleInternalNode::new(*SPARSE_MERKLE_PLACEHOLDER_HASH, current_hash)
-            } else {
-                SparseMerkleInternalNode::new(current_hash, *SPARSE_MERKLE_PLACEHOLDER_HASH)
-            }
-            .hash();
-        }
-    }
-
-    (key1[0..remaining_len].to_vec(), current_hash)
 }
