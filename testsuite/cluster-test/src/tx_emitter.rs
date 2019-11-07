@@ -53,7 +53,7 @@ const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempoo
 
 pub struct TxEmitter {
     accounts: Vec<AccountData>,
-    faucet_account: AccountData,
+    mint_file: String,
 }
 
 pub struct EmitJob {
@@ -84,11 +84,9 @@ pub struct EmitJobRequest {
 
 impl TxEmitter {
     pub fn new(cluster: &Cluster) -> Self {
-        let mint_client = Self::pick_mint_client(cluster.instances());
-        let faucet_account = load_faucet_account(&mint_client, cluster.mint_file());
         Self {
             accounts: vec![],
-            faucet_account,
+            mint_file: cluster.mint_file().to_string(),
         }
     }
 
@@ -148,11 +146,12 @@ impl TxEmitter {
         let mut mint_failures = 0;
         info!("Minting accounts on {}", mint_client);
         let retry_mint = env::var_os("NO_MINT_RETRY").is_none();
+        let mut faucet_account = load_faucet_account(&mint_client, &self.mint_file);
         while self.accounts.len() < num_accounts {
             let mut accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
-            let mint_requests = gen_mint_txn_requests(&mut self.faucet_account, &accounts);
+            let mint_requests = gen_mint_txn_requests(&mut faucet_account, &accounts);
             if let Err(e) =
-                execute_and_wait_transactions(&mint_client, &mut self.faucet_account, mint_requests)
+                execute_and_wait_transactions(&mint_client, &mut faucet_account, mint_requests)
             {
                 mint_failures += 1;
                 if retry_mint && mint_failures > 5 {
