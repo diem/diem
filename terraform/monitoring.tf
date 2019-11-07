@@ -64,7 +64,7 @@ resource "aws_instance" "monitoring" {
 
 resource "aws_ebs_volume" "monitoring" {
   availability_zone = data.aws_availability_zones.available.names[0]
-  size              = 10
+  size              = var.monitoring_ebs_volume
   type              = "standard"
   snapshot_id       = var.monitoring_snapshot
 
