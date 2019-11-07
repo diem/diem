@@ -22,9 +22,13 @@ use libra_types::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
         SignedTransaction, TransactionOutput, TransactionStatus,
     },
-    vm_error::StatusCode,
+    vm_error::{StatusCode, VMStatus},
 };
-use std::{fmt, str::FromStr, time::Duration};
+use std::{
+    fmt::{self, Debug},
+    str::FromStr,
+    time::Duration,
+};
 use stdlib::stdlib_modules;
 use vm::file_format::{CompiledModule, CompiledScript};
 use vm::gas_schedule::{GasAlgebra, MAXIMUM_NUMBER_OF_GAS_UNITS};
@@ -96,6 +100,15 @@ pub enum EvaluationOutput {
     Status(Status),
 }
 
+impl EvaluationOutput {
+    pub fn is_error(&self) -> bool {
+        match self {
+            Self::Error(_) => true,
+            _ => false,
+        }
+    }
+}
+
 /// A log consisting of outputs from all stages and the final status.
 /// This is checked against the directives.
 #[derive(Debug)]
@@ -104,6 +117,10 @@ pub struct EvaluationLog {
 }
 
 impl EvaluationLog {
+    pub fn new() -> Self {
+        Self { outputs: vec![] }
+    }
+
     pub fn get_failed_transactions(&self) -> Vec<(usize, Stage)> {
         let mut res = vec![];
         let mut last_txn = None;
@@ -124,7 +141,7 @@ impl EvaluationLog {
         res
     }
 
-    fn append(&mut self, output: EvaluationOutput) {
+    pub fn append(&mut self, output: EvaluationOutput) {
         self.outputs.push(output);
     }
 }
@@ -156,7 +173,6 @@ impl fmt::Display for EvaluationOutput {
 
 impl fmt::Display for EvaluationLog {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "---------------------Outputs----------------")?;
         for (i, output) in self.outputs.iter().enumerate() {
             writeln!(f, "[{}] {}", i, output)?;
         }
@@ -165,23 +181,27 @@ impl fmt::Display for EvaluationLog {
 }
 
 /// Verifies a script & its dependencies.
-fn do_verify_script(script: CompiledScript, deps: &[VerifiedModule]) -> Result<VerifiedScript> {
-    let verified_script =
-        VerifiedScript::new(script).map_err(|(_, errs)| ErrorKind::VerificationFailure(errs))?;
+fn do_verify_script(
+    script: CompiledScript,
+    deps: &[VerifiedModule],
+) -> std::result::Result<VerifiedScript, Vec<VMStatus>> {
+    let verified_script = VerifiedScript::new(script).map_err(|(_, errs)| errs)?;
     let errs = verify_script_dependencies(&verified_script, deps);
     if !errs.is_empty() {
-        return Err(ErrorKind::VerificationFailure(errs).into());
+        return Err(errs);
     }
     Ok(verified_script)
 }
 
 /// Verifies a module & its dependencies.
-fn do_verify_module(module: CompiledModule, deps: &[VerifiedModule]) -> Result<VerifiedModule> {
-    let verified_module =
-        VerifiedModule::new(module).map_err(|(_, errs)| ErrorKind::VerificationFailure(errs))?;
+fn do_verify_module(
+    module: CompiledModule,
+    deps: &[VerifiedModule],
+) -> std::result::Result<VerifiedModule, Vec<VMStatus>> {
+    let verified_module = VerifiedModule::new(module).map_err(|(_, errs)| errs)?;
     let errs = verify_module_dependencies(&verified_module, deps);
     if !errs.is_empty() {
-        return Err(ErrorKind::VerificationFailure(errs).into());
+        return Err(errs);
     }
     Ok(verified_module)
 }
@@ -378,8 +398,16 @@ fn eval_transaction(
                 return Ok(Status::Success);
             }
             log.append(EvaluationOutput::Stage(Stage::Verifier));
-            let compiled_script =
-                unwrap_or_abort!(do_verify_script(compiled_script, &*deps)).into_inner();
+            let compiled_script = match do_verify_script(compiled_script, &*deps) {
+                Ok(script) => script.into_inner(),
+                Err(errs) => {
+                    for err in errs.into_iter() {
+                        let err: Error = ErrorKind::VerificationError(err).into();
+                        log.append(EvaluationOutput::Error(Box::new(err)));
+                    }
+                    return Ok(Status::Failure);
+                }
+            };
 
             // stage 4: serializer round trip
             if !transaction.config.is_stage_disabled(Stage::Serializer) {
@@ -423,8 +451,16 @@ fn eval_transaction(
                 return Ok(Status::Success);
             }
             log.append(EvaluationOutput::Stage(Stage::Verifier));
-            let compiled_module =
-                unwrap_or_abort!(do_verify_module(compiled_module, &*deps)).into_inner();
+            let compiled_module = match do_verify_module(compiled_module, &*deps) {
+                Ok(module) => module.into_inner(),
+                Err(errs) => {
+                    for err in errs.into_iter() {
+                        let err: Error = ErrorKind::VerificationError(err).into();
+                        log.append(EvaluationOutput::Error(Box::new(err)));
+                    }
+                    return Ok(Status::Failure);
+                }
+            };
 
             // stage 4: serializer round trip
             if !transaction.config.is_stage_disabled(Stage::Serializer) {

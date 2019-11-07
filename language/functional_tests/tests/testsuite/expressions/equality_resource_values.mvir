@@ -7,15 +7,4 @@ module Token {
         return;
     }
 }
-
-//! new-transaction
-
-import {{default}}.Token;
-
-main() {
-    Token.test();
-    return;
-}
-
-// check: VerificationFailure
 // check: EQUALITY_OP_TYPE_MISMATCH_ERROR

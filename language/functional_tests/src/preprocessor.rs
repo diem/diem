@@ -3,6 +3,7 @@
 
 use crate::{
     checker::Directive,
+    common::LineSp,
     config::{
         global::{Config as GlobalConfig, Entry as GlobalConfigEntry},
         transaction::{
@@ -34,10 +35,10 @@ pub struct RawTransactionInput {
 
 /// Parses the input string into three parts: a global config, directives and transactions.
 pub fn split_input(
-    s: &str,
+    lines: impl IntoIterator<Item = impl AsRef<str>>,
 ) -> Result<(
     Vec<GlobalConfigEntry>,
-    Vec<Directive>,
+    Vec<LineSp<Directive>>,
     Vec<RawTransactionInput>,
 )> {
     let mut global_config = vec![];
@@ -48,7 +49,8 @@ pub fn split_input(
 
     let mut first_transaction = true;
 
-    for line in s.lines() {
+    for (line_idx, line) in lines.into_iter().enumerate() {
+        let line = line.as_ref();
         if is_new_transaction(line) {
             if text.is_empty() {
                 if !transaction_config.is_empty() {
@@ -80,8 +82,8 @@ pub fn split_input(
             transaction_config.push(entry);
             continue;
         }
-        if let Ok(directive) = line.parse::<Directive>() {
-            directives.push(directive);
+        if let Ok(dirs) = Directive::parse_line(line) {
+            directives.extend(dirs.into_iter().map(|sp| sp.into_line_sp(line_idx)));
             continue;
         }
         if !line.trim().is_empty() {

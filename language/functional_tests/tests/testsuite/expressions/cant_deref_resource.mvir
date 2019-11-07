@@ -1,6 +1,3 @@
-// check: VerificationFailure
-// check: READREF_RESOURCE_ERROR
-
 module Token {
     resource T {v: u64}
 
@@ -40,14 +37,5 @@ module Token {
         y = *move(tref);
         return;
     }
-
 }
-
-//! new-transaction
-
-import {{default}}.Token;
-
-main() {
-    Token.test();
-    return;
-}
+// check: READREF_RESOURCE_ERROR

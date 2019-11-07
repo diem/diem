@@ -1,6 +1,3 @@
-// check: VerificationFailure
-// check: WRITEREF_EXISTS_BORROW_ERROR
-
 module Tester {
     struct T{v: u64}
 
@@ -19,18 +16,5 @@ module Tester {
         assert(*move(t_v) == 1, 42);
         return;
     }
-
 }
-
-//! new-transaction
-
-import {{default}}.Tester;
-
-main() {
-    let t: Tester.T;
-    let ref_t: &mut Tester.T;
-    t = Tester.new(0);
-    ref_t = &mut t;
-    Tester.replace(move(ref_t));
-    return;
-}
+// check: WRITEREF_EXISTS_BORROW_ERROR

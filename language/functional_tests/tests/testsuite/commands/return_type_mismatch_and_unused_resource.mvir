@@ -19,6 +19,5 @@ module M {
     }
 }
 
-// check: VerificationFailure
 // check: RET_UNSAFE_TO_DESTROY_ERROR
 // check: RET_UNSAFE_TO_DESTROY_ERROR

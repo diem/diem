@@ -7,11 +7,12 @@
 extern crate lazy_static;
 
 pub mod checker;
+pub mod common;
 pub mod config;
 pub mod errors;
 pub mod evaluator;
 mod genesis_accounts;
-pub mod utils;
+pub mod preprocessor;
 
 #[cfg(test)]
 pub mod tests;

@@ -56,5 +56,4 @@ module Tester {
 
 }
 
-// check: VerificationFailure
 // check: GLOBAL_REFERENCE_ERROR

@@ -88,8 +88,7 @@ main() {
     return;
 }
 
-// check: DiscardedTransaction
-// check: INVALID_AUTH_KEY
+// check: DiscardedTransaction INVALID_AUTH_KEY
 
 //! new-transaction
 //! sender: bob
@@ -113,3 +112,4 @@ main() {
     assert(LibraAccount.sequence_number({{alice}}) == 33, 80);
     return;
 }
+// check: ABORTED 80

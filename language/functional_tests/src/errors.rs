@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-pub use anyhow::{anyhow, Error, Result};
+pub use anyhow::{anyhow, bail, format_err, Error, Result};
 use libra_types::{transaction::TransactionOutput, vm_error::VMStatus};
 use thiserror::Error;
 
@@ -14,8 +14,8 @@ pub enum ErrorKind {
     DiscardedTransaction(TransactionOutput),
     #[error("the checker has failed to match the directives against the output")]
     CheckerFailure,
-    #[error("verification error {0:?}")]
-    VerificationFailure(Vec<VMStatus>),
+    #[error("VerificationError({0:?})")]
+    VerificationError(VMStatus),
     #[error("other error: {0}")]
     #[allow(dead_code)]
     Other(String),
