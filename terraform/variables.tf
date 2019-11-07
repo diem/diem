@@ -126,3 +126,8 @@ variable "cloudwatch_logs" {
   description = "Send container logs to CloudWatch"
   default     = false
 }
+
+variable "monitoring_ebs_volume" {
+  default     = 100
+  description = "Size of monitoring instance EBS volume in GB"
+}
