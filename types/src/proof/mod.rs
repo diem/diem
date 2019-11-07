@@ -3,6 +3,9 @@
 
 pub mod accumulator;
 pub mod proof_error;
+// This module actually needs and uses the imports that it complains about not using
+// (SparseMerkleProof and ProofError)
+#[allow(unused_imports)]
 #[macro_use]
 pub mod ensure_proof;
 pub mod definition;

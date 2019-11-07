@@ -858,21 +858,14 @@ impl ClientProxy {
                     None => (0, AccountStatus::Local),
                 },
                 Err(e) => {
-                    // try downcasting error to ProofError
-                    let proof_error = e.downcast_ref::<ProofError>();
-                    if proof_error.is_some() {
-                        let proof_error = proof_error.unwrap();
-                        match proof_error {
-                            ProofError { .. } => {
-                                if verbose {
-                                    error!(
-                                        "Proof failure (msg: {:?}, failed proof: {:?})",
-                                        proof_error.msg, proof_error.proof
-                                    );
-                                } else {
-                                    error!("Proof failure (msg: {:?})", proof_error.msg,);
-                                }
-                            }
+                    if let Some(proof_error) = e.downcast_ref::<ProofError>() {
+                        if verbose {
+                            error!(
+                                "Proof failure (msg: {:?}, failed proof: {:?})",
+                                proof_error.msg, proof_error.proof
+                            );
+                        } else {
+                            error!("Proof failure (msg: {:?})", proof_error.msg,);
                         }
                     } else {
                         error!("Failed to get account state from validator, error: {:?}", e);

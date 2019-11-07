@@ -8,13 +8,14 @@
 
 use crate::proof::definition::SparseMerkleProof;
 use crate::proof::proof_error::ProofError;
+use failure::Error;
 
 macro_rules! ensure_proof {
     ($proof:ident, $cond:expr, $e:expr) => {
         match $proof {
             SparseMerkleProof { .. } => {
                 if !($cond) {
-                    return Err(ProofError::new($proof.to_string(), $e.to_string()))?;
+                    return Err(Error::from(ProofError::new($proof.to_string(), $e.to_string())));
                 }
             }
         }
@@ -24,7 +25,7 @@ macro_rules! ensure_proof {
         match $proof {
             SparseMerkleProof { .. } => {
                 if !($cond) {
-                    return Err(ProofError::new($proof.to_string(), format!($fmt, $($arg)+)))?;
+                    return Err(Error::from(ProofError::new($proof.to_string(), format!($fmt, $($arg)+))));
                 }
             }
         }
