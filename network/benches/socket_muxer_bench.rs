@@ -37,7 +37,7 @@
 //!
 //! Note: gnuplot must be installed to generate benchmark plots.
 
-use bytes::{Bytes, BytesMut};
+use bytes05::{Bytes, BytesMut};
 use criterion::{
     criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
     PlotConfiguration, Throughput,
@@ -61,10 +61,8 @@ use socket_bench_server::{
     start_muxer_server, start_stream_server, Args,
 };
 use std::{fmt::Debug, io, time::Duration};
-use tokio::{
-    codec::{Framed, LengthDelimitedCodec},
-    runtime::Runtime,
-};
+use tokio::runtime::Runtime;
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 const KiB: usize = 1 << 10;
 const MiB: usize = 1 << 20;
@@ -85,7 +83,7 @@ where
     let data = Bytes::from(vec![0u8; msg_len]);
     b.iter(|| {
         // Create a stream of messages to send
-        let mut data_stream = stream::repeat(data.clone()).take(SENDS_PER_ITER as u64);
+        let mut data_stream = stream::repeat(data.clone()).take(SENDS_PER_ITER).map(Ok);
         // Send the batch of messages. Note that `Sink::send_all` will flush the
         // sink after exhausting the `data_stream`, which is necessary to ensure
         // we measure sending all of the messages.
@@ -317,7 +315,7 @@ fn socket_muxer_bench(c: &mut Criterion) {
     ::libra_logger::try_init_for_testing();
 
     let rt = Runtime::new().unwrap();
-    let executor = rt.executor();
+    let executor = rt.handle().clone();
 
     let args = Args::from_env();
 

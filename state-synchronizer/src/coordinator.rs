@@ -30,7 +30,7 @@ use std::{
     str::FromStr,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use tokio::timer::Interval;
+use tokio::time::interval;
 
 pub(crate) struct SyncRequest {
     // The Result value returned to the caller is Error in case the StateSynchronizer failed to
@@ -131,8 +131,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .await
             .expect("[state sync] Start failure: cannot sync with storage.");
 
-        let mut interval =
-            Interval::new_interval(Duration::from_millis(self.config.tick_interval_ms)).fuse();
+        let mut interval = interval(Duration::from_millis(self.config.tick_interval_ms)).fuse();
 
         let network_senders: Vec<StateSynchronizerSender> =
             network.iter().map(|t| t.0.clone()).collect();

@@ -10,8 +10,8 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["async-await"] }
+futures = "0.3.0"
 tokio-sync= "0.2.0-alpha.6"
 
 [dev-dependencies]
-tokio = "0.2.0-alpha.6"
+tokio = { version = "0.2", features = ["full"] }

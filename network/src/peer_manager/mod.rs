@@ -32,8 +32,7 @@ use netcore::{
 };
 use parity_multiaddr::Multiaddr;
 use std::{collections::HashMap, marker::PhantomData};
-use tokio::future::FutureExt as _;
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::Handle;
 
 mod error;
 #[cfg(test)]
@@ -136,7 +135,7 @@ where
     TMuxer: StreamMultiplexer,
 {
     /// A handle to a tokio executor.
-    executor: TaskExecutor,
+    executor: Handle,
     /// PeerId of "self".
     own_peer_id: PeerId,
     /// Address to listen on for incoming connections.
@@ -175,7 +174,7 @@ where
     /// Construct a new PeerManager actor
     pub fn new(
         transport: TTransport,
-        executor: TaskExecutor,
+        executor: Handle,
         own_peer_id: PeerId,
         listen_addr: Multiaddr,
         requests_rx: channel::Receiver<PeerManagerRequest<TMuxer::Substream>>,
@@ -191,12 +190,18 @@ where
             channel::new(1024, &counters::PENDING_PEER_NOTIFICATIONS);
         let (dial_request_tx, dial_request_rx) =
             channel::new(1024, &counters::PENDING_PEER_MANAGER_DIAL_REQUESTS);
-        let (connection_handler, listen_addr) = ConnectionHandler::new(
-            transport,
-            listen_addr,
-            dial_request_rx,
-            connection_handler_notifs_tx,
-        );
+        //TODO now that you can only listen on a socket inside of a tokio runtime we'll need to
+        // rethink how we init the PeerManager so we don't have to do this funny thing.
+        let (connection_handler, listen_addr) =
+            futures::executor::block_on(executor.spawn(async move {
+                ConnectionHandler::new(
+                    transport,
+                    listen_addr,
+                    dial_request_rx,
+                    connection_handler_notifs_tx,
+                )
+            }))
+            .unwrap();
 
         Self {
             executor,
@@ -422,10 +427,8 @@ where
                     peer_id.short_str()
                 );
                 // Drop the new connection and keep the one already stored in active_peers
-                if let Err(e) = connection
-                    .close()
-                    .timeout(transport::TRANSPORT_TIMEOUT)
-                    .await
+                if let Err(e) =
+                    tokio::time::timeout(transport::TRANSPORT_TIMEOUT, connection.close()).await
                 {
                     error!(
                         "Closing connection with Peer {} failed with error: {}",
@@ -1050,12 +1053,7 @@ where
     }
 
     async fn close_connection(&mut self, reason: DisconnectReason) {
-        match self
-            .connection
-            .close()
-            .timeout(transport::TRANSPORT_TIMEOUT)
-            .await
-        {
+        match tokio::time::timeout(transport::TRANSPORT_TIMEOUT, self.connection.close()).await {
             Err(e) => {
                 error!(
                     "Failed to gracefully close connection with peer: {}; error: {}",

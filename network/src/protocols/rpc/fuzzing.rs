@@ -7,7 +7,6 @@ use crate::{
     protocols::rpc::{self, RpcNotification},
     ProtocolId,
 };
-use bytes::{Bytes, BytesMut};
 use channel;
 use futures::{
     future::{self, FutureExt},
@@ -19,10 +18,9 @@ use libra_types::{account_address::ADDRESS_LENGTH, PeerId};
 use memsocket::MemorySocket;
 use proptest::{arbitrary::any, collection::vec, prop_oneof, strategy::Strategy};
 use std::{io, time::Duration};
-use tokio::{
-    codec::{Encoder, LengthDelimitedCodec},
-    runtime::current_thread,
-};
+use tokio::runtime;
+use tokio_util::codec::Encoder;
+use tokio_util::codec::LengthDelimitedCodec;
 
 // Length of unsigned varint prefix in bytes for a u128-sized length
 const MAX_UVI_PREFIX_BYTES: usize = 19;
@@ -53,10 +51,10 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
 
     let length_prefixed_data_strat = data_strat.prop_map(|data| {
         let max_len = data.len() + MAX_UVI_PREFIX_BYTES;
-        let mut buf = BytesMut::with_capacity(max_len);
+        let mut buf = bytes05::BytesMut::with_capacity(max_len);
         let mut codec = LengthDelimitedCodec::new();
         codec
-            .encode(Bytes::from(data), &mut buf)
+            .encode(bytes05::Bytes::from(data), &mut buf)
             .expect("Failed to create uvi-prefixed data for corpus");
         buf.freeze().to_vec()
     });
@@ -123,7 +121,7 @@ pub fn fuzzer(data: &[u8]) {
 
     let f = future::try_join3(f_handle_inbound, f_respond_inbound, f_outbound);
     // we need to use tokio runtime since Rpc uses tokio timers
-    let res = current_thread::Runtime::new().unwrap().block_on(f);
+    let res = runtime::Runtime::new().unwrap().block_on(f);
 
     // there should be no errors when testing with well-formed inputs
     if cfg!(test) {

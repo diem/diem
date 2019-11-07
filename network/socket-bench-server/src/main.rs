@@ -30,7 +30,7 @@ fn main() {
     let args = Args::from_env();
 
     let rt = Runtime::new().unwrap();
-    let executor = rt.executor();
+    let executor = rt.handle();
 
     if let Some(addr) = args.tcp_addr {
         let addr = start_stream_server(&executor, TcpTransport::default(), addr);
@@ -51,6 +51,4 @@ fn main() {
         let addr = start_muxer_server(&executor, build_tcp_noise_muxer_transport(), addr);
         info!("bench: tcp+noise+muxer: listening on: {}", addr);
     }
-
-    rt.shutdown_on_idle();
 }

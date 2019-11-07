@@ -25,8 +25,8 @@ use std::{
 };
 use storage_client::StorageRead;
 use tokio::{
-    runtime::{Builder, Runtime, TaskExecutor},
-    timer::Interval,
+    runtime::{Builder, Handle, Runtime},
+    time::interval,
 };
 use vm_validator::vm_validator::{get_account_state, TransactionValidation};
 
@@ -97,7 +97,7 @@ fn notify_subscribers(
 }
 
 fn default_timer(tick_ms: u64) -> IntervalStream {
-    Interval::new_interval(Duration::from_millis(tick_ms))
+    interval(Duration::from_millis(tick_ms))
         .map(|_| SyncEvent)
         .boxed()
 }
@@ -283,7 +283,7 @@ where
 /// This task handles inbound network events.
 async fn inbound_network_task<V>(
     smp: SharedMempool<V>,
-    executor: TaskExecutor,
+    executor: Handle,
     mut network_events: MempoolNetworkEvents,
 ) where
     V: TransactionValidation,
@@ -359,7 +359,7 @@ async fn inbound_network_task<V>(
 
 /// GC all expired transactions by SystemTTL
 async fn gc_task(mempool: Arc<Mutex<CoreMempool>>, gc_interval_ms: u64) {
-    let mut interval = Interval::new_interval(Duration::from_millis(gc_interval_ms));
+    let mut interval = interval(Duration::from_millis(gc_interval_ms));
     while let Some(_interval) = interval.next().await {
         mempool
             .lock()
@@ -389,10 +389,12 @@ where
     V: TransactionValidation + 'static,
 {
     let runtime = Builder::new()
-        .name_prefix("shared-mem-")
+        .thread_name("shared-mem-")
+        .threaded_scheduler()
+        .enable_all()
         .build()
         .expect("[shared mempool] failed to create runtime");
-    let executor = runtime.executor();
+    let executor = runtime.handle();
 
     let peer_info = Arc::new(Mutex::new(PeerInfo::new()));
 
@@ -406,10 +408,14 @@ where
         subscribers,
     };
 
-    let interval =
-        timer.unwrap_or_else(|| default_timer(config.mempool.shared_mempool_tick_interval_ms));
+    let interval_ms = config.mempool.shared_mempool_tick_interval_ms;
+    let smp_outbound = smp.clone();
+    let f = async move {
+        let interval = timer.unwrap_or_else(|| default_timer(interval_ms));
+        outbound_sync_task(smp_outbound, interval).await
+    };
 
-    executor.spawn(outbound_sync_task(smp.clone(), interval));
+    executor.spawn(f);
 
     executor.spawn(inbound_network_task(smp, executor.clone(), network_events));
 

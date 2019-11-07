@@ -7,18 +7,16 @@
 //! over how the internal queueing in the channel happens and how we schedule messages
 //! to be sent out from this channel.
 //! Internally, it uses the `PerKeyQueue` to store messages
-use std::pin::Pin;
-use std::sync::{Arc, Mutex};
-use std::task::Waker;
-
 use crate::message_queues::{PerKeyQueue, QueueStyle};
 use failure::prelude::*;
-use futures::async_await::FusedStream;
-use futures::stream::Stream;
-use futures::task::Context;
-use futures::Poll;
+use futures::{async_await::FusedStream, stream::Stream};
 use libra_metrics::IntCounterVec;
-use std::hash::Hash;
+use std::{
+    hash::Hash,
+    pin::Pin,
+    sync::{Arc, Mutex},
+    task::{Context, Poll, Waker},
+};
 
 /// SharedState is a data structure private to this module which is
 /// shared by the sender and receiver.

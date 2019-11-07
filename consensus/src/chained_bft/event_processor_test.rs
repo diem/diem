@@ -58,7 +58,7 @@ use prost::Message as _;
 use safety_rules::{ConsensusState, OnDiskStorage, SafetyRules};
 use std::{collections::HashMap, convert::TryFrom, path::PathBuf, sync::Arc, time::Duration};
 use tempfile::NamedTempFile;
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::Handle;
 
 /// Auxiliary struct that is setting up node environment for the test.
 pub struct NodeSetup {
@@ -88,7 +88,7 @@ impl NodeSetup {
 
     fn create_nodes(
         playground: &mut NetworkPlayground,
-        executor: TaskExecutor,
+        executor: Handle,
         num_nodes: usize,
     ) -> Vec<NodeSetup> {
         let (signers, validators) = random_validator_verifier(num_nodes, None, false);
@@ -116,7 +116,7 @@ impl NodeSetup {
 
     fn new(
         playground: &mut NetworkPlayground,
-        executor: TaskExecutor,
+        executor: Handle,
         signer: ValidatorSigner,
         proposer_author: Author,
         storage: Arc<MockStorage<TestPayload>>,
@@ -205,7 +205,7 @@ impl NodeSetup {
         }
     }
 
-    pub fn restart(self, playground: &mut NetworkPlayground, executor: TaskExecutor) -> Self {
+    pub fn restart(self, playground: &mut NetworkPlayground, executor: Handle) -> Self {
         let recover_data = self
             .storage
             .try_start()
@@ -225,8 +225,8 @@ impl NodeSetup {
 #[test]
 fn basic_new_rank_event_test() {
     let runtime = consensus_runtime();
-    let mut playground = NetworkPlayground::new(runtime.executor());
-    let nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    let nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
     let node = &nodes[0];
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
@@ -328,10 +328,10 @@ fn basic_new_rank_event_test() {
 /// If the proposal is valid, a vote should be sent
 fn process_successful_proposal_test() {
     let runtime = consensus_runtime();
-    let mut playground = NetworkPlayground::new(runtime.executor());
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
     let node = &mut nodes[1];
 
     let genesis_qc = certificate_for_genesis();
@@ -375,10 +375,10 @@ fn process_successful_proposal_test() {
 /// No votes are sent, but the block is still added to the block tree.
 fn process_old_proposal_test() {
     let runtime = consensus_runtime();
-    let mut playground = NetworkPlayground::new(runtime.executor());
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
     let node = &mut nodes[1];
     let genesis_qc = certificate_for_genesis();
     let new_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
@@ -423,10 +423,10 @@ fn process_old_proposal_test() {
 /// rules
 fn process_round_mismatch_test() {
     let runtime = consensus_runtime();
-    let mut playground = NetworkPlayground::new(runtime.executor());
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let mut node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
         .pop()
         .unwrap();
     let genesis_qc = certificate_for_genesis();
@@ -461,8 +461,8 @@ fn process_round_mismatch_test() {
 /// have the highest quorum certificate (carried by the SyncInfo of the vote message)
 fn process_vote_timeout_msg_test() {
     let runtime = consensus_runtime();
-    let mut playground = NetworkPlayground::new(runtime.executor());
-    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
     let non_proposer = nodes.pop().unwrap();
     let mut static_proposer = nodes.pop().unwrap();
 
@@ -551,10 +551,10 @@ fn process_vote_timeout_msg_test() {
 /// We don't vote for proposals that comes from proposers that are not valid proposers for round
 fn process_proposer_mismatch_test() {
     let runtime = consensus_runtime();
-    let mut playground = NetworkPlayground::new(runtime.executor());
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
     let incorrect_proposer = nodes.pop().unwrap();
     let mut node = nodes.pop().unwrap();
     let genesis_qc = certificate_for_genesis();
@@ -595,10 +595,10 @@ fn process_proposer_mismatch_test() {
 /// We allow to 'skip' round if proposal carries timeout certificate for next round
 fn process_timeout_certificate_test() {
     let runtime = consensus_runtime();
-    let mut playground = NetworkPlayground::new(runtime.executor());
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
-    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let mut node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
         .pop()
         .unwrap();
     let genesis_qc = certificate_for_genesis();
@@ -639,8 +639,8 @@ fn process_timeout_certificate_test() {
 /// 1) if a new QC is formed and a block is present send a PM event
 fn process_votes_basic_test() {
     let runtime = consensus_runtime();
-    let mut playground = NetworkPlayground::new(runtime.executor());
-    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    let mut node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
         .pop()
         .unwrap();
     let genesis = node.block_store.root();
@@ -682,14 +682,13 @@ fn process_votes_basic_test() {
             a1.id()
         );
     });
-    runtime.shutdown_now();
 }
 
 #[test]
 fn process_block_retrieval() {
     let runtime = consensus_runtime();
-    let mut playground = NetworkPlayground::new(runtime.executor());
-    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    let mut node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
         .pop()
         .unwrap();
 
@@ -790,8 +789,8 @@ fn process_block_retrieval() {
 /// rebuild a node from previous storage without violating safety guarantees.
 fn basic_restart_test() {
     let runtime = consensus_runtime();
-    let mut playground = NetworkPlayground::new(runtime.executor());
-    let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    let mut node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
         .pop()
         .unwrap();
     let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
@@ -822,7 +821,7 @@ fn basic_restart_test() {
         );
     }
     // verify after restart we recover the data
-    node = node.restart(&mut playground, runtime.executor());
+    node = node.restart(&mut playground, runtime.handle().clone());
     assert_eq!(
         node.event_processor.consensus_state(),
         ConsensusState::new(1, num_proposals, num_proposals - 2),
@@ -836,9 +835,9 @@ fn basic_restart_test() {
 /// Generate a NIL vote extending HQC upon timeout if no votes have been sent in the round.
 fn nil_vote_on_timeout() {
     let runtime = consensus_runtime();
-    let mut playground = NetworkPlayground::new(runtime.executor());
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // It needs 2 nodes to test network message.
-    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
     let node = &mut nodes[0];
     block_on(async move {
         // Process the outgoing vote message and verify that it contains a round signature

@@ -3,18 +3,18 @@
 
 #![forbid(unsafe_code)]
 
-//! A bounded tokio [`TaskExecutor`]. Only a bounded number of tasks can run
+//! A bounded tokio [`Handle`]. Only a bounded number of tasks can run
 //! concurrently when spawned through this executor, defined by the initial
 //! `capacity`.
 
 use futures::future::{Future, FutureExt};
 use futures_semaphore::Semaphore;
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::Handle;
 
 #[derive(Clone, Debug)]
 pub struct BoundedExecutor {
     semaphore: Semaphore,
-    executor: TaskExecutor,
+    executor: Handle,
 }
 
 /// Returned by [`BoundedExecutor::try_spawn`] if it is at capacity.
@@ -23,9 +23,9 @@ pub enum SpawnError {
 }
 
 impl BoundedExecutor {
-    /// Create a new `BoundedExecutor` from an existing tokio [`TaskExecutor`]
+    /// Create a new `BoundedExecutor` from an existing tokio [`Handle`]
     /// with a maximum concurrent task capacity of `capacity`.
-    pub fn new(capacity: usize, executor: TaskExecutor) -> Self {
+    pub fn new(capacity: usize, executor: Handle) -> Self {
         let semaphore = Semaphore::new(capacity);
         Self {
             semaphore,
@@ -53,7 +53,7 @@ mod test {
         sync::atomic::{AtomicU32, Ordering},
         time::Duration,
     };
-    use tokio::{runtime::Runtime, timer::delay_for};
+    use tokio::{runtime::Runtime, time::delay_for};
 
     fn yield_task() -> impl Future<Output = ()> {
         delay_for(Duration::from_millis(1)).map(|_| ())
@@ -69,7 +69,7 @@ mod test {
         static COMPLETED_TASKS: AtomicU32 = AtomicU32::new(0);
 
         let rt = Runtime::new().unwrap();
-        let executor = rt.executor();
+        let executor = rt.handle().clone();
         let executor = BoundedExecutor::new(MAX_WORKERS as usize, executor);
 
         for _ in 0..NUM_TASKS {

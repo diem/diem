@@ -2,13 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{libra_channel, message_queues::QueueStyle};
-use futures::{executor::block_on, future::join};
-use libra_types::account_address::AccountAddress;
-use libra_types::account_address::ADDRESS_LENGTH;
+use futures::{executor::block_on, future::join, future::FutureExt, stream::StreamExt};
+use libra_types::account_address::{AccountAddress, ADDRESS_LENGTH};
 use std::time::Duration;
-use tokio::prelude::*;
-use tokio::runtime::Runtime;
-use tokio::timer::delay_for;
+use tokio::{runtime::Runtime, time::delay_for};
 
 #[test]
 fn test_send_recv_order() {
@@ -54,7 +51,7 @@ fn test_waker() {
         delay_for(Duration::from_millis(100)).await;
         sender.push(0, 2).unwrap();
     };
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
     rt.block_on(join(f1, f2));
 }
 

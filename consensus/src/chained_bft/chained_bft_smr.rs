@@ -24,7 +24,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use tokio::runtime::{Runtime, TaskExecutor};
+use tokio::runtime::{Handle, Runtime};
 
 /// Consensus configuration derived from ConsensusConfig
 pub struct ChainedBftSMRConfig {
@@ -92,7 +92,7 @@ impl<T: Payload> ChainedBftSMR<T> {
     }
 
     fn start_event_processing(
-        executor: TaskExecutor,
+        executor: Handle,
         mut epoch_manager: EpochManager<T>,
         mut event_processor: EventProcessor<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
@@ -175,7 +175,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             .runtime
             .as_mut()
             .expect("Consensus start: No valid runtime found!")
-            .executor();
+            .handle();
         let time_service = Arc::new(ClockTimeService::new(executor.clone()));
 
         let (timeout_sender, timeout_receiver) =
@@ -211,7 +211,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         );
 
         Self::start_event_processing(
-            executor,
+            executor.clone(),
             epoch_mgr,
             event_processor,
             timeout_receiver,
@@ -224,8 +224,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
 
     /// Stop is synchronous: waits for all the worker threads to terminate.
     fn stop(&mut self) {
-        if let Some(rt) = self.runtime.take() {
-            rt.shutdown_now();
+        if let Some(_rt) = self.runtime.take() {
             debug!("Chained BFT SMR stopped.")
         }
     }

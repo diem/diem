@@ -8,7 +8,6 @@ use failure::Fail;
 use futures::channel::{mpsc, oneshot};
 use libra_types::PeerId;
 use std::io;
-use tokio::timer;
 
 #[derive(Debug, Fail)]
 pub enum RpcError {
@@ -86,8 +85,9 @@ impl From<mpsc::SendError> for RpcError {
     }
 }
 
-impl From<timer::timeout::Elapsed> for RpcError {
-    fn from(_err: timer::timeout::Elapsed) -> RpcError {
-        RpcError::TimedOut
-    }
-}
+// TODO add back once tokio exposes the Elapsed type
+//impl From<time::timeout::Elapsed> for RpcError {
+//    fn from(_err: time::timeout::Elapsed) -> RpcError {
+//        RpcError::TimedOut
+//    }
+//}

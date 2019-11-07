@@ -40,8 +40,8 @@ use std::{
     sync::{Arc, RwLock},
     time::Duration,
 };
-use tokio::runtime::TaskExecutor;
-use tokio::timer::Interval;
+use tokio::runtime::Handle;
+use tokio::time::interval;
 use tokio_retry::strategy::ExponentialBackoff;
 
 pub const NETWORK_CHANNEL_SIZE: usize = 1024;
@@ -75,7 +75,7 @@ pub enum TransportType {
 /// [`NetworkBuilder::build`].  New instances of `NetworkBuilder` are obtained
 /// via [`NetworkBuilder::new`].
 pub struct NetworkBuilder {
-    executor: TaskExecutor,
+    executor: Handle,
     peer_id: PeerId,
     addr: Multiaddr,
     role: RoleType,
@@ -106,7 +106,7 @@ pub struct NetworkBuilder {
 impl NetworkBuilder {
     /// Return a new NetworkBuilder initialized with default configuration values.
     pub fn new(
-        executor: TaskExecutor,
+        executor: Handle,
         peer_id: PeerId,
         addr: Multiaddr,
         role: RoleType,
@@ -438,17 +438,23 @@ impl NetworkBuilder {
                 &counters::PENDING_PEER_MANAGER_CONNECTIVITY_MANAGER_NOTIFICATIONS,
             );
             peer_event_handlers.push(pm_conn_mgr_notifs_tx);
-            let conn_mgr = ConnectivityManager::new(
-                self.trusted_peers.clone(),
-                Interval::new_interval(Duration::from_millis(self.connectivity_check_interval_ms))
-                    .fuse(),
-                PeerManagerRequestSender::new(pm_reqs_tx.clone()),
-                pm_conn_mgr_notifs_rx,
-                conn_mgr_reqs_rx,
-                ExponentialBackoff::from_millis(2).factor(1000 /* seconds */),
-                self.max_connection_delay_ms,
-            );
-            self.executor.spawn(conn_mgr.start());
+            let trusted_peers = self.trusted_peers.clone();
+            let max_connection_delay_ms = self.max_connection_delay_ms;
+            let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
+            let pm_reqs_tx = pm_reqs_tx.clone();
+            let f = async move {
+                let conn_mgr = ConnectivityManager::new(
+                    trusted_peers,
+                    interval(Duration::from_millis(connectivity_check_interval_ms)).fuse(),
+                    PeerManagerRequestSender::new(pm_reqs_tx.clone()),
+                    pm_conn_mgr_notifs_rx,
+                    conn_mgr_reqs_rx,
+                    ExponentialBackoff::from_millis(2).factor(1000 /* seconds */),
+                    max_connection_delay_ms,
+                );
+                conn_mgr.start().await
+            };
+            self.executor.spawn(f);
             debug!("Started connection manager");
         }
 
@@ -493,14 +499,20 @@ impl NetworkBuilder {
             // Initialize and start HealthChecker.
             let (hc_network_tx, hc_network_rx) = network_provider
                 .add_health_checker(vec![ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)]);
-            let health_checker = HealthChecker::new(
-                Interval::new_interval(Duration::from_millis(self.ping_interval_ms)).fuse(),
-                hc_network_tx,
-                hc_network_rx,
-                Duration::from_millis(self.ping_timeout_ms),
-                self.ping_failures_tolerated,
-            );
-            self.executor.spawn(health_checker.start());
+            let ping_interval_ms = self.ping_interval_ms;
+            let ping_timeout_ms = self.ping_timeout_ms;
+            let ping_failures_tolerated = self.ping_failures_tolerated;
+            let f = async move {
+                let health_checker = HealthChecker::new(
+                    interval(Duration::from_millis(ping_interval_ms)).fuse(),
+                    hc_network_tx,
+                    hc_network_rx,
+                    Duration::from_millis(ping_timeout_ms),
+                    ping_failures_tolerated,
+                );
+                health_checker.start().await
+            };
+            self.executor.spawn(f);
             debug!("Started health checker");
         }
 
@@ -517,22 +529,31 @@ impl NetworkBuilder {
             let (discovery_network_tx, discovery_network_rx) = network_provider.add_discovery(
                 vec![ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL)],
             );
-            let discovery = Discovery::new(
-                self.peer_id,
-                vec![self
-                    .advertised_address
-                    .clone()
-                    .unwrap_or_else(|| self.addr.clone())],
-                signer,
-                self.seed_peers.clone(),
-                self.trusted_peers.clone(),
-                Interval::new_interval(Duration::from_millis(self.discovery_interval_ms)).fuse(),
-                discovery_network_tx,
-                discovery_network_rx,
-                net_conn_mgr_reqs_tx.take().unwrap(),
-                Duration::from_millis(self.discovery_msg_timeout_ms),
-            );
-            self.executor.spawn(discovery.start());
+            let peer_id = self.peer_id;
+            let addrs = vec![self
+                .advertised_address
+                .clone()
+                .unwrap_or_else(|| self.addr.clone())];
+            let seed_peers = self.seed_peers.clone();
+            let trusted_peers = self.trusted_peers.clone();
+            let discovery_interval_ms = self.discovery_interval_ms;
+            let discovery_msg_timeout_ms = self.discovery_msg_timeout_ms;
+            let f = async move {
+                let discovery = Discovery::new(
+                    peer_id,
+                    addrs,
+                    signer,
+                    seed_peers,
+                    trusted_peers,
+                    interval(Duration::from_millis(discovery_interval_ms)).fuse(),
+                    discovery_network_tx,
+                    discovery_network_rx,
+                    net_conn_mgr_reqs_tx.take().unwrap(),
+                    Duration::from_millis(discovery_msg_timeout_ms),
+                );
+                discovery.start().await
+            };
+            self.executor.spawn(f);
             debug!("Started discovery protocol actor");
         }
         (listen_addr, Box::new(network_provider))

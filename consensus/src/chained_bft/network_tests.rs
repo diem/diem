@@ -26,7 +26,7 @@ use std::{
     sync::{Arc, Mutex, RwLock},
     time::Duration,
 };
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::Handle;
 
 /// `NetworkPlayground` mocks the network implementation and provides convenience
 /// methods for testing. Test clients can use `wait_for_messages` or
@@ -49,11 +49,11 @@ pub struct NetworkPlayground {
     /// Allow test code to drop direct-send messages between peers.
     drop_config: Arc<RwLock<DropConfig>>,
     /// An executor for spawning node outbound network event handlers
-    executor: TaskExecutor,
+    executor: Handle,
 }
 
 impl NetworkPlayground {
-    pub fn new(executor: TaskExecutor) -> Self {
+    pub fn new(executor: Handle) -> Self {
         let (outbound_msgs_tx, outbound_msgs_rx) = mpsc::channel(1_024);
 
         NetworkPlayground {
@@ -343,7 +343,7 @@ fn test_network_api() {
     let runtime = consensus_runtime();
     let num_nodes = 5;
     let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
-    let mut playground = NetworkPlayground::new(runtime.executor());
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = Vec::new();
     let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
     let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
@@ -360,7 +360,7 @@ fn test_network_api() {
         let (task, receiver) =
             NetworkTask::new(1, network_events, self_receiver, Arc::clone(&validators));
         receivers.push(receiver);
-        runtime.executor().spawn(task.start());
+        runtime.handle().spawn(task.start());
         nodes.push(node);
     }
     let vote_msg = VoteMsg::new(
@@ -405,7 +405,7 @@ fn test_rpc() {
     let num_nodes = 2;
     let mut senders = Vec::new();
     let mut receivers: Vec<NetworkReceivers<u64>> = Vec::new();
-    let mut playground = NetworkPlayground::new(runtime.executor());
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = Vec::new();
     let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
     let validators = Arc::new(validator_verifier);
@@ -428,7 +428,7 @@ fn test_rpc() {
             NetworkTask::new(1, network_events, self_receiver, Arc::clone(&validators));
         senders.push(network_sender);
         receivers.push(receiver);
-        runtime.executor().spawn(task.start());
+        runtime.handle().spawn(task.start());
         nodes.push(node);
     }
     let receiver_1 = receivers.remove(1);
@@ -470,7 +470,7 @@ fn test_rpc() {
             request.response_sender.send(Ok(bytes)).unwrap();
         }
     };
-    runtime.executor().spawn(on_request_block);
+    runtime.handle().spawn(on_request_block);
     let peer = peers[1];
     block_on(async move {
         let response = nodes[0]
