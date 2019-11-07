@@ -125,7 +125,7 @@ jobs:
           name: Cargo Audit
           command: |
             cargo install --force cargo-audit
-            cargo audit
+            cargo audit --deny-warnings
       - build_teardown
   terraform:
     executor: terraform-executor
