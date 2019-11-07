@@ -402,7 +402,7 @@ dependencies = [
  "invalid-mutations 0.1.0",
  "libra-failure-ext 0.1.0",
  "libra-types 0.1.0",
- "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "petgraph 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
  "vm-runtime-types 0.1.0",
@@ -745,7 +745,7 @@ dependencies = [
  "libra-prost-ext 0.1.0",
  "libra-tools 0.1.0",
  "libra-types 0.1.0",
- "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "network 0.1.0",
  "num-derive 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -779,7 +779,7 @@ dependencies = [
  "libra-crypto 0.1.0",
  "libra-failure-ext 0.1.0",
  "libra-types 0.1.0",
- "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "network 0.1.0",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1997,7 +1997,7 @@ dependencies = [
  "libra-failure-ext 0.1.0",
  "libra-tools 0.1.0",
  "libra-types 0.1.0",
- "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2022,6 +2022,7 @@ dependencies = [
  "libra-crypto-derive 0.1.0",
  "libra-failure-ext 0.1.0",
  "libra-nibble 0.1.0",
+ "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pairing 0.14.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2563,7 +2564,7 @@ dependencies = [
 
 [[package]]
 name = "mirai-annotations"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -4496,7 +4497,7 @@ dependencies = [
  "language-e2e-tests 0.1.0",
  "libra-types 0.1.0",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
  "structopt 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5196,7 +5197,7 @@ dependencies = [
  "libra-failure-ext 0.1.0",
  "libra-proptest-helpers 0.1.0",
  "libra-types 0.1.0",
- "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5254,7 +5255,7 @@ dependencies = [
  "libra-metrics 0.1.0",
  "libra-state-view 0.1.0",
  "libra-types 0.1.0",
- "mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prometheus 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5758,7 +5759,7 @@ dependencies = [
 "checksum mio-uds 0.6.7 (registry+https://github.com/rust-lang/crates.io-index)" = "966257a94e196b11bb43aca423754d87429960a768de9414f3691d6957abf125"
 "checksum miow 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "8c1f2f3b1cf331de6896aabf6e9d55dca90356cc9960cca7eaaf408a355ae919"
 "checksum miow 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "396aa0f2003d7df8395cb93e09871561ccc3e785f0acb369170e8cc74ddf9226"
-"checksum mirai-annotations 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "04d2c9c31e9c7fb10c69843da5a44c19f1e2b2896036e0ed3cb526829f53e529"
+"checksum mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7968d6cdc3c7a9632e45d738fd07fde89d04bbb0e88e7abb058871a82fa92645"
 "checksum multimap 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2eb04b9f127583ed176e163fb9ec6f3e793b87e21deedd5734a69386a18a0151"
 "checksum net2 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)" = "42550d9fb7b6684a6d404d9fa7250c2eb2646df731d1c06afc06dcee9e1bcf88"
 "checksum new_debug_unreachable 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "f40f005c60db6e03bae699e414c58bf9aa7ea02a2d0b9bfbcf19286cc4c82b30"

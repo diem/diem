@@ -8,15 +8,14 @@ use syn::{DataEnum, Ident};
 pub fn parse_newtype_fields(item: &syn::DeriveInput) -> (syn::Type, proc_macro2::TokenStream) {
     let fields = match item.data {
         syn::Data::Struct(ref body) => body.fields.iter().collect::<Vec<&syn::Field>>(),
-        _ => panic!("#[derive(Deref)] can only be used on structs"),
+        _ => vec![],
     };
 
     let field_ty = match fields.len() {
         1 => Some(fields[0].ty.clone()),
         _ => None,
     };
-    let field_ty = field_ty
-        .unwrap_or_else(|| panic!("#[derive(Deref)] can only be used on structs with one field."));
+    let field_ty = field_ty.expect("#[derive(Deref)] can only be used on structs with one field.");
 
     let field_name = match fields[0].ident {
         Some(ref ident) => quote!(#ident),
