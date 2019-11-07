@@ -72,6 +72,7 @@ use bytes::Bytes;
 use failure::prelude::*;
 use lazy_static::lazy_static;
 use libra_nibble::Nibble;
+use mirai_annotations::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use rand::{rngs::EntropyRng, Rng};
@@ -317,6 +318,8 @@ pub struct HashValueBitIterator<'a> {
     /// The reference to the bytes that represent the `HashValue`.
     hash_bytes: &'a [u8],
     pos: std::ops::Range<usize>,
+    // invariant hash_bytes.len() == HashValue::LENGTH;
+    // invariant pos.end == hash_bytes.len() * 8;
 }
 
 impl<'a> HashValueBitIterator<'a> {
@@ -330,6 +333,9 @@ impl<'a> HashValueBitIterator<'a> {
 
     /// Returns the `index`-th bit in the bytes.
     fn get_bit(&self, index: usize) -> bool {
+        assume!(index < self.pos.end); // assumed precondition
+        assume!(self.hash_bytes.len() == HashValue::LENGTH); // invariant
+        assume!(self.pos.end == self.hash_bytes.len() * 8); // invariant
         let pos = index / 8;
         let bit = 7 - index % 8;
         (self.hash_bytes[pos] >> bit) & 1 != 0
