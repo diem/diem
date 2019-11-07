@@ -37,7 +37,7 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 use std::time::Instant;
 use storage_client::StorageRead;
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::Handle;
 use vm_validator::vm_validator::{get_account_state, TransactionValidation};
 
 /// UpstreamProxyData is the set of data needed for a full node to send transaction write
@@ -92,7 +92,7 @@ pub async fn process_network_messages<M, V>(
     upstream_proxy_data: UpstreamProxyData<M, V>,
     network_events: Vec<AdmissionControlNetworkEvents>,
     mut peer_info: HashMap<PeerId, bool>,
-    executor: TaskExecutor,
+    executor: Handle,
     mut client_events: mpsc::Receiver<(
         SubmitTransactionRequest,
         oneshot::Sender<failure::Result<SubmitTransactionResponse>>,

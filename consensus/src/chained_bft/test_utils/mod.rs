@@ -232,6 +232,8 @@ pub fn consensus_runtime() -> runtime::Runtime {
     }
 
     runtime::Builder::new()
+        .threaded_scheduler()
+        .enable_all()
         .build()
         .expect("Failed to create Tokio runtime!")
 }

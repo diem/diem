@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["compat"] }
+futures = { version = "0.3.0", features = ["compat"] }
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 structopt = "0.3.2"
 

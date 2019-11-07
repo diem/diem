@@ -77,11 +77,8 @@ use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::compat::IoCompat;
 use std::{fmt::Debug, io, time::Duration};
-use tokio::{
-    codec::{Framed, LengthDelimitedCodec},
-    future::FutureExt as _,
-    runtime::TaskExecutor,
-};
+use tokio::runtime::Handle;
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 pub mod error;
 pub mod utils;
@@ -158,7 +155,7 @@ pub enum RpcNotification {
 /// The rpc actor.
 pub struct Rpc<TSubstream> {
     /// Executor to spawn inbound and outbound handler tasks.
-    executor: TaskExecutor,
+    executor: Handle,
     /// Channel to receive requests from other upstream actors.
     requests_rx: channel::Receiver<RpcRequest>,
     /// Channel to receive notifications from [`PeerManager`](crate::peer_manager::PeerManager).
@@ -185,7 +182,7 @@ where
 {
     /// Create a new instance of the [`Rpc`] protocol actor.
     pub fn new(
-        executor: TaskExecutor,
+        executor: Handle,
         requests_rx: channel::Receiver<RpcRequest>,
         peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
         peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
@@ -301,17 +298,20 @@ async fn handle_outbound_rpc<TSubstream>(
             let timeout = req.timeout;
 
             // Future to run the actual outbound rpc protocol and get the results.
-            let mut f_rpc_res = handle_outbound_rpc_inner(peer_mgr_tx, peer_id, protocol, req_data)
-                .timeout(timeout)
-                .map_err(Into::<RpcError>::into)
-                .map(|r| r.and_then(|x| x))
-                .boxed()
-                .fuse();
+            let mut f_rpc_res = tokio::time::timeout(
+                timeout,
+                handle_outbound_rpc_inner(peer_mgr_tx, peer_id, protocol, req_data),
+            )
+            .map_err(Into::<std::io::Error>::into)
+            .map_err(Into::<RpcError>::into)
+            .map(|r| r.and_then(|x| x))
+            .boxed()
+            .fuse();
 
             // If the rpc client drops their oneshot receiver, this future should
             // cancel the request.
             let mut f_rpc_cancel =
-                future::poll_fn(|cx: &mut Context| res_tx.poll_cancel(cx)).fuse();
+                future::poll_fn(|cx: &mut Context| res_tx.poll_canceled(cx)).fuse();
 
             futures::select! {
                 res = f_rpc_res => {
@@ -362,7 +362,9 @@ where
     let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
     // Send the rpc request data.
     let req_len = req_data.len();
-    substream.buffered_send(req_data).await?;
+    substream
+        .buffered_send(bytes05::Bytes::copy_from_slice(req_data.as_ref()))
+        .await?;
     // We won't send anything else on this substream, so we can half-close our
     // output side.
     substream.close().await?;
@@ -375,7 +377,7 @@ where
 
     // Wait for listener's response.
     let res_data = match substream.next().await {
-        Some(res_data) => res_data?.freeze(),
+        Some(res_data) => res_data?.freeze().as_ref().into(),
         None => return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into()),
     };
 
@@ -400,13 +402,16 @@ async fn handle_inbound_substream<TSubstream>(
     match notif {
         PeerManagerNotification::NewInboundSubstream(peer_id, substream) => {
             // Run the actual inbound rpc protocol.
-            let res = handle_inbound_substream_inner(
-                notification_tx,
-                peer_id,
-                substream.protocol,
-                substream.substream,
+            let res = tokio::time::timeout(
+                timeout,
+                handle_inbound_substream_inner(
+                    notification_tx,
+                    peer_id,
+                    substream.protocol,
+                    substream.substream,
+                ),
             )
-            .timeout(timeout)
+            .map_err(Into::<std::io::Error>::into)
             .map_err(Into::<RpcError>::into)
             .map(|r| r.and_then(|x| x))
             .await;
@@ -444,7 +449,7 @@ where
     let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
     // Read the rpc request data.
     let req_data = match substream.next().await {
-        Some(req_data) => req_data?.freeze(),
+        Some(req_data) => req_data?.freeze().as_ref().into(),
         None => return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into()),
     };
     counters::LIBRA_NETWORK_RPC_MESSAGES
@@ -477,7 +482,9 @@ where
     let res_len = res_data.len();
 
     // Send the response to remote
-    substream.buffered_send(res_data).await?;
+    substream
+        .buffered_send(bytes05::Bytes::copy_from_slice(res_data.as_ref()))
+        .await?;
 
     // We won't send anything else on this substream, so we can half-close
     // our output. The initiator will have also half-closed their side before

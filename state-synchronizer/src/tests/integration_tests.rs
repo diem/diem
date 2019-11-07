@@ -40,7 +40,7 @@ use std::{
         Arc,
     },
 };
-use tokio::runtime::{Builder, Runtime};
+use tokio::runtime::Runtime;
 use transaction_builder::encode_transfer_script;
 use vm_genesis::GENESIS_KEYPAIR;
 
@@ -161,7 +161,7 @@ struct SynchronizerEnv {
 
 impl SynchronizerEnv {
     fn new(handler: MockRpcHandler, role: RoleType) -> Self {
-        let runtime = Builder::new().build().unwrap();
+        let runtime = Runtime::new().unwrap();
         let peers = vec![PeerId::random(), PeerId::random()];
 
         // setup network
@@ -200,7 +200,7 @@ impl SynchronizerEnv {
         .collect();
 
         let (listener_addr, mut network_provider) = NetworkBuilder::new(
-            runtime.executor(),
+            runtime.handle().clone(),
             peers[1],
             addr.clone(),
             RoleType::Validator,
@@ -211,10 +211,10 @@ impl SynchronizerEnv {
         .direct_send_protocols(protocols.clone())
         .build();
         let (sender_b, events_b) = network_provider.add_state_synchronizer(protocols.clone());
-        runtime.executor().spawn(network_provider.start());
+        runtime.handle().spawn(network_provider.start());
 
         let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
-            runtime.executor(),
+            runtime.handle().clone(),
             peers[0],
             addr.clone(),
             RoleType::Validator,
@@ -226,7 +226,7 @@ impl SynchronizerEnv {
         .direct_send_protocols(protocols.clone())
         .build();
         let (sender_a, events_a) = network_provider.add_state_synchronizer(protocols);
-        runtime.executor().spawn(network_provider.start());
+        runtime.handle().spawn(network_provider.start());
 
         // create synchronizers
         let mut config = get_test_config().0;

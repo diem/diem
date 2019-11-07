@@ -63,10 +63,8 @@ use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::Debug,
 };
-use tokio::{
-    codec::{Framed, LengthDelimitedCodec},
-    runtime::TaskExecutor,
-};
+use tokio::runtime::Handle;
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 #[cfg(test)]
 mod test;
@@ -109,7 +107,7 @@ impl Debug for Message {
 /// The DirectSend actor.
 pub struct DirectSend<TSubstream> {
     /// A handle to a tokio executor.
-    executor: TaskExecutor,
+    executor: Handle,
     /// Channel to receive requests from other upstream actors.
     ds_requests_rx: channel::Receiver<DirectSendRequest>,
     /// Channels to send notifictions to upstream actors.
@@ -127,7 +125,7 @@ where
     TSubstream: AsyncRead + AsyncWrite + Send + Unpin + Debug + 'static,
 {
     pub fn new(
-        executor: TaskExecutor,
+        executor: Handle,
         ds_requests_rx: channel::Receiver<DirectSendRequest>,
         ds_notifs_tx: channel::Sender<DirectSendNotification>,
         peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
@@ -191,7 +189,7 @@ where
                         peer_id,
                         Message {
                             protocol: protocol.clone(),
-                            mdata: data.freeze(),
+                            mdata: data.freeze().as_ref().into(),
                         },
                     );
                     ds_notifs_tx
@@ -218,7 +216,7 @@ where
     // Create a new message queue and spawn a task to forward the messages from the queue to the
     // corresponding substream.
     async fn start_message_queue_handler(
-        executor: TaskExecutor,
+        executor: Handle,
         mut peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
         peer_id: PeerId,
         protocol: ProtocolId,
@@ -238,7 +236,13 @@ where
 
         // Spawn a task to forward the messages from the queue to the substream.
         let f_substream = async move {
-            if let Err(e) = msg_rx.map(Ok).forward(substream).await {
+            // TODO(bmwill) migrate to bytes 0.5 everywhere
+            if let Err(e) = msg_rx
+                .map(|b| bytes05::Bytes::copy_from_slice(b.as_ref()))
+                .map(Ok)
+                .forward(substream)
+                .await
+            {
                 warn!(
                     "Forward messages to peer {} error {:?}",
                     peer_id.short_str(),

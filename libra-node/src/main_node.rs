@@ -99,11 +99,13 @@ pub fn setup_network(
     config: &mut NetworkConfig,
 ) -> (Runtime, Box<dyn LibraNetworkProvider>) {
     let runtime = Builder::new()
-        .name_prefix("network-")
+        .thread_name("network-")
+        .threaded_scheduler()
+        .enable_all()
         .build()
         .expect("Failed to start runtime. Won't be able to start networking.");
     let mut network_builder = NetworkBuilder::new(
-        runtime.executor(),
+        runtime.handle().clone(),
         peer_id,
         config.listen_address.clone(),
         config.role,
@@ -234,7 +236,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 .unwrap()
             );
             // Start the network provider.
-            runtime.executor().spawn(network_provider.start());
+            runtime.handle().spawn(network_provider.start());
             network_runtimes.push(runtime);
             debug!("Network started for peer_id: {}", peer_id);
         }
@@ -281,7 +283,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
                 ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             ]);
-        runtime.executor().spawn(network_provider.start());
+        runtime.handle().spawn(network_provider.start());
         network_runtimes.push(runtime);
         debug!("Network started for peer_id: {}", peer_id);
 

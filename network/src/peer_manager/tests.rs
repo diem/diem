@@ -30,7 +30,7 @@ use netcore::{
 };
 use parity_multiaddr::Multiaddr;
 use std::{collections::HashMap, io, time::Duration};
-use tokio::{runtime::TaskExecutor, timer::Timeout};
+use tokio::{runtime::Handle, time::timeout};
 
 const HELLO_PROTOCOL: &[u8] = b"/hello-world/1.0.0";
 
@@ -166,7 +166,7 @@ fn peer_open_substream() {
 // we won't deadlock.
 #[test]
 fn peer_open_substream_simultaneous() {
-    let runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
     let (
         (peer_a, mut peer_handle_a, mut peer_notifs_rx_a),
         (peer_b, mut peer_handle_b, mut peer_notifs_rx_b),
@@ -185,8 +185,8 @@ fn peer_open_substream_simultaneous() {
             .await;
 
         // These both should complete, but in the event they deadlock wrap them in a timeout
-        let timeout_a = Timeout::new(substream_rx_a, Duration::from_secs(10));
-        let timeout_b = Timeout::new(substream_rx_b, Duration::from_secs(10));
+        let timeout_a = timeout(Duration::from_secs(10), substream_rx_a);
+        let timeout_b = timeout(Duration::from_secs(10), substream_rx_b);
         let _ = timeout_a.await.unwrap().unwrap();
         let _ = timeout_b.await.unwrap().unwrap();
 
@@ -218,11 +218,10 @@ fn peer_open_substream_simultaneous() {
     runtime.spawn(peer_b.start());
 
     runtime.block_on(test);
-    runtime.shutdown_on_idle();
 }
 
-#[test]
-fn peer_disconnect_request() {
+#[tokio::test]
+async fn peer_disconnect_request() {
     let (peer, mut peer_handle, _connection, mut internal_event_rx) =
         build_test_peer(ConnectionOrigin::Inbound);
 
@@ -237,11 +236,11 @@ fn peer_disconnect_request() {
         .await;
     };
 
-    block_on(join(test, peer.start()));
+    join(test, peer.start()).await;
 }
 
-#[test]
-fn peer_disconnect_connection_lost() {
+#[tokio::test]
+async fn peer_disconnect_connection_lost() {
     let (peer, peer_handle, connection, mut internal_event_rx) =
         build_test_peer(ConnectionOrigin::Inbound);
 
@@ -256,7 +255,7 @@ fn peer_disconnect_connection_lost() {
         .await;
     };
 
-    block_on(join(test, peer.start()));
+    join(test, peer.start()).await;
 }
 
 #[test]
@@ -282,7 +281,7 @@ fn ordered_peer_ids(num: usize) -> Vec<PeerId> {
 }
 
 fn build_test_peer_manager(
-    executor: TaskExecutor,
+    executor: Handle,
     peer_id: PeerId,
 ) -> (
     PeerManager<
@@ -399,13 +398,13 @@ async fn check_correct_connection_is_live<TMuxer: StreamMultiplexer>(
 
 #[test]
 fn peer_manager_simultaneous_dial_two_inbound() {
-    let runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
     let role = RoleType::Validator;
     let (mut peer_manager, _request_tx, _hello_rx) =
-        build_test_peer_manager(runtime.executor(), ids[1]);
+        build_test_peer_manager(runtime.handle().clone(), ids[1]);
 
     let test = async move {
         //
@@ -447,13 +446,13 @@ fn peer_manager_simultaneous_dial_two_inbound() {
 
 #[test]
 fn peer_manager_simultaneous_dial_inbound_outbout_remote_id_larger() {
-    let runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
     let role = RoleType::Validator;
     let (mut peer_manager, _request_tx, _hello_rx) =
-        build_test_peer_manager(runtime.executor(), ids[0]);
+        build_test_peer_manager(runtime.handle().clone(), ids[0]);
 
     let test = async move {
         //
@@ -496,13 +495,13 @@ fn peer_manager_simultaneous_dial_inbound_outbout_remote_id_larger() {
 
 #[test]
 fn peer_manager_simultaneous_dial_inbound_outbout_own_id_larger() {
-    let runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
     let role = RoleType::Validator;
     let (mut peer_manager, _request_tx, _hello_rx) =
-        build_test_peer_manager(runtime.executor(), ids[1]);
+        build_test_peer_manager(runtime.handle().clone(), ids[1]);
 
     let test = async move {
         //
@@ -545,13 +544,13 @@ fn peer_manager_simultaneous_dial_inbound_outbout_own_id_larger() {
 
 #[test]
 fn peer_manager_simultaneous_dial_outbound_inbound_remote_id_larger() {
-    let runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
     let role = RoleType::Validator;
     let (mut peer_manager, _request_tx, _hello_rx) =
-        build_test_peer_manager(runtime.executor(), ids[0]);
+        build_test_peer_manager(runtime.handle().clone(), ids[0]);
 
     let test = async move {
         //
@@ -594,13 +593,13 @@ fn peer_manager_simultaneous_dial_outbound_inbound_remote_id_larger() {
 
 #[test]
 fn peer_manager_simultaneous_dial_outbound_inbound_own_id_larger() {
-    let runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
     let role = RoleType::Validator;
     let (mut peer_manager, _request_tx, _hello_rx) =
-        build_test_peer_manager(runtime.executor(), ids[1]);
+        build_test_peer_manager(runtime.handle().clone(), ids[1]);
 
     let test = async move {
         //
@@ -643,13 +642,13 @@ fn peer_manager_simultaneous_dial_outbound_inbound_own_id_larger() {
 
 #[test]
 fn peer_manager_simultaneous_dial_two_outbound() {
-    let runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
     let role = RoleType::Validator;
     let (mut peer_manager, _request_tx, _hello_rx) =
-        build_test_peer_manager(runtime.executor(), ids[1]);
+        build_test_peer_manager(runtime.handle().clone(), ids[1]);
 
     let test = async move {
         //
@@ -691,13 +690,13 @@ fn peer_manager_simultaneous_dial_two_outbound() {
 
 #[test]
 fn peer_manager_simultaneous_dial_disconnect_event() {
-    let runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
     let role = RoleType::Validator;
     let (mut peer_manager, _request_tx, _hello_rx) =
-        build_test_peer_manager(runtime.executor(), ids[1]);
+        build_test_peer_manager(runtime.handle().clone(), ids[1]);
 
     let test = async move {
         let (outbound, _inbound) = build_test_connection();

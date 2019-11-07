@@ -9,7 +9,6 @@ use std::{
     fmt::{self, Display},
     io,
 };
-use tokio::timer;
 
 /// Errors propagated from the network module.
 #[derive(Debug)]
@@ -43,7 +42,7 @@ pub enum NetworkErrorKind {
     #[fail(display = "Operation timed out")]
     TimedOut,
 
-    #[fail(display = "Unknown tokio::timer Error variant")]
+    #[fail(display = "Unknown tokio::time Error variant")]
     UnknownTimerError,
 
     #[fail(display = "PeerManager error")]
@@ -144,11 +143,12 @@ impl From<PeerManagerError> for NetworkError {
     }
 }
 
-impl From<timer::timeout::Elapsed> for NetworkError {
-    fn from(_err: timer::timeout::Elapsed) -> NetworkError {
-        Context::new(NetworkErrorKind::TimedOut).into()
-    }
-}
+//FIXME
+//impl From<time::timeout::Elapsed> for NetworkError {
+//    fn from(_err: time::timeout::Elapsed) -> NetworkError {
+//        Context::new(NetworkErrorKind::TimedOut).into()
+//    }
+//}
 
 #[cfg(test)]
 mod test {

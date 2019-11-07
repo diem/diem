@@ -90,7 +90,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
 
     // Set up the listener network
     let (listen_addr, mut network_provider) = NetworkBuilder::new(
-        runtime.executor(),
+        runtime.handle().clone(),
         listener_peer_id,
         listener_addr,
         RoleType::Validator,
@@ -110,11 +110,11 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
         network_provider.add_consensus(vec![ProtocolId::from_static(
             CONSENSUS_DIRECT_SEND_PROTOCOL,
         )]);
-    runtime.executor().spawn(network_provider.start());
+    runtime.handle().clone().spawn(network_provider.start());
 
     // Set up the dialer network
     let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
-        runtime.executor(),
+        runtime.handle().clone(),
         dialer_peer_id,
         dialer_addr,
         RoleType::Validator,
@@ -140,7 +140,7 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
         network_provider.add_consensus(vec![ProtocolId::from_static(
             CONSENSUS_DIRECT_SEND_PROTOCOL,
         )]);
-    runtime.executor().spawn(network_provider.start());
+    runtime.handle().clone().spawn(network_provider.start());
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
@@ -176,7 +176,6 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
         }
         block_on(rx.next()).unwrap();
     });
-    runtime.shutdown_now();
 }
 
 fn compose_proposal(msg_len: usize) -> ConsensusMsg {
@@ -233,7 +232,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
 
     // Set up the listener network
     let (listen_addr, mut network_provider) = NetworkBuilder::new(
-        runtime.executor(),
+        runtime.handle().clone(),
         listener_peer_id,
         listener_addr,
         RoleType::Validator,
@@ -249,11 +248,11 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     .build();
     let (_listener_sender, mut listener_events) =
         network_provider.add_consensus(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
-    runtime.executor().spawn(network_provider.start());
+    runtime.handle().clone().spawn(network_provider.start());
 
     // Set up the dialer network
     let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
-        runtime.executor(),
+        runtime.handle().clone(),
         dialer_peer_id,
         dialer_addr,
         RoleType::Validator,
@@ -275,7 +274,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     .build();
     let (dialer_sender, mut dialer_events) =
         network_provider.add_consensus(vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)]);
-    runtime.executor().spawn(network_provider.start());
+    runtime.handle().clone().spawn(network_provider.start());
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
@@ -315,7 +314,6 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
             let _ = res.unwrap();
         }
     });
-    runtime.shutdown_now();
 }
 
 async fn request_block(

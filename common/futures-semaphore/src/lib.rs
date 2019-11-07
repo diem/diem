@@ -162,7 +162,7 @@ mod test {
         sync::atomic::{AtomicU32, Ordering},
         time::Duration,
     };
-    use tokio::{runtime::Runtime, timer::delay_for};
+    use tokio::{runtime::Runtime, time::delay_for};
 
     #[test]
     fn basic_functionality_semaphore() {

@@ -66,7 +66,6 @@ use std::{
     sync::{Arc, RwLock},
     time::{Duration, SystemTime},
 };
-use tokio::future::FutureExt as _;
 
 #[cfg(test)]
 mod test;
@@ -220,7 +219,7 @@ where
             let msg = self.compose_discovery_msg();
             let timeout = self.msg_timeout;
             let fut = async move {
-                if let Err(err) = sender.send_to(peer, msg).timeout(timeout).await {
+                if let Err(err) = tokio::time::timeout(timeout, sender.send_to(peer, msg)).await {
                     warn!(
                         "Failed to send discovery msg to {}; error: {:?}",
                         peer.short_str(),

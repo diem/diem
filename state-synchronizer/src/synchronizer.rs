@@ -49,10 +49,12 @@ impl StateSynchronizer {
         executor_proxy: E,
     ) -> Self {
         let runtime = Builder::new()
-            .name_prefix("state-sync-")
+            .thread_name("state-sync-")
+            .threaded_scheduler()
+            .enable_all()
             .build()
             .expect("[state synchronizer] failed to create runtime");
-        let executor = runtime.executor();
+        let executor = runtime.handle();
 
         let (coordinator_sender, coordinator_receiver) = mpsc::unbounded();
 

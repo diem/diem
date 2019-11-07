@@ -8,7 +8,7 @@ use std::{
     pin::Pin,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
-use tokio::{runtime::TaskExecutor, timer::delay_for};
+use tokio::{runtime::Handle, time::delay_for};
 
 /// Time service is an abstraction for operations that depend on time
 /// It supports implementations that can simulated time or depend on actual time
@@ -81,13 +81,13 @@ where
 
 /// TimeService implementation that uses actual clock to schedule tasks
 pub struct ClockTimeService {
-    executor: TaskExecutor,
+    executor: Handle,
 }
 
 impl ClockTimeService {
     /// Creates new TimeService that runs tasks based on actual clock
     /// It needs executor to schedule internal tasks that facilitates it's work
-    pub fn new(executor: TaskExecutor) -> ClockTimeService {
+    pub fn new(executor: Handle) -> ClockTimeService {
         ClockTimeService { executor }
     }
 }

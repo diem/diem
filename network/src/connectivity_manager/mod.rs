@@ -33,7 +33,7 @@ use std::{
     sync::{Arc, RwLock},
     time::{Duration, Instant},
 };
-use tokio::timer;
+use tokio::time;
 
 #[cfg(test)]
 mod test;
@@ -260,7 +260,7 @@ where
             // the next dial attempt for this peer.
             let now = Instant::now();
             let dial_delay = dial_state.next_backoff_delay(max_delay);
-            let f_delay = timer::delay_for(dial_delay);
+            let f_delay = time::delay_for(dial_delay);
 
             let (cancel_tx, cancel_rx) = oneshot::channel();
 
@@ -278,7 +278,9 @@ where
                     "Dial future: dialing peer: {}, at address: {}, after delay: {:?}",
                     peer_id.short_str(),
                     addr,
-                    f_delay.deadline().duration_since(now)
+                    f_delay
+                        .deadline()
+                        .duration_since(tokio::time::Instant::from_std(now))
                 );
                 // We dial after a delay. The dial can be cancelled by sending to or dropping
                 // `cancel_rx`.

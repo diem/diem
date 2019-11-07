@@ -53,7 +53,9 @@ impl ChainedBftProvider {
         synchronizer_client: Arc<StateSyncClient>,
     ) -> Self {
         let runtime = runtime::Builder::new()
-            .name_prefix("consensus-")
+            .thread_name("consensus-")
+            .threaded_scheduler()
+            .enable_all()
             .build()
             .expect("Failed to create Tokio runtime!");
 

@@ -21,7 +21,7 @@ use netcore::{
 };
 use prost::Message;
 use std::{convert::TryInto, io};
-use tokio::codec::{Framed, LengthDelimitedCodec};
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 const IDENTITY_PROTOCOL_NAME: &[u8] = b"/identity/0.1.0";
 
@@ -113,7 +113,9 @@ where
     let bytes = msg
         .to_bytes()
         .expect("writing protobuf failed; should never happen");
-    framed_substream.send(bytes).await?;
+    framed_substream
+        .send(bytes05::Bytes::copy_from_slice(bytes.as_ref()))
+        .await?;
     framed_substream.close().await?;
 
     // Read an IdentityMsg from the Remote
@@ -123,7 +125,7 @@ where
             "Connection closed by remote",
         )
     })??;
-    let response = IdentityMsg::decode(&response).map_err(|e| {
+    let response = IdentityMsg::decode(response.as_ref()).map_err(|e| {
         io::Error::new(
             io::ErrorKind::InvalidData,
             format!("Failed to parse identity msg: {}", e),

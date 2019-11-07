@@ -310,7 +310,7 @@ fn dialer_close_before_listener_send() {
             Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         // Send the rpc request data.
         substream
-            .buffered_send(Bytes::from_static(req_data))
+            .buffered_send(bytes05::Bytes::from_static(req_data))
             .await
             .unwrap();
         // Dialer then suddenly drops the connection
@@ -358,12 +358,12 @@ fn dialer_sends_two_requests_err() {
             Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         // Send the rpc request data.
         substream
-            .buffered_send(Bytes::from_static(req_data))
+            .buffered_send(bytes05::Bytes::from_static(req_data))
             .await
             .unwrap();
         // ERROR: Send _another_ rpc request data in the same substream.
         substream
-            .buffered_send(Bytes::from_static(req_data))
+            .buffered_send(bytes05::Bytes::from_static(req_data))
             .await
             .unwrap();
         // Dialer half-closes
@@ -410,7 +410,8 @@ fn outbound_rpc_timeout() {
         // Check error is timeout error
         let err = res.expect_err("Dialer's rpc request should fail");
         match err {
-            RpcError::TimedOut => {}
+            //FIXME when when tokio timout::Elapsed is exported again
+            RpcError::IoError(_) => {}
             err => panic!("Unexpected error: {:?}, expected TimedOut", err),
         };
     };
@@ -486,8 +487,8 @@ fn outbound_cancellation_before_send() {
 fn outbound_cancellation_recv() {
     ::libra_logger::try_init_for_testing();
 
-    let rt = Runtime::new().unwrap();
-    let executor = rt.executor();
+    let mut rt = Runtime::new().unwrap();
+    let executor = rt.handle().clone();
 
     let listener_peer_id = PeerId::random();
     let protocol_id = b"/get_blocks/1.0.0";
@@ -564,7 +565,7 @@ fn outbound_cancellation_recv() {
         cancel_done_rx.await.unwrap();
 
         // should get an error when trying to send
-        match substream.send(Bytes::from_static(res_data)).await {
+        match substream.send(bytes05::Bytes::from_static(res_data)).await {
             Err(err) => assert_eq!(io::ErrorKind::BrokenPipe, err.kind()),
             res => panic!("listener: Unexpected result: {:?}", res),
         }
@@ -585,7 +586,7 @@ fn rpc_protocol() {
     let req_data = b"hello";
     let res_data = b"goodbye";
 
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
 
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
 
@@ -596,7 +597,7 @@ fn rpc_protocol() {
     let dialer_peer_mgr_reqs_tx = PeerManagerRequestSender::new(dialer_peer_mgr_reqs_tx);
     let (rpc_handler_tx, _) = channel::new_test(8);
     let dialer_rpc = Rpc::new(
-        rt.executor(),
+        rt.handle().clone(),
         dialer_rpc_rx,
         dialer_peer_mgr_notifs_rx,
         dialer_peer_mgr_reqs_tx,
@@ -647,7 +648,7 @@ fn rpc_protocol() {
     let listener_peer_mgr_reqs_tx = PeerManagerRequestSender::new(listener_peer_mgr_reqs_tx);
     let (listener_rpc_notifs_tx, mut listener_rpc_notifs_rx) = channel::new_test(8);
     let listener_rpc = Rpc::new(
-        rt.executor(),
+        rt.handle().clone(),
         listener_rpc_reqs_rx,
         listener_peer_mgr_notifs_rx,
         listener_peer_mgr_reqs_tx,
