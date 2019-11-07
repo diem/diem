@@ -17,9 +17,13 @@ use network::{
     },
     validator_network::{Event, ConsensusNetworkSender}
 };
+use futures::compat::Future01CompatExt;
 use futures::SinkExt;
 use crypto::hash::CryptoHash;
 use crate::pow::payload_ext::BlockPayloadExt;
+use futures_locks::Mutex;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct SyncManager {
     author: AccountAddress,
@@ -28,9 +32,9 @@ pub struct SyncManager {
     block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
     sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>>,
     sync_signal_receiver: Option<mpsc::Receiver<(PeerId, u64)>>,
-    sync_state_sender: mpsc::Sender<SyncState>,
-    sync_state_receiver: Option<mpsc::Receiver<SyncState>>,
     chain_manager: Arc<AtomicRefCell<ChainManager>>,
+    sync_block_cache: Arc<Mutex<HashMap<PeerId, Vec<Block<BlockPayloadExt>>>>>,
+    sync_block_height: Arc<AtomicU64>,
 }
 
 impl SyncManager {
@@ -42,40 +46,32 @@ impl SyncManager {
                sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>>,
                sync_signal_receiver: Option<mpsc::Receiver<(PeerId, u64)>>,
                chain_manager: Arc<AtomicRefCell<ChainManager>>) -> Self {
-        let (sync_state_sender, sync_state_receiver) = mpsc::channel(10);
-        SyncManager{author, self_sender, network_sender, block_cache_sender, sync_block_receiver,
-            sync_signal_receiver, sync_state_sender, sync_state_receiver:Some(sync_state_receiver), chain_manager}
+        SyncManager{author, self_sender, network_sender, block_cache_sender, sync_block_receiver, sync_signal_receiver,
+            chain_manager, sync_block_cache:Arc::new(Mutex::new(HashMap::new())), sync_block_height:Arc::new(AtomicU64::new(0))}
     }
 
     pub fn sync_block_msg(&mut self, executor: TaskExecutor) {
         let mut sync_block_receiver = self.sync_block_receiver.take().expect("sync_block_receiver is none.");
         let mut sync_signal_receiver = self.sync_signal_receiver.take().expect("sync_signal_receiver is none.");
         let sync_network_sender = self.network_sender.clone();
-        let sync_state_sender = self.sync_state_sender.clone();
-        let mut sync_state_receiver = self.sync_state_receiver.take().expect("sync_state_receiver is none.");
         let mut sync_block_cache_sender = self.block_cache_sender.clone();
         let self_peer_id = self.author.clone();
         let sync_self_sender = self.self_sender.clone();
         let chain_manager = self.chain_manager.clone();
+        let max_height = self.sync_block_height.clone();
+        let sync_block_cache = self.sync_block_cache.clone();
 
         let sync_fut = async move {
             loop {
                 ::futures::select! {
                     (peer_id, height) = sync_signal_receiver.select_next_some() => {
-                        //sync data from latest block
+                        //1. sync data from latest block
                         //TODO:timeout
-                        let sync_block_req_msg = Self::sync_block_req(None);
+                        if max_height.load(Ordering::Relaxed) < height {
+                            max_height.store(height, Ordering::Relaxed);
+                            let sync_block_req_msg = Self::sync_block_req(None);
 
-                        EventProcessor::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
-                    },
-                    (sync_state) = sync_state_receiver.select_next_some() => {
-                        match sync_state {
-                            SyncState::END => {
-                            },
-                            SyncState::GOON((peer_id, hash)) => {
-                                let sync_block_req_msg = Self::sync_block_req(Some(hash));
-                                EventProcessor::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
-                            }
+                            EventProcessor::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
                         }
                     },
                     (peer_id, sync_block_resp) = sync_block_receiver.select_next_some() => {
@@ -83,40 +79,45 @@ impl SyncManager {
                         let status = sync_block_resp.status;
                         let mut blocks = sync_block_resp.blocks;
 
-                        let mut flag = false;
-                        let mut end_block = None;
+                        let mut end_flag = false;
+                        let mut end_block_hash = None;
+                        let mut sync_block_cache_lock = sync_block_cache.clone().lock().compat().await.unwrap();
                         if blocks.len() > 0 {
-                            blocks.reverse();
+                            if !sync_block_cache_lock.contains_key(&peer_id) {
+                                let block_vec = Vec::new();
+                                sync_block_cache_lock.insert(peer_id, block_vec);
+                            }
                             for block in blocks {
-                                let hash = block.hash();
-                                if chain_manager.borrow().block_exist(&hash).await {
-                                    flag = true;
+                                let tmp_hash = block.hash();
+                                if chain_manager.borrow().block_exist(&tmp_hash).await {
+                                    end_flag = true;
                                     break;
-                                } else {
-                                    end_block = Some(hash);
-                                    sync_block_cache_sender.send(block).await.expect("send block err.");
-                                }
+                                };
+
+                                // add to sync_block_cache
+                                end_block_hash = Some(block.parent_id());
+                                sync_block_cache_lock.get_mut(&peer_id).expect("peer block not exist.").push(block);
                             }
                         }
 
-                        let state = match status {
-                            BlockRetrievalStatus::Succeeded => {
-                                if flag {
-                                    SyncState::END
-                                } else {
-                                    SyncState::GOON((peer_id, end_block.unwrap()))
+                        if end_flag {
+                            let mut block_vec = sync_block_cache_lock.remove(&peer_id).expect("peer block not exist.");
+                            block_vec.reverse();
+                            for b in block_vec {
+                                sync_block_cache_sender.send(b).await.expect("send block err.");
+                            }
+                        } else {
+                            match status {
+                                BlockRetrievalStatus::Succeeded => {
+                                    let sync_block_req_msg = Self::sync_block_req(end_block_hash);
+                                    EventProcessor::send_consensus_msg(peer_id, &mut sync_network_sender.clone(), self_peer_id.clone(), &mut sync_self_sender.clone(), sync_block_req_msg).await;
                                 }
-                            }
-                            BlockRetrievalStatus::IdNotFound => {
-                                //end
-                                SyncState::END
-                            }
-                            BlockRetrievalStatus::NotEnoughBlocks => {
-                                SyncState::END
-                            }
-                        };
-                        if let Err(err) = sync_state_sender.clone().send(state).await {
-                            error!("send sync block err: {:?}", err);
+                                _ => {
+//                                    BlockRetrievalStatus::IdNotFound
+//                                    BlockRetrievalStatus::NotEnoughBlocks
+                                    let _ = sync_block_cache_lock.remove(&peer_id);
+                                }
+                            };
                         }
                     }
                     complete => {
@@ -129,7 +130,7 @@ impl SyncManager {
     }
 
     fn sync_block_req(hash: Option<HashValue>) -> ConsensusMsg {
-        let num_blocks = 10;
+        let num_blocks = 100;
         let req = match hash {
             None => RequestBlock { block_id: vec![], num_blocks },
             Some(h) => {
@@ -140,11 +141,6 @@ impl SyncManager {
             message: Some(ConsensusMsg_oneof::RequestBlock(req)),
         }
     }
-}
-
-enum SyncState {
-    GOON((PeerId, HashValue)),
-    END,
 }
 
 pub struct BlockRetrievalResponse<T> {

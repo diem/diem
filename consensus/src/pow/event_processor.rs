@@ -146,8 +146,8 @@ impl EventProcessor {
                                                payload.nonce, Proof { solve: payload.solve.clone() });
 
                                 if self_peer_id != peer_id {
-                                    let height = chain_manager.borrow().chain_height().await;
-                                    if height < block.round() {
+                                    let (height, block_index) = chain_manager.borrow().chain_height_and_root().await;
+                                    if height < block.round() && block.parent_id() != block_index.id {
                                         if let Err(err) = sync_signal_sender.clone().send((peer_id, block.round())).await {
                                             error!("send sync signal err: {:?}", err);
                                         }
@@ -159,61 +159,64 @@ impl EventProcessor {
                                 }
                             }
                             ConsensusMsg_oneof::RequestBlock(req_block) => {
-                                let mut blocks = vec![];
-                                let mut latest_block = if req_block.block_id.len() > 0 {
-                                    Some(HashValue::from_slice(req_block.block_id.as_ref()).unwrap())
-                                } else { None };
-                                let mut exist_flag = false;
-                                for _i in 0..req_block.num_blocks {
-                                    let hash = match latest_block {
-                                        Some(child_hash) => {
-                                            let child = block_db.get_block_by_hash::<BlockPayloadExt>(&child_hash);
-                                            match child {
-                                                Some(_c) => {
-                                                    child_hash
-                                                }
-                                                None => {
-                                                    exist_flag = true;
+                                if req_block.num_blocks > 0 {
+                                    let mut blocks = vec![];
+                                    let mut latest_block = if req_block.block_id.len() > 0 {
+                                        Some(HashValue::from_slice(req_block.block_id.as_ref()).unwrap())
+                                    } else { None };
+                                    let mut not_exist_flag = false;
+                                    for _i in 1..req_block.num_blocks {
+                                        let block = match latest_block {
+                                            Some(child_hash) => {
+                                                if child_hash == *PRE_GENESIS_BLOCK_ID {
                                                     break;
                                                 }
+
+                                                let child = block_db.get_block_by_hash::<BlockPayloadExt>(&child_hash);
+                                                match child {
+                                                    Some(c) => {
+                                                        c
+                                                    }
+                                                    None => {
+                                                        not_exist_flag = true;
+                                                        break;
+                                                    }
+                                                }
                                             }
+                                            None => {
+                                                block_db.get_block_by_hash::<BlockPayloadExt>(&chain_manager.borrow().chain_root().await).expect("root not exist")
+                                            }
+                                        };
+
+                                        latest_block = Some(block.parent_id());
+                                        blocks.push(block.into());
+
+                                        if latest_block.unwrap() == *GENESIS_BLOCK_ID {
+                                            break;
                                         }
-                                        None => {
-                                            chain_manager.borrow().chain_root().await
+                                    }
+
+                                    let status = if not_exist_flag {
+                                        //BlockRetrievalStatus::IDNOTFOUND
+                                        //1
+                                        1
+                                    } else {
+                                        if (blocks.len() as u64) == req_block.num_blocks {
+                                            //BlockRetrievalStatus::SUCCEEDED
+                                            0
+                                        } else {
+                                            //BlockRetrievalStatus::NOTENOUGHBLOCKS
+                                            2
                                         }
                                     };
-                                    if hash == *PRE_GENESIS_BLOCK_ID {
-                                        break;
-                                    }
-                                    let block = block_db.get_block_by_hash::<BlockPayloadExt>(&hash).expect("block not exist.");
-                                    latest_block = Some(block.parent_id());
-                                    blocks.push(block.into());
 
-                                    if hash == *GENESIS_BLOCK_ID {
-                                        break;
-                                    }
+                                    let resp_block = RespondBlock { status, blocks };
+                                    let resp_block_msg = ConsensusMsg {
+                                        message: Some(ConsensusMsg_oneof::RespondBlock(resp_block)),
+                                    };
+
+                                    Self::send_consensus_msg(peer_id, &mut network_sender.clone(), self_peer_id.clone(), &mut self_sender.clone(), resp_block_msg).await;
                                 }
-
-                                let status = if exist_flag {
-                                    //BlockRetrievalStatus::IDNOTFOUND
-                                    //1
-                                    1
-                                } else {
-                                    if (blocks.len() as u64) == req_block.num_blocks {
-                                        //BlockRetrievalStatus::SUCCEEDED
-                                        0
-                                    } else {
-                                        //BlockRetrievalStatus::NOTENOUGHBLOCKS
-                                        2
-                                    }
-                                };
-
-                                let resp_block = RespondBlock { status, blocks };
-                                let resp_block_msg = ConsensusMsg {
-                                    message: Some(ConsensusMsg_oneof::RespondBlock(resp_block)),
-                                };
-
-                                Self::send_consensus_msg(peer_id, &mut network_sender.clone(), self_peer_id.clone(), &mut self_sender.clone(), resp_block_msg).await;
                             }
                             ConsensusMsg_oneof::RespondBlock(res_block) => {
                                 let mut blocks = vec![];

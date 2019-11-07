@@ -11,11 +11,7 @@ use tokio::runtime::{TaskExecutor};
 use crate::state_replication::{StateComputer, TxnManager};
 use futures::{channel::mpsc, StreamExt};
 use consensus_types::block::Block;
-use {
-    futures::{
-        compat::Future01CompatExt,
-    },
-};
+use futures::compat::Future01CompatExt;
 use logger::prelude::*;
 use crypto::hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID};
 use crate::pow::payload_ext::BlockPayloadExt;
