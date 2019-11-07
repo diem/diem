@@ -162,7 +162,7 @@ impl DeploymentManager {
         Ok(upstream_commit)
     }
 
-    fn get_upstream_tag(&self, digest: &str) -> failure::Result<String> {
+    pub fn get_upstream_tag(&self, digest: &str) -> failure::Result<String> {
         let image_id = ImageIdentifier {
             image_digest: Some(digest.to_string()),
             image_tag: None,
