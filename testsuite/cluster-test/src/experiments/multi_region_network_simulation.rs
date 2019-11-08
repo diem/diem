@@ -12,7 +12,7 @@ use failure;
 use slog_scope::{info, warn};
 use std::{collections::HashSet, fmt, thread, time::Duration};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct Metrics {
     split_size: usize,
     cross_region_latency: u64,
@@ -195,6 +195,7 @@ impl Experiment for MultiRegionSimulation {
                     .single_run(*split, Duration::from_millis(*cross_region_latency))
                     .map_err(|e| warn!("{}", e))
                 {
+                    info!("metrics for this run: {:?}", metrics);
                     results.push(metrics);
                 }
                 thread::sleep(Duration::from_secs(60));
@@ -202,6 +203,10 @@ impl Experiment for MultiRegionSimulation {
         }
         print_results(results);
         Ok(())
+    }
+
+    fn deadline(&self) -> Duration {
+        Duration::from_secs(24 * 60 * 60)
     }
 }
 

@@ -53,6 +53,10 @@ impl Experiment for PacketLossRandomValidators {
         }
         Ok(())
     }
+
+    fn deadline(&self) -> Duration {
+        Duration::from_secs(20 * 60)
+    }
 }
 
 impl fmt::Display for PacketLossRandomValidators {

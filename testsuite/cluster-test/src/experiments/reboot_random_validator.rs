@@ -57,6 +57,10 @@ impl Experiment for RebootRandomValidators {
         }
         Ok(())
     }
+
+    fn deadline(&self) -> Duration {
+        Duration::from_secs(20 * 60)
+    }
 }
 
 impl fmt::Display for RebootRandomValidators {

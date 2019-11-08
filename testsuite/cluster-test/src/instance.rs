@@ -54,7 +54,7 @@ impl Instance {
             ssh_dest.as_str(),
         ];
         let mut ssh_cmd = Command::new("timeout");
-        ssh_cmd.arg("15").args(ssh_args).args(args);
+        ssh_cmd.arg("60").args(ssh_args).args(args);
         if no_std_err {
             ssh_cmd.stderr(Stdio::null());
         }
