@@ -100,6 +100,7 @@ pub struct ClientProxy {
     sync_on_wallet_recovery: bool,
     /// temp files (alive for duration of program)
     temp_files: Vec<PathBuf>,
+    /// verbose client output
     verbose: bool,
 }
 
@@ -1142,7 +1143,7 @@ mod tests {
             false,
             None,
             Some(mnemonic_path),
-            false,
+            false, /* verbose mode */
         )
         .unwrap();
         for _ in 0..count {

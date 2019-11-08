@@ -168,7 +168,7 @@ impl InProcessTestClient {
                 false,
                 /* faucet server */ None,
                 Some(mnemonic_file_path.to_string()),
-                false,
+                /* verbose mode */ false,
             )
             .unwrap(),
             alias_to_cmd,

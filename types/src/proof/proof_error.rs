@@ -26,10 +26,6 @@ impl Fail for ProofError {}
 
 impl Display for ProofError {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(
-            f,
-            "ProofError (msg: {:?}, proof: {:?})",
-            self.msg, self.proof
-        )
+        Debug::fmt(&self, f)
     }
 }
