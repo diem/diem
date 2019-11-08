@@ -63,7 +63,6 @@ impl LedgerStore {
         }
     }
 
-    #[allow(dead_code)]
     pub fn get_epoch(&self, version: Version) -> Result<u64> {
         let mut iter = self
             .db
