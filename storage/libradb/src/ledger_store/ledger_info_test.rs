@@ -45,7 +45,7 @@ fn arb_ledger_infos_with_sigs() -> impl Strategy<Value = Vec<(LedgerInfoWithSign
                     )| {
                         round += 1;
                         version += block_size;
-                        is_new_epoch &= (last_new_epoch_version == version);
+                        is_new_epoch &= last_new_epoch_version == version;
                         let next_validator_set = if is_new_epoch {
                             Some(ValidatorSet::new(Vec::new()))
                         } else {
