@@ -1,32 +1,25 @@
 //! account: bob
 //! account: alice
 
-//! new-transaction
-//! sender: alice
-//! receiver: bob
-//! args: 100000, 50000
+module Test{
+    import 0x0.ChannelAccount;
 
-import 0x0.ChannelAccount;
-//open channel
-main(sender_amount:u64, receiver_amount:u64) {
-    ChannelAccount.open(move(sender_amount), move(receiver_amount));
-    return;
+    public assert_channel_sequence_number(expect_sender_number: u64, expect_receiver_number:u64){
+        assert(ChannelAccount.sender_sequence_number() == move(expect_sender_number), 1024);
+        assert(ChannelAccount.receiver_sequence_number() == move(expect_receiver_number), 1025);
+        return;
+    }
 }
 
 //! new-transaction
 //! sender: alice
 //! receiver: bob
 
-import 0x0.ChannelAccount;
-main() {
-    let x: bool;
-    let alice_sequence_number: u64;
-    let bob_sequence_number: u64;
+0x0.ChannelAccount.open 100000 50000
 
-    alice_sequence_number = ChannelAccount.sender_sequence_number();
-    bob_sequence_number = ChannelAccount.receiver_sequence_number();
+//! new-transaction
+//! sender: alice
+//! receiver: bob
 
-    assert(copy(alice_sequence_number) == 1, 1024);
-    assert(move(alice_sequence_number) == move(bob_sequence_number), 1025);
-    return;
-}
+{{default}}.Test.assert_channel_sequence_number 1 1
+
