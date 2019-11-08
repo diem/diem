@@ -1,0 +1,29 @@
+[package]
+name = "libra-dev"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra libra-dev"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libra-types = { path = "../types" }
+lcs = { path = "../common/lcs", package = "libra-canonical-serialization" }
+libc = "0.2.65"
+
+[lib]
+crate-type = ["staticlib"]
+
+[profile.release]
+debug = true
+lto = true
+
+[profile.dev]
+debug = true
+lto = true
+panic = "abort"

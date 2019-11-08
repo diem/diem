@@ -94,6 +94,10 @@ default-members = [
     "storage/storage-service",
 ]
 
+exclude = [
+    "libra-dev",
+]
+
 [profile.release]
 debug = true
 
