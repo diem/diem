@@ -15,6 +15,7 @@ use crate::{
 use failure::prelude::*;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
+use mirai_annotations::*;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum ChildInfo {
@@ -65,6 +66,7 @@ impl InternalInfo {
     }
 
     fn set_child(&mut self, index: usize, child_info: ChildInfo) {
+        precondition!(index < 16);
         self.children[index] = Some(child_info);
     }
 
