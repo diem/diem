@@ -5041,6 +5041,7 @@ dependencies = [
 name = "tree_heap"
 version = "0.1.0"
 dependencies = [
+ "bytecode-source-map 0.1.0",
  "bytecode-verifier 0.1.0",
  "functional_tests 0.1.0",
  "ir-to-bytecode 0.1.0",

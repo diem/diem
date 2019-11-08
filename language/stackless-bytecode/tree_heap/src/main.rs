@@ -1,25 +1,26 @@
-// Copyright (c) The Libra Core Contributors
-// SPDX-License-Identifier: Apache-2.0
-
+use bytecode_source_map::source_map::SourceMap;
 use bytecode_verifier::VerifiedModule;
-use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
+use ir_to_bytecode::{compiler::compile_module, parser::ast::Loc, parser::parse_module};
 use libra_types::account_address::AccountAddress;
 use std::{
     env,
     fs::{self, File},
     io::prelude::*,
 };
+use stdlib::{stdlib_modules, stdlib_source_map};
 use tree_heap::translator::BoogieTranslator;
 
-fn compile_files(file_names: Vec<String>) -> Vec<VerifiedModule> {
-    let mut verified_modules = vec![];
+// mod translator;
+fn compile_files(file_names: Vec<String>) -> (Vec<VerifiedModule>, SourceMap<Loc>) {
+    let mut verified_modules = stdlib_modules().to_vec();
+    let mut source_maps = stdlib_source_map().to_vec();
     let files_len = file_names.len();
     let dep_files = &file_names[0..files_len];
     let address = AccountAddress::default();
     for file_name in dep_files {
         let code = fs::read_to_string(file_name).unwrap();
         let module = parse_module(&code).unwrap();
-        let (compiled_module, _) =
+        let (compiled_module, source_map) =
             compile_module(address, module, &verified_modules).expect("module failed to compile");
         let verified_module_res = VerifiedModule::new(compiled_module);
 
@@ -29,18 +30,19 @@ fn compile_files(file_names: Vec<String>) -> Vec<VerifiedModule> {
             }
             Ok(verified_module) => {
                 verified_modules.push(verified_module);
+                source_maps.push(source_map);
             }
         }
     }
-    verified_modules
+    (verified_modules, source_maps)
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     let file_names = &args[1..];
     // read files and compile into compiled modules
-    let modules = compile_files(file_names.to_vec());
-    let mut ts = BoogieTranslator::new(&modules);
+    let (modules, source_maps) = compile_files(file_names.to_vec());
+    let mut ts = BoogieTranslator::new(&modules, &source_maps);
     let mut res = String::new();
 
     // handwritten boogie code
