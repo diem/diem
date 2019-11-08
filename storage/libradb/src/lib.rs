@@ -464,7 +464,8 @@ impl LibraDB {
 
         // Get the latest ledger info and signatures
         let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
-        let ledger_version = ledger_info_with_sigs.ledger_info().version();
+        let ledger_info = ledger_info_with_sigs.ledger_info();
+        let ledger_version = ledger_info.version();
 
         // Fulfill all request items
         let response_items = request_items
@@ -538,6 +539,31 @@ impl LibraDB {
             })
             .collect::<Result<Vec<_>>>()?;
 
+        // TODO: cache last epoch change version to avoid a DB access in most cases.
+        let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
+        let current_epoch = if ledger_info.next_validator_set().is_some() {
+            ledger_info.epoch() + 1
+        } else {
+            ledger_info.epoch()
+        };
+        let validator_change_proof = if client_epoch < current_epoch {
+            let mut ledger_infos = self
+                .ledger_store
+                .get_latest_ledger_infos_per_epoch(client_epoch)?;
+            if ledger_infos
+                .last()
+                .ok_or_else(|| LibraDbError::NotFound(String::from("Latest epoch LedgerInfo")))?
+                .ledger_info()
+                .next_validator_set()
+                .is_none()
+            {
+                ledger_infos.pop();
+            }
+            ledger_infos
+        } else {
+            Vec::new()
+        };
+
         let ledger_consistency_proof = self
             .ledger_store
             .get_consistency_proof(client_known_version, ledger_version)?;
@@ -545,7 +571,7 @@ impl LibraDB {
         Ok((
             response_items,
             ledger_info_with_sigs,
-            ValidatorChangeEventWithProof::new(vec![]),
+            ValidatorChangeEventWithProof::new(validator_change_proof),
             ledger_consistency_proof,
         ))
     }

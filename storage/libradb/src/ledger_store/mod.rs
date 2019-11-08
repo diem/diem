@@ -41,6 +41,8 @@ pub(crate) struct LedgerStore {
     latest_ledger_info: ArcSwap<Option<LedgerInfoWithSignatures>>,
 }
 
+const MAX_NUM_EPOCH_CHANGE_LEDGER_INFO: usize = 100;
+
 impl LedgerStore {
     pub fn new(db: Arc<DB>) -> Self {
         // Upon restart, read the latest ledger info and signatures and cache them in memory.
@@ -91,7 +93,17 @@ impl LedgerStore {
     ) -> Result<Vec<LedgerInfoWithSignatures>> {
         let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
         iter.seek(&start_epoch)?;
-        Ok(iter.map(|kv| Ok(kv?.1)).collect::<Result<Vec<_>>>()?)
+        let iter = iter.take(MAX_NUM_EPOCH_CHANGE_LEDGER_INFO + 1);
+        let result = iter.map(|res| Ok(res?.1)).collect::<Result<Vec<_>>>()?;
+        if result.len() > MAX_NUM_EPOCH_CHANGE_LEDGER_INFO {
+            Err(LibraDbError::TooManyRequested(
+                MAX_NUM_EPOCH_CHANGE_LEDGER_INFO as u64 + 1,
+                MAX_NUM_EPOCH_CHANGE_LEDGER_INFO as u64,
+            )
+            .into())
+        } else {
+            Ok(result)
+        }
     }
 
     pub fn get_latest_ledger_info_option(&self) -> Option<LedgerInfoWithSignatures> {
