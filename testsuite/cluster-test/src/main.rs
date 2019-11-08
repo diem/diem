@@ -926,6 +926,7 @@ impl ClusterTestRunner {
             now.second()
         );
         let suffix = &suffix;
+        let log_file = "/data/libra/libra.log";
         info!("Will use suffix {} for log rotation", suffix);
         let jobs = self
             .cluster
@@ -939,13 +940,11 @@ impl ClusterTestRunner {
                         .map_err(|e| info!("Failed to wipe {}: {:?}", instance, e))
                         .ok();
                     instance
-                        .run_cmd_tee_err(vec![
-                            "sudo",
-                            "gzip",
-                            "-S",
-                            suffix,
-                            "/data/libra/libra.log",
-                        ])
+                        .run_cmd_tee_err(vec![format!(
+                            "test -f {f} && sudo gzip -S {s} {f}",
+                            f = log_file,
+                            s = suffix
+                        )])
                         .map_err(|e| info!("Failed to gzip log file {}: {:?}", instance, e))
                         .ok();
                 }
