@@ -219,7 +219,7 @@ impl LedgerStore {
             let epoch = ledger_info_with_sigs.ledger_info().epoch();
             let version = ledger_info_with_sigs.ledger_info().version();
             cs.batch
-                .put::<EpochByVersionSchema>(&(version + 1), &(epoch + 1))?;
+                .put::<EpochByVersionSchema>(&version, &(epoch + 1))?;
         }
         cs.batch.put::<LedgerInfoSchema>(
             &ledger_info_with_sigs.ledger_info().epoch(),
