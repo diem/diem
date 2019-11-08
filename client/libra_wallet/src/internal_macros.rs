@@ -68,6 +68,7 @@ macro_rules! impl_array_newtype {
 
             #[inline]
             fn index(&self, index: usize) -> &$ty {
+                precondition!(index < $len);
                 let &$thing(ref dat) = self;
                 &dat[index]
             }
