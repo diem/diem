@@ -355,13 +355,13 @@ fn parse_borrow_field<'input>(
     // only a simple name token is allowed, and it must not be
     // the start of a pack expression.
     let e = if tokens.peek() == Tok::NameValue {
+        if tokens.lookahead()? != Tok::LBrace {
+            let var = parse_var_(tokens)?;
+            return Ok(Exp::BorrowLocal(mutable, var));
+        }
         let start_loc = tokens.start_loc();
         let name = parse_name(tokens)?;
         let end_loc = tokens.previous_end_loc();
-        if tokens.peek() != Tok::LBrace {
-            let var = spanned(start_loc, end_loc, Var::parse(name)?);
-            return Ok(Exp::BorrowLocal(mutable, var));
-        }
         let type_actuals: Vec<Type> = vec![];
         spanned(start_loc, end_loc, parse_pack(tokens, &name, type_actuals)?)
     } else {
@@ -738,14 +738,9 @@ fn parse_lvalue_<'input>(
 
 fn parse_lvalues<'input>(
     tokens: &mut Lexer<'input>,
-    prefix: Option<LValue_>,
 ) -> Result<Vec<LValue_>, ParseError<usize, failure::Error>> {
-    let l = if let Some(lv) = prefix {
-        lv
-    } else {
-        parse_lvalue_(tokens)?
-    };
-    let mut lvalues = vec![l];
+    let mut lvalues: Vec<LValue_> = vec![];
+    lvalues.push(parse_lvalue_(tokens)?);
     while tokens.peek() == Tok::Comma {
         tokens.advance()?;
         lvalues.push(parse_lvalue_(tokens)?);
@@ -790,9 +785,8 @@ fn parse_field_bindings<'input>(
 
 fn parse_assign<'input>(
     tokens: &mut Lexer<'input>,
-    prefix: Option<LValue_>,
 ) -> Result<Cmd, ParseError<usize, failure::Error>> {
-    let lvalues = parse_lvalues(tokens, prefix)?;
+    let lvalues = parse_lvalues(tokens)?;
     consume_token(tokens, Tok::Equal)?;
     let e = parse_exp_(tokens)?;
     Ok(Cmd::Assign(lvalues, e))
@@ -828,20 +822,14 @@ fn parse_cmd<'input>(tokens: &mut Lexer<'input>) -> Result<Cmd, ParseError<usize
         Tok::NameValue => {
             // This could be either an LValue for an assignment or
             // NameAndTypeActuals (with no type_actuals) for an unpack.
-            let start_loc = tokens.start_loc();
-            let name = parse_name(tokens)?;
-            if tokens.peek() == Tok::LBrace {
+            if tokens.lookahead()? == Tok::LBrace {
+                let name = parse_name(tokens)?;
                 parse_unpack(tokens, &name, vec![])
             } else {
-                // Construct the first LValue_ for the LValues vector.
-                let var = Var::parse(name)?;
-                let end_loc = tokens.previous_end_loc();
-                let v = spanned(start_loc, end_loc, var);
-                let lv = spanned(start_loc, end_loc, LValue::Var(v));
-                parse_assign(tokens, Some(lv))
+                parse_assign(tokens)
             }
         }
-        Tok::Star | Tok::Underscore => parse_assign(tokens, None),
+        Tok::Star | Tok::Underscore => parse_assign(tokens),
         Tok::NameBeginTyValue => {
             let (name, tys) = parse_name_and_type_actuals(tokens)?;
             parse_unpack(tokens, &name, tys)
@@ -1351,9 +1339,16 @@ fn parse_acquire_list<'input>(
 
 fn parse_function_decl<'input>(
     tokens: &mut Lexer<'input>,
-    is_native: bool,
-    start_loc: usize,
 ) -> Result<(FunctionName, Function_), ParseError<usize, failure::Error>> {
+    let start_loc = tokens.start_loc();
+
+    let is_native = if tokens.peek() == Tok::Native {
+        tokens.advance()?;
+        true
+    } else {
+        false
+    };
+
     let is_public = if tokens.peek() == Tok::Public {
         tokens.advance()?;
         true
@@ -1526,9 +1521,16 @@ fn parse_script<'input>(
 
 fn parse_struct_decl<'input>(
     tokens: &mut Lexer<'input>,
-    is_native: bool,
-    start_loc: usize,
 ) -> Result<StructDefinition_, ParseError<usize, failure::Error>> {
+    let start_loc = tokens.start_loc();
+
+    let is_native = if tokens.peek() == Tok::Native {
+        tokens.advance()?;
+        true
+    } else {
+        false
+    };
+
     let is_nominal_resource = match tokens.peek() {
         Tok::Struct => false,
         Tok::Resource => true,
@@ -1647,6 +1649,16 @@ fn parse_import_decl<'input>(
 //     "}" =>? ModuleDefinition::new(n, imports, structs, functions),
 // }
 
+fn is_struct_decl<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<bool, ParseError<usize, failure::Error>> {
+    let mut t = tokens.peek();
+    if t == Tok::Native {
+        t = tokens.lookahead()?;
+    }
+    Ok(t == Tok::Struct || t == Tok::Resource)
+}
+
 fn parse_module<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<ModuleDefinition, ParseError<usize, failure::Error>> {
@@ -1659,47 +1671,14 @@ fn parse_module<'input>(
         imports.push(parse_import_decl(tokens)?);
     }
 
-    // The "native" keyword can apply to either structs or functions,
-    // so the parser needs to move past that token before it can determine
-    // which kind of declaration it is handling.
-    let mut start_loc = tokens.start_loc();
-    let mut is_native = if tokens.peek() == Tok::Native {
-        tokens.advance()?;
-        true
-    } else {
-        false
-    };
-
     let mut structs: Vec<StructDefinition_> = vec![];
-    while tokens.peek() == Tok::Struct || tokens.peek() == Tok::Resource {
-        structs.push(parse_struct_decl(tokens, is_native, start_loc)?);
-
-        start_loc = tokens.start_loc();
-        is_native = if tokens.peek() == Tok::Native {
-            tokens.advance()?;
-            true
-        } else {
-            false
-        };
+    while is_struct_decl(tokens)? {
+        structs.push(parse_struct_decl(tokens)?);
     }
 
     let mut functions: Vec<(FunctionName, Function_)> = vec![];
     while tokens.peek() != Tok::RBrace {
-        functions.push(parse_function_decl(tokens, is_native, start_loc)?);
-
-        start_loc = tokens.start_loc();
-        is_native = if tokens.peek() == Tok::Native {
-            tokens.advance()?;
-            true
-        } else {
-            false
-        };
-    }
-    // Make sure there was no "native" keyword before the RBrace.
-    if is_native {
-        return Err(ParseError::InvalidToken {
-            location: tokens.start_loc(),
-        });
+        functions.push(parse_function_decl(tokens)?);
     }
     tokens.advance()?; // consume the RBrace
 
