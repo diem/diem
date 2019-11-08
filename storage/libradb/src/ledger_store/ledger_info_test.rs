@@ -30,7 +30,6 @@ fn arb_ledger_infos_with_sigs() -> impl Strategy<Value = Vec<(LedgerInfoWithSign
             let mut epoch = ledger_params[0];
             let mut round = ledger_params[1];
             let mut version = ledger_params[2];
-            let mut last_new_epoch_version = u64::max_value();
 
             block_params
                 .into_iter()
@@ -41,11 +40,11 @@ fn arb_ledger_infos_with_sigs() -> impl Strategy<Value = Vec<(LedgerInfoWithSign
                         consensus_data_hash,
                         timestamp,
                         block_size,
-                        mut is_new_epoch,
+                        new_epoch_if_possible,
                     )| {
                         round += 1;
                         version += block_size;
-                        is_new_epoch &= last_new_epoch_version == version;
+                        let is_new_epoch = new_epoch_if_possible && block_size != 0;
                         let next_validator_set = if is_new_epoch {
                             Some(ValidatorSet::new(Vec::new()))
                         } else {
@@ -69,7 +68,6 @@ fn arb_ledger_infos_with_sigs() -> impl Strategy<Value = Vec<(LedgerInfoWithSign
                         );
                         if is_new_epoch {
                             epoch += 1;
-                            last_new_epoch_version = version;
                         }
                         (li, is_new_epoch)
                     },
