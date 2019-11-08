@@ -23,7 +23,7 @@ use futures::{
     SinkExt, Stream, StreamExt,
 };
 use libra_types::{validator_public_keys::ValidatorPublicKeys, PeerId};
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use pin_project::pin_project;
 use prost::Message as _;
 use std::{pin::Pin, time::Duration};

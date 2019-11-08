@@ -14,7 +14,7 @@
 
 use crate::schema::ensure_slice_len_eq;
 use byteorder::{BigEndian, ReadBytesExt};
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use failure::prelude::*;
 use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;

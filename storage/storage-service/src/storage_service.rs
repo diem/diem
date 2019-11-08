@@ -1,5 +1,5 @@
 use crate::StorageService;
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use failure::prelude::*;
 use futures::{executor::block_on, prelude::*};
 use grpc_helpers::{spawn_service_thread_with_drop_closure, ServerHandle};

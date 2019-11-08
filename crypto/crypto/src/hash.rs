@@ -598,6 +598,11 @@ define_hasher! {
     (DiscoveryMsgHasher, DISCOVERY_MSG_HASHER, b"DiscoveryMsg")
 }
 
+define_hasher! {
+    /// The hasher used to compute the hash of a DiscoveryMsg object.
+    (BlockPayloadExtHasher, BLOCK_PAYLOAD_EXT, b"BlockPayloadExt")
+}
+
 fn create_literal_hash(word: &str) -> HashValue {
     let mut s = word.as_bytes().to_vec();
     assert!(s.len() <= HashValue::LENGTH);

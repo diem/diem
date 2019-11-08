@@ -23,7 +23,7 @@ use ::libra_types::proto::types;
 pub use self::{
     consensus::{
         consensus_msg::Message as ConsensusMsg_oneof, Block, ConsensusMsg, Proposal, RequestBlock,
-        RespondBlock, SyncInfo, VoteMsg, VoteProposal,
+        RespondBlock, SyncInfo, VoteMsg, VoteProposal, BlockPayloadExt
     },
     mempool::MempoolSyncMsg,
     network::{

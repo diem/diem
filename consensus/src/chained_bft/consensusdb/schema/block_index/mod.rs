@@ -1,7 +1,7 @@
 use super::ensure_slice_len_eq;
 use super::BLOCK_INDEX_CF_NAME;
 use byteorder::{BigEndian, ReadBytesExt};
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use failure::prelude::*;
 use schemadb::{
     define_schema,

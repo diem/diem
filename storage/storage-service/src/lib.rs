@@ -12,7 +12,7 @@ pub mod mocks;
 mod storage_service;
 pub use storage_service::start_storage_service_and_return_service;
 
-use crypto::HashValue;
+use libra_crypto::HashValue;
 use failure::prelude::*;
 use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle};
 use libra_config::config::NodeConfig;

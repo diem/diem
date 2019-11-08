@@ -3,12 +3,12 @@ use crate::{
     consensus_provider::ConsensusProvider, state_computer::ExecutionProxy,
     txn_manager::MempoolProxy,
 };
-use config::config::NodeConfig;
+use libra_config::config::NodeConfig;
 use executor::Executor;
 use failure::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
 use libra_types::account_address::AccountAddress;
-use logger::prelude::*;
+use libra_logger::prelude::*;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
 use std::convert::TryFrom;

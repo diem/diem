@@ -29,7 +29,7 @@ use crate::{
 };
 use channel;
 use futures::channel::oneshot;
-use futures::{future::BoxFuture, FutureExt, SinkExt, StreamExt};
+use futures::{future::BoxFuture,lock::Mutex, FutureExt, SinkExt, StreamExt};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
@@ -348,8 +348,6 @@ where
                 let len = msg.mdata.len() as i64;
                 let peer_ids_clone = peer_ids.lock().await;
                 for peer_id in peer_ids_clone.iter() {
-                    counters::DIRECT_SEND_MESSAGES_SENT.inc();
-                    counters::DIRECT_SEND_BYTES_SENT.inc_by(len);
                     ds_reqs_tx
                         .send(DirectSendRequest::SendMessage(peer_id.clone(), msg.clone()))
                         .await

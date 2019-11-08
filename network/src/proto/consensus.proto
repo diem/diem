@@ -46,3 +46,7 @@ message RequestBlock {
 message RespondBlock {
   bytes bytes = 1;
 }
+
+message BlockPayloadExt {
+    bytes bytes = 1;
+}

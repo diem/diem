@@ -1,11 +1,10 @@
-use canonical_serialization::{
-    CanonicalDeserialize, CanonicalDeserializer, CanonicalSerialize, CanonicalSerializer,
-    SimpleSerializer,
-};
 use failure::prelude::*;
 use libra_types::transaction::SignedTransaction;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::convert::TryFrom;
+use libra_crypto::hash::{CryptoHash, CryptoHasher, BlockPayloadExtHasher};
+use libra_crypto::HashValue;
 
 #[derive(Clone, Eq, PartialEq, Default, Hash, Serialize, Deserialize)]
 pub struct BlockPayloadExt {
@@ -17,21 +16,6 @@ pub struct BlockPayloadExt {
 impl BlockPayloadExt {
     pub fn get_txns(&self) -> Vec<SignedTransaction> {
         self.txns.clone()
-    }
-
-    /// Dumps into a vector.
-    pub fn to_vec(&self) -> Vec<u8> {
-        SimpleSerializer::<Vec<u8>>::serialize(self).expect("BlockPayloadExt serialization failed")
-    }
-}
-
-impl CanonicalSerialize for BlockPayloadExt {
-    fn serialize(&self, serializer: &mut impl CanonicalSerializer) -> Result<()> {
-        serializer
-            .encode_vec(self.txns.as_ref())?
-            .encode_u64(self.nonce)?
-            .encode_vec(self.solve.as_ref())?;
-        Ok(())
     }
 }
 
@@ -50,12 +34,31 @@ impl fmt::Debug for BlockPayloadExt {
     }
 }
 
-impl CanonicalDeserialize for BlockPayloadExt {
-    fn deserialize(deserializer: &mut impl CanonicalDeserializer) -> Result<Self> {
-        let txns = deserializer.decode_vec()?;
-        let nonce = deserializer.decode_u64()?;
-        let solve = deserializer.decode_vec()?;
+impl TryFrom<network::proto::BlockPayloadExt> for BlockPayloadExt {
+    type Error = failure::Error;
 
-        Ok(BlockPayloadExt { txns, nonce, solve })
+    fn try_from(proto: network::proto::BlockPayloadExt) -> failure::Result<Self> {
+        Ok(lcs::from_bytes(&proto.bytes)?)
+    }
+}
+
+impl TryFrom<BlockPayloadExt> for network::proto::BlockPayloadExt {
+    type Error = failure::Error;
+
+    fn try_from(payload: BlockPayloadExt) -> failure::Result<Self> {
+        Ok(Self {
+            bytes: lcs::to_bytes(&payload)?,
+        })
+    }
+}
+
+impl CryptoHash for BlockPayloadExt {
+    type Hasher = BlockPayloadExtHasher;
+
+    fn hash(&self) -> HashValue {
+        let bytes = lcs::to_bytes(self).expect("BlockData serialization failed");
+        let mut state = Self::Hasher::default();
+        state.write(bytes.as_ref());
+        state.finish()
     }
 }

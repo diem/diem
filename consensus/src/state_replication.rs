@@ -7,6 +7,7 @@ use failure::Result;
 use futures::Future;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use std::{pin::Pin, sync::Arc};
+use libra_crypto::HashValue;
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
 pub trait TxnManager: Send + Sync {
@@ -49,27 +50,26 @@ pub trait StateComputer: Send + Sync {
         executed_trees: ExecutedTrees,
     ) -> Pin<Box<dyn Future<Output = Result<ProcessedVMOutput>> + Send>>;
 
-    /// Pre compute
-    fn pre_compute(
+    /// How to execute a sequence of transactions and obtain the next state. While some of the
+    /// transactions succeed, some of them can fail.
+    /// In case all the transactions are failed, new_state_id is equal to the previous state id.
+    fn compute_by_hash(
         &self,
-        // The id of a ancestor block which is main chain block.
-        ancestor_id: HashValue,
+        // The id of a parent block, on top of which the given transactions should be executed.
+        // We're going to use a special GENESIS_BLOCK_ID constant defined in crypto::hash module to
+        // refer to the block id of the Genesis block, which is executed in a special way.
+        parent_block_id: HashValue,
+        // The id of a current block.
+        block_id: HashValue,
         // Transactions to execute.
-        transactions_vec: Vec<Self::Payload>,
-    ) -> Pin<Box<dyn Future<Output = Result<(StateComputeResult, HashValue)>> + Send>>;
+        transactions: &Self::Payload,
+    ) -> Pin<Box<dyn Future<Output = Result<ProcessedVMOutput>> + Send>>;
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
         blocks: Vec<(Self::Payload, Arc<ProcessedVMOutput>)>,
         finality_proof: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
-
-    /// Send a successful commit. A future is fulfilled when the state is finalized.
-    fn commit_with_id(
-        &self,
-        block_id: HashValue,
-        commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
     /// Rollback

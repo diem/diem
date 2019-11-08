@@ -37,7 +37,7 @@ use storage_proto::{
 };
 
 pub use crate::state_view::VerifiedStateView;
-use crypto::HashValue;
+use libra_crypto::HashValue;
 
 fn pick<T>(items: &[T]) -> &T {
     let mut rng = rand::thread_rng();

@@ -33,7 +33,7 @@ use libra_crypto::{
     ed25519::*,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
-use libra_logger::prelude::*;\
+use libra_logger::prelude::*;
 use libra_types::{validator_signer::ValidatorSigner, PeerId};
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
 use parity_multiaddr::Multiaddr;

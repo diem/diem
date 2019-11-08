@@ -341,7 +341,7 @@ where
                 _ => {
                     info!(
                         "Received updated note for peer: {} from peer: {} myself is: {}",
-                        peer_id.short_str(),
+                        note.peer_id.short_str(),
                         remote_peer.short_str(),
                         self_peer_id.short_str(),
                     );
@@ -468,24 +468,24 @@ where
     // Check that all received `Note`s are valid -- reject the whole message
     // if any `Note` is invalid.
     let res_notes: Result<Vec<VerifiedNote>, NetworkError> = res_msg.and_then(|msg| {
-//        let mut verified_notes = vec![];
-//        msg.notes.iter().try_for_each(|note| {
-//            verify_note(&note, &trusted_peers)
-//                .and_then(|verified_note| {
-//                    verified_notes.push(verified_note);
-//                    Ok(())
-//                })
-//                .map_err(|err| {
-//                    security_log(SecurityEvent::InvalidDiscoveryMsg)
-//                        .error(&err)
-//                        .data(&peer_id)
-//                        .data(&note)
-//                        .data(&trusted_peers)
-//                        .log();
-//                    err
-//                })
-//        })?;
-        Ok(msg.notes)
+        let mut verified_notes = vec![];
+        msg.notes.iter().try_for_each(|note| {
+            verify_note(&note, &trusted_peers)
+                .and_then(|verified_note| {
+                    verified_notes.push(verified_note);
+                    Ok(())
+                })
+                .map_err(|err| {
+                    security_log(SecurityEvent::InvalidDiscoveryMsg)
+                        .error(&err)
+                        .data(&peer_id)
+                        .data(&note)
+                        .data(&trusted_peers)
+                        .log();
+                    err
+                })
+        })?;
+        Ok(verified_notes)
     });
 
     (peer_id, res_notes)
