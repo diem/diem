@@ -2137,6 +2137,7 @@ dependencies = [
  "libra-metrics 0.1.0",
  "libra-types 0.1.0",
  "lru-cache 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "network 0.1.0",
  "num_cpus 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
