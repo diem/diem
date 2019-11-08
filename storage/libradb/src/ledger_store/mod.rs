@@ -218,6 +218,9 @@ impl LedgerStore {
         if ledger_info.next_validator_set().is_some() {
             let epoch = ledger_info_with_sigs.ledger_info().epoch();
             let version = ledger_info_with_sigs.ledger_info().version();
+            // Although the current block is under `epoch`, from now on the ledger is considered to
+            // be in `epoch+1`, this is useful in the case that the next block is empty (hence still
+            // has the same `version`)
             cs.batch
                 .put::<EpochByVersionSchema>(&version, &(epoch + 1))?;
         }
