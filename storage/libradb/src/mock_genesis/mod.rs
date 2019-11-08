@@ -12,6 +12,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_types::block_info::BlockInfo;
+use libra_types::validator_set::ValidatorSet;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -77,7 +78,15 @@ fn gen_mock_genesis() -> (
     );
 
     let ledger_info = LedgerInfo::new(
-        BlockInfo::new(0, 0, *GENESIS_BLOCK_ID, txn_info.hash(), 0, 0, None),
+        BlockInfo::new(
+            0,
+            0,
+            *GENESIS_BLOCK_ID,
+            txn_info.hash(),
+            0,
+            0,
+            Some(ValidatorSet::new(Vec::new())),
+        ),
         HashValue::random(),
     );
     let ledger_info_with_sigs =
