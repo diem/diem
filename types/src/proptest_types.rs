@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+use crate::block_info::{BlockInfo, Round};
 use crate::transaction::Transaction;
+use crate::validator_set::ValidatorSet;
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -131,16 +133,35 @@ impl AccountInfo {
 #[derive(Debug)]
 pub struct AccountInfoUniverse {
     accounts: Vec<AccountInfo>,
+    epoch: u64,
+    round: Round,
+    version: Version,
 }
 
 impl AccountInfoUniverse {
-    fn new(keypairs: Vec<(Ed25519PrivateKey, Ed25519PublicKey)>) -> Self {
+    fn new(
+        keypairs: Vec<(Ed25519PrivateKey, Ed25519PublicKey)>,
+        epoch: u64,
+        round: Round,
+        version: Version,
+    ) -> Self {
         let accounts = keypairs
             .into_iter()
             .map(|(private_key, public_key)| AccountInfo::new(private_key, public_key))
             .collect();
 
-        Self { accounts }
+        // Notice that the Genesis LedgerInfo has round=0, epoch=0, version=0,
+        // and if the first block after Genesis is empty, it has round=1, epoch=1 and version=0.
+        assert!(1 <= epoch);
+        assert!(epoch <= round);
+        assert!(round <= version + 1);
+
+        Self {
+            accounts,
+            epoch,
+            round,
+            version,
+        }
     }
 
     fn get_account_info(&self, account_index: Index) -> &AccountInfo {
@@ -150,13 +171,34 @@ impl AccountInfoUniverse {
     fn get_account_info_mut(&mut self, account_index: Index) -> &mut AccountInfo {
         account_index.get_mut(self.accounts.as_mut_slice())
     }
+
+    fn get_and_bump_round(&mut self) -> Round {
+        let round = self.round;
+        self.round += 1;
+        round
+    }
+
+    fn bump_and_get_version(&mut self, block_size: usize) -> Version {
+        self.version += block_size as u64;
+        self.version
+    }
+
+    fn get_epoch(&self) -> u64 {
+        self.epoch
+    }
+
+    fn get_and_bump_epoch(&mut self) -> u64 {
+        let epoch = self.epoch;
+        self.epoch += 1;
+        epoch
+    }
 }
 
 impl Arbitrary for AccountInfoUniverse {
     type Parameters = usize;
     fn arbitrary_with(num_accounts: Self::Parameters) -> Self::Strategy {
         vec(keypair_strategy(), num_accounts)
-            .prop_map(Self::new)
+            .prop_map(|keypairs| AccountInfoUniverse::new(keypairs, 1, 1, 0))
             .boxed()
     }
 
@@ -886,4 +928,93 @@ impl Arbitrary for BlockMetadata {
     }
 
     type Strategy = BoxedStrategy<Self>;
+}
+
+#[derive(Arbitrary, Debug)]
+struct BlockInfoGen {
+    id: HashValue,
+    executed_state_id: HashValue,
+    timestamp_usecs: u64,
+    new_epoch_if_not_empty: bool,
+}
+
+impl BlockInfoGen {
+    pub fn materialize(self, universe: &mut AccountInfoUniverse, block_size: usize) -> BlockInfo {
+        let (epoch, next_validator_set) = if self.new_epoch_if_not_empty && block_size > 0 {
+            (
+                universe.get_and_bump_epoch(),
+                Some(ValidatorSet::new(Vec::new())),
+            )
+        } else {
+            (universe.get_epoch(), None)
+        };
+
+        BlockInfo::new(
+            epoch,
+            universe.get_and_bump_round(),
+            self.id,
+            self.executed_state_id,
+            universe.bump_and_get_version(block_size),
+            self.timestamp_usecs,
+            next_validator_set,
+        )
+    }
+}
+
+#[derive(Arbitrary, Debug)]
+struct LedgerInfoGen {
+    commit_info_gen: BlockInfoGen,
+    consensus_data_hash: HashValue,
+}
+
+impl LedgerInfoGen {
+    pub fn materialize(self, universe: &mut AccountInfoUniverse, block_size: usize) -> LedgerInfo {
+        LedgerInfo::new(
+            self.commit_info_gen.materialize(universe, block_size),
+            self.consensus_data_hash,
+        )
+    }
+}
+
+#[derive(Debug)]
+pub struct LedgerInfoWithSignaturesGen {
+    ledger_info_gen: LedgerInfoGen,
+    // TODO: To make it more real, we can let the universe carry the current validator set.
+    signers: Vec<Index>,
+}
+
+impl Arbitrary for LedgerInfoWithSignaturesGen {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (any::<LedgerInfoGen>(), vec(any::<Index>(), 3))
+            .prop_map(|(ledger_info_gen, signers)| LedgerInfoWithSignaturesGen {
+                ledger_info_gen,
+                signers,
+            })
+            .boxed()
+    }
+}
+
+impl LedgerInfoWithSignaturesGen {
+    pub fn materialize(
+        self,
+        universe: &mut AccountInfoUniverse,
+        block_size: usize,
+    ) -> LedgerInfoWithSignatures<Ed25519Signature> {
+        let ledger_info = self.ledger_info_gen.materialize(universe, block_size);
+        let ledger_info_hash = ledger_info.hash();
+        let signatures = self
+            .signers
+            .into_iter()
+            .map(|signer_index| {
+                let account = universe.get_account_info(signer_index);
+                let signature = account.private_key.sign_message(&ledger_info_hash);
+                (account.address, signature)
+            })
+            .collect();
+
+        LedgerInfoWithSignatures::new(ledger_info, signatures)
+    }
 }

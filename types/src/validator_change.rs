@@ -12,7 +12,7 @@ use std::convert::{TryFrom, TryInto};
 /// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of
 /// validator changes from the first LedgerInfo's epoch.
 pub struct ValidatorChangeEventWithProof<Sig> {
-    ledger_info_with_sigs: Vec<LedgerInfoWithSignatures<Sig>>,
+    pub ledger_info_with_sigs: Vec<LedgerInfoWithSignatures<Sig>>,
 }
 
 impl<Sig: Signature> ValidatorChangeEventWithProof<Sig> {
