@@ -119,7 +119,7 @@ module LibraAccount {
     public mint_to_address(payee: address, amount: u64) acquires T {
         // Create an account if it does not exist
         if (!exists<T>(copy(payee))) {
-            Self.create_new_account(copy(payee), 0);
+            Self.create_account(copy(payee));
         }
 
         // Mint and deposit the coin
@@ -197,13 +197,13 @@ module LibraAccount {
     // to the `payee` address
     // Creates the `payee` account if it does not exist
     public pay_from_sender(payee: address, amount: u64) acquires T {
-        let to_pay: LibraCoin.T;
-        if (exists<T>(copy(payee))) {
-            to_pay = Self.withdraw_from_sender(move(amount));
-            Self.deposit(move(payee), move(to_pay));
-        } else {
-            Self.create_new_account(move(payee), move(amount));
+        if (!exists<T>(copy(payee))) {
+            Self.create_account(copy(payee));
         }
+        Self.deposit(
+            move(payee),
+            Self.withdraw_from_sender(move(amount))
+        );
         return;
     }
 
@@ -275,21 +275,27 @@ module LibraAccount {
         return;
     }
 
+    // Creates a new account at `fresh_address` with an initial balance of zero
+    public create_account(fresh_address: address) {
+        Self.save_account(
+            copy(fresh_address),
+            T {
+                authentication_key: AddressUtil.address_to_bytes(move(fresh_address)),
+                balance: LibraCoin.zero(),
+                delegated_key_rotation_capability: false,
+                delegated_withdrawal_capability: false,
+                received_events: Event.new_event_handle<Self.ReceivedPaymentEvent>(),
+                sent_events: Event.new_event_handle<Self.SentPaymentEvent>(),
+                sequence_number: 0,
+            }
+        );
+        return;
+    }
+
     // Creates a new account at `fresh_address` with the `initial_balance` deducted from the
     // transaction sender's account
     public create_new_account(fresh_address: address, initial_balance: u64) acquires T {
-        let account: Self.T;
-        account = T {
-            authentication_key: AddressUtil.address_to_bytes(copy(fresh_address)),
-            balance: LibraCoin.zero(),
-            delegated_key_rotation_capability: false,
-            delegated_withdrawal_capability: false,
-            received_events: Event.new_event_handle<Self.ReceivedPaymentEvent>(),
-            sent_events: Event.new_event_handle<Self.SentPaymentEvent>(),
-            sequence_number: 0,
-        };
-        Self.save_account(copy(fresh_address), move(account));
-
+        Self.create_account(copy(fresh_address));
         if (copy(initial_balance) > 0) {
             Self.pay_from_sender(move(fresh_address), move(initial_balance));
         }

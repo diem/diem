@@ -1,5 +1,6 @@
 import 0x0.LibraAccount;
-main (fresh_address: address, initial_amount: u64) {
+// TODO: remove initial_amount?
+main(fresh_address: address, initial_amount: u64) {
   LibraAccount.create_new_account(move(fresh_address), move(initial_amount));
   return;
 }
