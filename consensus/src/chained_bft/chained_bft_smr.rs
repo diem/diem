@@ -137,9 +137,6 @@ impl<T: Payload> ChainedBftSMR<T> {
                         idle_duration = pre_select_instant.elapsed();
                         epoch_manager.process_epoch_retrieval(epoch_retrieval_and_peer.0, epoch_retrieval_and_peer.1).await
                     }
-                    complete => {
-                        break;
-                    }
                 }
                 counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
                     .observe_duration(pre_select_instant.elapsed() - idle_duration);
