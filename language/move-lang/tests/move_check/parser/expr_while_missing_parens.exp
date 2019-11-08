@@ -6,6 +6,6 @@ error:
    │               ^ Unrecognized Token: v
    ·
  4 │         while v < 3 { v = v + 1 }
-   │               - Expected:  "(",
+   │               - Expected:  "("
    │
 

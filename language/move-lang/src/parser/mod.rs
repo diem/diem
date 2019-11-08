@@ -1,9 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[rustfmt::skip]
-#[allow(clippy::all)]
-#[allow(deprecated)]
+mod lexer;
 pub mod syntax;
 
 pub mod ast;

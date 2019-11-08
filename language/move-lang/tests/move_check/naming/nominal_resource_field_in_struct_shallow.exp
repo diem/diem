@@ -29,6 +29,6 @@ error:
    │     -------- Type '0x8675309::M::R' was declared as a resource here
    ·
  6 │     struct S2<T: resource> {
-   │            --- 'S2' declared as a `struct` here
+   │            -- 'S2' declared as a `struct` here
    │
 

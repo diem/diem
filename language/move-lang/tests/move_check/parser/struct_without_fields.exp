@@ -6,6 +6,6 @@ error:
    │             ^ Unrecognized Token: ;
    ·
  3 │     struct S;
-   │             - Expected:  "{",
+   │             - Expected:  "{"
    │
 

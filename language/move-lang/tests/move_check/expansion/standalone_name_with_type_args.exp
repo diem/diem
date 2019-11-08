@@ -6,6 +6,6 @@ error:
    │                       ^ Unrecognized Token: ;
    ·
  3 │         let _ = n<u64>;
-   │                       - Expected:  "(", "()", "{",
+   │                       - Expected:  "{", "("
    │
 

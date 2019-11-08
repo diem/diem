@@ -6,6 +6,6 @@ error:
    │ ^^^ Unrecognized Token: foo
    ·
  5 │ foo() {
-   │ --- Expected: 
+   │ --- Expected:  
    │
 

@@ -6,6 +6,6 @@ error:
    │                     ^ Unrecognized Token: =
    ·
  3 │         let (x1, x2 = (1, 2);
-   │                     - Expected:  ")", ",",
+   │                     - Expected:  ","
    │
 

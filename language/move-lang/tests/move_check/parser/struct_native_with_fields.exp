@@ -6,6 +6,6 @@ error:
    │                     ^ Unrecognized Token: {
    ·
  3 │     native struct S { f: u64 }
-   │                     - Expected:  ";",
+   │                     - Expected:  ";"
    │
 

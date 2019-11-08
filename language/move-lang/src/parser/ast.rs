@@ -160,6 +160,7 @@ pub struct Function {
 // Types
 //**************************************************************************************************
 
+// A ModuleAccess references something from a module, either a struct or a function.
 #[derive(Debug, PartialEq)]
 pub enum ModuleAccess_ {
     // N

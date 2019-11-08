@@ -6,6 +6,6 @@ error:
    │                          ^ Unrecognized Token: =
    ·
  6 │         let Generic<u64> = g;
-   │                          - Expected:  "{",
+   │                          - Expected:  "{"
    │
 

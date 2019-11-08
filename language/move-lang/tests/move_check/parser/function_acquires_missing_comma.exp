@@ -6,6 +6,6 @@ error:
    │                     ^^ Unrecognized Token: X2
    ·
  5 │     f() acquires X1 X2 {
-   │                     -- Expected:  ",", ";", "{",
+   │                     -- Expected:  "{"
    │
 

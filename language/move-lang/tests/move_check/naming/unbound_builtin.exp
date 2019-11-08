@@ -11,7 +11,7 @@ error:
    ┌── tests/move_check/naming/unbound_builtin.move:4:11 ───
    │
  4 │         ::release<u64>();
-   │           ^^^^^^^^ Unbound function: 'release'
+   │           ^^^^^^^ Unbound function: 'release'
    │
 
 error: 

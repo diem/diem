@@ -6,6 +6,6 @@ error:
    │            ^^^^^^^^ Unrecognized Token: resource
    ·
  3 │     struct resource S { }
-   │            -------- Expected:  r#"[a-zA-Z_][a-zA-Z0-9_]*"#, r#"[a-zA-Z_][a-zA-Z0-9_]*<"#,
+   │            -------- Expected:  a name value
    │
 

@@ -6,6 +6,6 @@ error:
    │         ^^^ Unrecognized Token: 0x1
    ·
  3 │ address 0x1:
-   │         --- Expected:  "(", "()",
+   │         --- Expected:  "("
    │
 

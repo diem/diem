@@ -6,6 +6,6 @@ error:
    │                     ^ Unrecognized Token: {
    ·
  3 │     struct S<T1, T2 { }
-   │                     - Expected:  ",", ":", ">",
+   │                     - Expected:  ","
    │
 

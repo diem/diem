@@ -6,6 +6,6 @@ error:
    │             ^ Unrecognized Token: {
    ·
  3 │         ::S { }
-   │             - Expected:  "(", "()",
+   │             - Expected:  "("
    │
 

@@ -6,6 +6,6 @@ error:
    │     ^ Unrecognized Token: f
    ·
  2 │     f() {}
-   │     - Expected:  "::", ";", "as", "{",
+   │     - Expected:  "{"
    │
 
