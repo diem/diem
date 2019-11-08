@@ -602,7 +602,7 @@ impl ModuleName {
         ModuleName(name)
     }
 
-    /// Creates a new `ModuleName` from a raw string. Intended for use by syntax.lalrpop.
+    /// Creates a new `ModuleName` from a raw string. Intended for use by the parser.
     pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
         Ok(ModuleName::new(parse_identifier(s.into())?))
     }
@@ -746,7 +746,7 @@ impl StructName {
         StructName(name)
     }
 
-    /// Creates a new `StructName` from a raw string. Intended for use by syntax.lalrpop.
+    /// Creates a new `StructName` from a raw string. Intended for use by the parser.
     pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
         Ok(StructName::new(parse_identifier(s.into())?))
     }
@@ -805,7 +805,7 @@ impl FunctionName {
         FunctionName(name)
     }
 
-    /// Creates a new `FunctionName` from a raw string. Intended for use by syntax.lalrpop.
+    /// Creates a new `FunctionName` from a raw string. Intended for use by the parser.
     pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
         Ok(FunctionName::new(parse_identifier(s.into())?))
     }
@@ -868,7 +868,7 @@ impl Var {
         Spanned::no_loc(Var::new(s))
     }
 
-    /// Creates a new `Var` from a raw string. Intended for use by syntax.lalrpop.
+    /// Creates a new `Var` from a raw string. Intended for use by the parser.
     pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
         Ok(Var::new(parse_identifier(s.into())?))
     }
@@ -885,7 +885,7 @@ impl TypeVar {
         TypeVar(s)
     }
 
-    /// Creates a new `TypeVar` from a raw string. Intended for use by syntax.lalrpop.
+    /// Creates a new `TypeVar` from a raw string. Intended for use by the parser.
     pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
         Ok(TypeVar::new(parse_identifier(s.into())?))
     }
