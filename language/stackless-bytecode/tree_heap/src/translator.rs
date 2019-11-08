@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //! This module translates the bytecode of a module to Boogie code.
 
 use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
