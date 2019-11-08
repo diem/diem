@@ -126,7 +126,7 @@ impl<'input> Lexer<'input> {
         self.previous_end
     }
 
-    pub fn advance(&mut self) -> Result<(), ParseError<usize, Token<'input>, failure::Error>> {
+    pub fn advance(&mut self) -> Result<(), ParseError<usize, failure::Error>> {
         self.previous_end = self.token.2;
         let text = self.text.trim_start();
         let whitespace = self.text.len() - text.len();
