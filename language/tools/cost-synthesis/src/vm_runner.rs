@@ -27,8 +27,7 @@ macro_rules! with_loaded_vm {
         $module_cache.cache_module(root_module.clone());
         let $mod = $module_cache
             .get_loaded_module(&module_id)
-            .expect("[Module Lookup] Runtime error while looking up module")
-            .expect("[Module Cache] Unable to find module in module cache.");
+            .expect("[Module Lookup] Runtime error while looking up module");
         for m in modules.clone() {
             $module_cache.cache_module(m);
         }
