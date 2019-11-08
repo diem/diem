@@ -63,55 +63,31 @@ module VecTest{
 //! new-transaction
 //! sender: alice
 //! receiver: bob
-//! args: 100000, 50000
 
-import 0x0.ChannelAccount;
-//open channel
-main(sender_amount:u64, receiver_amount:u64) {
-    ChannelAccount.open(move(sender_amount), move(receiver_amount));
-    return;
-}
+0x0.ChannelAccount.open 100000 50000
 
 //! new-transaction
 //! sender: alice
 //! receiver: bob
 
-import {{default}}.VecTest;
-
-main() {
-    VecTest.test_move_vec_to_sender();
-    return;
-}
+{{default}}.VecTest.test_move_vec_to_sender
 
 //! new-transaction
 //! sender: alice
 //! receiver: bob
 
-import {{default}}.VecTest;
+{{default}}.VecTest.test_move_vec_from_sender
 
-main() {
-    VecTest.test_move_vec_from_sender();
-    return;
-}
 
 //! new-transaction
 //! sender: alice
 //! receiver: bob
 
-import {{default}}.VecTest;
-
-main() {
-    VecTest.test_move_vec_to_receiver();
-    return;
-}
+{{default}}.VecTest.test_move_vec_to_receiver
 
 //! new-transaction
 //! sender: alice
 //! receiver: bob
 
-import {{default}}.VecTest;
+{{default}}.VecTest.test_move_vec_from_receiver
 
-main() {
-    VecTest.test_move_vec_from_receiver();
-    return;
-}

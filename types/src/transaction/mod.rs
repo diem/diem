@@ -36,6 +36,7 @@ pub mod helpers;
 mod module;
 mod program;
 mod script;
+mod script_action;
 mod transaction_argument;
 
 #[cfg(test)]
@@ -44,9 +45,10 @@ mod unit_tests;
 pub use module::Module;
 pub use program::Program;
 pub use script::{Script, SCRIPT_HASH_LENGTH};
+pub use script_action::ScriptAction;
 
 pub use channel_transaction_payload::{
-    ChannelScriptBody, ChannelTransactionPayload, ChannelTransactionPayloadBody,
+    ChannelActionBody, ChannelScriptBody, ChannelTransactionPayload, ChannelTransactionPayloadBody,
     ChannelWriteSetBody,
 };
 use std::ops::Deref;
