@@ -3,11 +3,11 @@ version: 2.1
 executors:
   build-executor:
     docker:
-      - image: circleci/rust:stretch
+      - image: circleci/rust:buster
     resource_class: 2xlarge
   audit-executor:
     docker:
-      - image: circleci/rust:stretch
+      - image: circleci/rust:buster
     resource_class: xlarge
   terraform-executor:
     docker:
@@ -44,9 +44,8 @@ commands:
       - run:
           name: Install Dependencies
           command: |
-            sudo sh -c 'echo "deb http://deb.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list'
             sudo apt-get update
-            sudo apt-get install -y protobuf-compiler/stretch-backports cmake curl
+            sudo apt-get install -y cmake curl
             sudo apt-get clean
             sudo rm -r /var/lib/apt/lists/*
             rustup component add clippy rustfmt
