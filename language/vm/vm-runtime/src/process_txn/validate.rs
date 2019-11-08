@@ -215,6 +215,24 @@ where
                             },
                         )?)
                     }
+                    ChannelTransactionPayloadBody::Action(action_body) => {
+                        Some(ValidatedTransaction::validate(
+                            &txn,
+                            module_cache,
+                            data_cache,
+                            allocator,
+                            mode,
+                            vm_mode,
+                            || {
+                                Self::check_channel_write_set(
+                                    action_body.write_set(),
+                                    txn.sender(),
+                                    action_body.receiver,
+                                )?;
+                                Ok(())
+                            },
+                        )?)
+                    }
                 }
             }
         };

@@ -33,6 +33,20 @@ impl fmt::Debug for TransactionArgument {
     }
 }
 
+impl fmt::Display for TransactionArgument {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TransactionArgument::U64(value) => write!(f, "{}", value),
+            TransactionArgument::Bool(boolean) => write!(f, "{}", boolean),
+            TransactionArgument::Address(address) => write!(f, "{}", address),
+            TransactionArgument::String(string) => write!(f, "{}", string),
+            TransactionArgument::ByteArray(byte_array) => {
+                write!(f, "b\"{}\"", hex::encode(byte_array.as_bytes()))
+            }
+        }
+    }
+}
+
 impl TryFrom<crate::proto::types::TransactionArgument> for TransactionArgument {
     type Error = Error;
 
