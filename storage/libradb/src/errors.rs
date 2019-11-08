@@ -12,6 +12,9 @@ pub enum LibraDbError {
     #[fail(display = "{} not found.", _0)]
     NotFound(String),
     /// Requested too many items.
-    #[fail(display = "Too many items requested: {}, max is {}", _0, _1)]
+    #[fail(
+        display = "Too many items requested: at least {} requested, max is {}",
+        _0, _1
+    )]
     TooManyRequested(u64, u64),
 }
