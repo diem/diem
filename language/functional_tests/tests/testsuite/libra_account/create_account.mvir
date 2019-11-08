@@ -14,7 +14,7 @@ main() {
     assert(!move(account_exists), 83);
 
     ten_coins = LibraAccount.withdraw_from_sender(10);
-    LibraAccount.create_new_account(copy(addr), 0);
+    LibraAccount.create_account(copy(addr));
     LibraAccount.deposit(copy(addr), move(ten_coins));
 
     account_exists_now = LibraAccount.exists(copy(addr));
