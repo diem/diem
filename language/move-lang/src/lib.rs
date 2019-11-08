@@ -22,7 +22,7 @@ pub mod test_utils;
 
 use codespan::{ByteIndex, Span};
 use errors::*;
-use lalrpop_util::ParseError;
+use parser::syntax::{parse_file_string, ParseError};
 use shared::{Address, Loc};
 use std::{
     collections::HashMap,
@@ -162,55 +162,36 @@ fn check_errors(errors: Errors) -> Result<(), Errors> {
 // Parsing
 //**************************************************************************************************
 
-fn parsing_error<Token>(
-    fname: &'static str,
-    e: lalrpop_util::ParseError<usize, Token, &'static str>,
-) -> Error
-where
-    Token: std::fmt::Display,
-{
+fn parsing_error(fname: &'static str, e: ParseError) -> Error {
     let fmt_expected = |expected: Vec<String>| -> String {
-        format!(
-            "Expected: {}",
-            expected
-                .iter()
-                .fold(String::new(), |acc, token| format!("{} {},", acc, token))
-        )
+        // FIXME: Remove extra space after "Expected:" that was inserted to match the
+        // old parser and minimize test changes during the transition.
+        format!("Expected:  {}", expected.join(", "))
     };
     match e {
         ParseError::InvalidToken { location: l } => {
             let span = Span::new(ByteIndex(l as u32), ByteIndex(l as u32));
             let loc = Loc::new(fname, span);
-            vec![(loc, "Invalid Token".into())]
+            vec![(loc, "Invalid token".into())]
         }
         ParseError::UnrecognizedToken {
-            token: (l, tok, r),
+            location: l,
+            actual,
             expected,
         } => {
-            let span = Span::new(ByteIndex(l as u32), ByteIndex(r as u32));
+            let end_loc = l + actual.len();
+            let span = Span::new(ByteIndex(l as u32), ByteIndex(end_loc as u32));
             let loc = Loc::new(fname, span);
             vec![
-                (loc, format!("Unrecognized Token: {}", tok)),
+                (loc, format!("Unrecognized Token: {}", actual)),
                 (loc, fmt_expected(expected)),
             ]
         }
-        ParseError::UnrecognizedEOF {
-            location: l,
-            expected,
-        } => {
+        ParseError::User { location: l, error } => {
             let span = Span::new(ByteIndex(l as u32), ByteIndex(l as u32));
             let loc = Loc::new(fname, span);
-            vec![
-                (loc, "Unrecognized End of File".into()),
-                (loc, fmt_expected(expected)),
-            ]
+            vec![(loc, error)]
         }
-        ParseError::ExtraToken { token: (l, tok, r) } => {
-            let span = Span::new(ByteIndex(l as u32), ByteIndex(r as u32));
-            let loc = Loc::new(fname, span);
-            vec![(loc, format!("Unexpected Extra Token: {}", tok))]
-        }
-        ParseError::User { error: e } => panic!("ICE unimplemented display for parse error: {}", e),
     }
 }
 
@@ -255,7 +236,6 @@ fn parse_file(
     fname: &'static str,
 ) -> io::Result<(Option<parser::ast::FileDefinition>, Errors)> {
     let mut errors: Errors = Vec::new();
-    let parser = parser::syntax::FileParser::new();
     let mut f = File::open(fname)?;
     let mut source_buffer = String::new();
     f.read_to_string(&mut source_buffer)?;
@@ -266,7 +246,7 @@ fn parse_file(
         }
         Ok(no_comments_buffer) => no_comments_buffer,
     };
-    let def_opt = match parser.parse(fname, &no_comments_buffer) {
+    let def_opt = match parse_file_string(fname, &no_comments_buffer) {
         Ok(def) => Some(def),
         Err(err) => {
             errors.push(parsing_error(fname, err));
