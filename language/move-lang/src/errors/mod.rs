@@ -60,8 +60,13 @@ fn render_errors<W: WriteColor>(
     writer: &mut W,
     files: &Files,
     file_mapping: &FileMapping,
-    errors: Errors,
+    mut errors: Errors,
 ) {
+    errors.sort_by(|e1, e2| {
+        let loc1: &Loc = &e1[0].0;
+        let loc2: &Loc = &e2[0].0;
+        loc1.cmp(loc2)
+    });
     let mut seen: HashSet<HashableError> = HashSet::new();
     for error in errors.into_iter() {
         let hashable_error = hashable_error(&error);

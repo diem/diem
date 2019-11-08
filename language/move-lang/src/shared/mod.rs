@@ -110,7 +110,7 @@ impl TryFrom<&[u8]> for Address {
 // Loc
 //**************************************************************************************************
 
-#[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Loc {
     file: &'static str,
     span: Span,
