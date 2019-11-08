@@ -19,6 +19,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use hmac::Hmac;
 use libra_crypto::{ed25519::*, hash::HashValue, hkdf::Hkdf, traits::SigningKey};
 use libra_types::account_address::AccountAddress;
+use mirai_annotations::*;
 use pbkdf2::pbkdf2;
 use serde::{Deserialize, Serialize};
 use sha3::Sha3_256;
@@ -35,6 +36,7 @@ impl_array_newtype_encodable!(Master, u8, 32);
 /// A child number for a derived key, used to derive a certain private key from the Master
 #[derive(Default, Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct ChildNumber(pub(crate) u64);
+// invariant self.0 <= u64::max_value() / 2;
 
 impl ChildNumber {
     /// Constructor from u64
@@ -50,6 +52,8 @@ impl ChildNumber {
 
 impl std::ops::AddAssign for ChildNumber {
     fn add_assign(&mut self, other: Self) {
+        assume!(self.0 <= u64::max_value() / 2); // invariant
+        assume!(other.0 <= u64::max_value() / 2); // invariant
         *self = Self(self.0 + other.0)
     }
 }
