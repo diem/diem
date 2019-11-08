@@ -771,6 +771,7 @@ impl ClusterTestRunner {
             style::Reset
         );
         let affected_validators = experiment.affected_validators();
+        let deadline = experiment.deadline();
         let (exp_result_sender, exp_result_recv) = mpsc::channel();
         thread::spawn(move || {
             let result = experiment.run();
@@ -780,7 +781,7 @@ impl ClusterTestRunner {
         });
 
         // We expect experiments completes and cluster go into healthy state within timeout
-        let experiment_deadline = Instant::now() + Duration::from_secs(20 * 60);
+        let experiment_deadline = Instant::now() + deadline;
 
         loop {
             if Instant::now() > experiment_deadline {

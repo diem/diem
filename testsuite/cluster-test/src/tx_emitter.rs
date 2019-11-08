@@ -234,7 +234,7 @@ impl SubmissionThread {
             if self.params.wait_committed {
                 if wait_for_accounts_sequence(&self.client, &mut self.accounts).is_err() {
                     info!(
-                        "[{}] Some transactions was not committed before expiration",
+                        "[{}] Some transactions were not committed before expiration",
                         self.instance
                     );
                 }
