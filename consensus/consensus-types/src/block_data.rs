@@ -6,7 +6,7 @@ use crate::{
     quorum_cert::QuorumCert,
 };
 use libra_crypto::hash::{BlockHasher, CryptoHash, CryptoHasher, HashValue};
-use mirai_annotations::assumed_postcondition;
+use mirai_annotations::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
@@ -126,6 +126,7 @@ where
     T: Default + Serialize,
 {
     pub fn new_genesis(timestamp_usecs: u64, quorum_cert: QuorumCert) -> Self {
+        assume!(quorum_cert.certified_block().epoch() < u64::max_value()); // unlikely to be false in this universe
         Self {
             epoch: quorum_cert.certified_block().epoch() + 1,
             round: 0,
@@ -141,6 +142,7 @@ where
         // The reason for artificially adding 1 usec is to support execution state synchronization,
         // which doesn't have any other way of determining the order of ledger infos rather than
         // comparing their timestamps.
+        assume!(quorum_cert.certified_block().timestamp_usecs() < u64::max_value()); // unlikely to be false in this universe
         let timestamp_usecs = quorum_cert.certified_block().timestamp_usecs() + 1;
 
         Self {
