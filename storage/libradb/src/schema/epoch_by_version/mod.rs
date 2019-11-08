@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This module defines physical storage schema for an index to help us find out which epoch a ledger version is in, by storing a version <-> epoch pair for each version where the epoch bumps.
+//! This module defines physical storage schema for an index to help us find out which epoch a
+//! ledger version is in, by storing a version <-> epoch pair for each version where the epoch
+//! number bumps.
 //!
 //! ```text
 //! |<--key-->|<---value-->|
