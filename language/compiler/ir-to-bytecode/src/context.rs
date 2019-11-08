@@ -252,7 +252,10 @@ impl<'a> Context<'a> {
             assert!(options[idx as usize].is_none());
             options[idx as usize] = Some(item);
         }
-        options.into_iter().map(|opt| opt.unwrap()).collect()
+        options
+            .into_iter()
+            .map(|opt| opt.expect("items produces size distinct index values"))
+            .collect()
     }
 
     fn materialize_map<T: Clone>(m: HashMap<T, TableIndex>) -> Vec<T> {
