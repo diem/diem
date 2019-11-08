@@ -175,16 +175,14 @@ fn test_loader_one_module() {
     let allocator = Arena::new();
     let loaded_program = VMModuleCache::new(&allocator);
     loaded_program.cache_module(module);
-    let module_ref = loaded_program.get_loaded_module(&mod_id).unwrap().unwrap();
+    let module_ref = loaded_program.get_loaded_module(&mod_id).unwrap();
 
     // Get the function reference of the first two function handles.
     let func1_ref = loaded_program
         .resolve_function_ref(module_ref, FunctionHandleIndex::new(0))
-        .unwrap()
         .unwrap();
     let func2_ref = loaded_program
         .resolve_function_ref(module_ref, FunctionHandleIndex::new(1))
-        .unwrap()
         .unwrap();
 
     // The two references should refer to the same module
@@ -220,11 +218,9 @@ fn test_loader_cross_modules() {
     let entry_module = entry_func.module();
     let func1 = loaded_program
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
-        .unwrap()
         .unwrap();
     let func2 = loaded_program
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
-        .unwrap()
         .unwrap();
 
     assert_eq!(
@@ -259,9 +255,7 @@ fn test_cache_with_storage() {
     // Function is not defined locally.
     assert!(vm_cache
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
-        .unwrap()
-        .is_none());
-
+        .is_err());
     {
         let fetcher = FakeFetcher::new(vec![test_module("module").into_inner()]);
         let mut block_cache = BlockModuleCache::new(&vm_cache, fetcher);
@@ -269,11 +263,9 @@ fn test_cache_with_storage() {
         // Make sure the block cache fetches the code from the view.
         let func1 = block_cache
             .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
-            .unwrap()
             .unwrap();
         let func2 = block_cache
             .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
-            .unwrap()
             .unwrap();
 
         assert_eq!(
@@ -297,11 +289,9 @@ fn test_cache_with_storage() {
 
         let func1 = block_cache
             .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
-            .unwrap()
             .unwrap();
         let func2 = block_cache
             .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
-            .unwrap()
             .unwrap();
 
         assert_eq!(
@@ -325,11 +315,9 @@ fn test_cache_with_storage() {
     // definition
     let func1 = vm_cache
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
-        .unwrap()
         .unwrap();
     let func2 = vm_cache
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(2))
-        .unwrap()
         .unwrap();
 
     assert_eq!(
@@ -448,7 +436,6 @@ fn test_multi_level_cache_write_back() {
     // After reclaiming we should see it from the
     let func2_ref = vm_cache
         .resolve_function_ref(entry_module, FunctionHandleIndex::new(1))
-        .unwrap()
         .unwrap();
     assert_eq!(func2_ref.arg_count(), 1);
     assert_eq!(func2_ref.return_count(), 0);
@@ -488,16 +475,14 @@ fn test_same_module_struct_resolution() {
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
         let module_id = ModuleId::new(AccountAddress::default(), ident("M1"));
-        let module_ref = block_cache.get_loaded_module(&module_id).unwrap().unwrap();
+        let module_ref = block_cache.get_loaded_module(&module_id).unwrap();
         let gas_schedule = CostTable::zero();
         let gas = GasMeter::new(GasUnits::new(100_000_000), &gas_schedule);
         let struct_x = block_cache
             .resolve_struct_def(module_ref, StructDefinitionIndex::new(0), &gas)
-            .unwrap()
             .unwrap();
         let struct_t = block_cache
             .resolve_struct_def(module_ref, StructDefinitionIndex::new(1), &gas)
-            .unwrap()
             .unwrap();
         assert_eq!(struct_x, StructDef::new(vec![]));
         assert_eq!(
@@ -538,13 +523,11 @@ fn test_multi_module_struct_resolution() {
         let module_id_2 = ModuleId::new(AccountAddress::default(), ident("M2"));
         let module2_ref = block_cache
             .get_loaded_module(&module_id_2)
-            .unwrap()
             .unwrap();
 
         let gas = GasMeter::new(GasUnits::new(100_000_000), &gas_schedule);
         let struct_t = block_cache
             .resolve_struct_def(module2_ref, StructDefinitionIndex::new(0), &gas)
-            .unwrap()
             .unwrap();
         assert_eq!(
             struct_t,
@@ -575,7 +558,7 @@ fn test_field_offset_resolution() {
     let block_cache = BlockModuleCache::new(&vm_cache, fetcher);
     {
         let module_id = ModuleId::new(AccountAddress::default(), ident("M1"));
-        let module_ref = block_cache.get_loaded_module(&module_id).unwrap().unwrap();
+        let module_ref = block_cache.get_loaded_module(&module_id).unwrap();
 
         let f_idx = module_ref.field_defs_table.get(&ident("f")).unwrap();
         assert_eq!(module_ref.get_field_offset(*f_idx).unwrap(), 0);
