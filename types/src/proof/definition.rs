@@ -74,6 +74,10 @@ fn into_proto_siblings(siblings: Vec<HashValue>, placeholder: HashValue) -> Vec<
         .collect()
 }
 
+pub trait Proof {
+    fn is_proof(&self) -> bool;
+}
+
 /// A proof that can be used authenticate an element in an accumulator given trusted root hash. For
 /// example, both `LedgerInfoToTransactionInfoProof` and `TransactionInfoToEventProof` can be
 /// constructed on top of this structure.
@@ -86,8 +90,14 @@ pub struct AccumulatorProof<H> {
     phantom: PhantomData<H>,
 }
 
+impl<H> Proof for AccumulatorProof<H> {
+    fn is_proof(&self) -> bool {
+        true
+    }
+}
+
 /// Because leaves can only take half the space in the tree, any numbering of the tree leaves must
-/// not take the full width of the total space.  Thus, for a 64-bit ordering, our maximumm proof
+/// not take the full width of the total space.  Thus, for a 64-bit ordering, our maximum proof
 /// depth is limited to 63.
 pub type LeafCount = u64;
 pub const MAX_ACCUMULATOR_PROOF_DEPTH: usize = 63;
@@ -230,6 +240,12 @@ impl std::fmt::Display for SparseMerkleProof {
             "SparseMerkleProof (leaf: {:?}, siblings: {:?})",
             self.leaf, self.siblings
         )
+    }
+}
+
+impl Proof for SparseMerkleProof {
+    fn is_proof(&self) -> bool {
+        true
     }
 }
 

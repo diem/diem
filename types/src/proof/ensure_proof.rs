@@ -6,29 +6,26 @@
 //! if the proof fails.
 //! Currently, this macro only supports SparseMerkleProofs
 
-use crate::proof::definition::SparseMerkleProof;
-use crate::proof::proof_error::ProofError;
+use crate::proof::{definition::Proof, proof_error::ProofError};
 use failure::Error;
 
 macro_rules! ensure_proof {
     ($proof:ident, $cond:expr, $e:expr) => {
-        match $proof {
-            SparseMerkleProof { .. } => {
-                if !($cond) {
-                    return Err(Error::from(ProofError::new($proof.to_string(), $e.to_string())));
-                }
+        if Proof::is_proof($proof) {
+            if !($cond) {
+                return Err(Error::from(ProofError::new($proof.to_string(), $e.to_string())));
             }
+        } else {
+            ensure!($cond, $e);
         }
-        ensure!($cond, $e);
     };
     ($proof:ident, $cond:expr, $fmt:expr, $($arg:tt)+) => {
-        match $proof {
-            SparseMerkleProof { .. } => {
-                if !($cond) {
-                    return Err(Error::from(ProofError::new($proof.to_string(), format!($fmt, $($arg)+))));
-                }
+        if Proof::is_proof($proof) {
+            if !($cond) {
+                return Err(Error::from(ProofError::new($proof.to_string(), format!($fmt, $($arg)+))));
             }
+        } else {
+            ensure!($cond, $fmt, $($arg)+);
         }
-        ensure!($cond, $fmt, $($arg)+);
     };
 }
