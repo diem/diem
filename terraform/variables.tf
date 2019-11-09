@@ -50,13 +50,32 @@ variable "fullnode_ids" {
 }
 
 variable "validator_fullnode_id" {
-  type        = string
-  description = "PeerId of the validator on the full node network"
+  type        = list(string)
+  description = "List of PeerId of the validator on the full node network"
 }
 
 variable "num_fullnodes" {
   default     = 1
-  description = "Number of full nodes to run (attached to first validator)"
+  description = "Number of full nodes to run on validators"
+}
+
+variable "fullnode_distribution" {
+  type        = list(number)
+  default     = [1, 0, 0, 0]
+  description = "List of number of fullnodes on each validator"
+}
+
+# This is to generate a list of fullnode with validator index to indicate
+# which validator they should be connected to
+locals {
+  validator_index = range(length(var.peer_ids))
+  fullnode_pair = zipmap(local.validator_index, var.fullnode_distribution)
+  expanded_fullnodes = {
+    for key, val in local.fullnode_pair : key => [
+      for i in range(val) : format("%d", key)
+    ]
+  }
+  fullnode_list = flatten(values(local.expanded_fullnodes))
 }
 
 variable "validator_type" {

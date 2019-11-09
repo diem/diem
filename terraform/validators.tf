@@ -221,14 +221,21 @@ resource "aws_secretsmanager_secret_version" "validator_network" {
   secret_string = element(data.local_file.network_keys.*.content, count.index)
 }
 
+data "local_file" "validator_fullnode_keys" {
+  count    = length(var.peer_ids)
+  filename = "${var.validator_set}/val/${var.validator_fullnode_id[count.index]}.network.keys.toml"
+}
+
 resource "aws_secretsmanager_secret" "validator_fullnode" {
-  name                    = "${terraform.workspace}-validator-fullnode"
+  count                   = length(var.peer_ids)
+  name                    = "${terraform.workspace}-validator_fullnode-${substr(var.validator_fullnode_id[count.index], 0, 8)}"
   recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "validator_fullnode" {
-  secret_id     = aws_secretsmanager_secret.validator_fullnode.id
-  secret_string = file("${var.validator_set}/val/${var.validator_fullnode_id}.network.keys.toml")
+  count         = length(var.peer_ids)
+  secret_id     = element(aws_secretsmanager_secret.validator_fullnode.*.id, count.index)
+  secret_string = element(data.local_file.validator_fullnode_keys.*.content, count.index)
 }
 
 data "template_file" "validator_config" {
@@ -238,7 +245,7 @@ data "template_file" "validator_config" {
   vars = {
     self_ip     = var.validator_use_public_ip == true ? element(aws_instance.validator.*.public_ip, count.index) : element(aws_instance.validator.*.private_ip, count.index)
     peer_id     = var.peer_ids[count.index]
-    fullnode_id = var.validator_fullnode_id
+    fullnode_id = var.validator_fullnode_id[count.index]
   }
 }
 
@@ -276,7 +283,7 @@ data "template_file" "ecs_task_definition" {
     peer_id          = var.peer_ids[count.index]
     network_secret   = element(aws_secretsmanager_secret.validator_network.*.arn, count.index)
     consensus_secret = element(aws_secretsmanager_secret.validator_consensus.*.arn, count.index)
-    fullnode_secret  = aws_secretsmanager_secret.validator_fullnode.arn
+    fullnode_secret  = element(aws_secretsmanager_secret.validator_fullnode.*.arn, count.index)
     log_level        = var.validator_log_level
     log_group        = var.cloudwatch_logs ? aws_cloudwatch_log_group.testnet.name : ""
     log_region       = var.region
