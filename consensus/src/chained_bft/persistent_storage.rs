@@ -284,8 +284,8 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         let highest_timeout_certificate = initial_data.1.map(|ts| {
             from_slice(&ts[..]).expect("unable to deserialize highest timeout certificate")
         });
-        let mut blocks = initial_data.2;
-        let mut quorum_certs: Vec<_> = initial_data.3;
+        let blocks = initial_data.2;
+        let quorum_certs: Vec<_> = initial_data.3;
         let blocks_repr: Vec<String> = blocks.iter().map(|b| format!("\n\t{}", b)).collect();
         info!(
             "The following blocks were restored from ConsensusDB : {}",
