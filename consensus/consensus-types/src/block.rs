@@ -238,6 +238,8 @@ where
             self.quorum_cert().certified_block().round() < self.round(),
             "Block has invalid round"
         );
+
+        ensure!(!self.quorum_cert().ends_epoch(), "Block after epoch ends");
         Ok(())
     }
 

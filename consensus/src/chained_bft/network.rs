@@ -439,16 +439,13 @@ impl<T: Payload> NetworkTask<T> {
         match vote_msg.epoch().cmp(&self.epoch) {
             Ordering::Equal => {
                 debug!("Received {}", vote_msg);
-                vote_msg
-                    .vote()
-                    .verify(self.validators.as_ref())
-                    .map_err(|e| {
-                        security_log(SecurityEvent::InvalidConsensusVote)
-                            .error(&e)
-                            .data(&vote_msg)
-                            .log();
-                        e
-                    })?;
+                vote_msg.verify(self.validators.as_ref()).map_err(|e| {
+                    security_log(SecurityEvent::InvalidConsensusVote)
+                        .error(&e)
+                        .data(&vote_msg)
+                        .log();
+                    e
+                })?;
                 self.vote_tx.push(peer_id, vote_msg)
             }
             Ordering::Less | Ordering::Greater => self
