@@ -22,18 +22,18 @@ pub mod validator;
 use failure::prelude::*;
 use schemadb::ColumnFamilyName;
 
-pub(super) const EVENT_ACCUMULATOR_CF_NAME: ColumnFamilyName = "event_accumulator";
-pub(super) const EVENT_BY_KEY_CF_NAME: ColumnFamilyName = "event_by_key";
-pub(super) const EVENT_CF_NAME: ColumnFamilyName = "event";
-pub(super) const JELLYFISH_MERKLE_NODE_CF_NAME: ColumnFamilyName = "jellyfish_merkle_node";
-pub(super) const LEDGER_HISTORY_CF_NAME: ColumnFamilyName = "ledger_history";
-pub(super) const LEDGER_COUNTERS_CF_NAME: ColumnFamilyName = "ledger_counters";
-pub(super) const STALE_NODE_INDEX_CF_NAME: ColumnFamilyName = "stale_node_index";
-pub(super) const TRANSACTION_CF_NAME: ColumnFamilyName = "transaction";
-pub(super) const TRANSACTION_ACCUMULATOR_CF_NAME: ColumnFamilyName = "transaction_accumulator";
-pub(super) const TRANSACTION_BY_ACCOUNT_CF_NAME: ColumnFamilyName = "transaction_by_account";
-pub(super) const TRANSACTION_INFO_CF_NAME: ColumnFamilyName = "transaction_info";
-pub(super) const VALIDATOR_CF_NAME: ColumnFamilyName = "validator";
+pub const EVENT_ACCUMULATOR_CF_NAME: ColumnFamilyName = "event_accumulator";
+pub const EVENT_BY_KEY_CF_NAME: ColumnFamilyName = "event_by_key";
+pub const EVENT_CF_NAME: ColumnFamilyName = "event";
+pub const JELLYFISH_MERKLE_NODE_CF_NAME: ColumnFamilyName = "jellyfish_merkle_node";
+pub const LEDGER_HISTORY_CF_NAME: ColumnFamilyName = "ledger_history";
+pub const LEDGER_COUNTERS_CF_NAME: ColumnFamilyName = "ledger_counters";
+pub const STALE_NODE_INDEX_CF_NAME: ColumnFamilyName = "stale_node_index";
+pub const TRANSACTION_CF_NAME: ColumnFamilyName = "transaction";
+pub const TRANSACTION_ACCUMULATOR_CF_NAME: ColumnFamilyName = "transaction_accumulator";
+pub const TRANSACTION_BY_ACCOUNT_CF_NAME: ColumnFamilyName = "transaction_by_account";
+pub const TRANSACTION_INFO_CF_NAME: ColumnFamilyName = "transaction_info";
+pub const VALIDATOR_CF_NAME: ColumnFamilyName = "validator";
 
 pub fn ensure_slice_len_eq(data: &[u8], len: usize) -> Result<()> {
     ensure!(
