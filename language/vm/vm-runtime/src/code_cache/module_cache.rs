@@ -140,6 +140,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         if let Some(m) = self.map.get(id) {
             return Ok(&*m);
         }
+        // TODO: Add a better error message for what failed to be loaded.
         let module = match fetcher.get_module(id) {
             Some(module) => module,
             None => return Err(VMStatus::new(StatusCode::LINKER_ERROR)),

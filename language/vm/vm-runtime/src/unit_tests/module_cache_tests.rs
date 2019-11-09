@@ -521,9 +521,7 @@ fn test_multi_module_struct_resolution() {
     let gas_schedule = CostTable::zero();
     {
         let module_id_2 = ModuleId::new(AccountAddress::default(), ident("M2"));
-        let module2_ref = block_cache
-            .get_loaded_module(&module_id_2)
-            .unwrap();
+        let module2_ref = block_cache.get_loaded_module(&module_id_2).unwrap();
 
         let gas = GasMeter::new(GasUnits::new(100_000_000), &gas_schedule);
         let struct_t = block_cache
