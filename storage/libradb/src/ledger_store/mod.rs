@@ -196,7 +196,7 @@ impl LedgerStore {
         cs.batch.put::<LedgerInfoSchema>(
             &ledger_info_with_sigs.ledger_info().epoch(),
             ledger_info_with_sigs,
-        );
+        )?;
         cs.batch.put::<LedgerInfoHistorySchema>(
             &ledger_info_with_sigs.ledger_info().consensus_block_id(),
             ledger_info_with_sigs,

@@ -242,6 +242,6 @@ impl StorageWrite for StorageService {
     }
 
     fn rollback_by_block_id(&self, block_id: HashValue) {
-        self.rollback_by_block_id_inner(&block_id);
+        self.rollback_by_block_id_inner(&block_id).expect("rollback failed.");
     }
 }

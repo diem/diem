@@ -348,7 +348,6 @@ where
         };
 
         if committed_block_id.is_zero() {
-            println!("------------->>>>>>");
             let genesis_transaction = config
                 .get_genesis_transaction()
                 .expect("failed to load genesis transaction!");

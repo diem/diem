@@ -12,7 +12,7 @@
 //! `epoch` is serialized in big endian so that records in RocksDB will be in order of their
 //! numeric value.
 
-use crate::schema::ensure_slice_len_eq;
+use crate::schema::{ensure_slice_len_eq, LEDGER_HISTORY_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt};
 use libra_crypto::HashValue;
 use failure::prelude::*;
@@ -60,7 +60,7 @@ define_schema!(
     LedgerInfoHistorySchema,
     HashValue, /* consensus_block_id */
     LedgerInfoWithSignatures,
-    DEFAULT_CF_NAME
+    LEDGER_HISTORY_CF_NAME
 );
 
 impl KeyCodec<LedgerInfoHistorySchema> for HashValue {
