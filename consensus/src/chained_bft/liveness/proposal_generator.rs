@@ -103,6 +103,11 @@ impl<T: Payload> ProposalGenerator<T> {
 
         let hqc = self.ensure_highest_quorum_cert(round)?;
 
+        ensure!(
+            !hqc.ends_epoch(),
+            "The epoch has already ended,a proposal is not allowed to generated"
+        );
+
         // One needs to hold the blocks with the references to the payloads while get_block is
         // being executed: pending blocks vector keeps all the pending ancestors of the extended
         // branch.
@@ -177,7 +182,6 @@ impl<T: Payload> ProposalGenerator<T> {
                 }
             }
         };
-
         // Reconfiguration rule - we propose empty blocks after reconfiguration until it's committed
         let txns = if self.block_store.root().id() != hqc.certified_block().id()
             && hqc.certified_block().has_reconfiguration()

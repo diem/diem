@@ -67,6 +67,14 @@ impl QuorumCert {
         }
     }
 
+    /// If the QC commits reconfiguration and starts a new epoch
+    pub fn ends_epoch(&self) -> bool {
+        self.signed_ledger_info
+            .ledger_info()
+            .next_validator_set()
+            .is_some()
+    }
+
     /// QuorumCert for the genesis block deterministically generated from end-epoch LedgerInfo:
     /// - the ID of the block is determined by the generated genesis block.
     /// - the accumulator root hash of the LedgerInfo is set to the last executed state of previous
