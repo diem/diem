@@ -71,6 +71,9 @@ pub struct RecoveryData<T> {
 
     // Liveness data
     highest_timeout_certificate: Option<TimeoutCertificate>,
+
+    // seed for proposer election
+    seed: HashValue,
 }
 
 impl<T: Payload> RecoveryData<T> {
@@ -81,6 +84,7 @@ impl<T: Payload> RecoveryData<T> {
         mut quorum_certs: Vec<QuorumCert>,
         storage_ledger: &LedgerInfo,
         highest_timeout_certificate: Option<TimeoutCertificate>,
+        seed: HashValue,
     ) -> Result<Self> {
         let root =
             Self::find_root(&mut blocks, &mut quorum_certs, storage_ledger).with_context(|e| {
@@ -116,6 +120,7 @@ impl<T: Payload> RecoveryData<T> {
             quorum_certs,
             blocks_to_prune,
             highest_timeout_certificate,
+            seed,
         })
     }
 
@@ -133,6 +138,10 @@ impl<T: Payload> RecoveryData<T> {
 
     pub fn last_vote(&self) -> Option<Vote> {
         self.last_vote.clone()
+    }
+
+    pub fn seed(&self) -> HashValue {
+        self.seed
     }
 
     pub fn take(
@@ -318,6 +327,19 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         let (_, ledger_info, _, _) = read_client
             .update_to_latest_ledger(0, vec![])
             .expect("unable to read ledger info from storage");
+        // find the genesis ledger info
+        let seed = match ledger_info.ledger_info().epoch() {
+            0 => ledger_info.ledger_info().consensus_data_hash(),
+            epoch => {
+                let previous_epoch = epoch - 1;
+                let genesis_ledger_info = read_client
+                    .get_latest_ledger_infos_per_epoch(previous_epoch)
+                    .expect("unable to read genesis ledger info from storage")
+                    .pop()
+                    .expect("storage does not contain genesis ledger info");
+                genesis_ledger_info.ledger_info().consensus_data_hash()
+            }
+        };
         let mut initial_data = RecoveryData::new(
             consensus_state,
             last_vote,
@@ -325,6 +347,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             quorum_certs,
             ledger_info.ledger_info(),
             highest_timeout_certificate,
+            seed,
         )
         .unwrap_or_else(|e| panic!("Can not construct recovery data due to {}", e));
 

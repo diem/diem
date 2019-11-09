@@ -18,6 +18,7 @@ use consensus_types::common::{Payload, Round};
 use consensus_types::epoch_retrieval::EpochRetrievalRequest;
 use futures::executor::block_on;
 use libra_config::config::ConsensusProposerType;
+use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
@@ -92,11 +93,12 @@ impl<T: Payload> EpochManager<T> {
     fn create_proposer_election(
         &self,
         validators: &ValidatorVerifier,
+        seed: HashValue,
     ) -> Box<dyn ProposerElection<T> + Send + Sync> {
         let proposers = validators.get_ordered_account_addresses();
         match self.config.proposer_type {
             ConsensusProposerType::MultipleOrderedProposers => {
-                Box::new(MultiProposer::new(proposers, 2))
+                Box::new(MultiProposer::new(proposers, 2, seed))
             }
             ConsensusProposerType::RotatingProposer => Box::new(RotatingProposer::new(
                 proposers,
@@ -179,6 +181,7 @@ impl<T: Payload> EpochManager<T> {
             vec![],
             ledger_info.ledger_info(),
             None,
+            ledger_info.ledger_info().consensus_data_hash(),
         )
         .expect("should be able to build new epoch RecoveryData");
         self.epoch = initial_data.epoch();
@@ -188,6 +191,8 @@ impl<T: Payload> EpochManager<T> {
             initial_data.root_block(),
             validators,
         );
+
+        //
         self.start_epoch(self.signer.clone(), Arc::new(validators), initial_data)
     }
 
@@ -201,6 +206,7 @@ impl<T: Payload> EpochManager<T> {
         let last_vote = initial_data.last_vote();
         let author = signer.author();
         let safety_rules = SafetyRules::new(initial_data.state(), signer);
+        let seed = initial_data.seed();
 
         let block_store = Arc::new(block_on(BlockStore::new(
             Arc::clone(&self.storage),
@@ -222,7 +228,7 @@ impl<T: Payload> EpochManager<T> {
         let pacemaker =
             self.create_pacemaker(self.time_service.clone(), self.timeout_sender.clone());
 
-        let proposer_election = self.create_proposer_election(&validators);
+        let proposer_election = self.create_proposer_election(&validators, seed);
         let network_sender = NetworkSender::new(
             author,
             self.network_sender.clone(),

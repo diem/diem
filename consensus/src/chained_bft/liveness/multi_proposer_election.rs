@@ -6,16 +6,8 @@ use consensus_types::{
     block::Block,
     common::{Author, Payload, Round},
 };
+use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use siphasher::sip::SipHasher24;
-use std::hash::{Hash, Hasher};
-
-// A deterministic hashing function based on SipHash 2-4 hasher
-pub fn hash(val: u64) -> u64 {
-    let mut hasher = SipHasher24::new();
-    val.hash(&mut hasher);
-    hasher.finish()
-}
 
 /// The MultiProposer maps a round to an ordered list of authors.
 /// The primary proposer is determined by an index of hash(round) % num_proposers.
@@ -34,6 +26,8 @@ pub struct MultiProposer<T> {
     proposers: Vec<Author>,
     // Number of proposers per round
     num_proposers_per_round: usize,
+    // Seed for this epoch
+    seed: HashValue,
     // Keeps the highest received backup (non-primary) proposal of the highest round.
     // When a proposal from a higher round is received, the previous proposals are discarded:
     // `process_proposal()` is supposed to be called only if the proposal round matches the current
@@ -44,7 +38,11 @@ pub struct MultiProposer<T> {
 }
 
 impl<T> MultiProposer<T> {
-    pub fn new(proposers: Vec<Author>, mut num_proposers_per_round: usize) -> Self {
+    pub fn new(
+        proposers: Vec<Author>,
+        mut num_proposers_per_round: usize,
+        seed: HashValue,
+    ) -> Self {
         assert!(num_proposers_per_round > 0);
         if num_proposers_per_round > proposers.len() {
             error!(
@@ -60,6 +58,7 @@ impl<T> MultiProposer<T> {
         Self {
             proposers,
             num_proposers_per_round,
+            seed,
             backup_proposal_round: 0,
             backup_proposal: None,
         }
@@ -68,11 +67,19 @@ impl<T> MultiProposer<T> {
     fn get_candidates(&self, round: Round) -> Vec<Author> {
         let mut res = vec![];
         let mut candidates = self.proposers.clone();
-        let mut cur_val = round;
+        let mut cur_val = round.to_le_bytes().to_vec();
         for _ in 0..self.num_proposers_per_round {
-            cur_val = hash(cur_val);
-            let idx = (cur_val % candidates.len() as u64) as usize;
-            res.push(candidates.swap_remove(idx));
+            let mut with_seed = self.seed.clone().to_vec();
+            with_seed.extend_from_slice(&cur_val);
+            cur_val = HashValue::from_sha3_256(&with_seed).to_vec();
+            let mut temp = [0u8; 8];
+            temp.copy_from_slice(&cur_val[..8]);
+            let cur_val_u64 = u64::from_le_bytes(temp);
+            // note: this modular reduction has a slight bias.
+            // Yet, the bias is so small in practice that it is not worth
+            // addressing this edge case.
+            let idx = cur_val_u64 % (candidates.len() as u64);
+            res.push(candidates.swap_remove(idx as usize));
         }
         res
     }
