@@ -8,31 +8,31 @@ use crate::state_replication::{StateComputer, TxnManager};
 use atomic_refcell::AtomicRefCell;
 use channel;
 use consensus_types::block::Block;
+use consensus_types::block_retrieval::{
+    BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
+};
+use cuckoo::consensus::{PowCuckoo, PowService, Proof};
+use futures::channel::mpsc;
+use futures::{stream::select, SinkExt, StreamExt, TryStreamExt};
 use libra_crypto::hash::CryptoHash;
 use libra_crypto::hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID};
 use libra_crypto::HashValue;
-use cuckoo::consensus::{PowCuckoo, PowService, Proof};
-use failure::prelude::*;
-use futures::channel::mpsc;
-use futures::{stream::select, SinkExt, StreamExt, TryStreamExt};
-use libra_types::account_address::AccountAddress;
-use libra_types::transaction::{SignedTransaction, Transaction};
-use libra_types::PeerId;
 use libra_logger::prelude::*;
+use libra_prost_ext::MessageExt;
+use libra_types::account_address::AccountAddress;
+use libra_types::transaction::SignedTransaction;
+use libra_types::PeerId;
 use network::{
     proto::{
         ConsensusMsg,
         ConsensusMsg_oneof::{self},
-        RequestBlock, RespondBlock,
     },
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event},
 };
-use libra_prost_ext::MessageExt;
+use std::convert::TryInto;
 use std::sync::Arc;
 use std::{convert::TryFrom, path::PathBuf};
 use tokio::runtime::TaskExecutor;
-use consensus_types::block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus, BlockRetrievalRequest};
-use std::convert::TryInto;
 
 pub struct EventProcessor {
     block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
@@ -62,7 +62,6 @@ impl EventProcessor {
         state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
         author: AccountAddress,
         storage_dir: PathBuf,
-        genesis_txn: Transaction,
         rollback_flag: bool,
     ) -> Self {
         let (block_cache_sender, block_cache_receiver) = mpsc::channel(10);
@@ -76,18 +75,13 @@ impl EventProcessor {
 
         let pow_srv = Arc::new(PowCuckoo::new(6, 8));
 
-        let genesis_txn_vec = match genesis_txn {
-            Transaction::UserTransaction(signed_txn) => vec![signed_txn].to_vec(),
-            _ => vec![],
-        };
-
         let chain_manager = Arc::new(AtomicRefCell::new(ChainManager::new(
             Some(block_cache_receiver),
             Arc::clone(&block_store),
             txn_manager.clone(),
             state_computer.clone(),
-            genesis_txn_vec.clone(),
             rollback_flag,
+            author.clone(),
         )));
 
         let sync_manager = Arc::new(AtomicRefCell::new(SyncManager::new(
@@ -108,7 +102,6 @@ impl EventProcessor {
             self_sender.clone(),
             block_store.clone(),
             pow_srv.clone(),
-            genesis_txn_vec.clone(),
             chain_manager.clone(),
         ));
 
@@ -204,16 +197,16 @@ impl EventProcessor {
                                 }
                             }
                             ConsensusMsg_oneof::RequestBlock(req_block) => {
-                                let block_req = BlockRetrievalRequest::try_from(req_block).expect("parse err.");
+                                let block_req =
+                                    BlockRetrievalRequest::try_from(req_block).expect("parse err.");
                                 if block_req.num_blocks() > 0 {
                                     let mut blocks = vec![];
-                                    let mut latest_block = if block_req.block_id() != HashValue::zero() {
-                                        Some(
-                                            block_req.block_id()
-                                        )
-                                    } else {
-                                        None
-                                    };
+                                    let mut latest_block =
+                                        if block_req.block_id() != HashValue::zero() {
+                                            Some(block_req.block_id())
+                                        } else {
+                                            None
+                                        };
                                     let mut not_exist_flag = false;
                                     for _i in 1..block_req.num_blocks() {
                                         let block = match latest_block {
@@ -261,7 +254,9 @@ impl EventProcessor {
 
                                     let resp_block = BlockRetrievalResponse::new(status, blocks);
                                     let resp_block_msg = ConsensusMsg {
-                                        message: Some(ConsensusMsg_oneof::RespondBlock(resp_block.try_into().expect("into err."))),
+                                        message: Some(ConsensusMsg_oneof::RespondBlock(
+                                            resp_block.try_into().expect("into err."),
+                                        )),
                                     };
 
                                     Self::send_consensus_msg(
@@ -275,8 +270,10 @@ impl EventProcessor {
                                 }
                             }
                             ConsensusMsg_oneof::RespondBlock(resp_block) => {
-                                let block_resp = BlockRetrievalResponse::try_from(resp_block).expect("parse err.");
-                                if let Err(err) = sync_block_sender.send((peer_id, block_resp)).await
+                                let block_resp = BlockRetrievalResponse::try_from(resp_block)
+                                    .expect("parse err.");
+                                if let Err(err) =
+                                    sync_block_sender.send((peer_id, block_resp)).await
                                 {
                                     error!("send sync block err: {:?}", err);
                                 };
@@ -352,20 +349,20 @@ impl EventProcessor {
         }
     }
 
-//    fn sync_block_req(hash: Option<HashValue>) -> ConsensusMsg {
-//        let num_blocks = 10;
-//        let req = match hash {
-//            None => RequestBlock {
-//                block_id: vec![],
-//                num_blocks,
-//            },
-//            Some(h) => RequestBlock {
-//                block_id: h.to_vec(),
-//                num_blocks,
-//            },
-//        };
-//        ConsensusMsg {
-//            message: Some(ConsensusMsg_oneof::RequestBlock(req)),
-//        }
-//    }
+    //    fn sync_block_req(hash: Option<HashValue>) -> ConsensusMsg {
+    //        let num_blocks = 10;
+    //        let req = match hash {
+    //            None => RequestBlock {
+    //                block_id: vec![],
+    //                num_blocks,
+    //            },
+    //            Some(h) => RequestBlock {
+    //                block_id: h.to_vec(),
+    //                num_blocks,
+    //            },
+    //        };
+    //        ConsensusMsg {
+    //            message: Some(ConsensusMsg_oneof::RequestBlock(req)),
+    //        }
+    //    }
 }

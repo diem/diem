@@ -1,10 +1,9 @@
-use failure::prelude::*;
+use libra_crypto::hash::{BlockPayloadExtHasher, CryptoHash, CryptoHasher};
+use libra_crypto::HashValue;
 use libra_types::transaction::SignedTransaction;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 use std::convert::TryFrom;
-use libra_crypto::hash::{CryptoHash, CryptoHasher, BlockPayloadExtHasher};
-use libra_crypto::HashValue;
+use std::fmt;
 
 #[derive(Clone, Eq, PartialEq, Default, Hash, Serialize, Deserialize)]
 pub struct BlockPayloadExt {

@@ -5,9 +5,9 @@ use consensus_types::block::Block;
 use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
 use failure::Result;
 use futures::Future;
+use libra_crypto::HashValue;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use std::{pin::Pin, sync::Arc};
-use libra_crypto::HashValue;
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
 pub trait TxnManager: Send + Sync {
@@ -55,9 +55,9 @@ pub trait StateComputer: Send + Sync {
     /// In case all the transactions are failed, new_state_id is equal to the previous state id.
     fn compute_by_hash(
         &self,
-        // The id of a parent block, on top of which the given transactions should be executed.
-        // We're going to use a special GENESIS_BLOCK_ID constant defined in crypto::hash module to
-        // refer to the block id of the Genesis block, which is executed in a special way.
+        // The id of a grandpa block
+        grandpa_block_id: HashValue,
+        // The id of a parent block
         parent_block_id: HashValue,
         // The id of a current block.
         block_id: HashValue,

@@ -577,7 +577,9 @@ impl LibraDB {
         };
         let ledger_info = ledger_info_with_sigs.ledger_info().clone();
 
-        let (latest_version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
+        //let (latest_version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
+        let latest_version = ledger_info.version();
+        let txn_info = self.ledger_store.get_transaction_info(latest_version)?;
 
         let account_state_root_hash = txn_info.state_root_hash();
 
@@ -600,7 +602,10 @@ impl LibraDB {
     ) -> Result<Option<StartupInfo>> {
         let ledger_info_with_sigs = match self.ledger_store.get_ledger_info_by_block_id(block_id) {
             Ok(x) => x,
-            Err(err) => return Ok(None),
+            Err(err) => {
+                warn!("err:{:?}", err);
+                return Ok(None);
+            }
         };
         let ledger_info = ledger_info_with_sigs.ledger_info().clone();
 
@@ -612,7 +617,6 @@ impl LibraDB {
         let ledger_frozen_subtree_hashes = self
             .ledger_store
             .get_ledger_frozen_subtree_hashes(version)?;
-
         Ok(Some(StartupInfo {
             ledger_info,
             latest_version: version,
@@ -750,7 +754,9 @@ impl LibraDB {
 
     pub fn rollback_by_block_id(&self, block_id: &HashValue) -> Result<()> {
         let mut cs = ChangeSet::new();
-        self.ledger_store.rollback_by_block_id(block_id, &mut cs)
+        self.ledger_store.rollback_by_block_id(block_id, &mut cs)?;
+        let sealed_cs = SealedChangeSet { batch: cs.batch };
+        self.commit(sealed_cs)
     }
 }
 

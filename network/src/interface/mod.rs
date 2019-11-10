@@ -11,6 +11,7 @@
 //! [`NetworkRequest::SendRpc`](crate::interface::NetworkRequest::SendRpc) message to the
 //! [`NetworkProvider`] actor. Inbound RPC requests are forwarded to the appropriate
 //! handler, determined using the protocol negotiated on the RPC substream.
+pub use crate::peer_manager::PeerManagerError;
 use crate::{
     common::NetworkPublicKeys,
     connectivity_manager::ConnectivityRequest,
@@ -29,7 +30,7 @@ use crate::{
 };
 use channel;
 use futures::channel::oneshot;
-use futures::{future::BoxFuture,lock::Mutex, FutureExt, SinkExt, StreamExt};
+use futures::{future::BoxFuture, lock::Mutex, FutureExt, SinkExt, StreamExt};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
@@ -39,7 +40,6 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-pub use crate::peer_manager::PeerManagerError;
 
 pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
 pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute

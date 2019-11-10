@@ -22,8 +22,8 @@ use futures::{
     task::{Context, Poll},
     SinkExt, Stream, StreamExt,
 };
-use libra_types::{validator_public_keys::ValidatorPublicKeys, PeerId};
 use libra_logger::prelude::*;
+use libra_types::{validator_public_keys::ValidatorPublicKeys, PeerId};
 use pin_project::pin_project;
 use prost::Message as _;
 use std::{pin::Pin, time::Duration};

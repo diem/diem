@@ -3,12 +3,12 @@ use crate::{
     consensus_provider::ConsensusProvider, state_computer::ExecutionProxy,
     txn_manager::MempoolProxy,
 };
-use libra_config::config::NodeConfig;
 use executor::Executor;
 use failure::prelude::*;
+use libra_config::config::NodeConfig;
+use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
 use libra_types::account_address::AccountAddress;
-use libra_logger::prelude::*;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
 use std::convert::TryFrom;
@@ -47,10 +47,6 @@ impl PowConsensusProvider {
         let author = AccountAddress::try_from(peer_id_str.clone())
             .expect("Failed to parse peer id of a validator");
 
-        let genesis_transaction = node_config
-            .get_genesis_transaction()
-            .expect("failed to load genesis transaction!");
-
         let event_handle = EventProcessor::new(
             network_sender,
             network_events,
@@ -58,7 +54,6 @@ impl PowConsensusProvider {
             state_computer,
             author,
             node_config.get_storage_dir(),
-            genesis_transaction,
             rollback_flag,
         );
         Self {

@@ -440,12 +440,13 @@ where
     pub fn execute_block_by_id(
         &self,
         transactions: Vec<Transaction>,
+        grandpa_id: HashValue,
         parent_id: HashValue,
         id: HashValue,
     ) -> oneshot::Receiver<Result<ProcessedVMOutput>> {
         debug!(
-            "Received request to execute block. Parent id: {:x}. Id: {:x}.",
-            parent_id, id
+            "Received request to execute block. Grandpa id: {:x}. Parent id: {:x}. Id: {:x}.",
+            grandpa_id, parent_id, id
         );
 
         let (resp_sender, resp_receiver) = oneshot::channel();
@@ -454,19 +455,20 @@ where
             .lock()
             .expect("Failed to lock mutex.")
             .as_ref()
-            {
-                Some(sender) => sender
-                    .send(Command::ExecuteBlockById {
-                            transactions,
-                            parent_id,
-                            id,
-                        resp_sender,
-                    })
-                    .expect("Did block processor thread panic?"),
-                None => resp_sender
-                    .send(Err(format_err!("Executor is shutting down.")))
-                    .expect("Failed to send error message."),
-            }
+        {
+            Some(sender) => sender
+                .send(Command::ExecuteBlockById {
+                    transactions,
+                    grandpa_id,
+                    parent_id,
+                    id,
+                    resp_sender,
+                })
+                .expect("Did block processor thread panic?"),
+            None => resp_sender
+                .send(Err(format_err!("Executor is shutting down.")))
+                .expect("Failed to send error message."),
+        }
         resp_receiver
     }
 
@@ -553,17 +555,17 @@ where
             .lock()
             .expect("Failed to lock mutex.")
             .as_ref()
-            {
-                Some(sender) => sender
-                    .send(Command::RollbackBlock {
-                        block_id,
-                        resp_sender,
-                    })
-                    .expect("Did block processor thread panic?"),
-                None => resp_sender
-                    .send(Err(format_err!("Executor is shutting down.")))
-                    .expect("Failed to send error message."),
-            }
+        {
+            Some(sender) => sender
+                .send(Command::RollbackBlock {
+                    block_id,
+                    resp_sender,
+                })
+                .expect("Did block processor thread panic?"),
+            None => resp_sender
+                .send(Err(format_err!("Executor is shutting down.")))
+                .expect("Failed to send error message."),
+        }
         resp_receiver
     }
 }
@@ -634,6 +636,7 @@ enum Command {
     },
     ExecuteBlockById {
         transactions: Vec<Transaction>,
+        grandpa_id: HashValue,
         parent_id: HashValue,
         id: HashValue,
         resp_sender: oneshot::Sender<Result<ProcessedVMOutput>>,

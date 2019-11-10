@@ -4,16 +4,17 @@ use crate::pow::event_processor::EventProcessor;
 use crate::pow::payload_ext::BlockPayloadExt;
 use crate::state_replication::{StateComputer, TxnManager};
 use atomic_refcell::AtomicRefCell;
+use consensus_types::block_info::BlockInfo;
 use consensus_types::{block::Block, quorum_cert::QuorumCert, vote_data::VoteData};
-use libra_crypto::hash::CryptoHash;
-use libra_crypto::hash::{GENESIS_BLOCK_ID, PRE_GENESIS_BLOCK_ID};
 use cuckoo::consensus::PowService;
-use failure::prelude::*;
+use libra_crypto::hash::CryptoHash;
+use libra_crypto::hash::GENESIS_BLOCK_ID;
+use libra_crypto::HashValue;
+use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
 use libra_types::crypto_proxies::ValidatorSigner;
 use libra_types::ledger_info::{LedgerInfo, LedgerInfoWithSignatures};
 use libra_types::transaction::SignedTransaction;
-use libra_logger::prelude::*;
 use network::{
     proto::{
         Block as BlockProto, ConsensusMsg,
@@ -23,13 +24,11 @@ use network::{
 };
 use rand::Rng;
 use std::collections::BTreeMap;
+use std::convert::TryInto;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
 use tokio::runtime::TaskExecutor;
-use consensus_types::block_info::BlockInfo;
-use std::convert::TryInto;
-use libra_crypto::HashValue;
 
 pub struct MintManager {
     txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
@@ -39,7 +38,6 @@ pub struct MintManager {
     self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
     block_store: Arc<ConsensusDB>,
     pow_srv: Arc<dyn PowService>,
-    genesis_txn: Vec<SignedTransaction>,
     chain_manager: Arc<AtomicRefCell<ChainManager>>,
 }
 
@@ -52,7 +50,6 @@ impl MintManager {
         self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
         block_store: Arc<ConsensusDB>,
         pow_srv: Arc<dyn PowService>,
-        genesis_txn: Vec<SignedTransaction>,
         chain_manager: Arc<AtomicRefCell<ChainManager>>,
     ) -> Self {
         MintManager {
@@ -63,7 +60,6 @@ impl MintManager {
             self_sender,
             block_store,
             pow_srv,
-            genesis_txn,
             chain_manager,
         }
     }
@@ -76,20 +72,15 @@ impl MintManager {
         let mut self_sender = self.self_sender.clone();
         let block_db = self.block_store.clone();
         let pow_srv = self.pow_srv.clone();
-        let mut genesis_txn_vec = self.genesis_txn.clone();
         let chain_manager = self.chain_manager.clone();
 
         let mint_fut = async move {
             let chain_manager_clone = chain_manager.clone();
             loop {
                 match mint_txn_manager.pull_txns(1, vec![]).await {
-                    Ok(mut txns) => {
+                    Ok(txns) => {
                         let (height, parent_block) =
                             chain_manager_clone.borrow().chain_height_and_root().await;
-                        chain_manager_clone
-                            .borrow()
-                            .print_block_chain_root(mint_author.clone())
-                            .await;
                         if txns.len() > 0 {
                             //create block
                             let parent_block_id = parent_block.id;
@@ -104,26 +95,27 @@ impl MintManager {
                                 QuorumCert::certificate_for_genesis()
                             };
 
-                            let mut tmp = vec![];
-                            tmp.append(&mut genesis_txn_vec);
-                            let (pre_compute_parent_block_id, commit_txn_vec) =
-                                if parent_block_id != *GENESIS_BLOCK_ID {
-                                    (grandpa_block_id, txns.clone())
-                                } else {
-                                    tmp.append(&mut txns);
-                                    (*PRE_GENESIS_BLOCK_ID, tmp)
-                                };
+                            //                            let mut tmp = vec![];
+                            //                            tmp.append(&mut genesis_txn_vec);
+                            //                            let (pre_compute_parent_block_id, commit_txn_vec) =
+                            //                                if parent_block_id != *GENESIS_BLOCK_ID {
+                            //                                    (grandpa_block_id, txns.clone())
+                            //                                } else {
+                            //                                    tmp.append(&mut txns);
+                            //                                    (*PRE_GENESIS_BLOCK_ID, tmp)
+                            //                                };
 
                             //compute current block state id
                             let tmp_id = HashValue::random();
                             match mint_state_computer
-                                .compute_by_hash(pre_compute_parent_block_id, tmp_id, &commit_txn_vec)
+                                .compute_by_hash(grandpa_block_id, parent_block_id, tmp_id, &txns)
                                 .await
                             {
                                 Ok(processed_vm_output) => {
                                     let executed_trees = processed_vm_output.executed_trees();
                                     let state_id = executed_trees.state_root();
-                                    let txn_accumulator_hash = executed_trees.txn_accumulator().root_hash();
+                                    let txn_accumulator_hash =
+                                        executed_trees.txn_accumulator().root_hash();
                                     let txn_len = executed_trees.version().expect("version err.");
 
                                     let parent_li = quorum_cert.ledger_info().ledger_info().clone();
@@ -136,8 +128,15 @@ impl MintManager {
 
                                     // vote data
                                     let parent_block_info = parent_vd.proposed().clone();
-                                    let block_info = BlockInfo::new(epoch, height + 1, parent_block_id, state_id,
-                                                                    txn_len, parent_li.timestamp_usecs(), v_s.clone());
+                                    let block_info = BlockInfo::new(
+                                        epoch,
+                                        height + 1,
+                                        parent_block_id,
+                                        state_id,
+                                        txn_len,
+                                        parent_li.timestamp_usecs(),
+                                        v_s.clone(),
+                                    );
                                     let vote_data = VoteData::new(block_info, parent_block_info);
                                     // ledger info
                                     let li = LedgerInfo::new(
@@ -178,7 +177,13 @@ impl MintManager {
                                         &ValidatorSigner::from_int(1),
                                     );
 
-                                    let block_pb = TryInto::<BlockProto>::try_into(block).expect("parse block err.");
+                                    info!(
+                                        "Minter : {:?} find a new block : {:?}",
+                                        mint_author,
+                                        block.id()
+                                    );
+                                    let block_pb = TryInto::<BlockProto>::try_into(block)
+                                        .expect("parse block err.");
 
                                     // send block
                                     let msg = ConsensusMsg {

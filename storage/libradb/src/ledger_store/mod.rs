@@ -224,7 +224,9 @@ impl LedgerStore {
             .db
             .get::<LedgerInfoHistorySchema>(block_id)?
             .ok_or_else(|| LibraDbError::NotFound(format!("LedgerInfo by {:?}", block_id)))?;
-        self.put_ledger_info(&ledger_info, cs)
+        self.put_ledger_info(&ledger_info, cs)?;
+        self.set_latest_ledger_info(ledger_info);
+        Ok(())
     }
 }
 

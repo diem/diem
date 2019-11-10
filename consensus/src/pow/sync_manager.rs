@@ -4,30 +4,28 @@ use crate::pow::payload_ext::BlockPayloadExt;
 use atomic_refcell::AtomicRefCell;
 use channel;
 use consensus_types::block::Block;
-use libra_crypto::hash::CryptoHash;
-use libra_crypto::HashValue;
-use failure::prelude::*;
+use consensus_types::block_retrieval::{
+    BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
+};
 use futures::compat::Future01CompatExt;
 use futures::SinkExt;
 use futures::{channel::mpsc, StreamExt};
 use futures_locks::Mutex;
+use libra_crypto::HashValue;
 use libra_types::account_address::AccountAddress;
 use libra_types::PeerId;
-use libra_logger::prelude::*;
 use network::{
     proto::{
         ConsensusMsg,
         ConsensusMsg_oneof::{self},
-        RequestBlock,
     },
     validator_network::{ConsensusNetworkSender, Event},
 };
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::runtime::TaskExecutor;
-use consensus_types::block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus, BlockRetrievalRequest};
-use std::convert::TryInto;
 
 pub struct SyncManager {
     author: AccountAddress,
@@ -154,7 +152,9 @@ impl SyncManager {
     fn sync_block_req(hash: HashValue) -> ConsensusMsg {
         let num_blocks = 10;
 
-        let req = BlockRetrievalRequest::new(hash, num_blocks).try_into().expect("xxx");
+        let req = BlockRetrievalRequest::new(hash, num_blocks)
+            .try_into()
+            .expect("xxx");
 
         ConsensusMsg {
             message: Some(ConsensusMsg_oneof::RequestBlock(req)),

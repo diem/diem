@@ -14,8 +14,8 @@
 
 use crate::schema::{ensure_slice_len_eq, LEDGER_HISTORY_CF_NAME};
 use byteorder::{BigEndian, ReadBytesExt};
-use libra_crypto::HashValue;
 use failure::prelude::*;
+use libra_crypto::HashValue;
 use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use prost::Message;
