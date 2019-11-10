@@ -102,6 +102,6 @@ impl ConsensusProvider for PowConsensusProvider {
         //TODO
         // 1. stop mint
         // 2. stop process event
-        unimplemented!()
+        //unimplemented!()
     }
 }

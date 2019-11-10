@@ -205,12 +205,12 @@ impl MintManager {
                             }
                         }
 
-                        let mut r = rand::thread_rng();
-                        r.gen::<i32>();
-                        let sleep_time = r.gen_range(10, 20);
-                        debug!("sleep begin.");
-                        sleep(Duration::from_secs(sleep_time));
-                        debug!("sleep end.");
+//                        let mut r = rand::thread_rng();
+//                        r.gen::<i32>();
+//                        let sleep_time = r.gen_range(10, 20);
+//                        debug!("sleep begin.");
+//                        sleep(Duration::from_secs(sleep_time));
+//                        debug!("sleep end.");
                     }
                     _ => {}
                 }

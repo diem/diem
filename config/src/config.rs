@@ -33,6 +33,7 @@ use std::{
     time::Duration,
 };
 use toml;
+use crate::config::ConsensusType::{PBFT, POW};
 
 #[cfg(test)]
 #[path = "unit_tests/config_test.rs"]
@@ -417,6 +418,12 @@ pub struct ConsensusConfig {
     #[serde(skip)]
     pub consensus_peers: ConsensusPeersConfig,
     pub consensus_peers_file: PathBuf,
+    pub consensus_type: String,
+}
+
+pub enum ConsensusType {
+    PBFT,
+    POW,
 }
 
 impl Default for ConsensusConfig {
@@ -431,6 +438,7 @@ impl Default for ConsensusConfig {
             consensus_keypair_file: PathBuf::from("consensus_keypair.config.toml"),
             consensus_peers: ConsensusPeersConfig::default(),
             consensus_peers_file: PathBuf::from("consensus_peers.config.toml"),
+            consensus_type: "pow".to_string(),
         }
     }
 }
@@ -466,6 +474,14 @@ impl ConsensusConfig {
             "rotating_proposer" => RotatingProposer,
             "multiple_ordered_proposers" => MultipleOrderedProposers,
             &_ => unimplemented!("Invalid proposer type: {}", self.proposer_type),
+        }
+    }
+
+    pub fn get_consensus_type(&self) -> ConsensusType {
+        match self.consensus_type.as_str() {
+            "pbft" => PBFT,
+            "pow" => POW,
+            &_ => unimplemented!("Invalid consensus type: {}", self.consensus_type),
         }
     }
 

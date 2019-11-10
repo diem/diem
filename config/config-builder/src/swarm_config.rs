@@ -348,6 +348,7 @@ impl SwarmConfig {
             // Dummy values - will be loaded from corresponding files.
             consensus_keypair: ConsensusKeyPair::default(),
             consensus_peers: template.consensus.consensus_peers.clone(),
+            consensus_type: template.consensus.consensus_type.clone(),
         };
         let mut config = NodeConfig {
             base: base_config,
