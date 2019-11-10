@@ -331,7 +331,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 state_synchronizer.create_client(),
                 false,
             ),
-            _ => make_consensus_provider(
+            PBFT => make_consensus_provider(
                 node_config,
                 consensus_network_sender,
                 consensus_network_events,
