@@ -257,7 +257,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                         .get_network_identity_public()
                         .to_bytes()
                 )
-                .unwrap()
+                    .unwrap()
             );
             // Start the network provider.
             runtime.executor().spawn(network_provider.start());
@@ -331,7 +331,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 state_synchronizer.create_client(),
                 false,
             ),
-            PBFT => make_consensus_provider(
+            _ => make_consensus_provider(
                 node_config,
                 consensus_network_sender,
                 consensus_network_events,
