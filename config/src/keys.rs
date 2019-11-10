@@ -121,6 +121,10 @@ impl NetworkKeyPairs {
         self.network_signing_private_key.take()
     }
 
+    pub fn get_network_signing_public_key(&self) -> Ed25519PublicKey {
+        self.network_signing_public_key.clone()
+    }
+
     pub fn get_network_identity_private(&self) -> X25519StaticPrivateKey {
         self.network_identity_private_key.clone()
     }

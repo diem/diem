@@ -307,7 +307,7 @@ As a consequence, it is recommended that you set up your test-only code in the f
     ```
 3. (optional) Use `cfg_attr` to make test-only trait derivations conditional:
     ```
-    #[cfg_attr(any(test, feature = "testing"), derive(FooTrait))]
+    #[cfg_attr(any(test, feature = "fuzzing"), derive(FooTrait))]
     #[derive(Debug, Display, ...)] // inconditional derivations
     struct Foo { ... }
     ```

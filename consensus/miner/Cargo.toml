@@ -1,0 +1,27 @@
+[package]
+name = "miner"
+version = "0.1.0"
+authors = ["Starcoin Core Dev <dev@starcoin.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-std = "0.99.11"
+serde_json = "1.0.41"
+proto = {path = "proto"}
+grpcio = { version = "=0.5.0-alpha.4", default-features = false }
+futures03 = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["async-await", "io-compat", "compat"] }
+futures = "0.1.28"
+
+
+[[bin]]
+name = "server"
+path = "src/server.rs"
+
+[[bin]]
+name = "client"
+path = "src/client.rs"

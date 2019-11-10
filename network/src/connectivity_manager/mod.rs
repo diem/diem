@@ -219,8 +219,8 @@ where
             .peer_addresses
             .iter()
             .filter(|(peer_id, addrs)| {
-                eligible.contains_key(peer_id)  // The node is eligible to be dialed.
-                    && self.connected.get(peer_id).is_none() // The node is not already connected.
+                //eligible.contains_key(peer_id)  // The node is eligible to be dialed.
+                self.connected.get(peer_id).is_none() // The node is not already connected.
                     && self.dial_queue.get(peer_id).is_none() // There is no pending dial to this node.
                     && !addrs.is_empty() // There is an address to dial.
             })
@@ -313,7 +313,7 @@ where
         // Cancel dials to peers that are no longer eligible.
         self.cancel_stale_dials().await;
         // Disconnect from connected peers that are no longer eligible.
-        self.close_stale_connections().await;
+        //self.close_stale_connections().await;
         // Dial peers which are eligible but are neither connected nor queued for dialing in the
         // future.
         self.dial_eligible_peers(pending_dials).await;

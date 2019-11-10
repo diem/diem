@@ -3,6 +3,7 @@ use failure::prelude::*;
 use futures::{executor::block_on, prelude::*};
 use grpc_helpers::{spawn_service_thread_with_drop_closure, ServerHandle};
 use libra_config::config::NodeConfig;
+use libra_crypto::HashValue;
 use libra_types::proof::AccumulatorConsistencyProof;
 use libra_types::{
     account_address::AccountAddress,
@@ -166,6 +167,17 @@ impl StorageRead for StorageService {
         block_on(self.get_startup_info_async())
     }
 
+    fn get_history_startup_info_by_block_id(
+        &self,
+        block_id: HashValue,
+    ) -> Result<Option<storage_proto::StartupInfo>> {
+        let info = self
+            .get_history_startup_info_by_block_id_inner(&block_id)
+            .and_then(|resp| storage_proto::GetStartupInfoResponse::try_from(resp))
+            .unwrap();
+        Ok(info.info)
+    }
+
     fn get_startup_info_async(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Option<storage_proto::StartupInfo>>> + Send>> {
@@ -227,5 +239,10 @@ impl StorageWrite for StorageService {
             Ok(())
         }
             .boxed()
+    }
+
+    fn rollback_by_block_id(&self, block_id: HashValue) {
+        self.rollback_by_block_id_inner(&block_id)
+            .expect("rollback failed.");
     }
 }

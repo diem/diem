@@ -27,7 +27,7 @@ use crate::{
     ProtocolId,
 };
 use channel;
-use futures::StreamExt;
+use futures::{lock::Mutex, StreamExt};
 use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::*,
@@ -38,7 +38,7 @@ use libra_types::{validator_signer::ValidatorSigner, PeerId};
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
 use parity_multiaddr::Multiaddr;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
     time::Duration,
 };
@@ -496,6 +496,7 @@ impl NetworkBuilder {
             &counters::PENDING_PEER_MANAGER_NET_NOTIFICATIONS,
         );
         peer_event_handlers.push(pm_net_notifs_tx);
+        let peer_ids = Arc::new(Mutex::new(HashSet::new()));
         let peer_mgr = PeerManager::new(
             transport,
             self.executor.clone(),
@@ -504,6 +505,7 @@ impl NetworkBuilder {
             pm_reqs_rx,
             protocol_handlers,
             peer_event_handlers,
+            peer_ids.clone(),
         );
         let listen_addr = peer_mgr.listen_addr().clone();
         self.executor.spawn(peer_mgr.start());
@@ -525,6 +527,7 @@ impl NetworkBuilder {
             self.max_concurrent_network_reqs,
             self.max_concurrent_network_notifs,
             self.channel_size,
+            peer_ids,
         );
         (listen_addr, Box::new(validator_network))
     }

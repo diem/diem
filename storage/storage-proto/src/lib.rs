@@ -462,6 +462,62 @@ impl Into<Vec<LedgerInfoWithSignatures>> for GetLatestLedgerInfosPerEpochRespons
     }
 }
 
+/// Helper to construct and parse [`proto::storage::RollbackRequest`]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RollbackRequest {
+    pub block_id: HashValue,
+}
+
+impl TryFrom<crate::proto::storage::RollbackRequest> for RollbackRequest {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::RollbackRequest) -> Result<Self> {
+        let block_id = HashValue::from_slice(&proto.block_id)?;
+        Ok(Self { block_id })
+    }
+}
+
+impl From<RollbackRequest> for crate::proto::storage::RollbackRequest {
+    fn from(response: RollbackRequest) -> Self {
+        Self {
+            block_id: response.block_id.to_vec(),
+        }
+    }
+}
+
+/// Helper to construct and parse [`proto::storage::RollbackResponse`]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RollbackResponse {}
+
+/// Helper to construct and parse [`proto::storage::GetHistoryStartupInfoByBlockIdRequest`]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GetHistoryStartupInfoByBlockIdRequest {
+    pub block_id: HashValue,
+}
+
+impl TryFrom<crate::proto::storage::GetHistoryStartupInfoByBlockIdRequest>
+    for GetHistoryStartupInfoByBlockIdRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        proto: crate::proto::storage::GetHistoryStartupInfoByBlockIdRequest,
+    ) -> Result<Self> {
+        let block_id = HashValue::from_slice(&proto.block_id)?;
+        Ok(Self { block_id })
+    }
+}
+
+impl From<GetHistoryStartupInfoByBlockIdRequest>
+    for crate::proto::storage::GetHistoryStartupInfoByBlockIdRequest
+{
+    fn from(request: GetHistoryStartupInfoByBlockIdRequest) -> Self {
+        Self {
+            block_id: request.block_id.to_vec(),
+        }
+    }
+}
+
 pub mod prelude {
     pub use super::*;
 }

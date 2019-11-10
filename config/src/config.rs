@@ -33,6 +33,7 @@ use std::{
     time::Duration,
 };
 use toml;
+use crate::config::ConsensusType::{PBFT, POW};
 
 #[cfg(test)]
 #[path = "unit_tests/config_test.rs"]
@@ -417,6 +418,12 @@ pub struct ConsensusConfig {
     #[serde(skip)]
     pub consensus_peers: ConsensusPeersConfig,
     pub consensus_peers_file: PathBuf,
+    pub consensus_type: String,
+}
+
+pub enum ConsensusType {
+    PBFT,
+    POW,
 }
 
 impl Default for ConsensusConfig {
@@ -431,6 +438,7 @@ impl Default for ConsensusConfig {
             consensus_keypair_file: PathBuf::from("consensus_keypair.config.toml"),
             consensus_peers: ConsensusPeersConfig::default(),
             consensus_peers_file: PathBuf::from("consensus_peers.config.toml"),
+            consensus_type: "pow".to_string(),
         }
     }
 }
@@ -466,6 +474,14 @@ impl ConsensusConfig {
             "rotating_proposer" => RotatingProposer,
             "multiple_ordered_proposers" => MultipleOrderedProposers,
             &_ => unimplemented!("Invalid proposer type: {}", self.proposer_type),
+        }
+    }
+
+    pub fn get_consensus_type(&self) -> ConsensusType {
+        match self.consensus_type.as_str() {
+            "pbft" => PBFT,
+            "pow" => POW,
+            &_ => unimplemented!("Invalid consensus type: {}", self.consensus_type),
         }
     }
 
@@ -675,9 +691,15 @@ impl NodeConfigHelpers {
     /// consensus_peers_file, network_keypairs_file, consensus_keypair_file, and seed_peers_file
     /// set. It is expected that the callee will provide these.
     pub fn get_single_node_test_config(random_ports: bool) -> NodeConfig {
-        Self::get_single_node_test_config_publish_options(
+        Self::get_single_node_test_config_times(random_ports, 0)
+    }
+
+    /// times
+    pub fn get_single_node_test_config_times(random_ports: bool, times: usize) -> NodeConfig {
+        Self::get_single_node_test_config_publish_options_times(
             random_ports,
             Some(VMPublishingOption::Open),
+            times,
         )
     }
 
@@ -688,6 +710,14 @@ impl NodeConfigHelpers {
     pub fn get_single_node_test_config_publish_options(
         random_ports: bool,
         publishing_options: Option<VMPublishingOption>,
+    ) -> NodeConfig {
+        Self::get_single_node_test_config_publish_options_times(random_ports, publishing_options, 0)
+    }
+
+    pub fn get_single_node_test_config_publish_options_times(
+        random_ports: bool,
+        publishing_options: Option<VMPublishingOption>,
+        times: usize,
     ) -> NodeConfig {
         let config_string = String::from_utf8_lossy(CONFIG_TEMPLATE);
         let mut config =
@@ -704,7 +734,7 @@ impl NodeConfigHelpers {
             config.vm_config.publishing_options = vm_publishing_option;
         }
         let (mut private_keys, test_consensus_peers, test_network_peers) =
-            ConfigHelpers::gen_validator_nodes(1, None);
+            ConfigHelpers::gen_validator_nodes_times(1, None, times);
         let peer_id = *private_keys.keys().nth(0).unwrap();
         let (
             ConsensusPrivateKey {

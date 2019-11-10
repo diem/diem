@@ -165,7 +165,6 @@ impl KeyFactory {
 
         Ok(sk)
     }
-
 }
 
 /// Seed is the output of a one-way function, which accepts a Mnemonic as input

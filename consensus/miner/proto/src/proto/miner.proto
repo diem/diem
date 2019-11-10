@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package miner;
+
+service MinerProxy{
+  rpc GetMineCtx(MineCtxRequest) returns (MineCtxResponse) {};
+  rpc Mined(MinedBlockRequest) returns (MinedBlockResponse) {}
+}
+
+message MineCtxRequest{}
+
+message MineCtxResponse{
+    bytes header=1;
+    uint64 nonce=2;
+}
+
+message MinedBlockRequest{
+    MineCtxResponse mine_ctx=1;
+    bytes proof=2;
+}
+
+message MinedBlockResponse{
+    bool accept=1;
+}

@@ -340,9 +340,10 @@ where
                 }
                 _ => {
                     info!(
-                        "Received updated note for peer: {} from peer: {}",
+                        "Received updated note for peer: {} from peer: {} myself is: {}",
                         note.peer_id.short_str(),
-                        remote_peer.short_str()
+                        remote_peer.short_str(),
+                        self_peer_id.short_str(),
                     );
                     // We can never receive a note with a higher epoch number on us than what we
                     // ourselves have broadcasted.
@@ -561,24 +562,24 @@ fn verify_signature(
     signature: &[u8],
     msg: &[u8],
 ) -> Result<(), NetworkError> {
-    let verifier = SignatureValidator::new_with_quorum_voting_power(
-        trusted_peers
-            .read()
-            .unwrap()
-            .iter()
-            .map(|(peer_id, network_public_keys)| {
-                (
-                    *peer_id,
-                    SignatureInfo::new(network_public_keys.signing_public_key.clone(), 1),
-                )
-            })
-            .collect(),
-        1, /* quorum size */
-    )
-    .expect("Quorum size should be valid.");
-    let signature = Ed25519Signature::try_from(signature)
-        .map_err(|err| err.context(NetworkErrorKind::SignatureError))?;
-    verifier.verify_signature(signer, get_hash(msg), &signature)?;
+    //    let verifier = SignatureValidator::new_with_quorum_voting_power(
+    //        trusted_peers
+    //            .read()
+    //            .unwrap()
+    //            .iter()
+    //            .map(|(peer_id, network_public_keys)| {
+    //                (
+    //                    *peer_id,
+    //                    SignatureInfo::new(network_public_keys.signing_public_key.clone(), 1),
+    //                )
+    //            })
+    //            .collect(),
+    //        1, /* quorum size */
+    //    )
+    //    .expect("Quorum size should be valid.");
+    //    let signature = Ed25519Signature::try_from(signature)
+    //        .map_err(|err| err.context(NetworkErrorKind::SignatureError))?;
+    //    verifier.verify_signature(signer, get_hash(msg), &signature)?;
     Ok(())
 }
 

@@ -436,6 +436,42 @@ where
         resp_receiver
     }
 
+    /// Executes a block.
+    pub fn execute_block_by_id(
+        &self,
+        transactions: Vec<Transaction>,
+        grandpa_id: HashValue,
+        parent_id: HashValue,
+        id: HashValue,
+    ) -> oneshot::Receiver<Result<ProcessedVMOutput>> {
+        debug!(
+            "Received request to execute block. Grandpa id: {:x}. Parent id: {:x}. Id: {:x}.",
+            grandpa_id, parent_id, id
+        );
+
+        let (resp_sender, resp_receiver) = oneshot::channel();
+        match self
+            .command_sender
+            .lock()
+            .expect("Failed to lock mutex.")
+            .as_ref()
+        {
+            Some(sender) => sender
+                .send(Command::ExecuteBlockById {
+                    transactions,
+                    grandpa_id,
+                    parent_id,
+                    id,
+                    resp_sender,
+                })
+                .expect("Did block processor thread panic?"),
+            None => resp_sender
+                .send(Err(format_err!("Executor is shutting down.")))
+                .expect("Failed to send error message."),
+        }
+        resp_receiver
+    }
+
     /// Commits a block and all its ancestors within a block batch. Returns `Ok(())` if successful.
     pub fn commit_blocks(
         &self,
@@ -510,6 +546,28 @@ where
     pub fn committed_trees(&self) -> ExecutedTrees {
         (*self.committed_trees.lock().unwrap()).clone()
     }
+
+    /// Rollback
+    pub fn rollback_by_block_id(&self, block_id: HashValue) -> oneshot::Receiver<Result<()>> {
+        let (resp_sender, resp_receiver) = oneshot::channel();
+        match self
+            .command_sender
+            .lock()
+            .expect("Failed to lock mutex.")
+            .as_ref()
+        {
+            Some(sender) => sender
+                .send(Command::RollbackBlock {
+                    block_id,
+                    resp_sender,
+                })
+                .expect("Did block processor thread panic?"),
+            None => resp_sender
+                .send(Err(format_err!("Executor is shutting down.")))
+                .expect("Failed to send error message."),
+        }
+        resp_receiver
+    }
 }
 
 impl<V> Drop for Executor<V> {
@@ -576,12 +634,23 @@ enum Command {
         executable_block: ExecutableBlock,
         resp_sender: oneshot::Sender<Result<ProcessedVMOutput>>,
     },
+    ExecuteBlockById {
+        transactions: Vec<Transaction>,
+        grandpa_id: HashValue,
+        parent_id: HashValue,
+        id: HashValue,
+        resp_sender: oneshot::Sender<Result<ProcessedVMOutput>>,
+    },
     CommitBlockBatch {
         committable_block_batch: CommittableBlockBatch,
         resp_sender: oneshot::Sender<Result<()>>,
     },
     ExecuteAndCommitChunk {
         chunk: Chunk,
+        resp_sender: oneshot::Sender<Result<()>>,
+    },
+    RollbackBlock {
+        block_id: HashValue,
         resp_sender: oneshot::Sender<Result<()>>,
     },
 }
@@ -641,5 +710,18 @@ impl ExecutedTrees {
 
     pub fn new_empty() -> ExecutedTrees {
         Self::new(*SPARSE_MERKLE_PLACEHOLDER_HASH, vec![], 0)
+    }
+
+    /// Reset ExecutedTrees
+    pub fn reset(
+        &mut self,
+        state_tree: Arc<SparseMerkleTree>,
+        transaction_accumulator: Arc<InMemoryAccumulator<TransactionAccumulatorHasher>>,
+    ) {
+        let mut executed_trees = ExecutedTrees {
+            state_tree,
+            transaction_accumulator,
+        };
+        std::mem::swap(self, &mut executed_trees);
     }
 }
