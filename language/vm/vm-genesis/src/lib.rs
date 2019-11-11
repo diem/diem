@@ -292,7 +292,7 @@ pub fn encode_genesis_transaction_with_validator(
                     vec![],
                 )
                 .unwrap();
-            for validator_keys in validator_set.payload() {
+            for validator_keys in validator_set.payload().iter().rev() {
                 // First, add a ValidatorConfig resource under each account
                 let validator_address = *validator_keys.account_address();
                 txn_executor.create_account(validator_address).unwrap();
@@ -378,7 +378,6 @@ pub fn encode_genesis_transaction_with_validator(
                 "Expected sequence number 0 for validator set change event but got {}",
                 validator_set_change_event.sequence_number()
             );
-
             // (4) It should emit the validator set we fed into the genesis tx
             assert_eq!(
                 ValidatorSet::from_bytes(validator_set_change_event.event_data()).unwrap(),

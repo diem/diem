@@ -65,8 +65,7 @@ main() {
     return;
 }
 
-// check: ContractEvent {
-// TODO: check for reconfiguration event type once we have it
+// check: ValidatorSetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -124,15 +123,16 @@ main() {
     let info: LibraSystem.ValidatorInfo;
 
     LibraSystem.block_prologue(4, h"aa", h"bb", {{vivian}});
-    // check that the validator set contains Vivian's new key
-    info = LibraSystem.get_ith_validator_info(0);
-    assert(*LibraSystem.get_consensus_pubkey(&info) == h"80", 15);
     // check that the validator set contains Viola's new key
+    info = LibraSystem.get_ith_validator_info(0);
+    assert(*LibraSystem.get_address(&info) == {{viola}}, 14);
+    assert(*LibraSystem.get_consensus_pubkey(&info) == h"80", 15);
+    // check that the validator set contains Vivian's new key
     info = LibraSystem.get_ith_validator_info(1);
-    assert(*LibraSystem.get_consensus_pubkey(&info) == h"90", 16);
+    assert(*LibraSystem.get_address(&info) == {{vivian}}, 16);
+    assert(*LibraSystem.get_consensus_pubkey(&info) == h"90", 17);
     return;
 }
 
-// check: ContractEvent {
-// TODO: check for reconfiguration event type once we have it
+// check: ValidatorSetChangeEvent
 // check: EXECUTED

@@ -401,25 +401,29 @@ procedure {:inline 1} Unpack_LibraSystem_ValidatorSetChangeEvent(v: Value) retur
 const unique LibraSystem_ValidatorSet: TypeName;
 const LibraSystem_ValidatorSet_validators: FieldName;
 axiom LibraSystem_ValidatorSet_validators == 0;
+const LibraSystem_ValidatorSet_additions: FieldName;
+axiom LibraSystem_ValidatorSet_additions == 1;
 const LibraSystem_ValidatorSet_change_events: FieldName;
-axiom LibraSystem_ValidatorSet_change_events == 1;
+axiom LibraSystem_ValidatorSet_change_events == 2;
 function LibraSystem_ValidatorSet_type_value(): TypeValue {
-    StructType(LibraSystem_ValidatorSet, TypeValueArray(DefaultTypeMap[0 := Vector_T_type_value(LibraSystem_ValidatorInfo_type_value())][1 := LibraAccount_EventHandle_type_value(LibraSystem_ValidatorSetChangeEvent_type_value())], 2))
+    StructType(LibraSystem_ValidatorSet, TypeValueArray(DefaultTypeMap[0 := Vector_T_type_value(LibraSystem_ValidatorInfo_type_value())][1 := Vector_T_type_value(AddressType())][2 := LibraAccount_EventHandle_type_value(LibraSystem_ValidatorSetChangeEvent_type_value())], 3))
 }
 
-procedure {:inline 1} Pack_LibraSystem_ValidatorSet(v0: Value, v1: Value) returns (v: Value)
+procedure {:inline 1} Pack_LibraSystem_ValidatorSet(v0: Value, v1: Value, v2: Value) returns (v: Value)
 {
     assume has_type(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()), v0);
-    assume has_type(LibraAccount_EventHandle_type_value(LibraSystem_ValidatorSetChangeEvent_type_value()), v1);
-    v := Struct(ValueArray(DefaultIntMap[LibraSystem_ValidatorSet_validators := v0][LibraSystem_ValidatorSet_change_events := v1], 2));
+    assume has_type(Vector_T_type_value(AddressType()), v1);
+    assume has_type(LibraAccount_EventHandle_type_value(LibraSystem_ValidatorSetChangeEvent_type_value()), v2);
+    v := Struct(ValueArray(DefaultIntMap[LibraSystem_ValidatorSet_validators := v0][LibraSystem_ValidatorSet_additions := v1][LibraSystem_ValidatorSet_change_events := v2], 3));
     assume has_type(LibraSystem_ValidatorSet_type_value(), v);
 }
 
-procedure {:inline 1} Unpack_LibraSystem_ValidatorSet(v: Value) returns (v0: Value, v1: Value)
+procedure {:inline 1} Unpack_LibraSystem_ValidatorSet(v: Value) returns (v0: Value, v1: Value, v2: Value)
 {
     assert is#Struct(v);
     v0 := smap(v)[LibraSystem_ValidatorSet_validators];
-    v1 := smap(v)[LibraSystem_ValidatorSet_change_events];
+    v1 := smap(v)[LibraSystem_ValidatorSet_additions];
+    v2 := smap(v)[LibraSystem_ValidatorSet_change_events];
 }
 
 const unique LibraSystem_BlockMetadata: TypeName;
@@ -5924,8 +5928,9 @@ procedure {:inline 1} LibraSystem_initialize_validator_set () returns ()
     var t3: Value; // BooleanType()
     var t4: Value; // IntegerType()
     var t5: Value; // Vector_T_type_value(LibraSystem_ValidatorInfo_type_value())
-    var t6: Value; // LibraAccount_EventHandle_type_value(LibraSystem_ValidatorSetChangeEvent_type_value())
-    var t7: Value; // LibraSystem_ValidatorSet_type_value()
+    var t6: Value; // Vector_T_type_value(AddressType())
+    var t7: Value; // LibraAccount_EventHandle_type_value(LibraSystem_ValidatorSetChangeEvent_type_value())
+    var t8: Value; // LibraSystem_ValidatorSet_type_value()
 
     var tmp: Value;
     var old_size: int;
@@ -5934,7 +5939,7 @@ procedure {:inline 1} LibraSystem_initialize_validator_set () returns ()
     // assume arguments are of correct types
 
     old_size := m_size;
-    m_size := m_size + 8;
+    m_size := m_size + 9;
 
     // bytecode translation starts here
     call tmp := GetTxnSenderAddress();
@@ -5963,19 +5968,26 @@ Label_7:
 
     m := Memory(domain#Memory(m)[old_size+5 := true], contents#Memory(m)[old_size+5 := t5]);
 
-    call t6 := LibraAccount_new_event_handle(LibraSystem_ValidatorSetChangeEvent_type_value());
-    assume has_type(LibraAccount_EventHandle_type_value(LibraSystem_ValidatorSetChangeEvent_type_value()), t6);
+    call t6 := Vector_empty(AddressType());
+    assume has_type(Vector_T_type_value(AddressType()), t6);
 
     m := Memory(domain#Memory(m)[old_size+6 := true], contents#Memory(m)[old_size+6 := t6]);
 
+    call t7 := LibraAccount_new_event_handle(LibraSystem_ValidatorSetChangeEvent_type_value());
+    assume has_type(LibraAccount_EventHandle_type_value(LibraSystem_ValidatorSetChangeEvent_type_value()), t7);
+
+    m := Memory(domain#Memory(m)[old_size+7 := true], contents#Memory(m)[old_size+7 := t7]);
+
     assume has_type(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()), contents#Memory(m)[old_size+5]);
 
-    assume has_type(LibraAccount_EventHandle_type_value(LibraSystem_ValidatorSetChangeEvent_type_value()), contents#Memory(m)[old_size+6]);
+    assume has_type(Vector_T_type_value(AddressType()), contents#Memory(m)[old_size+6]);
 
-    call tmp := Pack_LibraSystem_ValidatorSet(contents#Memory(m)[old_size+5], contents#Memory(m)[old_size+6]);
-    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+    assume has_type(LibraAccount_EventHandle_type_value(LibraSystem_ValidatorSetChangeEvent_type_value()), contents#Memory(m)[old_size+7]);
 
-    call MoveToSender(LibraSystem_ValidatorSet_type_value(), contents#Memory(m)[old_size+7]);
+    call tmp := Pack_LibraSystem_ValidatorSet(contents#Memory(m)[old_size+5], contents#Memory(m)[old_size+6], contents#Memory(m)[old_size+7]);
+    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+
+    call MoveToSender(LibraSystem_ValidatorSet_type_value(), contents#Memory(m)[old_size+8]);
 
     return;
 
@@ -6062,6 +6074,38 @@ Label_7:
 procedure LibraSystem_initialize_block_metadata_verify () returns ()
 {
     call LibraSystem_initialize_block_metadata();
+}
+
+procedure {:inline 1} LibraSystem_get_address (arg0: Reference) returns (ret0: Reference)
+{
+    // declare local variables
+    var t0: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
+    var t1: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
+    var t2: Reference; // ReferenceType(AddressType())
+
+    var tmp: Value;
+    var old_size: int;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    old_size := m_size;
+    m_size := m_size + 3;
+    t0 := arg0;
+
+    // bytecode translation starts here
+    call t1 := CopyOrMoveRef(t0);
+
+    call t2 := BorrowField(t1, LibraSystem_ValidatorInfo_addr);
+
+    ret0 := t2;
+    return;
+
+}
+
+procedure LibraSystem_get_address_verify (arg0: Reference) returns (ret0: Reference)
+{
+    call ret0 := LibraSystem_get_address(arg0);
 }
 
 procedure {:inline 1} LibraSystem_get_consensus_pubkey (arg0: Reference) returns (ret0: Reference)
@@ -6620,43 +6664,179 @@ procedure LibraSystem_validator_set_size_verify () returns (ret0: Value)
     call ret0 := LibraSystem_validator_set_size();
 }
 
+procedure {:inline 1} LibraSystem_is_validator_ (arg0: Reference, arg1: Reference) returns (ret0: Value)
+{
+    // declare local variables
+    var t0: Reference; // ReferenceType(AddressType())
+    var t1: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t2: Value; // IntegerType()
+    var t3: Value; // IntegerType()
+    var t4: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
+    var t5: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t6: Value; // IntegerType()
+    var t7: Value; // IntegerType()
+    var t8: Value; // IntegerType()
+    var t9: Value; // BooleanType()
+    var t10: Value; // BooleanType()
+    var t11: Value; // IntegerType()
+    var t12: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t13: Value; // IntegerType()
+    var t14: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
+    var t15: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
+    var t16: Reference; // ReferenceType(AddressType())
+    var t17: Reference; // ReferenceType(AddressType())
+    var t18: Value; // BooleanType()
+    var t19: Value; // BooleanType()
+    var t20: Value; // IntegerType()
+    var t21: Value; // IntegerType()
+    var t22: Value; // IntegerType()
+    var t23: Value; // IntegerType()
+    var t24: Value; // IntegerType()
+    var t25: Value; // BooleanType()
+    var t26: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t27: Value; // IntegerType()
+    var t28: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
+    var t29: Value; // BooleanType()
+
+    var tmp: Value;
+    var old_size: int;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+
+    old_size := m_size;
+    m_size := m_size + 30;
+    t0 := arg0;
+    t1 := arg1;
+
+    // bytecode translation starts here
+    call t5 := CopyOrMoveRef(t1);
+
+    call t6 := Vector_length(LibraSystem_ValidatorInfo_type_value(), t5);
+    assume has_type(IntegerType(), t6);
+
+    m := Memory(domain#Memory(m)[old_size+6 := true], contents#Memory(m)[old_size+6 := t6]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
+    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
+    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+
+    call tmp := LdConst(0);
+    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+
+    tmp := Boolean(is_equal(IntegerType(), contents#Memory(m)[old_size+7], contents#Memory(m)[old_size+8]));
+    m := Memory(domain#Memory(m)[9+old_size := true], contents#Memory(m)[9+old_size := tmp]);
+
+    tmp := contents#Memory(m)[old_size + 9];
+    if (!b#Boolean(tmp)) { goto Label_9; }
+
+    call tmp := LdFalse();
+    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
+
+    ret0 := contents#Memory(m)[old_size+10];
+    return;
+
+Label_9:
+    call tmp := LdConst(0);
+    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+11]);
+    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+
+    call t12 := CopyOrMoveRef(t1);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
+    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
+
+    call t14 := Vector_borrow(LibraSystem_ValidatorInfo_type_value(), t12, contents#Memory(m)[old_size+13]);
+
+
+    call t4 := CopyOrMoveRef(t14);
+
+Label_15:
+    call t15 := CopyOrMoveRef(t4);
+
+    call t16 := BorrowField(t15, LibraSystem_ValidatorInfo_addr);
+
+    call t17 := CopyOrMoveRef(t0);
+
+    tmp := Boolean(is_equal(ReferenceType(AddressType()), contents#Memory(m)[old_size+16], contents#Memory(m)[old_size+17]));
+    m := Memory(domain#Memory(m)[18+old_size := true], contents#Memory(m)[18+old_size := tmp]);
+
+    tmp := contents#Memory(m)[old_size + 18];
+    if (!b#Boolean(tmp)) { goto Label_22; }
+
+    call tmp := LdTrue();
+    m := Memory(domain#Memory(m)[19+old_size := true], contents#Memory(m)[19+old_size := tmp]);
+
+    ret0 := contents#Memory(m)[old_size+19];
+    return;
+
+Label_22:
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
+    m := Memory(domain#Memory(m)[20+old_size := true], contents#Memory(m)[20+old_size := tmp]);
+
+    call tmp := LdConst(1);
+    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
+
+    call tmp := Add(contents#Memory(m)[old_size+20], contents#Memory(m)[old_size+21]);
+    m := Memory(domain#Memory(m)[22+old_size := true], contents#Memory(m)[22+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+22]);
+    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
+    m := Memory(domain#Memory(m)[23+old_size := true], contents#Memory(m)[23+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
+    m := Memory(domain#Memory(m)[24+old_size := true], contents#Memory(m)[24+old_size := tmp]);
+
+    call tmp := Ge(contents#Memory(m)[old_size+23], contents#Memory(m)[old_size+24]);
+    m := Memory(domain#Memory(m)[25+old_size := true], contents#Memory(m)[25+old_size := tmp]);
+
+    tmp := contents#Memory(m)[old_size + 25];
+    if (!b#Boolean(tmp)) { goto Label_31; }
+
+    goto Label_36;
+
+Label_31:
+    call t26 := CopyOrMoveRef(t1);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
+    m := Memory(domain#Memory(m)[27+old_size := true], contents#Memory(m)[27+old_size := tmp]);
+
+    call t28 := Vector_borrow(LibraSystem_ValidatorInfo_type_value(), t26, contents#Memory(m)[old_size+27]);
+
+
+    call t4 := CopyOrMoveRef(t28);
+
+    goto Label_15;
+
+Label_36:
+    call tmp := LdFalse();
+    m := Memory(domain#Memory(m)[29+old_size := true], contents#Memory(m)[29+old_size := tmp]);
+
+    ret0 := contents#Memory(m)[old_size+29];
+    return;
+
+}
+
+procedure LibraSystem_is_validator__verify (arg0: Reference, arg1: Reference) returns (ret0: Value)
+{
+    call ret0 := LibraSystem_is_validator_(arg0, arg1);
+}
+
 procedure {:inline 1} LibraSystem_is_validator (arg0: Value) returns (ret0: Value)
 {
     // declare local variables
     var t0: Value; // AddressType()
-    var t1: Value; // IntegerType()
-    var t2: Value; // IntegerType()
-    var t3: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
-    var t4: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
-    var t5: Value; // AddressType()
-    var t6: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
-    var t7: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
-    var t8: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
-    var t9: Value; // IntegerType()
-    var t10: Value; // IntegerType()
-    var t11: Value; // IntegerType()
-    var t12: Value; // BooleanType()
-    var t13: Value; // BooleanType()
-    var t14: Value; // IntegerType()
-    var t15: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
-    var t16: Value; // IntegerType()
-    var t17: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
-    var t18: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
-    var t19: Reference; // ReferenceType(AddressType())
-    var t20: Value; // AddressType()
-    var t21: Value; // AddressType()
-    var t22: Value; // BooleanType()
-    var t23: Value; // BooleanType()
-    var t24: Value; // IntegerType()
-    var t25: Value; // IntegerType()
-    var t26: Value; // IntegerType()
-    var t27: Value; // IntegerType()
-    var t28: Value; // IntegerType()
-    var t29: Value; // BooleanType()
-    var t30: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
-    var t31: Value; // IntegerType()
-    var t32: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
-    var t33: Value; // BooleanType()
+    var t1: Reference; // ReferenceType(AddressType())
+    var t2: Value; // AddressType()
+    var t3: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
+    var t4: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t5: Value; // BooleanType()
 
     var tmp: Value;
     var old_size: int;
@@ -6666,134 +6846,25 @@ procedure {:inline 1} LibraSystem_is_validator (arg0: Value) returns (ret0: Valu
     assume has_type(AddressType(), arg0);
 
     old_size := m_size;
-    m_size := m_size + 34;
+    m_size := m_size + 6;
     m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
 
     // bytecode translation starts here
+    call t1 := BorrowLoc(old_size+0);
+
     call tmp := LdAddr(472);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
-
-    call t6 := BorrowGlobal(contents#Memory(m)[old_size+5], LibraSystem_ValidatorSet_type_value());
-
-    call t7 := BorrowField(t6, LibraSystem_ValidatorSet_validators);
-
-    call t3 := CopyOrMoveRef(t7);
-
-    call t8 := CopyOrMoveRef(t3);
-
-    call t9 := Vector_length(LibraSystem_ValidatorInfo_type_value(), t8);
-    assume has_type(IntegerType(), t9);
-
-    m := Memory(domain#Memory(m)[old_size+9 := true], contents#Memory(m)[old_size+9 := t9]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+9]);
-    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
-
-    call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
-
-    tmp := Boolean(is_equal(IntegerType(), contents#Memory(m)[old_size+10], contents#Memory(m)[old_size+11]));
-    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
-
-    tmp := contents#Memory(m)[old_size + 12];
-    if (!b#Boolean(tmp)) { goto Label_13; }
-
-    call tmp := LdFalse();
-    m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
-
-    ret0 := contents#Memory(m)[old_size+13];
-    return;
-
-Label_13:
-    call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+14]);
     m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
 
-    call t15 := CopyOrMoveRef(t3);
+    call t3 := BorrowGlobal(contents#Memory(m)[old_size+2], LibraSystem_ValidatorSet_type_value());
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[16+old_size := true], contents#Memory(m)[16+old_size := tmp]);
+    call t4 := BorrowField(t3, LibraSystem_ValidatorSet_validators);
 
-    call t17 := Vector_borrow(LibraSystem_ValidatorInfo_type_value(), t15, contents#Memory(m)[old_size+16]);
+    call t5 := LibraSystem_is_validator_(t1, t4);
+    assume has_type(BooleanType(), t5);
 
+    m := Memory(domain#Memory(m)[old_size+5 := true], contents#Memory(m)[old_size+5 := t5]);
 
-    call t4 := CopyOrMoveRef(t17);
-
-Label_19:
-    call t18 := CopyOrMoveRef(t4);
-
-    call t19 := BorrowField(t18, LibraSystem_ValidatorInfo_addr);
-
-    call tmp := ReadRef(t19);
-    assume has_type(AddressType(), tmp);
-
-    m := Memory(domain#Memory(m)[20+old_size := true], contents#Memory(m)[20+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
-
-    tmp := Boolean(is_equal(AddressType(), contents#Memory(m)[old_size+20], contents#Memory(m)[old_size+21]));
-    m := Memory(domain#Memory(m)[22+old_size := true], contents#Memory(m)[22+old_size := tmp]);
-
-    tmp := contents#Memory(m)[old_size + 22];
-    if (!b#Boolean(tmp)) { goto Label_27; }
-
-    call tmp := LdTrue();
-    m := Memory(domain#Memory(m)[23+old_size := true], contents#Memory(m)[23+old_size := tmp]);
-
-    ret0 := contents#Memory(m)[old_size+23];
-    return;
-
-Label_27:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[24+old_size := true], contents#Memory(m)[24+old_size := tmp]);
-
-    call tmp := LdConst(1);
-    m := Memory(domain#Memory(m)[25+old_size := true], contents#Memory(m)[25+old_size := tmp]);
-
-    call tmp := Add(contents#Memory(m)[old_size+24], contents#Memory(m)[old_size+25]);
-    m := Memory(domain#Memory(m)[26+old_size := true], contents#Memory(m)[26+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+26]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[27+old_size := true], contents#Memory(m)[27+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+1]);
-    m := Memory(domain#Memory(m)[28+old_size := true], contents#Memory(m)[28+old_size := tmp]);
-
-    call tmp := Ge(contents#Memory(m)[old_size+27], contents#Memory(m)[old_size+28]);
-    m := Memory(domain#Memory(m)[29+old_size := true], contents#Memory(m)[29+old_size := tmp]);
-
-    tmp := contents#Memory(m)[old_size + 29];
-    if (!b#Boolean(tmp)) { goto Label_36; }
-
-    goto Label_41;
-
-Label_36:
-    call t30 := CopyOrMoveRef(t3);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+2]);
-    m := Memory(domain#Memory(m)[31+old_size := true], contents#Memory(m)[31+old_size := tmp]);
-
-    call t32 := Vector_borrow(LibraSystem_ValidatorInfo_type_value(), t30, contents#Memory(m)[old_size+31]);
-
-
-    call t4 := CopyOrMoveRef(t32);
-
-    goto Label_19;
-
-Label_41:
-    call tmp := LdFalse();
-    m := Memory(domain#Memory(m)[33+old_size := true], contents#Memory(m)[33+old_size := tmp]);
-
-    ret0 := contents#Memory(m)[old_size+33];
+    ret0 := contents#Memory(m)[old_size+5];
     return;
 
 }
@@ -6808,20 +6879,36 @@ procedure {:inline 1} LibraSystem_add_validator (arg0: Value) returns ()
     // declare local variables
     var t0: Value; // AddressType()
     var t1: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
-    var t2: Value; // AddressType()
-    var t3: Value; // BooleanType()
-    var t4: Value; // BooleanType()
-    var t5: Value; // IntegerType()
-    var t6: Value; // AddressType()
-    var t7: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
-    var t8: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
-    var t9: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
-    var t10: Value; // AddressType()
-    var t11: Value; // ByteArrayType()
-    var t12: Value; // IntegerType()
-    var t13: Value; // ByteArrayType()
-    var t14: Value; // ByteArrayType()
-    var t15: Value; // LibraSystem_ValidatorInfo_type_value()
+    var t2: Reference; // ReferenceType(Vector_T_type_value(AddressType()))
+    var t3: Value; // AddressType()
+    var t4: Value; // AddressType()
+    var t5: Value; // BooleanType()
+    var t6: Value; // BooleanType()
+    var t7: Value; // IntegerType()
+    var t8: Value; // AddressType()
+    var t9: Value; // BooleanType()
+    var t10: Value; // BooleanType()
+    var t11: Value; // IntegerType()
+    var t12: Value; // AddressType()
+    var t13: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
+    var t14: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
+    var t15: Reference; // ReferenceType(Vector_T_type_value(AddressType()))
+    var t16: Reference; // ReferenceType(AddressType())
+    var t17: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
+    var t18: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t19: Value; // BooleanType()
+    var t20: Value; // BooleanType()
+    var t21: Value; // BooleanType()
+    var t22: Value; // IntegerType()
+    var t23: Reference; // ReferenceType(Vector_T_type_value(AddressType()))
+    var t24: Reference; // ReferenceType(Vector_T_type_value(AddressType()))
+    var t25: Reference; // ReferenceType(AddressType())
+    var t26: Value; // BooleanType()
+    var t27: Value; // BooleanType()
+    var t28: Value; // BooleanType()
+    var t29: Value; // IntegerType()
+    var t30: Reference; // ReferenceType(Vector_T_type_value(AddressType()))
+    var t31: Value; // AddressType()
 
     var tmp: Value;
     var old_size: int;
@@ -6831,67 +6918,122 @@ procedure {:inline 1} LibraSystem_add_validator (arg0: Value) returns ()
     assume has_type(AddressType(), arg0);
 
     old_size := m_size;
-    m_size := m_size + 16;
+    m_size := m_size + 32;
     m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
 
     // bytecode translation starts here
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
-    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+    call tmp := GetTxnSenderAddress();
+    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
 
-    call t3 := ValidatorConfig_has(contents#Memory(m)[old_size+2]);
-    assume has_type(BooleanType(), t3);
-
-    m := Memory(domain#Memory(m)[old_size+3 := true], contents#Memory(m)[old_size+3 := t3]);
-
-    call tmp := Not(contents#Memory(m)[old_size+3]);
+    call tmp := LdAddr(173345816);
     m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
 
-    tmp := contents#Memory(m)[old_size + 4];
-    if (!b#Boolean(tmp)) { goto Label_6; }
-
-    call tmp := LdConst(17);
+    tmp := Boolean(is_equal(AddressType(), contents#Memory(m)[old_size+3], contents#Memory(m)[old_size+4]));
     m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+
+    call tmp := Not(contents#Memory(m)[old_size+5]);
+    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+
+    tmp := contents#Memory(m)[old_size + 6];
+    if (!b#Boolean(tmp)) { goto Label_7; }
+
+    call tmp := LdConst(1);
+    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
 
     assert false;
 
-Label_6:
-    call tmp := LdAddr(472);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
-
-    call t7 := BorrowGlobal(contents#Memory(m)[old_size+6], LibraSystem_ValidatorSet_type_value());
-
-    call t1 := CopyOrMoveRef(t7);
-
-    call t8 := CopyOrMoveRef(t1);
-
-    call t9 := BorrowField(t8, LibraSystem_ValidatorSet_validators);
-
+Label_7:
     call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
+    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
+
+    call t9 := ValidatorConfig_has(contents#Memory(m)[old_size+8]);
+    assume has_type(BooleanType(), t9);
+
+    m := Memory(domain#Memory(m)[old_size+9 := true], contents#Memory(m)[old_size+9 := t9]);
+
+    call tmp := Not(contents#Memory(m)[old_size+9]);
     m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
 
-    // unimplemented instruction
+    tmp := contents#Memory(m)[old_size + 10];
+    if (!b#Boolean(tmp)) { goto Label_13; }
 
-    call tmp := LdConst(1);
+    call tmp := LdConst(17);
+    m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
+
+    assert false;
+
+Label_13:
+    call tmp := LdAddr(472);
     m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
 
-    // unimplemented instruction
+    call t13 := BorrowGlobal(contents#Memory(m)[old_size+12], LibraSystem_ValidatorSet_type_value());
 
-    // unimplemented instruction
+    call t1 := CopyOrMoveRef(t13);
 
-    assume has_type(AddressType(), contents#Memory(m)[old_size+10]);
+    call t14 := CopyOrMoveRef(t1);
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+11]);
+    call t15 := BorrowField(t14, LibraSystem_ValidatorSet_additions);
 
-    assume has_type(IntegerType(), contents#Memory(m)[old_size+12]);
+    call t2 := CopyOrMoveRef(t15);
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+13]);
+    call t16 := BorrowLoc(old_size+0);
 
-    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+14]);
+    call t17 := CopyOrMoveRef(t1);
 
-    call tmp := Pack_LibraSystem_ValidatorInfo(contents#Memory(m)[old_size+10], contents#Memory(m)[old_size+11], contents#Memory(m)[old_size+12], contents#Memory(m)[old_size+13], contents#Memory(m)[old_size+14]);
-    m := Memory(domain#Memory(m)[15+old_size := true], contents#Memory(m)[15+old_size := tmp]);
+    call t18 := BorrowField(t17, LibraSystem_ValidatorSet_validators);
 
-    call Vector_push_back(LibraSystem_ValidatorInfo_type_value(), t9, contents#Memory(m)[old_size+15]);
+    call t19 := LibraSystem_is_validator_(t16, t18);
+    assume has_type(BooleanType(), t19);
+
+    m := Memory(domain#Memory(m)[old_size+19 := true], contents#Memory(m)[old_size+19 := t19]);
+
+    call tmp := Not(contents#Memory(m)[old_size+19]);
+    m := Memory(domain#Memory(m)[20+old_size := true], contents#Memory(m)[20+old_size := tmp]);
+
+    call tmp := Not(contents#Memory(m)[old_size+20]);
+    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
+
+    tmp := contents#Memory(m)[old_size + 21];
+    if (!b#Boolean(tmp)) { goto Label_28; }
+
+    call tmp := LdConst(18);
+    m := Memory(domain#Memory(m)[22+old_size := true], contents#Memory(m)[22+old_size := tmp]);
+
+    assert false;
+
+Label_28:
+    call t23 := CopyOrMoveRef(t2);
+
+    call t24 := FreezeRef(t23);
+
+    call t25 := BorrowLoc(old_size+0);
+
+    call t26 := Vector_contains(AddressType(), t24, t25);
+    assume has_type(BooleanType(), t26);
+
+    m := Memory(domain#Memory(m)[old_size+26 := true], contents#Memory(m)[old_size+26 := t26]);
+
+    call tmp := Not(contents#Memory(m)[old_size+26]);
+    m := Memory(domain#Memory(m)[27+old_size := true], contents#Memory(m)[27+old_size := tmp]);
+
+    call tmp := Not(contents#Memory(m)[old_size+27]);
+    m := Memory(domain#Memory(m)[28+old_size := true], contents#Memory(m)[28+old_size := tmp]);
+
+    tmp := contents#Memory(m)[old_size + 28];
+    if (!b#Boolean(tmp)) { goto Label_37; }
+
+    call tmp := LdConst(19);
+    m := Memory(domain#Memory(m)[29+old_size := true], contents#Memory(m)[29+old_size := tmp]);
+
+    assert false;
+
+Label_37:
+    call t30 := CopyOrMoveRef(t2);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
+    m := Memory(domain#Memory(m)[31+old_size := true], contents#Memory(m)[31+old_size := tmp]);
+
+    call Vector_push_back(AddressType(), t30, contents#Memory(m)[old_size+31]);
 
     return;
 
@@ -7109,45 +7251,157 @@ procedure LibraSystem_copy_validator_info_verify (arg0: Reference) returns (ret0
     call ret0 := LibraSystem_copy_validator_info(arg0);
 }
 
+procedure {:inline 1} LibraSystem_make_info (arg0: Value) returns (ret0: Value)
+{
+    // declare local variables
+    var t0: Value; // AddressType()
+    var t1: Value; // ValidatorConfig_Config_type_value()
+    var t2: Value; // AddressType()
+    var t3: Value; // ValidatorConfig_Config_type_value()
+    var t4: Value; // AddressType()
+    var t5: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
+    var t6: Value; // ByteArrayType()
+    var t7: Value; // IntegerType()
+    var t8: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
+    var t9: Value; // ByteArrayType()
+    var t10: Reference; // ReferenceType(ValidatorConfig_Config_type_value())
+    var t11: Value; // ByteArrayType()
+    var t12: Value; // LibraSystem_ValidatorInfo_type_value()
+
+    var tmp: Value;
+    var old_size: int;
+    assume !abort_flag;
+
+    // assume arguments are of correct types
+    assume has_type(AddressType(), arg0);
+
+    old_size := m_size;
+    m_size := m_size + 13;
+    m := Memory(domain#Memory(m)[0+old_size := true], contents#Memory(m)[0+old_size :=  arg0]);
+
+    // bytecode translation starts here
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
+    m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
+
+    call t3 := ValidatorConfig_config(contents#Memory(m)[old_size+2]);
+    assume has_type(ValidatorConfig_Config_type_value(), t3);
+
+    m := Memory(domain#Memory(m)[old_size+3 := true], contents#Memory(m)[old_size+3 := t3]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
+    m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+0]);
+    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
+
+    call t5 := BorrowLoc(old_size+1);
+
+    call t6 := ValidatorConfig_consensus_pubkey(t5);
+    assume has_type(ByteArrayType(), t6);
+
+    m := Memory(domain#Memory(m)[old_size+6 := true], contents#Memory(m)[old_size+6 := t6]);
+
+    call tmp := LdConst(1);
+    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+
+    call t8 := BorrowLoc(old_size+1);
+
+    call t9 := ValidatorConfig_network_signing_pubkey(t8);
+    assume has_type(ByteArrayType(), t9);
+
+    m := Memory(domain#Memory(m)[old_size+9 := true], contents#Memory(m)[old_size+9 := t9]);
+
+    call t10 := BorrowLoc(old_size+1);
+
+    call t11 := ValidatorConfig_network_identity_pubkey(t10);
+    assume has_type(ByteArrayType(), t11);
+
+    m := Memory(domain#Memory(m)[old_size+11 := true], contents#Memory(m)[old_size+11 := t11]);
+
+    assume has_type(AddressType(), contents#Memory(m)[old_size+4]);
+
+    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+6]);
+
+    assume has_type(IntegerType(), contents#Memory(m)[old_size+7]);
+
+    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+9]);
+
+    assume has_type(ByteArrayType(), contents#Memory(m)[old_size+11]);
+
+    call tmp := Pack_LibraSystem_ValidatorInfo(contents#Memory(m)[old_size+4], contents#Memory(m)[old_size+6], contents#Memory(m)[old_size+7], contents#Memory(m)[old_size+9], contents#Memory(m)[old_size+11]);
+    m := Memory(domain#Memory(m)[12+old_size := true], contents#Memory(m)[12+old_size := tmp]);
+
+    ret0 := contents#Memory(m)[old_size+12];
+    return;
+
+}
+
+procedure LibraSystem_make_info_verify (arg0: Value) returns (ret0: Value)
+{
+    call ret0 := LibraSystem_make_info(arg0);
+}
+
 procedure {:inline 1} LibraSystem_reconfigure () returns ()
 {
     // declare local variables
     var t0: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
-    var t1: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
-    var t2: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
-    var t3: Value; // IntegerType()
-    var t4: Value; // IntegerType()
-    var t5: Value; // BooleanType()
-    var t6: Value; // AddressType()
-    var t7: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
-    var t8: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
-    var t9: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
-    var t10: Value; // IntegerType()
-    var t11: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
-    var t12: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
-    var t13: Value; // IntegerType()
-    var t14: Value; // BooleanType()
-    var t15: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
-    var t16: Value; // IntegerType()
-    var t17: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
-    var t18: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
-    var t19: Value; // BooleanType()
+    var t1: Reference; // ReferenceType(Vector_T_type_value(AddressType()))
+    var t2: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t3: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
+    var t4: Reference; // ReferenceType(AddressType())
+    var t5: Value; // IntegerType()
+    var t6: Value; // IntegerType()
+    var t7: Value; // BooleanType()
+    var t8: Value; // AddressType()
+    var t9: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
+    var t10: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
+    var t11: Reference; // ReferenceType(Vector_T_type_value(AddressType()))
+    var t12: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
+    var t13: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t14: Value; // IntegerType()
+    var t15: Reference; // ReferenceType(Vector_T_type_value(AddressType()))
+    var t16: Reference; // ReferenceType(Vector_T_type_value(AddressType()))
+    var t17: Value; // IntegerType()
+    var t18: Value; // IntegerType()
+    var t19: Value; // IntegerType()
     var t20: Value; // BooleanType()
-    var t21: Value; // IntegerType()
-    var t22: Value; // IntegerType()
-    var t23: Value; // IntegerType()
-    var t24: Value; // IntegerType()
+    var t21: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t22: Reference; // ReferenceType(Vector_T_type_value(AddressType()))
+    var t23: Value; // AddressType()
+    var t24: Value; // LibraSystem_ValidatorInfo_type_value()
     var t25: Value; // IntegerType()
-    var t26: Value; // BooleanType()
-    var t27: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t26: Value; // IntegerType()
+    var t27: Value; // IntegerType()
     var t28: Value; // IntegerType()
-    var t29: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
+    var t29: Value; // IntegerType()
     var t30: Value; // BooleanType()
-    var t31: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
-    var t32: Reference; // ReferenceType(LibraAccount_EventHandle_type_value(LibraSystem_ValidatorSetChangeEvent_type_value()))
-    var t33: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
-    var t34: Value; // Vector_T_type_value(LibraSystem_ValidatorInfo_type_value())
-    var t35: Value; // LibraSystem_ValidatorSetChangeEvent_type_value()
+    var t31: Value; // BooleanType()
+    var t32: Value; // BooleanType()
+    var t33: Value; // IntegerType()
+    var t34: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t35: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t36: Value; // IntegerType()
+    var t37: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t38: Value; // IntegerType()
+    var t39: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
+    var t40: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
+    var t41: Value; // BooleanType()
+    var t42: Value; // BooleanType()
+    var t43: Value; // IntegerType()
+    var t44: Value; // IntegerType()
+    var t45: Value; // IntegerType()
+    var t46: Value; // IntegerType()
+    var t47: Value; // IntegerType()
+    var t48: Value; // BooleanType()
+    var t49: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t50: Value; // IntegerType()
+    var t51: Reference; // ReferenceType(LibraSystem_ValidatorInfo_type_value())
+    var t52: Value; // BooleanType()
+    var t53: Reference; // ReferenceType(LibraSystem_ValidatorSet_type_value())
+    var t54: Reference; // ReferenceType(LibraAccount_EventHandle_type_value(LibraSystem_ValidatorSetChangeEvent_type_value()))
+    var t55: Reference; // ReferenceType(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()))
+    var t56: Value; // Vector_T_type_value(LibraSystem_ValidatorInfo_type_value())
+    var t57: Value; // LibraSystem_ValidatorSetChangeEvent_type_value()
 
     var tmp: Value;
     var old_size: int;
@@ -7156,41 +7410,29 @@ procedure {:inline 1} LibraSystem_reconfigure () returns ()
     // assume arguments are of correct types
 
     old_size := m_size;
-    m_size := m_size + 36;
+    m_size := m_size + 58;
 
     // bytecode translation starts here
     call tmp := LdAddr(472);
-    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+    m := Memory(domain#Memory(m)[8+old_size := true], contents#Memory(m)[8+old_size := tmp]);
 
-    call t7 := BorrowGlobal(contents#Memory(m)[old_size+6], LibraSystem_ValidatorSet_type_value());
+    call t9 := BorrowGlobal(contents#Memory(m)[old_size+8], LibraSystem_ValidatorSet_type_value());
 
-    call t0 := CopyOrMoveRef(t7);
+    call t0 := CopyOrMoveRef(t9);
 
-    call t8 := CopyOrMoveRef(t0);
+    call t10 := CopyOrMoveRef(t0);
 
-    call t9 := BorrowField(t8, LibraSystem_ValidatorSet_validators);
+    call t11 := BorrowField(t10, LibraSystem_ValidatorSet_additions);
 
-    call t1 := CopyOrMoveRef(t9);
+    call t1 := CopyOrMoveRef(t11);
+
+    call t12 := CopyOrMoveRef(t0);
+
+    call t13 := BorrowField(t12, LibraSystem_ValidatorSet_validators);
+
+    call t2 := CopyOrMoveRef(t13);
 
     call tmp := LdConst(0);
-    m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+10]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
-
-    call t11 := CopyOrMoveRef(t1);
-
-    call t12 := FreezeRef(t11);
-
-    call t13 := Vector_length(LibraSystem_ValidatorInfo_type_value(), t12);
-    assume has_type(IntegerType(), t13);
-
-    m := Memory(domain#Memory(m)[old_size+13 := true], contents#Memory(m)[old_size+13 := t13]);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+13]);
-    m := Memory(domain#Memory(m)[4+old_size := true], contents#Memory(m)[4+old_size := tmp]);
-
-    call tmp := LdFalse();
     m := Memory(domain#Memory(m)[14+old_size := true], contents#Memory(m)[14+old_size := tmp]);
 
     call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+14]);
@@ -7198,99 +7440,204 @@ procedure {:inline 1} LibraSystem_reconfigure () returns ()
 
     call t15 := CopyOrMoveRef(t1);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[16+old_size := true], contents#Memory(m)[16+old_size := tmp]);
+    call t16 := FreezeRef(t15);
 
-    call t17 := Vector_borrow_mut(LibraSystem_ValidatorInfo_type_value(), t15, contents#Memory(m)[old_size+16]);
+    call t17 := Vector_length(AddressType(), t16);
+    assume has_type(IntegerType(), t17);
 
+    m := Memory(domain#Memory(m)[old_size+17 := true], contents#Memory(m)[old_size+17 := t17]);
 
-    call t2 := CopyOrMoveRef(t17);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+17]);
+    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
 
-Label_18:
-    call t18 := CopyOrMoveRef(t2);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
+    m := Memory(domain#Memory(m)[18+old_size := true], contents#Memory(m)[18+old_size := tmp]);
 
-    call t19 := LibraSystem_copy_validator_info(t18);
-    assume has_type(BooleanType(), t19);
+    call tmp := LdConst(0);
+    m := Memory(domain#Memory(m)[19+old_size := true], contents#Memory(m)[19+old_size := tmp]);
 
-    m := Memory(domain#Memory(m)[old_size+19 := true], contents#Memory(m)[old_size+19 := t19]);
-
-    tmp := contents#Memory(m)[old_size + 19];
-    if (!b#Boolean(tmp)) { goto Label_23; }
-
-    call tmp := LdTrue();
+    call tmp := Gt(contents#Memory(m)[old_size+18], contents#Memory(m)[old_size+19]);
     m := Memory(domain#Memory(m)[20+old_size := true], contents#Memory(m)[20+old_size := tmp]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+20]);
-    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+    tmp := contents#Memory(m)[old_size + 20];
+    if (!b#Boolean(tmp)) { goto Label_37; }
 
-Label_23:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
+Label_19:
+    call t21 := CopyOrMoveRef(t2);
 
-    call tmp := LdConst(1);
-    m := Memory(domain#Memory(m)[22+old_size := true], contents#Memory(m)[22+old_size := tmp]);
+    call t22 := CopyOrMoveRef(t1);
 
-    call tmp := Add(contents#Memory(m)[old_size+21], contents#Memory(m)[old_size+22]);
-    m := Memory(domain#Memory(m)[23+old_size := true], contents#Memory(m)[23+old_size := tmp]);
+    call t23 := Vector_pop_back(AddressType(), t22);
+    assume has_type(AddressType(), t23);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+23]);
-    m := Memory(domain#Memory(m)[3+old_size := true], contents#Memory(m)[3+old_size := tmp]);
+    m := Memory(domain#Memory(m)[old_size+23 := true], contents#Memory(m)[old_size+23 := t23]);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
-    m := Memory(domain#Memory(m)[24+old_size := true], contents#Memory(m)[24+old_size := tmp]);
+    call t24 := LibraSystem_make_info(contents#Memory(m)[old_size+23]);
+    assume has_type(LibraSystem_ValidatorInfo_type_value(), t24);
 
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+4]);
+    m := Memory(domain#Memory(m)[old_size+24 := true], contents#Memory(m)[old_size+24 := t24]);
+
+    call Vector_push_back(LibraSystem_ValidatorInfo_type_value(), t21, contents#Memory(m)[old_size+24]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
     m := Memory(domain#Memory(m)[25+old_size := true], contents#Memory(m)[25+old_size := tmp]);
 
-    call tmp := Ge(contents#Memory(m)[old_size+24], contents#Memory(m)[old_size+25]);
+    call tmp := LdConst(1);
     m := Memory(domain#Memory(m)[26+old_size := true], contents#Memory(m)[26+old_size := tmp]);
 
-    tmp := contents#Memory(m)[old_size + 26];
-    if (!b#Boolean(tmp)) { goto Label_32; }
+    call tmp := Add(contents#Memory(m)[old_size+25], contents#Memory(m)[old_size+26]);
+    m := Memory(domain#Memory(m)[27+old_size := true], contents#Memory(m)[27+old_size := tmp]);
 
-    goto Label_37;
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+27]);
+    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
 
-Label_32:
-    call t27 := CopyOrMoveRef(t1);
-
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+3]);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
     m := Memory(domain#Memory(m)[28+old_size := true], contents#Memory(m)[28+old_size := tmp]);
 
-    call t29 := Vector_borrow_mut(LibraSystem_ValidatorInfo_type_value(), t27, contents#Memory(m)[old_size+28]);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
+    m := Memory(domain#Memory(m)[29+old_size := true], contents#Memory(m)[29+old_size := tmp]);
 
-
-    call t2 := CopyOrMoveRef(t29);
-
-    goto Label_18;
-
-Label_37:
-    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
+    call tmp := Ge(contents#Memory(m)[old_size+28], contents#Memory(m)[old_size+29]);
     m := Memory(domain#Memory(m)[30+old_size := true], contents#Memory(m)[30+old_size := tmp]);
 
     tmp := contents#Memory(m)[old_size + 30];
-    if (!b#Boolean(tmp)) { goto Label_46; }
+    if (!b#Boolean(tmp)) { goto Label_33; }
 
-    call t31 := CopyOrMoveRef(t0);
+    goto Label_34;
 
-    call t32 := BorrowField(t31, LibraSystem_ValidatorSet_change_events);
+Label_33:
+    goto Label_19;
 
-    call t33 := CopyOrMoveRef(t1);
+Label_34:
+    call tmp := LdTrue();
+    m := Memory(domain#Memory(m)[31+old_size := true], contents#Memory(m)[31+old_size := tmp]);
 
-    call tmp := ReadRef(t33);
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+31]);
+    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+
+    goto Label_39;
+
+Label_37:
+    call tmp := LdFalse();
+    m := Memory(domain#Memory(m)[32+old_size := true], contents#Memory(m)[32+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+32]);
+    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+
+Label_39:
+    call tmp := LdConst(0);
+    m := Memory(domain#Memory(m)[33+old_size := true], contents#Memory(m)[33+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+33]);
+    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+
+    call t34 := CopyOrMoveRef(t2);
+
+    call t35 := FreezeRef(t34);
+
+    call t36 := Vector_length(LibraSystem_ValidatorInfo_type_value(), t35);
+    assume has_type(IntegerType(), t36);
+
+    m := Memory(domain#Memory(m)[old_size+36 := true], contents#Memory(m)[old_size+36 := t36]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+36]);
+    m := Memory(domain#Memory(m)[6+old_size := true], contents#Memory(m)[6+old_size := tmp]);
+
+    call t37 := CopyOrMoveRef(t2);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
+    m := Memory(domain#Memory(m)[38+old_size := true], contents#Memory(m)[38+old_size := tmp]);
+
+    call t39 := Vector_borrow_mut(LibraSystem_ValidatorInfo_type_value(), t37, contents#Memory(m)[old_size+38]);
+
+
+    call t3 := CopyOrMoveRef(t39);
+
+Label_49:
+    call t40 := CopyOrMoveRef(t3);
+
+    call t41 := LibraSystem_copy_validator_info(t40);
+    assume has_type(BooleanType(), t41);
+
+    m := Memory(domain#Memory(m)[old_size+41 := true], contents#Memory(m)[old_size+41 := t41]);
+
+    tmp := contents#Memory(m)[old_size + 41];
+    if (!b#Boolean(tmp)) { goto Label_54; }
+
+    call tmp := LdTrue();
+    m := Memory(domain#Memory(m)[42+old_size := true], contents#Memory(m)[42+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+42]);
+    m := Memory(domain#Memory(m)[7+old_size := true], contents#Memory(m)[7+old_size := tmp]);
+
+Label_54:
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
+    m := Memory(domain#Memory(m)[43+old_size := true], contents#Memory(m)[43+old_size := tmp]);
+
+    call tmp := LdConst(1);
+    m := Memory(domain#Memory(m)[44+old_size := true], contents#Memory(m)[44+old_size := tmp]);
+
+    call tmp := Add(contents#Memory(m)[old_size+43], contents#Memory(m)[old_size+44]);
+    m := Memory(domain#Memory(m)[45+old_size := true], contents#Memory(m)[45+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+45]);
+    m := Memory(domain#Memory(m)[5+old_size := true], contents#Memory(m)[5+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
+    m := Memory(domain#Memory(m)[46+old_size := true], contents#Memory(m)[46+old_size := tmp]);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+6]);
+    m := Memory(domain#Memory(m)[47+old_size := true], contents#Memory(m)[47+old_size := tmp]);
+
+    call tmp := Ge(contents#Memory(m)[old_size+46], contents#Memory(m)[old_size+47]);
+    m := Memory(domain#Memory(m)[48+old_size := true], contents#Memory(m)[48+old_size := tmp]);
+
+    tmp := contents#Memory(m)[old_size + 48];
+    if (!b#Boolean(tmp)) { goto Label_63; }
+
+    goto Label_68;
+
+Label_63:
+    call t49 := CopyOrMoveRef(t2);
+
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+5]);
+    m := Memory(domain#Memory(m)[50+old_size := true], contents#Memory(m)[50+old_size := tmp]);
+
+    call t51 := Vector_borrow_mut(LibraSystem_ValidatorInfo_type_value(), t49, contents#Memory(m)[old_size+50]);
+
+
+    call t3 := CopyOrMoveRef(t51);
+
+    goto Label_49;
+
+Label_68:
+    call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+7]);
+    m := Memory(domain#Memory(m)[52+old_size := true], contents#Memory(m)[52+old_size := tmp]);
+
+    tmp := contents#Memory(m)[old_size + 52];
+    if (!b#Boolean(tmp)) { goto Label_77; }
+
+    call t53 := CopyOrMoveRef(t0);
+
+    call t54 := BorrowField(t53, LibraSystem_ValidatorSet_change_events);
+
+    call t55 := CopyOrMoveRef(t2);
+
+    call tmp := ReadRef(t55);
     assume has_type(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()), tmp);
 
-    m := Memory(domain#Memory(m)[34+old_size := true], contents#Memory(m)[34+old_size := tmp]);
+    m := Memory(domain#Memory(m)[56+old_size := true], contents#Memory(m)[56+old_size := tmp]);
 
-    assume has_type(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()), contents#Memory(m)[old_size+34]);
+    assume has_type(Vector_T_type_value(LibraSystem_ValidatorInfo_type_value()), contents#Memory(m)[old_size+56]);
 
-    call tmp := Pack_LibraSystem_ValidatorSetChangeEvent(contents#Memory(m)[old_size+34]);
-    m := Memory(domain#Memory(m)[35+old_size := true], contents#Memory(m)[35+old_size := tmp]);
+    call tmp := Pack_LibraSystem_ValidatorSetChangeEvent(contents#Memory(m)[old_size+56]);
+    m := Memory(domain#Memory(m)[57+old_size := true], contents#Memory(m)[57+old_size := tmp]);
 
-    call LibraAccount_emit_event(LibraSystem_ValidatorSetChangeEvent_type_value(), t32, contents#Memory(m)[old_size+35]);
+    call LibraAccount_emit_event(LibraSystem_ValidatorSetChangeEvent_type_value(), t54, contents#Memory(m)[old_size+57]);
 
     return;
 
-Label_46:
+Label_77:
     return;
 
 }

@@ -16,10 +16,13 @@ module LibraSystem {
     }
 
     resource ValidatorSet {
+        // The current validator set. Updated only at epoch boundaries via reconfiguration.
         validators: Vector.T<Self.ValidatorInfo>,
+        // List of validators to add at the next reconfiguration.
+        additions: Vector.T<address>,
+        // Handle where validator set change events are emitted
         change_events: LibraAccount.EventHandle<Self.ValidatorSetChangeEvent>,
     }
-
 
     resource BlockMetadata {
       // Height of the current block
@@ -40,11 +43,12 @@ module LibraSystem {
     // This can only be invoked by the Association address, and only a single time.
     // Currently, it is invoked in the genesis transaction
     public initialize_validator_set() {
-      // Only callable by the Association address
+      // Only callable by the validator set address
       assert(get_txn_sender() == 0x1D8, 1);
 
       move_to_sender<ValidatorSet>(ValidatorSet {
           validators: Vector.empty<Self.ValidatorInfo>(),
+          additions:  Vector.empty<address>(),
           change_events: LibraAccount.new_event_handle<Self.ValidatorSetChangeEvent>(),
       });
       return;
@@ -65,6 +69,10 @@ module LibraSystem {
         proposer: 0xA550C18,
       });
       return;
+    }
+
+    public get_address(v: &Self.ValidatorInfo): &address {
+      return &move(v).addr;
     }
 
     public get_consensus_pubkey(v: &Self.ValidatorInfo): &bytearray {
@@ -150,14 +158,11 @@ module LibraSystem {
         return Vector.length<Self.ValidatorInfo>(&move(validator_set_ref).validators);
     }
 
-    // Return true if addr is a current validator
-    public is_validator(addr: address): bool acquires ValidatorSet {
+   is_validator_(addr: &address, vector_ref: &Vector.T<Self.ValidatorInfo>): bool {
         let size: u64;
         let i: u64;
-        let vector_ref: &Vector.T<Self.ValidatorInfo>;
         let info_ref: &Self.ValidatorInfo;
 
-        vector_ref = &borrow_global<ValidatorSet>(0x1D8).validators;
         size = Vector.length<Self.ValidatorInfo>(copy(vector_ref));
         if (copy(size) == 0) {
             return false;
@@ -167,7 +172,7 @@ module LibraSystem {
         // this is only needed to make the bytecode verifier happy
         info_ref = Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i));
         loop {
-            if (*&copy(info_ref).addr == copy(addr)) {
+            if (&copy(info_ref).addr == copy(addr)) {
                 return true;
             }
             i = copy(i) + 1;
@@ -180,25 +185,45 @@ module LibraSystem {
         return false;
     }
 
-    // TODO: Decide on access control policy. For now, we ensure that this is only callable from the
-    // genesis txn. Obviously, we'll need a different policy once we support reconfiguration.
-    add_validator(account_address: address) acquires ValidatorSet {
-        let validator_set_ref: &mut Self.ValidatorSet;
+    // Return true if addr is a current validator
+    public is_validator(addr: address): bool acquires ValidatorSet {
+        return Self.is_validator_(&addr, &borrow_global<ValidatorSet>(0x1D8).validators);
+    }
 
+    // Adds a validator to the addition buffer, which will cause it to be added to the validator
+    // set in the next epoch.
+    // Fails if `account_address` is already a validator or has already been added to the addition
+    // buffer.
+    // Only callable by the Association address
+    public add_validator(account_address: address) acquires ValidatorSet {
+        let validator_set_ref: &mut Self.ValidatorSet;
+        let validator_set_additions: &mut Vector.T<address>;
+
+        // Only the Association can add new validators
+        assert(get_txn_sender() == 0xA550C18, 1);
         // A prospective validator must have a validator config resource
         assert(ValidatorConfig.has(copy(account_address)), 17);
 
         validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
-        Vector.push_back<Self.ValidatorInfo>(
-            &mut move(validator_set_ref).validators,
-            ValidatorInfo {
-                addr: move(account_address),
-                consensus_pubkey: h"",
-                // TODO: check for LIT, compute voting power based on LIT + stake
-                consensus_voting_power: 1,
-                network_signing_pubkey: h"",
-                network_identity_pubkey: h"",
-            }
+        validator_set_additions = &mut copy(validator_set_ref).additions;
+        // Ensure that this address is not already a validator
+        assert(
+            !Self.is_validator_(&account_address, &copy(validator_set_ref).validators),
+            18
+        );
+        // Ensure that this is not already a addition
+        assert(
+            !Vector.contains<address>(
+                freeze(copy(validator_set_additions)),
+                &account_address,
+            ),
+            19
+        );
+
+        // Add to candidates
+        Vector.push_back<address>(
+            move(validator_set_additions),
+            copy(account_address),
         );
 
         return;
@@ -224,7 +249,7 @@ module LibraSystem {
             *&mut copy(validator_info).consensus_pubkey = move(consensus_pubkey);
             changed = true;
         }
-       if (&network_signing_pubkey != &copy(validator_info).network_signing_pubkey) {
+        if (&network_signing_pubkey != &copy(validator_info).network_signing_pubkey) {
             *&mut copy(validator_info).network_signing_pubkey = move(network_signing_pubkey);
             changed = true;
         }
@@ -236,14 +261,33 @@ module LibraSystem {
         return move(changed);
     }
 
+    // Create a ValidatorInfo from the ValidatorConfig stored at addr.
+    // Aborts if addr does not have a ValidatorConfig
+    make_info(addr: address): Self.ValidatorInfo {
+        let config: ValidatorConfig.Config;
+        config = ValidatorConfig.config(copy(addr));
+
+       return ValidatorInfo {
+           addr: move(addr),
+           consensus_pubkey: ValidatorConfig.consensus_pubkey(&config),
+           consensus_voting_power: 1,
+           network_signing_pubkey: ValidatorConfig.network_signing_pubkey(&config),
+           network_identity_pubkey: ValidatorConfig.network_identity_pubkey(&config),
+       };
+    }
+
     // Trigger a reconfiguation the Libra system by:
-    // (1) Computing a new validator set and storing it on chain
-    // (2) Emitting an event containing new validator set, which will be passed to the executor
-    // TODO: make  this private + only callable from block prologue
+    // (1) Checking if there have been any additions since the last reconfiguration (and adding
+    //     the validator's config if so)
+    // (2) Checking if there have been any key rotations since the last reconfiguration (and
+    //     updating the key info if so)
+    // (3) Emitting an event containing new validator set, which will be passed to the executor
     reconfigure() acquires ValidatorSet {
         let validator_set_ref: &mut Self.ValidatorSet;
+        let additions_ref: &mut Vector.T<address>;
         let vector_ref: &mut Vector.T<Self.ValidatorInfo>;
         let info_ref: &mut Self.ValidatorInfo;
+        let validator_addr: &address;
         let i: u64;
         let len: u64;
         let changed: bool;
@@ -253,12 +297,37 @@ module LibraSystem {
         // TODO: support adding and removing validators. Eventually, we will do this by computing
         // the new validator set from a larger list of candidate validators sorted by stake.
         validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
+        additions_ref = &mut copy(validator_set_ref).additions;
         vector_ref = &mut copy(validator_set_ref).validators;
 
+        // (1) Check for additions
+        i = 0;
+        len = Vector.length<address>(freeze(copy(additions_ref)));
+        // if additions is nonempty, we have an addition to process
+        if (copy(len) > 0) {
+            loop {
+                // remove validator address from additions and add corresponding ValidatorInfo to
+                // the validator set
+                Vector.push_back<Self.ValidatorInfo>(
+                    copy(vector_ref),
+                    Self.make_info(Vector.pop_back<address>(copy(additions_ref)))
+                );
+                i = move(i) + 1;
+                if (copy(i) >= copy(len)) {
+                    break;
+                }
+            }
+            // ensures additions.length == 0
+            // ensures validators.length == old(validators).length + old(additions).length
+            changed = true;
+        } else {
+            changed = false;
+        }
+
+        // (2) Check for key rotation
         i = 0;
         len = Vector.length<Self.ValidatorInfo>(freeze(copy(vector_ref)));
         // assume(len > 0), since an empty validator set is nonsensical
-        changed = false;
         info_ref = Vector.borrow_mut<Self.ValidatorInfo>(copy(vector_ref), copy(i));
         // check if each validator has rotated their keys, copy their new info and note the change
         // if so.
@@ -274,6 +343,7 @@ module LibraSystem {
             info_ref = Vector.borrow_mut<Self.ValidatorInfo>(copy(vector_ref), copy(i));
         }
 
+        // (3) emit changed event if appropriate
         if (move(changed)) {
             LibraAccount.emit_event<Self.ValidatorSetChangeEvent>(
                 &mut move(validator_set_ref).change_events,
