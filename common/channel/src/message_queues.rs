@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_metrics::IntCounter;
+use libra_metrics::IntCounterVec;
 use std::collections::{HashMap, VecDeque};
 use std::hash::Hash;
 
@@ -14,12 +14,6 @@ use std::hash::Hash;
 pub enum QueueStyle {
     LIFO,
     FIFO,
-}
-
-pub struct Counters {
-    pub dropped_msgs_counter: &'static IntCounter,
-    pub enqueued_msgs_counter: &'static IntCounter,
-    pub dequeued_msgs_counter: &'static IntCounter,
 }
 
 /// PerKeyQueue maintains a queue of messages per key. It
@@ -43,7 +37,7 @@ pub(crate) struct PerKeyQueue<K: Eq + Hash + Clone, T> {
     round_robin_queue: VecDeque<K>,
     /// Maximum number of messages to store per key
     max_queue_size: usize,
-    counters: Option<Counters>,
+    counters: Option<&'static IntCounterVec>,
 }
 
 impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
@@ -52,7 +46,7 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
     pub(crate) fn new(
         queue_style: QueueStyle,
         max_queue_size_per_key: usize,
-        counters: Option<Counters>,
+        counters: Option<&'static IntCounterVec>,
     ) -> Self {
         assert!(
             max_queue_size_per_key > 0,
@@ -87,7 +81,7 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
     /// add the key to round_robin_queue if it didnt already exist
     pub(crate) fn push(&mut self, key: K, message: T) {
         if let Some(c) = self.counters.as_ref() {
-            c.enqueued_msgs_counter.inc();
+            c.with_label_values(&["enqueued"]).inc();
         }
         let max_queue_size = self.max_queue_size;
         let key_message_queue = self
@@ -101,7 +95,7 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
         // Push the message to the actual key message queue
         if key_message_queue.len() == max_queue_size {
             if let Some(c) = self.counters.as_ref() {
-                c.dropped_msgs_counter.inc()
+                c.with_label_values(&["dropped"]).inc();
             }
             match self.queue_style {
                 // Drop the newest message for FIFO
@@ -132,7 +126,7 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
         }
         if message.is_some() {
             if let Some(c) = self.counters.as_ref() {
-                c.dequeued_msgs_counter.inc();
+                c.with_label_values(&["dequeued"]).inc();
             }
         }
         message

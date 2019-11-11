@@ -537,11 +537,15 @@ impl<T: Payload> EventProcessor<T> {
                 match waiting_success {
                     WaitingSuccess::WaitWasRequired { wait_duration, .. } => {
                         counters::VOTE_SUCCESS_WAIT_S.observe_duration(wait_duration);
-                        counters::VOTE_WAIT_WAS_REQUIRED_COUNT.inc();
+                        counters::VOTES_COUNT
+                            .with_label_values(&["wait_was_required"])
+                            .inc();
                     }
                     WaitingSuccess::NoWaitRequired { .. } => {
                         counters::VOTE_SUCCESS_WAIT_S.observe_duration(Duration::new(0, 0));
-                        counters::VOTE_NO_WAIT_REQUIRED_COUNT.inc();
+                        counters::VOTES_COUNT
+                            .with_label_values(&["no_wait_required"])
+                            .inc();
                     }
                 }
             }
@@ -553,7 +557,9 @@ impl<T: Payload> EventProcessor<T> {
                                 block_timestamp_us,
                                 current_round_deadline);
                         counters::VOTE_FAILURE_WAIT_S.observe_duration(Duration::new(0, 0));
-                        counters::VOTE_MAX_WAIT_EXCEEDED_COUNT.inc();
+                        counters::VOTES_COUNT
+                            .with_label_values(&["max_wait_exceeded"])
+                            .inc();
                     }
                     WaitingError::WaitFailed {
                         current_duration_since_epoch,
@@ -565,7 +571,9 @@ impl<T: Payload> EventProcessor<T> {
                                 block_timestamp_us,
                                 current_duration_since_epoch);
                         counters::VOTE_FAILURE_WAIT_S.observe_duration(wait_duration);
-                        counters::VOTE_WAIT_FAILED_COUNT.inc();
+                        counters::VOTES_COUNT
+                            .with_label_values(&["wait_failed"])
+                            .inc();
                     }
                 };
                 return Err(waiting_error);

@@ -152,7 +152,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_gauge{op='last_committed_version'}[1m])",
+          "expr": "irate(libra_consensus_last_committed_version[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -237,7 +237,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='num_txns_per_block'}[1m])/irate(consensus_duration_count{op='num_txns_per_block'}[1m])",
+          "expr": "irate(libra_consensus_num_txns_per_block_sum[1m])/irate(libra_consensus_num_txns_per_block_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -335,7 +335,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='txn_execution_duration_s'}[1m])/irate(consensus_duration_count{op='txn_execution_duration_s'}[1m])",
+          "expr": "irate(libra_consensus_txn_execution_duration_s_sum[1m])/irate(libra_consensus_txn_execution_duration_s_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -420,7 +420,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='txn_execution_duration_s'}[1m])/irate(consensus_duration_count{op='txn_execution_duration_s'}[1m])",
+          "expr": "irate(libra_consensus_txn_execution_duration_s_sum[1m])/irate(libra_consensus_txn_execution_duration_s_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -505,7 +505,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='vm_execute_block_time_s'}[1m])/irate(consensus_duration_count{op='vm_execute_block_time_s'}[1m])",
+          "expr": "irate(libra_consensus_vm_execute_block_time_s_sum[1m])/irate(libra_consensus_vm_execute_block_time_s_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -701,7 +701,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='creation_to_commit_s'}[1m])/irate(consensus_duration_count{op='creation_to_commit_s'}[1m])",
+          "expr": "irate(libra_consensus_creation_to_commit_s_sum[1m])/irate(libra_consensus_creation_to_commit_s_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -786,7 +786,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='creation_to_qc_s'}[1m])/irate(consensus_duration_count{op='creation_to_qc_s'}[1m])",
+          "expr": "irate(libra_consensus_creation_to_qc_s_sum[1m])/irate(libra_consensus_creation_to_qc_s_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
