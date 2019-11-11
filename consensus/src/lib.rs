@@ -16,6 +16,9 @@ extern crate failure;
 #[macro_use]
 extern crate debug_interface;
 
+#[macro_use]
+extern crate prometheus;
+
 mod chained_bft;
 
 mod util;

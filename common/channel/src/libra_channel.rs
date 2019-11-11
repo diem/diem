@@ -11,12 +11,13 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::Waker;
 
-use crate::message_queues::{Counters, PerKeyQueue, QueueStyle};
+use crate::message_queues::{PerKeyQueue, QueueStyle};
 use failure::prelude::*;
 use futures::async_await::FusedStream;
 use futures::stream::Stream;
 use futures::task::Context;
 use futures::Poll;
+use libra_metrics::IntCounterVec;
 use std::hash::Hash;
 
 /// SharedState is a data structure private to this module which is
@@ -121,7 +122,7 @@ impl<K: Eq + Hash + Clone, M> FusedStream for Receiver<K, M> {
 pub fn new<K: Eq + Hash + Clone, M>(
     queue_style: QueueStyle,
     max_queue_size_per_key: usize,
-    counters: Option<Counters>,
+    counters: Option<&'static IntCounterVec>,
 ) -> (Sender<K, M>, Receiver<K, M>) {
     let shared_state = Arc::new(Mutex::new(SharedState {
         internal_queue: PerKeyQueue::new(queue_style, max_queue_size_per_key, counters),

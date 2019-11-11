@@ -455,7 +455,7 @@ fn print_stat(prometheus: &Prometheus, window: Duration) -> failure::Result<(f64
     let start = end - window;
     let avg_tps = prometheus
         .query_range_avg(
-            "irate(consensus_gauge{op='last_committed_version'}[1m])".to_string(),
+            "irate(libra_consensus_last_committed_version[1m])".to_string(),
             &start,
             &end,
             step,

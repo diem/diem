@@ -3,10 +3,7 @@
 
 use crate::counters;
 use bytes::Bytes;
-use channel::{
-    self, libra_channel,
-    message_queues::{self, QueueStyle},
-};
+use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse};
 use consensus_types::epoch_retrieval::EpochRetrievalRequest;
 use consensus_types::{
@@ -274,50 +271,21 @@ impl<T: Payload> NetworkTask<T> {
         self_receiver: channel::Receiver<failure::Result<Event<ConsensusMsg>>>,
         validators: Arc<ValidatorVerifier>,
     ) -> (NetworkTask<T>, NetworkReceivers<T>) {
-        let (proposal_tx, proposal_rx) = libra_channel::new(
-            QueueStyle::LIFO,
-            1,
-            Some(message_queues::Counters {
-                dropped_msgs_counter: &counters::PROPOSAL_DROPPED_MSGS,
-                enqueued_msgs_counter: &counters::PROPOSAL_ENQUEUED_MSGS,
-                dequeued_msgs_counter: &counters::PROPOSAL_DEQUEUED_MSGS,
-            }),
-        );
-        let (vote_tx, vote_rx) = libra_channel::new(
-            QueueStyle::LIFO,
-            1,
-            Some(message_queues::Counters {
-                dropped_msgs_counter: &counters::VOTES_DROPPED_MSGS,
-                enqueued_msgs_counter: &counters::VOTES_ENQUEUED_MSGS,
-                dequeued_msgs_counter: &counters::VOTES_DEQUEUED_MSGS,
-            }),
-        );
+        let (proposal_tx, proposal_rx) =
+            libra_channel::new(QueueStyle::LIFO, 1, Some(&counters::PROPOSAL_CHANNEL_MSGS));
+        let (vote_tx, vote_rx) =
+            libra_channel::new(QueueStyle::LIFO, 1, Some(&counters::VOTES_CHANNEL_MSGS));
         let (block_request_tx, block_request_rx) = libra_channel::new(
             QueueStyle::LIFO,
             1,
-            Some(message_queues::Counters {
-                dropped_msgs_counter: &counters::BLOCK_RETRIEVAL_DROPPED_MSGS,
-                enqueued_msgs_counter: &counters::BLOCK_RETRIEVAL_ENQUEUED_MSGS,
-                dequeued_msgs_counter: &counters::BLOCK_RETRIEVAL_DEQUEUED_MSGS,
-            }),
+            Some(&counters::BLOCK_RETRIEVAL_CHANNEL_MSGS),
         );
-        let (sync_info_tx, sync_info_rx) = libra_channel::new(
-            QueueStyle::LIFO,
-            1,
-            Some(message_queues::Counters {
-                dropped_msgs_counter: &counters::SYNC_INFO_DROPPED_MSGS,
-                enqueued_msgs_counter: &counters::SYNC_INFO_ENQUEUED_MSGS,
-                dequeued_msgs_counter: &counters::SYNC_INFO_DEQUEUED_MSGS,
-            }),
-        );
+        let (sync_info_tx, sync_info_rx) =
+            libra_channel::new(QueueStyle::LIFO, 1, Some(&counters::SYNC_INFO_CHANNEL_MSGS));
         let (epoch_change_tx, epoch_change_rx) = libra_channel::new(
             QueueStyle::LIFO,
             1,
-            Some(message_queues::Counters {
-                dropped_msgs_counter: &counters::EPOCH_CHANGE_DROPPED_MSGS,
-                enqueued_msgs_counter: &counters::EPOCH_CHANGE_ENQUEUED_MSGS,
-                dequeued_msgs_counter: &counters::EPOCH_CHANGE_DEQUEUED_MSGS,
-            }),
+            Some(&counters::EPOCH_CHANGE_CHANNEL_MSGS),
         );
         let (different_epoch_tx, different_epoch_rx) =
             libra_channel::new(QueueStyle::LIFO, 1, None);
