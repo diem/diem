@@ -1,103 +1,68 @@
 //! account: alice,1000000
 //! account: bob,1000000
 
-//! new-transaction
-//! sender: alice
-//! receiver: bob
-//! args: 100000, 50000
+module Test{
+    import 0x0.ChannelAccount;
 
-import 0x0.ChannelAccount;
-//open channel
-main(sender_amount:u64, receiver_amount:u64) {
-    ChannelAccount.open(move(sender_amount), move(receiver_amount));
-    return;
+    public assert_channel_balance(expect_sender_balance: u64, expect_receiver_balance:u64){
+        assert(ChannelAccount.sender_balance() == move(expect_sender_balance), 1024);
+        assert(ChannelAccount.receiver_balance() == move(expect_receiver_balance), 1025);
+        return;
+    }
+
+    public assert_channel_closed(closed: bool){
+        assert(ChannelAccount.sender_closed() == copy(closed), 42);
+        assert(ChannelAccount.receiver_closed() == copy(closed), 42);
+        return;
+    }
 }
 
-//! new-transaction
-//! sender: alice
-//! receiver: bob
-//! args: 10000, 10000
-
-import 0x0.ChannelAccount;
-//deposit
-main(sender_amount:u64, receiver_amount:u64) {
-    ChannelAccount.deposit(move(sender_amount), move(receiver_amount));
-    return;
-}
-
-//! new-transaction
-//! sender: alice
-//! receiver: bob
-//! args: 10000
-
-import 0x0.ChannelAccount;
-//transfer
-main(amount:u64) {
-    ChannelAccount.transfer(move(amount));
-    return;
-}
 
 //! new-transaction
 //! sender: alice
 //! receiver: bob
 
-import 0x0.ChannelAccount;
-
-main() {
-
-    assert(ChannelAccount.sender_balance() == 100000, 42);
-    assert(ChannelAccount.receiver_balance() == 70000, 42);
-    return;
-}
+0x0.ChannelAccount.open 100000 50000
 
 //! new-transaction
 //! sender: alice
 //! receiver: bob
 
-import 0x0.ChannelAccount;
-//withdraw
-main() {
-    let sender_balance: u64;
-    let receiver_balance: u64;
-
-    sender_balance = ChannelAccount.sender_balance();
-    receiver_balance = ChannelAccount.receiver_balance();
-    ChannelAccount.withdraw(move(sender_balance), move(receiver_balance));
-
-    return;
-}
+0x0.ChannelAccount.deposit 10000 10000
 
 //! new-transaction
 //! sender: alice
 //! receiver: bob
 
-import 0x0.ChannelAccount;
-
-main() {
-
-    assert(ChannelAccount.sender_balance() == 0, 42);
-    assert(ChannelAccount.receiver_balance() == 0, 42);
-    return;
-}
+0x0.ChannelAccount.transfer 10000
 
 //! new-transaction
 //! sender: alice
 //! receiver: bob
 
-import 0x0.ChannelAccount;
-//close
-main() {
-    ChannelAccount.close();
-    return;
-}
+{{default}}.Test.assert_channel_balance 100000 70000
 
 //! new-transaction
 //! sender: alice
 //! receiver: bob
 
-import 0x0.ChannelAccount;
-main() {
-    assert(ChannelAccount.sender_closed() == true, 42);
-    assert(ChannelAccount.receiver_closed() == true, 42);
-    return;
-}
+0x0.ChannelAccount.withdraw 100000 70000
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+{{default}}.Test.assert_channel_balance 0 0
+
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+0x0.ChannelAccount.close
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+{{default}}.Test.assert_channel_closed true

@@ -1,6 +1,18 @@
 //! account: bob
 //! account: alice
 
+module Test{
+    import 0x0.ChannelAccount;
+
+    public assert_channel_txn(){
+        let receiver: address;
+        assert(is_channel_txn() == true, 42);
+        receiver = get_txn_receiver();
+        assert(copy(receiver) == {{bob}}, 42);
+        return;
+    }
+}
+
 //! new-transaction
 //! sender: alice
 main() {
@@ -14,27 +26,11 @@ main() {
 //! new-transaction
 //! sender: alice
 //! receiver: bob
-//! args: 100000, 50000
 
-import 0x0.ChannelAccount;
-//open channel
-main(sender_amount:u64, receiver_amount:u64) {
-    ChannelAccount.open(move(sender_amount), move(receiver_amount));
-    return;
-}
+0x0.ChannelAccount.open 100000 50000
 
 //! new-transaction
 //! sender: alice
 //! receiver: bob
-main() {
-    let x: bool;
-    let receiver: address;
 
-    x = is_channel_txn();
-    assert(copy(x) == true, 42);
-
-    receiver = get_txn_receiver();
-    assert(copy(receiver) == {{bob}}, 42);
-
-    return;
-}
+{{default}}.Test.assert_channel_txn

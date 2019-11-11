@@ -212,4 +212,8 @@ impl<'a> Config<'a> {
     pub fn is_stage_disabled(&self, stage: Stage) -> bool {
         self.disabled_stages.contains(&stage)
     }
+
+    pub fn is_channel_transaction(&self) -> bool {
+        return self.receiver.is_some();
+    }
 }

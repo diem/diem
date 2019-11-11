@@ -1,0 +1,118 @@
+//! account: bob
+//! account: alice
+
+//! new-transaction
+module Token {
+    resource T {
+        value: u64
+    }
+    public new(value:u64): Self.T {
+        return T{ value: move(value) };
+    }
+
+    public value(token_ref: &Self.T):u64 {
+        return *&move(token_ref).value;
+    }
+
+    public destroy(token: Self.T){
+        let value:u64;
+        T{value} = move(token);
+        return;
+    }
+
+    public move_to_sender_channel(value:u64) {
+       let t1: Self.T;
+
+       t1 = Self.new(move(value));
+
+       move_to_sender_channel<T>(move(t1));
+       return;
+    }
+
+    public move_to_receiver_channel(value:u64) {
+       let t1: Self.T;
+
+       t1 = Self.new(move(value));
+
+       move_to_receiver_channel<T>(move(t1));
+       return;
+    }
+
+    public exist_sender_channel(): bool {
+        return exist_sender_channel<T>();
+    }
+
+    public exist_receiver_channel(): bool {
+        return exist_receiver_channel<T>();
+    }
+
+    public sender_channel_value():u64{
+        let ref: &mut Self.T;
+        ref = borrow_sender_channel<T>();
+        return *&move(ref).value;
+    }
+
+    public receiver_channel_value():u64{
+        let ref: &mut Self.T;
+        ref = borrow_receiver_channel<T>();
+        return *&move(ref).value;
+    }
+
+    public move_from_sender_channel(): Self.T {
+        let t: Self.T;
+        let value: u64;
+        t = move_from_sender_channel<T>();
+        return move(t);
+    }
+
+    public move_from_receiver_channel(): Self.T {
+        let t: Self.T;
+        let value: u64;
+        t = move_from_receiver_channel<T>();
+        return move(t);
+    }
+
+    public assert_value(expect_sender_value: u64, expect_receiver_value:u64){
+        let sender_value: u64;
+        let receiver_value: u64;
+
+        assert(is_channel_txn() == true, 42);
+
+        assert(Self.exist_sender_channel() == true, 42);
+        assert(Self.exist_receiver_channel() == true, 42);
+
+        sender_value = Self.sender_channel_value();
+        receiver_value = Self.receiver_channel_value();
+
+        assert(move(sender_value) == move(expect_sender_value), 42);
+        assert(move(receiver_value) == move(expect_receiver_value), 42);
+
+        return;
+    }
+
+}
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+0x0.ChannelAccount.open 100000 50000
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+{{default}}.Token.move_to_sender_channel 1
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+{{default}}.Token.move_to_receiver_channel 2
+
+
+//! new-transaction
+//! sender: alice
+//! receiver: bob
+
+{{default}}.Token.assert_value 1 2
