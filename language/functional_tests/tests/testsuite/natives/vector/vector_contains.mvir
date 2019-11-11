@@ -1,0 +1,37 @@
+import 0x0.Vector;
+
+main() {
+  let vec: Vector.T<u64>;
+  let zero: u64;
+  let one: u64;
+  let two: u64;
+  let three: u64;
+
+  zero = 0;
+  one = 1;
+  two = 2;
+  three = 3;
+
+  vec = Vector.empty<u64>();
+
+  assert(!Vector.contains<u64>(&vec, &zero), 1);
+
+  Vector.push_back<u64>(&mut vec, copy(zero));
+  assert(Vector.contains<u64>(&vec, &zero), 2);
+  assert(!Vector.contains<u64>(&vec, &one), 3);
+
+  Vector.push_back<u64>(&mut vec, copy(one));
+  assert(Vector.contains<u64>(&vec, &zero), 4);
+  assert(Vector.contains<u64>(&vec, &one), 5);
+  assert(!Vector.contains<u64>(&vec, &two), 6);
+
+  Vector.push_back<u64>(&mut vec, copy(two));
+  assert(Vector.contains<u64>(&vec, &zero), 7);
+  assert(Vector.contains<u64>(&vec, &one), 8);
+  assert(Vector.contains<u64>(&vec, &two), 9);
+  assert(!Vector.contains<u64>(&vec, &three), 10);
+
+  return;
+}
+
+// check: EXECUTED

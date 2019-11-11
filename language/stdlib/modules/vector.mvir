@@ -87,4 +87,22 @@ module Vector {
     return;
   }
 
+  // Return true if `e` is in the vector `v`
+  public contains<Element>(v: &Self.T<Element>, e: &Element): bool {
+    let len: u64;
+    let i: u64;
+
+    i = 0;
+    len = Self.length<Element>(copy(v));
+
+    while (copy(i) < copy(len)) {
+      if (copy(e) == Self.borrow<Element>(copy(v), copy(i))) {
+        return true;
+      }
+      i = move(i) + 1;
+    }
+
+    return false;
+  }
+
 }
