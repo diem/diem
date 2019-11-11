@@ -423,6 +423,7 @@ pub struct ConsensusConfig {
     pub consensus_type: String,
 }
 
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum ConsensusType {
     PBFT,
     POW,
