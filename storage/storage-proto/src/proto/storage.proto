@@ -47,8 +47,8 @@ service Storage {
     returns (GetStartupInfoResponse);
 
     // Returns latest ledger infos per epoch.
-    rpc GetLatestLedgerInfosPerEpoch(GetLatestLedgerInfosPerEpochRequest)
-    returns (GetLatestLedgerInfosPerEpochResponse);
+    rpc GetEpochChangeLedgerInfos(GetEpochChangeLedgerInfosRequest)
+    returns (GetEpochChangeLedgerInfosResponse);
 }
 
 message SaveTransactionsRequest {
@@ -128,12 +128,12 @@ message StartupInfo {
     TreeState synced_tree_state = 3;
 }
 
-message GetLatestLedgerInfosPerEpochRequest {
+message GetEpochChangeLedgerInfosRequest {
     /// The last epoch number with available information to the client.
     uint64 start_epoch = 1;
 }
 
-message GetLatestLedgerInfosPerEpochResponse {
+message GetEpochChangeLedgerInfosResponse {
     /// Vector of latest ledger infos per epoch (not sorted)
     repeated types.LedgerInfoWithSignatures latest_ledger_infos = 1;
 }

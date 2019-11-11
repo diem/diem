@@ -30,9 +30,8 @@ use std::{pin::Pin, sync::Arc};
 use storage_proto::{
     proto::storage::{GetStartupInfoRequest, StorageClient},
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
-    GetLatestLedgerInfosPerEpochRequest, GetLatestLedgerInfosPerEpochResponse,
-    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    SaveTransactionsRequest, StartupInfo,
+    GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse, GetStartupInfoResponse,
+    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest, StartupInfo,
 };
 
 pub use crate::state_view::VerifiedStateView;
@@ -211,24 +210,24 @@ impl StorageRead for StorageReadServiceClient {
             .boxed()
     }
 
-    fn get_latest_ledger_infos_per_epoch(
+    fn get_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,
     ) -> Result<Vec<LedgerInfoWithSignatures>> {
-        block_on(self.get_latest_ledger_infos_per_epoch_async(start_epoch))
+        block_on(self.get_epoch_change_ledger_infos_async(start_epoch))
     }
 
-    fn get_latest_ledger_infos_per_epoch_async(
+    fn get_epoch_change_ledger_infos_async(
         &self,
         start_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>> {
-        let proto_req = GetLatestLedgerInfosPerEpochRequest::new(start_epoch);
+        let proto_req = GetEpochChangeLedgerInfosRequest::new(start_epoch);
         convert_grpc_response(
             self.client()
-                .get_latest_ledger_infos_per_epoch_async(&proto_req.into()),
+                .get_epoch_change_ledger_infos_async(&proto_req.into()),
         )
         .map(|resp| {
-            let resp = GetLatestLedgerInfosPerEpochResponse::try_from(resp?)?;
+            let resp = GetEpochChangeLedgerInfosResponse::try_from(resp?)?;
             Ok(resp.into())
         })
         .boxed()
@@ -380,20 +379,20 @@ pub trait StorageRead: Send + Sync {
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>>;
 
-    /// See [`LibraDB::get_latest_ledger_infos_per_epoch`].
+    /// See [`LibraDB::get_epoch_change_ledger_infos`].
     ///
-    /// [`LibraDB::get_latest_ledger_infos_per_epoch`]:
-    /// ../libradb/struct.LibraDB.html#method.get_latest_ledger_infos_per_epoch
-    fn get_latest_ledger_infos_per_epoch(
+    /// [`LibraDB::get_epoch_change_ledger_infos`]:
+    /// ../libradb/struct.LibraDB.html#method.get_epoch_change_ledger_infos
+    fn get_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,
     ) -> Result<Vec<LedgerInfoWithSignatures>>;
 
-    /// See [`LibraDB::get_latest_ledger_infos_per_epoch`].
+    /// See [`LibraDB::get_epoch_change_ledger_infos`].
     ///
-    /// [`LibraDB::get_latest_ledger_infos_per_epoch`]:
-    /// ../libradb/struct.LibraDB.html#method.get_latest_ledger_infos_per_epoch
-    fn get_latest_ledger_infos_per_epoch_async(
+    /// [`LibraDB::get_epoch_change_ledger_infos`]:
+    /// ../libradb/struct.LibraDB.html#method.get_epoch_change_ledger_infos
+    fn get_epoch_change_ledger_infos_async(
         &self,
         start_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>>;

@@ -42,27 +42,20 @@ proptest! {
             .unwrap();
         store.db.write_schemas(cs.batch).unwrap();
 
-        // verify get_latest_ledger_infos_per_epoch()
-        let mut epoch_ledgers: Vec<_> = ledger_infos_with_sigs
+        // verify get_epoch_change_ledger_infos()
+        let epoch_ledgers: Vec<_> = ledger_infos_with_sigs
             .iter()
             .filter(|info| info.ledger_info().next_validator_set().is_some())
-            .map(|info| info.clone())
+            .cloned()
             .collect();
-        let last = ledger_infos_with_sigs.last().unwrap();
-        let last_is_new_epoch = last.ledger_info().next_validator_set().is_some();
-        if !last_is_new_epoch {
-            epoch_ledgers.push(last.clone());
-        }
         let start_epoch = ledger_infos_with_sigs.first().unwrap().ledger_info().epoch();
+        let ledger_version = ledger_infos_with_sigs.last().unwrap().ledger_info().version();
         prop_assert_eq!(
-            &store.get_latest_ledger_infos_per_epoch(start_epoch).unwrap(),
+            &store.get_epoch_change_ledger_infos(start_epoch, ledger_version).unwrap(),
             &epoch_ledgers
         );
 
         // verify get_epoch()
-        if !last_is_new_epoch {
-            epoch_ledgers.pop();
-        }
         let epoch_change_versions: Vec<_> = epoch_ledgers.iter().map(|li| {
             let ledger_info = li.ledger_info();
             (ledger_info.epoch() + 1, ledger_info.version())

@@ -25,8 +25,8 @@ use std::{
 };
 use storage_proto::proto::storage::{
     create_storage, GetAccountStateWithProofByVersionRequest,
-    GetAccountStateWithProofByVersionResponse, GetLatestLedgerInfosPerEpochRequest,
-    GetLatestLedgerInfosPerEpochResponse, GetStartupInfoRequest, GetStartupInfoResponse,
+    GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
+    GetEpochChangeLedgerInfosResponse, GetStartupInfoRequest, GetStartupInfoResponse,
     GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
     SaveTransactionsResponse, Storage,
 };
@@ -217,15 +217,15 @@ impl StorageService {
         Ok(rust_resp.into())
     }
 
-    fn get_latest_ledger_infos_per_epoch_inner(
+    fn get_epoch_change_ledger_infos_inner(
         &self,
-        req: GetLatestLedgerInfosPerEpochRequest,
-    ) -> Result<GetLatestLedgerInfosPerEpochResponse> {
-        let rust_req = storage_proto::GetLatestLedgerInfosPerEpochRequest::try_from(req)?;
+        req: GetEpochChangeLedgerInfosRequest,
+    ) -> Result<GetEpochChangeLedgerInfosResponse> {
+        let rust_req = storage_proto::GetEpochChangeLedgerInfosRequest::try_from(req)?;
         let ledger_infos = self
             .db
-            .get_latest_ledger_infos_per_epoch(rust_req.start_epoch)?;
-        let rust_resp = storage_proto::GetLatestLedgerInfosPerEpochResponse::new(ledger_infos);
+            .get_epoch_change_ledger_infos(rust_req.start_epoch)?;
+        let rust_resp = storage_proto::GetEpochChangeLedgerInfosResponse::new(ledger_infos);
         Ok(rust_resp.into())
     }
 }
@@ -291,15 +291,15 @@ impl Storage for StorageService {
         provide_grpc_response(resp, ctx, sink);
     }
 
-    fn get_latest_ledger_infos_per_epoch(
+    fn get_epoch_change_ledger_infos(
         &mut self,
         ctx: grpcio::RpcContext,
-        req: GetLatestLedgerInfosPerEpochRequest,
-        sink: grpcio::UnarySink<GetLatestLedgerInfosPerEpochResponse>,
+        req: GetEpochChangeLedgerInfosRequest,
+        sink: grpcio::UnarySink<GetEpochChangeLedgerInfosResponse>,
     ) {
-        debug!("[GRPC] Storage::get_latest_ledger_infos_per_epoch");
+        debug!("[GRPC] Storage::get_epoch_change_ledger_infos");
         let _timer = SVC_COUNTERS.req(&ctx);
-        let resp = self.get_latest_ledger_infos_per_epoch_inner(req);
+        let resp = self.get_epoch_change_ledger_infos_inner(req);
         provide_grpc_response(resp, ctx, sink);
     }
 }

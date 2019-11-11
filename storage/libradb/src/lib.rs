@@ -304,18 +304,13 @@ impl LibraDB {
             .version())
     }
 
-    /// Returns the latest ledger infos per epoch starting with the given epoch num:
-    /// - the latest ledger info of the current epoch is just the last ledger info in the system
-    /// - the latest ledger infos of previous epochs contain reconfiguration validator sets.
-    /// Returns error in case `start_epoch` is higher than the currently known epoch.
-    /// The returned vector is not necessarily sorted: the client should make sure to sort it
-    /// by epoch number.
-    pub fn get_latest_ledger_infos_per_epoch(
+    /// Returns ledger infos reflecting epoch bumps starting with the given epoch.
+    pub fn get_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,
     ) -> Result<Vec<LedgerInfoWithSignatures>> {
         self.ledger_store
-            .get_latest_ledger_infos_per_epoch(start_epoch)
+            .get_epoch_change_ledger_infos(start_epoch, self.get_latest_version()?)
     }
 
     /// Persist transactions. Called by the executor module when either syncing nodes or committing
@@ -547,19 +542,8 @@ impl LibraDB {
             ledger_info.epoch()
         };
         let validator_change_proof = if client_epoch < current_epoch {
-            let mut ledger_infos = self
-                .ledger_store
-                .get_latest_ledger_infos_per_epoch(client_epoch)?;
-            if ledger_infos
-                .last()
-                .ok_or_else(|| LibraDbError::NotFound(String::from("Latest epoch LedgerInfo")))?
-                .ledger_info()
-                .next_validator_set()
-                .is_none()
-            {
-                ledger_infos.pop();
-            }
-            ledger_infos
+            self.ledger_store
+                .get_epoch_change_ledger_infos(client_epoch, ledger_info.version())?
         } else {
             Vec::new()
         };
