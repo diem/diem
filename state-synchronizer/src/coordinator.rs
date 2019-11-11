@@ -162,12 +162,12 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                         StateSynchronizerMsg_oneof::ChunkRequest(request) => {
                                             let known_version = request.known_version;
                                             if let Err(err) = self.process_chunk_request(peer_id, request).await {
-                                                error!("[state sync] failed to serve chunk request to {} with known version {}: {:?}", peer_id, known_version, err);
+                                                error!("[state sync] failed to serve chunk request to {} with known version {}: {}", peer_id, known_version, err);
                                             }
                                         }
                                         StateSynchronizerMsg_oneof::ChunkResponse(response) => {
                                             if let Err(err) = self.process_chunk_response(&peer_id, response).await {
-                                                error!("[state sync] failed to process chunk response from {}: {:?}", peer_id, err);
+                                                error!("[state sync] failed to process chunk response from {}: {}", peer_id, err);
                                                 counters::OP_COUNTERS.inc(&format!("{}.{}", counters::APPLY_CHUNK_FAILURE, peer_id));
                                             } else {
                                                 self.peer_manager.update_score(&peer_id, PeerScoreUpdateType::Success);
@@ -179,7 +179,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                 _ => {}
                             }
                         },
-                        Err(err) => { error!("[state sync] network error {:?}", err); },
+                        Err(err) => { error!("[state sync] network error {}", err); },
                     }
                 },
                 _ = interval.select_next_some() => {
@@ -238,7 +238,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 }
             }
             if let Err(err) = self.check_subscriptions().await {
-                error!("[state sync] failed to check subscriptions: {:?}", err);
+                error!("[state sync] failed to check subscriptions: {}", err);
             }
         }
         let sync_request_complete = self.sync_request.as_ref().map_or(false, |sync_req| {
@@ -276,7 +276,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             || request.limit > self.config.max_chunk_limit
         {
             return Err(format_err!(
-                "[state sync] timeout: {:?}, chunk limit: {:?}, but timeout must not exceed {:?} ms, and chunk limit must not exceed {:?}",
+                "[state sync] timeout: {}, chunk limit: {}, but timeout must not exceed {} ms, and chunk limit must not exceed {}",
                 request.timeout,
                 request.limit,
                 self.config.max_timeout_ms,
@@ -295,7 +295,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             _ => latest_ledger_info.clone(),
         };
 
-        debug!("[state sync] chunk request: peer_id: {:?}, known_version: {}, latest_ledger_info: {}, target: {}", peer_id, request.known_version, latest_ledger_info.ledger_info().version(), target.ledger_info().version());
+        debug!("[state sync] chunk request: peer_id: {}, known_version: {}, latest_ledger_info: {}, target: {}", peer_id, request.known_version, latest_ledger_info.ledger_info().version(), target.ledger_info().version());
 
         // if upstream synchronizer doesn't have new data and request timeout is set
         // add peer request into subscription queue
@@ -478,7 +478,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     }
                 };
                 debug!(
-                    "[state sync] request next chunk. peer_id: {:?}, known_version: {}, timeout: {}",
+                    "[state sync] request next chunk. peer_id: {}, known_version: {}, timeout: {}",
                     peer_id,
                     self.known_version + offset,
                     timeout
@@ -539,7 +539,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
         while let Some(res) = futures.next().await {
             if let Err(err) = res {
-                error!("[state sync] failed to notify subscriber {:?}", err);
+                error!("[state sync] failed to notify subscriber {}", err);
             }
         }
         Ok(())
