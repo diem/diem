@@ -184,25 +184,25 @@ Exp_ = CtrlExp_;
 Exp = Sp<Exp_>;
 
 CtrlExp_ : Exp_ = {
-    "if" "(" <eb: Exp> ")" <et: AssignExp> "else" <ef: AssignExp> =>
+    "if" "(" <eb: Exp> ")" <et: ReturnAbortExp> "else" <ef: ReturnAbortExp> =>
         Exp_::IfElse(Box::new(eb), Box::new(et), Some(Box::new(ef))),
-    "if" "(" <eb: Exp> ")" <et: AssignExp> =>
+    "if" "(" <eb: Exp> ")" <et: ReturnAbortExp> =>
         Exp_::IfElse(Box::new(eb), Box::new(et), None),
-    "while" "(" <eb: Exp> ")" <eloop: AssignExp> => Exp_::While(Box::new(eb), Box::new(eloop)),
-    "loop" <eloop: AssignExp> => Exp_::Loop(Box::new(eloop)),
-    AssignExp_ => <>,
+    "while" "(" <eb: Exp> ")" <eloop: ReturnAbortExp> => Exp_::While(Box::new(eb), Box::new(eloop)),
+    "loop" <eloop: ReturnAbortExp> => Exp_::Loop(Box::new(eloop)),
+    <a: UnaryExp> "=" <rhs: Exp> => {
+        Exp_::Assign(Box::new(a), Box::new(rhs))
+    },
+    ReturnAbortExp_ => <>,
 };
 CtrlExp = Sp<CtrlExp_>;
 
-AssignExp_ : Exp_ = {
-    "return" <e: AssignExp>  => Exp_::Return(Box::new(e)),
-    "abort" <e: AssignExp>  => Exp_::Abort(Box::new(e)),
-    <a: UnaryExp> "=" <rhs: AssignExp> => {
-        Exp_::Assign(Box::new(a), Box::new(rhs))
-    },
+ReturnAbortExp_ : Exp_ = {
+    "return" <e: ReturnAbortExp>  => Exp_::Return(Box::new(e)),
+    "abort" <e: ReturnAbortExp>  => Exp_::Abort(Box::new(e)),
     BinopExp_ => <>
 }
-AssignExp = Sp<AssignExp_>;
+ReturnAbortExp = Sp<ReturnAbortExp_>;
 
 Tier<Op, NextTier>: Exp_ = {
     <e1: Sp<Tier<Op,NextTier>>> <o: Sp<Op>> <e2: Sp<NextTier>> => {

@@ -598,12 +598,13 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                 &eb.ty,
                 &Type_::bool(bloc),
             );
-            let (ty, eloop) = loop_body(context, *nloop);
-            (sp(eloc, ty.value), TE::While(eb, eloop))
+            let (_has_break, ty, body) = loop_body(context, eloc, false, *nloop);
+            (sp(eloc, ty.value), TE::While(eb, body))
         }
         NE::Loop(nloop) => {
-            let (ty, eloop) = loop_body(context, *nloop);
-            (sp(eloc, ty.value), TE::Loop(eloop))
+            let (has_break, ty, body) = loop_body(context, eloc, true, *nloop);
+            let eloop = TE::Loop { has_break, body };
+            (sp(eloc, ty.value), eloop)
         }
         NE::Block(nseq) => {
             let seq = sequence(context, nseq);
@@ -617,12 +618,22 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             (sp(eloc, Type_::Unit), TE::Assign(a, lvalue_ty, er))
         }
 
-        NE::Mutate(ndotted, nr) => {
+        NE::Mutate(nl, nr) => {
+            let el = exp(context, *nl);
             let er = exp(context, *nr);
             let mut rvalue_tys = checked_rvalue_tys(context, eloc, "mutation", 1, er.ty.clone());
             assert!(rvalue_tys.len() == 1);
             let rvalue_ty = rvalue_tys.pop().unwrap();
-            let edotted = exp_dotted_borrow(context, "mutation", ndotted).0;
+            check_mutation(context, el.exp.loc, el.ty.clone(), rvalue_ty);
+            (sp(eloc, Type_::Unit), TE::Mutate(el, er))
+        }
+
+        NE::FieldMutate(ndotted, nr) => {
+            let er = exp(context, *nr);
+            let mut rvalue_tys = checked_rvalue_tys(context, eloc, "mutation", 1, er.ty.clone());
+            assert!(rvalue_tys.len() == 1);
+            let rvalue_ty = rvalue_tys.pop().unwrap();
+            let edotted = exp_dotted(context, "mutation", true, ndotted).0;
             let eborrow = exp_dotted_to_borrow(context, true, edotted);
             check_mutation(context, eborrow.exp.loc, eborrow.ty.clone(), rvalue_ty);
             (sp(eloc, Type_::Unit), TE::Mutate(Box::new(eborrow), er))
@@ -647,6 +658,15 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                     "Invalid usage of 'break'. 'break' can only be used inside a loop body",
                 )]);
             }
+            let current_break_ty = sp(eloc, Type_::Unit);
+            let break_ty = match &context.break_type {
+                None => current_break_ty,
+                Some(t) => {
+                    let t = t.clone();
+                    join(context, eloc, || "Invalid break.", &current_break_ty, &t)
+                }
+            };
+            context.break_type = Some(break_ty);
             (Type_::anything(eloc), TE::Break)
         }
         NE::Continue => {
@@ -816,7 +836,7 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         }
 
         NE::Borrow(mut_, ndotted) => {
-            let edotted = exp_dotted_borrow(context, "borrow", ndotted).0;
+            let edotted = exp_dotted(context, "borrow", true, ndotted).0;
             let eborrow = exp_dotted_to_borrow(context, mut_, edotted);
             (eborrow.ty, eborrow.exp.value)
         }
@@ -826,15 +846,22 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                 sp!(_, N::ExpDotted_::Exp(_)) => false,
                 _ => true,
             });
-            let (edotted, inner_ty) = exp_dotted_borrow(context, "dot access", ndotted);
+            let (edotted, inner_ty) = exp_dotted(context, "dot access", true, ndotted);
             let ederefborrow = exp_dotted_to_owned_value(context, edotted, inner_ty);
             (ederefborrow.ty, ederefborrow.exp.value)
         }
 
         NE::Annotate(nl, ty_annot) => {
             let el = exp(context, *nl);
+            let annot_loc = ty_annot.loc;
             let rhs = core::instantiate(context, ty_annot);
-            subtype(context, eloc, || "Invalid type annotation", &el.ty, &rhs);
+            subtype(
+                context,
+                annot_loc,
+                || "Invalid type annotation",
+                &el.ty,
+                &rhs,
+            );
             (rhs, el.exp.value)
         }
         NE::UnresolvedError => {
@@ -845,21 +872,33 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
     T::exp(ty, sp(eloc, e_))
 }
 
-fn loop_body(context: &mut Context, nloop: N::Exp) -> (Type, Box<T::Exp>) {
-    let old_in_loop = context.in_loop;
-    context.in_loop = true;
+fn loop_body(
+    context: &mut Context,
+    eloc: Loc,
+    is_loop: bool,
+    nloop: N::Exp,
+) -> (bool, Type, Box<T::Exp>) {
+    let old_in_loop = std::mem::replace(&mut context.in_loop, true);
+    let old_break_type = std::mem::replace(&mut context.break_type, None);
     let eloop = exp(context, nloop);
     context.in_loop = old_in_loop;
+    let break_type = std::mem::replace(&mut context.break_type, old_break_type);
 
     let lloc = eloop.exp.loc;
-    let ty = subtype(
+    subtype(
         context,
         lloc,
         || "Invalid loop body",
         &eloop.ty,
         &sp(lloc, Type_::Unit),
     );
-    (ty, eloop)
+    let has_break = break_type.is_some();
+    let ty = if is_loop && !has_break {
+        Type_::anything(lloc)
+    } else {
+        break_type.unwrap_or_else(|| sp(eloc, Type_::Unit))
+    };
+    (has_break, ty, eloop)
 }
 
 //**************************************************************************************************
@@ -1392,14 +1431,6 @@ enum ExpDotted_ {
 }
 type ExpDotted = Spanned<ExpDotted_>;
 
-fn exp_dotted_borrow(
-    context: &mut Context,
-    verb: &str,
-    ndot: N::ExpDotted,
-) -> (ExpDotted, BaseType) {
-    exp_dotted(context, verb, true, ndot)
-}
-
 fn exp_dotted(
     context: &mut Context,
     verb: &str,
@@ -1443,7 +1474,7 @@ fn exp_dotted(
             (edot_, bt)
         }
         NE::Dot(nlhs, field) => {
-            let (lhs, inner) = exp_dotted_borrow(context, "dot access", *nlhs);
+            let (lhs, inner) = exp_dotted(context, "dot access", true, *nlhs);
             let field_ty = resolve_field(context, dloc, inner, &field);
             (
                 ExpDotted_::Dot(Box::new(lhs), field, Box::new(field_ty.clone())),

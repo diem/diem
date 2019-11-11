@@ -59,6 +59,7 @@ pub struct Context {
     pub constraints: Constraints,
 
     pub in_loop: bool,
+    pub break_type: Option<Type>,
 
     errors: Errors,
 }
@@ -83,6 +84,7 @@ impl Context {
             errors,
             locals: UniqueMap::new(),
             in_loop: false,
+            break_type: None,
             modules,
         }
     }
@@ -835,7 +837,7 @@ pub fn join(mut subst: Subst, t1: &Type, t2: &Type) -> Result<(Subst, Type), Typ
         }
         (sp!(loc, Multiple(tys1)), sp!(_, Multiple(tys2))) if tys1.len() == tys2.len() => {
             let mut tys = vec![];
-            for (ty1, ty2) in tys1.iter().zip(tys1) {
+            for (ty1, ty2) in tys1.iter().zip(tys2) {
                 let (nsubst, t) = join_single(subst, ty1, ty2)?;
                 subst = nsubst;
                 tys.push(t)

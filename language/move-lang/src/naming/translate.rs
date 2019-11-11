@@ -520,7 +520,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
                 Some(na) => NE::Assign(na, ne),
             }
         }
-        EE::Mutate(edotted, er) => {
+        EE::FieldMutate(edotted, er) => {
             let ndot_opt = dotted(context, *edotted);
             let ner = exp(context, *er);
             match ndot_opt {
@@ -528,8 +528,13 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
                     assert!(context.has_errors());
                     NE::UnresolvedError
                 }
-                Some(ndot) => NE::Mutate(ndot, ner),
+                Some(ndot) => NE::FieldMutate(ndot, ner),
             }
+        }
+        EE::Mutate(el, er) => {
+            let nel = exp(context, *el);
+            let ner = exp(context, *er);
+            NE::Mutate(nel, ner)
         }
 
         EE::Return(es) => NE::Return(exp(context, *es)),

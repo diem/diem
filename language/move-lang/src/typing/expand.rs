@@ -217,7 +217,7 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
             exp(context, eb);
             exp(context, eloop);
         }
-        E::Loop(eloop) => exp(context, eloop),
+        E::Loop { body: eloop, .. } => exp(context, eloop),
         E::Block(seq) => sequence(context, seq),
         E::Assign(assigns, tys, er) => {
             assign_list(context, assigns);
