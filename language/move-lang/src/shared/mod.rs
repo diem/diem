@@ -110,7 +110,7 @@ impl TryFrom<&[u8]> for Address {
 // Loc
 //**************************************************************************************************
 
-#[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
 pub struct Loc {
     file: &'static str,
     span: Span,
@@ -126,6 +126,33 @@ impl Loc {
 
     pub fn span(self) -> Span {
         self.span
+    }
+}
+
+impl PartialOrd for Loc {
+    fn partial_cmp(&self, other: &Loc) -> Option<Ordering> {
+        let file_ord = self.file.partial_cmp(other.file)?;
+        if file_ord != Ordering::Equal {
+            return Some(file_ord);
+        }
+
+        let start_ord = self.span.start().partial_cmp(&other.span.start())?;
+        if start_ord != Ordering::Equal {
+            return Some(start_ord);
+        }
+
+        self.span.end().partial_cmp(&other.span.end())
+    }
+}
+
+impl Ord for Loc {
+    fn cmp(&self, other: &Loc) -> Ordering {
+        self.file.cmp(other.file).then_with(|| {
+            self.span
+                .start()
+                .cmp(&other.span.start())
+                .then_with(|| self.span.end().cmp(&other.span.end()))
+        })
     }
 }
 

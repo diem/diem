@@ -497,7 +497,9 @@ fn statement(context: &mut Context, result: &mut Block, e: T::Exp) {
                 block: loop_block,
             }
         }
-        TE::Loop(loop_body) => {
+        TE::Loop {
+            body: loop_body, ..
+        } => {
             let mut loop_block = Block::new();
             let el = maybe_exp(context, &mut loop_block, None, *loop_body);
             ignore_and_pop(context, &mut loop_block, true, el);
@@ -687,6 +689,9 @@ fn ignore_and_pop(
         Unreachable { .. } if last_stmt => (),
         Unreachable { report, loc } => dead_code_err(context, report, loc),
         Reachable(exp) => {
+            if let H::UnannotatedExp_::Unit = &exp.exp.value {
+                return;
+            }
             let pop_num = match &exp.ty.value {
                 H::Type_::Unit => 0,
                 H::Type_::Single(_) => 1,
@@ -782,13 +787,22 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             result.push_back(sp(eloc, s_));
             unit_()
         }
-        TE::Loop(loop_body) => {
+        TE::Loop {
+            has_break,
+            body: loop_body,
+        } => {
             let mut loop_block = Block::new();
             let el = maybe_exp(context, &mut loop_block, None, *loop_body);
             ignore_and_pop(context, &mut loop_block, true, el);
 
             let s_ = S::Loop { block: loop_block };
             result.push_back(sp(eloc, s_));
+            if !has_break {
+                return Unreachable {
+                    report: true,
+                    loc: eloc,
+                };
+            }
             unit_()
         }
         TE::Block(seq) => return block(context, result, eloc, None, seq),
@@ -1173,8 +1187,9 @@ fn freeze(context: &mut Context, result: &mut Block, expected_type: &H::Type, e:
                 .into_iter()
                 .zip(&points)
                 .map(|(ty, needs_freeze)| {
-                    let ty = if *needs_freeze { freeze_single(ty) } else { ty };
-                    (context.new_temp(loc, ty.clone()), ty)
+                    let orig_ty = ty.clone();
+                    let maybe_frozen = if *needs_freeze { freeze_single(ty) } else { ty };
+                    (context.new_temp(loc, maybe_frozen), orig_ty)
                 })
                 .collect::<Vec<_>>();
 
@@ -1235,7 +1250,7 @@ fn freeze_ty(sp!(tloc, t): H::Type) -> H::Type {
     use H::Type_ as T;
     match t {
         T::Single(s) => sp(tloc, T::Single(freeze_single(s))),
-        _ => panic!("ICE freezing anything but a mutable ref"),
+        t => panic!("ICE MULTIPLE freezing anything but a mutable ref: {:#?}", t),
     }
 }
 
@@ -1243,6 +1258,6 @@ fn freeze_single(sp!(sloc, s): H::SingleType) -> H::SingleType {
     use H::SingleType_ as S;
     match s {
         S::Ref(true, inner) => sp(sloc, S::Ref(false, inner)),
-        _ => panic!("ICE freezing anything but a mutable ref"),
+        t => panic!("ICE SINGLE freezing anything but a mutable ref: {:#?}", t),
     }
 }

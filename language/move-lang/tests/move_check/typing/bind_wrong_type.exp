@@ -86,7 +86,7 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:18:16 ───
     │
  18 │         let x: () = 0;
-    │                     ^ Invalid type annotation
+    │                ^^ Invalid type annotation
     ·
  18 │         let x: () = 0;
     │                     - The type: 'u64'
@@ -111,7 +111,7 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:19:17 ───
     │
  19 │         let (): u64 = ();
-    │                       ^^ Invalid type annotation
+    │                 ^^^ Invalid type annotation
     ·
  19 │         let (): u64 = ();
     │                       -- The type: '()'
@@ -136,7 +136,7 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:20:27 ───
     │
  20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
-    │                                               ^^^^^^^^^^^^^^^^^^^ Invalid type annotation
+    │                           ^^^^^^^^^^^^^^^^^ Invalid type annotation
     ·
  20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
     │                                               ------------------- The type: '(u64,bool,0000000000000000000000000000000000000000000000000000000008675309.M.R)'
@@ -161,7 +161,7 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:21:27 ───
     │
  21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
-    │                                         ^^^^^^^^^^^^^^^^^^^ Invalid type annotation
+    │                           ^^^^^^^^^^^ Invalid type annotation
     ·
  21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
     │                                         ------------------- The type: '(u64,bool,0000000000000000000000000000000000000000000000000000000008675309.M.R)'

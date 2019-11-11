@@ -153,7 +153,8 @@ pub enum Exp_ {
     Block(Sequence),
 
     Assign(AssignList, Box<Exp>),
-    Mutate(Box<ExpDotted>, Box<Exp>),
+    FieldMutate(Box<ExpDotted>, Box<Exp>),
+    Mutate(Box<Exp>, Box<Exp>),
 
     Return(Box<Exp>),
     Abort(Box<Exp>),

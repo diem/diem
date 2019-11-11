@@ -125,7 +125,7 @@ fn exp(
             exp(context, annotated_acquires, seen, eb);
             exp(context, annotated_acquires, seen, eloop);
         }
-        E::Loop(eloop) => exp(context, annotated_acquires, seen, eloop),
+        E::Loop { body: eloop, .. } => exp(context, annotated_acquires, seen, eloop),
         E::Block(seq) => sequence(context, annotated_acquires, seen, seq),
         E::Assign(_, _, er) => {
             exp(context, annotated_acquires, seen, er);
