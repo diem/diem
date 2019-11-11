@@ -73,9 +73,3 @@ message IdentityMsg {
   repeated bytes supported_protocols = 2;
   Role role = 3;
 }
-
-// Ping message sent as liveness probe.
-message Ping {}
-
-// Pong message sent as response to liveness probe.
-message Pong {}

@@ -4,8 +4,9 @@
 //! Interface between HealthChecker and Network layers.
 
 use crate::{
+    error::NetworkError,
     interface::NetworkRequest,
-    proto::{HealthCheckerMsg, HealthCheckerMsg_oneof, Ping2, Pong2},
+    proto::{HealthCheckerMsg, HealthCheckerMsg_oneof, Ping, Pong},
     protocols::rpc::error::RpcError,
     validator_network::{NetworkEvents, NetworkSender},
     ProtocolId,
@@ -57,9 +58,9 @@ impl HealthCheckerNetworkSender {
     pub async fn ping(
         &mut self,
         recipient: PeerId,
-        req_msg: Ping2,
+        req_msg: Ping,
         timeout: Duration,
-    ) -> Result<Pong2, RpcError> {
+    ) -> Result<Pong, RpcError> {
         let protocol = ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL);
         let req_msg_enum = HealthCheckerMsg {
             message: Some(HealthCheckerMsg_oneof::Ping(req_msg)),
@@ -76,6 +77,10 @@ impl HealthCheckerNetworkSender {
             // TODO: context
             Err(RpcError::InvalidRpcResponse)
         }
+    }
+
+    pub async fn disconnect_peer(&mut self, peer_id: PeerId) -> Result<(), NetworkError> {
+        self.inner.disconnect_peer(peer_id).await
     }
 }
 
@@ -99,7 +104,7 @@ mod tests {
         let mut stream = HealthCheckerNetworkEvents::new(network_reqs_rx);
 
         // build rpc request
-        let req_msg = Ping2 { nonce: 1234 };
+        let req_msg = Ping { nonce: 1234 };
         let req_msg_enum = HealthCheckerMsg {
             message: Some(HealthCheckerMsg_oneof::Ping(req_msg)),
         };
@@ -133,11 +138,11 @@ mod tests {
 
         // send ping rpc request
         let peer_id = PeerId::random();
-        let req_msg = Ping2 { nonce: 1234 };
+        let req_msg = Ping { nonce: 1234 };
         let f_res_msg = sender.ping(peer_id, req_msg.clone(), Duration::from_secs(5));
 
         // build rpc response
-        let res_msg = Pong2 { nonce: 1234 };
+        let res_msg = Pong { nonce: 1234 };
         let res_msg_enum = HealthCheckerMsg {
             message: Some(HealthCheckerMsg_oneof::Pong(res_msg.clone())),
         };
