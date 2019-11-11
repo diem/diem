@@ -29,13 +29,12 @@ pub use self::{
         RequestEpoch, RespondBlock, SyncInfo, VoteMsg, VoteProposal,
     },
     health_checker::{
-        health_checker_msg::Message as HealthCheckerMsg_oneof, HealthCheckerMsg, Ping as Ping2,
-        Pong as Pong2,
+        health_checker_msg::Message as HealthCheckerMsg_oneof, HealthCheckerMsg, Ping, Pong,
     },
     mempool::MempoolSyncMsg,
     network::{
         identity_msg::Role as IdentityMsg_Role, DiscoveryMsg, FullNodePayload, IdentityMsg, Note,
-        PeerInfo, Ping, Pong, SignedFullNodePayload, SignedPeerInfo,
+        PeerInfo, SignedFullNodePayload, SignedPeerInfo,
     },
     state_synchronizer::{
         state_synchronizer_msg::Message as StateSynchronizerMsg_oneof, GetChunkRequest,

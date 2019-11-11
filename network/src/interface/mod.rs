@@ -22,8 +22,9 @@ use crate::{
     },
     validator_network::{
         AdmissionControlNetworkEvents, AdmissionControlNetworkSender, ConsensusNetworkEvents,
-        ConsensusNetworkSender, MempoolNetworkEvents, MempoolNetworkSender,
-        StateSynchronizerEvents, StateSynchronizerSender,
+        ConsensusNetworkSender, HealthCheckerNetworkEvents, HealthCheckerNetworkSender,
+        MempoolNetworkEvents, MempoolNetworkSender, StateSynchronizerEvents,
+        StateSynchronizerSender,
     },
     ProtocolId,
 };
@@ -40,6 +41,7 @@ pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
 pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
 pub const STATE_SYNCHRONIZER_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
 pub const ADMISSION_CONTROL_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
+pub const HEALTH_CHECKER_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
 
 /// Requests [`NetworkProvider`] receives from the network interface.
 #[derive(Debug)]
@@ -97,6 +99,10 @@ pub trait LibraNetworkProvider {
         &mut self,
         ac_protocols: Vec<ProtocolId>,
     ) -> (AdmissionControlNetworkSender, AdmissionControlNetworkEvents);
+    fn add_health_checker(
+        &mut self,
+        hc_protocols: Vec<ProtocolId>,
+    ) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents);
     fn start(self: Box<Self>) -> BoxFuture<'static, ()>;
 }
 
@@ -197,7 +203,7 @@ where
         &mut self,
         ac_protocols: Vec<ProtocolId>,
     ) -> (AdmissionControlNetworkSender, AdmissionControlNetworkEvents) {
-        // Construct Consensus network interfaces
+        // Construct Admission Control network interfaces
         let (ac_tx, ac_rx) = channel::new_with_timeout(
             self.channel_size,
             &counters::PENDING_ADMISSION_CONTROL_NETWORK_EVENTS,
@@ -208,6 +214,23 @@ where
         let ac_handlers = ac_protocols.iter().map(|p| (p.clone(), ac_tx.clone()));
         self.upstream_handlers.extend(ac_handlers);
         (ac_network_sender, ac_network_events)
+    }
+
+    fn add_health_checker(
+        &mut self,
+        hc_protocols: Vec<ProtocolId>,
+    ) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
+        // Construct Health Checker network interfaces
+        let (hc_tx, hc_rx) = channel::new_with_timeout(
+            self.channel_size,
+            &counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS,
+            Duration::from_millis(HEALTH_CHECKER_INBOUND_MSG_TIMEOUT_MS),
+        );
+        let hc_network_sender = HealthCheckerNetworkSender::new(self.requests_tx.clone());
+        let hc_network_events = HealthCheckerNetworkEvents::new(hc_rx);
+        let hc_handlers = hc_protocols.iter().map(|p| (p.clone(), hc_tx.clone()));
+        self.upstream_handlers.extend(hc_handlers);
+        (hc_network_sender, hc_network_events)
     }
 
     fn start(self: Box<Self>) -> BoxFuture<'static, ()> {

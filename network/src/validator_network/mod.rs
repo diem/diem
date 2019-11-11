@@ -32,6 +32,7 @@ mod consensus;
 mod health_checker;
 mod mempool;
 mod state_synchronizer;
+
 #[cfg(test)]
 mod test;
 
@@ -44,7 +45,9 @@ pub use consensus::{
     ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
     CONSENSUS_RPC_PROTOCOL,
 };
-pub use health_checker::HealthCheckerNetworkEvents;
+pub use health_checker::{
+    HealthCheckerNetworkEvents, HealthCheckerNetworkSender, HEALTH_CHECKER_RPC_PROTOCOL,
+};
 use libra_types::PeerId;
 pub use mempool::{MempoolNetworkEvents, MempoolNetworkSender, MEMPOOL_DIRECT_SEND_PROTOCOL};
 pub use state_synchronizer::{
