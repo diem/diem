@@ -139,7 +139,9 @@ impl SafetyRules {
                 .set_epoch(qc.ledger_info().ledger_info().epoch());
             self.persistent_storage.set_last_voted_round(0);
             self.persistent_storage.set_preferred_round(0);
-        } else if qc.parent_block().round() > self.persistent_storage.preferred_round() {
+        }
+
+        if qc.parent_block().round() > self.persistent_storage.preferred_round() {
             self.persistent_storage
                 .set_preferred_round(qc.parent_block().round());
         }

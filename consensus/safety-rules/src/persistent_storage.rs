@@ -95,7 +95,6 @@ pub struct OnDiskStorage {
 }
 
 impl OnDiskStorage {
-    #[allow(dead_code)]
     pub fn new_storage(file_path: PathBuf) -> Box<dyn PersistentStorage> {
         let internal_data = InMemoryStorage::load_config(file_path.clone());
         Box::new(Self {
@@ -104,7 +103,6 @@ impl OnDiskStorage {
         })
     }
 
-    #[allow(dead_code)]
     pub fn default_storage(file_path: PathBuf) -> Box<dyn PersistentStorage> {
         if file_path.exists() {
             return Self::new_storage(file_path);

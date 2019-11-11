@@ -60,3 +60,6 @@ impl ValueCodec<SingleEntrySchema> for Vec<u8> {
         Ok(data.to_vec())
     }
 }
+
+#[cfg(test)]
+mod test;
