@@ -57,7 +57,7 @@ fn load_genesis(path: PathBuf) -> WriteSet {
     )
     .unwrap();
     match txn.payload() {
-        TransactionPayload::WriteSet(ws) => ws.clone(),
+        TransactionPayload::WriteSet(ws) => ws.write_set().clone(),
         _ => panic!("Expected writeset txn in genesis txn"),
     }
 }

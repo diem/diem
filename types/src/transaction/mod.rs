@@ -33,9 +33,11 @@ pub mod helpers;
 mod module;
 mod script;
 mod transaction_argument;
+mod write_set;
 
 pub use module::Module;
 pub use script::{Script, SCRIPT_HASH_LENGTH};
+pub use write_set::WriteSetPayload;
 
 use std::ops::Deref;
 pub use transaction_argument::{parse_as_transaction_argument, TransactionArgument};
@@ -174,6 +176,23 @@ impl RawTransaction {
         RawTransaction {
             sender,
             sequence_number,
+            payload: TransactionPayload::WriteSet(WriteSetPayload::new(write_set, vec![])),
+            // Since write-set transactions bypass the VM, these fields aren't relevant.
+            max_gas_amount: 0,
+            gas_unit_price: 0,
+            // Write-set transactions are special and important and shouldn't expire.
+            expiration_time: Duration::new(u64::max_value(), 0),
+        }
+    }
+
+    pub fn new_write_set_payload(
+        sender: AccountAddress,
+        sequence_number: u64,
+        write_set: WriteSetPayload,
+    ) -> Self {
+        RawTransaction {
+            sender,
+            sequence_number,
             payload: TransactionPayload::WriteSet(write_set),
             // Since write-set transactions bypass the VM, these fields aren't relevant.
             max_gas_amount: 0,
@@ -265,7 +284,7 @@ pub enum TransactionPayload {
     /// Deprecated. See https://developers.libra.org/blog/2019/10/22/simplifying-payloads for more
     /// details.
     Program,
-    WriteSet(WriteSet),
+    WriteSet(WriteSetPayload),
     /// A transaction that executes code.
     Script(Script),
     /// A transaction that publishes code.

@@ -96,7 +96,7 @@ impl FakeExecutor {
         )
         .payload()
         {
-            TransactionPayload::WriteSet(ws) => ws.clone(),
+            TransactionPayload::WriteSet(ws) => ws.write_set().clone(),
             _ => panic!("Expected writeset txn in genesis txn"),
         };
         Self::from_genesis(&genesis_write_set, Some(publishing_options))

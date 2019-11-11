@@ -113,7 +113,7 @@ where
                     },
                 )?)
             }
-            TransactionPayload::WriteSet(write_set) => {
+            TransactionPayload::WriteSet(write_set_payload) => {
                 // The only acceptable write-set transaction for now is for the genesis
                 // transaction.
                 // XXX figure out a story for hard forks.
@@ -122,7 +122,7 @@ where
                     return Err(VMStatus::new(StatusCode::REJECTED_WRITE_SET));
                 }
 
-                for (_access_path, write_op) in write_set {
+                for (_access_path, write_op) in write_set_payload.write_set() {
                     // Genesis transactions only add entries, never delete them.
                     if write_op.is_deletion() {
                         error!("[VM] Bad genesis block");
