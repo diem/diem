@@ -139,14 +139,14 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!()
     }
 
-    fn get_latest_ledger_infos_per_epoch(
+    fn get_epoch_change_ledger_infos(
         &self,
         _start_epoch: u64,
     ) -> Result<Vec<LedgerInfoWithSignatures>> {
         unimplemented!()
     }
 
-    fn get_latest_ledger_infos_per_epoch_async(
+    fn get_epoch_change_ledger_infos_async(
         &self,
         _start_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>> {

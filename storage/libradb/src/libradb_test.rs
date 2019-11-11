@@ -20,7 +20,7 @@ fn verify_epochs(db: &LibraDB, ledger_infos_with_sigs: &[LedgerInfoWithSignature
     let epoch_change_lis: Vec<_> = ledger_infos_with_sigs
         .iter()
         .filter(|info| info.ledger_info().next_validator_set().is_some())
-        .map(|info| info.clone())
+        .cloned()
         .collect();
 
     let (_, _, proof, _) = db.update_to_latest_ledger(0, Vec::new())?;
