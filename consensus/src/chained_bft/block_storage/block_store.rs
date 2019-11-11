@@ -94,13 +94,24 @@ impl<T: Payload> BlockStore<T> {
         max_pruned_blocks_in_mem: usize,
     ) -> BlockTree<T> {
         let (root_block, root_qc, root_li) = (root.0, root.1, root.2);
-        // TODO: check root matches the committed_trees.
-        let root_output = ProcessedVMOutput::new(vec![], state_computer.committed_trees(), None);
+        assert_eq!(
+            root_qc.certified_block().version(),
+            state_computer.committed_trees().version().unwrap_or(0),
+            "root qc version {} doesn't match committed trees {}",
+            root_qc.certified_block().version(),
+            state_computer.committed_trees().version().unwrap_or(0),
+        );
         assert_eq!(
             root_qc.certified_block().executed_state_id(),
-            root_output.accu_root(),
-            "We have inconsistent executed state with Quorum Cert for root block {}",
-            root_block.id()
+            state_computer.committed_trees().state_id(),
+            "root qc state id {} doesn't match committed trees {}",
+            root_qc.certified_block().executed_state_id(),
+            state_computer.committed_trees().state_id(),
+        );
+        let root_output = ProcessedVMOutput::new(
+            vec![],
+            state_computer.committed_trees(),
+            root_qc.certified_block().next_validator_set().cloned(),
         );
         let executed_root_block = ExecutedBlock::new(root_block, root_output);
         let mut tree = BlockTree::new(
@@ -297,12 +308,13 @@ impl<T: Payload> BlockStore<T> {
         // corruption, for example.
         match self.get_block(qc.certified_block().id()) {
             Some(executed_block) => {
-                assert_eq!(
-                        executed_block.compute_result().executed_state.state_id,
-                        qc.certified_block().executed_state_id(),
-                        "QC for block {} has a different execution result than the local computation. Restart and try again.",
-                        qc.certified_block().id(),
-                    );
+                ensure!(
+                    executed_block.block_info() == *qc.certified_block(),
+                    "QC for block {} has different BlockInfo {} than local {}",
+                    qc.certified_block().id(),
+                    qc.certified_block(),
+                    executed_block.block_info()
+                );
             }
             None => bail!("Insert {} without having the block in store first", qc),
         }

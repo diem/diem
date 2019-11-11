@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::block::block_test_utils::{certificate_for_genesis, placeholder_certificate_for_block};
+use crate::block::block_test_utils::certificate_for_genesis;
 use crate::{
     block::{block_test_utils::*, Block},
     quorum_cert::QuorumCert,
@@ -45,12 +45,15 @@ fn test_nil_block() {
 
     let signer = ValidatorSigner::random(None);
     let payload = 101;
-    let nil_block_qc = placeholder_certificate_for_block(
+    let parent_block_info = nil_block.quorum_cert().certified_block();
+    let nil_block_qc = gen_test_certificate(
         vec![&signer],
-        nil_block.id(),
-        nil_block.round(),
-        nil_block.quorum_cert().certified_block().id(),
-        nil_block.quorum_cert().certified_block().round(),
+        nil_block.gen_block_info(
+            parent_block_info.executed_state_id(),
+            parent_block_info.version(),
+            parent_block_info.next_validator_set().cloned(),
+        ),
+        nil_block.quorum_cert().certified_block().clone(),
         None,
     );
     println!(

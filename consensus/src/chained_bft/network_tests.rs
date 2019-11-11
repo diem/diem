@@ -329,9 +329,11 @@ impl DropConfig {
 }
 
 use crate::chained_bft::network::NetworkTask;
+use crate::chained_bft::test_utils::TestPayload;
 use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };
+use libra_crypto::HashValue;
 #[cfg(test)]
 use libra_types::crypto_proxies::random_validator_verifier;
 use std::convert::{TryFrom, TryInto};
@@ -430,8 +432,6 @@ fn test_rpc() {
         nodes.push(node);
     }
     let receiver_1 = receivers.remove(1);
-    let genesis = Arc::new(Block::<u64>::make_genesis_block());
-    let genesis_clone = Arc::clone(&genesis);
     let node0 = nodes[0].clone();
     let peer1 = peers[1];
     let vote_msg = VoteMsg::new(
@@ -456,9 +456,9 @@ fn test_rpc() {
             playground
                 .wait_for_messages(2, NetworkPlayground::votes_only)
                 .await;
-            let response = BlockRetrievalResponse::new(
-                BlockRetrievalStatus::Succeeded,
-                vec![Block::clone(genesis_clone.as_ref())],
+            let response = BlockRetrievalResponse::<TestPayload>::new(
+                BlockRetrievalStatus::IdNotFound,
+                vec![],
             );
             let bytes = ConsensusMsg {
                 message: Some(ConsensusMsg_oneof::RespondBlock(
@@ -474,13 +474,13 @@ fn test_rpc() {
     let peer = peers[1];
     block_on(async move {
         let response = nodes[0]
-            .request_block(
-                BlockRetrievalRequest::new(genesis.id(), 1),
+            .request_block::<TestPayload>(
+                BlockRetrievalRequest::new(HashValue::zero(), 1),
                 peer,
                 Duration::from_secs(5),
             )
             .await
             .unwrap();
-        assert_eq!(response.blocks()[0], *genesis);
+        assert_eq!(response.status(), BlockRetrievalStatus::IdNotFound);
     });
 }
