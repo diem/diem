@@ -107,6 +107,7 @@ pub struct Discovery<TTicker, TSubstream> {
     msg_timeout: Duration,
     /// Random-number generator.
     rng: SmallRng,
+    is_public: bool,
 }
 
 impl<TTicker, TSubstream> Discovery<TTicker, TSubstream>
@@ -125,6 +126,7 @@ where
         peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         msg_timeout: Duration,
+        is_public: bool,
     ) -> Self {
         // TODO(philiphayes): wire through config
         let dns_seed_addr = b"example.com";
@@ -140,7 +142,7 @@ where
 
         let known_peers = vec![(
             self_peer_id,
-            verify_note(&self_note, &trusted_peers).expect("The note is not valid"),
+            verify_note(&self_note, &trusted_peers, is_public).expect("The note is not valid"),
         )]
         .into_iter()
         .collect();
@@ -156,6 +158,7 @@ where
             conn_mgr_reqs_tx,
             msg_timeout,
             rng: SmallRng::from_entropy(),
+            is_public,
         }
     }
 
@@ -290,6 +293,7 @@ where
                         peer_id,
                         substream,
                         self.msg_timeout,
+                        self.is_public,
                     )
                     .boxed(),
                 );
@@ -454,6 +458,7 @@ async fn handle_inbound_substream<TSubstream>(
     peer_id: PeerId,
     substream: NegotiatedSubstream<TSubstream>,
     timeout: Duration,
+    is_public: bool,
 ) -> (PeerId, Result<Vec<VerifiedNote>, NetworkError>)
 where
     TSubstream: AsyncRead + AsyncWrite + Send + Unpin + 'static,
@@ -470,7 +475,7 @@ where
     let res_notes: Result<Vec<VerifiedNote>, NetworkError> = res_msg.and_then(|msg| {
         let mut verified_notes = vec![];
         msg.notes.iter().try_for_each(|note| {
-            verify_note(&note, &trusted_peers)
+            verify_note(&note, &trusted_peers, is_public)
                 .and_then(|verified_note| {
                     verified_notes.push(verified_note);
                     Ok(())
@@ -499,6 +504,7 @@ where
 fn verify_note(
     note: &Note,
     trusted_peers: &RwLock<HashMap<PeerId, NetworkPublicKeys>>,
+    is_public: bool,
 ) -> Result<VerifiedNote, NetworkError> {
     // validate PeerId
 
@@ -518,6 +524,7 @@ fn verify_note(
         peer_id,
         &peer_info_signature,
         &peer_info_bytes,
+        is_public,
     )?;
 
     let peer_info = PeerInfo::decode(peer_info_bytes)?;
@@ -535,6 +542,7 @@ fn verify_note(
             peer_id,
             &signed_full_node_payload.signature,
             &signed_full_node_payload.payload,
+            is_public,
         )?;
 
         let _ = FullNodePayload::decode(&signed_full_node_payload.payload)?;
@@ -561,25 +569,28 @@ fn verify_signature(
     signer: PeerId,
     signature: &[u8],
     msg: &[u8],
+    is_public: bool,
 ) -> Result<(), NetworkError> {
-    //    let verifier = SignatureValidator::new_with_quorum_voting_power(
-    //        trusted_peers
-    //            .read()
-    //            .unwrap()
-    //            .iter()
-    //            .map(|(peer_id, network_public_keys)| {
-    //                (
-    //                    *peer_id,
-    //                    SignatureInfo::new(network_public_keys.signing_public_key.clone(), 1),
-    //                )
-    //            })
-    //            .collect(),
-    //        1, /* quorum size */
-    //    )
-    //    .expect("Quorum size should be valid.");
-    //    let signature = Ed25519Signature::try_from(signature)
-    //        .map_err(|err| err.context(NetworkErrorKind::SignatureError))?;
-    //    verifier.verify_signature(signer, get_hash(msg), &signature)?;
+    if !is_public {
+        let verifier = SignatureValidator::new_with_quorum_voting_power(
+            trusted_peers
+                .read()
+                .unwrap()
+                .iter()
+                .map(|(peer_id, network_public_keys)| {
+                    (
+                        *peer_id,
+                        SignatureInfo::new(network_public_keys.signing_public_key.clone(), 1),
+                    )
+                })
+                .collect(),
+            1, /* quorum size */
+        )
+        .expect("Quorum size should be valid.");
+        let signature = Ed25519Signature::try_from(signature)
+            .map_err(|err| err.context(NetworkErrorKind::SignatureError))?;
+        verifier.verify_signature(signer, get_hash(msg), &signature)?;
+    }
     Ok(())
 }
 

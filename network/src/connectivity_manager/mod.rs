@@ -114,6 +114,7 @@ where
         requests_rx: channel::Receiver<ConnectivityRequest>,
         backoff_strategy: TBackoff,
         max_delay_ms: u64,
+        is_public: bool,
     ) -> Self {
         Self {
             eligible,
@@ -128,7 +129,7 @@ where
             backoff_strategy,
             max_delay_ms,
             event_id: 0,
-            is_public: false,
+            is_public,
         }
     }
 
@@ -221,7 +222,11 @@ where
             .peer_addresses
             .iter()
             .filter(|(peer_id, addrs)| {
-                //eligible.contains_key(peer_id)  // The node is eligible to be dialed.
+                if !self.is_public {
+                    if !eligible.contains_key(peer_id) {
+                        return false;
+                    } // The node is eligible to be dialed.
+                }
                 self.connected.get(peer_id).is_none() // The node is not already connected.
                     && self.dial_queue.get(peer_id).is_none() // There is no pending dial to this node.
                     && !addrs.is_empty() // There is an address to dial.

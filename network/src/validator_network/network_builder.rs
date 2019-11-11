@@ -499,6 +499,7 @@ impl NetworkBuilder {
                 pm_discovery_notifs_rx,
                 conn_mgr_reqs_tx.clone(),
                 Duration::from_millis(self.discovery_msg_timeout_ms),
+                self.is_public,
             );
             self.executor.spawn(discovery.start());
             debug!("Started discovery protocol actor");
