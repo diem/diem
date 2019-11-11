@@ -428,68 +428,68 @@ impl From<GetStartupInfoResponse> for crate::proto::storage::GetStartupInfoRespo
     }
 }
 
-/// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochRequest`]
+/// Helper to construct and parse [`proto::storage::GetEpochChangeLedgerInfosRequest`]
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct GetLatestLedgerInfosPerEpochRequest {
+pub struct GetEpochChangeLedgerInfosRequest {
     pub start_epoch: u64,
 }
 
-impl GetLatestLedgerInfosPerEpochRequest {
+impl GetEpochChangeLedgerInfosRequest {
     /// Constructor.
     pub fn new(start_epoch: u64) -> Self {
         Self { start_epoch }
     }
 }
 
-impl TryFrom<crate::proto::storage::GetLatestLedgerInfosPerEpochRequest>
-    for GetLatestLedgerInfosPerEpochRequest
+impl TryFrom<crate::proto::storage::GetEpochChangeLedgerInfosRequest>
+    for GetEpochChangeLedgerInfosRequest
 {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::GetLatestLedgerInfosPerEpochRequest) -> Result<Self> {
+    fn try_from(proto: crate::proto::storage::GetEpochChangeLedgerInfosRequest) -> Result<Self> {
         Ok(Self {
             start_epoch: proto.start_epoch,
         })
     }
 }
 
-impl From<GetLatestLedgerInfosPerEpochRequest>
-    for crate::proto::storage::GetLatestLedgerInfosPerEpochRequest
+impl From<GetEpochChangeLedgerInfosRequest>
+    for crate::proto::storage::GetEpochChangeLedgerInfosRequest
 {
-    fn from(request: GetLatestLedgerInfosPerEpochRequest) -> Self {
+    fn from(request: GetEpochChangeLedgerInfosRequest) -> Self {
         Self {
             start_epoch: request.start_epoch,
         }
     }
 }
 
-/// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochResponse`]
+/// Helper to construct and parse [`proto::storage::GetEpochChangeLedgerInfosResponse`]
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct GetLatestLedgerInfosPerEpochResponse {
-    pub latest_ledger_infos: Vec<LedgerInfoWithSignatures>,
+pub struct GetEpochChangeLedgerInfosResponse {
+    pub ledger_infos_with_sigs: Vec<LedgerInfoWithSignatures>,
 }
 
-impl GetLatestLedgerInfosPerEpochResponse {
+impl GetEpochChangeLedgerInfosResponse {
     /// Constructor.
     pub fn new(latest_ledger_infos: Vec<LedgerInfoWithSignatures>) -> Self {
         Self {
-            latest_ledger_infos,
+            ledger_infos_with_sigs: latest_ledger_infos,
         }
     }
 }
 
-impl TryFrom<crate::proto::storage::GetLatestLedgerInfosPerEpochResponse>
-    for GetLatestLedgerInfosPerEpochResponse
+impl TryFrom<crate::proto::storage::GetEpochChangeLedgerInfosResponse>
+    for GetEpochChangeLedgerInfosResponse
 {
     type Error = Error;
 
     fn try_from(
-        proto: crate::proto::storage::GetLatestLedgerInfosPerEpochResponse,
+        proto: crate::proto::storage::GetEpochChangeLedgerInfosResponse,
     ) -> Result<Self> {
         Ok(Self {
-            latest_ledger_infos: proto
+            ledger_infos_with_sigs: proto
                 .latest_ledger_infos
                 .into_iter()
                 .map(TryFrom::try_from)
@@ -498,13 +498,13 @@ impl TryFrom<crate::proto::storage::GetLatestLedgerInfosPerEpochResponse>
     }
 }
 
-impl From<GetLatestLedgerInfosPerEpochResponse>
-    for crate::proto::storage::GetLatestLedgerInfosPerEpochResponse
+impl From<GetEpochChangeLedgerInfosResponse>
+    for crate::proto::storage::GetEpochChangeLedgerInfosResponse
 {
-    fn from(response: GetLatestLedgerInfosPerEpochResponse) -> Self {
+    fn from(response: GetEpochChangeLedgerInfosResponse) -> Self {
         Self {
             latest_ledger_infos: response
-                .latest_ledger_infos
+                .ledger_infos_with_sigs
                 .into_iter()
                 .map(Into::into)
                 .collect(),
@@ -512,9 +512,9 @@ impl From<GetLatestLedgerInfosPerEpochResponse>
     }
 }
 
-impl Into<Vec<LedgerInfoWithSignatures>> for GetLatestLedgerInfosPerEpochResponse {
+impl Into<Vec<LedgerInfoWithSignatures>> for GetEpochChangeLedgerInfosResponse {
     fn into(self) -> Vec<LedgerInfoWithSignatures> {
-        self.latest_ledger_infos
+        self.ledger_infos_with_sigs
     }
 }
 

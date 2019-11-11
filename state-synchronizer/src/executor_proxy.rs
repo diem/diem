@@ -150,16 +150,9 @@ impl ExecutorProxyTrait for ExecutorProxy {
     }
 
     fn get_epoch_proof(&self, start_epoch: u64) -> Result<ValidatorChangeEventWithProof> {
-        let mut ledger_info_per_epoch = self
+        let ledger_info_per_epoch = self
             .storage_read_client
-            .get_latest_ledger_infos_per_epoch(start_epoch)?;
-        // The latest ledger info may not carry the validator set.
-        match ledger_info_per_epoch.pop() {
-            Some(li) if li.ledger_info().next_validator_set().is_some() => {
-                ledger_info_per_epoch.push(li);
-            }
-            _ => (),
-        }
+            .get_epoch_change_ledger_infos(start_epoch)?;
         Ok(ValidatorChangeEventWithProof::new(ledger_info_per_epoch))
     }
 }
