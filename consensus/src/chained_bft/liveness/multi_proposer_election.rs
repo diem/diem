@@ -7,14 +7,16 @@ use consensus_types::{
     common::{Author, Payload, Round},
 };
 use libra_logger::prelude::*;
-use siphasher::sip::SipHasher24;
-use std::hash::{Hash, Hasher};
 
-// A deterministic hashing function based on SipHash 2-4 hasher
-pub fn hash(val: u64) -> u64 {
-    let mut hasher = SipHasher24::new();
-    val.hash(&mut hasher);
-    hasher.finish()
+// next continuously mutates a state and returns a u64-index
+pub fn next(state: &mut Vec<u8>) -> u64 {
+    std::mem::replace(
+        state,
+        libra_crypto::HashValue::from_sha3_256(state).to_vec(),
+    );
+    let mut temp = [0u8; 8];
+    temp.copy_from_slice(&state[..8]);
+    u64::from_le_bytes(temp)
 }
 
 /// The MultiProposer maps a round to an ordered list of authors.
@@ -68,11 +70,14 @@ impl<T> MultiProposer<T> {
     fn get_candidates(&self, round: Round) -> Vec<Author> {
         let mut res = vec![];
         let mut candidates = self.proposers.clone();
-        let mut cur_val = round;
+        let mut state = round.to_le_bytes().to_vec();
         for _ in 0..self.num_proposers_per_round {
-            cur_val = hash(cur_val);
-            let idx = (cur_val % candidates.len() as u64) as usize;
-            res.push(candidates.swap_remove(idx));
+            let idx = next(&mut state);
+            // note: this modular reduction has a slight bias.
+            // Yet, the bias is so small in practice that it is not worth
+            // addressing this edge case.
+            let idx = idx % (candidates.len() as u64);
+            res.push(candidates.swap_remove(idx as usize));
         }
         res
     }
