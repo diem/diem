@@ -4,6 +4,7 @@
 use crate::{block::Block, common::Round, quorum_cert::QuorumCert};
 use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
 use libra_crypto::hash::HashValue;
+use libra_types::block_info::BlockInfo;
 use std::{
     fmt::{Display, Formatter},
     sync::Arc,
@@ -94,6 +95,15 @@ impl<T> ExecutedBlock<T> {
             .iter()
             .filter_map(|x| x.txn_info_hash())
             .collect()
+    }
+
+    pub fn block_info(&self) -> BlockInfo {
+        let executed_state = self.compute_result().executed_state;
+        self.block().gen_block_info(
+            executed_state.state_id,
+            executed_state.version,
+            executed_state.validators,
+        )
     }
 }
 

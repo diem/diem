@@ -23,14 +23,13 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
+use consensus_types::block::block_test_utils::gen_test_certificate;
 use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };
 use consensus_types::{
     block::{
-        block_test_utils::{
-            certificate_for_genesis, placeholder_certificate_for_block, placeholder_ledger_info,
-        },
+        block_test_utils::{certificate_for_genesis, placeholder_ledger_info},
         Block,
     },
     common::Author,
@@ -467,7 +466,6 @@ fn process_vote_timeout_msg_test() {
 
     let qc = non_proposer.block_store.highest_quorum_cert();
     let block_0 = Block::new_proposal(vec![1], 1, 1, qc.as_ref().clone(), &non_proposer.signer);
-    let block_0_id = block_0.id();
     block_on(
         non_proposer
             .block_store
@@ -481,13 +479,16 @@ fn process_vote_timeout_msg_test() {
     )
     .unwrap();
 
+    let parent_block_info = block_0.quorum_cert().certified_block();
     // Populate block_0 and a quorum certificate for block_0 on non_proposer
-    let block_0_quorum_cert = placeholder_certificate_for_block(
+    let block_0_quorum_cert = gen_test_certificate(
         vec![&static_proposer.signer, &non_proposer.signer],
-        block_0_id,
-        1,
-        block_0.quorum_cert().certified_block().id(),
-        block_0.quorum_cert().certified_block().round(),
+        block_0.gen_block_info(
+            parent_block_info.executed_state_id(),
+            parent_block_info.version(),
+            parent_block_info.next_validator_set().cloned(),
+        ),
+        parent_block_info.clone(),
         None,
     );
     non_proposer

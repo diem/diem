@@ -190,6 +190,34 @@ pub fn placeholder_ledger_with_id(id: HashValue) -> LedgerInfo {
     )
 }
 
+pub fn gen_test_certificate(
+    signers: Vec<&ValidatorSigner>,
+    block: BlockInfo,
+    parent_block: BlockInfo,
+    committed_block_id: Option<HashValue>,
+) -> QuorumCert {
+    let vote_data = VoteData::new(block.clone(), parent_block.clone());
+    let mut ledger_info_placeholder = match committed_block_id {
+        Some(id) => placeholder_ledger_with_id(id),
+        None => placeholder_ledger_info(),
+    };
+
+    ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
+
+    let mut signatures = BTreeMap::new();
+    for signer in signers {
+        let li_sig = signer
+            .sign_message(ledger_info_placeholder.hash())
+            .expect("Failed to sign LedgerInfo");
+        signatures.insert(signer.author(), li_sig);
+    }
+
+    QuorumCert::new(
+        vote_data,
+        LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures),
+    )
+}
+
 pub fn placeholder_certificate_for_block(
     signers: Vec<&ValidatorSigner>,
     certified_block_id: HashValue,
@@ -208,7 +236,7 @@ pub fn placeholder_certificate_for_block(
             genesis_ledger_info.transaction_accumulator_hash(),
             genesis_ledger_info.version(),
             genesis_ledger_info.timestamp_usecs(),
-            genesis_ledger_info.next_validator_set().cloned(),
+            None,
         ),
         BlockInfo::new(
             genesis_ledger_info.epoch() + 1,
@@ -217,7 +245,7 @@ pub fn placeholder_certificate_for_block(
             genesis_ledger_info.transaction_accumulator_hash(),
             genesis_ledger_info.version(),
             genesis_ledger_info.timestamp_usecs(),
-            genesis_ledger_info.next_validator_set().cloned(),
+            None,
         ),
     );
 

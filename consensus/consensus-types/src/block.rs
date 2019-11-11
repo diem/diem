@@ -7,7 +7,7 @@ use crate::{
     quorum_cert::QuorumCert,
     vote_data::VoteData,
 };
-use failure::{ensure, format_err};
+use failure::{bail, ensure, format_err};
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::block_info::BlockInfo;
 use libra_types::transaction::Version;
@@ -103,6 +103,23 @@ impl<T> Block<T> {
     pub fn timestamp_usecs(&self) -> u64 {
         self.block_data.timestamp_usecs()
     }
+
+    pub fn gen_block_info(
+        &self,
+        executed_state_id: HashValue,
+        version: Version,
+        next_validator_set: Option<ValidatorSet>,
+    ) -> BlockInfo {
+        BlockInfo::new(
+            self.epoch(),
+            self.round(),
+            self.id(),
+            executed_state_id,
+            version,
+            self.timestamp_usecs(),
+            next_validator_set,
+        )
+    }
 }
 
 impl<T> Block<T>
@@ -138,7 +155,7 @@ where
             ledger_info.transaction_accumulator_hash(),
             ledger_info.version(),
             ledger_info.timestamp_usecs(),
-            ledger_info.next_validator_set().cloned(),
+            None,
         );
 
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
@@ -210,7 +227,7 @@ where
     /// If this is the genesis block, we skip these checks.
     pub fn validate_signatures(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
         match self.block_data.block_type() {
-            BlockType::Genesis => Ok(()),
+            BlockType::Genesis => bail!("We should not accept genesis from others"),
             BlockType::NilBlock => self.quorum_cert().verify(validator),
             BlockType::Proposal { author, .. } => {
                 let signature = self
@@ -226,38 +243,22 @@ where
     /// Makes sure that the proposal makes sense, independently of the current state.
     /// If this is the genesis block, we skip these checks.
     pub fn verify_well_formed(&self) -> failure::Result<()> {
-        if self.is_genesis_block() {
-            return Ok(());
-        }
-        debug_checked_verify_eq!(
-            self.id(),
-            self.block_data.hash(),
-            "Block id mismatch the hash"
+        ensure!(
+            !self.is_genesis_block(),
+            "We should not accept genesis from others"
         );
         ensure!(
             self.quorum_cert().certified_block().round() < self.round(),
             "Block has invalid round"
         );
+        debug_checked_verify_eq!(
+            self.id(),
+            self.block_data.hash(),
+            "Block id mismatch the hash"
+        );
 
         ensure!(!self.quorum_cert().ends_epoch(), "Block after epoch ends");
         Ok(())
-    }
-
-    pub fn gen_block_info(
-        &self,
-        executed_state_id: HashValue,
-        version: Version,
-        next_validator_set: Option<ValidatorSet>,
-    ) -> BlockInfo {
-        BlockInfo::new(
-            self.epoch(),
-            self.round(),
-            self.id(),
-            executed_state_id,
-            version,
-            self.timestamp_usecs(),
-            next_validator_set,
-        )
     }
 }
 

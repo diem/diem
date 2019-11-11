@@ -138,7 +138,7 @@ impl SafetyRules {
     /// Learn about a new quorum certificate. In normal state, this updates the preferred round,
     /// if the parent is greater than our current preferred round. This can also trigger upgrading
     /// to a new epoch.
-    /// @TODO verify signatures of the QC
+    /// @TODO verify signatures of the QC, also the special genesis QC
     /// @TODO improving signaling by stating reaction to passed in QC:
     ///     QC has older preferred round,
     ///     signatures are incorrect,

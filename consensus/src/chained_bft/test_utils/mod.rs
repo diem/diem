@@ -3,10 +3,7 @@
 
 use crate::chained_bft::block_storage::{BlockReader, BlockStore};
 use consensus_types::{
-    block::{
-        block_test_utils::{certificate_for_genesis, placeholder_certificate_for_block},
-        Block,
-    },
+    block::{block_test_utils::certificate_for_genesis, Block},
     common::Round,
     executed_block::ExecutedBlock,
     quorum_cert::QuorumCert,
@@ -24,6 +21,7 @@ mod mock_state_computer;
 mod mock_storage;
 mod mock_txn_manager;
 
+use consensus_types::block::block_test_utils::gen_test_certificate;
 use libra_types::block_info::BlockInfo;
 pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
 pub use mock_storage::{EmptyStorage, MockStorage};
@@ -163,12 +161,10 @@ impl TreeInserter {
         block: &ExecutedBlock<TestPayload>,
         consensus_block_id: Option<HashValue>,
     ) -> QuorumCert {
-        placeholder_certificate_for_block(
+        gen_test_certificate(
             vec![&self.signer],
-            block.id(),
-            block.round(),
-            block.quorum_cert().certified_block().id(),
-            block.quorum_cert().certified_block().round(),
+            block.block_info(),
+            block.quorum_cert().certified_block().clone(),
             consensus_block_id,
         )
     }
