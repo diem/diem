@@ -6,6 +6,7 @@
 use crate::effects::Effect;
 use crate::effects::NetworkDelay;
 use crate::prometheus::Prometheus;
+use crate::tx_emitter::{EmitJobRequest, EmitThreadParams, TxEmitter};
 use crate::util::unix_timestamp_now;
 use crate::{cluster::Cluster, experiments::Experiment, thread_pool_executor::ThreadPoolExecutor};
 use failure;
@@ -184,9 +185,19 @@ impl Experiment for MultiRegionSimulation {
     }
 
     fn run(&self) -> failure::Result<()> {
+        let mut emitter = TxEmitter::new(&self.cluster);
         let mut results = vec![];
         for split in &self.splits {
             for cross_region_latency in &self.cross_region_latencies {
+                let job = emitter
+                    .start_job(EmitJobRequest {
+                        instances: self.cluster.instances().clone(),
+                        accounts_per_client: 10,
+                        thread_params: EmitThreadParams::default(),
+                    })
+                    .expect("Failed to start emit job");
+                // Wait for minting to complete and transactions to start
+                thread::sleep(Duration::from_secs(30));
                 info!(
                     "Running multi region simulation: split: {}, cross region latency: {}ms",
                     split, cross_region_latency
@@ -198,6 +209,8 @@ impl Experiment for MultiRegionSimulation {
                     info!("metrics for this run: {:?}", metrics);
                     results.push(metrics);
                 }
+                emitter.stop_job(job);
+                // Sleep for a minute before different experiments
                 thread::sleep(Duration::from_secs(60));
             }
         }
