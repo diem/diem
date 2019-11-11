@@ -19,11 +19,12 @@ use crate::{
     protocols::{
         direct_send::DirectSend,
         discovery::{Discovery, DISCOVERY_PROTOCOL_NAME},
-        health_checker::{HealthChecker, PING_PROTOCOL_NAME},
+        health_checker::HealthChecker,
         identity::Identity,
         rpc::Rpc,
     },
     transport::*,
+    validator_network::HEALTH_CHECKER_RPC_PROTOCOL,
     ProtocolId,
 };
 use channel;
@@ -102,6 +103,7 @@ pub struct NetworkBuilder {
     max_connection_delay_ms: u64,
     signing_keys: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
     is_permissioned: bool,
+    health_checker_enabled: bool,
 }
 
 impl NetworkBuilder {
@@ -122,7 +124,7 @@ impl NetworkBuilder {
             trusted_peers: Arc::new(RwLock::new(HashMap::new())),
             channel_size: NETWORK_CHANNEL_SIZE,
             direct_send_protocols: vec![],
-            rpc_protocols: vec![],
+            rpc_protocols: vec![ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)],
             transport: TransportType::Memory,
             discovery_interval_ms: DISCOVERY_INTERVAL_MS,
             discovery_msg_timeout_ms: DISOVERY_MSG_TIMEOUT_MS,
@@ -138,6 +140,7 @@ impl NetworkBuilder {
             max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
             signing_keys: None,
             is_permissioned: true,
+            health_checker_enabled: true,
         }
     }
 
@@ -294,7 +297,6 @@ impl NetworkBuilder {
             .direct_send_protocols
             .iter()
             .chain(&self.rpc_protocols)
-            .chain(&vec![ProtocolId::from_static(PING_PROTOCOL_NAME)])
             .cloned()
             .collect();
         // TODO: This check is performed at 2 places to modify how protocols are setup. Ideally we
@@ -303,6 +305,25 @@ impl NetworkBuilder {
             supported_protocols.push(ProtocolId::from_static(DISCOVERY_PROTOCOL_NAME));
         }
         supported_protocols
+    }
+
+    /// Enable or disable the health checker protocol in this network instance.
+    // TODO(philiphayes): remember to remove this
+    #[allow(dead_code)]
+    fn health_checker_enabled(&mut self, enabled: bool) -> &mut Self {
+        self.health_checker_enabled = enabled;
+        let health_checker_protocol = ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL);
+        if enabled {
+            self.rpc_protocols.push(health_checker_protocol);
+        } else {
+            // TODO(philiphayes): replace with `Vec::remove_item` when it's stable.
+            let maybe_idx = self
+                .rpc_protocols
+                .iter()
+                .position(|x| *x == health_checker_protocol);
+            maybe_idx.map(|idx| self.rpc_protocols.remove(idx));
+        }
+        self
     }
 
     /// Create the configured `NetworkBuilder`
@@ -408,26 +429,6 @@ impl NetworkBuilder {
         self.executor.spawn(rpc.start());
         debug!("Started RPC actor");
 
-        // Initialize and start HealthChecker.
-        let (pm_ping_notifs_tx, pm_ping_notifs_rx) = channel::new(
-            self.channel_size,
-            &counters::PENDING_PEER_MANAGER_PING_NOTIFICATIONS,
-        );
-        protocol_handlers.insert(
-            ProtocolId::from_static(PING_PROTOCOL_NAME),
-            pm_ping_notifs_tx.clone(),
-        );
-        peer_event_handlers.push(pm_ping_notifs_tx);
-        let health_checker = HealthChecker::new(
-            Interval::new_interval(Duration::from_millis(self.ping_interval_ms)).fuse(),
-            PeerManagerRequestSender::new(pm_reqs_tx.clone()),
-            pm_ping_notifs_rx,
-            Duration::from_millis(self.ping_timeout_ms),
-            self.ping_failures_tolerated,
-        );
-        self.executor.spawn(health_checker.start());
-        debug!("Started health checker");
-
         let mut net_conn_mgr_reqs_tx = None;
 
         // We start the discovery and connectivity_manager module only if the network is
@@ -512,7 +513,7 @@ impl NetworkBuilder {
         // Setup communication channels.
         let (network_reqs_tx, network_reqs_rx) =
             channel::new(self.channel_size, &counters::PENDING_NETWORK_REQUESTS);
-        let validator_network = NetworkProvider::new(
+        let mut network_provider = NetworkProvider::new(
             pm_net_reqs_tx,
             pm_net_notifs_rx,
             rpc_reqs_tx,
@@ -526,6 +527,22 @@ impl NetworkBuilder {
             self.max_concurrent_network_notifs,
             self.channel_size,
         );
-        (listen_addr, Box::new(validator_network))
+
+        if self.health_checker_enabled {
+            // Initialize and start HealthChecker.
+            let (hc_network_tx, hc_network_rx) = network_provider
+                .add_health_checker(vec![ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)]);
+            let health_checker = HealthChecker::new(
+                Interval::new_interval(Duration::from_millis(self.ping_interval_ms)).fuse(),
+                hc_network_tx,
+                hc_network_rx,
+                Duration::from_millis(self.ping_timeout_ms),
+                self.ping_failures_tolerated,
+            );
+            self.executor.spawn(health_checker.start());
+            debug!("Started health checker");
+        }
+
+        (listen_addr, Box::new(network_provider))
     }
 }

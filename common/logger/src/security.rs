@@ -39,6 +39,12 @@ pub enum SecurityEvent {
     /// Consensus received an invalid sync info message
     InvalidSyncInfoMsg,
 
+    /// HealthChecker received an invalid network event
+    InvalidNetworkEventHC,
+
+    /// HealthChecker received an invalid message
+    InvalidHealthCheckerMsg,
+
     /// A block being committed or executed is invalid
     InvalidBlock,
 
