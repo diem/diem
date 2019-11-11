@@ -67,6 +67,7 @@ pub struct ConnectivityManager<TTicker, TSubstream, TBackoff> {
     /// A local counter incremented on receiving an incoming message. Printing this in debugging
     /// allows for easy debugging.
     event_id: u32,
+    is_public: bool,
 }
 
 /// Requests received by the [`ConnectivityManager`] manager actor from upstream modules.
@@ -127,6 +128,7 @@ where
             backoff_strategy,
             max_delay_ms,
             event_id: 0,
+            is_public: false,
         }
     }
 
@@ -313,7 +315,9 @@ where
         // Cancel dials to peers that are no longer eligible.
         self.cancel_stale_dials().await;
         // Disconnect from connected peers that are no longer eligible.
-        //self.close_stale_connections().await;
+        if !self.is_public {
+            self.close_stale_connections().await;
+        }
         // Dial peers which are eligible but are neither connected nor queued for dialing in the
         // future.
         self.dial_eligible_peers(pending_dials).await;

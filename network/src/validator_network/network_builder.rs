@@ -466,6 +466,7 @@ impl NetworkBuilder {
                 conn_mgr_reqs_rx,
                 ExponentialBackoff::from_millis(2).factor(1000 /* seconds */),
                 self.max_connection_delay_ms,
+                self.is_public,
             );
             self.executor.spawn(conn_mgr.start());
             debug!("Started connection manager");
