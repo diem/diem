@@ -11,7 +11,9 @@ use libra_types::{
     account_config,
     byte_array::ByteArray,
     identifier::Identifier,
-    transaction::{RawTransaction, Script, SignatureCheckedTransaction, TransactionArgument},
+    transaction::{
+        ChangeSet, RawTransaction, Script, SignatureCheckedTransaction, TransactionArgument,
+    },
     validator_set::ValidatorSet,
 };
 use rand::{rngs::StdRng, SeedableRng};
@@ -382,10 +384,9 @@ pub fn encode_genesis_transaction_with_validator(
                 "Validator set in emitted event does not match validator set fed into genesis transaction"
             );
 
-            txn_output.write_set().clone().into_mut()
+            ChangeSet::new(txn_output.write_set().clone(), txn_output.events().to_vec())
         }
     };
-    let transaction =
-        RawTransaction::new_write_set(genesis_addr, 0, genesis_write_set.freeze().unwrap());
+    let transaction = RawTransaction::new_change_set(genesis_addr, 0, genesis_write_set);
     transaction.sign(private_key, public_key).unwrap()
 }
