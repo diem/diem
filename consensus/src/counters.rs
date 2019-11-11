@@ -157,17 +157,13 @@ pub static ref CREATION_TO_RECEIVAL_S: DurationHistogram = DurationHistogram::ne
 ////////////////////////////////////
 // PROPSOSAL/VOTE TIMESTAMP COUNTERS
 ////////////////////////////////////
-/// Count of the proposals that passed the timestamp rules and did not have to wait
-pub static ref PROPOSAL_NO_WAIT_REQUIRED_COUNT: IntCounter = register_int_counter!("libra_consensus_proposal_no_wait_required_count", "Count of the proposals that passed the timestamp rules and did not have to wait").unwrap();
 
-/// Count of the proposals where passing the timestamp rules required waiting
-pub static ref PROPOSAL_WAIT_WAS_REQUIRED_COUNT: IntCounter = register_int_counter!("libra_consensus_proposal_wait_was_required_count", "Count of the proposals where passing the timestamp rules required waiting").unwrap();
-
-/// Count of the proposals that were not made due to the waiting period exceeding the maximum allowed duration, breaking timestamp rules
-pub static ref PROPOSAL_MAX_WAIT_EXCEEDED_COUNT: IntCounter = register_int_counter!("libra_consensus_proposal_max_wait_exceeded_count", "Count of the proposals that were not made due to the waiting period exceeding the maximum allowed duration, breaking timestamp rules").unwrap();
-
-/// Count of the proposals that were not made due to waiting to ensure the current time exceeds min_duration_since_epoch failed, breaking timestamp rules
-pub static ref PROPOSAL_WAIT_FAILED_COUNT: IntCounter = register_int_counter!("libra_consensus_proposal_wait_failed_count", "Count of the proposals that were not made due to waiting to ensure the current time exceeds min_duration_since_epoch failed, breaking timestamp rules").unwrap();
+/// Total count of the proposals generated. state can be:
+/// no_wait_required: Count of the proposals that passed the timestamp rules and did not have to wait
+/// wait_was_required: Count of the proposals where passing the timestamp rules required waiting
+/// max_wait_exceeded: Count of the proposals that were not made due to the waiting period exceeding the maximum allowed duration, breaking timestamp rules
+/// wait_failed: Count of the proposals that were not made due to waiting to ensure the current time exceeds min_duration_since_epoch failed, breaking timestamp rules
+pub static ref PROPOSALS_GENERATED_COUNT: IntCounterVec = register_int_counter_vec!("libra_consensus_proposals_generated_count", "Count of all the proposals generated", &["state"]).unwrap();
 
 /// Histogram of time waited for successfully proposing a proposal (both those that waited and didn't wait) after following timestamp rules
 pub static ref PROPOSAL_SUCCESS_WAIT_S: DurationHistogram = DurationHistogram::new(register_histogram!("libra_consensus_proposal_success_wait_s", "Histogram of time waited for successfully proposing a proposal (both those that waited and didn't wait) after following timestamp rules").unwrap());

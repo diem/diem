@@ -143,7 +143,9 @@ impl<T: Payload> ProposalGenerator<T> {
                             wait_duration,
                         } => {
                             counters::PROPOSAL_SUCCESS_WAIT_S.observe_duration(wait_duration);
-                            counters::PROPOSAL_WAIT_WAS_REQUIRED_COUNT.inc();
+                            counters::PROPOSALS_GENERATED_COUNT
+                                .with_label_values(&["wait_was_required"])
+                                .inc();
                             current_duration_since_epoch
                         }
                         WaitingSuccess::NoWaitRequired {
@@ -151,7 +153,9 @@ impl<T: Payload> ProposalGenerator<T> {
                             ..
                         } => {
                             counters::PROPOSAL_SUCCESS_WAIT_S.observe_duration(Duration::new(0, 0));
-                            counters::PROPOSAL_NO_WAIT_REQUIRED_COUNT.inc();
+                            counters::PROPOSALS_GENERATED_COUNT
+                                .with_label_values(&["no_wait_required"])
+                                .inc();
                             current_duration_since_epoch
                         }
                     }
@@ -160,7 +164,9 @@ impl<T: Payload> ProposalGenerator<T> {
                     match waiting_error {
                         WaitingError::MaxWaitExceeded => {
                             counters::PROPOSAL_FAILURE_WAIT_S.observe_duration(Duration::new(0, 0));
-                            counters::PROPOSAL_MAX_WAIT_EXCEEDED_COUNT.inc();
+                            counters::PROPOSALS_GENERATED_COUNT
+                                .with_label_values(&["max_wait_exceeded"])
+                                .inc();
                             bail!(
                                 "Waiting until parent block timestamp usecs {:?} would exceed the round duration {:?}, hence will not create a proposal for this round",
                                 hqc.certified_block().timestamp_usecs(),
@@ -171,7 +177,9 @@ impl<T: Payload> ProposalGenerator<T> {
                             wait_duration,
                         } => {
                             counters::PROPOSAL_FAILURE_WAIT_S.observe_duration(wait_duration);
-                            counters::PROPOSAL_WAIT_FAILED_COUNT.inc();
+                            counters::PROPOSALS_GENERATED_COUNT
+                                .with_label_values(&["wait_failed"])
+                                .inc();
                             bail!(
                                 "Even after waiting for {:?}, parent block timestamp usecs {:?} >= current timestamp usecs {:?}, will not create a proposal for this round",
                                 wait_duration,
