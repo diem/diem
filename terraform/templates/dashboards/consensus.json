@@ -1921,7 +1921,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_vote_no_wait_required_count",
+          "expr": "libra_consensus_votes_count{state='no_wait_required'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -2007,7 +2007,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_vote_wait_was_required_count",
+          "expr": "libra_consensus_votes_count{state='wait_was_required'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -2093,7 +2093,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_vote_max_wait_exceeded_count",
+          "expr": "libra_consensus_votes_count{state='max_wait_exceeded'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -2179,7 +2179,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_vote_wait_failed_count",
+          "expr": "libra_consensus_votes_count{state='wait_failed'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",

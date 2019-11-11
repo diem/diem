@@ -98,7 +98,7 @@ pub static ref BLOCK_RETRIEVAL_COUNT: IntCounter = register_int_counter!("libra_
 pub static ref BLOCK_RETRIEVAL_DURATION_S: DurationHistogram = DurationHistogram::new(register_histogram!("libra_consensus_block_retrieval_duration_s", "Histogram of block retrieval duration.").unwrap());
 
 /// Histogram of state sync duration.
-pub static ref STATE_SYNC_DURATION_S: DurationHistogram =DurationHistogram::new(register_histogram!("libra_consensus_state_sync_duration_s", "Histogram of state sync duration.").unwrap());
+pub static ref STATE_SYNC_DURATION_S: DurationHistogram = DurationHistogram::new(register_histogram!("libra_consensus_state_sync_duration_s", "Histogram of state sync duration.").unwrap());
 
 /// Counts the number of times the sync info message has been set since last restart.
 pub static ref SYNC_INFO_MSGS_SENT_COUNT: IntCounter = register_int_counter!("libra_consensus_sync_info_msg_sent_count", "Counts the number of times the sync info message has been set since last restart.").unwrap();
@@ -146,7 +146,7 @@ pub static ref EMPTY_BLOCK_EXECUTION_DURATION_S: DurationHistogram = DurationHis
 
 /// Histogram of the time it takes for a block to get committed.
 /// Measured as the commit time minus block's timestamp.
-pub static ref CREATION_TO_COMMIT_S: DurationHistogram =DurationHistogram::new(register_histogram!("libra_consensus_creation_to_commit_s", "Histogram of the time it takes for a block to get committed. Measured as the commit time minus block's timestamp.").unwrap());
+pub static ref CREATION_TO_COMMIT_S: DurationHistogram = DurationHistogram::new(register_histogram!("libra_consensus_creation_to_commit_s", "Histogram of the time it takes for a block to get committed. Measured as the commit time minus block's timestamp.").unwrap());
 
 /// Duration between block generation time until the moment it gathers full QC
 pub static ref CREATION_TO_QC_S: DurationHistogram = DurationHistogram::new(register_histogram!("libra_consensus_creation_to_qc_s", "Duration between block generation time until the moment it gathers full QC").unwrap());
@@ -169,23 +169,18 @@ pub static ref PROPOSALS_GENERATED_COUNT: IntCounterVec = register_int_counter_v
 pub static ref PROPOSAL_SUCCESS_WAIT_S: DurationHistogram = DurationHistogram::new(register_histogram!("libra_consensus_proposal_success_wait_s", "Histogram of time waited for successfully proposing a proposal (both those that waited and didn't wait) after following timestamp rules").unwrap());
 
 /// Histogram of time waited for failing to propose a proposal (both those that waited and didn't wait) while trying to follow timestamp rules
-pub static ref PROPOSAL_FAILURE_WAIT_S: DurationHistogram =DurationHistogram::new(register_histogram!("libra_consensus_proposal_failure_wait_s", "Histogram of time waited for failing to propose a proposal (both those that waited and didn't wait) while trying to follow timestamp rules").unwrap());
+pub static ref PROPOSAL_FAILURE_WAIT_S: DurationHistogram = DurationHistogram::new(register_histogram!("libra_consensus_proposal_failure_wait_s", "Histogram of time waited for failing to propose a proposal (both those that waited and didn't wait) while trying to follow timestamp rules").unwrap());
 
-/// Count of the votes that passed the timestamp rules and did not have to wait
-pub static ref VOTE_NO_WAIT_REQUIRED_COUNT: IntCounter = register_int_counter!("libra_consensus_vote_no_wait_required_count", "Count of the votes that passed the timestamp rules and did not have to wait").unwrap();
-
-/// Count of the votes where passing the timestamp rules required waiting
-pub static ref VOTE_WAIT_WAS_REQUIRED_COUNT: IntCounter = register_int_counter!("libra_consensus_vote_wait_was_required_count", "Count of the votes where passing the timestamp rules required waiting").unwrap();
-
-/// Count of the votes that were not made due to the waiting period exceeding the maximum allowed duration, breaking timestamp rules
-pub static ref VOTE_MAX_WAIT_EXCEEDED_COUNT: IntCounter = register_int_counter!("libra_consensus_vote_max_wait_exceeded_count", "Count of the votes that were not made due to the waiting period exceeding the maximum allowed duration, breaking timestamp rules").unwrap();
-
-/// Count of the votes that were not made due to waiting to ensure the current time exceeds min_duration_since_epoch failed, breaking timestamp rules
-pub static ref VOTE_WAIT_FAILED_COUNT: IntCounter = register_int_counter!("libra_consensus_vote_wait_failed_count", "Count of the votes that were not made due to waiting to ensure the current time exceeds min_duration_since_epoch failed, breaking timestamp rules").unwrap();
+/// Total count of the votes. state can be:
+/// no_wait_required: Count of the votes that passed the timestamp rules and did not have to wait
+/// wait_was_required: Count of the votes where passing the timestamp rules required waiting
+/// max_wait_exceeded: Count of the votes that were not made due to the waiting period exceeding the maximum allowed duration, breaking timestamp rules
+/// wait_failed: Count of the votes that were not made due to waiting to ensure the current time exceeds min_duration_since_epoch failed, breaking timestamp rules
+pub static ref VOTES_COUNT: IntCounterVec = register_int_counter_vec!("libra_consensus_votes_count", "Count of all the votes", &["state"]).unwrap();
 
 /// Histogram of time waited for successfully having the ability to vote (both those that waited and didn't wait) after following timestamp rules.
 /// A success only means that a replica has an opportunity to vote.  It may not vote if it doesn't pass the voting rules.
-pub static ref VOTE_SUCCESS_WAIT_S: DurationHistogram =DurationHistogram::new(register_histogram!("libra_consensus_vote_success_wait_s", "Histogram of time waited for successfully having the ability to vote (both those that waited and didn't wait) after following timestamp rules.").unwrap());
+pub static ref VOTE_SUCCESS_WAIT_S: DurationHistogram = DurationHistogram::new(register_histogram!("libra_consensus_vote_success_wait_s", "Histogram of time waited for successfully having the ability to vote (both those that waited and didn't wait) after following timestamp rules.").unwrap());
 
 /// Histogram of time waited for failing to have the ability to vote (both those that waited and didn't wait) while trying to follow timestamp rules
 pub static ref VOTE_FAILURE_WAIT_S: DurationHistogram = DurationHistogram::new(register_histogram!("libra_consensus_vote_success_wait_s", "Histogram of time waited for failing to have the ability to vote (both those that waited and didn't wait) while trying to follow timestamp rules").unwrap());
