@@ -94,6 +94,7 @@ impl SwarmConfig {
             network_keypairs: NetworkKeyPairs::default(),
             network_peers: template_network.network_peers.clone(),
             seed_peers: template_network.seed_peers.clone(),
+            is_public_network: false,
         };
         let (mut private_keys, mut network_peers_config) =
             ConfigHelpers::gen_full_nodes(num_nodes, key_seed);
@@ -336,6 +337,7 @@ impl SwarmConfig {
             network_keypairs: NetworkKeyPairs::default(),
             network_peers: template_network.network_peers.clone(),
             seed_peers: template_network.seed_peers.clone(),
+            is_public_network: false,
         };
         let consensus_config = ConsensusConfig {
             max_block_size: template.consensus.max_block_size,

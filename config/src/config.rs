@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::config::ConsensusType::{PBFT, POW};
 use crate::{
     config::ConsensusProposerType::{FixedProposer, MultipleOrderedProposers, RotatingProposer},
     keys::{ConsensusKeyPair, NetworkKeyPairs},
@@ -33,7 +34,6 @@ use std::{
     time::Duration,
 };
 use toml;
-use crate::config::ConsensusType::{PBFT, POW};
 
 #[cfg(test)]
 #[path = "unit_tests/config_test.rs"]
@@ -340,6 +340,7 @@ pub struct NetworkConfig {
     #[serde(skip)]
     pub seed_peers: SeedPeersConfig,
     pub seed_peers_file: PathBuf,
+    pub is_public_network: bool,
 }
 
 impl Default for NetworkConfig {
@@ -359,6 +360,7 @@ impl Default for NetworkConfig {
             network_peers: NetworkPeersConfig::default(),
             seed_peers_file: PathBuf::from("seed_peers.config.toml"),
             seed_peers: SeedPeersConfig::default(),
+            is_public_network: true,
         }
     }
 }
