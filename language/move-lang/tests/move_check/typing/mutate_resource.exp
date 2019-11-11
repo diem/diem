@@ -1,0 +1,33 @@
+error: 
+
+   ┌── tests/move_check/typing/mutate_resource.move:2:5 ───
+   │
+ 5 │         *r = R {};
+   │          ^ Invalid mutation. Can only assign to references of a copyable type
+   ·
+ 2 │     resource struct R {}
+   │     -------- 0000000000000000000000000000000000000000000000000000000008675309.M.R is found to be a non-copyable type here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/mutate_resource.move:8:8 ───
+   │
+ 9 │         *r = x;
+   │          ^ Invalid mutation. Can only assign to references of a copyable type
+   ·
+ 8 │     t1<T>(r: &mut T, x: T) {
+   │        - T is found to be a non-copyable type here
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/mutate_resource.move:12:11 ───
+    │
+ 13 │         *r = x;
+    │          ^ Invalid mutation. Can only assign to references of a copyable type
+    ·
+ 12 │     t2<T: resource>(r: &mut T, x: T) {
+    │           -------- T is found to be a non-copyable type here
+    │
+

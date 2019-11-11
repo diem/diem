@@ -179,7 +179,7 @@ module LibraAccount {
         if (sender_account.delegated_key_rotation_capability) abort 11;
 
         // ensure uniqueness of the capability
-        *sender_account.delegated_key_rotation_capability = true;
+        sender_account.delegated_key_rotation_capability = true;
         KeyRotationCapability { account_address }
     }
 

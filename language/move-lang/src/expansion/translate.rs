@@ -634,7 +634,8 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
                     EE::UnresolvedError
                 }
                 Some(LValue::Assigns(al)) => EE::Assign(al, er),
-                Some(LValue::Mutate(edotted)) => EE::Mutate(edotted, er),
+                Some(LValue::Mutate(el)) => EE::Mutate(el, er),
+                Some(LValue::FieldMutate(edotted)) => EE::FieldMutate(edotted, er),
             }
         }
         PE::Return(pe) => EE::Return(exp(context, *pe)),
@@ -940,7 +941,8 @@ fn bind(context: &mut Context, sp!(loc, pb_): P::Bind) -> Option<E::Bind> {
 
 enum LValue {
     Assigns(E::AssignList),
-    Mutate(Box<E::ExpDotted>),
+    FieldMutate(Box<E::ExpDotted>),
+    Mutate(Box<E::Exp>),
 }
 
 fn lvalues(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<LValue> {
@@ -954,12 +956,12 @@ fn lvalues(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<LValue> {
             L::Assigns(sp(loc, al_opt?))
         }
         PE::Dereference(pr) => {
-            let er = exp_(context, *pr);
-            L::Mutate(Box::new(sp(er.loc, E::ExpDotted_::Exp(er))))
+            let er = exp(context, *pr);
+            L::Mutate(er)
         }
         pdotted_ @ PE::Dot(_, _, _) => {
             let dotted = exp_dotted(context, sp(loc, pdotted_))?;
-            L::Mutate(Box::new(dotted))
+            L::FieldMutate(Box::new(dotted))
         }
         _ => L::Assigns(sp(loc, vec![assign(context, sp(loc, e_))?])),
     };

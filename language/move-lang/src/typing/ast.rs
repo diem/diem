@@ -152,7 +152,10 @@ pub enum UnannotatedExp_ {
 
     IfElse(Box<Exp>, Box<Exp>, Box<Exp>),
     While(Box<Exp>, Box<Exp>),
-    Loop(Box<Exp>),
+    Loop {
+        has_break: bool,
+        body: Box<Exp>,
+    },
     Block(Sequence),
     Assign(AssignList, Vec<Option<SingleType>>, Box<Exp>),
     Mutate(Box<Exp>, Box<Exp>),
