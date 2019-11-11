@@ -116,6 +116,16 @@ jobs:
           name: Validate Validator-Sets Configs
           command: ./scripts/circle_validate_configs.sh
       - build_teardown
+  validate-cluster-test-dockerfile:
+    description: Validate that committed docker files for cluster test are up to date
+    executor: build-executor
+    steps:
+      - build_setup
+      - run:
+          # generate dockerfile; diff config to existing one
+          name: Validate cluster-test dockerfiles
+          command: ./docker/cluster-test/generate.sh
+      - build_teardown
   audit:
     executor: audit-executor
     steps:
@@ -179,6 +189,7 @@ workflows:
       - build
       - build-docker
       - validate-config
+      - validate-cluster-test-dockerfile
       - terraform
 
   scheduled-workflow:
