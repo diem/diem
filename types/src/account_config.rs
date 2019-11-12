@@ -83,6 +83,7 @@ pub struct AccountResource {
     received_events: EventHandle,
     sent_events: EventHandle,
     sequence_number: u64,
+    event_generator: u64,
 }
 
 impl AccountResource {
@@ -95,6 +96,7 @@ impl AccountResource {
         delegated_withdrawal_capability: bool,
         sent_events: EventHandle,
         received_events: EventHandle,
+        event_generator: u64,
     ) -> Self {
         AccountResource {
             balance,
@@ -104,6 +106,7 @@ impl AccountResource {
             delegated_withdrawal_capability,
             sent_events,
             received_events,
+            event_generator,
         }
     }
 

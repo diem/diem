@@ -253,7 +253,7 @@ lazy_static! {
         //
 
         // Event
-        add!(m, addr, "Event", "write_to_event_store",
+        add!(m, addr, "LibraAccount", "write_to_event_store",
             |_, _| {
                 Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
                             "write_to_event_store does not have a native implementation"

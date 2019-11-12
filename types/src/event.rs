@@ -4,18 +4,20 @@
 use crate::account_address::AccountAddress;
 use failure::prelude::*;
 use hex;
-use libra_crypto::HashValue;
 #[cfg(feature = "fuzzing")]
-use proptest_derive::Arbitrary;
+use rand::{rngs::OsRng, RngCore};
 use serde::{de, ser, Deserialize, Serialize};
-use std::{convert::TryFrom, fmt};
+use std::{
+    cmp::{Ord, Ordering, PartialOrd},
+    convert::TryFrom,
+    fmt,
+    hash::Hash,
+};
 
 /// Size of an event key.
-pub const EVENT_KEY_LENGTH: usize = 32;
+pub const EVENT_KEY_LENGTH: usize = 40;
 
 /// A struct that represents a globally unique id for an Event stream that a user can listen to.
-#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, Clone, Copy)]
-#[cfg_attr(feature = "fuzzing", derive(Arbitrary))]
 pub struct EventKey([u8; EVENT_KEY_LENGTH]);
 
 impl EventKey {
@@ -37,17 +39,88 @@ impl EventKey {
     #[cfg(feature = "fuzzing")]
     /// Create a random event key for testing
     pub fn random() -> Self {
-        EventKey::try_from(HashValue::random().to_vec().as_slice()).unwrap()
+        let mut rng = OsRng::new().expect("can't access OsRng");
+        let salt = rng.next_u64();
+        EventKey::new_from_address(&AccountAddress::random(), salt)
     }
 
     /// Create a unique handle by using an AccountAddress and a counter.
     pub fn new_from_address(addr: &AccountAddress, salt: u64) -> Self {
-        let mut output_bytes = salt.to_be_bytes().to_vec();
-        output_bytes.append(&mut addr.to_vec());
-        EventKey(*HashValue::from_sha3_256(&output_bytes).as_ref())
+        let mut output_bytes = [0; EVENT_KEY_LENGTH];
+        let (lhs, rhs) = output_bytes.split_at_mut(8);
+        lhs.copy_from_slice(&salt.to_le_bytes());
+        rhs.copy_from_slice(addr.as_ref());
+        EventKey(output_bytes)
     }
 }
 
+// Rust doesn't support deriving traits for array size greater than 32. We'll implement those traits
+// by hand for now
+impl PartialEq for EventKey {
+    #[inline]
+    fn eq(&self, other: &EventKey) -> bool {
+        self.as_bytes() == other.as_bytes()
+    }
+}
+
+impl Eq for EventKey {}
+
+impl PartialOrd for EventKey {
+    fn partial_cmp(&self, other: &EventKey) -> Option<Ordering> {
+        PartialOrd::partial_cmp(self.as_bytes(), other.as_bytes())
+    }
+    #[inline]
+    fn lt(&self, other: &EventKey) -> bool {
+        PartialOrd::lt(self.as_bytes(), other.as_bytes())
+    }
+    #[inline]
+    fn le(&self, other: &EventKey) -> bool {
+        PartialOrd::le(self.as_bytes(), other.as_bytes())
+    }
+    #[inline]
+    fn ge(&self, other: &EventKey) -> bool {
+        PartialOrd::ge(self.as_bytes(), other.as_bytes())
+    }
+    #[inline]
+    fn gt(&self, other: &EventKey) -> bool {
+        PartialOrd::gt(self.as_bytes(), other.as_bytes())
+    }
+}
+
+impl Ord for EventKey {
+    #[inline]
+    fn cmp(&self, other: &EventKey) -> Ordering {
+        Ord::cmp(self.as_bytes(), other.as_bytes())
+    }
+}
+
+impl Clone for EventKey {
+    fn clone(&self) -> Self {
+        let mut key = [0; EVENT_KEY_LENGTH];
+        key.copy_from_slice(self.as_bytes());
+        Self(key)
+    }
+}
+
+impl Default for EventKey {
+    fn default() -> Self {
+        Self([0; EVENT_KEY_LENGTH])
+    }
+}
+
+impl fmt::Debug for EventKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "EventKey({:?})", self.as_bytes())
+    }
+}
+
+impl Copy for EventKey {}
+
+impl Hash for EventKey {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        Hash::hash(self.as_bytes(), state)
+    }
+}
 // TODO(#1307)
 impl ser::Serialize for EventKey {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -150,7 +223,7 @@ impl EventHandle {
 
 impl fmt::LowerHex for EventKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", hex::encode(&self.0))
+        write!(f, "{}", hex::encode(self.as_bytes()))
     }
 }
 

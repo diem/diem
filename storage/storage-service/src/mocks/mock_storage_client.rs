@@ -189,6 +189,7 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
                     false,
                     EventHandle::random_handle(0),
                     EventHandle::random_handle(0),
+                    0,
                 );
                 version_data.insert(
                     libra_types::account_config::account_resource_path(),

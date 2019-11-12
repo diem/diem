@@ -1,13 +1,13 @@
 module M {
-    import 0x0.Event;
+    import 0x0.LibraAccount;
 
     struct MyEvent {}
 
     public emit_event() {
-        let handle: Event.Handle<Self.MyEvent>;
-        handle = Event.new_event_handle<Self.MyEvent>();
-        Event.emit_event<Self.MyEvent>(&mut handle, MyEvent{});
-        Event.destroy<Self.MyEvent>(move(handle));
+        let handle: LibraAccount.EventHandle<Self.MyEvent>;
+        handle = LibraAccount.new_event_handle<Self.MyEvent>();
+        LibraAccount.emit_event<Self.MyEvent>(&mut handle, MyEvent{});
+        LibraAccount.destroy_handle<Self.MyEvent>(move(handle));
         return;
     }
 }
