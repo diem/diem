@@ -26,8 +26,6 @@ use rand::Rng;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::sync::Arc;
-use std::thread::sleep;
-use std::time::Duration;
 use tokio::runtime::TaskExecutor;
 
 pub struct MintManager {
