@@ -34,6 +34,8 @@ mod debug_interface_config;
 pub use debug_interface_config::*;
 mod execution_config;
 pub use execution_config::*;
+mod logger_config;
+pub use logger_config::*;
 mod metrics_config;
 pub use metrics_config::*;
 mod mempool_config;
@@ -122,24 +124,6 @@ impl Clone for BaseConfig {
         Self {
             data_dir_path: self.data_dir_path.clone(),
             temp_data_dir: None,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(default)]
-pub struct LoggerConfig {
-    // Use async logging
-    pub is_async: bool,
-    // chan_size of slog async drain for node logging.
-    pub chan_size: usize,
-}
-
-impl Default for LoggerConfig {
-    fn default() -> LoggerConfig {
-        LoggerConfig {
-            is_async: true,
-            chan_size: 256,
         }
     }
 }
