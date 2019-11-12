@@ -109,7 +109,7 @@ impl MultiRegionSimulation {
         metrics.txn_per_sec = self
             .prometheus
             .query_range_avg(
-                "irate(consensus_gauge{op='last_committed_version'}[1m])".to_string(),
+                "irate(libra_consensus_last_committed_version[1m])".to_string(),
                 &start,
                 &end,
                 step,
@@ -119,7 +119,7 @@ impl MultiRegionSimulation {
         metrics.blocks_per_sec = self
             .prometheus
             .query_range_avg(
-                "irate(consensus_gauge{op='last_committed_round'}[1m])".to_string(),
+                "irate(libra_consensus_last_committed_round[1m])".to_string(),
                 &start,
                 &end,
                 step,
@@ -129,7 +129,7 @@ impl MultiRegionSimulation {
         metrics.avg_vote_time = self
             .prometheus
             .query_range_avg(
-                "irate(consensus_duration_sum{op='creation_to_receival_s'}[1m])/irate(consensus_duration_count{op='creation_to_receival_s'}[1m])".to_string(),
+                "irate(libra_consensus_creation_to_receival_s_sum[1m])/irate(libra_consensus_creation_to_receival_s_count[1m])".to_string(),
                 &start,
                 &end,
                 step,
@@ -139,7 +139,7 @@ impl MultiRegionSimulation {
         metrics.avg_qc_time = self
             .prometheus
             .query_range_avg(
-                "irate(consensus_duration_sum{op='creation_to_qc_s'}[1m])/irate(consensus_duration_count{op='creation_to_qc_s'}[1m])".to_string(),
+                "irate(libra_consensus_creation_to_qc_s_sum[1m])/irate(libra_consensus_creation_to_qc_s_count[1m])".to_string(),
                 &start,
                 &end,
                 step,
