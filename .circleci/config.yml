@@ -160,13 +160,16 @@ jobs:
           command: |
             # Use the dockerfile own build.sh script if it has one.
             for docker_file in $DOCKER_FILES; do
+              echo "Checking $docker_file"
               build_script=$(dirname $docker_file)/build.sh
               if [ -f "$build_script" ]; then
                 $build_script
-              else
+              elif [ -f "$docker_file" ]; then
                 file_no_ext=$(basename $docker_file)
                 module=${file_no_ext%.Dockerfile}
                 docker build -f $docker_file --tag commit_verify_${CIRCLE_BUILD_NUM}_$module .
+              else
+                echo "$docker_file is renamed or removed in pull request."
               fi
             done
 
