@@ -44,14 +44,14 @@ pub struct ChainedBftSMRConfig {
 
 impl ChainedBftSMRConfig {
     pub fn from_node_config(cfg: &ConsensusConfig) -> ChainedBftSMRConfig {
-        let pacemaker_initial_timeout_ms = cfg.pacemaker_initial_timeout_ms().unwrap_or(1000);
+        let pacemaker_initial_timeout_ms = cfg.pacemaker_initial_timeout_ms.unwrap_or(1000);
         ChainedBftSMRConfig {
-            max_pruned_blocks_in_mem: cfg.max_pruned_blocks_in_mem().unwrap_or(10000) as usize,
+            max_pruned_blocks_in_mem: cfg.max_pruned_blocks_in_mem.unwrap_or(10000) as usize,
             pacemaker_initial_timeout: Duration::from_millis(pacemaker_initial_timeout_ms),
-            proposer_type: cfg.get_proposer_type(),
-            contiguous_rounds: cfg.contiguous_rounds(),
-            max_block_size: cfg.max_block_size(),
-            safety_rules: cfg.safety_rules().clone(),
+            proposer_type: cfg.proposer_type,
+            contiguous_rounds: cfg.contiguous_rounds,
+            max_block_size: cfg.max_block_size,
+            safety_rules: cfg.safety_rules.clone(),
         }
     }
 }

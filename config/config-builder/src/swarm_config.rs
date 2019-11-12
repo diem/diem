@@ -342,7 +342,7 @@ impl SwarmConfig {
         };
         let consensus_config = ConsensusConfig {
             max_block_size: template.consensus.max_block_size,
-            proposer_type: template.consensus.proposer_type.clone(),
+            proposer_type: template.consensus.proposer_type,
             contiguous_rounds: template.consensus.contiguous_rounds,
             max_pruned_blocks_in_mem: template.consensus.max_pruned_blocks_in_mem,
             pacemaker_initial_timeout_ms: template.consensus.pacemaker_initial_timeout_ms,
