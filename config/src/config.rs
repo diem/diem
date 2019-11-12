@@ -4,10 +4,7 @@
 use crate::{
     keys::{ConsensusKeyPair, NetworkKeyPairs},
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
-    trusted_peers::{
-        ConfigHelpers, ConsensusPrivateKey, NetworkPeersConfig, NetworkPrivateKeys,
-        UpstreamPeersConfig,
-    },
+    trusted_peers::{ConfigHelpers, ConsensusPrivateKey, NetworkPeersConfig, NetworkPrivateKeys},
     utils::{deserialize_whitelist, get_available_port, get_local_ip, serialize_whitelist},
 };
 use failure::prelude::*;
@@ -35,6 +32,8 @@ use toml;
 
 mod consensus_config;
 pub use consensus_config::*;
+mod state_sync_config;
+pub use state_sync_config::*;
 mod safety_rules_config;
 pub use safety_rules_config::*;
 
@@ -386,37 +385,6 @@ impl Default for MempoolConfig {
             address: "localhost".to_string(),
             mempool_service_port: 6182,
             system_transaction_gc_interval_ms: 180_000,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(default)]
-pub struct StateSyncConfig {
-    // Size of chunk to request for state synchronization
-    pub chunk_limit: u64,
-    // interval used for checking state synchronization progress
-    pub tick_interval_ms: u64,
-    // default timeout used for long polling to remote peer
-    pub long_poll_timeout_ms: u64,
-    // valid maximum chunk limit for sanity check
-    pub max_chunk_limit: u64,
-    // valid maximum timeout limit for sanity check
-    pub max_timeout_ms: u64,
-    // List of peers to use as upstream in state sync protocols.
-    #[serde(flatten)]
-    pub upstream_peers: UpstreamPeersConfig,
-}
-
-impl Default for StateSyncConfig {
-    fn default() -> Self {
-        Self {
-            chunk_limit: 1000,
-            tick_interval_ms: 100,
-            long_poll_timeout_ms: 30000,
-            max_chunk_limit: 1000,
-            max_timeout_ms: 120_000,
-            upstream_peers: UpstreamPeersConfig::default(),
         }
     }
 }
