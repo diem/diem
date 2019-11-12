@@ -29,6 +29,7 @@ pub mod network_builder;
 
 mod admission_control;
 mod consensus;
+mod discovery;
 mod health_checker;
 mod mempool;
 mod state_synchronizer;
@@ -44,6 +45,9 @@ pub use admission_control::{
 pub use consensus::{
     ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
     CONSENSUS_RPC_PROTOCOL,
+};
+pub use discovery::{
+    DiscoveryNetworkEvents, DiscoveryNetworkSender, DISCOVERY_DIRECT_SEND_PROTOCOL,
 };
 pub use health_checker::{
     HealthCheckerNetworkEvents, HealthCheckerNetworkSender, HEALTH_CHECKER_RPC_PROTOCOL,
@@ -173,7 +177,6 @@ pub struct NetworkSender<TMessage: Message + Default> {
 }
 
 impl<TMessage: Message + Default> NetworkSender<TMessage> {
-    #[allow(dead_code)]
     pub fn new(inner: channel::Sender<NetworkRequest>) -> Self {
         Self {
             inner,
@@ -189,7 +192,6 @@ impl<TMessage: Message + Default> NetworkSender<TMessage> {
     ///
     /// The Future will resolve to an `Err` if the event queue is unexpectedly
     /// shutdown.
-    #[allow(dead_code)]
     pub async fn send_to(
         &mut self,
         recipient: PeerId,
@@ -224,7 +226,6 @@ impl<TMessage: Message + Default> NetworkSender<TMessage> {
     ///
     /// The Future will resolve to an `Err` if the event queue is unexpectedly
     /// shutdown.
-    #[allow(dead_code)]
     pub async fn send_to_many(
         &mut self,
         recipients: impl Iterator<Item = PeerId>,
@@ -253,7 +254,6 @@ impl<TMessage: Message + Default> NetworkSender<TMessage> {
     /// Send a unary rpc request to remote peer `recipient`. Handles
     /// serialization and deserialization of the message types, assuming that the
     /// request and response both have the same message type.
-    #[allow(dead_code)]
     pub async fn unary_rpc(
         &mut self,
         recipient: PeerId,
@@ -284,7 +284,6 @@ impl<TMessage: Message + Default> NetworkSender<TMessage> {
 
     /// Update the set of eligible nodes that the network should accept
     /// connections from.
-    #[allow(dead_code)]
     pub async fn update_eligible_nodes(
         &mut self,
         nodes: HashMap<PeerId, NetworkPublicKeys>,
@@ -296,7 +295,6 @@ impl<TMessage: Message + Default> NetworkSender<TMessage> {
     }
 
     /// Dial the peer with the given `PeerId` at a `Multiaddr`.
-    #[allow(dead_code)]
     pub async fn dial_peer(&mut self, peer: PeerId, addr: Multiaddr) -> Result<(), NetworkError> {
         let (res_tx, res_rx) = oneshot::channel();
         self.inner
@@ -306,7 +304,6 @@ impl<TMessage: Message + Default> NetworkSender<TMessage> {
     }
 
     /// Disconnect from the peer with the given `PeerId`.
-    #[allow(dead_code)]
     pub async fn disconnect_peer(&mut self, peer: PeerId) -> Result<(), NetworkError> {
         let (res_tx, res_rx) = oneshot::channel();
         self.inner
@@ -317,14 +314,12 @@ impl<TMessage: Message + Default> NetworkSender<TMessage> {
 
     /// Unwrap the `NetworkSender` into the underlying
     /// `channel::Sender<NetworkRequest>`.
-    #[allow(dead_code)]
     pub fn into_inner(self) -> channel::Sender<NetworkRequest> {
         self.inner
     }
 
     /// Get a mutable reference to the underlying
     /// `channel::Sender<NetworkRequest>`.
-    #[allow(dead_code)]
     pub fn get_mut(&mut self) -> &mut channel::Sender<NetworkRequest> {
         &mut self.inner
     }
