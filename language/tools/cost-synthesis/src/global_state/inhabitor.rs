@@ -87,7 +87,7 @@ where
 
     fn next_str(&mut self) -> String {
         let len: usize = self.gen.gen_range(1, MAX_STRING_SIZE);
-        (0..len).map(|_| self.gen.gen::<char>()).collect::<String>()
+        random_string(&mut self.gen, len)
     }
 
     fn next_vm_string(&mut self) -> VMString {

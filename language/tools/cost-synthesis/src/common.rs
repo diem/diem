@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Defines constants and types that are used throughout cost synthesis.
+use rand::{distributions::Alphanumeric, rngs::StdRng, Rng};
 use vm::file_format::TableIndex;
 use vm_runtime_types::value::Value;
 
@@ -31,3 +32,13 @@ pub const DEFAULT_FUNCTION_IDX: TableIndex = 0;
 
 /// The type of the value stack.
 pub type Stack = Vec<Value>;
+
+pub fn random_string(rng: &mut StdRng, len: usize) -> String {
+    if len == 0 {
+        "".to_string()
+    } else {
+        let mut string = "a".to_string();
+        (1..len).for_each(|_| string.push(rng.sample(Alphanumeric)));
+        string
+    }
+}

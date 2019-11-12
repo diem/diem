@@ -292,9 +292,11 @@ impl BytecodeGenerator {
                         StructDefinitionIndex::new(
                             self.rng.gen_range(0, module.struct_defs.len()) as TableIndex
                         ),
-                        LocalsSignatureIndex::new(
-                            self.rng.gen_range(0, module.locals_signatures.len()) as TableIndex,
-                        ),
+                        // TODO: Need to generate a proper generic call eventually
+                        LocalsSignatureIndex::new(0),
+                        //LocalsSignatureIndex::new(
+                        //self.rng.gen_range(0, module.locals_signatures.len()) as TableIndex,
+                        //),
                     )
                 }
                 BytecodeType::FieldDefinitionIndex(instruction) => {
@@ -309,9 +311,11 @@ impl BytecodeGenerator {
                         FunctionHandleIndex::new(
                             self.rng.gen_range(0, module.function_handles.len()) as TableIndex,
                         ),
-                        LocalsSignatureIndex::new(
-                            self.rng.gen_range(0, module.locals_signatures.len()) as TableIndex,
-                        ),
+                        // TODO: Need to generate a proper generic call eventually
+                        LocalsSignatureIndex::new(0),
+                        //LocalsSignatureIndex::new(
+                        //self.rng.gen_range(0, module.locals_signatures.len()) as TableIndex,
+                        //),
                     )
                 }
             };
