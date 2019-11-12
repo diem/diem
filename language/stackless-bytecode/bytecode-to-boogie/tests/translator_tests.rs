@@ -5,8 +5,9 @@ use bytecode_source_map::source_map::SourceMap;
 use bytecode_to_boogie::translator::BoogieTranslator;
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::{compiler::compile_module, parser::ast::Loc, parser::parse_module};
+use libra_tools::tempdir::TempPath;
 use libra_types::account_address::AccountAddress;
-use std::fs;
+use std::{env, fs, process::Command};
 use stdlib::{stdlib_modules, stdlib_source_map};
 
 // mod translator;
@@ -38,11 +39,9 @@ fn compile_files(file_names: Vec<String>) -> (Vec<VerifiedModule>, SourceMap<Loc
     (verified_modules, source_maps)
 }
 
-#[test]
-fn test3() {
+fn generate_boogie(file_name: String) -> String {
     let mut file_names = vec![];
-    let name = "test_mvir/test3.mvir".to_string();
-    file_names.push(name);
+    file_names.push(file_name);
     let (modules, source_maps) = compile_files(file_names.to_vec());
 
     let mut ts = BoogieTranslator::new(&modules, &source_maps);
@@ -52,87 +51,57 @@ fn test3() {
     let written_code = fs::read_to_string("src/bytecode_instrs.bpl").unwrap();
     res.push_str(&written_code);
     res.push_str(&ts.translate());
-    // This is probably too sensitive to minor changes in libra; commenting for now.
-    //    let expected_code = fs::read_to_string("test_mvir/test3.bpl.expect").unwrap();
-    //    assert_eq!(res, expected_code);
+    res
+}
+
+fn run_boogie(boogie_str: String) {
+    let temp_path = TempPath::new();
+    temp_path.create_as_dir().unwrap();
+    let boogie_file_path = temp_path.path().join("output.bpl");
+    fs::write(&boogie_file_path, boogie_str).unwrap();
+    if let Ok(boogie_path) = env::var("BOOGIE_EXE") {
+        if let Ok(z3_path) = env::var("Z3_EXE") {
+            Command::new(boogie_path)
+                .args(&[
+                    &format!("{}{}", "-z3exe:", z3_path).as_str(),
+                    boogie_file_path.to_str().unwrap(),
+                ])
+                .output()
+                .expect("failed to execute Boogie");
+        }
+    }
+}
+
+#[test]
+fn test3() {
+    run_boogie(generate_boogie("test_mvir/test3.mvir".to_string()));
 }
 
 #[test]
 fn test_arithmetic() {
-    let mut file_names = vec![];
-    let name = "test_mvir/test-arithmetic.mvir".to_string();
-    file_names.push(name);
-    let (modules, source_maps) = compile_files(file_names.to_vec());
-
-    let mut ts = BoogieTranslator::new(&modules, &source_maps);
-    let mut res = String::new();
-
-    // handwritten boogie code
-    let written_code = fs::read_to_string("src/bytecode_instrs.bpl").unwrap();
-    res.push_str(&written_code);
-    res.push_str(&ts.translate());
+    run_boogie(generate_boogie(
+        "test_mvir/test-arithmetic.mvir".to_string(),
+    ));
 }
 
 #[test]
 fn test_control_flow() {
-    let mut file_names = vec![];
-    let name = "test_mvir/test-control-flow.mvir".to_string();
-    file_names.push(name);
-    let (modules, source_maps) = compile_files(file_names.to_vec());
-
-    let mut ts = BoogieTranslator::new(&modules, &source_maps);
-    let mut res = String::new();
-
-    // handwritten boogie code
-    let written_code = fs::read_to_string("src/bytecode_instrs.bpl").unwrap();
-    res.push_str(&written_code);
-    res.push_str(&ts.translate());
+    run_boogie(generate_boogie(
+        "test_mvir/test-control-flow.mvir".to_string(),
+    ));
 }
 
 #[test]
 fn test_func_call() {
-    let mut file_names = vec![];
-    let name = "test_mvir/test-func-call.mvir".to_string();
-    file_names.push(name);
-    let (modules, source_maps) = compile_files(file_names.to_vec());
-
-    let mut ts = BoogieTranslator::new(&modules, &source_maps);
-    let mut res = String::new();
-
-    // handwritten boogie code
-    let written_code = fs::read_to_string("src/bytecode_instrs.bpl").unwrap();
-    res.push_str(&written_code);
-    res.push_str(&ts.translate());
+    run_boogie(generate_boogie("test_mvir/test-func-call.mvir".to_string()));
 }
 
 #[test]
 fn test_reference() {
-    let mut file_names = vec![];
-    let name = "test_mvir/test-reference.mvir".to_string();
-    file_names.push(name);
-    let (modules, source_maps) = compile_files(file_names.to_vec());
-
-    let mut ts = BoogieTranslator::new(&modules, &source_maps);
-    let mut res = String::new();
-
-    // handwritten boogie code
-    let written_code = fs::read_to_string("src/bytecode_instrs.bpl").unwrap();
-    res.push_str(&written_code);
-    res.push_str(&ts.translate());
+    run_boogie(generate_boogie("test_mvir/test-reference.mvir".to_string()));
 }
 
 #[test]
 fn test_struct() {
-    let mut file_names = vec![];
-    let name = "test_mvir/test-struct.mvir".to_string();
-    file_names.push(name);
-    let (modules, source_maps) = compile_files(file_names.to_vec());
-
-    let mut ts = BoogieTranslator::new(&modules, &source_maps);
-    let mut res = String::new();
-
-    // handwritten boogie code
-    let written_code = fs::read_to_string("src/bytecode_instrs.bpl").unwrap();
-    res.push_str(&written_code);
-    res.push_str(&ts.translate());
+    run_boogie(generate_boogie("test_mvir/test-struct.mvir".to_string()));
 }
