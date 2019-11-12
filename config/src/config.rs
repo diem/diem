@@ -34,6 +34,9 @@ use std::{
 };
 use toml;
 
+mod safety_rules_config;
+pub use safety_rules_config::*;
+
 #[cfg(test)]
 #[path = "unit_tests/config_test.rs"]
 mod config_test;
@@ -490,33 +493,6 @@ impl Default for MempoolConfig {
             system_transaction_gc_interval_ms: 180_000,
         }
     }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(default)]
-pub struct SafetyRulesConfig {
-    pub backend: SafetyRulesBackend,
-}
-
-impl Default for SafetyRulesConfig {
-    fn default() -> Self {
-        Self {
-            backend: SafetyRulesBackend::InMemoryStorage,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(tag = "type")]
-pub enum SafetyRulesBackend {
-    InMemoryStorage,
-    OnDiskStorage {
-        // In testing scenarios this implies that the default state is okay if
-        // a state is not specified.
-        default: bool,
-        // Required path for on disk storage
-        path: PathBuf,
-    },
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
