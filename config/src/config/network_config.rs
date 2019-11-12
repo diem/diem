@@ -17,7 +17,8 @@ use std::{
     string::ToString,
 };
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum RoleType {
     Validator,
     FullNode,
@@ -64,7 +65,7 @@ pub struct NetworkConfig {
     // must also be set to true.
     pub is_permissioned: bool,
     // The role of the node in the network. One of: {"validator", "full_node"}.
-    pub role: String,
+    pub role: RoleType,
     // network_keypairs contains the node's network keypairs.
     // it is filled later on from network_keypairs_file.
     #[serde(skip)]
@@ -85,7 +86,7 @@ impl Default for NetworkConfig {
     fn default() -> NetworkConfig {
         NetworkConfig {
             peer_id: "".to_string(),
-            role: "validator".to_string(),
+            role: RoleType::Validator,
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
             advertised_address: "/ip4/127.0.0.1/tcp/6180".parse::<Multiaddr>().unwrap(),
             discovery_interval_ms: 1000,

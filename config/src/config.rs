@@ -139,7 +139,7 @@ impl NodeConfig {
         for network in &mut config.networks {
             // We use provided peer id for validator role. Otherwise peer id is generated using
             // network identity key.
-            if network.role == "validator" {
+            if network.role == RoleType::Validator {
                 assert_eq!(
                     validator_count, 0,
                     "At most 1 network config should be for a validator"
@@ -158,7 +158,7 @@ impl NodeConfig {
     pub fn is_validator(&self) -> bool {
         self.networks
             .iter()
-            .any(|network| RoleType::Validator == (&network.role).into())
+            .any(|network| RoleType::Validator == network.role)
     }
 
     /// Returns true if the node config is for a validator. Otherwise returns false.
@@ -174,7 +174,7 @@ impl NodeConfig {
     pub fn get_validator_network_config(&self) -> Option<&NetworkConfig> {
         self.networks
             .iter()
-            .filter(|network| RoleType::Validator == (&network.role).into())
+            .filter(|network| RoleType::Validator == network.role)
             .last()
     }
 

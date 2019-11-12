@@ -79,7 +79,7 @@ impl SwarmConfig {
         // Create network config for upstream node.
         let mut upstream_full_node_config = NetworkConfig {
             peer_id: upstream_peer_id.to_string(),
-            role: "full_node".to_string(),
+            role: RoleType::FullNode,
             network_keypairs_file: upstream_network_keys_file_name.into(),
             network_peers_file: template_network.network_peers_file.clone(),
             seed_peers_file: template_network.seed_peers_file.clone(),
@@ -316,15 +316,11 @@ impl SwarmConfig {
         // Save consensus peers file.
         let consensus_peers_file_name = "consensus_peers.config.toml".to_string();
         consensus_peers_config.save_config(&output_dir.join(&consensus_peers_file_name));
-        let role_string = match role {
-            RoleType::Validator => "validator".to_string(),
-            RoleType::FullNode => "full_node".to_string(),
-        };
         let base_config = BaseConfig::new(output_dir.to_path_buf());
         let template_network = template.networks.get(0).unwrap();
         let network_config = NetworkConfig {
             peer_id: node_id.to_string(),
-            role: role_string,
+            role,
             network_keypairs_file: network_keys_file_name.into(),
             network_peers_file: network_peers_file_name.into(),
             seed_peers_file: seed_peers_file_name.into(),
