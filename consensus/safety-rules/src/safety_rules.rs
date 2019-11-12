@@ -173,12 +173,13 @@ impl SafetyRules {
         let block0 = proposed_block.quorum_cert().parent_block().round();
 
         let commit = block0 + 1 == block1 && block1 + 1 == block2;
-        match commit {
-            true => LedgerInfo::new(
+        if commit {
+            LedgerInfo::new(
                 proposed_block.quorum_cert().parent_block().clone(),
                 HashValue::zero(),
-            ),
-            false => LedgerInfo::new(BlockInfo::empty(), HashValue::zero()),
+            )
+        } else {
+            LedgerInfo::new(BlockInfo::empty(), HashValue::zero())
         }
     }
 
