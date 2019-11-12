@@ -2,14 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use get_if_addrs::get_if_addrs;
-use libra_types::transaction::SCRIPT_HASH_LENGTH;
 use parity_multiaddr::{Multiaddr, Protocol};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::{
-    collections::HashSet,
-    hash::BuildHasher,
-    net::{IpAddr, TcpListener, TcpStream},
-};
+use std::net::{IpAddr, TcpListener, TcpStream};
 
 /// Return an ephemeral, available port. On unix systems, the port returned will be in the
 /// TIME_WAIT state ensuring that the OS won't hand out this port for some grace period.
@@ -59,37 +53,4 @@ pub fn get_local_ip() -> Option<Multiaddr> {
                 Some(addr)
             })
     })
-}
-
-pub fn deserialize_whitelist<'de, D>(
-    deserializer: D,
-) -> ::std::result::Result<HashSet<[u8; SCRIPT_HASH_LENGTH]>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let whitelisted_scripts: Vec<String> = Deserialize::deserialize(deserializer)?;
-    let whitelist = whitelisted_scripts
-        .iter()
-        .map(|s| {
-            let mut hash = [0u8; SCRIPT_HASH_LENGTH];
-            let decoded_hash =
-                hex::decode(s).expect("Unable to decode script hash from configuration file.");
-            assert_eq!(decoded_hash.len(), SCRIPT_HASH_LENGTH);
-            hash.copy_from_slice(decoded_hash.as_slice());
-            hash
-        })
-        .collect();
-    Ok(whitelist)
-}
-
-pub fn serialize_whitelist<S, H>(
-    whitelist: &HashSet<[u8; SCRIPT_HASH_LENGTH], H>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-    H: BuildHasher,
-{
-    let encoded_whitelist: Vec<String> = whitelist.iter().map(hex::encode).collect();
-    encoded_whitelist.serialize(serializer)
 }
