@@ -32,6 +32,8 @@ use toml;
 
 mod consensus_config;
 pub use consensus_config::*;
+mod metrics_config;
+pub use metrics_config::*;
 mod state_sync_config;
 pub use state_sync_config::*;
 mod safety_rules_config;
@@ -140,22 +142,6 @@ impl Clone for BaseConfig {
         Self {
             data_dir_path: self.data_dir_path.clone(),
             temp_data_dir: None,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(default)]
-pub struct MetricsConfig {
-    pub dir: PathBuf,
-    pub collection_interval_ms: u64,
-}
-
-impl Default for MetricsConfig {
-    fn default() -> MetricsConfig {
-        MetricsConfig {
-            dir: PathBuf::from("metrics"),
-            collection_interval_ms: 1000,
         }
     }
 }
