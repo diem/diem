@@ -36,6 +36,8 @@ mod execution_config;
 pub use execution_config::*;
 mod metrics_config;
 pub use metrics_config::*;
+mod mempool_config;
+pub use mempool_config::*;
 mod network_config;
 pub use network_config::*;
 mod state_sync_config;
@@ -138,39 +140,6 @@ impl Default for LoggerConfig {
         LoggerConfig {
             is_async: true,
             chan_size: 256,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(default)]
-pub struct MempoolConfig {
-    pub broadcast_transactions: bool,
-    pub shared_mempool_tick_interval_ms: u64,
-    pub shared_mempool_batch_size: usize,
-    pub shared_mempool_max_concurrent_inbound_syncs: usize,
-    pub capacity: usize,
-    // max number of transactions per user in Mempool
-    pub capacity_per_user: usize,
-    pub system_transaction_timeout_secs: u64,
-    pub system_transaction_gc_interval_ms: u64,
-    pub mempool_service_port: u16,
-    pub address: String,
-}
-
-impl Default for MempoolConfig {
-    fn default() -> MempoolConfig {
-        MempoolConfig {
-            broadcast_transactions: true,
-            shared_mempool_tick_interval_ms: 50,
-            shared_mempool_batch_size: 100,
-            shared_mempool_max_concurrent_inbound_syncs: 100,
-            capacity: 1_000_000,
-            capacity_per_user: 100,
-            system_transaction_timeout_secs: 86400,
-            address: "localhost".to_string(),
-            mempool_service_port: 6182,
-            system_transaction_gc_interval_ms: 180_000,
         }
     }
 }
