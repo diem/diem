@@ -102,6 +102,7 @@ pub struct NetworkBuilder {
     max_connection_delay_ms: u64,
     signing_keys: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
     is_permissioned: bool,
+    is_public: bool,
 }
 
 impl NetworkBuilder {
@@ -138,6 +139,7 @@ impl NetworkBuilder {
             max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
             signing_keys: None,
             is_permissioned: true,
+            is_public: false,
         }
     }
 
@@ -289,6 +291,11 @@ impl NetworkBuilder {
         self
     }
 
+    pub fn is_public(&mut self, is_public: bool) -> &mut Self {
+        self.is_public = is_public;
+        self
+    }
+
     fn supported_protocols(&self) -> Vec<ProtocolId> {
         let mut supported_protocols: Vec<ProtocolId> = self
             .direct_send_protocols
@@ -324,7 +331,9 @@ impl NetworkBuilder {
             TransportType::PermissionlessMemoryNoise(ref mut keys) => {
                 let keys = keys.take().expect("Identity keys not set");
                 self.build_with_transport(build_permissionless_memory_noise_transport(
-                    identity, keys,
+                    identity,
+                    keys,
+                    self.is_public,
                 ))
             }
             TransportType::Tcp => self.build_with_transport(build_tcp_transport(identity)),
@@ -334,7 +343,11 @@ impl NetworkBuilder {
             }
             TransportType::PermissionlessTcpNoise(ref mut keys) => {
                 let keys = keys.take().expect("Identity keys not set");
-                self.build_with_transport(build_permissionless_tcp_noise_transport(identity, keys))
+                self.build_with_transport(build_permissionless_tcp_noise_transport(
+                    identity,
+                    keys,
+                    self.is_public,
+                ))
             }
         }
     }
@@ -432,7 +445,7 @@ impl NetworkBuilder {
 
         // We start the discovery and connectivity_manager module only if the network is
         // permissioned.
-        if self.is_permissioned {
+        if self.is_permissioned || self.is_public {
             // Initialize and start connectivity manager.
             let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
                 self.channel_size,
@@ -453,6 +466,7 @@ impl NetworkBuilder {
                 conn_mgr_reqs_rx,
                 ExponentialBackoff::from_millis(2).factor(1000 /* seconds */),
                 self.max_connection_delay_ms,
+                self.is_public,
             );
             self.executor.spawn(conn_mgr.start());
             debug!("Started connection manager");
@@ -485,6 +499,7 @@ impl NetworkBuilder {
                 pm_discovery_notifs_rx,
                 conn_mgr_reqs_tx.clone(),
                 Duration::from_millis(self.discovery_msg_timeout_ms),
+                self.is_public,
             );
             self.executor.spawn(discovery.start());
             debug!("Started discovery protocol actor");

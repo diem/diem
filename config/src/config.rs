@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::config::ConsensusType::{PBFT, POW};
 use crate::{
     config::ConsensusProposerType::{FixedProposer, MultipleOrderedProposers, RotatingProposer},
     keys::{ConsensusKeyPair, NetworkKeyPairs},
@@ -33,7 +34,6 @@ use std::{
     time::Duration,
 };
 use toml;
-use crate::config::ConsensusType::{PBFT, POW};
 
 #[cfg(test)]
 #[path = "unit_tests/config_test.rs"]
@@ -340,6 +340,7 @@ pub struct NetworkConfig {
     #[serde(skip)]
     pub seed_peers: SeedPeersConfig,
     pub seed_peers_file: PathBuf,
+    pub is_public_network: bool,
 }
 
 impl Default for NetworkConfig {
@@ -359,6 +360,7 @@ impl Default for NetworkConfig {
             network_peers: NetworkPeersConfig::default(),
             seed_peers_file: PathBuf::from("seed_peers.config.toml"),
             seed_peers: SeedPeersConfig::default(),
+            is_public_network: true,
         }
     }
 }
@@ -421,6 +423,7 @@ pub struct ConsensusConfig {
     pub consensus_type: String,
 }
 
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum ConsensusType {
     PBFT,
     POW,
@@ -572,6 +575,8 @@ impl NodeConfig {
     /// Paths used in the config are either absolute or relative to the config location
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut config = Self::load_config(&path);
+        config.consensus.load(path.as_ref())?;
+        let is_public = config.consensus.get_consensus_type() == ConsensusType::POW;
         let mut validator_count = 0;
         for network in &mut config.networks {
             // We use provided peer id for validator role. Otherwise peer id is generated using
@@ -586,8 +591,8 @@ impl NodeConfig {
             } else {
                 network.load(path.as_ref())?;
             }
+            network.is_public_network = is_public;
         }
-        config.consensus.load(path.as_ref())?;
         Ok(config)
     }
 

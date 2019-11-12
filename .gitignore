@@ -42,3 +42,4 @@ language/vm/vm-genesis/genesis/vm_config.toml
 .terraform/
 .idea
 .vscode
+*iml
