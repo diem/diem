@@ -573,14 +573,16 @@ Addr: () = {
     }
 }
 
-AddressDirective: AddressDirective = {
-    Addr <addr: Sp<Address>> ":" => AddressDirective::Specified(addr.loc, addr.value),
+AddressDirective: (Loc, Address) = {
+    Addr <addr: Sp<Address>> ":" => (addr.loc, addr.value),
+}
+
+ModuleAddr: ModuleOrAddress = {
+    <loc_addr: AddressDirective> => ModuleOrAddress::Address(loc_addr.0, loc_addr.1),
+    <Module> => ModuleOrAddress::Module(<>),
 }
 
 pub File: FileDefinition = {
-    <addr_directive_opt: AddressDirective?> <modules: (Module)*> => {
-        let addr_directive = addr_directive_opt.unwrap_or(AddressDirective::Sender);
-        FileDefinition::Modules(addr_directive, modules)
-    },
+    <ModuleAddr*> => FileDefinition::Modules(<>),
     <uses: (UseDecl)*> <function: MoveFunctionDecl> => FileDefinition::Main(Main{ uses, function }),
 }

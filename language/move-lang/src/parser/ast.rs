@@ -56,14 +56,14 @@ pub struct Program {
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum FileDefinition {
-    Modules(AddressDirective, Vec<ModuleDefinition>),
+    Modules(Vec<ModuleOrAddress>),
     Main(Main),
 }
 
 #[derive(Debug)]
-pub enum AddressDirective {
-    Sender,
-    Specified(Loc, Address),
+pub enum ModuleOrAddress {
+    Module(ModuleDefinition),
+    Address(Loc, Address),
 }
 
 #[derive(Debug)]
