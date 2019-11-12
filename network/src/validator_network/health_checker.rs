@@ -16,7 +16,6 @@ use libra_types::PeerId;
 use std::time::Duration;
 
 /// Protocol id for HealthChecker RPC calls
-#[allow(dead_code)]
 pub const HEALTH_CHECKER_RPC_PROTOCOL: &[u8] = b"/libra/health-checker/rpc/0.1.0";
 
 /// The interface from Network to HealthChecker layer.
@@ -42,7 +41,6 @@ pub struct HealthCheckerNetworkSender {
 }
 
 impl HealthCheckerNetworkSender {
-    #[allow(dead_code)]
     pub fn new(inner: channel::Sender<NetworkRequest>) -> Self {
         Self {
             inner: NetworkSender::new(inner),
@@ -54,7 +52,6 @@ impl HealthCheckerNetworkSender {
     ///
     /// The rpc request can be canceled at any point by dropping the returned
     /// future.
-    #[allow(dead_code)]
     pub async fn ping(
         &mut self,
         recipient: PeerId,

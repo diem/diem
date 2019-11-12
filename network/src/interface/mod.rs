@@ -22,9 +22,9 @@ use crate::{
     },
     validator_network::{
         AdmissionControlNetworkEvents, AdmissionControlNetworkSender, ConsensusNetworkEvents,
-        ConsensusNetworkSender, HealthCheckerNetworkEvents, HealthCheckerNetworkSender,
-        MempoolNetworkEvents, MempoolNetworkSender, StateSynchronizerEvents,
-        StateSynchronizerSender,
+        ConsensusNetworkSender, DiscoveryNetworkEvents, DiscoveryNetworkSender,
+        HealthCheckerNetworkEvents, HealthCheckerNetworkSender, MempoolNetworkEvents,
+        MempoolNetworkSender, StateSynchronizerEvents, StateSynchronizerSender,
     },
     ProtocolId,
 };
@@ -37,11 +37,12 @@ use std::{collections::HashMap, fmt::Debug, time::Duration};
 
 pub use crate::peer_manager::PeerManagerError;
 
-pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
-pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
-pub const STATE_SYNCHRONIZER_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
-pub const ADMISSION_CONTROL_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
-pub const HEALTH_CHECKER_INBOUND_MSG_TIMEOUT_MS: u64 = 60 * 1000; // 1 minute
+pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
+pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
+pub const STATE_SYNCHRONIZER_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
+pub const ADMISSION_CONTROL_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
+pub const HEALTH_CHECKER_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
+pub const DISCOVERY_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds.
 
 /// Requests [`NetworkProvider`] receives from the network interface.
 #[derive(Debug)]
@@ -103,6 +104,10 @@ pub trait LibraNetworkProvider {
         &mut self,
         hc_protocols: Vec<ProtocolId>,
     ) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents);
+    fn add_discovery(
+        &mut self,
+        discovery_protocols: Vec<ProtocolId>,
+    ) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents);
     fn start(self: Box<Self>) -> BoxFuture<'static, ()>;
 }
 
@@ -231,6 +236,25 @@ where
         let hc_handlers = hc_protocols.iter().map(|p| (p.clone(), hc_tx.clone()));
         self.upstream_handlers.extend(hc_handlers);
         (hc_network_sender, hc_network_events)
+    }
+
+    fn add_discovery(
+        &mut self,
+        discovery_protocols: Vec<ProtocolId>,
+    ) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents) {
+        // Construct Discovery Network interfaces
+        let (discovery_tx, discovery_rx) = channel::new_with_timeout(
+            self.channel_size,
+            &counters::PENDING_DISCOVERY_NETWORK_EVENTS,
+            Duration::from_millis(DISCOVERY_INBOUND_MSG_TIMEOUT_MS),
+        );
+        let discovery_network_sender = DiscoveryNetworkSender::new(self.requests_tx.clone());
+        let discovery_network_events = DiscoveryNetworkEvents::new(discovery_rx);
+        let discovery_handlers = discovery_protocols
+            .iter()
+            .map(|p| (p.clone(), discovery_tx.clone()));
+        self.upstream_handlers.extend(discovery_handlers);
+        (discovery_network_sender, discovery_network_events)
     }
 
     fn start(self: Box<Self>) -> BoxFuture<'static, ()> {
