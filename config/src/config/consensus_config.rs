@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    config::ConsensusProposerType::{FixedProposer, MultipleOrderedProposers, RotatingProposer},
     config::{PersistableConfig, SafetyRulesBackend, SafetyRulesConfig},
     keys::ConsensusKeyPair,
     trusted_peers::ConsensusPeersConfig,
@@ -16,7 +15,7 @@ use std::path::{Path, PathBuf};
 #[serde(default)]
 pub struct ConsensusConfig {
     pub max_block_size: u64,
-    pub proposer_type: String,
+    pub proposer_type: ConsensusProposerType,
     pub contiguous_rounds: u32,
     pub max_pruned_blocks_in_mem: Option<u64>,
     pub pacemaker_initial_timeout_ms: Option<u64>,
@@ -35,7 +34,7 @@ impl Default for ConsensusConfig {
     fn default() -> ConsensusConfig {
         ConsensusConfig {
             max_block_size: 100,
-            proposer_type: "multiple_ordered_proposers".to_string(),
+            proposer_type: ConsensusProposerType::MultipleOrderedProposers,
             contiguous_rounds: 2,
             max_pruned_blocks_in_mem: None,
             pacemaker_initial_timeout_ms: None,
@@ -48,7 +47,8 @@ impl Default for ConsensusConfig {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ConsensusProposerType {
     // Choose the smallest PeerId as the proposer
     FixedProposer,
@@ -85,34 +85,5 @@ impl ConsensusConfig {
             }
         }
         Ok(())
-    }
-
-    pub fn get_proposer_type(&self) -> ConsensusProposerType {
-        match self.proposer_type.as_str() {
-            "fixed_proposer" => FixedProposer,
-            "rotating_proposer" => RotatingProposer,
-            "multiple_ordered_proposers" => MultipleOrderedProposers,
-            &_ => unimplemented!("Invalid proposer type: {}", self.proposer_type),
-        }
-    }
-
-    pub fn contiguous_rounds(&self) -> u32 {
-        self.contiguous_rounds
-    }
-
-    pub fn max_block_size(&self) -> u64 {
-        self.max_block_size
-    }
-
-    pub fn max_pruned_blocks_in_mem(&self) -> &Option<u64> {
-        &self.max_pruned_blocks_in_mem
-    }
-
-    pub fn pacemaker_initial_timeout_ms(&self) -> &Option<u64> {
-        &self.pacemaker_initial_timeout_ms
-    }
-
-    pub fn safety_rules(&self) -> &SafetyRulesConfig {
-        &self.safety_rules
     }
 }
