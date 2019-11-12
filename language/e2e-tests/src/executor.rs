@@ -7,7 +7,7 @@ use crate::{
     account::{Account, AccountData},
     data_store::{FakeDataStore, GENESIS_WRITE_SET, TESTNET_GENESIS},
 };
-use libra_config::config::{NodeConfig, NodeConfigHelpers, VMPublishingOption};
+use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
@@ -27,7 +27,7 @@ use vm_runtime::{MoveVM, VMExecutor, VMVerifier};
 /// This struct is a mock in-memory implementation of the Libra executor.
 #[derive(Debug)]
 pub struct FakeExecutor {
-    config: NodeConfig,
+    config: VMConfig,
     data_store: FakeDataStore,
 }
 
@@ -57,11 +57,13 @@ impl FakeExecutor {
         write_set: &WriteSet,
         publishing_options: Option<VMPublishingOption>,
     ) -> Self {
+        let mut config = VMConfig::default();
+        if let Some(vm_publishing_options) = publishing_options {
+            config.publishing_options = vm_publishing_options;
+        }
+
         let mut executor = FakeExecutor {
-            config: NodeConfigHelpers::get_single_node_test_config_publish_options(
-                false,
-                publishing_options,
-            ),
+            config,
             data_store: FakeDataStore::default(),
         };
         executor.apply_write_set(write_set);
@@ -103,7 +105,7 @@ impl FakeExecutor {
     /// Creates an executor in which no genesis state has been applied yet.
     pub fn no_genesis() -> Self {
         FakeExecutor {
-            config: NodeConfigHelpers::get_single_node_test_config(false),
+            config: VMConfig::default(),
             data_store: FakeDataStore::default(),
         }
     }
@@ -159,7 +161,7 @@ impl FakeExecutor {
                 .into_iter()
                 .map(Transaction::UserTransaction)
                 .collect(),
-            &self.config.vm_config,
+            &self.config,
             &self.data_store,
         )
     }
@@ -181,7 +183,7 @@ impl FakeExecutor {
 
     /// Verifies the given transaction by running it through the VM verifier.
     pub fn verify_transaction(&self, txn: SignedTransaction) -> Option<VMStatus> {
-        let vm = MoveVM::new(&self.config.vm_config);
+        let vm = MoveVM::new(&self.config);
         vm.validate_transaction(txn, &self.data_store)
     }
 

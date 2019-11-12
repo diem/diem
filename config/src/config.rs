@@ -254,17 +254,6 @@ impl NodeConfigHelpers {
     /// consensus_peers_file, network_keypairs_file, consensus_keypair_file, and seed_peers_file
     /// set. It is expected that the callee will provide these.
     pub fn get_single_node_test_config(random_ports: bool) -> NodeConfig {
-        Self::get_single_node_test_config_publish_options(random_ports, None)
-    }
-
-    /// Returns a simple test config for single node. It does not have correct network_peers_file,
-    /// consensus_peers_file, network_keypairs_file, consensus_keypair_file, and seed_peers_file
-    /// set. It is expected that the callee will provide these.
-    /// `publishing_options` is either one of either `Open` or `CustomScripts` only.
-    pub fn get_single_node_test_config_publish_options(
-        random_ports: bool,
-        publishing_options: Option<VMPublishingOption>,
-    ) -> NodeConfig {
         let config_string = String::from_utf8_lossy(CONFIG_TEMPLATE);
         let mut config =
             NodeConfig::parse(&config_string).expect("Error parsing single node test config");
@@ -275,9 +264,6 @@ impl NodeConfigHelpers {
         config.base.temp_data_dir = Some(dir);
         if random_ports {
             NodeConfigHelpers::randomize_config_ports(&mut config);
-        }
-        if let Some(vm_publishing_option) = publishing_options {
-            config.vm_config.publishing_options = vm_publishing_option;
         }
         let (mut private_keys, test_consensus_peers, test_network_peers) =
             ConfigHelpers::gen_validator_nodes(1, None);
