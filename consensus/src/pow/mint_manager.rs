@@ -93,16 +93,6 @@ impl MintManager {
                                 QuorumCert::certificate_for_genesis()
                             };
 
-                            //                            let mut tmp = vec![];
-                            //                            tmp.append(&mut genesis_txn_vec);
-                            //                            let (pre_compute_parent_block_id, commit_txn_vec) =
-                            //                                if parent_block_id != *GENESIS_BLOCK_ID {
-                            //                                    (grandpa_block_id, txns.clone())
-                            //                                } else {
-                            //                                    tmp.append(&mut txns);
-                            //                                    (*PRE_GENESIS_BLOCK_ID, tmp)
-                            //                                };
-
                             //compute current block state id
                             let tmp_id = HashValue::random();
                             match mint_state_computer
@@ -203,12 +193,12 @@ impl MintManager {
                             }
                         }
 
-                        //                        let mut r = rand::thread_rng();
-                        //                        r.gen::<i32>();
-                        //                        let sleep_time = r.gen_range(10, 20);
-                        //                        debug!("sleep begin.");
-                        //                        sleep(Duration::from_secs(sleep_time));
-                        //                        debug!("sleep end.");
+                        let mut r = rand::thread_rng();
+                        r.gen::<i32>();
+                        let sleep_time = r.gen_range(1, 5);
+                        debug!("sleep begin.");
+                        sleep(Duration::from_secs(sleep_time));
+                        debug!("sleep end.");
                     }
                     _ => {}
                 }

@@ -227,141 +227,6 @@ where
                 self.blocks_to_execute
                     .push_back((executable_block, resp_sender));
             }
-            //            Command::PreExecuteBlock {
-            //                transactions_vec,
-            //                ancestor_id,
-            //                resp_sender,
-            //            } => {
-            //                let first_len = transactions_vec[0].len() as u64;
-            //                let (
-            //                    state_root_hash,
-            //                    frozen_subtrees_in_accumulator,
-            //                    ver,
-            //                    committed_timestamp_usecs,
-            //                    committed_block_id,
-            //                ) = if ancestor_id == *PRE_GENESIS_BLOCK_ID {
-            //                    info!("Startup info is empty. Will start from GENESIS.");
-            //                    (
-            //                        *SPARSE_MERKLE_PLACEHOLDER_HASH,
-            //                        vec![],
-            //                        0,
-            //                        0,
-            //                        *PRE_GENESIS_BLOCK_ID,
-            //                    )
-            //                } else {
-            //                    let info = self
-            //                        .storage_read_client
-            //                        .get_history_startup_info_by_block_id(ancestor_id)
-            //                        .expect("Failed to read startup info from storage.")
-            //                        .expect("startup info is none.");
-            //
-            //                    info!("Startup info read from DB: {:?}.", info);
-            //                    let ledger_info = info.ledger_info;
-            //                    (
-            //                        info.account_state_root_hash,
-            //                        info.ledger_frozen_subtree_hashes,
-            //                        info.latest_version + 1,
-            //                        ledger_info.timestamp_usecs(),
-            //                        ledger_info.consensus_block_id(),
-            //                    )
-            //                };
-            //
-            //                let mut tmp_committed_trees = Arc::new(SparseMerkleTree::new(state_root_hash));
-            //                let mut tmp_committed_trees = ExecutedTrees {
-            //                    state_tree: tmp_committed_trees,
-            //                    transaction_accumulator: Arc::new(
-            //                        InMemoryAccumulator::new(frozen_subtrees_in_accumulator, ver)
-            //                            .expect("The startup info read from storage should be valid."),
-            //                    ),
-            //                };
-            //
-            //                let mut count = 0;
-            //                let mut vec_len = transactions_vec.len();
-            //                let mut totle = 0;
-            //                for transactions in transactions_vec {
-            //                    count = count + 1;
-            //                    totle = totle + transactions.len();
-            //                    // Construct a StateView and pass the transactions to VM.
-            //                    let tmp_ver = tmp_committed_trees.version();
-            //                    let tmp_state_root = tmp_committed_trees.state_root();
-            //                    let state_view = VerifiedStateView::new(
-            //                        Arc::clone(&self.storage_read_client),
-            //                        tmp_ver,
-            //                        tmp_state_root,
-            //                        tmp_committed_trees.state_tree(),
-            //                    );
-            //
-            ////                    let transactions: Vec<SignedTransaction> = transactions
-            ////                        .iter()
-            ////                        .map(|txn| {
-            ////                            txn.as_signed_user_txn()
-            ////                                .expect("All should be user transactions for now.")
-            ////                        })
-            ////                        .cloned()
-            ////                        .collect();
-            //
-            //                    let vm_outputs = V::execute_block(transactions.clone(), &self.vm_config, &state_view).unwrap();
-            //
-            //                    // Since other validators have committed these transactions, their status should all be
-            //                    // TransactionStatus::Keep.
-            //                    for output in &vm_outputs {
-            //                        if let TransactionStatus::Discard(_) = output.status() {
-            //                            println!("Syncing transactions that should be discarded.");
-            //                        }
-            //                    }
-            //
-            ////                    let latest_transactions = transactions
-            ////                        .into_iter()
-            ////                        .map(Transaction::UserTransaction)
-            ////                        .collect::<Vec<_>>();
-            //
-            //                    let (account_to_btree, account_to_proof) = state_view.into();
-            //
-            //                    match Self::process_vm_outputs(
-            //                        account_to_btree,
-            //                        account_to_proof,
-            //                        &transactions,
-            //                        vm_outputs,
-            //                        &tmp_committed_trees,
-            //                    ) {
-            //                        Ok(output) => {
-            //                            tmp_committed_trees = output.executed_trees().clone();
-            //                        }
-            //                        Err(e) => {
-            //                            //Err(format_err!("{}", e));
-            //                            println!("{:?}", e);
-            //                            break;
-            //                        }
-            //                    };
-            //                }
-            //
-            //                let vm_output = if count == vec_len {
-            //                    let accu_root_hash = tmp_committed_trees.txn_accumulator().root_hash();
-            //                    let version =
-            //                        (tmp_committed_trees.txn_accumulator().num_leaves() - 1) as Version;
-            //                    let state_id = tmp_committed_trees.state_tree().root_hash();
-            //
-            //                    // Now that we have the root hash and execution status we can send the response to
-            //                    // consensus.
-            //                    // TODO: The VM will support a special transaction to set the validators for the
-            //                    // next epoch that is part of a block execution.
-            //                    let state_compute_result = StateComputeResult {
-            //                        executed_state: ExecutedState {
-            //                            state_id: accu_root_hash,
-            //                            version,
-            //                            validators: None,
-            //                        },
-            //                        compute_status: vec![],
-            //                    };
-            //                    Ok((state_compute_result, state_id))
-            //                } else {
-            //                    Err(format_err!("pre compute err."))
-            //                };
-            //
-            //                if let Err(_err) = resp_sender.send(vm_output) {
-            //                    warn!("Failed to send pre execute block response.");
-            //                }
-            //            }
             Command::CommitBlockBatch {
                 committable_block_batch,
                 resp_sender,
@@ -381,30 +246,6 @@ where
                     .replace((committable_block_batch, resp_sender))
                     .is_none());
             }
-            //            Command::CommitBlockWithId {
-            //                block_id,
-            //                ledger_info_with_sigs,
-            //                resp_sender,
-            //            } => {
-            //                match self
-            //                    .block_tree
-            //                    .mark_as_committed(block_id, ledger_info_with_sigs)
-            //                    {
-            //                        Ok(()) => {
-            //                            let block = self
-            //                                .block_tree
-            //                                .get_block_mut(block_id)
-            //                                .expect("Block must exist if mark_as_committed succeeded.");
-            //                            // We have successfully marked the block as committed, but the real
-            //                            // response will not be sent to consensus until the block is successfully
-            //                            // persisted in storage. So we just save the sender in the block.
-            //                            block.set_commit_response_sender(resp_sender);
-            //                        }
-            //                        Err(err) => resp_sender
-            //                            .send(Err(format_err!("{}", err)))
-            //                            .expect("Failed to send error message."),
-            //                    }
-            //            }
             Command::ExecuteAndCommitChunk { chunk, resp_sender } => {
                 let res = self.execute_and_commit_chunk(chunk.clone()).map_err(|e| {
                     security_log(SecurityEvent::InvalidChunkExecutor)
@@ -438,32 +279,11 @@ where
 
     /// Query from storage
     fn executed_trees_by_id(&self, id: HashValue) -> ExecutedTrees {
-        //        let (
-        //            state_root_hash,
-        //            frozen_subtrees_in_accumulator,
-        //            ver
-        //        ) = if id == *PRE_GENESIS_BLOCK_ID {
-        //            info!("Startup info is empty. Will start from GENESIS.");
-        //            (
-        //                *SPARSE_MERKLE_PLACEHOLDER_HASH,
-        //                vec![],
-        //                0
-        //            )
-        //        } else {
         let info = self
             .storage_read_client
             .get_history_startup_info_by_block_id(id)
             .expect("Failed to read startup info from storage.")
             .expect("startup info is none.");
-
-        //            info!("Startup info read from DB: {:?}.", info);
-        //            let ledger_info = info.ledger_info;
-        //            (
-        //                info.account_state_root_hash,
-        //                info.ledger_frozen_subtree_hashes,
-        //                info.latest_version + 1
-        //            )
-        //        };
 
         ExecutedTrees::new(
             info.account_state_root_hash,
@@ -762,7 +582,10 @@ where
             .cloned()
             .collect();
         if !status.is_empty() {
-            debug!("Execution status: {:?}", status);
+            debug!(
+                "Block Id is {:?}, Parent Block Id is {:?}, Execution status: {:?}",
+                executable_block.id, executable_block.parent_id, status
+            );
         }
 
         let (account_to_btree, account_to_proof) = state_view.into();
