@@ -51,7 +51,9 @@ pub enum Error {
     },
 }
 
-/// The public state used to ensure safety of the protocol.
+/// Public representation of the internal state of SafetyRules for monitoring / debugging purposes.
+/// This does not include sensitive data like private keys.
+/// @TODO add hash of ledger info (waypoint)
 #[derive(Serialize, Default, Deserialize, Debug, Eq, PartialEq, Clone)]
 pub struct ConsensusState {
     epoch: u64,
@@ -100,18 +102,25 @@ impl ConsensusState {
     }
 }
 
-/// SafetyRules is responsible for two things that are critical for the safety of the consensus:
-/// 1) voting rules,
-/// 2) commit rules.
-/// SafetyRules is NOT THREAD SAFE (should be protected outside via e.g., RwLock).
-/// The commit decisions are returned to the caller as result of learning about a new QuorumCert.
+/// SafetyRules is responsible for the safety of the consensus:
+/// 1) voting rules
+/// 2) commit rules
+/// 3) ownership of the consensus private key
+/// @TODO add a benchmark to evaluate SafetyRules
+/// @TODO consider a cache of verified QCs to cut down on verification costs
+/// @TODO bootstrap with a hash of a ledger info (waypoint) that includes a validator set
+/// @TODO update storage with hash of ledger info (waypoint) during epoch changes (includes a new validator
+/// set)
 pub struct SafetyRules {
     persistent_storage: Box<dyn PersistentStorage>,
     validator_signer: Arc<ValidatorSigner>,
 }
 
 impl SafetyRules {
-    /// Constructs a new instance of SafetyRules given the BlockTree and ConsensusState.
+    /// Constructs a new instance of SafetyRules with the given persistent storage and the
+    /// consensus private keys
+    /// @TODO replace this with an API that takes in a SafetyRulesConfig
+    /// @TODO load private key from persistent store
     pub fn new(
         persistent_storage: Box<dyn PersistentStorage>,
         validator_signer: Arc<ValidatorSigner>,
@@ -126,13 +135,18 @@ impl SafetyRules {
         &self.validator_signer
     }
 
-    /// Learn about a new quorum certificate. Several things can happen as a result of that:
-    /// 1) update the preferred block to a higher value.
-    /// 2) commit some blocks.
-    /// In case of commits the last committed block is returned.
-    /// Requires that all the ancestors of the block are available for at least up to the last
-    /// committed block, might panic otherwise.
-    /// The update function is invoked whenever a system learns about a potentially high QC.
+    /// Learn about a new quorum certificate. In normal state, this updates the preferred round,
+    /// if the parent is greater than our current preferred round. This can also trigger upgrading
+    /// to a new epoch.
+    /// @TODO verify signatures of the QC
+    /// @TODO improving signaling by stating reaction to passed in QC:
+    ///     QC has older preferred round,
+    ///     signatures are incorrect,
+    ///     epoch is unexpected
+    ///     updating to new preferred round
+    /// @TODO update epoch with validator set
+    /// @TODO if public key does not match private key in validator set, access persistent storage
+    /// to identify new key
     pub fn update(&mut self, qc: &QuorumCert) {
         if qc.ledger_info().ledger_info().epoch() > self.persistent_storage.epoch() {
             self.persistent_storage
@@ -168,7 +182,8 @@ impl SafetyRules {
         }
     }
 
-    /// Clones the up-to-date state of consensus (for monitoring / debugging purposes)
+    /// Provides the internal state of SafetyRules for monitoring / debugging purposes. This does
+    /// not include sensitive data like private keys.
     pub fn consensus_state(&self) -> ConsensusState {
         ConsensusState {
             epoch: self.persistent_storage.epoch(),
@@ -178,11 +193,9 @@ impl SafetyRules {
     }
 
     /// Attempts to vote for a given proposal following the voting rules.
-    /// The returned value is then going to be used for either sending the vote or doing nothing.
-    /// In case of a vote a cloned consensus state is returned (to be persisted before the vote is
-    /// sent).
-    /// Requires that all the ancestors of the block are available for at least up to the last
-    /// committed block, might panic otherwise.
+    /// @TODO verify signature on vote proposal
+    /// @TODO verify QC correctness
+    /// @TODO verify epoch on vote proposal
     pub fn construct_and_sign_vote<T: Payload>(
         &mut self,
         vote_proposal: &VoteProposal<T>,
@@ -235,6 +248,11 @@ impl SafetyRules {
         ))
     }
 
+    /// As the holder of the private key, SafetyRules also signs proposals or blocks.
+    /// A Block is a signed BlockData along with some additional metadata.
+    /// @TODO only sign blocks that are later than last_voted_round and match the current epoch
+    /// @TODO verify QC correctness
+    /// @TODO verify QC matches preferred round
     pub fn sign_proposal<T: Payload>(&self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
         Ok(Block::new_proposal_from_block_data(
             block_data,
@@ -244,6 +262,8 @@ impl SafetyRules {
 
     /// As the holder of the private key, SafetyRules also signs what is effectively a
     /// timeout message. This returns the signature for that timeout message.
+    /// @TODO only sign a timeout if it matches last_voted_round or last_voted_round + 1
+    /// @TODO update last_voted_round
     pub fn sign_timeout(&self, timeout: &Timeout) -> Result<Signature, Error> {
         Ok(timeout.sign(&self.validator_signer))
     }
