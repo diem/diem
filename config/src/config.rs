@@ -32,6 +32,8 @@ use toml;
 
 mod consensus_config;
 pub use consensus_config::*;
+mod execution_config;
+pub use execution_config::*;
 mod metrics_config;
 pub use metrics_config::*;
 mod state_sync_config;
@@ -142,24 +144,6 @@ impl Clone for BaseConfig {
         Self {
             data_dir_path: self.data_dir_path.clone(),
             temp_data_dir: None,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(default)]
-pub struct ExecutionConfig {
-    pub address: String,
-    pub port: u16,
-    pub genesis_file_location: String,
-}
-
-impl Default for ExecutionConfig {
-    fn default() -> ExecutionConfig {
-        ExecutionConfig {
-            address: "localhost".to_string(),
-            port: 6183,
-            genesis_file_location: "genesis.blob".to_string(),
         }
     }
 }
@@ -425,11 +409,11 @@ impl NodeConfig {
     }
 
     pub fn get_genesis_transaction_file(&self) -> PathBuf {
-        let path = PathBuf::from(self.execution.genesis_file_location.clone());
+        let path = &self.execution.genesis_file_location;
         if path.is_relative() {
             self.base.data_dir_path.join(path)
         } else {
-            path
+            path.clone()
         }
     }
 
