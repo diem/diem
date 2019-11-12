@@ -18,14 +18,13 @@ use consensus_types::{
 use failure::{self};
 use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
 use libra_logger::prelude::*;
-use libra_prost_ext::MessageExt;
 use libra_types::account_address::AccountAddress;
 use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
 use libra_types::proto::types::ValidatorChangeEventWithProof as ValidatorChangeEventWithProofProto;
 use network::{
     proto::{
-        ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RequestEpoch, RespondBlock,
+        ConsensusMsg, ConsensusMsg_oneof, Proposal, RequestBlock, RequestEpoch,
         SyncInfo as SyncInfoProto, VoteMsg as VoteMsgProto,
     },
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
@@ -40,9 +39,9 @@ use std::{
 /// The block retrieval request is used internally for implementing RPC: the callback is executed
 /// for carrying the response
 #[derive(Debug)]
-pub struct IncomingBlockRetrievalRequest<T> {
+pub struct IncomingBlockRetrievalRequest {
     pub req: BlockRetrievalRequest,
-    pub response_sender: oneshot::Sender<BlockRetrievalResponse<T>>,
+    pub response_sender: oneshot::Sender<Result<Bytes, RpcError>>,
 }
 
 /// Just a convenience struct to keep all the network proxy receiving queues in one place.
@@ -50,7 +49,7 @@ pub struct IncomingBlockRetrievalRequest<T> {
 pub struct NetworkReceivers<T> {
     pub proposals: libra_channel::Receiver<AccountAddress, ProposalMsg<T>>,
     pub votes: libra_channel::Receiver<AccountAddress, VoteMsg>,
-    pub block_retrieval: libra_channel::Receiver<AccountAddress, IncomingBlockRetrievalRequest<T>>,
+    pub block_retrieval: libra_channel::Receiver<AccountAddress, IncomingBlockRetrievalRequest>,
     pub sync_info_msgs: libra_channel::Receiver<AccountAddress, (SyncInfo, AccountAddress)>,
     pub epoch_change: libra_channel::Receiver<AccountAddress, LedgerInfoWithSignatures>,
     pub different_epoch: libra_channel::Receiver<AccountAddress, (u64, AccountAddress)>,
@@ -257,7 +256,7 @@ pub struct NetworkTask<T> {
     epoch: u64,
     proposal_tx: libra_channel::Sender<AccountAddress, ProposalMsg<T>>,
     vote_tx: libra_channel::Sender<AccountAddress, VoteMsg>,
-    block_request_tx: libra_channel::Sender<AccountAddress, IncomingBlockRetrievalRequest<T>>,
+    block_request_tx: libra_channel::Sender<AccountAddress, IncomingBlockRetrievalRequest>,
     sync_info_tx: libra_channel::Sender<AccountAddress, (SyncInfo, AccountAddress)>,
     epoch_change_tx: libra_channel::Sender<AccountAddress, LedgerInfoWithSignatures>,
     different_epoch_tx: libra_channel::Sender<AccountAddress, (u64, AccountAddress)>,
@@ -485,21 +484,11 @@ impl<T: Payload> NetworkTask<T> {
     ) -> failure::Result<()> {
         let req = BlockRetrievalRequest::try_from(request_msg)?;
         debug!("Received block retrieval request {}", req);
-        let (tx, rx) = oneshot::channel();
         let req_with_callback = IncomingBlockRetrievalRequest {
             req,
-            response_sender: tx,
+            response_sender: callback,
         };
-        self.block_request_tx.push(peer_id, req_with_callback)?;
-        let response = rx.await?;
-        let response_serialized = RespondBlock::try_from(response)?;
-        let response_msg = ConsensusMsg {
-            message: Some(ConsensusMsg_oneof::RespondBlock(response_serialized)),
-        };
-        let response_data = response_msg.to_bytes()?;
-        callback
-            .send(Ok(response_data))
-            .map_err(|_| format_err!("handling inbound rpc call timed out"))
+        self.block_request_tx.push(peer_id, req_with_callback)
     }
 
     async fn process_epoch_change(

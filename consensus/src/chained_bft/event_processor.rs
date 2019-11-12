@@ -33,6 +33,7 @@ use consensus_types::{
 use failure::ResultExt;
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
+use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::{
     LedgerInfoWithSignatures, ValidatorChangeEventWithProof, ValidatorVerifier,
 };
@@ -40,12 +41,14 @@ use mirai_annotations::{
     debug_checked_precondition, debug_checked_precondition_eq, debug_checked_verify,
     debug_checked_verify_eq,
 };
+use network::proto::{ConsensusMsg, ConsensusMsg_oneof};
 
 use crate::chained_bft::network::IncomingBlockRetrievalRequest;
 use consensus_types::block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus};
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::SafetyRules;
+use std::convert::TryInto;
 use std::time::Instant;
 use std::{sync::Arc, time::Duration};
 use termion::color::*;
@@ -792,7 +795,7 @@ impl<T: Payload> EventProcessor<T> {
     ///
     /// The current version of the function is not really async, but keeping it this way for
     /// future possible changes.
-    pub async fn process_block_retrieval(&self, request: IncomingBlockRetrievalRequest<T>) {
+    pub async fn process_block_retrieval(&self, request: IncomingBlockRetrievalRequest) {
         let mut blocks = vec![];
         let mut status = BlockRetrievalStatus::Succeeded;
         let mut id = request.req.block_id();
@@ -810,9 +813,22 @@ impl<T: Payload> EventProcessor<T> {
             status = BlockRetrievalStatus::IdNotFound;
         }
 
-        if let Err(e) = request
-            .response_sender
-            .send(BlockRetrievalResponse::new(status, blocks))
+        let response = BlockRetrievalResponse::new(status, blocks);
+        if let Err(e) = response
+            .try_into()
+            .and_then(|proto| {
+                let bytes = ConsensusMsg {
+                    message: Some(ConsensusMsg_oneof::RespondBlock(proto)),
+                }
+                .to_bytes()?;
+                Ok(bytes)
+            })
+            .and_then(|response_data| {
+                request
+                    .response_sender
+                    .send(Ok(response_data))
+                    .map_err(|e| format_err!("{:?}", e))
+            })
         {
             error!("Failed to return the requested block: {:?}", e);
         }
