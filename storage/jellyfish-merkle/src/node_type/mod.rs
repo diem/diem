@@ -167,17 +167,6 @@ pub struct InternalNode {
     children: Children,
 }
 
-/// Represents an account.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
-pub struct LeafNode {
-    // The hashed account address associated with this leaf node.
-    account_key: HashValue,
-    // The hash of the account state blob.
-    blob_hash: HashValue,
-    // The account blob associated with `account_key`.
-    blob: AccountStateBlob,
-}
-
 /// Computes the hash of internal node according to [`JellyfishTree`](crate::JellyfishTree)
 /// data structure in the logical view. `start` and `nibble_height` determine a subtree whose
 /// root hash we want to get. For an internal node with 16 children at the bottom level, we compute
@@ -233,53 +222,6 @@ impl CryptoHash for InternalNode {
             16, /* the number of leaves in the subtree of which we want the hash of root */
             self.generate_bitmaps(),
         )
-    }
-}
-
-/// Computes the hash of a [`LeafNode`].
-impl CryptoHash for LeafNode {
-    // Unused hasher.
-    type Hasher = LeafNodeHasher;
-
-    fn hash(&self) -> HashValue {
-        SparseMerkleLeafNode::new(self.account_key, self.blob_hash).hash()
-    }
-}
-
-/// The concrete node type of [`JellyfishMerkleTree`](crate::JellyfishMerkleTree).
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Node {
-    /// Represents `null`.
-    Null,
-    /// A wrapper of [`InternalNode`].
-    Internal(InternalNode),
-    /// A wrapper of [`LeafNode`].
-    Leaf(LeafNode),
-}
-
-#[repr(u8)]
-#[derive(FromPrimitive, ToPrimitive)]
-enum NodeTag {
-    Null = 0,
-    Internal = 1,
-    Leaf = 2,
-}
-
-impl From<InternalNode> for Node {
-    fn from(node: InternalNode) -> Self {
-        Node::Internal(node)
-    }
-}
-
-impl From<InternalNode> for Children {
-    fn from(node: InternalNode) -> Self {
-        node.children
-    }
-}
-
-impl From<LeafNode> for Node {
-    fn from(node: LeafNode) -> Self {
-        Node::Leaf(node)
     }
 }
 
@@ -542,6 +484,17 @@ impl InternalNode {
     }
 }
 
+/// Represents an account.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
+pub struct LeafNode {
+    // The hashed account address associated with this leaf node.
+    account_key: HashValue,
+    // The hash of the account state blob.
+    blob_hash: HashValue,
+    // The account blob associated with `account_key`.
+    blob: AccountStateBlob,
+}
+
 impl LeafNode {
     /// Creates a new leaf node.
     pub fn new(account_key: HashValue, blob: AccountStateBlob) -> Self {
@@ -566,6 +519,53 @@ impl LeafNode {
     /// Gets the associated blob itself.
     pub fn blob(&self) -> &AccountStateBlob {
         &self.blob
+    }
+}
+
+/// Computes the hash of a [`LeafNode`].
+impl CryptoHash for LeafNode {
+    // Unused hasher.
+    type Hasher = LeafNodeHasher;
+
+    fn hash(&self) -> HashValue {
+        SparseMerkleLeafNode::new(self.account_key, self.blob_hash).hash()
+    }
+}
+
+#[repr(u8)]
+#[derive(FromPrimitive, ToPrimitive)]
+enum NodeTag {
+    Null = 0,
+    Internal = 1,
+    Leaf = 2,
+}
+
+/// The concrete node type of [`JellyfishMerkleTree`](crate::JellyfishMerkleTree).
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Node {
+    /// Represents `null`.
+    Null,
+    /// A wrapper of [`InternalNode`].
+    Internal(InternalNode),
+    /// A wrapper of [`LeafNode`].
+    Leaf(LeafNode),
+}
+
+impl From<InternalNode> for Node {
+    fn from(node: InternalNode) -> Self {
+        Node::Internal(node)
+    }
+}
+
+impl From<InternalNode> for Children {
+    fn from(node: InternalNode) -> Self {
+        node.children
+    }
+}
+
+impl From<LeafNode> for Node {
+    fn from(node: LeafNode) -> Self {
+        Node::Leaf(node)
     }
 }
 
