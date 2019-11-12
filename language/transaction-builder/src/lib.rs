@@ -120,12 +120,13 @@ pub fn encode_rotate_consensus_pubkey_script(new_key: Vec<u8>) -> Script {
     )
 }
 
-/// Encode a program that rotates the sender's authentication key to `new_key`.
-pub fn rotate_authentication_key_script(new_key: AccountAddress) -> Script {
+/// Encode a program that rotates the sender's authentication key to `new_key`. `new_key` should be
+/// a 256 bit sha3 hash of an ed25519 public key.
+pub fn rotate_authentication_key_script(new_hashed_key: Vec<u8>) -> Script {
     Script::new(
         ROTATE_AUTHENTICATION_KEY_TXN.clone(),
         vec![TransactionArgument::ByteArray(ByteArray::new(
-            new_key.as_ref().to_vec(),
+            new_hashed_key,
         ))],
     )
 }
