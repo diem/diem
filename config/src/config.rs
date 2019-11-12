@@ -146,7 +146,6 @@ impl Clone for BaseConfig {
 pub struct MetricsConfig {
     pub dir: PathBuf,
     pub collection_interval_ms: u64,
-    pub push_server_addr: String,
 }
 
 impl Default for MetricsConfig {
@@ -154,7 +153,6 @@ impl Default for MetricsConfig {
         MetricsConfig {
             dir: PathBuf::from("metrics"),
             collection_interval_ms: 1000,
-            push_server_addr: "".to_string(),
         }
     }
 }
@@ -164,10 +162,6 @@ impl Default for MetricsConfig {
 pub struct ExecutionConfig {
     pub address: String,
     pub port: u16,
-    // directive to load the testnet genesis block or the default genesis block.
-    // There are semantic differences between the 2 genesis related to minting and
-    // account creation
-    pub testnet_genesis: bool,
     pub genesis_file_location: String,
 }
 
@@ -176,7 +170,6 @@ impl Default for ExecutionConfig {
         ExecutionConfig {
             address: "localhost".to_string(),
             port: 6183,
-            testnet_genesis: false,
             genesis_file_location: "genesis.blob".to_string(),
         }
     }
