@@ -41,6 +41,8 @@ mod metrics_config;
 pub use metrics_config::*;
 mod state_sync_config;
 pub use state_sync_config::*;
+mod storage_config;
+pub use storage_config::*;
 mod safety_rules_config;
 pub use safety_rules_config::*;
 
@@ -165,26 +167,6 @@ impl Default for LoggerConfig {
         LoggerConfig {
             is_async: true,
             chan_size: 256,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(default)]
-pub struct StorageConfig {
-    pub address: String,
-    pub port: u16,
-    pub dir: PathBuf,
-    pub grpc_max_receive_len: Option<i32>,
-}
-
-impl Default for StorageConfig {
-    fn default() -> StorageConfig {
-        StorageConfig {
-            address: "localhost".to_string(),
-            port: 6184,
-            dir: PathBuf::from("libradb/db"),
-            grpc_max_receive_len: Some(100_000_000),
         }
     }
 }
