@@ -23,7 +23,9 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
-use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus};
+use consensus_types::block_retrieval::{
+    BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
+};
 use consensus_types::{
     block::{
         block_test_utils::{
@@ -50,9 +52,10 @@ use libra_types::crypto_proxies::{
     random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
 };
 use network::{
-    proto::ConsensusMsg_oneof,
+    proto::{ConsensusMsg, ConsensusMsg_oneof},
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
+use prost::Message as _;
 use safety_rules::{ConsensusState, OnDiskStorage, SafetyRules};
 use std::{collections::HashMap, convert::TryFrom, path::PathBuf, sync::Arc, time::Duration};
 use tempfile::NamedTempFile;
@@ -704,7 +707,15 @@ fn process_block_retrieval() {
             .process_block_retrieval(single_block_request)
             .await;
         match rx1.await {
-            Ok(response) => {
+            Ok(Ok(bytes)) => {
+                let msg = ConsensusMsg::decode(bytes).unwrap();
+                let response = match msg.message {
+                    Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
+                        BlockRetrievalResponse::<TestPayload>::try_from(proto)
+                    }
+                    _ => panic!("block retrieval failure"),
+                }
+                .unwrap();
                 assert_eq!(response.status(), BlockRetrievalStatus::Succeeded);
                 assert_eq!(response.blocks().get(0).unwrap().id(), block_id);
             }
@@ -722,7 +733,15 @@ fn process_block_retrieval() {
             .process_block_retrieval(missing_block_request)
             .await;
         match rx2.await {
-            Ok(response) => {
+            Ok(Ok(bytes)) => {
+                let msg = ConsensusMsg::decode(bytes).unwrap();
+                let response = match msg.message {
+                    Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
+                        BlockRetrievalResponse::<TestPayload>::try_from(proto)
+                    }
+                    _ => panic!("block retrieval failure"),
+                }
+                .unwrap();
                 assert_eq!(response.status(), BlockRetrievalStatus::IdNotFound);
                 assert!(response.blocks().is_empty());
             }
@@ -739,7 +758,15 @@ fn process_block_retrieval() {
             .process_block_retrieval(many_block_request)
             .await;
         match rx3.await {
-            Ok(response) => {
+            Ok(Ok(bytes)) => {
+                let msg = ConsensusMsg::decode(bytes).unwrap();
+                let response = match msg.message {
+                    Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
+                        BlockRetrievalResponse::<TestPayload>::try_from(proto)
+                    }
+                    _ => panic!("block retrieval failure"),
+                }
+                .unwrap();
                 assert_eq!(response.status(), BlockRetrievalStatus::NotEnoughBlocks);
                 assert_eq!(block_id, response.blocks().get(0).unwrap().id());
                 assert_eq!(
