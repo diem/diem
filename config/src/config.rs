@@ -33,6 +33,8 @@ mod admission_control_config;
 pub use admission_control_config::*;
 mod consensus_config;
 pub use consensus_config::*;
+mod debug_interface_config;
+pub use debug_interface_config::*;
 mod execution_config;
 pub use execution_config::*;
 mod metrics_config;
@@ -163,29 +165,6 @@ impl Default for LoggerConfig {
         LoggerConfig {
             is_async: true,
             chan_size: 256,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(default)]
-pub struct DebugInterfaceConfig {
-    pub admission_control_node_debug_port: u16,
-    pub storage_node_debug_port: u16,
-    // This has similar use to the core-node-debug-server itself
-    pub metrics_server_port: u16,
-    pub public_metrics_server_port: u16,
-    pub address: String,
-}
-
-impl Default for DebugInterfaceConfig {
-    fn default() -> DebugInterfaceConfig {
-        DebugInterfaceConfig {
-            admission_control_node_debug_port: 6191,
-            storage_node_debug_port: 6194,
-            metrics_server_port: 9101,
-            public_metrics_server_port: 9102,
-            address: "localhost".to_string(),
         }
     }
 }
