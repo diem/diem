@@ -69,7 +69,7 @@ impl ChainManager {
         }
     }
 
-    pub fn process_orphan_blocks(&self) {
+    pub fn _process_orphan_blocks(&self) {
         //TODO:orphan
     }
 
@@ -277,7 +277,7 @@ impl ChainManager {
             .expect("save_blocks err.");
     }
 
-    pub async fn chain_height(&self) -> u64 {
+    pub async fn _chain_height(&self) -> u64 {
         self.block_chain
             .clone()
             .read()
@@ -307,7 +307,7 @@ impl ChainManager {
             .block_exist(block_hash)
     }
 
-    pub async fn get_block_index_by_height(&self, height: &u64) -> BlockIndex {
+    pub async fn _get_block_index_by_height(&self, height: &u64) -> BlockIndex {
         self.block_chain
             .clone()
             .read()

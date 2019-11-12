@@ -345,7 +345,6 @@ where
                     .unwrap();
             }
             NetworkRequest::BroadCastMessage(msg) => {
-                let len = msg.mdata.len() as i64;
                 let peer_ids_clone = peer_ids.lock().await;
                 for peer_id in peer_ids_clone.iter() {
                     ds_reqs_tx

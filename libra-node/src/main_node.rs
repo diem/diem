@@ -9,10 +9,7 @@ use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_d
 use executor::Executor;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
-use libra_config::config::{
-    ConsensusType::{PBFT, POW},
-    NetworkConfig, NodeConfig, RoleType,
-};
+use libra_config::config::{ConsensusType::POW, NetworkConfig, NodeConfig, RoleType};
 use libra_crypto::{ed25519::*, ValidKey};
 use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
