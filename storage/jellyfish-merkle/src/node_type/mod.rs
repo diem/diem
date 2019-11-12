@@ -370,7 +370,7 @@ impl InternalNode {
     ) -> HashValue {
         // Given a bit [start, 1 << nibble_height], return the value of that range.
         let (range_existence_bitmap, range_leaf_bitmap) =
-            InternalNode::range_bitmaps(start, width, (existence_bitmap, leaf_bitmap));
+            Self::range_bitmaps(start, width, (existence_bitmap, leaf_bitmap));
         if range_existence_bitmap == 0 {
             // No child under this subtree
             *SPARSE_MERKLE_PLACEHOLDER_HASH
@@ -445,11 +445,8 @@ impl InternalNode {
                 (existence_bitmap, leaf_bitmap),
             ));
 
-            let (range_existence_bitmap, range_leaf_bitmap) = InternalNode::range_bitmaps(
-                child_half_start,
-                width,
-                (existence_bitmap, leaf_bitmap),
-            );
+            let (range_existence_bitmap, range_leaf_bitmap) =
+                Self::range_bitmaps(child_half_start, width, (existence_bitmap, leaf_bitmap));
 
             if range_existence_bitmap == 0 {
                 // No child in this range.
