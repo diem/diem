@@ -8,13 +8,3 @@ role = "validator"
 [consensus]
 consensus_keypair_file = "" # For direct validation of this file
 consensus_peers_file = ""  # For direct validation of this file
-
-[vm_config]
-  [vm_config.publishing_options]
-  type = "Locked"
-  whitelist = [
-    "6aabc87f543f85e10216432d02b0251297d4c7723e906de481dfa04b057c2371",
-    "1cf66b5f5c911e80dad222b8ee8dfe3ad4830f75bb412ba12ea8e429203d9c83",
-    "a2180395d1632a0793f34e8a8a6be20b3b03bdceee35affe8c751fc8467b73a4",
-    "5ee07d4ac1ecf88f1b41c2c458f15699fe9d811c61563338253b3807b75c04c1",
-  ]
