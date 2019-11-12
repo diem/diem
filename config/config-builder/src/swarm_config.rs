@@ -320,12 +320,7 @@ impl SwarmConfig {
             RoleType::Validator => "validator".to_string(),
             RoleType::FullNode => "full_node".to_string(),
         };
-        let base_config = BaseConfig::new(
-            output_dir.to_path_buf(),
-            template.base.node_sync_retries,
-            template.base.node_sync_channel_buffer_size,
-            template.base.node_async_log_chan_size,
-        );
+        let base_config = BaseConfig::new(output_dir.to_path_buf());
         let template_network = template.networks.get(0).unwrap();
         let network_config = NetworkConfig {
             peer_id: node_id.to_string(),
@@ -369,7 +364,7 @@ impl SwarmConfig {
             storage: template.storage.clone(),
             mempool: template.mempool.clone(),
             state_sync: template.state_sync.clone(),
-            log_collector: template.log_collector.clone(),
+            logger: template.logger.clone(),
             vm_config: template.vm_config.clone(),
         };
         NodeConfigHelpers::randomize_config_ports(&mut config);
