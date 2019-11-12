@@ -124,13 +124,13 @@ impl ConsensusNetworkSender {
         Ok(())
     }
 
-    pub async fn broadcast_bytes(&mut self, message_bytes: Bytes) -> Result<(), NetworkError> {
+    pub async fn broadcast_bytes(&mut self, message_bytes: Bytes, ignore_peers:Vec<PeerId>) -> Result<(), NetworkError> {
         warn!("broadcast message");
         self.inner
             .send(NetworkRequest::BroadCastMessage(Message {
                 protocol: ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
                 mdata: message_bytes,
-            }))
+            }, ignore_peers))
             .await?;
         Ok(())
     }

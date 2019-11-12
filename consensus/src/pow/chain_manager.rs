@@ -105,27 +105,22 @@ impl ChainManager {
                                         let mut save_flag = false;
                                         if chain_lock.block_exist(&parent_block_id) {
                                             let mut commit_txn_vec = Vec::<SignedTransaction>::new();
-                //                            let mut pre_compute_parent_block_id = *PRE_GENESIS_BLOCK_ID;
-                //                            if parent_block_id == *GENESIS_BLOCK_ID {
-                //                                commit_txn_vec.append(&mut genesis_txn_vec);
-                //                            } else {
-                                                // 2. find ancestors
-                                                let (ancestors, pre_block_index) = chain_lock.find_ancestor_until_main_chain(&parent_block_id).expect("find ancestors err.");
+                                            // 2. find ancestors
+                                            let (ancestors, pre_block_index) = chain_lock.find_ancestor_until_main_chain(&parent_block_id).expect("find ancestors err.");
 
-                                                // 3. find blocks
-                                                let blocks = block_db.get_blocks_by_hashs::<BlockPayloadExt>(ancestors).expect("find blocks err.");
+                                            // 3. find blocks
+                                            let blocks = block_db.get_blocks_by_hashs::<BlockPayloadExt>(ancestors).expect("find blocks err.");
 
-                                                for b in blocks {
-                                                    let mut tmp_txns = match b.payload() {
-                                                        Some(t) => t.get_txns(),
-                                                        None => vec![],
-                                                    };
-                                                    commit_txn_vec.append(&mut tmp_txns);
-                                                }
+                                            for b in blocks {
+                                                let mut tmp_txns = match b.payload() {
+                                                    Some(t) => t.get_txns(),
+                                                    None => vec![],
+                                                };
+                                                commit_txn_vec.append(&mut tmp_txns);
+                                            }
 
-                                                let pre_compute_grandpa_block_id = pre_block_index.parent_block_id;
-                                                let pre_compute_parent_block_id = pre_block_index.id;
-                //                            }
+                                            let pre_compute_grandpa_block_id = pre_block_index.parent_block_id;
+                                            let pre_compute_parent_block_id = pre_block_index.id;
                                             commit_txn_vec.append(&mut payload);
 
                                             // 4. call pre_compute
@@ -138,6 +133,8 @@ impl ChainManager {
 
                                                     if state_id == block.quorum_cert().certified_block().executed_state_id() && txn_accumulator_hash == block.quorum_cert().ledger_info().ledger_info().transaction_accumulator_hash() {
                                                         save_flag = true;
+                                                    } else {
+                                                        warn!("Peer id {:?}, Drop block {:?}, parent_block_id {:?}, grandpa_block_id {:?}", author, block.id(), pre_compute_parent_block_id, pre_compute_grandpa_block_id);
                                                     }
                                                 }
                                                 Err(e) => {error!("{:?}", e)},
@@ -182,7 +179,7 @@ impl ChainManager {
                                                                 Self::execut_and_commit_block(block_db.clone(), grandpa_block_id, commit_block, txn_manager.clone(), state_computer.clone()).await;
                                                             }
 
-                    //                                      // 4. update main chain
+                                                            // 4. update main chain
                                                             main_chain_indexes.append(&mut commit_vec);
                                                         }
 
@@ -349,7 +346,7 @@ impl BlockChain {
     }
 
     pub fn print_block_chain_root(&self, peer_id: PeerId) {
-        let height = self.hash_height_index.len() as u64;
+        let height = self.main_chain.borrow().len() as u64;
         for index in 0..height {
             info!(
                 "Main Chain Block, PeerId: {:?} , Height: {} , Block Root: {:?}",
@@ -395,8 +392,9 @@ impl BlockChain {
                 let current_block_id = block_index.id.clone();
                 let (old, current_index) = if self.height == height {
                     let old_root_hash = self.root_hash();
-                    self.height = self.height + 1;
-                    self.indexes.insert(self.height, vec![block_index.clone()]);
+                    let tmp = self.height + 1;
+                    self.height = tmp;
+                    self.indexes.insert(tmp, vec![block_index.clone()]);
                     (Some(old_root_hash), 0)
                 } else {
                     let tmp_indexes = self

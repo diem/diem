@@ -68,7 +68,7 @@ pub enum NetworkRequest {
     /// are sent back to the caller via the oneshot channel.
     DisconnectPeer(PeerId, oneshot::Sender<Result<(), PeerManagerError>>),
 
-    BroadCastMessage(Message),
+    BroadCastMessage(Message, Vec<PeerId>),
 }
 
 /// Notifications that [`NetworkProvider`] sends to consumers of its API. The
@@ -344,13 +344,15 @@ where
                     .await
                     .unwrap();
             }
-            NetworkRequest::BroadCastMessage(msg) => {
+            NetworkRequest::BroadCastMessage(msg, ignore_peers) => {
                 let peer_ids_clone = peer_ids.lock().await;
                 for peer_id in peer_ids_clone.iter() {
-                    ds_reqs_tx
-                        .send(DirectSendRequest::SendMessage(peer_id.clone(), msg.clone()))
-                        .await
-                        .unwrap();
+                    if !ignore_peers.contains(&peer_id) {
+                        ds_reqs_tx
+                            .send(DirectSendRequest::SendMessage(peer_id.clone(), msg.clone()))
+                            .await
+                            .unwrap();
+                    }
                 }
             }
             NetworkRequest::UpdateEligibleNodes(nodes) => {

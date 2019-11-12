@@ -26,6 +26,7 @@ use network::{
     proto::{
         ConsensusMsg,
         ConsensusMsg_oneof::{self},
+        Block as BlockProto
     },
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event},
 };
@@ -136,9 +137,9 @@ impl EventProcessor {
 
         let mut all_events = select(network_events, own_msgs);
         let block_db = self.block_store.clone();
-        let network_sender = self.network_sender.clone();
+        let mut network_sender = self.network_sender.clone();
         let self_peer_id = self.author;
-        let self_sender = self.self_sender.clone();
+        let mut self_sender = self.self_sender.clone();
         let chain_manager = self.chain_manager.clone();
 
         let sync_signal_sender = self.sync_signal_sender.clone();
@@ -162,6 +163,7 @@ impl EventProcessor {
                                 //TODO:verify block and sign
                                 let block: Block<BlockPayloadExt> =
                                     Block::try_from(new_block).expect("parse block pb err.");
+                                debug!("Self is {:?}, Peer Id is {:?}, Block Id is {:?}", self_peer_id, peer_id, block.id());
 
                                 let payload = block.payload().expect("payload is none");
                                 let _verify = pow_srv.verify(
@@ -190,6 +192,20 @@ impl EventProcessor {
                                             error!("send sync signal err: {:?}", err);
                                         }
                                     }
+
+                                    //broadcast new block
+                                    let block_pb = TryInto::<BlockProto>::try_into(block.clone())
+                                        .expect("parse block err.");
+
+                                    // send block
+                                    let msg = ConsensusMsg {
+                                        message: Some(ConsensusMsg_oneof::NewBlock(block_pb)),
+                                    };
+                                    Self::broadcast_consensus_msg_but(&mut network_sender,
+                                                                      false,
+                                                                      self_peer_id,
+                                                                      &mut self_sender,
+                                                                      msg,vec![peer_id]).await;
                                 }
 
                                 if let Err(err) = (&mut block_cache_sender).send(block).await {
@@ -305,7 +321,18 @@ impl EventProcessor {
         self_flag: bool,
         self_peer_id: PeerId,
         self_sender: &mut channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+        msg: ConsensusMsg
+    ) {
+        Self::broadcast_consensus_msg_but(network_sender, self_flag, self_peer_id, self_sender, msg, vec![]).await;
+    }
+
+    pub async fn broadcast_consensus_msg_but(
+        network_sender: &mut ConsensusNetworkSender,
+        self_flag: bool,
+        self_peer_id: PeerId,
+        self_sender: &mut channel::Sender<failure::Result<Event<ConsensusMsg>>>,
         msg: ConsensusMsg,
+        ignore_peers: Vec<PeerId>
     ) {
         if self_flag {
             //let event_msg = Ok(Event::PowMessage((self_peer_id, pow_ctx.expect("Pow context not set"), msg.clone())));
@@ -315,7 +342,7 @@ impl EventProcessor {
             }
         }
         let msg_raw = msg.to_bytes().unwrap();
-        if let Err(err) = network_sender.broadcast_bytes(msg_raw.clone()).await {
+        if let Err(err) = network_sender.broadcast_bytes(msg_raw.clone(),ignore_peers).await {
             error!(
                 "Error broadcasting proposal  error: {:?}, msg: {:?}",
                 err, msg
