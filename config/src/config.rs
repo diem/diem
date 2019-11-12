@@ -71,7 +71,7 @@ pub struct NodeConfig {
     #[serde(default)]
     pub state_sync: StateSyncConfig,
     #[serde(default)]
-    pub log_collector: LoggerConfig,
+    pub logger: LoggerConfig,
     #[serde(default)]
     pub vm_config: VMConfig,
 }
@@ -82,13 +82,6 @@ pub struct BaseConfig {
     pub data_dir_path: PathBuf,
     #[serde(skip)]
     temp_data_dir: Option<TempPath>,
-    // Number of retries per chunk download
-    pub node_sync_retries: usize,
-    // Buffer size for sync_channel used for node syncing (number of elements that it can
-    // hold before it blocks on sends)
-    pub node_sync_channel_buffer_size: u64,
-    // chan_size of slog async drain for node logging.
-    pub node_async_log_chan_size: usize,
 }
 
 impl Default for BaseConfig {
@@ -96,9 +89,6 @@ impl Default for BaseConfig {
         BaseConfig {
             data_dir_path: PathBuf::from("."),
             temp_data_dir: None,
-            node_sync_retries: 7,
-            node_sync_channel_buffer_size: 10,
-            node_async_log_chan_size: 256,
         }
     }
 }
@@ -133,18 +123,10 @@ impl fmt::Display for RoleType {
 
 impl BaseConfig {
     /// Constructs a new BaseConfig with an empty temp directory
-    pub fn new(
-        data_dir_path: PathBuf,
-        node_sync_retries: usize,
-        node_sync_channel_buffer_size: u64,
-        node_async_log_chan_size: usize,
-    ) -> Self {
+    pub fn new(data_dir_path: PathBuf) -> Self {
         BaseConfig {
             data_dir_path,
             temp_data_dir: None,
-            node_sync_retries,
-            node_sync_channel_buffer_size,
-            node_async_log_chan_size,
         }
     }
 }
@@ -155,9 +137,6 @@ impl Clone for BaseConfig {
         Self {
             data_dir_path: self.data_dir_path.clone(),
             temp_data_dir: None,
-            node_sync_retries: self.node_sync_retries,
-            node_sync_channel_buffer_size: self.node_sync_channel_buffer_size,
-            node_async_log_chan_size: self.node_async_log_chan_size,
         }
     }
 }
@@ -206,15 +185,17 @@ impl Default for ExecutionConfig {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct LoggerConfig {
+    // Use async logging
     pub is_async: bool,
-    pub chan_size: Option<usize>,
+    // chan_size of slog async drain for node logging.
+    pub chan_size: usize,
 }
 
 impl Default for LoggerConfig {
     fn default() -> LoggerConfig {
         LoggerConfig {
             is_async: true,
-            chan_size: None,
+            chan_size: 256,
         }
     }
 }

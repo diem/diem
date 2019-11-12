@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_config::config::{NodeConfig, NodeConfigHelpers};
+use libra_config::config::{LoggerConfig, NodeConfig, NodeConfigHelpers};
 use libra_logger::prelude::*;
 use slog_scope::GlobalLoggerGuard;
 use std::path::Path;
@@ -38,14 +38,14 @@ pub fn setup_executable(
     no_logging: bool,
 ) -> (NodeConfig, Option<GlobalLoggerGuard>) {
     crash_handler::setup_panic_handler();
-    let mut _logger = set_default_global_logger(no_logging, None);
+    let mut _logger = set_default_global_logger(no_logging, &LoggerConfig::default());
 
     let config = load_config_from_path(config);
 
     // Reset the global logger using config (for chan_size currently).
     // We need to drop the global logger guard first before resetting it.
     _logger = None;
-    let logger = set_default_global_logger(no_logging, Some(config.base.node_async_log_chan_size));
+    let logger = set_default_global_logger(no_logging, &config.logger);
     for network in &config.networks {
         setup_metrics(&network.peer_id, &config);
     }
@@ -55,14 +55,14 @@ pub fn setup_executable(
 
 fn set_default_global_logger(
     is_logging_disabled: bool,
-    chan_size: Option<usize>,
+    logger_config: &LoggerConfig,
 ) -> Option<GlobalLoggerGuard> {
     if is_logging_disabled {
         return None;
     }
 
     Some(libra_logger::set_default_global_logger(
-        true,      /* async */
-        chan_size, /* chan_size */
+        logger_config.is_async,
+        Some(logger_config.chan_size),
     ))
 }
