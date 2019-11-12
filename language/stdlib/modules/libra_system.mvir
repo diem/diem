@@ -1,5 +1,4 @@
 module LibraSystem {
-    import 0x0.Event;
     import 0x0.LibraAccount;
     import 0x0.ValidatorConfig;
     import 0x0.Vector;
@@ -18,7 +17,7 @@ module LibraSystem {
 
     resource ValidatorSet {
         validators: Vector.T<Self.ValidatorInfo>,
-        change_events: Event.Handle<Self.ValidatorSetChangeEvent>,
+        change_events: LibraAccount.EventHandle<Self.ValidatorSetChangeEvent>,
     }
 
 
@@ -46,7 +45,7 @@ module LibraSystem {
 
       move_to_sender<ValidatorSet>(ValidatorSet {
           validators: Vector.empty<Self.ValidatorInfo>(),
-          change_events: Event.new_event_handle<Self.ValidatorSetChangeEvent>(),
+          change_events: LibraAccount.new_event_handle<Self.ValidatorSetChangeEvent>(),
       });
       return;
     }
@@ -276,7 +275,7 @@ module LibraSystem {
         }
 
         if (move(changed)) {
-            Event.emit_event<Self.ValidatorSetChangeEvent>(
+            LibraAccount.emit_event<Self.ValidatorSetChangeEvent>(
                 &mut move(validator_set_ref).change_events,
                 ValidatorSetChangeEvent {
                     new_validator_set: *move(vector_ref),

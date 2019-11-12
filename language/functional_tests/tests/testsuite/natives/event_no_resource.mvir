@@ -1,13 +1,13 @@
 module ResourceHandle {
-    import 0x0.Event;
+    import 0x0.LibraAccount;
     import 0x0.LibraCoin;
     resource T {
-        foo: Event.Handle<LibraCoin.T>
+        foo: LibraAccount.EventHandle<LibraCoin.T>
     }
 
     public new(): Self.T {
-        let handle: Event.Handle<LibraCoin.T>;
-        handle = Event.new_event_handle<LibraCoin.T>();
+        let handle: LibraAccount.EventHandle<LibraCoin.T>;
+        handle = LibraAccount.new_event_handle<LibraCoin.T>();
         return T { foo: move(handle) };
     }
 }

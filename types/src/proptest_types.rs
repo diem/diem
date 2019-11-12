@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use crate::block_info::{BlockInfo, Round};
+use crate::event::EVENT_KEY_LENGTH;
 use crate::transaction::Transaction;
 use crate::validator_set::ValidatorSet;
 use crate::{
@@ -642,6 +643,7 @@ impl AccountResourceGen {
             self.delegated_withdrawal_capability,
             account_info.sent_event_handle.clone(),
             account_info.received_event_handle.clone(),
+            0,
         )
     }
 }
@@ -661,6 +663,22 @@ impl AccountStateBlobGen {
             .account_resource_gen
             .materialize(account_index, universe);
         AccountStateBlob::from(account_resource)
+    }
+}
+
+#[cfg(feature = "fuzzing")]
+impl Arbitrary for EventKey {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (vec(any::<u8>(), EVENT_KEY_LENGTH))
+            .prop_map(|v| {
+                let mut bytes = [0; EVENT_KEY_LENGTH];
+                bytes.copy_from_slice(v.as_slice());
+                EventKey::new(bytes)
+            })
+            .boxed()
     }
 }
 

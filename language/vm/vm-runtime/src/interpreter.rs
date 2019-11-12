@@ -58,9 +58,6 @@ lazy_static! {
     /// The ModuleId for the Account module
     pub static ref ACCOUNT_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("LibraAccount").unwrap()) };
-    /// The ModuleId for the Event
-    pub static ref EVENT_MODULE: ModuleId =
-        { ModuleId::new(account_config::core_code_address(), Identifier::new("Event").unwrap()) };
 }
 
 // Names for special functions and structs
@@ -224,7 +221,7 @@ where
             context,
             &ACCOUNT_MODULE,
             &CREATE_ACCOUNT_NAME,
-            vec![Value::byte_array(ByteArray::new(addr.to_vec()))],
+            vec![Value::address(addr)],
         )?;
 
         let account_resource = interp.operand_stack.pop_as::<Struct>()?;
@@ -741,7 +738,7 @@ where
         let function_name = function.name();
         let native_function = resolve_native_function(&module_id, function_name)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
-        if module_id == *EVENT_MODULE && function_name == EMIT_EVENT_NAME.as_ident_str() {
+        if module_id == *ACCOUNT_MODULE && function_name == EMIT_EVENT_NAME.as_ident_str() {
             self.call_emit_event(context, type_actual_tags)
         } else if module_id == *ACCOUNT_MODULE && function_name == SAVE_ACCOUNT_NAME.as_ident_str()
         {
