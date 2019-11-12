@@ -26,8 +26,6 @@ use rand::Rng;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::sync::Arc;
-use std::thread::sleep;
-use std::time::Duration;
 use tokio::runtime::TaskExecutor;
 
 pub struct MintManager {
@@ -205,12 +203,12 @@ impl MintManager {
                             }
                         }
 
-//                        let mut r = rand::thread_rng();
-//                        r.gen::<i32>();
-//                        let sleep_time = r.gen_range(10, 20);
-//                        debug!("sleep begin.");
-//                        sleep(Duration::from_secs(sleep_time));
-//                        debug!("sleep end.");
+                        //                        let mut r = rand::thread_rng();
+                        //                        r.gen::<i32>();
+                        //                        let sleep_time = r.gen_range(10, 20);
+                        //                        debug!("sleep begin.");
+                        //                        sleep(Duration::from_secs(sleep_time));
+                        //                        debug!("sleep end.");
                     }
                     _ => {}
                 }

@@ -42,7 +42,6 @@ mod error;
 mod tests;
 
 pub use self::error::PeerManagerError;
-use failure::_core::hash::Hash;
 
 /// Notifications about new/lost peers.
 #[derive(Debug)]

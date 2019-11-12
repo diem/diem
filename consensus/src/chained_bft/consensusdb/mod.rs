@@ -225,7 +225,7 @@ impl ConsensusDB {
     }
 
     /// Load BlockIndex
-    pub fn load_block_index(&self) -> Result<Vec<BlockIndex>> {
+    pub fn _load_block_index(&self) -> Result<Vec<BlockIndex>> {
         unimplemented!()
     }
 }
