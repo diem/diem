@@ -11,6 +11,8 @@ use tempfile::NamedTempFile;
 /// SafetyRules needs an abstract storage interface to act as a common utility for storing
 /// persistent data to local disk, cloud, secrets managers, or even memory (for tests)
 /// Any set function is expected to sync to the remote system before returning.
+/// @TODO add access to private key from persistent store
+/// @TODO add retrieval of private key based upon public key to persistent store
 pub trait PersistentStorage: Send + Sync {
     fn epoch(&self) -> u64;
     fn set_epoch(&mut self, epoch: u64);
