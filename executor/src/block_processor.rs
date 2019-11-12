@@ -582,7 +582,10 @@ where
             .cloned()
             .collect();
         if !status.is_empty() {
-            debug!("Block Id is {:?}, Parent Block Id is {:?}, Execution status: {:?}", executable_block.id, executable_block.parent_id, status);
+            debug!(
+                "Block Id is {:?}, Parent Block Id is {:?}, Execution status: {:?}",
+                executable_block.id, executable_block.parent_id, status
+            );
         }
 
         let (account_to_btree, account_to_proof) = state_view.into();

@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::config::ConsensusType::{PBFT, POW};
 use crate::{
     config::ConsensusProposerType::{FixedProposer, MultipleOrderedProposers, RotatingProposer},
     keys::{ConsensusKeyPair, NetworkKeyPairs},
@@ -33,7 +34,6 @@ use std::{
     time::Duration,
 };
 use toml;
-use crate::config::ConsensusType::{PBFT, POW};
 
 #[cfg(test)]
 #[path = "unit_tests/config_test.rs"]
