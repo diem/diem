@@ -98,13 +98,6 @@ where
 {
     /// Constructs a new `AccumulatorProof` using a list of siblings.
     pub fn new(siblings: Vec<HashValue>) -> Self {
-        // The sibling list could be empty in case the accumulator is empty or has a single
-        // element. When it's not empty, the top most sibling will never be default, otherwise the
-        // accumulator should have collapsed to a smaller one.
-        if let Some(last_sibling) = siblings.last() {
-            assert_ne!(*last_sibling, *ACCUMULATOR_PLACEHOLDER_HASH);
-        }
-
         AccumulatorProof {
             siblings,
             phantom: PhantomData,
@@ -225,13 +218,6 @@ pub struct SparseMerkleProof {
 impl SparseMerkleProof {
     /// Constructs a new `SparseMerkleProof` using leaf and a list of siblings.
     pub fn new(leaf: Option<(HashValue, HashValue)>, siblings: Vec<HashValue>) -> Self {
-        // The sibling list could be empty in case the Sparse Merkle Tree is empty or has a single
-        // element. When it's not empty, the bottom most sibling will never be default, otherwise a
-        // leaf and a default sibling should have collapsed to a leaf.
-        if let Some(first_sibling) = siblings.first() {
-            assert_ne!(*first_sibling, *SPARSE_MERKLE_PLACEHOLDER_HASH);
-        }
-
         SparseMerkleProof { leaf, siblings }
     }
 
