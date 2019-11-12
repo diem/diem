@@ -129,6 +129,9 @@ where
     /// A reverse lookup table for each code module that allows us to resolve function handles to
     /// function definitions. Also lazily populated.
     function_handle_table: HashMap<ModuleId, HashMap<Identifier, FunctionDefinitionIndex>>,
+
+    /// The tables sizes that we have for address and string pools
+    table_size: u16,
 }
 
 impl<'alloc, 'txn> RandomStackGenerator<'alloc, 'txn>
@@ -156,8 +159,9 @@ where
             root_module,
             module_cache,
             iters,
-            user_string_index: iters,
-            address_pool_index: iters,
+            table_size: iters,
+            user_string_index: 0,
+            address_pool_index: 0,
             struct_handle_table: HashMap::new(),
             function_handle_table: HashMap::new(),
         }
@@ -223,18 +227,12 @@ where
     fn next_vm_string(&mut self, is_padding: bool) -> VMString {
         if is_padding {
             let len: usize = self.gen.gen_range(1, MAX_STRING_SIZE);
-            (0..len)
-                .map(|_| self.gen.gen::<char>())
-                .collect::<String>()
-                .into()
+            random_string(&mut self.gen, len).into()
         } else {
             let user_string = self
                 .root_module
                 .user_string_at(UserStringIndex::new(self.user_string_index));
-            self.user_string_index = self
-                .user_string_index
-                .checked_sub(1)
-                .expect("Exhausted strings in string pool");
+            self.user_string_index = (self.user_string_index + 1) % self.table_size;
             user_string.to_owned()
         }
     }
@@ -246,10 +244,7 @@ where
             let address = self
                 .root_module
                 .address_at(AddressPoolIndex::new(self.address_pool_index));
-            self.address_pool_index = self
-                .address_pool_index
-                .checked_sub(1)
-                .expect("Exhausted account addresses in address pool");
+            self.address_pool_index = (self.address_pool_index + 1) % self.table_size;
             *address
         }
     }

@@ -68,7 +68,7 @@ impl ModuleBuilder {
         Self {
             gen: StdRng::from_seed(seed),
             module: Self::default_module_with_types(),
-            table_size,
+            table_size: table_size + 1,
             known_modules: HashMap::new(),
             bytecode_gen,
         }
@@ -90,9 +90,7 @@ impl ModuleBuilder {
         let mut identifiers = (0..self.table_size)
             .map(|_| {
                 let len = self.gen.gen_range(1, MAX_STRING_SIZE);
-                // TODO: restrict identifiers to a subset of ASCII
-                let s: String = (0..len).map(|_| self.gen.gen::<char>()).collect();
-                Identifier::new(s).unwrap()
+                Identifier::new(random_string(&mut self.gen, len)).unwrap()
             })
             .collect();
         self.module.identifiers.append(&mut identifiers);
@@ -102,10 +100,7 @@ impl ModuleBuilder {
         let mut strs = (0..self.table_size)
             .map(|_| {
                 let len = self.gen.gen_range(1, MAX_STRING_SIZE);
-                (0..len)
-                    .map(|_| self.gen.gen::<char>())
-                    .collect::<String>()
-                    .into()
+                random_string(&mut self.gen, len).into()
             })
             .collect();
         self.module.user_strings.append(&mut strs);
@@ -166,7 +161,8 @@ impl ModuleBuilder {
                 acquires_global_resources: acquires_global_resources.clone(),
                 code: CodeUnit {
                     max_stack_size: 20,
-                    locals: LocalsSignatureIndex(i as u16),
+                    // NB: + 1  since the 0'th locals signature index is empty
+                    locals: LocalsSignatureIndex((i + 1) as u16),
                     code: {
                         match &self.bytecode_gen {
                             Some(bytecode_gen) => bytecode_gen(
@@ -354,8 +350,7 @@ impl ModuleBuilder {
     // CompiledModule.
     fn with_callee_modules(&mut self) {
         // Add the SELF module
-        let module_name: String = (0..10).map(|_| self.gen.gen::<char>()).collect();
-        let module_name = Identifier::new(module_name).unwrap();
+        let module_name = Identifier::new(random_string(&mut self.gen, 10)).unwrap();
         self.module.identifiers.insert(0, module_name);
         self.module.address_pool.insert(0, AccountAddress::random());
         // Recall that we inserted the module name at index 0 in the string pool.
@@ -425,6 +420,7 @@ impl ModuleBuilder {
             .into_iter()
             .map(TypeSignature)
             .collect();
+        module.locals_signatures = vec![LocalsSignature(vec![])];
         module
     }
 }
