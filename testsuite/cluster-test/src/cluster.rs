@@ -5,6 +5,7 @@ use crate::{aws::Aws, instance::Instance};
 use failure::{self, prelude::*};
 use rand::prelude::*;
 use rusoto_ec2::{DescribeInstancesRequest, Ec2, Filter, Tag};
+use slog_scope::*;
 use std::collections::HashMap;
 use std::{thread, time::Duration};
 
@@ -63,7 +64,7 @@ impl Cluster {
                 .sync();
             let result = match result {
                 Err(e) => {
-                    println!(
+                    warn!(
                         "Failed to describe aws instances: {:?}, retries left: {}",
                         e, retries_left
                     );
