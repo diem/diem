@@ -17,18 +17,23 @@ proptest! {
     fn test_restore_without_interruption(
         btree in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 1..1000),
     ) {
-        let version = (btree.len() - 1) as Version;
-        let expected_root_hash = get_expected_root_hash(&btree);
+        let (db, version) = init_mock_db(&btree.clone().into_iter().collect());
+        let tree = JellyfishMerkleTree::new(&db);
+        let expected_root_hash = tree.get_root_hash(version).unwrap();
 
         // For this test, restore everything without interruption.
-        let db = MockTreeStore::default();
-        let mut restore = JellyfishMerkleRestore::new(&db, version).unwrap();
+        let restore_db = MockTreeStore::default();
+        let mut restore =
+            JellyfishMerkleRestore::new(&restore_db, version, expected_root_hash).unwrap();
         for (key, value) in &btree {
-            restore.add_chunk(vec![(*key, value.clone())]).unwrap();
+            let proof = tree.get_range_proof(*key, version).unwrap();
+            restore
+                .add_chunk(vec![(*key, value.clone())], proof)
+                .unwrap();
         }
         restore.finish().unwrap();
 
-        assert_success(&db, expected_root_hash, &btree, version);
+        assert_success(&restore_db, expected_root_hash, &btree, version);
     }
 
     #[test]
@@ -39,42 +44,50 @@ proptest! {
                 (Just(btree), 1..len)
             })
     ) {
-        let version = (all.len() - 1) as Version;
-        let expected_root_hash = get_expected_root_hash(&all);
+        let (db, version) = init_mock_db(&all.clone().into_iter().collect());
+        let tree = JellyfishMerkleTree::new(&db);
+        let expected_root_hash = tree.get_root_hash(version).unwrap();
         let batch1: Vec<_> = all.clone().into_iter().take(batch1_size).collect();
-        let db = MockTreeStore::default();
 
+        let restore_db = MockTreeStore::default();
         {
-            let mut restore = JellyfishMerkleRestore::new(&db, version).unwrap();
-            restore.add_chunk(batch1).unwrap();
+            let mut restore =
+                JellyfishMerkleRestore::new(&restore_db, version, expected_root_hash).unwrap();
+            let proof = tree
+                .get_range_proof(batch1.last().map(|(key, _value)| *key).unwrap(), version)
+                .unwrap();
+            restore.add_chunk(batch1, proof).unwrap();
             // Do not call `finish`.
         }
 
         {
-            let rightmost_key = match db.get_rightmost_leaf().unwrap() {
+            let rightmost_key = match restore_db.get_rightmost_leaf().unwrap() {
                 None => {
                     // Sometimes the batch is too small so nothing is written to DB.
                     return Ok(());
                 }
                 Some((_, node)) => node.account_key(),
             };
-            let remaining_accounts: Vec<_> = all.clone()
+            let remaining_accounts: Vec<_> = all
+                .clone()
                 .into_iter()
                 .filter(|(k, _v)| *k > rightmost_key)
                 .collect();
-            let mut restore = JellyfishMerkleRestore::new(&db, version).unwrap();
-            restore.add_chunk(remaining_accounts).unwrap();
+
+            let mut restore =
+                JellyfishMerkleRestore::new(&restore_db, version, expected_root_hash).unwrap();
+            let proof = tree
+                .get_range_proof(
+                    remaining_accounts.last().map(|(key, _value)| *key).unwrap(),
+                    version,
+                )
+                .unwrap();
+            restore.add_chunk(remaining_accounts, proof).unwrap();
             restore.finish().unwrap();
         }
 
-        assert_success(&db, expected_root_hash, &all, version);
+        assert_success(&restore_db, expected_root_hash, &all, version);
     }
-}
-
-fn get_expected_root_hash(btree: &BTreeMap<HashValue, AccountStateBlob>) -> HashValue {
-    let (db, version) = init_mock_db(&btree.clone().into_iter().collect());
-    let tree = JellyfishMerkleTree::new(&db);
-    tree.get_root_hash(version).unwrap()
 }
 
 fn assert_success(
