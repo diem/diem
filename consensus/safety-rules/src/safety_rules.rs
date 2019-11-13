@@ -148,9 +148,8 @@ impl SafetyRules {
     /// @TODO if public key does not match private key in validator set, access persistent storage
     /// to identify new key
     pub fn update(&mut self, qc: &QuorumCert) {
-        if qc.ledger_info().ledger_info().epoch() > self.persistent_storage.epoch() {
-            self.persistent_storage
-                .set_epoch(qc.ledger_info().ledger_info().epoch());
+        if qc.commit_info().epoch() > self.persistent_storage.epoch() {
+            self.persistent_storage.set_epoch(qc.commit_info().epoch());
             self.persistent_storage.set_last_voted_round(0);
             self.persistent_storage.set_preferred_round(0);
         }

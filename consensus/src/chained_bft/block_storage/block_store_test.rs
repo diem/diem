@@ -398,48 +398,6 @@ fn test_need_fetch_for_qc() {
 }
 
 #[test]
-fn test_need_sync_for_qc() {
-    let mut inserter = TreeInserter::default();
-    let block_store = inserter.block_store();
-
-    // build a tree of the following form
-    // genesis <- a1 <- a2 <- a3
-    let genesis = block_store.root();
-    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
-    let a2 = inserter.insert_block(&a1, 2, None);
-    let a3 = inserter.insert_block(&a2, 3, None);
-    block_store.prune_tree(a3.id());
-    let qc = placeholder_certificate_for_block(
-        vec![inserter.signer()],
-        HashValue::zero(),
-        a3.round() + 3,
-        HashValue::zero(),
-        a3.round() + 2,
-        None,
-    );
-    assert_eq!(
-        block_store.need_sync_for_quorum_cert(HashValue::zero(), &qc),
-        true
-    );
-    let qc = placeholder_certificate_for_block(
-        vec![inserter.signer()],
-        HashValue::zero(),
-        a3.round() + 2,
-        HashValue::zero(),
-        a3.round() + 1,
-        None,
-    );
-    assert_eq!(
-        block_store.need_sync_for_quorum_cert(HashValue::zero(), &qc),
-        false,
-    );
-    assert_eq!(
-        block_store.need_sync_for_quorum_cert(genesis.id(), &certificate_for_genesis()),
-        false
-    );
-}
-
-#[test]
 fn test_empty_reconfiguration_suffix() {
     let mut inserter = TreeInserter::default();
     let block_store = inserter.block_store();

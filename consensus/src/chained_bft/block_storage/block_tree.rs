@@ -105,10 +105,7 @@ where
     ) -> Self {
         assert_eq!(
             root.id(),
-            root_ledger_info
-                .ledger_info()
-                .ledger_info()
-                .consensus_block_id(),
+            root_ledger_info.commit_info().id(),
             "inconsistent root and ledger info"
         );
         let root_id = root.id();
@@ -260,23 +257,10 @@ where
             .entry(block_id)
             .or_insert_with(|| Arc::clone(&qc));
 
-        let committed_block_id = qc.ledger_info().ledger_info().consensus_block_id();
-        if let Some(block) = self.get_block(&committed_block_id) {
-            if block.round()
-                > self
-                    .get_block(
-                        &self
-                            .highest_ledger_info
-                            .ledger_info()
-                            .ledger_info()
-                            .consensus_block_id(),
-                    )
-                    .expect("Highest ledger info's block should exist")
-                    .round()
-            {
-                self.highest_ledger_info = qc;
-            }
+        if self.highest_ledger_info.commit_info().round() < qc.commit_info().round() {
+            self.highest_ledger_info = qc;
         }
+
         Ok(())
     }
 
