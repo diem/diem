@@ -193,6 +193,7 @@ impl PeerManager {
         }
     }
 
+    #[cfg(test)]
     pub fn has_requested(&self, version: u64, peer_id: PeerId) -> bool {
         if let Some((id, _)) = self.requests.get(&version) {
             return *id == peer_id;

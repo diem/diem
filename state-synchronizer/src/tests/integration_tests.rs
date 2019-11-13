@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    executor_proxy::ExecutorProxyTrait, LedgerInfo, PeerId, StateSyncClient, StateSynchronizer,
+    executor_proxy::ExecutorProxyTrait, PeerId, StateSyncClient, StateSynchronizer,
+    SynchronizerState,
 };
 use config_builder::util::get_test_config;
 use failure::{prelude::*, Result};
@@ -22,7 +23,6 @@ use libra_types::{
     transaction::{Transaction, TransactionListWithProof},
 };
 use network::{
-    proto::GetChunkResponse,
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
         STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
@@ -31,11 +31,12 @@ use network::{
 };
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
+use std::sync::RwLock;
 use std::{
     collections::{BTreeMap, HashMap},
     pin::Pin,
     sync::{
-        atomic::{AtomicU64, AtomicUsize, Ordering},
+        atomic::{AtomicUsize, Ordering},
         Arc,
     },
 };
@@ -43,25 +44,41 @@ use tokio::runtime::{Builder, Runtime};
 use transaction_builder::encode_transfer_script;
 use vm_genesis::GENESIS_KEYPAIR;
 
-type MockRpcHandler =
-    Box<dyn Fn(GetChunkResponse) -> Result<GetChunkResponse> + Send + Sync + 'static>;
+type MockRpcHandler = Box<
+    dyn Fn(TransactionListWithProof) -> Result<TransactionListWithProof> + Send + Sync + 'static,
+>;
+
+// To play with the storage values
+pub struct MockStorage {
+    version: u64,
+}
+
+impl MockStorage {
+    fn new(version: u64) -> Self {
+        Self { version }
+    }
+
+    fn commit(&mut self, val: u64) {
+        self.version = std::cmp::max(self.version, val);
+    }
+}
 
 pub struct MockExecutorProxy {
     peer_id: PeerId,
     handler: MockRpcHandler,
-    version: AtomicU64,
+    storage: Arc<RwLock<MockStorage>>,
 }
 
 impl MockExecutorProxy {
-    fn new(peer_id: PeerId, handler: MockRpcHandler) -> Self {
+    fn new(peer_id: PeerId, handler: MockRpcHandler, storage: Arc<RwLock<MockStorage>>) -> Self {
         Self {
             peer_id,
             handler,
-            version: AtomicU64::new(0),
+            storage,
         }
     }
 
-    fn mock_ledger_info(peer_id: PeerId, version: u64) -> LedgerInfo {
+    fn mock_ledger_info(peer_id: PeerId, version: u64) -> LedgerInfoWithSignatures {
         let ledger_info = TypesLedgerInfo::new(
             BlockInfo::new(0, 0, HashValue::zero(), HashValue::zero(), version, 0, None),
             HashValue::zero(),
@@ -73,9 +90,7 @@ impl MockExecutorProxy {
         LedgerInfoWithSignatures::new(ledger_info, signatures)
     }
 
-    fn mock_chunk_response(&self, version: u64) -> GetChunkResponse {
-        let target = Self::mock_ledger_info(self.peer_id, version + 1);
-
+    fn mock_chunk_response(&self, version: u64) -> TransactionListWithProof {
         let sender = AccountAddress::from_public_key(&GENESIS_KEYPAIR.1);
         let receiver = AccountAddress::new([0xff; 32]);
         let program = encode_transfer_script(&receiver, 1);
@@ -88,25 +103,23 @@ impl MockExecutorProxy {
         ));
 
         let proof = TransactionListProof::new_empty();
-        let txns = TransactionListWithProof::new(vec![transaction], None, Some(version + 1), proof);
-
-        GetChunkResponse {
-            txn_list_with_proof: Some(txns.into()),
-            ledger_info_with_sigs: Some(target.into()),
-        }
+        TransactionListWithProof::new(vec![transaction], None, Some(version + 1), proof)
     }
 }
 
 impl ExecutorProxyTrait for MockExecutorProxy {
-    fn get_latest_ledger_info(&self) -> Pin<Box<dyn Future<Output = Result<LedgerInfo>> + Send>> {
-        let version = self.version.load(Ordering::Relaxed);
-        let response = Self::mock_ledger_info(self.peer_id, version);
-        async move { Ok(response) }.boxed()
-    }
-
-    fn get_latest_version(&self) -> Pin<Box<dyn Future<Output = Result<u64>> + Send>> {
-        let version = self.version.load(Ordering::Relaxed);
-        async move { Ok(version) }.boxed()
+    fn get_local_storage_state(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>> {
+        let highest_committed_version = self.storage.read().unwrap().version;
+        let highest_local_li = Self::mock_ledger_info(self.peer_id, highest_committed_version);
+        async move {
+            Ok(SynchronizerState {
+                highest_local_li,
+                highest_committed_version,
+            })
+        }
+            .boxed()
     }
 
     fn execute_chunk(
@@ -115,7 +128,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         let version = ledger_info_with_sigs.ledger_info().version();
-        self.version.store(version, Ordering::Relaxed);
+        self.storage.write().unwrap().version = version;
         async move { Ok(()) }.boxed()
     }
 
@@ -123,13 +136,13 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         &self,
         known_version: u64,
         _: u64,
-        _: LedgerInfo,
-    ) -> Pin<Box<dyn Future<Output = Result<GetChunkResponse>> + Send>> {
+        _: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
         let response = (self.handler)(self.mock_chunk_response(known_version));
         async move { response }.boxed()
     }
 
-    fn validate_ledger_info(&self, _target: &LedgerInfo) -> Result<()> {
+    fn validate_ledger_info(&self, _target: &LedgerInfoWithSignatures) -> Result<()> {
         Ok(())
     }
 
@@ -143,6 +156,7 @@ struct SynchronizerEnv {
     _synchronizers: Vec<StateSynchronizer>,
     peers: Vec<PeerId>,
     clients: Vec<Arc<StateSyncClient>>,
+    storage_proxies: Vec<Arc<RwLock<MockStorage>>>, // to directly modify peers storage
 }
 
 impl SynchronizerEnv {
@@ -223,18 +237,26 @@ impl SynchronizerEnv {
             .upstream_peers
             .upstream_peers
             .push(peers[1].to_string());
+        let storage_proxies = vec![
+            Arc::new(RwLock::new(MockStorage::new(0))),
+            Arc::new(RwLock::new(MockStorage::new(0))),
+        ];
         let synchronizers: Vec<StateSynchronizer> = vec![
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_a, events_a)],
                 role,
                 &config.state_sync,
-                MockExecutorProxy::new(peers[0], Self::default_handler()),
+                MockExecutorProxy::new(
+                    peers[0],
+                    Self::default_handler(),
+                    storage_proxies[0].clone(),
+                ),
             ),
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_b, events_b)],
                 role,
                 &get_test_config().0.state_sync,
-                MockExecutorProxy::new(peers[1], handler),
+                MockExecutorProxy::new(peers[1], handler, storage_proxies[1].clone()),
             ),
         ];
         let clients = synchronizers.iter().map(|s| s.create_client()).collect();
@@ -244,11 +266,12 @@ impl SynchronizerEnv {
             clients,
             _synchronizers: synchronizers,
             _runtime: runtime,
+            storage_proxies,
         }
     }
 
     fn default_handler() -> MockRpcHandler {
-        Box::new(|resp| -> Result<GetChunkResponse> { Ok(resp) })
+        Box::new(|resp| -> Result<TransactionListWithProof> { Ok(resp) })
     }
 
     fn sync_to(&self, peer_id: usize, version: u64) {
@@ -257,6 +280,10 @@ impl SynchronizerEnv {
     }
 
     fn commit(&self, peer_id: usize, version: u64) {
+        self.storage_proxies[peer_id]
+            .write()
+            .unwrap()
+            .commit(version);
         block_on(self.clients[peer_id].commit(version)).unwrap();
     }
 
@@ -264,7 +291,7 @@ impl SynchronizerEnv {
         let max_retries = 30;
         for _ in 0..max_retries {
             let state = block_on(self.clients[peer_id].get_state()).unwrap();
-            if state == target_version {
+            if state.highest_committed_version == target_version {
                 return true;
             }
             std::thread::sleep(std::time::Duration::from_millis(1000));
@@ -289,7 +316,7 @@ fn test_basic_catch_up() {
 fn test_flaky_peer_sync() {
     // create handler that causes error, but has successful retries
     let attempt = AtomicUsize::new(0);
-    let handler = Box::new(move |resp| -> Result<GetChunkResponse> {
+    let handler = Box::new(move |resp| -> Result<TransactionListWithProof> {
         let fail_request = attempt.load(Ordering::Relaxed) == 0;
         attempt.fetch_add(1, Ordering::Relaxed);
         if fail_request {
