@@ -18,12 +18,13 @@ RUN docker/cluster-test/compile.sh
 FROM debian:buster
 
 RUN apt-get update && apt-get install -y openssh-client
+RUN mkdir /etc/cluster-test
+WORKDIR /etc/cluster-test
 
 #ifdef INCREMENTAL_IMAGE
 COPY cluster_test_docker_builder_cluster_test /usr/local/bin/cluster-test
+
 #else
-RUN mkdir /etc/cluster-test
-WORKDIR /etc/cluster-test
 
 COPY --from=builder /target/release/cluster-test /usr/local/bin/cluster-test
 #endif
