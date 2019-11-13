@@ -1,5 +1,4 @@
 use crate::cuckoo::Cuckoo;
-use crate::util::blake2b_256;
 use byteorder::{ByteOrder, LittleEndian};
 
 pub trait PowService: Send + Sync {

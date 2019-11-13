@@ -310,7 +310,12 @@ impl CostTable {
         // NB: instruction keys are 1-indexed. This means that their location in the cost array
         // will be the key - 1.
         let key = instruction_key(instr);
-        let cost = self.instruction_table.get((key - 1) as usize);
+        //TODO(jole) remove this after refactor channel builtin method.
+        let zero_cost = GasCost::new(0, 0);
+        let cost = self
+            .instruction_table
+            .get((key - 1) as usize)
+            .or(Some(&zero_cost));
         assume!(cost.is_some());
         let good_cost = cost.unwrap();
         GasCost {
