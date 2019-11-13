@@ -42,7 +42,7 @@ pub(crate) struct LedgerStore {
 }
 
 // TODO: Either implement an iteration API to allow a very old client to loop through a long history
-// or guarantee that there is always a recent enough waypoint and client knowns to boot from there.
+// or guarantee that there is always a recent enough waypoint and client knows to boot from there.
 const MAX_NUM_EPOCH_CHANGE_LEDGER_INFO: usize = 100;
 
 impl LedgerStore {
@@ -95,32 +95,31 @@ impl LedgerStore {
     ) -> Result<Vec<LedgerInfoWithSignatures>> {
         let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
         iter.seek(&start_epoch)?;
-        let result = iter
-            .take(MAX_NUM_EPOCH_CHANGE_LEDGER_INFO + 1)
-            .map(|res| Ok(res?.1))
-            .take_while(|res| {
-                res.as_ref()
-                    .ok()
-                    .map(|x| {
-                        // Stop at ledger_version, or the latest ledger info which doesn't bump
-                        // the epoch.
-                        x.ledger_info().version() <= ledger_version
-                            && x.ledger_info().next_validator_set().is_some()
-                    })
-                    // Pass through Err.
-                    .unwrap_or(true)
-            })
-            .collect::<Result<Vec<_>>>()?;
 
-        if result.len() > MAX_NUM_EPOCH_CHANGE_LEDGER_INFO {
-            Err(LibraDbError::TooManyRequested(
-                MAX_NUM_EPOCH_CHANGE_LEDGER_INFO as u64 + 1,
-                MAX_NUM_EPOCH_CHANGE_LEDGER_INFO as u64,
-            )
-            .into())
-        } else {
-            Ok(result)
+        let mut result = Vec::new();
+        for res in iter {
+            let (_epoch, ledger_info_with_sigs) = res?;
+            if ledger_info_with_sigs.ledger_info().version() > ledger_version {
+                break;
+            }
+            if ledger_info_with_sigs
+                .ledger_info()
+                .next_validator_set()
+                .is_none()
+            {
+                break;
+            }
+            if result.len() >= MAX_NUM_EPOCH_CHANGE_LEDGER_INFO {
+                return Err(LibraDbError::TooManyRequested(
+                    MAX_NUM_EPOCH_CHANGE_LEDGER_INFO as u64 + 1,
+                    MAX_NUM_EPOCH_CHANGE_LEDGER_INFO as u64,
+                )
+                .into());
+            }
+            result.push(ledger_info_with_sigs);
         }
+
+        Ok(result)
     }
 
     pub fn get_latest_ledger_info_option(&self) -> Option<LedgerInfoWithSignatures> {
