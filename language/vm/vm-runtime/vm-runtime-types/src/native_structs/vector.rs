@@ -7,7 +7,10 @@ use crate::{
     pop_arg,
     value::{MutVal, ReferenceValue, Value},
 };
-use libra_types::vm_error::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode, StatusType, VMStatus};
+use libra_types::{
+    language_storage::TypeTag,
+    vm_error::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode, StatusType, VMStatus},
+};
 use serde::Serialize;
 use std::{collections::VecDeque, ops::Add};
 use vm::errors::VMResult;
@@ -48,7 +51,11 @@ macro_rules! get_vector_ref {
 }
 
 impl NativeVector {
-    pub fn native_empty(_args: VecDeque<Value>, cost_table: &CostTable) -> VMResult<NativeResult> {
+    pub fn native_empty(
+        _type_args: Vec<TypeTag>,
+        _args: VecDeque<Value>,
+        cost_table: &CostTable,
+    ) -> VMResult<NativeResult> {
         Ok(NativeResult::ok(
             native_gas(cost_table, NativeCostIndex::EMPTY, 1),
             vec![Value::native_struct(NativeStructValue::Vector(
@@ -58,6 +65,7 @@ impl NativeVector {
     }
 
     pub fn native_length(
+        _type_args: Vec<TypeTag>,
         mut args: VecDeque<Value>,
         cost_table: &CostTable,
     ) -> VMResult<NativeResult> {
@@ -73,6 +81,7 @@ impl NativeVector {
     }
 
     pub fn native_push_back(
+        _type_args: Vec<TypeTag>,
         mut args: VecDeque<Value>,
         cost_table: &CostTable,
     ) -> VMResult<NativeResult> {
@@ -105,6 +114,7 @@ impl NativeVector {
     }
 
     pub fn native_borrow(
+        _type_args: Vec<TypeTag>,
         mut args: VecDeque<Value>,
         cost_table: &CostTable,
     ) -> VMResult<NativeResult> {
@@ -136,7 +146,11 @@ impl NativeVector {
         }
     }
 
-    pub fn native_pop(mut args: VecDeque<Value>, cost_table: &CostTable) -> VMResult<NativeResult> {
+    pub fn native_pop(
+        _type_args: Vec<TypeTag>,
+        mut args: VecDeque<Value>,
+        cost_table: &CostTable,
+    ) -> VMResult<NativeResult> {
         if args.len() != 1 {
             let msg = format!(
                 "wrong number of arguments for pop expected 1 found {}",
@@ -159,6 +173,7 @@ impl NativeVector {
     }
 
     pub fn native_destroy_empty(
+        _type_args: Vec<TypeTag>,
         mut args: VecDeque<Value>,
         cost_table: &CostTable,
     ) -> VMResult<NativeResult> {
@@ -183,6 +198,7 @@ impl NativeVector {
     }
 
     pub fn native_swap(
+        _type_args: Vec<TypeTag>,
         mut args: VecDeque<Value>,
         cost_table: &CostTable,
     ) -> VMResult<NativeResult> {

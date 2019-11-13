@@ -738,7 +738,11 @@ where
             for _ in 0..expected_args {
                 arguments.push_front(self.operand_stack.pop()?);
             }
-            let result = (native_function.dispatch)(arguments, self.gas_meter.cost_table())?;
+            let result = (native_function.dispatch)(
+                type_actual_tags,
+                arguments,
+                self.gas_meter.cost_table(),
+            )?;
             gas!(consume: self, result.cost)?;
             result.result.and_then(|values| {
                 for value in values {

@@ -223,7 +223,8 @@ macro_rules! bench_native {
                     let before = Instant::now();
                     let mut args = VecDeque::new();
                     args.push_front(Value::byte_array(stack_access.next_bytearray()));
-                    let _ = $function(args, &cost_table);
+                    // TODO: generate type arguments for generic native functions.
+                    let _ = $function(vec![], args, &cost_table);
                     acc + before.elapsed().as_nanos()
                 });
                 // Time per byte averaged over the number of iterations that we performed.
