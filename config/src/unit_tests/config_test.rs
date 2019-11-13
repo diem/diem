@@ -4,10 +4,14 @@
 use super::*;
 use std::fs;
 
+static EXPECTED_SINGLE_NODE_CONFIG: &[u8] = include_bytes!("../../data/configs/single.node.config.toml");
+
 #[test]
 fn verify_test_config() {
-    // This test verifies that the default config in config.toml is valid
+    // This test likely failed because there was a breaking change in the NodeConfig. It may be
+    // desirable to reverse the change or to change the test config and potentially documentation.
     let _ = NodeConfigHelpers::get_single_node_test_config(false);
+    let _ = NodeConfig::parse(&String::from_utf8_lossy(EXPECTED_SINGLE_NODE_CONFIG)).expect("Error parsing expected single node config");
 }
 
 #[test]
