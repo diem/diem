@@ -674,7 +674,7 @@ impl From<TransactionWithProof> for crate::proto::types::TransactionWithProof {
 /// The status of executing a transaction. The VM decides whether or not we should `Keep` the
 /// transaction output or `Discard` it based upon the execution of the transaction. We wrap these
 /// decisions around a `VMStatus` that provides more detail on the final execution state of the VM.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionStatus {
     /// Discard the transaction output
     Discard(VMStatus),
@@ -724,7 +724,7 @@ impl From<VMStatus> for TransactionStatus {
 }
 
 /// The output of executing a transaction.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct TransactionOutput {
     /// The list of writes this transaction intends to do.
     write_set: WriteSet,
