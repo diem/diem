@@ -20,6 +20,7 @@ impl Default for SafetyRulesConfig {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
 pub enum SafetyRulesBackend {
     InMemoryStorage,
     OnDiskStorage {
