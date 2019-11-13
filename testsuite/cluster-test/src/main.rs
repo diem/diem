@@ -982,7 +982,7 @@ impl ClusterTestRunner {
                         .ok();
                     instance
                         .run_cmd_tee_err(vec![format!(
-                            "test -f {f} && sudo gzip -S {s} {f}",
+                            "! test -f {f} || (sudo timeout 45 gzip -S {s} {f} || (echo gzip failed; sudo rm -f {f}))",
                             f = log_file,
                             s = suffix
                         )])
