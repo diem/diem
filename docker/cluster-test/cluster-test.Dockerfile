@@ -23,8 +23,6 @@ RUN mkdir /etc/cluster-test
 WORKDIR /etc/cluster-test
 COPY --from=builder /target/release/cluster-test /usr/local/bin/cluster-test
 COPY terraform/validator-sets/100/mint.key /etc/cluster-test/
-## Capture backtrace on error
-ENV RUST_BACKTRACE 1
 ENTRYPOINT ["cluster-test"]
 ARG BUILD_DATE
 ARG GIT_REV
