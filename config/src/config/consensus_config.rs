@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct ConsensusConfig {
     pub max_block_size: u64,

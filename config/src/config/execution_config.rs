@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct ExecutionConfig {
     pub address: String,

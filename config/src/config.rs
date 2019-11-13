@@ -61,8 +61,8 @@ static CONFIG_TEMPLATE: &[u8] = include_bytes!("../data/configs/node.config.toml
 /// This is used to set up the nodes and configure various parameters.
 /// The config file is broken up into sections for each module
 /// so that only that module can be passed around
-#[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct NodeConfig {
     //TODO Add configuration for multiple chain's in a future diff
     #[serde(default)]
@@ -92,7 +92,7 @@ pub struct NodeConfig {
     pub vm_config: VMConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct BaseConfig {
     pub data_dir_path: PathBuf,

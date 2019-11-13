@@ -47,7 +47,7 @@ impl fmt::Display for RoleType {
 }
 
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct NetworkConfig {
     pub peer_id: String,
