@@ -460,7 +460,7 @@ fn print_stat(prometheus: &Prometheus, window: Duration) -> failure::Result<(f64
             &end,
             step,
         )
-        .map_err(|_| format_err!("No tps data"))?;
+        .map_err(|e| format_err!("No tps data: {}", e))?;
     let avg_latency = prometheus.query_range_avg(
         "irate(mempool_duration_sum{op='e2e.latency'}[1m])/irate(mempool_duration_count{op='e2e.latency'}[1m])"
             .to_string(),
