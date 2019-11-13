@@ -101,6 +101,11 @@ impl Vote {
         )
     }
 
+    /// Return the epoch of the vote
+    pub fn epoch(&self) -> u64 {
+        self.vote_data.proposed().epoch()
+    }
+
     /// Returns the signature for the vote_data().proposed().round() that can be aggregated for
     /// TimeoutCertificate.
     pub fn timeout_signature(&self) -> Option<&Signature> {

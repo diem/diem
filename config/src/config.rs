@@ -75,9 +75,6 @@ pub struct NodeConfig {
     pub log_collector: LoggerConfig,
     #[serde(default)]
     pub vm_config: VMConfig,
-
-    #[serde(default)]
-    pub secret_service: SecretServiceConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -225,22 +222,6 @@ impl Default for LoggerConfig {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
-pub struct SecretServiceConfig {
-    pub address: String,
-    pub secret_service_port: u16,
-}
-
-impl Default for SecretServiceConfig {
-    fn default() -> SecretServiceConfig {
-        SecretServiceConfig {
-            address: "localhost".to_string(),
-            secret_service_port: 6185,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(default)]
 pub struct AdmissionControlConfig {
     pub address: String,
     pub admission_control_service_port: u16,
@@ -265,7 +246,6 @@ impl Default for AdmissionControlConfig {
 #[serde(default)]
 pub struct DebugInterfaceConfig {
     pub admission_control_node_debug_port: u16,
-    pub secret_service_node_debug_port: u16,
     pub storage_node_debug_port: u16,
     // This has similar use to the core-node-debug-server itself
     pub metrics_server_port: u16,
@@ -278,7 +258,6 @@ impl Default for DebugInterfaceConfig {
         DebugInterfaceConfig {
             admission_control_node_debug_port: 6191,
             storage_node_debug_port: 6194,
-            secret_service_node_debug_port: 6195,
             metrics_server_port: 9101,
             public_metrics_server_port: 9102,
             address: "localhost".to_string(),
@@ -420,6 +399,7 @@ pub struct ConsensusConfig {
     #[serde(skip)]
     pub consensus_peers: ConsensusPeersConfig,
     pub consensus_peers_file: PathBuf,
+    pub safety_rules: SafetyRulesConfig,
     pub consensus_type: String,
 }
 
@@ -441,6 +421,7 @@ impl Default for ConsensusConfig {
             consensus_keypair_file: PathBuf::from("consensus_keypair.config.toml"),
             consensus_peers: ConsensusPeersConfig::default(),
             consensus_peers_file: PathBuf::from("consensus_peers.config.toml"),
+            safety_rules: SafetyRulesConfig::default(),
             consensus_type: "pow".to_string(),
         }
     }
@@ -467,6 +448,20 @@ impl ConsensusConfig {
             self.consensus_peers = ConsensusPeersConfig::load_config(
                 path.as_ref().with_file_name(&self.consensus_peers_file),
             );
+        }
+        if let SafetyRulesBackend::OnDiskStorage {
+            default,
+            path: sr_path,
+        } = &self.safety_rules.backend
+        {
+            // If the file is relative, it means it is in the same directory as this config,
+            // unfortunately this is meaningless to the process that would load the config.
+            if !sr_path.as_os_str().is_empty() && sr_path.is_relative() {
+                self.safety_rules.backend = SafetyRulesBackend::OnDiskStorage {
+                    default: *default,
+                    path: path.as_ref().with_file_name(sr_path),
+                };
+            }
         }
         Ok(())
     }
@@ -503,6 +498,10 @@ impl ConsensusConfig {
     pub fn pacemaker_initial_timeout_ms(&self) -> &Option<u64> {
         &self.pacemaker_initial_timeout_ms
     }
+
+    pub fn safety_rules(&self) -> &SafetyRulesConfig {
+        &self.safety_rules
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -536,6 +535,33 @@ impl Default for MempoolConfig {
             system_transaction_gc_interval_ms: 180_000,
         }
     }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
+pub struct SafetyRulesConfig {
+    pub backend: SafetyRulesBackend,
+}
+
+impl Default for SafetyRulesConfig {
+    fn default() -> Self {
+        Self {
+            backend: SafetyRulesBackend::InMemoryStorage,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(tag = "type")]
+pub enum SafetyRulesBackend {
+    InMemoryStorage,
+    OnDiskStorage {
+        // In testing scenarios this implies that the default state is okay if
+        // a state is not specified.
+        default: bool,
+        // Required path for on disk storage
+        path: PathBuf,
+    },
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -776,11 +802,9 @@ impl NodeConfigHelpers {
         config.debug_interface.admission_control_node_debug_port = get_available_port();
         config.debug_interface.metrics_server_port = get_available_port();
         config.debug_interface.public_metrics_server_port = get_available_port();
-        config.debug_interface.secret_service_node_debug_port = get_available_port();
         config.debug_interface.storage_node_debug_port = get_available_port();
         config.execution.port = get_available_port();
         config.mempool.mempool_service_port = get_available_port();
-        config.secret_service.secret_service_port = get_available_port();
         config.storage.port = get_available_port();
     }
 }

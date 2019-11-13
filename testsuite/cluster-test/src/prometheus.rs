@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use failure::{
     self,
     prelude::{bail, format_err},
@@ -6,6 +9,7 @@ use reqwest::Url;
 use serde::Deserialize;
 use std::{collections::HashMap, time::Duration};
 
+#[derive(Clone)]
 pub struct Prometheus {
     url: Url,
     client: reqwest::Client,
@@ -28,7 +32,7 @@ impl Prometheus {
         Self { url, client }
     }
 
-    pub fn query_range(
+    fn query_range(
         &self,
         query: String,
         start: &Duration,
@@ -67,6 +71,18 @@ impl Prometheus {
                 response.error
             ),
         }
+    }
+    pub fn query_range_avg(
+        &self,
+        query: String,
+        start: &Duration,
+        end: &Duration,
+        step: u64,
+    ) -> failure::Result<f64> {
+        let response = self.query_range(query, start, end, step)?;
+        response
+            .avg()
+            .ok_or_else(|| format_err!("Failed to compute avg"))
     }
 }
 

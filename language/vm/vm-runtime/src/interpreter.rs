@@ -37,7 +37,7 @@ use vm::{
         Bytecode, FunctionHandleIndex, LocalIndex, LocalsSignatureIndex, SignatureToken,
         StructDefinitionIndex,
     },
-    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits},
+    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     transaction_metadata::TransactionMetadata,
     IndexKind,
 };
@@ -63,6 +63,7 @@ lazy_static! {
     static ref CREATE_ACCOUNT_NAME: Identifier = Identifier::new("make").unwrap();
     static ref ACCOUNT_STRUCT_NAME: Identifier = Identifier::new("T").unwrap();
     static ref EMIT_EVENT_NAME: Identifier = Identifier::new("write_to_event_store").unwrap();
+    static ref SAVE_ACCOUNT_NAME: Identifier = Identifier::new("save_account").unwrap();
 }
 
 /// `Interpreter` instances can execute Move functions.
@@ -86,7 +87,7 @@ where
     /// The stack of active functions.
     call_stack: CallStack<'txn>,
     /// Gas metering to track cost of execution.
-    gas_meter: GasMeter,
+    gas_meter: GasMeter<'txn>,
     /// Transaction data to resolve special bytecodes (e.g. GetTxnSequenceNumber, GetTxnPublicKey,
     /// GetTxnSenderAddress, ...)
     txn_data: TransactionMetadata,
@@ -162,11 +163,12 @@ where
         module_cache: P,
         txn_data: TransactionMetadata,
         data_view: TransactionDataCache<'txn>,
+        gas_schedule: &'txn CostTable,
     ) -> Self {
         Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
-            gas_meter: GasMeter::new(txn_data.max_gas_amount()),
+            gas_meter: GasMeter::new(txn_data.max_gas_amount(), gas_schedule),
             txn_data,
             event_data: vec![],
             data_view,
@@ -251,6 +253,10 @@ where
         self.data_view.make_write_set(to_be_published_modules)
     }
 
+    pub(crate) fn exists_module(&self, m: &ModuleId) -> bool {
+        self.data_view.exists_module(m)
+    }
+
     /// Execute a function.
     /// `module` is an identifier for the name the module is stored in. `function_name` is the name
     /// of the function. If such function is found, the VM will execute this function with arguments
@@ -266,10 +272,7 @@ where
         function_name: &IdentStr,
         args: Vec<Value>,
     ) -> VMResult<()> {
-        let loaded_module = self
-            .module_cache
-            .get_loaded_module(module)?
-            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
+        let loaded_module = self.module_cache.get_loaded_module(module)?;
         let func_idx = loaded_module
             .function_defs_table
             .get(function_name)
@@ -374,24 +377,6 @@ where
                             Err(self.maybe_core_dump(err, &frame))
                         })?;
                         current_frame = frame;
-                    }
-                }
-                ExitCode::CreateAccount => {
-                    // TODO: this code will be removed but at the moment it re-enters execute_main.
-                    // That creates some issue with errors and core dumps reporting which are
-                    // not completely and correctly sorted out to keep the logic manageable
-                    // and given this is going away soon
-                    self.call_stack.push(current_frame).or_else(|_| {
-                        let err = VMStatus::new(StatusCode::CALL_STACK_OVERFLOW);
-                        Err(err)
-                    })?;
-                    self.create_account_opcode()?;
-                    if let Some(frame) = self.call_stack.pop() {
-                        current_frame = frame;
-                    } else {
-                        return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
-                            "returning from CreateAccount opcode with no call stack".to_string(),
-                        ));
                     }
                 }
             }
@@ -614,9 +599,6 @@ where
                             size,
                         )?;
                     }
-                    Bytecode::CreateAccount => {
-                        return Ok(ExitCode::CreateAccount);
-                    }
                     Bytecode::FreezeRef => {
                         // FreezeRef should just be a null op as we don't distinguish between mut
                         // and immut ref at runtime.
@@ -800,10 +782,7 @@ where
         idx: FunctionHandleIndex,
         type_actual_tags: Vec<TypeTag>,
     ) -> VMResult<Option<Frame<'txn, FunctionRef<'txn>>>> {
-        let func = self
-            .module_cache
-            .resolve_function_ref(module, idx)?
-            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
+        let func = self.module_cache.resolve_function_ref(module, idx)?;
         if func.is_native() {
             self.call_native(func, type_actual_tags)?;
             Ok(None)
@@ -830,6 +809,9 @@ where
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         if module_id == *EVENT_MODULE && function_name == EMIT_EVENT_NAME.as_ident_str() {
             self.call_emit_event(type_actual_tags)
+        } else if module_id == *ACCOUNT_MODULE && function_name == SAVE_ACCOUNT_NAME.as_ident_str()
+        {
+            self.call_save_account()
         } else {
             let mut arguments = VecDeque::new();
             let expected_args = native_function.num_args();
@@ -879,6 +861,15 @@ where
         self.event_data
             .push(ContractEvent::new(guid, count, type_tag, msg));
         Ok(())
+    }
+
+    /// Save an account into the data store.
+    fn call_save_account(&mut self) -> VMResult<()> {
+        let account_module = self.module_cache.get_loaded_module(&ACCOUNT_MODULE)?;
+
+        let account_resource = self.operand_stack.pop_as::<Struct>()?;
+        let address = self.operand_stack.pop_as::<AccountAddress>()?;
+        self.save_account(account_module, address, account_resource)
     }
 
     /// Perform a binary operation to two values at the top of the stack.
@@ -931,14 +922,10 @@ where
         F: FnOnce(&mut Self, AccessPath, StructDef) -> VMResult<AbstractMemorySize<GasCarrier>>,
     {
         let ap = Self::make_access_path(module, idx, address);
-        if let Some(struct_def) =
-            self.module_cache
-                .resolve_struct_def(module, idx, &self.gas_meter)?
-        {
-            op(self, ap, struct_def)
-        } else {
-            Err(VMStatus::new(StatusCode::LINKER_ERROR))
-        }
+        let struct_def = self
+            .module_cache
+            .resolve_struct_def(module, idx, &self.gas_meter)?;
+        op(self, ap, struct_def)
     }
 
     /// BorrowGlobal (mutable and not) opcode.
@@ -998,47 +985,22 @@ where
         create_access_path(&address, struct_tag)
     }
 
-    //
-    // Create account opcode. This will all go away once we make create account a native function.
-    //
-
-    fn create_account_opcode(&mut self) -> VMResult<()> {
-        let account_module = self
-            .module_cache
-            .get_loaded_module(&ACCOUNT_MODULE)?
-            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
-        let create_account_name: &IdentStr = &CREATE_ACCOUNT_NAME;
-        let create_account_idx = account_module
-            .function_defs_table
-            .get(create_account_name)
-            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
-        let create_account_fn = FunctionRef::new(account_module, *create_account_idx);
-        let addr = self.operand_stack.pop_as::<AccountAddress>()?;
-        self.gas_meter.disable_metering();
-        self.execute_main(
-            create_account_fn,
-            vec![Value::byte_array(ByteArray::new(addr.to_vec()))],
-            self.call_stack.0.len(),
-        )?;
-        self.gas_meter.enable_metering();
-        self.save_account(account_module, addr)
-    }
-
     fn save_account(
         &mut self,
         account_module: &LoadedModule,
         addr: AccountAddress,
+        account_resource: Struct,
     ) -> VMResult<()> {
         let account_struct_id = account_module
             .struct_defs_table
             .get(&*ACCOUNT_STRUCT_NAME)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
-        let account_struct_def = self
-            .module_cache
-            .resolve_struct_def(account_module, *account_struct_id, &self.gas_meter)?
-            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
+        let account_struct_def = self.module_cache.resolve_struct_def(
+            account_module,
+            *account_struct_id,
+            &self.gas_meter,
+        )?;
 
-        let account_resource = self.operand_stack.pop_as::<Struct>()?;
         // TODO: Adding the freshly created account's expiration date to the TransactionOutput here.
         let account_path = Self::make_access_path(account_module, *account_struct_id, addr);
         self.data_view
@@ -1049,10 +1011,7 @@ where
     /// in the `ACCOUNT_MODULE` on chain.
     // REVIEW: this should not live here
     pub fn create_account_entry(&mut self, addr: AccountAddress) -> VMResult<()> {
-        let account_module = self
-            .module_cache
-            .get_loaded_module(&ACCOUNT_MODULE)?
-            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
+        let account_module = self.module_cache.get_loaded_module(&ACCOUNT_MODULE)?;
 
         // TODO: Currently the event counter will cause the gas cost for create account be flexible.
         //       We either need to fix the gas stability test cases in tests or we need to come up
@@ -1066,7 +1025,8 @@ where
         )?;
         self.gas_meter.enable_metering();
 
-        self.save_account(account_module, addr)
+        let account_resource = self.operand_stack.pop_as::<Struct>()?;
+        self.save_account(account_module, addr, account_resource)
     }
 
     //
@@ -1300,8 +1260,6 @@ enum ExitCode {
     Return,
     /// A `Call` opcode was found.
     Call(FunctionHandleIndex, LocalsSignatureIndex),
-    /// A `CreateAccount` opcode was found.
-    CreateAccount,
 }
 
 impl<'txn, F> Frame<'txn, F>
@@ -1452,8 +1410,9 @@ where
         module_cache: P,
         txn_data: TransactionMetadata,
         data_view: TransactionDataCache<'txn>,
+        gas_schedule: &'txn CostTable,
     ) -> Self {
-        let interpreter = Interpreter::new(module_cache, txn_data, data_view);
+        let interpreter = Interpreter::new(module_cache, txn_data, data_view, gas_schedule);
         InterpreterForCostSynthesis(interpreter)
     }
 

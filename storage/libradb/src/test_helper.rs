@@ -7,6 +7,7 @@ use super::*;
 use crate::mock_genesis::{db_with_mock_genesis, GENESIS_INFO};
 use libra_crypto::hash::CryptoHash;
 use libra_tools::tempdir::TempPath;
+use libra_types::block_info::BlockInfo;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo,
@@ -26,6 +27,7 @@ fn to_blocks_to_commit(
     let genesis_ledger_info = genesis_ledger_info_with_sigs.ledger_info();
     let mut cur_ver = 0;
     let mut cur_txn_accu_hash = genesis_ledger_info.transaction_accumulator_hash();
+    let mut cur_round = 0;
     let blocks_to_commit = partial_blocks
         .into_iter()
         .map(|(txns_to_commit, partial_ledger_info_with_sigs)| {
@@ -57,17 +59,15 @@ fn to_blocks_to_commit(
 
                 cur_txn_accu_hash = txn_accu_hash;
             }
-
-            let ledger_info = LedgerInfo::new(
-                cur_ver,
-                cur_txn_accu_hash,
-                partial_ledger_info_with_sigs
-                    .ledger_info()
-                    .consensus_data_hash(),
+            cur_round += 1;
+            let block_info = BlockInfo::new(
+                partial_ledger_info_with_sigs.ledger_info().epoch(),
+                cur_round,
                 partial_ledger_info_with_sigs
                     .ledger_info()
                     .consensus_block_id(),
-                partial_ledger_info_with_sigs.ledger_info().epoch(),
+                cur_txn_accu_hash,
+                cur_ver,
                 partial_ledger_info_with_sigs
                     .ledger_info()
                     .timestamp_usecs(),
@@ -75,6 +75,12 @@ fn to_blocks_to_commit(
                     .ledger_info()
                     .next_validator_set()
                     .cloned(),
+            );
+            let ledger_info = LedgerInfo::new(
+                block_info,
+                partial_ledger_info_with_sigs
+                    .ledger_info()
+                    .consensus_data_hash(),
             );
             let ledger_info_with_sigs = LedgerInfoWithSignatures::new(
                 ledger_info,

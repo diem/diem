@@ -132,7 +132,9 @@ impl TransactionBenchState {
     fn execute(self) {
         // The output is ignored here since we're just testing transaction performance, not trying
         // to assert correctness.
-        self.executor.execute_block(self.transactions);
+        self.executor
+            .execute_block(self.transactions)
+            .expect("VM should not fail to start");
     }
 }
 

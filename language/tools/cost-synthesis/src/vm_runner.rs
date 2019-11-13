@@ -27,8 +27,7 @@ macro_rules! with_loaded_vm {
         $module_cache.cache_module(root_module.clone());
         let $mod = $module_cache
             .get_loaded_module(&module_id)
-            .expect("[Module Lookup] Runtime error while looking up module")
-            .expect("[Module Cache] Unable to find module in module cache.");
+            .expect("[Module Lookup] Runtime error while looking up module");
         for m in modules.clone() {
             $module_cache.cache_module(m);
         }
@@ -39,9 +38,11 @@ macro_rules! with_loaded_vm {
         for (access_path, blob) in $root_account.generate_resources(&mut inhabitor).into_iter() {
             data_cache.set(access_path, blob);
         }
+        let gas_schedule = CostTable::zero();
         let txn_data = TransactionMetadata::default();
         let data_cache = TransactionDataCache::new(&data_cache);
-        let mut $vm = InterpreterForCostSynthesis::new(&$module_cache, txn_data, data_cache);
+        let mut $vm =
+            InterpreterForCostSynthesis::new(&$module_cache, txn_data, data_cache, &gas_schedule);
         $vm.turn_off_gas_metering();
         $vm.push_frame(entry_func, vec![]);
     };

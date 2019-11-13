@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
     cluster::Cluster,
     effects::{Action, Reboot},
@@ -53,6 +56,10 @@ impl Experiment for RebootRandomValidators {
             thread::sleep(Duration::from_secs(5));
         }
         Ok(())
+    }
+
+    fn deadline(&self) -> Duration {
+        Duration::from_secs(20 * 60)
     }
 }
 

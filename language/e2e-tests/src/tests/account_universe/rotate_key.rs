@@ -5,7 +5,6 @@ use crate::{
     account_universe::{
         default_num_accounts, default_num_transactions, AccountUniverseGen, RotateKeyGen,
     },
-    gas_costs,
     tests::account_universe::{run_and_assert_gas_cost_stability, run_and_assert_universe},
 };
 use proptest::{collection::vec, prelude::*};
@@ -19,7 +18,7 @@ proptest! {
         universe in AccountUniverseGen::success_strategy(1),
         key_rotations in vec(any::<RotateKeyGen>(), 0..default_num_transactions()),
     ) {
-        run_and_assert_gas_cost_stability(universe, key_rotations, *gas_costs::ROTATE_KEY)?;
+        run_and_assert_gas_cost_stability(universe, key_rotations)?;
     }
 
     #[test]

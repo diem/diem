@@ -1,0 +1,16 @@
+error: 
+
+   ┌── tests/move_check/naming/unbound_struct_in_module.move:6:12 ───
+   │
+ 6 │     foo(s: X.S): X.S {
+   │            ^^^ Unbound struct or resource 'S' in module '0000000000000000000000000000000000000000000000000000000000000001.X'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unbound_struct_in_module.move:6:18 ───
+   │
+ 6 │     foo(s: X.S): X.S {
+   │                  ^^^ Unbound struct or resource 'S' in module '0000000000000000000000000000000000000000000000000000000000000001.X'
+   │
+

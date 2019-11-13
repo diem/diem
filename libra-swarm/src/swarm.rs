@@ -410,7 +410,7 @@ impl LibraSwarm {
     /// function are now available at all the nodes.
     pub fn wait_for_all_nodes_to_catchup(&mut self) -> bool {
         let num_attempts = 60;
-        let last_committed_round_str = "consensus{op=committed_blocks_count}";
+        let last_committed_round_str = "libra_consensus_committed_blocks_count{}";
         let mut done = vec![false; self.nodes.len()];
 
         let mut last_committed_round = 0;

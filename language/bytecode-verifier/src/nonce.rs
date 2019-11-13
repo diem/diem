@@ -5,7 +5,7 @@
 //! A Nonce instance represents an arbitrary reference or access path.
 //! The integer inside a Nonce is meaningless; only equality and borrow relationships are
 //! meaningful.
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Nonce(usize);
 
 impl Nonce {

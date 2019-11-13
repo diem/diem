@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{common::Round, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate};
-use failure::ResultExt;
+use failure::{ensure, ResultExt};
 use libra_types::crypto_proxies::ValidatorVerifier;
 use network;
 use serde::{Deserialize, Serialize};
@@ -82,6 +82,24 @@ impl SyncInfo {
     }
 
     pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
+        let epoch = self.highest_quorum_cert.certified_block().epoch();
+        ensure!(
+            epoch == self.highest_ledger_info.certified_block().epoch(),
+            "Multi epoch in SyncInfo - HLI and HQC"
+        );
+        if let Some(tc) = &self.highest_timeout_cert {
+            ensure!(epoch == tc.epoch(), "Multi epoch in SyncInfo - TC and HQC");
+        }
+
+        ensure!(
+            self.highest_quorum_cert.certified_block().round()
+                >= self.highest_ledger_info.certified_block().round(),
+            "HQC has lower round than HLI"
+        );
+        ensure!(
+            self.highest_ledger_info.committed_block_id().is_some(),
+            "HLI has no committed block"
+        );
         self.highest_quorum_cert
             .verify(validator)
             .and_then(|_| self.highest_ledger_info.verify(validator))
@@ -93,6 +111,10 @@ impl SyncInfo {
             })
             .with_context(|e| format!("Fail to verify SyncInfo: {:?}", e))?;
         Ok(())
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.highest_quorum_cert.certified_block().epoch()
     }
 }
 

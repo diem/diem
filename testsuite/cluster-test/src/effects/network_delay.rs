@@ -1,6 +1,10 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::effects::Effect;
 /// NetworkDelay introduces network delay from a given instance to a provided list of instances
 /// If no instances are provided, network delay is introduced on all outgoing packets
-use crate::{effects::Action, instance::Instance};
+use crate::instance::Instance;
 use failure;
 use slog_scope::info;
 use std::fmt;
@@ -26,8 +30,8 @@ impl NetworkDelay {
     }
 }
 
-impl Action for NetworkDelay {
-    fn apply(&self) -> failure::Result<()> {
+impl Effect for NetworkDelay {
+    fn activate(&self) -> failure::Result<()> {
         info!(
             "NetworkDelay {}ms for {}",
             self.delay.as_millis(),
@@ -58,8 +62,9 @@ impl Action for NetworkDelay {
         self.instance.run_cmd(vec![command])
     }
 
-    fn is_complete(&self) -> bool {
-        true
+    fn deactivate(&self) -> failure::Result<()> {
+        self.instance
+            .run_cmd(vec!["sudo tc qdisc delete dev eth0 root; true".to_string()])
     }
 }
 

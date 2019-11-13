@@ -359,3 +359,17 @@ fn test_gc_ready_transaction() {
     assert_eq!(timeline.len(), 1);
     assert_eq!(timeline[0].sequence_number(), 0);
 }
+
+#[test]
+fn test_clean_stuck_transactions() {
+    let mut pool = setup_mempool().0;
+    for seq in 0..5 {
+        add_txn(&mut pool, TestTransaction::new(0, seq, 1)).unwrap();
+    }
+    let db_sequence_number = 10;
+    let txn = TestTransaction::new(0, db_sequence_number, 1).make_signed_transaction();
+    pool.add_txn(txn, 0, db_sequence_number, 100, TimelineState::NotReady);
+    let block = pool.get_block(10, HashSet::new());
+    assert_eq!(block.len(), 1);
+    assert_eq!(block[0].sequence_number(), 10);
+}

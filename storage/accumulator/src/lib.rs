@@ -104,10 +104,11 @@
 use failure::prelude::*;
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
 use libra_types::proof::{
-    definition::LeafCount,
+    definition::{LeafCount, MAX_ACCUMULATOR_PROOF_DEPTH},
     position::{FrozenSubTreeIterator, FrozenSubtreeSiblingIterator, Position},
     AccumulatorConsistencyProof, AccumulatorProof, AccumulatorRangeProof, MerkleTreeInternalNode,
 };
+use mirai_annotations::*;
 use std::marker::PhantomData;
 
 /// Defines the interface between `MerkleAccumulator` and underlying storage.
@@ -296,6 +297,9 @@ where
     ///     and the full route from root of that subtree to the accumulator root turns frozen
     ///         height - (log2(num_new_leaves) + 1) < height - 1 = root_level
     fn max_to_freeze(num_new_leaves: usize, root_level: u32) -> usize {
+        precondition!(root_level as usize <= MAX_ACCUMULATOR_PROOF_DEPTH);
+        precondition!(num_new_leaves < (usize::max_value() / 2));
+        precondition!(num_new_leaves * 2 <= usize::max_value() - root_level as usize);
         num_new_leaves * 2 + root_level as usize
     }
 

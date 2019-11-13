@@ -19,6 +19,7 @@ use crate::{
     },
 };
 use consensus_types::{
+    accumulator_extension_proof::AccumulatorExtensionProof,
     block::Block,
     common::{Author, Payload, Round},
     proposal_msg::ProposalMsg,
@@ -30,18 +31,24 @@ use consensus_types::{
     vote_proposal::VoteProposal,
 };
 use failure::ResultExt;
+use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
-use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
+use libra_prost_ext::MessageExt;
+use libra_types::crypto_proxies::{
+    LedgerInfoWithSignatures, ValidatorChangeEventWithProof, ValidatorVerifier,
+};
 use mirai_annotations::{
     debug_checked_precondition, debug_checked_precondition_eq, debug_checked_verify,
     debug_checked_verify_eq,
 };
+use network::proto::{ConsensusMsg, ConsensusMsg_oneof};
 
 use crate::chained_bft::network::IncomingBlockRetrievalRequest;
 use consensus_types::block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus};
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::SafetyRules;
+use std::convert::TryInto;
 use std::time::Instant;
 use std::{sync::Arc, time::Duration};
 use termion::color::*;
@@ -343,11 +350,11 @@ impl<T: Payload> EventProcessor<T> {
             // The timeout event is late: the node has already moved to another round.
             return;
         }
-        let last_vote_round = self.safety_rules.consensus_state().last_vote_round();
+        let last_voted_round = self.safety_rules.consensus_state().last_voted_round();
         warn!(
             "Round {} timed out: {}, expected round proposer was {:?}, broadcasting the vote to all replicas",
             round,
-            if last_vote_round == round { "already executed and voted at this round" } else { "will try to generate a backup vote" },
+            if last_voted_round == round { "already executed and voted at this round" } else { "will try to generate a backup vote" },
             self.proposer_election.get_valid_proposers(round).iter().map(|p| p.short_str()).collect::<Vec<String>>(),
         );
 
@@ -412,7 +419,7 @@ impl<T: Payload> EventProcessor<T> {
     ) -> failure::Result<()> {
         self.safety_rules.update(qc);
         let consensus_state = self.safety_rules.consensus_state();
-        counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_block_round() as i64);
+        counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
 
         let mut highest_committed_proposal_round = None;
         if let Some(block) = qc
@@ -491,17 +498,13 @@ impl<T: Payload> EventProcessor<T> {
         // Safety invariant: The last voted round is updated to be the same as the proposed block's
         // round. At this point, the replica has decided to vote for the proposed block.
         debug_checked_verify_eq!(
-            self.safety_rules.consensus_state().last_vote_round(),
+            self.safety_rules.consensus_state().last_voted_round(),
             proposal_round
         );
         // Safety invariant: qc_parent <-- qc
         // the preferred block round must be at least as large as qc_parent's round.
         debug_checked_verify!(
-            (*self)
-                .safety_rules
-                .consensus_state()
-                .preferred_block_round()
-                >= certified_parent_block_round
+            self.safety_rules.consensus_state().preferred_round() >= certified_parent_block_round
         );
 
         let recipients = self
@@ -537,11 +540,15 @@ impl<T: Payload> EventProcessor<T> {
                 match waiting_success {
                     WaitingSuccess::WaitWasRequired { wait_duration, .. } => {
                         counters::VOTE_SUCCESS_WAIT_S.observe_duration(wait_duration);
-                        counters::VOTE_WAIT_WAS_REQUIRED_COUNT.inc();
+                        counters::VOTES_COUNT
+                            .with_label_values(&["wait_was_required"])
+                            .inc();
                     }
                     WaitingSuccess::NoWaitRequired { .. } => {
                         counters::VOTE_SUCCESS_WAIT_S.observe_duration(Duration::new(0, 0));
-                        counters::VOTE_NO_WAIT_REQUIRED_COUNT.inc();
+                        counters::VOTES_COUNT
+                            .with_label_values(&["no_wait_required"])
+                            .inc();
                     }
                 }
             }
@@ -553,7 +560,9 @@ impl<T: Payload> EventProcessor<T> {
                                 block_timestamp_us,
                                 current_round_deadline);
                         counters::VOTE_FAILURE_WAIT_S.observe_duration(Duration::new(0, 0));
-                        counters::VOTE_MAX_WAIT_EXCEEDED_COUNT.inc();
+                        counters::VOTES_COUNT
+                            .with_label_values(&["max_wait_exceeded"])
+                            .inc();
                     }
                     WaitingError::WaitFailed {
                         current_duration_since_epoch,
@@ -565,7 +574,9 @@ impl<T: Payload> EventProcessor<T> {
                                 block_timestamp_us,
                                 current_duration_since_epoch);
                         counters::VOTE_FAILURE_WAIT_S.observe_duration(wait_duration);
-                        counters::VOTE_WAIT_FAILED_COUNT.inc();
+                        counters::VOTES_COUNT
+                            .with_label_values(&["wait_failed"])
+                            .inc();
                     }
                 };
                 return Err(waiting_error);
@@ -604,6 +615,7 @@ impl<T: Payload> EventProcessor<T> {
             .await
             .with_context(|e| format!("Failed to execute_and_insert the block: {:?}", e))?;
         let block = executed_block.block();
+
         // Checking pacemaker round again, because multiple proposed_block can now race
         // during async block retrieval
         ensure!(
@@ -613,13 +625,26 @@ impl<T: Payload> EventProcessor<T> {
             self.pacemaker.current_round(),
             block.round(),
         );
+
+        let parent_block = self
+            .block_store
+            .get_block(executed_block.parent_id())
+            .ok_or_else(|| format_err!("Parent block not found in block store"))?;
+
         self.wait_before_vote_if_needed(block.timestamp_usecs())
             .await?;
 
         let vote_proposal = VoteProposal::new(
+            AccumulatorExtensionProof::<TransactionAccumulatorHasher>::new(
+                parent_block
+                    .executed_trees()
+                    .txn_accumulator()
+                    .frozen_subtree_roots()
+                    .clone(),
+                parent_block.executed_trees().txn_accumulator().num_leaves(),
+                executed_block.transaction_info_hashes(),
+            ),
             block.clone(),
-            executed_block.compute_result().executed_state.state_id,
-            executed_block.compute_result().executed_state.version,
             executed_block
                 .compute_result()
                 .executed_state
@@ -633,10 +658,10 @@ impl<T: Payload> EventProcessor<T> {
             .with_context(|e| format!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e))?;
 
         let consensus_state = self.safety_rules.consensus_state();
-        counters::LAST_VOTE_ROUND.set(consensus_state.last_vote_round() as i64);
+        counters::LAST_VOTE_ROUND.set(consensus_state.last_voted_round() as i64);
 
         self.storage
-            .save_consensus_state(consensus_state, &vote)
+            .save_state(&vote)
             .with_context(|e| format!("Fail to persist consensus state: {:?}", e))?;
         self.last_vote_sent.replace((vote.clone(), block.round()));
         Ok(vote)
@@ -766,7 +791,9 @@ impl<T: Payload> EventProcessor<T> {
             }
         }
         if finality_proof.ledger_info().next_validator_set().is_some() {
-            self.network.send_epoch_change(finality_proof).await
+            self.network
+                .broadcast_epoch_change(ValidatorChangeEventWithProof::new(vec![finality_proof]))
+                .await
         }
     }
 
@@ -776,7 +803,7 @@ impl<T: Payload> EventProcessor<T> {
     ///
     /// The current version of the function is not really async, but keeping it this way for
     /// future possible changes.
-    pub async fn process_block_retrieval(&self, request: IncomingBlockRetrievalRequest<T>) {
+    pub async fn process_block_retrieval(&self, request: IncomingBlockRetrievalRequest) {
         let mut blocks = vec![];
         let mut status = BlockRetrievalStatus::Succeeded;
         let mut id = request.req.block_id();
@@ -794,9 +821,22 @@ impl<T: Payload> EventProcessor<T> {
             status = BlockRetrievalStatus::IdNotFound;
         }
 
-        if let Err(e) = request
-            .response_sender
-            .send(BlockRetrievalResponse::new(status, blocks))
+        let response = BlockRetrievalResponse::new(status, blocks);
+        if let Err(e) = response
+            .try_into()
+            .and_then(|proto| {
+                let bytes = ConsensusMsg {
+                    message: Some(ConsensusMsg_oneof::RespondBlock(proto)),
+                }
+                .to_bytes()?;
+                Ok(bytes)
+            })
+            .and_then(|response_data| {
+                request
+                    .response_sender
+                    .send(Ok(response_data))
+                    .map_err(|e| format_err!("{:?}", e))
+            })
         {
             error!("Failed to return the requested block: {:?}", e);
         }

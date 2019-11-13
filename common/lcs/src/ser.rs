@@ -32,22 +32,20 @@ use std::collections::BTreeMap;
 ///     enabled: bool,
 /// }
 ///
-/// fn main() {
-///     let service = Service {
-///         ip: Ip([192, 168, 1, 1]),
-///         port: vec![Port(8001), Port(8002), Port(8003)],
-///         connection_max: Some(5000),
-///         enabled: false,
-///     };
+/// let service = Service {
+///     ip: Ip([192, 168, 1, 1]),
+///     port: vec![Port(8001), Port(8002), Port(8003)],
+///     connection_max: Some(5000),
+///     enabled: false,
+/// };
 ///
-///     let bytes = to_bytes(&service).unwrap();
-///     let expected = vec![
-///         0xc0, 0xa8, 0x01, 0x01, 0x03, 0x00, 0x00, 0x00,
-///         0x41, 0x1f, 0x42, 0x1f, 0x43, 0x1f, 0x01, 0x88,
-///         0x13, 0x00, 0x00, 0x00,
-///     ];
-///     assert_eq!(bytes, expected);
-/// }
+/// let bytes = to_bytes(&service).unwrap();
+/// let expected = vec![
+///     0xc0, 0xa8, 0x01, 0x01, 0x03, 0x00, 0x00, 0x00,
+///     0x41, 0x1f, 0x42, 0x1f, 0x43, 0x1f, 0x01, 0x88,
+///     0x13, 0x00, 0x00, 0x00,
+/// ];
+/// assert_eq!(bytes, expected);
 /// ```
 pub fn to_bytes<T>(value: &T) -> Result<Vec<u8>>
 where
@@ -59,7 +57,7 @@ where
 }
 
 /// Serialization implementation for LCS
-pub(crate) struct Serializer {
+struct Serializer {
     output: Vec<u8>,
 }
 
@@ -347,7 +345,7 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
 }
 
 #[doc(hidden)]
-pub(crate) struct MapSerializer<'a> {
+struct MapSerializer<'a> {
     ser: &'a mut Serializer,
     map: BTreeMap<Vec<u8>, Vec<u8>>,
     next_key: Option<Vec<u8>>,

@@ -1,5 +1,9 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{effects::Action, instance::Instance};
 use failure;
+use slog_scope::info;
 use std::fmt;
 
 pub struct Reboot {
@@ -14,7 +18,7 @@ impl Reboot {
 
 impl Action for Reboot {
     fn apply(&self) -> failure::Result<()> {
-        println!("Rebooting {}", self.instance);
+        info!("Rebooting {}", self.instance);
         self.instance.run_cmd(vec![
             "touch /dev/shm/cluster_test_reboot; nohup sudo /usr/sbin/reboot &",
         ])
@@ -26,11 +30,11 @@ impl Action for Reboot {
             .run_cmd(vec!["! cat /dev/shm/cluster_test_reboot"])
         {
             Ok(..) => {
-                println!("Rebooting {} complete", self.instance);
+                info!("Rebooting {} complete", self.instance);
                 true
             }
             Err(..) => {
-                println!(
+                info!(
                     "Rebooting {} in progress - did not reboot yet",
                     self.instance
                 );

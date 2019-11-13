@@ -8,10 +8,10 @@
     <div class="navbar-header">
       <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false" aria-controls="navbar-nav" aria-label="toggle navigation">
         <span class="navbar-toggler-icon"></span>
-        
-       
-        
-        
+
+
+
+
       </button>
       <a class="navbar-brand" href="{{ pathPrefix }}/">Prometheus</a>
     </div>
@@ -32,7 +32,7 @@
 <nav class="col-md-2 md-block bg-dark sidebar prom_lhs_menu_nav">
 <div class="sidebar-sticky">
 <ul class="nav flex-column">
- 
+
 {{ template "_menuItem" (args . "index.html" "Overview") }}
 
 {{ if query "up{job='validators'}" }}

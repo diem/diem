@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use vm::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FieldDefinitionIndex, FunctionHandleIndex,
     LocalIndex, LocalsSignatureIndex, StructDefinitionIndex, UserStringIndex,
@@ -65,7 +68,6 @@ pub enum StacklessBytecode {
     GetTxnSenderAddress(TempIndex),
     GetTxnMaxGasUnits(TempIndex),
     GetTxnGasUnitPrice(TempIndex),
-    CreateAccount(TempIndex),
 
     LdTrue(TempIndex),
     LdFalse(TempIndex),

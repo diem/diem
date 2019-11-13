@@ -48,7 +48,7 @@ impl StorageRead for MockStorageReadClient {
     ) -> Result<(
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
-        Vec<ValidatorChangeEventWithProof>,
+        ValidatorChangeEventWithProof,
         AccumulatorConsistencyProof,
     )> {
         let request = libra_types::get_with_proof::UpdateToLatestLedgerRequest::new(
@@ -77,7 +77,7 @@ impl StorageRead for MockStorageReadClient {
                     Output = Result<(
                         Vec<ResponseItem>,
                         LedgerInfoWithSignatures,
-                        Vec<ValidatorChangeEventWithProof>,
+                        ValidatorChangeEventWithProof,
                         AccumulatorConsistencyProof,
                     )>,
                 > + Send,

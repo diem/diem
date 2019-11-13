@@ -55,9 +55,10 @@ use netcore::{
 };
 use parity_multiaddr::Multiaddr;
 use socket_bench_server::{
-    build_memsocket_muxer_transport, build_memsocket_noise_muxer_transport,
-    build_memsocket_noise_transport, build_tcp_muxer_transport, build_tcp_noise_muxer_transport,
-    build_tcp_noise_transport, start_muxer_server, start_stream_server, Args,
+    build_memsocket_dual_muxed_transport, build_memsocket_muxer_transport,
+    build_memsocket_noise_muxer_transport, build_memsocket_noise_transport,
+    build_tcp_muxer_transport, build_tcp_noise_muxer_transport, build_tcp_noise_transport,
+    start_muxer_server, start_stream_server, Args,
 };
 use std::{fmt::Debug, io, time::Duration};
 use tokio::{
@@ -191,6 +192,16 @@ fn bench_memsocket_muxer_send(b: &mut Bencher, msg_len: &usize, server_addr: Mul
         bench_client_muxer_send(b, *msg_len, &mut runtime, server_addr, client_transport);
 }
 
+/// Benchmark the throughput of sending messages of size `msg_len` over a muxer
+/// over an already muxed in-memory socket.
+fn bench_memsocket_dual_muxed_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
+    let mut runtime = Runtime::new().unwrap();
+    let client_transport = build_memsocket_dual_muxed_transport();
+    // Benchmark sending some data to the server.
+    let (_client_muxer, _client_stream) =
+        bench_client_muxer_send(b, *msg_len, &mut runtime, server_addr, client_transport);
+}
+
 /// Benchmark the throughput of sending messages of size`msg_len` over a muxer
 /// over an in-memory socket with noise encryption
 fn bench_memsocket_noise_muxer_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
@@ -209,6 +220,21 @@ fn bench_tcp_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
     let mut runtime = Runtime::new().unwrap();
 
     let client_transport = TcpTransport::default();
+
+    // Benchmark sending some data to the server.
+    let _client_stream =
+        bench_client_stream_send(b, *msg_len, &mut runtime, server_addr, client_transport);
+}
+
+/// Benchmark the throughput of sending messages of size `msg_len` over tcp to
+/// server at multiaddr `server_addr` with TCP_NODELAY set.
+fn bench_tcp_send_with_nodelay(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
+    let mut runtime = Runtime::new().unwrap();
+
+    let client_transport = TcpTransport {
+        nodelay: Some(true),
+        ..TcpTransport::default()
+    };
 
     // Benchmark sending some data to the server.
     let _client_stream =
@@ -321,6 +347,11 @@ fn socket_muxer_bench(c: &mut Criterion) {
         build_memsocket_muxer_transport(),
         "/memory/0".parse().unwrap(),
     );
+    let memsocket_dual_muxed_addr = start_muxer_server(
+        &executor,
+        build_memsocket_dual_muxed_transport(),
+        "/memory/0".parse().unwrap(),
+    );
     let memsocket_noise_muxer_addr = start_muxer_server(
         &executor,
         build_memsocket_noise_muxer_transport(),
@@ -330,6 +361,14 @@ fn socket_muxer_bench(c: &mut Criterion) {
     let local_tcp_addr = start_stream_server(
         &executor,
         TcpTransport::default(),
+        "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
+    );
+    let local_tcp_nodelay_addr = start_stream_server(
+        &executor,
+        TcpTransport {
+            nodelay: Some(true),
+            ..TcpTransport::default()
+        },
         "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
     );
     let local_tcp_noise_addr = start_stream_server(
@@ -355,11 +394,14 @@ fn socket_muxer_bench(c: &mut Criterion) {
         move |b, msg_len| bench_memsocket_send(b, msg_len, memsocket_addr.clone()),
         msg_lens,
     )
-    .with_function("memsocket+noise", move |b, msg_len| {
-        bench_memsocket_noise_send(b, msg_len, memsocket_noise_addr.clone())
-    })
     .with_function("memsocket+muxer", move |b, msg_len| {
         bench_memsocket_muxer_send(b, msg_len, memsocket_muxer_addr.clone())
+    })
+    .with_function("memsocket+muxer+muxer", move |b, msg_len| {
+        bench_memsocket_dual_muxed_send(b, msg_len, memsocket_dual_muxed_addr.clone())
+    })
+    .with_function("memsocket+noise", move |b, msg_len| {
+        bench_memsocket_noise_send(b, msg_len, memsocket_noise_addr.clone())
     })
     .with_function("memsocket+noise+muxer", move |b, msg_len| {
         bench_memsocket_noise_muxer_send(b, msg_len, memsocket_noise_muxer_addr.clone())
@@ -375,6 +417,9 @@ fn socket_muxer_bench(c: &mut Criterion) {
     })
     .with_function("local_tcp+noise+muxer", move |b, msg_len| {
         bench_tcp_noise_muxer_send(b, msg_len, local_tcp_noise_muxer_addr.clone())
+    })
+    .with_function("local_tcp_nodelay", move |b, msg_len| {
+        bench_tcp_send_with_nodelay(b, msg_len, local_tcp_nodelay_addr.clone())
     });
 
     // optionally enable remote benches if the env variables are set

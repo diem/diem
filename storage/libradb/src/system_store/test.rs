@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use super::*;
 use crate::{ledger_counters::LedgerCounter, LibraDB};
 use libra_tools::tempdir::TempPath;

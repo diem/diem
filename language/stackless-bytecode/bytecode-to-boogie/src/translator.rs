@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //! This module translates the bytecode of a module to Boogie code.
 
 use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
@@ -504,10 +507,6 @@ impl<'a> ModuleTranslator<'a> {
             GetTxnSenderAddress(idx) => vec![format!("call t{} := GetTxnSenderAddress();", idx)],
             GetTxnMaxGasUnits(idx) => vec![format!("call t{} := GetTxnMaxGasUnits();", idx)],
             GetTxnGasUnitPrice(idx) => vec![format!("call t{} := GetTxnGasUnitPrice();", idx)],
-            CreateAccount(idx) => vec![format!(
-                "call addr_exists' := CreateAccount(t{}, addr_exists');",
-                idx
-            )],
             _ => vec!["// unimplemented instruction".into()],
         };
         for code in stmts {

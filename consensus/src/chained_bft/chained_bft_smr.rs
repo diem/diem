@@ -18,7 +18,7 @@ use channel;
 use consensus_types::common::{Payload, Round};
 use failure::prelude::*;
 use futures::{select, stream::StreamExt};
-use libra_config::config::{ConsensusConfig, ConsensusProposerType};
+use libra_config::config::{ConsensusConfig, ConsensusProposerType, SafetyRulesConfig};
 use libra_logger::prelude::*;
 use std::{
     sync::Arc,
@@ -38,6 +38,8 @@ pub struct ChainedBftSMRConfig {
     pub contiguous_rounds: u32,
     /// Max block size (number of transactions) that consensus pulls from mempool
     pub max_block_size: u64,
+    /// Path to SafetyRulesConfig
+    pub safety_rules: SafetyRulesConfig,
 }
 
 impl ChainedBftSMRConfig {
@@ -49,6 +51,7 @@ impl ChainedBftSMRConfig {
             proposer_type: cfg.get_proposer_type(),
             contiguous_rounds: cfg.contiguous_rounds(),
             max_block_size: cfg.max_block_size(),
+            safety_rules: cfg.safety_rules().clone(),
         }
     }
 }
@@ -90,7 +93,7 @@ impl<T: Payload> ChainedBftSMR<T> {
 
     fn start_event_processing(
         executor: TaskExecutor,
-        epoch_manager: EpochManager<T>,
+        mut epoch_manager: EpochManager<T>,
         mut event_processor: EventProcessor<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
         network_task: NetworkTask<T>,
@@ -125,9 +128,17 @@ impl<T: Payload> ChainedBftSMR<T> {
                     ledger_info = network_receivers.epoch_change.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
                         event_processor = epoch_manager.start_new_epoch(ledger_info);
+                        // clean up all the previous messages from the old epochs
+                        network_receivers.clear_prev_epoch_msgs();
+                        event_processor.start().await;
                     }
-                    complete => {
-                        break;
+                    different_epoch_and_peer = network_receivers.different_epoch.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
+                        epoch_manager.process_different_epoch(different_epoch_and_peer.0, different_epoch_and_peer.1).await
+                    }
+                    epoch_retrieval_and_peer = network_receivers.epoch_retrieval.select_next_some() => {
+                        idle_duration = pre_select_instant.elapsed();
+                        epoch_manager.process_epoch_retrieval(epoch_retrieval_and_peer.0, epoch_retrieval_and_peer.1).await
                     }
                 }
                 counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
@@ -144,9 +155,8 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
     type Payload = T;
 
     /// We're following the steps to start
-    /// 1. Align initial data with libradb (sync if necessary) (We need initial trusting peers to connect to)
-    /// 2. Construct the EpochManager from the latest libradb state
-    /// 3. Construct per-epoch component with the fixed Validators provided by EpochManager including
+    /// 1. Construct the EpochManager from the latest libradb state
+    /// 2. Construct per-epoch component with the fixed Validators provided by EpochManager including
     /// ProposerElection, Pacemaker, SafetyRules, Network(Populate with known validators), EventProcessor
     fn start(
         &mut self,
@@ -161,13 +171,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             .initial_data
             .take()
             .expect("already started, initial data is None");
-        // Step 1
-        if initial_data.need_sync() {
-            // make sure we sync to the root state in case we're not
-            state_computer.sync_to_or_bail(initial_data.root_ledger_info().ledger_info().clone());
-        }
-
-        // Step 2 TODO: read validators from libradb instead of config
+        // Step 1 TODO: read validators from libradb instead of config
         let validator = Arc::new(initial_setup.validator);
         let executor = self
             .runtime
@@ -180,8 +184,9 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         let signer = Arc::new(initial_setup.signer);
+        let epoch = initial_data.epoch();
         let epoch_mgr = EpochManager::new(
-            initial_setup.epoch,
+            epoch,
             self.config.take().expect("already started, config is None"),
             time_service,
             self_sender,
@@ -193,14 +198,18 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             signer.clone(),
         );
 
-        // Step 3
+        // Step 2
         let event_processor = epoch_mgr.start_epoch(signer, validator.clone(), initial_data);
 
         // TODO: this is test only, we should remove this
         self.block_store = Some(event_processor.block_store());
 
-        let (network_task, network_receiver) =
-            NetworkTask::new(initial_setup.network_events, self_receiver, validator);
+        let (network_task, network_receiver) = NetworkTask::new(
+            epoch,
+            initial_setup.network_events,
+            self_receiver,
+            validator,
+        );
 
         Self::start_event_processing(
             executor,

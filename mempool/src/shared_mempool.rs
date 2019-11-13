@@ -164,9 +164,10 @@ async fn sync_with_peers<'a>(
                     .map(|txn| txn.try_into().unwrap())
                     .collect();
 
-                debug!(
+                trace!(
                     "MempoolNetworkSender.send_to peer {} msg {:?}",
-                    peer_id, msg
+                    peer_id,
+                    msg
                 );
                 // Since this is a direct-send, this will only error if the network
                 // module has unexpectedly crashed or shutdown.

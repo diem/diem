@@ -11,6 +11,8 @@ use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, HashValue, SigningKey,
 };
+use libra_types::block_info::BlockInfo;
+use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::LedgerInfoWithSignatures,
@@ -23,7 +25,7 @@ use network::{
     proto::GetChunkResponse,
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
-        STATE_SYNCHRONIZER_MSG_PROTOCOL,
+        STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
     },
     NetworkPublicKeys, ProtocolId,
 };
@@ -61,13 +63,8 @@ impl MockExecutorProxy {
 
     fn mock_ledger_info(peer_id: PeerId, version: u64) -> LedgerInfo {
         let ledger_info = TypesLedgerInfo::new(
-            version,
+            BlockInfo::new(0, 0, HashValue::zero(), HashValue::zero(), version, 0, None),
             HashValue::zero(),
-            HashValue::zero(),
-            HashValue::zero(),
-            0,
-            0,
-            None,
         );
         let mut signatures = BTreeMap::new();
         let private_key = Ed25519PrivateKey::genesis();
@@ -135,6 +132,10 @@ impl ExecutorProxyTrait for MockExecutorProxy {
     fn validate_ledger_info(&self, _target: &LedgerInfo) -> Result<()> {
         Ok(())
     }
+
+    fn get_epoch_proof(&self, _start_epoch: u64) -> Result<ValidatorChangeEventWithProof> {
+        unimplemented!("get epoch proof not supported for mock executor proxy");
+    }
 }
 
 struct SynchronizerEnv {
@@ -151,7 +152,9 @@ impl SynchronizerEnv {
 
         // setup network
         let addr: Multiaddr = "/memory/0".parse().unwrap();
-        let protocols = vec![ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL)];
+        let protocols = vec![ProtocolId::from_static(
+            STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
+        )];
 
         // Setup signing public keys.
         let mut rng = StdRng::from_seed(TEST_SEED);
@@ -252,15 +255,9 @@ impl SynchronizerEnv {
         Box::new(|resp| -> Result<GetChunkResponse> { Ok(resp) })
     }
 
-    fn sync_to(&self, peer_id: usize, version: u64) -> bool {
+    fn sync_to(&self, peer_id: usize, version: u64) {
         let target = MockExecutorProxy::mock_ledger_info(self.peers[1], version);
-        block_on(self.clients[peer_id].sync_to_deprecated(target)).unwrap()
-    }
-
-    fn sync_to_new_flow(&self, peer_id: usize, version: u64) -> bool {
-        let target = MockExecutorProxy::mock_ledger_info(self.peers[1], version);
-        let li = block_on(self.clients[peer_id].sync_to(target)).unwrap();
-        li.ledger_info().version() == version
+        block_on(self.clients[peer_id].sync_to(target)).unwrap()
     }
 
     fn commit(&self, peer_id: usize, version: u64) {
@@ -286,18 +283,10 @@ fn test_basic_catch_up() {
 
     // test small sequential syncs
     for version in 1..5 {
-        assert!(env.sync_to(0, version));
+        env.sync_to(0, version);
     }
     // test batch sync for multiple transactions
-    assert!(env.sync_to(0, 10));
-}
-
-#[test]
-fn test_basic_catch_up_new_flow() {
-    let env = SynchronizerEnv::new(SynchronizerEnv::default_handler(), RoleType::Validator);
-    for version in 1..5 {
-        assert!(env.sync_to_new_flow(0, version));
-    }
+    env.sync_to(0, 10);
 }
 
 #[test]
@@ -314,7 +303,7 @@ fn test_flaky_peer_sync() {
         }
     });
     let env = SynchronizerEnv::new(handler, RoleType::Validator);
-    assert!(env.sync_to(0, 1));
+    env.sync_to(0, 1);
 }
 
 #[test]

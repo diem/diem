@@ -3,13 +3,15 @@
 
 use crate::{
     block_data::{BlockData, BlockType},
-    block_info::BlockInfo,
     common::{Author, Round},
     quorum_cert::QuorumCert,
     vote_data::VoteData,
 };
 use failure::{ensure, format_err};
 use libra_crypto::hash::{CryptoHash, HashValue};
+use libra_types::block_info::BlockInfo;
+use libra_types::transaction::Version;
+use libra_types::validator_set::ValidatorSet;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
@@ -142,17 +144,9 @@ where
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
         // carrying information about version from the last LedgerInfo of previous epoch.
         let genesis_quorum_cert = QuorumCert::new(
-            VoteData::new(ancestor.clone(), ancestor),
+            VoteData::new(ancestor.clone(), ancestor.clone()),
             LedgerInfoWithSignatures::new(
-                LedgerInfo::new(
-                    ledger_info.version(),
-                    ledger_info.transaction_accumulator_hash(),
-                    HashValue::zero(),
-                    HashValue::zero(),
-                    ledger_info.epoch(),
-                    ledger_info.timestamp_usecs(),
-                    None,
-                ),
+                LedgerInfo::new(ancestor, HashValue::zero()),
                 BTreeMap::new(),
             ),
         );
@@ -244,7 +238,26 @@ where
             self.quorum_cert().certified_block().round() < self.round(),
             "Block has invalid round"
         );
+
+        ensure!(!self.quorum_cert().ends_epoch(), "Block after epoch ends");
         Ok(())
+    }
+
+    pub fn gen_block_info(
+        &self,
+        executed_state_id: HashValue,
+        version: Version,
+        next_validator_set: Option<ValidatorSet>,
+    ) -> BlockInfo {
+        BlockInfo::new(
+            self.epoch(),
+            self.round(),
+            self.id(),
+            executed_state_id,
+            version,
+            self.timestamp_usecs(),
+            next_validator_set,
+        )
     }
 }
 

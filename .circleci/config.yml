@@ -3,11 +3,11 @@ version: 2.1
 executors:
   build-executor:
     docker:
-      - image: circleci/rust:stretch
+      - image: circleci/rust:buster
     resource_class: 2xlarge
   audit-executor:
     docker:
-      - image: circleci/rust:stretch
+      - image: circleci/rust:buster
     resource_class: xlarge
   terraform-executor:
     docker:
@@ -15,6 +15,14 @@ executors:
     resource_class: small
 
 commands:
+  rust_setup:
+    description: Set rustc version
+    steps:
+      - run:
+          name: Set rustc version
+          command: |
+            rustup default stable
+            rustup update stable
   print_versions:
     description: Version Info
     steps:
@@ -36,15 +44,15 @@ commands:
       - run:
           name: Install Dependencies
           command: |
-            sudo sh -c 'echo "deb http://deb.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list'
             sudo apt-get update
-            sudo apt-get install -y protobuf-compiler/stretch-backports cmake curl
+            sudo apt-get install -y cmake curl
             sudo apt-get clean
             sudo rm -r /var/lib/apt/lists/*
             rustup component add clippy rustfmt
   build_setup:
     steps:
       - checkout
+      - rust_setup
       - print_versions
       - env_setup
       - install_deps
@@ -66,6 +74,7 @@ jobs:
       - run:
           name: Linting
           command: |
+            [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo x lint
             [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo xclippy --workspace --all-targets
             [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo fmt -- --check
       - run:
@@ -107,6 +116,16 @@ jobs:
           name: Validate Validator-Sets Configs
           command: ./scripts/circle_validate_configs.sh
       - build_teardown
+  validate-cluster-test-dockerfile:
+    description: Validate that committed docker files for cluster test are up to date
+    executor: build-executor
+    steps:
+      - build_setup
+      - run:
+          # generate dockerfile; diff config to existing one
+          name: Validate cluster-test dockerfiles
+          command: ./docker/cluster-test/generate.sh
+      - build_teardown
   audit:
     executor: audit-executor
     steps:
@@ -129,12 +148,48 @@ jobs:
           name: Terraform validate
           command: terraform validate
           working_directory: terraform/
+  build-docker:
+    machine:
+      image: ubuntu-1604:201903-01
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Check if the docker build job should run
+          command: .circleci/should_build_docker.sh
+      - run:
+          name: Get the list of updated docker files
+          command: |
+            echo 'export DOCKER_FILES=$(
+              for commit in $(git rev-list origin/master..HEAD) ; do
+                git diff-tree --no-commit-id --name-only -r "$commit" -- "*.Dockerfile";
+              done
+            )' >> $BASH_ENV
+      - run:
+          name: Build each of the updated docker files
+          command: |
+            # Use the dockerfile own build.sh script if it has one.
+            for docker_file in $DOCKER_FILES; do
+              echo "Checking $docker_file"
+              build_script=$(dirname $docker_file)/build.sh
+              if [ -f "$build_script" ]; then
+                $build_script
+              elif [ -f "$docker_file" ]; then
+                file_no_ext=$(basename $docker_file)
+                module=${file_no_ext%.Dockerfile}
+                docker build -f $docker_file --tag commit_verify_${CIRCLE_BUILD_NUM}_$module .
+              else
+                echo "$docker_file is renamed or removed in pull request."
+              fi
+            done
 
 workflows:
   commit-workflow:
     jobs:
       - build
+      - build-docker
       - validate-config
+      - validate-cluster-test-dockerfile
       - terraform
 
   scheduled-workflow:

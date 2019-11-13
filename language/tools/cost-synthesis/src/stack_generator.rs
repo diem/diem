@@ -116,9 +116,8 @@ where
     /// Cursor into the user string pool. Used for the generation of random user strings.
     user_string_index: TableIndex,
 
-    /// Cursor into the address pool. Used for the generation of random addresses.  We use this
-    /// since we need the addresses to be unique for e.g. CreateAccount, and we don't want a
-    /// mutable reference into the underlying `root_module`.
+    /// Cursor into the address pool. Used for the generation of random addresses.  We use this since we need the
+    /// addresses to be unique, and we don't want a mutable reference into the underlying `root_module`.
     address_pool_index: TableIndex,
 
     /// A reverse lookup table to find the struct definition for a struct handle. Needed for
@@ -130,6 +129,9 @@ where
     /// A reverse lookup table for each code module that allows us to resolve function handles to
     /// function definitions. Also lazily populated.
     function_handle_table: HashMap<ModuleId, HashMap<Identifier, FunctionDefinitionIndex>>,
+
+    /// The tables sizes that we have for address and string pools
+    table_size: u16,
 }
 
 impl<'alloc, 'txn> RandomStackGenerator<'alloc, 'txn>
@@ -157,8 +159,9 @@ where
             root_module,
             module_cache,
             iters,
-            user_string_index: iters,
-            address_pool_index: iters,
+            table_size: iters,
+            user_string_index: 0,
+            address_pool_index: 0,
             struct_handle_table: HashMap::new(),
             function_handle_table: HashMap::new(),
         }
@@ -185,16 +188,6 @@ where
             | Call(_, _) => true,
             CopyLoc(_) | MoveLoc(_) | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_)
             | ImmBorrowField(_) | MutBorrowField(_) => true,
-            _ => false,
-        }
-    }
-
-    // Certain operations are only valid if their values come from module-specific data. In
-    // particular, CreateLibraAccount. But, they may eventually be more of these as well.
-    fn points_to_module_data(&self) -> bool {
-        use Bytecode::*;
-        match self.op {
-            CreateAccount => true,
             _ => false,
         }
     }
@@ -232,35 +225,26 @@ where
     // the stack, or where the instructions semantics don't require having an address in the
     // address pool, we don't waste our pools and generate a random value.
     fn next_vm_string(&mut self, is_padding: bool) -> VMString {
-        if !self.points_to_module_data() || is_padding {
+        if is_padding {
             let len: usize = self.gen.gen_range(1, MAX_STRING_SIZE);
-            (0..len)
-                .map(|_| self.gen.gen::<char>())
-                .collect::<String>()
-                .into()
+            random_string(&mut self.gen, len).into()
         } else {
             let user_string = self
                 .root_module
                 .user_string_at(UserStringIndex::new(self.user_string_index));
-            self.user_string_index = self
-                .user_string_index
-                .checked_sub(1)
-                .expect("Exhausted strings in string pool");
+            self.user_string_index = (self.user_string_index + 1) % self.table_size;
             user_string.to_owned()
         }
     }
 
     fn next_addr(&mut self, is_padding: bool) -> AccountAddress {
-        if !self.points_to_module_data() || is_padding {
+        if is_padding {
             AccountAddress::new(self.gen.gen())
         } else {
             let address = self
                 .root_module
                 .address_at(AddressPoolIndex::new(self.address_pool_index));
-            self.address_pool_index = self
-                .address_pool_index
-                .checked_sub(1)
-                .expect("Exhausted account addresses in address pool");
+            self.address_pool_index = (self.address_pool_index + 1) % self.table_size;
             *address
         }
     }
@@ -418,8 +402,7 @@ where
         let module = self
             .module_cache
             .get_loaded_module(&module_id)
-            .expect("[Module Lookup] Runtime error while looking up module")
-            .expect("[Module Lookup] Unable to find module");
+            .expect("[Module Lookup] Runtime error while looking up module");
         let struct_def_idx = self
             .struct_handle_table
             .entry(module_id)
@@ -464,8 +447,7 @@ where
         let module = self
             .module_cache
             .get_loaded_module(&module_id)
-            .expect("[Module Lookup] Runtime error while looking up module")
-            .expect("[Module Lookup] Unable to find module");
+            .expect("[Module Lookup] Runtime error while looking up module");
         let function_def_idx = *self
             .function_handle_table
             .entry(module_id)

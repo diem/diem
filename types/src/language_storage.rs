@@ -7,7 +7,8 @@ use crate::{
     identifier::{IdentStr, Identifier},
 };
 use failure::Result;
-use libra_crypto::hash::{AccessPathHasher, CryptoHash, CryptoHasher, HashValue};
+use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
+use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -22,7 +23,9 @@ pub enum TypeTag {
     Struct(StructTag),
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
+#[derive(
+    Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord, CryptoHasher,
+)]
 pub struct StructTag {
     pub address: AccountAddress,
     pub module: Identifier,
@@ -56,7 +59,9 @@ impl ResourceKey {
 
 /// Represents the initial key into global storage where we first index by the address, and then
 /// the struct tag
-#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
+#[derive(
+    Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord, CryptoHasher,
+)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 pub struct ModuleId {
@@ -105,7 +110,7 @@ impl<'a> From<&'a ModuleId> for AccessPath {
 }
 
 impl CryptoHash for ModuleId {
-    type Hasher = AccessPathHasher;
+    type Hasher = ModuleIdHasher;
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
@@ -115,7 +120,7 @@ impl CryptoHash for ModuleId {
 }
 
 impl CryptoHash for StructTag {
-    type Hasher = AccessPathHasher;
+    type Hasher = StructTagHasher;
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();

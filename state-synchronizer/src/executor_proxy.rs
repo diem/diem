@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::LedgerInfo;
 use executor::Executor;
 use failure::prelude::*;
@@ -5,6 +8,7 @@ use futures::{channel::oneshot, Future, FutureExt};
 use grpcio::EnvBuilder;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
+use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
     transaction::TransactionListWithProof,
@@ -38,6 +42,8 @@ pub trait ExecutorProxyTrait: Sync + Send {
     ) -> Pin<Box<dyn Future<Output = Result<GetChunkResponse>> + Send>>;
 
     fn validate_ledger_info(&self, target: &LedgerInfoWithSignatures) -> Result<()>;
+
+    fn get_epoch_proof(&self, start_epoch: u64) -> Result<ValidatorChangeEventWithProof>;
 }
 
 pub(crate) struct ExecutorProxy {
@@ -83,8 +89,11 @@ impl ExecutorProxyTrait for ExecutorProxy {
         let client = Arc::clone(&self.storage_read_client);
         async move {
             let resp = client.get_startup_info_async().await?;
-            resp.map(|r| r.latest_version)
-                .ok_or_else(|| format_err!("failed to fetch startup info"))
+            resp.map(|r| {
+                r.synced_tree_state
+                    .map_or(r.ledger_info.version(), |s| s.version)
+            })
+            .ok_or_else(|| format_err!("failed to fetch startup info"))
         }
             .boxed()
     }
@@ -138,5 +147,19 @@ impl ExecutorProxyTrait for ExecutorProxy {
     fn validate_ledger_info(&self, target: &LedgerInfo) -> Result<()> {
         target.verify(&self.validator_verifier)?;
         Ok(())
+    }
+
+    fn get_epoch_proof(&self, start_epoch: u64) -> Result<ValidatorChangeEventWithProof> {
+        let mut ledger_info_per_epoch = self
+            .storage_read_client
+            .get_latest_ledger_infos_per_epoch(start_epoch)?;
+        // The latest ledger info may not carry the validator set.
+        match ledger_info_per_epoch.pop() {
+            Some(li) if li.ledger_info().next_validator_set().is_some() => {
+                ledger_info_per_epoch.push(li);
+            }
+            _ => (),
+        }
+        Ok(ValidatorChangeEventWithProof::new(ledger_info_per_epoch))
     }
 }

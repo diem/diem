@@ -18,12 +18,10 @@ use bincode::{deserialize, serialize};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::{Fail, Result, *};
 use libra_crypto::{
-    hash::{
-        CryptoHash, SparseMerkleInternalHasher, SparseMerkleLeafHasher,
-        SPARSE_MERKLE_PLACEHOLDER_HASH,
-    },
+    hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
+use libra_crypto_derive::CryptoHasher;
 use libra_nibble::Nibble;
 use libra_types::{
     account_state_blob::AccountStateBlob,
@@ -163,21 +161,10 @@ pub(crate) type Children = HashMap<Nibble, Child>;
 /// Though we choose the same internal node structure as that of Patricia Merkle tree, the root hash
 /// computation logic is similar to a 4-level sparse Merkle tree except for some customizations. See
 /// the `CryptoHash` trait implementation below for details.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, CryptoHasher)]
 pub struct InternalNode {
     // Up to 16 children.
     children: Children,
-}
-
-/// Represents an account.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct LeafNode {
-    // The hashed account address associated with this leaf node.
-    account_key: HashValue,
-    // The hash of the account state blob.
-    blob_hash: HashValue,
-    // The account blob associated with `account_key`.
-    blob: AccountStateBlob,
 }
 
 /// Computes the hash of internal node according to [`JellyfishTree`](crate::JellyfishTree)
@@ -227,8 +214,7 @@ pub struct LeafNode {
 /// Note: @ denotes placeholder hash.
 /// ```
 impl CryptoHash for InternalNode {
-    // Unused hasher.
-    type Hasher = SparseMerkleInternalHasher;
+    type Hasher = InternalNodeHasher;
 
     fn hash(&self) -> HashValue {
         self.merkle_hash(
@@ -236,53 +222,6 @@ impl CryptoHash for InternalNode {
             16, /* the number of leaves in the subtree of which we want the hash of root */
             self.generate_bitmaps(),
         )
-    }
-}
-
-/// Computes the hash of a [`LeafNode`].
-impl CryptoHash for LeafNode {
-    // Unused hasher.
-    type Hasher = SparseMerkleLeafHasher;
-
-    fn hash(&self) -> HashValue {
-        SparseMerkleLeafNode::new(self.account_key, self.blob_hash).hash()
-    }
-}
-
-/// The concrete node type of [`JellyfishMerkleTree`](crate::JellyfishMerkleTree).
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Node {
-    /// Represents `null`.
-    Null,
-    /// A wrapper of [`InternalNode`].
-    Internal(InternalNode),
-    /// A wrapper of [`LeafNode`].
-    Leaf(LeafNode),
-}
-
-#[repr(u8)]
-#[derive(FromPrimitive, ToPrimitive)]
-enum NodeTag {
-    Null = 0,
-    Internal = 1,
-    Leaf = 2,
-}
-
-impl From<InternalNode> for Node {
-    fn from(node: InternalNode) -> Self {
-        Node::Internal(node)
-    }
-}
-
-impl From<InternalNode> for Children {
-    fn from(node: InternalNode) -> Self {
-        node.children
-    }
-}
-
-impl From<LeafNode> for Node {
-    fn from(node: LeafNode) -> Self {
-        Node::Leaf(node)
     }
 }
 
@@ -431,7 +370,7 @@ impl InternalNode {
     ) -> HashValue {
         // Given a bit [start, 1 << nibble_height], return the value of that range.
         let (range_existence_bitmap, range_leaf_bitmap) =
-            InternalNode::range_bitmaps(start, width, (existence_bitmap, leaf_bitmap));
+            Self::range_bitmaps(start, width, (existence_bitmap, leaf_bitmap));
         if range_existence_bitmap == 0 {
             // No child under this subtree
             *SPARSE_MERKLE_PLACEHOLDER_HASH
@@ -506,11 +445,8 @@ impl InternalNode {
                 (existence_bitmap, leaf_bitmap),
             ));
 
-            let (range_existence_bitmap, range_leaf_bitmap) = InternalNode::range_bitmaps(
-                child_half_start,
-                width,
-                (existence_bitmap, leaf_bitmap),
-            );
+            let (range_existence_bitmap, range_leaf_bitmap) =
+                Self::range_bitmaps(child_half_start, width, (existence_bitmap, leaf_bitmap));
 
             if range_existence_bitmap == 0 {
                 // No child in this range.
@@ -545,6 +481,17 @@ impl InternalNode {
     }
 }
 
+/// Represents an account.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
+pub struct LeafNode {
+    // The hashed account address associated with this leaf node.
+    account_key: HashValue,
+    // The hash of the account state blob.
+    blob_hash: HashValue,
+    // The account blob associated with `account_key`.
+    blob: AccountStateBlob,
+}
+
 impl LeafNode {
     /// Creates a new leaf node.
     pub fn new(account_key: HashValue, blob: AccountStateBlob) -> Self {
@@ -569,6 +516,53 @@ impl LeafNode {
     /// Gets the associated blob itself.
     pub fn blob(&self) -> &AccountStateBlob {
         &self.blob
+    }
+}
+
+/// Computes the hash of a [`LeafNode`].
+impl CryptoHash for LeafNode {
+    // Unused hasher.
+    type Hasher = LeafNodeHasher;
+
+    fn hash(&self) -> HashValue {
+        SparseMerkleLeafNode::new(self.account_key, self.blob_hash).hash()
+    }
+}
+
+#[repr(u8)]
+#[derive(FromPrimitive, ToPrimitive)]
+enum NodeTag {
+    Null = 0,
+    Internal = 1,
+    Leaf = 2,
+}
+
+/// The concrete node type of [`JellyfishMerkleTree`](crate::JellyfishMerkleTree).
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Node {
+    /// Represents `null`.
+    Null,
+    /// A wrapper of [`InternalNode`].
+    Internal(InternalNode),
+    /// A wrapper of [`LeafNode`].
+    Leaf(LeafNode),
+}
+
+impl From<InternalNode> for Node {
+    fn from(node: InternalNode) -> Self {
+        Node::Internal(node)
+    }
+}
+
+impl From<InternalNode> for Children {
+    fn from(node: InternalNode) -> Self {
+        node.children
+    }
+}
+
+impl From<LeafNode> for Node {
+    fn from(node: LeafNode) -> Self {
+        Node::Leaf(node)
     }
 }
 

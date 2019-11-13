@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use bytecode_verifier::CodeUnitVerifier;
 use libra_types::vm_error::StatusCode;
 use vm::file_format::{self, Bytecode};

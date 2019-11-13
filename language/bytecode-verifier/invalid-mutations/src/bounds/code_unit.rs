@@ -379,7 +379,6 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                     | GetTxnMaxGasUnits
                     | GetGasRemaining
                     | GetTxnSenderAddress
-                    | CreateAccount
                     | GetTxnSequenceNumber
                     | GetTxnPublicKey
                     | IsOffchain
@@ -466,7 +465,6 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
         | GetTxnMaxGasUnits
         | GetGasRemaining
         | GetTxnSenderAddress
-        | CreateAccount
         | GetTxnSequenceNumber
         | GetTxnPublicKey
         | IsOffchain

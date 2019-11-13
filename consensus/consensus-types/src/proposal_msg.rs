@@ -64,14 +64,17 @@ impl<T: Payload> ProposalUncheckedSignatures<T> {
         if let Some(tc) = self.0.sync_info.highest_timeout_certificate() {
             tc.verify(validator).map_err(|e| format_err!("{:?}", e))?;
         }
-        // verify the QC signatures of highest_ledger_info
+        // verify the QC signatures of sync_info
         self.0
             .sync_info
-            .highest_ledger_info()
             .verify(validator)
             .map_err(|e| format_err!("{:?}", e))?;
         // return proposal
         Ok(self.0)
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.0.proposal.epoch()
     }
 }
 
@@ -98,6 +101,10 @@ impl<T: Payload> ProposalMsg<T> {
             self.proposal.round() > 0,
             "Proposal for {} has an incorrect round of 0",
             self.proposal,
+        );
+        ensure!(
+            self.proposal.epoch() == self.sync_info.epoch(),
+            "ProposalMsg has different epoch number from SyncInfo"
         );
         ensure!(
             self.proposal.parent_id()

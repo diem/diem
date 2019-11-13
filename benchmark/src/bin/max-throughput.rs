@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use benchmark::{
     bin_utils::{
         create_benchmarker_from_opt, linear_search_max_throughput, try_start_metrics_server,

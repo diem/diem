@@ -5,8 +5,9 @@ use crate::{
     common::{Author, Round},
     quorum_cert::QuorumCert,
 };
-use libra_crypto::hash::{BlockHasher, CryptoHash, CryptoHasher, HashValue};
-use mirai_annotations::assumed_postcondition;
+use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
+use libra_crypto_derive::CryptoHasher;
+use mirai_annotations::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
@@ -27,7 +28,7 @@ pub enum BlockType<T> {
     Genesis,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, CryptoHasher)]
 /// Block has the core data of a consensus block that should be persistent when necessary.
 /// Each block must know the id of its parent and keep the QuorurmCertificate to that parent.
 pub struct BlockData<T> {
@@ -126,6 +127,7 @@ where
     T: Default + Serialize,
 {
     pub fn new_genesis(timestamp_usecs: u64, quorum_cert: QuorumCert) -> Self {
+        assume!(quorum_cert.certified_block().epoch() < u64::max_value()); // unlikely to be false in this universe
         Self {
             epoch: quorum_cert.certified_block().epoch() + 1,
             round: 0,
@@ -141,6 +143,7 @@ where
         // The reason for artificially adding 1 usec is to support execution state synchronization,
         // which doesn't have any other way of determining the order of ledger infos rather than
         // comparing their timestamps.
+        assume!(quorum_cert.certified_block().timestamp_usecs() < u64::max_value()); // unlikely to be false in this universe
         let timestamp_usecs = quorum_cert.certified_block().timestamp_usecs() + 1;
 
         Self {
@@ -173,7 +176,7 @@ impl<T> CryptoHash for BlockData<T>
 where
     T: Serialize,
 {
-    type Hasher = BlockHasher;
+    type Hasher = BlockDataHasher;
 
     fn hash(&self) -> HashValue {
         let bytes = lcs::to_bytes(self).expect("BlockData serialization failed");

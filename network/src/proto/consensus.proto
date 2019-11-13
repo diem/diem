@@ -5,7 +5,7 @@ syntax = "proto3";
 
 package consensus;
 
-import "ledger_info.proto";
+import "validator_change.proto";
 
 message ConsensusMsg {
   oneof message {
@@ -14,8 +14,9 @@ message ConsensusMsg {
     RequestBlock request_block = 3;
     RespondBlock respond_block = 4;
     SyncInfo sync_info = 5;
-    types.LedgerInfoWithSignatures ledger_info = 6;
-    Block new_block = 7;
+    types.ValidatorChangeEventWithProof epoch_change = 6;
+    RequestEpoch request_epoch = 7;
+    Block new_block = 8;
   }
 }
 
@@ -44,6 +45,10 @@ message RequestBlock {
 }
 
 message RespondBlock {
+  bytes bytes = 1;
+}
+
+message RequestEpoch {
   bytes bytes = 1;
 }
 

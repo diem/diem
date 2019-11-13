@@ -1,0 +1,32 @@
+error: 
+
+   ┌── tests/move_check/expansion/unpack_assign_other_expr.move:6:11 ───
+   │
+ 6 │         S ( f ) = S { f: 0 };
+   │           ^^^^^ Invalid fields for deconstructing assignment. Expected: named arguments
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/unpack_assign_other_expr.move:9:11 ───
+   │
+ 9 │         S f = S { f: 0 };
+   │           ^ Invalid fields for deconstructing assignment. Expected: named arguments
+   │
+
+error: 
+
+    ┌── tests/move_check/expansion/unpack_assign_other_expr.move:11:11 ───
+    │
+ 11 │         G () = G {};
+    │           ^^ Invalid fields for deconstructing assignment. Expected: named arguments
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/unpack_assign_other_expr.move:12:11 ───
+    │
+ 12 │         G {{}} = G{};
+    │           ^^^^ Invalid fields for deconstructing assignment. Expected: named arguments
+    │
+

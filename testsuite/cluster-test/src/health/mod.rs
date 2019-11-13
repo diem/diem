@@ -1,11 +1,12 @@
-mod aws_log_tail;
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 mod commit_check;
 mod debug_interface_log_tail;
 mod liveness_check;
 mod log_tail;
 
 use crate::{cluster::Cluster, util::unix_timestamp_now};
-pub use aws_log_tail::AwsLogThread;
 pub use commit_check::CommitHistoryHealthCheck;
 pub use debug_interface_log_tail::DebugPortLogThread;
 use failure::prelude::*;

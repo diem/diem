@@ -56,6 +56,9 @@ type ThresholdBLSPrivateKey =
 #[derive(Serialize, Deserialize, Deref, SilentDisplay, SilentDebug)]
 pub struct BLS12381PrivateKey(ThresholdBLSPrivateKey);
 
+#[cfg(feature = "assert-private-keys-not-cloneable")]
+static_assertions::assert_not_impl_any!(BLS12381PrivateKey: Clone);
+
 /// A BLS12-381 public key.
 #[derive(Clone, Hash, Serialize, Deserialize, Deref, Debug, PartialEq, Eq)]
 pub struct BLS12381PublicKey(threshold_crypto::PublicKey);

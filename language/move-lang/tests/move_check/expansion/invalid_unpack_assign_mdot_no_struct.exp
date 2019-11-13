@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/expansion/invalid_unpack_assign_mdot_no_struct.move:3:9 ───
+   │
+ 3 │         M.f {} = 0
+   │         ^^^ Invalid type name. Expected: a module identifier and struct name
+   │
+

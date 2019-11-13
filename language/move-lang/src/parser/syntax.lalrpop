@@ -1,0 +1,586 @@
+use std::str::FromStr;
+use codespan::{ByteIndex, Span};
+use lalrpop_util::ParseError;
+
+use crate::shared::*;
+use crate::parser::ast::*;
+
+grammar(file: &'static str);
+
+U64: u64 = <s:r"[0-9]+"> => u64::from_str(s).unwrap();
+Ident: String = <s:r"[a-z_][a-zA-Z0-9_]*"> => s.to_string();
+
+MIdent: String = <s:r"[A-Z][a-zA-Z0-9_]*"> => s.to_string();
+Name: Name = Sp<Ident>;
+MName: Name = Sp<MIdent>;
+NameBeginArgs: Name = {
+    <s: Sp<r"[a-z_][a-zA-Z0-9_]*<">> => {
+        let sp!(loc, s) = s;
+        let mut s = s.to_string();
+        assert_eq!(s.pop(), Some('<'));
+        sp(loc, s)
+    }
+}
+MNameBeginArgs: Name = {
+    <s: Sp<r"[A-Z][a-zA-Z0-9_]*<">> => {
+        let sp!(loc, s) = s;
+        let mut s = s.to_string();
+        assert_eq!(s.pop(), Some('<'));
+        sp(loc, s)
+    }
+}
+
+Address: Address = {
+    < s: r"0[xX][0-9a-fA-F]+" > =>? {
+        Address::parse_str(s).map_err(|msg| {
+            let error: &'static str = Box::leak(Box::new(msg));
+            ParseError::User { error }
+        })
+    },
+};
+
+Sp<Rule>: Spanned<Rule> =
+    <l: @L> <rule: Rule> <r: @R> =>
+    Spanned{loc: Loc::new(file, Span::new(ByteIndex(l as u32), ByteIndex(r as u32))), value: rule};
+
+Comma<T>: Vec<T> = {
+    <v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            let mut v = v;
+            v.push(e);
+            v
+        }
+    }
+};
+LValueList<T>: Vec<T> = {
+    <v: (<T> ",")+> <last: T> => {
+        let mut v = v;
+        v.push(last);
+        v
+    },
+};
+
+Var: Var = {
+    <n:Name> => Var(n),
+};
+
+Field: Field = {
+    <n:Name> => Field(n),
+};
+
+ExpFieldArg: Exp = {
+    ":" <e: Exp> => e,
+}
+ExpField: (Field, Exp) = {
+    <f: Field> <arg_opt: ExpFieldArg?> => {
+        let arg = match arg_opt {
+            None => sp(f.loc(), Exp_::Name(f.0.clone())),
+            Some(arg) => arg,
+        };
+        (f, arg)
+    },
+}
+ExpFields: Vec<(Field, Exp)> = Comma<ExpField>;
+
+BindFieldArg: Bind = {
+    ":" <b: Bind> => b,
+}
+BindField: (Field, Bind) = {
+    <f: Field> <arg_opt: BindFieldArg?> => {
+        let arg = match arg_opt {
+            None => {
+                let v = Var(f.0.clone());
+                sp(v.loc(), Bind_::Var(v))
+            }
+            Some(arg) => arg,
+        };
+        (f, arg)
+    },
+}
+BindFields = Comma<BindField>;
+Bind_ : Bind_ = {
+    <v: Var> => Bind_::Var(v),
+    <n: TypeNameBeginArgs> <ty_args_opt: BaseTypes?> ">" "{" <args: BindFields> "}" => {
+        let ty_args = ty_args_opt.unwrap_or(vec![]);
+        Bind_::Unpack(n, Some(ty_args), args)
+    },
+    <n: TypeName> "{" <args: BindFields> "}" => {
+        Bind_::Unpack(n, None, args)
+    },
+};
+Bind = Sp<Bind_>;
+BindList_ : Vec<Bind> = {
+    "()" => vec![],
+    <Bind> => vec![<>],
+    "(" <LValueList<Bind>> ")" => <>,
+};
+BindList = Sp<BindList_>;
+
+Value_: Value_ = {
+    Address => Value_::Address(<>),
+    "true" => Value_::Bool(true),
+    "false" => Value_::Bool(false),
+    <i: U64> => Value_::U64(i),
+}
+Value: Value = Sp<Value_>;
+
+SequenceItem_ : SequenceItem_ = {
+    <e: Exp> => SequenceItem_::Seq(Box::new(e)),
+    "let" <b: BindList> <ty_opt: TypeAnnot?> =>
+        SequenceItem_::Declare(b, ty_opt),
+    "let" <b: BindList> <ty_opt: TypeAnnot?> "=" <e: Exp> =>
+        SequenceItem_::Bind(b, ty_opt, Box::new(e)),
+};
+SequenceItem : SequenceItem = Sp<SequenceItem_>;
+Sequence: Sequence = {
+    <seq_vec: (<SequenceItem> ";")*> <eopt:Exp?> => (seq_vec, Box::new(eopt)),
+};
+Block: Sequence = {
+    "{" <seq: Sequence> "}" => seq,
+};
+
+Term_ : Exp_ = {
+    "move" <v: Var> => Exp_::Move(v),
+    "copy" <v: Var> => Exp_::Copy(v),
+    "break" => Exp_::Break,
+    "continue" => Exp_::Continue,
+    <Name> => Exp_::Name(<>),
+    <MName> => Exp_::MName(<>),
+    <Value> => Exp_::Value(<>),
+    <n: NameBeginArgs> <ty_args_opt: BaseTypes?> ">" => {
+        let ty_args = ty_args_opt.unwrap_or(vec![]);
+        Exp_::NameTypeArgs(n, ty_args)
+    },
+    <n: MNameBeginArgs> <ty_args_opt: BaseTypes?> ">" => {
+        let ty_args = ty_args_opt.unwrap_or(vec![]);
+        Exp_::MNameTypeArgs(n, ty_args)
+    },
+    "()" => Exp_::Unit,
+    "(" <es: Comma<Exp>> ")" => {
+        match es.len() {
+            0 => Exp_::Unit,
+            _ => Exp_::ExpList(es),
+        }
+    },
+    "(" <e:Exp> <ty: TypeAnnot> ")" => Exp_::Annotate(Box::new(e), ty),
+    "{" "}" => Exp_::Block((vec![], Box::new(None))),
+    "{" <e:Exp> "}" => Exp_::Block((vec![], Box::new(Some(e)))),
+    "{" <seq: (<SequenceItem> ";")+> <eopt:Exp?> "}" => Exp_::Block((seq, Box::new(eopt))),
+    "{" <f: Field> <e: ExpFieldArg> "}" => Exp_::Fields(vec![(f, e)]),
+    "{" <f: Field> <eopt: ExpFieldArg?> "," <fs: ExpFields> "}" => {
+        let mut fs = fs;
+        let arg = match eopt {
+            None => sp(f.loc(), Exp_::Name(f.0.clone())),
+            Some(arg) => arg,
+        };
+        fs.insert(0, (f, arg));
+        Exp_::Fields(fs)
+    }
+}
+Term = Sp<Term_>;
+
+Exp_ = CtrlExp_;
+Exp = Sp<Exp_>;
+
+CtrlExp_ : Exp_ = {
+    "if" "(" <eb: Exp> ")" <et: AssignExp> "else" <ef: AssignExp> =>
+        Exp_::IfElse(Box::new(eb), Box::new(et), Some(Box::new(ef))),
+    "if" "(" <eb: Exp> ")" <et: AssignExp> =>
+        Exp_::IfElse(Box::new(eb), Box::new(et), None),
+    "while" "(" <eb: Exp> ")" <eloop: AssignExp> => Exp_::While(Box::new(eb), Box::new(eloop)),
+    "loop" <eloop: AssignExp> => Exp_::Loop(Box::new(eloop)),
+    AssignExp_ => <>,
+};
+CtrlExp = Sp<CtrlExp_>;
+
+AssignExp_ : Exp_ = {
+    "return" <e: AssignExp>  => Exp_::Return(Box::new(e)),
+    "abort" <e: AssignExp>  => Exp_::Abort(Box::new(e)),
+    <a: UnaryExp> "=" <rhs: AssignExp> => {
+        Exp_::Assign(Box::new(a), Box::new(rhs))
+    },
+    BinopExp_ => <>
+}
+AssignExp = Sp<AssignExp_>;
+
+Tier<Op, NextTier>: Exp_ = {
+    <e1: Sp<Tier<Op,NextTier>>> <o: Sp<Op>> <e2: Sp<NextTier>> => {
+        Exp_::BinopExp(Box::new(e1), o, Box::new(e2))
+    },
+    NextTier
+};
+
+BinopExp_ = Tier<CmpOp, OrExp>;
+BinopExp = Sp<BinopExp_>;
+
+CmpOp: BinOp_ = {
+    "==" => BinOp_::Eq,
+    "!=" => BinOp_::Neq,
+    "<" => BinOp_::Lt,
+    ">" => BinOp_::Gt,
+    "<=" => BinOp_::Le,
+    ">=" => BinOp_::Ge,
+}
+
+OrExp = Tier<OrOp, AndExp>;
+
+OrOp: BinOp_ = {
+    "||" => BinOp_::Or,
+}
+
+AndExp = Tier<AndOp, XorExp>;
+
+AndOp: BinOp_ = {
+    "&&" => BinOp_::And,
+}
+
+XorExp = Tier<XorOp, BinOrExp>;
+
+XorOp: BinOp_ = {
+    "^" => BinOp_::Xor,
+}
+
+BinOrExp = Tier<BinOrOp, BinAndExp>;
+
+BinOrOp: BinOp_ = {
+    "|" => BinOp_::BitOr,
+}
+
+BinAndExp = Tier<BinAndOp, AddSubExp>;
+
+BinAndOp: BinOp_ = {
+    "&" => BinOp_::BitAnd,
+}
+
+AddSubExp = Tier<AddSubOp, FactorExp>;
+
+AddSubOp: BinOp_ = {
+    "+" => BinOp_::Add,
+    "-" => BinOp_::Sub,
+}
+
+FactorExp = Tier<FactorOp, UnaryExp_>;
+
+FactorOp: BinOp_ = {
+    "*" => BinOp_::Mul,
+    "/" => BinOp_::Div,
+    "%" => BinOp_::Mod,
+}
+
+UnaryOp_ : UnaryOp_ = {
+    "!" => UnaryOp_::Not,
+    "-" => UnaryOp_::Neg,
+};
+UnaryOp = Sp<UnaryOp_>;
+
+UnaryExp_ : Exp_ = {
+    <o: UnaryOp> <e: UnaryExp> => {
+        Exp_::UnaryExp(o, Box::new(e))
+    },
+    "&mut " <e: UnaryExp> => Exp_::Borrow(true, Box::new(e)),
+    "&" <e: UnaryExp> => Exp_::Borrow(false, Box::new(e)),
+    "*" <e: UnaryExp> => Exp_::Dereference(Box::new(e)),
+    DotApply_
+}
+UnaryExp = Sp<UnaryExp_>;
+
+DotApply_: Exp_ = {
+    <lhs: DotApply> "." <n: Name> => Exp_::Dot(Box::new(lhs), n, None),
+    <lhs: DotApply> "." <n: NameBeginArgs> <tys_opt: BaseTypes?> ">" => {
+        Exp_::Dot(Box::new(lhs), n, Some(tys_opt.unwrap_or(vec![])))
+    },
+    <lhs: DotApply> "." <n: MName> => Exp_::MDot(Box::new(lhs), n, None),
+    <lhs: DotApply> "." <n: MNameBeginArgs> <tys_opt: BaseTypes?> ">" => {
+        Exp_::MDot(Box::new(lhs), n, Some(tys_opt.unwrap_or(vec![])))
+    },
+    <lhs: DotApply> <rhs: Term> => Exp_::Apply(Box::new(lhs), Box::new(rhs)),
+    "." <lhs: Term> <rhs: Term> => Exp_::GlobalApply(Box::new(lhs), Box::new(rhs)),
+    Term_ => <>,
+}
+DotApply =  Sp<DotApply_>;
+
+ModuleName: ModuleName = {
+    <n: MName> => ModuleName(n),
+}
+
+ModuleIdent_: ModuleIdent_ = {
+    <address: Address> "." <name: ModuleName> => ModuleIdent_ {address, name},
+}
+
+ModuleIdent : ModuleIdent = {
+    <Sp<ModuleIdent_>> => ModuleIdent(<>),
+}
+
+StructName: StructName = {
+    <MName> => StructName(<>),
+}
+
+TypeName_: TypeName_ = {
+    <n: Name> => TypeName_::Name(n),
+    <n: MName> => TypeName_::Name(n),
+    <m: ModuleName> "." <n: StructName> => TypeName_::ModuleType(m, n),
+    <m: ModuleIdent> "." <n: StructName> => TypeName_::QualifiedModuleType(m, n),
+}
+TypeName: TypeName = Sp<TypeName_>;
+
+TypeNameBeginArgs_: TypeName_ = {
+    <n: NameBeginArgs> => TypeName_::Name(n),
+    <n: MNameBeginArgs> => TypeName_::Name(n),
+    <m: ModuleName> "." <n: MNameBeginArgs> => TypeName_::ModuleType(m, StructName(n)),
+    <m: ModuleIdent> "." <n: MNameBeginArgs> => TypeName_::QualifiedModuleType(m, StructName(n)),
+}
+TypeNameBeginArgs: TypeName = Sp<TypeNameBeginArgs_>;
+
+
+BaseType_ : SingleType_ = {
+    <tn: TypeNameBeginArgs> <tys: BaseTypes?> ">" =>
+        SingleType_::Apply(tn, tys.unwrap_or(vec![])),
+    <tn: TypeName> => SingleType_::Apply(tn, vec![]),
+}
+BaseType: SingleType = Sp<BaseType_>;
+BaseTypes: Vec<SingleType> = {
+     <bts: (<BaseType> ",")*> <last: BaseType> => {
+         let mut bts = bts;
+         bts.push(last);
+         bts
+     }
+};
+
+SingleType_: SingleType_ = {
+    <BaseType_> => <>,
+    "&"<b: BaseType> => SingleType_::Ref(false, Box::new(b)),
+    "&mut "<b: BaseType> => SingleType_::Ref(true, Box::new(b)),
+}
+SingleType: SingleType = Sp<SingleType_>;
+TwoPlusSingleTypes: Vec<SingleType> = {
+     <sts: (<SingleType> ",")+> <last: SingleType> => {
+         let mut sts = sts;
+         sts.push(last);
+         sts
+     }
+};
+
+TypeArguments: Vec<SingleType> = {
+    "<>" => vec![],
+    "<" <BaseTypes> ">" => <>,
+}
+
+Type_: Type_ = {
+    <t: SingleType> => Type_::Single(t),
+    "()" => Type_::Unit,
+    "(" <ts: TwoPlusSingleTypes> ")" => Type_::Multiple(ts),
+}
+Type: Type = Sp<Type_>;
+
+Copyable: () = {
+    "copyable" => (),
+}
+
+Resource: () = {
+    "resource" => (),
+}
+
+Constraint: Kind = {
+    ":" <c: Sp<Copyable>> => sp(c.loc, Kind_::Affine),
+    ":" <c: Sp<Resource>> => sp(c.loc, Kind_::Resource),
+}
+
+TypeParameter: (Name, Kind) = {
+    <n: MName> <constraint: Constraint?> => {
+        let kind = constraint.unwrap_or_else(||
+            sp(n.loc, Kind_::Unknown)
+        );
+        (n, kind)
+    }
+}
+
+TypeParameters: Vec<(Name, Kind)> = {
+    <Comma<TypeParameter>> ">" => <>,
+}
+
+Parameter : (Var, SingleType) = {
+    <v: Var> ":" <t: SingleType> ","? => (v, t)
+}
+Parameters : Vec<(Var, SingleType)> = {
+    "()" => vec![],
+    "(" <Parameter*> ")" => <>,
+}
+
+NativeTag: () = {
+  "native" => ()
+}
+
+Public: () = {
+  "public" => ()
+}
+
+TypeAnnot: Type = {
+    ":" <t: Type> => t,
+}
+
+AcquireList: Vec<SingleType> = {
+    "acquires" <b: BaseType> <bs: ("," <BaseType>)*> => {
+        let mut bs = bs;
+        bs.insert(0, b);
+        bs
+    }
+}
+
+FunctionDecl : Function = {
+  <f: NativeFunctionDecl> => f,
+  <f: MoveFunctionDecl> => f,
+}
+
+FunctionName: FunctionName = {
+    <Name> => FunctionName(<>),
+}
+
+FunctionDefName: (FunctionName, Vec<(Name, Kind)>) = {
+    <FunctionName> => (<>, vec![]),
+    <s: NameBeginArgs> <tys: TypeParameters> => (FunctionName(s), tys),
+}
+
+NativeFunctionDecl: Function = {
+    <nat: Sp<NativeTag>>
+    <p: Sp<Public>?>
+    <name_tys: FunctionDefName>
+    <parameters: Parameters>
+    <ret: TypeAnnot?>
+    <acquires: AcquireList?>
+    <semi: Sp<";">> => {
+        let visibility = match p {
+            Some(sp!(loc, _)) => FunctionVisibility::Public(loc),
+            None => FunctionVisibility::Internal
+        };
+        let (name, type_parameters) = name_tys;
+        let return_type = match ret {
+            Some(t) => t,
+            None => sp(name.loc(), Type_::Unit),
+        };
+        let signature = FunctionSignature {
+            type_parameters,
+            parameters,
+            return_type
+        };
+        let acquires = acquires.unwrap_or_else(Vec::new);
+        let body = sp(nat.loc, FunctionBody_::Native);
+        Function { visibility, signature, acquires, name, body }
+    }
+}
+
+MoveFunctionDecl: Function = {
+    <p: Sp<Public>?>
+    <name_tys: FunctionDefName>
+    <parameters: Parameters>
+    <ret: TypeAnnot?>
+    <acquires: AcquireList?>
+    <block: Sp<Block>> => {
+        let visibility = match p {
+            Some(sp!(loc, _)) => FunctionVisibility::Public(loc),
+            None => FunctionVisibility::Internal
+        };
+        let (name, type_parameters) = name_tys;
+        let return_type = match ret {
+            Some(t) => t,
+            None => sp(name.loc(), Type_::Unit),
+        };
+        let signature = FunctionSignature {
+            type_parameters,
+            parameters,
+            return_type
+        };
+        let acquires = acquires.unwrap_or_else(Vec::new);
+        let body = sp(block.loc, FunctionBody_::Defined(block.value));
+        Function { visibility, signature, acquires, name, body }
+    }
+}
+
+FieldDecl : (Field, SingleType) = {
+    <f: Field> ":" <t: SingleType> ","? => (f, t)
+}
+
+ResourceMod_: () = {
+    "resource" => ()
+}
+
+ResourceMod: Loc = {
+    <s: Sp<ResourceMod_>> => s.loc
+}
+
+FieldAnnot: (Field, SingleType) = {
+    <f: Field> ":" <st: SingleType> => (f, st)
+}
+
+StructDefName: (StructName, Vec<(Name, Kind)>) = {
+    <StructName> => (<>, vec![]),
+    <s: MNameBeginArgs> <tys: TypeParameters> => (StructName(s), tys),
+}
+
+StructDefinition: StructDefinition = {
+    <resource_opt: ResourceMod?>
+    <s: Sp<"struct">>
+    <sn_ty: StructDefName>
+    "{"
+    <fields: Comma<FieldAnnot>>
+    "}" => {
+        let (name, type_parameters) = sn_ty;
+        let fields = StructFields::Defined(fields);
+        StructDefinition { resource_opt, name, type_parameters, fields }
+    },
+    <native: Sp<"native">>
+    <resource_opt: ResourceMod?>
+    <s: Sp<"struct">>
+    <sn_ty: StructDefName>
+    ";" => {
+        let (name, type_parameters) = sn_ty;
+        let fields = StructFields::Native(native.loc);
+        StructDefinition { resource_opt, name, type_parameters, fields }
+    },
+}
+
+UseAlias: ModuleName = {
+    "as" <alias: ModuleName> => alias,
+}
+
+UseDecl: (ModuleIdent, Option<ModuleName>) = {
+    "use" <ident: ModuleIdent> <alias: UseAlias?> ";" => (ident, alias),
+}
+
+Module : ModuleDefinition = {
+    "module" <name: ModuleName> "{"
+        <uses: (UseDecl)*>
+        <structs: (StructDefinition)*>
+        <functions: (FunctionDecl)*>
+    "}" => ModuleDefinition {
+        uses,
+        name,
+        structs,
+        functions
+    },
+}
+
+Addr: () = {
+    <addr_name: Name> =>? {
+        if addr_name.value == "address" {
+            Ok(())
+        } else {
+            let msg =
+                format!("Invalid address directive. Expected 'address' got '{}'", addr_name.value);
+            let error: &'static str = Box::leak(Box::new(msg));
+            Err(ParseError::User { error })
+        }
+    }
+}
+
+AddressDirective: AddressDirective = {
+    Addr <addr: Sp<Address>> ":" => AddressDirective::Specified(addr.loc, addr.value),
+}
+
+pub File: FileDefinition = {
+    <addr_directive_opt: AddressDirective?> <modules: (Module)*> => {
+        let addr_directive = addr_directive_opt.unwrap_or(AddressDirective::Sender);
+        FileDefinition::Modules(addr_directive, modules)
+    },
+    <uses: (UseDecl)*> <function: MoveFunctionDecl> => FileDefinition::Main(Main{ uses, function }),
+}

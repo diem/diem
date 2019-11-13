@@ -1,0 +1,16 @@
+error: 
+
+   ┌── tests/move_check/expansion/pack_no_fields_single_block_expr.move:4:19 ───
+   │
+ 4 │         let s = S { false };
+   │                   ^^^^^^^^^ Invalid fields for struct construction. Expected: named arguments
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/pack_no_fields_single_block_expr.move:5:19 ───
+   │
+ 5 │         let s = S { 0 };
+   │                   ^^^^^ Invalid fields for struct construction. Expected: named arguments
+   │
+

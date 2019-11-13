@@ -25,16 +25,16 @@ use tokio::net::tcp::{TcpListener, TcpStream};
 #[derive(Debug, Clone, Default)]
 pub struct TcpTransport {
     /// Size of the recv buffer size to set for opened sockets, or `None` to keep default.
-    recv_buffer_size: Option<usize>,
+    pub recv_buffer_size: Option<usize>,
     /// Size of the send buffer size to set for opened sockets, or `None` to keep default.
-    send_buffer_size: Option<usize>,
+    pub send_buffer_size: Option<usize>,
     /// TTL to set for opened sockets, or `None` to keep default.
-    ttl: Option<u32>,
+    pub ttl: Option<u32>,
     /// Keep alive duration to set for opened sockets, or `None` to keep default.
     #[allow(clippy::option_option)]
-    keepalive: Option<Option<Duration>>,
+    pub keepalive: Option<Option<Duration>>,
     /// `TCP_NODELAY` to set for opened sockets, or `None` to keep default.
-    nodelay: Option<bool>,
+    pub nodelay: Option<bool>,
 }
 
 impl TcpTransport {

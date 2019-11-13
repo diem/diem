@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{block::Block, common::Round};
-use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue, TimeoutHasher};
+use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
+use libra_crypto_derive::CryptoHasher;
 use libra_types::crypto_proxies::{Signature, ValidatorSigner};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 /// This structure contains all the information necessary to construct a signature
 /// on the equivalent of a timeout message
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, CryptoHasher)]
 pub struct Timeout {
     /// Epoch number corresponds to the set of validators that are active for this round.
     epoch: u64,

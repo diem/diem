@@ -5,7 +5,7 @@ use crate::chained_bft::liveness::{
     multi_proposer_election::{self, MultiProposer},
     proposer_election::ProposerElection,
 };
-use consensus_types::{block::Block, quorum_cert::QuorumCert};
+use consensus_types::{block::block_test_utils::certificate_for_genesis, block::Block};
 use libra_crypto::ed25519::*;
 use libra_types::validator_signer::ValidatorSigner;
 
@@ -19,11 +19,12 @@ fn test_multi_proposer() {
         signers.push(signer);
     }
     let mut pe: Box<dyn ProposerElection<u32>> = Box::new(MultiProposer::new(proposers.clone(), 2));
-    let round = 1;
-    let first_hash = multi_proposer_election::hash(round);
-    let primary_idx = (first_hash % 8) as usize;
-    let second_hash = multi_proposer_election::hash(first_hash);
-    let secondary_idx = (second_hash % 7) as usize; // assuming no collisions in this case
+    let round = 1u64;
+    let mut state = round.to_le_bytes().to_vec();
+    let primary_idx = multi_proposer_election::next(&mut state);
+    let primary_idx = (primary_idx % 8) as usize;
+    let secondary_idx = multi_proposer_election::next(&mut state);
+    let secondary_idx = (secondary_idx % 7) as usize; // assuming no collisions in this case
 
     let primary_proposer = proposers[primary_idx];
     let secondary_proposer = proposers[secondary_idx];
@@ -46,13 +47,8 @@ fn test_multi_proposer() {
     }
     assert_eq!(pe.is_valid_proposer(proposers[another_idx], round), None);
 
-    let good_proposal = Block::new_proposal(
-        1,
-        1,
-        1,
-        QuorumCert::certificate_for_genesis(),
-        &signers[primary_idx],
-    );
+    let good_proposal =
+        Block::new_proposal(1, 1, 1, certificate_for_genesis(), &signers[primary_idx]);
     assert_eq!(pe.take_backup_proposal(1), None);
     assert_eq!(
         pe.process_proposal(good_proposal.clone()),
@@ -60,13 +56,8 @@ fn test_multi_proposer() {
     );
     assert_eq!(pe.take_backup_proposal(1), None);
 
-    let secondary_proposal = Block::new_proposal(
-        1,
-        1,
-        1,
-        QuorumCert::certificate_for_genesis(),
-        &signers[secondary_idx],
-    );
+    let secondary_proposal =
+        Block::new_proposal(1, 1, 1, certificate_for_genesis(), &signers[secondary_idx]);
     assert_eq!(pe.process_proposal(secondary_proposal.clone()), None);
     assert_eq!(pe.take_backup_proposal(2), None);
     assert_eq!(pe.take_backup_proposal(1), Some(secondary_proposal));
@@ -97,8 +88,9 @@ fn test_multi_proposer_hash() {
     // Verify that the hash distributes primary proposers in a "reasonable" fashion
     let mut counts = vec![0; 10];
     for round in 0..10000 {
-        let idx = (multi_proposer_election::hash(round) % counts.len() as u64) as usize;
-        counts[idx] += 1;
+        let mut state = (round as u64).to_le_bytes().to_vec();
+        let idx = multi_proposer_election::next(&mut state) % (counts.len() as u64);
+        counts[idx as usize] += 1;
     }
     for c in counts {
         assert!(c > 900);

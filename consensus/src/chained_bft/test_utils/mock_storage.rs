@@ -13,7 +13,6 @@ use failure::Result;
 use libra_config::config::{NodeConfig, NodeConfigHelpers};
 use libra_crypto::HashValue;
 use libra_types::ledger_info::LedgerInfo;
-use safety_rules::ConsensusState;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -23,7 +22,6 @@ pub struct MockSharedStorage<T> {
     // Safety state
     pub block: Mutex<HashMap<HashValue, Block<T>>>,
     pub qc: Mutex<HashMap<HashValue, QuorumCert>>,
-    pub state: Mutex<ConsensusState>,
     pub last_vote: Mutex<Option<Vote>>,
 
     // Liveness state
@@ -41,12 +39,7 @@ impl<T: Payload> MockStorage<T> {
     pub fn new(shared_storage: Arc<MockSharedStorage<T>>) -> Self {
         MockStorage {
             shared_storage,
-            storage_ledger: Mutex::new(
-                QuorumCert::certificate_for_genesis()
-                    .ledger_info()
-                    .ledger_info()
-                    .clone(),
-            ),
+            storage_ledger: Mutex::new(LedgerInfo::genesis()),
         }
     }
 
@@ -71,7 +64,6 @@ impl<T: Payload> MockStorage<T> {
             .collect();
         blocks.sort_by_key(Block::round);
         RecoveryData::new(
-            self.shared_storage.state.lock().unwrap().clone(),
             self.shared_storage.last_vote.lock().unwrap().clone(),
             blocks,
             quorum_certs,
@@ -153,8 +145,7 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
         Ok(())
     }
 
-    fn save_consensus_state(&self, state: ConsensusState, last_vote: &Vote) -> Result<()> {
-        *self.shared_storage.state.lock().unwrap() = state;
+    fn save_state(&self, last_vote: &Vote) -> Result<()> {
         self.shared_storage
             .last_vote
             .lock()
@@ -167,19 +158,11 @@ impl<T: Payload> PersistentStorage<T> for MockStorage<T> {
         let shared_storage = Arc::new(MockSharedStorage {
             block: Mutex::new(HashMap::new()),
             qc: Mutex::new(HashMap::new()),
-            state: Mutex::new(ConsensusState::default()),
             last_vote: Mutex::new(None),
             highest_timeout_certificate: Mutex::new(None),
         });
         let storage = MockStorage::new(Arc::clone(&shared_storage));
 
-        // The current assumption is that the genesis block version is 0.
-        storage
-            .save_tree(
-                vec![Block::make_genesis_block()],
-                vec![QuorumCert::certificate_for_genesis()],
-            )
-            .unwrap();
         (
             Arc::new(Self::new(shared_storage)),
             storage.get_recovery_data().unwrap(),
@@ -215,24 +198,14 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
         Ok(())
     }
 
-    fn save_consensus_state(&self, _: ConsensusState, _: &Vote) -> Result<()> {
+    fn save_state(&self, _: &Vote) -> Result<()> {
         Ok(())
     }
 
     fn start(_: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
-        let genesis = Block::make_genesis_block();
-        let genesis_qc = QuorumCert::certificate_for_genesis();
         (
             Arc::new(EmptyStorage),
-            RecoveryData::new(
-                ConsensusState::default(),
-                None,
-                vec![genesis],
-                vec![genesis_qc.clone()],
-                genesis_qc.ledger_info().ledger_info(),
-                None,
-            )
-            .unwrap(),
+            RecoveryData::new(None, vec![], vec![], &LedgerInfo::genesis(), None).unwrap(),
         )
     }
 }

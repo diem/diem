@@ -10,19 +10,21 @@ use crate::{
     },
     counters::report_verification_status,
     data_cache::BlockDataCache,
+    gas_meter::load_gas_schedule,
     loaded_data::loaded_module::LoadedModule,
     process_txn::{validate::ValidationMode, ProcessTransaction},
+    system_txn::block_metadata_processor::process_block_metadata,
 };
-use failure::prelude::*;
 use libra_config::config::{VMConfig, VMMode, VMPublishingOption};
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
     block_metadata::BlockMetadata,
     transaction::{SignedTransaction, Transaction, TransactionOutput},
-    vm_error::{StatusCode, VMStatus},
+    vm_error::{sub_status, StatusCode, VMStatus},
     write_set::WriteSet,
 };
+use vm::{errors::VMResult, gas_schedule::CostTable};
 use vm_cache_map::Arena;
 
 /// An instantiation of the MoveVM.
@@ -77,14 +79,31 @@ impl<'alloc> VMRuntime<'alloc> {
             BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(data_view));
         let data_cache = BlockDataCache::new(data_view);
 
-        let arena = Arena::new();
+        // If we fail to load the gas schedule, then we fail to process the block.
+        let gas_schedule = match load_gas_schedule(&module_cache, &data_cache) {
+            // TODO/XXX: This is a hack to get around not having proper writesets yet. Once that gets
+            // in remove this line.
+            Err(_) if data_view.is_genesis() => CostTable::zero(),
+            Ok(cost_table) => cost_table,
+            Err(_error) => {
+                return Some(
+                    VMStatus::new(StatusCode::VM_STARTUP_FAILURE)
+                        .with_sub_status(sub_status::VSF_GAS_SCHEDULE_NOT_FOUND),
+                )
+            }
+        };
+
         let signature_verified_txn = match txn.check_signature() {
             Ok(t) => t,
             Err(_) => return Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
         };
 
-        let process_txn =
-            ProcessTransaction::new(signature_verified_txn, module_cache, &data_cache, &arena);
+        let process_txn = ProcessTransaction::new(
+            signature_verified_txn,
+            &gas_schedule,
+            module_cache,
+            &data_cache,
+        );
         let mode = if data_view.is_genesis() {
             ValidationMode::Genesis
         } else {
@@ -117,23 +136,28 @@ impl<'alloc> VMRuntime<'alloc> {
         &self,
         txn_block: Vec<Transaction>,
         data_view: &dyn StateView,
-    ) -> Result<Vec<TransactionOutput>> {
+    ) -> VMResult<Vec<TransactionOutput>> {
         let mut result = vec![];
         let blocks = chunk_block_transactions(txn_block);
+        let mut data_cache = BlockDataCache::new(data_view);
+        let code_cache = BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(data_view));
+
         for block in blocks {
             match block {
                 TransactionBlock::UserTransaction(txns) => {
                     result.append(&mut execute_user_transaction_block(
                         txns,
-                        &self.code_cache,
+                        &code_cache,
                         &self.script_cache,
-                        data_view,
+                        &mut data_cache,
                         &self.publishing_option,
                         self.vm_mode.clone(),
-                    ))
+                    )?)
                 }
-                // TODO: Implement the logic for processing system transactions.
-                TransactionBlock::BlockPrologue(_) => unimplemented!(""),
+                TransactionBlock::BlockPrologue(block_metadata) => result.push(
+                    process_block_metadata(block_metadata, &code_cache, &mut data_cache),
+                ),
+                // TODO: Implement the logic for processing writeset transactions.
                 TransactionBlock::WriteSet(_) => unimplemented!(""),
             }
         }

@@ -50,4 +50,3 @@ SystemTTL is checked periodically in the background, while the expiration specif
     ├── runtime.rs               # bundle of shared mempool and gRPC service
     └── shared_mempool.rs        # shared mempool
 ```
-

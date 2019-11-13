@@ -141,10 +141,10 @@ impl Account {
         gas_unit_price: u64,
     ) -> SignedTransaction {
         let raw_txn = match payload {
-            TransactionPayload::Program(program) => RawTransaction::new(
+            TransactionPayload::Program => RawTransaction::new(
                 *self.address(),
                 sequence_number,
-                TransactionPayload::Program(program),
+                TransactionPayload::Program,
                 max_gas_amount,
                 gas_unit_price,
                 Duration::from_secs(u64::max_value()),

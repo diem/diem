@@ -4,10 +4,9 @@
 //! Interface between Admission Control and Network layers.
 
 use crate::{
-    error::NetworkError,
-    interface::{NetworkNotification, NetworkRequest},
-    protocols::rpc::{self, error::RpcError},
-    validator_network::Event,
+    interface::NetworkRequest,
+    protocols::rpc::error::RpcError,
+    validator_network::{NetworkEvents, NetworkSender},
     ProtocolId,
 };
 use admission_control_proto::proto::admission_control::{
@@ -15,15 +14,8 @@ use admission_control_proto::proto::admission_control::{
     SubmitTransactionRequest, SubmitTransactionResponse,
 };
 use channel;
-use futures::{
-    stream::Map,
-    task::{Context, Poll},
-    Stream, StreamExt,
-};
 use libra_types::PeerId;
-use pin_project::pin_project;
-use prost::Message as _;
-use std::{pin::Pin, time::Duration};
+use std::time::Duration;
 
 /// Protocol id for admission control RPC calls
 pub const ADMISSION_CONTROL_RPC_PROTOCOL: &[u8] = b"/libra/admission_control/rpc/0.1.0";
@@ -34,58 +26,27 @@ pub const ADMISSION_CONTROL_RPC_PROTOCOL: &[u8] = b"/libra/admission_control/rpc
 /// raw `Bytes` direct-send and rpc messages are deserialized into
 /// `AdmissionControlMsg` types. `AdmissionControlNetworkEvents` is a thin wrapper around
 /// an `channel::Receiver<NetworkNotification>`.
-#[pin_project]
-pub struct AdmissionControlNetworkEvents {
-    #[pin]
-    inner: Map<
-        channel::Receiver<NetworkNotification>,
-        fn(NetworkNotification) -> Result<Event<AdmissionControlMsg>, NetworkError>,
-    >,
-}
-
-impl AdmissionControlNetworkEvents {
-    pub fn new(receiver: channel::Receiver<NetworkNotification>) -> Self {
-        let inner = receiver.map::<_, fn(_) -> _>(|notification| match notification {
-            NetworkNotification::NewPeer(peer_id) => Ok(Event::NewPeer(peer_id)),
-            NetworkNotification::LostPeer(peer_id) => Ok(Event::LostPeer(peer_id)),
-            NetworkNotification::RecvRpc(peer_id, rpc_req) => {
-                let req_msg = AdmissionControlMsg::decode(rpc_req.data.as_ref())?;
-                Ok(Event::RpcRequest((peer_id, req_msg, rpc_req.res_tx)))
-            }
-            NetworkNotification::RecvMessage(peer_id, msg) => {
-                let msg = AdmissionControlMsg::decode(msg.mdata.as_ref())?;
-                Ok(Event::Message((peer_id, msg)))
-            }
-        });
-
-        Self { inner }
-    }
-}
-
-impl Stream for AdmissionControlNetworkEvents {
-    type Item = Result<Event<AdmissionControlMsg>, NetworkError>;
-
-    fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
-        self.project().inner.poll_next(context)
-    }
-}
+pub type AdmissionControlNetworkEvents = NetworkEvents<AdmissionControlMsg>;
 
 /// The interface from Admission Control to Network layer.
 ///
-/// This is a thin wrapper around an `channel::Sender<NetworkRequest>`, so it is
-/// easy to clone and send off to a separate task. For example, the rpc requests
-/// return Futures that encapsulate the whole flow, from sending the request to
-/// remote, to finally receiving the response and deserializing. It therefore
-/// makes the most sense to make the rpc call on a separate async task, which
-/// requires the `AdmissionControlNetworkSender` to be `Clone` and `Send`.
+/// This is a thin wrapper around a `NetworkSender<AdmissionControlMsg>`, which
+/// is in turn a thin wrapper around a `channel::Sender<NetworkRequest>`, so it
+/// is easy to clone and send off to a separate task. For example, the rpc
+/// requests return Futures that encapsulate the whole flow, from sending the
+/// request to remote, to finally receiving the response and deserializing. It
+/// therefore makes the most sense to make the rpc call on a separate async task,
+/// which requires the `AdmissionControlNetworkSender` to be `Clone` and `Send`.
 #[derive(Clone)]
 pub struct AdmissionControlNetworkSender {
-    inner: channel::Sender<NetworkRequest>,
+    inner: NetworkSender<AdmissionControlMsg>,
 }
 
 impl AdmissionControlNetworkSender {
     pub fn new(inner: channel::Sender<NetworkRequest>) -> Self {
-        Self { inner }
+        Self {
+            inner: NetworkSender::new(inner),
+        }
     }
 
     /// Send a SubmitTransactionRequest RPC request to remote peer `recipient`. Returns the
@@ -94,24 +55,20 @@ impl AdmissionControlNetworkSender {
     /// The rpc request can be canceled at any point by dropping the returned
     /// future.
     pub async fn send_transaction_upstream(
-        &self,
+        &mut self,
         recipient: PeerId,
         req_msg: SubmitTransactionRequest,
         timeout: Duration,
     ) -> Result<SubmitTransactionResponse, RpcError> {
         let protocol = ProtocolId::from_static(ADMISSION_CONTROL_RPC_PROTOCOL);
-        let send_txn_req_msg_enum = AdmissionControlMsg {
+        let req_msg_enum = AdmissionControlMsg {
             message: Some(AdmissionControlMsg_oneof::SubmitTransactionRequest(req_msg)),
         };
 
-        let res_msg_enum = rpc::utils::unary_rpc(
-            self.inner.clone(),
-            recipient,
-            protocol,
-            send_txn_req_msg_enum,
-            timeout,
-        )
-        .await?;
+        let res_msg_enum = self
+            .inner
+            .unary_rpc(recipient, protocol, req_msg_enum, timeout)
+            .await?;
 
         if let Some(AdmissionControlMsg_oneof::SubmitTransactionResponse(response)) =
             res_msg_enum.message
@@ -127,9 +84,14 @@ impl AdmissionControlNetworkSender {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocols::rpc::InboundRpcRequest;
-    use crate::utils::MessageExt;
-    use futures::{channel::oneshot, executor::block_on, future::try_join, SinkExt};
+    use crate::{
+        interface::NetworkNotification, protocols::rpc::InboundRpcRequest, utils::MessageExt,
+        validator_network::Event,
+    };
+    use futures::{
+        channel::oneshot, executor::block_on, future::try_join, sink::SinkExt, stream::StreamExt,
+    };
+    use prost::Message as _;
 
     // `AdmissionControlNetworkEvents` should deserialize inbound RPC requests
     #[test]
@@ -169,7 +131,7 @@ mod tests {
     #[test]
     fn test_admission_control_outbound_rpc() {
         let (network_reqs_tx, mut network_reqs_rx) = channel::new_test(8);
-        let sender = AdmissionControlNetworkSender::new(network_reqs_tx);
+        let mut sender = AdmissionControlNetworkSender::new(network_reqs_tx);
 
         // make submit_transaction_request rpc request
         let peer_id = PeerId::random();

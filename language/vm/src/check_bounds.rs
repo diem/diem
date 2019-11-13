@@ -532,8 +532,8 @@ impl BoundsCheck<(&CompiledModuleMut, &FunctionSignature)> for CodeUnit {
                     FreezeRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse | ReadRef | WriteRef
                     | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Or | And | Not | Eq
                     | Neq | Lt | Gt | Le | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits
-                    | GetGasRemaining | GetTxnSenderAddress | CreateAccount
-                    | GetTxnSequenceNumber | GetTxnPublicKey => vec![],
+                    | GetGasRemaining | GetTxnSenderAddress | GetTxnSequenceNumber
+                    | GetTxnPublicKey => vec![],
 
                     //TODO merge to above.
                     IsOffchain

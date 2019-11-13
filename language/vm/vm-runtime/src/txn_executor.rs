@@ -3,15 +3,18 @@
 //! Processor for a single transaction.
 
 use crate::{
-    code_cache::module_cache::{ModuleCache, VMModuleCache},
-    counters::*,
-    data_cache::{RemoteCache, TransactionDataCache},
-    interpreter::Interpreter,
-    loaded_data::{
-        function::{FunctionRef, FunctionReference},
-        loaded_module::LoadedModule,
+    code_cache::{
+        module_adapter::ModuleFetcherImpl,
+        module_cache::{BlockModuleCache, ModuleCache, VMModuleCache},
     },
+    counters::*,
+    data_cache::{BlockDataCache, RemoteCache, TransactionDataCache},
+    gas_meter::load_gas_schedule,
+    interpreter::Interpreter,
+    loaded_data::function::FunctionRef,
 };
+
+use libra_state_view::StateView;
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use libra_config::config::VMMode;
 use libra_types::{
@@ -24,11 +27,13 @@ use libra_types::{
     write_set::WriteSet,
 };
 use vm::{
-    errors::*, file_format::CompiledScript, transaction_metadata::TransactionMetadata,
-    vm_string::VMString,
+    access::ModuleAccess, errors::*, file_format::FunctionDefinitionIndex, gas_schedule::CostTable,
+    transaction_metadata::TransactionMetadata, vm_string::VMString,
 };
 use vm_cache_map::Arena;
 use vm_runtime_types::value::Value;
+
+pub use crate::gas_meter::GAS_SCHEDULE_MODULE;
 
 // Metadata needed for resolving the account module.
 lazy_static! {
@@ -89,6 +94,7 @@ where
     /// transactions within the same block.
     pub fn new(
         module_cache: P,
+        gas_schedule: &'txn CostTable,
         data_cache: &'txn dyn RemoteCache,
         txn_data: TransactionMetadata,
     ) -> Self {
@@ -97,6 +103,7 @@ where
                 module_cache,
                 txn_data,
                 TransactionDataCache::new(data_cache),
+                gas_schedule,
             ),
         }
     }
@@ -277,6 +284,10 @@ where
             },
         ))
     }
+
+    pub fn exists_module(&self, m: &ModuleId) -> bool {
+        self.interpreter.exists_module(m)
+    }
 }
 
 #[inline]
@@ -291,7 +302,7 @@ fn error_output(err: VMStatus) -> TransactionOutput {
 }
 
 /// Convert the transaction arguments into move values.
-pub(crate) fn convert_txn_args(args: Vec<TransactionArgument>) -> Vec<Value> {
+pub fn convert_txn_args(args: Vec<TransactionArgument>) -> Vec<Value> {
     args.into_iter()
         .map(|arg| match arg {
             TransactionArgument::U64(i) => Value::u64(i),
@@ -303,27 +314,33 @@ pub(crate) fn convert_txn_args(args: Vec<TransactionArgument>) -> Vec<Value> {
         .collect()
 }
 
-/// A helper function for executing a single script. Will be deprecated once we have a better
-/// testing framework for executing arbitrary script.
-pub fn execute_function(
-    caller_script: VerifiedScript,
-    modules: Vec<VerifiedModule>,
+/// Execute the first function in a module
+pub fn execute_function_in_module(
+    state_view: &dyn StateView,
+    module: VerifiedModule,
+    idx: FunctionDefinitionIndex,
     args: Vec<TransactionArgument>,
-    data_cache: &dyn RemoteCache,
 ) -> VMResult<()> {
-    let allocator = Arena::new();
-    let module_cache = VMModuleCache::new(&allocator);
-    let main_module = caller_script.into_module();
-    let loaded_main = LoadedModule::new(main_module);
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
-    let txn_metadata = TransactionMetadata::default();
-    for m in modules {
-        module_cache.cache_module(m);
+    let module_id = module.as_inner().self_id();
+    let entry_name = {
+        let entry_func_idx = module.function_def_at(idx).function;
+        let entry_name_idx = module.function_handle_at(entry_func_idx).name;
+        module.identifier_at(entry_name_idx)
+    };
+    {
+        let arena = Arena::new();
+        let vm_module_cache = VMModuleCache::new(&arena);
+        let code_cache =
+            BlockModuleCache::new(&vm_module_cache, ModuleFetcherImpl::new(state_view));
+        code_cache.cache_module(module.clone());
+        let data_cache = BlockDataCache::new(state_view);
+        let gas_schedule = load_gas_schedule(&code_cache, &data_cache)?;
+        let mut txn_executor = TransactionExecutor::new(
+            code_cache,
+            &gas_schedule,
+            &data_cache,
+            TransactionMetadata::default(),
+        );
+        txn_executor.execute_function(&module_id, &entry_name, convert_txn_args(args))
     }
-    let mut interpreter = Interpreter::new(
-        module_cache,
-        txn_metadata,
-        TransactionDataCache::new(data_cache),
-    );
-    interpreter.interpeter_entrypoint(entry_func, convert_txn_args(args))
 }

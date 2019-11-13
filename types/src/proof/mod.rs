@@ -19,16 +19,18 @@ use failure::prelude::*;
 use libra_crypto::{
     hash::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, SparseMerkleInternalHasher,
-        SparseMerkleLeafHasher, TestOnlyHasher, TransactionAccumulatorHasher,
+        TestOnlyHasher, TransactionAccumulatorHasher,
     },
     HashValue,
 };
+use libra_crypto_derive::CryptoHasher;
 use std::marker::PhantomData;
 
 pub use self::definition::{
     AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, AccumulatorRangeProof,
-    EventAccumulatorProof, EventProof, SparseMerkleProof, TransactionAccumulatorProof,
-    TransactionAccumulatorRangeProof, TransactionListProof, TransactionProof,
+    EventAccumulatorProof, EventProof, SparseMerkleProof, SparseMerkleRangeProof,
+    TransactionAccumulatorProof, TransactionAccumulatorRangeProof, TransactionListProof,
+    TransactionProof,
 };
 
 #[cfg(any(test, feature = "fuzzing"))]
@@ -90,6 +92,7 @@ pub type TransactionAccumulatorInternalNode = MerkleTreeInternalNode<Transaction
 pub type EventAccumulatorInternalNode = MerkleTreeInternalNode<EventAccumulatorHasher>;
 pub type TestAccumulatorInternalNode = MerkleTreeInternalNode<TestOnlyHasher>;
 
+#[derive(CryptoHasher)]
 pub struct SparseMerkleLeafNode {
     key: HashValue,
     value_hash: HashValue,
@@ -102,7 +105,7 @@ impl SparseMerkleLeafNode {
 }
 
 impl CryptoHash for SparseMerkleLeafNode {
-    type Hasher = SparseMerkleLeafHasher;
+    type Hasher = SparseMerkleLeafNodeHasher;
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();

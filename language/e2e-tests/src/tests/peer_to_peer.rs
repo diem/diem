@@ -30,18 +30,16 @@ fn single_peer_to_peer_with_event() {
         let txn = peer_to_peer_txn(sender.account(), receiver.account(), 10, transfer_amount);
 
         // execute transaction
-        let txns: Vec<SignedTransaction> = vec![txn];
-        let output = executor.execute_block(txns);
-        let txn_output = output.get(0).expect("must have a transaction output");
+        let output = executor.execute_transaction(txn);
         assert_eq!(
-            output[0].status(),
+            output.status(),
             &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
         );
 
-        executor.apply_write_set(txn_output.write_set());
+        executor.apply_write_set(output.write_set());
 
         // check that numbers in stored DB are correct
-        let gas = txn_output.gas_used();
+        let gas = output.gas_used();
         let sender_balance = 1_000_000 - transfer_amount - gas;
         let receiver_balance = 100_000 + transfer_amount;
         let updated_sender = executor
@@ -60,7 +58,7 @@ fn single_peer_to_peer_with_event() {
 
         let rec_ev_path = receiver.received_events_key().to_vec();
         let sent_ev_path = sender.sent_events_key().to_vec();
-        for event in txn_output.events() {
+        for event in output.events() {
             assert!(
                 rec_ev_path.as_slice() == event.key().as_bytes()
                     || sent_ev_path.as_slice() == event.key().as_bytes()
@@ -96,18 +94,16 @@ fn single_peer_to_peer_with_padding() {
     let unpadded_txn = peer_to_peer_txn(sender.account(), receiver.account(), 10, transfer_amount);
     assert!(txn.raw_txn_bytes_len() > unpadded_txn.raw_txn_bytes_len());
     // execute transaction
-    let txns: Vec<SignedTransaction> = vec![txn];
-    let output = executor.execute_block(txns);
-    let txn_output = output.get(0).expect("must have a transaction output");
+    let output = executor.execute_transaction(txn);
     assert_eq!(
-        output[0].status(),
+        output.status(),
         &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
 
-    executor.apply_write_set(txn_output.write_set());
+    executor.apply_write_set(output.write_set());
 
     // check that numbers in stored DB are correct
-    let gas = txn_output.gas_used();
+    let gas = output.gas_used();
     let sender_balance = 1_000_000 - transfer_amount - gas;
     let receiver_balance = 100_000 + transfer_amount;
     let updated_sender = executor
@@ -140,7 +136,7 @@ fn few_peer_to_peer_with_event() {
             peer_to_peer_txn(sender.account(), receiver.account(), 12, transfer_amount),
             peer_to_peer_txn(sender.account(), receiver.account(), 13, transfer_amount),
         ];
-        let output = executor.execute_block(txns);
+        let output = executor.execute_block(txns).unwrap();
         for (idx, txn_output) in output.iter().enumerate() {
             assert_eq!(
                 txn_output.status(),
@@ -205,7 +201,7 @@ fn zero_amount_peer_to_peer() {
             transfer_amount,
         );
 
-        let output = &executor.execute_block(vec![txn])[0];
+        let output = &executor.execute_transaction(txn);
         // Error code 7 means that the transaction was a zero-amount one.
         assert!(transaction_status_eq(
             &output.status(),
@@ -228,17 +224,15 @@ fn peer_to_peer_create_account() {
         let txn = peer_to_peer_txn(sender.account(), &new_account, 10, transfer_amount);
 
         // execute transaction
-        let txns: Vec<SignedTransaction> = vec![txn];
-        let output = executor.execute_block(txns);
-        let txn_output = output.get(0).expect("must have a transaction output");
+        let output = executor.execute_transaction(txn);
         assert_eq!(
-            output[0].status(),
+            output.status(),
             &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
         );
-        executor.apply_write_set(txn_output.write_set());
+        executor.apply_write_set(output.write_set());
 
         // check that numbers in stored DB are correct
-        let gas = txn_output.gas_used();
+        let gas = output.gas_used();
         let sender_balance = 1_000_000 - transfer_amount - gas;
         let receiver_balance = transfer_amount;
         let updated_sender = executor
@@ -423,7 +417,7 @@ fn cycle_peer_to_peer() {
         // execute transaction
         let mut execution_time = 0u128;
         let now = Instant::now();
-        let output = executor.execute_block(txns);
+        let output = executor.execute_block(txns).unwrap();
         execution_time += now.elapsed().as_nanos();
         println!("EXECUTION TIME: {}", execution_time);
         for txn_output in &output {
@@ -469,7 +463,7 @@ fn cycle_peer_to_peer_multi_block() {
 
             // execute transaction
             let now = Instant::now();
-            let output = executor.execute_block(txns);
+            let output = executor.execute_block(txns).unwrap();
             execution_time += now.elapsed().as_nanos();
             for txn_output in &output {
                 assert_eq!(
@@ -516,7 +510,7 @@ fn one_to_many_peer_to_peer() {
 
             // execute transaction
             let now = Instant::now();
-            let output = executor.execute_block(txns);
+            let output = executor.execute_block(txns).unwrap();
             execution_time += now.elapsed().as_nanos();
             for txn_output in &output {
                 assert_eq!(
@@ -563,7 +557,7 @@ fn many_to_one_peer_to_peer() {
 
             // execute transaction
             let now = Instant::now();
-            let output = executor.execute_block(txns);
+            let output = executor.execute_block(txns).unwrap();
             execution_time += now.elapsed().as_nanos();
             for txn_output in &output {
                 assert_eq!(

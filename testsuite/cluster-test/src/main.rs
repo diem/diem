@@ -1,3 +1,7 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use chrono::{Datelike, Timelike, Utc};
 use cluster_test::effects::RemoveNetworkEffects;
 use cluster_test::experiments::{MultiRegionSimulation, PacketLossRandomValidators};
 use cluster_test::github::GitHub;
@@ -13,7 +17,6 @@ use cluster_test::{
     effects::{Action, Effect, Reboot, StopContainer},
     experiments::{Experiment, RebootRandomValidators},
     health::{DebugPortLogThread, HealthCheckRunner, LogTail},
-    log_prune::LogPruner,
     slack::SlackClient,
     suite::ExperimentSuite,
     tx_emitter::TxEmitter,
@@ -44,7 +47,7 @@ const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 struct Args {
     #[structopt(short = "w", long, conflicts_with = "swarm")]
     workplace: Option<String>,
-    #[structopt(short = "p", long, use_delimiter = true, conflicts_with = "prune-logs")]
+    #[structopt(short = "p", long, use_delimiter = true)]
     peers: Vec<String>,
 
     #[structopt(
@@ -56,6 +59,12 @@ struct Args {
     #[structopt(long, group = "action")]
     wipe_all_db: bool,
     #[structopt(long, group = "action")]
+    discovery: bool,
+    #[structopt(long, group = "action")]
+    pssh: bool,
+    #[structopt(last = true, requires = "pssh")]
+    last: Vec<String>,
+    #[structopt(long, group = "action")]
     run: bool,
     #[structopt(long, group = "action")]
     run_once: bool,
@@ -63,8 +72,6 @@ struct Args {
     tail_logs: bool,
     #[structopt(long, group = "action")]
     health_check: bool,
-    #[structopt(long, group = "action")]
-    prune_logs: bool,
     #[structopt(long, group = "action")]
     reboot: bool,
     #[structopt(long, group = "action")]
@@ -106,19 +113,19 @@ struct Args {
     #[structopt(
         long,
         default_value = "10",
-        help = "Number of instances which should be in region1. The remaining instances are in region 2."
+        help = "Space separated list of various split sizes"
     )]
-    multi_region_split: usize,
+    multi_region_splits: Vec<usize>,
     #[structopt(
         long,
         default_value = "50",
-        help = "Delay in ms between the two regions"
+        help = "Space separated list of various delays in ms between the two regions"
     )]
-    multi_region_delay_ms: u64,
+    multi_region_delays_ms: Vec<u64>,
     #[structopt(
         long,
-        default_value = "60",
-        help = "Duration in secs for which multi region experiment happens"
+        default_value = "300",
+        help = "Duration in secs (per config) for which multi region experiment happens"
     )]
     multi_region_exp_duration_secs: u64,
 
@@ -152,11 +159,7 @@ pub fn main() {
         panic!("Can only use --emit-tx option in --swarm mode");
     }
 
-    if args.prune_logs {
-        let util = ClusterUtil::setup(&args);
-        util.prune_logs();
-        return;
-    } else if args.emit_tx {
+    if args.emit_tx {
         let thread_params = EmitThreadParams {
             wait_millis: args.wait_millis,
             wait_committed: !args.burst,
@@ -173,6 +176,14 @@ pub fn main() {
     } else if args.stop_experiment {
         let util = ClusterUtil::setup(&args);
         util.stop_experiment(args.max_stopped);
+        return;
+    } else if args.discovery {
+        let util = ClusterUtil::setup(&args);
+        util.discovery();
+        return;
+    } else if args.pssh {
+        let util = ClusterUtil::setup(&args);
+        util.pssh(args.last);
         return;
     }
 
@@ -214,11 +225,12 @@ pub fn main() {
         runner.cleanup_and_run(Box::new(experiment)).unwrap();
     } else if args.multi_region_simulation {
         let experiment = MultiRegionSimulation::new(
-            args.multi_region_split,
-            Duration::from_millis(args.multi_region_delay_ms),
+            args.multi_region_splits.clone(),
+            args.multi_region_delays_ms.clone(),
             Duration::from_secs(args.multi_region_exp_duration_secs),
-            &runner.cluster,
+            runner.cluster.clone(),
             runner.thread_pool_executor.clone(),
+            runner.prometheus.clone(),
         );
         runner.cleanup_and_run(Box::new(experiment)).unwrap();
     } else if args.perf_run {
@@ -243,7 +255,7 @@ fn setup_log() {
     let decorator = slog_term::PlainDecorator::new(std::io::stdout());
     let drain = slog_term::CompactFormat::new(decorator).build().fuse();
     let drain = slog_envlogger::new(drain);
-    let drain = slog_async::Async::new(drain).build().fuse();
+    let drain = std::sync::Mutex::new(drain).fuse();
     let logger = slog::Logger::root(drain, o!());
     let logger_guard = slog_scope::set_global_logger(logger);
     std::mem::forget(logger_guard);
@@ -339,9 +351,28 @@ impl ClusterUtil {
         }
     }
 
-    pub fn prune_logs(&self) {
-        let log_prune = LogPruner::new(self.aws.clone());
-        log_prune.prune_logs();
+    pub fn discovery(&self) {
+        for instance in self.cluster.instances() {
+            println!("{} {}", instance.short_hash(), instance.ip());
+        }
+    }
+
+    pub fn pssh(&self, cmd: Vec<String>) {
+        let executor = ThreadPoolExecutor::new("pssh".to_string());
+        let jobs = self
+            .cluster
+            .instances()
+            .iter()
+            .map(|x| {
+                let cmd = &cmd;
+                move || {
+                    if let Err(e) = x.run_cmd_tee_err(cmd) {
+                        warn!("Failed on {}: {}", x, e)
+                    }
+                }
+            })
+            .collect();
+        executor.execute_jobs(jobs);
     }
 
     pub fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
@@ -422,23 +453,21 @@ fn print_stat(prometheus: &Prometheus, window: Duration) -> failure::Result<(f64
     let step = 10;
     let end = unix_timestamp_now();
     let start = end - window;
-    let tps = prometheus.query_range(
-        "irate(consensus_gauge{op='last_committed_version'}[1m])".to_string(),
-        &start,
-        &end,
-        step,
-    )?;
-    let avg_tps = tps.avg().ok_or_else(|| format_err!("No tps data"))?;
-    let latency = prometheus.query_range(
+    let avg_tps = prometheus
+        .query_range_avg(
+            "irate(libra_consensus_last_committed_version[1m])".to_string(),
+            &start,
+            &end,
+            step,
+        )
+        .map_err(|_| format_err!("No tps data"))?;
+    let avg_latency = prometheus.query_range_avg(
         "irate(mempool_duration_sum{op='e2e.latency'}[1m])/irate(mempool_duration_count{op='e2e.latency'}[1m])"
             .to_string(),
         &start,
         &end,
         step,
-    )?;
-    let avg_latency = latency
-        .avg()
-        .ok_or_else(|| format_err!("No latency data"))?;
+    ).map_err(|_| format_err!("No latency data"))?;
     info!(
         "Tps: {:.0}, latency: {:.0} ms",
         avg_tps,
@@ -606,6 +635,11 @@ impl ClusterTestRunner {
         } else {
             info!("WIPE_ON_DEPLOY is set to no, keeping database");
         }
+        let marker = self
+            .deployment_manager
+            .get_upstream_tag(&hash)
+            .map_err(|e| format_err!("Failed to get upstream tag: {}", e))?;
+        self.fetch_genesis(&marker)?;
         self.deployment_manager.redeploy(hash)?;
         thread::sleep(Duration::from_secs(60));
         self.logs.recv_all();
@@ -615,6 +649,34 @@ impl ClusterTestRunner {
         info!("Waiting until all validators healthy after deployment");
         self.wait_until_all_healthy()?;
         Ok(true)
+    }
+
+    fn fetch_genesis(&self, marker: &str) -> failure::Result<()> {
+        let cmd = format!(
+            "sudo aws s3 cp s3://toro-validator-sets/{}/100/genesis.blob /opt/libra/genesis.blob",
+            marker
+        );
+        info!("Running {} to fetch genesis blob", cmd);
+        let jobs = self
+            .cluster
+            .instances()
+            .iter()
+            .map(|instance| {
+                let cmd = &cmd;
+                move || instance.run_cmd_tee_err(vec![cmd])
+            })
+            .collect();
+        if self
+            .thread_pool_executor
+            .execute_jobs(jobs)
+            .iter()
+            .any(Result::is_err)
+        {
+            return Err(format_err!(
+                "Failed to update genesis.blob on one of validators"
+            ));
+        }
+        Ok(())
     }
 
     fn run_suite(&mut self, suite: ExperimentSuite) -> failure::Result<()> {
@@ -709,6 +771,7 @@ impl ClusterTestRunner {
             style::Reset
         );
         let affected_validators = experiment.affected_validators();
+        let deadline = experiment.deadline();
         let (exp_result_sender, exp_result_recv) = mpsc::channel();
         thread::spawn(move || {
             let result = experiment.run();
@@ -718,7 +781,7 @@ impl ClusterTestRunner {
         });
 
         // We expect experiments completes and cluster go into healthy state within timeout
-        let experiment_deadline = Instant::now() + Duration::from_secs(10 * 60);
+        let experiment_deadline = Instant::now() + deadline;
 
         loop {
             if Instant::now() > experiment_deadline {
@@ -800,7 +863,7 @@ impl ClusterTestRunner {
     }
 
     fn wait_until_all_healthy(&mut self) -> failure::Result<()> {
-        let wait_deadline = Instant::now() + Duration::from_secs(10 * 60);
+        let wait_deadline = Instant::now() + Duration::from_secs(20 * 60);
         for instance in self.cluster.instances() {
             self.health_check_runner.invalidate(instance.short_hash());
         }
@@ -853,6 +916,19 @@ impl ClusterTestRunner {
             thread::sleep(Duration::from_secs(10));
             info!("Starting...");
         }
+        let now = Utc::now();
+        let suffix = format!(
+            ".{:04}{:02}{:02}-{:02}{:02}{:02}.gz",
+            now.year(),
+            now.month(),
+            now.day(),
+            now.hour(),
+            now.minute(),
+            now.second()
+        );
+        let suffix = &suffix;
+        let log_file = "/data/libra/libra.log";
+        info!("Will use suffix {} for log rotation", suffix);
         let jobs = self
             .cluster
             .instances()
@@ -860,11 +936,18 @@ impl ClusterTestRunner {
             .map(|instance| {
                 let instance = instance.clone();
                 move || {
-                    if let Err(e) =
-                        instance.run_cmd_tee_err(vec!["sudo", "rm", "-rf", "/data/libra/"])
-                    {
-                        info!("Failed to wipe {}: {:?}", instance, e);
-                    }
+                    instance
+                        .run_cmd_tee_err(vec!["sudo", "rm", "-rf", "/data/libra/*db"])
+                        .map_err(|e| info!("Failed to wipe {}: {:?}", instance, e))
+                        .ok();
+                    instance
+                        .run_cmd_tee_err(vec![format!(
+                            "test -f {f} && sudo gzip -S {s} {f}",
+                            f = log_file,
+                            s = suffix
+                        )])
+                        .map_err(|e| info!("Failed to gzip log file {}: {:?}", instance, e))
+                        .ok();
                 }
             })
             .collect();

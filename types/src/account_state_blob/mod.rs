@@ -9,9 +9,10 @@ use crate::{
 };
 use failure::prelude::*;
 use libra_crypto::{
-    hash::{AccountStateBlobHasher, CryptoHash, CryptoHasher},
+    hash::{CryptoHash, CryptoHasher},
     HashValue,
 };
+use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{arbitrary::Arbitrary, prelude::*};
 #[cfg(any(test, feature = "fuzzing"))]
@@ -23,7 +24,7 @@ use std::{
     fmt,
 };
 
-#[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
 pub struct AccountStateBlob {
     blob: Vec<u8>,
 }

@@ -10,7 +10,7 @@ use executor::{ExecutedTrees, ProcessedVMOutput};
 use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
 use libra_logger::prelude::*;
-use libra_types::crypto_proxies::LedgerInfoWithSignatures;
+use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof};
 use libra_types::validator_set::ValidatorSet;
 use std::{pin::Pin, sync::Arc};
 use termion::color::*;
@@ -67,7 +67,7 @@ impl StateComputer for MockStateComputer {
     fn sync_to(
         &self,
         commit: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         debug!(
             "{}Fake sync{} to block id {}",
             Fg(Blue),
@@ -79,11 +79,21 @@ impl StateComputer for MockStateComputer {
         self.commit_callback
             .unbounded_send(commit.clone())
             .expect("Fail to notify about sync");
-        async { Ok(true) }.boxed()
+        async { Ok(()) }.boxed()
     }
 
     fn committed_trees(&self) -> ExecutedTrees {
         ExecutedTrees::new_empty()
+    }
+
+    fn get_epoch_proof(
+        &self,
+        _start_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>> {
+        future::err(format_err!(
+            "epoch proof not supported in mock state computer"
+        ))
+        .boxed()
     }
 }
 
@@ -115,11 +125,21 @@ impl StateComputer for EmptyStateComputer {
     fn sync_to(
         &self,
         _commit: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
-        async { Ok(true) }.boxed()
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+        async { Ok(()) }.boxed()
     }
 
     fn committed_trees(&self) -> ExecutedTrees {
         ExecutedTrees::new_empty()
+    }
+
+    fn get_epoch_proof(
+        &self,
+        _start_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>> {
+        future::err(format_err!(
+            "epoch proof not supported in empty state computer"
+        ))
+        .boxed()
     }
 }

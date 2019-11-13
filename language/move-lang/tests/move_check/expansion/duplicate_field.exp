@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/duplicate_field.move:3:9 ───
+   │
+ 4 │         f: u64,
+   │         ^ Duplicate definition for field 'f' in struct 'S'
+   ·
+ 3 │         f: u64,
+   │         - Previously defined here
+   │
+

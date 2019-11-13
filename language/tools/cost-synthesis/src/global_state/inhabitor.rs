@@ -87,7 +87,7 @@ where
 
     fn next_str(&mut self) -> String {
         let len: usize = self.gen.gen_range(1, MAX_STRING_SIZE);
-        (0..len).map(|_| self.gen.gen::<char>()).collect::<String>()
+        random_string(&mut self.gen, len)
     }
 
     fn next_vm_string(&mut self) -> VMString {
@@ -113,8 +113,7 @@ where
         let module = self
             .module_cache
             .get_loaded_module(&module_id)
-            .expect("[Module Lookup] Runtime error while looking up module")
-            .expect("[Module Lookup] Unable to find module");
+            .expect("[Module Lookup] Runtime error while looking up module");
         let struct_def_idx = self
             .struct_handle_table
             .entry(module_id)

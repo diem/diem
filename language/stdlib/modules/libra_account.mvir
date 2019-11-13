@@ -1,7 +1,7 @@
 // The module for the account resource that governs every Libra account
 module LibraAccount {
     import 0x0.LibraCoin;
-    import 0x00.Hash;
+    import 0x0.Hash;
     import 0x0.Event;
     import 0x0.U64Util;
     import 0x0.AddressUtil;
@@ -278,12 +278,26 @@ module LibraAccount {
     // Creates a new account at `fresh_address` with the `initial_balance` deducted from the
     // transaction sender's account
     public create_new_account(fresh_address: address, initial_balance: u64) acquires T {
-        create_account(copy(fresh_address));
+        let account: Self.T;
+        account = T {
+            authentication_key: AddressUtil.address_to_bytes(copy(fresh_address)),
+            balance: LibraCoin.zero(),
+            delegated_key_rotation_capability: false,
+            delegated_withdrawal_capability: false,
+            received_events: Event.new_event_handle<Self.ReceivedPaymentEvent>(),
+            sent_events: Event.new_event_handle<Self.SentPaymentEvent>(),
+            sequence_number: 0,
+        };
+        Self.save_account(copy(fresh_address), move(account));
+
         if (copy(initial_balance) > 0) {
             Self.pay_from_sender(move(fresh_address), move(initial_balance));
         }
         return;
     }
+
+    // Save an account to a given address if the address does not have an account resource yet
+    native save_account(addr: address, account: Self.T);
 
     // Helper to return u64 value of the `balance` field for given `account`
     balance_for_account(account: &Self.T): u64 {

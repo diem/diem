@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 pub mod aws;
 pub mod cluster;
 pub mod deployment;
@@ -6,7 +9,6 @@ pub mod experiments;
 pub mod github;
 pub mod health;
 pub mod instance;
-pub mod log_prune;
 pub mod prometheus;
 pub mod slack;
 pub mod suite;

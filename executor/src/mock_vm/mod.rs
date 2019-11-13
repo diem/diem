@@ -4,7 +4,6 @@
 #[cfg(test)]
 mod mock_vm_test;
 
-use failure::Result;
 use lazy_static::lazy_static;
 use libra_config::config::VMConfig;
 use libra_crypto::ed25519::compat;
@@ -54,7 +53,7 @@ impl VMExecutor for MockVM {
         transactions: Vec<Transaction>,
         _config: &VMConfig,
         state_view: &dyn StateView,
-    ) -> Result<Vec<TransactionOutput>> {
+    ) -> Result<Vec<TransactionOutput>, VMStatus> {
         if state_view.is_genesis() {
             assert_eq!(
                 transactions.len(),
@@ -319,7 +318,7 @@ fn decode_transaction(txn: &SignedTransaction) -> MockVMTransaction {
         TransactionPayload::WriteSet(_) => {
             unimplemented!("MockVM does not support WriteSet transaction payload.")
         }
-        TransactionPayload::Program(_) => {
+        TransactionPayload::Program => {
             unimplemented!("MockVM does not support Program transaction payload.")
         }
         TransactionPayload::Module(_) => {

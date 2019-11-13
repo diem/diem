@@ -84,8 +84,11 @@ pub const DISCOVERY_PROTOCOL_NAME: &[u8] = b"/libra/discovery/0.1.0";
 
 /// The actor running the discovery protocol.
 pub struct Discovery<TTicker, TSubstream> {
-    /// Note for self.
-    self_note: Note,
+    /// Note for self, which is prefixed with an underscore as this is not used but is in
+    /// preparation for logic that changes the advertised Note while the validator is running.
+    _note: Note,
+    /// PeerId for self.
+    peer_id: PeerId,
     /// Validator for verifying signatures on messages.
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     /// Current state, maintaining the most recent Note for each peer, alongside parsed PeerInfo.
@@ -147,7 +150,8 @@ where
         .into_iter()
         .collect();
         Self {
-            self_note,
+            _note: self_note,
+            peer_id: self_peer_id,
             seed_peers,
             trusted_peers,
             known_peers,
@@ -166,8 +170,7 @@ where
     // list.
     async fn connect_to_seed_peers(&mut self) {
         debug!("Connecting to seed peers");
-        let self_peer_id =
-            PeerId::try_from(self.self_note.peer_id.clone()).expect("PeerId parsing failed");
+        let self_peer_id = self.peer_id;
         for (peer_id, peer_info) in self
             .seed_peers
             .iter()
@@ -326,8 +329,6 @@ where
     async fn reconcile(&mut self, remote_peer: PeerId, remote_notes: Vec<VerifiedNote>) {
         // If a peer is previously unknown, or has a newer epoch number, we update its
         // corresponding entry in the map.
-        let self_peer_id =
-            PeerId::try_from(self.self_note.peer_id.clone()).expect("PeerId parsing fails");
         for note in remote_notes {
             match self.known_peers.get_mut(&note.peer_id) {
                 // If we know about this peer, and receive the same or an older epoch, we do
@@ -351,7 +352,7 @@ where
                     );
                     // We can never receive a note with a higher epoch number on us than what we
                     // ourselves have broadcasted.
-                    assert_ne!(note.peer_id, self_peer_id);
+                    assert_ne!(note.peer_id, self.peer_id);
                     // Update internal state of the peer with new Note.
                     self.known_peers.insert(note.peer_id, note.clone());
 

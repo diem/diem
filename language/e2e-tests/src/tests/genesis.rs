@@ -10,7 +10,8 @@ use libra_types::{
     account_config,
     test_helpers::transaction_test_helpers,
     transaction::TransactionStatus,
-    vm_error::{StatusCode, VMStatus},
+    vm_error::StatusCode,
+    vm_error::VMStatus,
     write_set::{WriteOp, WriteSetMut},
 };
 

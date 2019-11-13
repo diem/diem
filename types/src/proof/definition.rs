@@ -98,13 +98,6 @@ where
 {
     /// Constructs a new `AccumulatorProof` using a list of siblings.
     pub fn new(siblings: Vec<HashValue>) -> Self {
-        // The sibling list could be empty in case the accumulator is empty or has a single
-        // element. When it's not empty, the top most sibling will never be default, otherwise the
-        // accumulator should have collapsed to a smaller one.
-        if let Some(last_sibling) = siblings.last() {
-            assert_ne!(*last_sibling, *ACCUMULATOR_PLACEHOLDER_HASH);
-        }
-
         AccumulatorProof {
             siblings,
             phantom: PhantomData,
@@ -225,13 +218,6 @@ pub struct SparseMerkleProof {
 impl SparseMerkleProof {
     /// Constructs a new `SparseMerkleProof` using leaf and a list of siblings.
     pub fn new(leaf: Option<(HashValue, HashValue)>, siblings: Vec<HashValue>) -> Self {
-        // The sibling list could be empty in case the Sparse Merkle Tree is empty or has a single
-        // element. When it's not empty, the bottom most sibling will never be default, otherwise a
-        // leaf and a default sibling should have collapsed to a leaf.
-        if let Some(first_sibling) = siblings.first() {
-            assert_ne!(*first_sibling, *SPARSE_MERKLE_PLACEHOLDER_HASH);
-        }
-
         SparseMerkleProof { leaf, siblings }
     }
 
@@ -623,6 +609,44 @@ impl<H> From<AccumulatorRangeProof<H>> for crate::proto::types::AccumulatorRange
 pub type TransactionAccumulatorRangeProof = AccumulatorRangeProof<TransactionAccumulatorHasher>;
 #[cfg(any(test, feature = "fuzzing"))]
 pub type TestAccumulatorRangeProof = AccumulatorRangeProof<TestOnlyHasher>;
+
+/// A proof that can be used authenticate a range of consecutive leaves, from the leftmost leaf to
+/// a certain one, in a sparse Merkle tree. For example, given the following sparse Merkle tree:
+///
+/// ```text
+///                   root
+///                  /     \
+///                 /       \
+///                /         \
+///               o           o
+///              / \         / \
+///             a   o       o   h
+///                / \     / \
+///               o   d   e   X
+///              / \         / \
+///             b   c       f   g
+/// ```
+///
+/// if the proof wants show that `[a, b, c, d, e]` exists in the tree, it would need the siblings
+/// `X` and `h` on the right.
+#[derive(Debug)]
+pub struct SparseMerkleRangeProof {
+    /// The vector of siblings. The ones near the bottom are at the beginning of the vector. In the
+    /// above example, it's `[X, h]`.
+    siblings: Vec<HashValue>,
+}
+
+impl SparseMerkleRangeProof {
+    /// Constructs a new `SparseMerkleRangeProof`.
+    pub fn new(siblings: Vec<HashValue>) -> Self {
+        Self { siblings }
+    }
+
+    /// Returns the siblings.
+    pub fn siblings(&self) -> &[HashValue] {
+        &self.siblings
+    }
+}
 
 /// The complete proof used to authenticate a `Transaction` object.  This structure consists of an
 /// `AccumulatorProof` from `LedgerInfo` to `TransactionInfo` the verifier needs to verify the

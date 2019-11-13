@@ -1,0 +1,32 @@
+[package]
+name = "move-lang"
+version = "0.0.1"
+authors = ["Libra <oncall+libra@xmail.facebook.com>"]
+publish = false
+build = "build.rs"
+edition = "2018"
+
+[dependencies]
+codespan = "0.5.0"
+codespan-reporting = "0.5.0"
+hex = "0.3.2"
+regex = "1.1.6"
+lalrpop-util = "0.17.1"
+structopt = "0.3.3"
+text-diff = "0.4.0"
+datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
+
+move-vm = { path = "../vm", package = "vm" }
+move-bytecode-verifier = { path = "../bytecode-verifier", package = "bytecode-verifier" }
+libra-types = { path = "../../types" }
+
+[build-dependencies]
+lalrpop = "0.17.1"
+
+[[test]]
+name = "move_check_testsuite"
+harness = false
+
+[[test]]
+name = "stdlib_sanity_check"
+harness = false

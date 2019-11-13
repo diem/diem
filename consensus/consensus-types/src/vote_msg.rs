@@ -4,6 +4,8 @@
 use crate::{sync_info::SyncInfo, vote::Vote};
 #[cfg(any(test, feature = "fuzzing"))]
 use failure::bail;
+use failure::ensure;
+use libra_types::crypto_proxies::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 #[cfg(any(test, feature = "fuzzing"))]
 use std::convert::TryInto;
@@ -43,6 +45,19 @@ impl VoteMsg {
     /// SyncInfo of the given vote message
     pub fn sync_info(&self) -> &SyncInfo {
         &self.sync_info
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.vote.epoch()
+    }
+
+    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
+        ensure!(
+            self.vote().epoch() == self.sync_info.epoch(),
+            "VoteMsg has different epoch"
+        );
+        self.vote().verify(validator)?;
+        self.sync_info.verify(validator)
     }
 }
 

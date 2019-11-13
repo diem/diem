@@ -65,6 +65,10 @@ impl<'block> BlockDataCache<'block> {
             }
         }
     }
+
+    pub fn is_genesis(&self) -> bool {
+        self.data_view.is_genesis() && self.data_map.is_empty()
+    }
 }
 
 /// Trait for the StateVersionView or a mock implementation of the remote cache.
@@ -132,6 +136,16 @@ impl<'txn> TransactionDataCache<'txn> {
             //TODO(jole) optimize
             data_cache: WriteSetDataCache::new(pre_write_set, data_cache),
             data_map: BTreeMap::new(),
+        }
+    }
+
+    pub fn exists_module(&self, m: &ModuleId) -> bool {
+        let ap = AccessPath::from(m);
+        self.data_map.contains_key(&ap) || {
+            match self.data_cache.get(&ap) {
+                Ok(Some(_)) => true,
+                _ => false,
+            }
         }
     }
 

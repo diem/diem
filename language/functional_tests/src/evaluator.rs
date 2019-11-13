@@ -309,7 +309,7 @@ fn run_transaction(
     exec: &mut FakeExecutor,
     transaction: SignedTransaction,
 ) -> Result<TransactionOutput> {
-    let mut outputs = exec.execute_block(vec![transaction]);
+    let mut outputs = exec.execute_block(vec![transaction]).unwrap();
     if outputs.len() == 1 {
         let output = outputs.pop().unwrap();
         match output.status() {

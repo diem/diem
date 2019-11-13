@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{aws::Aws, cluster::Cluster};
 use failure::prelude::format_err;
 use retry::{delay::Fixed, retry};
@@ -159,7 +162,7 @@ impl DeploymentManager {
         Ok(upstream_commit)
     }
 
-    fn get_upstream_tag(&self, digest: &str) -> failure::Result<String> {
+    pub fn get_upstream_tag(&self, digest: &str) -> failure::Result<String> {
         let image_id = ImageIdentifier {
             image_digest: Some(digest.to_string()),
             image_tag: None,

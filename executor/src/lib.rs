@@ -10,7 +10,8 @@ mod mock_vm;
 
 use crate::block_processor::BlockProcessor;
 use failure::{format_err, Result};
-use futures::{channel::oneshot, executor::block_on};
+use futures::channel::oneshot;
+use futures::executor::block_on;
 use lazy_static::lazy_static;
 use libra_config::config::NodeConfig;
 use libra_crypto::{
@@ -21,6 +22,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_logger::prelude::*;
+use libra_types::block_info::BlockInfo;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -33,8 +35,7 @@ use libra_types::{
 };
 use scratchpad::SparseMerkleTree;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::{
     marker::PhantomData,
     sync::{mpsc, Arc, Mutex},
@@ -136,6 +137,9 @@ pub struct TransactionData {
 
     /// The number of newly created accounts.
     num_account_created: usize,
+
+    /// The transaction info hash if the VM status output was keep, None otherwise
+    txn_info_hash: Option<HashValue>,
 }
 
 impl TransactionData {
@@ -147,6 +151,7 @@ impl TransactionData {
         event_tree: Arc<InMemoryAccumulator<EventAccumulatorHasher>>,
         gas_used: u64,
         num_account_created: usize,
+        txn_info_hash: Option<HashValue>,
     ) -> Self {
         TransactionData {
             account_blobs,
@@ -156,6 +161,7 @@ impl TransactionData {
             event_tree,
             gas_used,
             num_account_created,
+            txn_info_hash,
         }
     }
 
@@ -189,6 +195,10 @@ impl TransactionData {
 
     fn prune_state_tree(&self) {
         self.state_tree.prune()
+    }
+
+    pub fn txn_info_hash(&self) -> Option<HashValue> {
+        self.txn_info_hash
     }
 }
 
@@ -277,7 +287,6 @@ pub struct Executor<V> {
     /// of the channel and processes the commands.
     command_sender: Mutex<Option<mpsc::Sender<Command>>>,
 
-    /// The lasted committed trees.
     committed_trees: Arc<Mutex<ExecutedTrees>>,
 
     phantom: PhantomData<V>,
@@ -293,38 +302,45 @@ where
         storage_write_client: Arc<dyn StorageWrite>,
         config: &NodeConfig,
     ) -> Self {
+        let (command_sender, command_receiver) = mpsc::channel();
+
         let startup_info = storage_read_client
             .get_startup_info()
             .expect("Failed to read startup info from storage.");
 
-        let (committed_trees, committed_timestamp_usecs, committed_block_id) = match startup_info {
+        let (committed_trees, synced_trees, committed_timestamp_usecs) = match startup_info {
             Some(info) => {
                 info!("Startup info read from DB: {:?}.", info);
                 let ledger_info = info.ledger_info;
                 (
-                    Arc::new(Mutex::new(ExecutedTrees::new(
-                        info.account_state_root_hash,
-                        info.ledger_frozen_subtree_hashes,
-                        info.latest_version + 1,
-                    ))),
+                    ExecutedTrees::new(
+                        info.committed_tree_state.account_state_root_hash,
+                        info.committed_tree_state.ledger_frozen_subtree_hashes,
+                        info.committed_tree_state.version + 1,
+                    ),
+                    info.synced_tree_state.map(|state| {
+                        ExecutedTrees::new(
+                            state.account_state_root_hash,
+                            state.ledger_frozen_subtree_hashes,
+                            state.version + 1,
+                        )
+                    }),
                     ledger_info.timestamp_usecs(),
-                    ledger_info.consensus_block_id(),
                 )
             }
             None => {
                 info!("Startup info is empty. Will start from GENESIS.");
-                (
-                    Arc::new(Mutex::new(ExecutedTrees::new_empty())),
-                    0,
-                    HashValue::zero(),
-                )
+                (ExecutedTrees::new_empty(), None, 0)
             }
         };
+        let committed_trees = Arc::new(Mutex::new(committed_trees));
 
-        let (command_sender, command_receiver) = mpsc::channel();
-
-        let cloned_committed_trees = committed_trees.clone();
         let vm_config = config.vm_config.clone();
+        let genesis_txn = config
+            .get_genesis_transaction()
+            .expect("failed to load genesis transaction!");
+        let cloned_committed_trees = committed_trees.clone();
+        let (resp_sender, resp_receiver) = oneshot::channel();
         let executor = Executor {
             block_processor_thread: Some(
                 std::thread::Builder::new()
@@ -332,11 +348,14 @@ where
                     .spawn(move || {
                         let mut block_processor = BlockProcessor::<V>::new(
                             command_receiver,
-                            committed_timestamp_usecs,
-                            cloned_committed_trees,
                             storage_read_client,
                             storage_write_client,
+                            cloned_committed_trees,
+                            synced_trees,
+                            committed_timestamp_usecs,
                             vm_config,
+                            genesis_txn,
+                            resp_sender,
                         );
                         block_processor.run();
                     })
@@ -346,14 +365,7 @@ where
             phantom: PhantomData,
             committed_trees,
         };
-
-        if committed_block_id.is_zero() {
-            let genesis_transaction = config
-                .get_genesis_transaction()
-                .expect("failed to load genesis transaction!");
-            executor.init_genesis(genesis_transaction);
-        }
-
+        block_on(resp_receiver).expect("initialization is done");
         executor
     }
 
@@ -374,15 +386,18 @@ where
         .expect("Failed to execute genesis block.");
 
         let root_hash = output.accu_root();
+        // TODO: once genesis emit the event, next_validator_set should be parsed from vm output
         let ledger_info = LedgerInfo::new(
-            /* version = */ 0,
-            root_hash,
-            /* consensus_data_hash = */ HashValue::zero(),
-            /* consensus_block_id */ *PRE_GENESIS_BLOCK_ID,
-            /* epoch = */ 0,
-            /* timestamp_usecs = */ 0,
-            // TODO: once genesis emit the event, this should be parsed from vm output
-            Some(ValidatorSet::new(vec![])),
+            BlockInfo::new(
+                0,
+                0,
+                *PRE_GENESIS_BLOCK_ID,
+                root_hash,
+                0,
+                0,
+                Some(ValidatorSet::new(vec![])),
+            ),
+            HashValue::zero(),
         );
         let ledger_info_with_sigs =
             LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ BTreeMap::new());

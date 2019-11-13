@@ -39,11 +39,15 @@ impl MempoolProxy {
             transaction.sequence_number = txn.sequence_number();
             match status {
                 TransactionStatus::Keep(_) => {
-                    counters::SUCCESS_TXNS_COUNT.inc();
+                    counters::COMMITTED_TXNS_COUNT
+                        .with_label_values(&["success"])
+                        .inc();
                     transaction.is_rejected = false;
                 }
                 TransactionStatus::Discard(_) => {
-                    counters::FAILED_TXNS_COUNT.inc();
+                    counters::COMMITTED_TXNS_COUNT
+                        .with_label_values(&["failed"])
+                        .inc();
                     transaction.is_rejected = true;
                 }
             };
@@ -131,7 +135,6 @@ impl TxnManager for MempoolProxy {
         timestamp_usecs: u64,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         counters::COMMITTED_BLOCKS_COUNT.inc();
-        counters::COMMITTED_TXNS_COUNT.inc_by(txns.len() as i64);
         counters::NUM_TXNS_PER_BLOCK.observe(txns.len() as f64);
         let req =
             Self::gen_commit_transactions_request(txns.as_slice(), compute_result, timestamp_usecs);

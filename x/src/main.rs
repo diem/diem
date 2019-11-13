@@ -1,9 +1,14 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use structopt::StructOpt;
 
+mod bench;
 mod cargo;
 mod check;
 mod clippy;
 mod config;
+mod lint;
 mod test;
 mod utils;
 
@@ -17,6 +22,9 @@ struct Args {
 
 #[derive(Debug, StructOpt)]
 enum Command {
+    #[structopt(name = "bench")]
+    /// Run `cargo bench`
+    Bench(bench::Args),
     #[structopt(name = "check")]
     /// Run `cargo check`
     Check(check::Args),
@@ -26,6 +34,9 @@ enum Command {
     #[structopt(name = "test")]
     /// Run tests
     Test(test::Args),
+    #[structopt(name = "lint")]
+    /// Run lints
+    Lint(lint::Args),
 }
 
 fn main() -> Result<()> {
@@ -36,5 +47,7 @@ fn main() -> Result<()> {
         Command::Test(args) => test::run(args, config),
         Command::Check(args) => check::run(args, config),
         Command::Clippy(args) => clippy::run(args, config),
+        Command::Bench(args) => bench::run(args, config),
+        Command::Lint(args) => lint::run(args, config),
     }
 }

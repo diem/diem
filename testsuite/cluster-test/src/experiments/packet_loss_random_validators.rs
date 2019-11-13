@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 /// This module provides an experiment which introduces packet loss for
 /// a given number of instances in the cluster. It undoes the packet loss
 /// in the cluster after the given duration
@@ -49,6 +52,10 @@ impl Experiment for PacketLossRandomValidators {
             remove_network_effects.apply()?;
         }
         Ok(())
+    }
+
+    fn deadline(&self) -> Duration {
+        Duration::from_secs(20 * 60)
     }
 }
 

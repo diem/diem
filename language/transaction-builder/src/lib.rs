@@ -4,10 +4,11 @@ use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
 use libra_config::config::{VMConfig, VMMode, VMPublishingOption};
 use libra_crypto::HashValue;
+use libra_types::block_metadata::BlockMetadata;
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
-    transaction::{Script, TransactionArgument, SCRIPT_HASH_LENGTH},
+    transaction::{Script, Transaction, TransactionArgument, SCRIPT_HASH_LENGTH},
 };
 use std::{collections::HashSet, iter::FromIterator};
 use stdlib::{
@@ -119,12 +120,13 @@ pub fn encode_rotate_consensus_pubkey_script(new_key: Vec<u8>) -> Script {
     )
 }
 
-/// Encode a program that rotates the sender's authentication key to `new_key`.
-pub fn rotate_authentication_key_script(new_key: AccountAddress) -> Script {
+/// Encode a program that rotates the sender's authentication key to `new_key`. `new_key` should be
+/// a 256 bit sha3 hash of an ed25519 public key.
+pub fn rotate_authentication_key_script(new_hashed_key: Vec<u8>) -> Script {
     Script::new(
         ROTATE_AUTHENTICATION_KEY_TXN.clone(),
         vec![TransactionArgument::ByteArray(ByteArray::new(
-            new_key.as_ref().to_vec(),
+            new_hashed_key,
         ))],
     )
 }
@@ -142,12 +144,8 @@ pub fn encode_mint_script(sender: &AccountAddress, amount: u64) -> Script {
 }
 
 // TODO: this should go away once we are no longer using it in tests
-/// Encode a program creating `amount` coins for sender
-pub fn encode_block_prologue_script(block_height: u64) -> Script {
-    Script::new(
-        BLOCK_PROLOGUE_TXN.clone(),
-        vec![TransactionArgument::U64(block_height)],
-    )
+pub fn encode_block_prologue_script(block_metadata: BlockMetadata) -> Transaction {
+    Transaction::BlockMetadata(block_metadata)
 }
 
 /// Returns a user friendly mnemonic for the transaction type if the transaction is

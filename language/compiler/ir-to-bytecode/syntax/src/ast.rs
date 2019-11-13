@@ -325,9 +325,6 @@ pub enum Builtin {
     /// Returns the unit of gas remain to be used for now.
     GetGasRemaining,
 
-    /// Publishing,
-    /// Initialize a previously empty address by publishing a resource of type Account
-    CreateAccount,
     /// Remove a resource of the given type from the account with the given address
     MoveFrom(StructName, Vec<Type>),
     /// Publish an instantiated struct object into sender's account.
@@ -634,8 +631,8 @@ impl ModuleName {
         ModuleName(name)
     }
 
-    /// Creates a new `ModuleName` from a raw string. Intended for use by syntax.lalrpop.
-    pub fn parse<L, T>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, T, failure::Error>> {
+    /// Creates a new `ModuleName` from a raw string. Intended for use by the parser.
+    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
         Ok(ModuleName::new(parse_identifier(s.into())?))
     }
 
@@ -691,12 +688,12 @@ impl ModuleDefinition {
     /// Creates a new `ModuleDefinition` from its string name, dependencies, structs+resources,
     /// and procedures
     /// Does not verify the correctness of any internal properties of its elements
-    pub fn new<L, T>(
+    pub fn new<L>(
         name: impl Into<Box<str>>,
         imports: Vec<ImportDefinition>,
         structs: Vec<StructDefinition_>,
         functions: Vec<(FunctionName, Function_)>,
-    ) -> Result<Self, ParseError<L, T, failure::Error>> {
+    ) -> Result<Self, ParseError<L, failure::Error>> {
         Ok(ModuleDefinition {
             name: ModuleName::parse(name.into())?,
             imports,
@@ -778,8 +775,8 @@ impl StructName {
         StructName(name)
     }
 
-    /// Creates a new `StructName` from a raw string. Intended for use by syntax.lalrpop.
-    pub fn parse<L, T>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, T, failure::Error>> {
+    /// Creates a new `StructName` from a raw string. Intended for use by the parser.
+    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
         Ok(StructName::new(parse_identifier(s.into())?))
     }
 
@@ -800,12 +797,12 @@ impl StructDefinition {
     /// types
     /// Does not verify the correctness of any internal properties, e.g. doesn't check that the
     /// fields do not have reference types
-    pub fn move_declared<L, T>(
+    pub fn move_declared<L>(
         is_nominal_resource: bool,
         name: impl Into<Box<str>>,
         type_formals: Vec<(TypeVar_, Kind)>,
         fields: Fields<Type>,
-    ) -> Result<Self, ParseError<L, T, failure::Error>> {
+    ) -> Result<Self, ParseError<L, failure::Error>> {
         Ok(StructDefinition {
             is_nominal_resource,
             name: StructName::parse(name)?,
@@ -817,11 +814,11 @@ impl StructDefinition {
     /// Creates a new StructDefinition from the resource kind (true if resource), the string
     /// representation of the name, and the user specified fields, a map from their names to their
     /// types
-    pub fn native<L, T>(
+    pub fn native<L>(
         is_nominal_resource: bool,
         name: impl Into<Box<str>>,
         type_formals: Vec<(TypeVar_, Kind)>,
-    ) -> Result<Self, ParseError<L, T, failure::Error>> {
+    ) -> Result<Self, ParseError<L, failure::Error>> {
         Ok(StructDefinition {
             is_nominal_resource,
             name: StructName::parse(name)?,
@@ -837,8 +834,8 @@ impl FunctionName {
         FunctionName(name)
     }
 
-    /// Creates a new `FunctionName` from a raw string. Intended for use by syntax.lalrpop.
-    pub fn parse<L, T>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, T, failure::Error>> {
+    /// Creates a new `FunctionName` from a raw string. Intended for use by the parser.
+    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
         Ok(FunctionName::new(parse_identifier(s.into())?))
     }
 
@@ -900,8 +897,8 @@ impl Var {
         Spanned::no_loc(Var::new(s))
     }
 
-    /// Creates a new `Var` from a raw string. Intended for use by syntax.lalrpop.
-    pub fn parse<L, T>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, T, failure::Error>> {
+    /// Creates a new `Var` from a raw string. Intended for use by the parser.
+    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
         Ok(Var::new(parse_identifier(s.into())?))
     }
 
@@ -917,8 +914,8 @@ impl TypeVar {
         TypeVar(s)
     }
 
-    /// Creates a new `TypeVar` from a raw string. Intended for use by syntax.lalrpop.
-    pub fn parse<L, T>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, T, failure::Error>> {
+    /// Creates a new `TypeVar` from a raw string. Intended for use by the parser.
+    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
         Ok(TypeVar::new(parse_identifier(s.into())?))
     }
 
@@ -1090,13 +1087,11 @@ impl Exp {
 }
 
 /// Parses a field.
-pub fn parse_field<L, T>(
-    s: impl Into<Box<str>>,
-) -> Result<Field, ParseError<L, T, failure::Error>> {
+pub fn parse_field<L>(s: impl Into<Box<str>>) -> Result<Field, ParseError<L, failure::Error>> {
     Ok(Field::new(parse_identifier(s.into())?))
 }
 
-fn parse_identifier<L, T>(s: Box<str>) -> Result<Identifier, ParseError<L, T, failure::Error>> {
+fn parse_identifier<L>(s: Box<str>) -> Result<Identifier, ParseError<L, failure::Error>> {
     Identifier::new(s).map_err(|error| ParseError::User { error })
 }
 
@@ -1376,7 +1371,6 @@ impl fmt::Display for Var {
 impl fmt::Display for Builtin {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Builtin::CreateAccount => write!(f, "create_account"),
             Builtin::Exists(t, tys) => write!(f, "exists<{}{}>", t, format_type_actuals(tys)),
             Builtin::BorrowGlobal(mut_, t, tys) => {
                 let mut_flag = if *mut_ { "_mut" } else { "" };

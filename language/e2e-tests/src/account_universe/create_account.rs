@@ -30,7 +30,10 @@ pub struct CreateAccountGen {
 }
 
 impl AUTransactionGen for CreateAccountGen {
-    fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus) {
+    fn apply(
+        &self,
+        universe: &mut AccountUniverse,
+    ) -> (SignedTransaction, (TransactionStatus, u64)) {
         let sender = universe.pick(&self.sender).1;
 
         let txn = create_account_txn(
@@ -40,21 +43,23 @@ impl AUTransactionGen for CreateAccountGen {
             self.amount,
         );
 
-        let (status, is_success) = txn_one_account_result(
-            sender,
-            self.amount,
-            *gas_costs::CREATE_ACCOUNT,
-            *gas_costs::CREATE_ACCOUNT_TOO_LOW,
-        );
+        let mut gas_cost = sender.create_account_gas_cost();
+        let low_balance_gas_cost = sender.create_account_low_balance_gas_cost();
+
+        let (status, is_success) =
+            txn_one_account_result(sender, self.amount, gas_cost, low_balance_gas_cost);
         if is_success {
+            sender.event_counter_created = true;
             universe.add_account(AccountData::with_account(
                 self.new_account.clone(),
                 self.amount,
                 0,
             ));
+        } else {
+            gas_cost = 0;
         }
 
-        (txn, status)
+        (txn, (status, gas_cost))
     }
 }
 
@@ -71,7 +76,10 @@ pub struct CreateExistingAccountGen {
 }
 
 impl AUTransactionGen for CreateExistingAccountGen {
-    fn apply(&self, universe: &mut AccountUniverse) -> (SignedTransaction, TransactionStatus) {
+    fn apply(
+        &self,
+        universe: &mut AccountUniverse,
+    ) -> (SignedTransaction, (TransactionStatus, u64)) {
         let AccountPair {
             account_1: sender,
             account_2: receiver,
@@ -87,10 +95,12 @@ impl AUTransactionGen for CreateExistingAccountGen {
 
         // This transaction should never work, but it will fail differently if there's not enough
         // gas to reserve.
+        let mut gas_cost = 0;
         let enough_max_gas = sender.balance >= gas_costs::TXN_RESERVED;
         let status = if enough_max_gas {
             sender.sequence_number += 1;
-            sender.balance -= *gas_costs::CREATE_EXISTING_ACCOUNT;
+            gas_cost = sender.create_existing_account_gas_cost();
+            sender.balance -= gas_cost;
             TransactionStatus::Keep(VMStatus::new(StatusCode::CANNOT_WRITE_EXISTING_RESOURCE))
         } else {
             // Not enough gas to get past the prologue.
@@ -99,6 +109,6 @@ impl AUTransactionGen for CreateExistingAccountGen {
             ))
         };
 
-        (txn, status)
+        (txn, (status, gas_cost))
     }
 }

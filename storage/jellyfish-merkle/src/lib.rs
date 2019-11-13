@@ -74,12 +74,16 @@ mod mock_tree_store;
 mod nibble_path;
 pub mod node_type;
 pub mod restore;
+#[cfg(test)]
+mod test_helper;
 mod tree_cache;
 
 use failure::prelude::*;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
-    account_state_blob::AccountStateBlob, proof::SparseMerkleProof, transaction::Version,
+    account_state_blob::AccountStateBlob,
+    proof::{SparseMerkleProof, SparseMerkleRangeProof},
+    transaction::Version,
 };
 use nibble_path::{skip_common_prefix, NibbleIterator, NibblePath};
 use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey};
@@ -505,7 +509,7 @@ where
 
         // We limit the number of loops here deliberately to avoid potential cyclic graph bugs
         // in the tree structure.
-        for nibble_depth in 0..ROOT_NIBBLE_HEIGHT {
+        for nibble_depth in 0..=ROOT_NIBBLE_HEIGHT {
             let next_node = self.reader.get_node(&next_node_key)?;
             match next_node {
                 Node::Internal(internal_node) => {
@@ -557,6 +561,33 @@ where
             }
         }
         bail!("Jellyfish Merkle tree has cyclic graph inside.");
+    }
+
+    /// Gets the proof that shows a list of keys up to `rightmost_key_to_prove` exist at `version`.
+    pub fn get_range_proof(
+        &self,
+        rightmost_key_to_prove: HashValue,
+        version: Version,
+    ) -> Result<SparseMerkleRangeProof> {
+        let (account, proof) = self.get_with_proof(rightmost_key_to_prove, version)?;
+        ensure!(account.is_some(), "rightmost_key_to_prove must exist.");
+
+        let siblings = proof
+            .siblings()
+            .iter()
+            .rev()
+            .zip(rightmost_key_to_prove.iter_bits())
+            .filter_map(|(sibling, bit)| {
+                // We only need to keep the siblings on the right.
+                if !bit {
+                    Some(*sibling)
+                } else {
+                    None
+                }
+            })
+            .rev()
+            .collect();
+        Ok(SparseMerkleRangeProof::new(siblings))
     }
 
     #[cfg(test)]

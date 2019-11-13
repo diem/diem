@@ -7,11 +7,10 @@ use std::collections::HashMap;
 pub fn get_json_metrics() -> HashMap<String, String> {
     let mut json_metrics: HashMap<String, String> = HashMap::new();
     json_metrics = add_revision_hash(json_metrics);
-    serde_json::to_string(&json_metrics).unwrap();
     json_metrics
 }
 
 fn add_revision_hash(mut json_metrics: HashMap<String, String>) -> HashMap<String, String> {
-    json_metrics.insert("revision".to_string(), env!("GIT_REVISION").to_string());
+    json_metrics.insert("revision".to_string(), env!("GIT_REV").to_string());
     json_metrics
 }

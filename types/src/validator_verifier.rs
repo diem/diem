@@ -6,7 +6,6 @@ use crate::validator_set::ValidatorSet;
 use failure::prelude::*;
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_crypto::*;
-use libra_logger::prelude::*;
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -187,13 +186,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
                 .collect();
         // Fallback is required to identify the source of the problem if batching fails.
         if PublicKey::batch_verify_signatures(&hash, keys_and_signatures).is_err() {
-            match self.verify_aggregated_signature(hash, aggregated_signature) {
-                Ok(_) => warn!(
-                    "Inconsistency between batch and iterative signature verification detected! \
-                     Batch verification failed, while iterative passed."
-                ),
-                Err(err) => return Err(err),
-            }
+            self.verify_aggregated_signature(hash, aggregated_signature)?
         }
         Ok(())
     }
@@ -262,6 +255,11 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
         account_addresses
     }
 
+    /// Returns an ordered list of account addresses as an `Iterator`.
+    pub fn get_account_addresses_iter(&self) -> impl Iterator<Item = AccountAddress> + '_ {
+        self.address_to_validator_info.keys().copied()
+    }
+
     /// Returns the number of authors to be validated.
     pub fn len(&self) -> usize {
         self.address_to_validator_info.len()
@@ -303,6 +301,26 @@ impl From<&ValidatorSet> for ValidatorVerifier<Ed25519PublicKey> {
                 map
             },
         ))
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl From<&ValidatorVerifier<Ed25519PublicKey>> for ValidatorSet {
+    fn from(verifier: &ValidatorVerifier<Ed25519PublicKey>) -> Self {
+        use crate::validator_public_keys::ValidatorPublicKeys;
+        ValidatorSet::new(
+            verifier
+                .get_ordered_account_addresses()
+                .into_iter()
+                .map(|addr| {
+                    ValidatorPublicKeys::new_with_random_network_keys(
+                        addr,
+                        verifier.get_public_key(&addr).unwrap(),
+                        verifier.get_voting_power(&addr).unwrap(),
+                    )
+                })
+                .collect(),
+        )
     }
 }
 

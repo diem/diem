@@ -117,6 +117,7 @@ mod gas_meter;
 mod move_vm;
 mod process_txn;
 mod runtime;
+mod system_txn;
 #[cfg(test)]
 mod unit_tests;
 
@@ -128,10 +129,8 @@ pub mod loaded_data;
 pub mod txn_executor;
 
 pub use move_vm::MoveVM;
-pub use process_txn::verify::static_verify_program;
-pub use txn_executor::execute_function;
+pub use txn_executor::execute_function_in_module;
 
-use failure::prelude::*;
 use libra_config::config::VMConfig;
 use libra_state_view::StateView;
 use libra_types::{
@@ -163,5 +162,5 @@ pub trait VMExecutor {
         transactions: Vec<Transaction>,
         config: &VMConfig,
         state_view: &dyn StateView,
-    ) -> Result<Vec<TransactionOutput>>;
+    ) -> Result<Vec<TransactionOutput>, VMStatus>;
 }

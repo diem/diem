@@ -2,66 +2,105 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::PeerId;
+use crate::OP_COUNTERS;
 use admission_control_proto::proto::admission_control::{
-    admission_control_msg::Message as AdmissionControlMsg_oneof, AdmissionControlClient,
-    AdmissionControlMsg, SubmitTransactionRequest, SubmitTransactionResponse,
+    admission_control_msg::Message as AdmissionControlMsg_oneof,
+    submit_transaction_response::Status, AdmissionControlMsg, SubmitTransactionRequest,
+    SubmitTransactionResponse,
 };
+use admission_control_proto::AdmissionControlStatus;
 use bounded_executor::BoundedExecutor;
 use bytes::Bytes;
 use failure::format_err;
+use futures::compat::Future01CompatExt;
 use futures::{
     channel::{mpsc, oneshot},
     stream::{select_all, StreamExt},
 };
 use libra_config::config::{AdmissionControlConfig, RoleType};
 use libra_logger::prelude::*;
+use libra_mempool::proto::{
+    mempool::{AddTransactionWithValidationRequest, HealthCheckRequest},
+    mempool_client::MempoolClientTrait,
+};
+use libra_mempool_shared_proto::proto::mempool_status::{
+    MempoolAddTransactionStatus,
+    MempoolAddTransactionStatusCode::{self, MempoolIsFull},
+};
 use libra_prost_ext::MessageExt;
+use libra_types::transaction::SignedTransaction;
 use network::validator_network::{
     AdmissionControlNetworkEvents, AdmissionControlNetworkSender, Event, RpcError,
 };
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
+use std::convert::TryFrom;
+use std::sync::Arc;
+use storage_client::StorageRead;
 use tokio::runtime::TaskExecutor;
+use vm_validator::vm_validator::{get_account_state, TransactionValidation};
 
 /// UpstreamProxyData is the set of data needed for a full node to send transaction write
 /// requests to their upstream validator.
 /// UpstreamProxyData is instantiated in AC Runtime.
 #[derive(Clone)]
-pub struct UpstreamProxyData {
+pub struct UpstreamProxyData<M, V> {
     ac_config: AdmissionControlConfig,
     network_sender: AdmissionControlNetworkSender,
     role: RoleType,
-    /// AC Client
-    pub client: AdmissionControlClient, // TODO remove client
+    /// gRPC client connecting Mempool.
+    mempool_client: Option<Arc<M>>,
+    /// gRPC client to send read requests to Storage.
+    storage_read_client: Arc<dyn StorageRead>,
+    /// VM validator instance to validate transactions sent from wallets.
+    vm_validator: Arc<V>,
+    /// Flag indicating whether we need to check mempool before validation, drop txn if check
+    /// fails.
+    need_to_check_mempool_before_validation: bool,
 }
 
-impl UpstreamProxyData {
+impl<M: 'static, V> UpstreamProxyData<M, V>
+where
+    M: MempoolClientTrait,
+    V: TransactionValidation,
+{
+    /// Render upstream proxy data
     pub fn new(
         ac_config: AdmissionControlConfig,
         network_sender: AdmissionControlNetworkSender,
         role: RoleType,
-        client: AdmissionControlClient, // TODO remove client
+        mempool_client: Option<Arc<M>>,
+        storage_read_client: Arc<dyn StorageRead>,
+        vm_validator: Arc<V>,
+        need_to_check_mempool_before_validation: bool,
     ) -> Self {
         Self {
             ac_config,
             network_sender,
             role,
-            client,
+            mempool_client,
+            storage_read_client,
+            vm_validator,
+            need_to_check_mempool_before_validation,
         }
     }
 }
 
 /// Main routine for proxying write request. Starts a coordinator that listens for AdmissionControlMsg
-pub async fn process_network_messages(
-    upstream_proxy_data: UpstreamProxyData,
+#[allow(clippy::implicit_hasher)]
+pub async fn process_network_messages<M, V>(
+    upstream_proxy_data: UpstreamProxyData<M, V>,
     network_events: Vec<AdmissionControlNetworkEvents>,
     mut peer_info: HashMap<PeerId, bool>,
     executor: TaskExecutor,
-    mut client_events: mpsc::UnboundedReceiver<(
+    mut client_events: mpsc::Receiver<(
         SubmitTransactionRequest,
         oneshot::Sender<failure::Result<SubmitTransactionResponse>>,
     )>,
-) {
+) where
+    M: MempoolClientTrait + Clone + 'static,
+    V: TransactionValidation + Clone + 'static,
+{
     let mut events = select_all(network_events).fuse();
     let workers_available = upstream_proxy_data.ac_config.max_concurrent_inbound_syncs;
     let bounded_executor = BoundedExecutor::new(workers_available, executor);
@@ -71,7 +110,7 @@ pub async fn process_network_messages(
             (mut msg, callback) = client_events.select_next_some() => {
                 let peer_id = pick_peer(&peer_info);
                 bounded_executor
-                    .spawn(start_submit_transaction_upstream(msg, upstream_proxy_data.clone(), peer_id, callback))
+                    .spawn(submit_transaction(msg, upstream_proxy_data.clone(), peer_id, callback))
                     .await;
             },
             network_event = events.select_next_some() => {
@@ -131,36 +170,49 @@ fn pick_peer(peer_info: &HashMap<PeerId, bool>) -> Option<PeerId> {
     None
 }
 
-async fn start_submit_transaction_upstream(
+async fn submit_transaction<M, V>(
     request: SubmitTransactionRequest,
-    upstream_proxy_data: UpstreamProxyData,
+    mut upstream_proxy_data: UpstreamProxyData<M, V>,
     peer_id: Option<PeerId>,
     callback: oneshot::Sender<failure::Result<SubmitTransactionResponse>>,
-) {
+) where
+    M: MempoolClientTrait,
+    V: TransactionValidation,
+{
     let mut response = None;
-    if let Some(peer_id) = peer_id {
-        let result = upstream_proxy_data
-            .network_sender
-            .send_transaction_upstream(
-                peer_id.clone(),
-                request,
-                upstream_proxy_data.ac_config.upstream_proxy_timeout,
-            )
-            .await;
-        match result {
-            Ok(res) => {
-                response = Some(Ok(res));
-            }
-            Err(e) => {
-                response = Some(Err(format_err!(
-                    "[admission-control] Sending transaction upstream returned an error: {:?}",
-                    e
-                )));
+    match upstream_proxy_data.role {
+        RoleType::Validator => {
+            response = Some(submit_transaction_to_mempool(upstream_proxy_data, request).await);
+        }
+        RoleType::FullNode => {
+            if let Some(peer_id) = peer_id {
+                let result = upstream_proxy_data
+                    .network_sender
+                    .send_transaction_upstream(
+                        peer_id.clone(),
+                        request,
+                        upstream_proxy_data.ac_config.upstream_proxy_timeout,
+                    )
+                    .await;
+                match result {
+                    Ok(res) => {
+                        response = Some(Ok(res));
+                    }
+                    Err(e) => {
+                        response = Some(Err(format_err!(
+                            "[admission-control] Sending transaction upstream returned an error: {:?}",
+                            e
+                        )));
+                    }
+                }
             }
         }
-    }
-    let res = response
-        .unwrap_or_else(|| Err(format_err!("[admission-control] No active upstream peers")));
+    };
+    let res = response.unwrap_or_else(|| {
+        Err(format_err!(
+            "[admission-control] Processing write request failed"
+        ))
+    });
     if let Err(e) = callback.send(res) {
         error!(
             "[admission control] failed to send back transaction result with error: {:?}",
@@ -169,9 +221,9 @@ async fn start_submit_transaction_upstream(
     };
 }
 
-async fn submit_transaction_upstream(
+async fn submit_transaction_upstream<M, V>(
     request: SubmitTransactionRequest,
-    upstream_proxy_data: &UpstreamProxyData,
+    upstream_proxy_data: &mut UpstreamProxyData<M, V>,
     peer_id: Option<PeerId>,
 ) -> failure::Result<SubmitTransactionResponse> {
     if let Some(peer_id) = peer_id {
@@ -188,16 +240,20 @@ async fn submit_transaction_upstream(
     Err(format_err!("[admission-control] No active upstream peers"))
 }
 
-async fn process_submit_transaction_request(
-    upstream_proxy_data: UpstreamProxyData,
+async fn process_submit_transaction_request<M, V>(
+    mut upstream_proxy_data: UpstreamProxyData<M, V>,
     peer_id: Option<PeerId>,
     request: SubmitTransactionRequest,
     callback: oneshot::Sender<Result<Bytes, RpcError>>,
-) {
+) where
+    M: MempoolClientTrait,
+    V: TransactionValidation,
+{
     let mut response_msg = None;
     match upstream_proxy_data.role {
         RoleType::Validator => {
-            if let Ok(response) = upstream_proxy_data.client.submit_transaction(&request) {
+            if let Ok(response) = submit_transaction_to_mempool(upstream_proxy_data, request).await
+            {
                 let ac_control_msg = AdmissionControlMsg {
                     message: Some(AdmissionControlMsg_oneof::SubmitTransactionResponse(
                         response,
@@ -209,7 +265,7 @@ async fn process_submit_transaction_request(
         RoleType::FullNode => {
             // node is not a validator, so send the transaction to upstream AC via networking stack
             if let Ok(response) =
-                submit_transaction_upstream(request, &upstream_proxy_data, peer_id).await
+                submit_transaction_upstream(request, &mut upstream_proxy_data, peer_id).await
             {
                 let ac_control_msg = AdmissionControlMsg {
                     message: Some(AdmissionControlMsg_oneof::SubmitTransactionResponse(
@@ -235,5 +291,136 @@ async fn process_submit_transaction_request(
         error!(
             "[admission control] Did not get a response msg back from submit transaction upstream request",
         );
+    }
+}
+
+/// Validate transaction signature, then via VM, and add it to Mempool if it passes VM check.
+pub(crate) async fn submit_transaction_to_mempool<M, V>(
+    upstream_proxy_data: UpstreamProxyData<M, V>,
+    req: SubmitTransactionRequest,
+) -> failure::Result<SubmitTransactionResponse>
+where
+    M: MempoolClientTrait,
+    V: TransactionValidation,
+{
+    // Drop requests first if mempool is full (validator is lagging behind) so not to consume
+    // unnecessary resources.
+    if !can_send_txn_to_mempool(&upstream_proxy_data)? {
+        debug!("Mempool is full");
+        OP_COUNTERS.inc_by("submit_txn.rejected.mempool_full", 1);
+        let mut response = SubmitTransactionResponse::default();
+        let mut status = MempoolAddTransactionStatus::default();
+        status.set_code(MempoolIsFull);
+        status.message = "Mempool is full".to_string();
+        response.status = Some(Status::MempoolStatus(status));
+        return Ok(response);
+    }
+
+    let txn_proto = req.transaction.clone().unwrap_or_else(Default::default);
+
+    let transaction = match SignedTransaction::try_from(txn_proto.clone()) {
+        Ok(t) => t,
+        Err(e) => {
+            security_log(SecurityEvent::InvalidTransactionAC)
+                .error(&e)
+                .data(&txn_proto)
+                .log();
+            let mut response = SubmitTransactionResponse::default();
+            response.status = Some(Status::AcStatus(
+                AdmissionControlStatus::Rejected("submit txn rejected".to_string()).into(),
+            ));
+            OP_COUNTERS.inc_by("submit_txn.rejected.invalid_txn", 1);
+            return Ok(response);
+        }
+    };
+
+    let gas_cost = transaction.max_gas_amount();
+    let validation_status = upstream_proxy_data
+        .vm_validator
+        .validate_transaction(transaction.clone())
+        .compat()
+        .await
+        .map_err(|e| {
+            security_log(SecurityEvent::InvalidTransactionAC)
+                .error(&e)
+                .data(&transaction)
+                .log();
+            e
+        })?;
+
+    if let Some(validation_status) = validation_status {
+        let mut response = SubmitTransactionResponse::default();
+        OP_COUNTERS.inc_by("submit_txn.vm_validation.failure", 1);
+        debug!(
+            "txn failed in vm validation, status: {:?}, txn: {:?}",
+            validation_status, transaction
+        );
+        response.status = Some(Status::VmStatus(validation_status.into()));
+        return Ok(response);
+    }
+    let sender = transaction.sender();
+    let account_state =
+        get_account_state(upstream_proxy_data.storage_read_client.clone(), sender).await;
+    let mut add_transaction_request = AddTransactionWithValidationRequest::default();
+    add_transaction_request.transaction = req.transaction.clone();
+    add_transaction_request.max_gas_cost = gas_cost;
+
+    if let Ok((sequence_number, balance)) = account_state {
+        add_transaction_request.account_balance = balance;
+        add_transaction_request.latest_sequence_number = sequence_number;
+    }
+
+    add_txn_to_mempool(&upstream_proxy_data, add_transaction_request)
+}
+
+fn can_send_txn_to_mempool<M, V>(
+    upstream_proxy_data: &UpstreamProxyData<M, V>,
+) -> failure::Result<bool>
+where
+    M: MempoolClientTrait,
+{
+    if upstream_proxy_data.need_to_check_mempool_before_validation {
+        let req = HealthCheckRequest::default();
+        let is_mempool_healthy = match &upstream_proxy_data.mempool_client {
+            Some(client) => client.health_check(&req)?.is_healthy,
+            None => false,
+        };
+        return Ok(is_mempool_healthy);
+    }
+    Ok(true)
+}
+
+/// Add signed transaction to mempool once it passes vm check
+fn add_txn_to_mempool<M, V>(
+    upstream_proxy_data: &UpstreamProxyData<M, V>,
+    add_transaction_request: AddTransactionWithValidationRequest,
+) -> failure::Result<SubmitTransactionResponse>
+where
+    M: MempoolClientTrait,
+{
+    match &upstream_proxy_data.mempool_client {
+        Some(mempool_client) => {
+            let mempool_result =
+                mempool_client.add_transaction_with_validation(&add_transaction_request)?;
+
+            debug!("[GRPC] Done with transaction submission request");
+            let mut response = SubmitTransactionResponse::default();
+            if let Some(status) = mempool_result.status {
+                if status.code() == MempoolAddTransactionStatusCode::Valid {
+                    OP_COUNTERS.inc_by("submit_txn.txn_accepted", 1);
+                    response.status =
+                        Some(Status::AcStatus(AdmissionControlStatus::Accepted.into()));
+                } else {
+                    debug!(
+                        "txn failed in mempool, status: {:?}, txn: {:?}",
+                        status, add_transaction_request.transaction
+                    );
+                    OP_COUNTERS.inc_by("submit_txn.mempool.failure", 1);
+                    response.status = Some(Status::MempoolStatus(status));
+                }
+            }
+            Ok(response)
+        }
+        None => Err(format_err!("Mempool is not initialized")),
     }
 }

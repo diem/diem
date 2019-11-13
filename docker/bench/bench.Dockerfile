@@ -4,7 +4,7 @@ FROM debian:buster AS toolchain
 # docker build --build-arg https_proxy=http://fwdproxy:8080 --build-arg http_proxy=http://fwdproxy:8080
 
 RUN echo "deb http://deb.debian.org/debian buster-backports main" > /etc/apt/sources.list.d/backports.list \
-    && apt-get update && apt-get install -y protobuf-compiler/buster cmake curl clang \
+    && apt-get update && apt-get install -y protobuf-compiler/buster cmake curl clang git \
     && apt-get clean && rm -r /var/lib/apt/lists/*
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
@@ -17,6 +17,7 @@ RUN rustup install $(cat rust-toolchain)
 FROM toolchain AS builder
 
 COPY . /libra
+
 RUN cargo build --release -p libra-node -p client -p benchmark && cd target/release && rm -r build deps incremental
 
 ### Production Image ###
@@ -33,7 +34,6 @@ EXPOSE 9101
 
 # Define MINT_KEY, AC_HOST and AC_DEBUG environment variables when running
 ENTRYPOINT ["/opt/libra/bin/bench_init.sh"]
-
 
 ARG BUILD_DATE
 ARG GIT_REV

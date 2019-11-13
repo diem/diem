@@ -29,6 +29,7 @@ failure = { path = "../common/failure-ext", version = "0.1.0", package = "libra-
 grpc-helpers = { path = "../common/grpc-helpers", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+mirai-annotations = "1.5.0"
 network = { path = "../network", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 storage-client = { path = "../storage/storage-client", version = "0.1.0" }

@@ -23,16 +23,18 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
-use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus};
+use consensus_types::block_retrieval::{
+    BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
+};
 use consensus_types::{
     block::{
-        block_test_utils::{placeholder_certificate_for_block, placeholder_ledger_info},
+        block_test_utils::{
+            certificate_for_genesis, placeholder_certificate_for_block, placeholder_ledger_info,
+        },
         Block,
     },
-    block_info::BlockInfo,
     common::Author,
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
-    quorum_cert::QuorumCert,
     sync_info::SyncInfo,
     timeout::Timeout,
     timeout_certificate::TimeoutCertificate,
@@ -45,16 +47,18 @@ use futures::{
     executor::block_on,
 };
 use libra_crypto::HashValue;
+use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::{
     random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
 };
 use network::{
-    proto::ConsensusMsg_oneof,
+    proto::{ConsensusMsg, ConsensusMsg_oneof},
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender},
 };
-use safety_rules::{ConsensusState, SafetyRules};
-use std::convert::TryFrom;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use prost::Message as _;
+use safety_rules::{ConsensusState, OnDiskStorage, SafetyRules};
+use std::{collections::HashMap, convert::TryFrom, path::PathBuf, sync::Arc, time::Duration};
+use tempfile::NamedTempFile;
 use tokio::runtime::TaskExecutor;
 
 /// Auxiliary struct that is setting up node environment for the test.
@@ -66,6 +70,7 @@ pub struct NodeSetup {
     signer: ValidatorSigner,
     proposer_author: Author,
     validators: Arc<ValidatorVerifier>,
+    safety_rules_file: PathBuf,
 }
 
 impl NodeSetup {
@@ -93,6 +98,10 @@ impl NodeSetup {
         let mut nodes = vec![];
         for signer in signers.iter().take(num_nodes) {
             let (storage, initial_data) = MockStorage::<TestPayload>::start_for_testing();
+
+            let safety_rules_file = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
+            OnDiskStorage::default_storage(safety_rules_file.clone());
+
             nodes.push(Self::new(
                 playground,
                 executor.clone(),
@@ -101,6 +110,7 @@ impl NodeSetup {
                 storage,
                 initial_data,
                 Arc::clone(&validators),
+                safety_rules_file,
             ));
         }
         nodes
@@ -114,6 +124,7 @@ impl NodeSetup {
         storage: Arc<MockStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
         validators: Arc<ValidatorVerifier>,
+        safety_rules_file: PathBuf,
     ) -> Self {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
@@ -131,9 +142,8 @@ impl NodeSetup {
             validators.clone(),
         );
         let (task, _receiver) =
-            NetworkTask::<TestPayload>::new(network_events, self_receiver, validators.clone());
+            NetworkTask::<TestPayload>::new(0, network_events, self_receiver, validators.clone());
         executor.spawn(task.start());
-        let consensus_state = initial_data.state();
         let last_vote_sent = initial_data.last_vote();
         let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let state_computer = Arc::new(MockStateComputer::new(
@@ -159,7 +169,10 @@ impl NodeSetup {
             1,
         );
 
-        let safety_rules = SafetyRules::new(consensus_state, Arc::new(signer.clone()));
+        let safety_rules = SafetyRules::new(
+            OnDiskStorage::new_storage(safety_rules_file.clone()),
+            Arc::new(signer.clone()),
+        );
 
         let pacemaker = Self::create_pacemaker(time_service.clone());
 
@@ -186,6 +199,7 @@ impl NodeSetup {
             signer,
             proposer_author,
             validators,
+            safety_rules_file,
         }
     }
 
@@ -202,6 +216,7 @@ impl NodeSetup {
             self.storage,
             recover_data,
             self.validators,
+            self.safety_rules_file,
         )
     }
 }
@@ -214,7 +229,7 @@ fn basic_new_rank_event_test() {
     let node = &nodes[0];
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     block_on(async move {
         let new_round = 1;
         node.event_processor
@@ -256,8 +271,7 @@ fn basic_new_rank_event_test() {
         // should be a child of a1 and carry its QC.
         let vote = Vote::new(
             VoteData::new(
-                BlockInfo::from_block(
-                    a1.block(),
+                a1.block().gen_block_info(
                     executed_state.state_id,
                     executed_state.version,
                     executed_state.validators.clone(),
@@ -319,7 +333,7 @@ fn process_successful_proposal_test() {
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
     let node = &mut nodes[1];
 
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     block_on(async move {
         let proposal = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
         let proposal_id = proposal.id();
@@ -349,8 +363,8 @@ fn process_successful_proposal_test() {
             proposal_id
         );
         assert_eq!(
-            *node.storage.shared_storage.state.lock().unwrap(),
-            ConsensusState::new(0, 1, 0),
+            node.event_processor.safety_rules.consensus_state(),
+            ConsensusState::new(1, 1, 0),
         );
     });
 }
@@ -365,7 +379,7 @@ fn process_old_proposal_test() {
     // node (which will send the votes to the proposer).
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
     let node = &mut nodes[1];
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let new_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let new_block_id = new_block.id();
     let old_block = Block::new_proposal(vec![1], 1, 2, genesis_qc.clone(), &node.signer);
@@ -414,7 +428,7 @@ fn process_round_mismatch_test() {
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
         .pop()
         .unwrap();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_skip_round = Block::new_proposal(vec![1], 2, 2, genesis_qc.clone(), &node.signer);
     block_on(async move {
@@ -512,11 +526,7 @@ fn process_vote_timeout_msg_test() {
 
     let vote_msg_on_timeout = VoteMsg::new(
         vote_on_timeout,
-        SyncInfo::new(
-            block_0_quorum_cert,
-            QuorumCert::certificate_for_genesis(),
-            None,
-        ),
+        SyncInfo::new(block_0_quorum_cert, certificate_for_genesis(), None),
     );
     block_on(
         static_proposer
@@ -544,7 +554,7 @@ fn process_proposer_mismatch_test() {
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.executor(), 2);
     let incorrect_proposer = nodes.pop().unwrap();
     let mut node = nodes.pop().unwrap();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_incorrect_proposer = Block::new_proposal(
         vec![1],
@@ -588,7 +598,7 @@ fn process_timeout_certificate_test() {
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.executor(), 1)
         .pop()
         .unwrap();
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_skip_round = Block::new_proposal(vec![1], 2, 2, genesis_qc.clone(), &node.signer);
     let tc = TimeoutCertificate::new(Timeout::new(1, 1), HashMap::new());
@@ -628,7 +638,7 @@ fn process_votes_basic_test() {
         .unwrap();
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     let executed_state = &a1.compute_result().executed_state;
 
     let vote_data = VoteData::new(
@@ -676,7 +686,7 @@ fn process_block_retrieval() {
         .pop()
         .unwrap();
 
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_id = block.id();
 
@@ -697,7 +707,15 @@ fn process_block_retrieval() {
             .process_block_retrieval(single_block_request)
             .await;
         match rx1.await {
-            Ok(response) => {
+            Ok(Ok(bytes)) => {
+                let msg = ConsensusMsg::decode(bytes).unwrap();
+                let response = match msg.message {
+                    Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
+                        BlockRetrievalResponse::<TestPayload>::try_from(proto)
+                    }
+                    _ => panic!("block retrieval failure"),
+                }
+                .unwrap();
                 assert_eq!(response.status(), BlockRetrievalStatus::Succeeded);
                 assert_eq!(response.blocks().get(0).unwrap().id(), block_id);
             }
@@ -715,7 +733,15 @@ fn process_block_retrieval() {
             .process_block_retrieval(missing_block_request)
             .await;
         match rx2.await {
-            Ok(response) => {
+            Ok(Ok(bytes)) => {
+                let msg = ConsensusMsg::decode(bytes).unwrap();
+                let response = match msg.message {
+                    Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
+                        BlockRetrievalResponse::<TestPayload>::try_from(proto)
+                    }
+                    _ => panic!("block retrieval failure"),
+                }
+                .unwrap();
                 assert_eq!(response.status(), BlockRetrievalStatus::IdNotFound);
                 assert!(response.blocks().is_empty());
             }
@@ -732,7 +758,15 @@ fn process_block_retrieval() {
             .process_block_retrieval(many_block_request)
             .await;
         match rx3.await {
-            Ok(response) => {
+            Ok(Ok(bytes)) => {
+                let msg = ConsensusMsg::decode(bytes).unwrap();
+                let response = match msg.message {
+                    Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
+                        BlockRetrievalResponse::<TestPayload>::try_from(proto)
+                    }
+                    _ => panic!("block retrieval failure"),
+                }
+                .unwrap();
                 assert_eq!(response.status(), BlockRetrievalStatus::NotEnoughBlocks);
                 assert_eq!(block_id, response.blocks().get(0).unwrap().id());
                 assert_eq!(
@@ -760,7 +794,7 @@ fn basic_restart_test() {
     let mut proposals = Vec::new();
     let num_proposals = 100;
     // insert a few successful proposals
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     proposals.push(a1);
     for i in 2..=num_proposals {
         let parent = proposals.last().unwrap();
@@ -784,7 +818,7 @@ fn basic_restart_test() {
     node = node.restart(&mut playground, runtime.executor());
     assert_eq!(
         node.event_processor.consensus_state(),
-        ConsensusState::new(0, num_proposals, num_proposals - 2),
+        ConsensusState::new(1, num_proposals, num_proposals - 2),
     );
     for block in proposals {
         assert_eq!(node.block_store.block_exists(block.id()), true);

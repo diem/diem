@@ -78,7 +78,7 @@ impl From<UpdateToLatestLedgerRequest> for crate::proto::types::UpdateToLatestLe
 pub struct UpdateToLatestLedgerResponse<Sig> {
     pub response_items: Vec<ResponseItem>,
     pub ledger_info_with_sigs: LedgerInfoWithSignatures<Sig>,
-    pub validator_change_events: Vec<ValidatorChangeEventWithProof<Sig>>,
+    pub validator_change_events: ValidatorChangeEventWithProof<Sig>,
     pub ledger_consistency_proof: AccumulatorConsistencyProof,
 }
 
@@ -99,9 +99,8 @@ impl<Sig: Signature> TryFrom<crate::proto::types::UpdateToLatestLedgerResponse>
             .try_into()?;
         let validator_change_events = proto
             .validator_change_events
-            .into_iter()
-            .map(TryInto::try_into)
-            .collect::<Result<Vec<_>>>()?;
+            .unwrap_or_else(Default::default)
+            .try_into()?;
         let ledger_consistency_proof = proto
             .ledger_consistency_proof
             .unwrap_or_else(Default::default)
@@ -126,11 +125,7 @@ impl<Sig: Signature> From<UpdateToLatestLedgerResponse<Sig>>
             .map(Into::into)
             .collect();
         let ledger_info_with_sigs = Some(response.ledger_info_with_sigs.into());
-        let validator_change_events = response
-            .validator_change_events
-            .into_iter()
-            .map(Into::into)
-            .collect();
+        let validator_change_events = Some(response.validator_change_events.into());
         let ledger_consistency_proof = Some(response.ledger_consistency_proof.into());
 
         Self {
@@ -147,7 +142,7 @@ impl<Sig: Signature> UpdateToLatestLedgerResponse<Sig> {
     pub fn new(
         response_items: Vec<ResponseItem>,
         ledger_info_with_sigs: LedgerInfoWithSignatures<Sig>,
-        validator_change_events: Vec<ValidatorChangeEventWithProof<Sig>>,
+        validator_change_events: ValidatorChangeEventWithProof<Sig>,
         ledger_consistency_proof: AccumulatorConsistencyProof,
     ) -> Self {
         UpdateToLatestLedgerResponse {

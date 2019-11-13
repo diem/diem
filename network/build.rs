@@ -8,6 +8,7 @@ fn main() {
         "src/proto/mempool.proto",
         "src/proto/network.proto",
         "src/proto/state_synchronizer.proto",
+        "src/proto/health_checker.proto",
     ];
 
     let includes = [

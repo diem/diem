@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    iterator::JellyfishMerkleIterator, mock_tree_store::MockTreeStore, JellyfishMerkleTree,
+    iterator::JellyfishMerkleIterator, mock_tree_store::MockTreeStore, test_helper::plus_one,
+    JellyfishMerkleTree,
 };
 use failure::prelude::*;
 use libra_crypto::HashValue;
@@ -96,17 +97,4 @@ fn run_tests(db: &MockTreeStore, btree: &BTreeMap<HashValue, AccountStateBlob>, 
                 .unwrap();
         assert_eq!(iter.collect::<Result<Vec<_>>>().unwrap(), vec![]);
     }
-}
-
-fn plus_one(hash: HashValue) -> HashValue {
-    let mut buf = hash.to_vec();
-    for i in (0..HashValue::LENGTH).rev() {
-        if buf[i] == 255 {
-            buf[i] = 0;
-        } else {
-            buf[i] += 1;
-            break;
-        }
-    }
-    HashValue::from_slice(&buf).unwrap()
 }

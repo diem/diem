@@ -5,13 +5,13 @@
 //! procedure body.
 use crate::{
     absint::{AbstractInterpreter, BlockPrecondition, TransferFunctions},
-    abstract_state::{AbstractState, AbstractValue},
+    abstract_state::{AbstractState, AbstractValue, TypedAbstractValue},
     control_flow_graph::VMControlFlowGraph,
     nonce::Nonce,
 };
 use libra_types::vm_error::{StatusCode, VMStatus};
 use mirai_annotations::checked_verify;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use vm::{
     access::ModuleAccess,
     errors::{err_at_offset, VMResult},
@@ -25,18 +25,11 @@ use vm::{
     },
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct StackAbstractValue {
-    signature: SignatureToken,
-    value: AbstractValue,
-}
-
 pub struct TypeAndMemorySafetyAnalysis<'a> {
     module_view: ModuleView<'a, CompiledModule>,
     function_definition_view: FunctionDefinitionView<'a, CompiledModule>,
     locals_signature_view: LocalsSignatureView<'a, CompiledModule>,
-    stack: Vec<StackAbstractValue>,
-    next_nonce: usize,
+    stack: Vec<TypedAbstractValue>,
     errors: Vec<VMStatus>,
 }
 
@@ -46,7 +39,6 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         function_definition: &'a FunctionDefinition,
         cfg: &'a VMControlFlowGraph,
     ) -> Vec<VMStatus> {
-        let module_view = ModuleView::new(module);
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
         let locals_signature_view = function_definition_view.locals_signature();
         let function_signature_view = function_definition_view.signature();
@@ -77,28 +69,13 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         if !errors.is_empty() {
             return errors;
         }
-        let mut locals = BTreeMap::new();
-        for (arg_idx, arg_type_view) in function_signature_view.arg_tokens().enumerate() {
-            if arg_type_view.is_reference() {
-                locals.insert(
-                    arg_idx as LocalIndex,
-                    AbstractValue::Reference(Nonce::new(arg_idx)),
-                );
-            } else {
-                let arg_kind = arg_type_view
-                    .kind(&function_definition_view.signature().as_inner().type_formals);
-                locals.insert(arg_idx as LocalIndex, AbstractValue::full_value(arg_kind));
-            }
-        }
-        let initial_state = AbstractState::new(locals, BTreeMap::new());
-        // nonces in [0, locals_signature_view.len()) are reserved for constructing canonical state
-        let next_nonce = locals_signature_view.len();
+        let initial_state =
+            AbstractState::new(FunctionDefinitionView::new(module, function_definition));
         let mut verifier = Self {
-            module_view,
+            module_view: ModuleView::new(module),
             function_definition_view: FunctionDefinitionView::new(module, function_definition),
             locals_signature_view,
             stack: vec![],
-            next_nonce,
             errors: vec![],
         };
 
@@ -119,41 +96,6 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         self.module_view.as_inner()
     }
 
-    fn get_nonce(&mut self, state: &mut AbstractState) -> Nonce {
-        let nonce = Nonce::new(self.next_nonce);
-        state.add_nonce(nonce);
-        self.next_nonce += 1;
-        nonce
-    }
-
-    fn freeze_ok(&self, state: &AbstractState, existing_borrows: &BTreeSet<Nonce>) -> bool {
-        for (arg_idx, arg_type_view) in self.locals_signature_view.tokens().enumerate() {
-            if arg_type_view.as_inner().is_mutable_reference()
-                && state.is_available(arg_idx as LocalIndex)
-            {
-                if let AbstractValue::Reference(nonce) = state.local(arg_idx as LocalIndex) {
-                    if existing_borrows.contains(nonce) {
-                        return false;
-                    }
-                }
-            }
-        }
-        for stack_value in &self.stack {
-            if stack_value.signature.is_mutable_reference() {
-                if let AbstractValue::Reference(nonce) = &stack_value.value {
-                    if existing_borrows.contains(nonce) {
-                        return false;
-                    }
-                }
-            }
-        }
-        true
-    }
-
-    fn write_borrow_ok(existing_borrows: BTreeSet<Nonce>) -> bool {
-        existing_borrows.is_empty()
-    }
-
     /// Gives the current constraints on the type formals in the current function.
     fn type_formals(&self) -> &[Kind] {
         &self
@@ -164,19 +106,15 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
     }
 
     fn is_readable_reference(
-        &self,
         state: &AbstractState,
         signature: &SignatureToken,
         nonce: Nonce,
     ) -> bool {
         checked_verify!(signature.is_reference());
-        !signature.is_mutable_reference() || {
-            let borrowed_nonces = state.borrowed_nonces(nonce);
-            self.freeze_ok(state, &borrowed_nonces)
-        }
+        !signature.is_mutable_reference() || state.is_nonce_freezable(nonce)
     }
 
-    // helper for both `ImmBorrowFIeld` and `MutBorrowField`
+    // helper for both `ImmBorrowField` and `MutBorrowField`
     fn borrow_field(
         &mut self,
         state: &mut AbstractState,
@@ -204,60 +142,41 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 offset,
             ));
         }
-
-        let operand_nonce = operand.value.extract_nonce().unwrap();
-        let nonce = self.get_nonce(state);
-        if mut_ {
-            if !operand.signature.is_mutable_reference() {
-                return Err(err_at_offset(
-                    StatusCode::BORROWFIELD_TYPE_MISMATCH_ERROR,
-                    offset,
-                ));
-            }
-
-            let borrowed_nonces =
-                state.borrowed_nonces_for_field(field_definition_index, operand_nonce);
-            if !Self::write_borrow_ok(borrowed_nonces) {
-                return Err(err_at_offset(
-                    StatusCode::BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR,
-                    offset,
-                ));
-            }
-        } else {
-            // No checks needed for immutable case
-            if operand.signature.is_mutable_reference() {
-                let borrowed_nonces =
-                    state.borrowed_nonces_for_field(field_definition_index, operand_nonce);
-                if !self.freeze_ok(&state, &borrowed_nonces) {
-                    return Err(err_at_offset(
-                        StatusCode::BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR,
-                        offset,
-                    ));
-                }
-            }
+        if mut_ && !operand.signature.is_mutable_reference() {
+            return Err(err_at_offset(
+                StatusCode::BORROWFIELD_TYPE_MISMATCH_ERROR,
+                offset,
+            ));
         }
 
-        let field_signature = self
-            .module()
-            .get_field_signature(field_definition_index)
-            .0
-            .clone();
-        let field_token = Box::new(
-            field_signature
-                .substitute(operand.signature.get_type_actuals_from_reference().unwrap()),
-        );
-        let signature = if mut_ {
-            SignatureToken::MutableReference(field_token)
+        if let Some(nonce) = state.borrow_field_from_nonce(&operand, mut_, field_definition_index) {
+            let field_signature = self
+                .module()
+                .get_field_signature(field_definition_index)
+                .0
+                .clone();
+            let field_token = Box::new(
+                field_signature
+                    .substitute(operand.signature.get_type_actuals_from_reference().unwrap()),
+            );
+            let signature = if mut_ {
+                SignatureToken::MutableReference(field_token)
+            } else {
+                SignatureToken::Reference(field_token)
+            };
+            self.stack.push(TypedAbstractValue {
+                signature,
+                value: AbstractValue::Reference(nonce),
+            });
+            let operand_nonce = operand.value.extract_nonce().unwrap();
+            state.remove_nonce(operand_nonce);
+            Ok(())
         } else {
-            SignatureToken::Reference(field_token)
-        };
-        self.stack.push(StackAbstractValue {
-            signature,
-            value: AbstractValue::Reference(nonce),
-        });
-        state.borrow_field_from_nonce(field_definition_index, operand_nonce, nonce);
-        state.destroy_nonce(operand_nonce);
-        Ok(())
+            Err(err_at_offset(
+                StatusCode::BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR,
+                offset,
+            ))
+        }
     }
 
     // helper for both `ImmBorrowLoc` and `MutBorrowLoc`
@@ -280,42 +199,23 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             ));
         }
 
-        if mut_ {
-            if !state.is_full(state.local(idx)) {
-                return Err(err_at_offset(
-                    StatusCode::BORROWLOC_EXISTS_BORROW_ERROR,
-                    offset,
-                ));
-            }
-        } else {
-            let borrowed_nonces = match state.local(idx) {
-                AbstractValue::Reference(_) => {
-                    // TODO This should really be a VMInvariantViolation
-                    // But it is not supported in the verifier currently
-                    return Err(err_at_offset(StatusCode::BORROWLOC_REFERENCE_ERROR, offset));
-                }
-                AbstractValue::Value(_, nonces) => nonces,
+        if let Some(nonce) = state.borrow_local_value(mut_, idx) {
+            let signature = if mut_ {
+                SignatureToken::MutableReference(Box::new(loc_signature))
+            } else {
+                SignatureToken::Reference(Box::new(loc_signature))
             };
-            if !self.freeze_ok(state, &borrowed_nonces) {
-                return Err(err_at_offset(
-                    StatusCode::BORROWLOC_EXISTS_BORROW_ERROR,
-                    offset,
-                ));
-            }
-        }
-
-        let nonce = self.get_nonce(state);
-        state.borrow_from_local_value(idx, nonce);
-        let signature = if mut_ {
-            SignatureToken::MutableReference(Box::new(loc_signature))
+            self.stack.push(TypedAbstractValue {
+                signature,
+                value: AbstractValue::Reference(nonce),
+            });
+            Ok(())
         } else {
-            SignatureToken::Reference(Box::new(loc_signature))
-        };
-        self.stack.push(StackAbstractValue {
-            signature,
-            value: AbstractValue::Reference(nonce),
-        });
-        Ok(())
+            Err(err_at_offset(
+                StatusCode::BORROWLOC_EXISTS_BORROW_ERROR,
+                offset,
+            ))
+        }
     }
 
     fn borrow_channel(
@@ -356,25 +256,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             ));
         }
 
-        if mut_ {
-            if !state.global(idx).is_empty() {
-                return Err(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset));
-            }
-        } else {
-            let freeze_ok = state
-                .global_opt(idx)
-                .map(|globals| self.freeze_ok(state, globals))
-                .unwrap_or(true);
-            if !freeze_ok {
-                return Err(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset));
-            }
-        }
-
         let type_actuals = &self.module().locals_signature_at(type_actuals_idx).0;
         let struct_type =
             SignatureToken::Struct(struct_definition.struct_handle, type_actuals.clone());
         SignatureTokenView::new(self.module(), &struct_type).kind(self.type_formals());
-
         if !is_channel {
             let operand = self.stack.pop().unwrap();
             if operand.signature != SignatureToken::Address {
@@ -385,19 +270,20 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             }
         }
 
-        let nonce = self.get_nonce(state);
-        state.borrow_from_global_value(idx, nonce);
-
-        let signature = if mut_ {
-            SignatureToken::MutableReference(Box::new(struct_type))
+        if let Some(nonce) = state.borrow_global_value(mut_, idx) {
+            let signature = if mut_ {
+                SignatureToken::MutableReference(Box::new(struct_type))
+            } else {
+                SignatureToken::Reference(Box::new(struct_type))
+            };
+            self.stack.push(TypedAbstractValue {
+                signature,
+                value: AbstractValue::Reference(nonce),
+            });
+            Ok(())
         } else {
-            SignatureToken::Reference(Box::new(struct_type))
-        };
-        self.stack.push(StackAbstractValue {
-            signature,
-            value: AbstractValue::Reference(nonce),
-        });
-        Ok(())
+            Err(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset))
+        }
     }
 
     fn execute_inner(
@@ -416,7 +302,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 }
 
                 if let AbstractValue::Reference(nonce) = operand.value {
-                    state.destroy_nonce(nonce);
+                    state.remove_nonce(nonce);
                 }
 
                 Ok(())
@@ -446,7 +332,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         ));
                     }
                 }
-                state.insert_local(*idx, operand.value);
+                state.insert_local(*idx, operand);
                 Ok(())
             }
 
@@ -455,11 +341,25 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if error_code.signature != SignatureToken::U64 {
                     return Err(err_at_offset(StatusCode::ABORT_TYPE_MISMATCH_ERROR, offset));
                 }
-                *state = AbstractState::new(BTreeMap::new(), BTreeMap::new());
+                *state = AbstractState::default();
                 Ok(())
             }
 
             Bytecode::Ret => {
+                for idx in 0..self.locals_signature_view.len() {
+                    let local_idx = idx as LocalIndex;
+                    let is_reference = state.is_available(local_idx)
+                        && state.local(local_idx).value.is_reference();
+                    if is_reference {
+                        state.destroy_local(local_idx);
+                    }
+                }
+                if !state.is_frame_safe_to_destroy() {
+                    return Err(err_at_offset(
+                        StatusCode::RET_UNSAFE_TO_DESTROY_ERROR,
+                        offset,
+                    ));
+                }
                 for return_type_view in self
                     .function_definition_view
                     .signature()
@@ -470,22 +370,18 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     if operand.signature != *return_type_view.as_inner() {
                         return Err(err_at_offset(StatusCode::RET_TYPE_MISMATCH_ERROR, offset));
                     }
-                }
-                for idx in 0..self.locals_signature_view.len() {
-                    let is_reference = state.is_available(idx as LocalIndex)
-                        && state.local(idx as LocalIndex).is_reference();
-                    if is_reference {
-                        state.destroy_local(idx as LocalIndex)
+                    if return_type_view.is_mutable_reference() {
+                        if let AbstractValue::Reference(nonce) = operand.value {
+                            if state.is_nonce_borrowed(nonce) {
+                                return Err(err_at_offset(
+                                    StatusCode::RET_BORROWED_MUTABLE_REFERENCE_ERROR,
+                                    offset,
+                                ));
+                            }
+                        }
                     }
                 }
-                if !state.is_safe_to_destroy() {
-                    return Err(err_at_offset(
-                        StatusCode::RET_UNSAFE_TO_DESTROY_ERROR,
-                        offset,
-                    ));
-                }
-
-                *state = AbstractState::new(BTreeMap::new(), BTreeMap::new());
+                *state = AbstractState::default();
                 Ok(())
             }
 
@@ -495,9 +391,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let operand = self.stack.pop().unwrap();
                 if let SignatureToken::MutableReference(signature) = operand.signature {
                     let operand_nonce = operand.value.extract_nonce().unwrap();
-                    let borrowed_nonces = state.borrowed_nonces(operand_nonce);
-                    if self.freeze_ok(&state, &borrowed_nonces) {
-                        self.stack.push(StackAbstractValue {
+                    if state.is_nonce_freezable(operand_nonce) {
+                        self.stack.push(TypedAbstractValue {
                             signature: SignatureToken::Reference(signature),
                             value: operand.value,
                         });
@@ -525,41 +420,41 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             }
 
             Bytecode::LdConst(_) => {
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::U64,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
             }
 
             Bytecode::LdAddr(_) => {
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::Address,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
             }
 
             Bytecode::LdStr(_) => {
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::String,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
             }
 
             Bytecode::LdByteArray(_) => {
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::ByteArray,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
             }
 
             Bytecode::LdTrue | Bytecode::LdFalse => {
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::Bool,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
             }
@@ -569,9 +464,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if !state.is_available(*idx) {
                     Err(err_at_offset(StatusCode::COPYLOC_UNAVAILABLE_ERROR, offset))
                 } else if signature_view.is_reference() {
-                    let nonce = self.get_nonce(state);
-                    state.borrow_from_local_reference(*idx, nonce);
-                    self.stack.push(StackAbstractValue {
+                    let nonce = state.borrow_from_local_reference(*idx);
+                    self.stack.push(TypedAbstractValue {
                         signature: signature_view.as_inner().clone(),
                         value: AbstractValue::Reference(nonce),
                     });
@@ -582,10 +476,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             Err(err_at_offset(StatusCode::COPYLOC_RESOURCE_ERROR, offset))
                         }
                         Kind::Unrestricted => {
-                            if state.is_full(state.local(*idx)) {
-                                self.stack.push(StackAbstractValue {
+                            if !state.is_local_borrowed(*idx) {
+                                self.stack.push(TypedAbstractValue {
                                     signature: signature_view.as_inner().clone(),
-                                    value: AbstractValue::full_value(Kind::Unrestricted),
+                                    value: AbstractValue::Value(Kind::Unrestricted),
                                 });
                                 Ok(())
                             } else {
@@ -603,9 +497,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let signature = self.locals_signature_view.token_at(*idx).as_inner().clone();
                 if !state.is_available(*idx) {
                     Err(err_at_offset(StatusCode::MOVELOC_UNAVAILABLE_ERROR, offset))
-                } else if signature.is_reference() || state.is_full(state.local(*idx)) {
+                } else if signature.is_reference() || !state.is_local_borrowed(*idx) {
                     let value = state.remove_local(*idx);
-                    self.stack.push(StackAbstractValue { signature, value });
+                    self.stack.push(value);
                     Ok(())
                 } else {
                     Err(err_at_offset(
@@ -631,7 +525,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     .module_view
                     .function_acquired_resources(&function_handle);
                 for acquired_resource in &function_acquired_resources {
-                    if !state.global(*acquired_resource).is_empty() {
+                    if state.is_global_borrowed(*acquired_resource) {
                         return Err(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset));
                     }
                 }
@@ -645,28 +539,27 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     if arg.signature != arg_type.substitute(type_actuals) {
                         return Err(err_at_offset(StatusCode::CALL_TYPE_MISMATCH_ERROR, offset));
                     }
-                    if arg_type.is_mutable_reference() && !state.is_full(&arg.value) {
-                        return Err(err_at_offset(
-                            StatusCode::CALL_BORROWED_MUTABLE_REFERENCE_ERROR,
-                            offset,
-                        ));
-                    }
                     if let AbstractValue::Reference(nonce) = arg.value {
-                        all_references_to_borrow_from.insert(nonce);
                         if arg_type.is_mutable_reference() {
+                            if state.is_nonce_borrowed(nonce) {
+                                return Err(err_at_offset(
+                                    StatusCode::CALL_BORROWED_MUTABLE_REFERENCE_ERROR,
+                                    offset,
+                                ));
+                            }
                             mutable_references_to_borrow_from.insert(nonce);
                         }
+                        all_references_to_borrow_from.insert(nonce);
                     }
                 }
                 for return_type_view in function_signature_view.return_tokens() {
                     if return_type_view.is_reference() {
-                        let nonce = self.get_nonce(state);
-                        if return_type_view.is_mutable_reference() {
-                            state.borrow_from_nonces(&mutable_references_to_borrow_from, nonce);
+                        let nonce = if return_type_view.is_mutable_reference() {
+                            state.borrow_from_nonces(&mutable_references_to_borrow_from)
                         } else {
-                            state.borrow_from_nonces(&all_references_to_borrow_from, nonce);
-                        }
-                        self.stack.push(StackAbstractValue {
+                            state.borrow_from_nonces(&all_references_to_borrow_from)
+                        };
+                        self.stack.push(TypedAbstractValue {
                             signature: return_type_view.as_inner().substitute(type_actuals),
                             value: AbstractValue::Reference(nonce),
                         });
@@ -674,14 +567,14 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         let return_type = return_type_view.as_inner().substitute(type_actuals);
                         let kind = SignatureTokenView::new(self.module(), &return_type)
                             .kind(self.type_formals());
-                        self.stack.push(StackAbstractValue {
+                        self.stack.push(TypedAbstractValue {
                             signature: return_type,
-                            value: AbstractValue::full_value(kind),
+                            value: AbstractValue::Value(kind),
                         });
                     }
                 }
                 for nonce in all_references_to_borrow_from {
-                    state.destroy_nonce(nonce);
+                    state.remove_nonce(nonce);
                 }
                 Ok(())
             }
@@ -723,9 +616,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     }
                 }
 
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: struct_type,
-                    value: AbstractValue::full_value(kind),
+                    value: AbstractValue::Value(kind),
                 });
                 Ok(())
             }
@@ -769,9 +662,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             // Get the kind of the type.
                             let kind = SignatureTokenView::new(self.module(), &field_type)
                                 .kind(self.type_formals());
-                            self.stack.push(StackAbstractValue {
+                            self.stack.push(TypedAbstractValue {
                                 signature: field_type,
-                                value: AbstractValue::full_value(kind),
+                                value: AbstractValue::Value(kind),
                             })
                         }
                     }
@@ -780,7 +673,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             }
 
             Bytecode::ReadRef => {
-                let StackAbstractValue {
+                let TypedAbstractValue {
                     signature: operand_signature,
                     value: operand_value,
                 } = self.stack.pop().unwrap();
@@ -791,7 +684,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     ));
                 }
                 let operand_nonce = operand_value.extract_nonce().unwrap();
-                if !self.is_readable_reference(state, &operand_signature, operand_nonce) {
+                if !Self::is_readable_reference(state, &operand_signature, operand_nonce) {
                     Err(err_at_offset(
                         StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR,
                         offset,
@@ -808,11 +701,11 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     {
                         Err(err_at_offset(StatusCode::READREF_RESOURCE_ERROR, offset))
                     } else {
-                        self.stack.push(StackAbstractValue {
+                        self.stack.push(TypedAbstractValue {
                             signature: inner_signature,
-                            value: AbstractValue::full_value(Kind::Unrestricted),
+                            value: AbstractValue::Value(Kind::Unrestricted),
                         });
-                        state.destroy_nonce(operand_nonce);
+                        state.remove_nonce(operand_nonce);
                         Ok(())
                     }
                 }
@@ -834,15 +727,17 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                                     StatusCode::WRITEREF_TYPE_MISMATCH_ERROR,
                                     offset,
                                 ))
-                            } else if state.is_full(&ref_operand.value) {
-                                let ref_operand_nonce = ref_operand.value.extract_nonce().unwrap();
-                                state.destroy_nonce(ref_operand_nonce);
-                                Ok(())
                             } else {
-                                Err(err_at_offset(
-                                    StatusCode::WRITEREF_EXISTS_BORROW_ERROR,
-                                    offset,
-                                ))
+                                let ref_operand_nonce = ref_operand.value.extract_nonce().unwrap();
+                                if !state.is_nonce_borrowed(ref_operand_nonce) {
+                                    state.remove_nonce(ref_operand_nonce);
+                                    Ok(())
+                                } else {
+                                    Err(err_at_offset(
+                                        StatusCode::WRITEREF_EXISTS_BORROW_ERROR,
+                                        offset,
+                                    ))
+                                }
                             }
                         }
                     }
@@ -867,9 +762,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if operand1.signature == SignatureToken::U64
                     && operand2.signature == SignatureToken::U64
                 {
-                    self.stack.push(StackAbstractValue {
+                    self.stack.push(TypedAbstractValue {
                         signature: SignatureToken::U64,
-                        value: AbstractValue::full_value(Kind::Unrestricted),
+                        value: AbstractValue::Value(Kind::Unrestricted),
                     });
                     Ok(())
                 } else {
@@ -886,9 +781,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if operand1.signature == SignatureToken::Bool
                     && operand2.signature == SignatureToken::Bool
                 {
-                    self.stack.push(StackAbstractValue {
+                    self.stack.push(TypedAbstractValue {
                         signature: SignatureToken::Bool,
-                        value: AbstractValue::full_value(Kind::Unrestricted),
+                        value: AbstractValue::Value(Kind::Unrestricted),
                     });
                     Ok(())
                 } else {
@@ -902,9 +797,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::Not => {
                 let operand = self.stack.pop().unwrap();
                 if operand.signature == SignatureToken::Bool {
-                    self.stack.push(StackAbstractValue {
+                    self.stack.push(TypedAbstractValue {
                         signature: SignatureToken::Bool,
-                        value: AbstractValue::full_value(Kind::Unrestricted),
+                        value: AbstractValue::Value(Kind::Unrestricted),
                     });
                     Ok(())
                 } else {
@@ -923,8 +818,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let is_copyable = kind1 == Kind::Unrestricted;
                 if is_copyable && operand1.signature == operand2.signature {
                     if let AbstractValue::Reference(nonce) = operand1.value {
-                        if self.is_readable_reference(state, &operand1.signature, nonce) {
-                            state.destroy_nonce(nonce);
+                        if Self::is_readable_reference(state, &operand1.signature, nonce) {
+                            state.remove_nonce(nonce);
                         } else {
                             return Err(err_at_offset(
                                 StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR,
@@ -933,8 +828,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         }
                     }
                     if let AbstractValue::Reference(nonce) = operand2.value {
-                        if self.is_readable_reference(state, &operand2.signature, nonce) {
-                            state.destroy_nonce(nonce);
+                        if Self::is_readable_reference(state, &operand2.signature, nonce) {
+                            state.remove_nonce(nonce);
                         } else {
                             return Err(err_at_offset(
                                 StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR,
@@ -942,9 +837,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             ));
                         }
                     }
-                    self.stack.push(StackAbstractValue {
+                    self.stack.push(TypedAbstractValue {
                         signature: SignatureToken::Bool,
-                        value: AbstractValue::full_value(Kind::Unrestricted),
+                        value: AbstractValue::Value(Kind::Unrestricted),
                     });
                     Ok(())
                 } else {
@@ -961,9 +856,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if operand1.signature == SignatureToken::U64
                     && operand2.signature == SignatureToken::U64
                 {
-                    self.stack.push(StackAbstractValue {
+                    self.stack.push(TypedAbstractValue {
                         signature: SignatureToken::Bool,
-                        value: AbstractValue::full_value(Kind::Unrestricted),
+                        value: AbstractValue::Value(Kind::Unrestricted),
                     });
                     Ok(())
                 } else {
@@ -992,9 +887,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
                 let operand = self.stack.pop().unwrap();
                 if operand.signature == SignatureToken::Address {
-                    self.stack.push(StackAbstractValue {
+                    self.stack.push(TypedAbstractValue {
                         signature: SignatureToken::Bool,
-                        value: AbstractValue::full_value(Kind::Unrestricted),
+                        value: AbstractValue::Value(Kind::Unrestricted),
                     });
                     Ok(())
                 } else {
@@ -1022,7 +917,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         StatusCode::MOVEFROM_NO_RESOURCE_ERROR,
                         offset,
                     ));
-                } else if !state.global(*idx).is_empty() {
+                } else if state.is_global_borrowed(*idx) {
                     return Err(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset));
                 }
 
@@ -1033,9 +928,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
                 let operand = self.stack.pop().unwrap();
                 if operand.signature == SignatureToken::Address {
-                    self.stack.push(StackAbstractValue {
+                    self.stack.push(TypedAbstractValue {
                         signature: struct_type,
-                        value: AbstractValue::full_value(Kind::Resource),
+                        value: AbstractValue::Value(Kind::Resource),
                     });
                     Ok(())
                 } else {
@@ -1077,39 +972,27 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             | Bytecode::GetTxnMaxGasUnits
             | Bytecode::GetGasRemaining
             | Bytecode::GetTxnSequenceNumber => {
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::U64,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
             }
 
             Bytecode::GetTxnSenderAddress => {
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::Address,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
             }
 
             Bytecode::GetTxnPublicKey => {
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::ByteArray,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
-            }
-
-            Bytecode::CreateAccount => {
-                let operand = self.stack.pop().unwrap();
-                if operand.signature == SignatureToken::Address {
-                    Ok(())
-                } else {
-                    Err(err_at_offset(
-                        StatusCode::CREATEACCOUNT_TYPE_MISMATCH_ERROR,
-                        offset,
-                    ))
-                }
             }
 
             Bytecode::IsOffchain => {

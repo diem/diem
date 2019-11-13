@@ -30,7 +30,7 @@ use vm::{
         FunctionDefinitionIndex, FunctionHandleIndex, StructDefinitionIndex, UserStringIndex,
         NO_TYPE_ACTUALS,
     },
-    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
+    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier},
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
@@ -119,7 +119,6 @@ fn stack_instructions(options: &Opt) {
         Unpack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         Pack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS),
-        CreateAccount,
         Sub,
         Ret,
         Add,

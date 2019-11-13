@@ -8,6 +8,7 @@ use failure::Result;
 use futures::{Future, FutureExt};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
+use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Transaction},
@@ -281,13 +282,20 @@ impl StateComputer for ExecutionProxy {
     /// Synchronize to a commit that not present locally.
     fn sync_to(
         &self,
-        commit: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send>> {
+        target: LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         counters::STATE_SYNC_COUNT.inc();
-        self.synchronizer.sync_to_deprecated(commit).boxed()
+        self.synchronizer.sync_to(target).boxed()
     }
 
     fn committed_trees(&self) -> ExecutedTrees {
         self.executor.committed_trees()
+    }
+
+    fn get_epoch_proof(
+        &self,
+        start_epoch: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>> {
+        self.synchronizer.get_epoch_proof(start_epoch).boxed()
     }
 }

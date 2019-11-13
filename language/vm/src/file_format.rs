@@ -1164,12 +1164,6 @@ pub enum Bytecode {
     ///
     /// ```..., value -> ...```
     MoveToSender(StructDefinitionIndex, LocalsSignatureIndex),
-    /// Create an account at the address specified. Does not return anything.
-    ///
-    /// Stack transition:
-    ///
-    /// ```..., address_value -> ...```
-    CreateAccount,
     /// Get the sequence number submitted with the transaction and pushes it on the stack.
     ///
     /// Stack transition:
@@ -1200,7 +1194,7 @@ pub enum Bytecode {
 /// The number of bytecode instructions.
 /// This is necessary for checking that all instructions are covered since Rust
 /// does not provide a way of determining the number of variants of an enum.
-pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 67;
+pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 66;
 
 impl ::std::fmt::Debug for Bytecode {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -1256,7 +1250,6 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::Exists(a, b) => write!(f, "Exists({}, {:?})", a, b),
             Bytecode::MoveFrom(a, b) => write!(f, "MoveFrom({}, {:?})", a, b),
             Bytecode::MoveToSender(a, b) => write!(f, "MoveToSender({}, {:?})", a, b),
-            Bytecode::CreateAccount => write!(f, "CreateAccount"),
             Bytecode::GetTxnSequenceNumber => write!(f, "GetTxnSequenceNumber"),
             Bytecode::GetTxnPublicKey => write!(f, "GetTxnPublicKey"),
             Bytecode::IsOffchain => write!(f, "IsOffchain"),

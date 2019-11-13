@@ -3,8 +3,18 @@
 // prologue  public
 
 import 0x0.LibraSystem;
-main(height: u64) {
-  LibraSystem.block_prologue(move(height));
+main(
+    timestamp: u64,
+    new_block_hash: bytearray,
+    previous_block_votes: bytearray,
+    proposer: address
+) {
+  LibraSystem.block_prologue(
+      move(timestamp),
+      move(new_block_hash),
+      move(previous_block_votes),
+      move(proposer)
+  );
 
   return;
 }

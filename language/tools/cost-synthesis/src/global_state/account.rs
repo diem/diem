@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::global_state::inhabitor::RandomInhabitor;
 use bytecode_verifier::VerifiedModule;
 use libra_crypto::ed25519::{compat, Ed25519PrivateKey, Ed25519PublicKey};

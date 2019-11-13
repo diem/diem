@@ -9,11 +9,13 @@ use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_config::config::{NodeConfig, VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue};
+use libra_types::block_info::BlockInfo;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},
     account_state_blob::AccountStateWithProof,
+    block_metadata::BlockMetadata,
     crypto_proxies::ValidatorVerifier,
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -40,15 +42,14 @@ fn gen_ledger_info_with_sigs(
     commit_block_id: HashValue,
 ) -> LedgerInfoWithSignatures<Ed25519Signature> {
     let ledger_info = LedgerInfo::new(
-        version,
-        root_hash,
-        /* consensus_data_hash = */ HashValue::zero(),
-        commit_block_id,
-        0,
-        /* timestamp = */ 0,
-        None,
+        BlockInfo::new(0, 0, commit_block_id, root_hash, version, 0, None),
+        HashValue::zero(),
     );
     LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
+}
+
+fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
+    BlockMetadata::new(gen_block_id(index), index as u64, BTreeMap::new(), proposer)
 }
 
 fn create_storage_service_and_executor(config: &NodeConfig) -> (ServerHandle, Executor<MoveVM>) {
@@ -134,13 +135,7 @@ fn test_reconfiguration() {
         )),
     );
     // Create a dummy block prologue transaction that will emit a ValidatorSetChanged event
-    let txn3 = get_test_signed_transaction(
-        genesis_account,
-        /* sequence_number = */ 2,
-        genesis_keypair.private_key.clone(),
-        genesis_keypair.public_key.clone(),
-        Some(encode_block_prologue_script(/* block_height */ 1)),
-    );
+    let txn3 = encode_block_prologue_script(gen_block_metadata(1, *validator_account));
     let txn_block = vec![txn1, txn2, txn3];
     let block1_id = gen_block_id(1);
     let vm_output = block_on(executor.execute_block(
@@ -168,13 +163,7 @@ fn test_reconfiguration() {
             new_pubkey.to_bytes().to_vec(),
         )),
     );
-    let txn5 = get_test_signed_transaction(
-        genesis_account,
-        /* sequence_number = */ 3,
-        genesis_keypair.private_key.clone(),
-        genesis_keypair.public_key.clone(),
-        Some(encode_block_prologue_script(/* block_height */ 2)),
-    );
+    let txn5 = encode_block_prologue_script(gen_block_metadata(2, *validator_account));
     let txn_block = vec![txn4, txn5];
     let block2_id = gen_block_id(2);
     let output = block_on(executor.execute_block(

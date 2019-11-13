@@ -9,7 +9,7 @@ use crate::{
     transaction_status_eq,
 };
 use libra_types::{
-    transaction::{SignedTransaction, TransactionStatus},
+    transaction::TransactionStatus,
     vm_error::{StatusCode, VMStatus},
 };
 
@@ -29,18 +29,16 @@ fn mint_to_existing() {
     let txn = mint_txn(&genesis_account, receiver.account(), 1, mint_amount);
 
     // execute transaction
-    let txns: Vec<SignedTransaction> = vec![txn];
-    let output = executor.execute_block(txns);
-    let txn_output = output.get(0).expect("must have a transaction output");
+    let output = executor.execute_transaction(txn);
     assert_eq!(
-        output[0].status(),
+        output.status(),
         &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
-    println!("write set {:?}", txn_output.write_set());
-    executor.apply_write_set(txn_output.write_set());
+    println!("write set {:?}", output.write_set());
+    executor.apply_write_set(output.write_set());
 
     // check that numbers in stored DB are correct
-    let gas = txn_output.gas_used();
+    let gas = output.gas_used();
     let sender_balance = 1_000_000_000 - gas;
     let receiver_balance = 1_000_000 + mint_amount;
 
@@ -72,17 +70,15 @@ fn mint_to_new_account() {
     let txn = mint_txn(&genesis_account, &new_account, 1, mint_amount);
 
     // execute transaction
-    let txns: Vec<SignedTransaction> = vec![txn];
-    let output = executor.execute_block(txns);
-    let txn_output = output.get(0).expect("must have a transaction output");
+    let output = executor.execute_transaction(txn);
     assert!(transaction_status_eq(
-        &output[0].status(),
+        &output.status(),
         &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     ));
-    executor.apply_write_set(txn_output.write_set());
+    executor.apply_write_set(output.write_set());
 
     // check that numbers in stored DB are correct
-    let gas = txn_output.gas_used();
+    let gas = output.gas_used();
     let sender_balance = 1_000_000_000 - gas;
     let receiver_balance = mint_amount;
 
@@ -99,11 +95,10 @@ fn mint_to_new_account() {
 
     // Mint can only be called from genesis address;
     let txn = mint_txn(&new_account, &new_account, 0, mint_amount);
-    let txns: Vec<SignedTransaction> = vec![txn];
-    let output = executor.execute_block(txns);
+    let output = executor.execute_transaction(txn);
 
     assert!(transaction_status_eq(
-        &output[0].status(),
+        &output.status(),
         &TransactionStatus::Keep(VMStatus::new(StatusCode::MISSING_DATA))
     ));
 }

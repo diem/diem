@@ -27,13 +27,11 @@ use serde::de::{self, Deserialize, DeserializeSeed, IntoDeserializer, Visitor};
 ///     port: Port,
 /// }
 ///
-/// fn main() {
-///     let bytes = vec![0x7f, 0x00, 0x00, 0x01, 0x41, 0x1f];
-///     let socket_addr: SocketAddr = from_bytes(&bytes).unwrap();
+/// let bytes = vec![0x7f, 0x00, 0x00, 0x01, 0x41, 0x1f];
+/// let socket_addr: SocketAddr = from_bytes(&bytes).unwrap();
 ///
-///     assert_eq!(socket_addr.ip.0, [127, 0, 0, 1]);
-///     assert_eq!(socket_addr.port.0, 8001);
-/// }
+/// assert_eq!(socket_addr.ip.0, [127, 0, 0, 1]);
+/// assert_eq!(socket_addr.port.0, 8001);
 /// ```
 pub fn from_bytes<'a, T>(bytes: &'a [u8]) -> Result<T>
 where
@@ -44,22 +42,32 @@ where
     deserializer.end().map(move |_| t)
 }
 
+/// Perform a stateful deserialization from a `&[u8]` using the provided `seed`.
+pub fn from_bytes_seed<'a, T>(seed: T, bytes: &'a [u8]) -> Result<T::Value>
+where
+    T: DeserializeSeed<'a>,
+{
+    let mut deserializer = Deserializer::new(bytes);
+    let t = seed.deserialize(&mut deserializer)?;
+    deserializer.end().map(move |_| t)
+}
+
 /// Deserialization implementation for LCS
-pub struct Deserializer<'de> {
+struct Deserializer<'de> {
     input: &'de [u8],
 }
 
 impl<'de> Deserializer<'de> {
     /// Creates a new `Deserializer` which will be deserializing the provided
     /// input.
-    pub fn new(input: &'de [u8]) -> Self {
+    fn new(input: &'de [u8]) -> Self {
         Deserializer { input }
     }
 
     /// The `Deserializer::end` method should be called after a type has been
     /// fully deserialized. This allows the `Deserializer` to validate that
     /// the there are no more bytes remaining in the input stream.
-    pub fn end(&mut self) -> Result<()> {
+    fn end(&mut self) -> Result<()> {
         if self.input.is_empty() {
             Ok(())
         } else {

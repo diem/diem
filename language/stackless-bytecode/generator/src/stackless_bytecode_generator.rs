@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::stackless_bytecode::StacklessBytecode;
 use vm::{
     access::ModuleAccess,
@@ -739,10 +742,6 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.code
                     .push(StacklessBytecode::GetTxnPublicKey(temp_index));
                 self.temp_count += 1;
-            }
-            Bytecode::CreateAccount => {
-                let temp_index = self.temp_stack.pop().unwrap();
-                self.code.push(StacklessBytecode::CreateAccount(temp_index));
             }
             _ => {
                 //TODO support channel's Bytecode

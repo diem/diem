@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/expansion/standalone_name_with_type_args.move:3:17 ───
+   │
+ 3 │         let _ = n<u64>;
+   │                 ^^^^^^ Unexpected name with type arguments 'n'
+   │
+

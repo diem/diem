@@ -398,16 +398,6 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
                 SignatureToken::ByteArray,
             ))],
         },
-        Bytecode::CreateAccount => Summary {
-            preconditions: vec![
-                state_stack_has!(
-                    0,
-                    Some(AbstractValue::new_primitive(SignatureToken::Address))
-                ),
-                state_memory_safe!(None),
-            ],
-            effects: vec![state_stack_pop!()],
-        },
         Bytecode::Pack(i, _) => Summary {
             preconditions: vec![state_stack_satisfies_struct_signature!(i)],
             effects: vec![

@@ -9,8 +9,10 @@ use crate::{
     },
     util::mock_time_service::SimulatedTimeService,
 };
-use consensus_types::block::block_test_utils::placeholder_certificate_for_block;
-use consensus_types::{block::Block, quorum_cert::QuorumCert};
+use consensus_types::block::block_test_utils::{
+    certificate_for_genesis, placeholder_certificate_for_block,
+};
+use consensus_types::block::Block;
 use futures::executor::block_on;
 use libra_types::crypto_proxies::ValidatorSigner;
 use std::{
@@ -60,8 +62,8 @@ fn test_proposal_generation_parent() {
         1,
     );
     let genesis = block_store.root();
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
-    let b1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 2);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
+    let b1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 2);
 
     // With no certifications the parent is genesis
     // generate proposals for an empty tree.
@@ -101,7 +103,7 @@ fn test_old_proposal_generation() {
         1,
     );
     let genesis = block_store.root();
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     inserter.insert_qc_for_block(a1.as_ref(), None);
 
     let proposal_err = block_on(proposal_generator.generate_proposal(1, minute_from_now())).err();
@@ -120,7 +122,7 @@ fn test_empty_proposal_after_reconfiguration() {
         1,
     );
     let genesis = block_store.root();
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     // Normal proposal is not empty
     let normal_proposal_1 =
         block_on(proposal_generator.generate_proposal(42, minute_from_now())).unwrap();

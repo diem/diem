@@ -1,11 +1,10 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::process_txn::balance_checker::BalanceChecker;
 use crate::{
-    code_cache::{
-        module_cache::{ModuleCache, TransactionModuleCache},
-        script_cache::ScriptCache,
-    },
+    code_cache::{module_cache::ModuleCache, script_cache::ScriptCache},
     data_cache::RemoteCache,
-    loaded_data::loaded_module::LoadedModule,
     process_txn::{verify::VerifiedTransaction, ProcessTransaction},
     txn_executor::TransactionExecutor,
 };
@@ -23,10 +22,9 @@ use libra_types::{
 };
 use vm::{
     errors::convert_prologue_runtime_error,
-    gas_schedule::{self, AbstractMemorySize, GasAlgebra, GasCarrier},
+    gas_schedule::{self, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier},
     transaction_metadata::TransactionMetadata,
 };
-use vm_cache_map::Arena;
 
 pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8]) -> bool {
     match publishing_option {
@@ -79,45 +77,20 @@ where
     ) -> Result<Self, VMStatus> {
         let ProcessTransaction {
             txn,
+            gas_schedule,
             module_cache,
             data_cache,
-            allocator,
             ..
         } = process_txn;
 
         let txn_state = match txn.payload() {
-            TransactionPayload::Program(program) => {
-                Some(ValidatedTransaction::validate(
-                    &txn,
-                    module_cache,
-                    data_cache,
-                    allocator,
-                    mode,
-                    vm_mode,
-                    || {
-                        // Verify against whitelist if we are locked. Otherwise allow.
-                        if !is_allowed_script(&publishing_option, &program.code()) {
-                            warn!("[VM] Custom scripts not allowed: {:?}", &program.code());
-                            return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT));
-                        }
-
-                        if !publishing_option.is_open() {
-                            // Not allowing module publishing for now.
-                            if !program.modules().is_empty() {
-                                warn!("[VM] Custom modules not allowed");
-                                return Err(VMStatus::new(StatusCode::UNKNOWN_MODULE));
-                            }
-                        }
-                        Ok(())
-                    },
-                )?)
-            }
+            TransactionPayload::Program => return Err(VMStatus::new(StatusCode::MALFORMED)),
             TransactionPayload::Script(script) => {
                 Some(ValidatedTransaction::validate(
                     &txn,
+                    gas_schedule,
                     module_cache,
                     data_cache,
-                    allocator,
                     mode,
                     vm_mode,
                     || {
@@ -134,9 +107,9 @@ where
                 debug!("validate module {:?}", module);
                 Some(ValidatedTransaction::validate(
                     &txn,
+                    gas_schedule,
                     module_cache,
                     data_cache,
-                    allocator,
                     mode,
                     vm_mode,
                     || {
@@ -281,9 +254,9 @@ where
 
     fn validate(
         txn: &SignatureCheckedTransaction,
+        gas_schedule: &'txn CostTable,
         module_cache: P,
         data_cache: &'txn dyn RemoteCache,
-        allocator: &'txn Arena<LoadedModule>,
         mode: ValidationMode,
         vm_mode: VMMode,
         payload_check: impl Fn() -> Result<(), VMStatus>,
@@ -408,6 +381,7 @@ where
         let metadata = TransactionMetadata::new(&txn);
         let mut txn_state = ValidatedTransactionState::new(
             metadata,
+            gas_schedule,
             module_cache,
             data_cache,
             allocator,
@@ -447,10 +421,7 @@ where
     'alloc: 'txn,
     P: ModuleCache<'alloc>,
 {
-    // <'txn, 'txn> looks weird, but it just means that the module cache passed in (the
-    // TransactionModuleCache) allocates for that long.
-    pub(super) txn_executor:
-        TransactionExecutor<'txn, 'txn, TransactionModuleCache<'alloc, 'txn, P>>,
+    pub(super) txn_executor: TransactionExecutor<'alloc, 'txn, P>,
 }
 
 impl<'alloc, 'txn, P> ValidatedTransactionState<'alloc, 'txn, P>
@@ -460,6 +431,7 @@ where
 {
     fn new(
         metadata: TransactionMetadata,
+        gas_schedule: &'txn CostTable,
         module_cache: P,
         data_cache: &'txn dyn RemoteCache,
         allocator: &'txn Arena<LoadedModule>,
@@ -470,6 +442,7 @@ where
         let txn_module_cache = TransactionModuleCache::new(module_cache, allocator);
         let txn_executor = TransactionExecutor::new_with_vm_mode(
             txn_module_cache,
+            gas_schedule,
             data_cache,
             metadata,
             pre_cache_write_set,

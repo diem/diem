@@ -100,7 +100,7 @@ impl StorageRead for StorageReadServiceClient {
     ) -> Result<(
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
-        Vec<ValidatorChangeEventWithProof>,
+        ValidatorChangeEventWithProof,
         AccumulatorConsistencyProof,
     )> {
         block_on(self.update_to_latest_ledger_async(client_known_version, requested_items))
@@ -116,7 +116,7 @@ impl StorageRead for StorageReadServiceClient {
                     Output = Result<(
                         Vec<ResponseItem>,
                         LedgerInfoWithSignatures,
-                        Vec<ValidatorChangeEventWithProof>,
+                        ValidatorChangeEventWithProof,
                         AccumulatorConsistencyProof,
                     )>,
                 > + Send,
@@ -318,7 +318,7 @@ pub trait StorageRead: Send + Sync {
     ) -> Result<(
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
-        Vec<ValidatorChangeEventWithProof>,
+        ValidatorChangeEventWithProof,
         AccumulatorConsistencyProof,
     )>;
 
@@ -336,7 +336,7 @@ pub trait StorageRead: Send + Sync {
                     Output = Result<(
                         Vec<ResponseItem>,
                         LedgerInfoWithSignatures,
-                        Vec<ValidatorChangeEventWithProof>,
+                        ValidatorChangeEventWithProof,
                         AccumulatorConsistencyProof,
                     )>,
                 > + Send,

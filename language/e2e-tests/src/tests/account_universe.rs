@@ -101,26 +101,26 @@ fn all_transactions_strategy(
 pub(crate) fn run_and_assert_gas_cost_stability(
     universe: AccountUniverseGen,
     transaction_gens: Vec<impl AUTransactionGen + Clone>,
-    gas_cost: u64,
 ) -> Result<(), TestCaseError> {
     test_all_genesis_impl({
         |mut executor| {
             let mut universe = universe.clone().setup_gas_cost_stability(&mut executor);
-            let (transactions, expected_statuses): (Vec<_>, Vec<_>) = transaction_gens
+            let (transactions, expected_values): (Vec<_>, Vec<_>) = transaction_gens
                 .iter()
                 .map(|transaction_gen| transaction_gen.clone().apply(&mut universe))
                 .unzip();
-            let outputs = executor.execute_block(transactions);
+            let outputs = executor.execute_block(transactions).unwrap();
 
-            for (idx, (output, expected)) in outputs.iter().zip(&expected_statuses).enumerate() {
+            for (idx, (output, expected_value)) in outputs.iter().zip(&expected_values).enumerate()
+            {
                 prop_assert!(
-                    transaction_status_eq(output.status(), expected),
+                    transaction_status_eq(output.status(), &expected_value.0),
                     "unexpected status for transaction {}",
                     idx
                 );
                 prop_assert_eq!(
                     output.gas_used(),
-                    gas_cost,
+                    expected_value.1,
                     "transaction at idx {} did not have expected gas cost",
                     idx,
                 );
@@ -138,17 +138,17 @@ pub(crate) fn run_and_assert_universe(
     test_all_genesis_impl({
         |mut executor| {
             let mut universe = universe.clone().setup(&mut executor);
-            let (transactions, expected_statuses): (Vec<_>, Vec<_>) = transaction_gens
+            let (transactions, expected_values): (Vec<_>, Vec<_>) = transaction_gens
                 .iter()
                 .map(|transaction_gen| transaction_gen.clone().apply(&mut universe))
                 .unzip();
-            let outputs = executor.execute_block(transactions);
+            let outputs = executor.execute_block(transactions).unwrap();
 
-            prop_assert_eq!(outputs.len(), expected_statuses.len());
+            prop_assert_eq!(outputs.len(), expected_values.len());
 
-            for (idx, (output, expected)) in outputs.iter().zip(&expected_statuses).enumerate() {
+            for (idx, (output, expected)) in outputs.iter().zip(&expected_values).enumerate() {
                 prop_assert!(
-                    transaction_status_eq(&output.status(), &expected),
+                    transaction_status_eq(output.status(), &expected.0),
                     "unexpected status for transaction {}",
                     idx
                 );

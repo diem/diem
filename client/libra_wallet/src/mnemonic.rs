@@ -7,6 +7,7 @@
 //! https://github.com/rust-bitcoin/rust-wallet/blob/master/wallet/src/mnemonic.rs
 use crate::error::*;
 
+use mirai_annotations::*;
 #[cfg(test)]
 use rand::rngs::EntropyRng;
 #[cfg(test)]
@@ -57,7 +58,7 @@ impl Mnemonic {
             ));
         }
 
-        let mut mnemonic = Vec::with_capacity(words.len());
+        let mut mnemonic = Vec::with_capacity(len);
         let mut bit_writer = U11BitWriter::new(len);
         for word in &words {
             if let Ok(idx) = WORDS.binary_search(word) {
@@ -174,11 +175,13 @@ struct U11BitWriter {
     bytes: Vec<u8>,
     unused: u16,
     buffer: u16,
+    // invariant self.unused <= 8;
 }
 
 impl U11BitWriter {
     /// Create a new `BitWriter` around the given writer.
     fn new(mnemonic_len: usize) -> U11BitWriter {
+        precondition!(mnemonic_len <= 24);
         U11BitWriter {
             bytes: Vec::with_capacity(11 * mnemonic_len / 8 + 1),
             unused: 8,
@@ -208,6 +211,7 @@ impl U11BitWriter {
             nbits_remaining -= 8;
             self.bytes.push((value >> nbits_remaining) as u8);
         }
+        verify!(nbits_remaining < 8);
 
         // Put the remaining bits in the buffer.
         if nbits_remaining > 0 {
