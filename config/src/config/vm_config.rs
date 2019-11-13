@@ -7,7 +7,7 @@ use std::{collections::HashSet, hash::BuildHasher};
 
 /// Holds the VM configuration, currently this is only the publishing options for scripts and
 /// modules, but in the future this may need to be expanded to hold more information.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct VMConfig {
     pub publishing_options: VMPublishingOption,
@@ -49,7 +49,7 @@ impl VMConfig {
 /// 3. Both module publishing and custom scripts are allowed.
 /// We represent these as an enum instead of a struct since whitelisting and module/script
 /// publishing are mutually exclusive options.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(tag = "type", content = "whitelist")]
 pub enum VMPublishingOption {
     /// Only allow scripts on a whitelist to be run

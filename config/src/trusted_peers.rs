@@ -28,7 +28,7 @@ use std::{
 #[path = "unit_tests/trusted_peers_test.rs"]
 mod trusted_peers_test;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct NetworkPeerInfo {
     #[serde(serialize_with = "serialize_key")]
     #[serde(deserialize_with = "deserialize_key")]
@@ -45,7 +45,7 @@ pub struct NetworkPrivateKeys {
     pub network_identity_private_key: X25519StaticPrivateKey,
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Deserialize, PartialEq, Serialize)]
 pub struct NetworkPeersConfig {
     #[serde(flatten)]
     #[serde(serialize_with = "serialize_ordered_map")]
@@ -58,7 +58,7 @@ impl fmt::Debug for NetworkPeersConfig {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct ConsensusPeerInfo {
     #[serde(serialize_with = "serialize_key")]
     #[serde(deserialize_with = "deserialize_key")]
@@ -70,14 +70,14 @@ pub struct ConsensusPrivateKey {
     pub consensus_private_key: Ed25519PrivateKey,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, PartialEq, Deserialize)]
 pub struct ConsensusPeersConfig {
     #[serde(flatten)]
     #[serde(serialize_with = "serialize_ordered_map")]
     pub peers: HashMap<String, ConsensusPeerInfo>,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct UpstreamPeersConfig {
     /// List of PeerIds serialized as string.
     pub upstream_peers: Vec<String>,

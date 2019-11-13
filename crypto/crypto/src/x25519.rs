@@ -206,6 +206,12 @@ impl ExchangeKey for X25519StaticPrivateKey {
     }
 }
 
+impl PartialEq for X25519StaticPrivateKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.to_bytes() == other.to_bytes()
+    }
+}
+
 impl TryFrom<&[u8]> for X25519StaticPrivateKey {
     type Error = CryptoMaterialError;
     fn try_from(bytes: &[u8]) -> Result<X25519StaticPrivateKey, CryptoMaterialError> {

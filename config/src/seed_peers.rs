@@ -10,7 +10,7 @@ use std::collections::HashMap;
 #[path = "unit_tests/seed_peers_test.rs"]
 mod seed_peers_test;
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct SeedPeersConfig {
     // All peers config. Key:a unique peer id, will be PK in future, Value: peer discovery info
     pub seed_peers: HashMap<String, Vec<Multiaddr>>,
