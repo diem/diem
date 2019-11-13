@@ -51,6 +51,36 @@ commands:
             sudo apt-get clean
             sudo rm -r /var/lib/apt/lists/*
             rustup component add clippy rustfmt
+  install_language_verifier_deps:
+    steps:
+      - run:
+          name: Install mono runtime
+          command: |
+            sudo apt-get update
+            sudo apt-get install mono-complete
+      - run:
+          name: Create work dir for extern dep packages
+          command: mkdir -p $HOME/deps
+      - run:
+          name: Download language verifier Boogie
+          command: |
+            cd $HOME/deps
+            curl -LO https://github.com/boogie-org/boogie/releases/download/v2.4.1/boogie-2.4.1.zip
+            unzip boogie-2.4.1.zip
+            mv boogie-2.4.1 boogie
+      - run:
+          name: Download theorem prover Z3
+          command: |
+            cd $HOME/deps
+            curl -LO https://github.com/Z3Prover/z3/releases/download/z3-4.8.6/z3-4.8.6-x64-ubuntu-16.04.zip
+            unzip z3-4.8.6-x64-ubuntu-16.04.zip
+            mv z3-4.8.6-x64-ubuntu-16.04 z3
+      - run:
+          name: Append extern dep to PATH
+          command: |
+            echo 'export PATH=$PATH:$HOME/deps/boogie' >> $BASH_ENV
+            echo 'export PATH=$PATH:$HOME/deps/z3/bin' >> $BASH_ENV
+            echo 'export Z3_BIN=$HOME/deps/z3/bin/z3' >> $BASH_ENV
   build_setup:
     steps:
       - checkout
@@ -184,6 +214,16 @@ jobs:
                 echo "$docker_file is renamed or removed in pull request."
               fi
             done
+  check-language-verifier:
+    executor: audit-executor
+    steps:
+      - checkout
+      - install_deps
+      - install_language_verifier_deps
+      - run:
+          name: Start boogie
+          command: |
+            boogie -z3exe:$Z3_BIN
 
 workflows:
   commit-workflow:
@@ -193,6 +233,7 @@ workflows:
       - validate-config
       - validate-cluster-test-dockerfile
       - terraform
+      - check-language-verifier
 
   scheduled-workflow:
     triggers:
