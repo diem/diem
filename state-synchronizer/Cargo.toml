@@ -20,6 +20,7 @@ prometheus = { version = "0.7.0", default-features = false }
 libra-config = { path = "../config", version = "0.1.0" }
 executor = { path = "../executor", version = "0.1.0" }
 failure = { path = "../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 network = { path = "../network", version = "0.1.0" }

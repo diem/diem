@@ -4,6 +4,7 @@ use crate::coordinator::EpochRetrievalRequest;
 use crate::{
     coordinator::{CoordinatorMessage, SyncCoordinator, SyncRequest},
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
+    SynchronizerState,
 };
 use executor::Executor;
 use failure::prelude::*;
@@ -107,7 +108,7 @@ impl StateSyncClient {
     }
 
     /// Returns information about StateSynchronizer internal state
-    pub fn get_state(&self) -> impl Future<Output = Result<u64>> {
+    pub fn get_state(&self) -> impl Future<Output = Result<SynchronizerState>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
         async move {

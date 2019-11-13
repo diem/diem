@@ -1,30 +1,26 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::LedgerInfo;
+use crate::SynchronizerState;
 use executor::Executor;
 use failure::prelude::*;
 use futures::{channel::oneshot, Future, FutureExt};
 use grpcio::EnvBuilder;
 use libra_config::config::NodeConfig;
-use libra_logger::prelude::*;
-use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof, ValidatorVerifier},
     transaction::TransactionListWithProof,
 };
-use network::proto::GetChunkResponse;
 use std::{pin::Pin, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
 use vm_runtime::MoveVM;
 
 /// Proxies interactions with execution and storage for state synchronization
 pub trait ExecutorProxyTrait: Sync + Send {
-    /// Return the latest known version
-    fn get_latest_version(&self) -> Pin<Box<dyn Future<Output = Result<u64>> + Send>>;
-
-    /// Return the latest known ledger info
-    fn get_latest_ledger_info(&self) -> Pin<Box<dyn Future<Output = Result<LedgerInfo>> + Send>>;
+    /// Latest state (ledger info and committed version) in the local storage
+    fn get_local_storage_state(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>>;
 
     /// Execute and commit a batch of transactions
     fn execute_chunk(
@@ -33,13 +29,13 @@ pub trait ExecutorProxyTrait: Sync + Send {
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
-    /// Gets chunk of transactions
+    /// Gets chunk of transactions given the known version, target version and the max limit.
     fn get_chunk(
         &self,
         known_version: u64,
         limit: u64,
-        target: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<GetChunkResponse>> + Send>>;
+        target_version: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>>;
 
     fn validate_ledger_info(&self, target: &LedgerInfoWithSignatures) -> Result<()>;
 
@@ -85,22 +81,25 @@ fn convert_to_future<T: Send + 'static>(
 }
 
 impl ExecutorProxyTrait for ExecutorProxy {
-    fn get_latest_version(&self) -> Pin<Box<dyn Future<Output = Result<u64>> + Send>> {
+    fn get_local_storage_state(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>> {
         let client = Arc::clone(&self.storage_read_client);
         async move {
-            let resp = client.get_startup_info_async().await?;
-            resp.map(|r| {
-                r.synced_tree_state
-                    .map_or(r.ledger_info.version(), |s| s.version)
+            let highest_local_li = client.update_to_latest_ledger_async(0, vec![]).await?.1;
+            // highest committed version is max between LI and synced tree state
+            let mut highest_committed_version = highest_local_li.ledger_info().version();
+            if let Some(startup_info) = client.get_startup_info_async().await? {
+                let pending_version = startup_info.synced_tree_state.map_or(0, |t| t.version);
+                highest_committed_version =
+                    std::cmp::max(pending_version, highest_committed_version);
+            }
+            Ok(SynchronizerState {
+                highest_local_li,
+                highest_committed_version,
             })
-            .ok_or_else(|| format_err!("failed to fetch startup info"))
         }
             .boxed()
-    }
-
-    fn get_latest_ledger_info(&self) -> Pin<Box<dyn Future<Output = Result<LedgerInfo>> + Send>> {
-        let client = Arc::clone(&self.storage_read_client);
-        async move { Ok(client.update_to_latest_ledger_async(0, vec![]).await?.1) }.boxed()
     }
 
     fn execute_chunk(
@@ -118,33 +117,18 @@ impl ExecutorProxyTrait for ExecutorProxy {
         &self,
         known_version: u64,
         limit: u64,
-        target: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<GetChunkResponse>> + Send>> {
+        target_version: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
         let client = Arc::clone(&self.storage_read_client);
         async move {
-            let transactions = client
-                .get_transactions_async(
-                    known_version + 1,
-                    limit,
-                    target.ledger_info().version(),
-                    false,
-                )
-                .await?;
-            if transactions.transactions.is_empty() {
-                error!(
-                    "[state sync] can't get {} txns from version {}",
-                    limit, known_version
-                );
-            }
-            Ok(GetChunkResponse {
-                ledger_info_with_sigs: Some(target.into()),
-                txn_list_with_proof: Some(transactions.into()),
-            })
+            client
+                .get_transactions_async(known_version + 1, limit, target_version, false)
+                .await
         }
             .boxed()
     }
 
-    fn validate_ledger_info(&self, target: &LedgerInfo) -> Result<()> {
+    fn validate_ledger_info(&self, target: &LedgerInfoWithSignatures) -> Result<()> {
         target.verify(&self.validator_verifier)?;
         Ok(())
     }
