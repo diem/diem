@@ -228,13 +228,10 @@ impl<T: Payload> BlockStore<T> {
         // This introduces an inconsistent state if we send out SyncInfo and others try to sync to
         // B_i and figure out we only have B_j.
         // Here we commit up to the highest_ledger_info to maintain highest_ledger_info == state_computer.committed_trees.
-        if let Some(block_to_commit) = self.highest_ledger_info().committed_block_id() {
-            let highest_li_commit_round = self.get_block(block_to_commit).map_or(0, |b| b.round());
-            if highest_li_commit_round > self.root().round() {
-                let finality_proof = self.highest_ledger_info().ledger_info().clone();
-                if let Err(e) = self.commit(finality_proof).await {
-                    warn!("{:?}", e);
-                }
+        if self.highest_ledger_info().commit_info().round() > self.root().round() {
+            let finality_proof = self.highest_ledger_info().ledger_info().clone();
+            if let Err(e) = self.commit(finality_proof).await {
+                warn!("{:?}", e);
             }
         }
     }

@@ -3,6 +3,7 @@
 
 use crate::{common::Round, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate};
 use failure::{ensure, ResultExt};
+use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use network;
 use serde::{Deserialize, Serialize};
@@ -97,7 +98,7 @@ impl SyncInfo {
             "HQC has lower round than HLI"
         );
         ensure!(
-            self.highest_ledger_info.committed_block_id().is_some(),
+            *self.highest_ledger_info.commit_info() != BlockInfo::empty(),
             "HLI has no committed block"
         );
         self.highest_quorum_cert

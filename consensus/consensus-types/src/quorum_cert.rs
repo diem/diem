@@ -55,13 +55,8 @@ impl QuorumCert {
         &self.signed_ledger_info
     }
 
-    pub fn committed_block_id(&self) -> Option<HashValue> {
-        let id = self.ledger_info().ledger_info().consensus_block_id();
-        if id.is_zero() {
-            None
-        } else {
-            Some(id)
-        }
+    pub fn commit_info(&self) -> &BlockInfo {
+        self.ledger_info().ledger_info().commit_info()
     }
 
     /// If the QC commits reconfiguration and starts a new epoch
