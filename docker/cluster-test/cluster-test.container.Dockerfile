@@ -8,6 +8,8 @@
 ## -
 FROM debian:buster
 RUN apt-get update && apt-get install -y openssh-client
+RUN mkdir /etc/cluster-test
+WORKDIR /etc/cluster-test
 COPY cluster_test_docker_builder_cluster_test /usr/local/bin/cluster-test
 COPY terraform/validator-sets/100/mint.key /etc/cluster-test/
 ENTRYPOINT ["cluster-test"]
