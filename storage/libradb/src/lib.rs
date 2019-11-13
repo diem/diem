@@ -305,10 +305,6 @@ impl LibraDB {
     }
 
     /// Returns ledger infos reflecting epoch bumps starting with the given epoch.
-    ///
-    /// Returns error in case `start_epoch` is higher than the currently known epoch.
-    /// The returned vector is not necessarily sorted: the client should make sure to sort it
-    /// by epoch number.
     pub fn get_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,

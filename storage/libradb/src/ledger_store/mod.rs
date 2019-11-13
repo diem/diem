@@ -41,6 +41,8 @@ pub(crate) struct LedgerStore {
     latest_ledger_info: ArcSwap<Option<LedgerInfoWithSignatures>>,
 }
 
+// TODO: Either implement an iteration API to allow a very old client to loop through a long history
+// or guarantee that there is always a recent enough waypoint and client knowns to boot from there.
 const MAX_NUM_EPOCH_CHANGE_LEDGER_INFO: usize = 100;
 
 impl LedgerStore {
@@ -93,19 +95,22 @@ impl LedgerStore {
     ) -> Result<Vec<LedgerInfoWithSignatures>> {
         let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
         iter.seek(&start_epoch)?;
-        let iter = iter
+        let result = iter
             .take(MAX_NUM_EPOCH_CHANGE_LEDGER_INFO + 1)
+            .map(|res| Ok(res?.1))
             .take_while(|res| {
                 res.as_ref()
                     .ok()
-                    .map(|(_, x)| {
+                    .map(|x| {
+                        // Stop at ledger_version, or the latest ledger info which doesn't bump
+                        // the epoch.
                         x.ledger_info().version() <= ledger_version
                             && x.ledger_info().next_validator_set().is_some()
                     })
-                    .unwrap_or(false)
-            });
-
-        let result = iter.map(|res| Ok(res?.1)).collect::<Result<Vec<_>>>()?;
+                    // Pass through Err.
+                    .unwrap_or(true)
+            })
+            .collect::<Result<Vec<_>>>()?;
 
         if result.len() > MAX_NUM_EPOCH_CHANGE_LEDGER_INFO {
             Err(LibraDbError::TooManyRequested(

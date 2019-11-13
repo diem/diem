@@ -485,9 +485,7 @@ impl TryFrom<crate::proto::storage::GetEpochChangeLedgerInfosResponse>
 {
     type Error = Error;
 
-    fn try_from(
-        proto: crate::proto::storage::GetEpochChangeLedgerInfosResponse,
-    ) -> Result<Self> {
+    fn try_from(proto: crate::proto::storage::GetEpochChangeLedgerInfosResponse) -> Result<Self> {
         Ok(Self {
             ledger_infos_with_sigs: proto
                 .latest_ledger_infos
