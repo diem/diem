@@ -431,13 +431,7 @@ impl InternalNode {
             // Get the number of children of the internal node that each subtree at this height
             // covers.
             let width = 1 << h;
-            // Get the index of the first child belonging to the same subtree whose root, let's say
-            // `r` is at height `h` that the n-th child belongs to.
-            // Note:  `child_half_start` will be always equal to `n` at height 0.
-            let child_half_start = (0xff << h) & u8::from(n);
-            // Get the index of the first child belonging to the subtree whose root is the sibling
-            // of `r` at height `h`.
-            let sibling_half_start = child_half_start ^ (1 << h);
+            let (child_half_start, sibling_half_start) = get_child_and_sibling_half_start(n, h);
             // Compute the root hash of the subtree rooted at the sibling of `r`.
             siblings.push(self.merkle_hash(
                 sibling_half_start,
@@ -479,6 +473,21 @@ impl InternalNode {
         }
         unreachable!("Impossible to get here without returning even at the lowest level.")
     }
+}
+
+/// Given a nibble, computes the start position of its `child_half_start` and `sibling_half_start`
+/// at `height` level.
+pub(crate) fn get_child_and_sibling_half_start(n: Nibble, height: u8) -> (u8, u8) {
+    // Get the index of the first child belonging to the same subtree whose root, let's say `r` is
+    // at `height` that the n-th child belongs to.
+    // Note: `child_half_start` will be always equal to `n` at height 0.
+    let child_half_start = (0xff << height) & u8::from(n);
+
+    // Get the index of the first child belonging to the subtree whose root is the sibling of `r`
+    // at `height`.
+    let sibling_half_start = child_half_start ^ (1 << height);
+
+    (child_half_start, sibling_half_start)
 }
 
 /// Represents an account.
