@@ -182,12 +182,13 @@ where
         module_cache: P,
         txn_data: TransactionMetadata,
         data_view: TransactionDataCache<'txn>,
+        gas_schedule: &'txn CostTable,
         vm_mode: VMMode,
     ) -> Self {
         Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
-            gas_meter: GasMeter::new(txn_data.max_gas_amount()),
+            gas_meter: GasMeter::new(txn_data.max_gas_amount(), gas_schedule),
             txn_data,
             event_data: vec![],
             data_view,
@@ -1146,14 +1147,13 @@ where
     {
         let (address, participant) = Self::get_channel_address_pair(&self.txn_data, is_sender)?;
         let ap = Self::make_channel_access_path(module, idx, address, participant);
-        if let Some(struct_def) =
+
+        op(
+            self,
+            ap,
             self.module_cache
-                .resolve_struct_def(module, idx, &self.gas_meter)?
-        {
-            op(self, ap, struct_def)
-        } else {
-            Err(VMStatus::new(StatusCode::LINKER_ERROR))
-        }
+                .resolve_struct_def(module, idx, &self.gas_meter)?,
+        )
     }
 
     pub(crate) fn txn_data(&self) -> &TransactionMetadata {

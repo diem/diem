@@ -13,7 +13,8 @@ use libra_types::transaction::ScriptAction;
 use libra_types::{
     account_address::AccountAddress,
     transaction::{
-        ChannelTransactionPayloadBody, Module, Script, SignatureCheckedTransaction, TransactionArgument, TransactionPayload,
+        ChannelTransactionPayloadBody, Module, Script, SignatureCheckedTransaction,
+        TransactionArgument, TransactionPayload,
     },
     vm_error::{StatusCode, VMStatus},
 };
@@ -104,7 +105,7 @@ where
 
                         Self::verify_script_action(
                             action_body.action(),
-                            &txn_state.txn_executor.module_cache(),
+                            txn_state.txn_executor.module_cache(),
                         )?;
 
                         Some(VerifiedTransactionState {
@@ -174,18 +175,8 @@ where
         Ok(main)
     }
 
-    fn verify_script_action(
-        action: &ScriptAction,
-        module_cache: &TransactionModuleCache<'alloc, 'txn, P>,
-    ) -> Result<(), VMStatus> {
-        let loaded_module = module_cache
-            .get_loaded_module(action.module())?
-            .ok_or_else(|| {
-                VMStatus::new(StatusCode::LINKER_ERROR).with_message(format!(
-                    "Can not find module when verify script action: {:?}",
-                    action
-                ))
-            })?;
+    fn verify_script_action(action: &ScriptAction, module_cache: &P) -> Result<(), VMStatus> {
+        let loaded_module = module_cache.get_loaded_module(action.module())?;
         let func_idx = loaded_module
             .function_defs_table
             .get(action.function())

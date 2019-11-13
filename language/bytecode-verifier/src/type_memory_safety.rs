@@ -996,17 +996,17 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             }
 
             Bytecode::IsOffchain => {
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::Bool,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
             }
 
             Bytecode::GetTxnReceiverAddress => {
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::Address,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
             }
@@ -1028,9 +1028,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     SignatureToken::Struct(struct_definition.struct_handle, type_actuals.clone());
                 SignatureTokenView::new(self.module(), &struct_type).kind(self.type_formals());
 
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::Bool,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
             }
@@ -1050,7 +1050,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         StatusCode::MOVEFROM_NO_RESOURCE_ERROR,
                         offset,
                     ));
-                } else if !state.global(*idx).is_empty() {
+                } else if state.is_global_borrowed(*idx) {
                     return Err(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset));
                 }
 
@@ -1059,9 +1059,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     SignatureToken::Struct(struct_definition.struct_handle, type_actuals.clone());
                 SignatureTokenView::new(self.module(), &struct_type).kind(self.type_formals());
 
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: struct_type,
-                    value: AbstractValue::full_value(Kind::Resource),
+                    value: AbstractValue::Value(Kind::Resource),
                 });
                 Ok(())
             }
@@ -1095,25 +1095,25 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             }
 
             Bytecode::IsChannelTxn => {
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::Bool,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
             }
 
             Bytecode::GetTxnReceiverPublicKey => {
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::ByteArray,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
             }
 
             Bytecode::GetTxnChannelSequenceNumber => {
-                self.stack.push(StackAbstractValue {
+                self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::U64,
-                    value: AbstractValue::full_value(Kind::Unrestricted),
+                    value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
             }

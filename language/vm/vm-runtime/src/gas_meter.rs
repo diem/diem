@@ -347,7 +347,7 @@ impl<'txn> GasMeter<'txn> {
             | Bytecode::IsChannelTxn
             | Bytecode::GetTxnReceiverPublicKey
             | Bytecode::GetTxnChannelSequenceNumber => {
-                let default_gas = static_cost_instr(instr, AbstractMemorySize::new(1));
+                let default_gas = self.gas_schedule.get_gas(instr, AbstractMemorySize::new(1));
                 Self::gas_of(default_gas)
             }
             Bytecode::ExistSenderChannel(_, _)
@@ -363,7 +363,7 @@ impl<'txn> GasMeter<'txn> {
                 } else {
                     AbstractMemorySize::new(0) // We already charged for size 1
                 };
-                Self::gas_of(static_cost_instr(instr, mem_size))
+                Self::gas_of(self.gas_schedule.get_gas(instr, mem_size))
             }
         };
         Ok(instruction_reqs)

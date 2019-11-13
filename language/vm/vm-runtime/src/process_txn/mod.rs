@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    code_cache::module_cache::ModuleCache, data_cache::RemoteCache,
-    loaded_data::loaded_module::LoadedModule,
-};
+use crate::{code_cache::module_cache::ModuleCache, data_cache::RemoteCache};
 use libra_config::config::{VMMode, VMPublishingOption};
 use libra_types::transaction::SignatureCheckedTransaction;
 use std::marker::PhantomData;

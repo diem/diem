@@ -28,6 +28,7 @@ use crate::{
     code_cache::module_cache::ModuleCache, data_cache::RemoteCache, gas_meter::GasMeter,
     loaded_data::loaded_module::LoadedModule,
 };
+use vm::gas_schedule::CostTable;
 
 struct StructFieldScanner<'alloc, 'txn> {
     module_cache: &'txn dyn ModuleCache<'alloc>,
@@ -59,11 +60,7 @@ impl<'alloc, 'txn> StructFieldScanner<'alloc, 'txn> {
 
     fn load_module_by_tag(&self, tag: &StructTag) -> VMResult<&LoadedModule> {
         self.module_cache
-            .get_loaded_module(&ModuleId::new(tag.address, tag.module.clone()))?
-            .ok_or(
-                VMStatus::new(StatusCode::MISSING_DATA)
-                    .with_message(format!("load module by tag: {:?} fail.", tag)),
-            )
+            .get_loaded_module(&ModuleId::new(tag.address, tag.module.clone()))
     }
 
     fn scan_struct_field(
@@ -98,12 +95,8 @@ impl<'alloc, 'txn> StructFieldScanner<'alloc, 'txn> {
                             let struct_name = module.identifier_at(struct_handle.name);
                             let field_type_module_id =
                                 StructHandleView::new(module, struct_handle).module_id();
-                            let field_module = self
-                                .module_cache
-                                .get_loaded_module(&field_type_module_id)?
-                                .ok_or(VMStatus::new(StatusCode::MISSING_DATA).with_message(
-                                    format!("get module by id: {:?} fail.", field_type_module_id),
-                                ))?;
+                            let field_module =
+                                self.module_cache.get_loaded_module(&field_type_module_id)?;
                             let struct_value: Struct = match field_value.into() {
                                 Ok(s) => s,
                                 Err(_e) => {
@@ -242,7 +235,8 @@ impl<'alloc, 'txn> BalanceChecker<'alloc, 'txn> {
     }
 
     fn resolve(&self, tag: &StructTag) -> VMResult<StructDef> {
-        let mut gas = GasMeter::new(GasUnits::new(1));
+        let gas_schedule = CostTable::zero();
+        let mut gas = GasMeter::new(GasUnits::new(1), &gas_schedule);
         gas.disable_metering();
         let module = self.scanner.load_module_by_tag(tag)?;
         let struct_def_idx = module
@@ -251,11 +245,7 @@ impl<'alloc, 'txn> BalanceChecker<'alloc, 'txn> {
             .ok_or(VMStatus::new(StatusCode::LINKER_ERROR))?;
         self.scanner
             .module_cache()
-            .resolve_struct_def(module, *struct_def_idx, &gas)?
-            .ok_or(
-                VMStatus::new(StatusCode::MISSING_DATA)
-                    .with_message(format!("resolve StructDef by tag: {:?} fail.", tag)),
-            )
+            .resolve_struct_def(module, *struct_def_idx, &gas)
     }
 
     pub fn check_balance(&self, write_set: &WriteSet) -> Result<(), VMStatus> {

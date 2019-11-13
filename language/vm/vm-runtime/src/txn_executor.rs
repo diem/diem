@@ -14,9 +14,9 @@ use crate::{
     loaded_data::function::FunctionRef,
 };
 
-use libra_state_view::StateView;
-use bytecode_verifier::{VerifiedModule, VerifiedScript};
+use bytecode_verifier::VerifiedModule;
 use libra_config::config::VMMode;
+use libra_state_view::StateView;
 use libra_types::{
     account_address::AccountAddress,
     account_config,
@@ -110,6 +110,7 @@ where
 
     pub fn new_with_vm_mode(
         module_cache: P,
+        gas_schedule: &'txn CostTable,
         data_cache: &'txn dyn RemoteCache,
         txn_data: TransactionMetadata,
         pre_cache_write_set: Option<WriteSet>,
@@ -120,6 +121,7 @@ where
                 module_cache,
                 txn_data,
                 TransactionDataCache::new_with_write_set(data_cache, pre_cache_write_set),
+                gas_schedule,
                 vm_mode,
             ),
         }

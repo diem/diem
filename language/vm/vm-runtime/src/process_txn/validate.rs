@@ -162,9 +162,9 @@ where
                     ChannelTransactionPayloadBody::Script(script_body) => {
                         Some(ValidatedTransaction::validate(
                             &txn,
+                            gas_schedule,
                             module_cache,
                             data_cache,
-                            allocator,
                             mode,
                             vm_mode,
                             || {
@@ -191,9 +191,9 @@ where
                     ChannelTransactionPayloadBody::Action(action_body) => {
                         Some(ValidatedTransaction::validate(
                             &txn,
+                            gas_schedule,
                             module_cache,
                             data_cache,
-                            allocator,
                             mode,
                             vm_mode,
                             || {
@@ -384,7 +384,6 @@ where
             gas_schedule,
             module_cache,
             data_cache,
-            allocator,
             pre_cache_write_set,
             vm_mode,
         );
@@ -434,14 +433,11 @@ where
         gas_schedule: &'txn CostTable,
         module_cache: P,
         data_cache: &'txn dyn RemoteCache,
-        allocator: &'txn Arena<LoadedModule>,
         pre_cache_write_set: Option<WriteSet>,
         vm_mode: VMMode,
     ) -> Self {
-        // This temporary cache is used for modules published by a single transaction.
-        let txn_module_cache = TransactionModuleCache::new(module_cache, allocator);
         let txn_executor = TransactionExecutor::new_with_vm_mode(
-            txn_module_cache,
+            module_cache,
             gas_schedule,
             data_cache,
             metadata,
