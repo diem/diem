@@ -8,6 +8,7 @@ use crate::{
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
+    language_storage::TypeTag,
     vm_error::{StatusCode, VMStatus},
 };
 use std::collections::VecDeque;
@@ -17,6 +18,7 @@ use vm::{
 };
 
 pub fn native_bytearray_concat(
+    _type_args: Vec<TypeTag>,
     mut arguments: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {
@@ -42,6 +44,7 @@ pub fn native_bytearray_concat(
 }
 
 pub fn native_address_to_bytes(
+    _type_args: Vec<TypeTag>,
     mut arguments: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {
@@ -65,6 +68,7 @@ pub fn native_address_to_bytes(
 }
 
 pub fn native_u64_to_bytes(
+    _type_args: Vec<TypeTag>,
     mut arguments: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {

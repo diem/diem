@@ -10,7 +10,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config,
     identifier::{IdentStr, Identifier},
-    language_storage::ModuleId,
+    language_storage::{ModuleId, TypeTag},
     vm_error::{StatusCode, VMStatus},
 };
 use std::collections::{HashMap, VecDeque};
@@ -60,7 +60,7 @@ impl NativeResult {
 /// Struct representing the expected definition for a native function.
 pub struct NativeFunction {
     /// Given the vector of aguments, it executes the native function.
-    pub dispatch: fn(VecDeque<Value>, &CostTable) -> VMResult<NativeResult>,
+    pub dispatch: fn(Vec<TypeTag>, VecDeque<Value>, &CostTable) -> VMResult<NativeResult>,
     /// The signature as defined in it's declaring module.
     /// It should NOT be generally inspected outside of it's declaring module as the various
     /// struct handle indexes are not remapped into the local context.
@@ -254,7 +254,7 @@ lazy_static! {
 
         // Event
         add!(m, addr, "LibraAccount", "write_to_event_store",
-            |_, _| {
+            |_, _, _| {
                 Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
                             "write_to_event_store does not have a native implementation"
                                 .to_string()))
@@ -265,7 +265,7 @@ lazy_static! {
         );
         // LibraAccount
         add!(m, addr, "LibraAccount", "save_account",
-            |_, _| {
+            |_, _, _| {
                 Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
                     "save_account does not have a native implementation".to_string()))
             },
