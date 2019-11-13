@@ -419,10 +419,7 @@ impl<T: Payload> EventProcessor<T> {
         counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
 
         let mut highest_committed_proposal_round = None;
-        if let Some(block) = qc
-            .committed_block_id()
-            .and_then(|new_commit| self.block_store.get_block(new_commit))
-        {
+        if let Some(block) = self.block_store.get_block(qc.commit_info().id()) {
             if block.round() > self.block_store.root().round() {
                 // We don't want to use NIL commits for pacemaker round interval calculations.
                 if !block.is_nil_block() {

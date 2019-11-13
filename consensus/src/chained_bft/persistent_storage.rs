@@ -191,7 +191,7 @@ impl<T: Payload> RecoveryData<T> {
             .clone();
         let root_ledger_info = quorum_certs
             .iter()
-            .find(|qc| qc.committed_block_id() == Some(root_block.id()))
+            .find(|qc| qc.commit_info().id() == root_block.id())
             .ok_or_else(|| format_err!("No LI found for root: {}", root_id))?
             .clone();
 
