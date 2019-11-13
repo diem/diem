@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct AdmissionControlConfig {
     pub address: String,

@@ -12,7 +12,7 @@ use std::{
 ///
 /// We use this in lieu of tempfile because tempfile brings in too many
 /// dependencies.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TempPath {
     path_buf: PathBuf,
     persist: bool,
