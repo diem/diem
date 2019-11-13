@@ -32,7 +32,9 @@ impl MempoolProxy {
         timestamp_usecs: u64,
     ) -> CommitTransactionsRequest {
         let mut all_updates = Vec::new();
-        assert_eq!(txns.len(), compute_result.compute_status.len());
+        // we exclude the prologue txn, we probably need a way to ensure this aligns with state_computer
+        let status = compute_result.compute_status[1..].to_vec();
+        assert_eq!(txns.len(), status.len());
         for (txn, status) in txns.iter().zip(compute_result.compute_status.iter()) {
             let mut transaction = CommittedTransaction::default();
             transaction.sender = txn.sender().as_ref().to_vec();

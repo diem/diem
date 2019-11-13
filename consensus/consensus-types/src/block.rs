@@ -9,7 +9,9 @@ use crate::{
 };
 use failure::{bail, ensure, format_err};
 use libra_crypto::hash::{CryptoHash, HashValue};
+use libra_types::account_address::{AccountAddress, ADDRESS_LENGTH};
 use libra_types::block_info::BlockInfo;
+use libra_types::block_metadata::BlockMetadata;
 use libra_types::transaction::Version;
 use libra_types::validator_set::ValidatorSet;
 use libra_types::{
@@ -308,5 +310,19 @@ impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for Block<T> {
             block_data,
             signature,
         })
+    }
+}
+
+impl<T> From<&Block<T>> for BlockMetadata {
+    fn from(block: &Block<T>) -> Self {
+        Self::new(
+            block.id(),
+            block.timestamp_usecs(),
+            block.quorum_cert().ledger_info().signatures().clone(),
+            // For nil block, we use 0x0 which is convention for nil address in move.
+            block
+                .author()
+                .unwrap_or_else(|| AccountAddress::new([0u8; ADDRESS_LENGTH])),
+        )
     }
 }

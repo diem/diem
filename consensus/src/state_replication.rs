@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use consensus_types::block::Block;
+use consensus_types::executed_block::ExecutedBlock;
 use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
 use failure::Result;
 use futures::Future;
@@ -52,7 +53,7 @@ pub trait StateComputer: Send + Sync {
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
-        blocks: Vec<(Self::Payload, Arc<ProcessedVMOutput>)>,
+        blocks: Vec<&ExecutedBlock<Self::Payload>>,
         finality_proof: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
