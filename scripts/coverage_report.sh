@@ -72,18 +72,19 @@ then
 fi
 
 # Set the flags necessary for coverage output
-export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Coverflow-checks=off -Zno-landing-pads -Cpasses=insert-gcov-profiling"
+export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Coverflow-checks=off -Zno-landing-pads"
+export RUSTC_BOOTSTRAP=1
 export CARGO_INCREMENTAL=0
 
 # Clean the project
 echo "Cleaning project..."
-(cd "$TEST_DIR"; cargo +nightly clean)
+(cd "$TEST_DIR"; cargo clean)
 
 # Run tests
 echo "Running tests..."
 while read -r line; do
         dirline=$(realpath $(dirname "$line"));
-        (cd "$dirline"; cargo +nightly xtest)
+        (cd "$dirline" && pwd && cargo xtest)
 done < <(find "$TEST_DIR" -name 'Cargo.toml')
 
 # Make the coverage directory if it doesn't exist
