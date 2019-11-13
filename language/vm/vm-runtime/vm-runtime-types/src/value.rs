@@ -4,7 +4,8 @@
 use crate::{
     loaded_data::{struct_def::StructDef, types::Type},
     native_structs::{
-        def::NativeStructTag, vector::NativeVector, NativeStructType, NativeStructValue,
+        def::{NativeStructTag, NativeStructType},
+        vector::NativeVector,
     },
 };
 use libra_types::{
@@ -15,7 +16,7 @@ use libra_types::{
 };
 use serde::{de, Deserialize, Serialize};
 use std::{
-    cell::{Ref, RefCell},
+    cell::{Ref, RefCell, RefMut},
     fmt,
     mem::replace,
     ops::Add,
@@ -64,8 +65,8 @@ enum ValueImpl {
     /// A struct in Move.
     Struct(Struct),
 
-    /// A native struct
-    NativeStruct(NativeStructValue),
+    /// A native vector.
+    Vector(NativeVector),
 
     /// Reference to a local.
     Reference(Reference),
@@ -187,7 +188,7 @@ impl ValueImpl {
             ValueImpl::String(s) => words_in(AbstractMemorySize::new(s.len() as u64)),
             ValueImpl::ByteArray(key) => AbstractMemorySize::new(key.len() as u64),
             ValueImpl::Struct(s) => s.size(),
-            ValueImpl::NativeStruct(s) => s.size(),
+            ValueImpl::Vector(v) => v.size(),
             ValueImpl::Reference(reference) => reference.size(),
             ValueImpl::GlobalRef(reference) => reference.size(),
             ValueImpl::PromotedReference(reference) => reference.0.size(),
@@ -232,7 +233,7 @@ impl ValueImpl {
             ValueImpl::ByteArray(_) => Type::ByteArray,
             ValueImpl::String(_) => Type::String,
             ValueImpl::Struct(s) => Type::Struct(s.to_struct_def_FOR_TESTING()),
-            ValueImpl::NativeStruct(v) => Type::Struct(v.to_struct_def_FOR_TESTING()),
+            ValueImpl::Vector(v) => Type::Struct(v.to_struct_def_FOR_TESTING()),
             ValueImpl::Reference(reference) => {
                 Type::Reference(Box::new(reference.to_type_FOR_TESTING()))
             }
@@ -252,7 +253,7 @@ impl ValueImpl {
             ValueImpl::ByteArray(ba) => format!("ByteArray({})", ba),
             ValueImpl::String(s) => format!("String({})", s),
             ValueImpl::Struct(s) => format!("Struct({})", s.pretty_string()),
-            ValueImpl::NativeStruct(v) => format!("NativeStruct({:?})", v),
+            ValueImpl::Vector(v) => format!("NativeVector({:?})", v),
             ValueImpl::Reference(reference) => format!("Reference({})", reference.pretty_string()),
             ValueImpl::GlobalRef(reference) => format!("GlobalRef({})", reference.pretty_string()),
             ValueImpl::PromotedReference(reference) => {
@@ -308,8 +309,8 @@ impl Value {
         Value(ValueImpl::GlobalRef(reference))
     }
 
-    pub fn native_struct(v: NativeStructValue) -> Self {
-        Value(ValueImpl::NativeStruct(v))
+    pub fn native_vector(v: NativeVector) -> Self {
+        Value(ValueImpl::Vector(v))
     }
 
     /// Convert a Value into a `T` if the value represents a type `T`.
@@ -371,7 +372,7 @@ impl Value {
 //
 
 impl From<Value> for VMResult<u64> {
-    fn from(value: Value) -> VMResult<u64> {
+    fn from(value: Value) -> Self {
         match value.0 {
             ValueImpl::U64(i) => Ok(i),
             _ => {
@@ -383,7 +384,7 @@ impl From<Value> for VMResult<u64> {
 }
 
 impl From<Value> for VMResult<bool> {
-    fn from(value: Value) -> VMResult<bool> {
+    fn from(value: Value) -> Self {
         match value.0 {
             ValueImpl::Bool(b) => Ok(b),
             _ => {
@@ -395,7 +396,7 @@ impl From<Value> for VMResult<bool> {
 }
 
 impl From<Value> for VMResult<AccountAddress> {
-    fn from(value: Value) -> VMResult<AccountAddress> {
+    fn from(value: Value) -> Self {
         match value.0 {
             ValueImpl::Address(address) => Ok(address),
             _ => {
@@ -407,7 +408,7 @@ impl From<Value> for VMResult<AccountAddress> {
 }
 
 impl From<Value> for VMResult<ByteArray> {
-    fn from(value: Value) -> VMResult<ByteArray> {
+    fn from(value: Value) -> Self {
         match value.0 {
             ValueImpl::ByteArray(byte_array) => Ok(byte_array),
             _ => {
@@ -419,7 +420,7 @@ impl From<Value> for VMResult<ByteArray> {
 }
 
 impl From<Value> for VMResult<VMString> {
-    fn from(value: Value) -> VMResult<VMString> {
+    fn from(value: Value) -> Self {
         match value.0 {
             ValueImpl::String(s) => Ok(s),
             _ => {
@@ -431,7 +432,7 @@ impl From<Value> for VMResult<VMString> {
 }
 
 impl From<Value> for VMResult<Struct> {
-    fn from(value: Value) -> VMResult<Struct> {
+    fn from(value: Value) -> Self {
         match value.0 {
             ValueImpl::Struct(s) => Ok(s),
             _ => {
@@ -442,12 +443,12 @@ impl From<Value> for VMResult<Struct> {
     }
 }
 
-impl From<Value> for VMResult<NativeStructValue> {
-    fn from(value: Value) -> VMResult<NativeStructValue> {
+impl From<Value> for VMResult<NativeVector> {
+    fn from(value: Value) -> Self {
         match value.0 {
-            ValueImpl::NativeStruct(s) => Ok(s),
+            ValueImpl::Vector(v) => Ok(v),
             _ => {
-                let msg = format!("Cannot cast {:?} to NativeStructValue", value);
+                let msg = format!("Cannot cast {:?} to NativeVector", value);
                 Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
             }
         }
@@ -455,7 +456,7 @@ impl From<Value> for VMResult<NativeStructValue> {
 }
 
 impl From<Value> for VMResult<ReferenceValue> {
-    fn from(value: Value) -> VMResult<ReferenceValue> {
+    fn from(value: Value) -> Self {
         match value.0 {
             ValueImpl::Reference(reference) => Ok(ReferenceValue::Reference(reference)),
             ValueImpl::GlobalRef(reference) => Ok(ReferenceValue::GlobalRef(reference)),
@@ -468,7 +469,7 @@ impl From<Value> for VMResult<ReferenceValue> {
 }
 
 impl From<Value> for VMResult<Reference> {
-    fn from(value: Value) -> VMResult<Reference> {
+    fn from(value: Value) -> Self {
         match value.0 {
             ValueImpl::Reference(reference) => Ok(reference),
             _ => {
@@ -480,11 +481,46 @@ impl From<Value> for VMResult<Reference> {
 }
 
 impl From<Value> for VMResult<GlobalRef> {
-    fn from(value: Value) -> VMResult<GlobalRef> {
+    fn from(value: Value) -> Self {
         match value.0 {
             ValueImpl::GlobalRef(reference) => Ok(reference),
             _ => {
                 let msg = format!("Cannot cast {:?} to GlobalReference", value);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
+        }
+    }
+}
+
+pub(crate) trait ValueRef<T> {
+    fn borrow_value(&self) -> VMResult<Ref<'_, T>>;
+    fn borrow_value_mut(&self) -> VMResult<RefMut<'_, T>>;
+}
+
+impl ValueRef<NativeVector> for MutVal {
+    fn borrow_value(&self) -> VMResult<Ref<'_, NativeVector>> {
+        let r = self.0.borrow();
+        match &*r {
+            ValueImpl::Vector(_) => Ok(Ref::map(r, |v| match &*v {
+                ValueImpl::Vector(v) => v,
+                _ => unreachable!(),
+            })),
+            _ => {
+                let msg = format!("Cannot borrow reference {:?} as NativeVector", self);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
+        }
+    }
+
+    fn borrow_value_mut(&self) -> VMResult<RefMut<'_, NativeVector>> {
+        let r = self.0.borrow_mut();
+        match &*r {
+            ValueImpl::Vector(_) => Ok(RefMut::map(r, |v| match &mut *v {
+                ValueImpl::Vector(v) => v,
+                _ => unreachable!(),
+            })),
+            _ => {
+                let msg = format!("Cannot borrow reference {:?} as NativeVector", self);
                 Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
             }
         }
@@ -533,30 +569,18 @@ impl MutVal {
         self.peek().equals(&v2.peek())
     }
 
-    fn mutate_native_struct<T, F>(&self, op: F) -> VMResult<T>
+    pub(crate) fn borrow_as<T>(&self) -> VMResult<Ref<'_, T>>
     where
-        F: FnOnce(&mut NativeStructValue) -> VMResult<T>,
+        MutVal: ValueRef<T>,
     {
-        match &mut *self.0.borrow_mut() {
-            ValueImpl::NativeStruct(s) => op(s),
-            _ => {
-                let msg = format!("Cannot cast {:?} to NativeStruct", self);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
+        ValueRef::<T>::borrow_value(self)
     }
 
-    fn read_native_struct<T, F>(&self, op: F) -> VMResult<T>
+    pub(crate) fn borrow_mut_as<T>(&self) -> VMResult<RefMut<'_, T>>
     where
-        F: FnOnce(&NativeStructValue) -> VMResult<T>,
+        MutVal: ValueRef<T>,
     {
-        match &*self.0.borrow_mut() {
-            ValueImpl::NativeStruct(s) => op(s),
-            _ => {
-                let msg = format!("Cannot cast {:?} to NativeStruct", self);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
+        ValueRef::<T>::borrow_value_mut(self)
     }
 
     fn pretty_string(&self) -> String {
@@ -676,18 +700,18 @@ impl Reference {
         self.0.to_type_FOR_TESTING()
     }
 
-    fn mutate_native_struct<T, F>(&self, op: F) -> VMResult<T>
+    pub(crate) fn borrow_as<T>(&self) -> VMResult<Ref<'_, T>>
     where
-        F: FnOnce(&mut NativeStructValue) -> VMResult<T>,
+        MutVal: ValueRef<T>,
     {
-        self.0.mutate_native_struct(op)
+        self.0.borrow_as()
     }
 
-    fn read_native_struct<T, F>(&self, op: F) -> VMResult<T>
+    pub(crate) fn borrow_mut_as<T>(&self) -> VMResult<RefMut<'_, T>>
     where
-        F: FnOnce(&NativeStructValue) -> VMResult<T>,
+        MutVal: ValueRef<T>,
     {
-        self.0.read_native_struct(op)
+        self.0.borrow_mut_as()
     }
 
     fn pretty_string(&self) -> String {
@@ -738,38 +762,30 @@ impl ReferenceValue {
         }
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn mutate_native_struct<T, F>(&self, op: F) -> VMResult<T>
+    pub(crate) fn borrow_as<T>(&self) -> VMResult<Ref<'_, T>>
     where
-        F: FnOnce(&mut NativeStructValue) -> VMResult<T>,
+        MutVal: ValueRef<T>,
     {
         match self {
-            ReferenceValue::GlobalRef(reference) => reference.mutate_native_struct(op),
-            ReferenceValue::Reference(reference) => reference.mutate_native_struct(op),
+            ReferenceValue::Reference(r) => r.borrow_as(),
+            ReferenceValue::GlobalRef(r) => r.borrow_as(),
         }
     }
 
-    pub(crate) fn read_native_struct<T, F>(&self, op: F) -> VMResult<T>
+    pub(crate) fn borrow_mut_as<T>(&self) -> VMResult<RefMut<'_, T>>
     where
-        F: FnOnce(&NativeStructValue) -> VMResult<T>,
+        MutVal: ValueRef<T>,
     {
         match self {
-            ReferenceValue::GlobalRef(reference) => reference.read_native_struct(op),
-            ReferenceValue::Reference(reference) => reference.read_native_struct(op),
+            ReferenceValue::Reference(r) => r.borrow_mut_as(),
+            ReferenceValue::GlobalRef(r) => r.borrow_mut_as(),
         }
     }
 
-    pub(crate) fn get_native_struct_reference<F>(&self, op: F) -> VMResult<Value>
-    where
-        F: FnOnce(&NativeStructValue) -> VMResult<MutVal>,
-    {
+    pub(crate) fn extend_ref(&self, v: MutVal) -> Value {
         match self {
-            ReferenceValue::GlobalRef(reference) => reference
-                .read_native_struct(op)
-                .map(|v| Value::global_ref(GlobalRef::new_ref(reference, v))),
-            ReferenceValue::Reference(reference) => reference
-                .read_native_struct(op)
-                .map(|v| Value::reference(Reference::new_from_cell(v))),
+            ReferenceValue::GlobalRef(r) => Value::global_ref(GlobalRef::new_ref(r, v)),
+            ReferenceValue::Reference(_) => Value::reference(Reference::new_from_cell(v)),
         }
     }
 }
@@ -882,19 +898,19 @@ impl GlobalRef {
         self.reference.write_value(value);
     }
 
-    fn read_native_struct<T, F>(&self, op: F) -> VMResult<T>
+    pub(crate) fn borrow_as<T>(&self) -> VMResult<Ref<'_, T>>
     where
-        F: FnOnce(&NativeStructValue) -> VMResult<T>,
+        MutVal: ValueRef<T>,
     {
-        self.reference.read_native_struct(op)
+        self.reference.borrow_as()
     }
 
-    fn mutate_native_struct<T, F>(&self, op: F) -> VMResult<T>
+    pub(crate) fn borrow_mut_as<T>(&self) -> VMResult<RefMut<'_, T>>
     where
-        F: FnOnce(&mut NativeStructValue) -> VMResult<T>,
+        MutVal: ValueRef<T>,
     {
         self.root.borrow_mut().mark_dirty();
-        self.reference.mutate_native_struct(op)
+        self.reference.borrow_mut_as()
     }
 
     fn equals(&self, v2: &GlobalRef) -> VMResult<bool> {
@@ -1092,7 +1108,7 @@ impl<'de> de::DeserializeSeed<'de> for &StructDef {
                     deserializer.deserialize_tuple(fields.len(), StructVisitor(fields))?,
                 ))
             }
-            StructDef::Native(ty) => Ok(Value::native_struct(ty.deserialize(deserializer)?)),
+            StructDef::Native(ty) => Ok(ty.deserialize(deserializer)?),
         }
     }
 }
@@ -1126,7 +1142,7 @@ impl<'de> de::DeserializeSeed<'de> for &Type {
 }
 
 impl<'de> de::DeserializeSeed<'de> for &NativeStructType {
-    type Value = NativeStructValue;
+    type Value = Value;
 
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
@@ -1163,7 +1179,7 @@ impl<'de> de::DeserializeSeed<'de> for &NativeStructType {
                     ));
                 };
                 let elem_type = &self.type_actuals()[0];
-                Ok(NativeStructValue::Vector(
+                Ok(Value::native_vector(
                     deserializer.deserialize_seq(NativeVectorVisitor(elem_type))?,
                 ))
             }
@@ -1172,6 +1188,7 @@ impl<'de> de::DeserializeSeed<'de> for &NativeStructType {
 }
 
 impl Serialize for ValueImpl {
+    // TODO: serialization should be guided by the types rather than the enum tags of the values themselves.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -1198,7 +1215,7 @@ impl Serialize for ValueImpl {
                 t.end()
             }
             ValueImpl::ByteArray(bytearray) => bytearray.serialize(serializer),
-            ValueImpl::NativeStruct(v) => v.serialize(serializer),
+            ValueImpl::Vector(v) => v.serialize(serializer),
             _ => unreachable!("invalid type to serialize"),
         }
     }
