@@ -13,6 +13,7 @@ use debug_interface::{
 };
 use grpcio::{self, ChannelBuilder, EnvBuilder};
 use serde_json::{self, value as json};
+use slog_scope::*;
 use std::{
     env,
     sync::{atomic::AtomicI64, mpsc, Arc},
@@ -72,7 +73,7 @@ impl DebugPortLogThread {
             {
                 Err(e) => {
                     if print_failures {
-                        println!("Failed to get events from {}: {:?}", self.instance, e);
+                        info!("Failed to get events from {}: {:?}", self.instance, e);
                     }
                     thread::sleep(Duration::from_secs(1));
                 }
@@ -100,7 +101,7 @@ impl DebugPortLogThread {
         let e = if event.name == "committed" {
             Self::parse_commit(json)
         } else {
-            println!("Unknown event: {} from {}", event.name, self.instance);
+            warn!("Unknown event: {} from {}", event.name, self.instance);
             return None;
         };
         Some(ValidatorEvent {
