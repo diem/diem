@@ -10,8 +10,6 @@ FROM debian:buster
 RUN apt-get update && apt-get install -y openssh-client
 COPY cluster_test_docker_builder_cluster_test /usr/local/bin/cluster-test
 COPY terraform/validator-sets/100/mint.key /etc/cluster-test/
-## Capture backtrace on error
-ENV RUST_BACKTRACE 1
 ENTRYPOINT ["cluster-test"]
 ARG BUILD_DATE
 ARG GIT_REV
