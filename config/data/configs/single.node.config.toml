@@ -53,7 +53,7 @@ contiguous_rounds = 2
 consensus_keypair_file = ""
 consensus_peers_file = ""
 [consensus.safety_rules.backend]
-type = "InMemoryStorage"
+type = "in_memory_storage"
 
 [mempool]
 broadcast_transactions = true
