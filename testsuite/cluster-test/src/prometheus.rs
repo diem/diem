@@ -52,16 +52,16 @@ impl Prometheus {
 
         let mut response = self
             .client
-            .get(url)
+            .get(url.clone())
             .send()
             .map_err(|e| format_err!("Failed to query prometheus: {:?}", e))?;
 
         // We don't check HTTP error code here
         // Prometheus supplies error status in json response along with error text
 
-        let response: PrometheusResponse = response
-            .json()
-            .map_err(|e| format_err!("Failed to parse prometheus response: {:?}", e))?;
+        let response: PrometheusResponse = response.json().map_err(|e| {
+            format_err!("Failed to parse prometheus response: {:?}. Url: {}", e, url)
+        })?;
 
         match response.data {
             Some(data) => MatrixResponse::from_prometheus(data),
@@ -158,7 +158,7 @@ struct PrometheusResult {
 
 #[derive(Debug, Deserialize)]
 struct PrometheusMetric {
-    op: String,
+    op: Option<String>,
     peer_id: String,
 }
 
