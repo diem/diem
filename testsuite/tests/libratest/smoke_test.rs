@@ -242,6 +242,19 @@ fn smoke_test_single_node() {
 }
 
 #[test]
+fn smoke_test_single_node_block_metadata() {
+    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    // just need an address to get the latest version
+    let address = AccountAddress::from_hex_literal("0xA550C18").unwrap();
+    // sleep 1s to commit some blocks
+    thread::sleep(time::Duration::from_secs(1));
+    let (_state, version) = client_proxy
+        .get_latest_account_state(&["q", &address.to_string()])
+        .unwrap();
+    assert!(version > 0, "BlockMetadata txn not persisted");
+}
+
+#[test]
 fn smoke_test_multi_node() {
     let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(4, 0);
     test_smoke_script(client_proxy);

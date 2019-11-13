@@ -175,17 +175,11 @@ impl<T: Payload> BlockStore<T> {
             .path_from_root(block_id_to_commit)
             .unwrap_or_else(Vec::new);
 
-        let payload_and_output_list = blocks_to_commit
-            .iter()
-            .map(|b| {
-                (
-                    b.payload().unwrap_or(&T::default()).clone(),
-                    Arc::clone(b.output()),
-                )
-            })
-            .collect();
         self.state_computer
-            .commit(payload_and_output_list, finality_proof)
+            .commit(
+                blocks_to_commit.iter().map(|b| b.as_ref()).collect(),
+                finality_proof,
+            )
             .await
             .unwrap_or_else(|e| panic!("Failed to persist commit due to {:?}", e));
         counters::LAST_COMMITTED_ROUND.set(block_to_commit.round() as i64);

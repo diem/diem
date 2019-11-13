@@ -6,6 +6,7 @@ use crate::{
     state_replication::StateComputer,
 };
 use consensus_types::block::Block;
+use consensus_types::executed_block::ExecutedBlock;
 use executor::{ExecutedTrees, ProcessedVMOutput};
 use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
@@ -52,7 +53,7 @@ impl StateComputer for MockStateComputer {
 
     fn commit(
         &self,
-        _blocks: Vec<(Self::Payload, Arc<ProcessedVMOutput>)>,
+        _blocks: Vec<&ExecutedBlock<Self::Payload>>,
         commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         self.consensus_db
@@ -116,7 +117,7 @@ impl StateComputer for EmptyStateComputer {
 
     fn commit(
         &self,
-        _blocks: Vec<(Self::Payload, Arc<ProcessedVMOutput>)>,
+        _blocks: Vec<&ExecutedBlock<Self::Payload>>,
         _commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         future::ok(()).boxed()
