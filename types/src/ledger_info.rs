@@ -115,7 +115,6 @@ impl LedgerInfo {
     }
 
     /// To bootstrap the system until we execute and commit the genesis txn before start.
-    #[cfg(any(test, feature = "fuzzing"))]
     pub fn genesis() -> Self {
         Self::new(BlockInfo::genesis(), HashValue::zero())
     }

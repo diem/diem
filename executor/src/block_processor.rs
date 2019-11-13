@@ -172,11 +172,11 @@ where
             .expect("block not exist err.");
 
         // 3. Reset ExecutedTrees
-        let state_tree = Arc::new(SparseMerkleTree::new(startup_info.account_state_root_hash));
+        let state_tree = Arc::new(SparseMerkleTree::new(startup_info.committed_tree_state.account_state_root_hash));
         let transaction_accumulator = Arc::new(
             InMemoryAccumulator::new(
-                startup_info.ledger_frozen_subtree_hashes,
-                startup_info.latest_version + 1,
+                startup_info.committed_tree_state.ledger_frozen_subtree_hashes,
+                startup_info.committed_tree_state.version + 1,
             )
             .expect("The startup info read from storage should be valid."),
         );
@@ -269,12 +269,7 @@ where
                 };
 
                 if let Mode::Syncing = self.mode {
-                    if let Err(_err) =
-                        resp_sender.send(Err(error_when_syncing(executable_block.id)))
-                    {
-                        warn!("Failed to send execute block error (sync mode).");
-                    };
-                    return;
+                    info!("execute block by id {} in sync mode.", executable_block.id);
                 }
                 self.blocks_to_execute
                     .push_back((executable_block, resp_sender));
@@ -339,9 +334,9 @@ where
             .expect("startup info is none.");
 
         ExecutedTrees::new(
-            info.account_state_root_hash,
-            info.ledger_frozen_subtree_hashes,
-            info.latest_version + 1,
+            info.committed_tree_state.account_state_root_hash,
+            info.committed_tree_state.ledger_frozen_subtree_hashes,
+            info.committed_tree_state.version + 1,
         )
     }
 

@@ -382,9 +382,8 @@ impl EventProcessor {
                 error!("Error delivering a self proposal: {:?}", err);
             }
         } else {
-            let msg_raw = msg.to_bytes().unwrap();
             if let Err(err) = network_sender
-                .send_bytes(send_peer_id, msg_raw.clone())
+                .send_to(send_peer_id, msg.clone())
                 .await
             {
                 error!(
@@ -394,21 +393,4 @@ impl EventProcessor {
             }
         }
     }
-
-    //    fn sync_block_req(hash: Option<HashValue>) -> ConsensusMsg {
-    //        let num_blocks = 10;
-    //        let req = match hash {
-    //            None => RequestBlock {
-    //                block_id: vec![],
-    //                num_blocks,
-    //            },
-    //            Some(h) => RequestBlock {
-    //                block_id: h.to_vec(),
-    //                num_blocks,
-    //            },
-    //        };
-    //        ConsensusMsg {
-    //            message: Some(ConsensusMsg_oneof::RequestBlock(req)),
-    //        }
-    //    }
 }

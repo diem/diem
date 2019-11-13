@@ -29,7 +29,7 @@ use crate::{
     ProtocolId,
 };
 use channel;
-use futures::{channel::oneshot, future::BoxFuture, FutureExt, SinkExt, StreamExt};
+use futures::{channel::oneshot, future::BoxFuture, lock::Mutex, FutureExt, SinkExt, StreamExt};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;

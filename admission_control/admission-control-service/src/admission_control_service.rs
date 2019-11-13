@@ -70,6 +70,29 @@ impl AdmissionControlService {
         );
         Ok(rust_resp.into())
     }
+
+    pub(super) fn submit_transaction_inner(
+        &self,
+        req: SubmitTransactionRequest
+    ) -> Result<SubmitTransactionResponse> {
+        let (req_sender, res_receiver) = oneshot::channel();
+        let sent_result = block_on(self.ac_sender.clone().send((req, req_sender)));
+        match sent_result {
+            Ok(()) => {
+                let result = block_on(res_receiver);
+                result.unwrap_or_else(|e| {
+                    Err(format_err!(
+                        "[admission-control] Submitting transaction failed with error: {:?}",
+                        e
+                    ))
+                })
+            }
+            Err(e) => Err(format_err!(
+                "[admission-control] Failed to submit write request with error: {:?}",
+                e
+            )),
+        }
+    }
 }
 
 impl AdmissionControl for AdmissionControlService {

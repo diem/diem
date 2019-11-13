@@ -7,11 +7,17 @@ use crate::{
     error::NetworkError,
     interface::NetworkRequest,
     proto::{ConsensusMsg, ConsensusMsg_oneof, RequestBlock, RespondBlock},
-    protocols::rpc::error::RpcError,
+    protocols::{
+        direct_send::Message,
+        rpc::error::RpcError,
+    },
     validator_network::{NetworkEvents, NetworkSender},
     NetworkPublicKeys, ProtocolId,
 };
+use bytes::Bytes;
 use channel;
+use futures::SinkExt;
+use libra_logger::prelude::*;
 use libra_types::{validator_public_keys::ValidatorPublicKeys, PeerId};
 use std::time::Duration;
 
@@ -74,7 +80,7 @@ impl ConsensusNetworkSender {
     ) -> Result<(), NetworkError> {
         warn!("broadcast message");
         self.inner
-            .send(NetworkRequest::BroadCastMessage(
+            .get_mut().send(NetworkRequest::BroadCastMessage(
                 Message {
                     protocol: ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
                     mdata: message_bytes,

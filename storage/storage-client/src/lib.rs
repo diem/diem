@@ -32,7 +32,7 @@ use storage_proto::{
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
     GetHistoryStartupInfoByBlockIdRequest, GetLatestLedgerInfosPerEpochRequest,
     GetLatestLedgerInfosPerEpochResponse, GetStartupInfoResponse, GetTransactionsRequest,
-    GetTransactionsResponse, RollbackRequest, RollbackResponse, SaveTransactionsRequest,
+    GetTransactionsResponse, RollbackRequest, SaveTransactionsRequest,
     StartupInfo,
 };
 
@@ -297,7 +297,7 @@ impl StorageWrite for StorageWriteServiceClient {
 
     fn rollback_by_block_id(&self, block_id: HashValue) {
         let req = RollbackRequest { block_id };
-        self.client().rollback_by_block_id(&req.into());
+        self.client().rollback_by_block_id(&req.into()).expect("rollback err.");
     }
 }
 

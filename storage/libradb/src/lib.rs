@@ -580,7 +580,8 @@ impl LibraDB {
         let ledger_info = ledger_info_with_sigs.ledger_info().clone();
 
         let latest_tree_state = {
-            let (latest_version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
+            let latest_version = ledger_info.version();
+            let txn_info = self.ledger_store.get_transaction_info(latest_version)?;
             let account_state_root_hash = txn_info.state_root_hash();
             let ledger_frozen_subtree_hashes = self
                 .ledger_store
@@ -646,9 +647,12 @@ impl LibraDB {
             .get_ledger_frozen_subtree_hashes(version)?;
         Ok(Some(StartupInfo {
             ledger_info,
-            latest_version: version,
-            account_state_root_hash,
-            ledger_frozen_subtree_hashes,
+            committed_tree_state : TreeState::new(
+                version,
+                ledger_frozen_subtree_hashes,
+                account_state_root_hash,
+            ),
+            synced_tree_state: None,
         }))
     }
 

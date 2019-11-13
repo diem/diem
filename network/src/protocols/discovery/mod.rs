@@ -329,6 +329,8 @@ where
     async fn reconcile(&mut self, remote_peer: PeerId, remote_notes: Vec<VerifiedNote>) {
         // If a peer is previously unknown, or has a newer epoch number, we update its
         // corresponding entry in the map.
+        let self_peer_id =
+            PeerId::try_from(self._note.peer_id.clone()).expect("PeerId parsing fails");
         for note in remote_notes {
             match self.known_peers.get_mut(&note.peer_id) {
                 // If we know about this peer, and receive the same or an older epoch, we do
