@@ -109,7 +109,7 @@ impl GRPCClient {
     pub fn submit_transaction_async(
         &self,
         req: &SubmitTransactionRequest,
-    ) -> Result<(impl Future<Item = SubmitTransactionResponse, Error = failure::Error>)> {
+    ) -> Result<impl Future<Item = SubmitTransactionResponse, Error = failure::Error>> {
         let resp = self
             .client
             .submit_transaction_async_opt(&req, Self::get_default_grpc_call_option())?
