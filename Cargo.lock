@@ -5243,6 +5243,18 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "utils"
+version = "0.1.0"
+dependencies = [
+ "bytecode-verifier 0.1.0",
+ "ir-to-bytecode 0.1.0",
+ "ir-to-bytecode-syntax 0.1.0",
+ "libra-types 0.1.0",
+ "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vm 0.1.0",
+]
+
+[[package]]
 name = "uuid"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
