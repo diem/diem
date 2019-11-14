@@ -48,6 +48,14 @@ impl SynchronizerState {
             highest_committed_version: 0,
         }
     }
+
+    /// The highest available version in the local storage (even if it's not covered by the LI).
+    pub fn highest_version_in_local_storage(&self) -> u64 {
+        std::cmp::max(
+            self.highest_local_li.ledger_info().version(),
+            self.highest_committed_version,
+        )
+    }
 }
 
 #[cfg(test)]

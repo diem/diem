@@ -284,7 +284,7 @@ impl SynchronizerEnv {
             .write()
             .unwrap()
             .commit(version);
-        block_on(self.clients[peer_id].commit(version)).unwrap();
+        block_on(self.clients[peer_id].commit()).unwrap();
     }
 
     fn wait_for_version(&self, peer_id: usize, target_version: u64) -> bool {
