@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::block_storage::BlockStore;
+use crate::chained_bft::block_storage::{BlockReader, BlockStore};
 use crate::chained_bft::chained_bft_smr::ChainedBftSMRConfig;
 use crate::chained_bft::event_processor::EventProcessor;
 use crate::chained_bft::liveness::multi_proposer_election::MultiProposer;
@@ -203,7 +203,7 @@ impl<T: Payload> EpochManager<T> {
                 }
             }
         };
-        let safety_rules = SafetyRules::new(safety_rules_storage, signer);
+        let mut safety_rules = SafetyRules::new(safety_rules_storage, signer);
 
         let block_store = Arc::new(block_on(BlockStore::new(
             Arc::clone(&self.storage),
@@ -211,6 +211,8 @@ impl<T: Payload> EpochManager<T> {
             Arc::clone(&self.state_computer),
             self.config.max_pruned_blocks_in_mem,
         )));
+
+        safety_rules.start_new_epoch(block_store.highest_quorum_cert().as_ref());
 
         // txn manager is required both by proposal generator (to pull the proposers)
         // and by event processor (to update their status).
