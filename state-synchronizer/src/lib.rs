@@ -3,6 +3,10 @@
 //! Used to perform catching up between nodes for committed states.
 //! Used for node restarts, network partitions, full node syncs
 #![recursion_limit = "1024"]
+
+#[macro_use]
+extern crate prometheus;
+
 use libra_types::{account_address::AccountAddress, crypto_proxies::LedgerInfoWithSignatures};
 
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
