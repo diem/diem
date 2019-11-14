@@ -49,7 +49,7 @@ pub(crate) enum CoordinatorMessage {
     // used to initiate new sync
     Request(SyncRequest),
     // used to notify about new txn commit
-    Commit(u64),
+    Commit,
     GetState(oneshot::Sender<SynchronizerState>),
     // used to generate epoch proof
     GetEpochProof(EpochRetrievalRequest),
@@ -126,7 +126,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     /// main routine. starts sync coordinator that listens for CoordinatorMsg
     pub async fn start(mut self, network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>) {
-        self.sync_state_with_local_storage().await;
+        self.sync_state_with_local_storage()
+            .await
+            .expect("[state sync] Start failure: cannot sync with storage.");
 
         let mut interval =
             Interval::new_interval(Duration::from_millis(self.config.tick_interval_ms)).fuse();
@@ -149,8 +151,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                 error!("[state sync] request sync fail: {}", e);
                             }
                         }
-                        CoordinatorMessage::Commit(_version) => {
-                            self.process_commit().await;
+                        CoordinatorMessage::Commit => {
+                            if let Err(e) = self.process_commit().await {
+                                error!("[state sync] process commit fail: {}", e);
+                            }
                         }
                         CoordinatorMessage::GetState(callback) => {
                             self.get_state(callback);
@@ -205,20 +209,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     }
 
     /// Sync up coordinator state with the local storage.
-    async fn sync_state_with_local_storage(&mut self) {
-        self.local_state = self
-            .executor_proxy
-            .get_local_storage_state()
-            .await
-            .expect("[state sync] failed to sync with local storage");
-    }
-
-    /// The highest available version in the local storage (even if it's not covered by the LI).
-    fn highest_version_in_local_storage(&self) -> u64 {
-        std::cmp::max(
-            self.local_state.highest_local_li.ledger_info().version(),
-            self.local_state.highest_committed_version,
-        )
+    async fn sync_state_with_local_storage(&mut self) -> Result<()> {
+        self.local_state = self.executor_proxy.get_local_storage_state().await?;
+        Ok(())
     }
 
     /// In case there has been another pending request it's going to be overridden.
@@ -228,12 +221,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// StateSynchronizer assumes that it's the only one modifying the storage (consensus is not
     /// trying to commit transactions concurrently).
     async fn request_sync(&mut self, request: SyncRequest) -> Result<()> {
-        ensure!(
-            self.role == RoleType::Validator,
-            "Sync requests are for validator nodes only"
-        );
-
-        self.sync_state_with_local_storage().await;
+        self.sync_state_with_local_storage().await?;
         let highest_local_li = self.local_state.highest_local_li.ledger_info();
         let target_version = request.target.ledger_info().version();
         counters::TARGET_VERSION.set(target_version as i64);
@@ -242,53 +230,34 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             highest_local_li, target_version
         );
 
-        if target_version < highest_local_li.version() {
-            error!("[state sync] Sync request for an old version");
-
+        if target_version <= highest_local_li.version() {
             request
                 .callback
                 .send(Err(format_err!("Sync request for an old version")))
                 .map_err(|_| format_err!("Callback error"))?;
-            bail!("Sync request for an old version");
-        }
-        if target_version == highest_local_li.version()
-            && request.target.ledger_info().round() >= highest_local_li.round()
-        {
-            debug!("[state sync] sync contains only empty blocks: no remote calls needed");
-            self.executor_proxy
-                .execute_chunk(
-                    TransactionListWithProof::new_empty(),
-                    request.target.clone(),
-                )
-                .await?;
-            request
-                .callback
-                .send(Ok(()))
-                .map_err(|_| format_err!("Callback error"))?;
-            return Ok(());
+            bail!(
+                "[state sync] Sync request for version {} <= known version {}",
+                target_version,
+                highest_local_li.version()
+            );
         }
 
-        let peers: Vec<PeerId> = request.target.signatures().keys().copied().collect();
-        ensure!(
-            !peers.is_empty(),
-            "Empty peers in signatures of a sync request"
-        );
-        self.peer_manager.set_peers(peers);
+        self.peer_manager
+            .set_peers(request.target.signatures().keys().copied().collect());
         self.sync_request = Some(request);
-        self.send_chunk_request(self.highest_version_in_local_storage())
+        self.send_chunk_request(self.local_state.highest_version_in_local_storage())
             .await
     }
 
     /// The function is called after new txns have been applied to the local storage.
     /// As a result it might:
     /// 1) help remote subscribers with long poll requests, 2) finish local sync request
-    /// TODO: add a counter for sync request duration that takes into account retries across peers.
-    async fn process_commit(&mut self) {
+    async fn process_commit(&mut self) -> Result<()> {
         // We choose to re-sync the state with the storage as it's the simplest approach:
         // in case the performance implications of re-syncing upon every commit are high,
         // it's possible to manage some of the highest known versions in memory.
-        self.sync_state_with_local_storage().await;
-        let local_version = self.highest_version_in_local_storage();
+        self.sync_state_with_local_storage().await?;
+        let local_version = self.local_state.highest_version_in_local_storage();
         counters::COMMITTED_VERSION.set(local_version as i64);
 
         self.check_subscriptions().await;
@@ -307,11 +276,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 local_version
             );
             if let Some(sync_request) = self.sync_request.take() {
-                if sync_request.callback.send(Ok(())).is_err() {
-                    error!("[state sync] failed to notify subscriber");
-                }
+                sync_request
+                    .callback
+                    .send(Ok(()))
+                    .map_err(|_| format_err!("Callback error"))?;
             }
         }
+        Ok(())
     }
 
     fn get_state(&self, callback: oneshot::Sender<SynchronizerState>) {
@@ -344,7 +315,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .take()
             .map(TryInto::try_into)
             .transpose()?;
-        self.sync_state_with_local_storage().await;
+        self.sync_state_with_local_storage().await?;
         let local_li_version = self.local_state.highest_local_li.ledger_info().version();
         debug!(
             "[state sync] chunk request: peer_id: {}, request known version: {}, target version: {}, local li version: {}",
@@ -429,25 +400,26 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .ok_or_else(|| format_err!("Missing txn_list_with_proof"))?
             .try_into()?;
 
-        let known_version = self.highest_version_in_local_storage();
-        let chunk_start_version = txn_list_with_proof.first_transaction_version.unwrap_or(0);
-        // TODO: the current PeerManager does not properly handle multiple requests that are
-        // issued for the same version to different peers, hence the punishing is turned off.
-        self.peer_manager
-            .process_response(chunk_start_version, *peer_id);
+        let known_version = self.local_state.highest_version_in_local_storage();
+        let chunk_start_version =
+            txn_list_with_proof
+                .first_transaction_version
+                .ok_or_else(|| {
+                    self.peer_manager
+                        .update_score(&peer_id, PeerScoreUpdateType::EmptyChunk);
+                    format_err!("[state sync] Empty chunk from {}", peer_id.short_str())
+                })?;
+
         if chunk_start_version != known_version + 1 {
-            // issue another attempt without waiting for timeout
-            self.send_chunk_request(known_version).await?;
-            if txn_list_with_proof.is_empty() {
-                bail!("[state sync] Empty chunk from {}", peer_id.short_str());
-            } else {
-                bail!(
-                    "[state sync] Non sequential chunk from {}: known_version: {}, received: {}",
-                    peer_id.short_str(),
-                    known_version,
-                    chunk_start_version
-                );
-            }
+            // Old / wrong chunk.
+            self.peer_manager
+                .update_score(&peer_id, PeerScoreUpdateType::ChunkVersionCannotBeApplied);
+            bail!(
+                "[state sync] Non sequential chunk from {}: known_version: {}, received: {}",
+                peer_id.short_str(),
+                known_version,
+                chunk_start_version
+            );
         }
         let response_li: LedgerInfoWithSignatures = response
             .ledger_info_with_sigs
@@ -455,42 +427,46 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .try_into()?;
 
         if let Some(sync_req) = self.sync_request.as_ref() {
-            let response_li_version = response_li.ledger_info().version();
-            // Valid responses must come with the LI version of the request.
-            if sync_req.target.ledger_info().version() != response_li_version {
+            // Valid responses should not exceed the LI version of the request.
+            if sync_req.target.ledger_info().version() < response_li.ledger_info().version() {
                 self.peer_manager
                     .update_score(peer_id, PeerScoreUpdateType::InvalidChunk);
-                // issue another attempt without waiting for timeout
-                self.send_chunk_request(known_version).await?;
                 bail!(
-                    "[state sync] Chunk response with wrong LI version {}",
-                    response_li_version
+                    "[state sync] Response from {} has an LI version higher than requested.",
+                    peer_id
                 );
             }
         }
 
+        let chunk_size = txn_list_with_proof.len() as u64;
+
         // Optimistically fetch the next chunk assuming the current chunk is going to be applied
         // successfully.
-        // TODO: Should not issue chunk requests for the last retrieved chunk.
-        let chunk_size = txn_list_with_proof.len() as u64;
         let new_version = known_version + chunk_size;
         self.send_chunk_request(new_version).await?;
 
-        if let Err(e) = self
-            .validate_and_store_chunk(txn_list_with_proof, response_li)
+        self.validate_and_store_chunk(txn_list_with_proof, response_li)
             .await
-        {
-            self.peer_manager
-                .update_score(peer_id, PeerScoreUpdateType::InvalidChunk);
-            bail!("[state sync] Failed to apply chunk: {}", e);
-        };
+            .map_err(|e| {
+                self.peer_manager
+                    .update_score(peer_id, PeerScoreUpdateType::InvalidChunk);
+                format_err!("[state sync] failed to apply chunk: {}", e)
+            })?;
         counters::STATE_SYNC_TXN_REPLAYED.inc_by(chunk_size as i64);
         debug!(
             "[state sync] applied chunk. Previous version: {}, new version: {}, chunk size: {}",
             known_version, new_version, chunk_size
         );
-        self.process_commit().await;
-        Ok(())
+
+        // The overall chunk processing duration is calculated starting from the very first attempt
+        // until the commit
+        if let Some(first_attempt_tst) = self.peer_manager.get_first_request_time(known_version + 1)
+        {
+            if let Ok(duration) = SystemTime::now().duration_since(first_attempt_tst) {
+                counters::SYNC_PROGRESS_DURATION.observe_duration(duration);
+            }
+        }
+        self.process_commit().await
     }
 
     async fn validate_and_store_chunk(
@@ -515,10 +491,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             return;
         }
 
-        let known_version = self.highest_version_in_local_storage();
+        let known_version = self.local_state.highest_version_in_local_storage();
         let last_request_tst = self
             .peer_manager
-            .get_request_time(known_version + 1)
+            .get_last_request_time(known_version + 1)
             .unwrap_or(UNIX_EPOCH);
 
         // if coordinator didn't make progress by expected time, issue new request
@@ -553,9 +529,15 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     format_err!("[state sync] Validator chunk request without a sync request.")
                 })?
                 .target
-                .clone()
-                .into();
-            req.ledger_info_with_sigs = Some(target);
+                .clone();
+            if target.ledger_info().version() <= known_version {
+                debug!(
+                    "[state sync] Reached version {}, no need to send more requests",
+                    known_version
+                );
+                return Ok(());
+            }
+            req.ledger_info_with_sigs = Some(target.into());
         } else {
             req.timeout = self.config.long_poll_timeout_ms;
         }

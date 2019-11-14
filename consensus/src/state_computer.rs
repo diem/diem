@@ -127,7 +127,7 @@ impl StateComputer for ExecutionProxy {
                 Ok(Ok(())) => {
                     counters::BLOCK_COMMIT_DURATION_S
                         .observe_duration(pre_commit_instant.elapsed());
-                    if let Err(e) = synchronizer.commit(version).await {
+                    if let Err(e) = synchronizer.commit().await {
                         error!("failed to notify state synchronizer: {:?}", e);
                     }
                     Ok(())
