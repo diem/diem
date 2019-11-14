@@ -30,12 +30,13 @@ impl TestEnvironment {
     fn new(num_validators: usize) -> Self {
         ::libra_logger::init_for_e2e_testing();
         let faucet_key = generate_keypair::load_faucet_key_or_create_default(None);
+        let template_path = "testsuite/tests/libratest/configs/node.config.toml".to_string();
         let validator_swarm = LibraSwarm::configure_swarm(
             num_validators,
             RoleType::Validator,
             faucet_key.0.clone(),
             None,
-            None,
+            Some(template_path),
             None,
         )
         .unwrap();
