@@ -429,13 +429,7 @@ impl<T: Payload> NetworkTask<T> {
         let sync_info = SyncInfo::try_from(sync_info)?;
         match sync_info.epoch().cmp(&self.epoch) {
             Ordering::Equal => {
-                sync_info.verify(self.validators.as_ref()).map_err(|e| {
-                    security_log(SecurityEvent::InvalidSyncInfoMsg)
-                        .error(&e)
-                        .data(&sync_info)
-                        .log();
-                    e
-                })?;
+                // SyncInfo verification is postponed to the moment it's actually used.
                 self.sync_info_tx.push(peer_id, (sync_info, peer_id))
             }
             Ordering::Less | Ordering::Greater => self

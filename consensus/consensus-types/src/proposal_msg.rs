@@ -64,11 +64,7 @@ impl<T: Payload> ProposalUncheckedSignatures<T> {
         if let Some(tc) = self.0.sync_info.highest_timeout_certificate() {
             tc.verify(validator).map_err(|e| format_err!("{:?}", e))?;
         }
-        // verify the QC signatures of sync_info
-        self.0
-            .sync_info
-            .verify(validator)
-            .map_err(|e| format_err!("{:?}", e))?;
+        // Note that we postpone the verification of SyncInfo until it's being used.
         // return proposal
         Ok(self.0)
     }

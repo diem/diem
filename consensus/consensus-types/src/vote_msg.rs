@@ -56,8 +56,10 @@ impl VoteMsg {
             self.vote().epoch() == self.sync_info.epoch(),
             "VoteMsg has different epoch"
         );
-        self.vote().verify(validator)?;
-        self.sync_info.verify(validator)
+        // We're not verifying SyncInfo here yet: we are going to verify it only in case we need
+        // it. This way we avoid verifying O(n) SyncInfo messages while aggregating the votes
+        // (O(n^2) signature verifications).
+        self.vote().verify(validator)
     }
 }
 
