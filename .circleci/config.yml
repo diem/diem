@@ -51,6 +51,19 @@ commands:
             sudo apt-get clean
             sudo rm -r /var/lib/apt/lists/*
             rustup component add clippy rustfmt
+  install_code_coverage_deps:
+    steps:
+      - run:
+          name: Install grcov and lcov
+          command: |
+            sudo apt-get update
+            sudo apt-get install lcov
+            cargo install --force grcov
+  install_rust_nightly_toolchain:
+    steps:
+      - run:
+          name: Install nightly toolchain for features not in beta/stable
+          command: rustup install nightly
   build_setup:
     steps:
       - checkout
@@ -138,6 +151,22 @@ jobs:
             cargo install --force cargo-audit
             cargo audit
       - build_teardown
+  code-coverage:
+    description: Run code coverage
+    executor: build-executor
+    steps:
+      - build_setup
+      - install_code_coverage_deps
+      - install_rust_nightly_toolchain
+      - run:
+          name: Setup code coverage output
+          command: echo "export CODECOV_OUTPUT=codecov" >> $BASH_ENV
+      - run:
+          name: Run code coverage
+          command: ./scripts/coverage_report.sh . $CODECOV_OUTPUT --batch
+      - run:
+          name: Upload result to codecov.io
+          command: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcov.info;
   terraform:
     executor: terraform-executor
     steps:
@@ -203,3 +232,4 @@ workflows:
               only: master
     jobs:
       - audit
+      - code-coverage
