@@ -117,7 +117,7 @@ impl MintManager {
                                     };
 
                                     // vote data
-                                    let parent_block_info = parent_vd.parent().clone();
+                                    let parent_block_info = parent_vd.proposed().clone();
                                     let current_block_info = BlockInfo::new(
                                         epoch,
                                         height + 1,
@@ -127,7 +127,7 @@ impl MintManager {
                                         parent_li.timestamp_usecs(),
                                         v_s.clone(),
                                     );
-                                    let vote_data = VoteData::new(parent_block_info, current_block_info.clone());
+                                    let vote_data = VoteData::new(current_block_info.clone(), parent_block_info);
                                     let li = LedgerInfo::new(current_block_info, state_id);
                                     let signer = ValidatorSigner::genesis(); //TODO:change signer
                                     let signature = signer
@@ -184,6 +184,8 @@ impl MintManager {
                                     error!("{:?}", e);
                                 }
                             }
+                        } else {
+                            warn!("pull_txns zero txn.");
                         }
 
                         let mut r = rand::thread_rng();

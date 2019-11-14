@@ -131,7 +131,7 @@ impl ChainManager {
                                     let txn_accumulator_hash = executed_trees.txn_accumulator().root_hash();
                                     let txn_len = executed_trees.version().expect("version err.");
 
-                                    if state_id == block.quorum_cert().certified_block().executed_state_id() && txn_accumulator_hash == block.quorum_cert().ledger_info().ledger_info().transaction_accumulator_hash() {
+                                    if txn_accumulator_hash == block.quorum_cert().ledger_info().ledger_info().transaction_accumulator_hash() && state_id == block.quorum_cert().ledger_info().ledger_info().consensus_data_hash() {
                                         save_flag = true;
                                     } else {
                                         warn!("Peer id {:?}, Drop block {:?}, parent_block_id {:?}, grandpa_block_id {:?}", author, block.id(), pre_compute_parent_block_id, pre_compute_grandpa_block_id);
