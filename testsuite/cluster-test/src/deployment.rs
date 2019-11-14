@@ -11,17 +11,14 @@ use rusoto_ecr::{
 };
 use rusoto_ecs::{Ecs, UpdateServiceRequest};
 use slog_scope::{info, warn};
-use std::{fs, io::ErrorKind, thread, time::Duration};
+use std::{thread, time::Duration};
 
 #[derive(Clone)]
 pub struct DeploymentManager {
     aws: Aws,
     cluster: Cluster,
-
-    last_deployed_digest: Option<String>,
 }
 
-const LAST_DEPLOYED_FILE: &str = ".last_deployed_digest";
 const VALIDATOR_IMAGE_REPO: &str = "libra_e2e";
 const CLIENT_IMAGE_REPO: &str = "libra_client";
 const FAUCET_IMAGE_REPO: &str = "libra_faucet";
@@ -32,36 +29,15 @@ const UPSTREAM_PREFIX: &str = "upstream_";
 
 impl DeploymentManager {
     pub fn new(aws: Aws, cluster: Cluster) -> Self {
-        let last_deployed_digest = match fs::read_to_string(LAST_DEPLOYED_FILE) {
-            Ok(v) => {
-                info!("Read last deployed digest: {}", v);
-                Some(v)
-            }
-            Err(e) => {
-                if e.kind() == ErrorKind::NotFound {
-                    None
-                } else {
-                    panic!("Failed to read .last_deployed_digest: {:?}", e);
-                }
-            }
-        };
-
-        Self {
-            aws,
-            cluster,
-            last_deployed_digest,
-        }
+        Self { aws, cluster }
     }
 
     pub fn latest_hash_changed(&self) -> Option<String> {
         let hash = self.image_digest_by_tag(SOURCE_TAG);
-        if let Some(last) = &self.last_deployed_digest {
-            if last == &hash {
-                info!("Last deployed digest matches latest digest we expect, not doing redeploy");
-                return None;
-            }
-        } else {
-            info!("Last deployed digest unknown, re-deploying anyway");
+        let last_tested = self.image_digest_by_tag(TESTED_TAG);
+        if hash == last_tested {
+            info!("Last deployed digest matches latest digest we expect, not doing redeploy");
+            return None;
         }
         Some(hash)
     }
@@ -76,7 +52,6 @@ impl DeploymentManager {
             },
             RUNNING_TAG,
         )?;
-        let _ignore = fs::remove_file(LAST_DEPLOYED_FILE);
         self.update_all_services()?;
         Ok(())
     }
@@ -156,8 +131,6 @@ impl DeploymentManager {
             TESTED_TAG,
         )?;
 
-        fs::write(LAST_DEPLOYED_FILE, &hash).expect("Failed to write .last_deployed_digest");
-        self.last_deployed_digest = Some(hash);
         let upstream_commit = upstream_tag[UPSTREAM_PREFIX.len()..].to_string();
         Ok(upstream_commit)
     }
