@@ -58,8 +58,11 @@ where
     } else {
         Err(VMStatus::new(StatusCode::MALFORMED))
     };
-    match result {
-        Ok(_) => txn_executor.transaction_cleanup(vec![]),
+    match result.and_then(|_| txn_executor.make_write_set(vec![], Ok(()))) {
+        Ok(output) => {
+            data_cache.push_write_set(output.write_set());
+            output
+        }
         Err(err) => ExecutedTransaction::discard_error_output(err),
     }
 }
