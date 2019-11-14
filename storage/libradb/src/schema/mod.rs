@@ -10,13 +10,13 @@ pub(crate) mod epoch_by_version;
 pub(crate) mod event;
 pub(crate) mod event_accumulator;
 pub(crate) mod event_by_key;
-pub(crate) mod jellyfish_merkle_node;
+pub mod jellyfish_merkle_node;
 pub(crate) mod ledger_counters;
 pub(crate) mod ledger_info;
-pub(crate) mod stale_node_index;
+pub mod stale_node_index;
 pub(crate) mod transaction;
 pub(crate) mod transaction_accumulator;
-pub(crate) mod transaction_by_account;
+pub mod transaction_by_account;
 pub(crate) mod transaction_info;
 pub(crate) mod validator;
 
