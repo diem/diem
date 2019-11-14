@@ -64,30 +64,28 @@ static CONFIG_TEMPLATE: &[u8] = include_bytes!("../data/configs/node.config.toml
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct NodeConfig {
-    //TODO Add configuration for multiple chain's in a future diff
-    #[serde(default)]
-    pub base: BaseConfig,
-    #[serde(default)]
-    pub metrics: MetricsConfig,
-    #[serde(default)]
-    pub execution: ExecutionConfig,
     #[serde(default)]
     pub admission_control: AdmissionControlConfig,
     #[serde(default)]
-    pub debug_interface: DebugInterfaceConfig,
-
-    #[serde(default)]
-    pub storage: StorageConfig,
-    #[serde(default)]
-    pub networks: Vec<NetworkConfig>,
+    pub base: BaseConfig,
     #[serde(default)]
     pub consensus: ConsensusConfig,
     #[serde(default)]
+    pub debug_interface: DebugInterfaceConfig,
+    #[serde(default)]
+    pub execution: ExecutionConfig,
+    #[serde(default)]
+    pub logger: LoggerConfig,
+    #[serde(default)]
+    pub metrics: MetricsConfig,
+    #[serde(default)]
     pub mempool: MempoolConfig,
+    #[serde(default)]
+    pub networks: Vec<NetworkConfig>,
     #[serde(default)]
     pub state_sync: StateSyncConfig,
     #[serde(default)]
-    pub logger: LoggerConfig,
+    pub storage: StorageConfig,
     #[serde(default)]
     pub vm_config: VMConfig,
 }
