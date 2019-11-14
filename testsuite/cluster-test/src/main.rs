@@ -555,6 +555,18 @@ impl ClusterTestRunner {
                 return;
             }
             if let Some(hash_to_tag) = hash_to_tag.take() {
+                info!("Starting measure_performance");
+                let report = match self.measure_performance() {
+                    Ok(report) => report,
+                    Err(e) => {
+                        self.report_failure(format!("{}", e));
+                        return;
+                    }
+                };
+                let perf_msg = format!(
+                    "Performance report:\n```\n{}\n```",
+                    report.to_slack_message()
+                );
                 info!("Test suite succeed first time for `{}`", hash_to_tag);
                 let prev_commit = self
                     .deployment_manager
@@ -570,16 +582,6 @@ impl ClusterTestRunner {
                         return;
                     }
                     Ok(upstream_commit) => upstream_commit,
-                };
-                let perf_msg = match self.measure_performance() {
-                    Ok(report) => format!(
-                        "Performance report:\n```\n{}\n```",
-                        report.to_slack_message()
-                    ),
-                    Err(err) => {
-                        warn!("No performance data: {}", err);
-                        "No performance data".to_string()
-                    }
                 };
                 info!(
                     "prev_commit: {:?}, upstream_commit: {}",
