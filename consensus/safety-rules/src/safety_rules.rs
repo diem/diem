@@ -136,8 +136,7 @@ impl SafetyRules {
     }
 
     /// Learn about a new quorum certificate. In normal state, this updates the preferred round,
-    /// if the parent is greater than our current preferred round. This can also trigger upgrading
-    /// to a new epoch.
+    /// if the parent is greater than our current preferred round.
     /// @TODO verify signatures of the QC, also the special genesis QC
     /// @TODO improving signaling by stating reaction to passed in QC:
     ///     QC has older preferred round,
@@ -148,16 +147,20 @@ impl SafetyRules {
     /// @TODO if public key does not match private key in validator set, access persistent storage
     /// to identify new key
     pub fn update(&mut self, qc: &QuorumCert) {
+        if qc.parent_block().round() > self.persistent_storage.preferred_round() {
+            self.persistent_storage
+                .set_preferred_round(qc.parent_block().round());
+        }
+    }
+
+    /// Notify the safety rules about the new epoch start.
+    pub fn start_new_epoch(&mut self, qc: &QuorumCert) {
         if qc.commit_info().epoch() > self.persistent_storage.epoch() {
             self.persistent_storage.set_epoch(qc.commit_info().epoch());
             self.persistent_storage.set_last_voted_round(0);
             self.persistent_storage.set_preferred_round(0);
         }
-
-        if qc.parent_block().round() > self.persistent_storage.preferred_round() {
-            self.persistent_storage
-                .set_preferred_round(qc.parent_block().round());
-        }
+        self.update(qc);
     }
 
     /// Produces a LedgerInfo that either commits a block based upon the 3-chain commit rule

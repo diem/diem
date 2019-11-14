@@ -602,7 +602,11 @@ fn process_timeout_certificate_test() {
     let genesis_qc = certificate_for_genesis();
     let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_skip_round = Block::new_proposal(vec![1], 2, 2, genesis_qc.clone(), &node.signer);
-    let tc = TimeoutCertificate::new(Timeout::new(1, 1), HashMap::new());
+    let timeout = Timeout::new(1, 1);
+    let timeout_signature = timeout.sign(&node.signer);
+
+    let mut tc = TimeoutCertificate::new(timeout, HashMap::new());
+    tc.add_signature(node.author, timeout_signature);
 
     block_on(async move {
         let skip_round_proposal = ProposalMsg::<TestPayload>::new(
