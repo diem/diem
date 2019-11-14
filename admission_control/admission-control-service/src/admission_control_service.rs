@@ -21,6 +21,11 @@ use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedge
 use std::convert::TryFrom;
 use std::sync::Arc;
 use storage_client::StorageRead;
+use crate::UpstreamProxyData;
+use libra_mempool::core_mempool_client::CoreMemPoolClient;
+use vm_validator::vm_validator::VMValidator;
+use crate::upstream_proxy::submit_transaction;
+use tokio::runtime::TaskExecutor;
 
 /// Struct implementing trait (service handle) AdmissionControlService.
 #[derive(Clone)]
@@ -73,25 +78,19 @@ impl AdmissionControlService {
 
     pub(super) fn submit_transaction_inner(
         &self,
+        executor: TaskExecutor,
+        proxy: UpstreamProxyData<CoreMemPoolClient, VMValidator>,
         req: SubmitTransactionRequest
     ) -> Result<SubmitTransactionResponse> {
         let (req_sender, res_receiver) = oneshot::channel();
-        let sent_result = block_on(self.ac_sender.clone().send((req, req_sender)));
-        match sent_result {
-            Ok(()) => {
-                let result = block_on(res_receiver);
-                result.unwrap_or_else(|e| {
-                    Err(format_err!(
-                        "[admission-control] Submitting transaction failed with error: {:?}",
-                        e
-                    ))
-                })
-            }
-            Err(e) => Err(format_err!(
-                "[admission-control] Failed to submit write request with error: {:?}",
-                e
-            )),
-        }
+
+        let f = async move {
+            submit_transaction(req, proxy, None, req_sender).await;
+        };
+        executor.spawn(f);
+
+        let result = block_on(res_receiver).unwrap();
+        result
     }
 }
 

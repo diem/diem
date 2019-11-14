@@ -33,6 +33,7 @@ use lazy_static::lazy_static;
 use libra_metrics::OpMetrics;
 
 use libra_types::account_address::AccountAddress;
+pub use upstream_proxy::UpstreamProxyData;
 type PeerId = AccountAddress;
 
 lazy_static! {
