@@ -168,10 +168,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                         StateSynchronizerMsg_oneof::ChunkResponse(response) => {
                                             if let Err(err) = self.process_chunk_response(&peer_id, response).await {
                                                 error!("[state sync] failed to process chunk response from {}: {}", peer_id, err);
-                                                counters::OP_COUNTERS.inc(&format!("{}.{}", counters::APPLY_CHUNK_FAILURE, peer_id));
+                                                counters::APPLY_CHUNK_FAILURE.with_label_values(&[&*peer_id.to_string()]).inc();
                                             } else {
                                                 self.peer_manager.update_score(&peer_id, PeerScoreUpdateType::Success);
-                                                counters::OP_COUNTERS.inc(&format!("{}.{}", counters::APPLY_CHUNK_SUCCESS, peer_id));
+                                                counters::APPLY_CHUNK_SUCCESS.with_label_values(&[&*peer_id.to_string()]).inc();
                                             }
                                         }
                                     }
@@ -355,7 +355,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         peer_id: &PeerId,
         response: GetChunkResponse,
     ) -> Result<()> {
-        counters::OP_COUNTERS.inc(&format!("{}.{}", counters::RESPONSES_RECEIVED, peer_id));
+        counters::RESPONSES_RECEIVED
+            .with_label_values(&[&*peer_id.to_string()])
+            .inc();
         let txn_list_with_proof: TransactionListWithProof = response
             .txn_list_with_proof
             .ok_or_else(|| format_err!("Missing txn_list_with_proof"))?
@@ -491,7 +493,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 if sender.send_to(peer_id, msg).await.is_err() {
                     error!("[state sync] failed to send p2p message");
                 }
-                counters::OP_COUNTERS.inc(&format!("{}.{}", counters::REQUESTS_SENT, peer_id));
+                counters::REQUESTS_SENT
+                    .with_label_values(&[&*peer_id.to_string()])
+                    .inc();
             }
         }
     }
