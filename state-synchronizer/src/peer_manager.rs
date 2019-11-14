@@ -33,9 +33,34 @@ impl PeerInfo {
     }
 }
 
+/// Basic metadata about the chunk request.
+#[derive(Debug, Clone)]
+pub struct ChunkRequestInfo {
+    version: u64,
+    first_request_time: SystemTime,
+    last_request_time: SystemTime,
+    last_request_peer: PeerId,
+}
+
+impl ChunkRequestInfo {
+    pub fn new(version: u64, peer_id: PeerId) -> Self {
+        let now = SystemTime::now();
+        Self {
+            version,
+            first_request_time: now,
+            last_request_time: now,
+            last_request_peer: peer_id,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PeerScoreUpdateType {
     Success,
+    EmptyChunk,
+    // A received chunk cannot be directly applied (old / wrong version). Note that it could happen
+    // that a peer would first timeout and would then be punished with ChunkVersionCannotBeApplied.
+    ChunkVersionCannotBeApplied,
     InvalidChunk,
     TimeOut,
 }
@@ -43,8 +68,7 @@ pub enum PeerScoreUpdateType {
 pub struct PeerManager {
     peers: HashMap<PeerId, PeerInfo>,
     network_senders: HashMap<PeerId, StateSynchronizerSender>,
-    // Latest requested block versions from a peer
-    requests: BTreeMap<u64, (PeerId, SystemTime)>,
+    requests: BTreeMap<u64, ChunkRequestInfo>,
     weighted_index: Option<WeightedIndex<f64>>,
 }
 
@@ -110,11 +134,12 @@ impl PeerManager {
                     let new_score = peer_info.score + 1.0;
                     peer_info.score = new_score.min(MAX_SCORE);
                 }
-                PeerScoreUpdateType::InvalidChunk => {
+                PeerScoreUpdateType::InvalidChunk
+                | PeerScoreUpdateType::ChunkVersionCannotBeApplied => {
                     let new_score = peer_info.score * 0.8;
                     peer_info.score = new_score.max(MIN_SCORE);
                 }
-                PeerScoreUpdateType::TimeOut => {
+                PeerScoreUpdateType::TimeOut | PeerScoreUpdateType::EmptyChunk => {
                     let new_score = peer_info.score * 0.95;
                     peer_info.score = new_score.max(MIN_SCORE);
                 }
@@ -178,27 +203,25 @@ impl PeerManager {
     }
 
     pub fn process_request(&mut self, version: u64, peer_id: PeerId) {
-        self.requests.insert(version, (peer_id, SystemTime::now()));
-    }
-
-    pub fn get_request_time(&self, version: u64) -> Option<SystemTime> {
-        self.requests.get(&version).map(|(_, tst)| tst).cloned()
-    }
-
-    pub fn process_response(&mut self, version: u64, peer_id: PeerId) {
-        if let Some((id, _)) = self.requests.get(&version) {
-            if *id == peer_id {
-                self.requests.remove(&version);
-            }
+        if let Some(prev_request) = self.requests.get_mut(&version) {
+            prev_request.last_request_peer = peer_id;
+            prev_request.last_request_time = SystemTime::now();
+        } else {
+            self.requests
+                .insert(version, ChunkRequestInfo::new(version, peer_id));
         }
     }
 
-    #[cfg(test)]
-    pub fn has_requested(&self, version: u64, peer_id: PeerId) -> bool {
-        if let Some((id, _)) = self.requests.get(&version) {
-            return *id == peer_id;
-        }
-        false
+    pub fn get_last_request_time(&self, version: u64) -> Option<SystemTime> {
+        self.requests
+            .get(&version)
+            .map(|req_info| req_info.last_request_time)
+    }
+
+    pub fn get_first_request_time(&self, version: u64) -> Option<SystemTime> {
+        self.requests
+            .get(&version)
+            .map(|req_info| req_info.first_request_time)
     }
 
     pub fn remove_requests(&mut self, version: u64) {
@@ -206,10 +229,21 @@ impl PeerManager {
     }
 
     pub fn process_timeout(&mut self, version: u64, penalize: bool) {
-        if let Some((peer_id, _)) = self.requests.remove(&version) {
-            if penalize {
-                self.update_score(&peer_id, PeerScoreUpdateType::TimeOut);
-            }
+        if !penalize {
+            return;
         }
+        let peer_to_penalize = match self.requests.get(&version) {
+            Some(prev_request) => prev_request.last_request_peer,
+            None => {
+                return;
+            }
+        };
+
+        self.update_score(&peer_to_penalize, PeerScoreUpdateType::TimeOut);
+    }
+
+    #[cfg(test)]
+    pub fn peer_score(&self, peer_id: &PeerId) -> Option<f64> {
+        self.peers.get(peer_id).map(|p| p.score)
     }
 }

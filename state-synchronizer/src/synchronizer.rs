@@ -99,10 +99,10 @@ impl StateSyncClient {
     }
 
     /// Notifies state synchronizer about new version
-    pub fn commit(&self, version: u64) -> impl Future<Output = Result<()>> {
+    pub fn commit(&self) -> impl Future<Output = Result<()>> {
         let mut sender = self.coordinator_sender.clone();
         async move {
-            sender.send(CoordinatorMessage::Commit(version)).await?;
+            sender.send(CoordinatorMessage::Commit).await?;
             Ok(())
         }
     }
