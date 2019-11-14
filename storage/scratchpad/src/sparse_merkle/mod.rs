@@ -148,7 +148,8 @@ impl SparseMerkleTree {
         loop {
             let next_node = if let Node::Internal(node) = &*current_node.read_lock() {
                 let bit = bits.next().unwrap_or_else(|| {
-                    panic!("Tree is deeper than {} levels.", HashValue::LENGTH_IN_BITS)
+                    // invariant of HashValueBitIterator
+                    unreachable!("Tree is deeper than {} levels.", HashValue::LENGTH_IN_BITS)
                 });
                 bits_on_path.push(bit);
                 if bit {

@@ -114,7 +114,8 @@ fn parse_account_address<'input>(
         });
     }
     let addr = AccountAddress::from_hex_literal(&tokens.content()).unwrap_or_else(|_| {
-        panic!(
+        // The lexer guarantees this, but tracking it all the way to here is tedious.
+        unreachable!(
             "The address {:?} is of invalid length. Addresses are at most 32-bytes long",
             tokens.content()
         )
@@ -186,7 +187,8 @@ fn parse_copyable_val_<'input>(
         Tok::ByteArrayValue => {
             let s = tokens.content();
             let buf = ByteArray::new(hex::decode(&s[2..s.len() - 1]).unwrap_or_else(|_| {
-                panic!("The string {:?} is not a valid hex-encoded byte array", s)
+                // The lexer guarantees this, but tracking this knowledge all the way to here is tedious
+                unreachable!("The string {:?} is not a valid hex-encoded byte array", s)
             }));
             tokens.advance()?;
             CopyableVal::ByteArray(buf)

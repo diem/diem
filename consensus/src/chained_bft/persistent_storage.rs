@@ -311,7 +311,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
                     .into(),
             ),
         )
-        .unwrap_or_else(|e| panic!("Can not construct recovery data due to {}", e));
+        .unwrap_or_else(|e| unrecoverable!("Can not construct recovery data due to {}", e));
 
         (self as &dyn PersistentStorage<T>)
             .prune_tree(initial_data.take_blocks_to_prune())

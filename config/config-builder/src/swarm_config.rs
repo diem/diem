@@ -180,7 +180,7 @@ impl SwarmConfig {
                 network_identity_private_key,
             } = private_keys
                 .remove_entry(&peer_id)
-                .unwrap_or_else(|| panic!("Key not found for peer: {}", node_id))
+                .unwrap_or_else(|| unreachable!("Key not found for peer: {}", node_id))
                 .1;
             let network_keypairs =
                 NetworkKeyPairs::load(network_signing_private_key, network_identity_private_key);

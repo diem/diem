@@ -181,7 +181,7 @@ impl<T: Payload> BlockStore<T> {
                 finality_proof,
             )
             .await
-            .unwrap_or_else(|e| panic!("Failed to persist commit due to {:?}", e));
+            .unwrap_or_else(|e| unrecoverable!("Failed to persist commit due to {:?}", e));
         counters::LAST_COMMITTED_ROUND.set(block_to_commit.round() as i64);
         debug!("{}Committed{} {}", Fg(Blue), Fg(Reset), *block_to_commit);
         event!("committed",

@@ -218,10 +218,6 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
         &self.struct_handle.type_formals
     }
 
-    pub fn definition(&self) -> StructDefinitionView<'a, T> {
-        unimplemented!("this requires linking")
-    }
-
     pub fn module_handle(&self) -> &ModuleHandle {
         self.module.module_handle_at(self.struct_handle.module)
     }

@@ -38,6 +38,7 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
+use mirai_annotations::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 #[cfg(any(test, feature = "fuzzing"))]
@@ -1608,7 +1609,9 @@ impl CompiledModuleMut {
             // XXX these two don't seem to belong here
             other @ IndexKind::LocalPool
             | other @ IndexKind::CodeDefinition
-            | other @ IndexKind::TypeParameter => panic!("invalid kind for count: {:?}", other),
+            | other @ IndexKind::TypeParameter => {
+                unreachable!("invalid kind for count: {:?}", other)
+            }
         }
     }
 
