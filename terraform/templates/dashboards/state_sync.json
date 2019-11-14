@@ -620,7 +620,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_state_sync_timeout",
+          "expr": "libra_state_sync_timeout_total",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
