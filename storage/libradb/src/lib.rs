@@ -136,7 +136,7 @@ impl LibraDB {
         let instant = Instant::now();
         let db = Arc::new(
             DB::open(path.clone(), cf_opts_map)
-                .unwrap_or_else(|e| panic!("LibraDB open failed: {:?}", e)),
+                .unwrap_or_else(|e| unrecoverable!("LibraDB open failed: {:?}", e)),
         );
 
         info!(

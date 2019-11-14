@@ -19,7 +19,7 @@ pub use failure::{
 // Custom error handling macros are placed in the failure-macros crate. Due to
 // the way intra-crate macro exports currently work, macros can't be exported
 // from anywhere but the top level when they are defined in the same crate.
-pub use libra_failure_macros::bail_err;
+pub use libra_failure_macros::{bail_err, unrecoverable};
 
 pub type Result<T> = ::std::result::Result<T, Error>;
 
@@ -27,5 +27,5 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 pub mod prelude {
     pub use crate::Result;
     pub use failure::{bail, ensure, err_msg, format_err, Error, Fail, ResultExt};
-    pub use libra_failure_macros::bail_err;
+    pub use libra_failure_macros::{bail_err, unrecoverable};
 }

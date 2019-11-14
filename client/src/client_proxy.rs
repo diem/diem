@@ -99,6 +99,7 @@ pub struct ClientProxy {
     sync_on_wallet_recovery: bool,
     /// temp files (alive for duration of program)
     temp_files: Vec<PathBuf>,
+    // invariant self.address_to_ref_id.values().iter().all(|i| i < self.accounts.len())
 }
 
 impl ClientProxy {
@@ -807,8 +808,9 @@ impl ClientProxy {
                 .address_to_ref_id
                 .get(&address)
                 .expect("Should have the key");
+            // assumption follows from invariant
             let mut account_data: &mut AccountData =
-                self.accounts.get_mut(*account_ref_id).unwrap_or_else(|| panic!("Local cache not consistent, reference id {} not available in local accounts", account_ref_id));
+                self.accounts.get_mut(*account_ref_id).unwrap_or_else(|| unreachable!("Local cache not consistent, reference id {} not available in local accounts", account_ref_id));
             if account_state.0.is_some() {
                 account_data.status = AccountStatus::Persisted;
             }

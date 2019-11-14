@@ -240,7 +240,7 @@ impl NodeConfig {
             .iter()
             .map(|peer_id_str| {
                 (PeerId::from_str(peer_id_str).unwrap_or_else(|_| {
-                    panic!("Failed to parse peer_id from string: {}", peer_id_str)
+                    unreachable!("Failed to parse peer_id from string: {}", peer_id_str)
                 }))
             })
             .collect()

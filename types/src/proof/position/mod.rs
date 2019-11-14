@@ -24,6 +24,7 @@
 //! Note3: The leaf index starting from left-most leaf, starts from 0
 
 use crate::proof::definition::{LeafCount, MAX_ACCUMULATOR_LEAVES, MAX_ACCUMULATOR_PROOF_DEPTH};
+use mirai_annotations::*;
 use std::fmt;
 
 #[cfg(test)]
@@ -89,11 +90,13 @@ impl Position {
 
     /// What is the left node of this node? Will overflow if the node is a leaf
     pub fn left_child(self) -> Self {
+        checked_precondition!(!self.is_leaf());
         Self::child(self, NodeDirection::Left)
     }
 
     /// What is the right node of this node? Will overflow if the node is a leaf
     pub fn right_child(self) -> Self {
+        checked_precondition!(!self.is_leaf());
         Self::child(self, NodeDirection::Right)
     }
 

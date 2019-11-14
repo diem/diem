@@ -380,7 +380,7 @@ impl InternalNode {
             let only_child_index = Nibble::from(range_existence_bitmap.trailing_zeros() as u8);
             self.child(only_child_index)
                 .unwrap_or_else(|| {
-                    panic!(
+                    unrecoverable!(
                         "Corrupted internal node: existence_bitmap indicates \
                          the existence of a non-exist child at index {:x}",
                         only_child_index
@@ -458,7 +458,8 @@ impl InternalNode {
                         let only_child_version = self
                             .child(only_child_index)
                             .unwrap_or_else(|| {
-                                panic!(
+                                // Should be guaranteed by the self invariants, but these are not easy to express at the moment
+                                unrecoverable!(
                                     "Corrupted internal node: child_bitmap indicates \
                                      the existence of a non-exist child at index {:x}",
                                     only_child_index

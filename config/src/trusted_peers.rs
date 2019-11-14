@@ -13,7 +13,7 @@ use libra_types::{
     validator_set::ValidatorSet,
     PeerId,
 };
-use mirai_annotations::postcondition;
+use mirai_annotations::*;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
@@ -81,6 +81,7 @@ pub struct ConsensusPeersConfig {
 pub struct UpstreamPeersConfig {
     /// List of PeerIds serialized as string.
     pub upstream_peers: Vec<String>,
+    // invariant self.upstream_peers.all(|peer_id_str| { PeerId::from_str(peer_id_str) })
 }
 
 impl ConsensusPeersConfig {
@@ -123,7 +124,7 @@ impl ConsensusPeersConfig {
                 .map(|(peer_id_str, peer_info)| {
                     (
                         PeerId::from_str(peer_id_str).unwrap_or_else(|_| {
-                            panic!(
+                            unreachable!(
                                 "Failed to deserialize PeerId: {} from consensus peers config: ",
                                 peer_id_str
                             )
