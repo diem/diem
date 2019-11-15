@@ -274,12 +274,16 @@ impl NetworkBuilder {
     /// Set the protocol IDs that DirectSend actor subscribes.
     pub fn direct_send_protocols(&mut self, protocols: Vec<ProtocolId>) -> &mut Self {
         self.direct_send_protocols = protocols;
+        self.direct_send_protocols
+            .push(ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL));
         self
     }
 
     /// Set the protocol IDs that RPC actor subscribes.
     pub fn rpc_protocols(&mut self, protocols: Vec<ProtocolId>) -> &mut Self {
         self.rpc_protocols = protocols;
+        self.rpc_protocols
+            .push(ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL));
         self
     }
 
