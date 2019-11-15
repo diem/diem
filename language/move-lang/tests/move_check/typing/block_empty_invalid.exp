@@ -9,7 +9,7 @@ error:
    │          -- The type: '()'
    ·
  3 │         ({}: u64);
-   │              --- Is is not compatible with: 'u64'
+   │              --- Is not compatible with: 'u64'
    │
 
 error: 
@@ -23,7 +23,7 @@ error:
    │          -- The type: '()'
    ·
  4 │         ({}: &u64);
-   │              ---- Is is not compatible with: '&u64'
+   │              ---- Is not compatible with: '&u64'
    │
 
 error: 
@@ -37,6 +37,6 @@ error:
    │          -- The type: '()'
    ·
  5 │         ({}: (u64, bool));
-   │              ----------- Is is not compatible with: '(u64,bool)'
+   │              ----------- Is not compatible with: '(u64,bool)'
    │
 

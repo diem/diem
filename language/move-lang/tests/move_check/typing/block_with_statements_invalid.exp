@@ -9,35 +9,35 @@ error:
    │                    - The type: 'u64'
    ·
  4 │         ({ let x = 0; x } : bool);
-   │                             ---- Is is not compatible with: 'bool'
+   │                             ---- Is not compatible with: 'bool'
    │
 
 error: 
 
-   ┌── tests/move_check/typing/block_with_statements_invalid.move:5:24 ───
+   ┌── tests/move_check/typing/block_with_statements_invalid.move:5:23 ───
    │
  5 │         ({ let x = 0; &x } : u64);
    │                              ^^^ Invalid type annotation
    ·
  5 │         ({ let x = 0; &x } : u64);
-   │                        - The type: '&u64'
+   │                       -- The type: '&u64'
    ·
  5 │         ({ let x = 0; &x } : u64);
-   │                              --- Is is not compatible with: 'u64'
+   │                              --- Is not compatible with: 'u64'
    │
 
 error: 
 
-   ┌── tests/move_check/typing/block_with_statements_invalid.move:6:28 ───
+   ┌── tests/move_check/typing/block_with_statements_invalid.move:6:23 ───
    │
  6 │         ({ let y = 0; &mut (y + 1) } : ());
    │                                        ^^ Invalid type annotation
    ·
  6 │         ({ let y = 0; &mut (y + 1) } : ());
-   │                            ------- The type: '&mut u64'
+   │                       ------------ The type: '&mut u64'
    ·
  6 │         ({ let y = 0; &mut (y + 1) } : ());
-   │                                        -- Is is not compatible with: '()'
+   │                                        -- Is not compatible with: '()'
    │
 
 error: 
@@ -62,6 +62,6 @@ error:
    │                       ----------------- The type: '(u64,bool,bool)'
    ·
  8 │         ({ let x = 0; (x, false, false) } : (u64, bool));
-   │                                             ----------- Is is not compatible with: '(u64,bool)'
+   │                                             ----------- Is not compatible with: '(u64,bool)'
    │
 

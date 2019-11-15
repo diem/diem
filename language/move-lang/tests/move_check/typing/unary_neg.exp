@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/typing/unary_neg.move:6:11 ───
+   │
+ 7 │         (-x: u64);
+   │           ^ Invalid argument to '-'
+   ·
+ 6 │     t0(x: u64) {
+   │           --- Found: 'u64'. But the operation is not yet supported on any type
+   │
+

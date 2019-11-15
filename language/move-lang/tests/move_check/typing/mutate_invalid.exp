@@ -9,7 +9,7 @@ error:
    │               - The type: 'u64'
    ·
  6 │         *&mut 0 = false;
-   │                   ----- Is is not compatible with: 'bool'
+   │                   ----- Is not compatible with: 'bool'
    │
 
 error: 
@@ -20,10 +20,10 @@ error:
    │          ^^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
    ·
  7 │         *&mut S{f:0}.f = &1;
-   │                           - The type: '&u64'
+   │                          -- The type: '&u64'
    ·
  7 │         *&mut S{f:0}.f = &1;
-   │          ------------- Is is not compatible with: 'u64'
+   │          ------------- Is not compatible with: 'u64'
    │
 
 error: 
@@ -56,10 +56,10 @@ error:
     │          ^^^^^^^^^^^^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
     ·
  10 │         *&mut bar(&mut S{f:0}).f = &0;
-    │                                     - The type: '&u64'
+    │                                    -- The type: '&u64'
     ·
  10 │         *&mut bar(&mut S{f:0}).f = &0;
-    │          ----------------------- Is is not compatible with: 'u64'
+    │          ----------------------- Is not compatible with: 'u64'
     │
 
 error: 
@@ -73,7 +73,7 @@ error:
     │                   --- The type: 'u64'
     ·
  11 │         baz().f = false;
-    │                   ----- Is is not compatible with: 'bool'
+    │                   ----- Is not compatible with: 'bool'
     │
 
 error: 
@@ -87,7 +87,7 @@ error:
     │                   --- The type: 'u64'
     ·
  12 │         *&mut baz().f = false;
-    │                         ----- Is is not compatible with: 'bool'
+    │                         ----- Is not compatible with: 'bool'
     │
 
 error: 
@@ -101,7 +101,7 @@ error:
     │                      --------- The type: '0000000000000000000000000000000000000000000000000000000008675309.M.S'
     ·
  17 │         *r = X { f: 1 };
-    │              ---------- Is is not compatible with: '0000000000000000000000000000000000000000000000000000000008675309.M.X'
+    │              ---------- Is not compatible with: '0000000000000000000000000000000000000000000000000000000008675309.M.X'
     │
 
 error: 
@@ -112,10 +112,10 @@ error:
     │         ^^^ Invalid mutation. New value is not valid for the reference
     ·
  19 │         r.f = &0;
-    │                - The type: '&u64'
+    │               -- The type: '&u64'
     ·
  19 │         r.f = &0;
-    │         --- Is is not compatible with: 'u64'
+    │         --- Is not compatible with: 'u64'
     │
 
 error: 

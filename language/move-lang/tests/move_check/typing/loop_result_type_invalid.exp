@@ -9,7 +9,7 @@ error:
     │         ------------------------- The type: '()'
     ·
  10 │     t0(): X.R {
-    │           --- Is is not compatible with: '0000000000000000000000000000000000000000000000000000000000000001.X.R'
+    │           --- Is not compatible with: '0000000000000000000000000000000000000000000000000000000000000001.X.R'
     │
 
 error: 
@@ -23,7 +23,7 @@ error:
     │         ------------------------- The type: '()'
     ·
  14 │     t1(): u64 {
-    │           --- Is is not compatible with: 'u64'
+    │           --- Is not compatible with: 'u64'
     │
 
 error: 

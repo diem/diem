@@ -9,7 +9,7 @@ error:
    │                - The type: 'S'
    ·
  9 │         (s1: Self.S);
-   │              ------ Is is not compatible with: '0000000000000000000000000000000000000000000000000000000000000001.M.S'
+   │              ------ Is not compatible with: '0000000000000000000000000000000000000000000000000000000000000001.M.S'
    │
 
 error: 
@@ -23,7 +23,7 @@ error:
     │                    ---- The type: '0000000000000000000000000000000000000000000000000000000000000001.M.S'
     ·
  10 │         let s: S = S {};
-    │                - Is is not compatible with: 'S'
+    │                - Is not compatible with: 'S'
     │
 
 error: 
@@ -37,7 +37,7 @@ error:
     │                - The type: 'S'
     ·
  15 │     bar(s: S) {}
-    │            - Is is not compatible with: '0000000000000000000000000000000000000000000000000000000000000001.M.S'
+    │            - Is not compatible with: '0000000000000000000000000000000000000000000000000000000000000001.M.S'
     │
 
 error: 
@@ -51,6 +51,6 @@ error:
     │         ---- The type: '0000000000000000000000000000000000000000000000000000000000000001.M.S'
     ·
  8 │     foo<S>(s1: S, s2: S): S {
-    │                           - Is is not compatible with: 'S'
+    │                           - Is not compatible with: 'S'
     │
 

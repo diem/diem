@@ -9,7 +9,7 @@ error:
    │                   -- The type: '()'
    ·
  3 │         if (cond) () else 0;
-   │                           - Is is not compatible with: 'u64'
+   │                           - Is not compatible with: 'u64'
    │
 
 error: 
@@ -23,7 +23,7 @@ error:
    │                   - The type: 'u64'
    ·
  4 │         if (cond) 0 else ();
-   │                          -- Is is not compatible with: '()'
+   │                          -- Is not compatible with: '()'
    │
 
 error: 
@@ -37,7 +37,7 @@ error:
    │                   --- The type: 'address'
    ·
  8 │         if (cond) 0x0 else 0;
-   │                            - Is is not compatible with: 'u64'
+   │                            - Is not compatible with: 'u64'
    │
 
 error: 
@@ -51,7 +51,7 @@ error:
    │                   - The type: 'u64'
    ·
  9 │         if (cond) 0 else false;
-   │                          ----- Is is not compatible with: 'bool'
+   │                          ----- Is not compatible with: 'bool'
    │
 
 error: 
@@ -65,7 +65,7 @@ error:
     │                       ----- The type: 'bool'
     ·
  13 │         if (cond) (0, false) else (1, 1);
-    │                                       - Is is not compatible with: 'u64'
+    │                                       - Is not compatible with: 'u64'
     │
 
 error: 
@@ -79,7 +79,7 @@ error:
     │                    - The type: 'u64'
     ·
  14 │         if (cond) (0, false) else (false, false);
-    │                                    ----- Is is not compatible with: 'bool'
+    │                                    ----- Is not compatible with: 'bool'
     │
 
 error: 
@@ -93,7 +93,7 @@ error:
     │                    - The type: 'u64'
     ·
  15 │         if (cond) (0, false) else (true, 0x0);
-    │                                    ---- Is is not compatible with: 'bool'
+    │                                    ---- Is not compatible with: 'bool'
     │
 
 error: 
@@ -107,7 +107,7 @@ error:
     │                   ------------- The type: '(u64,bool,u64)'
     ·
  19 │         if (cond) (0, false, 0) else (0, false);
-    │                                      ---------- Is is not compatible with: '(u64,bool)'
+    │                                      ---------- Is not compatible with: '(u64,bool)'
     │
 
 error: 
@@ -121,6 +121,6 @@ error:
     │                   ---------- The type: '(u64,bool)'
     ·
  20 │         if (cond) (0, false) else (0, false, 0);
-    │                                   ------------- Is is not compatible with: '(u64,bool,u64)'
+    │                                   ------------- Is not compatible with: '(u64,bool,u64)'
     │
 
