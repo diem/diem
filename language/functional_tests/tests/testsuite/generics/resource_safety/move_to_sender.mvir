@@ -1,0 +1,10 @@
+module M {
+    resource Foo<T> { x: T }
+
+    f()  {
+        move_to_sender<Foo<u64>>(Foo<u64> { x: 42 });
+        return;
+    }
+}
+
+// check: TYPE_ERROR

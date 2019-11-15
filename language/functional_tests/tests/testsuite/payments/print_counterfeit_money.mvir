@@ -1,0 +1,53 @@
+//! account: default, 100000
+
+module M {
+    import 0x0.LibraCoin;
+    import 0x0.LibraAccount;
+
+    resource R<T: resource> { x: T }
+    resource FakeCoin { value: u64 }
+
+    fetch<T: resource>(): T acquires R {
+        let r: Self.R<T>;
+        let t: T;
+        r = move_from<R<T>>(get_txn_sender());
+        R<T> { x: t } = move(r);
+        return move(t);
+    }
+
+    store<T: resource>(x: T) {
+        move_to_sender<R<T>>(R<T> { x: move(x) });
+        return;
+    }
+
+    transmute<T1: resource, T2: resource>(x: T1): T2 acquires R {
+        Self.store<T1>(move(x));
+        return Self.fetch<T2>();
+    }
+
+    public become_rich() acquires R {
+        let fake: Self.FakeCoin;
+        let real: LibraCoin.T;
+
+        fake = FakeCoin { value: 400000 };
+        real = Self.transmute<Self.FakeCoin, LibraCoin.T>(move(fake));
+
+        LibraAccount.deposit(get_txn_sender(), move(real));
+
+        return;
+    }
+}
+
+//! new-transaction
+import {{default}}.M;
+import 0x0.LibraAccount;
+
+main() {
+    M.become_rich();
+    assert(LibraAccount.balance(get_txn_sender()) == 500000, 42);
+    return;
+}
+
+// check: TYPE_ERROR
+// check: TYPE_ERROR
+// check: LINKER_ERROR
