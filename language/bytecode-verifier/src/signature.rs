@@ -177,13 +177,7 @@ impl<'a> SignatureChecker<'a> {
                                         type_actuals,
                                     )
                                 }
-                                Pack(idx, type_actuals_idx)
-                                | Unpack(idx, type_actuals_idx)
-                                | Exists(idx, type_actuals_idx)
-                                | MoveFrom(idx, type_actuals_idx)
-                                | MoveToSender(idx, type_actuals_idx)
-                                | ImmBorrowGlobal(idx, type_actuals_idx)
-                                | MutBorrowGlobal(idx, type_actuals_idx) => {
+                                Pack(idx, type_actuals_idx) | Unpack(idx, type_actuals_idx) => {
                                     let struct_def = self.module.struct_def_at(*idx);
                                     let struct_handle =
                                         self.module.struct_handle_at(struct_def.struct_handle);
@@ -194,6 +188,36 @@ impl<'a> SignatureChecker<'a> {
                                         &struct_handle.type_formals,
                                         type_actuals,
                                     )
+                                }
+                                Exists(idx, type_actuals_idx)
+                                | MoveFrom(idx, type_actuals_idx)
+                                | MoveToSender(idx, type_actuals_idx)
+                                | ImmBorrowGlobal(idx, type_actuals_idx)
+                                | MutBorrowGlobal(idx, type_actuals_idx) => {
+                                    let struct_def = self.module.struct_def_at(*idx);
+                                    let struct_handle =
+                                        self.module.struct_handle_at(struct_def.struct_handle);
+                                    let type_actuals =
+                                        &self.module.locals_signature_at(*type_actuals_idx).0;
+                                    let mut errs = check_generic_instance(
+                                        context,
+                                        &struct_handle.type_formals,
+                                        type_actuals,
+                                    );
+
+                                    // TODO: Right now, it is forbidden to publish generic resources.
+                                    // We may lift the restriction after we properly implement access
+                                    // path derivation for generic types.
+                                    if !type_actuals.is_empty() {
+                                        errs.push(
+                                            VMStatus::new(StatusCode::TYPE_ERROR).with_message(
+                                                "generic resources not allowed in storage"
+                                                    .to_string(),
+                                            ),
+                                        )
+                                    }
+
+                                    errs
                                 }
                                 _ => vec![],
                             };
