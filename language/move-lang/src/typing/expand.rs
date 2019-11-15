@@ -105,7 +105,7 @@ pub fn base_type(context: &mut Context, bt: &mut BaseType) {
         }
         B::Apply(Some(_), _, bs) => base_types(context, bs),
         B::Apply(_, _, _) => {
-            let kind = core::infer_kind_base(&context, &context.subst, bt.clone());
+            let kind = core::infer_kind_base(&context, &context.subst, bt.clone()).unwrap();
             match &mut bt.value {
                 B::Apply(k_opt, _, bs) => {
                     *k_opt = Some(kind);

@@ -190,33 +190,49 @@ impl Context {
 // Type utils
 //**************************************************************************************************
 
-pub fn infer_kind(context: &Context, subst: &Subst, s: SingleType) -> Kind {
+pub fn infer_kind(context: &Context, subst: &Subst, s: SingleType) -> Option<Kind> {
     use SingleType_ as S;
     match s.value {
-        S::Ref(_, _) => sp(s.loc, Kind_::Unrestricted),
+        S::Ref(_, _) => Some(sp(s.loc, Kind_::Unrestricted)),
         S::Base(b) => infer_kind_base(context, subst, b),
     }
 }
 
-pub fn infer_kind_base(context: &Context, subst: &Subst, b: BaseType) -> Kind {
+pub fn infer_kind_base(context: &Context, subst: &Subst, b: BaseType) -> Option<Kind> {
     use BaseType_ as B;
     match unfold_type_base(&subst, b) {
         sp!(_, B::Var(_)) => panic!("ICE unfold_type_base failed, which is impossible"),
-        sp!(loc, B::Anything) => sp(loc, Kind_::Unknown),
-        sp!(_, B::Param(TParam { kind, .. })) => kind,
-        sp!(_, B::Apply(Some(kind), _, _)) => kind,
+        sp!(_, B::Anything) => None,
+        sp!(_, B::Param(TParam { kind, .. })) | sp!(_, B::Apply(Some(kind), _, _)) => Some(kind),
+        // if any unknown, give unkown
+        // else if any resource, give resource
+        // else affine
         sp!(_, B::Apply(None, n, tyl)) => {
-            // if any unknown, give unkown
-            // else if any resource, give resource
-            // else affine
-            tyl.into_iter()
-                .map(|t| infer_kind_base(context, subst, t))
+            // If an anything is found, we get a none. Then use the constraint for the
+            // default kind
+            let contraints = match &n.value {
+                TypeName_::Builtin(_) => tyl.iter().map(|_| None).collect::<Vec<_>>(),
+                TypeName_::ModuleType(m, n) => {
+                    let sdef = context.struct_definition(m, n);
+                    sdef.type_parameters
+                        .iter()
+                        .map(|tp| Some(tp.kind.clone()))
+                        .collect::<Vec<_>>()
+                }
+            };
+            let res = tyl
+                .into_iter()
+                .zip(contraints)
+                .filter_map(|(t, constraint_opt)| {
+                    infer_kind_base(context, subst, t).or(constraint_opt)
+                })
                 .map(|k| match k {
                     sp!(loc, Kind_::Unrestricted) => sp(loc, Kind_::Affine),
                     k => k,
                 })
                 .max_by(most_general_kind)
-                .unwrap_or_else(|| sp(type_name_declared_loc(context, &n), Kind_::Affine))
+                .unwrap_or_else(|| sp(type_name_declared_loc(context, &n), Kind_::Affine));
+            Some(res)
         }
     }
 }
@@ -434,11 +450,12 @@ pub fn solve_constraints(context: &mut Context) {
 fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) {
     use Kind_ as K;
     let sp!(bloc, b_) = unfold_type_base(&context.subst, b);
-    // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
-    if let BaseType_::Anything = &b_ {
-        return;
-    }
-    let b_kind = infer_kind_base(&context, &context.subst, sp(bloc, b_.clone()));
+    let b_kind = match infer_kind_base(&context, &context.subst, sp(bloc, b_.clone())) {
+        // Anything => None
+        // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
+        None => return,
+        Some(k) => k,
+    };
     match (b_kind.value, &k.value) {
             (_, K::Unrestricted) => panic!("ICE tparams cannot have unrestricted constraints"),
             // _ <: all
@@ -486,10 +503,13 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) 
 
 fn solve_copyable_constraint(context: &mut Context, loc: Loc, msg: String, s: SingleType) {
     let s = unfold_type_single(&context.subst, s);
-    if let SingleType_::Base(sp!(_, BaseType_::Anything)) = &s.value {
-        return;
-    }
-    match infer_kind(&context, &context.subst, s.clone()) {
+    let kind = match infer_kind(&context, &context.subst, s.clone()) {
+        // Anything => None
+        // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
+        None => return,
+        Some(k) => k,
+    };
+    match kind {
         sp!(_, Kind_::Unrestricted) | sp!(_, Kind_::Affine) => (),
         sp!(rloc, Kind_::Unknown) | sp!(rloc, Kind_::Resource) => {
             let ty_str = s.value.subst_format(&context.subst);
@@ -506,10 +526,13 @@ fn solve_copyable_constraint(context: &mut Context, loc: Loc, msg: String, s: Si
 
 fn solve_implicitly_copyable_constraint(context: &mut Context, loc: Loc, msg: String, b: BaseType) {
     let b = unfold_type_base(&context.subst, b);
-    if let BaseType_::Anything = &b.value {
-        return;
-    }
-    match infer_kind_base(&context, &context.subst, b) {
+    let kind = match infer_kind_base(&context, &context.subst, b) {
+        // Anything => None
+        // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
+        None => return,
+        Some(k) => k,
+    };
+    match kind {
         sp!(_, Kind_::Unrestricted) => (),
         sp!(_, Kind_::Affine) => context.error(vec![(loc, msg)]),
         sp!(rloc, Kind_::Unknown) | sp!(rloc, Kind_::Resource) => context.error(vec![

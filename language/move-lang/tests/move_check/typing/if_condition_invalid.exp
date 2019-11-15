@@ -9,7 +9,7 @@ error:
    │             -- The type: '()'
    ·
  3 │         if (()) () else ();
-   │             -- Is is not compatible with: 'bool'
+   │             -- Is not compatible with: 'bool'
    │
 
 error: 
@@ -23,7 +23,7 @@ error:
    │              -- The type: '()'
    ·
  4 │         if ((())) () else ();
-   │              -- Is is not compatible with: 'bool'
+   │              -- Is not compatible with: 'bool'
    │
 
 error: 
@@ -37,7 +37,7 @@ error:
    │             -- The type: '()'
    ·
  5 │         if ({}) () else ()
-   │             -- Is is not compatible with: 'bool'
+   │             -- Is not compatible with: 'bool'
    │
 
 error: 
@@ -51,7 +51,7 @@ error:
    │                        - The type: 'T'
    ·
  9 │         if (x) () else ();
-   │             - Is is not compatible with: 'bool'
+   │             - Is not compatible with: 'bool'
    │
 
 error: 
@@ -65,7 +65,7 @@ error:
     │             - The type: 'u64'
     ·
  10 │         if (0) () else ();
-    │             - Is is not compatible with: 'bool'
+    │             - Is not compatible with: 'bool'
     │
 
 error: 
@@ -79,7 +79,7 @@ error:
     │             --- The type: 'address'
     ·
  11 │         if (0x0) () else ()
-    │             --- Is is not compatible with: 'bool'
+    │             --- Is not compatible with: 'bool'
     │
 
 error: 
@@ -93,7 +93,7 @@ error:
     │             ------------- The type: '(bool,bool)'
     ·
  15 │         if ((false, true)) () else ();
-    │             ------------- Is is not compatible with: 'bool'
+    │             ------------- Is not compatible with: 'bool'
     │
 
 error: 
@@ -107,6 +107,6 @@ error:
     │             ---------- The type: '(u64,bool)'
     ·
  16 │         if ((0, false)) () else ()
-    │             ---------- Is is not compatible with: 'bool'
+    │             ---------- Is not compatible with: 'bool'
     │
 

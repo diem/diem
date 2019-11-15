@@ -7,7 +7,7 @@ use crate::{
     expansion::ast::Fields,
     hlir::ast::{self as H, Block},
     naming::ast as N,
-    parser::ast::{Field, FunctionName, ModuleIdent, StructName, Var},
+    parser::ast::{BinOp_, Field, FunctionName, ModuleIdent, StructName, Var},
     shared::*,
     typing::ast as T,
 };
@@ -868,6 +868,8 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             from_user,
             var: context.remapped_local(var),
         },
+        TE::BorrowLocal(mut_, v) => HE::BorrowLocal(mut_, context.remapped_local(v)),
+
         TE::Use(_) => panic!("ICE unexpanded use"),
         TE::ModuleCall(call) => {
             use crate::shared::fake_natives::transaction as TXN;
@@ -946,6 +948,12 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             let e = exp!(context, result, None, *te);
             HE::UnaryExp(op, e)
         }
+        TE::BinopExp(tl, op @ sp!(_, BinOp_::Eq), tr)
+        | TE::BinopExp(tl, op @ sp!(_, BinOp_::Neq), tr) => {
+            let el = exp!(context, result, None, *tl);
+            let er = exp!(context, result, Some(&el.ty), *tr);
+            HE::BinopExp(el, op, er)
+        }
         TE::BinopExp(tl, op, tr) => {
             let el = exp!(context, result, None, *tl);
             let er = exp!(context, result, None, *tr);
@@ -1008,7 +1016,6 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             let e = exp!(context, result, None, *te);
             HE::Borrow(mut_, e, f)
         }
-        TE::BorrowLocal(mut_, v) => HE::BorrowLocal(mut_, v),
         TE::TempBorrow(mut_, te) => {
             let e = exp_!(context, result, None, *te);
             let st = match &e.ty.value {
