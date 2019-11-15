@@ -261,6 +261,52 @@ fn test_executor_multiple_blocks() {
 }
 
 #[test]
+fn test_executor_two_blocks_with_failed_txns() {
+    let executor = TestExecutor::new();
+
+    let block1_id = gen_block_id(1);
+    let block2_id = gen_block_id(2);
+    let block1_txns = (0..50)
+        .map(|i| encode_mint_transaction(gen_address(i), 100))
+        .collect::<Vec<_>>();
+    let block2_txns = (0..50)
+        .map(|i| {
+            if i % 2 == 0 {
+                encode_mint_transaction(gen_address(i + 50), 100)
+            } else {
+                encode_transfer_transaction(gen_address(i), gen_address(i + 1), 500)
+            }
+        })
+        .collect::<Vec<_>>();
+    let output1 = block_on(executor.execute_block(
+        block1_txns.clone(),
+        executor.committed_trees(),
+        *PRE_GENESIS_BLOCK_ID,
+        block1_id,
+    ))
+    .unwrap()
+    .unwrap();
+    let output2 = block_on(executor.execute_block(
+        block2_txns.clone(),
+        output1.executed_trees().clone(),
+        block1_id,
+        block2_id,
+    ))
+    .unwrap()
+    .unwrap();
+    let ledger_info = gen_ledger_info(75, output2.accu_root(), block2_id, 1);
+    block_on(executor.commit_blocks(
+        vec![
+            CommittableBlock::new(block1_txns, Arc::new(output1)),
+            CommittableBlock::new(block2_txns, Arc::new(output2)),
+        ],
+        ledger_info,
+    ))
+    .unwrap()
+    .unwrap();
+}
+
+#[test]
 fn test_executor_execute_same_block_multiple_times() {
     let parent_block_id = *PRE_GENESIS_BLOCK_ID;
     let block_id = gen_block_id(1);
@@ -691,7 +737,7 @@ proptest! {
     }
 
     #[test]
-    fn test_idempotent_commits(chunk_size in 1..2u64, overlap_size in 1..2u64, num_new_txns in 1..2u64) {
+    fn test_idempotent_commits(chunk_size in 1..30u64, overlap_size in 1..30u64, num_new_txns in 1..30u64) {
         let (chunk_start, chunk_end) = (1, chunk_size + 1);
         let (overlap_start, overlap_end) = (chunk_size + 1, chunk_size + overlap_size + 1);
         let (mut chunks, ledger_info) =
@@ -706,7 +752,7 @@ proptest! {
 
         let overlap_txn_list_with_proof = chunks.pop().unwrap();
         let txn_list_with_proof_to_commit = chunks.pop().unwrap();
-        let mut txns_to_write = txn_list_with_proof_to_commit.transactions.clone();
+        let mut first_block_txns = txn_list_with_proof_to_commit.transactions.clone();
 
         let committed_trees_at_genesis = executor.committed_trees().clone();
 
@@ -716,24 +762,35 @@ proptest! {
             .unwrap();
 
         let parent_block_id = HashValue::zero();
-        let block_id = gen_block_id(1);
-        txns_to_write.extend(overlap_txn_list_with_proof.transactions);
-        txns_to_write.extend((chunk_size + overlap_size + 1..=chunk_size + overlap_size + num_new_txns)
-                             .map(|i| encode_mint_transaction(gen_address(i), 100)));
+        let first_block_id = gen_block_id(1);
+        first_block_txns.extend(overlap_txn_list_with_proof.transactions);
+        let second_block_txns = ((chunk_size + overlap_size + 1..=chunk_size + overlap_size + num_new_txns)
+                             .map(|i| encode_mint_transaction(gen_address(i), 100))).collect::<Vec<_>>();
 
-        let execute_block_future = executor.execute_block(
-            txns_to_write.clone(),
+        let execute_block1_future = executor.execute_block(
+            first_block_txns.clone(),
             committed_trees_at_genesis,
             parent_block_id,
-            block_id,
+            first_block_id,
         );
-        let output = block_on(execute_block_future).unwrap().unwrap();
-        let version = chunk_size + overlap_size + num_new_txns;
-        prop_assert_eq!(output.version().unwrap(), version);
+        let output1 = block_on(execute_block1_future).unwrap().unwrap();
 
-        let ledger_info = gen_ledger_info(version, output.accu_root(), block_id, 1);
+        let second_block_id = gen_block_id(2);
+        let execute_block2_future = executor.execute_block(
+            second_block_txns.clone(),
+            output1.executed_trees().clone(),
+            first_block_id,
+            second_block_id,
+        );
+        let output2 = block_on(execute_block2_future).unwrap().unwrap();
+
+        let version = chunk_size + overlap_size + num_new_txns;
+        prop_assert_eq!(output2.version().unwrap(), version);
+
+        let ledger_info = gen_ledger_info(version, output2.accu_root(), second_block_id, 1);
         let commit_block_future = executor.commit_blocks(
-            vec![CommittableBlock::new(txns_to_write, Arc::new(output))],
+            vec![CommittableBlock::new(first_block_txns, Arc::new(output1)),
+                 CommittableBlock::new(second_block_txns, Arc::new(output2))],
             ledger_info,
         );
         block_on(commit_block_future).unwrap().unwrap();
