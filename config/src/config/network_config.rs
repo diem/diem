@@ -12,39 +12,9 @@ use parity_multiaddr::Multiaddr;
 use serde::{Deserialize, Serialize};
 use std::{
     convert::TryFrom,
-    fmt,
     path::{Path, PathBuf},
     string::ToString,
 };
-
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum RoleType {
-    Validator,
-    FullNode,
-}
-
-impl<T> std::convert::From<T> for RoleType
-where
-    T: AsRef<str>,
-{
-    fn from(t: T) -> RoleType {
-        match t.as_ref() {
-            "validator" => RoleType::Validator,
-            "full_node" => RoleType::FullNode,
-            _ => unimplemented!("Invalid node role: {}", t.as_ref()),
-        }
-    }
-}
-
-impl fmt::Display for RoleType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            RoleType::Validator => write!(f, "validator"),
-            RoleType::FullNode => write!(f, "full_node"),
-        }
-    }
-}
 
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -64,8 +34,6 @@ pub struct NetworkConfig {
     // node can connect. If this flag is set to true, the `enable_encryption_and_authentication`
     // must also be set to true.
     pub is_permissioned: bool,
-    // The role of the node in the network. One of: {"validator", "full_node"}.
-    pub role: RoleType,
     // network_keypairs contains the node's network keypairs.
     // it is filled later on from network_keypairs_file.
     #[serde(skip)]
@@ -83,10 +51,9 @@ pub struct NetworkConfig {
 }
 
 impl Default for NetworkConfig {
-    fn default() -> NetworkConfig {
-        NetworkConfig {
+    fn default() -> Self {
+        Self {
             peer_id: "".to_string(),
-            role: RoleType::Validator,
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
             advertised_address: "/ip4/127.0.0.1/tcp/6180".parse::<Multiaddr>().unwrap(),
             discovery_interval_ms: 1000,

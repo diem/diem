@@ -43,7 +43,7 @@ fn get_config() -> NodeConfig {
             config
                 .consensus
                 .consensus_peers
-                .get_validator_set(&config.networks[0].network_peers),
+                .get_validator_set(&config.validator_network.as_ref().unwrap().network_peers),
         )
         .into();
     let mut file = File::create(config.get_genesis_transaction_file()).unwrap();

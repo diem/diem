@@ -59,7 +59,7 @@ impl SwarmConfig {
             upstream_private_keys.network_signing_private_key,
             upstream_private_keys.network_identity_private_key,
         );
-        let template_network = template.networks.get(0).unwrap();
+        let template_network = NetworkConfig::default();
         // Generate upstream peer address.
         let upstream_full_node_address = {
             let mut addr = Multiaddr::empty();
@@ -79,7 +79,6 @@ impl SwarmConfig {
         // Create network config for upstream node.
         let mut upstream_full_node_config = NetworkConfig {
             peer_id: upstream_peer_id.to_string(),
-            role: RoleType::FullNode,
             network_keypairs_file: upstream_network_keys_file_name.into(),
             network_peers_file: template_network.network_peers_file.clone(),
             seed_peers_file: template_network.seed_peers_file.clone(),
@@ -111,7 +110,7 @@ impl SwarmConfig {
         }
         // Modify upstream peer config to add the new network config.
         upstream_peer_config
-            .networks
+            .full_node_networks
             .push(upstream_full_node_config);
         // Write contents of upstream config to file.
         upstream_peer_config.save_config(&upstream_config_dir.join("node.config.toml"));
@@ -316,11 +315,10 @@ impl SwarmConfig {
         // Save consensus peers file.
         let consensus_peers_file_name = "consensus_peers.config.toml".to_string();
         consensus_peers_config.save_config(&output_dir.join(&consensus_peers_file_name));
-        let base_config = BaseConfig::new(output_dir.to_path_buf());
-        let template_network = template.networks.get(0).unwrap();
+        let base_config = BaseConfig::new(output_dir.to_path_buf(), role);
+        let template_network = NetworkConfig::default();
         let network_config = NetworkConfig {
             peer_id: node_id.to_string(),
-            role,
             network_keypairs_file: network_keys_file_name.into(),
             network_peers_file: network_peers_file_name.into(),
             seed_peers_file: seed_peers_file_name.into(),
@@ -349,9 +347,19 @@ impl SwarmConfig {
             consensus_peers: template.consensus.consensus_peers.clone(),
             safety_rules: safety_rules_config,
         };
+
+        let mut full_node_networks = vec![];
+        let mut validator_network = None;
+        if role == RoleType::Validator {
+            validator_network = Some(network_config);
+        } else {
+            full_node_networks = vec![network_config];
+        }
+
         let mut config = NodeConfig {
             base: base_config,
-            networks: vec![network_config],
+            full_node_networks,
+            validator_network,
             consensus: consensus_config,
             metrics: template.metrics.clone(),
             execution: template.execution.clone(),

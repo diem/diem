@@ -10,7 +10,7 @@ use admission_control_proto::proto::admission_control::create_admission_control;
 use futures::channel::mpsc;
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
-use libra_config::config::NodeConfig;
+use libra_config::config::{NodeConfig, RoleType};
 use libra_mempool::proto::mempool::MempoolClient;
 use network::validator_network::{AdmissionControlNetworkEvents, AdmissionControlNetworkSender};
 use std::{cmp::min, collections::HashMap, sync::Arc};
@@ -46,7 +46,7 @@ impl AdmissionControlRuntime {
         // Create mempool client if the node is validator.
         let connection_str = format!("localhost:{}", config.mempool.mempool_service_port);
         let env2 = Arc::new(EnvBuilder::new().name_prefix("grpc-ac-mem-").build());
-        let mempool_client = if config.is_validator() {
+        let mempool_client = if config.base.role == RoleType::Validator {
             Some(Arc::new(MempoolClient::new(
                 ChannelBuilder::new(env2).connect(&connection_str),
             )))
@@ -92,7 +92,7 @@ impl AdmissionControlRuntime {
         let upstream_proxy_data = UpstreamProxyData::new(
             config.admission_control.clone(),
             network_sender,
-            config.get_role(),
+            config.base.role,
             mempool_client,
             storage_client,
             vm_validator,

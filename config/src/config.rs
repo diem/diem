@@ -17,6 +17,7 @@ use prost::Message;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     convert::TryFrom,
+    fmt,
     fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
@@ -74,6 +75,8 @@ pub struct NodeConfig {
     pub debug_interface: DebugInterfaceConfig,
     #[serde(default)]
     pub execution: ExecutionConfig,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub full_node_networks: Vec<NetworkConfig>,
     #[serde(default)]
     pub logger: LoggerConfig,
     #[serde(default)]
@@ -81,11 +84,11 @@ pub struct NodeConfig {
     #[serde(default)]
     pub mempool: MempoolConfig,
     #[serde(default)]
-    pub networks: Vec<NetworkConfig>,
-    #[serde(default)]
     pub state_sync: StateSyncConfig,
     #[serde(default)]
     pub storage: StorageConfig,
+    #[serde(default)]
+    pub validator_network: Option<NetworkConfig>,
     #[serde(default)]
     pub vm_config: VMConfig,
 }
@@ -94,6 +97,7 @@ pub struct NodeConfig {
 #[serde(default)]
 pub struct BaseConfig {
     pub data_dir_path: PathBuf,
+    pub role: RoleType,
     #[serde(skip)]
     temp_data_dir: Option<TempPath>,
 }
@@ -102,27 +106,63 @@ impl Default for BaseConfig {
     fn default() -> BaseConfig {
         BaseConfig {
             data_dir_path: PathBuf::from("."),
+            role: RoleType::Validator,
             temp_data_dir: None,
         }
     }
 }
 
 impl BaseConfig {
-    /// Constructs a new BaseConfig with an empty temp directory
-    pub fn new(data_dir_path: PathBuf) -> Self {
+    pub fn new(data_dir_path: PathBuf, role: RoleType) -> Self {
         BaseConfig {
             data_dir_path,
+            role,
             temp_data_dir: None,
         }
     }
 }
 
-#[cfg(any(test, feature = "fuzzing"))]
 impl Clone for BaseConfig {
     fn clone(&self) -> Self {
         Self {
             data_dir_path: self.data_dir_path.clone(),
+            role: self.role,
             temp_data_dir: None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RoleType {
+    Validator,
+    FullNode,
+}
+
+impl RoleType {
+    pub fn is_validator(&self) -> bool {
+        *self == RoleType::Validator
+    }
+}
+
+impl std::str::FromStr for RoleType {
+    type Err = failure::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "validator" => Ok(RoleType::Validator),
+            "full_node" => Ok(RoleType::FullNode),
+            _ => bail!("Invalid node role: {}", s),
+        }
+    }
+}
+
+
+impl fmt::Display for RoleType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            RoleType::Validator => write!(f, "validator"),
+            RoleType::FullNode => write!(f, "full_node"),
         }
     }
 }
@@ -133,47 +173,25 @@ impl NodeConfig {
     /// Paths used in the config are either absolute or relative to the config location
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut config = Self::load_config(&path);
-        let mut validator_count = 0;
-        for network in &mut config.networks {
-            // We use provided peer id for validator role. Otherwise peer id is generated using
-            // network identity key.
-            if network.role == RoleType::Validator {
-                assert_eq!(
-                    validator_count, 0,
-                    "At most 1 network config should be for a validator"
-                );
-                network.load(path.as_ref())?;
-                validator_count += 1;
-            } else {
-                network.load(path.as_ref())?;
-            }
+        if config.base.role.is_validator() {
+            ensure!(
+                config.validator_network.is_some(),
+                "Missing a validator network config for a validator node"
+            );
+        } else {
+            ensure!(
+                config.validator_network.is_none(),
+                "Provided a validator network config for a full_node node"
+            );
+        }
+        for network in &mut config.full_node_networks {
+            network.load(path.as_ref())?;
+        }
+        if let Some(network) = &mut config.validator_network {
+            network.load(path.as_ref())?;
         }
         config.consensus.load(path.as_ref())?;
         Ok(config)
-    }
-
-    /// Returns true if the node config is for a validator. Otherwise returns false.
-    pub fn is_validator(&self) -> bool {
-        self.networks
-            .iter()
-            .any(|network| RoleType::Validator == network.role)
-    }
-
-    /// Returns true if the node config is for a validator. Otherwise returns false.
-    pub fn get_role(&self) -> RoleType {
-        if self.is_validator() {
-            RoleType::Validator
-        } else {
-            RoleType::FullNode
-        }
-    }
-
-    /// Returns the validator network config for this node.
-    pub fn get_validator_network_config(&self) -> Option<&NetworkConfig> {
-        self.networks
-            .iter()
-            .filter(|network| RoleType::Validator == network.role)
-            .last()
     }
 
     pub fn get_genesis_transaction_file(&self) -> PathBuf {
@@ -277,8 +295,11 @@ impl NodeConfigHelpers {
         ) = private_keys.remove_entry(&peer_id).unwrap().1;
         config.consensus.consensus_keypair = ConsensusKeyPair::load(Some(consensus_private_key));
         config.consensus.consensus_peers = test_consensus_peers;
-        // Setup node's peer id.
-        let mut network = config.networks.get_mut(0).unwrap();
+
+        let network = config
+            .validator_network
+            .as_mut()
+            .expect("Missing default network config");
         network.peer_id = peer_id.to_string();
         network.network_keypairs =
             NetworkKeyPairs::load(network_signing_private_key, network_identity_private_key);

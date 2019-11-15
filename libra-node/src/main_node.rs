@@ -97,6 +97,7 @@ fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
 pub fn setup_network(
     peer_id: PeerId,
     config: &mut NetworkConfig,
+    role: RoleType,
 ) -> (Runtime, Box<dyn LibraNetworkProvider>) {
     let runtime = Builder::new()
         .thread_name("network-")
@@ -108,7 +109,7 @@ pub fn setup_network(
         runtime.handle().clone(),
         peer_id,
         config.listen_address.clone(),
-        config.role,
+        role,
     );
     network_builder
         .permissioned(config.is_permissioned)
@@ -201,10 +202,9 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut ac_network_events = vec![];
     let mut validator_network_provider = None;
 
-    for i in 0..node_config.networks.len() {
-        let peer_id =
-            PeerId::try_from(node_config.networks[i].peer_id.clone()).expect("Invalid PeerId");
-        let (runtime, mut network_provider) = setup_network(peer_id, &mut node_config.networks[i]);
+    if let Some(network) = node_config.validator_network.as_mut() {
+        let peer_id = PeerId::try_from(network.peer_id.clone()).expect("Invalid PeerId");
+        let (runtime, mut network_provider) = setup_network(peer_id, network, RoleType::Validator);
         state_sync_network_handles.push(network_provider.add_state_synchronizer(vec![
             ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
         ]));
@@ -215,31 +215,47 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             )]);
         ac_network_events.push(ac_events);
 
-        let network = &node_config.networks[i];
-        if RoleType::Validator == network.role {
-            validator_network_provider = Some((peer_id, runtime, network_provider));
+        validator_network_provider = Some((peer_id, runtime, network_provider));
+        ac_network_sender = Some(ac_sender);
+    }
+
+    for i in 0..node_config.full_node_networks.len() {
+        let peer_id = PeerId::try_from(node_config.full_node_networks[i].peer_id.clone())
+            .expect("Invalid PeerId");
+        let (runtime, mut network_provider) = setup_network(
+            peer_id,
+            &mut node_config.full_node_networks[i],
+            RoleType::FullNode,
+        );
+        state_sync_network_handles.push(network_provider.add_state_synchronizer(vec![
+            ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
+        ]));
+
+        let (ac_sender, ac_events) =
+            network_provider.add_admission_control(vec![ProtocolId::from_static(
+                ADMISSION_CONTROL_RPC_PROTOCOL,
+            )]);
+        ac_network_events.push(ac_events);
+
+        let network = &node_config.full_node_networks[i];
+        if node_config.is_upstream_network(network) {
             ac_network_sender = Some(ac_sender);
-        } else {
-            if node_config.is_upstream_network(network) {
-                ac_network_sender = Some(ac_sender);
-            }
-            // For non-validator roles, the peer_id should be derived from the network identity
-            // key.
-            assert_eq!(
-                peer_id,
-                PeerId::try_from(
-                    network
-                        .network_keypairs
-                        .get_network_identity_public()
-                        .to_bytes()
-                )
-                .unwrap()
-            );
-            // Start the network provider.
-            runtime.handle().spawn(network_provider.start());
-            network_runtimes.push(runtime);
-            debug!("Network started for peer_id: {}", peer_id);
         }
+        // For non-validator roles, the peer_id should be derived from the network identity key.
+        assert_eq!(
+            peer_id,
+            PeerId::try_from(
+                network
+                    .network_keypairs
+                    .get_network_identity_public()
+                    .to_bytes()
+            )
+            .unwrap()
+        );
+        // Start the network provider.
+        runtime.handle().spawn(network_provider.start());
+        network_runtimes.push(runtime);
+        debug!("Network started for peer_id: {}", peer_id);
     }
 
     let debug_if = ServerHandle::setup(setup_debug_interface(&node_config));

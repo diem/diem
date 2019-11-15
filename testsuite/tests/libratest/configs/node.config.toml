@@ -1,10 +1,4 @@
 # Defaults are now set in config.rs
-[[networks]]
-seed_peers_file = ""  # For direct validation of this file
-network_keypairs_file = ""  # For direct validation of this file
-network_peers_file = ""  # For direct validation of this file
-role = "validator"
-
 [consensus]
 consensus_keypair_file = "" # For direct validation of this file
 consensus_peers_file = ""  # For direct validation of this file
@@ -12,3 +6,9 @@ consensus_peers_file = ""  # For direct validation of this file
 [state_sync]
 chunk_limit = 1
 upstream_peers = []
+
+[validator_network]
+seed_peers_file = ""  # For direct validation of this file
+network_keypairs_file = ""  # For direct validation of this file
+network_peers_file = ""  # For direct validation of this file
+role = "validator"

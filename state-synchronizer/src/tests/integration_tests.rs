@@ -230,8 +230,11 @@ impl SynchronizerEnv {
 
         // create synchronizers
         let mut config = get_test_config().0;
-        // TODO: If node is a full node, set correct config.
-        config.networks.get_mut(0).unwrap().role = role;
+        if !role.is_validator() {
+            config.full_node_networks = vec![config.validator_network.unwrap()];
+            config.validator_network = None;
+        }
+        config.base.role = role;
         config
             .state_sync
             .upstream_peers
