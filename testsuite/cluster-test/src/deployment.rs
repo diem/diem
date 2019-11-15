@@ -6,8 +6,8 @@ use failure::prelude::format_err;
 use retry::{delay::Fixed, retry};
 use rusoto_core::RusotoError;
 use rusoto_ecr::{
-    BatchGetImageRequest, DescribeImagesRequest, Ecr, Image, ImageIdentifier, PutImageError,
-    PutImageRequest,
+    BatchGetImageRequest, DescribeImagesRequest, DescribeImagesResponse, Ecr, Image,
+    ImageIdentifier, PutImageError, PutImageRequest,
 };
 use rusoto_ecs::{Ecs, UpdateServiceRequest};
 use slog_scope::{info, warn};
@@ -78,19 +78,7 @@ impl DeploymentManager {
     }
 
     fn image_digest_by_tag(&self, tag: &str) -> String {
-        let mut request = DescribeImagesRequest::default();
-        request.repository_name = VALIDATOR_IMAGE_REPO.into();
-        let image_id = ImageIdentifier {
-            image_digest: None,
-            image_tag: Some(tag.to_string()),
-        };
-        request.image_ids = Some(vec![image_id]);
-        let result = self
-            .aws
-            .ecr()
-            .describe_images(request)
-            .sync()
-            .expect("Failed to find latest nightly image");
+        let result = self.describe_images(tag);
         let images = result
             .image_details
             .expect("No image_details in ECR response");
@@ -99,6 +87,31 @@ impl DeploymentManager {
         }
         let image = images.into_iter().next().unwrap();
         image.image_digest.expect("No image_digest")
+    }
+
+    fn describe_images(&self, tag: &str) -> DescribeImagesResponse {
+        let mut retry = 0usize;
+        loop {
+            let mut request = DescribeImagesRequest::default();
+            request.repository_name = VALIDATOR_IMAGE_REPO.into();
+            let image_id = ImageIdentifier {
+                image_digest: None,
+                image_tag: Some(tag.to_string()),
+            };
+            request.image_ids = Some(vec![image_id]);
+            match self.aws.ecr().describe_images(request).sync() {
+                Ok(r) => return r,
+                Err(e) => {
+                    if retry > 10 {
+                        panic!("Failed describe_images after 10 attempts");
+                    } else {
+                        warn!("Transient failure in describe_images: {}", e);
+                        thread::sleep(Duration::from_secs(10));
+                        retry += 1;
+                    }
+                }
+            }
+        }
     }
 
     pub fn get_tested_upstream_commit(&self) -> failure::Result<String> {
