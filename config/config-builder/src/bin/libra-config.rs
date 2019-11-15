@@ -5,8 +5,7 @@
 
 use config_builder::swarm_config::SwarmConfigBuilder;
 use libra_config::config::RoleType;
-use std::convert::TryInto;
-use std::path::PathBuf;
+use std::{convert::TryInto, path::PathBuf, str::FromStr};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -47,7 +46,8 @@ fn main() {
     };
     let (faucet_account_keypair, _faucet_key_file_path, _temp_dir) =
         generate_keypair::load_faucet_key_or_create_default(Some(args.faucet_account_file.clone()));
-    let role: RoleType = args.role.clone().into();
+    let role: RoleType =
+        RoleType::from_str(args.role.as_ref()).expect("Unable to parse provided role");
 
     let mut config_builder = SwarmConfigBuilder::new();
     config_builder

@@ -82,7 +82,8 @@ impl ChainedBftProvider {
         node_config: &mut NodeConfig,
     ) -> InitialSetup {
         let peer_id_str = node_config
-            .get_validator_network_config()
+            .validator_network
+            .as_ref()
             .unwrap()
             .peer_id
             .clone();

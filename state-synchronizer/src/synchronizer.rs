@@ -36,7 +36,7 @@ impl StateSynchronizer {
         let executor_proxy = ExecutorProxy::new(executor, config);
         Self::bootstrap_with_executor_proxy(
             network,
-            config.get_role(),
+            config.base.role,
             &config.state_sync,
             executor_proxy,
         )

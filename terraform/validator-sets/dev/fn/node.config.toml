@@ -1,8 +1,10 @@
+[base]
+role = "full_node"
+
 [[networks]]
 listen_address = "/ip4/0.0.0.0/tcp/6181"
 advertised_address = "/ip4/${self_ip}/tcp/6181"
 peer_id = "${peer_id}"
-role = "full_node"
 network_peers_file = "fullnode_peers.config.toml"
 
 [state_sync]
