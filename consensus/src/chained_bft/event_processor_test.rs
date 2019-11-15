@@ -23,6 +23,8 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use channel;
+use channel::libra_channel;
+use channel::message_queues::QueueStyle;
 use consensus_types::block::block_test_utils::gen_test_certificate;
 use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
@@ -126,7 +128,7 @@ impl NodeSetup {
         safety_rules_file: PathBuf,
     ) -> Self {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
-        let (consensus_tx, consensus_rx) = channel::new_test(8);
+        let (consensus_tx, consensus_rx) = libra_channel::new(QueueStyle::FIFO, 8, None);
         let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
         let author = signer.author();

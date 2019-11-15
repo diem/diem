@@ -7,6 +7,8 @@ use crate::proto::DiscoveryMsg;
 use crate::protocols::direct_send::Message;
 use crate::validator_network::DISCOVERY_DIRECT_SEND_PROTOCOL;
 use crate::ProtocolId;
+use channel::libra_channel;
+use channel::message_queues::QueueStyle;
 use core::str::FromStr;
 use libra_crypto::{test_utils::TEST_SEED, *};
 use prost::Message as _;
@@ -74,12 +76,12 @@ fn setup_discovery(
 ) -> (
     channel::Receiver<NetworkRequest>,
     channel::Receiver<ConnectivityRequest>,
-    channel::Sender<NetworkNotification>,
+    libra_channel::Sender<PeerId, NetworkNotification>,
     channel::Sender<()>,
 ) {
     let (network_reqs_tx, network_reqs_rx) = channel::new_test(0);
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(1);
-    let (network_notifs_tx, network_notifs_rx) = channel::new_test(0);
+    let (network_notifs_tx, network_notifs_rx) = libra_channel::new(QueueStyle::FIFO, 10, None);
     let (ticker_tx, ticker_rx) = channel::new_test(0);
     let discovery = {
         Discovery::new(
@@ -201,11 +203,10 @@ fn inbound() {
         msg.notes.push(note_other.clone());
         msg.notes.push(seed_note.clone());
         network_notifs_tx
-            .send(NetworkNotification::RecvMessage(
+            .push(
                 seed_peer_id,
-                get_raw_message(msg),
-            ))
-            .await
+                NetworkNotification::RecvMessage(seed_peer_id, get_raw_message(msg)),
+            )
             .unwrap();
 
         // Connectivity manager receives address of new peer.
@@ -239,11 +240,10 @@ fn inbound() {
             );
             msg.notes.push(seed_note);
             network_notifs_tx
-                .send(NetworkNotification::RecvMessage(
+                .push(
                     peer_id_other,
-                    get_raw_message(msg),
-                ))
-                .await
+                    NetworkNotification::RecvMessage(peer_id_other, get_raw_message(msg)),
+                )
                 .unwrap();
         }
 
@@ -300,8 +300,7 @@ fn outbound() {
     let f_network = async move {
         // Notify discovery actor of connection to seed peer.
         network_notifs_tx
-            .send(NetworkNotification::NewPeer(seed_peer_id))
-            .await
+            .push(seed_peer_id, NetworkNotification::NewPeer(seed_peer_id))
             .unwrap();
 
         // Trigger outbound msg.
@@ -374,11 +373,10 @@ fn addr_update_includes_seed_addrs() {
         let mut msg = DiscoveryMsg::default();
         msg.notes.push(seed_note.clone());
         network_notifs_tx
-            .send(NetworkNotification::RecvMessage(
+            .push(
                 seed_peer_id,
-                get_raw_message(msg),
-            ))
-            .await
+                NetworkNotification::RecvMessage(seed_peer_id, get_raw_message(msg)),
+            )
             .unwrap();
 
         // The addrs sent to connectivity manager should also include the

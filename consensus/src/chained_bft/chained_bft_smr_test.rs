@@ -16,6 +16,8 @@ use crate::{
     state_replication::StateMachineReplication,
 };
 use channel;
+use channel::libra_channel;
+use channel::message_queues::QueueStyle;
 use consensus_types::{
     proposal_msg::{ProposalMsg, ProposalUncheckedSignatures},
     vote_msg::VoteMsg,
@@ -70,7 +72,7 @@ impl SMRNode {
         let author = signer.author();
 
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
-        let (consensus_tx, consensus_rx) = channel::new_test(8);
+        let (consensus_tx, consensus_rx) = libra_channel::new(QueueStyle::FIFO, 8, None);
         let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
 

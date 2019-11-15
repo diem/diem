@@ -40,7 +40,8 @@ pub struct NetworkPlayground {
     /// Maps each Author to a Sender of their inbound network notifications.
     /// These events will usually be handled by the event loop spawned in
     /// `ConsensusNetworkImpl`.
-    node_consensus_txs: Arc<Mutex<HashMap<Author, channel::Sender<NetworkNotification>>>>,
+    node_consensus_txs:
+        Arc<Mutex<HashMap<Author, libra_channel::Sender<PeerId, NetworkNotification>>>>,
     /// Nodes' outbound handlers forward their outbound non-rpc messages to this
     /// queue.
     outbound_msgs_tx: mpsc::Sender<(Author, NetworkRequest)>,
@@ -78,7 +79,9 @@ impl NetworkPlayground {
         src: Author,
         mut network_reqs_rx: channel::Receiver<NetworkRequest>,
         mut outbound_msgs_tx: mpsc::Sender<(Author, NetworkRequest)>,
-        node_consensus_txs: Arc<Mutex<HashMap<Author, channel::Sender<NetworkNotification>>>>,
+        node_consensus_txs: Arc<
+            Mutex<HashMap<Author, libra_channel::Sender<PeerId, NetworkNotification>>>,
+        >,
     ) {
         while let Some(net_req) = network_reqs_rx.next().await {
             let drop_rpc = drop_config
@@ -114,8 +117,7 @@ impl NetworkPlayground {
                     };
 
                     node_consensus_tx
-                        .send(NetworkNotification::RecvRpc(src, inbound_req))
-                        .await
+                        .push(src, NetworkNotification::RecvRpc(src, inbound_req))
                         .unwrap();
                 }
                 // Other NetworkRequest get buffered for `deliver_messages` to
@@ -133,7 +135,7 @@ impl NetworkPlayground {
         author: Author,
         // The `Sender` of inbound network events. The `Receiver` end of this
         // queue is usually wrapped in a `ConsensusNetworkEvents` adapter.
-        consensus_tx: channel::Sender<NetworkNotification>,
+        consensus_tx: libra_channel::Sender<PeerId, NetworkNotification>,
         // The `Receiver` of outbound network events this node sends. The
         // `Sender` side of this queue is usually wrapped in a
         // `ConsensusNetworkSender` adapter.
@@ -195,7 +197,7 @@ impl NetworkPlayground {
             ),
         };
 
-        node_consensus_tx.send(msg_notif).await.unwrap();
+        node_consensus_tx.push(src, msg_notif).unwrap();
         msg_copy
     }
 
@@ -330,12 +332,15 @@ impl DropConfig {
 
 use crate::chained_bft::network::NetworkTask;
 use crate::chained_bft::test_utils::TestPayload;
+use channel::libra_channel;
+use channel::message_queues::QueueStyle;
 use consensus_types::block_retrieval::{
     BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
 };
 use libra_crypto::HashValue;
 #[cfg(test)]
 use libra_types::crypto_proxies::random_validator_verifier;
+use libra_types::PeerId;
 use std::convert::{TryFrom, TryInto};
 
 #[test]
@@ -350,7 +355,7 @@ fn test_network_api() {
     let validators = Arc::new(validator_verifier);
     for peer in &peers {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
-        let (consensus_tx, consensus_rx) = channel::new_test(8);
+        let (consensus_tx, consensus_rx) = libra_channel::new(QueueStyle::FIFO, 8, None);
         let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
 
@@ -412,7 +417,7 @@ fn test_rpc() {
     let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
     for peer in peers.iter() {
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
-        let (consensus_tx, consensus_rx) = channel::new_test(1);
+        let (consensus_tx, consensus_rx) = libra_channel::new(QueueStyle::FIFO, 8, None);
         let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
         let network_events = ConsensusNetworkEvents::new(consensus_rx);
 

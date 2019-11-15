@@ -66,7 +66,9 @@ mod tests {
         utils::MessageExt,
         validator_network::Event,
     };
-    use futures::{executor::block_on, sink::SinkExt, stream::StreamExt};
+    use channel::libra_channel;
+    use channel::message_queues::QueueStyle;
+    use futures::{executor::block_on, stream::StreamExt};
     use prost::Message as _;
 
     // `StateSynchronizerSender` should serialize outbound messages
@@ -105,7 +107,7 @@ mod tests {
     // Direct send messages should get deserialized through the `StateSynchronizerEvents` stream.
     #[test]
     fn test_inbound_msg() {
-        let (mut state_sync_tx, state_sync_rx) = channel::new_test(8);
+        let (mut state_sync_tx, state_sync_rx) = libra_channel::new(QueueStyle::FIFO, 8, None);
         let mut stream = StateSynchronizerEvents::new(state_sync_rx);
         let peer_id = PeerId::random();
 
@@ -122,7 +124,7 @@ mod tests {
                 mdata: state_sync_msg.clone().to_bytes().unwrap(),
             },
         );
-        block_on(state_sync_tx.send(event)).unwrap();
+        state_sync_tx.push(peer_id, event).unwrap();
 
         // request should be properly deserialized
         let expected_event = Event::Message((peer_id, state_sync_msg.clone()));

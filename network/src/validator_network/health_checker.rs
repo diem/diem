@@ -89,15 +89,15 @@ mod tests {
         utils::MessageExt,
         validator_network::{Event, NetworkNotification},
     };
-    use futures::{
-        channel::oneshot, executor::block_on, future::try_join, sink::SinkExt, stream::StreamExt,
-    };
+    use channel::libra_channel;
+    use channel::message_queues::QueueStyle;
+    use futures::{channel::oneshot, executor::block_on, future::try_join, stream::StreamExt};
     use prost::Message as _;
 
     // `HealthCheckerNetworkEvents` should deserialize inbound RPC requests
     #[test]
     fn test_health_checker_inbound_rpc() {
-        let (mut network_reqs_tx, network_reqs_rx) = channel::new_test(8);
+        let (mut network_reqs_tx, network_reqs_rx) = libra_channel::new(QueueStyle::FIFO, 8, None);
         let mut stream = HealthCheckerNetworkEvents::new(network_reqs_rx);
 
         // build rpc request
@@ -117,7 +117,7 @@ mod tests {
         // mock receiving rpc request
         let peer_id = PeerId::random();
         let event = NetworkNotification::RecvRpc(peer_id, rpc_req);
-        block_on(network_reqs_tx.send(event)).unwrap();
+        network_reqs_tx.push(peer_id, event).unwrap();
 
         // request should be properly deserialized
         let (res_tx, _) = oneshot::channel();

@@ -44,7 +44,10 @@ use tokio::runtime::TaskExecutor;
 use tokio::timer::Interval;
 use tokio_retry::strategy::ExponentialBackoff;
 
+// This is the channel size for channels which are not per peer
 pub const NETWORK_CHANNEL_SIZE: usize = 1024;
+// This is the channel size for channels which are per peer
+pub const NETWORK_CHANNEL_SIZE_PER_VALIDATOR: usize = 16;
 pub const DISCOVERY_INTERVAL_MS: u64 = 1000;
 pub const PING_INTERVAL_MS: u64 = 1000;
 pub const PING_TIMEOUT_MS: u64 = 10_000;
@@ -486,7 +489,7 @@ impl NetworkBuilder {
             network_reqs_tx,
             self.max_concurrent_network_reqs,
             self.max_concurrent_network_notifs,
-            self.channel_size,
+            NETWORK_CHANNEL_SIZE_PER_VALIDATOR,
         );
 
         if self.health_checker_enabled {

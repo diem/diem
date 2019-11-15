@@ -8,6 +8,8 @@ use crate::{
     validator_network::HEALTH_CHECKER_RPC_PROTOCOL,
     ProtocolId,
 };
+use channel::libra_channel;
+use channel::message_queues::QueueStyle;
 use futures::sink::SinkExt;
 use prost::Message as _;
 use tokio::runtime::Runtime;
@@ -19,13 +21,13 @@ fn setup_permissive_health_checker(
     ping_failures_tolerated: u64,
 ) -> (
     channel::Receiver<NetworkRequest>,
-    channel::Sender<NetworkNotification>,
+    libra_channel::Sender<PeerId, NetworkNotification>,
     channel::Sender<()>,
 ) {
     let (ticker_tx, ticker_rx) = channel::new_test(0);
 
     let (network_reqs_tx, network_reqs_rx) = channel::new_test(0);
-    let (network_notifs_tx, network_notifs_rx) = channel::new_test(0);
+    let (network_notifs_tx, network_notifs_rx) = libra_channel::new(QueueStyle::FIFO, 10, None);
 
     let hc_network_tx = HealthCheckerNetworkSender::new(network_reqs_tx);
     let hc_network_rx = HealthCheckerNetworkEvents::new(network_notifs_rx);
@@ -45,7 +47,7 @@ fn setup_strict_health_checker(
     rt: &mut Runtime,
 ) -> (
     channel::Receiver<NetworkRequest>,
-    channel::Sender<NetworkNotification>,
+    libra_channel::Sender<PeerId, NetworkNotification>,
     channel::Sender<()>,
 ) {
     setup_permissive_health_checker(rt, 0 /* ping_failures_tolerated */)
@@ -103,7 +105,7 @@ async fn expect_ping_timeout(network_reqs_rx: &mut channel::Receiver<NetworkRequ
 async fn send_inbound_ping(
     peer_id: PeerId,
     ping_msg: Ping,
-    network_notifs_tx: &mut channel::Sender<NetworkNotification>,
+    network_notifs_tx: &mut libra_channel::Sender<PeerId, NetworkNotification>,
 ) -> oneshot::Receiver<Result<Bytes, RpcError>> {
     let protocol = ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL);
     let req_msg_enum = HealthCheckerMsg {
@@ -117,8 +119,10 @@ async fn send_inbound_ping(
         res_tx,
     };
     network_notifs_tx
-        .send(NetworkNotification::RecvRpc(peer_id, inbound_rpc_req))
-        .await
+        .push(
+            peer_id,
+            NetworkNotification::RecvRpc(peer_id, inbound_rpc_req),
+        )
         .unwrap();
     res_rx
 }
@@ -160,8 +164,7 @@ fn outbound() {
         let peer_id = PeerId::random();
 
         network_notifs_tx
-            .send(NetworkNotification::NewPeer(peer_id))
-            .await
+            .push(peer_id, NetworkNotification::NewPeer(peer_id))
             .unwrap();
 
         // Trigger ping to a peer. This should ping the newly added peer.
@@ -184,8 +187,7 @@ fn inbound() {
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
         network_notifs_tx
-            .send(NetworkNotification::NewPeer(peer_id))
-            .await
+            .push(peer_id, NetworkNotification::NewPeer(peer_id))
             .unwrap();
 
         // Receive ping from peer.
@@ -213,8 +215,7 @@ fn outbound_failure_permissive() {
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
         network_notifs_tx
-            .send(NetworkNotification::NewPeer(peer_id))
-            .await
+            .push(peer_id, NetworkNotification::NewPeer(peer_id))
             .unwrap();
 
         // Trigger pings to a peer. These should ping the newly added peer, but not disconnect from
@@ -246,8 +247,7 @@ fn ping_success_resets_fail_counter() {
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
         network_notifs_tx
-            .send(NetworkNotification::NewPeer(peer_id))
-            .await
+            .push(peer_id, NetworkNotification::NewPeer(peer_id))
             .unwrap();
         // Trigger pings to a peer. These should ping the newly added peer, but not disconnect from
         // it.
@@ -295,8 +295,7 @@ fn outbound_failure_strict() {
         let peer_id = PeerId::random();
 
         network_notifs_tx
-            .send(NetworkNotification::NewPeer(peer_id))
-            .await
+            .push(peer_id, NetworkNotification::NewPeer(peer_id))
             .unwrap();
 
         // Trigger ping to a peer. This should ping the newly added peer.
@@ -326,8 +325,7 @@ fn ping_timeout() {
         let peer_id = PeerId::random();
 
         network_notifs_tx
-            .send(NetworkNotification::NewPeer(peer_id))
-            .await
+            .push(peer_id, NetworkNotification::NewPeer(peer_id))
             .unwrap();
 
         // Trigger ping to a peer. This should ping the newly added peer.

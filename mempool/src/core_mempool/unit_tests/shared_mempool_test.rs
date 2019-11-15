@@ -6,11 +6,13 @@ use crate::{
     shared_mempool::{start_shared_mempool, SharedMempoolNotification, SyncEvent},
 };
 use channel;
+use channel::libra_channel;
+use channel::message_queues::QueueStyle;
 use futures::{
     sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
     Stream,
 };
-use futures_preview::{compat::Stream01CompatExt, executor::block_on, SinkExt, StreamExt};
+use futures_preview::{compat::Stream01CompatExt, executor::block_on, StreamExt};
 use libra_config::config::{NodeConfig, NodeConfigHelpers};
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
@@ -32,7 +34,7 @@ use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 struct SharedMempoolNetwork {
     mempools: HashMap<PeerId, Arc<Mutex<CoreMempool>>>,
     network_reqs_rxs: HashMap<PeerId, channel::Receiver<NetworkRequest>>,
-    network_notifs_txs: HashMap<PeerId, channel::Sender<NetworkNotification>>,
+    network_notifs_txs: HashMap<PeerId, libra_channel::Sender<PeerId, NetworkNotification>>,
     runtimes: HashMap<PeerId, Runtime>,
     subscribers: HashMap<PeerId, UnboundedReceiver<SharedMempoolNotification>>,
     timers: HashMap<PeerId, UnboundedSender<SyncEvent>>,
@@ -46,7 +48,8 @@ impl SharedMempoolNetwork {
         for peer in peers {
             let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
             let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
-            let (network_notifs_tx, network_notifs_rx) = channel::new_test(8);
+            let (network_notifs_tx, network_notifs_rx) =
+                libra_channel::new(QueueStyle::FIFO, 8, None);
             let network_sender = MempoolNetworkSender::new(network_reqs_tx);
             let network_events = MempoolNetworkEvents::new(network_notifs_rx);
             let (sender, subscriber) = unbounded();
@@ -87,7 +90,7 @@ impl SharedMempoolNetwork {
 
     fn send_event(&mut self, peer: &PeerId, notif: NetworkNotification) {
         let network_notifs_tx = self.network_notifs_txs.get_mut(peer).unwrap();
-        block_on(network_notifs_tx.send(notif)).unwrap();
+        network_notifs_tx.push(*peer, notif).unwrap();
         self.wait_for_event(peer, SharedMempoolNotification::PeerStateChange);
     }
 
@@ -118,10 +121,9 @@ impl SharedMempoolNetwork {
                     SignedTransaction::try_from(sync_msg.transactions.pop().unwrap()).unwrap();
                 // send it to peer
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
-                block_on(
-                    receiver_network_notif_tx.send(NetworkNotification::RecvMessage(*peer, msg)),
-                )
-                .unwrap();
+                receiver_network_notif_tx
+                    .push(*peer, NetworkNotification::RecvMessage(*peer, msg))
+                    .unwrap();
 
                 // await message delivery
                 self.wait_for_event(&peer_id, SharedMempoolNotification::NewTransactions);

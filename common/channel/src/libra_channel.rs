@@ -34,8 +34,6 @@ struct SharedState<K: Eq + Hash + Clone, M> {
 
     /// A boolean which tracks whether the receiver has dropped
     receiver_dropped: bool,
-    /// A boolean which tracks whether the sender has dropped
-    sender_dropped: bool,
     /// A boolean which tracks whether the stream has terminated
     /// A stream is considered terminated when sender has dropped
     /// and we have drained everything inside our internal queue
@@ -62,10 +60,17 @@ impl<K: Eq + Hash + Clone, M> Sender<K, M> {
     }
 }
 
+impl<K: Eq + Hash + Clone, M> Clone for Sender<K, M> {
+    fn clone(&self) -> Self {
+        Self {
+            shared_state: Arc::clone(&self.shared_state),
+        }
+    }
+}
+
 impl<K: Eq + Hash + Clone, M> Drop for Sender<K, M> {
     fn drop(&mut self) {
         let mut shared_state = self.shared_state.lock().unwrap();
-        shared_state.sender_dropped = true;
         if let Some(w) = shared_state.waker.take() {
             w.wake();
         }
@@ -99,10 +104,14 @@ impl<K: Eq + Hash + Clone, M> Stream for Receiver<K, M> {
     /// queue. If there is, then it returns immediately. If the internal_queue is empty,
     /// it sets the waker passed to it by the scheduler/executor and returns Pending
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        // If all the senders have been dropped, then only this Receiver should remain
+        // (since Receiver is not Clone) and hence the Arc::strong_count of
+        // shared state must be 1
+        let all_senders_dropped = Arc::strong_count(&self.shared_state) == 1;
         let mut shared_state = self.shared_state.lock().unwrap();
         if let Some(val) = shared_state.internal_queue.pop() {
             Poll::Ready(Some(val))
-        } else if shared_state.sender_dropped {
+        } else if all_senders_dropped {
             shared_state.stream_terminated = true;
             Poll::Ready(None)
         } else {
@@ -128,7 +137,6 @@ pub fn new<K: Eq + Hash + Clone, M>(
         internal_queue: PerKeyQueue::new(queue_style, max_queue_size_per_key, counters),
         waker: None,
         receiver_dropped: false,
-        sender_dropped: false,
         stream_terminated: false,
     }));
     let shared_state_clone = Arc::clone(&shared_state);

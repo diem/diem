@@ -60,20 +60,23 @@ lazy_static::lazy_static! {
     /// Counter of pending network events to Mempool
     pub static ref PENDING_MEMPOOL_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_mempool_network_events");
 
-    /// Counter of pending network events to Consensus
-    pub static ref PENDING_CONSENSUS_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_consensus_network_events");
+    /// Counters(queued,dequeued,dropped) related to channel which contains events from network to mempool
+    pub static ref MEMPOOL_NETWORK_EVENTS: IntCounterVec = register_int_counter_vec!("libra_network_mempool_network_events", "Counters(queued,dequeued,dropped) related to channel which contains events from network to mempool", &["state"]).unwrap();
 
-    /// Counter of pending network events to State Synchronizer
-    pub static ref PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_state_sync_network_events");
+    /// Counters(queued,dequeued,dropped) related to channel which contains events from network to consensus
+    pub static ref CONSENSUS_NETWORK_EVENTS: IntCounterVec = register_int_counter_vec!("libra_network_consensus_network_events", "Counters(queued,dequeued,dropped) related to channel which contains events from network to consensus", &["state"]).unwrap();
 
-    /// Counter of pending network events to Admission Control
-    pub static ref PENDING_ADMISSION_CONTROL_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_admission_control_network_events");
+    /// Counters(queued,dequeued,dropped) related to channel which contains events from network to state sync
+    pub static ref STATE_SYNCHRONIZER_NETWORK_EVENTS: IntCounterVec = register_int_counter_vec!("libra_network_state_sync_network_events", "Counters(queued,dequeued,dropped) related to channel which contains events from network to state sync", &["state"]).unwrap();
 
-    /// Counter of pending network events to Health Checker.
-    pub static ref PENDING_HEALTH_CHECKER_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_health_checker_network_events");
+    /// Counters(queued,dequeued,dropped) related to channel which contains events from network to Admission Control
+    pub static ref ADMISSION_CONTROL_NETWORK_EVENTS: IntCounterVec = register_int_counter_vec!("libra_network_admission_control_network_events", "Counters(queued,dequeued,dropped) related to channel which contains events from network to admission_control", &["state"]).unwrap();
 
-    /// Counter of pending network events to Discovery.
-    pub static ref PENDING_DISCOVERY_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_discovery_network_events");
+    /// Counters(queued,dequeued,dropped) related to channel which contains events from network to Health Checker
+    pub static ref HEALTH_CHECKER_NETWORK_EVENTS: IntCounterVec = register_int_counter_vec!("libra_network_health_checker_network_events", "Counters(queued,dequeued,dropped) related to channel which contains events from network to Health Checker", &["state"]).unwrap();
+
+    /// Counters(queued,dequeued,dropped) related to channel which contains events from network to Discovery
+    pub static ref DISCOVERY_NETWORK_EVENTS: IntCounterVec = register_int_counter_vec!("libra_network_discovery_network_events", "Counters(queued,dequeued,dropped) related to channel which contains events from network to Discovery", &["state"]).unwrap();
 
     /// Counter of pending requests in Peer Manager
     pub static ref PENDING_PEER_MANAGER_REQUESTS: IntGauge = OP_COUNTERS.gauge("pending_peer_manager_requests");

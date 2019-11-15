@@ -62,7 +62,9 @@ mod tests {
         interface::NetworkNotification, protocols::direct_send::Message, utils::MessageExt,
         validator_network::Event,
     };
-    use futures::{executor::block_on, sink::SinkExt, stream::StreamExt};
+    use channel::libra_channel;
+    use channel::message_queues::QueueStyle;
+    use futures::{executor::block_on, stream::StreamExt};
 
     fn new_test_sync_msg(peer_id: PeerId) -> MempoolSyncMsg {
         let mut mempool_msg = MempoolSyncMsg::default();
@@ -74,7 +76,7 @@ mod tests {
     // `MempoolNetworkEvents` stream.
     #[test]
     fn test_mempool_network_events() {
-        let (mut mempool_tx, mempool_rx) = channel::new_test(8);
+        let (mut mempool_tx, mempool_rx) = libra_channel::new(QueueStyle::FIFO, 8, None);
         let mut stream = MempoolNetworkEvents::new(mempool_rx);
 
         let peer_id = PeerId::random();
@@ -84,11 +86,18 @@ mod tests {
             mdata: mempool_msg.clone().to_bytes().unwrap(),
         };
 
-        block_on(mempool_tx.send(NetworkNotification::RecvMessage(peer_id, network_msg))).unwrap();
+        mempool_tx
+            .push(
+                peer_id,
+                NetworkNotification::RecvMessage(peer_id, network_msg),
+            )
+            .unwrap();
         let event = block_on(stream.next()).unwrap().unwrap();
         assert_eq!(event, Event::Message((peer_id, mempool_msg)));
 
-        block_on(mempool_tx.send(NetworkNotification::NewPeer(peer_id))).unwrap();
+        mempool_tx
+            .push(peer_id, NetworkNotification::NewPeer(peer_id))
+            .unwrap();
         let event = block_on(stream.next()).unwrap().unwrap();
         assert_eq!(event, Event::NewPeer(peer_id));
     }

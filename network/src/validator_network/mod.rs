@@ -42,6 +42,7 @@ pub use crate::interface::LibraNetworkProvider;
 pub use admission_control::{
     AdmissionControlNetworkEvents, AdmissionControlNetworkSender, ADMISSION_CONTROL_RPC_PROTOCOL,
 };
+use channel::libra_channel;
 pub use consensus::{
     ConsensusNetworkEvents, ConsensusNetworkSender, CONSENSUS_DIRECT_SEND_PROTOCOL,
     CONSENSUS_RPC_PROTOCOL,
@@ -108,19 +109,19 @@ impl<TMessage: PartialEq> PartialEq for Event<TMessage> {
 #[pin_project]
 pub struct NetworkEvents<TMessage: Message + Default> {
     #[pin]
-    inner: channel::Receiver<NetworkNotification>,
+    inner: libra_channel::Receiver<PeerId, NetworkNotification>,
     _marker: PhantomData<TMessage>,
 }
 
 impl<TMessage: Message + Default> NetworkEvents<TMessage> {
-    pub fn new(inner: channel::Receiver<NetworkNotification>) -> Self {
+    pub fn new(inner: libra_channel::Receiver<PeerId, NetworkNotification>) -> Self {
         Self {
             inner,
             _marker: PhantomData,
         }
     }
 
-    pub fn into_inner(self) -> channel::Receiver<NetworkNotification> {
+    pub fn into_inner(self) -> libra_channel::Receiver<PeerId, NetworkNotification> {
         self.inner
     }
 }

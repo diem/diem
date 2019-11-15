@@ -124,9 +124,9 @@ mod tests {
         utils::MessageExt,
         validator_network::Event,
     };
-    use futures::{
-        channel::oneshot, executor::block_on, future::try_join, sink::SinkExt, stream::StreamExt,
-    };
+    use channel::libra_channel;
+    use channel::message_queues::QueueStyle;
+    use futures::{channel::oneshot, executor::block_on, future::try_join, stream::StreamExt};
     use prost::Message as _;
 
     fn new_test_vote() -> ConsensusMsg {
@@ -142,7 +142,7 @@ mod tests {
     // `ConsensusNetworkEvents` stream.
     #[test]
     fn test_consensus_network_events() {
-        let (mut consensus_tx, consensus_rx) = channel::new_test(8);
+        let (mut consensus_tx, consensus_rx) = libra_channel::new(QueueStyle::FIFO, 8, None);
         let mut stream = ConsensusNetworkEvents::new(consensus_rx);
 
         let peer_id = PeerId::random();
@@ -153,7 +153,11 @@ mod tests {
         };
 
         // Network sends inbound message to consensus
-        block_on(consensus_tx.send(NetworkNotification::RecvMessage(peer_id, network_msg)))
+        consensus_tx
+            .push(
+                peer_id,
+                NetworkNotification::RecvMessage(peer_id, network_msg),
+            )
             .unwrap();
 
         // Consensus should receive deserialized message event
@@ -161,7 +165,9 @@ mod tests {
         assert_eq!(event, Event::Message((peer_id, consensus_msg)));
 
         // Network notifies consensus about new peer
-        block_on(consensus_tx.send(NetworkNotification::NewPeer(peer_id))).unwrap();
+        consensus_tx
+            .push(peer_id, NetworkNotification::NewPeer(peer_id))
+            .unwrap();
 
         // Consensus should receive notification
         let event = block_on(stream.next()).unwrap().unwrap();
@@ -198,7 +204,7 @@ mod tests {
     // `ConsensusNetworkEvents` should deserialize inbound RPC requests
     #[test]
     fn test_consensus_inbound_rpc() {
-        let (mut consensus_tx, consensus_rx) = channel::new_test(8);
+        let (mut consensus_tx, consensus_rx) = libra_channel::new(QueueStyle::FIFO, 8, None);
         let mut stream = ConsensusNetworkEvents::new(consensus_rx);
 
         // build rpc request
@@ -218,7 +224,7 @@ mod tests {
         // mock receiving rpc request
         let peer_id = PeerId::random();
         let event = NetworkNotification::RecvRpc(peer_id, rpc_req);
-        block_on(consensus_tx.send(event)).unwrap();
+        consensus_tx.push(peer_id, event).unwrap();
 
         // request should be properly deserialized
         let (res_tx, _) = oneshot::channel();
