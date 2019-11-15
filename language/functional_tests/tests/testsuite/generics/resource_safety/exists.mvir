@@ -1,0 +1,11 @@
+module M {
+    resource Foo<T> { x: T }
+
+    exists_foo_u64(): bool {
+        let b: bool;
+        b = exists<Foo<u64>>();
+        return move(b);
+    }
+}
+
+// check: TYPE_ERROR
