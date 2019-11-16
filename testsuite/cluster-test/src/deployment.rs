@@ -11,25 +11,43 @@ use rusoto_ecr::{
 };
 use rusoto_ecs::{Ecs, UpdateServiceRequest};
 use slog_scope::{info, warn};
-use std::{thread, time::Duration};
+use std::{env, thread, time::Duration};
 
 #[derive(Clone)]
 pub struct DeploymentManager {
     aws: Aws,
     cluster: Cluster,
+    running_tag: String,
 }
 
 const VALIDATOR_IMAGE_REPO: &str = "libra_e2e";
 const CLIENT_IMAGE_REPO: &str = "libra_client";
 const FAUCET_IMAGE_REPO: &str = "libra_faucet";
 pub const SOURCE_TAG: &str = "nightly";
-pub const RUNNING_TAG: &str = "cluster_test";
 pub const TESTED_TAG: &str = "nightly_tested";
 const UPSTREAM_PREFIX: &str = "upstream_";
+const MASTER_PREFIX: &str = "master_";
 
 impl DeploymentManager {
     pub fn new(aws: Aws, cluster: Cluster) -> Self {
-        Self { aws, cluster }
+        let running_tag = env::var("TAG").unwrap_or_else(|_| aws.workplace().to_string());
+        if running_tag == SOURCE_TAG
+            || running_tag == TESTED_TAG
+            || running_tag.starts_with(UPSTREAM_PREFIX)
+            || running_tag.starts_with(MASTER_PREFIX)
+        {
+            panic!(
+                "Cluster test can not deploy if workplace is configured to use {} tag.\
+                 Use custom tag for your workplace to use --deploy",
+                running_tag
+            );
+        }
+        info!("Will use {} tag for deployment", running_tag);
+        Self {
+            aws,
+            cluster,
+            running_tag,
+        }
     }
 
     pub fn latest_hash_changed(&self) -> Option<String> {
@@ -50,7 +68,7 @@ impl DeploymentManager {
                 image_digest: Some(hash),
                 image_tag: None,
             },
-            RUNNING_TAG,
+            &self.running_tag,
         )?;
         self.update_all_services()?;
         Ok(())
