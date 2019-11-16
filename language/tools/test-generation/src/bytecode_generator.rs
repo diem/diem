@@ -249,6 +249,12 @@ impl BytecodeGenerator {
     ) -> Vec<(StackEffect, Bytecode)> {
         let mut matches: Vec<(StackEffect, Bytecode)> = Vec::new();
         let instructions = &self.instructions;
+        // TODO: Remove this when we can generate type parameters
+        let empty_ty_param_index = module
+            .locals_signatures
+            .iter()
+            .position(|sig| sig.is_empty())
+            .expect("locals signatures must have an empty locals signature");
         for (stack_effect, instruction) in instructions.iter() {
             let instruction: Bytecode = match instruction {
                 BytecodeType::NoArg(instruction) => instruction.clone(),
@@ -293,7 +299,7 @@ impl BytecodeGenerator {
                             self.rng.gen_range(0, module.struct_defs.len()) as TableIndex
                         ),
                         // TODO: Need to generate a proper generic call eventually
-                        LocalsSignatureIndex::new(0),
+                        LocalsSignatureIndex::new(empty_ty_param_index as TableIndex),
                         //LocalsSignatureIndex::new(
                         //self.rng.gen_range(0, module.locals_signatures.len()) as TableIndex,
                         //),
@@ -312,7 +318,7 @@ impl BytecodeGenerator {
                             self.rng.gen_range(0, module.function_handles.len()) as TableIndex,
                         ),
                         // TODO: Need to generate a proper generic call eventually
-                        LocalsSignatureIndex::new(0),
+                        LocalsSignatureIndex::new(empty_ty_param_index as TableIndex),
                         //LocalsSignatureIndex::new(
                         //self.rng.gen_range(0, module.locals_signatures.len()) as TableIndex,
                         //),
@@ -509,6 +515,23 @@ impl BytecodeGenerator {
             }
         }
         bytecode
+    }
+
+    pub fn generate_module(&mut self, module: &mut CompiledModuleMut) {
+        let frozen_module = module.clone();
+        for fdef in module.function_defs.iter_mut() {
+            let f_handle = &module.function_handles[fdef.function.0 as usize].clone();
+            let func_sig = module.function_signatures[f_handle.signature.0 as usize].clone();
+            let locals_sigs = module.locals_signatures[fdef.code.locals.0 as usize]
+                .0
+                .clone();
+            fdef.code.code = self.generate(
+                &locals_sigs,
+                &func_sig,
+                &fdef.acquires_global_resources,
+                frozen_module.clone(),
+            );
+        }
     }
 
     /// Generate the body of a function definition given a set of starting `locals` and a target
