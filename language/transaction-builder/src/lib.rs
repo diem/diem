@@ -15,8 +15,8 @@ use stdlib::{
     stdlib_modules,
     transaction_scripts::{
         BLOCK_PROLOGUE_TXN_BODY, CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY,
-        PEER_TO_PEER_TRANSFER_TXN_BODY, ROTATE_AUTHENTICATION_KEY_TXN_BODY,
-        ROTATE_CONSENSUS_PUBKEY_TXN_BODY,
+        PEER_TO_PEER_TRANSFER_TXN_BODY, PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN_BODY,
+        ROTATE_AUTHENTICATION_KEY_TXN_BODY, ROTATE_CONSENSUS_PUBKEY_TXN_BODY,
     },
 };
 #[cfg(any(test, feature = "fuzzing"))]
@@ -24,6 +24,8 @@ use vm::file_format::Bytecode;
 
 lazy_static! {
     static ref PEER_TO_PEER_TXN: Vec<u8> = { compile_script(&PEER_TO_PEER_TRANSFER_TXN_BODY) };
+    static ref PEER_TO_PEER_WITH_METADATA_TXN: Vec<u8> =
+        { compile_script(&PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN_BODY) };
     static ref CREATE_ACCOUNT_TXN: Vec<u8> = { compile_script(&CREATE_ACCOUNT_TXN_BODY) };
     static ref ROTATE_AUTHENTICATION_KEY_TXN: Vec<u8> =
         { compile_script(&ROTATE_AUTHENTICATION_KEY_TXN_BODY) };
@@ -54,6 +56,24 @@ pub fn encode_transfer_script(recipient: &AccountAddress, amount: u64) -> Script
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U64(amount),
+        ],
+    )
+}
+
+/// Encode a program transferring `amount` coins from `sender` to `recipient` with associated
+/// metadata `metadata`. Fails if there is no account at the recipient address or if the sender's
+/// balance is lower than `amount`.
+pub fn encode_transfer_with_metadata_script(
+    recipient: &AccountAddress,
+    amount: u64,
+    metadata: Vec<u8>,
+) -> Script {
+    Script::new(
+        PEER_TO_PEER_WITH_METADATA_TXN.clone(),
+        vec![
+            TransactionArgument::Address(*recipient),
+            TransactionArgument::U64(amount),
+            TransactionArgument::ByteArray(ByteArray::new(metadata)),
         ],
     )
 }
@@ -167,6 +187,7 @@ pub fn allowing_script_hashes() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
     vec![
         MINT_TXN.clone(),
         PEER_TO_PEER_TXN.clone(),
+        PEER_TO_PEER_WITH_METADATA_TXN.clone(),
         ROTATE_AUTHENTICATION_KEY_TXN.clone(),
         CREATE_ACCOUNT_TXN.clone(),
     ]

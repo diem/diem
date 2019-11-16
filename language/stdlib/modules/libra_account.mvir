@@ -47,6 +47,8 @@ module LibraAccount {
         amount: u64,
         // The address that was paid
         payee: address,
+        // Metadata associated with the payment
+        metadata: bytearray,
     }
 
     // Message for received events
@@ -55,6 +57,8 @@ module LibraAccount {
         amount: u64,
         // The address that sent the coin
         payer: address,
+        // Metadata associated with the payment
+        metadata: bytearray,
     }
 
     // Creates a new LibraAccount.T
@@ -81,14 +85,20 @@ module LibraAccount {
 
     // Deposits the `to_deposit` coin into the `payee`'s account
     public deposit(payee: address, to_deposit: LibraCoin.T) acquires T {
+        Self.deposit_with_metadata(move(payee), move(to_deposit), h"");
+        return;
+    }
+
+    // Deposits the `to_deposit` coin into the `payee`'s account with the attached `metadata`
+    public deposit_with_metadata(
+        payee: address,
+        to_deposit: LibraCoin.T,
+        metadata: bytearray
+    ) acquires T {
         let deposit_value: u64;
         let payee_account_ref: &mut Self.T;
         let sender: address;
         let sender_account_ref: &mut Self.T;
-        let sent_event: Self.SentPaymentEvent;
-        let received_event: Self.ReceivedPaymentEvent;
-        let sent_event_bytes: bytearray;
-        let received_event_bytes: bytearray;
 
         // Check that the `to_deposit` coin is non-zero
         deposit_value = LibraCoin.value(&to_deposit);
@@ -97,18 +107,29 @@ module LibraAccount {
         // Load the sender's account
         sender = get_txn_sender();
         sender_account_ref = borrow_global_mut<T>(copy(sender));
-        // Log a send event
-        sent_event = SentPaymentEvent { amount: copy(deposit_value), payee: copy(payee) };
-
-        Event.emit_event<Self.SentPaymentEvent>(&mut move(sender_account_ref).sent_events, move(sent_event));
+        // Log a sent event
+        Event.emit_event<Self.SentPaymentEvent>(
+            &mut move(sender_account_ref).sent_events,
+            SentPaymentEvent {
+                amount: copy(deposit_value),
+                payee: copy(payee),
+                metadata: copy(metadata)
+            },
+        );
 
         // Load the payee's account
         payee_account_ref = borrow_global_mut<T>(move(payee));
         // Deposit the `to_deposit` coin
         LibraCoin.deposit(&mut copy(payee_account_ref).balance, move(to_deposit));
         // Log a received event
-        received_event = ReceivedPaymentEvent { amount: move(deposit_value), payer: move(sender) };
-        Event.emit_event<Self.ReceivedPaymentEvent>(&mut move(payee_account_ref).received_events, move(received_event));
+        Event.emit_event<Self.ReceivedPaymentEvent>(
+            &mut move(payee_account_ref).received_events,
+            ReceivedPaymentEvent {
+                amount: move(deposit_value),
+                payer: move(sender),
+                metadata: move(metadata)
+            }
+        );
         return;
     }
 
@@ -194,16 +215,29 @@ module LibraAccount {
     }
 
     // Withdraw `amount` LibraCoin.T from the transaction sender's account and send the coin
-    // to the `payee` address
+    // to the `payee` address with the attached `metadata`
     // Creates the `payee` account if it does not exist
-    public pay_from_sender(payee: address, amount: u64) acquires T {
+    public pay_from_sender_with_metadata(
+        payee: address,
+        amount: u64,
+        metadata: bytearray
+    ) acquires T {
         if (!exists<T>(copy(payee))) {
             Self.create_account(copy(payee));
         }
-        Self.deposit(
+        Self.deposit_with_metadata(
             move(payee),
-            Self.withdraw_from_sender(move(amount))
+            Self.withdraw_from_sender(move(amount)),
+            move(metadata)
         );
+        return;
+    }
+
+    // Withdraw `amount` LibraCoin.T from the transaction sender's account and send the coin
+    // to the `payee` address
+    // Creates the `payee` account if it does not exist
+    public pay_from_sender(payee: address, amount: u64) acquires T {
+        Self.pay_from_sender_with_metadata(move(payee), move(amount), h"");
         return;
     }
 
