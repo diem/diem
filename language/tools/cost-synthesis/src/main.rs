@@ -8,7 +8,7 @@
 //! * Native operations.
 use cost_synthesis::{
     global_state::{account::Account, inhabitor::RandomInhabitor},
-    module_generator::ModuleGenerator,
+    module_generator::generate_padded_modules,
     natives::StackAccessorMocker,
     stack_generator::RandomStackGenerator,
     with_loaded_vm,
@@ -155,9 +155,8 @@ fn stack_instructions(options: &Opt) {
         GetTxnPublicKey,
     ];
 
-    let mod_gen: ModuleGenerator = ModuleGenerator::new(options.num_iters as u16, 3);
     let mut account = Account::new();
-    with_loaded_vm! (mod_gen, account => vm, loaded_module, module_cache);
+    with_loaded_vm! (3, options.num_iters as usize, account => vm, loaded_module, module_cache);
     let costs: HashMap<String, Vec<u64>> = stack_opcodes
         .into_iter()
         .map(|instruction| {

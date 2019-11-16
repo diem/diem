@@ -854,6 +854,7 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
  "structopt 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "utils 0.1.0",
  "vm 0.1.0",
  "vm-cache-map 0.1.0",
  "vm-runtime 0.1.0",
@@ -4587,7 +4588,6 @@ name = "test-generation"
 version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
- "cost-synthesis 0.1.0",
  "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "language-e2e-tests 0.1.0",
  "libra-types 0.1.0",
@@ -4596,6 +4596,7 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
  "structopt 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "utils 0.1.0",
  "vm 0.1.0",
  "vm-cache-map 0.1.0",
  "vm-runtime 0.1.0",

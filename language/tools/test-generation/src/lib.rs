@@ -19,18 +19,15 @@ extern crate env_logger;
 use crate::config::{Args, EXECUTE_UNVERIFIED_MODULE, RUN_ON_VM};
 use bytecode_generator::BytecodeGenerator;
 use bytecode_verifier::VerifiedModule;
-use cost_synthesis::module_generator::ModuleBuilder;
 use language_e2e_tests::executor::FakeExecutor;
 use libra_types::{
     account_address::AccountAddress, byte_array::ByteArray, transaction::TransactionArgument,
 };
 use std::{fs, io::Write, panic};
+use utils::module_generation::{generate_module, ModuleGeneratorOptions};
 use vm::{
     access::ModuleAccess,
-    file_format::{
-        Bytecode, CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, FunctionSignature,
-        SignatureToken, StructDefinitionIndex,
-    },
+    file_format::{CompiledModule, FunctionDefinitionIndex, SignatureToken, TableIndex},
 };
 use vm_runtime::execute_function_in_module;
 
@@ -45,31 +42,39 @@ fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
 
 /// This function runs a verified module in the VM runtime
 fn run_vm(module: VerifiedModule) -> Result<(), String> {
-    let entry_idx = FunctionDefinitionIndex::new(0);
-    let function_signature = {
-        let handle = module.function_def_at(entry_idx).function;
-        let sig_idx = module.function_handle_at(handle).signature;
-        module.function_signature_at(sig_idx).clone()
-    };
+    for func_idx in 0..module.as_inner().as_inner().function_defs.len() {
+        let entry_idx = FunctionDefinitionIndex::new(func_idx as TableIndex);
+        let function_signature = {
+            let handle = module.function_def_at(entry_idx).function;
+            let sig_idx = module.function_handle_at(handle).signature;
+            module.function_signature_at(sig_idx).clone()
+        };
 
-    let main_args: Vec<TransactionArgument> = function_signature
-        .arg_types
-        .iter()
-        .map(|sig_tok| match sig_tok {
-            SignatureToken::Address => TransactionArgument::Address(AccountAddress::new([0; 32])),
-            SignatureToken::U64 => TransactionArgument::U64(0),
-            SignatureToken::Bool => TransactionArgument::Bool(true),
-            SignatureToken::String => TransactionArgument::String("".into()),
-            SignatureToken::ByteArray => TransactionArgument::ByteArray(ByteArray::new(vec![])),
-            _ => unimplemented!("Unsupported argument type: {:#?}", sig_tok),
-        })
-        .collect();
+        let main_args: Vec<TransactionArgument> = function_signature
+            .arg_types
+            .iter()
+            .map(|sig_tok| match sig_tok {
+                SignatureToken::Address => {
+                    TransactionArgument::Address(AccountAddress::new([0; 32]))
+                }
+                SignatureToken::U64 => TransactionArgument::U64(0),
+                SignatureToken::Bool => TransactionArgument::Bool(true),
+                SignatureToken::String => TransactionArgument::String("".into()),
+                SignatureToken::ByteArray => TransactionArgument::ByteArray(ByteArray::new(vec![])),
+                _ => unimplemented!("Unsupported argument type: {:#?}", sig_tok),
+            })
+            .collect();
 
-    let executor = FakeExecutor::from_genesis_file();
-    match execute_function_in_module(executor.get_state_view(), module, entry_idx, main_args) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("Runtime error: {:?}", e)),
+        let executor = FakeExecutor::from_genesis_file();
+        execute_function_in_module(
+            executor.get_state_view(),
+            module.clone(),
+            entry_idx,
+            main_args,
+        )
+        .map_err(|err| format!("Runtime error: {:?}", err))?;
     }
+    Ok(())
 }
 
 /// Serialize a module to `path` if `output_path` is `Some(path)`. If `output_path` is `None`
@@ -93,20 +98,6 @@ fn output_error_case(module: CompiledModule, output_path: Option<String>, iterat
     }
 }
 
-/// Generate a sequence of bytecode instructions such that
-/// - The arguments 'arguments' are used
-/// - The return type 'signature' is reached
-/// - The number of instructions generated is between 'target_min' and 'target_max'
-pub fn generate_bytecode(
-    arguments: &[SignatureToken],
-    signature: &FunctionSignature,
-    acquires_global_resources: &[StructDefinitionIndex],
-    module: CompiledModuleMut,
-) -> Vec<Bytecode> {
-    let mut bytecode_generator = BytecodeGenerator::new(None);
-    bytecode_generator.generate(arguments, signature, acquires_global_resources, module)
-}
-
 /// Run generate_bytecode for 'iterations' iterations and test each generated module
 /// on the bytecode verifier.
 pub fn run_generation(args: Args) {
@@ -114,10 +105,21 @@ pub fn run_generation(args: Args) {
     let iterations = args.num_iterations;
     let mut verified_programs: u64 = 0;
     let mut executed_programs: u64 = 0;
+    let mut generation_options = ModuleGeneratorOptions::default();
+    generation_options.min_table_size = 10;
+    // No type parameters for now
+    generation_options.max_ty_params = 1;
+    generation_options.max_functions = 10;
+    generation_options.max_structs = 10;
+    // Test generation cannot currently handle non-simple types (nested structs, and references)
+    generation_options.simple_types_only = true;
+    // Test generation cannot currently cope with resources
+    generation_options.add_resources = false;
     for i in 0..iterations {
-        let module =
-            ModuleBuilder::new(1, Some(Box::new(generate_bytecode))).materialize_unverified();
+        let mut module = generate_module(generation_options.clone()).into_inner();
+        BytecodeGenerator::new(None).generate_module(&mut module);
         debug!("Running on verifier...");
+        let module = module.freeze().expect("generated module failed to freeze.");
         let verified_module = match run_verifier(module.clone()) {
             Ok(verified_module) => {
                 // We cannot execute more than u64::max_value() iterations.
