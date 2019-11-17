@@ -18,13 +18,10 @@ use failure::prelude::*;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
-use libra_types::{
-    account_address::AccountAddress, crypto_proxies::ValidatorSigner,
-    transaction::SignedTransaction,
-};
+use libra_types::{crypto_proxies::ValidatorSigner, transaction::SignedTransaction};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
-use std::{convert::TryFrom, sync::Arc};
+use std::sync::Arc;
 use tokio::runtime;
 use vm_runtime::MoveVM;
 
@@ -81,14 +78,7 @@ impl ChainedBftProvider {
         network_events: ConsensusNetworkEvents,
         node_config: &mut NodeConfig,
     ) -> InitialSetup {
-        let peer_id_str = node_config
-            .validator_network
-            .as_ref()
-            .unwrap()
-            .peer_id
-            .clone();
-        let author =
-            AccountAddress::try_from(peer_id_str).expect("Failed to parse peer id of a validator");
+        let author = node_config.validator_network.as_ref().unwrap().peer_id;
         let private_key = node_config
             .consensus
             .consensus_keypair

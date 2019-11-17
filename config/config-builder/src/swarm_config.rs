@@ -23,6 +23,7 @@ use libra_types::PeerId;
 use parity_multiaddr::{Multiaddr, Protocol};
 use std::{
     collections::BTreeMap,
+    convert::TryFrom,
     fs::{self, File},
     io::prelude::*,
     path::{Path, PathBuf},
@@ -78,7 +79,7 @@ impl SwarmConfig {
             .save_config(&upstream_config_dir.join(&upstream_network_keys_file_name));
         // Create network config for upstream node.
         let mut upstream_full_node_config = NetworkConfig {
-            peer_id: upstream_peer_id.to_string(),
+            peer_id: upstream_peer_id,
             network_keypairs_file: upstream_network_keys_file_name.into(),
             network_peers_file: template_network.network_peers_file.clone(),
             seed_peers_file: template_network.seed_peers_file.clone(),
@@ -318,7 +319,7 @@ impl SwarmConfig {
         let base_config = BaseConfig::new(output_dir.to_path_buf(), role);
         let template_network = NetworkConfig::default();
         let network_config = NetworkConfig {
-            peer_id: node_id.to_string(),
+            peer_id: PeerId::try_from(node_id.to_string()).expect("Unable to reproduce peer_id"),
             network_keypairs_file: network_keys_file_name.into(),
             network_peers_file: network_peers_file_name.into(),
             seed_peers_file: seed_peers_file_name.into(),
