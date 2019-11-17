@@ -15,13 +15,13 @@ use stdlib::{stdlib_modules, stdlib_source_map};
 
 // mod translator;
 fn compile_files(file_names: Vec<String>) -> (Vec<VerifiedModule>, SourceMap<Loc>) {
-    let mut verified_modules = stdlib_modules().to_vec();
+    // only include vector module for ease of testing vector implementation
+    let vector_module = stdlib_modules().to_vec()[6].clone();
+    let mut verified_modules = vec![vector_module];
+    // let mut verified_modules = stdlib_modules().to_vec();
     let mut source_maps = stdlib_source_map().to_vec();
     let files_len = file_names.len();
-    //    let dep_files = &file_names[0..files_len - 1];
     let dep_files = &file_names[0..files_len];
-
-    //    let main_file = &file_names[files_len - 1];
     let address = AccountAddress::default();
     for file_name in dep_files {
         let code = fs::read_to_string(file_name).unwrap();
@@ -40,26 +40,6 @@ fn compile_files(file_names: Vec<String>) -> (Vec<VerifiedModule>, SourceMap<Loc
             }
         }
     }
-    // let main_code = fs::read_to_string(main_file).unwrap();
-    // let program = parse_program(&main_code).unwrap();
-    // let address = AccountAddress::default();
-    // let compiled_program =
-    //     compile_program(address, program, &verified_modules).expect("program failed to compile");
-    // let mut main_modules = compiled_program.modules;
-    // main_modules.push(compiled_program.script.into_module());
-    // for module in main_modules {
-    //     let verified_module_res = VerifiedModule::new(module);
-
-    //     match verified_module_res {
-    //         Err(e) => {
-    //             panic!("{:?}", e);
-    //         }
-    //         Ok(verified_module) => {
-    //             verified_modules.push(verified_module);
-    //         }
-    //     }
-    // }
-
     (verified_modules, source_maps)
 }
 

@@ -387,6 +387,7 @@ version = "0.1.0"
 dependencies = [
  "bytecode-source-map 0.1.0",
  "bytecode-verifier 0.1.0",
+ "functional_tests 0.1.0",
  "ir-to-bytecode 0.1.0",
  "libra-types 0.1.0",
  "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5046,22 +5047,6 @@ dependencies = [
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-types 0.1.0",
- "stdlib 0.1.0",
- "vm 0.1.0",
-]
-
-[[package]]
-name = "tree_heap"
-version = "0.1.0"
-dependencies = [
- "bytecode-source-map 0.1.0",
- "bytecode-verifier 0.1.0",
- "functional_tests 0.1.0",
- "ir-to-bytecode 0.1.0",
- "libra-types 0.1.0",
- "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "stackless-bytecode-generator 0.1.0",
  "stdlib 0.1.0",
  "vm 0.1.0",
 ]
