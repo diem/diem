@@ -1285,6 +1285,7 @@ dependencies = [
  "libra-config 0.1.0",
  "libra-logger 0.1.0",
  "libra-metrics 0.1.0",
+ "libra-types 0.1.0",
  "slog-scope 4.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

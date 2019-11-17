@@ -8,7 +8,7 @@ use executor::Executor;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
-use libra_crypto::{ed25519::*, ValidKey};
+use libra_crypto::ed25519::*;
 use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
 use libra_metrics::metric_server;
@@ -28,13 +28,7 @@ use network::{
     NetworkPublicKeys, ProtocolId,
 };
 use state_synchronizer::StateSynchronizer;
-use std::{
-    convert::{TryFrom, TryInto},
-    str::FromStr,
-    sync::Arc,
-    thread,
-    time::Instant,
-};
+use std::{convert::TryInto, str::FromStr, sync::Arc, thread, time::Instant};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
@@ -95,7 +89,6 @@ fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
 
 // TODO(abhayb): Move to network crate (similar to consensus).
 pub fn setup_network(
-    peer_id: PeerId,
     config: &mut NetworkConfig,
     role: RoleType,
 ) -> (Runtime, Box<dyn LibraNetworkProvider>) {
@@ -107,7 +100,7 @@ pub fn setup_network(
         .expect("Failed to start runtime. Won't be able to start networking.");
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
-        peer_id,
+        config.peer_id,
         config.listen_address.clone(),
         role,
     );
@@ -203,8 +196,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut validator_network_provider = None;
 
     if let Some(network) = node_config.validator_network.as_mut() {
-        let peer_id = PeerId::try_from(network.peer_id.clone()).expect("Invalid PeerId");
-        let (runtime, mut network_provider) = setup_network(peer_id, network, RoleType::Validator);
+        let (runtime, mut network_provider) = setup_network(network, RoleType::Validator);
         state_sync_network_handles.push(network_provider.add_state_synchronizer(vec![
             ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
         ]));
@@ -215,18 +207,13 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             )]);
         ac_network_events.push(ac_events);
 
-        validator_network_provider = Some((peer_id, runtime, network_provider));
+        validator_network_provider = Some((network.peer_id, runtime, network_provider));
         ac_network_sender = Some(ac_sender);
     }
 
     for i in 0..node_config.full_node_networks.len() {
-        let peer_id = PeerId::try_from(node_config.full_node_networks[i].peer_id.clone())
-            .expect("Invalid PeerId");
-        let (runtime, mut network_provider) = setup_network(
-            peer_id,
-            &mut node_config.full_node_networks[i],
-            RoleType::FullNode,
-        );
+        let (runtime, mut network_provider) =
+            setup_network(&mut node_config.full_node_networks[i], RoleType::FullNode);
         state_sync_network_handles.push(network_provider.add_state_synchronizer(vec![
             ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
         ]));
@@ -241,21 +228,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         if node_config.is_upstream_network(network) {
             ac_network_sender = Some(ac_sender);
         }
-        // For non-validator roles, the peer_id should be derived from the network identity key.
-        assert_eq!(
-            peer_id,
-            PeerId::try_from(
-                network
-                    .network_keypairs
-                    .get_network_identity_public()
-                    .to_bytes()
-            )
-            .unwrap()
-        );
         // Start the network provider.
         runtime.handle().spawn(network_provider.start());
         network_runtimes.push(runtime);
-        debug!("Network started for peer_id: {}", peer_id);
+        debug!("Network started for peer_id: {}", network.peer_id);
     }
 
     let debug_if = ServerHandle::setup(setup_debug_interface(&node_config));

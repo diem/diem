@@ -3,6 +3,7 @@
 
 use libra_config::config::{LoggerConfig, NodeConfig, NodeConfigHelpers};
 use libra_logger::prelude::*;
+use libra_types::PeerId;
 use slog_scope::GlobalLoggerGuard;
 use std::path::Path;
 
@@ -23,7 +24,7 @@ pub fn load_config_from_path(config: Option<&Path>) -> NodeConfig {
     node_config
 }
 
-pub fn setup_metrics(peer_id: &str, node_config: &NodeConfig) {
+pub fn setup_metrics(peer_id: PeerId, node_config: &NodeConfig) {
     if let Some(metrics_dir) = node_config.get_metrics_dir() {
         libra_metrics::dump_all_metrics_to_file_periodically(
             &metrics_dir,
@@ -47,10 +48,10 @@ pub fn setup_executable(
     _logger = None;
     let logger = set_default_global_logger(no_logging, &config.logger);
     for network in &config.full_node_networks {
-        setup_metrics(&network.peer_id, &config);
+        setup_metrics(network.peer_id, &config);
     }
     if let Some(network) = &config.validator_network {
-        setup_metrics(&network.peer_id, &config);
+        setup_metrics(network.peer_id, &config);
     }
 
     (config, logger)

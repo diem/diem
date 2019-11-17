@@ -15,7 +15,7 @@ use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
-use serde::{Deserialize, Serialize};
+use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 use std::{convert::TryFrom, fmt, str::FromStr};
 
 pub const ADDRESS_LENGTH: usize = 32;
@@ -26,9 +26,7 @@ const LIBRA_NETWORK_ID_SHORT: &str = "lb";
 
 /// A struct that represents an account address.
 /// Currently Public Key is used.
-#[derive(
-    Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Copy, Deserialize, Serialize, CryptoHasher,
-)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Copy, CryptoHasher)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountAddress([u8; ADDRESS_LENGTH]);
 
@@ -216,5 +214,33 @@ impl TryFrom<AccountAddress> for Bech32 {
     fn try_from(addr: AccountAddress) -> Result<Bech32> {
         let base32_hash = addr.0.to_base32();
         bech32::Bech32::new(LIBRA_NETWORK_ID_SHORT.into(), base32_hash).map_err(Into::into)
+    }
+}
+
+impl<'de> Deserialize<'de> for AccountAddress {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            let s = <&str>::deserialize(deserializer)?;
+            AccountAddress::from_str(s).map_err(D::Error::custom)
+        } else {
+            let b = <[u8; ADDRESS_LENGTH]>::deserialize(deserializer)?;
+            Ok(AccountAddress::new(b))
+        }
+    }
+}
+
+impl Serialize for AccountAddress {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            self.to_string().serialize(serializer)
+        } else {
+            self.0.serialize(serializer)
+        }
     }
 }

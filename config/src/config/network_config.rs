@@ -20,7 +20,7 @@ use std::{
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct NetworkConfig {
-    pub peer_id: String,
+    pub peer_id: PeerId,
     // TODO: Add support for multiple listen/advertised addresses in config.
     // The address that this node is listening on for new connections.
     pub listen_address: Multiaddr,
@@ -53,7 +53,7 @@ pub struct NetworkConfig {
 impl Default for NetworkConfig {
     fn default() -> Self {
         Self {
-            peer_id: "".to_string(),
+            peer_id: PeerId::default(),
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
             advertised_address: "/ip4/127.0.0.1/tcp/6180".parse::<Multiaddr>().unwrap(),
             discovery_interval_ms: 1000,
@@ -95,14 +95,13 @@ impl NetworkConfig {
                 get_local_ip().ok_or_else(|| ::failure::err_msg("No local IP"))?;
         }
         // If PeerId is not set, it is derived from NetworkIdentityKey.
-        if self.peer_id == "" {
+        if self.peer_id == PeerId::default() {
             self.peer_id = PeerId::try_from(
                 self.network_keypairs
                     .get_network_identity_public()
                     .to_bytes(),
             )
-            .unwrap()
-            .to_string();
+            .unwrap();
         }
         Ok(())
     }

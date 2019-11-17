@@ -8,6 +8,7 @@ use crate::{
     utils::get_available_port,
 };
 use failure::prelude::*;
+use libra_crypto::ValidKey;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
     transaction::{SignedTransaction, Transaction},
@@ -157,7 +158,6 @@ impl std::str::FromStr for RoleType {
     }
 }
 
-
 impl fmt::Display for RoleType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -186,6 +186,16 @@ impl NodeConfig {
         }
         for network in &mut config.full_node_networks {
             network.load(path.as_ref())?;
+            ensure!(
+                network.peer_id ==
+                PeerId::try_from(
+                    network
+                        .network_keypairs
+                        .get_network_identity_public()
+                        .to_bytes()
+                )?,
+                "For non-validator roles, the peer_id should be derived from the network identity key.",
+            );
         }
         if let Some(network) = &mut config.validator_network {
             network.load(path.as_ref())?;
@@ -300,7 +310,7 @@ impl NodeConfigHelpers {
             .validator_network
             .as_mut()
             .expect("Missing default network config");
-        network.peer_id = peer_id.to_string();
+        network.peer_id = peer_id;
         network.network_keypairs =
             NetworkKeyPairs::load(network_signing_private_key, network_identity_private_key);
         let seed_peers_config = SeedPeersConfigHelpers::get_test_config(&test_network_peers, None);
