@@ -585,7 +585,6 @@ impl LibraDB {
             Some(x) => x,
             None => return Ok(None),
         };
-        let ledger_info = ledger_info_with_sigs.ledger_info().clone();
 
         let latest_tree_state = {
             let (latest_version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
@@ -599,18 +598,19 @@ impl LibraDB {
                 account_state_root_hash,
             )
         };
-        assert!(latest_tree_state.version >= ledger_info.version());
+        let li_version = ledger_info_with_sigs.ledger_info().version();
+        assert!(latest_tree_state.version >= li_version);
 
-        let startup_info = if latest_tree_state.version != ledger_info.version() {
+        let startup_info = if latest_tree_state.version != li_version {
             // We synced to some version ahead of the version of the latest ledger info. Thus, we are still in sync mode.
-            let committed_version = ledger_info.version();
+            let committed_version = li_version;
             let committed_txn_info = self.ledger_store.get_transaction_info(committed_version)?;
             let committed_account_state_root_hash = committed_txn_info.state_root_hash();
             let committed_ledger_frozen_subtree_hashes = self
                 .ledger_store
                 .get_ledger_frozen_subtree_hashes(committed_version)?;
             StartupInfo {
-                ledger_info,
+                ledger_info: ledger_info_with_sigs,
                 committed_tree_state: TreeState::new(
                     committed_version,
                     committed_ledger_frozen_subtree_hashes,
@@ -621,7 +621,7 @@ impl LibraDB {
         } else {
             // The version of the latest ledger info matches other data. So the storage is not in sync mode.
             StartupInfo {
-                ledger_info,
+                ledger_info: ledger_info_with_sigs,
                 committed_tree_state: latest_tree_state,
                 synced_tree_state: None,
             }
