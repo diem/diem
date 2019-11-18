@@ -11,6 +11,7 @@ use libra_types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_multi_proposer() {
+    let epoch = 0u64;
     let mut signers = vec![];
     let mut proposers = vec![];
     for i in 0..8 {
@@ -18,9 +19,11 @@ fn test_multi_proposer() {
         proposers.push(signer.author());
         signers.push(signer);
     }
-    let mut pe: Box<dyn ProposerElection<u32>> = Box::new(MultiProposer::new(proposers.clone(), 2));
+    let mut pe: Box<dyn ProposerElection<u32>> =
+        Box::new(MultiProposer::new(epoch, proposers.clone(), 2));
     let round = 1u64;
-    let mut state = round.to_le_bytes().to_vec();
+    let mut state = epoch.to_le_bytes().to_vec();
+    state.extend_from_slice(&round.to_le_bytes());
     let primary_idx = multi_proposer_election::next(&mut state);
     let primary_idx = (primary_idx % 8) as usize;
     let secondary_idx = multi_proposer_election::next(&mut state);
@@ -69,6 +72,7 @@ fn test_multi_proposer() {
 fn test_multi_proposer_take_all() {
     // In case num of proposers per round is equal to the overall num of proposers
     // all the proposers are valid candidates
+    let epoch = 0u64;
     let mut signers = vec![];
     let mut proposers = vec![];
     for i in 0..8 {
@@ -76,7 +80,8 @@ fn test_multi_proposer_take_all() {
         proposers.push(signer.author());
         signers.push(signer);
     }
-    let pe: Box<dyn ProposerElection<u32>> = Box::new(MultiProposer::new(proposers.clone(), 8));
+    let pe: Box<dyn ProposerElection<u32>> =
+        Box::new(MultiProposer::new(epoch, proposers.clone(), 8));
     let candidates = pe.get_valid_proposers(1);
     for p in proposers {
         assert!(candidates.contains(&p));
@@ -87,8 +92,10 @@ fn test_multi_proposer_take_all() {
 fn test_multi_proposer_hash() {
     // Verify that the hash distributes primary proposers in a "reasonable" fashion
     let mut counts = vec![0; 10];
+    let epoch = 0u64;
     for round in 0..10000 {
-        let mut state = (round as u64).to_le_bytes().to_vec();
+        let mut state = epoch.to_le_bytes().to_vec();
+        state.extend_from_slice(&(round as u64).to_le_bytes());
         let idx = multi_proposer_election::next(&mut state) % (counts.len() as u64);
         counts[idx as usize] += 1;
     }
