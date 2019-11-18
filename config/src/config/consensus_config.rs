@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct ConsensusConfig {
     pub max_block_size: u64,
     pub proposer_type: ConsensusProposerType,

@@ -65,6 +65,7 @@ static CONFIG_TEMPLATE: &[u8] = include_bytes!("../data/configs/node.config.toml
 /// so that only that module can be passed around
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct NodeConfig {
     #[serde(default)]
     pub admission_control: AdmissionControlConfig,
@@ -95,7 +96,7 @@ pub struct NodeConfig {
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct BaseConfig {
     pub data_dir_path: PathBuf,
     pub role: RoleType,

@@ -5,7 +5,7 @@ use crate::trusted_peers::UpstreamPeersConfig;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct StateSyncConfig {
     // Size of chunk to request for state synchronization
     pub chunk_limit: u64,
