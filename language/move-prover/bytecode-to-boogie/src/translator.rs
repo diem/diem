@@ -32,6 +32,8 @@ pub struct BoogieTranslator {
     pub struct_defs: BTreeMap<String, usize>,
     pub max_struct_depth: usize,
     pub module_name_to_idx: BTreeMap<Identifier, usize>,
+    /// If set, this narrows down output for module code on the given modules.
+    pub target_modules: Option<Vec<String>>,
 }
 
 pub struct ModuleTranslator<'a> {
@@ -67,6 +69,24 @@ impl BoogieTranslator {
             struct_defs,
             max_struct_depth: 0,
             module_name_to_idx,
+            target_modules: None,
+        }
+    }
+
+    /// Sets the target modules for this translator. If this is set, output will be pruned to
+    /// those target modules (where the compilation scheme allows). This is currently used for
+    /// testing only; the produced output will not be accepted by Boogie.
+    pub fn set_target_modules(mut self, modules: &[&str]) -> Self {
+        self.target_modules = Some(modules.iter().map(|s| (*s).to_string()).collect());
+        self
+    }
+
+    fn shall_ignore_module(&self, module: &VerifiedModule) -> bool {
+        let module_name =
+            module.identifier_at(module.module_handle_at(ModuleHandleIndex::new(0)).name);
+        match &self.target_modules {
+            Some(modules) => !modules.contains(&module_name.to_string()),
+            _ => false,
         }
     }
 
@@ -79,7 +99,7 @@ impl BoogieTranslator {
         res.push_str(&self.emit_stratified_functions());
 
         for (module_idx, module) in self.modules.iter().enumerate() {
-            let mut mt = ModuleTranslator::new(&module, &self.source_maps[module_idx]);
+            let mut mt = ModuleTranslator::new(self, &module, &self.source_maps[module_idx]);
             res.push_str(&mt.translate());
         }
         res
@@ -88,21 +108,27 @@ impl BoogieTranslator {
     pub fn emit_struct_code(&mut self) -> String {
         let mut res = String::new();
         for module in self.modules.iter() {
+            let shall_ignore = self.shall_ignore_module(module);
+            let mut emit_str = |s: &String| {
+                if !shall_ignore {
+                    res.push_str(s);
+                }
+            };
             for (def_idx, struct_def) in module.struct_defs().iter().enumerate() {
                 let struct_name = struct_name_from_handle_index(module, struct_def.struct_handle);
-                res.push_str(&format!("const unique {}: TypeName;\n", struct_name));
+                emit_str(&format!("const unique {}: TypeName;\n", struct_name));
                 let struct_definition_view = StructDefinitionView::new(module, struct_def);
                 if struct_definition_view.is_native() {
                     continue;
                 }
                 let field_info = get_field_info_from_def_index(module, def_idx);
                 for (field_name, _) in field_info {
-                    res.push_str(&format!(
+                    emit_str(&format!(
                         "const unique {}_{}: FieldName;\n",
                         struct_name, field_name
                     ));
                 }
-                res.push_str(&self.emit_struct_specific_functions(module, def_idx));
+                emit_str(&self.emit_struct_specific_functions(module, def_idx));
                 let struct_handle_index = struct_def.struct_handle;
                 // calculate the max depth of a struct
                 self.max_struct_depth = std::cmp::max(
@@ -154,20 +180,24 @@ impl BoogieTranslator {
 }
 
 impl<'a> ModuleTranslator<'a> {
-    pub fn new(module: &'a VerifiedModule, source_map: &'a ModuleSourceMap<Loc>) -> Self {
+    pub fn new(
+        parent: &BoogieTranslator,
+        module: &'a VerifiedModule,
+        source_map: &'a ModuleSourceMap<Loc>,
+    ) -> Self {
         let stackless_bytecode = StacklessModuleGenerator::new(module.as_inner()).generate_module();
         let mut all_type_strs = BTreeSet::new();
         for struct_def in module.struct_defs().iter() {
             let struct_name = struct_name_from_handle_index(module, struct_def.struct_handle);
             all_type_strs.insert(struct_name);
         }
-        // let ignore = false;
         let module_name =
             module.identifier_at(module.module_handle_at(ModuleHandleIndex::new(0)).name);
         let module_address =
             module.address_at(module.module_handle_at(ModuleHandleIndex::new(0)).address);
-        let ignore = module_name.to_string() == "Vector"
-            && *module_address == AccountAddress::from_hex_literal("0x0").unwrap();
+        let ignore = parent.shall_ignore_module(module)
+            || module_name.to_string() == "Vector"
+                && *module_address == AccountAddress::from_hex_literal("0x0").unwrap();
         Self {
             module,
             source_map,

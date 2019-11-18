@@ -19,7 +19,10 @@ num = "0.2.0"
 
 [dev-dependencies]
 proptest = "0.9"
+goldenfile = "1.1.0"
+prettydiff = "0.3.1"
 
 [features]
 default = []
 fuzzing = ["libra-types/fuzzing"]
+golden = []
