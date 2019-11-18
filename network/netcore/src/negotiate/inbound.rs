@@ -92,7 +92,7 @@ async fn negotiate_inbound_select<'stream, 'c, TSocket, TProto, TProtocols>(
 ) -> Result<TProto>
 where
     'stream: 'c,
-    TSocket: AsyncRead + AsyncWrite + Unpin,
+    TSocket: AsyncRead + Unpin,
     TProto: AsRef<[u8]> + Clone,
     TProtocols: AsRef<[TProto]> + 'c,
 {
