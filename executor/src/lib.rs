@@ -325,7 +325,7 @@ where
                             state.version + 1,
                         )
                     }),
-                    ledger_info.timestamp_usecs(),
+                    ledger_info.ledger_info().timestamp_usecs(),
                 )
             }
             None => {

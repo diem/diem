@@ -31,7 +31,6 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::LedgerInfoWithSignatures,
-    ledger_info::LedgerInfo,
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
@@ -359,7 +358,7 @@ impl From<TreeState> for crate::proto::storage::TreeState {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct StartupInfo {
-    pub ledger_info: LedgerInfo,
+    pub ledger_info: LedgerInfoWithSignatures,
     pub committed_tree_state: TreeState,
     pub synced_tree_state: Option<TreeState>,
 }

@@ -111,12 +111,12 @@ impl ExecutorProxyTrait for MockExecutorProxy {
     fn get_local_storage_state(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>> {
-        let highest_committed_version = self.storage.read().unwrap().version;
-        let highest_local_li = Self::mock_ledger_info(self.peer_id, highest_committed_version);
+        let highest_synced_version = self.storage.read().unwrap().version;
+        let highest_local_li = Self::mock_ledger_info(self.peer_id, highest_synced_version);
         async move {
             Ok(SynchronizerState {
                 highest_local_li,
-                highest_committed_version,
+                highest_synced_version,
             })
         }
             .boxed()
@@ -291,7 +291,7 @@ impl SynchronizerEnv {
         let max_retries = 30;
         for _ in 0..max_retries {
             let state = block_on(self.clients[peer_id].get_state()).unwrap();
-            if state.highest_committed_version == target_version {
+            if state.highest_synced_version == target_version {
                 return true;
             }
             std::thread::sleep(std::time::Duration::from_millis(1000));

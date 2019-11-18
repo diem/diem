@@ -17,7 +17,7 @@ use vm_runtime::MoveVM;
 
 /// Proxies interactions with execution and storage for state synchronization
 pub trait ExecutorProxyTrait: Sync + Send {
-    /// Latest state (ledger info and committed version) in the local storage
+    /// Latest state (ledger info and synced version) in the local storage
     fn get_local_storage_state(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>>;
@@ -86,17 +86,17 @@ impl ExecutorProxyTrait for ExecutorProxy {
     ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>> {
         let client = Arc::clone(&self.storage_read_client);
         async move {
-            let highest_local_li = client.update_to_latest_ledger_async(0, vec![]).await?.1;
-            // highest committed version is max between LI and synced tree state
-            let mut highest_committed_version = highest_local_li.ledger_info().version();
-            if let Some(startup_info) = client.get_startup_info_async().await? {
-                let pending_version = startup_info.synced_tree_state.map_or(0, |t| t.version);
-                highest_committed_version =
-                    std::cmp::max(pending_version, highest_committed_version);
-            }
+            let storage_info = client
+                .get_startup_info_async()
+                .await?
+                .ok_or_else(|| format_err!("[state sync] Failed to access storage info"))?;
+            let highest_synced_version = std::cmp::max(
+                storage_info.ledger_info.ledger_info().version(),
+                storage_info.synced_tree_state.map_or(0, |t| t.version),
+            );
             Ok(SynchronizerState {
-                highest_local_li,
-                highest_committed_version,
+                highest_local_li: storage_info.ledger_info,
+                highest_synced_version,
             })
         }
             .boxed()

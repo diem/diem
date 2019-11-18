@@ -118,7 +118,7 @@ message StartupInfo {
     // The latest committed LedgerInfo. Note that at start up storage can have more
     // transactions than the latest committed LedgerInfo indicates due to an incomplete
     // start up sync.
-    types.LedgerInfo ledger_info = 1;
+    types.LedgerInfoWithSignatures ledger_info = 1;
 
     // The latest committed tree state matching the ledger info above.
     TreeState committed_tree_state = 2;

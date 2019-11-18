@@ -30,11 +30,11 @@ type PeerId = AccountAddress;
 /// the accumulator is ahead of the LedgerInfo.
 ///
 /// While `highest_local_li` can be used for helping the others (corresponding to the highest
-/// version we have a proof for), `highest_committed_version` is used for retrieving missing chunks
+/// version we have a proof for), `highest_synced_version` is used for retrieving missing chunks
 /// for the local storage.
 pub struct SynchronizerState {
     pub highest_local_li: LedgerInfoWithSignatures,
-    pub highest_committed_version: u64,
+    pub highest_synced_version: u64,
 }
 
 impl SynchronizerState {
@@ -45,7 +45,7 @@ impl SynchronizerState {
         );
         Self {
             highest_local_li,
-            highest_committed_version: 0,
+            highest_synced_version: 0,
         }
     }
 
@@ -53,7 +53,7 @@ impl SynchronizerState {
     pub fn highest_version_in_local_storage(&self) -> u64 {
         std::cmp::max(
             self.highest_local_li.ledger_info().version(),
-            self.highest_committed_version,
+            self.highest_synced_version,
         )
     }
 }
