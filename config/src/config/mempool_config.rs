@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct MempoolConfig {
     pub broadcast_transactions: bool,
     pub shared_mempool_tick_interval_ms: u64,

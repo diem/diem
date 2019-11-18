@@ -7,4 +7,3 @@ consensus_peers_file = ""  # For direct validation of this file
 seed_peers_file = ""  # For direct validation of this file
 network_keypairs_file = ""  # For direct validation of this file
 network_peers_file = ""  # For direct validation of this file
-role = "validator"

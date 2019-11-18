@@ -18,7 +18,7 @@ use std::{
 
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct NetworkConfig {
     pub peer_id: PeerId,
     // TODO: Add support for multiple listen/advertised addresses in config.
