@@ -78,6 +78,7 @@ fn get_file_listing() -> crate::Result<Vec<PathBuf>> {
     Ok(str::from_utf8(&output.stdout)?
         .split('\n')
         .filter(|s| !s.is_empty())
+        .filter(|s| !s.starts_with("testsuite/libra-fuzzer/artifacts/"))
         .map(Path::new)
         .map(Path::to_path_buf)
         .collect())
