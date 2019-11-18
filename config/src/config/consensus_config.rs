@@ -4,9 +4,10 @@
 use crate::{
     config::{PersistableConfig, SafetyRulesBackend, SafetyRulesConfig},
     keys::ConsensusKeyPair,
-    trusted_peers::ConsensusPeersConfig,
+    trusted_peers::{ConsensusPeerInfo, ConsensusPeersConfig},
 };
 use failure::prelude::*;
+use libra_types::PeerId;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -32,15 +33,27 @@ pub struct ConsensusConfig {
 
 impl Default for ConsensusConfig {
     fn default() -> ConsensusConfig {
+        let keypair = ConsensusKeyPair::default();
+        let mut peers = ConsensusPeersConfig::default();
+        let pubkey = keypair
+            .public()
+            .expect("Unable to obtain default public key");
+        peers.peers.insert(
+            PeerId::from_public_key(pubkey).to_string(),
+            ConsensusPeerInfo {
+                consensus_pubkey: pubkey.clone(),
+            },
+        );
+
         ConsensusConfig {
             max_block_size: 100,
             proposer_type: ConsensusProposerType::MultipleOrderedProposers,
             contiguous_rounds: 2,
             max_pruned_blocks_in_mem: None,
             pacemaker_initial_timeout_ms: None,
-            consensus_keypair: ConsensusKeyPair::default(),
+            consensus_keypair: keypair,
             consensus_keypair_file: PathBuf::from("consensus_keypair.config.toml"),
-            consensus_peers: ConsensusPeersConfig::default(),
+            consensus_peers: peers,
             consensus_peers_file: PathBuf::from("consensus_peers.config.toml"),
             safety_rules: SafetyRulesConfig::default(),
         }

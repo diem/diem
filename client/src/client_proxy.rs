@@ -1093,7 +1093,7 @@ impl fmt::Display for AccountEntry {
 #[cfg(test)]
 mod tests {
     use crate::client_proxy::{parse_bool, AddressAndIndex, ClientProxy};
-    use libra_config::{config::PersistableConfig, trusted_peers::ConfigHelpers};
+    use libra_config::config::{ConsensusConfig, PersistableConfig};
     use libra_tools::tempdir::TempPath;
     use libra_wallet::io_utils;
     use proptest::prelude::*;
@@ -1103,10 +1103,13 @@ mod tests {
         accounts.reserve(count);
         let file = TempPath::new();
         let mnemonic_path = file.path().to_str().unwrap().to_string();
+
+        let consensus_config = ConsensusConfig::default();
         let consensus_peer_file = TempPath::new();
         let consensus_peers_path = consensus_peer_file.path();
-        let (_, consensus_peers_config, _) = ConfigHelpers::gen_validator_nodes(1, None);
-        consensus_peers_config.save_config(&consensus_peers_path);
+        consensus_config
+            .consensus_peers
+            .save_config(consensus_peers_path);
         let val_set_file = consensus_peers_path.to_str().unwrap().to_string();
 
         // We don't need to specify host/port since the client won't be used to connect, only to
