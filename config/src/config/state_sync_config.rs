@@ -25,7 +25,7 @@ pub struct StateSyncConfig {
 impl Default for StateSyncConfig {
     fn default() -> Self {
         Self {
-            chunk_limit: 1000,
+            chunk_limit: 250,
             tick_interval_ms: 100,
             long_poll_timeout_ms: 30000,
             max_chunk_limit: 1000,
