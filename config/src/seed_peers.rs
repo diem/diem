@@ -6,10 +6,6 @@ use parity_multiaddr::{Multiaddr, Protocol};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[cfg(test)]
-#[path = "unit_tests/seed_peers_test.rs"]
-mod seed_peers_test;
-
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct SeedPeersConfig {
     // All peers config. Key:a unique peer id, will be PK in future, Value: peer discovery info
@@ -55,5 +51,17 @@ impl SeedPeersConfigHelpers {
             seed_peers.insert(peer_id.clone(), vec![addr]);
         }
         SeedPeersConfig { seed_peers }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::SeedPeersConfigHelpers;
+    use crate::trusted_peers::ConfigHelpers;
+
+    #[test]
+    fn generate_test_config() {
+        let (_, _, network_peers_config) = ConfigHelpers::gen_validator_nodes(10, None);
+        let _ = SeedPeersConfigHelpers::get_test_config(&network_peers_config, None);
     }
 }

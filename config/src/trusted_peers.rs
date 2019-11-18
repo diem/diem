@@ -24,10 +24,6 @@ use std::{
     str::FromStr,
 };
 
-#[cfg(test)]
-#[path = "unit_tests/trusted_peers_test.rs"]
-mod trusted_peers_test;
-
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct NetworkPeerInfo {
     #[serde(serialize_with = "serialize_key")]
@@ -290,4 +286,16 @@ where
 {
     let ordered: BTreeMap<_, _> = value.iter().collect();
     ordered.serialize(serializer)
+}
+
+#[cfg(test)]
+mod test {
+    use super::ConfigHelpers;
+
+    #[test]
+    fn generate_test_config() {
+        let (_keys, _consensus_peers_config, _network_peers_config) =
+            ConfigHelpers::gen_validator_nodes(10, None);
+        let (_keys, _network_peers_config) = ConfigHelpers::gen_full_nodes(10, None);
+    }
 }
