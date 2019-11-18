@@ -182,6 +182,10 @@ impl ConsensusKeyPair {
         }
     }
 
+    pub fn public(&self) -> Option<&Ed25519PublicKey> {
+        self.consensus_public_key.as_ref()
+    }
+
     /// Beware, this destroys the private key from this NodeConfig
     pub fn take_consensus_private(&mut self) -> Option<Ed25519PrivateKey> {
         self.consensus_private_key.take()
