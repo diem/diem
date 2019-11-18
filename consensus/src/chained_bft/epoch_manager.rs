@@ -91,12 +91,13 @@ impl<T: Payload> EpochManager<T> {
     /// Create a proposer election handler based on proposers
     fn create_proposer_election(
         &self,
+        epoch: u64,
         validators: &ValidatorVerifier,
     ) -> Box<dyn ProposerElection<T> + Send + Sync> {
         let proposers = validators.get_ordered_account_addresses();
         match self.config.proposer_type {
             ConsensusProposerType::MultipleOrderedProposers => {
-                Box::new(MultiProposer::new(proposers, 2))
+                Box::new(MultiProposer::new(epoch, proposers, 2))
             }
             ConsensusProposerType::RotatingProposer => Box::new(RotatingProposer::new(
                 proposers,
@@ -227,7 +228,7 @@ impl<T: Payload> EpochManager<T> {
         let pacemaker =
             self.create_pacemaker(self.time_service.clone(), self.timeout_sender.clone());
 
-        let proposer_election = self.create_proposer_election(&validators);
+        let proposer_election = self.create_proposer_election(self.epoch, &validators);
         let network_sender = NetworkSender::new(
             author,
             self.network_sender.clone(),
