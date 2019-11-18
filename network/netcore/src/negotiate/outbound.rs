@@ -79,7 +79,7 @@ pub async fn negotiate_outbound_select<TSocket, TProto>(
     protocol: TProto,
 ) -> Result<TSocket>
 where
-    TSocket: AsyncRead + AsyncWrite + Unpin,
+    TSocket: AsyncWrite + Unpin,
     TProto: AsRef<[u8]> + Clone,
 {
     write_u16frame(&mut stream, PROTOCOL_SELECT).await?;
