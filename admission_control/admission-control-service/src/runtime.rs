@@ -3,6 +3,7 @@
 
 use crate::{
     admission_control_service::AdmissionControlService,
+    counters,
     upstream_proxy::{process_network_messages, UpstreamProxyData},
 };
 use admission_control_proto::proto::admission_control::create_admission_control;
@@ -84,6 +85,7 @@ impl AdmissionControlRuntime {
             .iter()
             .map(|peer_id| (*peer_id, true))
             .collect();
+        counters::UPSTREAM_PEERS.set(upstream_peer_ids.len() as i64);
 
         let upstream_proxy_data = UpstreamProxyData::new(
             config.admission_control.clone(),

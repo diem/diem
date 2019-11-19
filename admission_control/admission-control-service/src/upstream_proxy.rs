@@ -120,10 +120,12 @@ pub async fn process_network_messages<M, V>(
                             Event::NewPeer(peer_id) => {
                                 debug!("[admission control] new peer {}", peer_id);
                                 new_peer(&mut peer_info, peer_id);
+                                counters::UPSTREAM_PEERS.set(count_active_peers(&peer_info) as i64);
                             }
                             Event::LostPeer(peer_id) => {
                                 debug!("[admission control] lost peer {}", peer_id);
                                 lost_peer(&mut peer_info, peer_id);
+                                counters::UPSTREAM_PEERS.set(count_active_peers(&peer_info) as i64);
                             }
                             Event::RpcRequest((peer_id, mut message, callback)) => {
                                 if let Some(AdmissionControlMsg_oneof::SubmitTransactionRequest(request)) = message.message {
@@ -170,6 +172,10 @@ fn pick_peer(peer_info: &HashMap<PeerId, bool>) -> Option<PeerId> {
     None
 }
 
+fn count_active_peers(peer_info: &HashMap<PeerId, bool>) -> usize {
+    peer_info.iter().filter(|(_, &is_alive)| is_alive).count()
+}
+
 async fn submit_transaction<M, V>(
     request: SubmitTransactionRequest,
     mut upstream_proxy_data: UpstreamProxyData<M, V>,
@@ -182,7 +188,6 @@ async fn submit_transaction<M, V>(
     let start_time = Instant::now();
     let mut response = None;
     let mut txn_result = "success";
-    let role = &upstream_proxy_data.role.to_string();
     match upstream_proxy_data.role {
         RoleType::Validator => {
             response = Some(submit_transaction_to_mempool(upstream_proxy_data, request).await);
@@ -216,7 +221,7 @@ async fn submit_transaction<M, V>(
         // timeout
         txn_result = "failure";
         counters::TIMEOUT
-            .with_label_values(&[role, "client", "timeout"])
+            .with_label_values(&["client", "timeout"])
             .inc();
         Err(format_err!(
             "[admission-control] Processing write request failed"
@@ -225,7 +230,7 @@ async fn submit_transaction<M, V>(
     if let Err(e) = callback.send(res) {
         txn_result = "failure";
         counters::TIMEOUT
-            .with_label_values(&[role, "client", "callback_timeout"])
+            .with_label_values(&["client", "callback_timeout"])
             .inc();
         error!(
             "[admission control] failed to send back transaction result with error: {:?}",
@@ -233,13 +238,11 @@ async fn submit_transaction<M, V>(
         );
     };
     counters::TRANSACTION_LATENCY
-        .with_label_values(&[role, txn_result])
+        .with_label_values(&[txn_result])
         .observe(start_time.elapsed().as_secs() as f64);
-    if role == &RoleType::FullNode.to_string() {
-        counters::TRANSACTION_PROXY
-            .with_label_values(&[role, "client", txn_result])
-            .inc();
-    }
+    counters::TRANSACTION_PROXY
+        .with_label_values(&["client", txn_result])
+        .inc();
 }
 
 async fn submit_transaction_upstream<M, V>(
@@ -273,7 +276,6 @@ async fn process_submit_transaction_request<M, V>(
     let start_time = Instant::now();
     let mut response_msg = None;
     let mut txn_result = "success";
-    let role = &upstream_proxy_data.role.to_string();
     match upstream_proxy_data.role {
         RoleType::Validator => {
             if let Ok(response) = submit_transaction_to_mempool(upstream_proxy_data, request).await
@@ -312,7 +314,7 @@ async fn process_submit_transaction_request<M, V>(
         {
             txn_result = "failure";
             counters::TIMEOUT
-                .with_label_values(&[role, "full_node", "callback_timeout"])
+                .with_label_values(&["full_node", "callback_timeout"])
                 .inc();
             error!(
                 "[admission control] failed to process transaction request, error: {:?}",
@@ -322,20 +324,18 @@ async fn process_submit_transaction_request<M, V>(
     } else {
         txn_result = "failure";
         counters::TIMEOUT
-            .with_label_values(&[role, "full_node", "timeout"])
+            .with_label_values(&["full_node", "timeout"])
             .inc();
         error!(
             "[admission control] Did not get a response msg back from submit transaction upstream request",
         );
     }
     counters::TRANSACTION_LATENCY
-        .with_label_values(&[role, txn_result])
+        .with_label_values(&[txn_result])
         .observe(start_time.elapsed().as_secs() as f64);
-    if role == &RoleType::FullNode.to_string() {
-        counters::TRANSACTION_PROXY
-            .with_label_values(&[role, "full_node", txn_result])
-            .inc();
-    }
+    counters::TRANSACTION_PROXY
+        .with_label_values(&["full_node", txn_result])
+        .inc();
 }
 
 /// Validate transaction signature, then via VM, and add it to Mempool if it passes VM check.

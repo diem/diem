@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use lazy_static;
-use prometheus::{HistogramVec, IntCounterVec};
+use prometheus::{HistogramVec, IntCounterVec, IntGauge};
 
 lazy_static::lazy_static! {
     // Number of transactions that admission control proxied up to upstream peer
@@ -19,8 +19,6 @@ lazy_static::lazy_static! {
         "libra_admission_control_transaction_proxy_count",
         "Number of transactions a full node proxied up to upstream peer",
         &[
-            // role of this node
-            "role",
             // role of the node that sent the txn submission request to this node: client or FN
             "sender_role",
             // result of the txn proxy: success, failure
@@ -47,8 +45,6 @@ lazy_static::lazy_static! {
         "libra_admission_control_timeout_count",
         "Number of timeouts that happen when AC handles transaction submissions",
         &[
-            // role of this node: validator, full_node
-            "role",
             // role of the node that sent the txn submission request to this node: client or FN
             "sender_role",
             // type of timeout: "timeout", "callback_timeout"
@@ -63,10 +59,13 @@ lazy_static::lazy_static! {
         "libra_admission_control_transaction_submission_latency_s",
         "Histogram of time it takes for admission control to handle a transaction submission request",
         &[
-            // role of this node: validator, full_node
-            "role",
             // result of the transaction handling: success, failure
             "state",
         ]
+    ).unwrap();
+
+    pub static ref UPSTREAM_PEERS: IntGauge = register_int_gauge!(
+        "libra_admission_control_upstream_peer_count",
+        "Number of upstream peers a node can proxy transactions to"
     ).unwrap();
 }
