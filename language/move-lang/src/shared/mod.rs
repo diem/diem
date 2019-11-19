@@ -5,7 +5,6 @@ use codespan::Span;
 use hex;
 use std::{
     cmp::Ordering,
-    collections::VecDeque,
     convert::TryFrom,
     fmt,
     hash::{Hash, Hasher},
@@ -72,23 +71,28 @@ impl AsRef<[u8]> for Address {
 
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:#x}", self)
+        write!(f, "0x{:#x}", self)
     }
 }
 
 impl fmt::Debug for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:#x}", self)
+        write!(f, "0x{:#x}", self)
     }
 }
 
 impl fmt::LowerHex for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut vec: VecDeque<u8> = self.0.iter().cloned().collect();
-        while vec.len() > 1 && vec[0] == 0 {
-            vec.pop_front();
+        let encoded = hex::encode(&self.0);
+        let dropped = encoded
+            .chars()
+            .skip_while(|c| c == &'0')
+            .collect::<String>();
+        if dropped.is_empty() {
+            write!(f, "0")
+        } else {
+            write!(f, "{}", dropped)
         }
-        write!(f, "{}", hex::encode(&self.0))
     }
 }
 

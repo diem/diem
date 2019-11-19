@@ -9,7 +9,7 @@ error:
    │                - The type: 'S'
    ·
  9 │         (s1: Self.S);
-   │              ------ Is not compatible with: '0000000000000000000000000000000000000000000000000000000000000001.M.S'
+   │              ------ Is not compatible with: '0x1.M.S'
    │
 
 error: 
@@ -20,7 +20,7 @@ error:
     │                ^ Invalid type annotation
     ·
  10 │         let s: S = S {};
-    │                    ---- The type: '0000000000000000000000000000000000000000000000000000000000000001.M.S'
+    │                    ---- The type: '0x1.M.S'
     ·
  10 │         let s: S = S {};
     │                - Is not compatible with: 'S'
@@ -31,13 +31,13 @@ error:
     ┌── tests/move_check/naming/generics_shadowing_invalid.move:8:16 ───
     │
  11 │         bar(s1);
-    │         ^^^^^^^ Invalid call of '0000000000000000000000000000000000000000000000000000000000000001.M.bar'. Invalid argument for parameter 's'
+    │         ^^^^^^^ Invalid call of '0x1.M.bar'. Invalid argument for parameter 's'
     ·
  8 │     foo<S>(s1: S, s2: S): S {
     │                - The type: 'S'
     ·
  15 │     bar(s: S) {}
-    │            - Is not compatible with: '0000000000000000000000000000000000000000000000000000000000000001.M.S'
+    │            - Is not compatible with: '0x1.M.S'
     │
 
 error: 
@@ -48,7 +48,7 @@ error:
     │         ^^^^ Invalid return expression
     ·
  12 │         S {}
-    │         ---- The type: '0000000000000000000000000000000000000000000000000000000000000001.M.S'
+    │         ---- The type: '0x1.M.S'
     ·
  8 │     foo<S>(s1: S, s2: S): S {
     │                           - Is not compatible with: 'S'

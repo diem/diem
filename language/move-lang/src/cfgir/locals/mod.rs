@@ -115,26 +115,29 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
                     | LocalState::MaybeUnavailable { available, .. } => {
                         let ty = context.local_type(&local);
                         let kind = ty.value.kind(ty.loc);
-                        if let Kind_::Resource = &kind.value {
-                            let verb = match state {
-                                LocalState::Unavailable(_) => unreachable!(),
-                                LocalState::Available(_) => "contains",
-                                LocalState::MaybeUnavailable { .. } => "might contain",
-                            };
-                            let available = *available;
-                            let stmt = match display_var(local.value()) {
-                                DisplayVar::Tmp => {
-                                    "The resource is created but not used".to_owned()
-                                }
-                                DisplayVar::Orig(l) => format!(
+                        match &kind.value {
+                            Kind_::Unrestricted | Kind_::Affine => (),
+                            Kind_::Resource | Kind_::Unknown => {
+                                let verb = match (state, &kind.value) {
+                                    (LocalState::Unavailable(_), _) => unreachable!(),
+                                    (LocalState::Available(_), Kind_::Resource) => "contains",
+                                    _ => "might contain",
+                                };
+                                let available = *available;
+                                let stmt = match display_var(local.value()) {
+                                    DisplayVar::Tmp => {
+                                        "The resource is created but not used".to_owned()
+                                    }
+                                    DisplayVar::Orig(l) => format!(
                                     "The local {} still {} a resource value due to this assignment",
                                     l, verb
                                 ),
-                            };
-                            errors.push(vec![
+                                };
+                                errors.push(vec![
                                 (*loc, "Invalid return".into()),
                                 (available, format!("{}. The resource must be consumed before the function returns", stmt))
                             ])
+                            }
                         }
                     }
                 }

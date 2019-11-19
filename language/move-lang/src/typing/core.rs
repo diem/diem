@@ -22,7 +22,12 @@ use std::collections::{BTreeSet, HashMap};
 
 pub enum Constraint {
     IsCopyable(Loc, String, SingleType),
-    IsImplicitlyCopyable(Loc, String, BaseType),
+    IsImplicitlyCopyable {
+        loc: Loc,
+        msg: String,
+        ty: BaseType,
+        fix: String,
+    },
     KindConstraint(Loc, BaseType, Kind),
 }
 pub type Subst = HashMap<TVar, BaseType>;
@@ -114,10 +119,13 @@ impl Context {
         &mut self,
         loc: Loc,
         msg: impl Into<String>,
-        bt: BaseType,
+        ty: BaseType,
+        fix: impl Into<String>,
     ) {
+        let msg = msg.into();
+        let fix = fix.into();
         self.constraints
-            .push(Constraint::IsImplicitlyCopyable(loc, msg.into(), bt))
+            .push(Constraint::IsImplicitlyCopyable { loc, msg, ty, fix })
     }
 
     pub fn add_copyable_constraint(&mut self, loc: Loc, msg: impl Into<String>, s: SingleType) {
@@ -439,8 +447,8 @@ pub fn solve_constraints(context: &mut Context) {
     for constraint in constraints {
         match constraint {
             Constraint::IsCopyable(loc, msg, s) => solve_copyable_constraint(context, loc, msg, s),
-            Constraint::IsImplicitlyCopyable(loc, msg, b) => {
-                solve_implicitly_copyable_constraint(context, loc, msg, b)
+            Constraint::IsImplicitlyCopyable { loc, msg, ty, fix } => {
+                solve_implicitly_copyable_constraint(context, loc, msg, ty, fix)
             }
             Constraint::KindConstraint(loc, b, k) => solve_kind_constraint(context, loc, b, k),
         }
@@ -449,8 +457,9 @@ pub fn solve_constraints(context: &mut Context) {
 
 fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) {
     use Kind_ as K;
-    let sp!(bloc, b_) = unfold_type_base(&context.subst, b);
-    let b_kind = match infer_kind_base(&context, &context.subst, sp(bloc, b_.clone())) {
+    let b = unfold_type_base(&context.subst, b);
+    let bloc = b.loc;
+    let b_kind = match infer_kind_base(&context, &context.subst, b.clone()) {
         // Anything => None
         // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
         None => return,
@@ -473,9 +482,10 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) 
             (K::Affine, K::Resource) |
             // all </: linear
             (K::Unknown, K::Resource) => {
-                let ty_str = b_.subst_format(&context.subst);
+                let ty_str = b.value.subst_format(&context.subst);
                 context.error(vec![
-                    (loc, format!("Constraint not satisfied. The {} type '{}' does not satisfy the constraint '{}'", Kind_::VALUE_CONSTRAINT, ty_str, Kind_::RESOURCE_CONSTRAINT)),
+                    (loc, "Constraint not satisfied.".into()),
+                    (bloc, format!("The {} type '{}' does not satisfy the constraint '{}'", Kind_::VALUE_CONSTRAINT, ty_str, Kind_::RESOURCE_CONSTRAINT)),
                     (b_kind.loc, "The type's constraint information was declared here".into()),
                     (k.loc, format!("'{}' constraint declared here", Kind_::RESOURCE_CONSTRAINT))
                 ])
@@ -490,9 +500,10 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) 
                     K::Resource => "resource ",
                     K::Unknown => "",
                 };
-                let ty_str = b_.subst_format(&context.subst);
+                let ty_str = b.value.subst_format(&context.subst);
                 context.error(vec![
-                    (loc, format!("Constraint not satisfied. The {}type '{}' does not satisfy the constraint '{}'", resource_msg, ty_str, Kind_::VALUE_CONSTRAINT)),
+                    (loc, "Constraint not satisfied.".into()),
+                    (bloc, format!("The {}type '{}' does not satisfy the constraint '{}'", resource_msg, ty_str, Kind_::VALUE_CONSTRAINT)),
                     (b_kind.loc, "The type's constraint information was declared here".into()),
                     (k.loc, format!("'{}' constraint declared here", Kind_::VALUE_CONSTRAINT))
                 ])
@@ -503,6 +514,7 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) 
 
 fn solve_copyable_constraint(context: &mut Context, loc: Loc, msg: String, s: SingleType) {
     let s = unfold_type_single(&context.subst, s);
+    let sloc = s.loc;
     let kind = match infer_kind(&context, &context.subst, s.clone()) {
         // Anything => None
         // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
@@ -515,18 +527,23 @@ fn solve_copyable_constraint(context: &mut Context, loc: Loc, msg: String, s: Si
             let ty_str = s.value.subst_format(&context.subst);
             context.error(vec![
                 (loc, msg),
-                (
-                    rloc,
-                    format!("{} is found to be a non-copyable type here", ty_str),
-                ),
+                (sloc, format!("The type: {}", ty_str)),
+                (rloc, "Is found to be a non-copyable type here".into()),
             ])
         }
     }
 }
 
-fn solve_implicitly_copyable_constraint(context: &mut Context, loc: Loc, msg: String, b: BaseType) {
+fn solve_implicitly_copyable_constraint(
+    context: &mut Context,
+    loc: Loc,
+    msg: String,
+    b: BaseType,
+    fix: String,
+) {
     let b = unfold_type_base(&context.subst, b);
-    let kind = match infer_kind_base(&context, &context.subst, b) {
+    let bloc = b.loc;
+    let kind = match infer_kind_base(&context, &context.subst, b.clone()) {
         // Anything => None
         // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
         None => return,
@@ -534,11 +551,25 @@ fn solve_implicitly_copyable_constraint(context: &mut Context, loc: Loc, msg: St
     };
     match kind {
         sp!(_, Kind_::Unrestricted) => (),
-        sp!(_, Kind_::Affine) => context.error(vec![(loc, msg)]),
-        sp!(rloc, Kind_::Unknown) | sp!(rloc, Kind_::Resource) => context.error(vec![
-            (loc, msg),
-            (rloc, "Declared as a non-copyable type here".into()),
-        ]),
+        sp!(kloc, Kind_::Affine) => {
+            let ty_str = b.value.subst_format(&context.subst);
+            context.error(vec![
+                (loc, format!("{} {}", msg, fix)),
+                (bloc, format!("The type: {}", ty_str)),
+                (
+                    kloc,
+                    "Is declared as a non-implicitly copyable type here".into(),
+                ),
+            ])
+        }
+        sp!(kloc, Kind_::Unknown) | sp!(kloc, Kind_::Resource) => {
+            let ty_str = b.value.subst_format(&context.subst);
+            context.error(vec![
+                (loc, msg),
+                (bloc, format!("The type: {}", ty_str)),
+                (kloc, "Is declared as a non-copyable type here".into()),
+            ])
+        }
     }
 }
 

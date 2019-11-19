@@ -47,8 +47,11 @@ error:
  7 │         ({ R {} } : R);
    │         ^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
    ·
+ 7 │         ({ R {} } : R);
+   │                     - The type: 0x8675309.M.R
+   ·
  2 │     resource struct R {}
-   │     -------- 0000000000000000000000000000000000000000000000000000000008675309.M.R is found to be a non-copyable type here
+   │     -------- Is found to be a non-copyable type here
    │
 
 error: 
