@@ -568,7 +568,7 @@ impl ClusterTestRunner {
             let prev_commit = self
                 .deployment_manager
                 .get_tested_upstream_commit()
-                .map_err(|e| warn!("Failed to get prev_commit: {:?}", e))
+                .map_err(|e| warn!("Failed to get prev_commit: {}", e))
                 .ok();
             let upstream_commit = match self
                 .deployment_manager
@@ -596,9 +596,16 @@ impl ClusterTestRunner {
         loop {
             let hash_to_tag;
             if let Some(hash) = self.deployment_manager.latest_hash_changed() {
+                let upstream_tag = self
+                    .deployment_manager
+                    .get_upstream_tag(&hash)
+                    .unwrap_or_else(|e| {
+                        warn!("Failed to get upstream tag for {}: {}", hash, e);
+                        "<unknown tag>".to_string()
+                    });
                 info!(
-                    "New version of `{}` tag is available: `{}`",
-                    SOURCE_TAG, hash
+                    "New version of `{}` tag({}) is available: `{}`",
+                    SOURCE_TAG, upstream_tag, hash
                 );
                 match self.redeploy(&hash) {
                     Err(e) => {

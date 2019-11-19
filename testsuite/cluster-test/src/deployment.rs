@@ -172,20 +172,24 @@ impl DeploymentManager {
             image_tag: None,
         };
         let images = self.get_images(VALIDATOR_IMAGE_REPO, &image_id)?;
-        for image in images {
-            let image_id = match image.image_id {
+        for image in &images {
+            let image_id = match &image.image_id {
                 Some(image_id) => image_id,
                 None => continue,
             };
-            let tag = match image_id.image_tag {
+            let tag = match &image_id.image_tag {
                 Some(tag) => tag,
                 None => continue,
             };
             if tag.starts_with(UPSTREAM_PREFIX) {
-                return Ok(tag);
+                return Ok(tag.clone());
             }
         }
-        Err(format_err!("Failed to find upstream tag"))
+        Err(format_err!(
+            "Failed to find upstream tag for {}. Images: {:?}",
+            digest,
+            images
+        ))
     }
 
     fn get_images(
