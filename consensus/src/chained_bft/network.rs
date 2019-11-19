@@ -383,18 +383,21 @@ impl<T: Payload> NetworkTask<T> {
         proposal: Proposal,
     ) -> failure::Result<()> {
         let proposal = ProposalUncheckedSignatures::<T>::try_from(proposal)?;
-        match proposal.epoch().cmp(&self.epoch) {
-            Ordering::Equal => {
-                let proposal = proposal
-                    .validate_signatures(self.validators.as_ref())?
-                    .verify_well_formed()?;
-                debug!("Received proposal {}", proposal);
-                self.proposal_tx.push(peer_id, proposal)
-            }
-            Ordering::Less | Ordering::Greater => self
+        if proposal.epoch() != self.epoch {
+            return self
                 .different_epoch_tx
-                .push(peer_id, (proposal.epoch(), peer_id)),
+                .push(peer_id, (proposal.epoch(), peer_id));
         }
+
+        let proposal = proposal
+            .validate_signatures(self.validators.as_ref())?
+            .verify_well_formed()?;
+        ensure!(
+            proposal.proposal().author() == Some(peer_id),
+            "proposal received must be from the sending peer"
+        );
+        debug!("Received proposal {}", proposal);
+        self.proposal_tx.push(peer_id, proposal)
     }
 
     async fn process_vote(
