@@ -3,7 +3,7 @@ error:
    ┌── tests/move_check/naming/unbound_struct_in_current.move:2:12 ───
    │
  2 │     foo(s: Self.S): Self.S {
-   │            ^^^^^^ Unbound struct or resource 'S' in module '0000000000000000000000000000000000000000000000000000000008675309.M'
+   │            ^^^^^^ Unbound struct or resource 'S' in module '0x8675309.M'
    │
 
 error: 
@@ -11,7 +11,7 @@ error:
    ┌── tests/move_check/naming/unbound_struct_in_current.move:2:21 ───
    │
  2 │     foo(s: Self.S): Self.S {
-   │                     ^^^^^^ Unbound struct or resource 'S' in module '0000000000000000000000000000000000000000000000000000000008675309.M'
+   │                     ^^^^^^ Unbound struct or resource 'S' in module '0x8675309.M'
    │
 
 error: 
@@ -19,7 +19,7 @@ error:
    ┌── tests/move_check/naming/unbound_struct_in_current.move:7:12 ───
    │
  7 │     bar(): Self.S {
-   │            ^^^^^^ Unbound struct or resource 'S' in module '0000000000000000000000000000000000000000000000000000000008675309.M'
+   │            ^^^^^^ Unbound struct or resource 'S' in module '0x8675309.M'
    │
 
 error: 
@@ -27,7 +27,7 @@ error:
    ┌── tests/move_check/naming/unbound_struct_in_current.move:8:9 ───
    │
  8 │         S {}
-   │         ^ Unbound struct or resource 'S' in module '0000000000000000000000000000000000000000000000000000000008675309.M'
+   │         ^ Unbound struct or resource 'S' in module '0x8675309.M'
    │
 
 error: 
@@ -35,7 +35,7 @@ error:
     ┌── tests/move_check/naming/unbound_struct_in_current.move:12:9 ───
     │
  12 │         S {} = bar();
-    │         ^ Unbound struct or resource 'S' in module '0000000000000000000000000000000000000000000000000000000008675309.M'
+    │         ^ Unbound struct or resource 'S' in module '0x8675309.M'
     │
 
 error: 
@@ -43,7 +43,7 @@ error:
     ┌── tests/move_check/naming/unbound_struct_in_current.move:13:9 ───
     │
  13 │         Self.S {} = bar();
-    │         ^^^^^^ Unbound struct or resource 'S' in module '0000000000000000000000000000000000000000000000000000000008675309.M'
+    │         ^^^^^^ Unbound struct or resource 'S' in module '0x8675309.M'
     │
 
 error: 
@@ -51,7 +51,7 @@ error:
     ┌── tests/move_check/naming/unbound_struct_in_current.move:17:13 ───
     │
  17 │         let S {} = bar();
-    │             ^ Unbound struct or resource 'S' in module '0000000000000000000000000000000000000000000000000000000008675309.M'
+    │             ^ Unbound struct or resource 'S' in module '0x8675309.M'
     │
 
 error: 
@@ -59,6 +59,6 @@ error:
     ┌── tests/move_check/naming/unbound_struct_in_current.move:18:13 ───
     │
  18 │         let Self.S {} = bar();
-    │             ^^^^^^ Unbound struct or resource 'S' in module '0000000000000000000000000000000000000000000000000000000008675309.M'
+    │             ^^^^^^ Unbound struct or resource 'S' in module '0x8675309.M'
     │
 

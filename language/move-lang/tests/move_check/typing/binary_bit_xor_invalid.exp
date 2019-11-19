@@ -53,7 +53,7 @@ error:
     │         ^ Invalid argument to '^'
     ·
  7 │     t0(x: u64, r: R, s: S) {
-    │                   - Found: '0000000000000000000000000000000000000000000000000000000008675309.M.R'. But expected: 'u64'
+    │                   - Found: '0x8675309.M.R'. But expected: 'u64'
     │
 
 error: 
@@ -64,7 +64,7 @@ error:
     │         ^ Invalid argument to '^'
     ·
  7 │     t0(x: u64, r: R, s: S) {
-    │                         - Found: '0000000000000000000000000000000000000000000000000000000008675309.M.S'. But expected: 'u64'
+    │                         - Found: '0x8675309.M.S'. But expected: 'u64'
     │
 
 error: 

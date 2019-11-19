@@ -6,10 +6,10 @@ error:
    │         ^ Invalid resource field 'f' for struct 'S'. Structs cannot contain resource types, except through type parameters
    ·
  4 │         f: R
-   │            - Field 'f' is a resource due to the type: '0000000000000000000000000000000000000000000000000000000008675309.M.R'
+   │            - Field 'f' is a resource due to the type: '0x8675309.M.R'
    ·
  2 │     resource struct R {}
-   │     -------- Type '0000000000000000000000000000000000000000000000000000000008675309.M.R' was declared as a resource here
+   │     -------- Type '0x8675309.M.R' was declared as a resource here
    ·
  3 │     struct S {
    │            - 'S' declared as a `struct` here
@@ -23,10 +23,10 @@ error:
    │         ^ Invalid resource field 'f' for struct 'S2'. Structs cannot contain resource types, except through type parameters
    ·
  7 │         f: R
-   │            - Field 'f' is a resource due to the type: '0000000000000000000000000000000000000000000000000000000008675309.M.R'
+   │            - Field 'f' is a resource due to the type: '0x8675309.M.R'
    ·
  2 │     resource struct R {}
-   │     -------- Type '0000000000000000000000000000000000000000000000000000000008675309.M.R' was declared as a resource here
+   │     -------- Type '0x8675309.M.R' was declared as a resource here
    ·
  6 │     struct S2<T: resource> {
    │            --- 'S2' declared as a `struct` here

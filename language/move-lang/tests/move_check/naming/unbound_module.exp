@@ -6,6 +6,6 @@ error:
    │         ^^^^^^^ Invalid function call
    ·
  2 │     use 0x0.X as X;
-   │         ----- Unbound module '0000000000000000000000000000000000000000000000000000000000000000.X'
+   │         ----- Unbound module '0x0.X'
    │
 
