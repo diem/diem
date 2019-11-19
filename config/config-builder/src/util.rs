@@ -62,7 +62,7 @@ pub fn get_test_config_with_validators() -> (
         ConfigHelpers::gen_validator_nodes(1, None);
     let genesis_transaction =
         gen_genesis_transaction_bytes(&keypair, &test_consensus_peers, &test_network_peers);
-    let mut genesis_transaction_file = File::create(config.get_genesis_transaction_file())
+    let mut genesis_transaction_file = File::create(config.execution.genesis_file_location())
         .expect("[config] Failed to create file for storing genesis transaction");
     genesis_transaction_file
         .write_all(&genesis_transaction)

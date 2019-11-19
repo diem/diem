@@ -46,13 +46,13 @@ fn get_config() -> NodeConfig {
                 .get_validator_set(&config.validator_network.as_ref().unwrap().network_peers),
         )
         .into();
-    let mut file = File::create(config.get_genesis_transaction_file()).unwrap();
+    let mut file = File::create(config.execution.genesis_file_location()).unwrap();
     file.write_all(&genesis_txn.to_vec().unwrap()).unwrap();
     config
 }
 
 fn create_storage_server(config: &mut NodeConfig) -> (grpcio::Server, mpsc::Receiver<()>) {
-    let (service, shutdown_receiver) = StorageService::new(&config.get_storage_dir());
+    let (service, shutdown_receiver) = StorageService::new(&config.storage.dir());
     let mut server = ServerBuilder::new(Arc::new(EnvBuilder::new().build()))
         .register_service(create_storage(service))
         .bind("localhost", 0)
