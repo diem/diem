@@ -125,6 +125,7 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
     }
 
     fn factor(&mut self, parent_id: RefID, loc: Loc, path: Path<Lbl>, intermediate_id: RefID) {
+        debug_assert!(self.check_invariant());
         let parent = self.0.get_mut(&parent_id).unwrap();
         let mut needs_factored = vec![];
         for (child_id, parent_to_child_edges) in &parent.borrowed_by.0 {
@@ -172,6 +173,7 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
             path,
             intermediate_id,
         );
+        debug_assert!(self.check_invariant());
     }
 
     //**********************************************************************************************
@@ -182,6 +184,7 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
     /// Fixes any transitive borrows, so if `parent` borrowed by `id` borrowed by `child`
     /// After the release, `parent` borrowed by `child`
     pub fn release(&mut self, id: RefID) {
+        debug_assert!(self.check_invariant());
         let Ref {
             borrowed_by,
             borrows_from,
@@ -207,6 +210,7 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
             let child = self.0.get_mut(&child_ref_id).unwrap();
             child.borrows_from.remove(&id);
         }
+        debug_assert!(self.check_invariant());
     }
 
     fn splice_out_intermediate(
@@ -243,9 +247,14 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
             let self_borrowed_by = &self_ref.borrowed_by.0;
             for (child_id, other_edges) in &other_ref.borrowed_by.0 {
                 for other_edge in other_edges {
-                    let found_match = &self_borrowed_by[child_id]
-                        .iter()
-                        .any(|self_edge| self_edge.leq(other_edge));
+                    let found_match = self_borrowed_by
+                        .get(child_id)
+                        .map(|parent_to_child| {
+                            parent_to_child
+                                .iter()
+                                .any(|self_edge| self_edge.leq(other_edge))
+                        })
+                        .unwrap_or(false);
                     if !found_match {
                         unmatched_edges
                             .entry(*parent_id)
@@ -268,6 +277,7 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
     /// Utility for remapping the reference ids according the `id_map` provided
     /// If it is not in the map, the id remains the same
     pub fn remap_refs(&mut self, id_map: &BTreeMap<RefID, RefID>) {
+        debug_assert!(self.check_invariant());
         for info in self.0.values_mut() {
             info.remap_refs(id_map);
         }
@@ -276,6 +286,7 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
                 self.0.insert(*new, info);
             }
         }
+        debug_assert!(self.check_invariant());
     }
 
     //**********************************************************************************************
@@ -286,6 +297,11 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
     /// It adds only 'unmatched' edges from other into self, i.e. for any edge in other, if there
     /// is an edge in self that is <= than that edge, it is not added.
     pub fn join(&self, other: &Self) -> Self {
+        debug_assert!(self.check_invariant());
+        debug_assert!(other.check_invariant());
+        debug_assert!(self.0.keys().all(|id| other.0.contains_key(id)));
+        debug_assert!(other.0.keys().all(|id| self.0.contains_key(id)));
+
         let mut joined = self.clone();
         for (parent_id, unmatched_borrowed_by) in self.unmatched_edges(other) {
             for (child_id, unmatched_edges) in unmatched_borrowed_by.0 {
@@ -294,7 +310,44 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
                 }
             }
         }
+        debug_assert!(joined.check_invariant());
         joined
+    }
+
+    //**********************************************************************************************
+    // Consistency/Invariants
+    //**********************************************************************************************
+
+    fn check_invariant(&self) -> bool {
+        self.id_consistency() && self.edge_consistency()
+    }
+
+    /// Checks at all ids in edges are contained in the borrow map itself, i.e. that each id
+    /// corresponds to a reference
+    fn id_consistency(&self) -> bool {
+        let contains_id = |id| self.0.contains_key(id);
+        self.0.values().all(|r| {
+            r.borrowed_by.0.keys().all(contains_id) && r.borrows_from.iter().all(contains_id)
+        })
+    }
+
+    /// Checks that for every edge in borrowed_by there is a flipped edge in borrows_from
+    /// And vice versa
+    //// i.e. verifies the "back edges" in the borrow graph
+    fn edge_consistency(&self) -> bool {
+        let parent_to_child_consistency =
+            |cur_parent, child| self.0[child].borrows_from.contains(cur_parent);
+        let child_to_parent_consistency =
+            |cur_child, parent| self.0[parent].borrowed_by.0.contains_key(cur_child);
+        self.0.iter().all(|(id, r)| {
+            r.borrowed_by
+                .0
+                .keys()
+                .all(|c| parent_to_child_consistency(id, c))
+                && r.borrows_from
+                    .iter()
+                    .all(|p| child_to_parent_consistency(id, p))
+        })
     }
 
     //**********************************************************************************************
