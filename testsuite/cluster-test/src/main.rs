@@ -196,9 +196,13 @@ pub fn main() {
 
     let mut runner = ClusterTestRunner::setup(&args);
 
-    if let Some(ref deploy_hash) = args.deploy {
+    if let Some(ref hash_or_tag) = args.deploy {
         // Deploy deploy_hash before running whatever command
-        exit_on_error(runner.redeploy(deploy_hash));
+        let hash = runner
+            .deployment_manager
+            .resolve(hash_or_tag)
+            .expect("Failed to resolve tag");
+        exit_on_error(runner.redeploy(&hash));
     }
 
     if args.run {
