@@ -12,6 +12,7 @@ use crate::{cluster::Cluster, experiments::Experiment, thread_pool_executor::Thr
 use failure;
 use slog_scope::{info, warn};
 use std::{collections::HashSet, fmt, thread, time::Duration};
+use structopt::StructOpt;
 
 #[derive(Default, Debug)]
 struct Metrics {
@@ -24,27 +25,43 @@ struct Metrics {
 }
 
 pub struct MultiRegionSimulation {
-    splits: Vec<usize>,
-    cross_region_latencies: Vec<u64>,
-    exp_duration_per_config: Duration,
+    params: MultiRegionSimulationParams,
     thread_pool_executor: ThreadPoolExecutor,
     cluster: Cluster,
     prometheus: Prometheus,
 }
 
+#[derive(StructOpt, Debug)]
+pub struct MultiRegionSimulationParams {
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Space separated list of various split sizes"
+    )]
+    splits: Vec<usize>,
+    #[structopt(
+        long,
+        default_value = "50",
+        help = "Space separated list of various delays in ms between the two regions"
+    )]
+    cross_region_latencies: Vec<u64>,
+    #[structopt(
+        long,
+        default_value = "300",
+        help = "Duration in secs (per config) for which multi region experiment happens"
+    )]
+    duration_secs: u64,
+}
+
 impl MultiRegionSimulation {
     pub fn new(
-        splits: Vec<usize>,
-        cross_region_latencies: Vec<u64>,
-        exp_duration_per_config: Duration,
+        params: MultiRegionSimulationParams,
         cluster: Cluster,
         thread_pool_executor: ThreadPoolExecutor,
         prometheus: Prometheus,
     ) -> Self {
         Self {
-            splits,
-            cross_region_latencies,
-            exp_duration_per_config,
+            params,
             thread_pool_executor,
             cluster,
             prometheus,
@@ -84,7 +101,7 @@ impl MultiRegionSimulation {
             .collect();
         self.thread_pool_executor.execute_jobs(start_effects);
 
-        thread::sleep(self.exp_duration_per_config);
+        thread::sleep(self.exp_duration_per_config());
         let metrics = self.get_metrics(count, cross_region_delay.as_millis() as u64);
         let stop_effects: Vec<_> = network_delays_effects
             .iter()
@@ -98,6 +115,10 @@ impl MultiRegionSimulation {
         Ok(metrics)
     }
 
+    fn exp_duration_per_config(&self) -> Duration {
+        Duration::from_secs(self.params.duration_secs)
+    }
+
     fn get_metrics(&self, split_size: usize, cross_region_latency: u64) -> Metrics {
         let mut metrics: Metrics = Default::default();
         metrics.split_size = split_size;
@@ -105,7 +126,7 @@ impl MultiRegionSimulation {
         let step = 10;
         let end = unix_timestamp_now();
         // Measure metrics 30s after the experiment started to ignore initial warmup metrics
-        let start = end - self.exp_duration_per_config + Duration::from_secs(30);
+        let start = end - self.exp_duration_per_config() + Duration::from_secs(30);
         metrics.txn_per_sec = self
             .prometheus
             .query_range_avg(
@@ -187,8 +208,8 @@ impl Experiment for MultiRegionSimulation {
     fn run(&self) -> failure::Result<()> {
         let mut emitter = TxEmitter::new(&self.cluster);
         let mut results = vec![];
-        for split in &self.splits {
-            for cross_region_latency in &self.cross_region_latencies {
+        for split in &self.params.splits {
+            for cross_region_latency in &self.params.cross_region_latencies {
                 let job = emitter
                     .start_job(EmitJobRequest {
                         instances: self.cluster.instances().clone(),
@@ -228,7 +249,7 @@ impl fmt::Display for MultiRegionSimulation {
         write!(
             f,
             "Multi Region Simulation splits: {:?} cross region latencies: {:?}",
-            self.splits, self.cross_region_latencies
+            self.params.splits, self.params.cross_region_latencies
         )
     }
 }
