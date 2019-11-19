@@ -1,8 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::PeerId;
-use crate::OP_COUNTERS;
+use crate::{counters, PeerId};
 use admission_control_proto::proto::admission_control::{
     admission_control_msg::Message as AdmissionControlMsg_oneof,
     submit_transaction_response::Status, AdmissionControlMsg, SubmitTransactionRequest,
@@ -36,6 +35,7 @@ use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
+use std::time::Instant;
 use storage_client::StorageRead;
 use tokio::runtime::TaskExecutor;
 use vm_validator::vm_validator::{get_account_state, TransactionValidation};
@@ -179,7 +179,10 @@ async fn submit_transaction<M, V>(
     M: MempoolClientTrait,
     V: TransactionValidation,
 {
+    let start_time = Instant::now();
     let mut response = None;
+    let mut txn_result = "success";
+    let role = &upstream_proxy_data.role.to_string();
     match upstream_proxy_data.role {
         RoleType::Validator => {
             response = Some(submit_transaction_to_mempool(upstream_proxy_data, request).await);
@@ -199,6 +202,7 @@ async fn submit_transaction<M, V>(
                         response = Some(Ok(res));
                     }
                     Err(e) => {
+                        txn_result = "failure";
                         response = Some(Err(format_err!(
                             "[admission-control] Sending transaction upstream returned an error: {:?}",
                             e
@@ -209,16 +213,33 @@ async fn submit_transaction<M, V>(
         }
     };
     let res = response.unwrap_or_else(|| {
+        // timeout
+        txn_result = "failure";
+        counters::TIMEOUT
+            .with_label_values(&[role, "client", "timeout"])
+            .inc();
         Err(format_err!(
             "[admission-control] Processing write request failed"
         ))
     });
     if let Err(e) = callback.send(res) {
+        txn_result = "failure";
+        counters::TIMEOUT
+            .with_label_values(&[role, "client", "callback_timeout"])
+            .inc();
         error!(
             "[admission control] failed to send back transaction result with error: {:?}",
             e
         );
     };
+    counters::TRANSACTION_LATENCY
+        .with_label_values(&[role, txn_result])
+        .observe(start_time.elapsed().as_secs() as f64);
+    if role == &RoleType::FullNode.to_string() {
+        counters::TRANSACTION_PROXY
+            .with_label_values(&[role, "client", txn_result])
+            .inc();
+    }
 }
 
 async fn submit_transaction_upstream<M, V>(
@@ -249,7 +270,10 @@ async fn process_submit_transaction_request<M, V>(
     M: MempoolClientTrait,
     V: TransactionValidation,
 {
+    let start_time = Instant::now();
     let mut response_msg = None;
+    let mut txn_result = "success";
+    let role = &upstream_proxy_data.role.to_string();
     match upstream_proxy_data.role {
         RoleType::Validator => {
             if let Ok(response) = submit_transaction_to_mempool(upstream_proxy_data, request).await
@@ -260,6 +284,8 @@ async fn process_submit_transaction_request<M, V>(
                     )),
                 };
                 response_msg = Some(ac_control_msg);
+            } else {
+                txn_result = "failure";
             }
         }
         RoleType::FullNode => {
@@ -273,6 +299,8 @@ async fn process_submit_transaction_request<M, V>(
                     )),
                 };
                 response_msg = Some(ac_control_msg);
+            } else {
+                txn_result = "failure";
             }
         }
     };
@@ -282,15 +310,31 @@ async fn process_submit_transaction_request<M, V>(
             .send(Ok(response_data))
             .map_err(|_| format_err!("[admission-control] handling inbound rpc call timed out"))
         {
+            txn_result = "failure";
+            counters::TIMEOUT
+                .with_label_values(&[role, "full_node", "callback_timeout"])
+                .inc();
             error!(
                 "[admission control] failed to process transaction request, error: {:?}",
                 err
             );
         }
     } else {
+        txn_result = "failure";
+        counters::TIMEOUT
+            .with_label_values(&[role, "full_node", "timeout"])
+            .inc();
         error!(
             "[admission control] Did not get a response msg back from submit transaction upstream request",
         );
+    }
+    counters::TRANSACTION_LATENCY
+        .with_label_values(&[role, txn_result])
+        .observe(start_time.elapsed().as_secs() as f64);
+    if role == &RoleType::FullNode.to_string() {
+        counters::TRANSACTION_PROXY
+            .with_label_values(&[role, "full_node", txn_result])
+            .inc();
     }
 }
 
@@ -307,7 +351,9 @@ where
     // unnecessary resources.
     if !can_send_txn_to_mempool(&upstream_proxy_data)? {
         debug!("Mempool is full");
-        OP_COUNTERS.inc_by("submit_txn.rejected.mempool_full", 1);
+        counters::TRANSACTION_SUBMISSION
+            .with_label_values(&["rejected", "mempool_full"])
+            .inc();
         let mut response = SubmitTransactionResponse::default();
         let mut status = MempoolAddTransactionStatus::default();
         status.set_code(MempoolIsFull);
@@ -329,7 +375,9 @@ where
             response.status = Some(Status::AcStatus(
                 AdmissionControlStatus::Rejected("submit txn rejected".to_string()).into(),
             ));
-            OP_COUNTERS.inc_by("submit_txn.rejected.invalid_txn", 1);
+            counters::TRANSACTION_SUBMISSION
+                .with_label_values(&["rejected", "invalid_txn"])
+                .inc();
             return Ok(response);
         }
     };
@@ -350,7 +398,9 @@ where
 
     if let Some(validation_status) = validation_status {
         let mut response = SubmitTransactionResponse::default();
-        OP_COUNTERS.inc_by("submit_txn.vm_validation.failure", 1);
+        counters::TRANSACTION_SUBMISSION
+            .with_label_values(&["rejected", "vm_validation"])
+            .inc();
         debug!(
             "txn failed in vm validation, status: {:?}, txn: {:?}",
             validation_status, transaction
@@ -407,7 +457,9 @@ where
             let mut response = SubmitTransactionResponse::default();
             if let Some(status) = mempool_result.status {
                 if status.code() == MempoolAddTransactionStatusCode::Valid {
-                    OP_COUNTERS.inc_by("submit_txn.txn_accepted", 1);
+                    counters::TRANSACTION_SUBMISSION
+                        .with_label_values(&["accepted", ""])
+                        .inc();
                     response.status =
                         Some(Status::AcStatus(AdmissionControlStatus::Accepted.into()));
                 } else {
@@ -415,7 +467,9 @@ where
                         "txn failed in mempool, status: {:?}, txn: {:?}",
                         status, add_transaction_request.transaction
                     );
-                    OP_COUNTERS.inc_by("submit_txn.mempool.failure", 1);
+                    counters::TRANSACTION_SUBMISSION
+                        .with_label_values(&["rejected", "mempool"])
+                        .inc();
                     response.status = Some(Status::MempoolStatus(status));
                 }
             }
