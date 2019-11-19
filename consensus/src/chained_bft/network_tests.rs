@@ -388,7 +388,7 @@ fn test_network_api() {
             let v = r.votes.next().await.unwrap();
             assert_eq!(v, vote_msg);
         }
-        nodes[4].broadcast_proposal(proposal.clone()).await;
+        nodes[0].broadcast_proposal(proposal.clone()).await;
         playground
             .wait_for_messages(4, NetworkPlayground::take_all)
             .await;
