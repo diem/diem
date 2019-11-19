@@ -68,10 +68,6 @@ impl<T: Payload> ProposalUncheckedSignatures<T> {
         // return proposal
         Ok(self.0)
     }
-
-    pub fn epoch(&self) -> u64 {
-        self.0.proposal.epoch()
-    }
 }
 
 impl<T: Payload> ProposalMsg<T> {

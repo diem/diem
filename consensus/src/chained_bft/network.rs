@@ -382,18 +382,23 @@ impl<T: Payload> NetworkTask<T> {
         peer_id: AccountAddress,
         proposal: Proposal,
     ) -> failure::Result<()> {
+        // verify the signature and well-formedness
         let proposal = ProposalUncheckedSignatures::<T>::try_from(proposal)?;
-        match proposal.epoch().cmp(&self.epoch) {
-            Ordering::Equal => {
-                let proposal = proposal
-                    .validate_signatures(self.validators.as_ref())?
-                    .verify_well_formed()?;
-                debug!("Received proposal {}", proposal);
-                self.proposal_tx.push(peer_id, proposal)
-            }
-            Ordering::Less | Ordering::Greater => self
-                .different_epoch_tx
-                .push(peer_id, (proposal.epoch(), peer_id)),
+        let proposal = proposal
+            .validate_signatures(self.validators.as_ref())?
+            .verify_well_formed()?;
+        debug!("Received proposal {}", proposal);
+        // panic: verify_well_formed ensures the proposal is real
+        ensure!(
+            proposal.proposal().author().unwrap() == peer_id,
+            "proposal received must be from the sending peer"
+        );
+        let proposal_epoch = proposal.proposal().epoch();
+        if proposal_epoch == self.epoch {
+            self.proposal_tx.push(peer_id, proposal)
+        } else {
+            self.different_epoch_tx
+                .push(peer_id, (proposal_epoch, peer_id))
         }
     }
 
