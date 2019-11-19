@@ -1,6 +1,0 @@
-import 0x0.GasSchedule;
-
-main() {
-    assert(GasSchedule.has_gas_schedule_resource(), 0);
-    return;
-}

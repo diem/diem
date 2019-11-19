@@ -3,6 +3,9 @@
 
 #![forbid(unsafe_code)]
 
+mod genesis_gas_schedule;
+
+use crate::genesis_gas_schedule::initial_gas_schedule;
 use failure::prelude::*;
 use lazy_static::lazy_static;
 use libra_crypto::{ed25519::*, traits::ValidKey};
@@ -220,6 +223,7 @@ pub fn encode_genesis_transaction_with_validator(
         let fake_fetcher = FakeFetcher::new(modules.iter().map(|m| m.as_inner().clone()).collect());
         let data_cache = BlockDataCache::new(&state_view);
         let block_cache = BlockModuleCache::new(&vm_cache, fake_fetcher);
+        let initial_gas_schedule = initial_gas_schedule(&block_cache, &data_cache);
         {
             let mut txn_data = TransactionMetadata::default();
             txn_data.sender = genesis_addr;
@@ -244,7 +248,7 @@ pub fn encode_genesis_transaction_with_validator(
                     account_config::association_address(),
                     &GAS_SCHEDULE_MODULE,
                     &INITIALIZE,
-                    vec![],
+                    vec![initial_gas_schedule],
                 )
                 .unwrap();
 
