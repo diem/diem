@@ -18,6 +18,7 @@ use consensus_types::{
 use failure;
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
+use libra_types::validator_change::ValidatorChangeEventWithProof;
 use mirai_annotations::checked_precondition;
 use rand::{prelude::*, Rng};
 use std::{
@@ -173,6 +174,14 @@ impl<T: Payload> BlockStore<T> {
         // ensure it's [b1, b2]
         blocks.reverse();
         self.rebuild(root, blocks, quorum_certs).await;
+        if highest_ledger_info.ends_epoch() {
+            retriever
+                .network
+                .broadcast_epoch_change(ValidatorChangeEventWithProof::new(vec![
+                    highest_ledger_info.ledger_info().clone(),
+                ]))
+                .await;
+        }
         Ok(())
     }
 }

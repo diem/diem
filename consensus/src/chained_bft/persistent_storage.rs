@@ -123,7 +123,10 @@ impl<T: Payload> RecoveryData<T> {
     }
 
     pub fn last_vote(&self) -> Option<Vote> {
-        self.last_vote.clone()
+        match &self.last_vote {
+            Some(v) if v.epoch() == self.epoch => Some(v.clone()),
+            _ => None,
+        }
     }
 
     pub fn take(
@@ -143,7 +146,10 @@ impl<T: Payload> RecoveryData<T> {
     }
 
     pub fn highest_timeout_certificate(&self) -> Option<TimeoutCertificate> {
-        self.highest_timeout_certificate.clone()
+        match &self.highest_timeout_certificate {
+            Some(tc) if tc.epoch() == self.epoch => Some(tc.clone()),
+            _ => None,
+        }
     }
 
     /// Finds the root (last committed block) and returns the root block, the QC to the root block

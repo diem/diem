@@ -156,7 +156,7 @@ where
             HashValue::zero(),
             ledger_info.transaction_accumulator_hash(),
             ledger_info.version(),
-            ledger_info.timestamp_usecs(),
+            0,
             None,
         );
 
@@ -170,7 +170,7 @@ where
             ),
         );
 
-        let block_data = BlockData::new_genesis(ledger_info.timestamp_usecs(), genesis_quorum_cert);
+        let block_data = BlockData::new_genesis(0, genesis_quorum_cert);
 
         Block {
             id: block_data.hash(),
