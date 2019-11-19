@@ -598,33 +598,43 @@ impl ClusterTestRunner {
     pub fn run_suite_in_loop(&mut self) {
         self.cleanup();
         loop {
-            let hash_to_tag;
-            if let Some(hash) = self.deployment_manager.latest_hash_changed() {
-                let upstream_tag = self
-                    .deployment_manager
-                    .get_upstream_tag(&hash)
-                    .unwrap_or_else(|e| {
-                        warn!("Failed to get upstream tag for {}: {}", hash, e);
-                        "<unknown tag>".to_string()
-                    });
-                info!(
-                    "New version of `{}` tag({}) is available: `{}`",
-                    SOURCE_TAG, upstream_tag, hash
-                );
-                match self.redeploy(&hash) {
-                    Err(e) => {
-                        self.report_failure(format!("Failed to deploy `{}`: {}", hash, e));
-                        return;
-                    }
-                    Ok(()) => {
-                        info!("Deployed new version `{}`, running test suite", hash);
-                        hash_to_tag = Some(hash);
-                    }
-                }
-                if let Err(e) = self.run_ci_suite(hash_to_tag) {
-                    self.report_failure(format!("{}", e));
+            let hash = self.wait_for_new_tag();
+            let upstream_tag = self
+                .deployment_manager
+                .get_upstream_tag(&hash)
+                .unwrap_or_else(|e| {
+                    warn!("Failed to get upstream tag for {}: {}", hash, e);
+                    "<unknown tag>".to_string()
+                });
+            info!(
+                "New version of `{}` tag({}) is available: `{}`",
+                SOURCE_TAG, upstream_tag, hash
+            );
+            match self.redeploy(&hash) {
+                Err(e) => {
+                    self.report_failure(format!("Failed to deploy `{}`: {}", hash, e));
                     return;
                 }
+                Ok(()) => {
+                    info!("Deployed new version `{}`, running test suite", hash);
+                }
+            }
+            if let Err(e) = self.run_ci_suite(Some(hash)) {
+                self.report_failure(format!("{}", e));
+                return;
+            }
+        }
+    }
+
+    fn wait_for_new_tag(&self) -> String {
+        let mut first = true;
+        loop {
+            if let Some(hash) = self.deployment_manager.latest_hash_changed() {
+                return hash;
+            }
+            if first {
+                info!("Last deployed digest matches latest digest we expect, not doing redeploy");
+                first = false;
             }
             thread::sleep(Duration::from_secs(60));
         }

@@ -58,7 +58,6 @@ impl DeploymentManager {
             .image_digest_by_tag(TESTED_TAG)
             .expect("Failed to get image digest for TESTED_TAG");
         if hash == last_tested {
-            info!("Last deployed digest matches latest digest we expect, not doing redeploy");
             return None;
         }
         Some(hash)
