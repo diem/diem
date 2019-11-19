@@ -15,7 +15,7 @@ hex = { version = "0.3.2", default-features = false }
 mirai-annotations = "1.4.0"
 parity-multiaddr = { version = "0.5.0", default-features = false }
 rand = "0.6.5"
-serde = { version = "1.0.99", default-features = false }
+serde = { version = "1.0.99", features = ["rc"], default-features = false }
 toml = { version = "0.5.3", default-features = false }
 prost = "0.5.0"
 

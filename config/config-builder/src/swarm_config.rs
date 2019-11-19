@@ -7,7 +7,8 @@ use failure::prelude::*;
 use libra_config::{
     config::{
         BaseConfig, ConsensusConfig, NetworkConfig, NodeConfig, NodeConfigHelpers,
-        PersistableConfig, RoleType, SafetyRulesBackend, SafetyRulesConfig, VMPublishingOption,
+        OnDiskStorageConfig, PersistableConfig, RoleType, SafetyRulesBackend, SafetyRulesConfig,
+        VMPublishingOption,
     },
     keys::{ConsensusKeyPair, NetworkKeyPairs},
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
@@ -28,6 +29,7 @@ use std::{
     io::prelude::*,
     path::{Path, PathBuf},
     str::FromStr,
+    sync::Arc,
 };
 
 pub struct SwarmConfig {
@@ -94,6 +96,7 @@ impl SwarmConfig {
             network_keypairs: NetworkKeyPairs::default(),
             network_peers: template_network.network_peers.clone(),
             seed_peers: template_network.seed_peers.clone(),
+            base: upstream_peer_config.base().clone(),
         };
         let (mut private_keys, mut network_peers_config) =
             ConfigHelpers::gen_full_nodes(num_nodes, key_seed);
@@ -290,6 +293,7 @@ impl SwarmConfig {
         output_dir: &Path,
         addrs: &[Multiaddr],
     ) -> NodeConfig {
+        let base_config = Arc::new(BaseConfig::new(output_dir.to_path_buf(), role));
         // Save consensus keys if present.
         let mut consensus_keys_file_name = "".to_string();
         if consenus_keypair.is_present() {
@@ -299,10 +303,11 @@ impl SwarmConfig {
         // Prepare safety rules
         let mut safety_rules_config = SafetyRulesConfig::default();
         if role == RoleType::Validator {
-            safety_rules_config.backend = SafetyRulesBackend::OnDiskStorage {
+            safety_rules_config.backend = SafetyRulesBackend::OnDiskStorage(OnDiskStorageConfig {
                 default: true,
                 path: PathBuf::from(format!("{}.node.safety_rules.toml", node_id.to_string())),
-            }
+                base: base_config.clone(),
+            })
         }
         // Save network keys.
         let network_keys_file_name = format!("{}.node.network.keys.toml", node_id.to_string());
@@ -316,7 +321,6 @@ impl SwarmConfig {
         // Save consensus peers file.
         let consensus_peers_file_name = "consensus_peers.config.toml".to_string();
         consensus_peers_config.save_config(&output_dir.join(&consensus_peers_file_name));
-        let base_config = BaseConfig::new(output_dir.to_path_buf(), role);
         let template_network = NetworkConfig::default();
         let network_config = NetworkConfig {
             peer_id: PeerId::try_from(node_id.to_string()).expect("Unable to reproduce peer_id"),
@@ -334,6 +338,7 @@ impl SwarmConfig {
             network_keypairs: NetworkKeyPairs::default(),
             network_peers: template_network.network_peers.clone(),
             seed_peers: template_network.seed_peers.clone(),
+            base: base_config.clone(),
         };
         let consensus_config = ConsensusConfig {
             max_block_size: template.consensus.max_block_size,
@@ -347,6 +352,7 @@ impl SwarmConfig {
             consensus_keypair: ConsensusKeyPair::default(),
             consensus_peers: template.consensus.consensus_peers.clone(),
             safety_rules: safety_rules_config,
+            base: base_config.clone(),
         };
 
         let mut full_node_networks = vec![];
@@ -375,12 +381,15 @@ impl SwarmConfig {
         NodeConfigHelpers::randomize_config_ports(&mut config);
         config.vm_config.publishing_options = VMPublishingOption::Open;
         config
+            .set_data_dir(output_dir.to_path_buf())
+            .expect("Unable to set output directory");
+        config
     }
 }
 
 pub struct SwarmConfigBuilder {
     num_nodes: usize,
-    template_path: PathBuf,
+    template_path: Option<PathBuf>,
     output_dir: PathBuf,
     force_discovery: bool,
     is_ipv4: bool,
@@ -396,7 +405,7 @@ impl Default for SwarmConfigBuilder {
     fn default() -> Self {
         SwarmConfigBuilder {
             num_nodes: 1,
-            template_path: "config/data/configs/node.config.toml".into(),
+            template_path: None,
             output_dir: "configs".into(),
             force_discovery: false,
             is_ipv4: false,
@@ -416,7 +425,7 @@ impl SwarmConfigBuilder {
     }
 
     pub fn with_base<P: AsRef<Path>>(&mut self, base_template_path: P) -> &mut Self {
-        self.template_path = base_template_path.as_ref().to_path_buf();
+        self.template_path = Some(base_template_path.as_ref().to_path_buf());
         self
     }
 
@@ -501,11 +510,14 @@ impl SwarmConfigBuilder {
         }
 
         // read template
-        let mut template = NodeConfig::load_config(&self.template_path);
+        let mut template = if let Some(template_path) = self.template_path {
+            NodeConfig::load_config(template_path)
+        } else {
+            NodeConfig::default()
+        };
         // update everything in the template and then generate swarm config
         let listen_address = if self.is_ipv4 { "0.0.0.0" } else { "::1" };
         let listen_address = listen_address.to_string();
-        template.base.data_dir_path = self.output_dir.clone();
         template.admission_control.address = listen_address.clone();
         template.debug_interface.address = listen_address;
         // TODO:

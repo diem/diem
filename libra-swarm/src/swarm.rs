@@ -294,16 +294,13 @@ impl LibraSwarm {
         upstream_config_dir: Option<String>,
     ) -> Result<LibraSwarm> {
         let swarm_config_dir = Self::setup_config_dir(&config_dir);
-        let base = utils::workspace_root().join(
-            template_path
-                .as_ref()
-                .unwrap_or(&"config/data/configs/node.config.toml".to_string()),
-        );
         let mut config_builder = SwarmConfigBuilder::new();
+        if let Some(template_path) = template_path {
+            config_builder.with_base(utils::workspace_root().join(template_path));
+        }
         config_builder
             .with_ipv4()
             .with_num_nodes(num_nodes)
-            .with_base(base)
             .with_output_dir(&swarm_config_dir)
             .with_faucet_keypair(faucet_account_keypair)
             .with_role(role)

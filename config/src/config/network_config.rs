@@ -2,19 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    config::PersistableConfig, keys::NetworkKeyPairs, seed_peers::SeedPeersConfig,
-    trusted_peers::NetworkPeersConfig, utils::get_local_ip,
+    config::{BaseConfig, PersistableConfig, RoleType},
+    keys::NetworkKeyPairs,
+    seed_peers::SeedPeersConfig,
+    trusted_peers::NetworkPeersConfig,
+    utils::get_local_ip,
 };
 use failure::prelude::*;
 use libra_crypto::ValidKey;
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use serde::{Deserialize, Serialize};
-use std::{
-    convert::TryFrom,
-    path::{Path, PathBuf},
-    string::ToString,
-};
+use std::{convert::TryFrom, path::PathBuf, string::ToString, sync::Arc};
 
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -48,6 +47,8 @@ pub struct NetworkConfig {
     #[serde(skip)]
     pub seed_peers: SeedPeersConfig,
     pub seed_peers_file: PathBuf,
+    #[serde(skip)]
+    pub base: Arc<BaseConfig>,
 }
 
 impl Default for NetworkConfig {
@@ -66,25 +67,22 @@ impl Default for NetworkConfig {
             network_peers: NetworkPeersConfig::default(),
             seed_peers_file: PathBuf::from("seed_peers.config.toml"),
             seed_peers: SeedPeersConfig::default(),
+            base: Arc::new(BaseConfig::default()),
         }
     }
 }
 
 impl NetworkConfig {
-    pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+    pub fn load(&mut self, base: Arc<BaseConfig>, network_role: RoleType) -> Result<()> {
+        self.base = base;
         if !self.network_peers_file.as_os_str().is_empty() {
-            self.network_peers = NetworkPeersConfig::load_config(
-                path.as_ref().with_file_name(&self.network_peers_file),
-            );
+            self.network_peers = NetworkPeersConfig::load_config(self.network_peers_file());
         }
         if !self.network_keypairs_file.as_os_str().is_empty() {
-            self.network_keypairs = NetworkKeyPairs::load_config(
-                path.as_ref().with_file_name(&self.network_keypairs_file),
-            );
+            self.network_keypairs = NetworkKeyPairs::load_config(self.network_keypairs_file());
         }
         if !self.seed_peers_file.as_os_str().is_empty() {
-            self.seed_peers =
-                SeedPeersConfig::load_config(path.as_ref().with_file_name(&self.seed_peers_file));
+            self.seed_peers = SeedPeersConfig::load_config(self.seed_peers_file());
         }
         if self.advertised_address.to_string().is_empty() {
             self.advertised_address =
@@ -103,6 +101,30 @@ impl NetworkConfig {
             )
             .unwrap();
         }
+
+        if !network_role.is_validator() {
+            ensure!(
+                self.peer_id ==
+                PeerId::try_from(
+                        self.network_keypairs
+                        .get_network_identity_public()
+                        .to_bytes()
+                )?,
+                "For non-validator roles, the peer_id should be derived from the network identity key.",
+            );
+        }
         Ok(())
+    }
+
+    pub fn network_peers_file(&self) -> PathBuf {
+        self.base.full_path(&self.network_peers_file)
+    }
+
+    pub fn network_keypairs_file(&self) -> PathBuf {
+        self.base.full_path(&self.network_keypairs_file)
+    }
+
+    pub fn seed_peers_file(&self) -> PathBuf {
+        self.base.full_path(&self.seed_peers_file)
     }
 }

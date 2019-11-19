@@ -192,11 +192,11 @@ impl<T: Payload> EpochManager<T> {
         let author = signer.author();
         let safety_rules_storage = match &self.config.safety_rules.backend {
             SafetyRulesBackend::InMemoryStorage => InMemoryStorage::default_storage(),
-            SafetyRulesBackend::OnDiskStorage { default, path } => {
-                if *default {
-                    OnDiskStorage::default_storage(path.clone())
+            SafetyRulesBackend::OnDiskStorage(config) => {
+                if config.default {
+                    OnDiskStorage::default_storage(config.path().clone())
                 } else {
-                    OnDiskStorage::new_storage(path.clone())
+                    OnDiskStorage::new_storage(config.path().clone())
                 }
             }
         };

@@ -1,5 +1,5 @@
 [base]
-data_dir_path = "/var/folders/tq/767cwxb92czdjb84m1bkppch0000gn/T/6f41f887e9b84374ebb0d35bb04f5d33"
+data_dir = "/var/folders/tq/767cwxb92czdjb84m1bkppch0000gn/T/6f41f887e9b84374ebb0d35bb04f5d33"
 role = "validator"
 
 [metrics]

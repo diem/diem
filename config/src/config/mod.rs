@@ -8,7 +8,6 @@ use crate::{
     utils::get_available_port,
 };
 use failure::prelude::*;
-use libra_crypto::ValidKey;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
     transaction::{SignedTransaction, Transaction},
@@ -24,6 +23,7 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     string::ToString,
+    sync::Arc,
 };
 use toml;
 
@@ -60,13 +60,13 @@ static CONFIG_TEMPLATE: &[u8] = include_bytes!("../../data/configs/node.config.t
 /// The config file is broken up into sections for each module
 /// so that only that module can be passed around
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Default, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct NodeConfig {
     #[serde(default)]
     pub admission_control: AdmissionControlConfig,
     #[serde(default)]
-    pub base: BaseConfig,
+    pub base: Arc<BaseConfig>,
     #[serde(default)]
     pub consensus: ConsensusConfig,
     #[serde(default)]
@@ -94,38 +94,50 @@ pub struct NodeConfig {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct BaseConfig {
-    pub data_dir_path: PathBuf,
+    pub data_dir: PathBuf,
     pub role: RoleType,
+    // Used only to prevent a potentially temporary data_dir from being deleted. This should
+    // eventually be moved to be owned by something outside the config.
     #[serde(skip)]
-    temp_data_dir: Option<TempPath>,
-}
-
-impl Default for BaseConfig {
-    fn default() -> BaseConfig {
-        BaseConfig {
-            data_dir_path: PathBuf::from("."),
-            role: RoleType::Validator,
-            temp_data_dir: None,
-        }
-    }
-}
-
-impl BaseConfig {
-    pub fn new(data_dir_path: PathBuf, role: RoleType) -> Self {
-        BaseConfig {
-            data_dir_path,
-            role,
-            temp_data_dir: None,
-        }
-    }
+    temp_dir: Option<TempPath>,
 }
 
 impl Clone for BaseConfig {
     fn clone(&self) -> Self {
         Self {
-            data_dir_path: self.data_dir_path.clone(),
+            data_dir: self.data_dir.clone(),
             role: self.role,
-            temp_data_dir: None,
+            temp_dir: None,
+        }
+    }
+}
+
+impl Default for BaseConfig {
+    fn default() -> BaseConfig {
+        BaseConfig {
+            data_dir: PathBuf::from("."),
+            role: RoleType::Validator,
+            temp_dir: None,
+        }
+    }
+}
+
+impl BaseConfig {
+    pub fn new(data_dir: PathBuf, role: RoleType) -> Self {
+        BaseConfig {
+            data_dir,
+            role,
+            temp_dir: None,
+        }
+    }
+
+    /// Returns the full path to a file path. If the file_path is relative, it prepends with the
+    /// data_dir. Otherwise it returns the provided full_path.
+    pub fn full_path(&self, file_path: &PathBuf) -> PathBuf {
+        if file_path.is_relative() {
+            self.data_dir.join(file_path)
+        } else {
+            file_path.clone()
         }
     }
 }
@@ -165,53 +177,69 @@ impl fmt::Display for RoleType {
 }
 
 impl NodeConfig {
+    pub fn set_data_dir(&mut self, path: PathBuf) -> Result<()> {
+        self.base = Arc::new(BaseConfig::new(path, self.base.role));
+        self.prepare()?;
+        Ok(())
+    }
+
+    pub fn set_role(&mut self, role: RoleType) -> Result<()> {
+        self.base = Arc::new(BaseConfig::new(self.base.data_dir.clone(), role));
+        self.prepare()?;
+        Ok(())
+    }
+
+    pub fn set_temp_dir(&mut self, path: TempPath) -> Result<()> {
+        self.base = Arc::new(BaseConfig {
+            data_dir: path.path().into(),
+            role: self.base.role,
+            temp_dir: Some(path),
+        });
+        self.prepare()?;
+        Ok(())
+    }
+
+    pub fn base(&self) -> &Arc<BaseConfig> {
+        &self.base
+    }
+
+    fn prepare(&mut self) -> Result<()> {
+        if self.base.role.is_validator() {
+            ensure!(
+                self.validator_network.is_some(),
+                "Missing a validator network config for a validator node"
+            );
+        } else {
+            ensure!(
+                self.validator_network.is_none(),
+                "Provided a validator network config for a full_node node"
+            );
+        }
+
+        for network in &mut self.full_node_networks {
+            network.load(self.base.clone(), RoleType::FullNode)?;
+        }
+        if let Some(network) = &mut self.validator_network {
+            network.load(self.base.clone(), RoleType::Validator)?;
+        }
+        self.consensus.load(self.base.clone())?;
+        self.execution.load(self.base.clone())?;
+        self.metrics.load(self.base.clone())?;
+        self.storage.load(self.base.clone())?;
+        Ok(())
+    }
+
     /// Reads the config file and returns the configuration object in addition to doing some
     /// post-processing of the config
     /// Paths used in the config are either absolute or relative to the config location
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut config = Self::load_config(&path);
-        if config.base.role.is_validator() {
-            ensure!(
-                config.validator_network.is_some(),
-                "Missing a validator network config for a validator node"
-            );
-        } else {
-            ensure!(
-                config.validator_network.is_none(),
-                "Provided a validator network config for a full_node node"
-            );
-        }
-        for network in &mut config.full_node_networks {
-            network.load(path.as_ref())?;
-            ensure!(
-                network.peer_id ==
-                PeerId::try_from(
-                    network
-                        .network_keypairs
-                        .get_network_identity_public()
-                        .to_bytes()
-                )?,
-                "For non-validator roles, the peer_id should be derived from the network identity key.",
-            );
-        }
-        if let Some(network) = &mut config.validator_network {
-            network.load(path.as_ref())?;
-        }
-        config.consensus.load(path.as_ref())?;
+        config.prepare()?;
         Ok(config)
     }
 
-    pub fn get_genesis_transaction_file(&self) -> PathBuf {
-        let path = &self.execution.genesis_file_location;
-        if path.is_relative() {
-            self.base.data_dir_path.join(path)
-        } else {
-            path.clone()
-        }
-    }
-
     pub fn get_genesis_transaction(&self) -> Result<Transaction> {
-        let file_path = self.get_genesis_transaction_file();
+        let file_path = self.execution.genesis_file_location();
         let mut file: File = File::open(&file_path).unwrap_or_else(|err| {
             panic!(
                 "Failed to open file: {:?}; error: {:?}",
@@ -225,26 +253,6 @@ impl NodeConfig {
         Ok(Transaction::UserTransaction(SignedTransaction::try_from(
             libra_types::proto::types::SignedTransaction::decode(&buffer)?,
         )?))
-    }
-
-    pub fn get_storage_dir(&self) -> PathBuf {
-        let path = self.storage.dir.clone();
-        if path.is_relative() {
-            self.base.data_dir_path.join(path)
-        } else {
-            path
-        }
-    }
-
-    pub fn get_metrics_dir(&self) -> Option<PathBuf> {
-        let path = self.metrics.dir.as_path();
-        if path.as_os_str().is_empty() {
-            None
-        } else if path.is_relative() {
-            Some(self.base.data_dir_path.join(path))
-        } else {
-            Some(path.to_owned())
-        }
     }
 
     /// Returns true if network_config is for an upstream network
@@ -283,8 +291,7 @@ impl NodeConfigHelpers {
         // Create temporary directory for persisting configs.
         let dir = TempPath::new();
         dir.create_as_dir().expect("error creating tempdir");
-        config.base.data_dir_path = dir.path().to_owned();
-        config.base.temp_data_dir = Some(dir);
+        config.set_temp_dir(dir).expect("Error setting temp_dir");
         if random_ports {
             NodeConfigHelpers::randomize_config_ports(&mut config);
         }
@@ -378,9 +385,13 @@ mod test {
 
         // These are randomly generated, so let's force them to be the same, perhaps we can use a
         // random seed so that these can be made uniform...
-        expected.base.data_dir_path = actual.base.data_dir_path.clone();
-        expected.base.temp_data_dir = None;
-        actual.base.temp_data_dir = None;
+        expected
+            .set_data_dir(actual.base.data_dir.clone())
+            .expect("Unable to set data_dir");
+        // Reseting any temp_dir
+        actual
+            .set_data_dir(actual.base.data_dir.clone())
+            .expect("Unable to set data_dir");
         expected.consensus.consensus_keypair = actual.consensus.consensus_keypair.clone();
         expected.consensus.consensus_peers = actual.consensus.consensus_peers.clone();
 

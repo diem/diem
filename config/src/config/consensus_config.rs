@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    config::{PersistableConfig, SafetyRulesBackend, SafetyRulesConfig},
+    config::{BaseConfig, PersistableConfig, SafetyRulesConfig},
     keys::ConsensusKeyPair,
     trusted_peers::{ConsensusPeerInfo, ConsensusPeersConfig},
 };
-use failure::prelude::*;
+use failure::Result;
 use libra_types::PeerId;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::{path::PathBuf, sync::Arc};
 
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -29,6 +29,8 @@ pub struct ConsensusConfig {
     pub consensus_peers: ConsensusPeersConfig,
     pub consensus_peers_file: PathBuf,
     pub safety_rules: SafetyRulesConfig,
+    #[serde(skip)]
+    pub base: Arc<BaseConfig>,
 }
 
 impl Default for ConsensusConfig {
@@ -56,6 +58,7 @@ impl Default for ConsensusConfig {
             consensus_peers: peers,
             consensus_peers_file: PathBuf::from("consensus_peers.config.toml"),
             safety_rules: SafetyRulesConfig::default(),
+            base: Arc::new(BaseConfig::default()),
         }
     }
 }
@@ -72,31 +75,23 @@ pub enum ConsensusProposerType {
 }
 
 impl ConsensusConfig {
-    pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+    pub fn load(&mut self, base: Arc<BaseConfig>) -> Result<()> {
+        self.base = base;
         if !self.consensus_keypair_file.as_os_str().is_empty() {
-            self.consensus_keypair = ConsensusKeyPair::load_config(
-                path.as_ref().with_file_name(&self.consensus_keypair_file),
-            );
+            self.consensus_keypair = ConsensusKeyPair::load_config(self.consensus_keypair_file());
         }
         if !self.consensus_peers_file.as_os_str().is_empty() {
-            self.consensus_peers = ConsensusPeersConfig::load_config(
-                path.as_ref().with_file_name(&self.consensus_peers_file),
-            );
+            self.consensus_peers = ConsensusPeersConfig::load_config(self.consensus_peers_file());
         }
-        if let SafetyRulesBackend::OnDiskStorage {
-            default,
-            path: sr_path,
-        } = &self.safety_rules.backend
-        {
-            // If the file is relative, it means it is in the same directory as this config,
-            // unfortunately this is meaningless to the process that would load the config.
-            if !sr_path.as_os_str().is_empty() && sr_path.is_relative() {
-                self.safety_rules.backend = SafetyRulesBackend::OnDiskStorage {
-                    default: *default,
-                    path: path.as_ref().with_file_name(sr_path),
-                };
-            }
-        }
+        self.safety_rules.load(self.base.clone())?;
         Ok(())
+    }
+
+    pub fn consensus_keypair_file(&self) -> PathBuf {
+        self.base.full_path(&self.consensus_keypair_file)
+    }
+
+    pub fn consensus_peers_file(&self) -> PathBuf {
+        self.base.full_path(&self.consensus_peers_file)
     }
 }

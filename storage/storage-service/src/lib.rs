@@ -35,7 +35,7 @@ use storage_proto::proto::storage::{
 
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
-    let (storage_service, shutdown_receiver) = StorageService::new(&config.get_storage_dir());
+    let (storage_service, shutdown_receiver) = StorageService::new(&config.storage.dir());
     spawn_service_thread_with_drop_closure(
         create_storage(storage_service),
         config.storage.address.clone(),
