@@ -3,7 +3,10 @@
 
 use chrono::{Datelike, Timelike, Utc};
 use cluster_test::effects::RemoveNetworkEffects;
-use cluster_test::experiments::{MultiRegionSimulation, PacketLossRandomValidators};
+use cluster_test::experiments::{
+    MultiRegionSimulation, MultiRegionSimulationParams, PacketLossRandomValidators,
+    PacketLossRandomValidatorsParams,
+};
 use cluster_test::github::GitHub;
 use cluster_test::health::PrintFailures;
 use cluster_test::instance::Instance;
@@ -39,7 +42,7 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-use structopt::{clap::ArgGroup, StructOpt};
+use structopt::{clap::AppSettings, clap::ArgGroup, StructOpt};
 use termion::{color, style};
 
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
@@ -64,8 +67,6 @@ struct Args {
     discovery: bool,
     #[structopt(long, group = "action")]
     pssh: bool,
-    #[structopt(last = true, requires = "pssh")]
-    last: Vec<String>,
     #[structopt(long, group = "action")]
     run: bool,
     #[structopt(long, group = "action")]
@@ -99,6 +100,9 @@ struct Args {
     #[structopt(long, group = "action")]
     run_ci_suite: bool,
 
+    #[structopt(last = true)]
+    last: Vec<String>,
+
     #[structopt(long)]
     deploy: Option<String>,
 
@@ -115,46 +119,6 @@ struct Args {
     //stop_experiment options
     #[structopt(long, default_value = "10")]
     max_stopped: usize,
-
-    // multi_region_simulation: options
-    #[structopt(
-        long,
-        default_value = "10",
-        help = "Space separated list of various split sizes"
-    )]
-    multi_region_splits: Vec<usize>,
-    #[structopt(
-        long,
-        default_value = "50",
-        help = "Space separated list of various delays in ms between the two regions"
-    )]
-    multi_region_delays_ms: Vec<u64>,
-    #[structopt(
-        long,
-        default_value = "300",
-        help = "Duration in secs (per config) for which multi region experiment happens"
-    )]
-    multi_region_exp_duration_secs: u64,
-
-    //packet_loss_experiment options
-    #[structopt(
-        long,
-        default_value = "10",
-        help = "Percent of instances in which packet loss should be introduced"
-    )]
-    packet_loss_percent_instances: f32,
-    #[structopt(
-        long,
-        default_value = "10",
-        help = "Percent of packet loss for each instance"
-    )]
-    packet_loss_percent: f32,
-    #[structopt(
-        long,
-        default_value = "60",
-        help = "Duration in secs for which packet loss happens"
-    )]
-    packet_loss_duration_secs: u64,
 }
 
 pub fn main() {
@@ -223,23 +187,21 @@ pub fn main() {
     } else if args.start {
         runner.start();
     } else if args.packet_loss_experiment {
-        let total_instances = runner.cluster.instances().len();
-        let packet_loss_num_instances: usize = std::cmp::min(
-            ((args.packet_loss_percent_instances / 100.0) * total_instances as f32).ceil() as usize,
-            total_instances,
+        let params = PacketLossRandomValidatorsParams::from_clap(
+            &PacketLossRandomValidatorsParams::clap()
+                .global_setting(AppSettings::NoBinaryName)
+                .get_matches_from(args.last),
         );
-        let experiment = PacketLossRandomValidators::new(
-            packet_loss_num_instances,
-            args.packet_loss_percent,
-            Duration::from_secs(args.packet_loss_duration_secs),
-            &runner.cluster,
-        );
+        let experiment = PacketLossRandomValidators::new(params, &runner.cluster);
         runner.cleanup_and_run(Box::new(experiment)).unwrap();
     } else if args.multi_region_simulation {
+        let params = MultiRegionSimulationParams::from_clap(
+            &MultiRegionSimulationParams::clap()
+                .global_setting(AppSettings::NoBinaryName)
+                .get_matches_from(args.last),
+        );
         let experiment = MultiRegionSimulation::new(
-            args.multi_region_splits.clone(),
-            args.multi_region_delays_ms.clone(),
-            Duration::from_secs(args.multi_region_exp_duration_secs),
+            params,
             runner.cluster.clone(),
             runner.thread_pool_executor.clone(),
             runner.prometheus.clone(),

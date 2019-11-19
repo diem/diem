@@ -12,6 +12,7 @@ use crate::{
 };
 use failure;
 use std::{collections::HashSet, fmt, thread, time::Duration};
+use structopt::StructOpt;
 
 pub struct PacketLossRandomValidators {
     instances: Vec<Instance>,
@@ -19,13 +20,40 @@ pub struct PacketLossRandomValidators {
     duration: Duration,
 }
 
+#[derive(StructOpt, Debug)]
+pub struct PacketLossRandomValidatorsParams {
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Percent of instances in which packet loss should be introduced"
+    )]
+    percent_instances: f32,
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Percent of packet loss for each instance"
+    )]
+    packet_loss_percent: f32,
+    #[structopt(
+        long,
+        default_value = "60",
+        help = "Duration in secs for which packet loss happens"
+    )]
+    duration_secs: u64,
+}
+
 impl PacketLossRandomValidators {
-    pub fn new(count: usize, percent: f32, duration: Duration, cluster: &Cluster) -> Self {
-        let (test_cluster, _) = cluster.split_n_random(count);
+    pub fn new(params: PacketLossRandomValidatorsParams, cluster: &Cluster) -> Self {
+        let total_instances = cluster.instances().len();
+        let packet_loss_num_instances: usize = std::cmp::min(
+            ((params.percent_instances / 100.0) * total_instances as f32).ceil() as usize,
+            total_instances,
+        );
+        let (test_cluster, _) = cluster.split_n_random(packet_loss_num_instances);
         Self {
             instances: test_cluster.into_instances(),
-            percent,
-            duration,
+            percent: params.packet_loss_percent,
+            duration: Duration::from_secs(params.duration_secs),
         }
     }
 }
