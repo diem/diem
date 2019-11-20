@@ -7,7 +7,9 @@ use crate::{
     trusted_peers::{ConsensusPeerInfo, ConsensusPeersConfig},
 };
 use failure::Result;
+use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
 use libra_types::PeerId;
+use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc};
 
@@ -36,16 +38,7 @@ pub struct ConsensusConfig {
 impl Default for ConsensusConfig {
     fn default() -> ConsensusConfig {
         let keypair = ConsensusKeyPair::default();
-        let mut peers = ConsensusPeersConfig::default();
-        let pubkey = keypair
-            .public()
-            .expect("Unable to obtain default public key");
-        peers.peers.insert(
-            PeerId::from_public_key(pubkey).to_string(),
-            ConsensusPeerInfo {
-                consensus_pubkey: pubkey.clone(),
-            },
-        );
+        let peers = Self::default_peers(&keypair, PeerId::default());
 
         ConsensusConfig {
             max_block_size: 100,
@@ -75,6 +68,15 @@ pub enum ConsensusProposerType {
 }
 
 impl ConsensusConfig {
+    pub fn random(rng: &mut StdRng, peer_id: PeerId) -> Self {
+        let privkey = Ed25519PrivateKey::generate_for_testing(rng);
+        let consensus_keypair = ConsensusKeyPair::load(Some(privkey));
+        let mut config = Self::default();
+        config.consensus_peers = Self::default_peers(&consensus_keypair, peer_id);
+        config.consensus_keypair = consensus_keypair;
+        config
+    }
+
     pub fn load(&mut self, base: Arc<BaseConfig>) -> Result<()> {
         self.base = base;
         if !self.consensus_keypair_file.as_os_str().is_empty() {
@@ -93,5 +95,19 @@ impl ConsensusConfig {
 
     pub fn consensus_peers_file(&self) -> PathBuf {
         self.base.full_path(&self.consensus_peers_file)
+    }
+
+    fn default_peers(keypair: &ConsensusKeyPair, peer_id: PeerId) -> ConsensusPeersConfig {
+        let mut peers = ConsensusPeersConfig::default();
+        let pubkey = keypair
+            .public()
+            .expect("Unable to obtain default public key");
+        peers.peers.insert(
+            peer_id.to_string(),
+            ConsensusPeerInfo {
+                consensus_pubkey: pubkey.clone(),
+            },
+        );
+        peers
     }
 }
