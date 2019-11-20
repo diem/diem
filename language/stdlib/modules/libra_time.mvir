@@ -1,0 +1,43 @@
+module LibraTimestamp {
+    // A singleton resource holding the current Unix time in microseconds
+    resource CurrentTimeMicroseconds {
+        microseconds: u64,
+    }
+
+    // Initialize the global wall clock time resource.
+    public initialize_timer() {
+        let timer: Self.CurrentTimeMicroseconds;
+
+        // Only callable by the Association address
+        assert(get_txn_sender() == 0xA550C18, 1);
+
+        // TODO: Should the initialized value be passed in to genesis?
+        timer = CurrentTimeMicroseconds {microseconds: 0};
+        move_to_sender<CurrentTimeMicroseconds>(move(timer));
+        return;
+    }
+
+    // Update the wall clock time by consensus. Requires VM privilege and will be invoked during block prologue.
+    public update_global_time(proposer: address, timestamp: u64) acquires CurrentTimeMicroseconds {
+        let global_timer: &mut Self.CurrentTimeMicroseconds;
+
+        // Can only be invoked by LibraVM privilege.
+        // Fixme: uncomment when after adding support in functional test.
+        // assert(get_txn_sender() == 0x0, 33);
+        global_timer = borrow_global_mut<CurrentTimeMicroseconds>(0xA550C18);
+        if (copy(proposer) == 0x0) {
+            // NIL block with null address as proposer. Timestamp must be equal.
+            assert(copy(timestamp) == *(&copy(global_timer).microseconds), 5001);
+        } else {
+            // Normal block. Time must advance
+            assert(*(&copy(global_timer).microseconds) < copy(timestamp), 5001);
+        }
+        *&mut move(global_timer).microseconds = move(timestamp);
+        return;
+    }
+
+    // Get the timestamp representing `now` in microseconds.
+    public now_microseconds(): u64 acquires CurrentTimeMicroseconds {
+        return *&(borrow_global<CurrentTimeMicroseconds>(0xA550C18)).microseconds;
+    }
+}

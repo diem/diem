@@ -11,31 +11,33 @@ main() {
 
 //! new-transaction
 import 0x0.LibraSystem;
+import 0x0.LibraTimestamp;
 
 main() {
     // TODO: this will stop working once we make the Block prologue private. We should delete this
     // part (which will be done by the executor) and leave the second assert
-    LibraSystem.block_prologue(100, h"aa", h"bb", {{vivian}});
+    LibraSystem.block_prologue(100000000, h"aa", h"bb", {{vivian}});
 
     assert(LibraSystem.get_current_block_height() == 1, 76);
     assert(LibraSystem.get_current_block_id() == h"aa", 77);
-    assert(LibraSystem.get_current_timestamp() == 100, 78);
     assert(LibraSystem.get_current_proposer() == {{vivian}}, 79);
+    assert(LibraTimestamp.now_microseconds() == 100000000, 80);
     return;
 }
 
 
 //! new-transaction
 import 0x0.LibraSystem;
+import 0x0.LibraTimestamp;
 
 main() {
     // TODO: this will stop working once we make the Block prologue private. We should delete this
     // part (which will be done by the executor) and leave the second assert
-    LibraSystem.block_prologue(101, h"aa", h"bb", {{vivian}});
+    LibraSystem.block_prologue(101000000, h"aa", h"bb", {{vivian}});
 
     assert(LibraSystem.get_current_block_height() == 2, 76);
     assert(LibraSystem.get_current_block_id() == h"aa", 77);
-    assert(LibraSystem.get_current_timestamp() == 101, 78);
     assert(LibraSystem.get_current_proposer() == {{vivian}}, 79);
+    assert(LibraTimestamp.now_microseconds() == 101000000, 80);
     return;
 }

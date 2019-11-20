@@ -3,6 +3,7 @@ module LibraSystem {
     import 0x0.LibraAccount;
     import 0x0.ValidatorConfig;
     import 0x0.Vector;
+    import 0x0.LibraTimestamp;
 
     struct ValidatorInfo {
         addr: address,
@@ -51,10 +52,6 @@ module LibraSystem {
       // TODO: Should we keep the height?
       height: u64,
 
-      // Unix Timestamp for the current block.
-      // TODO: Use a better wrapper for timestamp.
-      timestamp: u64,
-
       // Hash of the current block of transactions.
       id: bytearray,
 
@@ -102,10 +99,11 @@ module LibraSystem {
       //       in the genesis?
       move_to_sender<BlockMetadata>(BlockMetadata {
         height: 0,
-        timestamp: 0,
         id: h"",
         proposer: 0xA550C18,
       });
+      LibraTimestamp.initialize_timer();
+
       return;
     }
 
@@ -187,17 +185,12 @@ module LibraSystem {
         block_metadata_ref = borrow_global_mut<BlockMetadata>(0xA550C18);
 
         // TODO: Figure out a story for errors in the system transactions.
-        if (copy(proposer) == 0x0) {
-          // NIL block with null address as proposer. Timestamp must be equal.
-          assert(copy(timestamp) == *(&copy(block_metadata_ref).timestamp), 5001);
-        } else {
-          // Normal block. Time must advance
-          assert(copy(timestamp) > *(&copy(block_metadata_ref).timestamp), 5001);
-          assert(Self.is_validator(copy(proposer)), 5002);
+        if(copy(proposer) != 0x0) {
+            assert(Self.is_validator(copy(proposer)), 5002);
         }
+        LibraTimestamp.update_global_time(copy(proposer), move(timestamp));
 
         *(&mut copy(block_metadata_ref).id) = move(new_block_hash);
-        *(&mut copy(block_metadata_ref).timestamp) = move(timestamp);
         *(&mut copy(block_metadata_ref).proposer) = move(proposer);
         *(&mut move(block_metadata_ref).height) = *(&copy(block_metadata_ref).height) + 1;
         return;
@@ -211,11 +204,6 @@ module LibraSystem {
     // Get the current block id
     public get_current_block_id(): bytearray acquires BlockMetadata {
       return *&(borrow_global<BlockMetadata>(0xA550C18)).id;
-    }
-
-    // Get the current time
-    public get_current_timestamp(): u64 acquires BlockMetadata {
-      return *&(borrow_global<BlockMetadata>(0xA550C18)).timestamp;
     }
 
     // Gets the address of the proposer of the current block
