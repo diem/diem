@@ -3,6 +3,7 @@
 
 use crate::{aws::Aws, instance::Instance};
 use failure::{self, prelude::*};
+use libra_config::config::AdmissionControlConfig;
 use rand::prelude::*;
 use rusoto_ec2::{DescribeInstancesRequest, Ec2, Filter, Tag};
 use slog_scope::*;
@@ -77,6 +78,7 @@ impl Cluster {
                 }
                 Ok(r) => r,
             };
+            let ac_port = AdmissionControlConfig::default().admission_control_service_port as u32;
             for reservation in result.reservations.expect("no reservations") {
                 for aws_instance in reservation.instances.expect("no instances") {
                     let ip = aws_instance
@@ -90,7 +92,7 @@ impl Cluster {
                         }
                         InstanceRole::Peer(peer_id) => {
                             let short_hash = peer_id[..8].into();
-                            instances.push(Instance::new(short_hash, ip, 8000));
+                            instances.push(Instance::new(short_hash, ip, ac_port));
                         }
                         _ => {}
                     }

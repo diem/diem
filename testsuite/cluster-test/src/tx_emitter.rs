@@ -146,7 +146,7 @@ impl TxEmitter {
         let mut mint_failures = 0;
         info!("Minting accounts on {}", mint_client);
         let retry_mint = env::var_os("NO_MINT_RETRY").is_none();
-        let mut faucet_account = load_faucet_account(&mint_client, &self.mint_file);
+        let mut faucet_account = load_faucet_account(&mint_client, &self.mint_file)?;
         while self.accounts.len() < num_accounts {
             let mut accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
             let mint_requests = gen_mint_txn_requests(&mut faucet_account, &accounts);
@@ -433,17 +433,25 @@ fn execute_and_wait_transactions(
     r
 }
 
-fn load_faucet_account(client: &AdmissionControlClient, faucet_account_path: &str) -> AccountData {
+fn load_faucet_account(
+    client: &NamedAdmissionControlClient,
+    faucet_account_path: &str,
+) -> failure::Result<AccountData> {
     let key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
         load_key_from_file(faucet_account_path).expect("invalid faucet keypair file");
     let address = association_address();
-    let sequence_number = query_sequence_numbers(client, &[address])
-        .expect("query_sequence_numbers for faucet account failed")[0];
-    AccountData {
+    let sequence_number = query_sequence_numbers(client, &[address]).map_err(|e| {
+        format_err!(
+            "query_sequence_numbers on {} for faucet account failed: {}",
+            client,
+            e
+        )
+    })?[0];
+    Ok(AccountData {
         address,
         key_pair,
         sequence_number,
-    }
+    })
 }
 
 struct AccountData {
