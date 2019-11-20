@@ -56,10 +56,6 @@ lazy_static! {
     /// The ModuleId for the libra system module
     pub static ref LIBRA_SYSTEM_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("LibraSystem").unwrap()) };
-
-    /// The ModuleId for the transaction fee distribution module
-    pub static ref TRANSACTION_FEE_DISTRIBUTION_MODULE: ModuleId =
-        { ModuleId::new(account_config::core_code_address(), Identifier::new("TransactionFeeDistribution").unwrap()) };
 }
 
 // Names for special functions.
