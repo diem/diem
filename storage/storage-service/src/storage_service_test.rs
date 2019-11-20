@@ -23,7 +23,7 @@ fn start_test_storage_with_read_write_client(
     StorageReadServiceClient,
     StorageWriteServiceClient,
 ) {
-    let mut config = NodeConfigHelpers::get_single_node_test_config(/* random_ports = */ true);
+    let mut config = NodeConfigHelpers::get_single_node_test_config();
     let tmp_dir = libra_tools::tempdir::TempPath::new();
     config.storage.dir = tmp_dir.path().to_path_buf();
 

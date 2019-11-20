@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::utils;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -23,5 +24,14 @@ impl Default for DebugInterfaceConfig {
             public_metrics_server_port: 9102,
             address: "localhost".to_string(),
         }
+    }
+}
+
+impl DebugInterfaceConfig {
+    pub fn randomize_ports(&mut self) {
+        self.admission_control_node_debug_port = utils::get_available_port();
+        self.storage_node_debug_port = utils::get_available_port();
+        self.metrics_server_port = utils::get_available_port();
+        self.public_metrics_server_port = utils::get_available_port();
     }
 }

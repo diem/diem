@@ -14,7 +14,7 @@ pub fn load_config_from_path(config: Option<&Path>) -> NodeConfig {
         NodeConfig::load(path).expect("NodeConfig")
     } else {
         info!("Loading test configs");
-        NodeConfigHelpers::get_single_node_test_config(false /* random ports */)
+        NodeConfigHelpers::get_single_node_test_config()
     };
 
     // Node configuration contains important ephemeral port information and should

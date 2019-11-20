@@ -16,7 +16,7 @@ use std::{collections::HashSet, iter::FromIterator};
 
 pub(crate) fn setup_mempool() -> (CoreMempool, ConsensusMock) {
     (
-        CoreMempool::new(&NodeConfigHelpers::get_single_node_test_config(true)),
+        CoreMempool::new(&NodeConfigHelpers::get_single_node_test_config()),
         ConsensusMock::new(),
     )
 }
