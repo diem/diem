@@ -51,6 +51,8 @@ impl Instance {
             "-i",
             "/libra_rsa",
             "-oStrictHostKeyChecking=no",
+            "-oConnectTimeout=3",
+            "-oConnectionAttempts=10",
             ssh_dest.as_str(),
         ];
         let mut ssh_cmd = Command::new("timeout");
