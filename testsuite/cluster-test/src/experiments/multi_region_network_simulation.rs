@@ -84,8 +84,7 @@ impl MultiRegionSimulation {
             .map(|instance| {
                 NetworkDelay::new(
                     instance.clone(),
-                    Some(larger_region.clone()),
-                    cross_region_delay,
+                    vec![(larger_region.clone(), cross_region_delay)],
                 )
             })
             .collect();

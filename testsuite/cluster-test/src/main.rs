@@ -18,7 +18,7 @@ use cluster_test::{
     aws::Aws,
     cluster::Cluster,
     deployment::{DeploymentManager, SOURCE_TAG},
-    effects::{Action, Effect, Reboot, StopContainer},
+    effects::{three_region_simulation_effects, Action, Effect, Reboot, StopContainer},
     experiments::{Experiment, RebootRandomValidators},
     health::{DebugPortLogThread, HealthCheckRunner, LogTail},
     slack::SlackClient,
@@ -711,6 +711,62 @@ impl ClusterTestRunner {
         println!("{}", results.to_slack_message())
     }
 
+    fn measure_performance_3_region(&mut self) -> failure::Result<(f64, f64)> {
+        let window = Duration::from_secs(180);
+        // Simulate 3 regions us_west(40%), us_east(40%), eu(20%)
+        // RTT latency b/w us_west<->eu: 190ms; us_west<->us_east: 80ms; us_east<->eu: 120ms;
+        let (us, euro) = self.cluster.split_n_random(80);
+        let (us_west, us_east) = us.split_n_random(40);
+        let mut network_effects = three_region_simulation_effects(
+            (
+                us_west.instances().clone(),
+                us_east.instances().clone(),
+                euro.instances().clone(),
+            ),
+            (
+                Duration::from_millis(60), // us_east<->eu one way delay
+                Duration::from_millis(95), // us_west<->eu one way delay
+                Duration::from_millis(40), // us_west<->us_east one way delay
+            ),
+        );
+        info!("Activating network effects");
+        self.activate_all(&mut network_effects);
+        info!("Wait for all healthy");
+        self.wait_until_all_healthy()?;
+        self.emit_txn_for(
+            window + Duration::from_secs(60),
+            self.cluster.instances().clone(),
+        )?;
+        let stats_3_region = print_stat(&self.prometheus, window)
+            .map_err(|e| format_err!("Failed to query stats: {}", e))?;
+
+        info!("Deactivating network effects");
+        self.deactivate_all(&mut network_effects);
+        info!("Wait for all healthy");
+        self.wait_until_all_healthy()?;
+        Ok(stats_3_region)
+    }
+
+    fn measure_performance_nodes_down(
+        &mut self,
+        percent_nodes_down: usize,
+    ) -> failure::Result<(f64, f64)> {
+        let window = Duration::from_secs(180);
+        let (stop, keep) = self.cluster.split_n_random(percent_nodes_down);
+        let mut stop_effects: Vec<_> = stop
+            .into_instances()
+            .into_iter()
+            .map(StopContainer::new)
+            .collect();
+        self.activate_all(&mut stop_effects);
+        self.emit_txn_for(window + Duration::from_secs(30), keep.instances().clone())?;
+        let stats = print_stat(&self.prometheus, window)
+            .map_err(|e| format_err!("Failed to query stats: {}", e))?;
+        self.deactivate_all(&mut stop_effects);
+        self.wait_until_all_healthy()?;
+        Ok(stats)
+    }
+
     fn measure_performance(&mut self) -> failure::Result<SuiteReport> {
         info!("Starting warm up job");
         self.emit_txn_for(Duration::from_secs(60), self.cluster.instances().clone())?;
@@ -722,21 +778,12 @@ impl ClusterTestRunner {
         )?;
         let stats_all_up = print_stat(&self.prometheus, window)
             .map_err(|e| format_err!("Failed to query stats: {}", e))?;
-        let (stop, keep) = self.cluster.split_n_random(10);
-        let mut stop_effects: Vec<_> = stop
-            .into_instances()
-            .into_iter()
-            .map(StopContainer::new)
-            .collect();
-        self.activate_all(&mut stop_effects);
-        self.emit_txn_for(window + Duration::from_secs(30), keep.instances().clone())?;
-        let stats_10_down = print_stat(&self.prometheus, window)
-            .map_err(|e| format_err!("Failed to query stats: {}", e))?;
-        self.deactivate_all(&mut stop_effects);
-        self.wait_until_all_healthy()?;
+        let stats_10_down = self.measure_performance_nodes_down(10)?;
+        let stats_3_region = self.measure_performance_3_region()?;
         Ok(SuiteReport {
             stats_all_up,
             stats_10_down,
+            stats_3_region,
         })
     }
 
@@ -1065,13 +1112,14 @@ impl ClusterTestRunner {
 struct SuiteReport {
     stats_all_up: (f64, f64),
     stats_10_down: (f64, f64),
+    stats_3_region: (f64, f64),
 }
 
 impl SuiteReport {
     pub fn to_slack_message(&self) -> String {
         format!(
-            "all up: {:.0} TPS, {:.1} s latency\n10% down: {:.0} TPS, {:.1} s latency",
-            self.stats_all_up.0, self.stats_all_up.1, self.stats_10_down.0, self.stats_10_down.1,
+            "all up: {:.0} TPS, {:.1} s latency\n10% down: {:.0} TPS, {:.1} s latency\n3 region simulation: {:.0} TPS, {:.1} s latency",
+            self.stats_all_up.0, self.stats_all_up.1, self.stats_10_down.0, self.stats_10_down.1, self.stats_3_region.0, self.stats_3_region.1,
         )
     }
 }
