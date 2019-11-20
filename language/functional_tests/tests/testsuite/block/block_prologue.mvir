@@ -12,11 +12,15 @@ main() {
 
 //! new-transaction
 import 0x0.LibraSystem;
+import 0x0.LibraTimestamp;
 
 main() {
+    let current_time: LibraTimestamp.Instant;
+
+    current_time = LibraTimestamp.new(1);
     assert(LibraSystem.get_current_block_height() == 1, 77);
     assert(LibraSystem.get_current_block_id() == h"aa", 77);
-    assert(LibraSystem.get_current_timestamp() == 1, 77);
     assert(LibraSystem.get_current_proposer() == {{vivian}}, 77);
+    assert(LibraTimestamp.get_global_time() == move(current_time), 77);
     return;
 }

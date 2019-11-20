@@ -21,6 +21,8 @@ static SIGNATURE_MODULE: Lazy<ModuleDefinition> =
     Lazy::new(|| make_module_definition!("../modules/signature.mvir"));
 static VALIDATOR_CONFIG_MODULE: Lazy<ModuleDefinition> =
     Lazy::new(|| make_module_definition!("../modules/validator_config.mvir"));
+static LIBRA_TIME_MODULE: Lazy<ModuleDefinition> =
+    Lazy::new(|| make_module_definition!("../modules/libra_time.mvir"));
 static LIBRA_SYSTEM_MODULE: Lazy<ModuleDefinition> =
     Lazy::new(|| make_module_definition!("../modules/libra_system.mvir"));
 static ADDRESS_UTIL_MODULE: Lazy<ModuleDefinition> =
@@ -46,8 +48,9 @@ static MODULE_DEFS: Lazy<Vec<&'static ModuleDefinition>> = Lazy::new(|| {
         &*VECTOR_MODULE,
         &*VALIDATOR_CONFIG_MODULE,
         &*GAS_SCHEDULE,        // depends on Vector
+        &*LIBRA_TIME_MODULE,
         &*ACCOUNT_MODULE,      // depends on LibraCoin, Event, AddressUtil, BytearrayUtil, U64Util
-        &*LIBRA_SYSTEM_MODULE, // depends on LibraAccount, ValidatorConfig
+        &*LIBRA_SYSTEM_MODULE, // depends on LibraAccount, LibraTime, ValidatorConfig
     ]
 });
 

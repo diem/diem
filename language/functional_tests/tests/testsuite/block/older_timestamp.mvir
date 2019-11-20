@@ -2,16 +2,20 @@
 
 //! new-transaction
 import 0x0.LibraSystem;
+import 0x0.LibraTimestamp;
 
 main() {
+    let current_time: LibraTimestamp.Instant;
+    current_time = LibraTimestamp.new(100);
+
     // TODO: this will stop working once we make the Block prologue private. We should delete this
     // part (which will be done by the executor) and leave the second assert
     LibraSystem.block_prologue(100, h"aa", h"bb", {{vivian}});
 
     assert(LibraSystem.get_current_block_height() == 1, 76);
     assert(LibraSystem.get_current_block_id() == h"aa", 77);
-    assert(LibraSystem.get_current_timestamp() == 100, 78);
     assert(LibraSystem.get_current_proposer() == {{vivian}}, 79);
+    assert(LibraTimestamp.get_global_time() == move(current_time), 77);
     return;
 }
 

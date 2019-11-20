@@ -1,0 +1,66 @@
+module LibraTimestamp {
+    resource GlobalTimer {
+        // A unix timestamp
+        timestamp: u64,
+    }
+
+    struct Instant {
+        // A unix timestamp
+        timestamp: u64,
+    }
+
+    struct Duration {
+        secs: u64,
+    }
+
+    public initialize_timer() {
+        let timer: Self.GlobalTimer;
+
+        // Only callable by the Association address
+        assert(get_txn_sender() == 0xA550C18, 1);
+        timer = GlobalTimer {timestamp: 0};
+        move_to_sender<GlobalTimer>(move(timer));
+        return;
+    }
+
+    public update_global_time(proposer: address, timestamp: u64) acquires GlobalTimer {
+        let global_timer: &mut Self.GlobalTimer;
+
+        // Can only be invoked by LibraVM privilege.
+        // assert(get_txn_sender() == 0x0, 33);
+        global_timer = borrow_global_mut<GlobalTimer>(0xA550C18);
+        if (copy(proposer) == 0x0) {
+            // NIL block with null address as proposer. Timestamp must be equal.
+            assert(copy(timestamp) == *(&copy(global_timer).timestamp), 5001);
+        } else {
+            // Normal block. Time must advance
+            assert(*(&copy(global_timer).timestamp) < copy(timestamp), 5001);
+        }
+        *&mut move(global_timer).timestamp = move(timestamp);
+        return;
+    }
+
+    public get_global_time(): Self.Instant acquires GlobalTimer {
+        return Instant {timestamp: (*&(borrow_global<GlobalTimer>(0xA550C18)).timestamp)};
+    }
+
+    public new(timestamp: u64): Self.Instant {
+        return Instant {timestamp: move(timestamp)};
+    }
+
+    public get_timestamp(t: &Self.Instant): u64 {
+        return *(&move(t).timestamp);
+    }
+
+    public add_duration(t: &mut Self.Instant, duration: Self.Duration) {
+        let secs: u64;
+
+        Duration { secs: secs } = move(duration);
+        *(&mut move(t).timestamp) = *(&copy(t).timestamp) + move(secs);
+        return;
+    }
+
+    public is_before_exclusive(lhs: &Self.Instant, rhs: &Self.Instant): bool {
+        return (*(&move(lhs).timestamp)) < (*(&move(rhs).timestamp));
+    }
+}
