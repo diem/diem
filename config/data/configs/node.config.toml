@@ -1,9 +1,0 @@
-# Defaults are now set in config.rs
-[consensus]
-consensus_keypair_file = "" # For direct validation of this file
-consensus_peers_file = ""  # For direct validation of this file
-
-[validator_network]
-seed_peers_file = ""  # For direct validation of this file
-network_keypairs_file = ""  # For direct validation of this file
-network_peers_file = ""  # For direct validation of this file

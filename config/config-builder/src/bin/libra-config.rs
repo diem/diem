@@ -13,7 +13,7 @@ use structopt::StructOpt;
 struct Args {
     #[structopt(short = "b", long, parse(from_os_str))]
     /// Base config to use
-    base: PathBuf,
+    base: Option<PathBuf>,
     #[structopt(short = "n", long, default_value = "1")]
     /// Specify the number of nodes to configure
     nodes: usize,
@@ -53,13 +53,15 @@ fn main() {
     config_builder
         .with_num_nodes(args.nodes)
         .with_role(role)
-        .with_base(&args.base)
         .with_output_dir(output_dir)
         .with_faucet_keypair(faucet_account_keypair)
         .with_upstream_config_dir(args.upstream_config_dir.clone());
 
     if args.discovery {
         config_builder.force_discovery();
+    }
+    if let Some(base) = args.base.as_ref() {
+        config_builder.with_base(base);
     }
     if let Some(key_seed) = args.key_seed.as_ref() {
         let seed = hex::decode(key_seed).expect("Invalid hex in seed.");

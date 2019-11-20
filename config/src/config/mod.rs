@@ -52,15 +52,12 @@ pub use safety_rules_config::*;
 mod vm_config;
 pub use vm_config::*;
 
-// path is relative to this file location
-static CONFIG_TEMPLATE: &[u8] = include_bytes!("../../data/configs/node.config.toml");
-
 /// Config pulls in configuration information from the config file.
 /// This is used to set up the nodes and configure various parameters.
 /// The config file is broken up into sections for each module
 /// so that only that module can be passed around
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
-#[derive(Default, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct NodeConfig {
     #[serde(default)]
@@ -285,13 +282,7 @@ impl NodeConfigHelpers {
     /// consensus_peers_file, network_keypairs_file, consensus_keypair_file, and seed_peers_file
     /// set. It is expected that the callee will provide these.
     pub fn get_single_node_test_config(random_ports: bool) -> NodeConfig {
-        let config_string = String::from_utf8_lossy(CONFIG_TEMPLATE);
-        let mut config =
-            NodeConfig::parse(&config_string).expect("Error parsing single node test config");
-        // Create temporary directory for persisting configs.
-        let dir = TempPath::new();
-        dir.create_as_dir().expect("error creating tempdir");
-        config.set_temp_dir(dir).expect("Error setting temp_dir");
+        let mut config = NodeConfig::default();
         if random_ports {
             NodeConfigHelpers::randomize_config_ports(&mut config);
         }
@@ -310,10 +301,7 @@ impl NodeConfigHelpers {
         config.consensus.consensus_keypair = ConsensusKeyPair::load(Some(consensus_private_key));
         config.consensus.consensus_peers = test_consensus_peers;
 
-        let network = config
-            .validator_network
-            .as_mut()
-            .expect("Missing default network config");
+        let mut network = NetworkConfig::default();
         network.peer_id = peer_id;
         network.network_keypairs =
             NetworkKeyPairs::load(network_signing_private_key, network_identity_private_key);
@@ -328,6 +316,13 @@ impl NodeConfigHelpers {
         network.advertised_address = network.listen_address.clone();
         network.seed_peers = seed_peers_config;
         network.network_peers = test_network_peers;
+        config.validator_network = Some(network);
+
+        // Create temporary directory for persisting configs.
+        let dir = TempPath::new();
+        dir.create_as_dir().expect("error creating tempdir");
+        config.set_temp_dir(dir).expect("Error setting temp_dir");
+
         config
     }
 
@@ -433,8 +428,6 @@ mod test {
     fn verify_all_configs() {
         let _ = vec![
             PathBuf::from("data/configs/overrides/persistent_data.node.config.override.toml"),
-            PathBuf::from("data/configs/full_node.config.toml"),
-            PathBuf::from("data/configs/node.config.toml"),
             PathBuf::from("data/configs/single.node.config.toml"),
             PathBuf::from("../terraform/validator-sets/100/fn/node.config.toml"),
             PathBuf::from("../terraform/validator-sets/100/val/node.config.toml"),
