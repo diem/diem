@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::utils::get_available_port;
 use failure::prelude::*;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
@@ -268,6 +267,14 @@ impl NodeConfig {
             })
             .collect()
     }
+
+    pub fn randomize_ports(&mut self) {
+        self.admission_control.randomize_ports();
+        self.debug_interface.randomize_ports();
+        self.execution.randomize_ports();
+        self.mempool.randomize_ports();
+        self.storage.randomize_ports();
+    }
 }
 
 pub struct NodeConfigHelpers {}
@@ -276,16 +283,12 @@ impl NodeConfigHelpers {
     /// Returns a simple test config for single node. It does not have correct network_peers_file,
     /// consensus_peers_file, network_keypairs_file, consensus_keypair_file, and seed_peers_file
     /// set. It is expected that the callee will provide these.
-    pub fn get_single_node_test_config(random_ports: bool) -> NodeConfig {
+    pub fn get_single_node_test_config() -> NodeConfig {
         let mut config = NodeConfig::default();
         let mut rng = StdRng::from_seed([0u8; 32]);
         let validator_network = NetworkConfig::random(&mut rng);
         config.consensus = ConsensusConfig::random(&mut rng, validator_network.peer_id);
         config.validator_network = Some(validator_network);
-
-        if random_ports {
-            NodeConfigHelpers::randomize_config_ports(&mut config);
-        }
 
         // Create temporary directory for persisting configs.
         let dir = TempPath::new();
@@ -293,17 +296,6 @@ impl NodeConfigHelpers {
         config.set_temp_dir(dir).expect("Error setting temp_dir");
 
         config
-    }
-
-    pub fn randomize_config_ports(config: &mut NodeConfig) {
-        config.admission_control.admission_control_service_port = get_available_port();
-        config.debug_interface.admission_control_node_debug_port = get_available_port();
-        config.debug_interface.metrics_server_port = get_available_port();
-        config.debug_interface.public_metrics_server_port = get_available_port();
-        config.debug_interface.storage_node_debug_port = get_available_port();
-        config.execution.port = get_available_port();
-        config.mempool.mempool_service_port = get_available_port();
-        config.storage.port = get_available_port();
     }
 }
 
@@ -343,7 +335,7 @@ mod test {
     fn verify_test_config() {
         // This test likely failed because there was a breaking change in the NodeConfig. It may be
         // desirable to reverse the change or to change the test config and potentially documentation.
-        let mut actual = NodeConfigHelpers::get_single_node_test_config(false);
+        let mut actual = NodeConfigHelpers::get_single_node_test_config();
         let mut expected = NodeConfig::parse(&String::from_utf8_lossy(EXPECTED_SINGLE_NODE_CONFIG))
             .expect("Error parsing expected single node config");
 

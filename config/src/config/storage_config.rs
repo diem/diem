@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::config::BaseConfig;
+use crate::{config::BaseConfig, utils};
 use failure::Result;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc};
@@ -37,5 +37,9 @@ impl StorageConfig {
 
     pub fn dir(&self) -> PathBuf {
         self.base.full_path(&self.dir)
+    }
+
+    pub fn randomize_ports(&mut self) {
+        self.port = utils::get_available_port();
     }
 }

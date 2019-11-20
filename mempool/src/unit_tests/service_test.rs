@@ -19,7 +19,7 @@ use std::{
 };
 
 fn setup_mempool() -> (::grpcio::Server, MempoolClient) {
-    let node_config = NodeConfigHelpers::get_single_node_test_config(true);
+    let node_config = NodeConfigHelpers::get_single_node_test_config();
 
     let env = Arc::new(EnvBuilder::new().build());
     let core_mempool = Arc::new(Mutex::new(CoreMempool::new(&node_config)));

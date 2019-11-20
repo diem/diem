@@ -50,7 +50,8 @@ pub fn get_test_config_with_validators() -> (
     KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
 ) {
     // TODO: test config should be moved here instead of config crate
-    let config = NodeConfigHelpers::get_single_node_test_config(true);
+    let mut config = NodeConfigHelpers::get_single_node_test_config();
+    config.randomize_ports();
     // Those configs should be different on every call. We bypass the
     // costly StdRng initialization
     let mut seed_rng = rand::rngs::OsRng::new().expect("can't access OsRng");

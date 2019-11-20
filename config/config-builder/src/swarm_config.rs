@@ -6,9 +6,8 @@ use crate::util::gen_genesis_transaction_bytes;
 use failure::prelude::*;
 use libra_config::{
     config::{
-        BaseConfig, ConsensusConfig, NetworkConfig, NodeConfig, NodeConfigHelpers,
-        OnDiskStorageConfig, PersistableConfig, RoleType, SafetyRulesBackend, SafetyRulesConfig,
-        VMPublishingOption,
+        BaseConfig, ConsensusConfig, NetworkConfig, NodeConfig, OnDiskStorageConfig,
+        PersistableConfig, RoleType, SafetyRulesBackend, SafetyRulesConfig, VMPublishingOption,
     },
     keys::{ConsensusKeyPair, NetworkKeyPairs},
     seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
@@ -378,7 +377,7 @@ impl SwarmConfig {
             logger: template.logger.clone(),
             vm_config: template.vm_config.clone(),
         };
-        NodeConfigHelpers::randomize_config_ports(&mut config);
+        config.randomize_ports();
         config.vm_config.publishing_options = VMPublishingOption::Open;
         config
             .set_data_dir(output_dir.to_path_buf())

@@ -74,7 +74,7 @@ impl SharedMempoolNetwork {
     }
 
     fn bootstrap(peers: Vec<PeerId>) -> Self {
-        Self::bootstrap_with_config(peers, NodeConfigHelpers::get_single_node_test_config(true))
+        Self::bootstrap_with_config(peers, NodeConfigHelpers::get_single_node_test_config())
     }
 
     fn add_txns(&mut self, peer_id: &PeerId, txns: Vec<TestTransaction>) {

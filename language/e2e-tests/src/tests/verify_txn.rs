@@ -86,7 +86,7 @@ fn verify_whitelist() {
     .map(|s| *HashValue::from_sha3_256(&s).as_ref())
     .collect();
 
-    let config = NodeConfigHelpers::get_single_node_test_config(false);
+    let config = NodeConfigHelpers::get_single_node_test_config();
 
     assert_eq!(
         Some(&programs),

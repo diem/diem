@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::utils;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -23,5 +24,11 @@ impl Default for AdmissionControlConfig {
             max_concurrent_inbound_syncs: 100,
             upstream_proxy_timeout: Duration::from_secs(1),
         }
+    }
+}
+
+impl AdmissionControlConfig {
+    pub fn randomize_ports(&mut self) {
+        self.admission_control_service_port = utils::get_available_port();
     }
 }

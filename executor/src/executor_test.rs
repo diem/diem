@@ -33,7 +33,7 @@ use storage_service::StorageService;
 use vm_genesis::{encode_genesis_transaction_with_validator, GENESIS_KEYPAIR};
 
 fn get_config() -> NodeConfig {
-    let config = NodeConfigHelpers::get_single_node_test_config(true);
+    let config = NodeConfigHelpers::get_single_node_test_config();
     // Write out the genesis blob to the correct location.
     // XXX Should this logic live in NodeConfigHelpers?
     let genesis_txn: libra_types::proto::types::SignedTransaction =
