@@ -54,9 +54,9 @@ impl Default for ConsensusConfig {
             max_pruned_blocks_in_mem: None,
             pacemaker_initial_timeout_ms: None,
             consensus_keypair: keypair,
-            consensus_keypair_file: PathBuf::from("consensus_keypair.config.toml"),
+            consensus_keypair_file: PathBuf::new(),
             consensus_peers: peers,
-            consensus_peers_file: PathBuf::from("consensus_peers.config.toml"),
+            consensus_peers_file: PathBuf::new(),
             safety_rules: SafetyRulesConfig::default(),
             base: Arc::new(BaseConfig::default()),
         }
