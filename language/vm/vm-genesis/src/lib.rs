@@ -33,7 +33,7 @@ use vm_runtime::{
     data_cache::BlockDataCache,
     txn_executor::{
         TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE, GAS_SCHEDULE_MODULE, LIBRA_SYSTEM_MODULE,
-        TRANSACTION_FEE_DISTRIBUTION_MODULE, VALIDATOR_CONFIG_MODULE,
+        VALIDATOR_CONFIG_MODULE,
     },
 };
 use vm_runtime_types::value::Value;
@@ -63,6 +63,8 @@ lazy_static! {
     static ref ADD_VALIDATOR: Identifier = Identifier::new("add_validator").unwrap();
     static ref INITIALIZE: Identifier = Identifier::new("initialize").unwrap();
     static ref INITIALIZE_BLOCK: Identifier = Identifier::new("initialize_block_metadata").unwrap();
+    static ref INITIALIZE_TXN_FEES: Identifier =
+        Identifier::new("initialize_transaction_fees").unwrap();
     static ref INITIALIZE_VALIDATOR: Identifier =
         Identifier::new("initialize_validator_set").unwrap();
     static ref MINT_TO_ADDRESS: Identifier = Identifier::new("mint_to_address").unwrap();
@@ -270,12 +272,12 @@ pub fn encode_genesis_transaction_with_validator(
                 .execute_function(&ACCOUNT_MODULE, &EPILOGUE, vec![])
                 .unwrap();
 
-            // Initialize the transaction fee distribution module.
+            // Create the transaction fees resource under the fees account
             txn_executor
                 .execute_function_with_sender_FOR_GENESIS_ONLY(
                     account_config::transaction_fee_address(),
-                    &TRANSACTION_FEE_DISTRIBUTION_MODULE,
-                    &INITIALIZE,
+                    &LIBRA_SYSTEM_MODULE,
+                    &INITIALIZE_TXN_FEES,
                     vec![],
                 )
                 .unwrap();
