@@ -5,12 +5,12 @@ use crate::{contract_event::ContractEvent, write_set::WriteSet};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
-pub struct WriteSetPayload {
+pub struct ChangeSet {
     write_set: WriteSet,
     events: Vec<ContractEvent>,
 }
 
-impl WriteSetPayload {
+impl ChangeSet {
     pub fn new(write_set: WriteSet, events: Vec<ContractEvent>) -> Self {
         Self { write_set, events }
     }
@@ -21,5 +21,9 @@ impl WriteSetPayload {
 
     pub fn write_set(&self) -> &WriteSet {
         &self.write_set
+    }
+
+    pub fn events(&self) -> &[ContractEvent] {
+        &self.events
     }
 }

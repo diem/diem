@@ -3,7 +3,7 @@
 
 //! These tests verify the behavior of LCS against some known test vectors with various types.
 
-use crate::transaction::WriteSetPayload;
+use crate::transaction::ChangeSet;
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -208,7 +208,7 @@ fn test_transaction_payload_with_a_program_canonical_serialization_example() {
 
 #[test]
 fn test_transaction_payload_with_a_write_set_canonical_serialization_example() {
-    let input = TransactionPayload::WriteSet(WriteSetPayload::new(get_common_write_set(), vec![]));
+    let input = TransactionPayload::WriteSet(ChangeSet::new(get_common_write_set(), vec![]));
 
     let expected_output = vec![
         0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0xA7, 0x1D, 0x76, 0xFA, 0xA2, 0xD2, 0xD5,

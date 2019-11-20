@@ -150,7 +150,7 @@ impl Account {
                 Duration::from_secs(u64::max_value()),
             ),
             TransactionPayload::WriteSet(writeset) => {
-                RawTransaction::new_write_set_payload(*self.address(), sequence_number, writeset)
+                RawTransaction::new_change_set(*self.address(), sequence_number, writeset)
             }
             TransactionPayload::Module(module) => RawTransaction::new_module(
                 *self.address(),
