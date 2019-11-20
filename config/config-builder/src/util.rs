@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_config::{
-    config::{NodeConfig, NodeConfigHelpers},
+    config::NodeConfig,
     trusted_peers::{
         ConfigHelpers, ConsensusPeersConfig, ConsensusPrivateKey, NetworkPeersConfig,
         NetworkPrivateKeys,
@@ -50,7 +50,7 @@ pub fn get_test_config_with_validators() -> (
     KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
 ) {
     // TODO: test config should be moved here instead of config crate
-    let mut config = NodeConfigHelpers::get_single_node_test_config();
+    let mut config = NodeConfig::random();
     config.randomize_ports();
     // Those configs should be different on every call. We bypass the
     // costly StdRng initialization

@@ -11,7 +11,7 @@ use crate::{
 };
 use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
-use libra_config::config::{NodeConfigHelpers, VMPublishingOption};
+use libra_config::config::{NodeConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, HashValue};
 use libra_types::{
     test_helpers::transaction_test_helpers,
@@ -86,7 +86,7 @@ fn verify_whitelist() {
     .map(|s| *HashValue::from_sha3_256(&s).as_ref())
     .collect();
 
-    let config = NodeConfigHelpers::get_single_node_test_config();
+    let config = NodeConfig::random();
 
     assert_eq!(
         Some(&programs),

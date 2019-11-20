@@ -275,17 +275,14 @@ impl NodeConfig {
         self.mempool.randomize_ports();
         self.storage.randomize_ports();
     }
-}
 
-pub struct NodeConfigHelpers {}
-
-impl NodeConfigHelpers {
-    /// Returns a simple test config for single node. It does not have correct network_peers_file,
-    /// consensus_peers_file, network_keypairs_file, consensus_keypair_file, and seed_peers_file
-    /// set. It is expected that the callee will provide these.
-    pub fn get_single_node_test_config() -> NodeConfig {
-        let mut config = NodeConfig::default();
+    pub fn random() -> Self {
         let mut rng = StdRng::from_seed([0u8; 32]);
+        Self::random_with_rng(&mut rng)
+    }
+
+    pub fn random_with_rng(mut rng: &mut StdRng) -> Self {
+        let mut config = NodeConfig::default();
         let validator_network = NetworkConfig::random(&mut rng);
         config.consensus = ConsensusConfig::random(&mut rng, validator_network.peer_id);
         config.validator_network = Some(validator_network);
@@ -335,7 +332,7 @@ mod test {
     fn verify_test_config() {
         // This test likely failed because there was a breaking change in the NodeConfig. It may be
         // desirable to reverse the change or to change the test config and potentially documentation.
-        let mut actual = NodeConfigHelpers::get_single_node_test_config();
+        let mut actual = NodeConfig::random();
         let mut expected = NodeConfig::parse(&String::from_utf8_lossy(EXPECTED_SINGLE_NODE_CONFIG))
             .expect("Error parsing expected single node config");
 

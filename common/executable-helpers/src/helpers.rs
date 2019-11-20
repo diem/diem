@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_config::config::{LoggerConfig, NodeConfig, NodeConfigHelpers};
+use libra_config::config::{LoggerConfig, NodeConfig};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use slog_scope::GlobalLoggerGuard;
@@ -14,7 +14,7 @@ pub fn load_config_from_path(config: Option<&Path>) -> NodeConfig {
         NodeConfig::load(path).expect("NodeConfig")
     } else {
         info!("Loading test configs");
-        NodeConfigHelpers::get_single_node_test_config()
+        NodeConfig::random()
     };
 
     // Node configuration contains important ephemeral port information and should

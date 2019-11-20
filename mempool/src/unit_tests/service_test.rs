@@ -4,7 +4,7 @@
 use crate::{core_mempool::CoreMempool, mempool_service::MempoolService, proto::mempool::*};
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder};
-use libra_config::config::NodeConfigHelpers;
+use libra_config::config::NodeConfig;
 use libra_crypto::ed25519::compat::generate_keypair;
 use libra_mempool_shared_proto::proto::mempool_status::*;
 use libra_types::{
@@ -19,7 +19,7 @@ use std::{
 };
 
 fn setup_mempool() -> (::grpcio::Server, MempoolClient) {
-    let node_config = NodeConfigHelpers::get_single_node_test_config();
+    let node_config = NodeConfig::random();
 
     let env = Arc::new(EnvBuilder::new().build());
     let core_mempool = Arc::new(Mutex::new(CoreMempool::new(&node_config)));
