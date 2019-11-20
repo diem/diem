@@ -8,6 +8,7 @@ mod remove_network_effects;
 mod stop_container;
 
 use failure;
+pub use network_delay::three_region_simulation_effects;
 pub use network_delay::NetworkDelay;
 pub use packet_loss::PacketLoss;
 pub use reboot::Reboot;
