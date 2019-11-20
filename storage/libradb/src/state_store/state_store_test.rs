@@ -9,6 +9,7 @@ use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state_blob::AccountStateBlob,
 };
+use proptest::{collection::hash_map, prelude::*};
 
 fn put_account_state_set(
     store: &StateStore,
@@ -224,5 +225,46 @@ fn test_retired_records() {
         verify_state_in_store(store, address1, Some(&value1), 2, root2);
         verify_state_in_store(store, address2, Some(&value2_update), 2, root2);
         verify_state_in_store(store, address3, Some(&value3_update), 2, root2);
+    }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(10))]
+
+    #[test]
+    fn test_iter_accounts(
+        input in hash_map(any::<AccountAddress>(), any::<AccountStateBlob>(), 1..200)
+    ) {
+        // Convert to a vector so iteration order becomes deterministic.
+        let kvs: Vec<_> = input.into_iter().collect();
+
+        let tmp_dir = TempPath::new();
+        let db = LibraDB::new(&tmp_dir);
+        let store = &db.state_store;
+
+        for (i, (key, value)) in kvs.iter().enumerate() {
+            // Insert one key at each version.
+            let mut cs = ChangeSet::new();
+            let account_state_set: HashMap<_, _> = std::iter::once((*key, value.clone())).collect();
+            store
+                .put_account_state_sets(vec![account_state_set], i as Version, &mut cs)
+                .unwrap();
+            store.db.write_schemas(cs.batch).unwrap();
+        }
+
+        // Test iterator at each version.
+        for i in 0..kvs.len() {
+            let actual_values = store
+                .iter_accounts(i as Version, HashValue::zero())
+                .unwrap()
+                .collect::<Result<Vec<_>>>()
+                .unwrap();
+            let mut expected_values: Vec<_> = kvs[..=i]
+                .iter()
+                .map(|(addr, account)| (addr.hash(), account.clone()))
+                .collect();
+            expected_values.sort_unstable_by_key(|item| item.0);
+            prop_assert_eq!(actual_values, expected_values);
+        }
     }
 }
