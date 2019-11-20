@@ -35,7 +35,7 @@ dir = "libradb/db"
 grpc_max_receive_len = 100000000
 
 [validator_network]
-peer_id = "8deeeaed65f0cd7484a9e4e5ac51fbac548f2f71299a05e000156031ca78fb9f"
+peer_id = "b1df0ea1b4c1400454bab824e2e3ef6669e4231e2b9332020d9630fe1cfb2808"
 listen_address = "/ip4/0.0.0.0/tcp/65206"
 advertised_address = "/ip4/0.0.0.0/tcp/65206"
 discovery_interval_ms = 1000

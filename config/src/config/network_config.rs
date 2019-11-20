@@ -5,13 +5,14 @@ use crate::{
     config::{BaseConfig, PersistableConfig, RoleType},
     keys::NetworkKeyPairs,
     seed_peers::SeedPeersConfig,
-    trusted_peers::NetworkPeersConfig,
+    trusted_peers::{NetworkPeerInfo, NetworkPeersConfig},
     utils::get_local_ip,
 };
 use failure::prelude::*;
-use libra_crypto::ValidKey;
+use libra_crypto::{ed25519::Ed25519PrivateKey, x25519::X25519StaticPrivateKey, Uniform, ValidKey};
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
+use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, path::PathBuf, string::ToString, sync::Arc};
 
@@ -53,8 +54,12 @@ pub struct NetworkConfig {
 
 impl Default for NetworkConfig {
     fn default() -> Self {
+        let keypair = NetworkKeyPairs::default();
+        let peer_id = PeerId::try_from(keypair.get_network_identity_public().to_bytes()).unwrap();
+        let peers = Self::default_peers(&keypair, &peer_id);
+
         Self {
-            peer_id: PeerId::default(),
+            peer_id,
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
             advertised_address: "/ip4/127.0.0.1/tcp/6180".parse::<Multiaddr>().unwrap(),
             discovery_interval_ms: 1000,
@@ -62,9 +67,9 @@ impl Default for NetworkConfig {
             enable_encryption_and_authentication: true,
             is_permissioned: true,
             network_keypairs_file: PathBuf::new(),
-            network_keypairs: NetworkKeyPairs::default(),
+            network_keypairs: keypair,
             network_peers_file: PathBuf::new(),
-            network_peers: NetworkPeersConfig::default(),
+            network_peers: peers,
             seed_peers_file: PathBuf::new(),
             seed_peers: SeedPeersConfig::default(),
             base: Arc::new(BaseConfig::default()),
@@ -116,6 +121,18 @@ impl NetworkConfig {
         Ok(())
     }
 
+    pub fn random(rng: &mut StdRng) -> Self {
+        let signing_key = Ed25519PrivateKey::generate_for_testing(rng);
+        let identity_key = X25519StaticPrivateKey::generate_for_testing(rng);
+        let network_keypairs = NetworkKeyPairs::load(signing_key, identity_key);
+        let mut config = Self::default();
+        config.peer_id =
+            PeerId::try_from(network_keypairs.get_network_identity_public().to_bytes()).unwrap();
+        config.network_keypairs = network_keypairs;
+        config.network_peers = Self::default_peers(&config.network_keypairs, &config.peer_id);
+        config
+    }
+
     pub fn network_peers_file(&self) -> PathBuf {
         self.base.full_path(&self.network_peers_file)
     }
@@ -126,5 +143,19 @@ impl NetworkConfig {
 
     pub fn seed_peers_file(&self) -> PathBuf {
         self.base.full_path(&self.seed_peers_file)
+    }
+
+    fn default_peers(keypair: &NetworkKeyPairs, peer_id: &PeerId) -> NetworkPeersConfig {
+        let mut peers = NetworkPeersConfig::default();
+        let identity_pubkey = keypair.get_network_identity_public();
+        let signing_pubkey = keypair.get_network_signing_public();
+        peers.peers.insert(
+            peer_id.to_string(),
+            NetworkPeerInfo {
+                network_identity_pubkey: identity_pubkey.clone(),
+                network_signing_pubkey: signing_pubkey.clone(),
+            },
+        );
+        peers
     }
 }

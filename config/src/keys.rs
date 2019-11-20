@@ -132,6 +132,10 @@ impl NetworkKeyPairs {
         &self.network_identity_public_key
     }
 
+    pub fn get_network_signing_public(&self) -> &Ed25519PublicKey {
+        &self.network_signing_public_key
+    }
+
     // getters for keypairs
     pub fn get_network_identity_keypair(&self) -> (X25519StaticPrivateKey, X25519StaticPublicKey) {
         (

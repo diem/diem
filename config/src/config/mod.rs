@@ -1,12 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    keys::{ConsensusKeyPair, NetworkKeyPairs},
-    seed_peers::SeedPeersConfigHelpers,
-    trusted_peers::{ConfigHelpers, ConsensusPrivateKey, NetworkPrivateKeys},
-    utils::get_available_port,
-};
+use crate::utils::get_available_port;
 use failure::prelude::*;
 use libra_tools::tempdir::TempPath;
 use libra_types::{
@@ -14,6 +9,7 @@ use libra_types::{
     PeerId,
 };
 use prost::Message;
+use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     convert::TryFrom,
@@ -22,7 +18,6 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
     str::FromStr,
-    string::ToString,
     sync::Arc,
 };
 use toml;
@@ -283,40 +278,14 @@ impl NodeConfigHelpers {
     /// set. It is expected that the callee will provide these.
     pub fn get_single_node_test_config(random_ports: bool) -> NodeConfig {
         let mut config = NodeConfig::default();
+        let mut rng = StdRng::from_seed([0u8; 32]);
+        let validator_network = NetworkConfig::random(&mut rng);
+        config.consensus = ConsensusConfig::random(&mut rng, validator_network.peer_id);
+        config.validator_network = Some(validator_network);
+
         if random_ports {
             NodeConfigHelpers::randomize_config_ports(&mut config);
         }
-        let (mut private_keys, test_consensus_peers, test_network_peers) =
-            ConfigHelpers::gen_validator_nodes(1, None);
-        let peer_id = *private_keys.keys().nth(0).unwrap();
-        let (
-            ConsensusPrivateKey {
-                consensus_private_key,
-            },
-            NetworkPrivateKeys {
-                network_signing_private_key,
-                network_identity_private_key,
-            },
-        ) = private_keys.remove_entry(&peer_id).unwrap().1;
-        config.consensus.consensus_keypair = ConsensusKeyPair::load(Some(consensus_private_key));
-        config.consensus.consensus_peers = test_consensus_peers;
-
-        let mut network = NetworkConfig::default();
-        network.peer_id = peer_id;
-        network.network_keypairs =
-            NetworkKeyPairs::load(network_signing_private_key, network_identity_private_key);
-        let seed_peers_config = SeedPeersConfigHelpers::get_test_config(&test_network_peers, None);
-        network.listen_address = seed_peers_config
-            .seed_peers
-            .get(&peer_id.to_string())
-            .unwrap()
-            .get(0)
-            .unwrap()
-            .clone();
-        network.advertised_address = network.listen_address.clone();
-        network.seed_peers = seed_peers_config;
-        network.network_peers = test_network_peers;
-        config.validator_network = Some(network);
 
         // Create temporary directory for persisting configs.
         let dir = TempPath::new();
