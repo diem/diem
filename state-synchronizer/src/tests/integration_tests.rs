@@ -9,15 +9,17 @@ use config_builder::util::get_test_config;
 use failure::{prelude::*, Result};
 use futures::{executor::block_on, future::FutureExt, Future};
 use libra_config::config::RoleType;
-use libra_crypto::{
-    ed25519::*, test_utils::TEST_SEED, traits::Genesis, x25519, HashValue, SigningKey,
-};
+use libra_crypto::hash::CryptoHash;
+use libra_crypto::{ed25519::*, test_utils::TEST_SEED, x25519, HashValue};
+use libra_logger::set_simple_logger;
 use libra_types::block_info::BlockInfo;
-use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
+use libra_types::crypto_proxies::{
+    random_validator_verifier, ValidatorChangeEventWithProof, ValidatorSigner, ValidatorVerifier,
+};
 use libra_types::{
     account_address::AccountAddress,
     crypto_proxies::LedgerInfoWithSignatures,
-    ledger_info::LedgerInfo as TypesLedgerInfo,
+    ledger_info::LedgerInfo,
     proof::TransactionListProof,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Transaction, TransactionListWithProof},
@@ -50,44 +52,56 @@ type MockRpcHandler = Box<
 
 // To play with the storage values
 pub struct MockStorage {
+    signer: ValidatorSigner,
+    verifier: ValidatorVerifier,
     version: u64,
 }
 
 impl MockStorage {
-    fn new(version: u64) -> Self {
-        Self { version }
+    fn new(signer: ValidatorSigner, verifier: ValidatorVerifier, version: u64) -> Self {
+        Self {
+            signer,
+            verifier,
+            version,
+        }
     }
 
     fn commit(&mut self, val: u64) {
         self.version = std::cmp::max(self.version, val);
     }
+
+    fn gen_ledger_info(&self, version: u64) -> LedgerInfoWithSignatures {
+        let ledger_info = LedgerInfo::new(
+            BlockInfo::new(
+                1,
+                version,
+                HashValue::zero(),
+                HashValue::zero(),
+                version,
+                0,
+                None,
+            ),
+            HashValue::zero(),
+        );
+        let signature = self.signer.sign_message(ledger_info.hash()).unwrap();
+        let mut signatures = BTreeMap::new();
+        signatures.insert(self.signer.author(), signature);
+        LedgerInfoWithSignatures::new(ledger_info, signatures)
+    }
+
+    fn trusted_verifier(&self) -> ValidatorVerifier {
+        self.verifier.clone()
+    }
 }
 
 pub struct MockExecutorProxy {
-    peer_id: PeerId,
     handler: MockRpcHandler,
     storage: Arc<RwLock<MockStorage>>,
 }
 
 impl MockExecutorProxy {
-    fn new(peer_id: PeerId, handler: MockRpcHandler, storage: Arc<RwLock<MockStorage>>) -> Self {
-        Self {
-            peer_id,
-            handler,
-            storage,
-        }
-    }
-
-    fn mock_ledger_info(peer_id: PeerId, version: u64) -> LedgerInfoWithSignatures {
-        let ledger_info = TypesLedgerInfo::new(
-            BlockInfo::new(0, 0, HashValue::zero(), HashValue::zero(), version, 0, None),
-            HashValue::zero(),
-        );
-        let mut signatures = BTreeMap::new();
-        let private_key = Ed25519PrivateKey::genesis();
-        let signature = private_key.sign_message(&HashValue::zero());
-        signatures.insert(peer_id, signature);
-        LedgerInfoWithSignatures::new(ledger_info, signatures)
+    fn new(handler: MockRpcHandler, storage: Arc<RwLock<MockStorage>>) -> Self {
+        Self { handler, storage }
     }
 
     fn mock_chunk_response(&self, version: u64) -> TransactionListWithProof {
@@ -112,14 +126,17 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>> {
         let highest_synced_version = self.storage.read().unwrap().version;
-        let highest_local_li = Self::mock_ledger_info(self.peer_id, highest_synced_version);
-        async move {
-            Ok(SynchronizerState {
-                highest_local_li,
-                highest_synced_version,
-            })
-        }
-            .boxed()
+        let highest_local_li = self
+            .storage
+            .read()
+            .unwrap()
+            .gen_ledger_info(highest_synced_version);
+        let state = SynchronizerState::new(
+            highest_local_li,
+            highest_synced_version,
+            self.storage.read().unwrap().trusted_verifier(),
+        );
+        async move { Ok(state) }.boxed()
     }
 
     fn execute_chunk(
@@ -142,10 +159,6 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         async move { response }.boxed()
     }
 
-    fn validate_ledger_info(&self, _target: &LedgerInfoWithSignatures) -> Result<()> {
-        Ok(())
-    }
-
     fn get_epoch_proof(&self, _start_epoch: u64) -> Result<ValidatorChangeEventWithProof> {
         unimplemented!("get epoch proof not supported for mock executor proxy");
     }
@@ -154,15 +167,18 @@ impl ExecutorProxyTrait for MockExecutorProxy {
 struct SynchronizerEnv {
     _runtime: Runtime,
     _synchronizers: Vec<StateSynchronizer>,
-    peers: Vec<PeerId>,
     clients: Vec<Arc<StateSyncClient>>,
     storage_proxies: Vec<Arc<RwLock<MockStorage>>>, // to directly modify peers storage
 }
 
 impl SynchronizerEnv {
     fn new(handler: MockRpcHandler, role: RoleType) -> Self {
+        set_simple_logger("state-sync");
         let runtime = Runtime::new().unwrap();
-        let peers = vec![PeerId::random(), PeerId::random()];
+        // Generate a verifier with a quorum voting power of 1 (a single signature on LI is enough
+        // to pass verification).
+        let (signers, verifier) = random_validator_verifier(2, Some(1), true);
+        let peers = signers.iter().map(|s| s.author()).collect::<Vec<PeerId>>();
 
         // setup network
         let addr: Multiaddr = "/memory/0".parse().unwrap();
@@ -243,31 +259,34 @@ impl SynchronizerEnv {
             .upstream_peers
             .push(peers[1]);
         let storage_proxies = vec![
-            Arc::new(RwLock::new(MockStorage::new(0))),
-            Arc::new(RwLock::new(MockStorage::new(0))),
+            Arc::new(RwLock::new(MockStorage::new(
+                signers[0].clone(),
+                verifier.clone(),
+                0,
+            ))),
+            Arc::new(RwLock::new(MockStorage::new(
+                signers[1].clone(),
+                verifier.clone(),
+                0,
+            ))),
         ];
         let synchronizers: Vec<StateSynchronizer> = vec![
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_a, events_a)],
                 role,
                 &config.state_sync,
-                MockExecutorProxy::new(
-                    peers[0],
-                    Self::default_handler(),
-                    storage_proxies[0].clone(),
-                ),
+                MockExecutorProxy::new(Self::default_handler(), storage_proxies[0].clone()),
             ),
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_b, events_b)],
                 role,
                 &get_test_config().0.state_sync,
-                MockExecutorProxy::new(peers[1], handler, storage_proxies[1].clone()),
+                MockExecutorProxy::new(handler, storage_proxies[1].clone()),
             ),
         ];
         let clients = synchronizers.iter().map(|s| s.create_client()).collect();
 
         Self {
-            peers,
             clients,
             _synchronizers: synchronizers,
             _runtime: runtime,
@@ -279,8 +298,7 @@ impl SynchronizerEnv {
         Box::new(|resp| -> Result<TransactionListWithProof> { Ok(resp) })
     }
 
-    fn sync_to(&self, peer_id: usize, version: u64) {
-        let target = MockExecutorProxy::mock_ledger_info(self.peers[1], version);
+    fn sync_to(&self, peer_id: usize, target: LedgerInfoWithSignatures) {
         block_on(self.clients[peer_id].sync_to(target)).unwrap()
     }
 
@@ -311,10 +329,20 @@ fn test_basic_catch_up() {
 
     // test small sequential syncs
     for version in 1..5 {
-        env.sync_to(0, version);
+        // peer 0 syncs to a target signed by peer 1
+        env.sync_to(
+            0,
+            env.storage_proxies[1]
+                .read()
+                .unwrap()
+                .gen_ledger_info(version),
+        );
     }
     // test batch sync for multiple transactions
-    env.sync_to(0, 10);
+    env.sync_to(
+        0,
+        env.storage_proxies[1].read().unwrap().gen_ledger_info(10),
+    );
 }
 
 #[test]
@@ -331,7 +359,7 @@ fn test_flaky_peer_sync() {
         }
     });
     let env = SynchronizerEnv::new(handler, RoleType::Validator);
-    env.sync_to(0, 1);
+    env.sync_to(0, env.storage_proxies[1].read().unwrap().gen_ledger_info(1));
 }
 
 #[test]

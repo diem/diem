@@ -54,6 +54,14 @@ pub(crate) enum CoordinatorMessage {
     GetEpochProof(EpochRetrievalRequest),
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct PendingRequestInfo {
+    expiration_time: SystemTime,
+    known_version: u64,
+    request_epoch: u64,
+    limit: u64,
+}
+
 /// Coordination of synchronization process is driven by SyncCoordinator, which `start()` function
 /// runs an infinite event loop and triggers actions based on external / internal requests.
 /// The coordinator can work in two modes:
@@ -81,8 +89,7 @@ pub(crate) struct SyncCoordinator<T> {
     sync_request: Option<SyncRequest>,
     // queue of incoming long polling requests
     // peer will be notified about new chunk of transactions if it's available before expiry time
-    // value format is (expiration_time, known_version, limit)
-    subscriptions: HashMap<PeerId, (SystemTime, u64, u64)>,
+    subscriptions: HashMap<PeerId, PendingRequestInfo>,
     executor_proxy: T,
 }
 
@@ -92,6 +99,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         role: RoleType,
         config: StateSyncConfig,
         executor_proxy: T,
+        initial_state: SynchronizerState,
     ) -> Self {
         let upstream_peers = config.upstream_peers.upstream_peers.clone();
         let retry_timeout_val = match role {
@@ -99,11 +107,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             RoleType::Validator => 2 * config.tick_interval_ms,
         };
 
-        // The uptodate sync state is retrieved from the local storage asynchronously, hence
-        // we're going to initialize with an empty state and retrieve it upon start() only.
         Self {
             client_events,
-            local_state: SynchronizerState::zero_state(),
+            local_state: initial_state,
             retry_timeout: Duration::from_millis(retry_timeout_val),
             config,
             role,
@@ -116,10 +122,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     /// main routine. starts sync coordinator that listens for CoordinatorMsg
     pub async fn start(mut self, network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>) {
-        self.sync_state_with_local_storage()
-            .await
-            .expect("[state sync] Start failure: cannot sync with storage.");
-
         let mut interval = interval(Duration::from_millis(self.config.tick_interval_ms)).fuse();
 
         let network_senders: Vec<StateSynchronizerSender> =
@@ -199,7 +201,15 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     /// Sync up coordinator state with the local storage.
     async fn sync_state_with_local_storage(&mut self) -> Result<()> {
-        self.local_state = self.executor_proxy.get_local_storage_state().await?;
+        let new_state = self.executor_proxy.get_local_storage_state().await?;
+        if new_state.epoch() > self.local_state.epoch() {
+            debug!(
+                "[state sync] Trusted epoch moved from {} to {}",
+                self.local_state.epoch(),
+                new_state.epoch()
+            );
+        }
+        self.local_state = new_state;
         Ok(())
     }
 
@@ -234,8 +244,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         self.peer_manager
             .set_peers(request.target.signatures().keys().copied().collect());
         self.sync_request = Some(request);
-        self.send_chunk_request(self.local_state.highest_version_in_local_storage())
-            .await
+        self.send_chunk_request(
+            self.local_state.highest_version_in_local_storage(),
+            self.local_state.epoch(),
+        )
+        .await
     }
 
     /// The function is called after new txns have been applied to the local storage.
@@ -320,8 +333,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             let expiration_time =
                 SystemTime::now().checked_add(Duration::from_millis(request.timeout));
             if let Some(time) = expiration_time {
-                self.subscriptions
-                    .insert(peer_id, (time, request.known_version, request.limit));
+                let request_info = PendingRequestInfo {
+                    expiration_time: time,
+                    known_version: request.known_version,
+                    request_epoch: request.chunk_epoch,
+                    limit: request.limit,
+                };
+                self.subscriptions.insert(peer_id, request_info);
             }
             return Ok(());
         }
@@ -335,6 +353,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         self.deliver_chunk(
             peer_id,
             request.known_version,
+            request.chunk_epoch,
             request.limit,
             target,
             sender,
@@ -350,12 +369,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         &self,
         peer_id: PeerId,
         known_version: u64,
+        request_epoch: u64,
         limit: u64,
         target: Option<LedgerInfoWithSignatures>,
         mut network_sender: StateSynchronizerSender,
     ) -> Result<()> {
-        // The LI in the response is either the given target or the highest LI of the node.
-        let response_li = target.unwrap_or_else(|| self.local_state.highest_local_li.clone());
+        let response_li = self.choose_response_li(known_version, request_epoch, target)?;
+
         let txns = self
             .executor_proxy
             .get_chunk(known_version, limit, response_li.ledger_info().version())
@@ -371,6 +391,36 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             error!("[state sync] failed to send p2p message");
         }
         Ok(())
+    }
+
+    /// The choice of the LedgerInfo in the response follows the following logic:
+    /// * response LI is either the requested target or the highest local LI if target is None.
+    /// * if the response LI would not belong to `request_epoch`, change
+    /// the response LI to the LI that is terminating `request_epoch`.
+    fn choose_response_li(
+        &self,
+        known_version: u64,
+        request_epoch: u64,
+        target: Option<LedgerInfoWithSignatures>,
+    ) -> Result<LedgerInfoWithSignatures> {
+        let mut target_li = target.unwrap_or_else(|| self.local_state.highest_local_li.clone());
+        if target_li.ledger_info().epoch() > request_epoch {
+            let end_of_epoch_li = self
+                .executor_proxy
+                .get_epoch_proof(request_epoch)?
+                .ledger_info_with_sigs
+                .first()
+                .ok_or_else(|| {
+                    format_err!(
+                        "[state sync] Fail to retrieve end of epoch LI for epoch {}",
+                        request_epoch
+                    )
+                })?
+                .clone();
+            debug!("[state sync] Chunk response for known_version = {} is limited to the last txn of epoch {} at version {}", known_version, request_epoch, end_of_epoch_li.ledger_info().version());
+            target_li = end_of_epoch_li;
+        }
+        Ok(target_li)
     }
 
     /// * Issue a request for the next chunk.
@@ -432,7 +482,12 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         // Optimistically fetch the next chunk assuming the current chunk is going to be applied
         // successfully.
         let new_version = known_version + chunk_size;
-        self.send_chunk_request(new_version).await?;
+        let new_epoch = match response_li.ledger_info().next_validator_set() {
+            // This LI carries the validator set for the next epoch.
+            Some(_) => response_li.ledger_info().epoch() + 1,
+            None => response_li.ledger_info().epoch(),
+        };
+        self.send_chunk_request(new_version, new_epoch).await?;
 
         self.validate_and_store_chunk(txn_list_with_proof, response_li)
             .await
@@ -459,11 +514,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     }
 
     async fn validate_and_store_chunk(
-        &mut self,
+        &self,
         txn_list_with_proof: TransactionListWithProof,
         target: LedgerInfoWithSignatures,
     ) -> Result<()> {
-        self.executor_proxy.validate_ledger_info(&target)?;
+        target.verify(self.local_state.verifier())?;
         self.executor_proxy
             .execute_chunk(txn_list_with_proof, target)
             .await?;
@@ -491,7 +546,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             if SystemTime::now().duration_since(tst).is_ok() {
                 self.peer_manager
                     .process_timeout(known_version + 1, self.role == RoleType::Validator);
-                if let Err(e) = self.send_chunk_request(known_version).await {
+                if let Err(e) = self
+                    .send_chunk_request(known_version, self.local_state.epoch())
+                    .await
+                {
                     error!("[state sync] Failed to send chunk request: {}", e);
                 }
                 counters::TIMEOUT.inc();
@@ -499,9 +557,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
     }
 
-    /// Sends a chunk request with a given `known_version` (might be chosen optimistically).
+    /// Sends a chunk request with a given `known_version` and `known_epoch`
+    /// (might be chosen optimistically).
     /// The request includes a target for Validator and a non-zero timeout for a FullNode.
-    async fn send_chunk_request(&mut self, known_version: u64) -> Result<()> {
+    async fn send_chunk_request(&mut self, known_version: u64, known_epoch: u64) -> Result<()> {
         let (peer_id, mut sender) = self
             .peer_manager
             .pick_peer()
@@ -509,6 +568,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         let mut req = GetChunkRequest::default();
         req.known_version = known_version;
+        req.chunk_epoch = known_epoch;
         req.limit = self.config.chunk_limit;
         if self.role == RoleType::Validator {
             let target = self
@@ -560,27 +620,30 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let highest_li_version = self.local_state.highest_local_li.ledger_info().version();
 
         let mut ready = vec![];
-        self.subscriptions
-            .retain(|peer_id, (expiry, known_version, limit)| {
-                // filter out expired peer requests
-                if SystemTime::now().duration_since(expiry.clone()).is_ok() {
-                    return false;
-                }
-                if *known_version < highest_li_version {
-                    ready.push((*peer_id, *known_version, *limit));
-                    false
-                } else {
-                    true
-                }
-            });
+        self.subscriptions.retain(|peer_id, request_info| {
+            // filter out expired peer requests
+            if SystemTime::now()
+                .duration_since(request_info.expiration_time.clone())
+                .is_ok()
+            {
+                return false;
+            }
+            if request_info.known_version < highest_li_version {
+                ready.push((*peer_id, request_info.clone()));
+                false
+            } else {
+                true
+            }
+        });
 
         let mut futures = FuturesUnordered::new();
-        for (peer_id, known_version, limit) in ready {
+        for (peer_id, request_info) in ready {
             if let Some(sender) = self.peer_manager.get_network_sender(&peer_id) {
                 futures.push(self.deliver_chunk(
                     peer_id,
-                    known_version,
-                    limit,
+                    request_info.known_version,
+                    request_info.request_epoch,
+                    request_info.limit,
                     Some(self.local_state.highest_local_li.clone()),
                     sender,
                 ));
