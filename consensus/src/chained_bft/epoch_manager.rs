@@ -173,8 +173,7 @@ impl<T: Payload> EpochManager<T> {
             .into();
         // make sure storage is on this ledger_info too, it should be no-op if it's already committed
         self.state_computer.sync_to_or_bail(ledger_info.clone());
-        let initial_data = RecoveryData::new(None, vec![], vec![], ledger_info.ledger_info(), None)
-            .expect("should be able to build new epoch RecoveryData");
+        let initial_data = self.storage.start();
         self.epoch = initial_data.epoch();
         info!(
             "Start new epoch {} with genesis {}, validators {}",

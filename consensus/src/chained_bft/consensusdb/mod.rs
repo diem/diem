@@ -157,10 +157,23 @@ impl ConsensusDB {
             .get::<SingleEntrySchema>(&SingleEntryKey::HighestTimeoutCertificate)
     }
 
+    /// Delete the timeout certificates
+    pub fn delete_highest_timeout_certificate(&self) -> Result<()> {
+        let mut batch = SchemaBatch::new();
+        batch.delete::<SingleEntrySchema>(&SingleEntryKey::HighestTimeoutCertificate)?;
+        self.commit(batch)
+    }
+
     /// Get latest vote message data (if available)
     fn get_last_vote_msg_data(&self) -> Result<Option<Vec<u8>>> {
         self.db
             .get::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg)
+    }
+
+    pub fn delete_last_vote_msg(&self) -> Result<()> {
+        let mut batch = SchemaBatch::new();
+        batch.delete::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg)?;
+        self.commit(batch)
     }
 
     /// Get all consensus blocks.
