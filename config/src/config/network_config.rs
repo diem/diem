@@ -126,8 +126,7 @@ impl NetworkConfig {
         let identity_key = X25519StaticPrivateKey::generate_for_testing(rng);
         let network_keypairs = NetworkKeyPairs::load(signing_key, identity_key);
         let mut config = Self::default();
-        config.peer_id =
-            PeerId::try_from(network_keypairs.get_network_identity_public().to_bytes()).unwrap();
+        config.peer_id = PeerId::from_public_key(network_keypairs.get_network_signing_public());
         config.network_keypairs = network_keypairs;
         config.network_peers = Self::default_peers(&config.network_keypairs, &config.peer_id);
         config
