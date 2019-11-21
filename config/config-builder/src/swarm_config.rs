@@ -2,33 +2,30 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Convenience structs and functions for generating configuration for a swarm of libra nodes
-use crate::util::genesis_transaction;
 use failure::prelude::*;
 use libra_config::{
     config::{
-        BaseConfig, ConsensusConfig, NetworkConfig, NodeConfig, OnDiskStorageConfig,
-        PersistableConfig, RoleType, SafetyRulesBackend, SafetyRulesConfig, VMPublishingOption,
+        NetworkConfig, NodeConfig, OnDiskStorageConfig, PersistableConfig, RoleType,
+        SafetyRulesBackend, VMPublishingOption,
     },
-    keys::{ConsensusKeyPair, NetworkKeyPairs},
-    seed_peers::{SeedPeersConfig, SeedPeersConfigHelpers},
+    seed_peers::SeedPeersConfig,
     trusted_peers::{
-        ConfigHelpers, ConsensusPeersConfig, ConsensusPrivateKey, NetworkPeerInfo,
-        NetworkPeersConfig, NetworkPrivateKeys, UpstreamPeersConfig,
+        ConsensusPeerInfo, ConsensusPeersConfig, NetworkPeerInfo, NetworkPeersConfig,
+        UpstreamPeersConfig,
     },
     utils,
 };
-use libra_crypto::{ed25519::*, test_utils::KeyPair};
-use libra_logger::prelude::*;
-use libra_types::PeerId;
-use parity_multiaddr::Multiaddr;
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    test_utils::KeyPair,
+};
+use libra_types::transaction::Transaction;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
-    collections::{BTreeMap, HashMap},
-    fs::File,
-    io::prelude::*,
+    collections::HashMap,
     path::{Path, PathBuf},
-    sync::Arc,
 };
+use vm_genesis;
 
 pub struct SwarmConfig {
     pub configs: Vec<PathBuf>,
@@ -135,7 +132,7 @@ impl SwarmConfig {
     }
 
     pub fn new_validator_swarm(
-        mut template: NodeConfig,
+        template: NodeConfig,
         num_nodes: usize,
         faucet_key: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         prune_seed_peers_for_discovery: bool,
@@ -143,173 +140,84 @@ impl SwarmConfig {
         key_seed: Option<[u8; 32]>,
         output_dir: &Path,
     ) -> Result<Self> {
-        let (mut private_keys, consensus_peers_config, network_peers_config) =
-            ConfigHelpers::gen_validator_nodes(num_nodes, key_seed);
-        let mut seed_peers_config = SeedPeersConfigHelpers::get_test_config_with_ipver(
-            &network_peers_config,
-            None,
-            is_ipv4,
-        );
-        let genesis_transaction =
-            genesis_transaction(&faucet_key, &consensus_peers_config, &network_peers_config);
-        // Extract peer addresses from seed peer config.
-        let peer_addresses: BTreeMap<_, _> =
-            seed_peers_config.seed_peers.clone().into_iter().collect();
-        // Prune seed peers config if needed.
-        if prune_seed_peers_for_discovery {
-            seed_peers_config.seed_peers = seed_peers_config
-                .seed_peers
-                .clone()
-                .into_iter()
-                .take(1)
-                .collect();
-        }
+        let seed = key_seed.unwrap_or([1u8; 32]);
+        let mut rng = StdRng::from_seed(seed);
+
+        let mut network_peers = NetworkPeersConfig {
+            peers: HashMap::new(),
+        };
+        let mut seed_peers = SeedPeersConfig {
+            seed_peers: HashMap::new(),
+        };
+        let mut consensus_peers = HashMap::new();
         let mut configs = Vec::new();
-        template.execution.genesis_file_location = PathBuf::from("genesis.blob");
+        let mut config_files = Vec::new();
+
         // Generate configs for all nodes.
-        for (index, (node_id, addrs)) in peer_addresses.iter().enumerate() {
+        for index in 0..num_nodes {
             let node_dir = output_dir.join(format!("{}", index));
             std::fs::create_dir_all(&node_dir).expect("unable to create config dir");
-            debug!("Directory for node {}: {:?}", index, node_dir);
-            // Save genesis transaction in file.
-            let mut genesis_transaction_file =
-                File::create(&node_dir.join(&template.execution.genesis_file_location))?;
-            genesis_transaction_file.write_all(&lcs::to_bytes(&genesis_transaction)?)?;
-            let (
-                ConsensusPrivateKey {
-                    consensus_private_key,
+
+            let mut config = NodeConfig::random_with_template(&template, &mut rng);
+            config.randomize_ports();
+            config.set_data_dir(node_dir.clone())?;
+
+            config.consensus.safety_rules.backend =
+                SafetyRulesBackend::OnDiskStorage(OnDiskStorageConfig {
+                    default: true,
+                    path: PathBuf::from("safety_rules.toml"),
+                    base: config.base.clone(),
+                });
+
+            let network = &mut config.validator_network.as_mut().unwrap();
+            network.listen_address = utils::get_available_port_in_multiaddr(is_ipv4);
+            network.advertised_address = network.listen_address.clone();
+            add_peer(network, &mut network_peers, &mut seed_peers);
+            consensus_peers.insert(
+                network.peer_id,
+                ConsensusPeerInfo {
+                    consensus_pubkey: config
+                        .consensus
+                        .consensus_keypair
+                        .public()
+                        .unwrap()
+                        .clone(),
                 },
-                NetworkPrivateKeys {
-                    network_signing_private_key,
-                    network_identity_private_key,
-                },
-            ) = private_keys.remove_entry(&node_id).unwrap().1;
-            let consensus_keypair = ConsensusKeyPair::load(Some(consensus_private_key));
-            let network_keypairs =
-                NetworkKeyPairs::load(network_signing_private_key, network_identity_private_key);
-            let validator_config = Self::get_config_by_role(
-                &template,
-                RoleType::Validator,
-                &node_id,
-                &network_keypairs,
-                &consensus_keypair,
-                &seed_peers_config,
-                &network_peers_config,
-                &consensus_peers_config,
-                &node_dir,
-                &addrs,
             );
-            let config_file = node_dir.join("node.config.toml");
-            validator_config.save_config(&config_file);
-            configs.push(config_file);
-        }
-        Ok(Self { configs })
-    }
 
-    fn get_config_by_role(
-        template: &NodeConfig,
-        role: RoleType,
-        node_id: &PeerId,
-        network_keypairs: &NetworkKeyPairs,
-        consenus_keypair: &ConsensusKeyPair,
-        seed_peers_config: &SeedPeersConfig,
-        network_peers_config: &NetworkPeersConfig,
-        consensus_peers_config: &ConsensusPeersConfig,
-        output_dir: &Path,
-        addrs: &[Multiaddr],
-    ) -> NodeConfig {
-        let base_config = Arc::new(BaseConfig::new(output_dir.to_path_buf(), role));
-        // Save consensus keys if present.
-        let mut consensus_keys_file_name = "".to_string();
-        if consenus_keypair.is_present() {
-            consensus_keys_file_name = format!("{}.node.consensus.keys.toml", node_id.to_string());
-            consenus_keypair.save_config(&output_dir.join(&consensus_keys_file_name));
-        }
-        // Prepare safety rules
-        let mut safety_rules_config = SafetyRulesConfig::default();
-        if role == RoleType::Validator {
-            safety_rules_config.backend = SafetyRulesBackend::OnDiskStorage(OnDiskStorageConfig {
-                default: true,
-                path: PathBuf::from(format!("{}.node.safety_rules.toml", node_id.to_string())),
-                base: base_config.clone(),
-            })
-        }
-        // Save network keys.
-        let network_keys_file_name = format!("{}.node.network.keys.toml", node_id.to_string());
-        network_keypairs.save_config(&output_dir.join(&network_keys_file_name));
-        // Save seed peers file.
-        let seed_peers_file_name = format!("{}.seed_peers.config.toml", node_id);
-        seed_peers_config.save_config(&output_dir.join(&seed_peers_file_name));
-        // Save network peers file.
-        let network_peers_file_name = format!("{}.network_peers.config.toml", node_id);
-        network_peers_config.save_config(&output_dir.join(&network_peers_file_name));
-        // Save consensus peers file.
-        let consensus_peers_file_name = "consensus_peers.config.toml".to_string();
-        consensus_peers_config.save_config(&output_dir.join(&consensus_peers_file_name));
-        let template_network = NetworkConfig::default();
-        let network_config = NetworkConfig {
-            peer_id: *node_id,
-            network_keypairs_file: network_keys_file_name.into(),
-            network_peers_file: network_peers_file_name.into(),
-            seed_peers_file: seed_peers_file_name.into(),
-            listen_address: addrs[0].clone(),
-            advertised_address: addrs[0].clone(),
-            discovery_interval_ms: template_network.discovery_interval_ms,
-            connectivity_check_interval_ms: template_network.connectivity_check_interval_ms,
-            enable_encryption_and_authentication: template_network
-                .enable_encryption_and_authentication,
-            is_permissioned: template_network.is_permissioned,
-            // Dummy values - will be loaded from corresponding files.
-            network_keypairs: NetworkKeyPairs::default(),
-            network_peers: network_peers_config.clone(),
-            seed_peers: template_network.seed_peers.clone(),
-            base: base_config.clone(),
-        };
-        let consensus_config = ConsensusConfig {
-            max_block_size: template.consensus.max_block_size,
-            proposer_type: template.consensus.proposer_type,
-            contiguous_rounds: template.consensus.contiguous_rounds,
-            max_pruned_blocks_in_mem: template.consensus.max_pruned_blocks_in_mem,
-            pacemaker_initial_timeout_ms: template.consensus.pacemaker_initial_timeout_ms,
-            consensus_keypair_file: consensus_keys_file_name.into(),
-            consensus_peers_file: consensus_peers_file_name.into(),
-            // Dummy values - will be loaded from corresponding files.
-            consensus_keypair: ConsensusKeyPair::default(),
-            consensus_peers: consensus_peers_config.clone(),
-            safety_rules: safety_rules_config,
-            base: base_config.clone(),
-        };
-
-        let mut full_node_networks = vec![];
-        let mut validator_network = None;
-        if role == RoleType::Validator {
-            validator_network = Some(network_config);
-        } else {
-            full_node_networks = vec![network_config];
+            configs.push(config);
+            config_files.push(node_dir.join("node.config.toml"));
         }
 
-        let mut config = NodeConfig {
-            base: base_config,
-            full_node_networks,
-            validator_network,
-            consensus: consensus_config,
-            metrics: template.metrics.clone(),
-            execution: template.execution.clone(),
-            admission_control: template.admission_control.clone(),
-            debug_interface: template.debug_interface.clone(),
-            storage: template.storage.clone(),
-            mempool: template.mempool.clone(),
-            state_sync: template.state_sync.clone(),
-            logger: template.logger.clone(),
-            test: None,
-            vm_config: template.vm_config.clone(),
+        let consensus_peers_config = ConsensusPeersConfig {
+            peers: consensus_peers,
         };
-        config.randomize_ports();
-        config.vm_config.publishing_options = VMPublishingOption::Open;
-        config
-            .set_data_dir(output_dir.to_path_buf())
-            .expect("Unable to set output directory");
-        config
+
+        if prune_seed_peers_for_discovery {
+            seed_peers.seed_peers = seed_peers.seed_peers.into_iter().take(1).collect();
+        }
+
+        let genesis = Transaction::UserTransaction(
+            vm_genesis::encode_genesis_transaction_with_validator(
+                &faucet_key.private_key,
+                faucet_key.public_key.clone(),
+                consensus_peers_config.get_validator_set(&network_peers),
+            )
+            .into_inner(),
+        );
+
+        for config in &mut configs {
+            config.consensus.consensus_peers = consensus_peers_config.clone();
+            config.execution.genesis = Some(genesis.clone());
+            let network = config.validator_network.as_mut().unwrap();
+            network.network_peers = network_peers.clone();
+            network.seed_peers = seed_peers.clone();
+            config.save(&PathBuf::from("node.config.toml"));
+        }
+
+        Ok(Self {
+            configs: config_files,
+        })
     }
 }
 
