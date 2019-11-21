@@ -91,7 +91,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     ));
 
     // TODO: EmptyStorage
-    let (storage, initial_data) = MockStorage::<TestPayload>::start_for_testing();
+    let (initial_data, storage) = MockStorage::<TestPayload>::start_for_testing();
 
     // TODO: remove
     let safety_rules =

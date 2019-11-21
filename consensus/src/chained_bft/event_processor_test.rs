@@ -96,7 +96,7 @@ impl NodeSetup {
         let validators = Arc::new(validator_verifier);
         let mut nodes = vec![];
         for signer in signers.iter().take(num_nodes) {
-            let (storage, initial_data) = MockStorage::<TestPayload>::start_for_testing();
+            let (initial_data, storage) = MockStorage::<TestPayload>::start_for_testing();
 
             let safety_rules_file = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
             OnDiskStorage::default_storage(safety_rules_file.clone());
@@ -205,7 +205,7 @@ impl NodeSetup {
     pub fn restart(self, playground: &mut NetworkPlayground, executor: TaskExecutor) -> Self {
         let recover_data = self
             .storage
-            .get_recovery_data()
+            .try_start()
             .unwrap_or_else(|e| panic!("fail to restart due to: {}", e));
         Self::new(
             playground,

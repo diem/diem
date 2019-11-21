@@ -75,7 +75,7 @@ pub fn build_chain() -> Vec<Arc<ExecutedBlock<TestPayload>>> {
 }
 
 pub fn build_empty_tree() -> Arc<BlockStore<TestPayload>> {
-    let (storage, initial_data) = EmptyStorage::start_for_testing();
+    let (initial_data, storage) = EmptyStorage::start_for_testing();
     Arc::new(block_on(BlockStore::new(
         storage,
         initial_data,

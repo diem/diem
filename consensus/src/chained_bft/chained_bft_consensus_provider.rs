@@ -63,12 +63,8 @@ impl ChainedBftProvider {
         let initial_setup = Self::initialize_setup(network_sender, network_events, node_config);
         debug!("[Consensus] My peer: {:?}", initial_setup.author);
         let config = ChainedBftSMRConfig::from_node_config(&node_config.consensus);
-        let (storage, initial_data) = StorageWriteProxy::start(node_config);
-        info!(
-            "Starting up the consensus state machine with recovery data - [last_vote {}], [highest timeout certificate: {}]",
-            initial_data.last_vote().map_or("None".to_string(), |v| v.to_string()),
-            initial_data.highest_timeout_certificate().map_or("None".to_string(), |v| v.to_string()),
-        );
+        let storage = Arc::new(StorageWriteProxy::new(node_config));
+        let initial_data = storage.start();
         let txn_manager = Arc::new(MempoolProxy::new(mempool_client.clone()));
         let state_computer = Arc::new(ExecutionProxy::new(executor, synchronizer_client.clone()));
         let smr = ChainedBftSMR::new(initial_setup, runtime, config, storage, initial_data);

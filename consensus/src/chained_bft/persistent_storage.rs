@@ -15,13 +15,7 @@ use libra_logger::prelude::*;
 use libra_types::ledger_info::LedgerInfo;
 use rmp_serde::{from_slice, to_vec_named};
 use std::{collections::HashSet, sync::Arc};
-
-/// Persistent storage for liveness data
-pub trait PersistentLivenessStorage: Send + Sync {
-    /// Persist the highest timeout certificate for improved liveness - proof for other replicas
-    /// to jump to this round
-    fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()>;
-}
+use storage_client::StorageRead;
 
 /// Persistent storage is essential for maintaining safety when a node crashes.  Specifically,
 /// upon a restart, a correct node will not equivocate.  Even if all nodes crash, safety is
@@ -29,11 +23,7 @@ pub trait PersistentLivenessStorage: Send + Sync {
 /// and supports clean up (i.e. tree pruning).
 /// Blocks persisted are proposed but not yet committed.  The committed state is persisted
 /// via StateComputer.
-pub trait PersistentStorage<T>: PersistentLivenessStorage + Send + Sync {
-    /// Get an Arc to an instance of PersistentLivenessStorage
-    /// (workaround for trait downcasting
-    fn persistent_liveness_storage(&self) -> Box<dyn PersistentLivenessStorage>;
-
+pub trait PersistentStorage<T>: Send + Sync {
     /// Persist the blocks and quorum certs into storage atomically.
     fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()>;
 
@@ -43,13 +33,12 @@ pub trait PersistentStorage<T>: PersistentLivenessStorage + Send + Sync {
     /// Persist consensus' state
     fn save_state(&self, vote: &Vote) -> Result<()>;
 
-    /// When the node restart, construct the instance and returned the data read from db.
-    /// This could guarantee we only read once during start, and we would panic if the
-    /// read fails.
-    /// It makes sense to be synchronous since we can't do anything else until this finishes.
-    fn start(config: &NodeConfig) -> (Arc<Self>, RecoveryData<T>)
-    where
-        Self: Sized;
+    /// Construct necessary data to start consensus.
+    fn start(&self) -> RecoveryData<T>;
+
+    /// Persist the highest timeout certificate for improved liveness - proof for other replicas
+    /// to jump to this round
+    fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()>;
 }
 
 /// The recovery data constructed from raw consensusdb data, it'll find the root value and
@@ -103,14 +92,21 @@ impl<T: Payload> RecoveryData<T> {
             &mut blocks,
             &mut quorum_certs,
         ));
+        let epoch = root.0.epoch();
         Ok(RecoveryData {
-            epoch: root.0.epoch(),
-            last_vote,
+            epoch,
+            last_vote: match last_vote {
+                Some(v) if v.epoch() == epoch => Some(v),
+                _ => None,
+            },
             root,
             blocks,
             quorum_certs,
             blocks_to_prune,
-            highest_timeout_certificate,
+            highest_timeout_certificate: match highest_timeout_certificate {
+                Some(tc) if tc.epoch() == epoch => Some(tc),
+                _ => None,
+            },
         })
     }
 
@@ -227,26 +223,18 @@ impl<T: Payload> RecoveryData<T> {
 /// The proxy we use to persist data in libra db storage service via grpc.
 pub struct StorageWriteProxy {
     db: Arc<ConsensusDB>,
+    read_client: Arc<dyn StorageRead>,
 }
 
 impl StorageWriteProxy {
-    pub fn new(db: Arc<ConsensusDB>) -> Self {
-        StorageWriteProxy { db }
-    }
-}
-
-impl PersistentLivenessStorage for StorageWriteProxy {
-    fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()> {
-        self.db
-            .save_highest_timeout_certificate(to_vec_named(&highest_timeout_cert)?)
+    pub fn new(config: &NodeConfig) -> Self {
+        let read_client = create_storage_read_client(config);
+        let db = Arc::new(ConsensusDB::new(config.get_storage_dir()));
+        StorageWriteProxy { db, read_client }
     }
 }
 
 impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
-    fn persistent_liveness_storage(&self) -> Box<dyn PersistentLivenessStorage> {
-        Box::new(StorageWriteProxy::new(Arc::clone(&self.db)))
-    }
-
     fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
         self.db
             .save_blocks_and_quorum_certificates(blocks, quorum_certs)
@@ -265,21 +253,16 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         self.db.save_state(to_vec_named(vote)?)
     }
 
-    fn start(config: &NodeConfig) -> (Arc<Self>, RecoveryData<T>) {
+    fn start(&self) -> RecoveryData<T> {
         info!("Start consensus recovery.");
-        let read_client = create_storage_read_client(config);
-        let db = Arc::new(ConsensusDB::new(config.get_storage_dir()));
-        let proxy = Arc::new(Self::new(Arc::clone(&db)));
-        let initial_data = db.get_data().expect("unable to recover consensus data");
+        let initial_data = self
+            .db
+            .get_data()
+            .expect("unable to recover consensus data");
 
         let last_vote = initial_data.0.map(|vote_data| {
             from_slice(&vote_data[..]).expect("unable to deserialize last vote msg")
         });
-        let last_vote_repr = match &last_vote {
-            Some(vote) => format!("{}", vote),
-            None => "None".to_string(),
-        };
-        debug!("Recovered last vote msg: {}", last_vote_repr);
 
         let highest_timeout_certificate = initial_data.1.map(|ts| {
             from_slice(&ts[..]).expect("unable to deserialize highest timeout certificate")
@@ -301,9 +284,12 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         );
 
         // find the block corresponding to storage latest ledger info
-        let (_, ledger_info, _, _) = read_client
-            .update_to_latest_ledger(0, vec![])
-            .expect("unable to read ledger info from storage");
+        let ledger_info = self
+            .read_client
+            .get_startup_info()
+            .expect("unable to read ledger info from storage")
+            .expect("startup info is None")
+            .ledger_info;
         let mut initial_data = RecoveryData::new(
             last_vote,
             blocks,
@@ -313,9 +299,31 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         )
         .unwrap_or_else(|e| panic!("Can not construct recovery data due to {}", e));
 
-        <dyn PersistentStorage<T>>::prune_tree(proxy.as_ref(), initial_data.take_blocks_to_prune())
+        (self as &dyn PersistentStorage<T>)
+            .prune_tree(initial_data.take_blocks_to_prune())
             .expect("unable to prune dangling blocks during restart");
+        if initial_data.last_vote.is_none() {
+            self.db
+                .delete_last_vote_msg()
+                .expect("unable to cleanup last vote");
+        }
+        if initial_data.highest_timeout_certificate.is_none() {
+            self.db
+                .delete_highest_timeout_certificate()
+                .expect("unable to cleanup highest timeout cert");
+        }
 
-        (proxy, initial_data)
+        info!(
+            "Starting up the consensus state machine with recovery data - [last_vote {}], [highest timeout certificate: {}]",
+            initial_data.last_vote.as_ref().map_or("None".to_string(), |v| v.to_string()),
+            initial_data.highest_timeout_certificate.as_ref().map_or("None".to_string(), |v| v.to_string()),
+        );
+
+        initial_data
+    }
+
+    fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()> {
+        self.db
+            .save_highest_timeout_certificate(to_vec_named(&highest_timeout_cert)?)
     }
 }

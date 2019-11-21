@@ -139,7 +139,7 @@ impl SMRNode {
         self.smr.stop();
         let recover_data = self
             .storage
-            .get_recovery_data()
+            .try_start()
             .unwrap_or_else(|e| panic!("fail to restart due to: {}", e));
         Self::start(
             playground,
@@ -171,7 +171,7 @@ impl SMRNode {
         let validators = Arc::new(validator_verifier);
         let mut nodes = vec![];
         for smr_id in 0..num_nodes {
-            let (storage, initial_data) = MockStorage::start_for_testing();
+            let (initial_data, storage) = MockStorage::start_for_testing();
             let safety_rules_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
             OnDiskStorage::default_storage(safety_rules_path.clone());
             nodes.push(Self::start(
