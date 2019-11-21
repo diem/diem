@@ -10,6 +10,7 @@ use executor::Executor;
 use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
+    executor::block_on,
     future::Future,
     SinkExt,
 };
@@ -58,11 +59,14 @@ impl StateSynchronizer {
 
         let (coordinator_sender, coordinator_receiver) = mpsc::unbounded();
 
+        let initial_state = block_on(executor_proxy.get_local_storage_state())
+            .expect("[state sync] Start failure: cannot sync with storage.");
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,
             role,
             state_sync_config.clone(),
             executor_proxy,
+            initial_state,
         );
         executor.spawn(coordinator.start(network));
 
