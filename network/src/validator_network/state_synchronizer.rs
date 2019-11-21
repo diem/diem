@@ -15,7 +15,7 @@ use libra_types::PeerId;
 
 /// Protocol id for state-synchronizer direct-send calls
 pub const STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL: &[u8] =
-    b"/libra/state-synchronizer/direct-send/0.1.0";
+    b"/libra/direct-send/0.1.0/state-synchronizer/0.1.0";
 
 /// The interface from Network to StateSynchronizer layer.
 ///

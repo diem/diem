@@ -18,7 +18,7 @@ use libra_types::PeerId;
 use std::time::Duration;
 
 /// Protocol id for admission control RPC calls
-pub const ADMISSION_CONTROL_RPC_PROTOCOL: &[u8] = b"/libra/admission_control/rpc/0.1.0";
+pub const ADMISSION_CONTROL_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/admission_control/0.1.0";
 
 /// The interface from Network to Admission Control layer.
 ///

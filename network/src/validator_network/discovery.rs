@@ -11,7 +11,7 @@ use crate::{
 };
 use libra_types::PeerId;
 
-pub const DISCOVERY_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/discovery/0.1.0";
+pub const DISCOVERY_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/discovery/0.1.0";
 
 /// The interface from Network to Discovery module.
 ///

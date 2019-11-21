@@ -32,7 +32,7 @@ const MAX_SMALL_MSG_BYTES: usize = 32;
 const MAX_MEDIUM_MSG_BYTES: usize = 280;
 
 const MOCK_PEER_ID: PeerId = PeerId::new([0u8; ADDRESS_LENGTH]);
-const MOCK_PROTOCOL_ID: &[u8] = b"/libra/consensus/rpc/1.2.3";
+const MOCK_PROTOCOL_ID: &[u8] = b"/libra/rpc/1.2.3/consensus/1.2.3";
 const INBOUND_RPC_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[test]
