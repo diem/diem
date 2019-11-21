@@ -1,18 +1,22 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{fmt, thread, time::Duration};
+
+use slog_scope::{info, warn};
+use structopt::StructOpt;
+
+use failure;
+
 /// This module provides an experiment which simulates a multi-region environment.
 /// It undoes the simulation in the cluster after the given duration
 use crate::effects::Effect;
 use crate::effects::NetworkDelay;
+use crate::experiments::Context;
 use crate::prometheus::Prometheus;
 use crate::tx_emitter::{EmitJobRequest, EmitThreadParams, TxEmitter};
 use crate::util::unix_timestamp_now;
 use crate::{cluster::Cluster, experiments::Experiment, thread_pool_executor::ThreadPoolExecutor};
-use failure;
-use slog_scope::{info, warn};
-use std::{collections::HashSet, fmt, thread, time::Duration};
-use structopt::StructOpt;
 
 #[derive(Default, Debug)]
 struct Metrics {
@@ -196,15 +200,7 @@ fn print_results(metrics: Vec<Metrics>) {
 }
 
 impl Experiment for MultiRegionSimulation {
-    fn affected_validators(&self) -> HashSet<String> {
-        let mut r = HashSet::new();
-        for instance in self.cluster.clone().into_instances() {
-            r.insert(instance.short_hash().clone());
-        }
-        r
-    }
-
-    fn run(&self) -> failure::Result<()> {
+    fn run(&mut self, _context: &mut Context) -> failure::Result<Option<String>> {
         let mut emitter = TxEmitter::new(&self.cluster);
         let mut results = vec![];
         for split in &self.params.splits {
@@ -235,7 +231,7 @@ impl Experiment for MultiRegionSimulation {
             }
         }
         print_results(results);
-        Ok(())
+        Ok(None)
     }
 
     fn deadline(&self) -> Duration {

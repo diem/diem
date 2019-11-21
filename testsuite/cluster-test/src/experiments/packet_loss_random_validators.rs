@@ -1,6 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{fmt, thread, time::Duration};
+
+use structopt::StructOpt;
+
+use failure;
+
+use crate::experiments::Context;
 /// This module provides an experiment which introduces packet loss for
 /// a given number of instances in the cluster. It undoes the packet loss
 /// in the cluster after the given duration
@@ -10,9 +17,6 @@ use crate::{
     experiments::Experiment,
     instance::Instance,
 };
-use failure;
-use std::{collections::HashSet, fmt, thread, time::Duration};
-use structopt::StructOpt;
 
 pub struct PacketLossRandomValidators {
     instances: Vec<Instance>,
@@ -59,15 +63,7 @@ impl PacketLossRandomValidators {
 }
 
 impl Experiment for PacketLossRandomValidators {
-    fn affected_validators(&self) -> HashSet<String> {
-        let mut r = HashSet::new();
-        for instance in self.instances.iter() {
-            r.insert(instance.short_hash().clone());
-        }
-        r
-    }
-
-    fn run(&self) -> failure::Result<()> {
+    fn run(&mut self, _context: &mut Context) -> failure::Result<Option<String>> {
         let mut instances = vec![];
         for instance in self.instances.iter() {
             let packet_loss = PacketLoss::new(instance.clone(), self.percent);
@@ -79,7 +75,7 @@ impl Experiment for PacketLossRandomValidators {
             let remove_network_effects = RemoveNetworkEffects::new(instance.clone());
             remove_network_effects.apply()?;
         }
-        Ok(())
+        Ok(None)
     }
 
     fn deadline(&self) -> Duration {

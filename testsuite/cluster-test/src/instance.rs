@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use failure::{self, prelude::*};
+use std::collections::HashSet;
 use std::{
     ffi::OsStr,
     fmt,
@@ -86,4 +87,12 @@ impl fmt::Display for Instance {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}({})", self.short_hash, self.ip)
     }
+}
+
+pub fn instancelist_to_set(instances: &[Instance]) -> HashSet<String> {
+    let mut r = HashSet::new();
+    for instance in instances {
+        r.insert(instance.short_hash().clone());
+    }
+    r
 }

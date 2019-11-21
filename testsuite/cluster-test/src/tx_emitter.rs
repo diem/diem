@@ -51,6 +51,7 @@ use std::thread::JoinHandle;
 
 const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempool
 
+#[derive(Clone)]
 pub struct TxEmitter {
     accounts: Vec<AccountData>,
     mint_file: String,
@@ -186,6 +187,21 @@ impl TxEmitter {
         let env_builder = Arc::new(EnvBuilder::new().name_prefix("ac-grpc-").build());
         let ch = ChannelBuilder::new(env_builder).connect(&address);
         AdmissionControlClient::new(ch)
+    }
+
+    pub fn emit_txn_for(
+        &mut self,
+        duration: Duration,
+        instances: Vec<Instance>,
+    ) -> failure::Result<()> {
+        let job = self.start_job(EmitJobRequest {
+            instances,
+            accounts_per_client: 10,
+            thread_params: EmitThreadParams::default(),
+        })?;
+        thread::sleep(duration);
+        self.stop_job(job);
+        Ok(())
     }
 }
 
@@ -454,6 +470,7 @@ fn load_faucet_account(
     })
 }
 
+#[derive(Clone)]
 struct AccountData {
     pub address: AccountAddress,
     pub key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
