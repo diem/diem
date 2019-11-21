@@ -149,7 +149,7 @@ where
             SignatureToken::Address => Value::address(self.next_addr()),
             SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
                 let underlying_value = self.inhabit(&*sig);
-                Value::reference(Reference::new(underlying_value))
+                Value::direct_ref(DirectRef::from_value_for_cost_synthesis(underlying_value))
             }
             SignatureToken::ByteArray => Value::byte_array(self.next_bytearray()),
             SignatureToken::Struct(struct_handle_idx, _) => {

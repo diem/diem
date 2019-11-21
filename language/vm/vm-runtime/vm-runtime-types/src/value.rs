@@ -5,7 +5,7 @@ use crate::{
     loaded_data::{struct_def::StructDef, types::Type},
     native_structs::{
         def::{NativeStructTag, NativeStructType},
-        vector::NativeVector,
+        vector::{NativeVector, VectorElemRef},
     },
 };
 use libra_types::{
@@ -51,8 +51,8 @@ mod vm_types;
 /// For instance, `[Value]` is a wrapper of `ValueImpl` that does not allow `Invalid` to be
 /// represented. In that sense instances of `[Value]` are what gets pushed/popped on the
 /// stack and effectively the values representable in Move.
-#[derive(PartialEq, Eq, Debug, Clone)]
-enum ValueImpl {
+#[derive(Debug, Clone)]
+pub(crate) enum ValueImpl {
     /// Locals are invalid on entry of a function and when moved out.
     Invalid,
     // Primitive types
@@ -68,47 +68,36 @@ enum ValueImpl {
     /// A native vector.
     Vector(NativeVector),
 
-    /// Reference to a local.
-    Reference(Reference),
-    /// Global reference into storage.
-    GlobalRef(GlobalRef),
+    /// A direct reference to a value behind a RefCell.
+    DirectRef(DirectRef),
+
+    /// A reference to a vector element.
+    VectorElemRef(VectorElemRef),
+
     /// A reference to a local.
     ///
     /// This value is used to promote a value into a reference lazily when borrowing a local.
-    PromotedReference(Reference),
+    PromotedReference(MutVal),
 }
 
 /// A Move value.
 ///
 /// `Value` is just a wrapper type around `[ValueImpl]` which allows only Move types.
-#[derive(PartialEq, Eq, Debug, Clone)]
-pub struct Value(ValueImpl);
+#[derive(Debug, Clone)]
+pub struct Value(pub(crate) ValueImpl);
 
-/// Internal representation for a reference or a mutable value.
+/// Internal representation for a mutable value.
 /// This is quite a core type for the mechanics of references.
-#[derive(PartialEq, Eq, Debug, Clone, Serialize)]
-pub(crate) struct MutVal(Rc<RefCell<ValueImpl>>);
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct MutVal(pub(crate) Rc<RefCell<ValueImpl>>);
 
 /// A struct in Move.
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Struct(Vec<MutVal>);
 
-/// External representation for a reference.
-#[derive(PartialEq, Eq, Debug, Clone)]
-pub struct Reference(MutVal);
-
 /// The locals (vector of values) for a `Frame`.
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Locals(Vec<ValueImpl>);
-
-/// The wrapper for all things reference in the VM.
-/// Right now we have 2 kind of references: local and global.
-/// This enum wraps both and offers a common API.
-#[derive(PartialEq, Eq, Debug, Clone)]
-pub enum ReferenceValue {
-    Reference(Reference),
-    GlobalRef(GlobalRef),
-}
 
 /// Status for on chain data (published resources):
 /// CLEAN - the data was only read
@@ -132,12 +121,475 @@ pub struct RootAccessPath {
     ap: AccessPath,
 }
 
-/// A GlobalRef holds the reference to the data and a shared reference to the root so
-/// status flags and reference count can be properly managed
-#[derive(PartialEq, Eq, Debug, Clone)]
+/// Wrapper of a reference to the in-memory rust representation of a Move value behind
+/// a `RefCell`.
+///
+/// This acts as a common interface for reading values, which may have different
+/// runtime representations under specialization. (Consider a bool stored in locals
+/// vs a bool in a native vector.)
+///
+/// Note: this is a very thin layer of abstraction that will live only on the stack,
+/// which is to be differentiated from the Move references.
+#[derive(Debug)]
+pub(crate) enum VMRef<'a> {
+    U64(Ref<'a, u64>),
+    Address(Ref<'a, AccountAddress>),
+    Bool(Ref<'a, bool>),
+    ByteArray(Ref<'a, ByteArray>),
+    Struct(Ref<'a, Struct>),
+    Vector(Ref<'a, NativeVector>),
+}
+
+/// Wrapper of a mutable reference to the in-memory rust representation of a Move value
+/// behind a `RefCell`.
+///
+/// Similar to `VMRef`, but with the additional ability to mutate the value referenced.
+#[derive(Debug)]
+pub(crate) enum VMRefMut<'a> {
+    U64(RefMut<'a, u64>),
+    Address(RefMut<'a, AccountAddress>),
+    Bool(RefMut<'a, bool>),
+    ByteArray(RefMut<'a, ByteArray>),
+    Struct(RefMut<'a, Struct>),
+    Vector(RefMut<'a, NativeVector>),
+}
+
+macro_rules! fn_ref_equals {
+    ($ref_ty: ident) => {
+        #[allow(dead_code)]
+        pub(crate) fn equals(&self, other: &Self) -> VMResult<bool> {
+            use $ref_ty::*;
+
+            match (self, other) {
+                (U64(r1), U64(r2)) => Ok(**r1 == **r2),
+                (Address(r1), Address(r2)) => Ok(**r1 == **r2),
+                (Bool(r1), Bool(r2)) => Ok(**r1 == **r2),
+                (ByteArray(r1), ByteArray(r2)) => Ok(**r1 == **r2),
+                (Struct(r1), Struct(r2)) => r1.equals(r2),
+                (Vector(_), Vector(_)) => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                    .with_message(format!("Equality between vectors aren't allowed"))),
+                (r1, r2) => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                    .with_message(format!("Invalid equality between {:?} and {:?}", r1, r2))),
+            }
+        }
+    };
+}
+
+macro_rules! fn_ref_copy_value {
+    ($ref_ty: ident) => {
+        #[allow(dead_code)]
+        pub(crate) fn copy_value(&self) -> Value {
+            use $ref_ty::*;
+
+            match self {
+                U64(r) => Value::u64(**r),
+                Address(r) => Value::address(**r),
+                Bool(r) => Value::bool(**r),
+                ByteArray(r) => Value::byte_array((*r).clone()),
+                Struct(r) => Value::struct_((*r).clone()),
+                Vector(r) => Value::native_vector((*r).clone()),
+            }
+        }
+    };
+}
+
+impl<'a> VMRef<'a> {
+    pub(crate) fn from_value_impl_ref(r: Ref<'a, ValueImpl>) -> VMResult<Self> {
+        macro_rules! conv {
+            ($ty: ident, $tc: ident, $r: expr) => {{
+                let raw = ($r) as *const $ty;
+                Ok(VMRef::$tc(Ref::map(r, |_| unsafe { &*raw })))
+            }};
+        }
+
+        match &*r {
+            ValueImpl::Bool(x) => conv!(bool, Bool, x),
+            ValueImpl::U64(x) => conv!(u64, U64, x),
+            ValueImpl::Address(x) => conv!(AccountAddress, Address, x),
+            ValueImpl::ByteArray(x) => conv!(ByteArray, ByteArray, x),
+            ValueImpl::Struct(x) => conv!(Struct, Struct, x),
+            ValueImpl::Vector(x) => conv!(NativeVector, Vector, x),
+            v => {
+                let msg = format!("Cannot borrow {:?}", v);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
+        }
+    }
+
+    fn_ref_equals!(VMRef);
+    fn_ref_copy_value!(VMRef);
+
+    #[allow(non_snake_case)]
+    #[doc(hidden)]
+    pub(crate) fn to_type_FOR_TESTING(&self) -> Type {
+        use VMRef::*;
+
+        match self {
+            U64(_) => Type::U64,
+            Address(_) => Type::Address,
+            Bool(_) => Type::Bool,
+            ByteArray(_) => Type::ByteArray,
+            Struct(r) => Type::Struct((*r).to_struct_def_FOR_TESTING()),
+            Vector(r) => Type::Struct((*r).to_struct_def_FOR_TESTING()),
+        }
+    }
+}
+
+impl<'a> VMRefMut<'a> {
+    pub(crate) fn from_value_impl_ref_mut(mut r: RefMut<'a, ValueImpl>) -> VMResult<Self> {
+        macro_rules! conv {
+            ($ty: ident, $tc: ident, $r: expr) => {{
+                let raw = ($r) as *mut $ty;
+                Ok(VMRefMut::$tc(RefMut::map(r, |_| unsafe { &mut *raw })))
+            }};
+        }
+
+        match &mut *r {
+            ValueImpl::Bool(x) => conv!(bool, Bool, x),
+            ValueImpl::U64(x) => conv!(u64, U64, x),
+            ValueImpl::Address(x) => conv!(AccountAddress, Address, x),
+            ValueImpl::ByteArray(x) => conv!(ByteArray, ByteArray, x),
+            ValueImpl::Struct(x) => conv!(Struct, Struct, x),
+            ValueImpl::Vector(x) => conv!(NativeVector, Vector, x),
+            v => {
+                let msg = format!("Cannot borrow {:?}", v);
+                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+            }
+        }
+    }
+
+    pub(crate) fn write_value(&mut self, v: Value) -> VMResult<()> {
+        use VMRefMut::*;
+
+        match self {
+            U64(r) => **r = v.value_as()?,
+            Address(r) => **r = v.value_as()?,
+            Bool(r) => **r = v.value_as()?,
+            ByteArray(r) => **r = v.value_as()?,
+            Struct(r) => **r = v.value_as()?,
+            Vector(r) => **r = v.value_as()?,
+        }
+
+        Ok(())
+    }
+
+    fn_ref_equals!(VMRefMut);
+    fn_ref_copy_value!(VMRefMut);
+}
+
+///
+pub(crate) trait FromVMRef {
+    fn from_vm_ref(r: VMRef) -> VMResult<Ref<Self>>;
+    fn from_vm_ref_mut(r: VMRefMut) -> VMResult<RefMut<Self>>;
+}
+
+macro_rules! impl_from_vm_ref {
+    ($ty: ident, $tc: ident) => {
+        impl FromVMRef for $ty {
+            fn from_vm_ref(r: VMRef) -> VMResult<Ref<Self>> {
+                match r {
+                    VMRef::$tc(r) => Ok(r),
+                    _ => {
+                        let msg = format!("Cannot use {:?} as {} ref", r, stringify!($ty));
+                        Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+                    }
+                }
+            }
+
+            fn from_vm_ref_mut(r: VMRefMut) -> VMResult<RefMut<Self>> {
+                match r {
+                    VMRefMut::$tc(r) => Ok(r),
+                    _ => {
+                        let msg = format!("Cannot use {:?} as {} ref", r, stringify!($ty));
+                        Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+                    }
+                }
+            }
+        }
+    };
+}
+impl_from_vm_ref!(u64, U64);
+impl_from_vm_ref!(bool, Bool);
+impl_from_vm_ref!(AccountAddress, Address);
+impl_from_vm_ref!(ByteArray, ByteArray);
+impl_from_vm_ref!(Struct, Struct);
+impl_from_vm_ref!(NativeVector, Vector);
+
+/// Trait for all sorts of references in the VM, providing a unified set of APIs reading and manipulating
+/// VM Values indirectly.
+/// Its definition consists of two core operations: `borrow` and `borrow_mut`, with a few
+/// auxiliary ones derived from them.
+pub(crate) trait Referenceable {
+    /// Immutably borrows the value referenced.
+    fn borrow(&self) -> VMResult<VMRef>;
+    /// Mutably borrows the value referenced.
+    fn borrow_mut(&self) -> VMResult<VMRefMut>;
+
+    // Immutably borrows the value referenced as type `T`.
+    fn borrow_as<T>(&self) -> VMResult<Ref<T>>
+    where
+        T: FromVMRef,
+    {
+        FromVMRef::from_vm_ref(self.borrow()?)
+    }
+
+    // Mutably borrows the value referenced as type `T`.
+    fn borrow_mut_as<T>(&self) -> VMResult<RefMut<T>>
+    where
+        T: FromVMRef,
+    {
+        FromVMRef::from_vm_ref_mut(self.borrow_mut()?)
+    }
+
+    // Checks if the referrenced values are equal.
+    fn equals<R: Referenceable>(&self, other: &R) -> VMResult<bool> {
+        let r1 = self.borrow()?;
+        let r2 = other.borrow()?;
+        r1.equals(&r2)
+    }
+
+    // Returns a copy of the referenced value.
+    fn copy_value(&self) -> VMResult<Value> {
+        Ok(self.borrow()?.copy_value())
+    }
+
+    // Write a value to the location pointed to by the reference.
+    fn write_value(&self, v: Value) -> VMResult<()> {
+        self.borrow_mut()?.write_value(v)
+    }
+}
+
+impl Referenceable for MutVal {
+    fn borrow(&self) -> VMResult<VMRef> {
+        VMRef::from_value_impl_ref(self.0.borrow())
+    }
+
+    fn borrow_mut(&self) -> VMResult<VMRefMut> {
+        VMRefMut::from_value_impl_ref_mut(self.0.borrow_mut())
+    }
+}
+
+/// A reference to a value local to the current interpreter execution flow, or
+/// in other words, not in the global storage.
+///
+/// It is simply a passthrough layer for `MutVal`.
+#[derive(Debug, Clone)]
+pub struct LocalRef(MutVal);
+
+impl Referenceable for LocalRef {
+    fn borrow(&self) -> VMResult<VMRef> {
+        self.0.borrow()
+    }
+
+    fn borrow_mut(&self) -> VMResult<VMRefMut> {
+        self.0.borrow_mut()
+    }
+}
+
+impl LocalRef {
+    pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
+        words_in(*REFERENCE_SIZE)
+    }
+
+    fn pretty_string(&self) -> String {
+        format!("LocalRef({})", self.0.pretty_string())
+    }
+}
+
+/// A reference to a value in the global storage.
+/// It also holds a shared reference to the root access path in order to maintain the
+/// status flags.
+///
+/// It is worth mentioning that, any modification to the value **MUST** go through
+/// `borrow_mut`, which sets the status flag to dirty, or otherwise the updated value
+/// may not get written back to the storage.
+#[derive(Debug, Clone)]
 pub struct GlobalRef {
+    val: MutVal,
     root: Rc<RefCell<RootAccessPath>>,
-    reference: MutVal,
+}
+
+impl Referenceable for GlobalRef {
+    fn borrow(&self) -> VMResult<VMRef> {
+        self.val.borrow()
+    }
+
+    fn borrow_mut(&self) -> VMResult<VMRefMut> {
+        self.root.borrow_mut().mark_dirty();
+        self.val.borrow_mut()
+    }
+}
+
+impl GlobalRef {
+    pub fn make_root(ap: AccessPath, value: Value) -> Self {
+        Self {
+            root: Rc::new(RefCell::new(RootAccessPath::new(ap))),
+            val: MutVal::new(value),
+        }
+    }
+
+    pub fn move_to(ap: AccessPath, value: Struct) -> Self {
+        let mut root = RootAccessPath::new(ap);
+        root.mark_dirty();
+        GlobalRef {
+            root: Rc::new(RefCell::new(root)),
+            val: MutVal::new(Value::struct_(value)),
+        }
+    }
+
+    pub fn move_from(&mut self) -> VMResult<Value> {
+        self.root.borrow_mut().mark_deleted();
+        self.val.copy_value()
+    }
+
+    pub fn is_loadable(&self) -> bool {
+        !self.is_deleted()
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.root.borrow().status == GlobalDataStatus::DIRTY
+    }
+
+    pub fn is_deleted(&self) -> bool {
+        self.root.borrow().status == GlobalDataStatus::DELETED
+    }
+
+    pub fn is_clean(&self) -> bool {
+        self.root.borrow().status == GlobalDataStatus::CLEAN
+    }
+
+    // Return the resource behind the reference.
+    // If the reference is not exclusively held by the cache (ref count 0) returns None
+    pub fn get_data(self) -> Option<Value> {
+        match Rc::try_unwrap(self.root) {
+            Ok(_) => match Rc::try_unwrap(self.val.0) {
+                Ok(res) => Some(Value::new(res.into_inner())),
+                Err(_) => None,
+            },
+            Err(_) => None,
+        }
+    }
+
+    pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
+        words_in(*REFERENCE_SIZE)
+    }
+
+    fn pretty_string(&self) -> String {
+        format!(
+            "GlobalRef(({}, {}), {})",
+            Rc::strong_count(&self.root),
+            self.root.borrow().pretty_string(),
+            self.val.pretty_string()
+        )
+    }
+}
+
+/// A reference that holds a shared pointer to the value being referenced directly.
+///
+/// `DirectRef` is the only kind of reference that can be extended -- a.k.a creating
+/// a reference to a sub component of the value referenced. For example, borrowing a
+/// field of a struct or borrowing an element of a vector.
+///
+/// This means all other references in the VM are indirect -- they all contain a
+/// `DirectRef` and some auxiliary info (e.g. an index) to further locate the data
+/// behind the shared pointer.
+#[derive(Debug, Clone)]
+pub enum DirectRef {
+    Local(LocalRef),
+    Global(GlobalRef),
+}
+
+impl DirectRef {
+    // TODO: revisit.
+    pub fn from_value_for_cost_synthesis(v: Value) -> Self {
+        Self::Local(LocalRef(MutVal::new(v)))
+    }
+
+    /// Creates a new `DirectRef` pointing to the given shared value, which is a component
+    /// of the value the original `DirectRef` points to.
+    ///
+    /// If the original one is a `GlobalRef`, the root access path is inherited by the component ref.
+    pub(crate) fn extend(&self, mv: MutVal) -> Self {
+        match self {
+            Self::Local(_) => Self::Local(LocalRef(mv)),
+            Self::Global(GlobalRef { root, .. }) => Self::Global(GlobalRef {
+                root: root.clone(),
+                val: mv,
+            }),
+        }
+    }
+
+    /// Borrows a field from the reference if the reference is to a struct.
+    pub fn borrow_field(&self, field_offset: usize) -> VMResult<Value> {
+        let s = self.borrow_as::<Struct>()?;
+        Ok(Value::direct_ref(
+            self.extend(s.get_field_reference(field_offset)?),
+        ))
+    }
+
+    pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
+        match self {
+            Self::Local(r) => r.size(),
+            Self::Global(r) => r.size(),
+        }
+    }
+
+    pub(crate) fn pretty_string(&self) -> String {
+        match self {
+            Self::Local(r) => r.pretty_string(),
+            Self::Global(r) => r.pretty_string(),
+        }
+    }
+}
+
+impl Referenceable for DirectRef {
+    fn borrow(&self) -> VMResult<VMRef> {
+        match self {
+            Self::Local(r) => r.borrow(),
+            Self::Global(r) => r.borrow(),
+        }
+    }
+
+    fn borrow_mut(&self) -> VMResult<VMRefMut> {
+        match self {
+            Self::Local(r) => r.borrow_mut(),
+            Self::Global(r) => r.borrow_mut(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Reference {
+    DirectRef(DirectRef),
+    VectorElemRef(VectorElemRef),
+}
+
+/// The wrapper for all types of references in the VM, offering a common API for
+/// applications that do not care about the specific type of the reference.
+impl Reference {
+    pub fn write_ref(&self, value: Value) -> VMResult<()> {
+        Referenceable::write_value(self, value)
+    }
+
+    pub fn read_ref(&self) -> VMResult<Value> {
+        Referenceable::copy_value(self)
+    }
+}
+
+impl Referenceable for Reference {
+    fn borrow(&self) -> VMResult<VMRef> {
+        match self {
+            Self::DirectRef(r) => r.borrow(),
+            Self::VectorElemRef(r) => r.borrow(),
+        }
+    }
+
+    fn borrow_mut(&self) -> VMResult<VMRefMut> {
+        match self {
+            Self::DirectRef(r) => r.borrow_mut(),
+            Self::VectorElemRef(r) => r.borrow_mut(),
+        }
+    }
 }
 
 // All implementation here is private to this module and the effective logic in
@@ -165,17 +617,7 @@ impl ValueImpl {
         }
     }
 
-    fn borrow_field(&self, field_offset: usize) -> VMResult<Value> {
-        match self {
-            ValueImpl::Struct(s) => s.get_field_reference(field_offset),
-            _ => {
-                let msg = format!("Borrow field must be called on a Struct, found {:?}", self);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
-    }
-
-    fn size(&self) -> AbstractMemorySize<GasCarrier> {
+    pub(crate) fn size(&self) -> AbstractMemorySize<GasCarrier> {
         match self {
             ValueImpl::Invalid | ValueImpl::U64(_) | ValueImpl::Bool(_) => *CONST_SIZE,
             ValueImpl::Address(_) => AbstractMemorySize::new(ADDRESS_LENGTH as u64),
@@ -189,9 +631,11 @@ impl ValueImpl {
             ValueImpl::ByteArray(key) => AbstractMemorySize::new(key.len() as u64),
             ValueImpl::Struct(s) => s.size(),
             ValueImpl::Vector(v) => v.size(),
-            ValueImpl::Reference(reference) => reference.size(),
-            ValueImpl::GlobalRef(reference) => reference.size(),
-            ValueImpl::PromotedReference(reference) => reference.0.size(),
+
+            ValueImpl::DirectRef(r) => r.size(),
+            ValueImpl::VectorElemRef(r) => r.size(),
+
+            ValueImpl::PromotedReference(val) => val.size(),
         }
     }
 
@@ -208,10 +652,11 @@ impl ValueImpl {
             (ValueImpl::String(s1), ValueImpl::String(s2)) => Ok(s1 == s2),
             (ValueImpl::Struct(s1), ValueImpl::Struct(s2)) => s1.equals(s2),
             // references
-            (ValueImpl::Reference(ref1), ValueImpl::Reference(ref2)) => ref1.equals(ref2),
-            (ValueImpl::GlobalRef(gr1), ValueImpl::GlobalRef(gr2)) => gr1.equals(gr2),
-            (ValueImpl::GlobalRef(gr), ValueImpl::Reference(reference)) => gr.equals_ref(reference),
-            (ValueImpl::Reference(reference), ValueImpl::GlobalRef(gr)) => gr.equals_ref(reference),
+            (ValueImpl::DirectRef(r1), ValueImpl::DirectRef(r2)) => r1.equals(r2),
+            (ValueImpl::DirectRef(r1), ValueImpl::VectorElemRef(r2)) => r1.equals(r2),
+            (ValueImpl::VectorElemRef(r1), ValueImpl::DirectRef(r2)) => r1.equals(r2),
+            (ValueImpl::VectorElemRef(r1), ValueImpl::VectorElemRef(r2)) => r1.equals(r2),
+
             // Should we allow comparing native structs?
             _ => {
                 let msg = format!("Invalid equality called between {:?} and {:?}", self, v2);
@@ -224,7 +669,7 @@ impl ValueImpl {
     /// tests.
     #[allow(non_snake_case)]
     #[doc(hidden)]
-    fn to_type_FOR_TESTING(&self) -> Type {
+    pub(crate) fn to_type_FOR_TESTING(&self) -> Type {
         match self {
             ValueImpl::Invalid => unreachable!("Cannot ask type of invalid location"),
             ValueImpl::U64(_) => Type::U64,
@@ -234,12 +679,10 @@ impl ValueImpl {
             ValueImpl::String(_) => Type::String,
             ValueImpl::Struct(s) => Type::Struct(s.to_struct_def_FOR_TESTING()),
             ValueImpl::Vector(v) => Type::Struct(v.to_struct_def_FOR_TESTING()),
-            ValueImpl::Reference(reference) => {
-                Type::Reference(Box::new(reference.to_type_FOR_TESTING()))
-            }
-            ValueImpl::GlobalRef(reference) => {
-                Type::Reference(Box::new(reference.to_type_FOR_TESTING()))
-            }
+
+            ValueImpl::DirectRef(r) => r.borrow().unwrap().to_type_FOR_TESTING(),
+            ValueImpl::VectorElemRef(r) => r.borrow().unwrap().to_type_FOR_TESTING(),
+
             ValueImpl::PromotedReference(reference) => reference.to_type_FOR_TESTING(),
         }
     }
@@ -254,8 +697,10 @@ impl ValueImpl {
             ValueImpl::String(s) => format!("String({})", s),
             ValueImpl::Struct(s) => format!("Struct({})", s.pretty_string()),
             ValueImpl::Vector(v) => format!("NativeVector({:?})", v),
-            ValueImpl::Reference(reference) => format!("Reference({})", reference.pretty_string()),
-            ValueImpl::GlobalRef(reference) => format!("GlobalRef({})", reference.pretty_string()),
+
+            ValueImpl::DirectRef(r) => format!("DirectRef({})", r.pretty_string()),
+            ValueImpl::VectorElemRef(r) => format!("VectorElemRef({})", r.pretty_string()),
+
             ValueImpl::PromotedReference(reference) => {
                 format!("PromotedReference({})", reference.pretty_string())
             }
@@ -265,7 +710,7 @@ impl ValueImpl {
 
 impl Value {
     /// Private internal constructor to make a `Value` from a `ValueImpl`.
-    fn new(value: ValueImpl) -> Self {
+    pub(crate) fn new(value: ValueImpl) -> Self {
         Value(value)
     }
 
@@ -299,17 +744,16 @@ impl Value {
         Value(ValueImpl::Struct(s))
     }
 
-    /// Return a `Value` representing a `Reference` in the VM.
-    pub fn reference(reference: Reference) -> Self {
-        Value(ValueImpl::Reference(reference))
+    /// Return a `Value` representing a direct reference in the VM.
+    pub fn direct_ref(val: DirectRef) -> Self {
+        Value(ValueImpl::DirectRef(val))
     }
 
-    /// Return a `Value` representing a `GlobalRef` in the VM.
-    pub fn global_ref(reference: GlobalRef) -> Self {
-        Value(ValueImpl::GlobalRef(reference))
+    pub(crate) fn vector_elem_ref(r: VectorElemRef) -> Self {
+        Value(ValueImpl::VectorElemRef(r))
     }
 
-    pub fn native_vector(v: NativeVector) -> Self {
+    pub(crate) fn native_vector(v: NativeVector) -> Self {
         Value(ValueImpl::Vector(v))
     }
 
@@ -331,13 +775,13 @@ impl Value {
         self.equals(v2).and_then(|res| Ok(!res))
     }
 
-    // called from gas metering, revisit
+    /*// called from gas metering, revisit
     pub fn is_global_ref(&self) -> bool {
         match &self.0 {
             ValueImpl::GlobalRef(_) => true,
             _ => false,
         }
-    }
+    }*/
 
     // called from cost synthesis, revisit
     pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
@@ -370,157 +814,37 @@ impl Value {
 // A pop from the stack returns a `Value` that is owned by the caller of pop. For many opcodes
 // (e.g. Add) the values popped from the stack are expected to be u64 and should fail otherwise.
 //
-
-impl From<Value> for VMResult<u64> {
-    fn from(value: Value) -> Self {
-        match value.0 {
-            ValueImpl::U64(i) => Ok(i),
-            _ => {
-                let msg = format!("Cannot cast {:?} to u64", value);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+macro_rules! impl_value_cast {
+    ($ty: ident, $tc: ident) => {
+        impl From<Value> for VMResult<$ty> {
+            fn from(value: Value) -> Self {
+                match value.0 {
+                    ValueImpl::$tc(x) => Ok(x),
+                    _ => {
+                        let msg = format!("Cannot cast {:?} to {}", value, stringify!($ty));
+                        Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
+                    }
+                }
             }
         }
-    }
+    };
 }
-
-impl From<Value> for VMResult<bool> {
-    fn from(value: Value) -> Self {
-        match value.0 {
-            ValueImpl::Bool(b) => Ok(b),
-            _ => {
-                let msg = format!("Cannot cast {:?} to bool", value);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
-    }
-}
-
-impl From<Value> for VMResult<AccountAddress> {
-    fn from(value: Value) -> Self {
-        match value.0 {
-            ValueImpl::Address(address) => Ok(address),
-            _ => {
-                let msg = format!("Cannot cast {:?} to Address", value);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
-    }
-}
-
-impl From<Value> for VMResult<ByteArray> {
-    fn from(value: Value) -> Self {
-        match value.0 {
-            ValueImpl::ByteArray(byte_array) => Ok(byte_array),
-            _ => {
-                let msg = format!("Cannot cast {:?} to ByteArray", value);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
-    }
-}
-
-impl From<Value> for VMResult<VMString> {
-    fn from(value: Value) -> Self {
-        match value.0 {
-            ValueImpl::String(s) => Ok(s),
-            _ => {
-                let msg = format!("Cannot cast {:?} to String", value);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
-    }
-}
-
-impl From<Value> for VMResult<Struct> {
-    fn from(value: Value) -> Self {
-        match value.0 {
-            ValueImpl::Struct(s) => Ok(s),
-            _ => {
-                let msg = format!("Cannot cast {:?} to Struct", value);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
-    }
-}
-
-impl From<Value> for VMResult<NativeVector> {
-    fn from(value: Value) -> Self {
-        match value.0 {
-            ValueImpl::Vector(v) => Ok(v),
-            _ => {
-                let msg = format!("Cannot cast {:?} to NativeVector", value);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
-    }
-}
-
-impl From<Value> for VMResult<ReferenceValue> {
-    fn from(value: Value) -> Self {
-        match value.0 {
-            ValueImpl::Reference(reference) => Ok(ReferenceValue::Reference(reference)),
-            ValueImpl::GlobalRef(reference) => Ok(ReferenceValue::GlobalRef(reference)),
-            _ => {
-                let msg = format!("Cannot cast {:?} to ReferenceValue", value);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
-    }
-}
+impl_value_cast!(u64, U64);
+impl_value_cast!(bool, Bool);
+impl_value_cast!(AccountAddress, Address);
+impl_value_cast!(ByteArray, ByteArray);
+impl_value_cast!(Struct, Struct);
+impl_value_cast!(NativeVector, Vector);
+impl_value_cast!(DirectRef, DirectRef);
+impl_value_cast!(VectorElemRef, VectorElemRef);
 
 impl From<Value> for VMResult<Reference> {
     fn from(value: Value) -> Self {
         match value.0 {
-            ValueImpl::Reference(reference) => Ok(reference),
+            ValueImpl::DirectRef(r) => Ok(Reference::DirectRef(r)),
+            ValueImpl::VectorElemRef(r) => Ok(Reference::VectorElemRef(r)),
             _ => {
                 let msg = format!("Cannot cast {:?} to Reference", value);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
-    }
-}
-
-impl From<Value> for VMResult<GlobalRef> {
-    fn from(value: Value) -> Self {
-        match value.0 {
-            ValueImpl::GlobalRef(reference) => Ok(reference),
-            _ => {
-                let msg = format!("Cannot cast {:?} to GlobalReference", value);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
-    }
-}
-
-pub(crate) trait ValueRef<T> {
-    fn borrow_value(&self) -> VMResult<Ref<'_, T>>;
-    fn borrow_value_mut(&self) -> VMResult<RefMut<'_, T>>;
-}
-
-impl ValueRef<NativeVector> for MutVal {
-    fn borrow_value(&self) -> VMResult<Ref<'_, NativeVector>> {
-        let r = self.0.borrow();
-        match &*r {
-            ValueImpl::Vector(_) => Ok(Ref::map(r, |v| match &*v {
-                ValueImpl::Vector(v) => v,
-                _ => unreachable!(),
-            })),
-            _ => {
-                let msg = format!("Cannot borrow reference {:?} as NativeVector", self);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
-    }
-
-    fn borrow_value_mut(&self) -> VMResult<RefMut<'_, NativeVector>> {
-        let r = self.0.borrow_mut();
-        match &*r {
-            ValueImpl::Vector(_) => Ok(RefMut::map(r, |v| match &mut *v {
-                ValueImpl::Vector(v) => v,
-                _ => unreachable!(),
-            })),
-            _ => {
-                let msg = format!("Cannot borrow reference {:?} as NativeVector", self);
                 Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
             }
         }
@@ -543,20 +867,8 @@ impl MutVal {
         }
     }
 
-    fn copy_value(&self) -> VMResult<Value> {
-        self.peek().copy_value()
-    }
-
     pub(crate) fn size(&self) -> AbstractMemorySize<GasCarrier> {
         self.peek().size()
-    }
-
-    fn borrow_field(&self, field_offset: usize) -> VMResult<Value> {
-        self.peek().borrow_field(field_offset)
-    }
-
-    fn write_value(self, value: Value) {
-        self.0.replace(value.0);
     }
 
     #[allow(non_snake_case)]
@@ -567,20 +879,6 @@ impl MutVal {
 
     fn equals(&self, v2: &MutVal) -> VMResult<bool> {
         self.peek().equals(&v2.peek())
-    }
-
-    pub(crate) fn borrow_as<T>(&self) -> VMResult<Ref<'_, T>>
-    where
-        MutVal: ValueRef<T>,
-    {
-        ValueRef::<T>::borrow_value(self)
-    }
-
-    pub(crate) fn borrow_mut_as<T>(&self) -> VMResult<RefMut<'_, T>>
-    where
-        MutVal: ValueRef<T>,
-    {
-        ValueRef::<T>::borrow_value_mut(self)
     }
 
     fn pretty_string(&self) -> String {
@@ -609,9 +907,9 @@ impl Struct {
     }
 
     // Public because of gas synthesis - review.
-    pub fn get_field_reference(&self, field_offset: usize) -> VMResult<Value> {
+    pub(crate) fn get_field_reference(&self, field_offset: usize) -> VMResult<MutVal> {
         if let Some(field_ref) = self.0.get(field_offset) {
-            Ok(Value::reference(Reference(field_ref.clone())))
+            Ok(field_ref.clone())
         } else {
             let msg = format!("Invalid field at index {} for {:?}", field_offset, self);
             Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
@@ -656,140 +954,6 @@ impl Struct {
     }
 }
 
-// Private API for a `Reference`. It is jut a pass through layer. All those should disappear
-// once compiled
-impl Reference {
-    // called from cost synthesis, revisit
-    pub fn new(value: Value) -> Self {
-        Reference(MutVal::new(value))
-    }
-
-    fn new_from_cell(val: MutVal) -> Self {
-        Reference(val)
-    }
-
-    fn into_value(self) -> VMResult<Value> {
-        self.0.into_value()
-    }
-
-    fn copy_value(&self) -> VMResult<Value> {
-        self.0.copy_value()
-    }
-
-    fn size(&self) -> AbstractMemorySize<GasCarrier> {
-        words_in(*REFERENCE_SIZE)
-    }
-
-    fn borrow_field(&self, field_offset: usize) -> VMResult<Value> {
-        self.0.borrow_field(field_offset)
-    }
-
-    fn write_value(self, value: Value) {
-        self.0.write_value(value);
-    }
-
-    fn equals(&self, ref2: &Reference) -> VMResult<bool> {
-        self.0.equals(&ref2.0)
-    }
-
-    /// Normal code should always know what type this value has. This is made available only for
-    /// tests.
-    #[allow(non_snake_case)]
-    #[doc(hidden)]
-    fn to_type_FOR_TESTING(&self) -> Type {
-        self.0.to_type_FOR_TESTING()
-    }
-
-    pub(crate) fn borrow_as<T>(&self) -> VMResult<Ref<'_, T>>
-    where
-        MutVal: ValueRef<T>,
-    {
-        self.0.borrow_as()
-    }
-
-    pub(crate) fn borrow_mut_as<T>(&self) -> VMResult<RefMut<'_, T>>
-    where
-        MutVal: ValueRef<T>,
-    {
-        self.0.borrow_mut_as()
-    }
-
-    fn pretty_string(&self) -> String {
-        self.0.pretty_string()
-    }
-}
-
-/// Implementation for reference opcodes.
-///
-/// A reference in the runtime can have different shapes so any time a reference is expected
-/// a `ReferenceValue` is created by popping whatever reference is on the stack.
-/// Operations on the reference (via opcodes) are then invoked on a `ReferenceValue`.
-impl ReferenceValue {
-    /// Create a `ReferenceValue` from a `Value` popped off the stack.
-    /// Fails if the value is not a reference of some kind.
-    pub fn new(value: Value) -> VMResult<Self> {
-        match value.0 {
-            ValueImpl::Reference(reference) => Ok(ReferenceValue::Reference(reference)),
-            ValueImpl::GlobalRef(reference) => Ok(ReferenceValue::GlobalRef(reference)),
-            _ => {
-                let msg = format!("ReferenceValue must be built from a reference {:?}", value);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
-    }
-
-    /// Borrow a field from the reference if the reference is to a struct.
-    pub fn borrow_field(self, field_offset: usize) -> VMResult<Value> {
-        match self {
-            ReferenceValue::GlobalRef(ref reference) => reference.borrow_field(field_offset),
-            ReferenceValue::Reference(ref reference) => reference.borrow_field(field_offset),
-        }
-    }
-
-    /// Read the value pointed to by the reference.
-    pub fn read_ref(self) -> VMResult<Value> {
-        match self {
-            ReferenceValue::GlobalRef(reference) => reference.copy_value(),
-            ReferenceValue::Reference(reference) => reference.copy_value(),
-        }
-    }
-
-    /// Write `value` to the location pointed to by the reference.
-    pub fn write_ref(self, value: Value) {
-        match self {
-            ReferenceValue::GlobalRef(reference) => reference.write_value(value),
-            ReferenceValue::Reference(reference) => reference.write_value(value),
-        }
-    }
-
-    pub(crate) fn borrow_as<T>(&self) -> VMResult<Ref<'_, T>>
-    where
-        MutVal: ValueRef<T>,
-    {
-        match self {
-            ReferenceValue::Reference(r) => r.borrow_as(),
-            ReferenceValue::GlobalRef(r) => r.borrow_as(),
-        }
-    }
-
-    pub(crate) fn borrow_mut_as<T>(&self) -> VMResult<RefMut<'_, T>>
-    where
-        MutVal: ValueRef<T>,
-    {
-        match self {
-            ReferenceValue::Reference(r) => r.borrow_mut_as(),
-            ReferenceValue::GlobalRef(r) => r.borrow_mut_as(),
-        }
-    }
-
-    pub(crate) fn extend_ref(&self, v: MutVal) -> Value {
-        match self {
-            ReferenceValue::GlobalRef(r) => Value::global_ref(GlobalRef::new_ref(r, v)),
-            ReferenceValue::Reference(_) => Value::reference(Reference::new_from_cell(v)),
-        }
-    }
-}
-
 //
 // Global Reference implementation - check how to move part of this code outside
 // (possibly in the cache)
@@ -814,128 +978,6 @@ impl RootAccessPath {
 
     fn pretty_string(&self) -> String {
         format!("{:?}, {:?}", self.status, self.ap)
-    }
-}
-
-impl GlobalRef {
-    pub fn make_root(ap: AccessPath, value: Value) -> Self {
-        GlobalRef {
-            root: Rc::new(RefCell::new(RootAccessPath::new(ap))),
-            reference: MutVal::new(value),
-        }
-    }
-
-    pub fn move_to(ap: AccessPath, value: Struct) -> Self {
-        let mut root = RootAccessPath::new(ap);
-        root.mark_dirty();
-        GlobalRef {
-            root: Rc::new(RefCell::new(root)),
-            reference: MutVal::new(Value::struct_(value)),
-        }
-    }
-
-    fn new_ref(root: &GlobalRef, reference: MutVal) -> Self {
-        GlobalRef {
-            root: Rc::clone(&root.root),
-            reference,
-        }
-    }
-
-    // Return the resource behind the reference.
-    // If the reference is not exclusively held by the cache (ref count 0) returns None
-    pub fn get_data(self) -> Option<Value> {
-        match Rc::try_unwrap(self.root) {
-            Ok(_) => match Rc::try_unwrap(self.reference.0) {
-                Ok(res) => Some(Value::new(res.into_inner())),
-                Err(_) => None,
-            },
-            Err(_) => None,
-        }
-    }
-
-    pub fn is_loadable(&self) -> bool {
-        !self.is_deleted()
-    }
-
-    pub fn is_dirty(&self) -> bool {
-        self.root.borrow().status == GlobalDataStatus::DIRTY
-    }
-
-    pub fn is_deleted(&self) -> bool {
-        self.root.borrow().status == GlobalDataStatus::DELETED
-    }
-
-    pub fn is_clean(&self) -> bool {
-        self.root.borrow().status == GlobalDataStatus::CLEAN
-    }
-
-    pub fn move_from(&mut self) -> VMResult<Value> {
-        self.root.borrow_mut().mark_deleted();
-        self.reference.copy_value()
-    }
-
-    pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
-        words_in(*REFERENCE_SIZE)
-    }
-
-    fn borrow_field(&self, field_offset: usize) -> VMResult<Value> {
-        let field_ref = self
-            .reference
-            .borrow_field(field_offset)?
-            .value_as::<Reference>()
-            .unwrap()
-            .0;
-        Ok(Value::global_ref(GlobalRef::new_ref(self, field_ref)))
-    }
-
-    fn copy_value(&self) -> VMResult<Value> {
-        let value = self.reference.copy_value()?;
-        Ok(value)
-    }
-
-    fn write_value(self, value: Value) {
-        self.root.borrow_mut().mark_dirty();
-        self.reference.write_value(value);
-    }
-
-    pub(crate) fn borrow_as<T>(&self) -> VMResult<Ref<'_, T>>
-    where
-        MutVal: ValueRef<T>,
-    {
-        self.reference.borrow_as()
-    }
-
-    pub(crate) fn borrow_mut_as<T>(&self) -> VMResult<RefMut<'_, T>>
-    where
-        MutVal: ValueRef<T>,
-    {
-        self.root.borrow_mut().mark_dirty();
-        self.reference.borrow_mut_as()
-    }
-
-    fn equals(&self, v2: &GlobalRef) -> VMResult<bool> {
-        self.reference.equals(&v2.reference)
-    }
-
-    fn equals_ref(&self, v2: &Reference) -> VMResult<bool> {
-        self.reference.equals(&v2.0)
-    }
-
-    /// Normal code should always know what type this value has. This is made available only for
-    /// tests.
-    #[allow(non_snake_case)]
-    #[doc(hidden)]
-    fn to_type_FOR_TESTING(&self) -> Type {
-        self.reference.to_type_FOR_TESTING()
-    }
-
-    fn pretty_string(&self) -> String {
-        format!(
-            "({}, {}), {}",
-            Rc::strong_count(&self.root),
-            self.root.borrow().pretty_string(),
-            self.reference.pretty_string()
-        )
     }
 }
 
@@ -1015,19 +1057,21 @@ impl Locals {
     pub fn borrow_loc(&mut self, idx: usize) -> VMResult<Value> {
         if let Some(local_ref) = self.0.get_mut(idx) {
             match local_ref {
-                ValueImpl::GlobalRef(_) | ValueImpl::Reference(_) | ValueImpl::Invalid => {
+                ValueImpl::DirectRef(_) | ValueImpl::VectorElemRef(_) | ValueImpl::Invalid => {
                     let msg = format!(
                         "BorrowLoc on an invalid local {:?} at index {}",
                         local_ref, idx
                     );
                     Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
                 }
-                ValueImpl::PromotedReference(reference) => Ok(Value::reference(reference.clone())),
+                ValueImpl::PromotedReference(mv) => {
+                    Ok(Value::direct_ref(DirectRef::Local(LocalRef(mv.clone()))))
+                }
                 _ => {
                     let ref_value = MutVal::new(Value::new(local_ref.clone()));
-                    let new_local_ref = ValueImpl::PromotedReference(Reference(ref_value.clone()));
+                    let new_local_ref = ValueImpl::PromotedReference(ref_value.clone());
                     replace(local_ref, new_local_ref);
-                    Ok(Value::reference(Reference(ref_value)))
+                    Ok(Value::direct_ref(DirectRef::Local(LocalRef(ref_value))))
                 }
             }
         } else {
@@ -1155,18 +1199,50 @@ impl<'de> de::DeserializeSeed<'de> for &NativeStructType {
             type Value = NativeVector;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("NativeVector")
+                formatter.write_str("NativeVector::General")
             }
 
             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
             where
                 A: de::SeqAccess<'de>,
             {
-                let mut val = Vec::new();
+                let mut val = vec![];
                 while let Some(elem) = seq.next_element_seed(self.0)? {
-                    val.push(MutVal::new(elem))
+                    val.push(elem.0)
                 }
-                Ok(NativeVector(val))
+                Ok(NativeVector::General(val))
+            }
+        }
+
+        struct BoolSeed;
+        impl<'de> de::DeserializeSeed<'de> for &BoolSeed {
+            type Value = bool;
+
+            fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+            where
+                D: de::Deserializer<'de>,
+            {
+                bool::deserialize(deserializer)
+            }
+        }
+
+        struct BoolVectorVisitor;
+        impl<'de, 'a> de::Visitor<'de> for BoolVectorVisitor {
+            type Value = NativeVector;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("NativeVector::Bool")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: de::SeqAccess<'de>,
+            {
+                let mut val = vec![];
+                while let Some(elem) = seq.next_element_seed(&BoolSeed)? {
+                    val.push(elem)
+                }
+                Ok(NativeVector::Bool(val))
             }
         }
 
@@ -1179,9 +1255,14 @@ impl<'de> de::DeserializeSeed<'de> for &NativeStructType {
                     ));
                 };
                 let elem_type = &self.type_actuals()[0];
-                Ok(Value::native_vector(
-                    deserializer.deserialize_seq(NativeVectorVisitor(elem_type))?,
-                ))
+                match elem_type {
+                    Type::Bool => Ok(Value::native_vector(
+                        deserializer.deserialize_seq(BoolVectorVisitor)?,
+                    )),
+                    _ => Ok(Value::native_vector(
+                        deserializer.deserialize_seq(NativeVectorVisitor(elem_type))?,
+                    )),
+                }
             }
         }
     }
@@ -1216,7 +1297,8 @@ impl Serialize for ValueImpl {
             }
             ValueImpl::ByteArray(bytearray) => bytearray.serialize(serializer),
             ValueImpl::Vector(v) => v.serialize(serializer),
-            _ => unreachable!("invalid type to serialize"),
+            ValueImpl::PromotedReference(mv) => mv.0.borrow().serialize(serializer),
+            _ => unreachable!("invalid type to serialize {:?}", self),
         }
     }
 }

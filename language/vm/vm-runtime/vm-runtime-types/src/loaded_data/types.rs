@@ -5,9 +5,9 @@
 use crate::loaded_data::struct_def::StructDef;
 use serde::{Deserialize, Serialize};
 
-#[cfg(test)]
-#[path = "../unit_tests/type_prop_tests.rs"]
-mod type_prop_tests;
+//#[cfg(test)]
+//#[path = "../unit_tests/type_prop_tests.rs"]
+//mod type_prop_tests;
 
 /// Resolved form of runtime types.
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]

@@ -291,3 +291,10 @@ macro_rules! pop_arg {
         $arguments.pop_back().unwrap().value_as::<$t>()?
     }};
 }
+
+#[macro_export]
+macro_rules! pop_arg_front {
+    ($arguments:ident, $t:ty) => {
+        $arguments.pop_front().unwrap().value_as::<$t>()?
+    };
+}

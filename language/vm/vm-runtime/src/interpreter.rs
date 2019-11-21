@@ -50,7 +50,7 @@ use vm::{
 use vm_runtime_types::{
     loaded_data::struct_def::StructDef,
     native_functions::dispatch::resolve_native_function,
-    value::{Locals, ReferenceValue, Struct, Value},
+    value::{DirectRef, Locals, Reference, Struct, Value},
 };
 
 // Data to resolve basic account and transaction flow functions and structs
@@ -470,7 +470,7 @@ where
                         };
                         gas!(const_instr: context, self, opcode)?;
                         let field_offset = frame.module().get_field_offset(*fd_idx)?;
-                        let reference = self.operand_stack.pop_as::<ReferenceValue>()?;
+                        let reference = self.operand_stack.pop_as::<DirectRef>()?;
                         let field_ref = reference.borrow_field(field_offset as usize)?;
                         self.operand_stack.push(field_ref)?;
                     }
@@ -505,16 +505,16 @@ where
                         }
                     }
                     Bytecode::ReadRef => {
-                        let reference = self.operand_stack.pop_as::<ReferenceValue>()?;
+                        let reference = self.operand_stack.pop_as::<Reference>()?;
                         let value = reference.read_ref()?;
                         gas!(instr: context, self, Opcodes::READ_REF, value.size())?;
                         self.operand_stack.push(value)?;
                     }
                     Bytecode::WriteRef => {
-                        let reference = self.operand_stack.pop_as::<ReferenceValue>()?;
+                        let reference = self.operand_stack.pop_as::<Reference>()?;
                         let value = self.operand_stack.pop()?;
                         gas!(instr: context, self, Opcodes::WRITE_REF, value.size())?;
-                        reference.write_ref(value);
+                        reference.write_ref(value)?;
                     }
                     // Arithmetic Operations
                     Bytecode::Add => {
@@ -757,7 +757,8 @@ where
             for _ in 0..expected_args {
                 arguments.push_front(self.operand_stack.pop()?);
             }
-            let result = (native_function.dispatch)(type_actual_tags, arguments, self.gas_schedule)?;
+            let result =
+                (native_function.dispatch)(type_actual_tags, arguments, self.gas_schedule)?;
             gas!(consume: context, result.cost)?;
             result.result.and_then(|values| {
                 for value in values {
@@ -874,7 +875,8 @@ where
     ) -> VMResult<AbstractMemorySize<GasCarrier>> {
         let global_ref = context.borrow_global(&ap, struct_def)?;
         let size = global_ref.size();
-        self.operand_stack.push(Value::global_ref(global_ref))?;
+        self.operand_stack
+            .push(Value::direct_ref(DirectRef::Global(global_ref)))?;
         Ok(size)
     }
 

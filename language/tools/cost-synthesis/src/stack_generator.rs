@@ -484,7 +484,7 @@ where
             SignatureToken::Address => Value::address(self.next_addr(false)),
             SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
                 let underlying_value = self.resolve_to_value(sig, stk);
-                Value::reference(Reference::new(underlying_value))
+                Value::direct_ref(DirectRef::from_value_for_cost_synthesis(underlying_value))
             }
             SignatureToken::ByteArray => Value::byte_array(self.next_bytearray()),
             SignatureToken::Struct(struct_handle_idx, _) => {
@@ -720,7 +720,7 @@ where
                 );
                 let field_size = struct_stack
                     .clone()
-                    .value_as::<ReferenceValue>()
+                    .value_as::<DirectRef>()
                     .expect("[BorrowField] Struct should be a reference.")
                     .borrow_field(usize::from(field_index))
                     .expect("[BorrowField] Unable to borrow field of generated struct to get field size.")
