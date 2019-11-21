@@ -16,7 +16,7 @@ use libra_types::PeerId;
 use std::time::Duration;
 
 /// Protocol id for HealthChecker RPC calls
-pub const HEALTH_CHECKER_RPC_PROTOCOL: &[u8] = b"/libra/health-checker/rpc/0.1.0";
+pub const HEALTH_CHECKER_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/health-checker/0.1.0";
 
 /// The interface from Network to HealthChecker layer.
 ///

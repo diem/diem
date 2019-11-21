@@ -21,7 +21,7 @@
 //!    higher layers to specify. The rpc protocol is only concerned with shipping
 //!    around opaque blobs. Current libra rpc clients (consensus, mempool) mostly
 //!    send protobuf enums around over a single rpc protocol,
-//!    e.g., `/libra/consensus/rpc/0.1.0`.
+//!    e.g., `/libra/rpc/0.1.0/consensus/0.1.0`.
 //!
 //! ## Wire Protocol (dialer):
 //!
@@ -29,7 +29,7 @@
 //!
 //! 1. Requests a new outbound substream from the muxer.
 //! 2. Negotiates the substream using [`protocol-select`] to the rpc method they
-//!    wish to call, e.g., `/libra/mempool/rpc/0.1.0`.
+//!    wish to call, e.g., `/libra/rpc/0.1.0/mempool/0.10`.
 //! 3. Sends the serialized request arguments on the newly negotiated substream.
 //! 4. Half-closes their output side.
 //! 5. Awaits the serialized response message from remote.
@@ -97,7 +97,7 @@ pub mod fuzzing;
 /// A wrapper struct for an inbound rpc request and its associated context.
 #[derive(Debug)]
 pub struct InboundRpcRequest {
-    /// Rpc method identifier, e.g., `/libra/consensus/rpc/0.1.0`. This is used
+    /// Rpc method identifier, e.g., `/libra/rpc/0.1.0/consensus/0.1.0`. This is used
     /// to dispatch the request to the corresponding client handler.
     pub protocol: ProtocolId,
     /// The serialized request data received from the sender.
@@ -122,7 +122,7 @@ pub struct InboundRpcRequest {
 /// A wrapper struct for an outbound rpc request and its associated context.
 #[derive(Debug)]
 pub struct OutboundRpcRequest {
-    /// Rpc method identifier, e.g., `/libra/consensus/rpc/0.1.0`. This is the
+    /// Rpc method identifier, e.g., `/libra/rpc/0.1.0/consensus/0.1.0`. This is the
     /// protocol we will negotiate our outbound substream to.
     pub protocol: ProtocolId,
     /// The serialized request data to be sent to the receiver.

@@ -18,7 +18,7 @@
 //! 3. The actual structure of the wire messages is left for higher layers to specify. The
 //!    DirectSend protocol is only concerned with shipping around opaque blobs. Current libra
 //!    DirectSend clients (consensus, mempool) mostly send protobuf enums around over a single
-//!    DirectSend protocol, e.g., `/libra/consensus/direct_send/0.1.0`.
+//!    DirectSend protocol, e.g., `/libra/direct_send/0.1.0/consensus/0.1.0`.
 //!
 //! ## Wire Protocol (dialer):
 //!
@@ -26,7 +26,7 @@
 //!
 //! 1. Requests a new outbound substream from the muxer.
 //! 2. Negotiates the substream using [`protocol-select`] to the protocol they
-//!    wish to speak, e.g., `/libra/mempool/direct_send/0.1.0`.
+//!    wish to speak, e.g., `/libra/direct_send/0.1.0/mempool/0.1.0`.
 //! 3. Sends the serialized message on the newly negotiated substream.
 //! 4. Drops the substream.
 //!
