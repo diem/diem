@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Convenience structs and functions for generating configuration for a swarm of libra nodes
-use crate::util::gen_genesis_transaction_bytes;
+use crate::util::genesis_transaction;
 use failure::prelude::*;
 use libra_config::{
     config::{
@@ -154,6 +154,7 @@ impl SwarmConfig {
         );
         // NOTE: Need to restart upstream node with new configuration.
         let mut configs = Vec::new();
+        template.execution.genesis_file_location = PathBuf::from("genesis.blob");
         // Generate configs for all nodes.
         for (index, (node_id, addrs)) in peer_addresses.iter().enumerate() {
             let node_dir = output_dir.join(format!("{}", index));
@@ -206,7 +207,7 @@ impl SwarmConfig {
     }
 
     pub fn new_validator_swarm(
-        template: NodeConfig,
+        mut template: NodeConfig,
         num_nodes: usize,
         faucet_key: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         prune_seed_peers_for_discovery: bool,
@@ -221,11 +222,8 @@ impl SwarmConfig {
             None,
             is_ipv4,
         );
-        let raw_genesis_transaction = gen_genesis_transaction_bytes(
-            &faucet_key,
-            &consensus_peers_config,
-            &network_peers_config,
-        );
+        let genesis_transaction =
+            genesis_transaction(&faucet_key, &consensus_peers_config, &network_peers_config);
         // Extract peer addresses from seed peer config.
         let peer_addresses: BTreeMap<_, _> =
             seed_peers_config.seed_peers.clone().into_iter().collect();
@@ -239,6 +237,7 @@ impl SwarmConfig {
                 .collect();
         }
         let mut configs = Vec::new();
+        template.execution.genesis_file_location = PathBuf::from("genesis.blob");
         // Generate configs for all nodes.
         for (index, (node_id, addrs)) in peer_addresses.iter().enumerate() {
             let node_dir = output_dir.join(format!("{}", index));
@@ -247,7 +246,7 @@ impl SwarmConfig {
             // Save genesis transaction in file.
             let mut genesis_transaction_file =
                 File::create(&node_dir.join(&template.execution.genesis_file_location))?;
-            genesis_transaction_file.write_all(&raw_genesis_transaction)?;
+            genesis_transaction_file.write_all(&lcs::to_bytes(&genesis_transaction)?)?;
             let peer_id = PeerId::from_str(&node_id).unwrap();
             let (
                 ConsensusPrivateKey {
@@ -335,7 +334,7 @@ impl SwarmConfig {
             is_permissioned: template_network.is_permissioned,
             // Dummy values - will be loaded from corresponding files.
             network_keypairs: NetworkKeyPairs::default(),
-            network_peers: template_network.network_peers.clone(),
+            network_peers: network_peers_config.clone(),
             seed_peers: template_network.seed_peers.clone(),
             base: base_config.clone(),
         };
@@ -349,7 +348,7 @@ impl SwarmConfig {
             consensus_peers_file: consensus_peers_file_name.into(),
             // Dummy values - will be loaded from corresponding files.
             consensus_keypair: ConsensusKeyPair::default(),
-            consensus_peers: template.consensus.consensus_peers.clone(),
+            consensus_peers: consensus_peers_config.clone(),
             safety_rules: safety_rules_config,
             base: base_config.clone(),
         };

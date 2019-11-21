@@ -10,11 +10,9 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     language_storage::ModuleId,
-    transaction::{SignedTransaction, TransactionPayload},
+    transaction::{Transaction, TransactionPayload},
     write_set::{WriteOp, WriteSet},
 };
-use prost::Message;
-use std::convert::TryFrom;
 use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
 use vm::{errors::*, CompiledModule};
 use vm_runtime::data_cache::RemoteCache;
@@ -52,14 +50,13 @@ fn load_genesis(path: PathBuf) -> WriteSet {
     let mut f = File::open(&path).unwrap();
     let mut bytes = vec![];
     f.read_to_end(&mut bytes).unwrap();
-    let txn = SignedTransaction::try_from(
-        libra_types::proto::types::SignedTransaction::decode(&bytes).unwrap(),
-    )
-    .unwrap();
-    match txn.payload() {
-        TransactionPayload::WriteSet(ws) => ws.write_set().clone(),
-        _ => panic!("Expected writeset txn in genesis txn"),
+    let txn = lcs::from_bytes(&bytes).unwrap();
+    if let Transaction::UserTransaction(txn) = txn {
+        if let TransactionPayload::WriteSet(ws) = txn.payload() {
+            return ws.write_set().clone();
+        }
     }
+    panic!("Expected writeset txn in genesis txn");
 }
 
 /// An in-memory implementation of [`StateView`] and [`RemoteCache`] for the VM.

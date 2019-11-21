@@ -339,8 +339,11 @@ where
 
         let vm_config = config.vm_config.clone();
         let genesis_txn = config
-            .get_genesis_transaction()
-            .expect("failed to load genesis transaction!");
+            .execution
+            .genesis
+            .as_ref()
+            .expect("failed to load genesis transaction!")
+            .clone();
         let cloned_committed_trees = committed_trees.clone();
         let (resp_sender, resp_receiver) = oneshot::channel();
         let executor = Executor {
