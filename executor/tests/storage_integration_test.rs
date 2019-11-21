@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use config_builder::util::{get_test_config, get_test_config_with_validators};
+use config_builder::util::get_test_config;
 use executor::{CommittableBlock, Executor};
 use failure::prelude::*;
 use futures::executor::block_on;
@@ -98,21 +98,21 @@ fn test_reconfiguration() {
     // When executing a transaction emits a validator set change, storage should propagate the new
     // validator set
 
-    let (validators, consensus_peers, mut config, genesis_keypair) =
-        get_test_config_with_validators();
+    let (mut config, genesis_keypair) = get_test_config();
     config.vm_config = VMConfig {
         publishing_options: VMPublishingOption::CustomScripts,
     };
     let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
 
     let genesis_account = association_address();
-    let validator_account = validators.keys().next().unwrap();
-    let (validator_privkey, _) = validators.get(validator_account).unwrap();
-    let validator_pubkey = &consensus_peers
-        .peers
-        .get(&validator_account.to_string())
-        .unwrap()
-        .consensus_pubkey;
+    let network_config = config.validator_network.as_ref().unwrap();
+    let validator_account = network_config.peer_id;
+    let validator_privkey = network_config
+        .network_keypairs
+        .clone()
+        .take_network_signing_private()
+        .unwrap();
+    let validator_pubkey = network_config.network_keypairs.get_network_signing_public();
 
     // give the validator some money so they can send a tx
     let txn1 = get_test_signed_transaction(
@@ -120,22 +120,22 @@ fn test_reconfiguration() {
         /* sequence_number = */ 1,
         genesis_keypair.private_key.clone(),
         genesis_keypair.public_key.clone(),
-        Some(encode_transfer_script(validator_account, 200_000)),
+        Some(encode_transfer_script(&validator_account, 200_000)),
     );
     // rotate the validator's connsensus pubkey to trigger a reconfiguration
     let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
     let (_, new_pubkey) = compat::generate_keypair(&mut rng);
     let txn2 = get_test_signed_transaction(
-        *validator_account,
+        validator_account,
         /* sequence_number = */ 0,
-        validator_privkey.consensus_private_key.clone(),
+        validator_privkey.clone(),
         validator_pubkey.clone(),
         Some(encode_rotate_consensus_pubkey_script(
             new_pubkey.to_bytes().to_vec(),
         )),
     );
     // Create a dummy block prologue transaction that will emit a ValidatorSetChanged event
-    let txn3 = encode_block_prologue_script(gen_block_metadata(1, *validator_account));
+    let txn3 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
     let txn_block = vec![txn1, txn2, txn3];
     let block1_id = gen_block_id(1);
     let vm_output = block_on(executor.execute_block(
@@ -155,15 +155,15 @@ fn test_reconfiguration() {
 
     // rotating to the same key should not trigger a reconfiguration
     let txn4 = get_test_signed_transaction(
-        *validator_account,
+        validator_account,
         /* sequence_number = */ 1,
-        validator_privkey.consensus_private_key.clone(),
+        validator_privkey.clone(),
         validator_pubkey.clone(),
         Some(encode_rotate_consensus_pubkey_script(
             new_pubkey.to_bytes().to_vec(),
         )),
     );
-    let txn5 = encode_block_prologue_script(gen_block_metadata(2, *validator_account));
+    let txn5 = encode_block_prologue_script(gen_block_metadata(2, validator_account));
     let txn_block = vec![txn4, txn5];
     let block2_id = gen_block_id(2);
     let output = block_on(executor.execute_block(
