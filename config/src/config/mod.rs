@@ -2,15 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use failure::prelude::*;
-use libra_types::{
-    transaction::{SignedTransaction, Transaction},
-    PeerId,
-};
-use prost::Message;
+use libra_types::PeerId;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
-    convert::TryFrom,
     fmt,
     fs::File,
     io::{Read, Write},
@@ -232,25 +227,9 @@ impl NodeConfig {
         Ok(config)
     }
 
-    pub fn get_genesis_transaction(&self) -> Result<Transaction> {
-        let file_path = self.execution.genesis_file_location();
-        let mut file: File = File::open(&file_path).unwrap_or_else(|err| {
-            panic!(
-                "Failed to open file: {:?}; error: {:?}",
-                file_path.clone(),
-                err
-            );
-        });
-        let mut buffer = vec![];
-        file.read_to_end(&mut buffer)?;
-        // TODO: update to use `Transaction::WriteSet` variant when ready.
-        Ok(Transaction::UserTransaction(SignedTransaction::try_from(
-            libra_types::proto::types::SignedTransaction::decode(&buffer)?,
-        )?))
-    }
-
     pub fn save(&mut self, output_file: &PathBuf) {
         self.consensus.save();
+        self.execution.save();
         if let Some(network) = &mut self.validator_network {
             network.save();
         }

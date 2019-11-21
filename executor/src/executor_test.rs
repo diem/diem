@@ -7,11 +7,11 @@ use crate::{
     },
     CommittableBlock, Executor, OP_COUNTERS,
 };
+use config_builder::util;
 use futures::executor::block_on;
 use grpcio::{EnvBuilder, ServerBuilder};
 use libra_config::config::NodeConfig;
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
-use libra_prost_ext::MessageExt;
 use libra_types::block_info::BlockInfo;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -23,33 +23,11 @@ use proptest::prelude::*;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::{
     collections::BTreeMap,
-    fs::File,
-    io::Write,
     sync::{mpsc, Arc},
 };
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_proto::proto::storage::create_storage;
 use storage_service::StorageService;
-use vm_genesis::{encode_genesis_transaction_with_validator, GENESIS_KEYPAIR};
-
-fn get_config() -> NodeConfig {
-    let config = NodeConfig::random();
-    // Write out the genesis blob to the correct location.
-    // XXX Should this logic live in NodeConfigHelpers?
-    let genesis_txn: libra_types::proto::types::SignedTransaction =
-        encode_genesis_transaction_with_validator(
-            &GENESIS_KEYPAIR.0,
-            GENESIS_KEYPAIR.1.clone(),
-            config
-                .consensus
-                .consensus_peers
-                .get_validator_set(&config.validator_network.as_ref().unwrap().network_peers),
-        )
-        .into();
-    let mut file = File::create(config.execution.genesis_file_location()).unwrap();
-    file.write_all(&genesis_txn.to_vec().unwrap()).unwrap();
-    config
-}
 
 fn create_storage_server(config: &mut NodeConfig) -> (grpcio::Server, mpsc::Receiver<()>) {
     let (service, shutdown_receiver) = StorageService::new(&config.storage.dir());
@@ -128,7 +106,7 @@ struct TestExecutor {
 
 impl TestExecutor {
     fn new() -> TestExecutor {
-        let mut config = get_config();
+        let (mut config, _) = util::get_test_config();
         let (storage_server, shutdown_receiver) = create_storage_server(&mut config);
         let executor = create_executor(&config);
 
@@ -380,7 +358,7 @@ fn create_transaction_chunks(
 
     // To obtain the batches of transactions, we first execute and save all these transactions in a
     // separate DB. Then we call get_transactions to retrieve them.
-    let mut config = get_config();
+    let (mut config, _) = util::get_test_config();
     let (storage_server, shutdown_receiver) = create_storage_server(&mut config);
     let executor = create_executor(&config);
 
@@ -453,7 +431,7 @@ fn test_executor_execute_and_commit_chunk() {
     };
 
     // Now we execute these two chunks of transactions.
-    let mut config = get_config();
+    let (mut config, _) = util::get_test_config();
     let (storage_server, shutdown_receiver) = create_storage_server(&mut config);
     let executor = create_executor(&config);
     let storage_client = StorageReadServiceClient::new(
@@ -522,7 +500,7 @@ fn test_executor_execute_and_commit_chunk_restart() {
         ])
     };
 
-    let mut config = get_config();
+    let (mut config, _) = util::get_test_config();
     let (storage_server, shutdown_receiver) = create_storage_server(&mut config);
 
     // First we simulate syncing the first chunk of transactions.
@@ -693,7 +671,7 @@ proptest! {
         let block_a = TestBlock::new(0..a_size, amount, *PRE_GENESIS_BLOCK_ID, gen_block_id(1));
         let block_b = TestBlock::new(0..b_size, amount, gen_block_id(1), gen_block_id(2));
 
-        let mut config = get_config();
+        let (mut config, _) = util::get_test_config();
         let (storage_server, shutdown_receiver) = create_storage_server(&mut config);
 
         // First execute and commit one block, then destroy executor.
@@ -746,7 +724,7 @@ proptest! {
                 overlap_start..overlap_end
             ]);
 
-        let mut config = get_config();
+        let (mut config, _) = util::get_test_config();
         let (storage_server, shutdown_receiver) = create_storage_server(&mut config);
         let executor = create_executor(&config);
 
