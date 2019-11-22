@@ -359,6 +359,7 @@ impl From<TreeState> for crate::proto::storage::TreeState {
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct StartupInfo {
     pub ledger_info: LedgerInfoWithSignatures,
+    pub ledger_info_with_validators: LedgerInfoWithSignatures,
     pub committed_tree_state: TreeState,
     pub synced_tree_state: Option<TreeState>,
 }
@@ -369,6 +370,10 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
     fn try_from(proto: crate::proto::storage::StartupInfo) -> Result<Self> {
         let ledger_info = proto
             .ledger_info
+            .ok_or_else(|| format_err!("Missing ledger_info"))?
+            .try_into()?;
+        let ledger_info_with_validators = proto
+            .ledger_info_with_validators
             .ok_or_else(|| format_err!("Missing ledger_info"))?
             .try_into()?;
         let committed_tree_state = proto
@@ -382,6 +387,7 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
 
         Ok(Self {
             ledger_info,
+            ledger_info_with_validators,
             committed_tree_state,
             synced_tree_state,
         })
@@ -391,11 +397,13 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
 impl From<StartupInfo> for crate::proto::storage::StartupInfo {
     fn from(info: StartupInfo) -> Self {
         let ledger_info = Some(info.ledger_info.into());
+        let ledger_info_with_validators = Some(info.ledger_info_with_validators.into());
         let committed_tree_state = Some(info.committed_tree_state.into());
         let synced_tree_state = info.synced_tree_state.map(Into::into);
 
         Self {
             ledger_info,
+            ledger_info_with_validators,
             committed_tree_state,
             synced_tree_state,
         }

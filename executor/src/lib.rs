@@ -17,12 +17,12 @@ use libra_config::config::NodeConfig;
 use libra_crypto::{
     hash::{
         EventAccumulatorHasher, TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH,
-        PRE_GENESIS_BLOCK_ID, SPARSE_MERKLE_PLACEHOLDER_HASH,
+        SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
 use libra_logger::prelude::*;
-use libra_types::block_info::BlockInfo;
+
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -35,7 +35,7 @@ use libra_types::{
 };
 use scratchpad::SparseMerkleTree;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::{
     marker::PhantomData,
     sync::{mpsc, Arc, Mutex},
@@ -367,50 +367,6 @@ where
         };
         block_on(resp_receiver).expect("initialization is done");
         executor
-    }
-
-    /// This is used when we start for the first time and the DB is completely empty. It will write
-    /// necessary information to DB by committing the genesis transaction.
-    fn init_genesis(&self, genesis_txn: Transaction) {
-        // Create a block with genesis_txn being the only transaction. Execute it then commit it
-        // immediately.
-        // We create `PRE_GENESIS_BLOCK_ID` as the parent of the genesis block.
-        let genesis_txns = vec![genesis_txn];
-        let output = block_on(self.execute_block(
-            genesis_txns.clone(),
-            ExecutedTrees::new_empty(),
-            HashValue::zero(),
-            *PRE_GENESIS_BLOCK_ID,
-        ))
-        .expect("Response sender was unexpectedly dropped.")
-        .expect("Failed to execute genesis block.");
-
-        let root_hash = output.accu_root();
-        // TODO: once genesis emit the event, next_validator_set should be parsed from vm output
-        let ledger_info = LedgerInfo::new(
-            BlockInfo::new(
-                0,
-                0,
-                *PRE_GENESIS_BLOCK_ID,
-                root_hash,
-                0,
-                0,
-                Some(ValidatorSet::new(vec![])),
-            ),
-            HashValue::zero(),
-        );
-        let ledger_info_with_sigs =
-            LedgerInfoWithSignatures::new(ledger_info, /* signatures = */ BTreeMap::new());
-        block_on(self.commit_blocks(
-            vec![CommittableBlock {
-                transactions: genesis_txns,
-                output: Arc::new(output),
-            }],
-            ledger_info_with_sigs,
-        ))
-        .expect("Response sender was unexpectedly dropped.")
-        .expect("Failed to commit genesis block.");
-        info!("GENESIS transaction is committed.")
     }
 
     /// Executes a block.

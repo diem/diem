@@ -24,6 +24,7 @@ failure = { path = "../common/failure-ext", version = "0.1.0", package = "libra-
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-prost-ext = { path = "../common/prost-ext", version = "0.1.0" }
+lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 scratchpad = { path = "../storage/scratchpad", version = "0.1.0" }
 libra-state-view = { path = "../storage/state-view", version = "0.1.0" }
 storage-client = { path = "../storage/storage-client", version = "0.1.0" }

@@ -141,7 +141,7 @@ where
                 root_hash,
                 0,
                 0,
-                Some(ValidatorSet::new(vec![])),
+                output.validators().clone(),
             ),
             HashValue::zero(),
         );

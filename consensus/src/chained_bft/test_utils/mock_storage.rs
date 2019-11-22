@@ -9,7 +9,9 @@ use consensus_types::{
 };
 use failure::Result;
 use libra_crypto::HashValue;
+use libra_types::crypto_proxies::ValidatorVerifier;
 use libra_types::ledger_info::LedgerInfo;
+use std::collections::BTreeMap;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -23,6 +25,7 @@ pub struct MockSharedStorage<T> {
 
     // Liveness state
     pub highest_timeout_certificate: Mutex<Option<TimeoutCertificate>>,
+    pub validators: Arc<ValidatorVerifier>,
 }
 
 /// A storage that simulates the operations in-memory, used in the tests that cares about storage
@@ -78,6 +81,7 @@ impl<T: Payload> MockStorage<T> {
                 .lock()
                 .unwrap()
                 .clone(),
+            self.shared_storage.validators.clone(),
         )
     }
 
@@ -85,12 +89,13 @@ impl<T: Payload> MockStorage<T> {
         self.try_start().map(|_| ())
     }
 
-    pub fn start_for_testing() -> (RecoveryData<T>, Arc<Self>) {
+    pub fn start_for_testing(validators: ValidatorVerifier) -> (RecoveryData<T>, Arc<Self>) {
         let shared_storage = Arc::new(MockSharedStorage {
             block: Mutex::new(HashMap::new()),
             qc: Mutex::new(HashMap::new()),
             last_vote: Mutex::new(None),
             highest_timeout_certificate: Mutex::new(None),
+            validators: Arc::new(validators),
         });
         let storage = Arc::new(MockStorage::new(Arc::clone(&shared_storage)));
 
@@ -182,7 +187,15 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
     }
 
     fn start(&self) -> RecoveryData<T> {
-        RecoveryData::new(None, vec![], vec![], &LedgerInfo::genesis(), None).unwrap()
+        RecoveryData::new(
+            None,
+            vec![],
+            vec![],
+            &LedgerInfo::genesis(),
+            None,
+            Arc::new(ValidatorVerifier::new(BTreeMap::new())),
+        )
+        .unwrap()
     }
     fn save_highest_timeout_cert(&self, _: TimeoutCertificate) -> Result<()> {
         Ok(())

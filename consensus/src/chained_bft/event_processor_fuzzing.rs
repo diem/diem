@@ -85,13 +85,10 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     let signer = FUZZING_SIGNER.clone();
 
     // TODO: remove
-    let validator = Arc::new(ValidatorVerifier::new_single(
-        signer.author(),
-        signer.public_key(),
-    ));
+    let validator = ValidatorVerifier::new_single(signer.author(), signer.public_key());
 
     // TODO: EmptyStorage
-    let (initial_data, storage) = MockStorage::<TestPayload>::start_for_testing();
+    let (initial_data, storage) = MockStorage::<TestPayload>::start_for_testing(validator);
 
     // TODO: remove
     let safety_rules =
@@ -105,8 +102,10 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         signer.author(),
         network_sender,
         self_sender,
-        Arc::clone(&validator),
+        initial_data.validators(),
     );
+
+    let validators = initial_data.validators();
 
     // TODO: mock
     let block_store = build_empty_store(storage.clone(), initial_data);
@@ -141,7 +140,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         network,
         storage.clone(),
         time_service,
-        validator,
+        validators,
     )
 }
 
