@@ -86,13 +86,11 @@ impl ConsensusConfig {
         }
     }
 
-    pub fn random(rng: &mut StdRng, peer_id: PeerId) -> Self {
+    pub fn random(&mut self, rng: &mut StdRng, peer_id: PeerId) {
         let privkey = Ed25519PrivateKey::generate_for_testing(rng);
         let consensus_keypair = ConsensusKeyPair::load(Some(privkey));
-        let mut config = Self::default();
-        config.consensus_peers = Self::default_peers(&consensus_keypair, peer_id);
-        config.consensus_keypair = consensus_keypair;
-        config
+        self.consensus_peers = Self::default_peers(&consensus_keypair, peer_id);
+        self.consensus_keypair = consensus_keypair;
     }
 
     pub fn load(&mut self, base: Arc<BaseConfig>) -> Result<()> {
@@ -105,6 +103,20 @@ impl ConsensusConfig {
         }
         self.safety_rules.load(self.base.clone())?;
         Ok(())
+    }
+
+    pub fn save(&mut self) {
+        if self.consensus_keypair_file.as_os_str().is_empty() {
+            self.consensus_keypair_file = PathBuf::from("consensus.keys.toml");
+        }
+        self.consensus_keypair
+            .save_config(self.consensus_keypair_file());
+
+        if self.consensus_peers_file.as_os_str().is_empty() {
+            self.consensus_peers_file = PathBuf::from("consensus_peers.toml");
+        }
+        self.consensus_peers
+            .save_config(self.consensus_peers_file());
     }
 
     pub fn consensus_keypair_file(&self) -> PathBuf {

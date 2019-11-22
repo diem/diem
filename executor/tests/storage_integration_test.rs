@@ -9,12 +9,12 @@ use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_config::config::{NodeConfig, VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue};
-use libra_types::block_info::BlockInfo;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{association_address, get_account_resource_or_default},
     account_state_blob::AccountStateWithProof,
+    block_info::BlockInfo,
     block_metadata::BlockMetadata,
     crypto_proxies::ValidatorVerifier,
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
@@ -105,14 +105,9 @@ fn test_reconfiguration() {
     let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
 
     let genesis_account = association_address();
-    let network_config = config.validator_network.as_ref().unwrap();
-    let validator_account = network_config.peer_id;
-    let validator_privkey = network_config
-        .network_keypairs
-        .clone()
-        .take_network_signing_private()
-        .unwrap();
-    let validator_pubkey = network_config.network_keypairs.get_network_signing_public();
+    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
+    let (validator_privkey, validator_pubkey) = compat::generate_keypair(&mut rng);
+    let validator_account = AccountAddress::from_public_key(&validator_pubkey);
 
     // give the validator some money so they can send a tx
     let txn1 = get_test_signed_transaction(
@@ -123,7 +118,6 @@ fn test_reconfiguration() {
         Some(encode_transfer_script(&validator_account, 200_000)),
     );
     // rotate the validator's connsensus pubkey to trigger a reconfiguration
-    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
     let (_, new_pubkey) = compat::generate_keypair(&mut rng);
     let txn2 = get_test_signed_transaction(
         validator_account,
