@@ -54,3 +54,14 @@ pub fn get_local_ip() -> Option<Multiaddr> {
             })
     })
 }
+
+pub fn get_available_port_in_multiaddr(is_ipv4: bool) -> Multiaddr {
+    let mut addr = Multiaddr::empty();
+    if is_ipv4 {
+        addr.push(Protocol::Ip4("0.0.0.0".parse().unwrap()));
+    } else {
+        addr.push(Protocol::Ip6("::1".parse().unwrap()));
+    }
+    addr.push(Protocol::Tcp(get_available_port()));
+    addr
+}

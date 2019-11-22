@@ -3,7 +3,7 @@
 
 use libra_crypto::{
     ed25519::{compat, *},
-    traits::{ValidKey, ValidKeyStringExt},
+    traits::ValidKeyStringExt,
     x25519::{self, X25519StaticPrivateKey, X25519StaticPublicKey},
 };
 use libra_types::{
@@ -17,7 +17,6 @@ use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
     collections::{BTreeMap, HashMap},
-    convert::TryFrom,
     fmt,
     hash::BuildHasher,
 };
@@ -201,45 +200,6 @@ impl ConfigHelpers {
             },
         )
     }
-
-    pub fn gen_full_nodes(
-        num_peers: usize,
-        seed: Option<[u8; 32]>,
-    ) -> (HashMap<PeerId, NetworkPrivateKeys>, NetworkPeersConfig) {
-        let mut network_peers = HashMap::new();
-        let mut peers_private_keys = HashMap::new();
-        // Deterministically derive keypairs from a seeded-rng
-        let seed = seed.unwrap_or([1u8; 32]);
-        let mut fast_rng = StdRng::from_seed(seed);
-        for _ in 0..num_peers {
-            let (private0, public0) = compat::generate_keypair(&mut fast_rng);
-            let (private1, public1) = x25519::compat::generate_keypair(&mut fast_rng);
-            // Generate peer id from network identity key.
-            let peer_id = PeerId::try_from(public1.to_bytes()).unwrap();
-            network_peers.insert(
-                peer_id,
-                NetworkPeerInfo {
-                    network_signing_pubkey: public0,
-                    network_identity_pubkey: public1,
-                },
-            );
-            // save the private keys in a different hashmap
-            peers_private_keys.insert(
-                peer_id,
-                NetworkPrivateKeys {
-                    network_identity_private_key: private1,
-                    network_signing_private_key: private0,
-                },
-            );
-        }
-        postcondition!(peers_private_keys.len() == num_peers);
-        (
-            peers_private_keys,
-            NetworkPeersConfig {
-                peers: network_peers,
-            },
-        )
-    }
 }
 
 pub fn serialize_key<S, K>(key: &K, serializer: S) -> Result<S::Ok, S::Error>
@@ -284,6 +244,5 @@ mod test {
     fn generate_test_config() {
         let (_keys, _consensus_peers_config, _network_peers_config) =
             ConfigHelpers::gen_validator_nodes(10, None);
-        let (_keys, _network_peers_config) = ConfigHelpers::gen_full_nodes(10, None);
     }
 }

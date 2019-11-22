@@ -113,7 +113,7 @@ impl ConsensusConfig {
             .save_config(self.consensus_keypair_file());
 
         if self.consensus_peers_file.as_os_str().is_empty() {
-            self.consensus_peers_file = PathBuf::from("consensus_peers.toml");
+            self.consensus_peers_file = PathBuf::from("consensus_peers.config.toml");
         }
         self.consensus_peers
             .save_config(self.consensus_peers_file());
