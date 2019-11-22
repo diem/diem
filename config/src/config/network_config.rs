@@ -142,15 +142,37 @@ impl NetworkConfig {
         Ok(())
     }
 
-    pub fn random(rng: &mut StdRng) -> Self {
+    pub fn save(&mut self) {
+        if self.is_permissioned {
+            if self.network_keypairs_file.as_os_str().is_empty() {
+                let file_name = format!("{}.network.keys.toml", self.peer_id.to_string());
+                self.network_keypairs_file = PathBuf::from(file_name);
+            }
+            self.network_keypairs
+                .save_config(self.network_keypairs_file());
+        }
+
+        if self.network_peers_file.as_os_str().is_empty() {
+            let file_name = format!("{}.network_peers.config.toml", self.peer_id.to_string());
+            self.network_peers_file = PathBuf::from(file_name);
+        }
+        self.network_peers.save_config(self.network_peers_file());
+
+        if self.seed_peers_file.as_os_str().is_empty() {
+            let file_name = format!("{}.seed_peers.toml", self.peer_id.to_string());
+            self.seed_peers_file = PathBuf::from(file_name);
+        }
+        self.seed_peers.save_config(self.seed_peers_file());
+    }
+
+    pub fn random(&mut self, rng: &mut StdRng) {
         let signing_key = Ed25519PrivateKey::generate_for_testing(rng);
         let identity_key = X25519StaticPrivateKey::generate_for_testing(rng);
         let network_keypairs = NetworkKeyPairs::load(signing_key, identity_key);
-        let mut config = Self::default();
-        config.peer_id = PeerId::from_public_key(network_keypairs.get_network_signing_public());
-        config.network_keypairs = network_keypairs;
-        config.network_peers = Self::default_peers(&config.network_keypairs, &config.peer_id);
-        config
+        self.peer_id =
+            PeerId::try_from(network_keypairs.get_network_identity_public().to_bytes()).unwrap();
+        self.network_keypairs = network_keypairs;
+        self.network_peers = Self::default_peers(&self.network_keypairs, &self.peer_id);
     }
 
     pub fn network_peers_file(&self) -> PathBuf {

@@ -274,6 +274,17 @@ impl NodeConfig {
         )?))
     }
 
+    pub fn save(&mut self, output_file: &PathBuf) {
+        self.consensus.save();
+        if let Some(network) = &mut self.validator_network {
+            network.save();
+        }
+        for network in &mut self.full_node_networks {
+            network.save();
+        }
+        self.save_config(self.base.full_path(output_file));
+    }
+
     /// Returns true if network_config is for an upstream network
     pub fn is_upstream_network(&self, network_config: &NetworkConfig) -> bool {
         self.state_sync
@@ -309,18 +320,41 @@ impl NodeConfig {
         Self::random_with_rng(&mut rng)
     }
 
-    pub fn random_with_rng(mut rng: &mut StdRng) -> Self {
+    pub fn random_with_rng(rng: &mut StdRng) -> Self {
         let mut config = NodeConfig::default();
-        let validator_network = NetworkConfig::random(&mut rng);
-        config.consensus = ConsensusConfig::random(&mut rng, validator_network.peer_id);
-        config.validator_network = Some(validator_network);
+        config.random_internal(rng);
+        config
+    }
+
+    pub fn random_with_template(template: &Self, rng: &mut StdRng) -> Self {
+        let mut config = template.clone_for_template();
+        config.random_internal(rng);
+        config
+    }
+
+    fn random_internal(&mut self, rng: &mut StdRng) {
+        if self.base.role == RoleType::Validator {
+            if self.validator_network.is_none() {
+                self.validator_network = Some(NetworkConfig::default());
+            }
+
+            let validator_network = self.validator_network.as_mut().unwrap();
+            validator_network.random(rng);
+            self.consensus.random(rng, validator_network.peer_id);
+        } else {
+            self.validator_network = None;
+            if self.full_node_networks.is_empty() {
+                self.full_node_networks.push(NetworkConfig::default());
+            }
+            for network in &mut self.full_node_networks {
+                network.random(rng);
+            }
+        }
 
         // Create temporary directory for persisting configs.
         let dir = TempPath::new();
         dir.create_as_dir().expect("error creating tempdir");
-        config.set_temp_dir(dir).expect("Error setting temp_dir");
-
-        config
+        self.set_temp_dir(dir).expect("Error setting temp_dir");
     }
 }
 
