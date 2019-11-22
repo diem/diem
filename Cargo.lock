@@ -329,6 +329,9 @@ dependencies = [
 [[package]]
 name = "borrow-graph"
 version = "0.0.1"
+dependencies = [
+ "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "bounded-executor"
