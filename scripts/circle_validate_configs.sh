@@ -10,6 +10,8 @@
 # - Script is running inside the git repository, with git command available
 # - Script is run from repo's top level folder
 
+set -e
+
 # Generate Configs
 echo "--- Generating all the configs ---"
 cd terraform/validator-sets
