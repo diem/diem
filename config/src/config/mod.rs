@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use failure::prelude::*;
-use libra_tools::tempdir::TempPath;
 use libra_types::{
     transaction::{SignedTransaction, Transaction},
     PeerId,
@@ -43,6 +42,8 @@ mod storage_config;
 pub use storage_config::*;
 mod safety_rules_config;
 pub use safety_rules_config::*;
+mod test_config;
+pub use test_config::*;
 mod vm_config;
 pub use vm_config::*;
 
@@ -77,30 +78,18 @@ pub struct NodeConfig {
     #[serde(default)]
     pub storage: StorageConfig,
     #[serde(default)]
+    pub test: Option<TestConfig>,
+    #[serde(default)]
     pub validator_network: Option<NetworkConfig>,
     #[serde(default)]
     pub vm_config: VMConfig,
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct BaseConfig {
     pub data_dir: PathBuf,
     pub role: RoleType,
-    // Used only to prevent a potentially temporary data_dir from being deleted. This should
-    // eventually be moved to be owned by something outside the config.
-    #[serde(skip)]
-    temp_dir: Option<TempPath>,
-}
-
-impl Clone for BaseConfig {
-    fn clone(&self) -> Self {
-        Self {
-            data_dir: self.data_dir.clone(),
-            role: self.role,
-            temp_dir: None,
-        }
-    }
 }
 
 impl Default for BaseConfig {
@@ -108,18 +97,13 @@ impl Default for BaseConfig {
         BaseConfig {
             data_dir: PathBuf::from("."),
             role: RoleType::Validator,
-            temp_dir: None,
         }
     }
 }
 
 impl BaseConfig {
     pub fn new(data_dir: PathBuf, role: RoleType) -> Self {
-        BaseConfig {
-            data_dir,
-            role,
-            temp_dir: None,
-        }
+        BaseConfig { data_dir, role }
     }
 
     /// Returns the full path to a file path. If the file_path is relative, it prepends with the
@@ -187,6 +171,7 @@ impl NodeConfig {
             mempool: self.mempool.clone(),
             state_sync: self.state_sync.clone(),
             storage: self.storage.clone(),
+            test: None,
             validator_network: if let Some(n) = &self.validator_network {
                 Some(n.clone_for_template())
             } else {
@@ -204,16 +189,6 @@ impl NodeConfig {
 
     pub fn set_role(&mut self, role: RoleType) -> Result<()> {
         self.base = Arc::new(BaseConfig::new(self.base.data_dir.clone(), role));
-        self.prepare()?;
-        Ok(())
-    }
-
-    pub fn set_temp_dir(&mut self, path: TempPath) -> Result<()> {
-        self.base = Arc::new(BaseConfig {
-            data_dir: path.path().into(),
-            role: self.base.role,
-            temp_dir: Some(path),
-        });
         self.prepare()?;
         Ok(())
     }
@@ -333,14 +308,20 @@ impl NodeConfig {
     }
 
     fn random_internal(&mut self, rng: &mut StdRng) {
+        let mut test = TestConfig::new_with_temp_dir();
+
         if self.base.role == RoleType::Validator {
+            test.random(rng);
+            let peer_id =
+                PeerId::from_public_key(test.account_keypair.as_ref().unwrap().public().unwrap());
+
             if self.validator_network.is_none() {
                 self.validator_network = Some(NetworkConfig::default());
             }
 
             let validator_network = self.validator_network.as_mut().unwrap();
-            validator_network.random(rng);
-            self.consensus.random(rng, validator_network.peer_id);
+            validator_network.random_with_peer_id(rng, Some(peer_id));
+            self.consensus.random(rng, peer_id);
         } else {
             self.validator_network = None;
             if self.full_node_networks.is_empty() {
@@ -351,10 +332,9 @@ impl NodeConfig {
             }
         }
 
-        // Create temporary directory for persisting configs.
-        let dir = TempPath::new();
-        dir.create_as_dir().expect("error creating tempdir");
-        self.set_temp_dir(dir).expect("Error setting temp_dir");
+        self.set_data_dir(test.temp_dir().as_ref().unwrap().into())
+            .expect("Error setting data_dir");
+        self.test = Some(test);
     }
 }
 
@@ -403,10 +383,6 @@ mod test {
         expected
             .set_data_dir(actual.base.data_dir.clone())
             .expect("Unable to set data_dir");
-        // Reseting any temp_dir
-        actual
-            .set_data_dir(actual.base.data_dir.clone())
-            .expect("Unable to set data_dir");
         expected.consensus.consensus_keypair = actual.consensus.consensus_keypair.clone();
         expected.consensus.consensus_peers = actual.consensus.consensus_peers.clone();
 
@@ -439,6 +415,7 @@ mod test {
         assert_eq!(actual.metrics, expected.metrics);
         assert_eq!(actual.state_sync, expected.state_sync);
         assert_eq!(actual.storage, expected.storage);
+        assert_eq!(actual.test, expected.test);
         assert_eq!(actual.validator_network, expected.validator_network);
         assert_eq!(actual.vm_config, expected.vm_config);
         assert_eq!(actual, expected);

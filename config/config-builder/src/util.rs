@@ -8,7 +8,7 @@ use libra_config::{
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_prost_ext::MessageExt;
 use rand::{Rng, SeedableRng};
-use std::{fs::File, io::prelude::*};
+use std::{fs::File, io::prelude::*, path::PathBuf};
 use vm_genesis::encode_genesis_transaction_with_validator;
 
 pub fn gen_genesis_transaction_bytes(
@@ -43,6 +43,7 @@ pub fn get_test_config() -> (NodeConfig, KeyPair<Ed25519PrivateKey, Ed25519Publi
         &config.consensus.consensus_peers,
         &config.validator_network.as_ref().unwrap().network_peers,
     );
+    config.execution.genesis_file_location = PathBuf::from("genesis.blob");
     let mut genesis_transaction_file = File::create(config.execution.genesis_file_location())
         .expect("[config] Failed to create file for storing genesis transaction");
     genesis_transaction_file

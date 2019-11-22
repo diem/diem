@@ -21,7 +21,7 @@ impl Default for ExecutionConfig {
         ExecutionConfig {
             address: "localhost".to_string(),
             port: 6183,
-            genesis_file_location: PathBuf::from("genesis.blob"),
+            genesis_file_location: PathBuf::new(),
             base: Arc::new(BaseConfig::default()),
         }
     }

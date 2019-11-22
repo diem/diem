@@ -9,7 +9,7 @@ collection_interval_ms = 1000
 [execution]
 address = "localhost"
 port = 6183
-genesis_file_location = "genesis.blob"
+genesis_file_location = ""
 
 [admission_control]
 address = "0.0.0.0"
@@ -33,9 +33,12 @@ address = "localhost"
 port = 6184
 dir = "libradb/db"
 grpc_max_receive_len = 100000000
+[test.account_keypair]
+consensus_private_key = "82001573a003fd3b7fd72ffb0eaf63aac62f12deb629dca72785a66268ec758b"
+consensus_public_key = "664f6e8f36eacb1770fa879d86c2c1d0fafea145e84fa7d671ab7a011a54d509"
 
 [validator_network]
-peer_id = "b1df0ea1b4c1400454bab824e2e3ef6669e4231e2b9332020d9630fe1cfb2808"
+peer_id = "dde866d21d22926429919efe44436af450c69e62826119143baad55bb0319403"
 listen_address = "/ip4/0.0.0.0/tcp/65206"
 advertised_address = "/ip4/0.0.0.0/tcp/65206"
 discovery_interval_ms = 1000

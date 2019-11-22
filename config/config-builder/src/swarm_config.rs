@@ -375,6 +375,7 @@ impl SwarmConfig {
             mempool: template.mempool.clone(),
             state_sync: template.state_sync.clone(),
             logger: template.logger.clone(),
+            test: None,
             vm_config: template.vm_config.clone(),
         };
         config.randomize_ports();

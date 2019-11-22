@@ -105,9 +105,17 @@ fn test_reconfiguration() {
     let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
 
     let genesis_account = association_address();
-    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-    let (validator_privkey, validator_pubkey) = compat::generate_keypair(&mut rng);
-    let validator_account = AccountAddress::from_public_key(&validator_pubkey);
+    let network_config = config.validator_network.as_ref().unwrap();
+    let validator_account = network_config.peer_id;
+    let keys = config
+        .test
+        .as_mut()
+        .unwrap()
+        .account_keypair
+        .as_mut()
+        .unwrap();
+    let validator_privkey = keys.take_consensus_private().unwrap();
+    let validator_pubkey = keys.public().unwrap().clone();
 
     // give the validator some money so they can send a tx
     let txn1 = get_test_signed_transaction(
@@ -118,6 +126,7 @@ fn test_reconfiguration() {
         Some(encode_transfer_script(&validator_account, 200_000)),
     );
     // rotate the validator's connsensus pubkey to trigger a reconfiguration
+    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
     let (_, new_pubkey) = compat::generate_keypair(&mut rng);
     let txn2 = get_test_signed_transaction(
         validator_account,

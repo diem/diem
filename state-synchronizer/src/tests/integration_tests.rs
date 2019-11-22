@@ -231,7 +231,9 @@ impl SynchronizerEnv {
         // create synchronizers
         let mut config = get_test_config().0;
         if !role.is_validator() {
-            config.full_node_networks = vec![config.validator_network.unwrap()];
+            let mut network = config.validator_network.unwrap();
+            network.set_default_peer_id();
+            config.full_node_networks = vec![network];
             config.validator_network = None;
         }
         config.set_role(role).expect("Unable to set role");
