@@ -166,13 +166,29 @@ impl NetworkConfig {
     }
 
     pub fn random(&mut self, rng: &mut StdRng) {
+        self.random_with_peer_id(rng, None);
+    }
+
+    pub fn random_with_peer_id(&mut self, rng: &mut StdRng, peer_id: Option<PeerId>) {
         let signing_key = Ed25519PrivateKey::generate_for_testing(rng);
         let identity_key = X25519StaticPrivateKey::generate_for_testing(rng);
         let network_keypairs = NetworkKeyPairs::load(signing_key, identity_key);
-        self.peer_id =
-            PeerId::try_from(network_keypairs.get_network_identity_public().to_bytes()).unwrap();
+        self.peer_id = if let Some(peer_id) = peer_id {
+            peer_id
+        } else {
+            PeerId::try_from(network_keypairs.get_network_identity_public().to_bytes()).unwrap()
+        };
         self.network_keypairs = network_keypairs;
         self.network_peers = Self::default_peers(&self.network_keypairs, &self.peer_id);
+    }
+
+    pub fn set_default_peer_id(&mut self) {
+        self.peer_id = PeerId::try_from(
+            self.network_keypairs
+                .get_network_identity_public()
+                .to_bytes(),
+        )
+        .unwrap();
     }
 
     pub fn network_peers_file(&self) -> PathBuf {
