@@ -600,6 +600,19 @@ impl LibraDB {
         };
         let li_version = ledger_info_with_sigs.ledger_info().version();
         assert!(latest_tree_state.version >= li_version);
+        let current_epoch = if ledger_info_with_sigs
+            .ledger_info()
+            .next_validator_set()
+            .is_some()
+        {
+            ledger_info_with_sigs.ledger_info().epoch() + 1
+        } else {
+            ledger_info_with_sigs.ledger_info().epoch()
+        };
+        let ledger_info_with_validators = self
+            .get_epoch_change_ledger_infos(current_epoch - 1)?
+            .pop()
+            .ok_or_else(|| format_err!("ledger info with validators not found"))?;
 
         let startup_info = if latest_tree_state.version != li_version {
             // We synced to some version ahead of the version of the latest ledger info. Thus, we are still in sync mode.
@@ -611,6 +624,7 @@ impl LibraDB {
                 .get_ledger_frozen_subtree_hashes(committed_version)?;
             StartupInfo {
                 ledger_info: ledger_info_with_sigs,
+                ledger_info_with_validators,
                 committed_tree_state: TreeState::new(
                     committed_version,
                     committed_ledger_frozen_subtree_hashes,
@@ -622,6 +636,7 @@ impl LibraDB {
             // The version of the latest ledger info matches other data. So the storage is not in sync mode.
             StartupInfo {
                 ledger_info: ledger_info_with_sigs,
+                ledger_info_with_validators,
                 committed_tree_state: latest_tree_state,
                 synced_tree_state: None,
             }

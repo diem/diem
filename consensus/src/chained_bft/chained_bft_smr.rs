@@ -171,8 +171,6 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             .initial_data
             .take()
             .expect("already started, initial data is None");
-        // Step 1 TODO: read validators from libradb instead of config
-        let validator = Arc::new(initial_setup.validator);
         let executor = self
             .runtime
             .as_mut()
@@ -185,6 +183,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         let signer = Arc::new(initial_setup.signer);
         let epoch = initial_data.epoch();
+        let validators = initial_data.validators();
         let epoch_mgr = EpochManager::new(
             epoch,
             self.config.take().expect("already started, config is None"),
@@ -199,7 +198,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         );
 
         // Step 2
-        let event_processor = epoch_mgr.start_epoch(signer, validator.clone(), initial_data);
+        let event_processor = epoch_mgr.start_epoch(signer, initial_data);
 
         // TODO: this is test only, we should remove this
         self.block_store = Some(event_processor.block_store());
@@ -208,7 +207,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             epoch,
             initial_setup.network_events,
             self_receiver,
-            validator,
+            validators,
         );
 
         Self::start_event_processing(

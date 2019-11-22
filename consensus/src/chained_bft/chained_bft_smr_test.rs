@@ -59,7 +59,6 @@ impl SMRNode {
     fn start(
         playground: &mut NetworkPlayground,
         signer: ValidatorSigner,
-        validators: Arc<ValidatorVerifier>,
         smr_id: usize,
         storage: Arc<MockStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
@@ -67,6 +66,7 @@ impl SMRNode {
         executor_with_reconfig: Option<ValidatorSet>,
         safety_rules_path: PathBuf,
     ) -> Self {
+        let validators = initial_data.validators();
         let author = signer.author();
 
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
@@ -97,7 +97,6 @@ impl SMRNode {
         let initial_setup = InitialSetup {
             author,
             signer: signer.clone(),
-            validator: validators.as_ref().clone(),
             network_sender,
             network_events,
         };
@@ -144,7 +143,6 @@ impl SMRNode {
         Self::start(
             playground,
             self.signer,
-            self.validators,
             self.smr_id + 10,
             self.storage,
             recover_data,
@@ -161,23 +159,21 @@ impl SMRNode {
         proposer_type: ConsensusProposerType,
         executor_with_reconfig: bool,
     ) -> Vec<Self> {
-        let (mut signers, validator_verifier) =
+        let (mut signers, validators) =
             random_validator_verifier(num_nodes, Some(quorum_voting_power), true);
         let validator_set = if executor_with_reconfig {
-            Some((&validator_verifier).into())
+            Some((&validators).into())
         } else {
             None
         };
-        let validators = Arc::new(validator_verifier);
         let mut nodes = vec![];
         for smr_id in 0..num_nodes {
-            let (initial_data, storage) = MockStorage::start_for_testing();
+            let (initial_data, storage) = MockStorage::start_for_testing(validators.clone());
             let safety_rules_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
             OnDiskStorage::default_storage(safety_rules_path.clone());
             nodes.push(Self::start(
                 playground,
                 signers.remove(0),
-                Arc::clone(&validators),
                 smr_id,
                 storage,
                 initial_data,
@@ -894,7 +890,9 @@ fn reconfiguration_test() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.executor());
 
-    let _nodes = SMRNode::start_num_nodes(3, 2, &mut playground, MultipleOrderedProposers, true);
+    // This quorum size needs to be 2f+1 because we derive the ValidatorVerifier from ValidatorSet at network.rs
+    // which doesn't support specializing quorum power
+    let _nodes = SMRNode::start_num_nodes(4, 3, &mut playground, MultipleOrderedProposers, true);
     block_on(async move {
         // Test we can survive a few epochs
         for _ in 0..10 {

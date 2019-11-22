@@ -91,12 +91,12 @@ impl NodeSetup {
         executor: TaskExecutor,
         num_nodes: usize,
     ) -> Vec<NodeSetup> {
-        let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
+        let (signers, validators) = random_validator_verifier(num_nodes, None, false);
         let proposer_author = signers[0].author();
-        let validators = Arc::new(validator_verifier);
         let mut nodes = vec![];
         for signer in signers.iter().take(num_nodes) {
-            let (initial_data, storage) = MockStorage::<TestPayload>::start_for_testing();
+            let (initial_data, storage) =
+                MockStorage::<TestPayload>::start_for_testing(validators.clone());
 
             let safety_rules_file = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
             OnDiskStorage::default_storage(safety_rules_file.clone());
@@ -108,7 +108,6 @@ impl NodeSetup {
                 proposer_author,
                 storage,
                 initial_data,
-                Arc::clone(&validators),
                 safety_rules_file,
             ));
         }
@@ -122,9 +121,9 @@ impl NodeSetup {
         proposer_author: Author,
         storage: Arc<MockStorage<TestPayload>>,
         initial_data: RecoveryData<TestPayload>,
-        validators: Arc<ValidatorVerifier>,
         safety_rules_file: PathBuf,
     ) -> Self {
+        let validators = initial_data.validators();
         let (network_reqs_tx, network_reqs_rx) = channel::new_test(8);
         let (consensus_tx, consensus_rx) = channel::new_test(8);
         let network_sender = ConsensusNetworkSender::new(network_reqs_tx);
@@ -138,10 +137,14 @@ impl NodeSetup {
             signer.author(),
             network_sender,
             self_sender,
-            validators.clone(),
+            initial_data.validators(),
         );
-        let (task, _receiver) =
-            NetworkTask::<TestPayload>::new(0, network_events, self_receiver, validators.clone());
+        let (task, _receiver) = NetworkTask::<TestPayload>::new(
+            0,
+            network_events,
+            self_receiver,
+            initial_data.validators(),
+        );
         executor.spawn(task.start());
         let last_vote_sent = initial_data.last_vote();
         let (commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
@@ -214,7 +217,6 @@ impl NodeSetup {
             self.proposer_author,
             self.storage,
             recover_data,
-            self.validators,
             self.safety_rules_file,
         )
     }

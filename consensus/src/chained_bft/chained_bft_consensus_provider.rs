@@ -8,7 +8,6 @@ use crate::{
         persistent_storage::{PersistentStorage, StorageWriteProxy},
     },
     consensus_provider::ConsensusProvider,
-    counters,
     state_computer::ExecutionProxy,
     state_replication::StateMachineReplication,
     txn_manager::MempoolProxy,
@@ -20,8 +19,7 @@ use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
 use libra_types::{
-    account_address::AccountAddress,
-    crypto_proxies::{ValidatorSigner, ValidatorVerifier},
+    account_address::AccountAddress, crypto_proxies::ValidatorSigner,
     transaction::SignedTransaction,
 };
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
@@ -34,7 +32,6 @@ use vm_runtime::MoveVM;
 pub struct InitialSetup {
     pub author: Author,
     pub signer: ValidatorSigner,
-    pub validator: ValidatorVerifier,
     pub network_sender: ConsensusNetworkSender,
     pub network_events: ConsensusNetworkEvents,
 }
@@ -97,22 +94,9 @@ impl ChainedBftProvider {
             "Failed to move a Consensus private key from a NodeConfig, key absent or already read",
         );
         let signer = ValidatorSigner::new(author, private_key);
-        // Keeping the initial set of validators in a node config is embarrassing and we should
-        // all feel bad about it.
-        let validator = node_config
-            .consensus
-            .consensus_peers
-            .get_validator_verifier();
-        counters::CURRENT_EPOCH_VALIDATORS.set(validator.len() as i64);
-        counters::CURRENT_EPOCH_QUORUM_SIZE.set(validator.quorum_voting_power() as i64);
-        debug!(
-            "[Consensus]: quorum_size = {:?}",
-            validator.quorum_voting_power()
-        );
         InitialSetup {
             author,
             signer,
-            validator,
             network_sender,
             network_events,
         }

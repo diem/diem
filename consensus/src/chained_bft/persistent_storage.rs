@@ -12,6 +12,7 @@ use failure::{Result, ResultExt};
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
+use libra_types::crypto_proxies::ValidatorVerifier;
 use libra_types::ledger_info::LedgerInfo;
 use rmp_serde::{from_slice, to_vec_named};
 use std::{collections::HashSet, sync::Arc};
@@ -43,7 +44,6 @@ pub trait PersistentStorage<T>: Send + Sync {
 
 /// The recovery data constructed from raw consensusdb data, it'll find the root value and
 /// blocks that need cleanup or return error if the input data is inconsistent.
-#[derive(Debug)]
 pub struct RecoveryData<T> {
     epoch: u64,
     // The last vote message sent by this validator.
@@ -57,6 +57,7 @@ pub struct RecoveryData<T> {
 
     // Liveness data
     highest_timeout_certificate: Option<TimeoutCertificate>,
+    validators: Arc<ValidatorVerifier>,
 }
 
 impl<T: Payload> RecoveryData<T> {
@@ -66,6 +67,7 @@ impl<T: Payload> RecoveryData<T> {
         mut quorum_certs: Vec<QuorumCert>,
         storage_ledger: &LedgerInfo,
         highest_timeout_certificate: Option<TimeoutCertificate>,
+        validators: Arc<ValidatorVerifier>,
     ) -> Result<Self> {
         let root =
             Self::find_root(&mut blocks, &mut quorum_certs, storage_ledger).with_context(|e| {
@@ -107,6 +109,7 @@ impl<T: Payload> RecoveryData<T> {
                 Some(tc) if tc.epoch() == epoch => Some(tc),
                 _ => None,
             },
+            validators,
         })
     }
 
@@ -140,6 +143,10 @@ impl<T: Payload> RecoveryData<T> {
 
     pub fn highest_timeout_certificate(&self) -> Option<TimeoutCertificate> {
         self.highest_timeout_certificate.clone()
+    }
+
+    pub fn validators(&self) -> Arc<ValidatorVerifier> {
+        Arc::clone(&self.validators)
     }
 
     /// Finds the root (last committed block) and returns the root block, the QC to the root block
@@ -255,20 +262,20 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
 
     fn start(&self) -> RecoveryData<T> {
         info!("Start consensus recovery.");
-        let initial_data = self
+        let raw_data = self
             .db
             .get_data()
             .expect("unable to recover consensus data");
 
-        let last_vote = initial_data.0.map(|vote_data| {
+        let last_vote = raw_data.0.map(|vote_data| {
             from_slice(&vote_data[..]).expect("unable to deserialize last vote msg")
         });
 
-        let highest_timeout_certificate = initial_data.1.map(|ts| {
+        let highest_timeout_certificate = raw_data.1.map(|ts| {
             from_slice(&ts[..]).expect("unable to deserialize highest timeout certificate")
         });
-        let blocks = initial_data.2;
-        let quorum_certs: Vec<_> = initial_data.3;
+        let blocks = raw_data.2;
+        let quorum_certs: Vec<_> = raw_data.3;
         let blocks_repr: Vec<String> = blocks.iter().map(|b| format!("\n\t{}", b)).collect();
         info!(
             "The following blocks were restored from ConsensusDB : {}",
@@ -284,18 +291,25 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
         );
 
         // find the block corresponding to storage latest ledger info
-        let ledger_info = self
+        let startup_info = self
             .read_client
             .get_startup_info()
             .expect("unable to read ledger info from storage")
-            .expect("startup info is None")
-            .ledger_info;
+            .expect("startup info is None");
         let mut initial_data = RecoveryData::new(
             last_vote,
             blocks,
             quorum_certs,
-            ledger_info.ledger_info(),
+            startup_info.ledger_info.ledger_info(),
             highest_timeout_certificate,
+            Arc::new(
+                startup_info
+                    .ledger_info_with_validators
+                    .ledger_info()
+                    .next_validator_set()
+                    .expect("should have ValidatorSet when start new epoch")
+                    .into(),
+            ),
         )
         .unwrap_or_else(|e| panic!("Can not construct recovery data due to {}", e));
 
@@ -312,7 +326,6 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
                 .delete_highest_timeout_certificate()
                 .expect("unable to cleanup highest timeout cert");
         }
-
         info!(
             "Starting up the consensus state machine with recovery data - [last_vote {}], [highest timeout certificate: {}]",
             initial_data.last_vote.as_ref().map_or("None".to_string(), |v| v.to_string()),

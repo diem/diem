@@ -8,6 +8,7 @@ use lazy_static::lazy_static;
 use libra_config::config::VMConfig;
 use libra_crypto::ed25519::compat;
 use libra_state_view::StateView;
+use libra_types::validator_set::ValidatorSet;
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -60,8 +61,18 @@ impl VMExecutor for MockVM {
                 1,
                 "Genesis block should have only one transaction."
             );
-            let output =
-                TransactionOutput::new(gen_genesis_writeset(), vec![], 0, KEEP_STATUS.clone());
+            let output = TransactionOutput::new(
+                gen_genesis_writeset(),
+                // mock the validator set event
+                vec![ContractEvent::new(
+                    ValidatorSet::change_event_key(),
+                    0,
+                    TypeTag::Bool,
+                    lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap(),
+                )],
+                0,
+                KEEP_STATUS.clone(),
+            );
             return Ok(vec![output]);
         }
 
