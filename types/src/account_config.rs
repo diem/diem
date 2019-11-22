@@ -212,6 +212,15 @@ pub struct AccountEvent {
 }
 
 impl AccountEvent {
+    // TODO: should only be used for libra client testing and be removed eventually
+    pub fn new(amount: u64, account: AccountAddress, metadata: Vec<u8>) -> Self {
+        Self {
+            amount,
+            account,
+            metadata,
+        }
+    }
+
     pub fn try_from(bytes: &[u8]) -> Result<AccountEvent> {
         lcs::from_bytes(bytes).map_err(Into::into)
     }
