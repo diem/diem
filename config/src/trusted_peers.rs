@@ -7,7 +7,6 @@ use libra_crypto::{
     x25519::{self, X25519StaticPrivateKey, X25519StaticPublicKey},
 };
 use libra_types::{
-    account_address::AccountAddress,
     crypto_proxies::{ValidatorInfo, ValidatorVerifier},
     validator_public_keys::ValidatorPublicKeys,
     validator_set::ValidatorSet,
@@ -21,7 +20,6 @@ use std::{
     convert::TryFrom,
     fmt,
     hash::BuildHasher,
-    str::FromStr,
 };
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -45,7 +43,7 @@ pub struct NetworkPrivateKeys {
 pub struct NetworkPeersConfig {
     #[serde(flatten)]
     #[serde(serialize_with = "serialize_ordered_map")]
-    pub peers: HashMap<String, NetworkPeerInfo>,
+    pub peers: HashMap<PeerId, NetworkPeerInfo>,
 }
 
 impl fmt::Debug for NetworkPeersConfig {
@@ -70,14 +68,13 @@ pub struct ConsensusPrivateKey {
 pub struct ConsensusPeersConfig {
     #[serde(flatten)]
     #[serde(serialize_with = "serialize_ordered_map")]
-    pub peers: HashMap<String, ConsensusPeerInfo>,
+    pub peers: HashMap<PeerId, ConsensusPeerInfo>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct UpstreamPeersConfig {
     /// List of PeerIds serialized as string.
-    pub upstream_peers: Vec<String>,
-    // invariant self.upstream_peers.all(|peer_id_str| { PeerId::from_str(peer_id_str) })
+    pub upstream_peers: Vec<PeerId>,
 }
 
 impl ConsensusPeersConfig {
@@ -86,21 +83,21 @@ impl ConsensusPeersConfig {
         let mut keys: Vec<ValidatorPublicKeys> = self
             .peers
             .iter()
-            .map(|(peer_id_str, peer_info)| {
+            .map(|(peer_id, peer_info)| {
                 ValidatorPublicKeys::new(
-                    AccountAddress::from_str(peer_id_str).expect("[config] invalid peer_id"),
+                    *peer_id,
                     peer_info.consensus_pubkey.clone(),
                     // TODO: Add support for dynamic voting weights in config
                     1,
                     network_peers_config
                         .peers
-                        .get(peer_id_str)
+                        .get(peer_id)
                         .unwrap()
                         .network_signing_pubkey
                         .clone(),
                     network_peers_config
                         .peers
-                        .get(peer_id_str)
+                        .get(peer_id)
                         .unwrap()
                         .network_identity_pubkey
                         .clone(),
@@ -117,15 +114,9 @@ impl ConsensusPeersConfig {
         ValidatorVerifier::new(
             self.peers
                 .iter()
-                .map(|(peer_id_str, peer_info)| {
+                .map(|(peer_id, peer_info)| {
                     (
-                        PeerId::from_str(peer_id_str).unwrap_or_else(|_| {
-                            unreachable!(
-                                "Failed to deserialize PeerId: {} from consensus peers config: ",
-                                peer_id_str
-                            )
-                        }),
-                        // TODO: Add support for dynamic voting weights in config
+                        *peer_id,
                         ValidatorInfo::new(peer_info.consensus_pubkey.clone(), 1),
                     )
                 })
@@ -145,7 +136,7 @@ impl ConfigHelpers {
         num_peers: usize,
         seed: Option<[u8; 32]>,
     ) -> (
-        HashMap<AccountAddress, (ConsensusPrivateKey, NetworkPrivateKeys)>,
+        HashMap<PeerId, (ConsensusPrivateKey, NetworkPrivateKeys)>,
         ConsensusPeersConfig,
         NetworkPeersConfig,
     ) {
@@ -161,9 +152,9 @@ impl ConfigHelpers {
             let _ = x25519::compat::generate_keypair(&mut fast_rng);
             let (private2, public2) = compat::generate_keypair(&mut fast_rng);
             // Generate peer id from consensus public key.
-            let peer_id = AccountAddress::from_public_key(&public2);
+            let peer_id = PeerId::from_public_key(&public2);
             consensus_peers.insert(
-                peer_id.to_string(),
+                peer_id,
                 ConsensusPeerInfo {
                     consensus_pubkey: public2,
                 },
@@ -181,7 +172,7 @@ impl ConfigHelpers {
             let (private1, public1) = x25519::compat::generate_keypair(&mut fast_rng);
             let _ = compat::generate_keypair(&mut fast_rng);
             network_peers.insert(
-                peer_id.to_string(),
+                peer_id,
                 NetworkPeerInfo {
                     network_signing_pubkey: public0,
                     network_identity_pubkey: public1,
@@ -214,10 +205,7 @@ impl ConfigHelpers {
     pub fn gen_full_nodes(
         num_peers: usize,
         seed: Option<[u8; 32]>,
-    ) -> (
-        HashMap<AccountAddress, NetworkPrivateKeys>,
-        NetworkPeersConfig,
-    ) {
+    ) -> (HashMap<PeerId, NetworkPrivateKeys>, NetworkPeersConfig) {
         let mut network_peers = HashMap::new();
         let mut peers_private_keys = HashMap::new();
         // Deterministically derive keypairs from a seeded-rng
@@ -227,9 +215,9 @@ impl ConfigHelpers {
             let (private0, public0) = compat::generate_keypair(&mut fast_rng);
             let (private1, public1) = x25519::compat::generate_keypair(&mut fast_rng);
             // Generate peer id from network identity key.
-            let peer_id = AccountAddress::try_from(public1.to_bytes()).unwrap();
+            let peer_id = PeerId::try_from(public1.to_bytes()).unwrap();
             network_peers.insert(
-                peer_id.to_string(),
+                peer_id,
                 NetworkPeerInfo {
                     network_signing_pubkey: public0,
                     network_identity_pubkey: public1,
@@ -276,7 +264,7 @@ where
 }
 
 pub fn serialize_ordered_map<S, V, H>(
-    value: &HashMap<String, V, H>,
+    value: &HashMap<PeerId, V, H>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where

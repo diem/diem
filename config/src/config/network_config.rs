@@ -208,7 +208,7 @@ impl NetworkConfig {
         let identity_pubkey = keypair.get_network_identity_public();
         let signing_pubkey = keypair.get_network_signing_public();
         peers.peers.insert(
-            peer_id.to_string(),
+            peer_id.clone(),
             NetworkPeerInfo {
                 network_identity_pubkey: identity_pubkey.clone(),
                 network_signing_pubkey: signing_pubkey.clone(),

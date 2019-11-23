@@ -241,7 +241,7 @@ impl SynchronizerEnv {
             .state_sync
             .upstream_peers
             .upstream_peers
-            .push(peers[1].to_string());
+            .push(peers[1]);
         let storage_proxies = vec![
             Arc::new(RwLock::new(MockStorage::new(0))),
             Arc::new(RwLock::new(MockStorage::new(0))),

@@ -10,7 +10,6 @@ use std::{
     fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
-    str::FromStr,
     sync::Arc,
 };
 use toml;
@@ -246,19 +245,6 @@ impl NodeConfig {
             .upstream_peers
             .iter()
             .any(|peer_id| network_config.network_peers.peers.contains_key(peer_id))
-    }
-
-    pub fn get_upstream_peer_ids(&self) -> Vec<PeerId> {
-        self.state_sync
-            .upstream_peers
-            .upstream_peers
-            .iter()
-            .map(|peer_id_str| {
-                (PeerId::from_str(peer_id_str).unwrap_or_else(|_| {
-                    unreachable!("Failed to parse peer_id from string: {}", peer_id_str)
-                }))
-            })
-            .collect()
     }
 
     pub fn randomize_ports(&mut self) {
