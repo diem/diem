@@ -12,7 +12,6 @@ use libra_crypto::ed25519::*;
 use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
 use libra_metrics::metric_server;
-use libra_types::account_address::AccountAddress as PeerId;
 use network::{
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
@@ -28,7 +27,7 @@ use network::{
     NetworkPublicKeys, ProtocolId,
 };
 use state_synchronizer::StateSynchronizer;
-use std::{convert::TryInto, str::FromStr, sync::Arc, thread, time::Instant};
+use std::{sync::Arc, thread, time::Instant};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
@@ -129,7 +128,7 @@ pub fn setup_network(
             .iter()
             .map(|(peer_id, keys)| {
                 (
-                    PeerId::from_str(peer_id).unwrap(),
+                    *peer_id,
                     NetworkPublicKeys {
                         signing_public_key: keys.network_signing_pubkey.clone(),
                         identity_public_key: keys.network_identity_pubkey.clone(),
@@ -137,13 +136,7 @@ pub fn setup_network(
                 )
             })
             .collect();
-        let seed_peers = config
-            .seed_peers
-            .seed_peers
-            .clone()
-            .into_iter()
-            .map(|(peer_id, addrs)| (peer_id.try_into().expect("Invalid PeerId"), addrs))
-            .collect();
+        let seed_peers = config.seed_peers.seed_peers.clone();
         let network_signing_private = config.network_keypairs.take_network_signing_private()
             .expect("Failed to move network signing private key out of NodeConfig, key not set or moved already");
         let network_signing_public: Ed25519PublicKey = (&network_signing_private).into();

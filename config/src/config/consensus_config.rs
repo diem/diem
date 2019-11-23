@@ -133,7 +133,7 @@ impl ConsensusConfig {
             .public()
             .expect("Unable to obtain default public key");
         peers.peers.insert(
-            peer_id.to_string(),
+            peer_id.clone(),
             ConsensusPeerInfo {
                 consensus_pubkey: pubkey.clone(),
             },

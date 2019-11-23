@@ -27,7 +27,6 @@ use network::{
 use std::{
     collections::HashMap,
     convert::TryInto,
-    str::FromStr,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::time::interval;
@@ -94,17 +93,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         config: StateSyncConfig,
         executor_proxy: T,
     ) -> Self {
-        let upstream_peers: Vec<_> = config
-            .upstream_peers
-            .upstream_peers
-            .iter()
-            .map(|peer_id_str| {
-                PeerId::from_str(peer_id_str).unwrap_or_else(|_| {
-                    // invariant of UpstreamPeersConfig
-                    unreachable!("Failed to parse peer_id from string: {}", peer_id_str)
-                })
-            })
-            .collect();
+        let upstream_peers = config.upstream_peers.upstream_peers.clone();
         let retry_timeout_val = match role {
             RoleType::FullNode => config.tick_interval_ms + config.long_poll_timeout_ms,
             RoleType::Validator => 2 * config.tick_interval_ms,

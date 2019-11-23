@@ -23,11 +23,9 @@ use libra_types::PeerId;
 use parity_multiaddr::{Multiaddr, Protocol};
 use std::{
     collections::BTreeMap,
-    convert::TryFrom,
     fs::{self, File},
     io::prelude::*,
     path::{Path, PathBuf},
-    str::FromStr,
     sync::Arc,
 };
 
@@ -119,7 +117,7 @@ impl SwarmConfig {
         upstream_peer_config.save_config(&upstream_config_dir.join("node.config.toml"));
         // Add upstream peer to StateSync::UpstreamPeersConfig.
         template.state_sync.upstream_peers = UpstreamPeersConfig {
-            upstream_peers: vec![upstream_peer_id.to_string()],
+            upstream_peers: vec![upstream_peer_id],
         };
         // Setup seed peers config.
         let mut seed_peers_config = SeedPeersConfigHelpers::get_test_config_with_ipver(
@@ -132,7 +130,7 @@ impl SwarmConfig {
             .seed_peers
             .clone()
             .into_iter()
-            .filter(|(peer_id, _)| *peer_id != upstream_peer_id.to_string())
+            .filter(|(peer_id, _)| *peer_id != upstream_peer_id)
             .collect();
         // Prune seed peers config to a single node if needed.
         if prune_seed_peers_for_discovery {
@@ -144,10 +142,9 @@ impl SwarmConfig {
                 .collect();
         }
         // Add upstream peer to SeedPeersConfig of full nodes.
-        seed_peers_config.seed_peers.insert(
-            upstream_peer_id.to_string(),
-            vec![upstream_full_node_address.clone()],
-        );
+        seed_peers_config
+            .seed_peers
+            .insert(upstream_peer_id, vec![upstream_full_node_address.clone()]);
         // Load contents of consensus peers file from upstream node.
         let consensus_peers_config = ConsensusPeersConfig::load_config(
             &upstream_config_dir.join(&upstream_peer_config.consensus.consensus_peers_file),
@@ -176,13 +173,12 @@ impl SwarmConfig {
                 Err(err)
             })?;
             // Remove network private keys for this peer.
-            let peer_id = PeerId::from_str(&node_id).unwrap();
             warn!("Looking for peer id for peer: {}", node_id);
             let NetworkPrivateKeys {
                 network_signing_private_key,
                 network_identity_private_key,
             } = private_keys
-                .remove_entry(&peer_id)
+                .remove_entry(&node_id)
                 .unwrap_or_else(|| unreachable!("Key not found for peer: {}", node_id))
                 .1;
             let network_keypairs =
@@ -247,7 +243,6 @@ impl SwarmConfig {
             let mut genesis_transaction_file =
                 File::create(&node_dir.join(&template.execution.genesis_file_location))?;
             genesis_transaction_file.write_all(&lcs::to_bytes(&genesis_transaction)?)?;
-            let peer_id = PeerId::from_str(&node_id).unwrap();
             let (
                 ConsensusPrivateKey {
                     consensus_private_key,
@@ -256,7 +251,7 @@ impl SwarmConfig {
                     network_signing_private_key,
                     network_identity_private_key,
                 },
-            ) = private_keys.remove_entry(&peer_id).unwrap().1;
+            ) = private_keys.remove_entry(&node_id).unwrap().1;
             let consensus_keypair = ConsensusKeyPair::load(Some(consensus_private_key));
             let network_keypairs =
                 NetworkKeyPairs::load(network_signing_private_key, network_identity_private_key);
@@ -282,7 +277,7 @@ impl SwarmConfig {
     fn get_config_by_role(
         template: &NodeConfig,
         role: RoleType,
-        node_id: &str,
+        node_id: &PeerId,
         network_keypairs: &NetworkKeyPairs,
         consenus_keypair: &ConsensusKeyPair,
         seed_peers_config: &SeedPeersConfig,
@@ -321,7 +316,7 @@ impl SwarmConfig {
         consensus_peers_config.save_config(&output_dir.join(&consensus_peers_file_name));
         let template_network = NetworkConfig::default();
         let network_config = NetworkConfig {
-            peer_id: PeerId::try_from(node_id.to_string()).expect("Unable to reproduce peer_id"),
+            peer_id: *node_id,
             network_keypairs_file: network_keys_file_name.into(),
             network_peers_file: network_peers_file_name.into(),
             seed_peers_file: seed_peers_file_name.into(),

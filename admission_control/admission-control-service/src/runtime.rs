@@ -82,7 +82,7 @@ impl AdmissionControlRuntime {
 
         let executor = upstream_proxy_runtime.handle();
 
-        let upstream_peer_ids = config.get_upstream_peer_ids();
+        let upstream_peer_ids = &config.state_sync.upstream_peers.upstream_peers;
         let peer_info: HashMap<_, _> = upstream_peer_ids
             .iter()
             .map(|peer_id| (*peer_id, true))

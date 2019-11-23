@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{trusted_peers::NetworkPeersConfig, utils::get_available_port};
+use libra_types::PeerId;
 use parity_multiaddr::{Multiaddr, Protocol};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -9,7 +10,7 @@ use std::collections::HashMap;
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct SeedPeersConfig {
     // All peers config. Key:a unique peer id, will be PK in future, Value: peer discovery info
-    pub seed_peers: HashMap<String, Vec<Multiaddr>>,
+    pub seed_peers: HashMap<PeerId, Vec<Multiaddr>>,
 }
 
 pub struct SeedPeersConfigHelpers {}
@@ -33,7 +34,7 @@ impl SeedPeersConfigHelpers {
     ) -> SeedPeersConfig {
         let mut seed_peers = HashMap::new();
         // sort to have same repeatable order
-        let mut peers: Vec<String> = network_peers.peers.keys().cloned().collect();
+        let mut peers: Vec<_> = network_peers.peers.keys().cloned().collect();
         peers.sort_unstable_by_key(std::clone::Clone::clone);
         // If a port is supplied, we should have only 1 peer.
         if port.is_some() {
@@ -48,7 +49,7 @@ impl SeedPeersConfigHelpers {
                 addr.push(Protocol::Ip6("::1".parse().unwrap()));
             }
             addr.push(Protocol::Tcp(port.unwrap_or_else(get_available_port)));
-            seed_peers.insert(peer_id.clone(), vec![addr]);
+            seed_peers.insert(peer_id, vec![addr]);
         }
         SeedPeersConfig { seed_peers }
     }
