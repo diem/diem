@@ -3,7 +3,6 @@
 
 use crate::{aws::Aws, cluster::Cluster};
 use failure::prelude::{bail, format_err};
-use retry::{delay::Fixed, retry};
 use rusoto_core::RusotoError;
 use rusoto_ecr::{
     BatchGetImageRequest, DescribeImagesRequest, DescribeImagesResponse, Ecr, Image,
@@ -208,7 +207,7 @@ impl DeploymentManager {
         get_request.repository_name = repository.to_string();
         get_request.image_ids = vec![image_id.clone()];
         // Retry upto 10 times, waiting 10 sec between retries
-        let response = retry(Fixed::from_millis(10_000).take(10), || {
+        let response = util::retry(util::fixed_retry_strategy(10_000, 10), || {
             self.aws
                 .ecr()
                 .batch_get_image(get_request.clone())

@@ -42,14 +42,14 @@ use rand::{
     seq::SliceRandom,
     Rng, SeedableRng,
 };
-use slog_scope::{debug, info, warn};
+use slog_scope::{debug, info};
 use std::env;
 use std::fmt;
 use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 
-const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempool
+//const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempool
 
 #[derive(Clone)]
 pub struct TxEmitter {
@@ -143,30 +143,25 @@ impl TxEmitter {
             info!("Not minting accounts");
             return Ok(()); // Early return to skip printing 'Minting ...' logs
         }
-        let mut mint_client = Self::pick_mint_client(&req.instances);
-        let mut mint_failures = 0;
+        let mint_client = Self::pick_mint_client(&req.instances);
         info!("Minting accounts on {}", mint_client);
         let retry_mint = env::var_os("NO_MINT_RETRY").is_none();
         let mut faucet_account = load_faucet_account(&mint_client, &self.mint_file)?;
-        while self.accounts.len() < num_accounts {
-            let mut accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
-            let mint_requests = gen_mint_txn_requests(&mut faucet_account, &accounts);
-            if let Err(e) =
-                execute_and_wait_transactions(&mint_client, &mut faucet_account, mint_requests)
-            {
-                mint_failures += 1;
-                if retry_mint && mint_failures > 5 {
-                    return Err(e);
-                }
-                mint_client = Self::pick_mint_client(&req.instances);
-                warn!(
-                    "Mint attempt {} failed, retrying on {}",
-                    mint_failures, mint_client
-                );
-                continue;
-            }
-            self.accounts.append(&mut accounts);
-        }
+        let seed_accounts = gen_random_accounts(req.instances.len());
+        let mint_requests = gen_mint_txn_requests(
+            &mut faucet_account,
+            &seed_accounts,
+            (1_000_000 * num_accounts / seed_accounts.len()) as u64,
+        );
+        let retries = if retry_mint { 5 } else { 0 };
+        util::retry(util::fixed_retry_strategy(2000, retries), || {
+            execute_and_wait_transactions(
+                &Self::pick_mint_client(&req.instances),
+                &mut faucet_account,
+                mint_requests.clone(),
+            )
+        })
+        .map_err(|e| format_err!("Minting seed accounts failed {}", e))?;
         info!("Mint is done");
         Ok(())
     }
@@ -400,18 +395,20 @@ fn gen_random_accounts(num_accounts: usize) -> Vec<AccountData> {
 fn gen_mint_txn_request(
     faucet_account: &mut AccountData,
     receiver: &AccountAddress,
+    amount: u64,
 ) -> SubmitTransactionRequest {
-    let program = transaction_builder::encode_mint_script(receiver, 1_000_000);
+    let program = transaction_builder::encode_mint_script(receiver, amount);
     gen_submit_transaction_request(program, faucet_account)
 }
 
 fn gen_mint_txn_requests(
     faucet_account: &mut AccountData,
     accounts: &[AccountData],
+    amount: u64,
 ) -> Vec<SubmitTransactionRequest> {
     accounts
         .iter()
-        .map(|account| gen_mint_txn_request(faucet_account, &account.address))
+        .map(|account| gen_mint_txn_request(faucet_account, &account.address, amount))
         .collect()
 }
 

@@ -23,6 +23,7 @@ members = [
     "common/proptest-helpers",
     "common/prost-ext",
     "common/tools",
+    "common/util",
     "config",
     "config/config-builder",
     "config/generate-keypair",
