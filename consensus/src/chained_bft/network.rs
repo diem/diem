@@ -406,22 +406,27 @@ impl<T: Payload> NetworkTask<T> {
         vote_msg: VoteMsgProto,
     ) -> failure::Result<()> {
         let vote_msg = VoteMsg::try_from(vote_msg)?;
-        match vote_msg.epoch().cmp(&self.epoch) {
-            Ordering::Equal => {
-                debug!("Received {}", vote_msg);
-                vote_msg.verify(self.validators.as_ref()).map_err(|e| {
-                    security_log(SecurityEvent::InvalidConsensusVote)
-                        .error(&e)
-                        .data(&vote_msg)
-                        .log();
-                    e
-                })?;
-                self.vote_tx.push(peer_id, vote_msg)
-            }
-            Ordering::Less | Ordering::Greater => self
+
+        ensure!(
+            vote_msg.vote().author() == peer_id,
+            "vote received must be from the sending peer"
+        );
+
+        if vote_msg.epoch() != self.epoch {
+            return self
                 .different_epoch_tx
-                .push(peer_id, (vote_msg.epoch(), peer_id)),
+                .push(peer_id, (vote_msg.epoch(), peer_id));
         }
+
+        debug!("Received {}", vote_msg);
+        vote_msg.verify(self.validators.as_ref()).map_err(|e| {
+            security_log(SecurityEvent::InvalidConsensusVote)
+                .error(&e)
+                .data(&vote_msg)
+                .log();
+            e
+        })?;
+        self.vote_tx.push(peer_id, vote_msg)
     }
 
     async fn process_sync_info(
