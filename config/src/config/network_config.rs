@@ -4,17 +4,16 @@
 use crate::{
     config::{BaseConfig, PersistableConfig, RoleType},
     keys::NetworkKeyPairs,
-    seed_peers::SeedPeersConfig,
     trusted_peers::{NetworkPeerInfo, NetworkPeersConfig},
     utils::get_local_ip,
 };
-use failure::prelude::*;
+use failure::{self, ensure, Result};
 use libra_crypto::{ed25519::Ed25519PrivateKey, x25519::X25519StaticPrivateKey, Uniform, ValidKey};
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, path::PathBuf, string::ToString, sync::Arc};
+use std::{collections::HashMap, convert::TryFrom, path::PathBuf, string::ToString, sync::Arc};
 
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -216,4 +215,11 @@ impl NetworkConfig {
         );
         peers
     }
+}
+
+// This is separated to another config so that it can be written to its own file
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct SeedPeersConfig {
+    // All peers config. Key:a unique peer id, will be PK in future, Value: peer discovery info
+    pub seed_peers: HashMap<PeerId, Vec<Multiaddr>>,
 }
