@@ -106,11 +106,14 @@ impl ConsensusConfig {
     }
 
     pub fn save(&mut self) {
-        if self.consensus_keypair_file.as_os_str().is_empty() {
-            self.consensus_keypair_file = PathBuf::from("consensus.keys.toml");
+        if self.consensus_keypair != ConsensusKeyPair::default() {
+            if self.consensus_keypair_file.as_os_str().is_empty() {
+                self.consensus_keypair_file = PathBuf::from("consensus.keys.toml");
+            }
+
+            self.consensus_keypair
+                .save_config(self.consensus_keypair_file());
         }
-        self.consensus_keypair
-            .save_config(self.consensus_keypair_file());
 
         if self.consensus_peers_file.as_os_str().is_empty() {
             self.consensus_peers_file = PathBuf::from("consensus_peers.config.toml");
