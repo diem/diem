@@ -6,9 +6,8 @@ use failure::prelude::*;
 use libra_config::{
     config::{
         NetworkConfig, NodeConfig, OnDiskStorageConfig, PersistableConfig, RoleType,
-        SafetyRulesBackend, VMPublishingOption,
+        SafetyRulesBackend, SeedPeersConfig, VMPublishingOption,
     },
-    seed_peers::SeedPeersConfig,
     trusted_peers::{
         ConsensusPeerInfo, ConsensusPeersConfig, NetworkPeerInfo, NetworkPeersConfig,
         UpstreamPeersConfig,
@@ -180,12 +179,7 @@ impl SwarmConfig {
             consensus_peers.insert(
                 network.peer_id,
                 ConsensusPeerInfo {
-                    consensus_pubkey: config
-                        .consensus
-                        .consensus_keypair
-                        .public()
-                        .unwrap()
-                        .clone(),
+                    consensus_pubkey: config.consensus.consensus_keypair.public().unwrap().clone(),
                 },
             );
 

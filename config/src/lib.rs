@@ -5,6 +5,5 @@
 
 pub mod config;
 pub mod keys;
-pub mod seed_peers;
 pub mod trusted_peers;
 pub mod utils;
