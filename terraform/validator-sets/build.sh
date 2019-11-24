@@ -19,7 +19,6 @@ fi
 cd $LIBRA_DIR && cargo run -p config-builder --bin libra-config -- -m "$OUTPUT_DIR/mint.key" -o "$OUTPUT_DIR/val" -d -r validator "$@"
 cd $LIBRA_DIR && cargo run -p config-builder --bin libra-config -- -m "$OUTPUT_DIR/mint.key" -o "$OUTPUT_DIR/fn" -u "$OUTPUT_DIR/val/0" -r full_node -n 10
 
-
 cd "$OUTPUT_DIR/val"
 mv */*.keys.toml .
 mv 1/*.network_peers.config.toml network_peers.config.toml

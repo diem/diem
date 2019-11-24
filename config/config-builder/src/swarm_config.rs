@@ -173,6 +173,10 @@ impl SwarmConfig {
             network.listen_address = utils::get_available_port_in_multiaddr(is_ipv4);
             network.advertised_address = network.listen_address.clone();
             add_peer(network, &mut network_peers, &mut seed_peers);
+            // @TODO the validator scripts expect this to be in this format. This restriction
+            // should not be moved upstream into those scripts.
+            config.consensus.consensus_keypair_file =
+                PathBuf::from(format!("{}.consensus.keys.toml", network.peer_id));
             consensus_peers.insert(
                 network.peer_id,
                 ConsensusPeerInfo {
