@@ -1,5 +1,8 @@
+// ================================================================================
+// Domains
+
 type TypeName;
-type FieldName;
+type FieldName = int;
 type LocalName;
 type Address = int;
 type ByteArray;
@@ -15,16 +18,86 @@ function {:constructor} Path(p: [int]Edge, size: int): Path;
 
 const DefaultPath: [int]Edge;
 
+type {:datatype} TypeValue;
+function {:constructor} BooleanType() : TypeValue;
+function {:constructor} IntegerType() : TypeValue;
+function {:constructor} AddressType() : TypeValue;
+function {:constructor} ByteArrayType() : TypeValue;
+function {:constructor} StrType() : TypeValue;
+function {:constructor} ReferenceType(t: TypeValue) : TypeValue;
+function {:constructor} VectorType(t: TypeValue) : TypeValue;
+function {:constructor} StructType(name: TypeName, ts: TypeValueArray) : TypeValue;
+
+type TypeValueArray;
+function TypeValueArray(v: [int]TypeValue, l: int): TypeValueArray;
+function v#TypeValueArray(tv: TypeValueArray): [int]TypeValue;
+function l#TypeValueArray(tv: TypeValueArray): int;
+axiom (forall v: [int]TypeValue, l: int :: v#TypeValueArray(TypeValueArray(v, l)) == v);
+axiom (forall v: [int]TypeValue, l: int :: l >= 0 ==> l#TypeValueArray(TypeValueArray(v, l)) == l);
+axiom (forall tv: TypeValueArray :: l#TypeValueArray(tv) >= 0);
+axiom (forall v1, v2: [int]TypeValue, l1, l2: int ::
+         TypeValueArray(v1, l1) == TypeValueArray(v2, l2) <==>
+         l1 == l2 && (forall i: int :: i >= 0 && i < l1 ==> v1[i] == v2[i]));
+const EmptyTypeValueArray: TypeValueArray;
+axiom l#TypeValueArray(EmptyTypeValueArray) == 0;
+
 type {:datatype} Value;
 function {:constructor} Boolean(b: bool): Value;
 function {:constructor} Integer(i: int): Value;
 function {:constructor} Address(a: Address): Value;
 function {:constructor} ByteArray(b: ByteArray): Value;
 function {:constructor} Str(a: String): Value;
-function {:constructor} Map(m: [Edge]Value): Value;
-function {:constructor} Vector(v: [Edge]Value, l: int): Value;
+function {:constructor} Vector(v: ValueArray): Value;
+function {:constructor} Struct(v: ValueArray): Value;
 
-const DefaultMap: [Edge]Value;
+type  ValueArray;
+function ValueArray(v: [int]Value, l: int): ValueArray;
+function v#ValueArray(tv: ValueArray): [int]Value;
+function l#ValueArray(tv: ValueArray): int;
+axiom (forall v: [int]Value, l: int :: v#ValueArray(ValueArray(v, l)) == v);
+axiom (forall v: [int]Value, l: int :: l >= 0 ==> l#ValueArray(ValueArray(v, l)) == l);
+axiom (forall tv: ValueArray :: l#ValueArray(tv) >= 0);
+axiom (forall v1, v2: [int]Value, l1, l2: int ::
+         ValueArray(v1, l1) == ValueArray(v2, l2) <==>
+         l1 == l2 && (forall i: int :: i >= 0 && i < l1 ==> v1[i] == v2[i]));
+const EmptyValueArray: ValueArray;
+axiom l#ValueArray(EmptyValueArray) == 0;
+
+
+function {:inline} vlen(v: Value): int { l#ValueArray(v#Vector(v)) }
+function {:inline} vmap(v: Value): [int]Value { v#ValueArray(v#Vector(v)) }
+function {:inline} mk_vector(v: [int]Value, l: int): Value { Vector(ValueArray(v, l)) }
+function {:inline} slen(v: Value): int { l#ValueArray(v#Struct(v)) }
+function {:inline} smap(v: Value): [int]Value { v#ValueArray(v#Struct(v)) }
+function {:inline} mk_struct(v: [int]Value, l: int): Value { Struct(ValueArray(v, l)) }
+
+
+// Axiomatic definition of type test and equality.
+function get_type(v: Value): TypeValue;
+function {:inline} has_type(t: TypeValue, v: Value): bool;
+function {:inline} is_equal(t: TypeValue, v1: Value, v2: Value): bool;
+
+axiom (forall x: bool :: get_type(Boolean(x)) == BooleanType());
+axiom (forall x: int :: get_type(Integer(x)) == IntegerType());
+axiom (forall x: Address :: get_type(Address(x)) == AddressType());
+axiom (forall x: ByteArray :: get_type(ByteArray(x)) == ByteArrayType());
+axiom (forall x: String :: get_type(Str(x)) == StrType());
+axiom (forall va: ValueArray :: (exists tv: TypeValue ::
+        (l#ValueArray(va) > 0 ==> tv == get_type(v#ValueArray(va)[0]))
+        && get_type(Vector(va)) == VectorType(tv)));
+axiom (forall va: ValueArray :: (exists tn: TypeName, tva: TypeValueArray ::
+        l#ValueArray(va) == l#TypeValueArray(tva)
+        && (forall i: int :: i >= 0 && i < l#ValueArray(va) ==>
+              v#TypeValueArray(tva)[i] == get_type(v#ValueArray(va)[i]))
+        && get_type(Struct(va)) == StructType(tn, tva)));
+
+axiom (forall v: Value, tv: TypeValue :: has_type(tv, v) <==> get_type(v) == tv);
+axiom (forall tv: TypeValue, v1, v2: Value :: is_equal(tv, v1, v2) <==> v1 == v2);
+
+
+const DefaultEdgeMap: [Edge]Value;
+const DefaultIntMap: [int]Value;
+const DefaultTypeMap: [int]TypeValue;
 
 type {:datatype} Reference;
 function {:constructor} Reference(rt: RefType, p: Path, l: Location): Reference;
@@ -46,16 +119,24 @@ var gs : GlobalStore;
 var m : Memory;
 var m_size : int;
 
-procedure {:inline 1} Exists(address: Value, t: TypeName) returns (dst: Value)
+// ============================================================================================
+// Instructions
+
+procedure {:inline 1} Exists(address: Value, t: TypeValue) returns (dst: Value)
 requires is#Address(address);
 {
-    dst := Boolean(domain#GlobalStore(gs)[a#Address(address)] && domain#TypeStore(contents#GlobalStore(gs)[a#Address(address)])[t]);
+    assume is#StructType(t);
+    dst := Boolean(domain#GlobalStore(gs)[a#Address(address)]
+           && domain#TypeStore(contents#GlobalStore(gs)[a#Address(address)])[name#StructType(t)]);
 }
 
-procedure {:inline 1} MoveToSender(t: TypeName, v: Value)
+procedure {:inline 1} MoveToSender(ta: TypeValue, v: Value)
 {
     var a: Address;
     var ts: TypeStore;
+    var t: TypeName;
+    assume is#StructType(ta);
+    t := name#StructType(ta);
     a := sender#Transaction_cons(txn);
     assert domain#GlobalStore(gs)[a];
     ts := contents#GlobalStore(gs)[a];
@@ -66,15 +147,18 @@ procedure {:inline 1} MoveToSender(t: TypeName, v: Value)
     m_size := m_size + 1;
 }
 
-procedure {:inline 1} MoveFrom(address: Value, t: TypeName) returns (dst: Value)
+procedure {:inline 1} MoveFrom(address: Value, ta: TypeValue) returns (dst: Value)
 requires is#Address(address);
 {
     var a: Address;
     var ts: TypeStore;
     var l: Location;
+    var t: TypeName;
     a := a#Address(address);
     assert domain#GlobalStore(gs)[a];
     ts := contents#GlobalStore(gs)[a];
+    assume is#StructType(ta);
+    t := name#StructType(ta);
     assert domain#TypeStore(ts)[t];
     l := contents#TypeStore(ts)[t];
     assert domain#Memory(m)[l];
@@ -84,16 +168,19 @@ requires is#Address(address);
     gs := GlobalStore(domain#GlobalStore(gs), contents#GlobalStore(gs)[a := ts]);
 }
 
-procedure {:inline 1} BorrowGlobal(address: Value, t: TypeName) returns (dst: Reference)
+procedure {:inline 1} BorrowGlobal(address: Value, ta: TypeValue) returns (dst: Reference)
 requires is#Address(address);
 {
     var a: Address;
     var v: Value;
     var ts: TypeStore;
     var l: Location;
+    var t: TypeName;
     a := a#Address(address);
     assert domain#GlobalStore(gs)[a];
     ts := contents#GlobalStore(gs)[a];
+    assume is#StructType(ta);
+    t := name#StructType(ta);
     assert domain#TypeStore(ts)[t];
     l := contents#TypeStore(ts)[t];
     assert domain#Memory(m)[l];
@@ -111,7 +198,7 @@ procedure {:inline 1} BorrowField(src: Reference, f: FieldName) returns (dst: Re
     var size: int;
     p := p#Reference(src);
     size := size#Path(p);
-	  p := Path(p#Path(p)[size := Field(f)], size+1);
+	p := Path(p#Path(p)[size := Field(f)], size+1);
     dst := Reference(rt#Reference(src), p, l#Reference(src));
 }
 
@@ -172,7 +259,7 @@ procedure {:inline 1} FreezeRef(src: Reference) returns (dest: Reference)
     dest := src;
 }
 
-// Eq, Pack, and Unpack are auto-generated for each type T
+// Pack, and Unpack are auto-generated for each type T
 const MAX_U64: int;
 axiom MAX_U64 == 9223372036854775807;
 var abort_flag: bool;
@@ -264,74 +351,6 @@ procedure {:inline 1} Not(src: Value) returns (dst: Value)
     dst := Boolean(!b#Boolean(src));
 }
 
-procedure {:inline 1} Eq(src1: Value, src2: Value) returns (dst: Value)
-{
-    dst := Boolean(src1 == src2);
-}
-
-procedure {:inline 1} Neq(src1: Value, src2: Value) returns (dst: Value)
-{
-    dst := Boolean(src1 != src2);
-}
-
-procedure {:inline 1} Eq_Vector_T(src1: Value, src2: Value) returns (dst: Value)
-{
-    dst := Boolean(src1 == src2);
-}
-
-procedure {:inline 1} Neq_Vector_T(src1: Value, src2: Value) returns (dst: Value)
-{
-    dst := Boolean(src1 != src2);
-}
-
-procedure {:inline 1} Eq_int(src1: Value, src2: Value) returns (dst: Value)
-{
-    assert is#Integer(src1) && is#Integer(src2);
-    dst := Boolean(i#Integer(src1) == i#Integer(src2));
-}
-
-procedure {:inline 1} Neq_int(src1: Value, src2: Value) returns (dst: Value)
-{
-    assert is#Integer(src1) && is#Integer(src2);
-    dst := Boolean(i#Integer(src1) != i#Integer(src2));
-}
-
-procedure {:inline 1} Eq_bool(src1: Value, src2: Value) returns (dst: Value)
-{
-    assert is#Boolean(src1) && is#Boolean(src2);
-    dst := Boolean(b#Boolean(src1) == b#Boolean(src2));
-}
-
-procedure {:inline 1} Neq_bool(src1: Value, src2: Value) returns (dst: Value)
-{
-    assert is#Boolean(src1) && is#Boolean(src2);
-    dst := Boolean(b#Boolean(src1) != b#Boolean(src2));
-}
-
-procedure {:inline 1} Eq_address(src1: Value, src2: Value) returns (dst: Value)
-{
-    assert is#Address(src1) && is#Address(src2);
-    dst := Boolean(a#Address(src1) == a#Address(src2));
-}
-
-procedure {:inline 1} Neq_address(src1: Value, src2: Value) returns (dst: Value)
-{
-    assert is#Address(src1) && is#Address(src2);
-    dst := Boolean(a#Address(src1) != a#Address(src2));
-}
-
-procedure {:inline 1} Eq_bytearray(src1: Value, src2: Value) returns (dst: Value)
-{
-    assert is#ByteArray(src1) && is#ByteArray(src2);
-    dst := Boolean(b#ByteArray(src1) == b#ByteArray(src2));
-}
-
-procedure {:inline 1} Neq_bytearray(src1: Value, src2: Value) returns (dst: Value)
-{
-    assert is#ByteArray(src1) && is#ByteArray(src2);
-    dst := Boolean(b#ByteArray(src1) != b#ByteArray(src2));
-}
-
 procedure {:inline 1} LdConst(val: int) returns (ret: Value)
 {
     ret := Integer(val);
@@ -399,74 +418,100 @@ procedure {:inline 1} GetTxnGasUnitPrice() returns (ret_gas_unit_price: Value)
   ret_gas_unit_price := Integer(gas_unit_price#Transaction_cons(txn));
 }
 
-procedure {:inline 1} Vector_empty() returns (v: Value) {
-    v := Vector(DefaultMap, 0);
+// ==================================================================================
+// Native Vector Type
+
+function Vector_T_type_value(tv: TypeValue): TypeValue {
+  VectorType(tv)
 }
 
-procedure {:inline 1} Vector_is_empty(r: Reference) returns (b: Value) {
+procedure {:inline 1} Vector_empty(ta: TypeValue) returns (v: Value) {
+    v := mk_vector(DefaultIntMap, 0);
+    assume has_type(VectorType(ta), v);
+}
+
+procedure {:inline 1} Vector_is_empty(ta: TypeValue, r: Reference) returns (b: Value) {
     var v: Value;
     call v := ReadRef(r);
-    b := Boolean(l#Vector(v) == 0);
+    b := Boolean(vlen(v) == 0);
 }
 
-procedure {:inline 1} Vector_push_back(r: Reference, val: Value) {
+procedure {:inline 1} Vector_push_back(ta: TypeValue, r: Reference, val: Value) {
     var old_v: Value;
     var old_len: int;
+    assume has_type(ta, val);
     call old_v := ReadRef(r);
-    old_len := l#Vector(old_v);
-    call WriteRef(r, Vector(v#Vector(old_v)[Index(old_len) := val], old_len+1));
+    assume has_type(VectorType(ta), old_v);
+    old_len := vlen(old_v);
+    call WriteRef(r, mk_vector(vmap(old_v)[old_len := val], old_len+1));
 }
 
-procedure {:inline 1} Vector_pop_back(r: Reference) returns (e: Value){
+procedure {:inline 1} Vector_pop_back(ta: TypeValue, r: Reference) returns (e: Value){
     var v: Value;
     var old_len: int;
     call v := ReadRef(r);
-    old_len := l#Vector(v);
-    e := v#Vector(v)[Index(old_len-1)];
-    call WriteRef(r, Vector(v#Vector(v), old_len-1));
+    assume has_type(VectorType(ta), v);
+    old_len := vlen(v);
+    e := vmap(v)[old_len-1];
+    assume has_type(ta, e);
+    call WriteRef(r, mk_vector(vmap(v), old_len-1));
 }
 
-procedure {:inline 1} Vector_append(r: Reference, other_v: Value) {
+procedure {:inline 1} Vector_append(ta: TypeValue, r: Reference, other_v: Value) {
     var v: Value;
     var old_len: int;
     var other_len: int;
     var result: Value;
     call v := ReadRef(r);
-    old_len := l#Vector(v);
-    other_len := l#Vector(other_v);
-    result := Vector(
-        (lambda e:Edge ::
-            if i#Index(e) < old_len then
-		        v#Vector(v)[e]
+    assume has_type(VectorType(ta), v);
+    assume has_type(VectorType(ta), other_v);
+    old_len := vlen(v);
+    other_len := vlen(other_v);
+    result := mk_vector(
+        (lambda i:int ::
+            if i < old_len then
+		        vmap(v)[i]
 		    else
-		        v#Vector(other_v)[Index(i#Index(e) - old_len)]
+		        vmap(other_v)[i - old_len]
         ),
 	    old_len + other_len);
+	assume has_type(VectorType(ta), result);
     call WriteRef(r, result);
 }
 
-procedure {:inline 1} Vector_reverse(r: Reference) {
+procedure {:inline 1} Vector_reverse(ta: TypeValue, r: Reference) {
     var v: Value;
     var result: Value;
     var len: int;
 
     call v := ReadRef(r);
-    len := l#Vector(v);
-    result := Vector(
-        (lambda e:Edge ::
-            v#Vector(v)[Index(len-i#Index(e)-1)]
+    assume has_type(VectorType(ta), v);
+    len := vlen(v);
+    result := mk_vector(
+        (lambda i:int ::
+            vmap(v)[len-i-1]
         ),
 	    len);
+    assume has_type(VectorType(ta), result);
     call WriteRef(r, result);
 }
 
-procedure {:inline 1} Vector_length(r: Reference) returns (l: Value) {
+procedure {:inline 1} Vector_length(ta: TypeValue, r: Reference) returns (l: Value) {
     var v: Value;
     call v := ReadRef(r);
-    l := Integer(l#Vector(v));
+    l := Integer(vlen(v));
 }
 
-procedure {:inline 1} Vector_borrow(src: Reference, index: Value) returns (dst: Reference) {
+procedure {:inline 1} Vector_borrow(ta: TypeValue, src: Reference, index: Value) returns (dst: Reference) {
+    var p: Path;
+    var size: int;
+    p := p#Reference(src);
+    size := size#Path(p);
+	p := Path(p#Path(p)[size := Index(i#Integer(index))], size+1);
+    dst := Reference(rt#Reference(src), p, l#Reference(src));
+}
+
+procedure {:inline 1} Vector_borrow_mut(ta: TypeValue, src: Reference, index: Value) returns (dst: Reference) {
     var p: Path;
     var size: int;
     p := p#Reference(src);
@@ -475,20 +520,11 @@ procedure {:inline 1} Vector_borrow(src: Reference, index: Value) returns (dst: 
     dst := Reference(rt#Reference(src), p, l#Reference(src));
 }
 
-procedure {:inline 1} Vector_borrow_mut(src: Reference, index: Value) returns (dst: Reference) {
-    var p: Path;
-    var size: int;
-    p := p#Reference(src);
-    size := size#Path(p);
-	  p := Path(p#Path(p)[size := Index(i#Integer(index))], size+1);
-    dst := Reference(rt#Reference(src), p, l#Reference(src));
+procedure {:inline 1} Vector_destroy_empty(ta: TypeValue, v: Value) {
+    assert (vlen(v) == 0);
 }
 
-procedure {:inline 1} Vector_destroy_empty(v: Value) {
-    assert (l#Vector(v) == 0);
-}
-
-procedure {:inline 1} Vector_swap(src: Reference, i: Value, j: Value) {
+procedure {:inline 1} Vector_swap(ta: TypeValue, src: Reference, i: Value, j: Value) {
     var i_val: Value;
     var j_val: Value;
     var i_ind: int;
@@ -497,28 +533,34 @@ procedure {:inline 1} Vector_swap(src: Reference, i: Value, j: Value) {
     i_ind := i#Integer(i);
     j_ind := i#Integer(j);
     call v := ReadRef(src);
-    assert (l#Vector(v) > i_ind && l#Vector(v) > j_ind);
-    i_val := v#Vector(v)[Index(i_ind)];
-    j_val := v#Vector(v)[Index(j_ind)];
-    v := Vector(v#Vector(v)[Index(i_ind) := j_val][Index(j_ind) := i_val], l#Vector(v));
+    assume has_type(VectorType(ta), v);
+    assert (vlen(v) > i_ind && vlen(v) > j_ind);
+    i_val := vmap(v)[i_ind];
+    j_val := vmap(v)[j_ind];
+    v := mk_vector(vmap(v)[i_ind := j_val][j_ind := i_val], vlen(v));
     call WriteRef(src, v);
 }
 
-procedure {:inline 1} Vector_get(src: Reference, i: Value) returns (e: Value) {
+procedure {:inline 1} Vector_get(ta: TypeValue, src: Reference, i: Value) returns (e: Value) {
     var i_ind: int;
     var v: Value;
     call v := ReadRef(src);
+    assume has_type(VectorType(ta), v);
     i_ind := i#Integer(i);
-    assert (i_ind < l#Vector(v));
-    e := v#Vector(v)[Index(i_ind)];
+    assert (i_ind < vlen(v));
+    e := vmap(v)[i_ind];
+    assume has_type(ta, e);
 }
 
-procedure {:inline 1} Vector_set(src: Reference, i: Value, e: Value) {
+procedure {:inline 1} Vector_set(ta: TypeValue, src: Reference, i: Value, e: Value) {
     var i_ind: int;
     var v: Value;
+    assume has_type(ta, e);
     i_ind := i#Integer(i);
     call v := ReadRef(src);
-    assert (l#Vector(v) > i_ind);
-    v := Vector(v#Vector(v)[Index(i_ind) := e], l#Vector(v));
+    assume has_type(VectorType(ta), v);
+    assert (vlen(v) > i_ind);
+    v := mk_vector(vmap(v)[i_ind := e], vlen(v));
+    assume has_type(VectorType(ta), v);
     call WriteRef(src, v);
 }

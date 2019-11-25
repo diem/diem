@@ -19,8 +19,8 @@ procedure {:inline 1} ReadValue1(p: Path, i: int, v: Value) returns (v': Value)
         v' := v;
     } else {
         e := p#Path(p)[i];
-        v' := m#Map(v)[e];
-        if (is#Vector(v)) { v' := v#Vector(v)[e]; }
+        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
+        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
         call v' := ReadValue0(p, i+1, v');
     }
 }
@@ -32,8 +32,8 @@ procedure {:inline 1} ReadValue2(p: Path, i: int, v: Value) returns (v': Value)
         v' := v;
     } else {
         e := p#Path(p)[i];
-        v' := m#Map(v)[e];
-        if (is#Vector(v)) { v' := v#Vector(v)[e]; }
+        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
+        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
         call v' := ReadValue1(p, i+1, v');
     }
 }
@@ -45,8 +45,8 @@ procedure {:inline 1} ReadValueMax(p: Path, i: int, v: Value) returns (v': Value
         v' := v;
     } else {
         e := p#Path(p)[i];
-        v' := m#Map(v)[e];
-        if (is#Vector(v)) { v' := v#Vector(v)[e]; }
+        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
+        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
         call v' := ReadValue2(p, i+1, v');
     }
 }
@@ -68,11 +68,11 @@ procedure {:inline 1} UpdateValue1(p: Path, i: int, v: Value, new_v: Value) retu
         v' := new_v;
     } else {
         e := p#Path(p)[i];
-        v' := m#Map(v)[e];
-        if (is#Vector(v)) { v' := v#Vector(v)[e]; }
+        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
+        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
         call v' := UpdateValue0(p, i+1, v', new_v);
-        if (is#Map(v)) { v' := Map(m#Map(v)[e := v']);}
-        if (is#Vector(v)) { v' := Vector(v#Vector(v)[e := v'], l#Vector(v));}
+        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
+        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
     }
 }
 
@@ -83,11 +83,11 @@ procedure {:inline 1} UpdateValue2(p: Path, i: int, v: Value, new_v: Value) retu
         v' := new_v;
     } else {
         e := p#Path(p)[i];
-        v' := m#Map(v)[e];
-        if (is#Vector(v)) { v' := v#Vector(v)[e]; }
+        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
+        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
         call v' := UpdateValue1(p, i+1, v', new_v);
-        if (is#Map(v)) { v' := Map(m#Map(v)[e := v']);}
-        if (is#Vector(v)) { v' := Vector(v#Vector(v)[e := v'], l#Vector(v));}
+        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
+        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
     }
 }
 
@@ -98,30 +98,30 @@ procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) re
         v' := new_v;
     } else {
         e := p#Path(p)[i];
-        v' := m#Map(v)[e];
-        if (is#Vector(v)) { v' := v#Vector(v)[e]; }
+        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
+        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
         call v' := UpdateValue2(p, i+1, v', new_v);
-        if (is#Map(v)) { v' := Map(m#Map(v)[e := v']);}
-        if (is#Vector(v)) { v' := Vector(v#Vector(v)[e := v'], l#Vector(v));}
+        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
+        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
     }
 }
 
 procedure {:inline 1} TestControlFlow_branch_once (arg0: Value) returns (ret0: Value)
 {
     // declare local variables
-    var t0: Value; // bool
-    var t1: Value; // bool
-    var t2: Value; // int
-    var t3: Value; // int
-    var t4: Value; // int
-    var t5: Value; // int
+    var t0: Value; // BooleanType()
+    var t1: Value; // BooleanType()
+    var t2: Value; // IntegerType()
+    var t3: Value; // IntegerType()
+    var t4: Value; // IntegerType()
+    var t5: Value; // IntegerType()
 
     var tmp: Value;
     var old_size: int;
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume is#Boolean(arg0);
+    assume has_type(BooleanType(), arg0);
 
     old_size := m_size;
     m_size := m_size + 6;
@@ -132,7 +132,7 @@ procedure {:inline 1} TestControlFlow_branch_once (arg0: Value) returns (ret0: V
     m := Memory(domain#Memory(m)[1+old_size := true], contents#Memory(m)[1+old_size := tmp]);
 
     tmp := contents#Memory(m)[old_size + 1];
-if (!b#Boolean(tmp)) { goto Label_6; }
+    if (!b#Boolean(tmp)) { goto Label_6; }
 
     call tmp := LdConst(1);
     m := Memory(domain#Memory(m)[2+old_size := true], contents#Memory(m)[2+old_size := tmp]);
