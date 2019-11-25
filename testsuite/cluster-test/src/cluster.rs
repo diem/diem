@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{aws::Aws, instance::Instance};
 use failure::{self, prelude::*};
 use libra_config::config::AdmissionControlConfig;

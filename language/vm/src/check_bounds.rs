@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{
     errors::{append_err_info, bounds_error, bytecode_offset_err, verification_error},
     file_format::{

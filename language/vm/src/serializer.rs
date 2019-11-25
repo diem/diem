@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Serialization of transactions and modules.
 //!
 //! This module exposes two entry points for serialization of `CompiledScript` and

@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use bech32::{Bech32, FromBase32, ToBase32};
 use bytes::Bytes;
 use failure::prelude::*;

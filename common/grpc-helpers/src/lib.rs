@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use failure::{prelude::*, Result};
 use futures::{compat::Future01CompatExt, future::Future, prelude::*};
 use futures_01::future::Future as Future01;

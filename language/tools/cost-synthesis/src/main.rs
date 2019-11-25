@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This performs instruction cost synthesis for the various bytecode instructions that we have. We
 //! separate instructions into three sets:
 //! * Global-memory independent instructions;

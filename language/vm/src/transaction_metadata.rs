@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, GasUnits};
 use libra_crypto::ed25519::{compat, Ed25519PublicKey};
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};

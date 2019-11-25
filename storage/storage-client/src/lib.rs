@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This crate implements a client library for storage that wraps the protobuf storage client. The
 //! main motivation is to hide storage implementation details. For example, if we later want to
 //! expand state store to multiple machines and enable sharding, we only need to tweak the client

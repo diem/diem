@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 pub mod transaction_test_helpers;
 
 pub fn assert_canonical_encode_decode<T>(t: T)

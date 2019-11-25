@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use rusoto_core::Region;
 use rusoto_ec2::Ec2Client;
 use rusoto_ecr::EcrClient;

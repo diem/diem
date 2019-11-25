@@ -1,8 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! A library supplying various cryptographic primitives
+#![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+//! A library supplying various cryptographic primitives
 
 pub mod bls12381;
 pub mod ed25519;
