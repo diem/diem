@@ -1,0 +1,16 @@
+error: 
+
+   ┌── tests/move_check/typing/uninferred_type_unpack_assign.move:5:9 ───
+   │
+ 5 │         S{} = S{};
+   │         ^^^ Could not infer this type. Try adding an annotation
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/uninferred_type_unpack_assign.move:5:15 ───
+   │
+ 5 │         S{} = S{};
+   │               ^^^ Could not infer this type. Try adding an annotation
+   │
+
