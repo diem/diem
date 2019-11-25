@@ -114,8 +114,8 @@ fn test_reconfiguration() {
         .account_keypair
         .as_mut()
         .unwrap();
-    let validator_privkey = keys.take_consensus_private().unwrap();
-    let validator_pubkey = keys.public().unwrap().clone();
+    let validator_privkey = keys.take_private().unwrap();
+    let validator_pubkey = keys.public().clone();
 
     // give the validator some money so they can send a tx
     let txn1 = get_test_signed_transaction(

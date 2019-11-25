@@ -3,7 +3,7 @@
 
 use crate::{
     config::{BaseConfig, PersistableConfig, RoleType},
-    keys::NetworkKeyPairs,
+    keys::KeyPair,
     trusted_peers::{NetworkPeerInfo, NetworkPeersConfig},
     utils::get_local_ip,
 };
@@ -54,7 +54,7 @@ pub struct NetworkConfig {
 impl Default for NetworkConfig {
     fn default() -> Self {
         let keypair = NetworkKeyPairs::default();
-        let peer_id = PeerId::try_from(keypair.get_network_identity_public().to_bytes()).unwrap();
+        let peer_id = PeerId::try_from(keypair.identity_keys.public().to_bytes()).unwrap();
         let peers = Self::default_peers(&keypair, &peer_id);
 
         Self {
@@ -119,12 +119,8 @@ impl NetworkConfig {
         }
         // If PeerId is not set, it is derived from NetworkIdentityKey.
         if self.peer_id == PeerId::default() {
-            self.peer_id = PeerId::try_from(
-                self.network_keypairs
-                    .get_network_identity_public()
-                    .to_bytes(),
-            )
-            .unwrap();
+            self.peer_id =
+                PeerId::try_from(self.network_keypairs.identity_keys.public().to_bytes()).unwrap();
         }
 
         if !network_role.is_validator() {
@@ -132,7 +128,8 @@ impl NetworkConfig {
                 self.peer_id ==
                 PeerId::try_from(
                         self.network_keypairs
-                        .get_network_identity_public()
+                        .identity_keys
+                        .public()
                         .to_bytes()
                 )?,
                 "For non-validator roles, the peer_id should be derived from the network identity key.",
@@ -175,19 +172,15 @@ impl NetworkConfig {
         self.peer_id = if let Some(peer_id) = peer_id {
             peer_id
         } else {
-            PeerId::try_from(network_keypairs.get_network_identity_public().to_bytes()).unwrap()
+            PeerId::try_from(network_keypairs.identity_keys.public().to_bytes()).unwrap()
         };
         self.network_keypairs = network_keypairs;
         self.network_peers = Self::default_peers(&self.network_keypairs, &self.peer_id);
     }
 
     pub fn set_default_peer_id(&mut self) {
-        self.peer_id = PeerId::try_from(
-            self.network_keypairs
-                .get_network_identity_public()
-                .to_bytes(),
-        )
-        .unwrap();
+        self.peer_id =
+            PeerId::try_from(self.network_keypairs.identity_keys.public().to_bytes()).unwrap();
     }
 
     pub fn network_peers_file(&self) -> PathBuf {
@@ -204,13 +197,11 @@ impl NetworkConfig {
 
     fn default_peers(keypair: &NetworkKeyPairs, peer_id: &PeerId) -> NetworkPeersConfig {
         let mut peers = NetworkPeersConfig::default();
-        let identity_pubkey = keypair.get_network_identity_public();
-        let signing_pubkey = keypair.get_network_signing_public();
         peers.peers.insert(
             peer_id.clone(),
             NetworkPeerInfo {
-                network_identity_pubkey: identity_pubkey.clone(),
-                network_signing_pubkey: signing_pubkey.clone(),
+                network_identity_pubkey: keypair.identity_keys.public().clone(),
+                network_signing_pubkey: keypair.signing_keys.public().clone(),
             },
         );
         peers
@@ -222,4 +213,25 @@ impl NetworkConfig {
 pub struct SeedPeersConfig {
     // All peers config. Key:a unique peer id, will be PK in future, Value: peer discovery info
     pub seed_peers: HashMap<PeerId, Vec<Multiaddr>>,
+}
+
+// Leveraged to store the network keypairs together on disk separate from this config
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct NetworkKeyPairs {
+    pub signing_keys: KeyPair<Ed25519PrivateKey>,
+    pub identity_keys: KeyPair<X25519StaticPrivateKey>,
+}
+
+impl NetworkKeyPairs {
+    // used in testing to fill the structure with test keypairs
+    pub fn load(
+        signing_private_key: Ed25519PrivateKey,
+        identity_private_key: X25519StaticPrivateKey,
+    ) -> Self {
+        Self {
+            signing_keys: KeyPair::load(signing_private_key),
+            identity_keys: KeyPair::load(identity_private_key),
+        }
+    }
 }

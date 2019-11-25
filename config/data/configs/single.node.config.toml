@@ -34,8 +34,8 @@ port = 6184
 dir = "libradb/db"
 grpc_max_receive_len = 100000000
 [test.account_keypair]
-consensus_private_key = "82001573a003fd3b7fd72ffb0eaf63aac62f12deb629dca72785a66268ec758b"
-consensus_public_key = "664f6e8f36eacb1770fa879d86c2c1d0fafea145e84fa7d671ab7a011a54d509"
+private_key = "82001573a003fd3b7fd72ffb0eaf63aac62f12deb629dca72785a66268ec758b"
+public_key = "664f6e8f36eacb1770fa879d86c2c1d0fafea145e84fa7d671ab7a011a54d509"
 
 [validator_network]
 peer_id = "dde866d21d22926429919efe44436af450c69e62826119143baad55bb0319403"
