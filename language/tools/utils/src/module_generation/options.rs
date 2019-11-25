@@ -27,10 +27,14 @@ pub struct ModuleGeneratorOptions {
     /// Whether or not generate modules should only contain simple (non-reference, or nested
     /// struct) types.
     pub simple_types_only: bool,
+    /// Whether references are allowed to be generated for e.g. function parameters, locals.
+    pub references_allowed: bool,
     /// Whether the generated modules should have any resources declared.
     pub add_resources: bool,
     /// The minimum number of entries in any table
     pub min_table_size: usize,
+    /// If set, all functions with type parameters will have arguments of those types as well.
+    pub args_for_ty_params: bool,
 }
 
 impl Default for ModuleGeneratorOptions {
@@ -47,8 +51,10 @@ impl Default for ModuleGeneratorOptions {
             max_function_call_size: 23,
             max_ret_types_size: 4,
             simple_types_only: false,
+            references_allowed: true,
             add_resources: true,
             min_table_size: 1,
+            args_for_ty_params: false,
         }
     }
 }

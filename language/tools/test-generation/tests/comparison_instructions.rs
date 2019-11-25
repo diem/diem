@@ -30,7 +30,7 @@ fn bytecode_comparison_integers() {
         let mut state1 = AbstractState::new();
         state1.stack_push(AbstractValue::new_primitive(ty.clone()));
         state1.stack_push(AbstractValue::new_primitive(ty.clone()));
-        let state2 = common::run_instruction(op.clone(), state1);
+        let (state2, _) = common::run_instruction(op.clone(), state1);
         assert_eq!(
             state2.stack_peek(0),
             Some(AbstractValue::new_primitive(SignatureToken::Bool)),
@@ -44,7 +44,20 @@ fn bytecode_eq_bool() {
     let mut state1 = AbstractState::new();
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Bool));
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Bool));
-    let state2 = common::run_instruction(Bytecode::Eq, state1);
+    let (state2, _) = common::run_instruction(Bytecode::Eq, state1);
+    assert_eq!(
+        state2.stack_peek(0),
+        Some(AbstractValue::new_primitive(SignatureToken::Bool)),
+        "stack type postcondition not met"
+    );
+}
+
+#[test]
+fn bytecode_neq_u64() {
+    let mut state1 = AbstractState::new();
+    state1.stack_push(AbstractValue::new_primitive(SignatureToken::U64));
+    state1.stack_push(AbstractValue::new_primitive(SignatureToken::U64));
+    let (state2, _) = common::run_instruction(Bytecode::Neq, state1);
     assert_eq!(
         state2.stack_peek(0),
         Some(AbstractValue::new_primitive(SignatureToken::Bool)),
@@ -57,7 +70,7 @@ fn bytecode_neq_bool() {
     let mut state1 = AbstractState::new();
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Bool));
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Bool));
-    let state2 = common::run_instruction(Bytecode::Neq, state1);
+    let (state2, _) = common::run_instruction(Bytecode::Neq, state1);
     assert_eq!(
         state2.stack_peek(0),
         Some(AbstractValue::new_primitive(SignatureToken::Bool)),

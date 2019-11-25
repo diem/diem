@@ -96,9 +96,8 @@ fn execute_function_in_module(
         runtime.cache_module(module.clone());
 
         let data_cache = BlockDataCache::new(state_view);
-        let mut context =
-            TransactionExecutionContext::new(*MAXIMUM_NUMBER_OF_GAS_UNITS, &data_cache);
-        let gas_schedule = runtime.load_gas_schedule(&mut context, &data_cache)?;
+        let context = TransactionExecutionContext::new(*MAXIMUM_NUMBER_OF_GAS_UNITS, &data_cache);
+        let gas_schedule = runtime.load_gas_schedule(&context, &data_cache)?;
         let mut txn_executor =
             TransactionExecutor::new(&gas_schedule, &data_cache, TransactionMetadata::default());
         txn_executor.execute_function(&runtime, &module_id, &entry_name, args)
@@ -135,17 +134,16 @@ pub fn run_generation(args: Args) {
     let mut executed_programs: u64 = 0;
     let mut generation_options = ModuleGeneratorOptions::default();
     generation_options.min_table_size = 10;
-    // No type parameters for now
-    generation_options.max_ty_params = 1;
+    generation_options.max_ty_params = 5;
     generation_options.max_functions = 10;
     generation_options.max_structs = 10;
-    // Test generation cannot currently handle non-simple types (nested structs, and references)
-    generation_options.simple_types_only = true;
+    generation_options.args_for_ty_params = true;
+    generation_options.references_allowed = false;
     // Test generation cannot currently cope with resources
     generation_options.add_resources = false;
     for i in 0..iterations {
-        let mut module = generate_module(generation_options.clone()).into_inner();
-        BytecodeGenerator::new(None).generate_module(&mut module);
+        let mut module = generate_module(None, generation_options.clone()).into_inner();
+        module = BytecodeGenerator::new(None).generate_module(module);
         debug!("Running on verifier...");
         let module = module.freeze().expect("generated module failed to freeze.");
         let verified_module = match run_verifier(module.clone()) {
