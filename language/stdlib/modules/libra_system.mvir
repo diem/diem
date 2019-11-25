@@ -21,6 +21,8 @@ module LibraSystem {
         validators: Vector.T<Self.ValidatorInfo>,
         // List of validators to add at the next reconfiguration.
         additions: Vector.T<address>,
+        // List of validators to removal at the next reconfiguration. Disjoint with additions.
+        removals: Vector.T<address>,
         // Handle where validator set change events are emitted
         change_events: LibraAccount.EventHandle<Self.ValidatorSetChangeEvent>,
     }
@@ -53,7 +55,8 @@ module LibraSystem {
 
       move_to_sender<ValidatorSet>(ValidatorSet {
           validators: Vector.empty<Self.ValidatorInfo>(),
-          additions:  Vector.empty<address>(),
+          additions: Vector.empty<address>(),
+          removals: Vector.empty<address>(),
           change_events: LibraAccount.new_event_handle<Self.ValidatorSetChangeEvent>(),
       });
       return;
@@ -221,7 +224,7 @@ module LibraSystem {
             !Self.is_validator_(&account_address, &copy(validator_set_ref).validators),
             18
         );
-        // Ensure that this is not already a addition
+        // Ensure that this is not already an addition
         assert(
             !Vector.contains<address>(
                 freeze(copy(validator_set_additions)),
@@ -233,6 +236,36 @@ module LibraSystem {
         // Add to candidates
         Vector.push_back<address>(
             move(validator_set_additions),
+            copy(account_address),
+        );
+
+        return;
+    }
+
+    public remove_validator(account_address: address) acquires ValidatorSet {
+        let validator_set_ref: &mut Self.ValidatorSet;
+
+        // Only the Association can remove validators
+        assert(get_txn_sender() == 0xA550C18, 1);
+
+        validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
+        // Ensure that this address is already a validator
+        assert(
+            Self.is_validator_(&account_address, &copy(validator_set_ref).validators),
+            21
+        );
+        // Ensure that this is not already a removal
+        assert(
+            !Vector.contains<address>(
+                &copy(validator_set_ref).removals,
+                &account_address,
+            ),
+            22
+        );
+
+        // Add to removals
+        Vector.push_back<address>(
+            &mut move(validator_set_ref).removals,
             copy(account_address),
         );
 
@@ -289,15 +322,18 @@ module LibraSystem {
     // Trigger a reconfiguation the Libra system by:
     // (1) Checking if there have been any additions since the last reconfiguration (and adding
     //     the validator's config if so)
-    // (2) Checking if there have been any key rotations since the last reconfiguration (and
+    // (2) Checking if there have been any removals since the last reconfiguration (and removing
+    //     the validator if so)
+    // (3) Checking if there have been any key rotations since the last reconfiguration (and
     //     updating the key info if so)
-    // (3) Emitting an event containing new validator set, which will be passed to the executor
+    // (4) Emitting an event containing new validator set, which will be passed to the executor
     reconfigure() acquires ValidatorSet {
         let validator_set_ref: &mut Self.ValidatorSet;
         let additions_ref: &mut Vector.T<address>;
+        let removals_ref: &mut Vector.T<address>;
         let vector_ref: &mut Vector.T<Self.ValidatorInfo>;
         let info_ref: &mut Self.ValidatorInfo;
-        let validator_addr: &address;
+        let to_remove_index: u64;
         let i: u64;
         let len: u64;
         let changed: bool;
@@ -308,7 +344,9 @@ module LibraSystem {
         // the new validator set from a larger list of candidate validators sorted by stake.
         validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
         additions_ref = &mut copy(validator_set_ref).additions;
+        removals_ref = &mut copy(validator_set_ref).removals;
         vector_ref = &mut copy(validator_set_ref).validators;
+        changed = false;
 
         // (1) Check for additions
         i = 0;
@@ -330,11 +368,34 @@ module LibraSystem {
             // ensures additions.length == 0
             // ensures validators.length == old(validators).length + old(additions).length
             changed = true;
-        } else {
-            changed = false;
         }
 
-        // (2) Check for key rotation
+        // (2) Check for removals
+        i = 0;
+        len = Vector.length<address>(freeze(copy(removals_ref)));
+        if (copy(len) > 0) {
+            loop {
+                // remove validator address from removals
+                to_remove_index = Self.get_validator_index(
+                    freeze(copy(vector_ref)),
+                    Vector.pop_back<address>(copy(removals_ref))
+                );
+                // remove corresponding Validator info from the validator set
+                _  = Vector.remove_unstable<Self.ValidatorInfo>(
+                    copy(vector_ref),
+                    move(to_remove_index)
+                );
+                i = move(i) + 1;
+                if (copy(i) >= copy(len)) {
+                    break;
+                }
+            }
+            // ensures removals.length == 0
+            // ensures validators.length == old(validators).length - old(removals).length
+            changed = true;
+        }
+
+        // (3) Check for key rotation
         i = 0;
         len = Vector.length<Self.ValidatorInfo>(freeze(copy(vector_ref)));
         // assume(len > 0), since an empty validator set is nonsensical
@@ -353,7 +414,7 @@ module LibraSystem {
             info_ref = Vector.borrow_mut<Self.ValidatorInfo>(copy(vector_ref), copy(i));
         }
 
-        // (3) emit changed event if appropriate
+        // (4) emit changed event if appropriate
         if (move(changed)) {
             LibraAccount.emit_event<Self.ValidatorSetChangeEvent>(
                 &mut move(validator_set_ref).change_events,
@@ -510,4 +571,29 @@ module LibraSystem {
          assert(copy(validator_payout) * move(num_validators) <= move(amount_collected), 1);
          return move(validator_payout);
      }
+
+    // Get the index of the validator with address `addr` in `validators`.
+    // Aborts if `addr` is not the address of any validator
+    public get_validator_index(validators: &Vector.T<Self.ValidatorInfo>, addr: address): u64 {
+        let i: u64;
+        let len: u64;
+
+        len = Vector.length<Self.ValidatorInfo>(copy(validators));
+        i = 0;
+        loop {
+            if (Self.get_address(Vector.borrow<Self.ValidatorInfo>(copy(validators), copy(i)))
+                ==
+                &addr
+            ) {
+                return move(i);
+            }
+
+            i = move(i) + 1;
+            if (copy(i) >= copy(len)) {
+                break;
+            }
+
+        }
+        abort(99);
+    }
 }
