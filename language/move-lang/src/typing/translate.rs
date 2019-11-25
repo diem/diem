@@ -983,7 +983,7 @@ fn bind_expected_type(_context: &mut Context, sp!(loc, b_): &T::Bind) -> Option<
     let loc = *loc;
     match b_ {
         TB::Ignore => None,
-        TB::Var(_, ty_opt) => Some(ty_opt.clone().expect("ICE var type not set")),
+        TB::Var(_, ty_opt) => ty_opt.clone(),
         TB::BorrowUnpack(mut_, m, s, tys, _) => {
             let tn = sp(loc, N::TypeName_::ModuleType(m.clone(), s.clone()));
             Some(sp(
@@ -1027,12 +1027,11 @@ fn close_scope_bind(context: &mut Context, sp!(_, b_): &mut T::Bind) {
         TB::Ignore => (),
         TB::Var(var, ty_opt) => {
             assert!(ty_opt.is_none());
-            let ty = match context.locals.get(var).unwrap() {
+            match context.locals.get(var).unwrap() {
                 // Error reported in Expand
-                LocalStatus::Declared(loc) => SingleType_::anything(*loc),
-                LocalStatus::Typed(ty) => ty.clone(),
+                LocalStatus::Declared(_loc) => (),
+                LocalStatus::Typed(ty) => *ty_opt = Some(ty.clone()),
             };
-            *ty_opt = Some(ty);
         }
         TB::BorrowUnpack(_, _, _, _, fields) | TB::Unpack(_, _, _, fields) => fields
             .iter_mut()

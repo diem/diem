@@ -1,0 +1,28 @@
+error: 
+
+    ┌── tests/move_check/typing/type_variable_join_single_unpack_invalid.move:10:14 ───
+    │
+ 11 │         (f2: bool);
+    │              ^^^^ Invalid type annotation
+    ·
+ 10 │         (f1: u64);
+    │              --- The type: 'u64'
+    ·
+ 11 │         (f2: bool);
+    │              ---- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/type_variable_join_single_unpack_invalid.move:13:18 ───
+    │
+ 14 │         (f2: Box<bool>);
+    │              ^^^^^^^^^ Invalid type annotation
+    ·
+ 13 │         (f1: Box<u64>);
+    │                  --- The type: 'u64'
+    ·
+ 14 │         (f2: Box<bool>);
+    │                  ---- Is not compatible with: 'bool'
+    │
+

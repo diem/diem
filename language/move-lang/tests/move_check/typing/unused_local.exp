@@ -1,0 +1,24 @@
+error: 
+
+   ┌── tests/move_check/typing/unused_local.move:5:13 ───
+   │
+ 5 │         let x;
+   │             ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/unused_local.move:9:14 ───
+   │
+ 9 │         let (x, y);
+   │              ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/unused_local.move:9:17 ───
+   │
+ 9 │         let (x, y);
+   │                 ^ Unused local 'y'. Consider removing or prefixing with an underscore: '_y'
+   │
+

@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/typing/uninferred_type_unpack_decl.move:5:13 ───
+   │
+ 5 │         let S{};
+   │             ^^^ Could not infer this type. Try adding an annotation
+   │
+

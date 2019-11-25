@@ -39,6 +39,14 @@ error:
 
 error: 
 
+    ┌── tests/move_check/typing/bind_wrong_type.move:11:13 ───
+    │
+ 11 │         let x = ();
+    │             ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
+    │
+
+error: 
+
     ┌── tests/move_check/typing/bind_wrong_type.move:12:13 ───
     │
  12 │         let () = 0;
@@ -79,6 +87,14 @@ error:
     ·
  18 │         let x: () = 0;
     │                -- Found 0 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:18:13 ───
+    │
+ 18 │         let x: () = 0;
+    │             ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
     │
 
 error: 
