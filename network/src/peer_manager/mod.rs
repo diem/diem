@@ -126,16 +126,6 @@ enum DisconnectReason {
     ConnectionLost,
 }
 
-#[derive(Debug)]
-enum InternalEvent<TMuxer>
-where
-    TMuxer: StreamMultiplexer,
-{
-    NewConnection(Identity, Multiaddr, ConnectionOrigin, TMuxer),
-    NewSubstream(PeerId, NegotiatedSubstream<TMuxer::Substream>),
-    PeerDisconnected(PeerId, RoleType, ConnectionOrigin, DisconnectReason),
-}
-
 /// Responsible for handling and maintaining connections to other Peers
 pub struct PeerManager<TTransport, TMuxer>
 where
@@ -162,10 +152,12 @@ where
     peer_event_handlers: Vec<channel::Sender<PeerManagerNotification<TMuxer::Substream>>>,
     /// Channel used to send Dial requests to the ConnectionHandler actor
     dial_request_tx: channel::Sender<ConnectionHandlerRequest>,
-    /// Internal event Receiver
-    internal_event_rx: channel::Receiver<InternalEvent<TMuxer>>,
-    /// Internal event Sender
-    internal_event_tx: channel::Sender<InternalEvent<TMuxer>>,
+    /// Receiver for connection events.
+    connection_handler_notifs_rx: channel::Receiver<ConnectionHandlerNotification<TMuxer>>,
+    /// Sender for peer events.
+    peer_notifs_tx: channel::Sender<PeerNotification<TMuxer>>,
+    /// Receiver for peer events.
+    peer_notifs_rx: channel::Receiver<PeerNotification<TMuxer>>,
     /// A map of outstanding disconnect requests
     outstanding_disconnect_requests: HashMap<PeerId, oneshot::Sender<Result<(), PeerManagerError>>>,
     /// Pin the transport type corresponding to this PeerManager instance
@@ -190,15 +182,17 @@ where
         >,
         peer_event_handlers: Vec<channel::Sender<PeerManagerNotification<TMuxer::Substream>>>,
     ) -> Self {
-        let (internal_event_tx, internal_event_rx) =
-            channel::new(1024, &counters::PENDING_PEER_MANAGER_INTERNAL_EVENTS);
+        let (connection_handler_notifs_tx, connection_handler_notifs_rx) =
+            channel::new(1024, &counters::PENDING_CONNECTION_HANDLER_NOTIFICATIONS);
+        let (peer_notifs_tx, peer_notifs_rx) =
+            channel::new(1024, &counters::PENDING_PEER_NOTIFICATIONS);
         let (dial_request_tx, dial_request_rx) =
             channel::new(1024, &counters::PENDING_PEER_MANAGER_DIAL_REQUESTS);
         let (connection_handler, listen_addr) = ConnectionHandler::new(
             transport,
             listen_addr,
             dial_request_rx,
-            internal_event_tx.clone(),
+            connection_handler_notifs_tx,
         );
 
         Self {
@@ -211,8 +205,9 @@ where
             protocol_handlers,
             peer_event_handlers,
             dial_request_tx,
-            internal_event_tx,
-            internal_event_rx,
+            connection_handler_notifs_rx,
+            peer_notifs_rx,
+            peer_notifs_tx,
             outstanding_disconnect_requests: HashMap::new(),
             phantom_transport: PhantomData,
         }
@@ -229,15 +224,14 @@ where
         self.start_connection_listener();
         loop {
             ::futures::select! {
-                maybe_internal_event = self.internal_event_rx.next() => {
-                    if let Some(event) = maybe_internal_event {
-                        self.handle_internal_event(event).await;
-                    }
+                connection_event = self.connection_handler_notifs_rx.select_next_some() => {
+                  self.handle_connection_event(connection_event).await;
                 }
-                maybe_request = self.requests_rx.next() => {
-                    if let Some(request) = maybe_request {
-                        self.handle_request(request).await;
-                    }
+                peer_event = self.peer_notifs_rx.select_next_some() => {
+                  self.handle_peer_event(peer_event).await;
+                }
+                request = self.requests_rx.select_next_some() => {
+                  self.handle_request(request).await;
                 }
                 complete => {
                     crit!("Peer manager actor terminated");
@@ -247,13 +241,19 @@ where
         }
     }
 
-    async fn handle_internal_event(&mut self, event: InternalEvent<TMuxer>) {
-        trace!("InternalEvent::{:?}", event);
+    async fn handle_connection_event(&mut self, event: ConnectionHandlerNotification<TMuxer>) {
+        trace!("ConnectionHandlerNotification::{:?}", event);
         match event {
-            InternalEvent::NewConnection(identity, addr, origin, conn) => {
+            ConnectionHandlerNotification::NewConnection(identity, addr, origin, conn) => {
                 self.add_peer(identity, addr, origin, conn).await;
             }
-            InternalEvent::NewSubstream(peer_id, substream) => {
+        }
+    }
+
+    async fn handle_peer_event(&mut self, event: PeerNotification<TMuxer>) {
+        trace!("PeerEvent::{:?}", event);
+        match event {
+            PeerNotification::NewSubstream(peer_id, substream) => {
                 let ch = self
                     .protocol_handlers
                     .get_mut(&substream.protocol)
@@ -261,7 +261,7 @@ where
                 let event = PeerManagerNotification::NewInboundSubstream(peer_id, substream);
                 ch.send(event).await.unwrap();
             }
-            InternalEvent::PeerDisconnected(peer_id, role, origin, _reason) => {
+            PeerNotification::PeerDisconnected(peer_id, role, origin, _reason) => {
                 let peer = self
                     .active_peers
                     .remove(&peer_id)
@@ -441,7 +441,7 @@ where
             connection,
             origin,
             self.protocol_handlers.keys().cloned().collect(),
-            self.internal_event_tx.clone(),
+            self.peer_notifs_tx.clone(),
             peer_req_rx,
         );
         let peer_handle = PeerHandle::new(peer_id, address.clone(), origin, peer_req_tx);
@@ -508,6 +508,14 @@ enum ConnectionHandlerRequest {
     ),
 }
 
+#[derive(Debug)]
+enum ConnectionHandlerNotification<TMuxer>
+where
+    TMuxer: StreamMultiplexer,
+{
+    NewConnection(Identity, Multiaddr, ConnectionOrigin, TMuxer),
+}
+
 /// Responsible for listening for new incoming connections
 struct ConnectionHandler<TTransport, TMuxer>
 where
@@ -518,7 +526,7 @@ where
     transport: TTransport,
     listener: Fuse<TTransport::Listener>,
     dial_request_rx: channel::Receiver<ConnectionHandlerRequest>,
-    internal_event_tx: channel::Sender<InternalEvent<TMuxer>>,
+    connection_handler_notifs_tx: channel::Sender<ConnectionHandlerNotification<TMuxer>>,
 }
 
 impl<TTransport, TMuxer> ConnectionHandler<TTransport, TMuxer>
@@ -533,7 +541,7 @@ where
         transport: TTransport,
         listen_addr: Multiaddr,
         dial_request_rx: channel::Receiver<ConnectionHandlerRequest>,
-        internal_event_tx: channel::Sender<InternalEvent<TMuxer>>,
+        connection_handler_notifs_tx: channel::Sender<ConnectionHandlerNotification<TMuxer>>,
     ) -> (Self, Multiaddr) {
         let (listener, listen_addr) = transport
             .listen_on(listen_addr)
@@ -545,7 +553,7 @@ where
                 transport,
                 listener: listener.fuse(),
                 dial_request_rx,
-                internal_event_tx,
+                connection_handler_notifs_tx,
             },
             listen_addr,
         )
@@ -642,14 +650,14 @@ where
                         peer_id.short_str(),
                         addr
                     );
-                    let event = InternalEvent::NewConnection(
+                    let event = ConnectionHandlerNotification::NewConnection(
                         identity,
                         addr,
                         ConnectionOrigin::Outbound,
                         connection,
                     );
                     // Send the new connection to PeerManager
-                    self.internal_event_tx.send(event).await.unwrap();
+                    self.connection_handler_notifs_tx.send(event).await.unwrap();
                     Ok(())
                 } else {
                     let e = ::failure::format_err!(
@@ -694,14 +702,14 @@ where
         match upgrade {
             Ok((identity, connection)) => {
                 debug!("Connection from {} successfully upgraded", addr);
-                let event = InternalEvent::NewConnection(
+                let event = ConnectionHandlerNotification::NewConnection(
                     identity,
                     addr,
                     ConnectionOrigin::Inbound,
                     connection,
                 );
                 // Send the new connection to PeerManager
-                self.internal_event_tx.send(event).await.unwrap();
+                self.connection_handler_notifs_tx.send(event).await.unwrap();
             }
             Err(e) => {
                 warn!("Connection from {} failed to upgrade {}", addr, e);
@@ -797,6 +805,15 @@ enum PeerRequest<TSubstream> {
     CloseConnection,
 }
 
+#[derive(Debug)]
+enum PeerNotification<TMuxer>
+where
+    TMuxer: StreamMultiplexer,
+{
+    NewSubstream(PeerId, NegotiatedSubstream<TMuxer::Substream>),
+    PeerDisconnected(PeerId, RoleType, ConnectionOrigin, DisconnectReason),
+}
+
 struct Peer<TMuxer>
 where
     TMuxer: StreamMultiplexer,
@@ -805,7 +822,7 @@ where
     identity: Identity,
     connection: TMuxer,
     own_supported_protocols: Vec<ProtocolId>,
-    internal_event_tx: channel::Sender<InternalEvent<TMuxer>>,
+    peer_notifs_tx: channel::Sender<PeerNotification<TMuxer>>,
     requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
     origin: ConnectionOrigin,
     shutdown: bool,
@@ -822,7 +839,7 @@ where
         connection: TMuxer,
         origin: ConnectionOrigin,
         own_supported_protocols: Vec<ProtocolId>,
-        internal_event_tx: channel::Sender<InternalEvent<TMuxer>>,
+        peer_notifs_tx: channel::Sender<PeerNotification<TMuxer>>,
         requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
     ) -> Self {
         Self {
@@ -830,7 +847,7 @@ where
             connection,
             origin,
             own_supported_protocols,
-            internal_event_tx,
+            peer_notifs_tx,
             requests_rx,
             shutdown: false,
         }
@@ -876,11 +893,11 @@ where
                 inbound_substream = pending_inbound_substreams.select_next_some() => {
                     match inbound_substream {
                         Ok(negotiated_substream) => {
-                            let event = InternalEvent::NewSubstream(
+                            let event = PeerNotification::NewSubstream(
                                 self.identity.peer_id(),
                                 negotiated_substream,
                             );
-                            self.internal_event_tx.send(event).await.unwrap();
+                            self.peer_notifs_tx.send(event).await.unwrap();
                         }
                         Err(e) => {
                             error!(
@@ -1048,8 +1065,8 @@ where
         // We send a PeerDisconnected event to peer manager as a result (or in case of a failure
         // above, in anticipation of) closing the connection.
 
-        self.internal_event_tx
-            .send(InternalEvent::PeerDisconnected(
+        self.peer_notifs_tx
+            .send(PeerNotification::PeerDisconnected(
                 self.identity.peer_id(),
                 self.identity.role(),
                 self.origin,
