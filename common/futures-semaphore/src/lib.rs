@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! `Semaphore` holds a set of permits. Permits are used to synchronize access
 //! to a shared resource. Before accessing the shared resource, callers must
 //! acquire a permit from the semaphore. Once the permit is acquired, the caller

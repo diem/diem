@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{cluster::Cluster, instance::Instance};
 use admission_control_proto::proto::admission_control::{
     AdmissionControlClient, SubmitTransactionRequest,

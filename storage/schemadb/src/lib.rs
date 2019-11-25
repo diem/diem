@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This library implements a schematized DB on top of [RocksDB](https://rocksdb.org/). It makes
 //! sure all data passed in and out are structured according to predefined schemas and prevents
 //! access to raw keys and values. This library also enforces a set of Libra specific DB options,

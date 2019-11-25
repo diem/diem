@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 /// PacketLoss introduces a given percentage of PacketLoss for a given instance
 use crate::{effects::Action, instance::Instance};
 use failure;

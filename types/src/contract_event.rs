@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{
     account_config::AccountEvent, event::EventKey, language_storage::TypeTag,
     ledger_info::LedgerInfo, proof::EventProof, transaction::Version,

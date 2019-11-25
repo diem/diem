@@ -2244,7 +2244,6 @@ dependencies = [
  "network 0.1.0",
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "signal-hook 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "state-synchronizer 0.1.0",
  "storage-client 0.1.0",
  "storage-service 0.1.0",

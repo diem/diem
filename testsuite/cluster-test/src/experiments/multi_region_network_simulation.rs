@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 /// This module provides an experiment which simulates a multi-region environment.
 /// It undoes the simulation in the cluster after the given duration
 use crate::effects::Effect;

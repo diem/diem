@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This module provides algorithms for accessing and updating a Merkle Accumulator structure
 //! persisted in a key-value store. Note that this doesn't write to the storage directly, rather,
 //! it reads from it via the `HashReader` trait and yields writes via an in memory `HashMap`.

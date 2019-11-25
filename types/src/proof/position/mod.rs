@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This module provides an abstraction for positioning a node in a binary tree,
 //! A `Position` uniquely identifies the location of a node
 //!

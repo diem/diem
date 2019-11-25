@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This crate provides Protocol Buffers definitions for the services provided by the
 //! [`storage_service`](../storage_service/index.html) crate.
 //!

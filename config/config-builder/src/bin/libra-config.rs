@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use config_builder::swarm_config::SwarmConfigBuilder;
 use libra_config::config::RoleType;
 use std::convert::TryInto;

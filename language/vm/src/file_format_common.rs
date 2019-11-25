@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Constants for the binary format.
 //!
 //! Definition for the constants of the binary format, used by the serializer and the deserializer.

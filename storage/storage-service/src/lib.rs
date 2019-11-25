@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This crate implements the storage [GRPC](http://grpc.io) service.
 //!
 //! The user of storage service is supposed to use it via client lib provided in

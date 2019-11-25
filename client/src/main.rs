@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use chrono::prelude::{SecondsFormat, Utc};
 use client::{client_proxy::ClientProxy, commands::*};
 use libra_logger::set_default_global_logger;

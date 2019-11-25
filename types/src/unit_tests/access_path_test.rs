@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},

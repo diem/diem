@@ -1,8 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[macro_use]
+#![forbid(unsafe_code)]
 
+#[macro_use]
 pub mod module_generator;
 mod bytecode_specifications;
 mod common;

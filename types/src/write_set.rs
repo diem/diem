@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! For each transaction the VM executes, the VM will output a `WriteSet` that contains each access
 //! path it updates. For each access path, the VM can either give its new value or delete it.
 

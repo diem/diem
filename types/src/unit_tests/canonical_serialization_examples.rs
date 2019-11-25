@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! These tests verify the behavior of LCS against some known test vectors with various types.
 
 use crate::transaction::ChangeSet;

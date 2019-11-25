@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 #![deny(missing_docs)]
 //! Mempool is used to hold transactions that have been submitted but not yet agreed upon and
 //! executed.
