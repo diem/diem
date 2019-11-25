@@ -95,15 +95,18 @@ impl ConsensusConfig {
         self.consensus_keypair = consensus_keypair;
     }
 
-    pub fn load(&mut self, base: Arc<BaseConfig>) -> Result<()> {
+    pub fn prepare(&mut self, base: Arc<BaseConfig>) {
         self.base = base;
+        self.safety_rules.prepare(self.base.clone());
+    }
+
+    pub fn load(&mut self) -> Result<()> {
         if !self.consensus_keypair_file.as_os_str().is_empty() {
             self.consensus_keypair = ConsensusKeyPair::load_config(self.consensus_keypair_file());
         }
         if !self.consensus_peers_file.as_os_str().is_empty() {
             self.consensus_peers = ConsensusPeersConfig::load_config(self.consensus_peers_file());
         }
-        self.safety_rules.load(self.base.clone())?;
         Ok(())
     }
 

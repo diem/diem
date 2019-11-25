@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::BaseConfig;
-use failure::Result;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc};
 
@@ -24,11 +23,10 @@ impl Default for SafetyRulesConfig {
 }
 
 impl SafetyRulesConfig {
-    pub fn load(&mut self, base: Arc<BaseConfig>) -> Result<()> {
+    pub fn prepare(&mut self, base: Arc<BaseConfig>) {
         if let SafetyRulesBackend::OnDiskStorage(backend) = &mut self.backend {
-            backend.load(base)?;
+            backend.prepare(base);
         }
-        Ok(())
     }
 }
 
@@ -52,9 +50,8 @@ pub struct OnDiskStorageConfig {
 }
 
 impl OnDiskStorageConfig {
-    pub fn load(&mut self, base: Arc<BaseConfig>) -> Result<()> {
+    pub fn prepare(&mut self, base: Arc<BaseConfig>) {
         self.base = base;
-        Ok(())
     }
 
     pub fn path(&self) -> PathBuf {

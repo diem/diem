@@ -37,9 +37,11 @@ impl Default for ExecutionConfig {
 }
 
 impl ExecutionConfig {
-    pub fn load(&mut self, base: Arc<BaseConfig>) -> Result<()> {
+    pub fn prepare(&mut self, base: Arc<BaseConfig>) {
         self.base = base;
+    }
 
+    pub fn load(&mut self) -> Result<()> {
         if !self.genesis_file_location.as_os_str().is_empty() {
             let mut file = File::open(&self.genesis_file_location())?;
             let mut buffer = vec![];
