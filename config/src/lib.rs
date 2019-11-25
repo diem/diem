@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 pub mod config;
+pub mod generator;
 pub mod keys;
 pub mod trusted_peers;
 pub mod utils;

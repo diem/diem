@@ -218,7 +218,7 @@ impl NodeConfig {
     /// Paths used in the config are either absolute or relative to the config location
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut config = Self::load_config(&path);
-        if self.base.role.is_validator() {
+        if config.base.role.is_validator() {
             ensure!(
                 config.validator_network.is_some(),
                 "Missing a validator network config for a validator node"
