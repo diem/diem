@@ -98,8 +98,11 @@ impl NetworkConfig {
         }
     }
 
-    pub fn load(&mut self, base: Arc<BaseConfig>, network_role: RoleType) -> Result<()> {
+    pub fn prepare(&mut self, base: Arc<BaseConfig>) {
         self.base = base;
+    }
+
+    pub fn load(&mut self, network_role: RoleType) -> Result<()> {
         if !self.network_peers_file.as_os_str().is_empty() {
             self.network_peers = NetworkPeersConfig::load_config(self.network_peers_file());
         }

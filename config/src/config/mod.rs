@@ -177,13 +177,13 @@ impl NodeConfig {
 
     pub fn set_data_dir(&mut self, path: PathBuf) -> Result<()> {
         self.base = Arc::new(BaseConfig::new(path, self.base.role));
-        self.prepare()?;
+        self.prepare();
         Ok(())
     }
 
     pub fn set_role(&mut self, role: RoleType) -> Result<()> {
         self.base = Arc::new(BaseConfig::new(self.base.data_dir.clone(), role));
-        self.prepare()?;
+        self.prepare();
         Ok(())
     }
 
@@ -191,30 +191,17 @@ impl NodeConfig {
         &self.base
     }
 
-    fn prepare(&mut self) -> Result<()> {
-        if self.base.role.is_validator() {
-            ensure!(
-                self.validator_network.is_some(),
-                "Missing a validator network config for a validator node"
-            );
-        } else {
-            ensure!(
-                self.validator_network.is_none(),
-                "Provided a validator network config for a full_node node"
-            );
-        }
-
+    fn prepare(&mut self) {
         for network in &mut self.full_node_networks {
-            network.load(self.base.clone(), RoleType::FullNode)?;
+            network.prepare(self.base.clone());
         }
         if let Some(network) = &mut self.validator_network {
-            network.load(self.base.clone(), RoleType::Validator)?;
+            network.prepare(self.base.clone());
         }
-        self.consensus.load(self.base.clone())?;
-        self.execution.load(self.base.clone())?;
-        self.metrics.load(self.base.clone())?;
-        self.storage.load(self.base.clone())?;
-        Ok(())
+        self.consensus.prepare(self.base.clone());
+        self.execution.prepare(self.base.clone());
+        self.metrics.prepare(self.base.clone());
+        self.storage.prepare(self.base.clone());
     }
 
     /// Reads the config file and returns the configuration object in addition to doing some
@@ -222,7 +209,26 @@ impl NodeConfig {
     /// Paths used in the config are either absolute or relative to the config location
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut config = Self::load_config(&path);
-        config.prepare()?;
+        if self.base.role.is_validator() {
+            ensure!(
+                config.validator_network.is_some(),
+                "Missing a validator network config for a validator node"
+            );
+        } else {
+            ensure!(
+                config.validator_network.is_none(),
+                "Provided a validator network config for a full_node node"
+            );
+        }
+        config.prepare();
+        config.consensus.load()?;
+        config.execution.load()?;
+        if let Some(network) = &mut config.validator_network {
+            network.load(RoleType::Validator)?;
+        }
+        for network in &mut config.full_node_networks {
+            network.load(RoleType::FullNode)?;
+        }
         Ok(config)
     }
 
