@@ -361,26 +361,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 for return_type_view in function_signature_view.return_tokens() {
                     let return_temp_index = self.temp_count;
                     // instantiate type parameters
-                    let return_type = match return_type_view.as_inner() {
-                        SignatureToken::TypeParameter(i) => type_sigs[*i as usize].clone(),
-                        SignatureToken::Reference(b) => {
-                            if let SignatureToken::TypeParameter(i) = **b {
-                                SignatureToken::Reference(Box::new(type_sigs[i as usize].clone()))
-                            } else {
-                                return_type_view.as_inner().clone()
-                            }
-                        }
-                        SignatureToken::MutableReference(b) => {
-                            if let SignatureToken::TypeParameter(i) = **b {
-                                SignatureToken::MutableReference(Box::new(
-                                    type_sigs[i as usize].clone(),
-                                ))
-                            } else {
-                                return_type_view.as_inner().clone()
-                            }
-                        }
-                        _ => return_type_view.as_inner().clone(),
-                    };
+                    let return_type =
+                        self.instantiate_type_params(return_type_view.as_inner(), &type_sigs);
                     return_temp_indices.push(return_temp_index);
                     self.temp_stack.push(return_temp_index);
                     self.local_types.push(return_type);
@@ -760,6 +742,30 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     .push(StacklessBytecode::GetTxnPublicKey(temp_index));
                 self.temp_count += 1;
             }
+        }
+    }
+
+    fn instantiate_type_params(
+        &self,
+        sig: &SignatureToken,
+        actuals: &[SignatureToken],
+    ) -> SignatureToken {
+        match sig {
+            SignatureToken::TypeParameter(i) => actuals[*i as usize].clone(),
+            SignatureToken::Reference(b) => {
+                SignatureToken::Reference(Box::new(self.instantiate_type_params(&**b, actuals)))
+            }
+            SignatureToken::MutableReference(b) => SignatureToken::MutableReference(Box::new(
+                self.instantiate_type_params(&**b, actuals),
+            )),
+            SignatureToken::Struct(handle_index, type_args) => SignatureToken::Struct(
+                *handle_index,
+                type_args
+                    .iter()
+                    .map(|a| self.instantiate_type_params(a, actuals))
+                    .collect(),
+            ),
+            _ => sig.clone(),
         }
     }
 }

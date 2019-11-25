@@ -3,40 +3,27 @@
 // everything below is auto generated
 
 const unique Test3_T: TypeName;
-const unique Test3_T_f: FieldName;
-const unique Test3_T_g: FieldName;
+const Test3_T_f: FieldName;
+axiom Test3_T_f == 0;
+const Test3_T_g: FieldName;
+axiom Test3_T_g == 1;
+function Test3_T_type_value(): TypeValue {
+    StructType(Test3_T, TypeValueArray(DefaultTypeMap[0 := IntegerType()][1 := IntegerType()], 2))
+}
 
 procedure {:inline 1} Pack_Test3_T(v0: Value, v1: Value) returns (v: Value)
 {
-    assert is#Integer(v0);
-    assert is#Integer(v1);
-    v := Map(DefaultMap[Field(Test3_T_f) := v0][Field(Test3_T_g) := v1]);
+    assume has_type(IntegerType(), v0);
+    assume has_type(IntegerType(), v1);
+    v := Struct(ValueArray(DefaultIntMap[Test3_T_f := v0][Test3_T_g := v1], 2));
+    assume has_type(Test3_T_type_value(), v);
 }
 
 procedure {:inline 1} Unpack_Test3_T(v: Value) returns (v0: Value, v1: Value)
 {
-    assert is#Map(v);
-    v0 := m#Map(v)[Field(Test3_T_f)];
-    v1 := m#Map(v)[Field(Test3_T_g)];
-}
-
-procedure {:inline 1} Eq_Test3_T(v1: Value, v2: Value) returns (res: Value)
-{
-    var b0: Value;
-    var b1: Value;
-    assert is#Map(v1) && is#Map(v2);
-    call b0 := Eq_int(m#Map(v1)[Field(Test3_T_f)], m#Map(v2)[Field(Test3_T_f)]);
-    call b1 := Eq_int(m#Map(v1)[Field(Test3_T_g)], m#Map(v2)[Field(Test3_T_g)]);
-    res := Boolean(true && b#Boolean(b0) && b#Boolean(b1));
-}
-
-procedure {:inline 1} Neq_Test3_T(v1: Value, v2: Value) returns (res: Value)
-{
-    var res_val: Value;
-    var res_bool: bool;
-    assert is#Map(v1) && is#Map(v2);
-    call res_val := Eq_Test3_T(v1, v2);
-    res := Boolean(!b#Boolean(res_val));
+    assert is#Struct(v);
+    v0 := smap(v)[Test3_T_f];
+    v1 := smap(v)[Test3_T_g];
 }
 
 procedure {:inline 1} ReadValue0(p: Path, i: int, v: Value) returns (v': Value)
@@ -56,8 +43,8 @@ procedure {:inline 1} ReadValue1(p: Path, i: int, v: Value) returns (v': Value)
         v' := v;
     } else {
         e := p#Path(p)[i];
-        v' := m#Map(v)[e];
-        if (is#Vector(v)) { v' := v#Vector(v)[e]; }
+        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
+        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
         call v' := ReadValue0(p, i+1, v');
     }
 }
@@ -69,8 +56,8 @@ procedure {:inline 1} ReadValue2(p: Path, i: int, v: Value) returns (v': Value)
         v' := v;
     } else {
         e := p#Path(p)[i];
-        v' := m#Map(v)[e];
-        if (is#Vector(v)) { v' := v#Vector(v)[e]; }
+        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
+        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
         call v' := ReadValue1(p, i+1, v');
     }
 }
@@ -82,8 +69,8 @@ procedure {:inline 1} ReadValueMax(p: Path, i: int, v: Value) returns (v': Value
         v' := v;
     } else {
         e := p#Path(p)[i];
-        v' := m#Map(v)[e];
-        if (is#Vector(v)) { v' := v#Vector(v)[e]; }
+        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
+        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
         call v' := ReadValue2(p, i+1, v');
     }
 }
@@ -105,11 +92,11 @@ procedure {:inline 1} UpdateValue1(p: Path, i: int, v: Value, new_v: Value) retu
         v' := new_v;
     } else {
         e := p#Path(p)[i];
-        v' := m#Map(v)[e];
-        if (is#Vector(v)) { v' := v#Vector(v)[e]; }
+        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
+        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
         call v' := UpdateValue0(p, i+1, v', new_v);
-        if (is#Map(v)) { v' := Map(m#Map(v)[e := v']);}
-        if (is#Vector(v)) { v' := Vector(v#Vector(v)[e := v'], l#Vector(v));}
+        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
+        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
     }
 }
 
@@ -120,11 +107,11 @@ procedure {:inline 1} UpdateValue2(p: Path, i: int, v: Value, new_v: Value) retu
         v' := new_v;
     } else {
         e := p#Path(p)[i];
-        v' := m#Map(v)[e];
-        if (is#Vector(v)) { v' := v#Vector(v)[e]; }
+        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
+        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
         call v' := UpdateValue1(p, i+1, v', new_v);
-        if (is#Map(v)) { v' := Map(m#Map(v)[e := v']);}
-        if (is#Vector(v)) { v' := Vector(v#Vector(v)[e := v'], l#Vector(v));}
+        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
+        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
     }
 }
 
@@ -135,81 +122,81 @@ procedure {:inline 1} UpdateValueMax(p: Path, i: int, v: Value, new_v: Value) re
         v' := new_v;
     } else {
         e := p#Path(p)[i];
-        v' := m#Map(v)[e];
-        if (is#Vector(v)) { v' := v#Vector(v)[e]; }
+        if (is#Struct(v)) { v' := smap(v)[f#Field(e)]; }
+        if (is#Vector(v)) { v' := vmap(v)[i#Index(e)]; }
         call v' := UpdateValue2(p, i+1, v', new_v);
-        if (is#Map(v)) { v' := Map(m#Map(v)[e := v']);}
-        if (is#Vector(v)) { v' := Vector(v#Vector(v)[e := v'], l#Vector(v));}
+        if (is#Struct(v)) { v' := mk_struct(smap(v)[f#Field(e) := v'], slen(v));}
+        if (is#Vector(v)) { v' := mk_vector(vmap(v)[i#Index(e) := v'], vlen(v));}
     }
 }
 
 procedure {:inline 1} Test3_test3 (arg0: Value) returns ()
 {
     // declare local variables
-    var t0: Value; // bool
-    var t1: Value; // Test3_T
-    var t2: Reference; // Test3_T_ref
-    var t3: Reference; // int_ref
-    var t4: Reference; // int_ref
-    var t5: Reference; // int_ref
-    var t6: Reference; // int_ref
-    var t7: Value; // int
-    var t8: Value; // int
-    var t9: Value; // int
-    var t10: Value; // int
-    var t11: Value; // Test3_T
-    var t12: Reference; // Test3_T_ref
-    var t13: Value; // bool
-    var t14: Reference; // Test3_T_ref
-    var t15: Reference; // int_ref
-    var t16: Reference; // Test3_T_ref
-    var t17: Reference; // int_ref
-    var t18: Value; // int
-    var t19: Reference; // int_ref
-    var t20: Value; // bool
-    var t21: Value; // bool
-    var t22: Reference; // Test3_T_ref
-    var t23: Reference; // int_ref
-    var t24: Reference; // Test3_T_ref
-    var t25: Reference; // int_ref
-    var t26: Value; // int
-    var t27: Reference; // int_ref
-    var t28: Reference; // Test3_T_ref
-    var t29: Reference; // int_ref
-    var t30: Reference; // Test3_T_ref
-    var t31: Reference; // int_ref
-    var t32: Reference; // int_ref
-    var t33: Value; // int
-    var t34: Reference; // int_ref
-    var t35: Value; // int
-    var t36: Value; // bool
-    var t37: Value; // int
-    var t38: Value; // int
-    var t39: Value; // bool
-    var t40: Value; // bool
-    var t41: Value; // int
-    var t42: Value; // int
-    var t43: Value; // int
-    var t44: Value; // bool
-    var t45: Value; // bool
-    var t46: Value; // int
-    var t47: Value; // int
-    var t48: Value; // int
-    var t49: Value; // bool
-    var t50: Value; // bool
-    var t51: Value; // int
-    var t52: Value; // int
-    var t53: Value; // int
-    var t54: Value; // bool
-    var t55: Value; // bool
-    var t56: Value; // int
+    var t0: Value; // BooleanType()
+    var t1: Value; // Test3_T_type_value()
+    var t2: Reference; // ReferenceType(Test3_T_type_value())
+    var t3: Reference; // ReferenceType(IntegerType())
+    var t4: Reference; // ReferenceType(IntegerType())
+    var t5: Reference; // ReferenceType(IntegerType())
+    var t6: Reference; // ReferenceType(IntegerType())
+    var t7: Value; // IntegerType()
+    var t8: Value; // IntegerType()
+    var t9: Value; // IntegerType()
+    var t10: Value; // IntegerType()
+    var t11: Value; // Test3_T_type_value()
+    var t12: Reference; // ReferenceType(Test3_T_type_value())
+    var t13: Value; // BooleanType()
+    var t14: Reference; // ReferenceType(Test3_T_type_value())
+    var t15: Reference; // ReferenceType(IntegerType())
+    var t16: Reference; // ReferenceType(Test3_T_type_value())
+    var t17: Reference; // ReferenceType(IntegerType())
+    var t18: Value; // IntegerType()
+    var t19: Reference; // ReferenceType(IntegerType())
+    var t20: Value; // BooleanType()
+    var t21: Value; // BooleanType()
+    var t22: Reference; // ReferenceType(Test3_T_type_value())
+    var t23: Reference; // ReferenceType(IntegerType())
+    var t24: Reference; // ReferenceType(Test3_T_type_value())
+    var t25: Reference; // ReferenceType(IntegerType())
+    var t26: Value; // IntegerType()
+    var t27: Reference; // ReferenceType(IntegerType())
+    var t28: Reference; // ReferenceType(Test3_T_type_value())
+    var t29: Reference; // ReferenceType(IntegerType())
+    var t30: Reference; // ReferenceType(Test3_T_type_value())
+    var t31: Reference; // ReferenceType(IntegerType())
+    var t32: Reference; // ReferenceType(IntegerType())
+    var t33: Value; // IntegerType()
+    var t34: Reference; // ReferenceType(IntegerType())
+    var t35: Value; // IntegerType()
+    var t36: Value; // BooleanType()
+    var t37: Value; // IntegerType()
+    var t38: Value; // IntegerType()
+    var t39: Value; // BooleanType()
+    var t40: Value; // BooleanType()
+    var t41: Value; // IntegerType()
+    var t42: Value; // IntegerType()
+    var t43: Value; // IntegerType()
+    var t44: Value; // BooleanType()
+    var t45: Value; // BooleanType()
+    var t46: Value; // IntegerType()
+    var t47: Value; // IntegerType()
+    var t48: Value; // IntegerType()
+    var t49: Value; // BooleanType()
+    var t50: Value; // BooleanType()
+    var t51: Value; // IntegerType()
+    var t52: Value; // IntegerType()
+    var t53: Value; // IntegerType()
+    var t54: Value; // BooleanType()
+    var t55: Value; // BooleanType()
+    var t56: Value; // IntegerType()
 
     var tmp: Value;
     var old_size: int;
     assume !abort_flag;
 
     // assume arguments are of correct types
-    assume is#Boolean(arg0);
+    assume has_type(BooleanType(), arg0);
 
     old_size := m_size;
     m_size := m_size + 57;
@@ -222,9 +209,9 @@ procedure {:inline 1} Test3_test3 (arg0: Value) returns ()
     call tmp := LdConst(0);
     m := Memory(domain#Memory(m)[10+old_size := true], contents#Memory(m)[10+old_size := tmp]);
 
-    assume is#Integer(contents#Memory(m)[old_size+9]);
+    assume has_type(IntegerType(), contents#Memory(m)[old_size+9]);
 
-    assume is#Integer(contents#Memory(m)[old_size+10]);
+    assume has_type(IntegerType(), contents#Memory(m)[old_size+10]);
 
     call tmp := Pack_Test3_T(contents#Memory(m)[old_size+9], contents#Memory(m)[old_size+10]);
     m := Memory(domain#Memory(m)[11+old_size := true], contents#Memory(m)[11+old_size := tmp]);
@@ -240,7 +227,7 @@ procedure {:inline 1} Test3_test3 (arg0: Value) returns ()
     m := Memory(domain#Memory(m)[13+old_size := true], contents#Memory(m)[13+old_size := tmp]);
 
     tmp := contents#Memory(m)[old_size + 13];
-if (!b#Boolean(tmp)) { goto Label_12; }
+    if (!b#Boolean(tmp)) { goto Label_12; }
 
     call t14 := CopyOrMoveRef(t2);
 
@@ -272,7 +259,7 @@ Label_15:
     m := Memory(domain#Memory(m)[21+old_size := true], contents#Memory(m)[21+old_size := tmp]);
 
     tmp := contents#Memory(m)[old_size + 21];
-if (!b#Boolean(tmp)) { goto Label_25; }
+    if (!b#Boolean(tmp)) { goto Label_25; }
 
     call t22 := CopyOrMoveRef(t2);
 
@@ -312,7 +299,7 @@ Label_28:
     call t32 := CopyOrMoveRef(t5);
 
     call tmp := ReadRef(t32);
-    assume is#Integer(tmp);
+    assume has_type(IntegerType(), tmp);
 
     m := Memory(domain#Memory(m)[33+old_size := true], contents#Memory(m)[33+old_size := tmp]);
 
@@ -322,7 +309,7 @@ Label_28:
     call t34 := CopyOrMoveRef(t6);
 
     call tmp := ReadRef(t34);
-    assume is#Integer(tmp);
+    assume has_type(IntegerType(), tmp);
 
     m := Memory(domain#Memory(m)[35+old_size := true], contents#Memory(m)[35+old_size := tmp]);
 
@@ -333,7 +320,7 @@ Label_28:
     m := Memory(domain#Memory(m)[36+old_size := true], contents#Memory(m)[36+old_size := tmp]);
 
     tmp := contents#Memory(m)[old_size + 36];
-if (!b#Boolean(tmp)) { goto Label_60; }
+    if (!b#Boolean(tmp)) { goto Label_60; }
 
     call tmp := CopyOrMoveValue(contents#Memory(m)[old_size+7]);
     m := Memory(domain#Memory(m)[37+old_size := true], contents#Memory(m)[37+old_size := tmp]);
@@ -341,14 +328,14 @@ if (!b#Boolean(tmp)) { goto Label_60; }
     call tmp := LdConst(10);
     m := Memory(domain#Memory(m)[38+old_size := true], contents#Memory(m)[38+old_size := tmp]);
 
-    call tmp := Eq(contents#Memory(m)[old_size+37], contents#Memory(m)[old_size+38]);
+    tmp := Boolean(is_equal(IntegerType(), contents#Memory(m)[old_size+37], contents#Memory(m)[old_size+38]));
     m := Memory(domain#Memory(m)[39+old_size := true], contents#Memory(m)[39+old_size := tmp]);
 
     call tmp := Not(contents#Memory(m)[old_size+39]);
     m := Memory(domain#Memory(m)[40+old_size := true], contents#Memory(m)[40+old_size := tmp]);
 
     tmp := contents#Memory(m)[old_size + 40];
-if (!b#Boolean(tmp)) { goto Label_52; }
+    if (!b#Boolean(tmp)) { goto Label_52; }
 
     call tmp := LdConst(42);
     m := Memory(domain#Memory(m)[41+old_size := true], contents#Memory(m)[41+old_size := tmp]);
@@ -362,14 +349,14 @@ Label_52:
     call tmp := LdConst(20);
     m := Memory(domain#Memory(m)[43+old_size := true], contents#Memory(m)[43+old_size := tmp]);
 
-    call tmp := Eq(contents#Memory(m)[old_size+42], contents#Memory(m)[old_size+43]);
+    tmp := Boolean(is_equal(IntegerType(), contents#Memory(m)[old_size+42], contents#Memory(m)[old_size+43]));
     m := Memory(domain#Memory(m)[44+old_size := true], contents#Memory(m)[44+old_size := tmp]);
 
     call tmp := Not(contents#Memory(m)[old_size+44]);
     m := Memory(domain#Memory(m)[45+old_size := true], contents#Memory(m)[45+old_size := tmp]);
 
     tmp := contents#Memory(m)[old_size + 45];
-if (!b#Boolean(tmp)) { goto Label_59; }
+    if (!b#Boolean(tmp)) { goto Label_59; }
 
     call tmp := LdConst(42);
     m := Memory(domain#Memory(m)[46+old_size := true], contents#Memory(m)[46+old_size := tmp]);
@@ -386,14 +373,14 @@ Label_60:
     call tmp := LdConst(20);
     m := Memory(domain#Memory(m)[48+old_size := true], contents#Memory(m)[48+old_size := tmp]);
 
-    call tmp := Eq(contents#Memory(m)[old_size+47], contents#Memory(m)[old_size+48]);
+    tmp := Boolean(is_equal(IntegerType(), contents#Memory(m)[old_size+47], contents#Memory(m)[old_size+48]));
     m := Memory(domain#Memory(m)[49+old_size := true], contents#Memory(m)[49+old_size := tmp]);
 
     call tmp := Not(contents#Memory(m)[old_size+49]);
     m := Memory(domain#Memory(m)[50+old_size := true], contents#Memory(m)[50+old_size := tmp]);
 
     tmp := contents#Memory(m)[old_size + 50];
-if (!b#Boolean(tmp)) { goto Label_67; }
+    if (!b#Boolean(tmp)) { goto Label_67; }
 
     call tmp := LdConst(42);
     m := Memory(domain#Memory(m)[51+old_size := true], contents#Memory(m)[51+old_size := tmp]);
@@ -407,14 +394,14 @@ Label_67:
     call tmp := LdConst(10);
     m := Memory(domain#Memory(m)[53+old_size := true], contents#Memory(m)[53+old_size := tmp]);
 
-    call tmp := Eq(contents#Memory(m)[old_size+52], contents#Memory(m)[old_size+53]);
+    tmp := Boolean(is_equal(IntegerType(), contents#Memory(m)[old_size+52], contents#Memory(m)[old_size+53]));
     m := Memory(domain#Memory(m)[54+old_size := true], contents#Memory(m)[54+old_size := tmp]);
 
     call tmp := Not(contents#Memory(m)[old_size+54]);
     m := Memory(domain#Memory(m)[55+old_size := true], contents#Memory(m)[55+old_size := tmp]);
 
     tmp := contents#Memory(m)[old_size + 55];
-if (!b#Boolean(tmp)) { goto Label_74; }
+    if (!b#Boolean(tmp)) { goto Label_74; }
 
     call tmp := LdConst(42);
     m := Memory(domain#Memory(m)[56+old_size := true], contents#Memory(m)[56+old_size := tmp]);

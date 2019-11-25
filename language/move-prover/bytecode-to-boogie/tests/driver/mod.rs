@@ -29,7 +29,11 @@ fn compile_files(file_names: Vec<&str>) -> (Vec<VerifiedModule>, SourceMap<Loc>)
 
         match verified_module_res {
             Err(e) => {
-                panic!("{:?}", e);
+                println!("vm verification errors!");
+                for s in &e.1 {
+                    println!("status: {:?}", s);
+                }
+                panic!("{:?}", e.0);
             }
             Ok(verified_module) => {
                 verified_modules.push(verified_module);
@@ -68,6 +72,10 @@ pub fn run_boogie(boogie_str: &str) {
     let temp_path = TempPath::new();
     temp_path.create_as_dir().unwrap();
     let boogie_file_path = temp_path.path().join("output.bpl");
+    // In order to debug errors in the output, one may uncomment below to find the output
+    // file at a stable location.
+    //    let mut boogie_file_path = std::path::PathBuf::new();
+    //    boogie_file_path.push("/tmp/output.bpl");
     fs::write(&boogie_file_path, boogie_str).unwrap();
     if let Ok(boogie_path) = env::var("BOOGIE_EXE") {
         if let Ok(z3_path) = env::var("Z3_EXE") {

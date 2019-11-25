@@ -56,3 +56,11 @@ fn test_lib() {
         &[], // empty here means include all deps in output
     ));
 }
+
+#[test]
+fn test_generics() {
+    run_boogie(&generate_boogie(
+        "test_mvir/test-generics.mvir",
+        &["TestGenerics"],
+    ));
+}
