@@ -1,4 +1,7 @@
-network_signing_private_key = "64cb70420fa49b0198ac079371dd7c5c6a5c17e0e5e164b35d5eb3739496a087"
-network_signing_public_key = "5f379b8559dd34976bc4f2b97284e991013ab611bdd260fcc6fddeac9de4c5f5"
-network_identity_private_key = "a0f9a76b589112d57cf7d78f6b79c35d23ede5c4410323fec251d20dad08416b"
-network_identity_public_key = "3b3625e87489b02ea6fc12d38bcde0a567396453c97a5381caac08514cd0387b"
+[signing_keys]
+private_key = "64cb70420fa49b0198ac079371dd7c5c6a5c17e0e5e164b35d5eb3739496a087"
+public_key = "5f379b8559dd34976bc4f2b97284e991013ab611bdd260fcc6fddeac9de4c5f5"
+
+[identity_keys]
+private_key = "a0f9a76b589112d57cf7d78f6b79c35d23ede5c4410323fec251d20dad08416b"
+public_key = "3b3625e87489b02ea6fc12d38bcde0a567396453c97a5381caac08514cd0387b"

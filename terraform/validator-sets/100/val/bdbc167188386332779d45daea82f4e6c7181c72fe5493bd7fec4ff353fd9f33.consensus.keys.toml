@@ -1,2 +1,2 @@
-consensus_private_key = "7fa8e1a6f5c46b7c1a2f6ad8124af64cfd0f37712856431e2629ec723a5d6d18"
-consensus_public_key = "63d5eb7ffb3dc268e8b5529ec6ffe2cab37380850d539ab6eb2164d43e92a6ae"
+private_key = "7fa8e1a6f5c46b7c1a2f6ad8124af64cfd0f37712856431e2629ec723a5d6d18"
+public_key = "63d5eb7ffb3dc268e8b5529ec6ffe2cab37380850d539ab6eb2164d43e92a6ae"
