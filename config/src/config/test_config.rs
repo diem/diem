@@ -1,16 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::keys::ConsensusKeyPair;
+use crate::keys::KeyPair;
 use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
 use libra_tools::tempdir::TempPath;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
+type AccountKeyPair = KeyPair<Ed25519PrivateKey>;
+
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct TestConfig {
-    pub account_keypair: Option<ConsensusKeyPair>,
+    pub account_keypair: Option<AccountKeyPair>,
     // Used only to prevent a potentially temporary data_dir from being deleted. This should
     // eventually be moved to be owned by something outside the config.
     #[serde(skip)]
@@ -44,7 +46,7 @@ impl TestConfig {
 
     pub fn random(&mut self, rng: &mut StdRng) {
         let privkey = Ed25519PrivateKey::generate_for_testing(rng);
-        self.account_keypair = Some(ConsensusKeyPair::load(Some(privkey)));
+        self.account_keypair = Some(AccountKeyPair::load(privkey));
     }
 
     pub fn temp_dir(&self) -> Option<&Path> {

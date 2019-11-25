@@ -82,10 +82,8 @@ impl ChainedBftProvider {
         let private_key = node_config
             .consensus
             .consensus_keypair
-            .take_consensus_private()
-            .expect(
-            "Failed to move a Consensus private key from a NodeConfig, key absent or already read",
-        );
+            .take_private()
+            .expect("Failed to take Consensus private key, key absent or already read");
         let signer = ValidatorSigner::new(author, private_key);
         InitialSetup {
             author,

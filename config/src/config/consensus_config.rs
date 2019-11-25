@@ -3,7 +3,7 @@
 
 use crate::{
     config::{BaseConfig, PersistableConfig, SafetyRulesConfig},
-    keys::ConsensusKeyPair,
+    keys::KeyPair,
     trusted_peers::{ConsensusPeerInfo, ConsensusPeersConfig},
 };
 use failure::Result;
@@ -12,6 +12,8 @@ use libra_types::PeerId;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc};
+
+type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
 
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -88,7 +90,7 @@ impl ConsensusConfig {
 
     pub fn random(&mut self, rng: &mut StdRng, peer_id: PeerId) {
         let privkey = Ed25519PrivateKey::generate_for_testing(rng);
-        let consensus_keypair = ConsensusKeyPair::load(Some(privkey));
+        let consensus_keypair = ConsensusKeyPair::load(privkey);
         self.consensus_peers = Self::default_peers(&consensus_keypair, peer_id);
         self.consensus_keypair = consensus_keypair;
     }
@@ -132,13 +134,10 @@ impl ConsensusConfig {
 
     fn default_peers(keypair: &ConsensusKeyPair, peer_id: PeerId) -> ConsensusPeersConfig {
         let mut peers = ConsensusPeersConfig::default();
-        let pubkey = keypair
-            .public()
-            .expect("Unable to obtain default public key");
         peers.peers.insert(
-            peer_id.clone(),
+            peer_id,
             ConsensusPeerInfo {
-                consensus_pubkey: pubkey.clone(),
+                consensus_pubkey: keypair.public().clone(),
             },
         );
         peers

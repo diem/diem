@@ -41,8 +41,8 @@ fn add_peer(
     network_peers.peers.insert(
         peer.peer_id,
         NetworkPeerInfo {
-            network_identity_pubkey: peer.network_keypairs.get_network_identity_public().clone(),
-            network_signing_pubkey: peer.network_keypairs.get_network_signing_public().clone(),
+            network_identity_pubkey: peer.network_keypairs.identity_keys.public().clone(),
+            network_signing_pubkey: peer.network_keypairs.signing_keys.public().clone(),
         },
     );
 }
@@ -179,7 +179,7 @@ impl SwarmConfig {
             consensus_peers.insert(
                 network.peer_id,
                 ConsensusPeerInfo {
-                    consensus_pubkey: config.consensus.consensus_keypair.public().unwrap().clone(),
+                    consensus_pubkey: config.consensus.consensus_keypair.public().clone(),
                 },
             );
 

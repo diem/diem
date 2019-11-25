@@ -8,7 +8,6 @@ use executor::Executor;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
-use libra_crypto::ed25519::*;
 use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
 use libra_metrics::metric_server;
@@ -137,24 +136,41 @@ pub fn setup_network(
             })
             .collect();
         let seed_peers = config.seed_peers.seed_peers.clone();
-        let network_signing_private = config.network_keypairs.take_network_signing_private()
-            .expect("Failed to move network signing private key out of NodeConfig, key not set or moved already");
-        let network_signing_public: Ed25519PublicKey = (&network_signing_private).into();
+        let signing_private = config
+            .network_keypairs
+            .signing_keys
+            .take_private()
+            .expect("Failed to take Network signing private key, key absent or already read");
+        let signing_public = config.network_keypairs.signing_keys.public().clone();
+        let identity_private = config
+            .network_keypairs
+            .identity_keys
+            .take_private()
+            .expect("Failed to take Network identity private key, key absent or already read");
+        let identity_public = config.network_keypairs.identity_keys.public().clone();
         network_builder
-            .transport(TransportType::TcpNoise(Some(
-                config.network_keypairs.get_network_identity_keypair(),
-            )))
+            .transport(TransportType::TcpNoise(Some((
+                identity_private,
+                identity_public,
+            ))))
             .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
             .seed_peers(seed_peers)
             .trusted_peers(trusted_peers)
-            .signing_keys((network_signing_private, network_signing_public))
+            .signing_keys((signing_private, signing_public))
             .discovery_interval_ms(config.discovery_interval_ms);
     } else if config.enable_encryption_and_authentication {
+        let identity_private = config
+            .network_keypairs
+            .identity_keys
+            .take_private()
+            .expect("Failed to take Network identity private key, key absent or already read");
+        let identity_public = config.network_keypairs.identity_keys.public().clone();
         // Even if a network end-point is permissionless, it might want to prove its identity to
         // another peer it connects to. For this, we use TCP + Noise but in a permission-less way.
-        network_builder.transport(TransportType::PermissionlessTcpNoise(Some(
-            config.network_keypairs.get_network_identity_keypair(),
-        )));
+        network_builder.transport(TransportType::TcpNoise(Some((
+            identity_private,
+            identity_public,
+        ))));
     } else {
         network_builder.transport(TransportType::Tcp);
     }
