@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
-
 #![deny(missing_docs)]
+
 //! Libra Client
 //!
 //! Client (binary) is the CLI tool to interact with Libra validator.
 //! It supposes all public APIs.
+
 pub use libra_crypto::{ed25519::*, test_utils::KeyPair, traits::ValidKeyStringExt};
 pub use libra_types::{
     account_address::AccountAddress,

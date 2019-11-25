@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
-
 #![deny(missing_docs)]
 #![recursion_limit = "1024"]
 
