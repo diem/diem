@@ -14,7 +14,7 @@ fn bytecode_readref() {
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
         Kind::Unrestricted,
     ));
-    let state2 = common::run_instruction(Bytecode::ReadRef, state1);
+    let (state2, _) = common::run_instruction(Bytecode::ReadRef, state1);
     assert_eq!(
         state2.stack_peek(0),
         Some(AbstractValue::new_primitive(SignatureToken::U64)),
@@ -37,7 +37,7 @@ fn bytecode_readref_wrong_dereference() {
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
         Kind::Unrestricted,
     ));
-    let state2 = common::run_instruction(Bytecode::ReadRef, state1);
+    let (state2, _) = common::run_instruction(Bytecode::ReadRef, state1);
     assert!(
         state2.stack_peek(0) != Some(AbstractValue::new_primitive(SignatureToken::U64)),
         "stack type postcondition not met"
@@ -52,7 +52,7 @@ fn bytecode_writeref() {
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
         Kind::Unrestricted,
     ));
-    let state2 = common::run_instruction(Bytecode::WriteRef, state1);
+    let (state2, _) = common::run_instruction(Bytecode::WriteRef, state1);
     assert_eq!(state2.stack_len(), 0, "stack type postcondition not met");
 }
 
@@ -77,7 +77,7 @@ fn bytecode_writeref_stack_len_mismatch() {
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
         Kind::Unrestricted,
     ));
-    let state2 = common::run_instruction(Bytecode::WriteRef, state1);
+    let (state2, _) = common::run_instruction(Bytecode::WriteRef, state1);
     assert!(state2.stack_len() != 0, "stack type postcondition not met");
 }
 
@@ -88,7 +88,7 @@ fn bytecode_feezeref() {
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
         Kind::Unrestricted,
     ));
-    let state2 = common::run_instruction(Bytecode::FreezeRef, state1);
+    let (state2, _) = common::run_instruction(Bytecode::FreezeRef, state1);
     assert_eq!(state2.stack_len(), 1, "stack len postcondition not met");
     assert_eq!(
         state2.stack_peek(0),

@@ -3,8 +3,10 @@
 
 use crate::{borrow_graph::BorrowGraph, error::VMError};
 use std::{collections::HashMap, fmt};
+use vm::access::ModuleAccess;
 use vm::file_format::{
-    empty_module, CompiledModule, CompiledModuleMut, Kind, SignatureToken, StructDefinitionIndex,
+    empty_module, CompiledModule, CompiledModuleMut, Kind, LocalsSignature, LocalsSignatureIndex,
+    SignatureToken, StructDefinitionIndex, TableIndex,
 };
 
 /// The BorrowState denotes whether a local is `Available` or
@@ -85,6 +87,97 @@ impl AbstractValue {
     pub fn new_value(token: SignatureToken, kind: Kind) -> AbstractValue {
         AbstractValue { token, kind }
     }
+
+    /// Predicate on whether the type of the abstract value is generic -- it is if it contains a
+    /// type parameter.
+    pub fn is_generic(&self) -> bool {
+        Self::is_generic_token(&self.token)
+    }
+
+    fn is_generic_token(token: &SignatureToken) -> bool {
+        match token {
+            SignatureToken::TypeParameter(_) => true,
+            SignatureToken::Struct(_, tys) => tys.iter().any(Self::is_generic_token),
+            SignatureToken::Reference(tok) | SignatureToken::MutableReference(tok) => {
+                Self::is_generic_token(tok)
+            }
+            _ => false,
+        }
+    }
+}
+
+/// During the generation of a bytecode sequence, specific instantiations may need to be made, that
+/// may not yet exist in the underlying module. Instead of mutating the underlying module (which
+/// would require an into_inner followd by a freeze) in order to record these instantiations in the
+/// locals signature table, we instead build wrapper around the underlying module containing the
+/// type instantiations, and at the end materialize this updated signature pool into a module. We
+/// also need the ability to quickly determine if an instantiation has already been created, and if
+/// so, at which index. So this also keeps a reverse lookup table of instantiation to
+/// LocalsSignatureIndex.
+#[derive(Debug, Clone)]
+pub struct InstantiableModule {
+    // A reverse lookup table for instantiations.
+    instance_for_offset: Vec<Vec<SignatureToken>>,
+    instantiations: HashMap<Vec<SignatureToken>, LocalsSignatureIndex>,
+    pub module: CompiledModule,
+}
+
+impl InstantiableModule {
+    pub fn new(module: CompiledModule) -> Self {
+        Self {
+            instantiations: module
+                .locals_signatures()
+                .iter()
+                .enumerate()
+                .map(|(index, sig)| (sig.0.clone(), LocalsSignatureIndex(index as TableIndex)))
+                .collect::<HashMap<_, _>>(),
+            instance_for_offset: module
+                .locals_signatures()
+                .iter()
+                .map(|loc_sig| loc_sig.0.clone())
+                .collect(),
+            module,
+        }
+    }
+
+    /// If the `instantiant` is not in the `instantiations` table, this adds the instantiant to the
+    /// `instance_for_offset` for table, and adds the index to the reverse lookup table. Returns
+    /// the LocalsSignatureIndex for the `instantiant`.
+    pub fn add_instantiation(&mut self, instantiant: Vec<SignatureToken>) -> LocalsSignatureIndex {
+        match self.instantiations.get(&instantiant) {
+            Some(index) => *index,
+            None => {
+                let current_index =
+                    LocalsSignatureIndex(self.instance_for_offset.len() as TableIndex);
+                self.instantiations
+                    .insert(instantiant.clone(), current_index);
+                self.instance_for_offset.push(instantiant);
+                current_index
+            }
+        }
+    }
+
+    /// Returns the type instantiation at `index`. Errors if the instantiation does not exist.
+    pub fn instantiantiation_at(&self, index: LocalsSignatureIndex) -> &Vec<SignatureToken> {
+        match self.instance_for_offset.get(index.0 as usize) {
+            Some(vec) => vec,
+            None => {
+                panic!("Unable to get instantiation at offset: {:#?}", index);
+            }
+        }
+    }
+
+    /// Consumes self, and adds the instantiations that have been built up to the underlying
+    /// module, and returns the resultant compiled module.
+    pub fn instantiate(self) -> CompiledModuleMut {
+        let mut module = self.module.into_inner();
+        module.locals_signatures = self
+            .instance_for_offset
+            .into_iter()
+            .map(LocalsSignature)
+            .collect();
+        module
+    }
 }
 
 /// An AbstractState represents an abstract view of the execution of the
@@ -96,6 +189,10 @@ pub struct AbstractState {
     /// A Vector of `AbstractValue`s representing the VM value stack
     stack: Vec<AbstractValue>,
 
+    /// A vector of type kinds for any generic function type parameters of the function that we are
+    /// in.
+    pub instantiation: Vec<Kind>,
+
     /// A HashMap mapping local indicies to `AbstractValue`s and `BorrowState`s
     locals: HashMap<usize, (AbstractValue, BorrowState)>,
 
@@ -104,7 +201,7 @@ pub struct AbstractState {
     register: Option<AbstractValue>,
 
     /// The module state
-    pub module: CompiledModule,
+    pub module: InstantiableModule,
 
     /// The global resources acquired by the function corresponding to this abstract state
     pub acquires_global_resources: Vec<StructDefinitionIndex>,
@@ -112,6 +209,10 @@ pub struct AbstractState {
     /// This flag is set when applying an instruction that should result in an error
     /// in the VM runtime.
     aborted: bool,
+
+    /// This flag controls whether or not control flow operators are allowed to be applied to the
+    /// abstract state.
+    control_flow_allowed: bool,
 
     /// This graph stores borrow information needed to ensure that bytecode instructions
     /// are memory safe
@@ -123,13 +224,17 @@ impl AbstractState {
     pub fn new() -> AbstractState {
         AbstractState {
             stack: Vec::new(),
+            instantiation: Vec::new(),
             locals: HashMap::new(),
             register: None,
-            module: empty_module()
-                .freeze()
-                .expect("Empty module should pass the bounds checker"),
+            module: InstantiableModule::new(
+                empty_module()
+                    .freeze()
+                    .expect("Empty module should pass the bounds checker"),
+            ),
             acquires_global_resources: Vec::new(),
             aborted: false,
+            control_flow_allowed: false,
             borrow_graph: BorrowGraph::new(0),
         }
     }
@@ -139,24 +244,30 @@ impl AbstractState {
     pub fn from_locals(
         module: CompiledModuleMut,
         locals: HashMap<usize, (AbstractValue, BorrowState)>,
+        instantiation: Vec<Kind>,
         acquires_global_resources: Vec<StructDefinitionIndex>,
     ) -> AbstractState {
         let locals_len = locals.len();
-        AbstractState {
-            stack: Vec::new(),
-            locals,
-            register: None,
-            module: module
+        let module = InstantiableModule::new(
+            module
                 .freeze()
                 .expect("Module should pass the bounds checker"),
+        );
+        AbstractState {
+            stack: Vec::new(),
+            instantiation,
+            locals,
+            module,
+            register: None,
             acquires_global_resources,
             aborted: false,
+            control_flow_allowed: false,
             borrow_graph: BorrowGraph::new(locals_len as u8),
         }
     }
 
     /// Get the register value
-    pub fn register_copy(&mut self) -> Option<AbstractValue> {
+    pub fn register_copy(&self) -> Option<AbstractValue> {
         self.register.clone()
     }
 
@@ -339,20 +450,39 @@ impl AbstractState {
         self.aborted
     }
 
+    /// Set the abstract state to allow generation of control flow operations.
+    pub fn allow_control_flow(&mut self) {
+        self.control_flow_allowed = true;
+    }
+
+    /// Predicate determining if control flow instructions can be generated.
+    pub fn is_control_flow_allowed(&self) -> bool {
+        self.control_flow_allowed
+    }
+
     /// The final state is one where the stack is empty
     pub fn is_final(&self) -> bool {
         self.stack.is_empty()
+    }
+
+    /// Returns the underlying module, with all type instantiations applied.
+    pub fn instantiate_module(self) -> CompiledModuleMut {
+        self.module.instantiate()
     }
 }
 
 impl fmt::Display for AbstractState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Stack: {:?} | Locals: {:?}", self.stack, self.locals)
+        write!(
+            f,
+            "Stack: {:?} | Locals: {:?} | Instantiation: {:?}",
+            self.stack, self.locals, self.instantiation
+        )
     }
 }
 
 impl fmt::Display for AbstractValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({:?} {:?})", self.token, self.kind)
+        write!(f, "({:?}: {:?})", self.token, self.kind)
     }
 }

@@ -19,5 +19,5 @@ pub fn generate_padded_modules(
     generation_options.max_ty_params = 1;
     generation_options.min_fields = 1;
     generation_options.min_table_size = table_size;
-    generate_verified_modules(num, generation_options)
+    generate_verified_modules(None, num, generation_options)
 }

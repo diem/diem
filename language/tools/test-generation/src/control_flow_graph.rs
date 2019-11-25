@@ -219,13 +219,17 @@ impl CFG {
     /// Randomly vary the availability of locals
     fn vary_locals(rng: &mut StdRng, locals: BlockLocals) -> BlockLocals {
         let mut locals = locals;
-        for (_, (_, availability)) in locals.iter_mut() {
+        for (_, (abstr_val, availability)) in locals.iter_mut() {
             if rng.gen_bool(0.5) {
                 if *availability == BorrowState::Available {
                     *availability = BorrowState::Unavailable;
                 } else {
                     *availability = BorrowState::Available;
                 }
+            }
+
+            if abstr_val.is_generic() {
+                *availability = BorrowState::Unavailable;
             }
         }
         locals

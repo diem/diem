@@ -458,6 +458,11 @@ impl<'a, T: ModuleAccess> FunctionSignatureView<'a, T> {
             .map(move |token| SignatureTokenView::new(module, token))
     }
 
+    #[inline]
+    pub fn type_formals(&self) -> &Vec<Kind> {
+        &self.function_signature.type_formals
+    }
+
     pub fn return_count(&self) -> usize {
         self.function_signature.return_types.len()
     }

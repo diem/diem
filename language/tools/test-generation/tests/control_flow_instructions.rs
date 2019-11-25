@@ -48,10 +48,10 @@ fn generate_module_with_function() -> CompiledModuleMut {
 #[test]
 fn bytecode_call() {
     let module = generate_module_with_function();
-    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![], vec![]);
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::U64));
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Bool));
-    let state2 = common::run_instruction(
+    let (state2, _) = common::run_instruction(
         Bytecode::Call(FunctionHandleIndex::new(0), LocalsSignatureIndex::new(0)),
         state1,
     );
@@ -66,7 +66,7 @@ fn bytecode_call() {
 #[should_panic]
 fn bytecode_call_function_signature_not_satisfied() {
     let module = generate_module_with_function();
-    let state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
+    let state1 = AbstractState::from_locals(module, HashMap::new(), vec![], vec![]);
     common::run_instruction(
         Bytecode::Call(FunctionHandleIndex::new(0), LocalsSignatureIndex::new(0)),
         state1,
@@ -77,10 +77,10 @@ fn bytecode_call_function_signature_not_satisfied() {
 #[should_panic]
 fn bytecode_call_return_not_pushed() {
     let module = generate_module_with_function();
-    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![]);
+    let mut state1 = AbstractState::from_locals(module, HashMap::new(), vec![], vec![]);
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::U64));
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Bool));
-    let state2 = common::run_instruction(
+    let (state2, _) = common::run_instruction(
         Bytecode::Call(FunctionHandleIndex::new(0), LocalsSignatureIndex::new(0)),
         state1,
     );

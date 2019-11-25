@@ -32,7 +32,7 @@ fn bytecode_bin_ops() {
         let mut state1 = AbstractState::new();
         state1.stack_push(AbstractValue::new_primitive(ty.clone()));
         state1.stack_push(AbstractValue::new_primitive(ty.clone()));
-        let state2 = common::run_instruction(op.clone(), state1);
+        let (state2, _) = common::run_instruction(op.clone(), state1);
         assert_eq!(
             state2.stack_peek(0),
             Some(AbstractValue::new_primitive(ty.clone())),
@@ -51,7 +51,7 @@ fn bytecode_shl_shr() {
         let mut state1 = AbstractState::new();
         state1.stack_push(AbstractValue::new_primitive(ty1.clone()));
         state1.stack_push(AbstractValue::new_primitive(ty2.clone()));
-        let state2 = common::run_instruction(op.clone(), state1);
+        let (state2, _) = common::run_instruction(op.clone(), state1);
         assert_eq!(
             state2.stack_peek(0),
             Some(AbstractValue::new_primitive(ty1.clone())),
@@ -62,17 +62,27 @@ fn bytecode_shl_shr() {
 
 #[test]
 fn bytecode_casting_ops() {
-    for ((op, ty1), ty2) in [
-        (Bytecode::CastU8, SignatureToken::U8),
-        (Bytecode::CastU64, SignatureToken::U64),
-        (Bytecode::CastU128, SignatureToken::U128),
+    for (op, ty1, ty2) in [
+        (Bytecode::CastU8, SignatureToken::U8, SignatureToken::U8),
+        (Bytecode::CastU64, SignatureToken::U64, SignatureToken::U8),
+        (Bytecode::CastU64, SignatureToken::U64, SignatureToken::U64),
+        (Bytecode::CastU128, SignatureToken::U128, SignatureToken::U8),
+        (
+            Bytecode::CastU128,
+            SignatureToken::U128,
+            SignatureToken::U64,
+        ),
+        (
+            Bytecode::CastU128,
+            SignatureToken::U128,
+            SignatureToken::U128,
+        ),
     ]
     .iter()
-    .cartesian_product(INTEGER_TYPES.iter())
     {
         let mut state1 = AbstractState::new();
         state1.stack_push(AbstractValue::new_primitive(ty2.clone()));
-        let state2 = common::run_instruction(op.clone(), state1);
+        let (state2, _) = common::run_instruction(op.clone(), state1);
         assert_eq!(
             state2.stack_peek(0),
             Some(AbstractValue::new_primitive(ty1.clone())),

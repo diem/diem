@@ -7,7 +7,7 @@ use utils::module_generation::{generate_module, ModuleGeneratorOptions};
 #[test]
 fn module_generation() {
     for _ in 0..500 {
-        let module = generate_module(ModuleGeneratorOptions::default());
+        let module = generate_module(None, ModuleGeneratorOptions::default());
         VerifiedModule::new(module).unwrap();
     }
 }

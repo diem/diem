@@ -8,7 +8,7 @@ use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::compiler::compile_module;
 use ir_to_bytecode_syntax::ast::*;
 use libra_types::{account_address::AccountAddress, identifier::Identifier};
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{rngs::StdRng, FromEntropy, Rng, SeedableRng};
 use std::collections::{BTreeSet, VecDeque};
 use vm::file_format::CompiledModule;
 
@@ -20,12 +20,13 @@ macro_rules! init {
     };
 }
 
-pub fn generate_module(options: ModuleGeneratorOptions) -> CompiledModule {
-    generate_modules(1, options).0
+pub fn generate_module(seed: Option<[u8; 32]>, options: ModuleGeneratorOptions) -> CompiledModule {
+    generate_modules(seed, 1, options).0
 }
 
 /// Generate a `number - 1` modules. Then generate a root module that imports all of these modules.
 pub fn generate_modules(
+    seed: Option<[u8; 32]>,
     number: usize,
     options: ModuleGeneratorOptions,
 ) -> (CompiledModule, Vec<CompiledModule>) {
@@ -34,13 +35,13 @@ pub fn generate_modules(
     let table_size = options.min_table_size;
     let (callee_names, callees): (Set<Identifier>, Vec<ModuleDefinition>) = (0..(number - 1))
         .map(|_| {
-            let module = ModuleGenerator::create(options.clone(), &Set::new());
+            let module = ModuleGenerator::create(seed, options.clone(), &Set::new());
             let module_name = module.name.as_inner().to_string();
             (Identifier::new(module_name).unwrap(), module)
         })
         .unzip();
 
-    let root_module = ModuleGenerator::create(options.clone(), &callee_names);
+    let root_module = ModuleGenerator::create(seed, options.clone(), &callee_names);
     let empty_deps: Vec<CompiledModule> = Vec::new();
     let compiled_callees = callees
         .into_iter()
@@ -64,10 +65,11 @@ pub fn generate_modules(
 }
 
 pub fn generate_verified_modules(
+    seed: Option<[u8; 32]>,
     number: usize,
     options: ModuleGeneratorOptions,
 ) -> (VerifiedModule, Vec<VerifiedModule>) {
-    let (root, callees) = generate_modules(number, options);
+    let (root, callees) = generate_modules(seed, number, options);
     let verified_modules = callees
         .into_iter()
         .map(|m| VerifiedModule::new(m).unwrap())
@@ -148,7 +150,7 @@ impl ModuleGenerator {
         // TODO: Always change the base type to a reference if it's resource type. Then we can
         // allow functions to take resources.
         // if typ.is_nominal_resource { .... }
-        if !self.options.simple_types_only && self.gen.gen_bool(0.25) {
+        if self.options.references_allowed && self.gen.gen_bool(0.25) {
             let is_mutable = self.gen.gen_bool(0.25);
             Type::Reference(is_mutable, Box::new(typ))
         } else {
@@ -177,11 +179,24 @@ impl ModuleGenerator {
     fn function_signature(&mut self) -> FunctionSignature {
         let ty_params = self.type_formals();
         let number_of_args = self.index(self.options.max_function_call_size);
-        let formals = init!(number_of_args, {
+        let mut formals: Vec<(Var_, Type)> = init!(number_of_args, {
             let param_name = Var::new_(self.identifier());
             let ty = self.typ(&ty_params);
             (param_name, ty)
         });
+
+        if self.options.args_for_ty_params {
+            let mut ty_formals = ty_params
+                .iter()
+                .map(|(ty_var_, _)| {
+                    let param_name = Var::new_(self.identifier());
+                    let ty = Type::TypeParameter(ty_var_.value.clone());
+                    (param_name, ty)
+                })
+                .collect();
+
+            formals.append(&mut ty_formals);
+        }
 
         FunctionSignature::new(formals, vec![], ty_params)
     }
@@ -256,8 +271,8 @@ impl ModuleGenerator {
     }
 
     fn gen(mut self) -> ModuleDefinition {
-        let num_structs = self.index(self.options.max_structs);
-        let num_functions = self.index(self.options.max_functions);
+        let num_structs = self.index(self.options.max_structs) + 1;
+        let num_functions = self.index(self.options.max_functions) + 1;
         // TODO: the order of generation here means that functions can't take resources as arguments.
         // We will need to generate (valid) bytecode bodies for these functions before we allow
         // resources.
@@ -270,22 +285,22 @@ impl ModuleGenerator {
             self.function_def();
             self.options.simple_types_only = simple_types;
         }
-        (1..num_structs).for_each(|_| self.struct_def(false));
+        (0..num_structs).for_each(|_| self.struct_def(false));
         // TODO/XXX: We can allow references to resources here
-        (1..num_functions).for_each(|_| self.function_def());
+        (0..num_functions).for_each(|_| self.function_def());
         if self.options.add_resources {
-            (1..num_structs).for_each(|_| self.struct_def(true));
+            (0..num_structs).for_each(|_| self.struct_def(true));
         }
         self.current_module
     }
 
     pub fn create(
+        seed: Option<[u8; 32]>,
         options: ModuleGeneratorOptions,
         callable_modules: &Set<Identifier>,
     ) -> ModuleDefinition {
         // TODO: Generation of struct and function handles to the `callable_modules`
-        let seed: [u8; 32] = [0; 32];
-        let mut gen = StdRng::from_seed(seed);
+        let mut gen = seed.map_or_else(StdRng::from_entropy, StdRng::from_seed);
         let module_name = {
             let len = gen.gen_range(10, options.max_string_size);
             Identifier::new(random_string(&mut gen, len)).unwrap()
