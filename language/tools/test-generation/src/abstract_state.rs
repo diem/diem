@@ -81,6 +81,10 @@ impl AbstractValue {
         );
         AbstractValue { token, kind }
     }
+
+    pub fn new_value(token: SignatureToken, kind: Kind) -> AbstractValue {
+        AbstractValue { token, kind }
+    }
 }
 
 /// An AbstractState represents an abstract view of the execution of the

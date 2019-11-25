@@ -8,6 +8,7 @@ use crate::{
     summaries,
 };
 use rand::{rngs::StdRng, FromEntropy, Rng, SeedableRng};
+use utils::inhabitation::inhabit_with_bytecode_seq;
 use vm::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
     FieldDefinitionIndex, FunctionHandleIndex, FunctionSignature, LocalIndex, LocalsSignatureIndex,
@@ -491,17 +492,13 @@ impl BytecodeGenerator {
                 if *target_availability == BorrowState::Available
                     && *current_availability == BorrowState::Unavailable
                 {
-                    let next_instruction = match abstract_value.token {
-                        SignatureToken::String => Bytecode::LdStr(UserStringIndex::new(0)),
-                        SignatureToken::Address => Bytecode::LdAddr(AddressPoolIndex::new(0)),
-                        SignatureToken::U64 => Bytecode::LdConst(0),
-                        SignatureToken::Bool => Bytecode::LdFalse,
-                        SignatureToken::ByteArray => {
-                            Bytecode::LdByteArray(ByteArrayPoolIndex::new(0))
-                        }
-                        _ => unimplemented!("Unsupported return type: {:#?}", abstract_value.token),
-                    };
-                    state = self.apply_instruction(state, &mut bytecode, next_instruction);
+                    let next_instructions =
+                        inhabit_with_bytecode_seq(&module, &abstract_value.token);
+                    state = next_instructions
+                        .into_iter()
+                        .fold(state, |state, instruction| {
+                            self.apply_instruction(state, &mut bytecode, instruction)
+                        });
                     state = self.apply_instruction(state, &mut bytecode, Bytecode::StLoc(*i as u8));
                 } else if *target_availability == BorrowState::Unavailable
                     && *current_availability == BorrowState::Available
@@ -585,17 +582,17 @@ impl BytecodeGenerator {
             } else if cfg_copy.num_children(*block_id) == 0 {
                 // Return: Add return types to last block
                 for token_type in signature.return_types.iter() {
-                    let next_instruction = match token_type {
-                        SignatureToken::String => Bytecode::LdStr(UserStringIndex::new(0)),
-                        SignatureToken::Address => Bytecode::LdAddr(AddressPoolIndex::new(0)),
-                        SignatureToken::U64 => Bytecode::LdConst(0),
-                        SignatureToken::Bool => Bytecode::LdFalse,
-                        SignatureToken::ByteArray => {
-                            Bytecode::LdByteArray(ByteArrayPoolIndex::new(0))
-                        }
-                        _ => unimplemented!("Unsupported return type: {:#?}", token_type),
-                    };
-                    state_f = self.apply_instruction(state_f, &mut bytecode, next_instruction);
+                    let next_instructions = inhabit_with_bytecode_seq(&module, &token_type);
+                    debug!(
+                        "Return value instructions: {:#?} for token {:#?}",
+                        next_instructions, &token_type
+                    );
+                    state_f =
+                        next_instructions
+                            .into_iter()
+                            .fold(state_f, |state_f, instruction| {
+                                self.apply_instruction(state_f, &mut bytecode, instruction)
+                            });
                 }
                 self.apply_instruction(state_f, &mut bytecode, Bytecode::Ret);
             }

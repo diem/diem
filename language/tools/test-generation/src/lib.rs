@@ -29,7 +29,7 @@ use std::{fs, io::Write, panic};
 use utils::module_generation::{generate_module, ModuleGeneratorOptions};
 use vm::{
     access::ModuleAccess,
-    file_format::{CompiledModule, FunctionDefinitionIndex, SignatureToken, TableIndex},
+    file_format::{CompiledModule, FunctionDefinitionIndex, SignatureToken},
 };
 use vm_runtime::execute_function_in_module;
 
@@ -44,38 +44,35 @@ fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
 
 /// This function runs a verified module in the VM runtime
 fn run_vm(module: VerifiedModule) -> Result<(), String> {
-    for func_idx in 0..module.as_inner().as_inner().function_defs.len() {
-        let entry_idx = FunctionDefinitionIndex::new(func_idx as TableIndex);
-        let function_signature = {
-            let handle = module.function_def_at(entry_idx).function;
-            let sig_idx = module.function_handle_at(handle).signature;
-            module.function_signature_at(sig_idx).clone()
-        };
+    // By convention the 0'th index function definition is the entrypoint to the module (i.e. that
+    // will contain only simply-typed arguments).
+    let entry_idx = FunctionDefinitionIndex::new(0);
+    let function_signature = {
+        let handle = module.function_def_at(entry_idx).function;
+        let sig_idx = module.function_handle_at(handle).signature;
+        module.function_signature_at(sig_idx).clone()
+    };
+    let main_args: Vec<TransactionArgument> = function_signature
+        .arg_types
+        .iter()
+        .map(|sig_tok| match sig_tok {
+            SignatureToken::Address => TransactionArgument::Address(AccountAddress::new([0; 32])),
+            SignatureToken::U64 => TransactionArgument::U64(0),
+            SignatureToken::Bool => TransactionArgument::Bool(true),
+            SignatureToken::String => TransactionArgument::String("".into()),
+            SignatureToken::ByteArray => TransactionArgument::ByteArray(ByteArray::new(vec![])),
+            _ => unimplemented!("Unsupported argument type: {:#?}", sig_tok),
+        })
+        .collect();
 
-        let main_args: Vec<TransactionArgument> = function_signature
-            .arg_types
-            .iter()
-            .map(|sig_tok| match sig_tok {
-                SignatureToken::Address => {
-                    TransactionArgument::Address(AccountAddress::new([0; 32]))
-                }
-                SignatureToken::U64 => TransactionArgument::U64(0),
-                SignatureToken::Bool => TransactionArgument::Bool(true),
-                SignatureToken::String => TransactionArgument::String("".into()),
-                SignatureToken::ByteArray => TransactionArgument::ByteArray(ByteArray::new(vec![])),
-                _ => unimplemented!("Unsupported argument type: {:#?}", sig_tok),
-            })
-            .collect();
-
-        let executor = FakeExecutor::from_genesis_file();
-        execute_function_in_module(
-            executor.get_state_view(),
-            module.clone(),
-            entry_idx,
-            main_args,
-        )
-        .map_err(|err| format!("Runtime error: {:?}", err))?;
-    }
+    let executor = FakeExecutor::from_genesis_file();
+    execute_function_in_module(
+        executor.get_state_view(),
+        module.clone(),
+        entry_idx,
+        main_args,
+    )
+    .map_err(|err| format!("Runtime error: {:?}", err))?;
     Ok(())
 }
 

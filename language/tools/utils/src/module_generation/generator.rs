@@ -108,10 +108,10 @@ impl ModuleGenerator {
             .collect();
 
         let mut end = 4;
-        if !self.options.simple_types_only && !ty_param_context.is_empty() {
+        if !ty_param_context.is_empty() {
             end += 1;
         };
-        if !self.options.simple_types_only && !structs.is_empty() {
+        if !structs.is_empty() {
             end += 1;
         };
 
@@ -157,14 +157,19 @@ impl ModuleGenerator {
     }
 
     fn type_formals(&mut self) -> Vec<(TypeVar_, Kind)> {
-        let num_ty_params = self.index(self.options.max_ty_params);
-        init!(
-            num_ty_params,
-            (
-                Spanned::no_loc(TypeVar::new(self.identifier())),
-                Kind::Unrestricted,
+        // Don't generate type parameters if we're generating simple types only
+        if self.options.simple_types_only {
+            vec![]
+        } else {
+            let num_ty_params = self.index(self.options.max_ty_params);
+            init!(
+                num_ty_params,
+                (
+                    Spanned::no_loc(TypeVar::new(self.identifier())),
+                    Kind::Unrestricted,
+                )
             )
-        )
+        }
     }
 
     // All functions will have unit return type, and an empty body with the exception of a return.
@@ -255,8 +260,17 @@ impl ModuleGenerator {
         // TODO: the order of generation here means that functions can't take resources as arguments.
         // We will need to generate (valid) bytecode bodies for these functions before we allow
         // resources.
-        // XXX: References to resources here
+        {
+            // We generate a function at this point as an "entry point" into the module: since we
+            // haven't generated any structs yet, this function will only take base types as its input
+            // parameters. Likewise we can't take references since there isn't any value stack.
+            let simple_types = self.options.simple_types_only;
+            self.options.simple_types_only = true;
+            self.function_def();
+            self.options.simple_types_only = simple_types;
+        }
         (1..num_structs).for_each(|_| self.struct_def(false));
+        // TODO/XXX: We can allow references to resources here
         (1..num_functions).for_each(|_| self.function_def());
         if self.options.add_resources {
             (1..num_structs).for_each(|_| self.struct_def(true));
