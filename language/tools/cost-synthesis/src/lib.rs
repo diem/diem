@@ -3,7 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-#[macro_use]
 pub mod module_generator;
 mod bytecode_specifications;
 mod common;
