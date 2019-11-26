@@ -107,8 +107,12 @@ pub struct VMStr(str);
 impl VMStr {
     pub fn new<'a>(s: impl AsRef<str> + 'a) -> &'a VMStr {
         let s = s.as_ref();
-        // VMStr and str have the same layout, so this is safe to do.
-        // This follows the pattern in Rust core https://doc.rust-lang.org/src/std/path.rs.html.
+        // UNSAFE CODE: This code requires auditing before modifications may land.
+        // JUSTIFICATION: The input and output references have the same
+        // lifetime and VMStr and str have the same layout, so this is safe to
+        // do. See
+        // https://rust-lang.github.io/unsafe-code-guidelines/layout/structs-and-tuples.html#single-field-structs
+        // AUDITOR: metajack
         unsafe { &*(s as *const str as *const VMStr) }
     }
 

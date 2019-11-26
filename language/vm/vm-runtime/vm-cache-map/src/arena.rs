@@ -1,6 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+// UNSAFE MODULE: This module requires auditing before modifications may land.
+// JUSTIFICATION: Arena::alloc below uses unsafe to tie the lifetime of the
+// returned type to the lifetime of the arena. This requires preserving the
+// invariant that the values do not get deallocated before the arena is
+// deallocated. The current code and the underlying typed_arena crate both
+// preserve this invariant. Modifications to this module must also maintain
+// this invariant, even if they don't touch the unsafe block below.
+// AUDITOR: metajack
+
 use std::sync::Mutex;
 use typed_arena::Arena as TypedArena;
 
@@ -37,9 +46,13 @@ impl<T> Arena<T> {
     pub fn alloc(&self, value: T) -> &mut T {
         let arena = self.inner.lock().expect("lock poisoned");
         let value = arena.alloc(value);
-        // Extend the lifetime of the value to that of the arena. typed_arena::Arena guarantees
-        // that the value will never be moved out from underneath, and this wrapper guarantees
-        // that the arena will not be dropped.
+        // UNSAFE CODE: This code requires auditing before modifications may land.
+        // JUSTIFICATION: This extends the lifetime of the returned reference
+        // to the lifetime of the arena. typed_arena's will not move values
+        // and will only deallocate when the arena goes out of scope. This
+        // unsafe cast is used by typed_arena itself (see the implementation
+        // of alloc_extend).
+        // AUDITOR: metajack
         unsafe { ::std::mem::transmute::<&mut T, &mut T>(value) }
     }
 
