@@ -375,8 +375,9 @@ where
         new_origin: ConnectionOrigin,
     ) -> bool {
         match (existing_origin, new_origin) {
-            // The remote dialed us twice for some reason, drop the new incoming connection
-            (ConnectionOrigin::Inbound, ConnectionOrigin::Inbound) => false,
+            // If the remote dials while an existing connection is open, the older connection is
+            // dropped.
+            (ConnectionOrigin::Inbound, ConnectionOrigin::Inbound) => true,
             (ConnectionOrigin::Inbound, ConnectionOrigin::Outbound) => remote_peer_id < own_peer_id,
             (ConnectionOrigin::Outbound, ConnectionOrigin::Inbound) => own_peer_id < remote_peer_id,
             // We should never dial the same peer twice, but if we do drop the new connection

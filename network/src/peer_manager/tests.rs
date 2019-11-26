@@ -430,13 +430,13 @@ fn peer_manager_simultaneous_dial_two_inbound() {
             )
             .await;
 
-        // outbound2 should have been dropped since it was the second inbound connection
+        // outbound1 should have been dropped since it was the older inbound connection
         check_correct_connection_is_live(
-            outbound1,
             outbound2,
+            outbound1,
             ids[0],
             role,
-            false,
+            true,
             &mut peer_manager.peer_notifs_rx,
         )
         .await;
