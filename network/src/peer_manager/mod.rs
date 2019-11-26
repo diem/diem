@@ -12,7 +12,9 @@
 //!  * An actor responsible for dialing and listening for new connections.
 //!  * An actor per Peer which owns the underlying connection and is responsible for listening for
 //!  and opening substreams as well as negotiating particular protocols on those substreams.
-use crate::{common::NegotiatedSubstream, counters, protocols::identity::Identity, ProtocolId};
+use crate::{
+    common::NegotiatedSubstream, counters, protocols::identity::Identity, transport, ProtocolId,
+};
 use channel;
 use futures::{
     channel::oneshot,
@@ -30,6 +32,7 @@ use netcore::{
 };
 use parity_multiaddr::Multiaddr;
 use std::{collections::HashMap, marker::PhantomData};
+use tokio::future::FutureExt as _;
 use tokio::runtime::TaskExecutor;
 
 mod error;
@@ -414,18 +417,22 @@ where
                 );
                 send_new_peer_notification = false;
             } else {
-                // Drop the new connection and keep the one already stored in active_peers
-                connection.close().await.unwrap_or_else(|e| {
-                    error!(
-                        "Closing connection with Peer {} failed with error: {}",
-                        peer_id.short_str(),
-                        e
-                    )
-                });
                 info!(
                     "Closing incoming connection with Peer {} to mitigate simultaneous dial",
                     peer_id.short_str()
                 );
+                // Drop the new connection and keep the one already stored in active_peers
+                if let Err(e) = connection
+                    .close()
+                    .timeout(transport::TRANSPORT_TIMEOUT)
+                    .await
+                {
+                    error!(
+                        "Closing connection with Peer {} failed with error: {}",
+                        peer_id.short_str(),
+                        e
+                    );
+                };
                 // Put the existing connection back
                 self.active_peers.insert(peer.peer_id(), peer);
                 return;
@@ -1043,7 +1050,12 @@ where
     }
 
     async fn close_connection(&mut self, reason: DisconnectReason) {
-        match self.connection.close().await {
+        match self
+            .connection
+            .close()
+            .timeout(transport::TRANSPORT_TIMEOUT)
+            .await
+        {
             Err(e) => {
                 error!(
                     "Failed to gracefully close connection with peer: {}; error: {}",
