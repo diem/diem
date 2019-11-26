@@ -247,6 +247,16 @@ impl NetworkSender {
         };
         self.broadcast(msg).await
     }
+
+    pub async fn notify_epoch_change(&mut self, proof: ValidatorChangeEventWithProof) {
+        let msg = ConsensusMsg {
+            message: Some(ConsensusMsg_oneof::EpochChange(proof.into())),
+        };
+        let self_msg = Event::Message((self.author, msg.clone()));
+        if let Err(e) = self.self_sender.send(Ok(self_msg)).await {
+            warn!("Failed to notify to self an epoch change {:?}", e);
+        }
+    }
 }
 
 pub struct NetworkTask<T> {
