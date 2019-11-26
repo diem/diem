@@ -6,12 +6,9 @@
 use crate::{
     config::{
         NetworkConfig, NodeConfig, OnDiskStorageConfig, RoleType, SafetyRulesBackend,
-        SeedPeersConfig, VMPublishingOption,
+        SeedPeersConfig, UpstreamPeersConfig, VMPublishingOption,
     },
-    trusted_peers::{
-        ConsensusPeerInfo, ConsensusPeersConfig, NetworkPeerInfo, NetworkPeersConfig,
-        UpstreamPeersConfig,
-    },
+    trusted_peers::{ConsensusPeerInfo, ConsensusPeersConfig, NetworkPeerInfo, NetworkPeersConfig},
     utils,
 };
 use failure::Result;

@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    traits::ValidKeyStringExt,
-    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+    ed25519::Ed25519PublicKey, traits::ValidKeyStringExt, x25519::X25519StaticPublicKey,
 };
 use libra_types::{
     crypto_proxies::{ValidatorInfo, ValidatorVerifier},
@@ -31,11 +29,6 @@ pub struct NetworkPeerInfo {
     pub network_identity_pubkey: X25519StaticPublicKey,
 }
 
-pub struct NetworkPrivateKeys {
-    pub network_signing_private_key: Ed25519PrivateKey,
-    pub network_identity_private_key: X25519StaticPrivateKey,
-}
-
 #[derive(Clone, Default, Deserialize, PartialEq, Serialize)]
 pub struct NetworkPeersConfig {
     #[serde(flatten)]
@@ -57,21 +50,11 @@ pub struct ConsensusPeerInfo {
     pub consensus_pubkey: Ed25519PublicKey,
 }
 
-pub struct ConsensusPrivateKey {
-    pub consensus_private_key: Ed25519PrivateKey,
-}
-
 #[derive(Clone, Debug, Default, Serialize, PartialEq, Deserialize)]
 pub struct ConsensusPeersConfig {
     #[serde(flatten)]
     #[serde(serialize_with = "serialize_ordered_map")]
     pub peers: HashMap<PeerId, ConsensusPeerInfo>,
-}
-
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
-pub struct UpstreamPeersConfig {
-    /// List of PeerIds serialized as string.
-    pub upstream_peers: Vec<PeerId>,
 }
 
 impl ConsensusPeersConfig {

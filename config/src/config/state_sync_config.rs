@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::trusted_peers::UpstreamPeersConfig;
+use libra_types::PeerId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -33,4 +33,11 @@ impl Default for StateSyncConfig {
             upstream_peers: UpstreamPeersConfig::default(),
         }
     }
+}
+
+// This is separated to another config so that it can be written to its own file
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct UpstreamPeersConfig {
+    /// List of PeerIds serialized as string.
+    pub upstream_peers: Vec<PeerId>,
 }
