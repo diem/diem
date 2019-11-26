@@ -10,7 +10,7 @@ mod executor_test;
 #[cfg(test)]
 mod mock_vm;
 
-use crate::block_processor::BlockProcessor;
+use crate::block_processor::{BlockProcessor, GENESIS_EPOCH, GENESIS_ROUND};
 use failure::{format_err, Result};
 use futures::channel::oneshot;
 use futures::executor::block_on;
@@ -310,7 +310,7 @@ where
             .get_startup_info()
             .expect("Failed to read startup info from storage.");
 
-        let (committed_trees, synced_trees, committed_timestamp_usecs) = match startup_info {
+        let (committed_trees, synced_trees, committed_epoch_and_round) = match startup_info {
             Some(info) => {
                 info!("Startup info read from DB: {:?}.", info);
                 let ledger_info = info.ledger_info;
@@ -327,12 +327,19 @@ where
                             state.version + 1,
                         )
                     }),
-                    ledger_info.ledger_info().timestamp_usecs(),
+                    (
+                        ledger_info.ledger_info().epoch(),
+                        ledger_info.ledger_info().round(),
+                    ),
                 )
             }
             None => {
                 info!("Startup info is empty. Will start from GENESIS.");
-                (ExecutedTrees::new_empty(), None, 0)
+                (
+                    ExecutedTrees::new_empty(),
+                    None,
+                    (GENESIS_EPOCH, GENESIS_ROUND),
+                )
             }
         };
         let committed_trees = Arc::new(Mutex::new(committed_trees));
@@ -357,7 +364,7 @@ where
                             storage_write_client,
                             cloned_committed_trees,
                             synced_trees,
-                            committed_timestamp_usecs,
+                            committed_epoch_and_round,
                             vm_config,
                             genesis_txn,
                             resp_sender,

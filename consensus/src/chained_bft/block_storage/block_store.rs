@@ -267,9 +267,7 @@ impl<T: Payload> BlockStore<T> {
 
         // Reconfiguration rule - if a block is a child of pending reconfiguration, it needs to be empty
         // So we roll over the executed state until it's committed and we start new epoch.
-        let parent_state = parent_block.compute_result();
-
-        let output = if self.root() != parent_block && parent_state.has_reconfiguration() {
+        let output = if parent_block.compute_result().has_reconfiguration() {
             ensure!(
                 block.payload().filter(|p| **p != T::default()).is_none(),
                 "Reconfiguration suffix should not carry payload"
@@ -394,10 +392,17 @@ impl<T: Payload> BlockStore<T> {
             .get_block(block.parent_id())
             .ok_or_else(|| format_err!("Block with missing parent {}", block.parent_id()))?;
         ensure!(parent.round() < block.round(), "Block with invalid round");
-        ensure!(
-            block.timestamp_usecs() > parent.timestamp_usecs(),
-            "Block with non-increasing timestamp"
-        );
+        if block.is_nil_block() || parent.compute_result().has_reconfiguration() {
+            ensure!(
+                block.timestamp_usecs() == parent.timestamp_usecs(),
+                "Nil/reconfig suffix block has different timestamp than parent"
+            );
+        } else {
+            ensure!(
+                block.timestamp_usecs() > parent.timestamp_usecs(),
+                "Block with non-increasing timestamp"
+            );
+        }
 
         Ok(parent)
     }

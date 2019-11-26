@@ -77,6 +77,19 @@ impl<T: Payload> ProposalGenerator<T> {
         Ok(Block::new_nil(round, hqc.as_ref().clone()))
     }
 
+    /// Reconfiguration rule - we propose empty blocks with parents' timestamp
+    /// after reconfiguration until it's committed
+    pub fn generate_reconfig_empty_suffix(&self, round: Round) -> anyhow::Result<BlockData<T>> {
+        let hqc = self.ensure_highest_quorum_cert(round)?;
+        Ok(BlockData::new_proposal(
+            T::default(),
+            self.author,
+            round,
+            hqc.certified_block().timestamp_usecs(),
+            hqc.as_ref().clone(),
+        ))
+    }
+
     /// The function generates a new proposal block: the returned future is fulfilled when the
     /// payload is delivered by the TxnManager implementation.  At most one proposal can be
     /// generated per round (no proposal equivocation allowed).
@@ -103,10 +116,9 @@ impl<T: Payload> ProposalGenerator<T> {
 
         let hqc = self.ensure_highest_quorum_cert(round)?;
 
-        ensure!(
-            !hqc.ends_epoch(),
-            "The epoch has already ended,a proposal is not allowed to generated"
-        );
+        if hqc.certified_block().has_reconfiguration() {
+            return self.generate_reconfig_empty_suffix(round);
+        }
 
         // One needs to hold the blocks with the references to the payloads while get_block is
         // being executed: pending blocks vector keeps all the pending ancestors of the extended
@@ -190,17 +202,12 @@ impl<T: Payload> ProposalGenerator<T> {
                 }
             }
         };
-        // Reconfiguration rule - we propose empty blocks after reconfiguration until it's committed
-        let txns = if self.block_store.root().id() != hqc.certified_block().id()
-            && hqc.certified_block().has_reconfiguration()
-        {
-            T::default()
-        } else {
-            self.txn_manager
-                .pull_txns(self.max_block_size, exclude_payload)
-                .await
-                .context("Fail to retrieve txn")?
-        };
+
+        let txns = self
+            .txn_manager
+            .pull_txns(self.max_block_size, exclude_payload)
+            .await
+            .context("Fail to retrieve txn")?;
 
         Ok(BlockData::new_proposal(
             txns,
@@ -219,6 +226,11 @@ impl<T: Payload> ProposalGenerator<T> {
             round,
             hqc.certified_block().round()
         );
+        ensure!(
+            !hqc.ends_epoch(),
+            "The epoch has already ended,a proposal is not allowed to generated"
+        );
+
         Ok(hqc)
     }
 }
