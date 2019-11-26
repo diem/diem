@@ -5,10 +5,10 @@
 //! genesis.blob.
 use crate::{
     config::{
-        NetworkConfig, NodeConfig, OnDiskStorageConfig, RoleType, SafetyRulesBackend,
+        ConsensusPeerInfo, ConsensusPeersConfig, NetworkConfig, NetworkPeerInfo,
+        NetworkPeersConfig, NodeConfig, OnDiskStorageConfig, RoleType, SafetyRulesBackend,
         SeedPeersConfig, UpstreamPeersConfig, VMPublishingOption,
     },
-    trusted_peers::{ConsensusPeerInfo, ConsensusPeersConfig, NetworkPeerInfo, NetworkPeersConfig},
     utils,
 };
 use failure::Result;

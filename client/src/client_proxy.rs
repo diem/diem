@@ -4,7 +4,7 @@
 use crate::{commands::*, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use failure::prelude::*;
-use libra_config::{config::PersistableConfig, trusted_peers::ConsensusPeersConfig};
+use libra_config::config::{ConsensusPeersConfig, PersistableConfig};
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_logger::prelude::*;
 use libra_tools::tempdir::TempPath;
