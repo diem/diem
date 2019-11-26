@@ -80,8 +80,8 @@ pub struct BlockTree<T> {
     highest_quorum_cert: Arc<QuorumCert>,
     /// The highest timeout certificate (if any).
     highest_timeout_cert: Option<Arc<TimeoutCertificate>>,
-    /// The quorum certificate that carries a highest ledger info
-    highest_ledger_info: Arc<QuorumCert>,
+    /// The quorum certificate that has highest commit info.
+    highest_commit_cert: Arc<QuorumCert>,
     /// Manages pending votes to be aggregated.
     pending_votes: PendingVotes,
     /// Map of block id to its completed quorum certificate (2f + 1 votes)
@@ -129,7 +129,7 @@ where
             highest_certified_block_id: root_id,
             highest_quorum_cert: Arc::clone(&root_quorum_cert),
             highest_timeout_cert,
-            highest_ledger_info: Arc::new(root_ledger_info),
+            highest_commit_cert: Arc::new(root_ledger_info),
             pending_votes: PendingVotes::new(),
             id_to_quorum_cert,
             pruned_block_ids,
@@ -190,8 +190,8 @@ where
         self.highest_timeout_cert.replace(tc);
     }
 
-    pub(super) fn highest_ledger_info(&self) -> Arc<QuorumCert> {
-        Arc::clone(&self.highest_ledger_info)
+    pub(super) fn highest_commit_cert(&self) -> Arc<QuorumCert> {
+        Arc::clone(&self.highest_commit_cert)
     }
 
     pub(super) fn get_quorum_cert_for_block(
@@ -257,8 +257,8 @@ where
             .entry(block_id)
             .or_insert_with(|| Arc::clone(&qc));
 
-        if self.highest_ledger_info.commit_info().round() < qc.commit_info().round() {
-            self.highest_ledger_info = qc;
+        if self.highest_commit_cert.commit_info().round() < qc.commit_info().round() {
+            self.highest_commit_cert = qc;
         }
 
         Ok(())

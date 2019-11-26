@@ -53,7 +53,7 @@ impl<T: Payload> From<ProposalUncheckedSignatures<T>> for ProposalMsg<T> {
 
 impl<T: Payload> ProposalUncheckedSignatures<T> {
     /// Validates the signatures of the proposal. This includes the leader's signature over the
-    /// block and the QC, the timeout certificate signatures and the highest_ledger_info signatures.
+    /// block and the QC, the timeout certificate signatures.
     pub fn validate_signatures(self, validator: &ValidatorVerifier) -> Result<ProposalMsg<T>> {
         // verify block leader's signature and QC
         self.0
