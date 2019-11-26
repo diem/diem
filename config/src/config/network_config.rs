@@ -78,6 +78,27 @@ impl Default for NetworkConfig {
 }
 
 impl NetworkConfig {
+    /// This clones the underlying data except for the keypair so that this config can be used as a
+    /// template for another config.
+    pub fn clone_for_template(&self) -> Self {
+        Self {
+            peer_id: self.peer_id,
+            listen_address: self.listen_address.clone(),
+            advertised_address: self.advertised_address.clone(),
+            discovery_interval_ms: self.discovery_interval_ms,
+            connectivity_check_interval_ms: self.connectivity_check_interval_ms,
+            enable_encryption_and_authentication: self.enable_encryption_and_authentication,
+            is_permissioned: self.is_permissioned,
+            network_keypairs_file: self.network_keypairs_file.clone(),
+            network_keypairs: NetworkKeyPairs::default(),
+            network_peers_file: self.network_peers_file.clone(),
+            network_peers: self.network_peers.clone(),
+            seed_peers_file: self.seed_peers_file.clone(),
+            seed_peers: self.seed_peers.clone(),
+            base: self.base.clone(),
+        }
+    }
+
     pub fn load(&mut self, base: Arc<BaseConfig>, network_role: RoleType) -> Result<()> {
         self.base = base;
         if !self.network_peers_file.as_os_str().is_empty() {

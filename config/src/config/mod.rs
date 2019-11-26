@@ -168,6 +168,34 @@ impl fmt::Display for RoleType {
 }
 
 impl NodeConfig {
+    /// This clones the underlying data except for the keypair so that this config can be used as a
+    /// template for another config.
+    pub fn clone_for_template(&self) -> Self {
+        Self {
+            admission_control: self.admission_control.clone(),
+            base: self.base.clone(),
+            consensus: self.consensus.clone_for_template(),
+            debug_interface: self.debug_interface.clone(),
+            execution: self.execution.clone(),
+            full_node_networks: self
+                .full_node_networks
+                .iter()
+                .map(|c| c.clone_for_template())
+                .collect(),
+            logger: self.logger.clone(),
+            metrics: self.metrics.clone(),
+            mempool: self.mempool.clone(),
+            state_sync: self.state_sync.clone(),
+            storage: self.storage.clone(),
+            validator_network: if let Some(n) = &self.validator_network {
+                Some(n.clone_for_template())
+            } else {
+                None
+            },
+            vm_config: self.vm_config.clone(),
+        }
+    }
+
     pub fn set_data_dir(&mut self, path: PathBuf) -> Result<()> {
         self.base = Arc::new(BaseConfig::new(path, self.base.role));
         self.prepare()?;
