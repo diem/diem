@@ -80,33 +80,6 @@ module LibraAccount {
         guid: bytearray,
     }
 
-    // Creates a new LibraAccount.T
-    // Invoked by the `create_account` builtin
-    make(fresh_address: address): Self.T {
-        let zero_balance: LibraCoin.T;
-        let generator: Self.EventHandleGenerator;
-        let sent_handle: Self.EventHandle<Self.SentPaymentEvent>;
-        let received_handle: Self.EventHandle<Self.ReceivedPaymentEvent>;
-        let auth_key: bytearray;
-
-        auth_key = AddressUtil.address_to_bytes(copy(fresh_address));
-        generator = EventHandleGenerator {counter: 0};
-        sent_handle = Self.new_event_handle_impl<Self.SentPaymentEvent>(&mut generator, copy(fresh_address));
-        received_handle = Self.new_event_handle_impl<Self.ReceivedPaymentEvent>(&mut generator, move(fresh_address));
-        zero_balance = LibraCoin.zero();
-
-        return T {
-            authentication_key: move(auth_key),
-            balance: move(zero_balance),
-            delegated_key_rotation_capability: false,
-            delegated_withdrawal_capability: false,
-            received_events: move(received_handle),
-            sent_events: move(sent_handle),
-            sequence_number: 0,
-            event_generator: move(generator),
-        };
-    }
-
     // Deposits the `to_deposit` coin into the `payee`'s account
     public deposit(payee: address, to_deposit: LibraCoin.T) acquires T {
         Self.deposit_with_metadata(move(payee), move(to_deposit), h"");

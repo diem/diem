@@ -62,7 +62,7 @@ lazy_static! {
 
 // Names for special functions and structs
 lazy_static! {
-    static ref CREATE_ACCOUNT_NAME: Identifier = Identifier::new("make").unwrap();
+    static ref CREATE_ACCOUNT_NAME: Identifier = Identifier::new("create_account").unwrap();
     static ref ACCOUNT_STRUCT_NAME: Identifier = Identifier::new("T").unwrap();
     static ref EMIT_EVENT_NAME: Identifier = Identifier::new("write_to_event_store").unwrap();
     static ref SAVE_ACCOUNT_NAME: Identifier = Identifier::new("save_account").unwrap();
@@ -215,17 +215,13 @@ where
         gas_schedule: &'txn CostTable,
         addr: AccountAddress,
     ) -> VMResult<()> {
-        let account_module = module_cache.get_loaded_module(&ACCOUNT_MODULE)?;
         let mut interp = Self::new(module_cache, txn_data, gas_schedule);
         interp.execute_function_call(
             context,
             &ACCOUNT_MODULE,
             &CREATE_ACCOUNT_NAME,
             vec![Value::address(addr)],
-        )?;
-
-        let account_resource = interp.operand_stack.pop_as::<Struct>()?;
-        interp.save_account(context, account_module, addr, account_resource)
+        )
     }
 
     /// Create a new instance of an `Interpreter` in the context of a transaction with a
