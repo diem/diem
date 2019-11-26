@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::tests::mock_storage::MockStorage;
 use crate::{
     executor_proxy::ExecutorProxyTrait, PeerId, StateSyncClient, StateSynchronizer,
     SynchronizerState,
@@ -9,20 +10,18 @@ use config_builder::util::get_test_config;
 use failure::{prelude::*, Result};
 use futures::{executor::block_on, future::FutureExt, Future};
 use libra_config::config::RoleType;
-use libra_crypto::hash::CryptoHash;
+use libra_crypto::x25519::X25519StaticPublicKey;
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, x25519, HashValue};
 use libra_logger::set_simple_logger;
 use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::{
-    random_validator_verifier, ValidatorChangeEventWithProof, ValidatorSigner, ValidatorVerifier,
+    random_validator_verifier, ValidatorChangeEventWithProof, ValidatorSigner,
 };
+use libra_types::validator_public_keys::ValidatorPublicKeys;
+use libra_types::validator_set::ValidatorSet;
 use libra_types::{
-    account_address::AccountAddress,
-    crypto_proxies::LedgerInfoWithSignatures,
-    ledger_info::LedgerInfo,
-    proof::TransactionListProof,
-    test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{Transaction, TransactionListWithProof},
+    crypto_proxies::LedgerInfoWithSignatures, ledger_info::LedgerInfo, proof::TransactionListProof,
+    transaction::TransactionListWithProof,
 };
 use network::{
     validator_network::{
@@ -43,56 +42,10 @@ use std::{
     },
 };
 use tokio::runtime::Runtime;
-use transaction_builder::encode_transfer_script;
-use vm_genesis::GENESIS_KEYPAIR;
 
 type MockRpcHandler = Box<
     dyn Fn(TransactionListWithProof) -> Result<TransactionListWithProof> + Send + Sync + 'static,
 >;
-
-// To play with the storage values
-pub struct MockStorage {
-    signer: ValidatorSigner,
-    verifier: ValidatorVerifier,
-    version: u64,
-}
-
-impl MockStorage {
-    fn new(signer: ValidatorSigner, verifier: ValidatorVerifier, version: u64) -> Self {
-        Self {
-            signer,
-            verifier,
-            version,
-        }
-    }
-
-    fn commit(&mut self, val: u64) {
-        self.version = std::cmp::max(self.version, val);
-    }
-
-    fn gen_ledger_info(&self, version: u64) -> LedgerInfoWithSignatures {
-        let ledger_info = LedgerInfo::new(
-            BlockInfo::new(
-                1,
-                version,
-                HashValue::zero(),
-                HashValue::zero(),
-                version,
-                0,
-                None,
-            ),
-            HashValue::zero(),
-        );
-        let signature = self.signer.sign_message(ledger_info.hash()).unwrap();
-        let mut signatures = BTreeMap::new();
-        signatures.insert(self.signer.author(), signature);
-        LedgerInfoWithSignatures::new(ledger_info, signatures)
-    }
-
-    fn trusted_verifier(&self) -> ValidatorVerifier {
-        self.verifier.clone()
-    }
-}
 
 pub struct MockExecutorProxy {
     handler: MockRpcHandler,
@@ -103,64 +56,52 @@ impl MockExecutorProxy {
     fn new(handler: MockRpcHandler, storage: Arc<RwLock<MockStorage>>) -> Self {
         Self { handler, storage }
     }
-
-    fn mock_chunk_response(&self, version: u64) -> TransactionListWithProof {
-        let sender = AccountAddress::from_public_key(&GENESIS_KEYPAIR.1);
-        let receiver = AccountAddress::new([0xff; 32]);
-        let program = encode_transfer_script(&receiver, 1);
-        let transaction = Transaction::UserTransaction(get_test_signed_txn(
-            sender,
-            version + 1,
-            GENESIS_KEYPAIR.0.clone(),
-            GENESIS_KEYPAIR.1.clone(),
-            Some(program),
-        ));
-
-        let proof = TransactionListProof::new_empty();
-        TransactionListWithProof::new(vec![transaction], None, Some(version + 1), proof)
-    }
 }
 
 impl ExecutorProxyTrait for MockExecutorProxy {
     fn get_local_storage_state(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>> {
-        let highest_synced_version = self.storage.read().unwrap().version;
-        let highest_local_li = self
-            .storage
-            .read()
-            .unwrap()
-            .gen_ledger_info(highest_synced_version);
-        let state = SynchronizerState::new(
-            highest_local_li,
-            highest_synced_version,
-            self.storage.read().unwrap().trusted_verifier(),
-        );
+        let state = self.storage.read().unwrap().get_local_storage_state();
         async move { Ok(state) }.boxed()
     }
 
     fn execute_chunk(
         &self,
-        _txn_list_with_proof: TransactionListWithProof,
+        txn_list_with_proof: TransactionListWithProof,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
-        let version = ledger_info_with_sigs.ledger_info().version();
-        self.storage.write().unwrap().version = version;
+        self.storage
+            .write()
+            .unwrap()
+            .add_txns_with_li(txn_list_with_proof.transactions, ledger_info_with_sigs);
         async move { Ok(()) }.boxed()
     }
 
     fn get_chunk(
         &self,
         known_version: u64,
-        _: u64,
-        _: u64,
+        limit: u64,
+        target_version: u64,
     ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
-        let response = (self.handler)(self.mock_chunk_response(known_version));
+        let txns = self
+            .storage
+            .read()
+            .unwrap()
+            .get_chunk(known_version + 1, limit, target_version);
+        let first_txn_version = txns.first().map(|_| known_version + 1);
+        let txns_with_proof = TransactionListWithProof::new(
+            txns,
+            None,
+            first_txn_version,
+            TransactionListProof::new_empty(),
+        );
+        let response = (self.handler)(txns_with_proof);
         async move { response }.boxed()
     }
 
-    fn get_epoch_proof(&self, _start_epoch: u64) -> Result<ValidatorChangeEventWithProof> {
-        unimplemented!("get epoch proof not supported for mock executor proxy");
+    fn get_epoch_proof(&self, start_epoch: u64) -> Result<ValidatorChangeEventWithProof> {
+        Ok(self.storage.read().unwrap().get_epoch_changes(start_epoch))
     }
 }
 
@@ -169,22 +110,18 @@ struct SynchronizerEnv {
     _synchronizers: Vec<StateSynchronizer>,
     clients: Vec<Arc<StateSyncClient>>,
     storage_proxies: Vec<Arc<RwLock<MockStorage>>>, // to directly modify peers storage
+    network_signing_public_keys: Vec<Ed25519PublicKey>,
+    network_identity_public_keys: Vec<X25519StaticPublicKey>,
 }
 
 impl SynchronizerEnv {
-    fn new(handler: MockRpcHandler, role: RoleType) -> Self {
-        set_simple_logger("state-sync");
-        let runtime = Runtime::new().unwrap();
-        // Generate a verifier with a quorum voting power of 1 (a single signature on LI is enough
-        // to pass verification).
-        let (signers, verifier) = random_validator_verifier(2, Some(1), true);
-        let peers = signers.iter().map(|s| s.author()).collect::<Vec<PeerId>>();
-
-        // setup network
-        let addr: Multiaddr = "/memory/0".parse().unwrap();
-        let protocols = vec![ProtocolId::from_static(
-            STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
-        )];
+    // Returns the initial peers with their signatures
+    fn initial_setup() -> (
+        Vec<ValidatorSigner>,
+        Vec<Ed25519PrivateKey>,
+        Vec<ValidatorPublicKeys>,
+    ) {
+        let (signers, _verifier) = random_validator_verifier(2, None, true);
 
         // Setup signing public keys.
         let mut rng = StdRng::from_seed(TEST_SEED);
@@ -196,24 +133,80 @@ impl SynchronizerEnv {
         let (_b_identity_private_key, b_identity_public_key) =
             x25519::compat::generate_keypair(&mut rng);
 
-        let trusted_peers: HashMap<_, _> = vec![
-            (
-                peers[0],
-                NetworkPublicKeys {
-                    signing_public_key: a_signing_public_key.clone(),
-                    identity_public_key: a_identity_public_key.clone(),
-                },
+        // The voting power of peer 1 is enough to generate an LI that passes validation.
+        let validators_keys = vec![
+            ValidatorPublicKeys::new(
+                signers[0].author(),
+                signers[0].public_key(),
+                1,
+                a_signing_public_key.clone(),
+                a_identity_public_key.clone(),
             ),
-            (
-                peers[1],
-                NetworkPublicKeys {
-                    signing_public_key: b_signing_public_key.clone(),
-                    identity_public_key: b_identity_public_key.clone(),
-                },
+            ValidatorPublicKeys::new(
+                signers[1].author(),
+                signers[1].public_key(),
+                3,
+                b_signing_public_key.clone(),
+                b_identity_public_key.clone(),
             ),
-        ]
-        .into_iter()
-        .collect();
+        ];
+        (
+            signers,
+            vec![a_signing_private_key, b_signing_private_key],
+            validators_keys,
+        )
+    }
+
+    fn genesis_li(validators: &[ValidatorPublicKeys]) -> LedgerInfoWithSignatures {
+        LedgerInfoWithSignatures::new(
+            LedgerInfo::new(
+                BlockInfo::new(
+                    0,
+                    0,
+                    HashValue::zero(),
+                    HashValue::zero(),
+                    0,
+                    0,
+                    Some(ValidatorSet::new(validators.to_owned())),
+                ),
+                HashValue::zero(),
+            ),
+            BTreeMap::new(),
+        )
+    }
+
+    fn new(handler: MockRpcHandler, role: RoleType) -> Self {
+        set_simple_logger("state-sync");
+        let runtime = Runtime::new().unwrap();
+        let (signers, network_signers, public_keys) = Self::initial_setup();
+        let peers = signers.iter().map(|s| s.author()).collect::<Vec<PeerId>>();
+        let network_signing_public_keys = public_keys
+            .iter()
+            .map(|pk| pk.network_signing_public_key().clone())
+            .collect::<Vec<Ed25519PublicKey>>();
+        let network_identity_public_keys = public_keys
+            .iter()
+            .map(|pk| pk.network_identity_public_key().clone())
+            .collect::<Vec<X25519StaticPublicKey>>();
+
+        // setup network
+        let addr: Multiaddr = "/memory/0".parse().unwrap();
+        let protocols = vec![ProtocolId::from_static(
+            STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
+        )];
+
+        let trusted_peers: HashMap<_, _> = public_keys
+            .iter()
+            .map(|public_keys| {
+                (
+                    *public_keys.account_address(),
+                    NetworkPublicKeys {
+                        signing_public_key: public_keys.network_signing_public_key().clone(),
+                        identity_public_key: public_keys.network_identity_public_key().clone(),
+                    },
+                )
+            })
+            .collect();
 
         let (listener_addr, mut network_provider) = NetworkBuilder::new(
             runtime.handle().clone(),
@@ -221,7 +214,10 @@ impl SynchronizerEnv {
             addr.clone(),
             RoleType::Validator,
         )
-        .signing_keys((b_signing_private_key, b_signing_public_key))
+        .signing_keys((
+            network_signers[1].clone(),
+            public_keys[1].network_signing_public_key().clone(),
+        ))
         .trusted_peers(trusted_peers.clone())
         .transport(TransportType::Memory)
         .direct_send_protocols(protocols.clone())
@@ -236,7 +232,10 @@ impl SynchronizerEnv {
             RoleType::Validator,
         )
         .transport(TransportType::Memory)
-        .signing_keys((a_signing_private_key, a_signing_public_key))
+        .signing_keys((
+            network_signers[0].clone(),
+            public_keys[0].network_signing_public_key().clone(),
+        ))
         .trusted_peers(trusted_peers.clone())
         .seed_peers([(peers[1], vec![listener_addr])].iter().cloned().collect())
         .direct_send_protocols(protocols.clone())
@@ -258,16 +257,16 @@ impl SynchronizerEnv {
             .upstream_peers
             .upstream_peers
             .push(peers[1]);
+
+        let genesis_li = Self::genesis_li(&public_keys);
         let storage_proxies = vec![
             Arc::new(RwLock::new(MockStorage::new(
+                genesis_li.clone(),
                 signers[0].clone(),
-                verifier.clone(),
-                0,
             ))),
             Arc::new(RwLock::new(MockStorage::new(
+                genesis_li.clone(),
                 signers[1].clone(),
-                verifier.clone(),
-                0,
             ))),
         ];
         let synchronizers: Vec<StateSynchronizer> = vec![
@@ -291,6 +290,8 @@ impl SynchronizerEnv {
             _synchronizers: synchronizers,
             _runtime: runtime,
             storage_proxies,
+            network_signing_public_keys,
+            network_identity_public_keys,
         }
     }
 
@@ -302,12 +303,20 @@ impl SynchronizerEnv {
         block_on(self.clients[peer_id].sync_to(target)).unwrap()
     }
 
+    // commit new txns up to the given version
     fn commit(&self, peer_id: usize, version: u64) {
-        self.storage_proxies[peer_id]
-            .write()
-            .unwrap()
-            .commit(version);
+        let mut storage = self.storage_proxies[peer_id].write().unwrap();
+        let num_txns = version - storage.version();
+        assert!(num_txns > 0);
+        storage.commit_new_txns(num_txns);
         block_on(self.clients[peer_id].commit()).unwrap();
+    }
+
+    fn latest_li(&self, peer_id: usize) -> LedgerInfoWithSignatures {
+        self.storage_proxies[peer_id]
+            .read()
+            .unwrap()
+            .highest_local_li()
     }
 
     fn wait_for_version(&self, peer_id: usize, target_version: u64) -> bool {
@@ -321,6 +330,34 @@ impl SynchronizerEnv {
         }
         false
     }
+
+    // Moves peer 1 to the next epoch. Note that peer 0 is not going to be able to discover its new
+    // signer: it'll learn about the new epoch public keys through state synchronization, but the
+    // private keys are supposed to be discovered separately.
+    pub fn move_to_next_epoch(&self) {
+        let (signers, _verifier) = random_validator_verifier(2, None, true);
+        let new_keys = vec![
+            ValidatorPublicKeys::new(
+                signers[0].author(),
+                signers[0].public_key(),
+                1,
+                self.network_signing_public_keys[0].clone(),
+                self.network_identity_public_keys[0].clone(),
+            ),
+            ValidatorPublicKeys::new(
+                signers[1].author(),
+                signers[1].public_key(),
+                3,
+                self.network_signing_public_keys[1].clone(),
+                self.network_identity_public_keys[1].clone(),
+            ),
+        ];
+        let validator_set = ValidatorSet::new(new_keys);
+        self.storage_proxies[1]
+            .write()
+            .unwrap()
+            .move_to_next_epoch(signers[1].clone(), validator_set);
+    }
 }
 
 #[test]
@@ -329,20 +366,20 @@ fn test_basic_catch_up() {
 
     // test small sequential syncs
     for version in 1..5 {
-        // peer 0 syncs to a target signed by peer 1
-        env.sync_to(
-            0,
-            env.storage_proxies[1]
-                .read()
-                .unwrap()
-                .gen_ledger_info(version),
-        );
+        env.commit(1, version);
+        let target_li = env.latest_li(1);
+        env.sync_to(0, target_li);
+        assert_eq!(env.latest_li(0).ledger_info().version(), version);
     }
     // test batch sync for multiple transactions
-    env.sync_to(
-        0,
-        env.storage_proxies[1].read().unwrap().gen_ledger_info(10),
-    );
+    env.commit(1, 20);
+    env.sync_to(0, env.latest_li(1));
+    assert_eq!(env.latest_li(0).ledger_info().version(), 20);
+
+    // test batch sync for multiple chunks
+    env.commit(1, 2000);
+    env.sync_to(0, env.latest_li(1));
+    assert_eq!(env.latest_li(0).ledger_info().version(), 2000);
 }
 
 #[test]
@@ -359,7 +396,9 @@ fn test_flaky_peer_sync() {
         }
     });
     let env = SynchronizerEnv::new(handler, RoleType::Validator);
-    env.sync_to(0, env.storage_proxies[1].read().unwrap().gen_ledger_info(1));
+    env.commit(1, 20);
+    env.sync_to(0, env.latest_li(1));
+    assert_eq!(env.latest_li(0).ledger_info().version(), 20);
 }
 
 #[test]
@@ -372,4 +411,43 @@ fn test_full_node() {
     // second sync will be done via long polling cause first node should send new request
     // after receiving first chunk immediately
     assert!(env.wait_for_version(0, 20));
+}
+
+#[test]
+fn catch_up_through_epochs_validators() {
+    let env = SynchronizerEnv::new(SynchronizerEnv::default_handler(), RoleType::Validator);
+
+    // catch up to the next epoch starting from the middle of the current one
+    env.commit(1, 20);
+    env.sync_to(0, env.latest_li(1));
+    env.commit(1, 40);
+    env.move_to_next_epoch();
+    env.commit(1, 100);
+    env.sync_to(0, env.latest_li(1));
+    assert_eq!(env.latest_li(0).ledger_info().version(), 100);
+    assert_eq!(env.latest_li(0).ledger_info().epoch(), 2);
+
+    // catch up through multiple epochs
+    for epoch in 2..10 {
+        env.commit(1, epoch * 100);
+        env.move_to_next_epoch();
+    }
+    env.commit(1, 950); // At this point peer 1 is at epoch 10 and version 950
+    env.sync_to(0, env.latest_li(1));
+    assert_eq!(env.latest_li(0).ledger_info().version(), 950);
+    assert_eq!(env.latest_li(0).ledger_info().epoch(), 10);
+}
+
+#[test]
+fn catch_up_through_epochs_full_node() {
+    let env = SynchronizerEnv::new(SynchronizerEnv::default_handler(), RoleType::FullNode);
+    // catch up through multiple epochs
+    for epoch in 1..10 {
+        env.commit(1, epoch * 100);
+        env.move_to_next_epoch();
+    }
+    env.commit(1, 950); // At this point peer 1 is at epoch 10 and version 950
+
+    assert!(env.wait_for_version(0, 950));
+    assert_eq!(env.latest_li(0).ledger_info().epoch(), 10);
 }
