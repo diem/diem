@@ -1,39 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use chrono::{Datelike, Timelike, Utc};
-use cluster_test::effects::RemoveNetworkEffects;
-use cluster_test::experiments::{
-    MultiRegionSimulation, MultiRegionSimulationParams, PacketLossRandomValidators,
-    PacketLossRandomValidatorsParams,
-};
-use cluster_test::github::GitHub;
-use cluster_test::health::PrintFailures;
-use cluster_test::instance::Instance;
-use cluster_test::prometheus::Prometheus;
-use cluster_test::thread_pool_executor::ThreadPoolExecutor;
-use cluster_test::tx_emitter::{EmitJobRequest, EmitThreadParams};
-use cluster_test::util::unix_timestamp_now;
-use cluster_test::{
-    aws::Aws,
-    cluster::Cluster,
-    deployment::{DeploymentManager, SOURCE_TAG},
-    effects::{three_region_simulation_effects, Action, Effect, Reboot, StopContainer},
-    experiments::{Experiment, RebootRandomValidators},
-    health::{DebugPortLogThread, HealthCheckRunner, LogTail},
-    slack::SlackClient,
-    suite::ExperimentSuite,
-    tx_emitter::TxEmitter,
-};
-use failure::{
-    self,
-    prelude::{bail, format_err},
-};
-use rand::prelude::ThreadRng;
-use rand::Rng;
-use reqwest::Url;
-use slog::{o, Drain};
-use slog_scope::{info, warn};
 use std::process;
 use std::{
     collections::HashSet,
@@ -42,8 +9,45 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
+
+use chrono::{Datelike, Timelike, Utc};
+use itertools::Itertools;
+use rand::prelude::ThreadRng;
+use rand::Rng;
+use reqwest::Url;
+use slog::{o, Drain};
+use slog_scope::{info, warn};
 use structopt::{clap::AppSettings, clap::ArgGroup, StructOpt};
 use termion::{color, style};
+
+use cluster_test::effects::RemoveNetworkEffects;
+use cluster_test::experiments::{
+    Context, MultiRegionSimulation, MultiRegionSimulationParams, PacketLossRandomValidators,
+    PacketLossRandomValidatorsParams,
+};
+use cluster_test::github::GitHub;
+use cluster_test::health::PrintFailures;
+use cluster_test::prometheus::Prometheus;
+use cluster_test::thread_pool_executor::ThreadPoolExecutor;
+use cluster_test::tx_emitter::{EmitJobRequest, EmitThreadParams};
+use cluster_test::util::unix_timestamp_now;
+use cluster_test::{
+    aws::Aws,
+    cluster::Cluster,
+    deployment::{DeploymentManager, SOURCE_TAG},
+    effects,
+    effects::{Action, Effect, Reboot, StopContainer},
+    experiments::{Experiment, RebootRandomValidators},
+    health::{DebugPortLogThread, HealthCheckRunner, LogTail},
+    slack::SlackClient,
+    stats,
+    suite::ExperimentSuite,
+    tx_emitter::TxEmitter,
+};
+use failure::{
+    self,
+    prelude::{bail, format_err},
+};
 
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -397,9 +401,13 @@ impl ClusterUtil {
                 })
                 .expect("Failed to start emit job");
             thread::sleep(Duration::from_secs(30) + window);
-            match print_stat(&self.prometheus, window) {
-                Err(e) => info!("Failed to get stats: {:?}", e),
-                Ok((tps, lat)) => results.push((stop_effects.len(), tps, lat)),
+            let now = unix_timestamp_now();
+            match stats::txn_stats(&self.prometheus, now - window, now) {
+                Ok((avg_tps, avg_latency)) => {
+                    results.push((stop_effects.len(), avg_tps, avg_latency));
+                    info!("Tps: {:.0}, latency: {:.0} ms", avg_tps, avg_latency);
+                }
+                Err(err) => info!("Stat error: {:?}", err),
             }
             emitter.stop_job(job);
             if stop_effects.len() > max_stopped {
@@ -435,38 +443,15 @@ impl ClusterUtil {
         thread::sleep(Duration::from_secs(30)); // warm up
         loop {
             thread::sleep(Duration::from_secs(10));
-            if let Err(err) = print_stat(&self.prometheus, window) {
-                info!("Stat error: {:?}", err);
+            let now = unix_timestamp_now();
+            match stats::txn_stats(&self.prometheus, now - window, now) {
+                Ok((avg_tps, avg_latency)) => {
+                    info!("Tps: {:.0}, latency: {:.0} ms", avg_tps, avg_latency)
+                }
+                Err(err) => info!("Stat error: {:?}", err),
             }
         }
     }
-}
-
-fn print_stat(prometheus: &Prometheus, window: Duration) -> failure::Result<(f64, f64)> {
-    let step = 10;
-    let end = unix_timestamp_now();
-    let start = end - window;
-    let avg_tps = prometheus
-        .query_range_avg(
-            "irate(libra_consensus_last_committed_version[1m])".to_string(),
-            &start,
-            &end,
-            step,
-        )
-        .map_err(|e| format_err!("No tps data: {}", e))?;
-    let avg_latency = prometheus.query_range_avg(
-        "irate(mempool_duration_sum{op='e2e.latency'}[1m])/irate(mempool_duration_count{op='e2e.latency'}[1m])"
-            .to_string(),
-        &start,
-        &end,
-        step,
-    ).map_err(|_| format_err!("No latency data"))?;
-    info!(
-        "Tps: {:.0}, latency: {:.0} ms",
-        avg_tps,
-        avg_latency * 1000.
-    );
-    Ok((avg_tps, avg_latency))
 }
 
 impl ClusterTestRunner {
@@ -522,13 +507,13 @@ impl ClusterTestRunner {
 
     pub fn run_ci_suite(&mut self, hash_to_tag: Option<String>) -> failure::Result<()> {
         let suite = ExperimentSuite::new_pre_release(&self.cluster);
-        self.run_suite(suite)?;
-        info!("Starting measure_performance");
-        let report = self.measure_performance()?;
-        let perf_msg = format!(
-            "Performance report:\n```\n{}\n```",
-            report.to_slack_message()
-        );
+        let results = self.run_suite(suite)?;
+        let output = results
+            .iter()
+            .filter(|x| x.is_some())
+            .map(|x| x.as_ref().unwrap())
+            .join("\n");
+        let perf_msg = format!("Performance report:\n```\n{}\n```", output);
         if let Some(hash_to_tag) = hash_to_tag {
             info!("Test suite succeed first time for `{}`", hash_to_tag);
             let prev_commit = self
@@ -689,128 +674,47 @@ impl ClusterTestRunner {
         Ok(())
     }
 
-    fn run_suite(&mut self, suite: ExperimentSuite) -> failure::Result<()> {
+    fn run_suite(&mut self, suite: ExperimentSuite) -> failure::Result<Vec<Option<String>>> {
         info!("Starting suite");
+        let mut results = vec![];
         let suite_started = Instant::now();
         for experiment in suite.experiments {
             let experiment_name = format!("{}", experiment);
-            self.run_single_experiment(experiment).map_err(move |e| {
+            results.push(self.run_single_experiment(experiment).map_err(move |e| {
                 format_err!("Experiment `{}` failed: `{}`", experiment_name, e)
-            })?;
+            })?);
             thread::sleep(self.experiment_interval);
         }
         info!(
             "Suite completed in {:?}",
             Instant::now().duration_since(suite_started)
         );
-        Ok(())
+        Ok(results)
     }
 
     pub fn perf_run(&mut self) {
-        let results = self.measure_performance().unwrap();
-        println!("{}", results.to_slack_message())
+        let suite = ExperimentSuite::new_perf_suite(&self.cluster);
+        let results = self.run_suite(suite).unwrap();
+        let output = results
+            .iter()
+            .filter(|x| x.is_some())
+            .map(|x| x.as_ref().unwrap())
+            .join("\n");
+        println!("Performance report:\n```\n{}\n```", output);
     }
 
-    fn measure_performance_3_region(&mut self) -> failure::Result<(f64, f64)> {
-        let window = Duration::from_secs(180);
-        // Simulate 3 regions us_west(40%), us_east(40%), eu(20%)
-        // RTT latency b/w us_west<->eu: 190ms; us_west<->us_east: 80ms; us_east<->eu: 120ms;
-        let (us, euro) = self.cluster.split_n_random(80);
-        let (us_west, us_east) = us.split_n_random(40);
-        let mut network_effects = three_region_simulation_effects(
-            (
-                us_west.instances().clone(),
-                us_east.instances().clone(),
-                euro.instances().clone(),
-            ),
-            (
-                Duration::from_millis(60), // us_east<->eu one way delay
-                Duration::from_millis(95), // us_west<->eu one way delay
-                Duration::from_millis(40), // us_west<->us_east one way delay
-            ),
-        );
-        info!("Activating network effects");
-        self.activate_all(&mut network_effects);
-        info!("Wait for all healthy");
-        self.wait_until_all_healthy()?;
-        self.emit_txn_for(
-            window + Duration::from_secs(60),
-            self.cluster.instances().clone(),
-        )?;
-        let stats_3_region = print_stat(&self.prometheus, window)
-            .map_err(|e| format_err!("Failed to query stats: {}", e))?;
-
-        info!("Deactivating network effects");
-        self.deactivate_all(&mut network_effects);
-        info!("Wait for all healthy");
-        self.wait_until_all_healthy()?;
-        Ok(stats_3_region)
-    }
-
-    fn measure_performance_nodes_down(
+    pub fn cleanup_and_run(
         &mut self,
-        percent_nodes_down: usize,
-    ) -> failure::Result<(f64, f64)> {
-        let window = Duration::from_secs(180);
-        let (stop, keep) = self.cluster.split_n_random(percent_nodes_down);
-        let mut stop_effects: Vec<_> = stop
-            .into_instances()
-            .into_iter()
-            .map(StopContainer::new)
-            .collect();
-        self.activate_all(&mut stop_effects);
-        self.emit_txn_for(window + Duration::from_secs(30), keep.instances().clone())?;
-        let stats = print_stat(&self.prometheus, window)
-            .map_err(|e| format_err!("Failed to query stats: {}", e))?;
-        self.deactivate_all(&mut stop_effects);
-        self.wait_until_all_healthy()?;
-        Ok(stats)
-    }
-
-    fn measure_performance(&mut self) -> failure::Result<SuiteReport> {
-        info!("Starting warm up job");
-        self.emit_txn_for(Duration::from_secs(60), self.cluster.instances().clone())?;
-        info!("Warm up done, measuring tps");
-        let window = Duration::from_secs(180);
-        self.emit_txn_for(
-            window + Duration::from_secs(30),
-            self.cluster.instances().clone(),
-        )?;
-        let stats_all_up = print_stat(&self.prometheus, window)
-            .map_err(|e| format_err!("Failed to query stats: {}", e))?;
-        let stats_10_down = self.measure_performance_nodes_down(10)?;
-        let stats_3_region = self.measure_performance_3_region()?;
-        Ok(SuiteReport {
-            stats_all_up,
-            stats_10_down,
-            stats_3_region,
-        })
-    }
-
-    fn emit_txn_for(
-        &mut self,
-        duration: Duration,
-        instances: Vec<Instance>,
-    ) -> failure::Result<()> {
-        let job = self.tx_emitter.start_job(EmitJobRequest {
-            instances,
-            accounts_per_client: 10,
-            thread_params: EmitThreadParams::default(),
-        })?;
-        thread::sleep(duration);
-        self.tx_emitter.stop_job(job);
-        Ok(())
-    }
-
-    pub fn cleanup_and_run(&mut self, experiment: Box<dyn Experiment>) -> failure::Result<()> {
+        experiment: Box<dyn Experiment>,
+    ) -> failure::Result<Option<String>> {
         self.cleanup();
         self.run_single_experiment(experiment)
     }
 
     pub fn run_single_experiment(
         &mut self,
-        experiment: Box<dyn Experiment>,
-    ) -> failure::Result<()> {
+        mut experiment: Box<dyn Experiment>,
+    ) -> failure::Result<Option<String>> {
         let events = self.logs.recv_all();
         if let Err(s) =
             self.health_check_runner
@@ -833,8 +737,13 @@ impl ClusterTestRunner {
         let affected_validators = experiment.affected_validators();
         let deadline = experiment.deadline();
         let (exp_result_sender, exp_result_recv) = mpsc::channel();
+        let mut context = Context::new(
+            self.tx_emitter.clone(),
+            self.prometheus.clone(),
+            self.thread_pool_executor.clone(),
+        );
         thread::spawn(move || {
-            let result = experiment.run();
+            let result = experiment.run(&mut context);
             exp_result_sender
                 .send(result)
                 .expect("Failed to send experiment result");
@@ -842,7 +751,7 @@ impl ClusterTestRunner {
 
         // We expect experiments completes and cluster go into healthy state within timeout
         let experiment_deadline = Instant::now() + deadline;
-
+        let retval;
         loop {
             if Instant::now() > experiment_deadline {
                 bail!("Experiment did not complete in time");
@@ -861,7 +770,7 @@ impl ClusterTestRunner {
             }
             match exp_result_recv.try_recv() {
                 Ok(result) => {
-                    result.expect("Failed to run experiment");
+                    retval = result.expect("Failed to run experiment");
                     break;
                 }
                 Err(TryRecvError::Empty) => {
@@ -908,7 +817,7 @@ impl ClusterTestRunner {
         }
 
         info!("Experiment completed");
-        Ok(())
+        Ok(retval)
     }
 
     fn run_health_check(&mut self) {
@@ -1064,11 +973,17 @@ impl ClusterTestRunner {
     }
 
     pub fn stop(&self) {
-        self.activate_all(&mut self.make_stop_effects())
+        effects::activate_all(
+            self.thread_pool_executor.clone(),
+            &mut self.make_stop_effects(),
+        )
     }
 
     pub fn start(&self) {
-        self.deactivate_all(&mut self.make_stop_effects())
+        effects::deactivate_all(
+            self.thread_pool_executor.clone(),
+            &mut self.make_stop_effects(),
+        )
     }
 
     fn make_stop_effects(&self) -> Vec<StopContainer> {
@@ -1078,48 +993,5 @@ impl ClusterTestRunner {
             .into_iter()
             .map(StopContainer::new)
             .collect()
-    }
-
-    fn activate_all<T: Effect>(&self, effects: &mut [T]) {
-        let jobs = effects
-            .iter_mut()
-            .map(|effect| {
-                move || {
-                    if let Err(e) = effect.activate() {
-                        info!("Failed to activate {}: {:?}", effect, e);
-                    }
-                }
-            })
-            .collect();
-        self.thread_pool_executor.execute_jobs(jobs);
-    }
-
-    fn deactivate_all<T: Effect>(&self, effects: &mut [T]) {
-        let jobs = effects
-            .iter_mut()
-            .map(|effect| {
-                move || {
-                    if let Err(e) = effect.deactivate() {
-                        info!("Failed to deactivate {}: {:?}", effect, e);
-                    }
-                }
-            })
-            .collect();
-        self.thread_pool_executor.execute_jobs(jobs);
-    }
-}
-
-struct SuiteReport {
-    stats_all_up: (f64, f64),
-    stats_10_down: (f64, f64),
-    stats_3_region: (f64, f64),
-}
-
-impl SuiteReport {
-    pub fn to_slack_message(&self) -> String {
-        format!(
-            "all up: {:.0} TPS, {:.1} s latency\n10% down: {:.0} TPS, {:.1} s latency\n3 region simulation: {:.0} TPS, {:.1} s latency",
-            self.stats_all_up.0, self.stats_all_up.1, self.stats_10_down.0, self.stats_10_down.1, self.stats_3_region.0, self.stats_3_region.1,
-        )
     }
 }
