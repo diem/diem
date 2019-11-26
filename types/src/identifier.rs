@@ -206,8 +206,11 @@ impl fmt::Display for IdentStr {
 // This function is private -- it is used by code within this module once it has verified
 // identifier invariants.
 fn str_to_ident_str(s: &str) -> &IdentStr {
-    // IdentStr and str have the same layout, so this is safe to do.
-    // This follows the pattern in Rust core https://doc.rust-lang.org/src/std/path.rs.html.
+    // UNSAFE CODE: This code requires auditing before modifications may land.
+    // JUSTIFICATION: The input and output references have the same lifetime
+    // and IdentStr and str have the same layout, so this is safe to do. See
+    // https://rust-lang.github.io/unsafe-code-guidelines/layout/structs-and-tuples.html#single-field-structs
+    // AUDITOR: metajack
     unsafe { &*(s as *const str as *const IdentStr) }
 }
 
