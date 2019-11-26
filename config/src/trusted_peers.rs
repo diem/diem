@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_crypto::{
-    ed25519::{compat, *},
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     traits::ValidKeyStringExt,
-    x25519::{self, X25519StaticPrivateKey, X25519StaticPublicKey},
+    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
 use libra_types::{
     crypto_proxies::{ValidatorInfo, ValidatorVerifier},
@@ -12,8 +12,6 @@ use libra_types::{
     validator_set::ValidatorSet,
     PeerId,
 };
-use mirai_annotations::*;
-use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -124,84 +122,6 @@ impl ConsensusPeersConfig {
     }
 }
 
-// TODO: move to mod utils.
-pub struct ConfigHelpers {}
-
-// TODO: Update comment.
-/// Creates a new TrustedPeersConfig with the given number of peers,
-/// as well as a hashmap of all the test validator nodes' private keys.
-impl ConfigHelpers {
-    pub fn gen_validator_nodes(
-        num_peers: usize,
-        seed: Option<[u8; 32]>,
-    ) -> (
-        HashMap<PeerId, (ConsensusPrivateKey, NetworkPrivateKeys)>,
-        ConsensusPeersConfig,
-        NetworkPeersConfig,
-    ) {
-        let mut consensus_peers = HashMap::new();
-        let mut network_peers = HashMap::new();
-        let mut consensus_private_keys = BTreeMap::new();
-        let mut peers_private_keys = HashMap::new();
-        // Deterministically derive keypairs from a seeded-rng
-        let seed = seed.unwrap_or([0u8; 32]);
-        let mut fast_rng = StdRng::from_seed(seed);
-        for _ in 0..num_peers {
-            let _ = compat::generate_keypair(&mut fast_rng);
-            let _ = x25519::compat::generate_keypair(&mut fast_rng);
-            let (private2, public2) = compat::generate_keypair(&mut fast_rng);
-            // Generate peer id from consensus public key.
-            let peer_id = PeerId::from_public_key(&public2);
-            consensus_peers.insert(
-                peer_id,
-                ConsensusPeerInfo {
-                    consensus_pubkey: public2,
-                },
-            );
-            consensus_private_keys.insert(
-                peer_id,
-                ConsensusPrivateKey {
-                    consensus_private_key: private2,
-                },
-            );
-        }
-        let mut fast_rng = StdRng::from_seed(seed);
-        for (peer_id, consensus_private_key) in consensus_private_keys.into_iter() {
-            let (private0, public0) = compat::generate_keypair(&mut fast_rng);
-            let (private1, public1) = x25519::compat::generate_keypair(&mut fast_rng);
-            let _ = compat::generate_keypair(&mut fast_rng);
-            network_peers.insert(
-                peer_id,
-                NetworkPeerInfo {
-                    network_signing_pubkey: public0,
-                    network_identity_pubkey: public1,
-                },
-            );
-            // save the private keys in a different hashmap
-            peers_private_keys.insert(
-                peer_id,
-                (
-                    consensus_private_key,
-                    NetworkPrivateKeys {
-                        network_identity_private_key: private1,
-                        network_signing_private_key: private0,
-                    },
-                ),
-            );
-        }
-        postcondition!(peers_private_keys.len() == num_peers);
-        (
-            peers_private_keys,
-            ConsensusPeersConfig {
-                peers: consensus_peers,
-            },
-            NetworkPeersConfig {
-                peers: network_peers,
-            },
-        )
-    }
-}
-
 pub fn serialize_key<S, K>(key: &K, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -234,15 +154,4 @@ where
 {
     let ordered: BTreeMap<_, _> = value.iter().collect();
     ordered.serialize(serializer)
-}
-
-#[cfg(test)]
-mod test {
-    use super::ConfigHelpers;
-
-    #[test]
-    fn generate_test_config() {
-        let (_keys, _consensus_peers_config, _network_peers_config) =
-            ConfigHelpers::gen_validator_nodes(10, None);
-    }
 }

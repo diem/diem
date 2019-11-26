@@ -159,6 +159,10 @@ pub fn validator_swarm(
     Ok(configs)
 }
 
+pub fn validator_swarm_for_testing(num_nodes: usize) -> Result<Vec<NodeConfig>> {
+    validator_swarm(NodeConfig::default(), num_nodes, true, true, None)
+}
+
 fn add_peer(
     peer: &NetworkConfig,
     network_peers: &mut NetworkPeersConfig,
