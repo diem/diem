@@ -11,7 +11,7 @@ import "transaction.proto";
 message GetChunkRequest {
   uint64 known_version = 1;
   // Epoch the chunk response is supposed to belong to (i.e., epoch of known_version + 1)
-  uint64 chunk_epoch = 2;
+  uint64 current_epoch = 2;
   uint64 limit = 3;
   uint64 timeout = 4;
   // An optional field specifying the target.

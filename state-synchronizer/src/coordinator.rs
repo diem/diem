@@ -336,7 +336,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 let request_info = PendingRequestInfo {
                     expiration_time: time,
                     known_version: request.known_version,
-                    request_epoch: request.chunk_epoch,
+                    request_epoch: request.current_epoch,
                     limit: request.limit,
                 };
                 self.subscriptions.insert(peer_id, request_info);
@@ -353,7 +353,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         self.deliver_chunk(
             peer_id,
             request.known_version,
-            request.chunk_epoch,
+            request.current_epoch,
             request.limit,
             target,
             sender,
@@ -568,7 +568,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         let mut req = GetChunkRequest::default();
         req.known_version = known_version;
-        req.chunk_epoch = known_epoch;
+        req.current_epoch = known_epoch;
         req.limit = self.config.chunk_limit;
         if self.role == RoleType::Validator {
             let target = self
