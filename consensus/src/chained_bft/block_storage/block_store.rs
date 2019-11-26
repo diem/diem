@@ -217,13 +217,13 @@ impl<T: Payload> BlockStore<T> {
             error!("fail to delete block: {:?}", e);
         }
         *self.inner.write().unwrap() = tree;
-        // If we fail to commit B_i via state computer and crash, after restart our highest ledger info
+        // If we fail to commit B_i via state computer and crash, after restart our highest commit cert
         // will not match the latest commit B_j(j<i) of state computer.
         // This introduces an inconsistent state if we send out SyncInfo and others try to sync to
         // B_i and figure out we only have B_j.
-        // Here we commit up to the highest_ledger_info to maintain highest_ledger_info == state_computer.committed_trees.
-        if self.highest_ledger_info().commit_info().round() > self.root().round() {
-            let finality_proof = self.highest_ledger_info().ledger_info().clone();
+        // Here we commit up to the highest_commit_cert to maintain highest_commit_cert == state_computer.committed_trees.
+        if self.highest_commit_cert().commit_info().round() > self.root().round() {
+            let finality_proof = self.highest_commit_cert().ledger_info().clone();
             if let Err(e) = self.commit(finality_proof).await {
                 warn!("{:?}", e);
             }
@@ -441,8 +441,8 @@ impl<T: Payload> BlockReader for BlockStore<T> {
         self.inner.read().unwrap().highest_quorum_cert()
     }
 
-    fn highest_ledger_info(&self) -> Arc<QuorumCert> {
-        self.inner.read().unwrap().highest_ledger_info()
+    fn highest_commit_cert(&self) -> Arc<QuorumCert> {
+        self.inner.read().unwrap().highest_commit_cert()
     }
 
     fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>> {

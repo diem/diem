@@ -63,7 +63,7 @@ pub trait BlockReader: Send + Sync {
     fn highest_quorum_cert(&self) -> Arc<QuorumCert>;
 
     /// Return the quorum certificate that carries ledger info with the highest round
-    fn highest_ledger_info(&self) -> Arc<QuorumCert>;
+    fn highest_commit_cert(&self) -> Arc<QuorumCert>;
 
     /// Return the highest timeout certificate if available.
     fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>>;

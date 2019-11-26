@@ -192,7 +192,7 @@ impl<T: Payload> EventProcessor<T> {
 
     /// The function is responsible for processing the incoming proposals and the Quorum
     /// Certificate.
-    /// 1. sync up to the SyncInfo including committing to the committed state the HLI carries
+    /// 1. sync up to the SyncInfo including committing to the committed state the HCC carries
     /// and fetch all the blocks from the committed state to the HQC
     /// 2. forwarding the proposals to the ProposerElection queue,
     /// which is going to eventually trigger one winning proposal per round
@@ -299,7 +299,7 @@ impl<T: Payload> EventProcessor<T> {
         if current_hqc_round >= sync_info.hqc_round()
             && current_htc_round >= sync_info.htc_round()
             && self.block_store.root().round()
-                >= sync_info.highest_ledger_info().commit_info().round()
+                >= sync_info.highest_commit_cert().commit_info().round()
         {
             return Ok(());
         }
@@ -616,7 +616,7 @@ impl<T: Payload> EventProcessor<T> {
             .map(|tc| tc.as_ref().clone());
         SyncInfo::new(
             hqc,
-            self.block_store.highest_ledger_info().as_ref().clone(),
+            self.block_store.highest_commit_cert().as_ref().clone(),
             htc,
         )
     }
@@ -750,12 +750,12 @@ impl<T: Payload> EventProcessor<T> {
         preferred_peer: Author,
     ) -> failure::Result<()> {
         let deadline = self.pacemaker.current_round_deadline();
-        // Process local highest ledger info should be no-op, this will sync us to the QC
+        // Process local highest commit cert should be no-op, this will sync us to the QC
         self.block_store
             .sync_to(
                 &SyncInfo::new(
                     qc.as_ref().clone(),
-                    self.block_store.highest_ledger_info().as_ref().clone(),
+                    self.block_store.highest_commit_cert().as_ref().clone(),
                     None,
                 ),
                 self.create_block_retriever(deadline, preferred_peer),
