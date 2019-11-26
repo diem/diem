@@ -88,7 +88,7 @@ resource "aws_cloudwatch_log_metric_filter" "log_metric_filter" {
   count          = var.cloudwatch_logs ? 1 : 0
   name           = "critical_log"
   pattern        = "[code=C*, time, x, file, ...]"
-  log_group_name = "${aws_cloudwatch_log_group.testnet.name}"
+  log_group_name = aws_cloudwatch_log_group.testnet.name
 
   metric_transformation {
     name      = "critical_lines"
