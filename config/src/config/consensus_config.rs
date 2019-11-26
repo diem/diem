@@ -68,6 +68,24 @@ pub enum ConsensusProposerType {
 }
 
 impl ConsensusConfig {
+    /// This clones the underlying data except for the keypair so that this config can be used as a
+    /// template for another config.
+    pub fn clone_for_template(&self) -> Self {
+        Self {
+            max_block_size: self.max_block_size,
+            proposer_type: self.proposer_type,
+            contiguous_rounds: self.contiguous_rounds,
+            max_pruned_blocks_in_mem: self.max_pruned_blocks_in_mem,
+            pacemaker_initial_timeout_ms: self.pacemaker_initial_timeout_ms,
+            consensus_keypair: ConsensusKeyPair::default(),
+            consensus_keypair_file: self.consensus_keypair_file.clone(),
+            consensus_peers: self.consensus_peers.clone(),
+            consensus_peers_file: self.consensus_peers_file.clone(),
+            safety_rules: self.safety_rules.clone(),
+            base: self.base.clone(),
+        }
+    }
+
     pub fn random(rng: &mut StdRng, peer_id: PeerId) -> Self {
         let privkey = Ed25519PrivateKey::generate_for_testing(rng);
         let consensus_keypair = ConsensusKeyPair::load(Some(privkey));
