@@ -68,7 +68,7 @@ variable "fullnode_distribution" {
 # This is to generate a list of fullnode with validator index to indicate
 # which validator they should be connected to
 locals {
-  validator_index = range(length(var.peer_ids))
+  validator_index = range(0, length(var.fullnode_distribution))
   fullnode_pair = zipmap(local.validator_index, var.fullnode_distribution)
   expanded_fullnodes = {
     for key, val in local.fullnode_pair : key => [
