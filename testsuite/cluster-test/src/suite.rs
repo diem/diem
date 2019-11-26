@@ -2,12 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
+use std::cmp::min;
+
+use crate::experiments::{
+    PerformanceBenchmarkNodesDown, PerformanceBenchmarkThreeRegionSimulation,
+};
 
 use crate::{
     cluster::Cluster,
     experiments::{Experiment, RebootRandomValidators},
 };
-use std::cmp::min;
 
 pub struct ExperimentSuite {
     pub experiments: Vec<Box<dyn Experiment>>,
@@ -22,6 +26,33 @@ impl ExperimentSuite {
             let b: Box<dyn Experiment> = Box::new(RebootRandomValidators::new(count, cluster));
             experiments.push(b);
         }
+        experiments.push(Box::new(PerformanceBenchmarkNodesDown::new(
+            cluster.clone(),
+            0,
+        )));
+        experiments.push(Box::new(PerformanceBenchmarkNodesDown::new(
+            cluster.clone(),
+            10,
+        )));
+        experiments.push(Box::new(PerformanceBenchmarkThreeRegionSimulation::new(
+            cluster.clone(),
+        )));
+        Self { experiments }
+    }
+
+    pub fn new_perf_suite(cluster: &Cluster) -> Self {
+        let mut experiments: Vec<Box<dyn Experiment>> = vec![];
+        experiments.push(Box::new(PerformanceBenchmarkNodesDown::new(
+            cluster.clone(),
+            0,
+        )));
+        experiments.push(Box::new(PerformanceBenchmarkNodesDown::new(
+            cluster.clone(),
+            10,
+        )));
+        experiments.push(Box::new(PerformanceBenchmarkThreeRegionSimulation::new(
+            cluster.clone(),
+        )));
         Self { experiments }
     }
 }

@@ -3,15 +3,20 @@
 
 #![forbid(unsafe_code)]
 
+use std::{collections::HashSet, fmt, thread, time::Duration};
+
+use rand::Rng;
+
+use failure;
+
+use crate::experiments::Context;
 use crate::{
     cluster::Cluster,
     effects::{Action, Reboot},
     experiments::Experiment,
+    instance,
     instance::Instance,
 };
-use failure;
-use rand::Rng;
-use std::{collections::HashSet, fmt, thread, time::Duration};
 
 pub struct RebootRandomValidators {
     instances: Vec<Instance>,
@@ -40,14 +45,10 @@ impl RebootRandomValidators {
 
 impl Experiment for RebootRandomValidators {
     fn affected_validators(&self) -> HashSet<String> {
-        let mut r = HashSet::new();
-        for instance in self.instances.iter() {
-            r.insert(instance.short_hash().clone());
-        }
-        r
+        instance::instancelist_to_set(&self.instances)
     }
 
-    fn run(&self) -> failure::Result<()> {
+    fn run(&mut self, _context: &mut Context) -> failure::Result<Option<String>> {
         let mut reboots = vec![];
         for instance in self.instances.iter() {
             let reboot = Reboot::new(instance.clone());
@@ -57,7 +58,7 @@ impl Experiment for RebootRandomValidators {
         while reboots.iter().any(|r| !r.is_complete()) {
             thread::sleep(Duration::from_secs(5));
         }
-        Ok(())
+        Ok(None)
     }
 
     fn deadline(&self) -> Duration {
