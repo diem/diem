@@ -223,12 +223,12 @@ resource "aws_secretsmanager_secret_version" "validator_network" {
 
 data "local_file" "validator_fullnode_keys" {
   count    = length(var.peer_ids)
-  filename = "${var.validator_set}/val/${var.validator_fullnode_id[count.index]}.network.keys.toml"
+  filename = "${var.validator_set}/val/${var.validator_fullnode_id[0]}.network.keys.toml"
 }
 
 resource "aws_secretsmanager_secret" "validator_fullnode" {
-  count                   = length(var.peer_ids)
-  name                    = "${terraform.workspace}-validator_fullnode-${substr(var.validator_fullnode_id[count.index], 0, 8)}"
+  count                   = 1
+  name                    = "${terraform.workspace}-validator_fullnode-${substr(var.validator_fullnode_id[0], 0, 8)}"
   recovery_window_in_days = 0
 }
 
@@ -245,7 +245,7 @@ data "template_file" "validator_config" {
   vars = {
     self_ip     = var.validator_use_public_ip == true ? element(aws_instance.validator.*.public_ip, count.index) : element(aws_instance.validator.*.private_ip, count.index)
     peer_id     = var.peer_ids[count.index]
-    fullnode_id = var.validator_fullnode_id[count.index]
+    fullnode_id = var.validator_fullnode_id[0]
   }
 }
 
