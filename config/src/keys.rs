@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::trusted_peers::{deserialize_key, serialize_key};
 use libra_crypto::{test_utils::TEST_SEED, PrivateKey, Uniform, ValidKeyStringExt};
 use mirai_annotations::verify_unreachable;
 use rand::{rngs::StdRng, SeedableRng};
@@ -116,4 +115,24 @@ where
     pub fn take_private(&mut self) -> Option<T> {
         self.private_key.take()
     }
+}
+
+pub fn serialize_key<S, K>(key: &K, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+    K: Serialize + ValidKeyStringExt,
+{
+    key.to_encoded_string()
+        .map_err(<S::Error as serde::ser::Error>::custom)
+        .and_then(|str| serializer.serialize_str(&str[..]))
+}
+
+pub fn deserialize_key<'de, D, K>(deserializer: D) -> Result<K, D::Error>
+where
+    D: Deserializer<'de>,
+    K: ValidKeyStringExt + DeserializeOwned + 'static,
+{
+    let encoded_key: &str = Deserialize::deserialize(deserializer)?;
+    ValidKeyStringExt::from_encoded_string(encoded_key)
+        .map_err(<D::Error as serde::de::Error>::custom)
 }

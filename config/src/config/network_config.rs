@@ -3,12 +3,15 @@
 
 use crate::{
     config::{BaseConfig, PersistableConfig, RoleType},
-    keys::KeyPair,
-    trusted_peers::{NetworkPeerInfo, NetworkPeersConfig},
-    utils::get_local_ip,
+    keys::{self, KeyPair},
+    utils,
 };
 use failure::{self, ensure, Result};
-use libra_crypto::{ed25519::Ed25519PrivateKey, x25519::X25519StaticPrivateKey, Uniform, ValidKey};
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+    Uniform, ValidKey,
+};
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use rand::rngs::StdRng;
@@ -114,11 +117,11 @@ impl NetworkConfig {
         }
         if self.advertised_address.to_string().is_empty() {
             self.advertised_address =
-                get_local_ip().ok_or_else(|| ::failure::err_msg("No local IP"))?;
+                utils::get_local_ip().ok_or_else(|| ::failure::err_msg("No local IP"))?;
         }
         if self.listen_address.to_string().is_empty() {
             self.listen_address =
-                get_local_ip().ok_or_else(|| ::failure::err_msg("No local IP"))?;
+                utils::get_local_ip().ok_or_else(|| ::failure::err_msg("No local IP"))?;
         }
         // If PeerId is not set, it is derived from NetworkIdentityKey.
         if self.peer_id == PeerId::default() {
@@ -237,4 +240,29 @@ impl NetworkKeyPairs {
             identity_keys: KeyPair::load(identity_private_key),
         }
     }
+}
+
+#[derive(Clone, Default, Deserialize, PartialEq, Serialize)]
+pub struct NetworkPeersConfig {
+    #[serde(flatten)]
+    #[serde(serialize_with = "utils::serialize_ordered_map")]
+    pub peers: HashMap<PeerId, NetworkPeerInfo>,
+}
+
+impl std::fmt::Debug for NetworkPeersConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "<{} keys>", self.peers.len())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct NetworkPeerInfo {
+    #[serde(serialize_with = "keys::serialize_key")]
+    #[serde(deserialize_with = "keys::deserialize_key")]
+    #[serde(rename = "ns")]
+    pub network_signing_pubkey: Ed25519PublicKey,
+    #[serde(serialize_with = "keys::serialize_key")]
+    #[serde(deserialize_with = "keys::deserialize_key")]
+    #[serde(rename = "ni")]
+    pub network_identity_pubkey: X25519StaticPublicKey,
 }
