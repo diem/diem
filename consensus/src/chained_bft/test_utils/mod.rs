@@ -49,7 +49,7 @@ pub fn build_simple_tree() -> (
     //             ╰--> C1
     let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis_block, 1);
     let a2 = inserter.insert_block(&a1, 2, None);
-    let a3 = inserter.insert_block(&a2, 3, Some(genesis.id()));
+    let a3 = inserter.insert_block(&a2, 3, Some(genesis.block_info()));
     let b1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis_block, 4);
     let b2 = inserter.insert_block(&b1, 5, None);
     let c1 = inserter.insert_block(&b1, 6, None);
@@ -66,11 +66,11 @@ pub fn build_chain() -> Vec<Arc<ExecutedBlock<TestPayload>>> {
     let genesis = block_store.root();
     let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     let a2 = inserter.insert_block(&a1, 2, None);
-    let a3 = inserter.insert_block(&a2, 3, Some(genesis.id()));
-    let a4 = inserter.insert_block(&a3, 4, Some(a1.id()));
-    let a5 = inserter.insert_block(&a4, 5, Some(a2.id()));
-    let a6 = inserter.insert_block(&a5, 6, Some(a3.id()));
-    let a7 = inserter.insert_block(&a6, 7, Some(a4.id()));
+    let a3 = inserter.insert_block(&a2, 3, Some(genesis.block_info()));
+    let a4 = inserter.insert_block(&a3, 4, Some(a1.block_info()));
+    let a5 = inserter.insert_block(&a4, 5, Some(a2.block_info()));
+    let a6 = inserter.insert_block(&a5, 6, Some(a3.block_info()));
+    let a7 = inserter.insert_block(&a6, 7, Some(a4.block_info()));
     vec![genesis, a1, a2, a3, a4, a5, a6, a7]
 }
 
@@ -130,10 +130,10 @@ impl TreeInserter {
         &mut self,
         parent: &ExecutedBlock<TestPayload>,
         round: Round,
-        consensus_block_id: Option<HashValue>,
+        committed_block: Option<BlockInfo>,
     ) -> Arc<ExecutedBlock<TestPayload>> {
         // Node must carry a QC to its parent
-        let parent_qc = self.create_qc_for_block(parent, consensus_block_id);
+        let parent_qc = self.create_qc_for_block(parent, committed_block);
         self.insert_block_with_qc(parent_qc, parent, round)
     }
 
@@ -148,7 +148,7 @@ impl TreeInserter {
             self.block_store
                 .insert_block_with_qc(self.create_block_with_qc(
                     parent_qc,
-                    parent,
+                    parent.timestamp_usecs() + 1,
                     round,
                     vec![self.payload_val],
                 )),
@@ -159,40 +159,34 @@ impl TreeInserter {
     pub fn create_qc_for_block(
         &self,
         block: &ExecutedBlock<TestPayload>,
-        consensus_block_id: Option<HashValue>,
+        committed_block: Option<BlockInfo>,
     ) -> QuorumCert {
         gen_test_certificate(
             vec![&self.signer],
             block.block_info(),
             block.quorum_cert().certified_block().clone(),
-            consensus_block_id,
+            committed_block,
         )
     }
 
     pub fn insert_qc_for_block(
         &self,
         block: &ExecutedBlock<TestPayload>,
-        consensus_block_id: Option<HashValue>,
+        committed_block: Option<BlockInfo>,
     ) {
         self.block_store
-            .insert_single_quorum_cert(self.create_qc_for_block(block, consensus_block_id))
+            .insert_single_quorum_cert(self.create_qc_for_block(block, committed_block))
             .unwrap()
     }
 
     pub fn create_block_with_qc(
         &self,
         parent_qc: QuorumCert,
-        parent: &ExecutedBlock<TestPayload>,
+        timestamp_usecs: u64,
         round: Round,
         payload: TestPayload,
     ) -> Block<TestPayload> {
-        Block::new_proposal(
-            payload,
-            round,
-            parent.timestamp_usecs() + 1,
-            parent_qc,
-            &self.signer,
-        )
+        Block::new_proposal(payload, round, timestamp_usecs, parent_qc, &self.signer)
     }
 
     pub fn insert_reconfiguration_block(
@@ -205,7 +199,7 @@ impl TreeInserter {
             self.block_store
                 .insert_reconfiguration_block(self.create_block_with_qc(
                     self.create_qc_for_block(parent, None),
-                    parent,
+                    parent.timestamp_usecs() + 1,
                     round,
                     vec![self.payload_val],
                 )),

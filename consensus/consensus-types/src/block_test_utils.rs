@@ -183,38 +183,33 @@ pub fn placeholder_ledger_info() -> LedgerInfo {
     LedgerInfo::new(BlockInfo::empty(), HashValue::zero())
 }
 
-pub fn placeholder_ledger_with_id(id: HashValue) -> LedgerInfo {
-    LedgerInfo::new(
-        BlockInfo::new(0, 0, id, HashValue::zero(), 0, 0, None),
-        HashValue::zero(),
-    )
-}
-
 pub fn gen_test_certificate(
     signers: Vec<&ValidatorSigner>,
     block: BlockInfo,
     parent_block: BlockInfo,
-    committed_block_id: Option<HashValue>,
+    committed_block: Option<BlockInfo>,
 ) -> QuorumCert {
     let vote_data = VoteData::new(block.clone(), parent_block.clone());
-    let mut ledger_info_placeholder = match committed_block_id {
-        Some(id) => placeholder_ledger_with_id(id),
-        None => placeholder_ledger_info(),
+    let ledger_info = match committed_block {
+        Some(info) => LedgerInfo::new(info, vote_data.hash()),
+        None => {
+            let mut placeholder = placeholder_ledger_info();
+            placeholder.set_consensus_data_hash(vote_data.hash());
+            placeholder
+        }
     };
-
-    ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
 
     let mut signatures = BTreeMap::new();
     for signer in signers {
         let li_sig = signer
-            .sign_message(ledger_info_placeholder.hash())
+            .sign_message(ledger_info.hash())
             .expect("Failed to sign LedgerInfo");
         signatures.insert(signer.author(), li_sig);
     }
 
     QuorumCert::new(
         vote_data,
-        LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures),
+        LedgerInfoWithSignatures::new(ledger_info, signatures),
     )
 }
 
@@ -224,7 +219,6 @@ pub fn placeholder_certificate_for_block(
     certified_block_round: u64,
     certified_parent_block_id: HashValue,
     certified_parent_block_round: u64,
-    consensus_block_id: Option<HashValue>,
 ) -> QuorumCert {
     // Assuming executed state to be Genesis state.
     let genesis_ledger_info = LedgerInfo::genesis();
@@ -251,10 +245,7 @@ pub fn placeholder_certificate_for_block(
 
     // This ledger info doesn't carry any meaningful information: it is all zeros except for
     // the consensus data hash that carries the actual vote.
-    let mut ledger_info_placeholder = match consensus_block_id {
-        Some(id) => placeholder_ledger_with_id(id),
-        None => placeholder_ledger_info(),
-    };
+    let mut ledger_info_placeholder = placeholder_ledger_info();
 
     ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
 

@@ -140,11 +140,8 @@ where
     pub fn new_nil(round: Round, quorum_cert: QuorumCert) -> Self {
         // We want all the NIL blocks to agree on the timestamps even though they're generated
         // independently by different validators, hence we're using the timestamp of a parent + 1.
-        // The reason for artificially adding 1 usec is to support execution state synchronization,
-        // which doesn't have any other way of determining the order of ledger infos rather than
-        // comparing their timestamps.
         assume!(quorum_cert.certified_block().timestamp_usecs() < u64::max_value()); // unlikely to be false in this universe
-        let timestamp_usecs = quorum_cert.certified_block().timestamp_usecs() + 1;
+        let timestamp_usecs = quorum_cert.certified_block().timestamp_usecs();
 
         Self {
             epoch: quorum_cert.certified_block().epoch(),
