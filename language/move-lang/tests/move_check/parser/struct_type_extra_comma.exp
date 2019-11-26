@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/struct_type_extra_comma.move:2:14 ───
+   │
+ 2 │     struct S<,T> { }
+   │              ^ Unrecognized Token: ,
+   ·
+ 2 │     struct S<,T> { }
+   │              - Expected:  ">", r#"0[xX][0-9a-fA-F]+"#, r#"[a-zA-Z_][a-zA-Z0-9_]*"#, r#"[a-zA-Z_][a-zA-Z0-9_]*<"#,
+   │
+

@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/function_native_with_body.move:3:17 ───
+   │
+ 3 │     native fn() {}
+   │                 ^ Unrecognized Token: {
+   ·
+ 3 │     native fn() {}
+   │                 - Expected:  ":", ";", "acquires",
+   │
+

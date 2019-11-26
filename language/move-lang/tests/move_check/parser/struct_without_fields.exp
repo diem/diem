@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/struct_without_fields.move:3:13 ───
+   │
+ 3 │     struct S;
+   │             ^ Unrecognized Token: ;
+   ·
+ 3 │     struct S;
+   │             - Expected:  "{",
+   │
+

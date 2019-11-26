@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/function_return_type_missing.move:3:10 ───
+   │
+ 3 │     f(): { }
+   │          ^ Unrecognized Token: {
+   ·
+ 3 │     f(): { }
+   │          - Expected:  "&", "&mut ", "(", "()", r#"0[xX][0-9a-fA-F]+"#, r#"[a-zA-Z_][a-zA-Z0-9_]*"#, r#"[a-zA-Z_][a-zA-Z0-9_]*<"#,
+   │
+

@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/function_params_missing.move:3:8 ───
+   │
+ 3 │     fn { }
+   │        ^ Unrecognized Token: {
+   ·
+ 3 │     fn { }
+   │        - Expected:  "(", "()",
+   │
+

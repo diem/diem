@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/function_acquires_trailing_comma.move:4:21 ───
+   │
+ 4 │     f() acquires X, {
+   │                     ^ Unrecognized Token: {
+   ·
+ 4 │     f() acquires X, {
+   │                     - Expected:  r#"0[xX][0-9a-fA-F]+"#, r#"[a-zA-Z_][a-zA-Z0-9_]*"#, r#"[a-zA-Z_][a-zA-Z0-9_]*<"#,
+   │
+

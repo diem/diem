@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/struct_type_missing_angle.move:3:21 ───
+   │
+ 3 │     struct S<T1, T2 { }
+   │                     ^ Unrecognized Token: {
+   ·
+ 3 │     struct S<T1, T2 { }
+   │                     - Expected:  ",", ":", ">",
+   │
+

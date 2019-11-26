@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/function_return_trailing_comma.move:3:20 ───
+   │
+ 3 │     f(): (u64, u64,) { (1, 2) }
+   │                    ^ Unrecognized Token: )
+   ·
+ 3 │     f(): (u64, u64,) { (1, 2) }
+   │                    - Expected:  "&", "&mut ", r#"0[xX][0-9a-fA-F]+"#, r#"[a-zA-Z_][a-zA-Z0-9_]*"#, r#"[a-zA-Z_][a-zA-Z0-9_]*<"#,
+   │
+

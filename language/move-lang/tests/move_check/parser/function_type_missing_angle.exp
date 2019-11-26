@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/function_type_missing_angle.move:3:15 ───
+   │
+ 3 │     fn<T1, T2 () { }
+   │               ^^ Unrecognized Token: ()
+   ·
+ 3 │     fn<T1, T2 () { }
+   │               -- Expected:  ",", ":", ">",
+   │
+

@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/extra_text_after_main.move:5:1 ───
+   │
+ 5 │ foo() {
+   │ ^^^ Unrecognized Token: foo
+   ·
+ 5 │ foo() {
+   │ --- Expected: 
+   │
+

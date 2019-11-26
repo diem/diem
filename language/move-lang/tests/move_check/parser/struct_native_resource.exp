@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/struct_native_resource.move:3:14 ───
+   │
+ 3 │     resource native struct S;
+   │              ^^^^^^ Unrecognized Token: native
+   ·
+ 3 │     resource native struct S;
+   │              ------ Expected:  "struct",
+   │
+

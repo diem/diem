@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/struct_missing_lbrace.move:3:5 ───
+   │
+ 3 │     f() {}
+   │     ^ Unrecognized Token: f
+   ·
+ 3 │     f() {}
+   │     - Expected:  ",", "}",
+   │
+
