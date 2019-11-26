@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/function_public_native.move:3:12 ───
+   │
+ 3 │     public native f();
+   │            ^^^^^^ Unrecognized Token: native
+   ·
+ 3 │     public native f();
+   │            ------ Expected:  r#"[a-zA-Z_][a-zA-Z0-9_]*"#, r#"[a-zA-Z_][a-zA-Z0-9_]*<"#,
+   │
+

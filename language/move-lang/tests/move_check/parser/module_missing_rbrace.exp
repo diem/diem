@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/module_missing_rbrace.move:2:11 ───
+   │
+ 2 │     f() {}
+   │           ^ Unrecognized End of File
+   ·
+ 2 │     f() {}
+   │           - Expected:  "native", "public", "}", r#"[a-zA-Z_][a-zA-Z0-9_]*"#, r#"[a-zA-Z_][a-zA-Z0-9_]*<"#,
+   │
+
