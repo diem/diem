@@ -17,14 +17,11 @@ use rand::Rng;
 use reqwest::Url;
 use slog::{o, Drain};
 use slog_scope::{info, warn};
-use structopt::{clap::AppSettings, clap::ArgGroup, StructOpt};
+use structopt::{clap::ArgGroup, StructOpt};
 use termion::{color, style};
 
 use cluster_test::effects::RemoveNetworkEffects;
-use cluster_test::experiments::{
-    Context, MultiRegionSimulation, MultiRegionSimulationParams, PacketLossRandomValidators,
-    PacketLossRandomValidatorsParams,
-};
+use cluster_test::experiments::{get_experiment, Context};
 use cluster_test::github::GitHub;
 use cluster_test::health::PrintFailures;
 use cluster_test::prometheus::Prometheus;
@@ -37,7 +34,7 @@ use cluster_test::{
     deployment::{DeploymentManager, SOURCE_TAG},
     effects,
     effects::{Action, Effect, Reboot, StopContainer},
-    experiments::{Experiment, RebootRandomValidators},
+    experiments::Experiment,
     health::{DebugPortLogThread, HealthCheckRunner, LogTail},
     slack::SlackClient,
     stats,
@@ -74,8 +71,6 @@ struct Args {
     #[structopt(long, group = "action")]
     run: bool,
     #[structopt(long, group = "action")]
-    run_once: bool,
-    #[structopt(long, group = "action")]
     tail_logs: bool,
     #[structopt(long, group = "action")]
     health_check: bool,
@@ -92,17 +87,15 @@ struct Args {
     #[structopt(long, group = "action")]
     stop_experiment: bool,
     #[structopt(long, group = "action")]
-    packet_loss_experiment: bool,
-    #[structopt(long, group = "action")]
     perf_run: bool,
     #[structopt(long, group = "action")]
     cleanup: bool,
     #[structopt(long, group = "action")]
-    multi_region_simulation: bool,
-    #[structopt(long, group = "action")]
     changelog: Option<String>,
     #[structopt(long, group = "action")]
     run_ci_suite: bool,
+    #[structopt(long, group = "action")]
+    run_experiment: Option<String>,
 
     #[structopt(last = true)]
     last: Vec<String>,
@@ -175,9 +168,6 @@ pub fn main() {
 
     if args.run {
         runner.run_suite_in_loop();
-    } else if args.run_once {
-        let experiment = RebootRandomValidators::new(3, &runner.cluster);
-        runner.cleanup_and_run(Box::new(experiment)).unwrap();
     } else if args.tail_logs {
         runner.tail_logs();
     } else if args.health_check {
@@ -194,27 +184,6 @@ pub fn main() {
         runner.stop();
     } else if args.start {
         runner.start();
-    } else if args.packet_loss_experiment {
-        let params = PacketLossRandomValidatorsParams::from_clap(
-            &PacketLossRandomValidatorsParams::clap()
-                .global_setting(AppSettings::NoBinaryName)
-                .get_matches_from(args.last),
-        );
-        let experiment = PacketLossRandomValidators::new(params, &runner.cluster);
-        runner.cleanup_and_run(Box::new(experiment)).unwrap();
-    } else if args.multi_region_simulation {
-        let params = MultiRegionSimulationParams::from_clap(
-            &MultiRegionSimulationParams::clap()
-                .global_setting(AppSettings::NoBinaryName)
-                .get_matches_from(args.last),
-        );
-        let experiment = MultiRegionSimulation::new(
-            params,
-            runner.cluster.clone(),
-            runner.thread_pool_executor.clone(),
-            runner.prometheus.clone(),
-        );
-        runner.cleanup_and_run(Box::new(experiment)).unwrap();
     } else if args.perf_run {
         runner.perf_run();
     } else if args.cleanup {
@@ -229,6 +198,14 @@ pub fn main() {
         println!("{}", runner.get_changelog(prev_commit.as_ref(), &commit));
     } else if args.run_ci_suite {
         exit_on_error(runner.run_ci_suite(args.deploy));
+    } else if let Some(experiment_name) = args.run_experiment {
+        runner
+            .cleanup_and_run(get_experiment(
+                &experiment_name,
+                &args.last,
+                &runner.cluster,
+            ))
+            .unwrap();
     } else {
         // Arg parser should prevent this from happening since action group is required
         unreachable!()
@@ -741,6 +718,7 @@ impl ClusterTestRunner {
             self.tx_emitter.clone(),
             self.prometheus.clone(),
             self.thread_pool_executor.clone(),
+            self.cluster.clone(),
         );
         thread::spawn(move || {
             let result = experiment.run(&mut context);

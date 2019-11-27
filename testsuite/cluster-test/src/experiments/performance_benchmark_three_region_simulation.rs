@@ -19,8 +19,10 @@ pub struct PerformanceBenchmarkThreeRegionSimulation {
 }
 
 impl PerformanceBenchmarkThreeRegionSimulation {
-    pub fn new(cluster: Cluster) -> Self {
-        Self { cluster }
+    pub fn new(cluster: &Cluster) -> Self {
+        Self {
+            cluster: cluster.clone(),
+        }
     }
 }
 

@@ -14,10 +14,10 @@ use failure;
 use crate::effects::Effect;
 use crate::effects::NetworkDelay;
 use crate::experiments::Context;
-use crate::prometheus::Prometheus;
+
+use crate::experiments::Experiment;
 use crate::tx_emitter::{EmitJobRequest, EmitThreadParams, TxEmitter};
 use crate::util::unix_timestamp_now;
-use crate::{cluster::Cluster, experiments::Experiment, thread_pool_executor::ThreadPoolExecutor};
 
 #[derive(Default, Debug)]
 struct Metrics {
@@ -31,9 +31,6 @@ struct Metrics {
 
 pub struct MultiRegionSimulation {
     params: MultiRegionSimulationParams,
-    thread_pool_executor: ThreadPoolExecutor,
-    cluster: Cluster,
-    prometheus: Prometheus,
 }
 
 #[derive(StructOpt, Debug)]
@@ -59,22 +56,17 @@ pub struct MultiRegionSimulationParams {
 }
 
 impl MultiRegionSimulation {
-    pub fn new(
-        params: MultiRegionSimulationParams,
-        cluster: Cluster,
-        thread_pool_executor: ThreadPoolExecutor,
-        prometheus: Prometheus,
-    ) -> Self {
-        Self {
-            params,
-            thread_pool_executor,
-            cluster,
-            prometheus,
-        }
+    pub fn new(params: MultiRegionSimulationParams) -> Self {
+        Self { params }
     }
 
-    fn single_run(&self, count: usize, cross_region_delay: Duration) -> failure::Result<Metrics> {
-        let (cluster1, cluster2) = self.cluster.split_n_random(count);
+    fn single_run(
+        &self,
+        count: usize,
+        cross_region_delay: Duration,
+        context: &mut Context,
+    ) -> failure::Result<Metrics> {
+        let (cluster1, cluster2) = context.cluster.split_n_random(count);
         let (region1, region2) = (cluster1.into_instances(), cluster2.into_instances());
         let (smaller_region, larger_region);
         if region1.len() < region2.len() {
@@ -103,10 +95,10 @@ impl MultiRegionSimulation {
                 }
             })
             .collect();
-        self.thread_pool_executor.execute_jobs(start_effects);
+        context.thread_pool_executor.execute_jobs(start_effects);
 
         thread::sleep(self.exp_duration_per_config());
-        let metrics = self.get_metrics(count, cross_region_delay.as_millis() as u64);
+        let metrics = self.get_metrics(count, cross_region_delay.as_millis() as u64, context);
         let stop_effects: Vec<_> = network_delays_effects
             .iter()
             .map(|effect| {
@@ -115,7 +107,7 @@ impl MultiRegionSimulation {
                 }
             })
             .collect();
-        self.thread_pool_executor.execute_jobs(stop_effects);
+        context.thread_pool_executor.execute_jobs(stop_effects);
         Ok(metrics)
     }
 
@@ -123,7 +115,12 @@ impl MultiRegionSimulation {
         Duration::from_secs(self.params.duration_secs)
     }
 
-    fn get_metrics(&self, split_size: usize, cross_region_latency: u64) -> Metrics {
+    fn get_metrics(
+        &self,
+        split_size: usize,
+        cross_region_latency: u64,
+        context: &mut Context,
+    ) -> Metrics {
         let mut metrics: Metrics = Default::default();
         metrics.split_size = split_size;
         metrics.cross_region_latency = cross_region_latency;
@@ -131,7 +128,7 @@ impl MultiRegionSimulation {
         let end = unix_timestamp_now();
         // Measure metrics 30s after the experiment started to ignore initial warmup metrics
         let start = end - self.exp_duration_per_config() + Duration::from_secs(30);
-        metrics.txn_per_sec = self
+        metrics.txn_per_sec = context
             .prometheus
             .query_range_avg(
                 "irate(libra_consensus_last_committed_version[1m])".to_string(),
@@ -141,7 +138,7 @@ impl MultiRegionSimulation {
             )
             .map_err(|e| warn!("{}", e))
             .ok();
-        metrics.blocks_per_sec = self
+        metrics.blocks_per_sec = context
             .prometheus
             .query_range_avg(
                 "irate(libra_consensus_last_committed_round[1m])".to_string(),
@@ -151,7 +148,7 @@ impl MultiRegionSimulation {
             )
             .map_err(|e| warn!("{}", e))
             .ok();
-        metrics.avg_vote_time = self
+        metrics.avg_vote_time = context
             .prometheus
             .query_range_avg(
                 "irate(libra_consensus_creation_to_receival_s_sum[1m])/irate(libra_consensus_creation_to_receival_s_count[1m])".to_string(),
@@ -161,7 +158,7 @@ impl MultiRegionSimulation {
             )
             .map_err(|e| warn!("{}", e))
             .ok().map(|x| x * 1000f64);
-        metrics.avg_qc_time = self
+        metrics.avg_qc_time = context
             .prometheus
             .query_range_avg(
                 "irate(libra_consensus_creation_to_qc_s_sum[1m])/irate(libra_consensus_creation_to_qc_s_count[1m])".to_string(),
@@ -201,14 +198,14 @@ fn print_results(metrics: Vec<Metrics>) {
 }
 
 impl Experiment for MultiRegionSimulation {
-    fn run(&mut self, _context: &mut Context) -> failure::Result<Option<String>> {
-        let mut emitter = TxEmitter::new(&self.cluster);
+    fn run(&mut self, context: &mut Context) -> failure::Result<Option<String>> {
+        let mut emitter = TxEmitter::new(&context.cluster);
         let mut results = vec![];
         for split in &self.params.splits {
             for cross_region_latency in &self.params.cross_region_latencies {
                 let job = emitter
                     .start_job(EmitJobRequest {
-                        instances: self.cluster.instances().clone(),
+                        instances: context.cluster.instances().clone(),
                         accounts_per_client: 10,
                         thread_params: EmitThreadParams::default(),
                     })
@@ -220,7 +217,11 @@ impl Experiment for MultiRegionSimulation {
                     split, cross_region_latency
                 );
                 if let Ok(metrics) = self
-                    .single_run(*split, Duration::from_millis(*cross_region_latency))
+                    .single_run(
+                        *split,
+                        Duration::from_millis(*cross_region_latency),
+                        context,
+                    )
                     .map_err(|e| warn!("{}", e))
                 {
                     info!("metrics for this run: {:?}", metrics);
