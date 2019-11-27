@@ -714,7 +714,7 @@ fn process_block_retrieval() {
             .await;
         match rx1.await {
             Ok(Ok(bytes)) => {
-                let msg = ConsensusMsg::decode(bytes).unwrap();
+                let msg = ConsensusMsg::decode(bytes.as_ref()).unwrap();
                 let response = match msg.message {
                     Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
                         BlockRetrievalResponse::<TestPayload>::try_from(proto)
@@ -740,7 +740,7 @@ fn process_block_retrieval() {
             .await;
         match rx2.await {
             Ok(Ok(bytes)) => {
-                let msg = ConsensusMsg::decode(bytes).unwrap();
+                let msg = ConsensusMsg::decode(bytes.as_ref()).unwrap();
                 let response = match msg.message {
                     Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
                         BlockRetrievalResponse::<TestPayload>::try_from(proto)
@@ -765,7 +765,7 @@ fn process_block_retrieval() {
             .await;
         match rx3.await {
             Ok(Ok(bytes)) => {
-                let msg = ConsensusMsg::decode(bytes).unwrap();
+                let msg = ConsensusMsg::decode(bytes.as_ref()).unwrap();
                 let response = match msg.message {
                     Some(ConsensusMsg_oneof::RespondBlock(proto)) => {
                         BlockRetrievalResponse::<TestPayload>::try_from(proto)

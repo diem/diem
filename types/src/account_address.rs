@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use bech32::{Bech32, FromBase32, ToBase32};
-use bytes::Bytes;
+use bytes05::Bytes;
 use failure::prelude::*;
 use hex;
 use libra_crypto::{
@@ -168,7 +168,7 @@ impl TryFrom<Bytes> for AccountAddress {
 
 impl From<AccountAddress> for Bytes {
     fn from(addr: AccountAddress) -> Bytes {
-        addr.0.as_ref().into()
+        Bytes::copy_from_slice(addr.0.as_ref())
     }
 }
 

@@ -9,7 +9,7 @@ use crate::{
     protocols::direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
     ProtocolId,
 };
-use bytes::Bytes;
+use bytes05::Bytes;
 use channel;
 use futures::{sink::SinkExt, stream::StreamExt};
 use libra_types::PeerId;
@@ -101,11 +101,11 @@ fn test_inbound_substream() {
         let mut dialer_substream =
             Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         dialer_substream
-            .send(bytes05::Bytes::from_static(MESSAGE_1))
+            .send(Bytes::from_static(MESSAGE_1))
             .await
             .unwrap();
         dialer_substream
-            .send(bytes05::Bytes::from_static(MESSAGE_2))
+            .send(Bytes::from_static(MESSAGE_2))
             .await
             .unwrap();
     };
@@ -149,7 +149,7 @@ fn test_inbound_substream_closed() {
         let mut dialer_substream =
             Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         dialer_substream
-            .send(bytes05::Bytes::from_static(MESSAGE_1))
+            .send(Bytes::from_static(MESSAGE_1))
             .await
             .unwrap();
         // close the substream on the dialer side

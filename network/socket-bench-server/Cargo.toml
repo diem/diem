@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bytes = { version = "0.4.12", default-features = false }
+bytes = "0.5"
 futures = { version = "0.3.0", features = ["io-compat", "compat"] }
 futures_01 = { version = "0.1.28", package = "futures" }
 parity-multiaddr = "0.5.0"

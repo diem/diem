@@ -49,7 +49,7 @@ use crate::{
     peer_manager::{PeerManagerNotification, PeerManagerRequestSender},
     ProtocolId,
 };
-use bytes::Bytes;
+use bytes05::Bytes;
 use channel;
 use futures::{
     io::{AsyncRead, AsyncWrite},
@@ -94,7 +94,7 @@ impl Debug for Message {
         let mdata_str = if self.mdata.len() <= 10 {
             format!("{:?}", self.mdata)
         } else {
-            format!("{:?}...", self.mdata.slice_to(10))
+            format!("{:?}...", self.mdata.slice(..10))
         };
         write!(
             f,
@@ -189,7 +189,7 @@ where
                         peer_id,
                         Message {
                             protocol: protocol.clone(),
-                            mdata: data.freeze().as_ref().into(),
+                            mdata: data.freeze(),
                         },
                     );
                     ds_notifs_tx
@@ -236,13 +236,7 @@ where
 
         // Spawn a task to forward the messages from the queue to the substream.
         let f_substream = async move {
-            // TODO(bmwill) migrate to bytes 0.5 everywhere
-            if let Err(e) = msg_rx
-                .map(|b| bytes05::Bytes::copy_from_slice(b.as_ref()))
-                .map(Ok)
-                .forward(substream)
-                .await
-            {
+            if let Err(e) = msg_rx.map(Ok).forward(substream).await {
                 warn!(
                     "Forward messages to peer {} error {:?}",
                     peer_id.short_str(),

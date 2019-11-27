@@ -12,7 +12,7 @@ use crate::{
     utils::MessageExt,
     ProtocolId,
 };
-use bytes::Bytes;
+use bytes05::Bytes;
 use futures::{
     channel::oneshot,
     ready,
@@ -135,11 +135,11 @@ impl<TMessage: Message + Default> Stream for NetworkEvents<TMessage> {
             NetworkNotification::NewPeer(peer_id) => Ok(Event::NewPeer(peer_id)),
             NetworkNotification::LostPeer(peer_id) => Ok(Event::LostPeer(peer_id)),
             NetworkNotification::RecvRpc(peer_id, rpc_req) => {
-                let req_msg = TMessage::decode(rpc_req.data)?;
+                let req_msg = TMessage::decode(rpc_req.data.as_ref())?;
                 Ok(Event::RpcRequest((peer_id, req_msg, rpc_req.res_tx)))
             }
             NetworkNotification::RecvMessage(peer_id, msg) => {
-                let msg = TMessage::decode(msg.mdata)?;
+                let msg = TMessage::decode(msg.mdata.as_ref())?;
                 Ok(Event::Message((peer_id, msg)))
             }
         }))
@@ -278,7 +278,7 @@ impl<TMessage: Message + Default> NetworkSender<TMessage> {
 
         // wait for response and deserialize
         let res_data = res_rx.await??;
-        let res_msg = TMessage::decode(res_data)?;
+        let res_msg = TMessage::decode(res_data.as_ref())?;
         Ok(res_msg)
     }
 
