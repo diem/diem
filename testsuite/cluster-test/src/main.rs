@@ -27,6 +27,7 @@ use cluster_test::experiments::{
 };
 use cluster_test::github::GitHub;
 use cluster_test::health::PrintFailures;
+use cluster_test::instance::Instance;
 use cluster_test::prometheus::Prometheus;
 use cluster_test::thread_pool_executor::ThreadPoolExecutor;
 use cluster_test::tx_emitter::{EmitJobRequest, EmitThreadParams};
@@ -48,6 +49,9 @@ use failure::{
     self,
     prelude::{bail, format_err},
 };
+use futures::future::join_all;
+use futures::future::FutureExt;
+use tokio::runtime::Runtime;
 
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -275,6 +279,7 @@ struct ClusterTestRunner {
     deployment_manager: DeploymentManager,
     experiment_interval: Duration,
     thread_pool_executor: ThreadPoolExecutor,
+    runtime: Runtime,
     slack: SlackClient,
     slack_log_url: Option<Url>,
     slack_changelog_url: Option<Url>,
@@ -355,21 +360,15 @@ impl ClusterUtil {
     }
 
     pub fn pssh(&self, cmd: Vec<String>) {
-        let executor = ThreadPoolExecutor::new("pssh".to_string());
-        let jobs = self
-            .cluster
-            .instances()
-            .iter()
-            .map(|x| {
-                let cmd = &cmd;
-                move || {
-                    if let Err(e) = x.run_cmd_tee_err(cmd) {
-                        warn!("Failed on {}: {}", x, e)
-                    }
+        let mut runtime = Runtime::new().unwrap();
+        let futures = self.cluster.instances().iter().map(|x| {
+            x.run_cmd_tee_err_async(&cmd).map(move |r| {
+                if let Err(e) = r {
+                    warn!("Failed on {}: {}", x, e)
                 }
             })
-            .collect();
-        executor.execute_jobs(jobs);
+        });
+        runtime.block_on(join_all(futures));
     }
 
     pub fn emit_tx(self, accounts_per_client: usize, thread_params: EmitThreadParams) {
@@ -489,6 +488,7 @@ impl ClusterTestRunner {
                 .expect("Failed to discover prometheus ip in aws"),
         );
         let github = GitHub::new();
+        let runtime = Runtime::new().expect("Failed to create tokio runtime");
         Self {
             logs,
             cluster,
@@ -497,6 +497,7 @@ impl ClusterTestRunner {
             experiment_interval,
             slack,
             thread_pool_executor,
+            runtime,
             slack_log_url,
             slack_changelog_url,
             tx_emitter,
@@ -646,27 +647,19 @@ impl ClusterTestRunner {
         Ok(())
     }
 
-    fn fetch_genesis(&self, marker: &str) -> failure::Result<()> {
+    fn fetch_genesis(&mut self, marker: &str) -> failure::Result<()> {
         let cmd = format!(
             "sudo aws s3 cp s3://toro-validator-sets/{}/100/genesis.blob /opt/libra/genesis.blob",
             marker
         );
         info!("Running {} to fetch genesis blob", cmd);
-        let jobs = self
+        let futures = self
             .cluster
             .instances()
             .iter()
-            .map(|instance| {
-                let cmd = &cmd;
-                move || instance.run_cmd_tee_err(vec![cmd])
-            })
-            .collect();
-        if self
-            .thread_pool_executor
-            .execute_jobs(jobs)
-            .iter()
-            .any(Result::is_err)
-        {
+            .map(|instance| instance.run_cmd_tee_err_async(vec![&cmd]));
+        let results = self.runtime.block_on(join_all(futures));
+        if results.iter().any(Result::is_err) {
             return Err(format_err!(
                 "Failed to update genesis.blob on one of validators"
             ));
@@ -881,7 +874,7 @@ impl ClusterTestRunner {
         }
     }
 
-    fn wipe_all_db(&self, safety_wait: bool) {
+    fn wipe_all_db(&mut self, safety_wait: bool) {
         info!("Going to wipe db on all validators in cluster!");
         if safety_wait {
             info!("Waiting 10 seconds before proceed");
@@ -905,26 +898,25 @@ impl ClusterTestRunner {
             .cluster
             .instances()
             .iter()
-            .map(|instance| {
-                let instance = instance.clone();
-                move || {
-                    instance
-                        .run_cmd_tee_err(vec!["sudo", "rm", "-rf", "/data/libra/*db"])
-                        .map_err(|e| info!("Failed to wipe {}: {:?}", instance, e))
-                        .ok();
-                    instance
-                        .run_cmd_tee_err(vec![format!(
-                            "! test -f {f} || (sudo timeout 45 gzip -S {s} {f} || (echo gzip failed; sudo rm -f {f}))",
-                            f = log_file,
-                            s = suffix
-                        )])
-                        .map_err(|e| info!("Failed to gzip log file {}: {:?}", instance, e))
-                        .ok();
-                }
-            })
-            .collect();
-        self.thread_pool_executor.execute_jobs(jobs);
+            .map(|instance| Self::wipe_instance(log_file, &suffix, instance));
+        self.runtime.block_on(join_all(jobs));
         info!("Done");
+    }
+
+    async fn wipe_instance(log_file: &str, suffix: &str, instance: &Instance) {
+        instance
+            .run_cmd_tee_err_async(vec!["sudo", "rm", "-rf", "/data/libra/*db"])
+            .await
+            .map_err(|e| info!("Failed to wipe {}: {:?}", instance, e))
+            .ok();
+        instance
+            .run_cmd_tee_err_async(vec![format!(
+                "! test -f {f} || (sudo timeout 45 gzip -S {s} {f} || (echo gzip failed; sudo rm -f {f}))",
+                f = log_file,
+                s = suffix
+            )]).await
+            .map_err(|e| info!("Failed to gzip log file {}: {:?}", instance, e))
+            .ok();
     }
 
     fn reboot(self) {

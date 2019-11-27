@@ -42,4 +42,7 @@ libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 generate-keypair = { path = "../../config/generate-keypair", version = "0.1.0" }
 
+futures = "0.3.0"
+tokio = { version = "0.2", features = ["full"] }
+
 threadpool = "1.7.1"
