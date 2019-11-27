@@ -157,9 +157,9 @@ where
     /// Receiver for connection events.
     connection_handler_notifs_rx: channel::Receiver<ConnectionHandlerNotification<TMuxer>>,
     /// Sender for peer events.
-    peer_notifs_tx: channel::Sender<PeerNotification<TMuxer>>,
+    peer_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
     /// Receiver for peer events.
-    peer_notifs_rx: channel::Receiver<PeerNotification<TMuxer>>,
+    peer_notifs_rx: channel::Receiver<PeerNotification<TMuxer::Substream>>,
     /// A map of outstanding disconnect requests
     outstanding_disconnect_requests: HashMap<PeerId, oneshot::Sender<Result<(), PeerManagerError>>>,
     /// Pin the transport type corresponding to this PeerManager instance
@@ -258,7 +258,7 @@ where
         }
     }
 
-    async fn handle_peer_event(&mut self, event: PeerNotification<TMuxer>) {
+    async fn handle_peer_event(&mut self, event: PeerNotification<TMuxer::Substream>) {
         trace!("PeerEvent::{:?}", event);
         match event {
             PeerNotification::NewSubstream(peer_id, substream) => {
@@ -817,11 +817,8 @@ enum PeerRequest<TSubstream> {
 }
 
 #[derive(Debug)]
-enum PeerNotification<TMuxer>
-where
-    TMuxer: StreamMultiplexer,
-{
-    NewSubstream(PeerId, NegotiatedSubstream<TMuxer::Substream>),
+enum PeerNotification<TSubstream> {
+    NewSubstream(PeerId, NegotiatedSubstream<TSubstream>),
     PeerDisconnected(PeerId, RoleType, ConnectionOrigin, DisconnectReason),
 }
 
@@ -833,7 +830,7 @@ where
     identity: Identity,
     connection: TMuxer,
     own_supported_protocols: Vec<ProtocolId>,
-    peer_notifs_tx: channel::Sender<PeerNotification<TMuxer>>,
+    peer_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
     requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
     origin: ConnectionOrigin,
     shutdown: bool,
@@ -850,7 +847,7 @@ where
         connection: TMuxer,
         origin: ConnectionOrigin,
         own_supported_protocols: Vec<ProtocolId>,
-        peer_notifs_tx: channel::Sender<PeerNotification<TMuxer>>,
+        peer_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
         requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
     ) -> Self {
         Self {
