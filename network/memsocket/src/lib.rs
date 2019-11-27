@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bytes::{Buf, Bytes, IntoBuf};
+use bytes::{buf::BufExt, Buf, Bytes};
 use futures::{
     channel::mpsc::{self, UnboundedReceiver, UnboundedSender},
     io::{AsyncRead, AsyncWrite, Error, ErrorKind, Result},
@@ -244,7 +244,7 @@ impl<'a> Stream for Incoming<'a> {
 pub struct MemorySocket {
     incoming: UnboundedReceiver<Bytes>,
     outgoing: UnboundedSender<Bytes>,
-    current_buffer: Option<<Bytes as IntoBuf>::Buf>,
+    current_buffer: Option<Bytes>,
     seen_eof: bool,
 }
 
@@ -365,7 +365,7 @@ impl AsyncRead for MemorySocket {
                                     return Poll::Pending;
                                 }
                             }
-                            Poll::Ready(Some(buf)) => Some(buf.into_buf()),
+                            Poll::Ready(Some(buf)) => Some(buf),
                             Poll::Ready(None) => return Poll::Ready(Ok(bytes_read)),
                         }
                     };
@@ -386,7 +386,7 @@ impl AsyncWrite for MemorySocket {
 
         match self.outgoing.poll_ready(context) {
             Poll::Ready(Ok(())) => {
-                if let Err(e) = self.outgoing.start_send(buf.into()) {
+                if let Err(e) = self.outgoing.start_send(Bytes::copy_from_slice(buf)) {
                     if e.is_disconnected() {
                         return Poll::Ready(Err(Error::new(ErrorKind::BrokenPipe, e)));
                     }
