@@ -135,7 +135,7 @@ impl ConsensusConfig {
         peers.peers.insert(
             peer_id.clone(),
             ConsensusPeerInfo {
-                consensus_pubkey: pubkey.clone(),
+                pubkey: pubkey.clone(),
             },
         );
         peers

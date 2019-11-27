@@ -132,7 +132,7 @@ impl Config {
                         let (validator_privkey, _) =
                             &validator_keys[validator_public_keys.account_address()];
                         AccountData::with_keypair(
-                            validator_privkey.consensus_private_key.clone(),
+                            validator_privkey.private_key.clone(),
                             validator_pubkey.clone(),
                             def.balance.unwrap_or(DEFAULT_BALANCE),
                             def.sequence_number.unwrap_or(0),

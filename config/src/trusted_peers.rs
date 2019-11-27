@@ -26,17 +26,15 @@ use std::{
 pub struct NetworkPeerInfo {
     #[serde(serialize_with = "serialize_key")]
     #[serde(deserialize_with = "deserialize_key")]
-    #[serde(rename = "ns")]
-    pub network_signing_pubkey: Ed25519PublicKey,
+    pub signing_pubkey: Ed25519PublicKey,
     #[serde(serialize_with = "serialize_key")]
     #[serde(deserialize_with = "deserialize_key")]
-    #[serde(rename = "ni")]
-    pub network_identity_pubkey: X25519StaticPublicKey,
+    pub identity_pubkey: X25519StaticPublicKey,
 }
 
 pub struct NetworkPrivateKeys {
-    pub network_signing_private_key: Ed25519PrivateKey,
-    pub network_identity_private_key: X25519StaticPrivateKey,
+    pub signing_private_key: Ed25519PrivateKey,
+    pub identity_private_key: X25519StaticPrivateKey,
 }
 
 #[derive(Clone, Default, Deserialize, PartialEq, Serialize)]
@@ -56,12 +54,11 @@ impl fmt::Debug for NetworkPeersConfig {
 pub struct ConsensusPeerInfo {
     #[serde(serialize_with = "serialize_key")]
     #[serde(deserialize_with = "deserialize_key")]
-    #[serde(rename = "c")]
-    pub consensus_pubkey: Ed25519PublicKey,
+    pub pubkey: Ed25519PublicKey,
 }
 
 pub struct ConsensusPrivateKey {
-    pub consensus_private_key: Ed25519PrivateKey,
+    pub private_key: Ed25519PrivateKey,
 }
 
 #[derive(Clone, Debug, Default, Serialize, PartialEq, Deserialize)]
@@ -86,20 +83,20 @@ impl ConsensusPeersConfig {
             .map(|(peer_id, peer_info)| {
                 ValidatorPublicKeys::new(
                     *peer_id,
-                    peer_info.consensus_pubkey.clone(),
+                    peer_info.pubkey.clone(),
                     // TODO: Add support for dynamic voting weights in config
                     1,
                     network_peers_config
                         .peers
                         .get(peer_id)
                         .unwrap()
-                        .network_signing_pubkey
+                        .signing_pubkey
                         .clone(),
                     network_peers_config
                         .peers
                         .get(peer_id)
                         .unwrap()
-                        .network_identity_pubkey
+                        .identity_pubkey
                         .clone(),
                 )
             })
@@ -115,10 +112,7 @@ impl ConsensusPeersConfig {
             self.peers
                 .iter()
                 .map(|(peer_id, peer_info)| {
-                    (
-                        *peer_id,
-                        ValidatorInfo::new(peer_info.consensus_pubkey.clone(), 1),
-                    )
+                    (*peer_id, ValidatorInfo::new(peer_info.pubkey.clone(), 1))
                 })
                 .collect(),
         )
@@ -153,16 +147,11 @@ impl ConfigHelpers {
             let (private2, public2) = compat::generate_keypair(&mut fast_rng);
             // Generate peer id from consensus public key.
             let peer_id = PeerId::from_public_key(&public2);
-            consensus_peers.insert(
-                peer_id,
-                ConsensusPeerInfo {
-                    consensus_pubkey: public2,
-                },
-            );
+            consensus_peers.insert(peer_id, ConsensusPeerInfo { pubkey: public2 });
             consensus_private_keys.insert(
                 peer_id,
                 ConsensusPrivateKey {
-                    consensus_private_key: private2,
+                    private_key: private2,
                 },
             );
         }
@@ -174,8 +163,8 @@ impl ConfigHelpers {
             network_peers.insert(
                 peer_id,
                 NetworkPeerInfo {
-                    network_signing_pubkey: public0,
-                    network_identity_pubkey: public1,
+                    signing_pubkey: public0,
+                    identity_pubkey: public1,
                 },
             );
             // save the private keys in a different hashmap
@@ -184,8 +173,8 @@ impl ConfigHelpers {
                 (
                     consensus_private_key,
                     NetworkPrivateKeys {
-                        network_identity_private_key: private1,
-                        network_signing_private_key: private0,
+                        identity_private_key: private1,
+                        signing_private_key: private0,
                     },
                 ),
             );
@@ -219,16 +208,16 @@ impl ConfigHelpers {
             network_peers.insert(
                 peer_id,
                 NetworkPeerInfo {
-                    network_signing_pubkey: public0,
-                    network_identity_pubkey: public1,
+                    signing_pubkey: public0,
+                    identity_pubkey: public1,
                 },
             );
             // save the private keys in a different hashmap
             peers_private_keys.insert(
                 peer_id,
                 NetworkPrivateKeys {
-                    network_identity_private_key: private1,
-                    network_signing_private_key: private0,
+                    identity_private_key: private1,
+                    signing_private_key: private0,
                 },
             );
         }

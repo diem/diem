@@ -56,8 +56,8 @@ impl SwarmConfig {
             .unwrap()
             .1;
         let upstream_network_keypairs = NetworkKeyPairs::load(
-            upstream_private_keys.network_signing_private_key,
-            upstream_private_keys.network_identity_private_key,
+            upstream_private_keys.signing_private_key,
+            upstream_private_keys.identity_private_key,
         );
         let template_network = NetworkConfig::default();
         // Generate upstream peer address.
@@ -175,8 +175,8 @@ impl SwarmConfig {
             // Remove network private keys for this peer.
             warn!("Looking for peer id for peer: {}", node_id);
             let NetworkPrivateKeys {
-                network_signing_private_key,
-                network_identity_private_key,
+                signing_private_key: network_signing_private_key,
+                identity_private_key: network_identity_private_key,
             } = private_keys
                 .remove_entry(&node_id)
                 .unwrap_or_else(|| unreachable!("Key not found for peer: {}", node_id))
@@ -245,11 +245,11 @@ impl SwarmConfig {
             genesis_transaction_file.write_all(&lcs::to_bytes(&genesis_transaction)?)?;
             let (
                 ConsensusPrivateKey {
-                    consensus_private_key,
+                    private_key: consensus_private_key,
                 },
                 NetworkPrivateKeys {
-                    network_signing_private_key,
-                    network_identity_private_key,
+                    signing_private_key: network_signing_private_key,
+                    identity_private_key: network_identity_private_key,
                 },
             ) = private_keys.remove_entry(&node_id).unwrap().1;
             let consensus_keypair = ConsensusKeyPair::load(Some(consensus_private_key));

@@ -210,8 +210,8 @@ impl NetworkConfig {
         peers.peers.insert(
             peer_id.clone(),
             NetworkPeerInfo {
-                network_identity_pubkey: identity_pubkey.clone(),
-                network_signing_pubkey: signing_pubkey.clone(),
+                identity_pubkey: identity_pubkey.clone(),
+                signing_pubkey: signing_pubkey.clone(),
             },
         );
         peers
