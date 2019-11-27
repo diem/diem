@@ -12,7 +12,8 @@ use crate::chained_bft::liveness::rotating_proposer_election::{choose_leader, Ro
 use crate::chained_bft::network::NetworkSender;
 use crate::chained_bft::persistent_storage::{PersistentStorage, RecoveryData};
 use crate::counters;
-use crate::state_replication::{StateComputer, TxnManager};
+use crate::state_replication::StateComputer;
+use crate::txn_manager::TxnManager;
 use crate::util::time_service::{ClockTimeService, TimeService};
 use consensus_types::common::{Payload, Round};
 use consensus_types::epoch_retrieval::EpochRetrievalRequest;

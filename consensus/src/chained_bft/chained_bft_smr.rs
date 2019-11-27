@@ -11,7 +11,8 @@ use crate::{
         persistent_storage::{PersistentStorage, RecoveryData},
     },
     counters,
-    state_replication::{StateComputer, StateMachineReplication, TxnManager},
+    state_replication::{StateComputer, StateMachineReplication},
+    txn_manager::TxnManager,
     util::time_service::ClockTimeService,
 };
 use channel;

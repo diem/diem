@@ -13,7 +13,7 @@ use crate::{
         persistent_storage::PersistentStorage,
     },
     counters,
-    state_replication::TxnManager,
+    txn_manager::TxnManager,
     util::time_service::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },

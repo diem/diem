@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::block_storage::BlockReader,
     counters,
-    state_replication::TxnManager,
+    txn_manager::TxnManager,
     util::time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},
 };
 use consensus_types::{

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{counters, state_replication::TxnManager};
+use crate::counters;
 use executor::StateComputeResult;
 use failure::Result;
 use futures::{compat::Future01CompatExt, future, Future, FutureExt};
@@ -77,6 +77,30 @@ impl MempoolProxy {
             Err(e) => future::err(e.into()).boxed(),
         }
     }
+}
+
+/// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
+pub trait TxnManager: Send + Sync {
+    type Payload;
+
+    /// Brings new transactions to be applied.
+    /// The `exclude_txns` list includes the transactions that are already pending in the
+    /// branch of blocks consensus is trying to extend.
+    fn pull_txns(
+        &self,
+        max_size: u64,
+        exclude_txns: Vec<&Self::Payload>,
+    ) -> Pin<Box<dyn Future<Output = Result<Self::Payload>> + Send>>;
+
+    /// Notifies TxnManager about the payload of the committed block including the state compute
+    /// result, which includes the specifics of what transactions succeeded and failed.
+    fn commit_txns<'a>(
+        &'a self,
+        txns: &Self::Payload,
+        compute_result: &StateComputeResult,
+        // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
+        timestamp_usecs: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>;
 }
 
 impl TxnManager for MempoolProxy {

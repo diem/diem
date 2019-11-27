@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::state_replication::{StateComputer, TxnManager};
+use crate::state_replication::StateComputer;
+use crate::txn_manager::TxnManager;
 use crate::{
     chained_bft::{
         chained_bft_smr::{ChainedBftSMR, ChainedBftSMRConfig},
