@@ -6,14 +6,14 @@ module X {
 module M {
 
     foo() {
-        01.X.bar()
+        01::X::bar()
     }
 
     bar() {
-        false.X.bar()
+        false::X::bar()
     }
 
     baz() {
-        foo().bar().X.bar()
+        foo().bar().X::bar()
     }
 }

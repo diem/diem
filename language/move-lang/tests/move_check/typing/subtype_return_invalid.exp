@@ -20,10 +20,10 @@ error:
    │         ^ Invalid return expression
    ·
  8 │     t1(s: &S): &mut S {
-   │           -- The type: '&0x8675309.M.S'
+   │           -- The type: '&0x8675309::M::S'
    ·
  8 │     t1(s: &S): &mut S {
-   │                ------ Is not a subtype of: '&mut 0x8675309.M.S'
+   │                ------ Is not a subtype of: '&mut 0x8675309::M::S'
    │
 
 error: 

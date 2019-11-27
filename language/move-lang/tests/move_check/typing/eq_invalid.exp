@@ -48,10 +48,10 @@ error:
     │              ^^^^^ Invalid argument to '=='
     ·
  12 │     t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
-    │                                 - The type: '0x8675309.M.S'
+    │                                 - The type: '0x8675309::M::S'
     ·
  12 │     t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
-    │                                           -- Is not compatible with: '&0x8675309.M.S'
+    │                                           -- Is not compatible with: '&0x8675309::M::S'
     │
 
 error: 
@@ -62,10 +62,10 @@ error:
     │                  ^ Invalid argument to '=='
     ·
  12 │     t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
-    │                                                      ------ The type: '&mut 0x8675309.M.S'
+    │                                                      ------ The type: '&mut 0x8675309::M::S'
     ·
  12 │     t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
-    │                                 - Is not compatible with: '0x8675309.M.S'
+    │                                 - Is not compatible with: '0x8675309::M::S'
     │
 
 error: 
@@ -76,7 +76,7 @@ error:
     │         ^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
     ·
  20 │     t1(r: R) {
-    │           - The type: 0x8675309.M.R
+    │           - The type: 0x8675309::M::R
     ·
  3 │     resource struct R {
     │     -------- Is found to be a non-copyable type here
@@ -114,7 +114,7 @@ error:
     │         ^^^^^^^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
     ·
  26 │         G1{} == G1{};
-    │         ---- The type: 0x8675309.M.G1<_>
+    │         ---- The type: 0x8675309::M::G1<_>
     ·
  7 │     struct G1<T: resource> {}
     │                  -------- Is found to be a non-copyable type here
@@ -144,7 +144,7 @@ error:
     │         ^^^^^^^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
     ·
  27 │         G2{} == G2{};
-    │         ---- The type: 0x8675309.M.G2<_>
+    │         ---- The type: 0x8675309::M::G2<_>
     ·
  8 │     struct G2<T> {}
     │               - Is found to be a non-copyable type here

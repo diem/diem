@@ -14,7 +14,7 @@ module X {
 }
 
 module M {
-    use 0x1.X;
+    use 0x1::X;
     foo(): u64 { 0 }
     bar(x: u64): (address, u64) {
         (0x0, x)
@@ -26,10 +26,10 @@ module M {
     }
 
     t0() {
-        (X.foo(): u64);
-        (X.bar(0): (address, u64));
-        (X.baz(0x0, 0): (bool, address, u64));
-        (X.bing(false, 0x0, 0): ());
+        (X::foo(): u64);
+        (X::bar(0): (address, u64));
+        (X::baz(0x0, 0): (bool, address, u64));
+        (X::bing(false, 0x0, 0): ());
     }
 
     t1() {
@@ -40,17 +40,17 @@ module M {
     }
 
     t2() {
-        let () = X.bing(X.baz(X.bar(X.foo())));
-        let () = X.bing (X.baz (X.bar (X.foo())));
-        let () = X.bing (X.baz (X.bar 1));
-        let () = X.bing (X.baz (0x0, 1));
-        let () = X.bing (false, 0x0, 1);
+        let () = X::bing(X::baz(X::bar(X::foo())));
+        let () = X::bing (X::baz (X::bar (X::foo())));
+        let () = X::bing (X::baz (X::bar(1)));
+        let () = X::bing (X::baz (0x0, 1));
+        let () = X::bing (false, 0x0, 1);
     }
 
     t3() {
         let () = bing(baz(bar(foo())));
         let () = bing (baz (bar (foo())));
-        let () = bing (baz (bar 1));
+        let () = bing (baz (bar(1)));
         let () = bing (baz (0x0, 1));
         let () = bing (false, 0x0, 1);
     }

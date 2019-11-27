@@ -35,11 +35,11 @@ error:
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:20:9 ───
     │
- 20 │         X.R,
-    │         ^^^ Invalid 'acquires' annotation
+ 20 │         X::R,
+    │         ^^^^ Invalid 'acquires' annotation
     ·
- 20 │         X.R,
-    │         --- The type '0x1.X.R' was not declared in the current module. Global storage access is internal to the module'
+ 20 │         X::R,
+    │         ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
 error: 
@@ -50,7 +50,7 @@ error:
     │         ^ Invalid 'acquires' annotation
     ·
  21 │         S,
-    │         - Expected a nominal resource. Found the type: 0x1.M.S
+    │         - Expected a nominal resource. Found the type: 0x1::M::S
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -120,11 +120,11 @@ error:
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:35:17 ───
     │
- 35 │         destroy(move_from<X.R>(a));
-    │                 ^^^^^^^^^^^^^^^^^ Invalid call to move_from.
+ 35 │         destroy(move_from<X::R>(a));
+    │                 ^^^^^^^^^^^^^^^^^^ Invalid call to move_from.
     ·
- 35 │         destroy(move_from<X.R>(a));
-    │                           --- The type '0x1.X.R' was not declared in the current module. Global storage access is internal to the module'
+ 35 │         destroy(move_from<X::R>(a));
+    │                           ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
 error: 
@@ -135,7 +135,7 @@ error:
     │                 ^^^^^^^^^^^^^^^ Invalid call to move_from.
     ·
  36 │         destroy(move_from<S>(a));
-    │                           - Expected a nominal resource. Found the type: 0x1.M.S
+    │                           - Expected a nominal resource. Found the type: 0x1::M::S
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -197,11 +197,11 @@ error:
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:43:9 ───
     │
- 43 │         borrow_global<X.R>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
+ 43 │         borrow_global<X::R>(a);
+    │         ^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
     ·
- 43 │         borrow_global<X.R>(a);
-    │                       --- The type '0x1.X.R' was not declared in the current module. Global storage access is internal to the module'
+ 43 │         borrow_global<X::R>(a);
+    │                       ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
 error: 
@@ -212,7 +212,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
     ·
  44 │         borrow_global<S>(a);
-    │                       - Expected a nominal resource. Found the type: 0x1.M.S
+    │                       - Expected a nominal resource. Found the type: 0x1::M::S
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -274,11 +274,11 @@ error:
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:51:9 ───
     │
- 51 │         borrow_global_mut<X.R>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
+ 51 │         borrow_global_mut<X::R>(a);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
     ·
- 51 │         borrow_global_mut<X.R>(a);
-    │                           --- The type '0x1.X.R' was not declared in the current module. Global storage access is internal to the module'
+ 51 │         borrow_global_mut<X::R>(a);
+    │                           ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
 error: 
@@ -289,7 +289,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
     ·
  52 │         borrow_global_mut<S>(a);
-    │                           - Expected a nominal resource. Found the type: 0x1.M.S
+    │                           - Expected a nominal resource. Found the type: 0x1::M::S
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -351,11 +351,11 @@ error:
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:59:9 ───
     │
- 59 │         exists<X.R>(a);
-    │         ^^^^^^^^^^^^^^ Invalid call to exists.
+ 59 │         exists<X::R>(a);
+    │         ^^^^^^^^^^^^^^^ Invalid call to exists.
     ·
- 59 │         exists<X.R>(a);
-    │                --- The type '0x1.X.R' was not declared in the current module. Global storage access is internal to the module'
+ 59 │         exists<X::R>(a);
+    │                ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
 error: 
@@ -366,7 +366,7 @@ error:
     │         ^^^^^^^^^^^^ Invalid call to exists.
     ·
  60 │         exists<S>(a);
-    │                - Expected a nominal resource. Found the type: 0x1.M.S
+    │                - Expected a nominal resource. Found the type: 0x1::M::S
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -436,11 +436,11 @@ error:
 
     ┌── tests/move_check/typing/invalid_type_acquire.move:67:9 ───
     │
- 67 │         move_to_sender<X.R>(any());
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
+ 67 │         move_to_sender<X::R>(any());
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
     ·
- 67 │         move_to_sender<X.R>(any());
-    │                        --- The type '0x1.X.R' was not declared in the current module. Global storage access is internal to the module'
+ 67 │         move_to_sender<X::R>(any());
+    │                        ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
 error: 
@@ -451,7 +451,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
     ·
  68 │         move_to_sender<S>(any());
-    │                        - Expected a nominal resource. Found the type: 0x1.M.S
+    │                        - Expected a nominal resource. Found the type: 0x1::M::S
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here

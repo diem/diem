@@ -1,5 +1,6 @@
 module M {
     foo() {
-        M.f {} = 0
+        Self::f {} = 0;
+        Self::f() = 0;
     }
 }

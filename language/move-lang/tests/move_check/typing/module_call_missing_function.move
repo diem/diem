@@ -5,13 +5,13 @@ module X {
 }
 
 module M {
-    use 0x1.X;
+    use 0x1::X;
 
     foo(): u64 { 0 }
 
     t0() {
-        Self.fooo();
+        Self::fooo();
         foooo();
-        X.foooooo();
+        X::foooooo();
     }
 }

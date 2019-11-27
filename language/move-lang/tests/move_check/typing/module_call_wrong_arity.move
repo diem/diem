@@ -13,7 +13,7 @@ module X {
 
 
 module M {
-    use 0x1.X;
+    use 0x1::X;
 
     foo(): u64 { 0 }
     bar(x: u64): (address, u64) {
@@ -24,13 +24,13 @@ module M {
     }
 
     t0() {
-        X.foo(1);
-        X.foo(1, 2);
-        X.bar();
-        X.bar(1, 2);
-        X.baz<u64, u64>();
-        X.baz<u64, u64>(1);
-        X.baz(1, 2, 3);
+        X::foo(1);
+        X::foo(1, 2);
+        X::bar();
+        X::bar(1, 2);
+        X::baz<u64, u64>();
+        X::baz<u64, u64>(1);
+        X::baz(1, 2, 3);
     }
 
     t1() {

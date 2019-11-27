@@ -6,7 +6,7 @@ error:
    │             ^^^^^^^ Constraint not satisfied.
    ·
  5 │     foo():  CupC<R> {
-   │                  - The resource type '0x8675309.M.R' does not satisfy the constraint 'copyable'
+   │                  - The resource type '0x8675309::M::R' does not satisfy the constraint 'copyable'
    ·
  3 │     resource struct R {}
    │     -------- The type's constraint information was declared here

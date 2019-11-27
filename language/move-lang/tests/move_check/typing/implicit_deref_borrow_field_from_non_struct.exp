@@ -44,16 +44,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/implicit_deref_borrow_field_from_non_struct.move:10:9 ───
+    ┌── tests/move_check/typing/implicit_deref_borrow_field_from_non_struct.move:5:34 ───
     │
  10 │         addr.R;
-    │         ^^^^^^ Invalid access. Expected a qualified module access
+    │         ^^^^^^ Unbound field 'R'
     ·
- 10 │         addr.R;
-    │         ---- Or an struct value or reference
-    ·
- 10 │         addr.R;
-    │              - Followed by a field access
+ 5 │     t0(u: u64, cond: bool, addr: address) {
+    │                                  ------- Expected a struct type in the current module but got: address
     │
 
 error: 
@@ -72,13 +69,10 @@ error:
     ┌── tests/move_check/typing/implicit_deref_borrow_field_from_non_struct.move:12:9 ───
     │
  12 │         ().R;
-    │         ^^^^ Invalid access. Expected a qualified module access
+    │         ^^ Invalid dot access. Expected an expression of a single type but got an expression of type: '()'
     ·
  12 │         ().R;
-    │         -- Or an struct value or reference
-    ·
- 12 │         ().R;
-    │            - Followed by a field access
+    │         -- Type found here
     │
 
 error: 
@@ -86,7 +80,7 @@ error:
     ┌── tests/move_check/typing/implicit_deref_borrow_field_from_non_struct.move:13:9 ───
     │
  13 │         (S{f: 0}, S{f:0}).f;
-    │         ^^^^^^^^^^^^^^^^^ Invalid dot access. Expected an expression of a single type but got an expression of type: '(0x8675309.M.S,0x8675309.M.S)'
+    │         ^^^^^^^^^^^^^^^^^ Invalid dot access. Expected an expression of a single type but got an expression of type: '(0x8675309::M::S,0x8675309::M::S)'
     ·
  13 │         (S{f: 0}, S{f:0}).f;
     │         ----------------- Type found here

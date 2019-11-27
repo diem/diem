@@ -3,7 +3,7 @@ error:
    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:6:9 ───
    │
  6 │         foo<u64, u64>(false, false);
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309.M.foo'. Invalid argument for parameter 'x'
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
    ·
  6 │         foo<u64, u64>(false, false);
    │             --- The type: 'u64'
@@ -17,7 +17,7 @@ error:
    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:6:9 ───
    │
  6 │         foo<u64, u64>(false, false);
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309.M.foo'. Invalid argument for parameter 'y'
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
    ·
  6 │         foo<u64, u64>(false, false);
    │                  --- The type: 'u64'
@@ -31,7 +31,7 @@ error:
    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:7:9 ───
    │
  7 │         foo<bool, bool>(0, false);
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309.M.foo'. Invalid argument for parameter 'x'
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
    ·
  7 │         foo<bool, bool>(0, false);
    │             ---- The type: 'bool'
@@ -45,7 +45,7 @@ error:
    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:8:9 ───
    │
  8 │         foo<bool, bool>(false, 0);
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309.M.foo'. Invalid argument for parameter 'y'
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
    ·
  8 │         foo<bool, bool>(false, 0);
    │                   ---- The type: 'bool'
@@ -59,7 +59,7 @@ error:
    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:9:9 ───
    │
  9 │         foo<bool, bool>(0, 0);
-   │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309.M.foo'. Invalid argument for parameter 'x'
+   │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
    ·
  9 │         foo<bool, bool>(0, 0);
    │             ---- The type: 'bool'
@@ -73,7 +73,7 @@ error:
    ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:9:9 ───
    │
  9 │         foo<bool, bool>(0, 0);
-   │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309.M.foo'. Invalid argument for parameter 'y'
+   │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
    ·
  9 │         foo<bool, bool>(0, 0);
    │                   ---- The type: 'bool'
@@ -87,7 +87,7 @@ error:
     ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:12:20 ───
     │
  13 │         foo<U, u64>(t, 0);
-    │         ^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309.M.foo'. Invalid argument for parameter 'x'
+    │         ^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
     ·
  13 │         foo<U, u64>(t, 0);
     │             - The type: 'U'
@@ -101,7 +101,7 @@ error:
     ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:12:26 ───
     │
  14 │         foo<V, T>(u, v);
-    │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309.M.foo'. Invalid argument for parameter 'x'
+    │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
     ·
  14 │         foo<V, T>(u, v);
     │             - The type: 'V'
@@ -115,7 +115,7 @@ error:
     ┌── tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:12:32 ───
     │
  14 │         foo<V, T>(u, v);
-    │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309.M.foo'. Invalid argument for parameter 'y'
+    │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
     ·
  14 │         foo<V, T>(u, v);
     │                - The type: 'T'

@@ -78,7 +78,7 @@ error:
     │                                    - The type: 'u64'
     ·
  14 │         let () = move_to_sender<R>(0);
-    │                                 - Is not compatible with: '0x8675309.M.R'
+    │                                 - Is not compatible with: '0x8675309::M::R'
     │
 
 error: 

@@ -5,9 +5,9 @@ module X {
 }
 
 module M {
-    use 0x1.X;
+    use 0x1::X;
 
-    t0(): X.R {
+    t0(): X::R {
         loop {}
     }
 

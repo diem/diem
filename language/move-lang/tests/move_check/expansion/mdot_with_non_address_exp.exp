@@ -1,42 +1,11 @@
 error: 
 
-   ┌── tests/move_check/expansion/mdot_with_non_address_exp.move:9:9 ───
+   ┌── tests/move_check/expansion/mdot_with_non_address_exp.move:9:11 ───
    │
- 9 │         01.X.bar()
-   │         ^^^^ Invalid access. Expected a qualified module access
+ 9 │         01::X::bar()
+   │           ^^ Unrecognized Token: ::
    ·
- 9 │         01.X.bar()
-   │         -- Or an struct value or reference
-   ·
- 9 │         01.X.bar()
-   │            - Followed by a field access
+ 9 │         01::X::bar()
+   │           -- Expected:  "!=", "%", "&", "&&", ")", "*", "+", ",", "-", ".", "/", ":", ";", "<", "<=", "=", "==", ">", ">=", "^", "else", "|", "||", "}",
    │
-
-error: 
-
-    ┌── tests/move_check/expansion/mdot_with_non_address_exp.move:13:9 ───
-    │
- 13 │         false.X.bar()
-    │         ^^^^^^^ Invalid access. Expected a qualified module access
-    ·
- 13 │         false.X.bar()
-    │         ----- Or an struct value or reference
-    ·
- 13 │         false.X.bar()
-    │               - Followed by a field access
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/mdot_with_non_address_exp.move:17:9 ───
-    │
- 17 │         foo().bar().X.bar()
-    │         ^^^^^^^^^^^^^ Invalid access. Expected a qualified module access
-    ·
- 17 │         foo().bar().X.bar()
-    │         ----------- Or an struct value or reference
-    ·
- 17 │         foo().bar().X.bar()
-    │                     - Followed by a field access
-    │
 

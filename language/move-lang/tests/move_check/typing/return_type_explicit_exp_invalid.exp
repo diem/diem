@@ -48,7 +48,7 @@ error:
     │              ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
     ·
  13 │         loop return (0, false, R{});
-    │                     --------------- The type: '(u64,bool,0x8675309.M.R)'
+    │                     --------------- The type: '(u64,bool,0x8675309::M::R)'
     ·
  12 │     t2(): (u64, bool) {
     │           ----------- Is not compatible with: '(u64,bool)'
@@ -62,10 +62,10 @@ error:
     │                      ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
     ·
  18 │         while (true) return (0, false, R{});
-    │                             --------------- The type: '(u64,bool,0x8675309.M.R)'
+    │                             --------------- The type: '(u64,bool,0x8675309::M::R)'
     ·
  17 │     t3(): (u64, bool, R, bool) {
-    │           -------------------- Is not compatible with: '(u64,bool,0x8675309.M.R,bool)'
+    │           -------------------- Is not compatible with: '(u64,bool,0x8675309::M::R,bool)'
     │
 
 error: 

@@ -4,7 +4,7 @@ module M {
     resource struct R {}
 
     foo() {
-        ignore(abort 0: CupC<R>);
+        ignore((abort 0: CupC<R>));
     }
 
     ignore<T>(x: T) {

@@ -1,3 +1,3 @@
 module M {
-    foo(x: X.T) {}
+    foo(x: X::T) {}
 }

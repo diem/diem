@@ -6,10 +6,10 @@ error:
    │         ^^^^^^^ Invalid deconstruction assignment
    ·
  8 │         S { g } = R {f :0};
-   │         ------- The type: '0x8675309.M.S'
+   │         ------- The type: '0x8675309::M::S'
    ·
  8 │         S { g } = R {f :0};
-   │                   -------- Is not compatible with: '0x8675309.M.R'
+   │                   -------- Is not compatible with: '0x8675309::M::R'
    │
 
 error: 
@@ -20,10 +20,10 @@ error:
    │          ^^^^^^^ Invalid deconstruction assignment
    ·
  9 │         (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
-   │          ------- The type: '0x8675309.M.S'
+   │          ------- The type: '0x8675309::M::S'
    ·
  9 │         (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
-   │                               --------- Is not compatible with: '0x8675309.M.R'
+   │                               --------- Is not compatible with: '0x8675309::M::R'
    │
 
 error: 
@@ -120,9 +120,9 @@ error:
     │                      ^ Invalid assignment to local 'r'
     ·
  27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
-    │                                               ------- The type: '0x8675309.M.R'
+    │                                               ------- The type: '0x8675309::M::R'
     ·
  26 │         let r = S{ g: 0 };
-    │                 --------- Is not compatible with: '0x8675309.M.S'
+    │                 --------- Is not compatible with: '0x8675309::M::S'
     │
 

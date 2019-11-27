@@ -32,13 +32,13 @@ module Vector {
     // Reverses the order of the elements in the vector in place.
     public reverse<Element>(v: &mut T<Element>) {
 
-        let len = v.length();
+        let len = length(v);
         if (len == 0) return ();
 
         let front_index = 0;
         let back_index = len -1;
         while (front_index < back_index) {
-            v.swap(front_index, back_index);
+            swap(v, front_index, back_index);
             front_index = front_index + 1;
             back_index = back_index - 1;
         }
@@ -46,14 +46,14 @@ module Vector {
 
     // Moves all of the elements of the `other` vector into the `lhs` vector.
     public append<Element>(lhs: &mut T<Element>, other: T<Element>) {
-        other.reverse();
-        while (!other.is_empty()) lhs.push_back(other.pop_back());
-        other.destroy_empty();
+        reverse(&mut other);
+        while (!is_empty(&other)) push_back(lhs, pop_back(&mut other));
+        destroy_empty(other);
     }
 
     // Return true if the vector has no elements
     public is_empty<Element>(v: &T<Element>): bool {
-        v.length() == 0
+        length(v) == 0
     }
 
 }

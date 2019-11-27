@@ -20,28 +20,28 @@ module M {
     }
 
     t2() {
-        foo {};
-        foo { let x = 0; };
+        foo({});
+        foo({ let x = 0; });
 
         let x = 0;
-        bar { x };
-        bar { let x = 0; x };
+        bar({ x });
+        bar({ let x = 0; x });
 
         let a = 0x0;
-        baz { (a, x) };
-        baz { let a = false; (a, x) };
+        baz({ (a, x) });
+        baz({ let a = false; (a, x) });
     }
 
     t3() {
-        foo{};
-        foo{ let x = 0; };
+        foo({});
+        foo({ let x = 0; });
 
         let x = 0;
-        bar{ x };
-        bar{ let x = 0; x };
+        bar({ x });
+        bar({ let x = 0; x });
 
         let a = 0x0;
-        baz{ (a, x) };
-        baz{ let a = false; (a, x) };
+        baz({ (a, x) });
+        baz({ let a = false; (a, x) });
     }
 }

@@ -3,30 +3,9 @@ error:
    ┌── tests/move_check/expansion/pack_no_fields_single_block_other_expr.move:6:19 ───
    │
  6 │         let s = S 0;
-   │                   ^ Invalid fields for struct construction. Expected: named arguments
-   │
-
-error: 
-
-   ┌── tests/move_check/expansion/pack_no_fields_single_block_other_expr.move:7:19 ───
-   │
- 7 │         let s = S f;
-   │                   ^ Invalid fields for struct construction. Expected: named arguments
-   │
-
-error: 
-
-   ┌── tests/move_check/expansion/pack_no_fields_single_block_other_expr.move:8:19 ───
-   │
- 8 │         let g = G ();
-   │                   ^^ Invalid fields for struct construction. Expected: named arguments
-   │
-
-error: 
-
-   ┌── tests/move_check/expansion/pack_no_fields_single_block_other_expr.move:9:19 ───
-   │
- 9 │         let g = G { {} };
-   │                   ^^^^^^ Invalid fields for struct construction. Expected: named arguments
+   │                   ^ Unrecognized Token: 0
+   ·
+ 6 │         let s = S 0;
+   │                   - Expected:  "!=", "%", "&", "&&", "(", "()", ")", "*", "+", ",", "-", ".", "/", ":", "::", ";", "<", "<=", "=", "==", ">", ">=", "^", "acquires", "as", "else", "{", "|", "||", "}", r#"0[xX][0-9a-fA-F]+"#, r#"[a-zA-Z_][a-zA-Z0-9_]*"#,
    │
 

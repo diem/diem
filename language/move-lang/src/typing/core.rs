@@ -177,20 +177,15 @@ impl Context {
         &self.struct_definition(m, n).type_parameters
     }
 
-    fn function_info(&mut self, m: &ModuleIdent, n: &FunctionName) -> Option<&FunctionInfo> {
-        if !self.module_info(m).functions.contains_key(n) {
-            self.error(vec![(
-                n.loc(),
-                format!("Unbound function '{}' in module '{}'", n, m),
-            )])
-        }
-        self.module_info(m).functions.get(n)
+    fn function_info(&mut self, m: &ModuleIdent, n: &FunctionName) -> &FunctionInfo {
+        self.module_info(m)
+            .functions
+            .get(n)
+            .expect("ICE should have failed in naming")
     }
 
     pub fn function_acquires(&mut self, m: &ModuleIdent, n: &FunctionName) -> BTreeSet<BaseType> {
-        self.function_info(m, n)
-            .map(|info| info.acquires.clone())
-            .unwrap_or_else(BTreeSet::new)
+        self.function_info(m, n).acquires.clone()
     }
 }
 
@@ -344,7 +339,7 @@ pub fn make_field_type(
             context.error(vec![
                 (
                     loc,
-                    format!("Unbound field '{}' for native struct '{}.{}'", field, m, n),
+                    format!("Unbound field '{}' for native struct '{}::{}'", field, m, n),
                 ),
                 (nloc, "Declared 'native' here".into()),
             ]);
@@ -356,7 +351,7 @@ pub fn make_field_type(
         None => {
             context.error(vec![(
                 loc,
-                format!("Unbound field '{}' in '{}.{}'", field, m, n),
+                format!("Unbound field '{}' in '{}::{}'", field, m, n),
             )]);
             sp(loc, BaseType_::Anything)
         }
@@ -378,19 +373,19 @@ pub fn make_function_type(
     m: &ModuleIdent,
     f: &FunctionName,
     ty_args_opt: Option<Vec<BaseType>>,
-) -> Option<(
+) -> (
     Loc,
     Vec<BaseType>,
     Vec<(Var, SingleType)>,
     BTreeSet<BaseType>,
     Type,
-)> {
+) {
     let in_current_module = match &context.current_module {
         Some(current) => m == current,
         None => false,
     };
     let constraints = context
-        .function_info(m, f)?
+        .function_info(m, f)
         .signature
         .type_parameters
         .iter()
@@ -403,7 +398,7 @@ pub fn make_function_type(
             let ty_args = check_type_argument_arity(
                 context,
                 loc,
-                || format!("{}.{}", m, f),
+                || format!("{}::{}", m, f),
                 ty_args,
                 &constraints,
             );
@@ -411,7 +406,7 @@ pub fn make_function_type(
         }
     };
 
-    let finfo = context.function_info(m, f)?;
+    let finfo = context.function_info(m, f);
     let tparam_subst = &make_tparam_subst(&finfo.signature.type_parameters, ty_args.clone());
     let params = finfo
         .signature
@@ -429,13 +424,13 @@ pub fn make_function_type(
     match &finfo.visibility {
         FunctionVisibility::Internal if !in_current_module => {
             context.error(vec![
-                (loc, format!("Invalid call to '{}.{}'", m, f)),
+                (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (defined_loc, "This function is internal to its module. Only 'public' functions can be called outside of their module".into()),
             ])
         }
         _ => (),
     };
-    Some((defined_loc, ty_args, params, acquires, return_ty))
+    (defined_loc, ty_args, params, acquires, return_ty)
 }
 
 //**************************************************************************************************
@@ -949,7 +944,14 @@ pub fn join_base_type(
         }
 
         (sp!(loc, Apply(k1, n1, tys1)), sp!(_, Apply(k2, n2, tys2))) if n1 == n2 => {
-            assert!(k1 == k2);
+            assert!(
+                k1 == k2,
+                "ICE failed naming: {:#?}kind != {:#?}kind. {:#?} !=  {:#?}",
+                n1,
+                n2,
+                k1,
+                k2
+            );
             let (subst, tys) = join_base_types(subst, tys1, tys2)?;
             Ok((subst, sp(*loc, Apply(k1.clone(), n1.clone(), tys))))
         }

@@ -1,10 +1,10 @@
 module M {
     struct S {}
     foo() {
-        false.M.S { }
+        false::M::S { }
     }
 
     bar() {
-        bar().bar().M.S { }
+        bar()::bar()::M::S { }
     }
 }

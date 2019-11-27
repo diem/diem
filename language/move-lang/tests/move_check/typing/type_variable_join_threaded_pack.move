@@ -18,15 +18,15 @@ module Container {
 
 
 module M {
-    use 0x1.Container;
+    use 0x1::Container;
 
     struct Box<T> { f1: T, f2: T }
 
     t0(): Box<u64> {
-        let v = Container.new();
-        let x = Container.get(&v);
+        let v = Container::new();
+        let x = Container::get(&v);
         let b = Box { f1: x, f2: x };
-        Container.put(&mut v, 0);
+        Container::put(&mut v, 0);
         b
     }
 }

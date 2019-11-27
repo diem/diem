@@ -1,8 +1,11 @@
 error: 
 
-   ┌── tests/move_check/expansion/unpack_assign_block_single_expr.move:4:11 ───
+   ┌── tests/move_check/expansion/unpack_assign_block_single_expr.move:4:13 ───
    │
  4 │         S { 0 } = S { f: 0 };
-   │           ^^^^^ Invalid fields for deconstructing assignment. Expected: named arguments
+   │             ^ Unrecognized Token: 0
+   ·
+ 4 │         S { 0 } = S { f: 0 };
+   │             - Expected:  "}", r#"[a-zA-Z_][a-zA-Z0-9_]*"#,
    │
 
