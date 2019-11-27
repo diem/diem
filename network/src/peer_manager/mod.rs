@@ -868,8 +868,7 @@ where
         let mut substream_rx = self.connection.listen_for_inbound().fuse();
         let mut pending_outbound_substreams = FuturesUnordered::new();
         let mut pending_inbound_substreams = FuturesUnordered::new();
-
-        loop {
+        while !self.shutdown {
             futures::select! {
                 maybe_req = self.requests_rx.next() => {
                     if let Some(request) = maybe_req {
@@ -922,10 +921,6 @@ where
                     // Do nothing since these futures have an output of "()"
                 },
                 complete => unreachable!(),
-            }
-
-            if self.shutdown {
-                break;
             }
         }
         debug!(
