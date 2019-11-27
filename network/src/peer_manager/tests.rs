@@ -29,6 +29,7 @@ use netcore::{
     transport::{boxed::BoxedTransport, memory::MemoryTransport, ConnectionOrigin, TransportExt},
 };
 use parity_multiaddr::Multiaddr;
+use std::fmt::Debug;
 use std::{collections::HashMap, io, time::Duration};
 use tokio::{runtime::Handle, time::timeout};
 
@@ -77,7 +78,7 @@ fn build_test_peer(
     Peer<Yamux<MemorySocket>>,
     PeerHandle<StreamHandle<MemorySocket>>,
     Yamux<MemorySocket>,
-    channel::Receiver<PeerNotification<Yamux<MemorySocket>>>,
+    channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
 ) {
     let (a, b) = build_test_connection();
     let identity = build_test_identity(PeerId::random());
@@ -102,12 +103,12 @@ fn build_test_connected_peers() -> (
     (
         Peer<Yamux<MemorySocket>>,
         PeerHandle<StreamHandle<MemorySocket>>,
-        channel::Receiver<PeerNotification<Yamux<MemorySocket>>>,
+        channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
     ),
     (
         Peer<Yamux<MemorySocket>>,
         PeerHandle<StreamHandle<MemorySocket>>,
-        channel::Receiver<PeerNotification<Yamux<MemorySocket>>>,
+        channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
     ),
 ) {
     let (peer_a, peer_handle_a, connection_a, peer_notifs_rx_a) =
@@ -316,10 +317,12 @@ async fn open_hello_substream<T: StreamMultiplexer>(connection: &T) -> io::Resul
     Ok(())
 }
 
-async fn assert_new_substream_event<TMuxer: StreamMultiplexer>(
+async fn assert_new_substream_event<TSubstream>(
     peer_id: PeerId,
-    peer_notifs_rx: &mut channel::Receiver<PeerNotification<TMuxer>>,
-) {
+    peer_notifs_rx: &mut channel::Receiver<PeerNotification<TSubstream>>,
+) where
+    TSubstream: Debug,
+{
     match peer_notifs_rx.next().await {
         Some(PeerNotification::NewSubstream(actual_peer_id, _)) => {
             assert_eq!(actual_peer_id, peer_id);
@@ -330,12 +333,14 @@ async fn assert_new_substream_event<TMuxer: StreamMultiplexer>(
     }
 }
 
-async fn assert_peer_disconnected_event<TMuxer: StreamMultiplexer>(
+async fn assert_peer_disconnected_event<TSubstream>(
     peer_id: PeerId,
     role: RoleType,
     reason: DisconnectReason,
-    peer_notifs_rx: &mut channel::Receiver<PeerNotification<TMuxer>>,
-) {
+    peer_notifs_rx: &mut channel::Receiver<PeerNotification<TSubstream>>,
+) where
+    TSubstream: Debug,
+{
     match peer_notifs_rx.next().await {
         Some(PeerNotification::PeerDisconnected(
             actual_peer_id,
@@ -365,7 +370,7 @@ async fn check_correct_connection_is_live<TMuxer: StreamMultiplexer>(
     expected_peer_id: PeerId,
     expected_role: RoleType,
     requested_shutdown: bool,
-    mut peer_notifs_rx: &mut channel::Receiver<PeerNotification<TMuxer>>,
+    mut peer_notifs_rx: &mut channel::Receiver<PeerNotification<TMuxer::Substream>>,
 ) {
     // If PeerManager needed to kill the existing connection we'll see a Requested shutdown
     // event
