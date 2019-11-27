@@ -302,7 +302,6 @@ async fn handle_outbound_rpc<TSubstream>(
                 timeout,
                 handle_outbound_rpc_inner(peer_mgr_tx, peer_id, protocol, req_data),
             )
-            .map_err(Into::<std::io::Error>::into)
             .map_err(Into::<RpcError>::into)
             .map(|r| r.and_then(|x| x))
             .boxed()
@@ -411,7 +410,6 @@ async fn handle_inbound_substream<TSubstream>(
                     substream.substream,
                 ),
             )
-            .map_err(Into::<std::io::Error>::into)
             .map_err(Into::<RpcError>::into)
             .map(|r| r.and_then(|x| x))
             .await;

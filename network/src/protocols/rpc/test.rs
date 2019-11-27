@@ -410,8 +410,7 @@ fn outbound_rpc_timeout() {
         // Check error is timeout error
         let err = res.expect_err("Dialer's rpc request should fail");
         match err {
-            //FIXME when when tokio timout::Elapsed is exported again
-            RpcError::IoError(_) => {}
+            RpcError::TimedOut => {}
             err => panic!("Unexpected error: {:?}, expected TimedOut", err),
         };
     };

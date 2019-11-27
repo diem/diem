@@ -143,12 +143,11 @@ impl From<PeerManagerError> for NetworkError {
     }
 }
 
-//FIXME
-//impl From<time::timeout::Elapsed> for NetworkError {
-//    fn from(_err: time::timeout::Elapsed) -> NetworkError {
-//        Context::new(NetworkErrorKind::TimedOut).into()
-//    }
-//}
+impl From<tokio::time::Elapsed> for NetworkError {
+    fn from(_err: tokio::time::Elapsed) -> NetworkError {
+        Context::new(NetworkErrorKind::TimedOut).into()
+    }
+}
 
 #[cfg(test)]
 mod test {

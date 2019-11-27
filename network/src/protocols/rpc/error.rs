@@ -85,9 +85,8 @@ impl From<mpsc::SendError> for RpcError {
     }
 }
 
-// TODO add back once tokio exposes the Elapsed type
-//impl From<time::timeout::Elapsed> for RpcError {
-//    fn from(_err: time::timeout::Elapsed) -> RpcError {
-//        RpcError::TimedOut
-//    }
-//}
+impl From<tokio::time::Elapsed> for RpcError {
+    fn from(_err: tokio::time::Elapsed) -> RpcError {
+        RpcError::TimedOut
+    }
+}
