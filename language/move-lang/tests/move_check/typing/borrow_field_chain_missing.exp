@@ -3,7 +3,7 @@ error:
    ┌── tests/move_check/typing/borrow_field_chain_missing.move:7:10 ───
    │
  7 │         &x1.f;
-   │          ^^^^ Unbound field 'f' in '0x8675309.M.X1'
+   │          ^^^^ Unbound field 'f' in '0x8675309::M::X1'
    │
 
 error: 
@@ -11,7 +11,7 @@ error:
    ┌── tests/move_check/typing/borrow_field_chain_missing.move:8:10 ───
    │
  8 │         &x1.x2.f;
-   │          ^^^^^^^ Unbound field 'f' in '0x8675309.M.X2'
+   │          ^^^^^^^ Unbound field 'f' in '0x8675309::M::X2'
    │
 
 error: 
@@ -19,7 +19,7 @@ error:
    ┌── tests/move_check/typing/borrow_field_chain_missing.move:9:10 ───
    │
  9 │         &x1.x2.x3.g;
-   │          ^^^^^^^^^^ Unbound field 'g' in '0x8675309.M.X3'
+   │          ^^^^^^^^^^ Unbound field 'g' in '0x8675309::M::X3'
    │
 
 error: 
@@ -27,7 +27,7 @@ error:
     ┌── tests/move_check/typing/borrow_field_chain_missing.move:11:10 ───
     │
  11 │         &x1_mut.f;
-    │          ^^^^^^^^ Unbound field 'f' in '0x8675309.M.X1'
+    │          ^^^^^^^^ Unbound field 'f' in '0x8675309::M::X1'
     │
 
 error: 
@@ -35,7 +35,7 @@ error:
     ┌── tests/move_check/typing/borrow_field_chain_missing.move:12:10 ───
     │
  12 │         &x1_mut.x2.f;
-    │          ^^^^^^^^^^^ Unbound field 'f' in '0x8675309.M.X2'
+    │          ^^^^^^^^^^^ Unbound field 'f' in '0x8675309::M::X2'
     │
 
 error: 
@@ -43,7 +43,7 @@ error:
     ┌── tests/move_check/typing/borrow_field_chain_missing.move:13:10 ───
     │
  13 │         &x1_mut.x2.x3.g;
-    │          ^^^^^^^^^^^^^^ Unbound field 'g' in '0x8675309.M.X3'
+    │          ^^^^^^^^^^^^^^ Unbound field 'g' in '0x8675309::M::X3'
     │
 
 error: 
@@ -51,7 +51,7 @@ error:
     ┌── tests/move_check/typing/borrow_field_chain_missing.move:15:14 ───
     │
  15 │         &mut x1_mut.f;
-    │              ^^^^^^^^ Unbound field 'f' in '0x8675309.M.X1'
+    │              ^^^^^^^^ Unbound field 'f' in '0x8675309::M::X1'
     │
 
 error: 
@@ -59,7 +59,7 @@ error:
     ┌── tests/move_check/typing/borrow_field_chain_missing.move:16:14 ───
     │
  16 │         &mut x1_mut.x2.f;
-    │              ^^^^^^^^^^^ Unbound field 'f' in '0x8675309.M.X2'
+    │              ^^^^^^^^^^^ Unbound field 'f' in '0x8675309::M::X2'
     │
 
 error: 
@@ -67,6 +67,6 @@ error:
     ┌── tests/move_check/typing/borrow_field_chain_missing.move:17:14 ───
     │
  17 │         &mut x1_mut.x2.x3.g;
-    │              ^^^^^^^^^^^^^^ Unbound field 'g' in '0x8675309.M.X3'
+    │              ^^^^^^^^^^^^^^ Unbound field 'g' in '0x8675309::M::X3'
     │
 

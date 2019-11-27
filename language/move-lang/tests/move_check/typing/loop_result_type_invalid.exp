@@ -8,8 +8,8 @@ error:
  11 │         loop { if (false) break }
     │         ------------------------- The type: '()'
     ·
- 10 │     t0(): X.R {
-    │           --- Is not compatible with: '0x1.X.R'
+ 10 │     t0(): X::R {
+    │           ---- Is not compatible with: '0x1::X::R'
     │
 
 error: 
@@ -31,7 +31,7 @@ error:
     ┌── tests/move_check/typing/loop_result_type_invalid.move:19:9 ───
     │
  19 │         foo(loop { break })
-    │         ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1.M.foo'. The call of '0x1.M.foo' expected 1 argument(s) but got 0
+    │         ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::foo'. The call of '0x1::M::foo' expected 1 argument(s) but got 0
     ·
  19 │         foo(loop { break })
     │             -------------- Found 0 arguments here

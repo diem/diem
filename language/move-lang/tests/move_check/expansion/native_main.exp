@@ -6,6 +6,6 @@ error:
    │ ^^^^^^ Unrecognized Token: native
    ·
  1 │ native main();
-   │ ------ Expected:  "module", "public", "use", r#"[a-z_][a-zA-Z0-9_]*"#, r#"[a-z_][a-zA-Z0-9_]*<"#,
+   │ ------ Expected:  "module", "public", "use", r#"[a-zA-Z_][a-zA-Z0-9_]*"#, r#"[a-zA-Z_][a-zA-Z0-9_]*<"#,
    │
 

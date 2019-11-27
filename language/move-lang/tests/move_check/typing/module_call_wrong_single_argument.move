@@ -11,7 +11,7 @@ module X {
 }
 
 module M {
-    use 0x1.X;
+    use 0x1::X;
     struct S {}
 
     public foo(s: S) {
@@ -27,10 +27,10 @@ module M {
     }
 
     t1() {
-        X.foo(S{});
-        X.foo(0);
-        X.bar(S{});
-        X.bar(false);
+        X::foo(S{});
+        X::foo(0);
+        X::bar(S{});
+        X::bar(false);
     }
 
 }

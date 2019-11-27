@@ -1,33 +1,11 @@
 error: 
 
-   ┌── tests/move_check/naming/standalone_module_ident.move:6:9 ───
+   ┌── tests/move_check/naming/standalone_module_ident.move:9:23 ───
    │
- 8 │         let x = X;
-   │                 ^ Unexpected module identifier: '0x1.X'
+ 9 │         let x = 0x1::X;
+   │                       ^ Unrecognized Token: ;
    ·
- 6 │     use 0x1.X;
-   │         ----- Modules can only be used in expressions as the left hand side of a '.' for a function call
+ 9 │         let x = 0x1::X;
+   │                       - Expected:  "::",
    │
-
-error: 
-
-   ┌── tests/move_check/naming/standalone_module_ident.move:9:17 ───
-   │
- 9 │         let x = 0x1.X;
-   │                 ^^^^^ Unexpected module identifier: '0x1.X'
-   ·
- 9 │         let x = 0x1.X;
-   │                 ----- Modules can only be used in expressions as the left hand side of a '.' for a function call
-   │
-
-error: 
-
-    ┌── tests/move_check/naming/standalone_module_ident.move:10:17 ───
-    │
- 10 │         let y = 0x1.Y;
-    │                 ^^^^^ Unexpected module identifier: '0x1.Y'
-    ·
- 10 │         let y = 0x1.Y;
-    │                 ----- Modules can only be used in expressions as the left hand side of a '.' for a function call
-    │
 

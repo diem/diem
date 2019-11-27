@@ -8,10 +8,10 @@ module X {
 }
 
 module M {
-    use 0x1.X;
+    use 0x1::X;
     t0() {
-        (&X.s().f: &u64);
-        let s = &X.s();
+        (&X::s().f: &u64);
+        let s = &X::s();
         (&s.f: &u64);
     }
 }

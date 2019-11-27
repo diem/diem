@@ -98,10 +98,10 @@ error:
     │          ^ Invalid mutation. New value is not valid for the reference
     ·
  16 │         let r = &mut S{ f: 0 };
-    │                      --------- The type: '0x8675309.M.S'
+    │                      --------- The type: '0x8675309::M::S'
     ·
  17 │         *r = X { f: 1 };
-    │              ---------- Is not compatible with: '0x8675309.M.X'
+    │              ---------- Is not compatible with: '0x8675309::M::X'
     │
 
 error: 

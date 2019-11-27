@@ -8,21 +8,10 @@ use crate::parser::ast::*;
 grammar(file: &'static str);
 
 U64: u64 = <s:r"[0-9]+"> => u64::from_str(s).unwrap();
-Ident: String = <s:r"[a-z_][a-zA-Z0-9_]*"> => s.to_string();
-
-MIdent: String = <s:r"[A-Z][a-zA-Z0-9_]*"> => s.to_string();
+Ident: String = <s:r"[a-zA-Z_][a-zA-Z0-9_]*"> => s.to_string();
 Name: Name = Sp<Ident>;
-MName: Name = Sp<MIdent>;
 NameBeginArgs: Name = {
-    <s: Sp<r"[a-z_][a-zA-Z0-9_]*<">> => {
-        let sp!(loc, s) = s;
-        let mut s = s.to_string();
-        assert_eq!(s.pop(), Some('<'));
-        sp(loc, s)
-    }
-}
-MNameBeginArgs: Name = {
-    <s: Sp<r"[A-Z][a-zA-Z0-9_]*<">> => {
+    <s: Sp<r"[a-zA-Z_][a-zA-Z0-9_]*<">> => {
         let sp!(loc, s) = s;
         let mut s = s.to_string();
         assert_eq!(s.pop(), Some('<'));
@@ -101,11 +90,11 @@ BindField: (Field, Bind) = {
 BindFields = Comma<BindField>;
 Bind_ : Bind_ = {
     <v: Var> => Bind_::Var(v),
-    <n: TypeNameBeginArgs> <ty_args_opt: BaseTypes?> ">" "{" <args: BindFields> "}" => {
+    <n: ModuleAccessBeginArgs> <ty_args_opt: BaseTypes?> ">" "{" <args: BindFields> "}" => {
         let ty_args = ty_args_opt.unwrap_or(vec![]);
         Bind_::Unpack(n, Some(ty_args), args)
     },
-    <n: TypeName> "{" <args: BindFields> "}" => {
+    <n: ModuleAccess> "{" <args: BindFields> "}" => {
         Bind_::Unpack(n, None, args)
     },
 };
@@ -146,42 +135,37 @@ Term_ : Exp_ = {
     "break" => Exp_::Break,
     "continue" => Exp_::Continue,
     <Name> => Exp_::Name(<>),
-    <MName> => Exp_::MName(<>),
     <Value> => Exp_::Value(<>),
-    <n: NameBeginArgs> <ty_args_opt: BaseTypes?> ">" => {
-        let ty_args = ty_args_opt.unwrap_or(vec![]);
-        Exp_::NameTypeArgs(n, ty_args)
-    },
-    <n: MNameBeginArgs> <ty_args_opt: BaseTypes?> ">" => {
-        let ty_args = ty_args_opt.unwrap_or(vec![]);
-        Exp_::MNameTypeArgs(n, ty_args)
-    },
-    "()" => Exp_::Unit,
-    "(" <es: Comma<Exp>> ")" => {
+    <es: ExpList> => {
+        let mut es = es;
         match es.len() {
             0 => Exp_::Unit,
+            1 => es.pop().unwrap().value,
             _ => Exp_::ExpList(es),
         }
     },
     "(" <e:Exp> <ty: TypeAnnot> ")" => Exp_::Annotate(Box::new(e), ty),
-    "{" "}" => Exp_::Block((vec![], Box::new(None))),
-    "{" <e:Exp> "}" => Exp_::Block((vec![], Box::new(Some(e)))),
-    "{" <seq: (<SequenceItem> ";")+> <eopt:Exp?> "}" => Exp_::Block((seq, Box::new(eopt))),
-    "{" <f: Field> <e: ExpFieldArg> "}" => Exp_::Fields(vec![(f, e)]),
-    "{" <f: Field> <eopt: ExpFieldArg?> "," <fs: ExpFields> "}" => {
-        let mut fs = fs;
-        let arg = match eopt {
-            None => sp(f.loc(), Exp_::Name(f.0.clone())),
-            Some(arg) => arg,
-        };
-        fs.insert(0, (f, arg));
-        Exp_::Fields(fs)
-    }
+    "{" <seq: (<SequenceItem> ";")*> <eopt:Exp?> "}" => Exp_::Block((seq, Box::new(eopt))),
+    <n: ModuleAccess> "{" <fs: ExpFields> "}" => Exp_::Pack(n, None, fs),
+    <n: ModuleAccessBeginArgs> <tys: BaseTypes?> ">" "{" <fs: ExpFields> "}" =>
+        Exp_::Pack(n, Some(tys.unwrap_or_else(Vec::new)), fs),
+    <n: ModuleAccess> <rhs: Sp<ExpList>> => Exp_::Call(n, None, rhs),
+    <n: ModuleAccessBeginArgs> <tys: BaseTypes?> ">" <rhs: Sp<ExpList>> =>
+        Exp_::Call(n, Some(tys.unwrap_or_else(Vec::new)), rhs),
+    "::" <n: Name> <rhs: Sp<ExpList>> => Exp_::GlobalCall(n, None, rhs),
+    "::" <n: NameBeginArgs> <tys: BaseTypes?> ">" <rhs: Sp<ExpList>> =>
+        Exp_::GlobalCall(n, Some(tys.unwrap_or_else(Vec::new)), rhs),
+
 }
 Term = Sp<Term_>;
 
 Exp_ = CtrlExp_;
 Exp = Sp<Exp_>;
+
+ExpList : Vec<Exp> = {
+    "()" => vec![],
+    "(" <Comma<Exp>> ")" => <>,
+}
 
 CtrlExp_ : Exp_ = {
     "if" "(" <eb: Exp> ")" <et: ReturnAbortExp> "else" <ef: ReturnAbortExp> =>
@@ -281,31 +265,22 @@ UnaryExp_ : Exp_ = {
     "&mut " <e: UnaryExp> => Exp_::Borrow(true, Box::new(e)),
     "&" <e: UnaryExp> => Exp_::Borrow(false, Box::new(e)),
     "*" <e: UnaryExp> => Exp_::Dereference(Box::new(e)),
-    DotApply_
+    DotChain_
 }
 UnaryExp = Sp<UnaryExp_>;
 
-DotApply_: Exp_ = {
-    <lhs: DotApply> "." <n: Name> => Exp_::Dot(Box::new(lhs), n, None),
-    <lhs: DotApply> "." <n: NameBeginArgs> <tys_opt: BaseTypes?> ">" => {
-        Exp_::Dot(Box::new(lhs), n, Some(tys_opt.unwrap_or(vec![])))
-    },
-    <lhs: DotApply> "." <n: MName> => Exp_::MDot(Box::new(lhs), n, None),
-    <lhs: DotApply> "." <n: MNameBeginArgs> <tys_opt: BaseTypes?> ">" => {
-        Exp_::MDot(Box::new(lhs), n, Some(tys_opt.unwrap_or(vec![])))
-    },
-    <lhs: DotApply> <rhs: Term> => Exp_::Apply(Box::new(lhs), Box::new(rhs)),
-    "." <lhs: Term> <rhs: Term> => Exp_::GlobalApply(Box::new(lhs), Box::new(rhs)),
-    Term_ => <>,
+DotChain_: Exp_ = {
+    <lhs: DotChain> "." <n: Name> => Exp_::Dot(Box::new(lhs), n),
+    Term_
 }
-DotApply =  Sp<DotApply_>;
+DotChain = Sp<DotChain_>;
 
 ModuleName: ModuleName = {
-    <n: MName> => ModuleName(n),
+    <n: Name> => ModuleName(n),
 }
 
 ModuleIdent_: ModuleIdent_ = {
-    <address: Address> "." <name: ModuleName> => ModuleIdent_ {address, name},
+    <address: Address> "::" <name: ModuleName> => ModuleIdent_ {address, name},
 }
 
 ModuleIdent : ModuleIdent = {
@@ -313,30 +288,28 @@ ModuleIdent : ModuleIdent = {
 }
 
 StructName: StructName = {
-    <MName> => StructName(<>),
+    <Name> => StructName(<>),
 }
 
-TypeName_: TypeName_ = {
-    <n: Name> => TypeName_::Name(n),
-    <n: MName> => TypeName_::Name(n),
-    <m: ModuleName> "." <n: StructName> => TypeName_::ModuleType(m, n),
-    <m: ModuleIdent> "." <n: StructName> => TypeName_::QualifiedModuleType(m, n),
+ModuleAccess_: ModuleAccess_ = {
+    <n: Name> => ModuleAccess_::Name(n),
+    <m: ModuleName> "::" <n: Name> => ModuleAccess_::ModuleAccess(m, n),
+    <m: ModuleIdent> "::" <n: Name> => ModuleAccess_::QualifiedModuleAccess(m, n),
 }
-TypeName: TypeName = Sp<TypeName_>;
+ModuleAccess: ModuleAccess = Sp<ModuleAccess_>;
 
-TypeNameBeginArgs_: TypeName_ = {
-    <n: NameBeginArgs> => TypeName_::Name(n),
-    <n: MNameBeginArgs> => TypeName_::Name(n),
-    <m: ModuleName> "." <n: MNameBeginArgs> => TypeName_::ModuleType(m, StructName(n)),
-    <m: ModuleIdent> "." <n: MNameBeginArgs> => TypeName_::QualifiedModuleType(m, StructName(n)),
+ModuleAccessBeginArgs_: ModuleAccess_ = {
+    <n: NameBeginArgs> => ModuleAccess_::Name(n),
+    <m: ModuleName> "::" <n: NameBeginArgs> => ModuleAccess_::ModuleAccess(m, n),
+    <m: ModuleIdent> "::" <n: NameBeginArgs> => ModuleAccess_::QualifiedModuleAccess(m, n),
 }
-TypeNameBeginArgs: TypeName = Sp<TypeNameBeginArgs_>;
+ModuleAccessBeginArgs: ModuleAccess = Sp<ModuleAccessBeginArgs_>;
 
 
 BaseType_ : SingleType_ = {
-    <tn: TypeNameBeginArgs> <tys: BaseTypes?> ">" =>
+    <tn: ModuleAccessBeginArgs> <tys: BaseTypes?> ">" =>
         SingleType_::Apply(tn, tys.unwrap_or(vec![])),
-    <tn: TypeName> => SingleType_::Apply(tn, vec![]),
+    <tn: ModuleAccess> => SingleType_::Apply(tn, vec![]),
 }
 BaseType: SingleType = Sp<BaseType_>;
 BaseTypes: Vec<SingleType> = {
@@ -387,7 +360,7 @@ Constraint: Kind = {
 }
 
 TypeParameter: (Name, Kind) = {
-    <n: MName> <constraint: Constraint?> => {
+    <n: Name> <constraint: Constraint?> => {
         let kind = constraint.unwrap_or_else(||
             sp(n.loc, Kind_::Unknown)
         );
@@ -514,7 +487,7 @@ FieldAnnot: (Field, SingleType) = {
 
 StructDefName: (StructName, Vec<(Name, Kind)>) = {
     <StructName> => (<>, vec![]),
-    <s: MNameBeginArgs> <tys: TypeParameters> => (StructName(s), tys),
+    <s: NameBeginArgs> <tys: TypeParameters> => (StructName(s), tys),
 }
 
 StructDefinition: StructDefinition = {

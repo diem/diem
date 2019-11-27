@@ -14,16 +14,16 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/while_condition_invalid.move:4:17 ───
+   ┌── tests/move_check/typing/while_condition_invalid.move:4:16 ───
    │
  4 │         while ((())) ();
-   │                 ^^ Invalid while condition
+   │                ^^^^ Invalid while condition
    ·
  4 │         while ((())) ();
-   │                 -- The type: '()'
+   │                ---- The type: '()'
    ·
  4 │         while ((())) ();
-   │                 -- Is not compatible with: 'bool'
+   │                ---- Is not compatible with: 'bool'
    │
 
 error: 

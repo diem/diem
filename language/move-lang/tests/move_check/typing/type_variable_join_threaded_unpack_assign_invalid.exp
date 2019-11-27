@@ -5,8 +5,8 @@ error:
  36 │         f1
     │         ^^ Invalid return expression
     ·
- 35 │         Container.put(&mut v, Box { f1: 0, f2: 0});
-    │                                         - The type: 'u64'
+ 35 │         Container::put(&mut v, Box { f1: 0, f2: 0});
+    │                                          - The type: 'u64'
     ·
  30 │     t0(): bool {
     │           ---- Is not compatible with: 'bool'
@@ -16,11 +16,11 @@ error:
 
     ┌── tests/move_check/typing/type_variable_join_threaded_unpack_assign_invalid.move:10:19 ───
     │
- 43 │         Box { f1, f2 }  = Container.get(&v);
-    │                           ^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+ 43 │         Box { f1, f2 }  = Container::get(&v);
+    │                           ^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
- 43 │         Box { f1, f2 }  = Container.get(&v);
-    │         -------------- The resource type '0x1.M.Box<0x1.M.R>' does not satisfy the constraint 'copyable'
+ 43 │         Box { f1, f2 }  = Container::get(&v);
+    │         -------------- The resource type '0x1::M::Box<0x1::M::R>' does not satisfy the constraint 'copyable'
     ·
  24 │     resource struct R{}
     │     -------- The type's constraint information was declared here

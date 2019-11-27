@@ -1,8 +1,11 @@
 error: 
 
-   ┌── tests/move_check/expansion/invalid_unpack_assign_lhs_not_name.move:4:9 ───
+   ┌── tests/move_check/expansion/invalid_unpack_assign_lhs_not_name.move:4:11 ───
    │
  4 │         0 { f } = 0;
-   │         ^ Invalid type name. Expected: a name, a name with type arguments, or a module identifier and struct name
+   │           ^ Unrecognized Token: {
+   ·
+ 4 │         0 { f } = 0;
+   │           - Expected:  "!=", "%", "&", "&&", ")", "*", "+", ",", "-", ".", "/", ":", ";", "<", "<=", "=", "==", ">", ">=", "^", "else", "|", "||", "}",
    │
 

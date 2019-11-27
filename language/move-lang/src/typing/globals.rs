@@ -100,7 +100,7 @@ fn exp(
                         .into_iter()
                         .filter(|a| valid_acquires_annot(context, loc, a))
                         .collect::<BTreeSet<_>>();
-                    let msg = || format!("Invalid call to '{}.{}'", &call.module, &call.name);
+                    let msg = || format!("Invalid call to '{}::{}'", &call.module, &call.name);
                     for bt in acquires {
                         check_acquire_listed(context, annotated_acquires, loc, msg, &bt);
                         seen.insert(bt);

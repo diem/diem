@@ -18,7 +18,7 @@ module Container {
 
 
 module M {
-    use 0x1.Container;
+    use 0x1::Container;
 
     struct Box<T> { f1: T, f2: T }
     resource struct R{}
@@ -28,20 +28,20 @@ module M {
     }
 
     t0(): bool {
-        let v = Container.new();
+        let v = Container::new();
         let f1;
         let f2;
-        Box { f1, f2 }  = Container.get(&v);
-        Container.put(&mut v, Box { f1: 0, f2: 0});
+        Box { f1, f2 }  = Container::get(&v);
+        Container::put(&mut v, Box { f1: 0, f2: 0});
         f1
     }
 
     t1(): R {
-        let v = Container.new();
+        let v = Container::new();
         let f1;
         let f2;
-        Box { f1, f2 }  = Container.get(&v);
-        Container.put(&mut v, Box { f1: R{}, f2 });
+        Box { f1, f2 }  = Container::get(&v);
+        Container::put(&mut v, Box { f1: R{}, f2 });
         f1
     }
 }

@@ -1,7 +1,7 @@
 address 0x0:
 
 module ValidatorConfig {
-    use 0x0.Transaction;
+    use 0x0::Transaction;
 
     struct Config {
         consensus_pubkey: bytearray,
@@ -10,11 +10,11 @@ module ValidatorConfig {
     }
 
     // A current or prospective validator should publish one of these under their address
-    resource struct T { config: Self.Config }
+    resource struct T { config: Self::Config }
 
     // The following are public accessors for retrieving config information about Validators
 
-    // Retrieve a read-only instance of a specific accounts ValidatorConfig.T.config
+    // Retrieve a read-only instance of a specific accounts ValidatorConfig::T::config
     public config(addr: address): Config acquires T {
         *&borrow_global<T>(addr).config
     }
@@ -57,7 +57,7 @@ module ValidatorConfig {
     // Rotate a validator candidate's consensus public key. The change will not take effect until
     // the next reconfiguration.
     public rotate_consensus_pubkey(consensus_pubkey: bytearray) acquires T {
-        borrow_global_mut<T>(Transaction.sender()).config.consensus_pubkey = consensus_pubkey;
+        borrow_global_mut<T>(Transaction::sender()).config.consensus_pubkey = consensus_pubkey;
     }
 
 }

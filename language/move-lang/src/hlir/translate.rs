@@ -1164,7 +1164,9 @@ fn needs_freeze(sp!(_, actual): &H::Type, sp!(_, expected): &H::Type) -> Freeze 
                 Freeze::NotNeeded
             }
         }
-        _ => unreachable!("ICE type checking failed"),
+        (actual, expected) => {
+            unreachable!("ICE type checking failed, {:#?} !~ {:#?}", actual, expected)
+        }
     }
 }
 
@@ -1192,12 +1194,7 @@ fn freeze(context: &mut Context, result: &mut Block, expected_type: &H::Type, e:
             assert!(actual_tys.len() == points.len());
             let new_temps = actual_tys
                 .into_iter()
-                .zip(&points)
-                .map(|(ty, needs_freeze)| {
-                    let orig_ty = ty.clone();
-                    let maybe_frozen = if *needs_freeze { freeze_single(ty) } else { ty };
-                    (context.new_temp(loc, maybe_frozen), orig_ty)
-                })
+                .map(|ty| (context.new_temp(loc, ty.clone()), ty))
                 .collect::<Vec<_>>();
 
             let lvalues = new_temps

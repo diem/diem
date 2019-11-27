@@ -90,7 +90,7 @@ error:
     │         ^ Invalid argument to '&&'
     ·
  7 │     t0(x: u64, r: R, s: S) {
-    │                   - The type: '0x8675309.M.R'
+    │                   - The type: '0x8675309::M::R'
     ·
  12 │         r && r;
     │         - Is not compatible with: 'bool'
@@ -104,7 +104,7 @@ error:
     │              ^ Invalid argument to '&&'
     ·
  7 │     t0(x: u64, r: R, s: S) {
-    │                   - The type: '0x8675309.M.R'
+    │                   - The type: '0x8675309::M::R'
     ·
  12 │         r && r;
     │         - Is not compatible with: 'bool'
@@ -118,7 +118,7 @@ error:
     │         ^ Invalid argument to '&&'
     ·
  7 │     t0(x: u64, r: R, s: S) {
-    │                         - The type: '0x8675309.M.S'
+    │                         - The type: '0x8675309::M::S'
     ·
  13 │         s && s;
     │         - Is not compatible with: 'bool'
@@ -132,7 +132,7 @@ error:
     │              ^ Invalid argument to '&&'
     ·
  7 │     t0(x: u64, r: R, s: S) {
-    │                         - The type: '0x8675309.M.S'
+    │                         - The type: '0x8675309::M::S'
     ·
  13 │         s && s;
     │         - Is not compatible with: 'bool'

@@ -211,11 +211,11 @@ error:
 
      ┌── tests/move_check/examples/multi_pool_money_market_token.move:158:13 ───
      │
- 158 │             move_to_sender(DepositRecord<In, Out> { record: Map.empty() })
-     │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
+ 158 │             move_to_sender(DepositRecord<In, Out> { record: Map::empty() })
+     │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
      ·
- 158 │             move_to_sender(DepositRecord<In, Out> { record: Map.empty() })
-     │                            ---------------------------------------------- The resource cannot take any type arguments, but found 2 type arguments
+ 158 │             move_to_sender(DepositRecord<In, Out> { record: Map::empty() })
+     │                            ----------------------------------------------- The resource cannot take any type arguments, but found 2 type arguments
      │
 
 error: 
@@ -255,11 +255,11 @@ error:
 
      ┌── tests/move_check/examples/multi_pool_money_market_token.move:173:13 ───
      │
- 173 │             move_to_sender(BorrowRecord<In, Out> { record: Map.empty() })
-     │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
+ 173 │             move_to_sender(BorrowRecord<In, Out> { record: Map::empty() })
+     │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
      ·
- 173 │             move_to_sender(BorrowRecord<In, Out> { record: Map.empty() })
-     │                            --------------------------------------------- The resource cannot take any type arguments, but found 2 type arguments
+ 173 │             move_to_sender(BorrowRecord<In, Out> { record: Map::empty() })
+     │                            ---------------------------------------------- The resource cannot take any type arguments, but found 2 type arguments
      │
 
 error: 

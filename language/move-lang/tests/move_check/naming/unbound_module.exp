@@ -1,11 +1,8 @@
 error: 
 
-   ┌── tests/move_check/naming/unbound_module.move:2:9 ───
+   ┌── tests/move_check/naming/unbound_module.move:4:9 ───
    │
- 4 │         X.foo();
-   │         ^^^^^^^ Invalid function call
-   ·
- 2 │     use 0x0.X as X;
-   │         ----- Unbound module '0x0.X'
+ 4 │         X::foo();
+   │         ^^^^^^ Unbound module '0x0::X'
    │
 

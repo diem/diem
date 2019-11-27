@@ -19,7 +19,7 @@ address 0x1:
 address 0x3:
 
 module M {
-    use 0x1.M;
+    use 0x1::M;
 
     struct X {}
 
@@ -27,8 +27,8 @@ module M {
         X {}
     }
 
-    public both(): (X, M.X) {
-        (X { }, M.x())
+    public both(): (X, M::X) {
+        (X { }, M::x())
     }
 
 }
@@ -36,13 +36,13 @@ module M {
 address 0x1:
 
 module M2 {
-    use 0x1.M as M1;
-    use 0x3.M as M3;
+    use 0x1::M as M1;
+    use 0x3::M as M3;
 
     struct X {}
 
-    public x(): (M1.X, X, M3.X) {
-        (M1.x(), X {}, M3.x())
+    public x(): (M1::X, X, M3::X) {
+        (M1::x(), X {}, M3::x())
     }
 
 }

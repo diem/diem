@@ -40,7 +40,7 @@ error:
    │         ^^^^^^^^^^^^^^^^ Constraint not satisfied.
    ·
  8 │         S { c: Coin {} };
-   │                ------- The resource type '0x8675309.M.Coin' does not satisfy the constraint 'copyable'
+   │                ------- The resource type '0x8675309::M::Coin' does not satisfy the constraint 'copyable'
    ·
  2 │     resource struct Coin {}
    │     -------- The type's constraint information was declared here
@@ -57,7 +57,7 @@ error:
    │         ^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
    ·
  8 │         S { c: Coin {} };
-   │         ---------------- The type: 0x8675309.M.S<0x8675309.M.Coin>
+   │         ---------------- The type: 0x8675309::M::S<0x8675309::M::Coin>
    ·
  2 │     resource struct Coin {}
    │     -------- Is found to be a non-copyable type here
@@ -71,7 +71,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
-    │                                     ---------- The copyable type '0x8675309.M.R<u64>' does not satisfy the constraint 'resource'
+    │                                     ---------- The copyable type '0x8675309::M::R<u64>' does not satisfy the constraint 'resource'
     ·
  12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
     │                                            - The type's constraint information was declared here
@@ -105,7 +105,7 @@ error:
     │                              ^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
-    │                                     ---------- The copyable type '0x8675309.M.R<u64>' does not satisfy the constraint 'resource'
+    │                                     ---------- The copyable type '0x8675309::M::R<u64>' does not satisfy the constraint 'resource'
     ·
  12 │         R {r: R { r: _ } } = R { r: R { r: 0 }};
     │                                            - The type's constraint information was declared here
@@ -139,7 +139,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  13 │         S { c: S { c: Coin {} } };
-    │                ---------------- The resource type '0x8675309.M.S<0x8675309.M.Coin>' does not satisfy the constraint 'copyable'
+    │                ---------------- The resource type '0x8675309::M::S<0x8675309::M::Coin>' does not satisfy the constraint 'copyable'
     ·
  2 │     resource struct Coin {}
     │     -------- The type's constraint information was declared here
@@ -156,7 +156,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
     ·
  13 │         S { c: S { c: Coin {} } };
-    │         ------------------------- The type: 0x8675309.M.S<0x8675309.M.S<0x8675309.M.Coin>>
+    │         ------------------------- The type: 0x8675309::M::S<0x8675309::M::S<0x8675309::M::Coin>>
     ·
  2 │     resource struct Coin {}
     │     -------- Is found to be a non-copyable type here
@@ -170,7 +170,7 @@ error:
     │                ^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
  13 │         S { c: S { c: Coin {} } };
-    │                       ------- The resource type '0x8675309.M.Coin' does not satisfy the constraint 'copyable'
+    │                       ------- The resource type '0x8675309::M::Coin' does not satisfy the constraint 'copyable'
     ·
  2 │     resource struct Coin {}
     │     -------- The type's constraint information was declared here

@@ -3,7 +3,7 @@ error:
    ┌── tests/move_check/naming/unbound_unqualified_function.move:3:9 ───
    │
  3 │         bar();
-   │         ^^^ Unbound function: 'bar'
+   │         ^^^ Unbound function 'bar' in current scope
    │
 
 error: 
@@ -11,7 +11,7 @@ error:
    ┌── tests/move_check/naming/unbound_unqualified_function.move:4:17 ───
    │
  4 │         let x = bar();
-   │                 ^^^ Unbound function: 'bar'
+   │                 ^^^ Unbound function 'bar' in current scope
    │
 
 error: 
@@ -19,6 +19,6 @@ error:
    ┌── tests/move_check/naming/unbound_unqualified_function.move:5:10 ───
    │
  5 │         *bar() = 0;
-   │          ^^^ Unbound function: 'bar'
+   │          ^^^ Unbound function 'bar' in current scope
    │
 

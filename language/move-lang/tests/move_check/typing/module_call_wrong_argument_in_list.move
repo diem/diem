@@ -10,7 +10,7 @@ module X {
 }
 
 module M {
-    use 0x1.X;
+    use 0x1::X;
     struct S {}
 
     public foo(a: address, u: u64, s: S) {
@@ -26,12 +26,12 @@ module M {
     }
 
     t1() {
-        X.foo(false, 0, X.s());
-        X.foo(0x0, false, X.s());
-        X.foo(0x0, 0, S{});
-        X.foo(0x0, false, S{});
-        X.foo(false, 0, S{});
-        X.foo(false, false, X.s());
+        X::foo(false, 0, X::s());
+        X::foo(0x0, false, X::s());
+        X::foo(0x0, 0, S{});
+        X::foo(0x0, false, S{});
+        X::foo(false, 0, S{});
+        X::foo(false, false, X::s());
     }
 
 }

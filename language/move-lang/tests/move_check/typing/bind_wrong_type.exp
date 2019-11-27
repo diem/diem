@@ -6,10 +6,10 @@ error:
    │             ^^^^^^^ Invalid deconstruction binding
    ·
  6 │         let S { g } = R {f :0};
-   │             ------- The type: '0x8675309.M.S'
+   │             ------- The type: '0x8675309::M::S'
    ·
  6 │         let S { g } = R {f :0};
-   │                       -------- Is not compatible with: '0x8675309.M.R'
+   │                       -------- Is not compatible with: '0x8675309::M::R'
    │
 
 error: 
@@ -20,10 +20,10 @@ error:
    │              ^^^^^^^ Invalid deconstruction binding
    ·
  7 │         let (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
-   │              ------- The type: '0x8675309.M.S'
+   │              ------- The type: '0x8675309::M::S'
    ·
  7 │         let (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
-   │                                   --------- Is not compatible with: '0x8675309.M.R'
+   │                                   --------- Is not compatible with: '0x8675309::M::R'
    │
 
 error: 
@@ -155,10 +155,10 @@ error:
     │                           ^^^^^^^^^^^^^^^^^ Invalid type annotation
     ·
  20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
-    │                                               ------------------- The type: '(u64,bool,0x8675309.M.R)'
+    │                                               ------------------- The type: '(u64,bool,0x8675309::M::R)'
     ·
  20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
-    │                           ----------------- Is not compatible with: '(u64,bool,0x8675309.M.R,0x8675309.M.R)'
+    │                           ----------------- Is not compatible with: '(u64,bool,0x8675309::M::R,0x8675309::M::R)'
     │
 
 error: 
@@ -180,7 +180,7 @@ error:
     │                           ^^^^^^^^^^^ Invalid type annotation
     ·
  21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
-    │                                         ------------------- The type: '(u64,bool,0x8675309.M.R)'
+    │                                         ------------------- The type: '(u64,bool,0x8675309::M::R)'
     ·
  21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
     │                           ----------- Is not compatible with: '(u64,bool)'

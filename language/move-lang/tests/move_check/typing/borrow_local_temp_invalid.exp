@@ -39,7 +39,7 @@ error:
    │         ^^^^^ Invalid borrow
    ·
  9 │         &(&0);
-   │           -- Expected a single non-reference type, but got: &u64
+   │          ---- Expected a single non-reference type, but got: &u64
    │
 
 error: 
@@ -50,7 +50,7 @@ error:
     │         ^^^^^^^^^ Invalid borrow
     ·
  10 │         &(&mut 1);
-    │           ------ Expected a single non-reference type, but got: &mut u64
+    │          -------- Expected a single non-reference type, but got: &mut u64
     │
 
 error: 

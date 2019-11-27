@@ -1,8 +1,11 @@
 error: 
 
-   ┌── tests/move_check/expansion/global_access_pack.move:3:9 ───
+   ┌── tests/move_check/expansion/global_access_pack.move:3:13 ───
    │
- 3 │         .S { }
-   │         ^^^^^^ Unexpected construction. Found a global-identifier access, and thus expected a function call
+ 3 │         ::S { }
+   │             ^ Unrecognized Token: {
+   ·
+ 3 │         ::S { }
+   │             - Expected:  "(", "()",
    │
 
