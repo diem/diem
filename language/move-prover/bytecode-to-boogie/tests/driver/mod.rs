@@ -50,9 +50,9 @@ pub fn generate_boogie(file_name: &str, target_modules: &[&str]) -> String {
     file_names.push(file_name);
     let (modules, source_maps) = compile_files(file_names.to_vec());
 
-    if cfg!(feature = "golden") {
-        // Verify or update golden file. This will run its own translate focused to the target test,
-        // so no need to pass in generated content.
+    if option_env!("VERIFY_BPL_GOLDEN").unwrap_or("0") == "1" {
+        // Verify or update golden files. This will run its own translate focused to the target
+        // test, so no need to pass in generated content.
         verify_or_update_golden(&modules, &source_maps, file_name, target_modules);
     }
 
