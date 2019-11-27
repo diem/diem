@@ -347,7 +347,7 @@ impl fmt::Display for HashValue {
 
 impl From<HashValue> for Bytes {
     fn from(value: HashValue) -> Bytes {
-        value.hash.as_ref().into()
+        Bytes::copy_from_slice(value.hash.as_ref())
     }
 }
 

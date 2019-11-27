@@ -40,7 +40,7 @@ dependencies = [
  "admission-control-proto 0.1.0",
  "assert_matches 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bounded-executor 0.1.0",
- "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bytes 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "channel 0.1.0",
  "debug-interface 0.1.0",
  "executable-helpers 0.1.0",
@@ -751,7 +751,7 @@ name = "consensus"
 version = "0.1.0"
 dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bytes 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cached 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "channel 0.1.0",
  "consensus-types 0.1.0",
@@ -2070,7 +2070,7 @@ version = "0.1.0"
 dependencies = [
  "bitvec 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bytes 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "curve25519-dalek 1.2.3 (git+https://github.com/calibra/curve25519-dalek.git?branch=fiat)",
  "digest 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ed25519-dalek 1.0.0-pre.1 (git+https://github.com/calibra/ed25519-dalek.git?branch=fiat)",
@@ -2278,7 +2278,7 @@ dependencies = [
 name = "libra-prost-ext"
 version = "0.1.0"
 dependencies = [
- "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bytes 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2323,6 +2323,7 @@ dependencies = [
  "bech32 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bytes 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2664,7 +2665,7 @@ dependencies = [
 name = "netcore"
 version = "0.1.0"
 dependencies = [
- "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bytes 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "memsocket 0.1.0",
@@ -4204,7 +4205,7 @@ dependencies = [
 name = "socket-bench-server"
 version = "0.1.0"
 dependencies = [
- "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bytes 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
@@ -4257,7 +4258,7 @@ dependencies = [
 name = "state-synchronizer"
 version = "0.1.0"
 dependencies = [
- "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bytes 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "channel 0.1.0",
  "config-builder 0.1.0",
  "executor 0.1.0",

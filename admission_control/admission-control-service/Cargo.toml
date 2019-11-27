@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bytes = "0.4.12"
+bytes = "0.5"
 prost = "0.5.0"
 futures = { version = "0.3.0", features = ["compat"] }
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["protobuf-codec"] }

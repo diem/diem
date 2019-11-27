@@ -69,7 +69,7 @@ async fn expect_ping(
         ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)
     );
 
-    let req_msg = HealthCheckerMsg::decode(req_data).unwrap();
+    let req_msg = HealthCheckerMsg::decode(req_data.as_ref()).unwrap();
     match req_msg.message {
         Some(HealthCheckerMsg_oneof::Ping(ping_msg)) => (ping_msg, res_tx),
         _ => panic!("Unexpected HealthCheckerMsg: {:?}", req_msg),
@@ -125,7 +125,7 @@ async fn send_inbound_ping(
 
 async fn expect_pong(res_rx: oneshot::Receiver<Result<Bytes, RpcError>>) {
     let res_data = res_rx.await.unwrap().unwrap();
-    let res_msg = HealthCheckerMsg::decode(res_data).unwrap();
+    let res_msg = HealthCheckerMsg::decode(res_data.as_ref()).unwrap();
     match res_msg.message {
         Some(HealthCheckerMsg_oneof::Pong(_)) => {}
         _ => panic!("Unexpected HealthCheckerMsg: {:?}", res_msg),

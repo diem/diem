@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 use prost::{EncodeError, Message};
 
 impl<T: ?Sized> MessageExt for T where T: Message {}
@@ -13,9 +13,9 @@ pub trait MessageExt: Message {
     where
         Self: Sized,
     {
-        let mut bytes = BytesMut::with_capacity(self.encoded_len());
+        let mut bytes = Vec::with_capacity(self.encoded_len());
         self.encode(&mut bytes)?;
-        Ok(bytes.freeze())
+        Ok(bytes.into())
     }
 
     fn to_vec(&self) -> Result<Vec<u8>, EncodeError>

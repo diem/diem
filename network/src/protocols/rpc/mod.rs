@@ -62,7 +62,7 @@ use crate::{
     ProtocolId,
 };
 use bounded_executor::BoundedExecutor;
-use bytes::Bytes;
+use bytes05::Bytes;
 use channel;
 use error::RpcError;
 use futures::{
@@ -362,9 +362,7 @@ where
     let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
     // Send the rpc request data.
     let req_len = req_data.len();
-    substream
-        .buffered_send(bytes05::Bytes::copy_from_slice(req_data.as_ref()))
-        .await?;
+    substream.buffered_send(req_data).await?;
     // We won't send anything else on this substream, so we can half-close our
     // output side.
     substream.close().await?;
@@ -377,7 +375,7 @@ where
 
     // Wait for listener's response.
     let res_data = match substream.next().await {
-        Some(res_data) => res_data?.freeze().as_ref().into(),
+        Some(res_data) => res_data?.freeze(),
         None => return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into()),
     };
 
@@ -449,7 +447,7 @@ where
     let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
     // Read the rpc request data.
     let req_data = match substream.next().await {
-        Some(req_data) => req_data?.freeze().as_ref().into(),
+        Some(req_data) => req_data?.freeze(),
         None => return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into()),
     };
     counters::LIBRA_NETWORK_RPC_MESSAGES
@@ -482,9 +480,7 @@ where
     let res_len = res_data.len();
 
     // Send the response to remote
-    substream
-        .buffered_send(bytes05::Bytes::copy_from_slice(res_data.as_ref()))
-        .await?;
+    substream.buffered_send(res_data).await?;
 
     // We won't send anything else on this substream, so we can half-close
     // our output. The initiator will have also half-closed their side before
