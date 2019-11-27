@@ -18,23 +18,31 @@ use crate::{
     instance::Instance,
 };
 
+use structopt::StructOpt;
+
+#[derive(StructOpt, Debug)]
+pub struct RebootRandomValidatorsParams {
+    #[structopt(long, default_value = "10", help = "Number of nodes to reboot")]
+    pub count: usize,
+}
+
 pub struct RebootRandomValidators {
     instances: Vec<Instance>,
 }
 
 impl RebootRandomValidators {
-    pub fn new(count: usize, cluster: &Cluster) -> Self {
-        if count > cluster.instances().len() {
+    pub fn new(params: RebootRandomValidatorsParams, cluster: &Cluster) -> Self {
+        if params.count > cluster.instances().len() {
             panic!(
                 "Can not reboot {} validators in cluster with {} instances",
-                count,
+                params.count,
                 cluster.instances().len()
             );
         }
-        let mut instances = Vec::with_capacity(count);
+        let mut instances = Vec::with_capacity(params.count);
         let mut all_instances = cluster.instances().clone();
         let mut rnd = rand::thread_rng();
-        for _i in 0..count {
+        for _i in 0..params.count {
             let instance = all_instances.remove(rnd.gen_range(0, all_instances.len()));
             instances.push(instance);
         }

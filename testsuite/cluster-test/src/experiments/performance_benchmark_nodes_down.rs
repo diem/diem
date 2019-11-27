@@ -15,6 +15,18 @@ use crate::{effects, instance, stats};
 
 use crate::util::unix_timestamp_now;
 
+use structopt::StructOpt;
+
+#[derive(StructOpt, Debug)]
+pub struct PerformanceBenchmarkNodesDownParams {
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Number of nodes which should be down"
+    )]
+    pub num_nodes_down: usize,
+}
+
 pub struct PerformanceBenchmarkNodesDown {
     down_instances: Vec<Instance>,
     up_instances: Vec<Instance>,
@@ -22,12 +34,12 @@ pub struct PerformanceBenchmarkNodesDown {
 }
 
 impl PerformanceBenchmarkNodesDown {
-    pub fn new(cluster: Cluster, num_nodes_down: usize) -> Self {
-        let (down_instances, up_instances) = cluster.split_n_random(num_nodes_down);
+    pub fn new(params: PerformanceBenchmarkNodesDownParams, cluster: &Cluster) -> Self {
+        let (down_instances, up_instances) = cluster.split_n_random(params.num_nodes_down);
         Self {
             down_instances: down_instances.into_instances(),
             up_instances: up_instances.into_instances(),
-            num_nodes_down,
+            num_nodes_down: params.num_nodes_down,
         }
     }
 }

@@ -4,13 +4,13 @@
 #![forbid(unsafe_code)]
 use std::cmp::min;
 
-use crate::experiments::{
-    PerformanceBenchmarkNodesDown, PerformanceBenchmarkThreeRegionSimulation,
-};
-
 use crate::{
     cluster::Cluster,
-    experiments::{Experiment, RebootRandomValidators},
+    experiments::{
+        Experiment, PerformanceBenchmarkNodesDown, PerformanceBenchmarkNodesDownParams,
+        PerformanceBenchmarkThreeRegionSimulation, RebootRandomValidators,
+        RebootRandomValidatorsParams,
+    },
 };
 
 pub struct ExperimentSuite {
@@ -23,19 +23,22 @@ impl ExperimentSuite {
         let count = min(3, cluster.instances().len() / 3);
         // Reboot different sets of 3 validators *100 times
         for _ in 0..20 {
-            let b: Box<dyn Experiment> = Box::new(RebootRandomValidators::new(count, cluster));
+            let b: Box<dyn Experiment> = Box::new(RebootRandomValidators::new(
+                RebootRandomValidatorsParams { count },
+                cluster,
+            ));
             experiments.push(b);
         }
         experiments.push(Box::new(PerformanceBenchmarkNodesDown::new(
-            cluster.clone(),
-            0,
+            PerformanceBenchmarkNodesDownParams { num_nodes_down: 0 },
+            cluster,
         )));
         experiments.push(Box::new(PerformanceBenchmarkNodesDown::new(
-            cluster.clone(),
-            10,
+            PerformanceBenchmarkNodesDownParams { num_nodes_down: 10 },
+            cluster,
         )));
         experiments.push(Box::new(PerformanceBenchmarkThreeRegionSimulation::new(
-            cluster.clone(),
+            cluster,
         )));
         Self { experiments }
     }
@@ -43,15 +46,15 @@ impl ExperimentSuite {
     pub fn new_perf_suite(cluster: &Cluster) -> Self {
         let mut experiments: Vec<Box<dyn Experiment>> = vec![];
         experiments.push(Box::new(PerformanceBenchmarkNodesDown::new(
-            cluster.clone(),
-            0,
+            PerformanceBenchmarkNodesDownParams { num_nodes_down: 0 },
+            cluster,
         )));
         experiments.push(Box::new(PerformanceBenchmarkNodesDown::new(
-            cluster.clone(),
-            10,
+            PerformanceBenchmarkNodesDownParams { num_nodes_down: 10 },
+            cluster,
         )));
         experiments.push(Box::new(PerformanceBenchmarkThreeRegionSimulation::new(
-            cluster.clone(),
+            cluster,
         )));
         Self { experiments }
     }
