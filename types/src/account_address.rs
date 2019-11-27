@@ -94,8 +94,7 @@ impl AsRef<[u8]> for AccountAddress {
 
 impl fmt::Display for AccountAddress {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        // Forward to the LowerHex impl with a "0x" prepended (the # flag).
-        write!(f, "{:#x}", self)
+        write!(f, "{:x}", self)
     }
 }
 
@@ -108,7 +107,13 @@ impl fmt::Debug for AccountAddress {
 
 impl fmt::LowerHex for AccountAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", hex::encode(&self.0))
+        if f.alternate() {
+            write!(f, "0x")?
+        }
+        for x in &self.0 {
+            write!(f, "{:0<2x}", x)?;
+        }
+        Ok(())
     }
 }
 
@@ -242,5 +247,19 @@ impl Serialize for AccountAddress {
         } else {
             self.0.serialize(serializer)
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::AccountAddress;
+
+    #[test]
+    fn display_and_debug() {
+        let a = AccountAddress::new([0; 32]);
+        let expect = format!("{:0<64}", 0);
+        let expect_prefix = format!("0x{:0<64}", 0);
+        assert_eq!(format!("{}", a), expect);
+        assert_eq!(format!("{:?}", a), expect_prefix);
     }
 }
