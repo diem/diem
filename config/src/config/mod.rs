@@ -125,13 +125,13 @@ impl RoleType {
 }
 
 impl std::str::FromStr for RoleType {
-    type Err = failure::Error;
+    type Err = ParseRoleError;
 
-    fn from_str(s: &str) -> Result<Self> {
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "validator" => Ok(RoleType::Validator),
             "full_node" => Ok(RoleType::FullNode),
-            _ => bail!("Invalid node role: {}", s),
+            _ => Err(ParseRoleError(s.to_string())),
         }
     }
 }
@@ -142,6 +142,15 @@ impl fmt::Display for RoleType {
             RoleType::Validator => write!(f, "validator"),
             RoleType::FullNode => write!(f, "full_node"),
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct ParseRoleError(String);
+
+impl fmt::Display for ParseRoleError {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "Invalid node role: {}", &self.0)
     }
 }
 
