@@ -93,7 +93,7 @@ impl TestEnvironment {
     }
 
     fn get_ac_client(&self, port: u16) -> ClientProxy {
-        let config = NodeConfig::load(&self.validator_swarm.config[0]).unwrap();
+        let config = NodeConfig::load(&self.validator_swarm.config.config_files[0]).unwrap();
         let validator_set_file = self
             .validator_swarm
             .dir
@@ -359,8 +359,14 @@ fn test_startup_sync_state() {
     );
     let peer_to_stop = 0;
     env.validator_swarm.kill_node(peer_to_stop);
-    let node_config =
-        NodeConfig::load(env.validator_swarm.config.get(peer_to_stop).unwrap()).unwrap();
+    let node_config = NodeConfig::load(
+        env.validator_swarm
+            .config
+            .config_files
+            .get(peer_to_stop)
+            .unwrap(),
+    )
+    .unwrap();
     // TODO Remove hardcoded path to state db
     let state_db_path = node_config.storage.dir().join("libradb");
     // Verify that state_db_path exists and

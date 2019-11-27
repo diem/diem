@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::utils;
-use config_builder::swarm_config::SwarmConfigBuilder;
+use config_builder::swarm_config::{SwarmConfig, SwarmConfigBuilder};
 use debug_interface::NodeDebugClient;
 use failure::prelude::*;
 use libra_config::config::{NodeConfig, RoleType};
@@ -200,7 +200,7 @@ pub struct LibraSwarm {
     pub dir: LibraSwarmDir,
     // Maps the node id of a node to the LibraNode struct
     pub nodes: HashMap<String, LibraNode>,
-    pub config: Vec<PathBuf>,
+    pub config: SwarmConfig,
 }
 
 #[derive(Debug, Fail)]
@@ -321,7 +321,7 @@ impl LibraSwarm {
         let logs_dir_path = self.dir.as_ref().join("logs");
         std::fs::create_dir(&logs_dir_path)?;
         // For each config launch a node
-        for (index, path) in self.config.iter().enumerate() {
+        for (index, path) in self.config.config_files.iter().enumerate() {
             // Use index as node id.
             let node_id = format!("{}", index);
             let node = LibraNode::launch(
@@ -490,6 +490,7 @@ impl LibraSwarm {
     /// Vector with the debug ports of all the validators in the swarm.
     pub fn get_validators_debug_ports(&self) -> Vec<u16> {
         self.config
+            .config_files
             .iter()
             .map(|path| {
                 let config = NodeConfig::load(&path).unwrap();
@@ -518,6 +519,7 @@ impl LibraSwarm {
         // `launch_node`.
         let path = self
             .config
+            .config_files
             .get(idx)
             .unwrap_or_else(|| panic!("Node at index {} not found", idx));
         let log_file_path = self.dir.as_ref().join("logs").join(format!("{}.log", idx));

@@ -115,7 +115,7 @@ impl SwarmConfigBuilder {
         self
     }
 
-    pub fn build(&mut self) -> Result<Vec<PathBuf>> {
+    pub fn build(&mut self) -> Result<SwarmConfig> {
         ensure!(self.num_nodes > 0, "Cannot build 0 NodeConfigs");
 
         let faucet_key = if let Some(keypair) = self.faucet_account_keypair.take() {
@@ -213,6 +213,10 @@ impl SwarmConfigBuilder {
             config.save(&PathBuf::from("node.config.toml"));
         }
 
-        Ok(config_files)
+        Ok(SwarmConfig { config_files })
     }
+}
+
+pub struct SwarmConfig {
+    pub config_files: Vec<PathBuf>,
 }
