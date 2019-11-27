@@ -5,6 +5,7 @@ use consensus_types::{
     executed_block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
 };
 use libra_crypto::HashValue;
+use libra_types::validator_verifier::VerifyError;
 use std::sync::Arc;
 
 mod block_store;
@@ -30,6 +31,8 @@ pub enum VoteReceptionResult {
     NewQuorumCertificate(Arc<QuorumCert>),
     /// The vote completes a new TimeoutCertificate
     NewTimeoutCertificate(Arc<TimeoutCertificate>),
+    /// There might be some issues adding a vote
+    ErrorAddingVote(VerifyError),
 }
 
 pub trait BlockReader: Send + Sync {
