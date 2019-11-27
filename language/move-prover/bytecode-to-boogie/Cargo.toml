@@ -26,4 +26,3 @@ prettydiff = "0.3.1"
 [features]
 default = []
 fuzzing = ["libra-types/fuzzing"]
-golden = []
