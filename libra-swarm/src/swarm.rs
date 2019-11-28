@@ -18,6 +18,7 @@ use std::{
     process::{Child, Command},
     str::FromStr,
 };
+use thiserror::Error;
 
 const LIBRA_NODE_BIN: &str = "libra-node";
 
@@ -203,25 +204,19 @@ pub struct LibraSwarm {
     pub config: SwarmConfig,
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum SwarmLaunchFailure {
     /// Timeout while waiting for nodes to start
-    #[fail(display = "Node launch check timeout")]
+    #[error("Node launch check timeout")]
     LaunchTimeout,
     /// Node return status indicates a crash
-    #[fail(display = "Node crash")]
+    #[error("Node crash")]
     NodeCrash,
     /// Timeout while waiting for the nodes to report that they're all interconnected
-    #[fail(display = "Node connectivity check timeout")]
+    #[error("Node connectivity check timeout")]
     ConnectivityTimeout,
-    #[fail(display = "IO Error")]
-    IoError(#[cause] io::Error),
-}
-
-impl From<io::Error> for SwarmLaunchFailure {
-    fn from(err: io::Error) -> Self {
-        SwarmLaunchFailure::IoError(err)
-    }
+    #[error("IO Error")]
+    IoError(#[from] io::Error),
 }
 
 impl LibraSwarm {

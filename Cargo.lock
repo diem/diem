@@ -2311,6 +2311,7 @@ dependencies = [
  "libra-logger 0.1.0",
  "libra-tools 0.1.0",
  "structopt 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
