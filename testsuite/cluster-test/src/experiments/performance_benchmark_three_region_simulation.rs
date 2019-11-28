@@ -1,20 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::fmt::Display;
-
-use failure::_core::fmt::{Error, Formatter};
-use failure::_core::time::Duration;
-
-use crate::cluster::Cluster;
-use crate::effects::{three_region_simulation_effects, Effect};
-use crate::experiments::Context;
-use crate::experiments::Experiment;
-use crate::stats;
-
-use crate::util::unix_timestamp_now;
-use futures::future::join_all;
-use futures::future::{BoxFuture, FutureExt};
+use crate::{
+    cluster::Cluster,
+    effects::{three_region_simulation_effects, Effect},
+    experiments::Context,
+    experiments::Experiment,
+    stats,
+    util::unix_timestamp_now,
+};
+use futures::future::{join_all, BoxFuture, FutureExt};
+use std::{
+    fmt::{Display, Error, Formatter},
+    time::Duration,
+};
 
 pub struct PerformanceBenchmarkThreeRegionSimulation {
     cluster: Cluster,

@@ -92,7 +92,7 @@ impl<T: Payload> ProposalMsg<T> {
         );
         self.proposal
             .verify_well_formed()
-            .with_context(|e| format!("Fail to verify ProposalMsg's block: {:}", e))?;
+            .context("Fail to verify ProposalMsg's block")?;
         ensure!(
             self.proposal.round() > 0,
             "Proposal for {} has an incorrect round of 0",

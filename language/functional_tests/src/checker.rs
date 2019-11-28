@@ -57,10 +57,13 @@ impl FromStr for Directive {
 /// Check the output using filecheck checker.
 pub fn run_filecheck(output: &str, checks: &str) -> Result<bool> {
     let mut builder = filecheck::CheckerBuilder::new();
-    builder.text(checks)?;
+    builder.text(checks).map_err(|e| anyhow!("{:?}", e))?;
     let checker = builder.finish();
     // filecheck allows one to pass in a variable map, however we're not using it
-    if !checker.check(output, filecheck::NO_VARIABLES)? {
+    if !checker
+        .check(output, filecheck::NO_VARIABLES)
+        .map_err(|e| anyhow!("{:?}", e))?
+    {
         return Err(ErrorKind::CheckerFailure.into());
     }
     Ok(!checker.is_empty())

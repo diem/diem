@@ -14,7 +14,7 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use executor::ProcessedVMOutput;
-use failure::ResultExt;
+use failure::Context;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 
@@ -248,7 +248,7 @@ impl<T: Payload> BlockStore<T> {
         let executed_block = self.execute_block(block).await?;
         self.storage
             .save_tree(vec![executed_block.block().clone()], vec![])
-            .with_context(|e| format!("Insert block failed with {:?} when saving block", e))?;
+            .context("Insert block failed when saving block")?;
         self.inner.write().unwrap().insert_block(executed_block)
     }
 
@@ -285,7 +285,7 @@ impl<T: Payload> BlockStore<T> {
             self.state_computer
                 .compute(&block, parent_trees)
                 .await
-                .with_context(|e| format!("Execution failure for block {}: {:?}", block, e))?
+                .with_context(|| format!("Execution failure for block {}", block))?
         };
         Ok(ExecutedBlock::new(block, output))
     }
@@ -312,7 +312,7 @@ impl<T: Payload> BlockStore<T> {
 
         self.storage
             .save_tree(vec![], vec![qc.clone()])
-            .with_context(|e| format!("Insert block failed with {:?} when saving quorum", e))?;
+            .context("Insert block failed when saving quorum")?;
         self.inner.write().unwrap().insert_quorum_cert(qc)
     }
 
@@ -325,12 +325,7 @@ impl<T: Payload> BlockStore<T> {
         }
         self.storage
             .save_highest_timeout_cert(tc.as_ref().clone())
-            .with_context(|e| {
-                format!(
-                    "Timeout certificate insert failed with {:?} when persisting to DB",
-                    e
-                )
-            })?;
+            .context("Timeout certificate insert failed when persisting to DB")?;
         self.inner.write().unwrap().replace_timeout_cert(tc);
         Ok(())
     }

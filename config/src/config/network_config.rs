@@ -6,7 +6,7 @@ use crate::{
     keys::{self, KeyPair},
     utils,
 };
-use failure::{self, ensure, Result};
+use failure::{self, anyhow, ensure, Result};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
@@ -117,11 +117,10 @@ impl NetworkConfig {
         }
         if self.advertised_address.to_string().is_empty() {
             self.advertised_address =
-                utils::get_local_ip().ok_or_else(|| ::failure::err_msg("No local IP"))?;
+                utils::get_local_ip().ok_or_else(|| anyhow!("No local IP"))?;
         }
         if self.listen_address.to_string().is_empty() {
-            self.listen_address =
-                utils::get_local_ip().ok_or_else(|| ::failure::err_msg("No local IP"))?;
+            self.listen_address = utils::get_local_ip().ok_or_else(|| anyhow!("No local IP"))?;
         }
         // If PeerId is not set, it is derived from NetworkIdentityKey.
         if self.peer_id == PeerId::default() {

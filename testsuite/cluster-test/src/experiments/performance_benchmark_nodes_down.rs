@@ -1,21 +1,22 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::HashSet, fmt::Display};
-
-use failure::_core::fmt::{Error, Formatter};
-use failure::_core::time::Duration;
-
-use crate::cluster::Cluster;
-use crate::effects::{Effect, StopContainer};
-use crate::experiments::Context;
-use crate::experiments::Experiment;
-use crate::instance::Instance;
-use crate::{instance, stats};
+use crate::{
+    cluster::Cluster,
+    effects::{Effect, StopContainer},
+    experiments::Context,
+    experiments::Experiment,
+    instance,
+    instance::Instance,
+    stats,
+    util::unix_timestamp_now,
+};
 use futures::future::{join_all, BoxFuture, FutureExt};
-
-use crate::util::unix_timestamp_now;
-
+use std::{
+    collections::HashSet,
+    fmt::{Display, Error, Formatter},
+    time::Duration,
+};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
