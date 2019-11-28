@@ -621,48 +621,42 @@ fn state_sync_on_timeout() {
     let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // This test depends on the fixed proposer on nodes[0]
-    let mut nodes = SMRNode::start_num_nodes(3, 2, &mut playground, FixedProposer, false);
+    let nodes = SMRNode::start_num_nodes(3, 2, &mut playground, FixedProposer, false);
     block_on(async move {
-        let mut proposals = vec![];
         // The first ten proposals are delivered just to nodes[0] and nodes[1], which should commit
         // the first seven blocks.
+        // nodes[2] should be fully disconnected from the others s.t. its timeouts would not trigger
+        // SyncInfo delivery ahead of time.
         playground.drop_message_for(&nodes[0].signer.author(), nodes[2].signer.author());
+        playground.drop_message_for(&nodes[1].signer.author(), nodes[2].signer.author());
         for _ in 0..10 {
             playground
                 .wait_for_messages(1, NetworkPlayground::proposals_only)
                 .await;
-            let votes = playground
+            playground
                 .wait_for_messages(1, NetworkPlayground::votes_only)
                 .await;
-            let vote_msg = VoteMsg::try_from(votes[0].1.clone()).unwrap();
-            let proposal_id = vote_msg.vote().vote_data().proposed().id();
-            proposals.push(proposal_id);
         }
 
-        // Start dropping messages from 0 to 1 as well: node 0 is now disconnected and we can
-        // expect timeouts from both 0 and 1.
-        playground.drop_message_for(&nodes[0].signer.author(), nodes[1].signer.author());
-
-        // Wait for a timeout message from 2 to {0, 1} and from 1 to {0, 2}
-        // (node 0 cannot send to anyone).  Note that there are 6 messages waited on
-        // since 2 can timeout 2x while waiting for 1 to timeout.
+        // Stop dropping messages from node 1 to node 0: next time node 0 sends a timeout to node 1,
+        // node 1 responds with a SyncInfo that carries a LedgerInfo for commit at round >= 7.
+        playground.stop_drop_message_for(&nodes[1].signer.author(), &nodes[2].signer.author());
+        // Wait for the sync info message from 1 to 2
         playground
-            .wait_for_messages(6, NetworkPlayground::timeout_votes_only)
+            .wait_for_messages(1, NetworkPlayground::sync_info_only)
             .await;
-
-        let mut node2_commits = vec![];
-        // The only notification we will receive is for the last commit known to nodes[1]: 7th
-        // proposal.
-        node2_commits.push(
-            nodes[2]
-                .commit_cb_receiver
-                .next()
-                .await
-                .unwrap()
-                .ledger_info()
-                .consensus_block_id(),
-        );
-        assert_eq!(node2_commits[0], proposals[6]);
+        // In the end of the state synchronization node 2 should have commit at round >= 7.
+        // In order to learn that node 2 is done with its state sync, wait for a next vote message
+        // from it.
+        let max_retries = 30;
+        for _ in 0..max_retries {
+            let commit_round = nodes[2].smr.block_store().unwrap().root().round();
+            if commit_round >= 7 {
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1000));
+        }
+        panic!("Node 2 didn't state sync up to round 7");
     });
 }
 
