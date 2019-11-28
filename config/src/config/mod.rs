@@ -12,6 +12,7 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+use thiserror::Error;
 use toml;
 
 mod admission_control_config;
@@ -145,14 +146,9 @@ impl fmt::Display for RoleType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
+#[error("Invalid node role: {0}")]
 pub struct ParseRoleError(String);
-
-impl fmt::Display for ParseRoleError {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "Invalid node role: {}", &self.0)
-    }
-}
 
 impl NodeConfig {
     /// This clones the underlying data except for the keypair so that this config can be used as a
