@@ -6,17 +6,25 @@ use crate::{
     OP_COUNTERS,
 };
 use bounded_executor::BoundedExecutor;
+use bytes05::Bytes;
+use failure::format_err;
 use futures::sync::mpsc::UnboundedSender;
-use futures_preview::{compat::Future01CompatExt, future::join_all, Stream, StreamExt};
+use futures_preview::{
+    channel::oneshot, compat::Future01CompatExt, future::join_all, Stream, StreamExt,
+};
 use libra_config::config::{MempoolConfig, NodeConfig};
 use libra_logger::prelude::*;
+use libra_prost_ext::MessageExt;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
-    proto::MempoolSyncMsg,
-    validator_network::{Event, MempoolNetworkEvents, MempoolNetworkSender},
+    proto::{
+        BroadcastTransactionsRequest, BroadcastTransactionsResponse, MempoolSyncMsg,
+        MempoolSyncMsg_oneof,
+    },
+    validator_network::{Event, MempoolNetworkEvents, MempoolNetworkSender, RpcError},
 };
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     convert::{TryFrom, TryInto},
     ops::Deref,
     pin::Pin,
@@ -64,6 +72,7 @@ where
     config: MempoolConfig,
     storage_read_client: Arc<dyn StorageRead>,
     validator: Arc<V>,
+    validator_peers: HashSet<PeerId>, // read-only and doesn't change, so concurrency-safe
     peer_info: Arc<Mutex<PeerInfo>>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
 }
@@ -81,6 +90,7 @@ where
             config: self.config.clone(),
             storage_read_client: Arc::clone(&self.storage_read_client),
             validator: Arc::clone(&self.validator),
+            validator_peers: self.validator_peers.clone(),
             peer_info: self.peer_info.clone(),
             subscribers: self.subscribers.clone(),
         }
@@ -157,13 +167,16 @@ async fn sync_with_peers<'a>(
 
             if !transactions.is_empty() {
                 OP_COUNTERS.inc_by("smp.sync_with_peers", transactions.len());
-                let mut msg = MempoolSyncMsg::default();
-                msg.peer_id = peer_id.into();
-                msg.transactions = transactions
+                let mut req = BroadcastTransactionsRequest::default();
+                req.peer_id = peer_id.into();
+                req.transactions = transactions
                     .into_iter()
                     .map(|txn| txn.try_into().unwrap())
                     .collect();
 
+                let msg = MempoolSyncMsg {
+                    message: Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(req)),
+                };
                 trace!(
                     "MempoolNetworkSender.send_to peer {} msg {:?}",
                     peer_id,
@@ -213,9 +226,7 @@ async fn process_incoming_transactions<V>(
         .enumerate()
         .filter_map(|(idx, t)| {
             if let Ok((sequence_number, balance)) = account_states[idx] {
-                if t.sequence_number() >= sequence_number {
-                    return Some((t, sequence_number, balance));
-                }
+                return Some((t, sequence_number, balance));
             }
             None
         })
@@ -257,6 +268,151 @@ async fn process_incoming_transactions<V>(
         }
     }
     notify_subscribers(SharedMempoolNotification::NewTransactions, &smp.subscribers);
+}
+
+/// send callback here
+async fn process_rpc_submit_transactions_request<V>(
+    smp: SharedMempool<V>,
+    peer_id: PeerId,
+    request: BroadcastTransactionsRequest,
+    callback: oneshot::Sender<Result<Bytes, RpcError>>,
+) where
+    V: TransactionValidation,
+{
+    // the RPC response object that will be returned to sender via callback
+    let resp = match submit_transactions_to_mempool(smp, peer_id, request).await {
+        Ok(response) => response,
+        Err(e) => {
+            error!(
+                "[shared mempool] Error occurred in submitting transactions to local mempool: {:?}",
+                e
+            );
+            // TODO return error in response
+            let mut response = BroadcastTransactionsResponse::default();
+            response.backpressure_ms = 0; // TODO this is placeholder
+            response
+        }
+    };
+    let response_msg = MempoolSyncMsg {
+        message: Some(MempoolSyncMsg_oneof::BroadcastTransactionsResponse(resp)),
+    };
+
+    // send response to callback
+    let response_data = response_msg.to_bytes().expect("failed to serialize proto");
+    if let Err(err) = callback
+        .send(Ok(response_data))
+        .map_err(|_| format_err!("[shared mempool] handling inbound RPC call timed out"))
+    {
+        error!(
+            "[shared mempool] failed to process batched transaction request, error: {:?}",
+            err
+        );
+    }
+}
+
+/// Tries to add transactions to local mempool
+/// returns RPC response that can be sent to callback
+/// peer_id is the PeerId of the node that sent the request
+async fn submit_transactions_to_mempool<V>(
+    smp: SharedMempool<V>,
+    peer_id: PeerId,
+    request: BroadcastTransactionsRequest,
+) -> failure::Result<BroadcastTransactionsResponse>
+where
+    V: TransactionValidation,
+{
+    /////////////////////////////////////////////
+    // convert from proto to SignedTransaction //
+    /////////////////////////////////////////////
+    let transactions: Vec<_> = request
+        .transactions
+        .clone()
+        .into_iter()
+        .filter_map(|txn| match SignedTransaction::try_from(txn.clone()) {
+            Ok(t) => Some(t),
+            Err(e) => {
+                // TODO make RPC response for this invalid transaction
+                // log error
+                security_log(SecurityEvent::InvalidTransactionMP)
+                    .error(&e)
+                    .data(&txn)
+                    .log();
+                None
+            }
+        })
+        .collect();
+
+    //////////////////////////////////
+    // validate transactions via VM //
+    //////////////////////////////////
+    let account_states = join_all(
+        transactions
+            .iter()
+            .map(|t| get_account_state(smp.storage_read_client.clone(), t.sender())),
+    )
+    .await;
+
+    let transactions: Vec<_> = transactions
+        .into_iter()
+        .enumerate()
+        .filter_map(|(idx, t)| {
+            if let Ok((sequence_number, balance)) = account_states[idx] {
+                return Some((t, sequence_number, balance));
+            }
+            None
+        })
+        .collect();
+
+    let validations = join_all(
+        transactions
+            .iter()
+            .map(|t| smp.validator.validate_transaction(t.0.clone()).compat()),
+    )
+    .await;
+
+    ///////////////////////////////
+    // add txns to local mempool //
+    ///////////////////////////////
+
+    // The [`TimelineState`] for adding txns to mempool should only be TimelineState::NonQualified,
+    // (i.e. this node should never try to broadcast it) if this MempoolSyncMsg came from one validator
+    // to another validator in the same validator network.
+    let timeline_state = if smp.validator_peers.contains(&peer_id) {
+        TimelineState::NonQualified
+    } else {
+        TimelineState::NotReady
+    };
+
+    let mut mempool = smp
+        .mempool
+        .lock()
+        .expect("[shared mempool] failed to acquire mempool lock");
+
+    for (idx, (transaction, sequence_number, balance)) in transactions.into_iter().enumerate() {
+        if let Ok(None) = validations[idx] {
+            let gas_cost = transaction.max_gas_amount();
+            mempool.add_txn(
+                transaction,
+                gas_cost,
+                sequence_number,
+                balance,
+                // peer validator SMP network or from FN
+                timeline_state,
+            );
+        // TODO log/update counters for MempoolAddTransactionStatus
+        // TODO check for MempoolAddTransactionStatus::MempoolIsFull and calculate backpressure
+        } else {
+            // txn vm validation failed
+            // TODO log/update counters for failed vm validation VMStatus
+        }
+    }
+
+    //return RPC response for this request
+    // TODO currently this is a dummy response - need to add real backpressure
+    // and potentially more info on individual txn failures
+    let mut response = BroadcastTransactionsResponse::default();
+    response.backpressure_ms = 0;
+    Ok(response)
 }
 
 /// This task handles [`SyncEvent`], which is periodically emitted for us to
@@ -310,41 +466,55 @@ async fn inbound_network_task<V>(
                     lost_peer(&peer_info, peer_id);
                     notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                 }
+                // TODO deprecate this in favor of Event::RpcRequest below
                 Event::Message((peer_id, msg)) => {
                     OP_COUNTERS.inc("smp.event.message");
-                    let transactions: Vec<_> = msg
-                        .transactions
-                        .clone()
-                        .into_iter()
-                        .filter_map(|txn| match SignedTransaction::try_from(txn) {
-                            Ok(t) => Some(t),
-                            Err(e) => {
-                                security_log(SecurityEvent::InvalidTransactionMP)
-                                    .error(&e)
-                                    .data(&msg)
-                                    .log();
-                                None
-                            }
-                        })
-                        .collect();
-                    OP_COUNTERS.inc_by(
-                        &format!("smp.transactions.received.{:?}", peer_id),
-                        transactions.len(),
-                    );
-                    bounded_executor
-                        .spawn(process_incoming_transactions(
-                            smp.clone(),
-                            peer_id,
-                            transactions,
-                        ))
-                        .await;
+                    if let Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(request)) =
+                        msg.message
+                    {
+                        let transactions: Vec<_> = request
+                            .transactions
+                            .clone()
+                            .into_iter()
+                            .filter_map(|txn| match SignedTransaction::try_from(txn.clone()) {
+                                Ok(t) => Some(t),
+                                Err(e) => {
+                                    security_log(SecurityEvent::InvalidTransactionMP)
+                                        .error(&e)
+                                        .data(&txn)
+                                        .log();
+                                    None
+                                }
+                            })
+                            .collect();
+                        OP_COUNTERS.inc_by(
+                            &format!("smp.transactions.received.{:?}", peer_id),
+                            transactions.len(),
+                        );
+                        bounded_executor
+                            .spawn(process_incoming_transactions(
+                                smp.clone(),
+                                peer_id,
+                                transactions,
+                            ))
+                            .await;
+                    }
                 }
-                _ => {
-                    security_log(SecurityEvent::InvalidNetworkEventMP)
-                        .error("UnexpectedNetworkEvent")
-                        .data(&network_event)
-                        .log();
-                    debug_assert!(false, "Unexpected network event");
+                Event::RpcRequest((peer_id, msg, callback)) => {
+                    // handle rpc events for transactions
+                    if let Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(request)) =
+                        msg.message
+                    {
+                        // get transactions from MempoolSyncMsg
+                        bounded_executor
+                            .spawn(process_rpc_submit_transactions_request(
+                                smp.clone(),
+                                peer_id,
+                                request,
+                                callback,
+                            ))
+                            .await;
+                    }
                 }
             },
             Err(e) => {
@@ -398,12 +568,19 @@ where
 
     let peer_info = Arc::new(Mutex::new(PeerInfo::new()));
 
+    let validator_peers = if let Some(v) = &config.validator_network {
+        v.network_peers.peers.iter().map(|(key, _)| *key).collect()
+    } else {
+        HashSet::new()
+    };
+
     let smp = SharedMempool {
         mempool: mempool.clone(),
         config: config.mempool.clone(),
         network_sender,
         storage_read_client,
         validator,
+        validator_peers,
         peer_info,
         subscribers,
     };

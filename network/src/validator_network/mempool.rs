@@ -15,6 +15,7 @@ use libra_types::PeerId;
 
 /// Protocol id for mempool direct-send calls
 pub const MEMPOOL_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/mempool/0.1.0";
+pub const MEMPOOL_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/mempool/0.1.0";
 
 /// The interface from Network to Mempool layer.
 ///
@@ -45,6 +46,7 @@ impl MempoolNetworkSender {
         }
     }
 
+    // for direct sends
     pub async fn send_to(
         &mut self,
         recipient: PeerId,
@@ -59,15 +61,23 @@ impl MempoolNetworkSender {
 mod tests {
     use super::*;
     use crate::{
-        interface::NetworkNotification, protocols::direct_send::Message, utils::MessageExt,
+        interface::NetworkNotification,
+        proto::{BroadcastTransactionsRequest, MempoolSyncMsg_oneof},
+        protocols::{direct_send::Message, rpc::InboundRpcRequest},
+        utils::MessageExt,
         validator_network::Event,
     };
-    use futures::{executor::block_on, sink::SinkExt, stream::StreamExt};
+    use futures::{channel::oneshot, executor::block_on, sink::SinkExt, stream::StreamExt};
 
-    fn new_test_sync_msg(peer_id: PeerId) -> MempoolSyncMsg {
-        let mut mempool_msg = MempoolSyncMsg::default();
-        mempool_msg.peer_id = peer_id.into();
-        mempool_msg
+    fn new_test_sync_req_msg(peer_id: PeerId) -> MempoolSyncMsg {
+        let mut submit_txns_req = BroadcastTransactionsRequest::default();
+        submit_txns_req.peer_id = peer_id.into();
+
+        MempoolSyncMsg {
+            message: Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(
+                submit_txns_req,
+            )),
+        }
     }
 
     // Direct send messages should get deserialized through the
@@ -78,7 +88,7 @@ mod tests {
         let mut stream = MempoolNetworkEvents::new(mempool_rx);
 
         let peer_id = PeerId::random();
-        let mempool_msg = new_test_sync_msg(peer_id);
+        let mempool_msg = new_test_sync_req_msg(peer_id);
         let network_msg = Message {
             protocol: ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
             mdata: mempool_msg.clone().to_bytes().unwrap(),
@@ -100,7 +110,7 @@ mod tests {
         let mut sender = MempoolNetworkSender::new(network_reqs_tx);
 
         let peer_id = PeerId::random();
-        let mempool_msg = new_test_sync_msg(peer_id);
+        let mempool_msg = new_test_sync_req_msg(peer_id);
         let expected_network_msg = Message {
             protocol: ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
             mdata: mempool_msg.clone().to_bytes().unwrap(),
@@ -118,5 +128,38 @@ mod tests {
             }
             event => panic!("Unexpected event: {:?}", event),
         }
+    }
+
+    #[test]
+    fn test_shared_mempool_inbound_rpc() {
+        let (mut smp_tx, smp_rx) = channel::new_test(8);
+        let mut stream = MempoolNetworkEvents::new(smp_rx);
+
+        // build rpc request
+        let req_msg = BroadcastTransactionsRequest::default();
+        println!("default SubmitTxnsReq: {:?}", req_msg);
+        let req_msg_enum = MempoolSyncMsg {
+            message: Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(req_msg)),
+        };
+
+        let req_data = req_msg_enum.clone().to_bytes().unwrap();
+
+        let (res_tx, _) = oneshot::channel();
+        let rpc_req = InboundRpcRequest {
+            protocol: ProtocolId::from_static(MEMPOOL_RPC_PROTOCOL),
+            data: req_data,
+            res_tx,
+        };
+
+        // mock receiving rpc request
+        let peer_id = PeerId::random();
+        let event = NetworkNotification::RecvRpc(peer_id, rpc_req);
+        block_on(smp_tx.send(event)).unwrap();
+
+        // request should be properly deserialized
+        let (res_tx, _) = oneshot::channel();
+        let expected_event = Event::RpcRequest((peer_id, req_msg_enum.clone(), res_tx));
+        let event = block_on(stream.next()).unwrap().unwrap();
+        assert_eq!(event, expected_event);
     }
 }

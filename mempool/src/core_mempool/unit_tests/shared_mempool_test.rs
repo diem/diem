@@ -5,6 +5,7 @@ use crate::{
     core_mempool::{unit_tests::common::TestTransaction, CoreMempool, TimelineState},
     shared_mempool::{start_shared_mempool, SharedMempoolNotification, SyncEvent},
 };
+use assert_matches;
 use channel;
 use futures::{
     sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
@@ -15,7 +16,7 @@ use libra_config::config::NodeConfig;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
-    proto::MempoolSyncMsg,
+    proto::{MempoolSyncMsg, MempoolSyncMsg_oneof},
     validator_network::{MempoolNetworkEvents, MempoolNetworkSender},
 };
 use prost::Message;
@@ -113,9 +114,13 @@ impl SharedMempoolNetwork {
 
         match network_req {
             NetworkRequest::SendMessage(peer_id, msg) => {
-                let mut sync_msg = MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
+                let sync_msg = MempoolSyncMsg::decode(msg.mdata.as_ref()).unwrap();
+                let req = assert_matches::assert_matches!(
+                    sync_msg.message,
+                    Some(MempoolSyncMsg_oneof::BroadcastTransactionsRequest(req)) => req
+                );
                 let transaction =
-                    SignedTransaction::try_from(sync_msg.transactions.pop().unwrap()).unwrap();
+                    SignedTransaction::try_from(req.clone().transactions.pop().unwrap()).unwrap();
                 // send it to peer
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
                 block_on(

@@ -21,6 +21,7 @@ use network::{
         CONSENSUS_DIRECT_SEND_PROTOCOL,
         CONSENSUS_RPC_PROTOCOL,
         MEMPOOL_DIRECT_SEND_PROTOCOL,
+        MEMPOOL_RPC_PROTOCOL,
         STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
     },
     NetworkPublicKeys, ProtocolId,
@@ -113,6 +114,7 @@ pub fn setup_network(
         .rpc_protocols(vec![
             ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
             ProtocolId::from_static(ADMISSION_CONTROL_RPC_PROTOCOL),
+            ProtocolId::from_static(MEMPOOL_RPC_PROTOCOL),
         ]);
     if config.is_permissioned {
         // If the node wants to run in permissioned mode, it should also have authentication and
