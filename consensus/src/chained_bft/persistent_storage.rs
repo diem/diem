@@ -8,7 +8,7 @@ use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
-use failure::{Result, ResultExt};
+use failure::{Context, Result};
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -70,11 +70,11 @@ impl<T: Payload> RecoveryData<T> {
         validators: Arc<ValidatorVerifier>,
     ) -> Result<Self> {
         let root =
-            Self::find_root(&mut blocks, &mut quorum_certs, storage_ledger).with_context(|e| {
+            Self::find_root(&mut blocks, &mut quorum_certs, storage_ledger).with_context(|| {
                 // for better readability
                 quorum_certs.sort_by_key(|qc| qc.certified_block().round());
                 format!(
-                    "Blocks in db: {}\nQuorum Certs in db: {}\nerror: {}",
+                    "Blocks in db: {}\nQuorum Certs in db: {}\n",
                     blocks
                         .iter()
                         .map(|b| format!("\n\t{}", b))
@@ -85,7 +85,6 @@ impl<T: Payload> RecoveryData<T> {
                         .map(|qc| format!("\n\t{}", qc))
                         .collect::<Vec<String>>()
                         .concat(),
-                    e,
                 )
             })?;
 

@@ -320,7 +320,7 @@ impl Signature for Ed25519Signature {
         public_key
             .0
             .verify(message, &self.0)
-            .map_err(std::convert::Into::into)
+            .map_err(|e| anyhow!("{}", e))
             .and(Ok(()))
     }
 
@@ -347,7 +347,8 @@ impl Signature for Ed25519Signature {
         // messages as the number of signatures. In our case, we just populate the same
         // message to meet dalek's api requirements.
         let messages = vec![message_ref; dalek_signatures.len()];
-        ed25519_dalek::verify_batch(&messages[..], &dalek_signatures[..], &dalek_public_keys[..])?;
+        ed25519_dalek::verify_batch(&messages[..], &dalek_signatures[..], &dalek_public_keys[..])
+            .map_err(|e| anyhow!("{}", e))?;
         Ok(())
     }
 }

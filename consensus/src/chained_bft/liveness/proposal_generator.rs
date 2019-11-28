@@ -13,7 +13,7 @@ use consensus_types::{
     common::{Author, Payload, Round},
     quorum_cert::QuorumCert,
 };
-use failure::ResultExt;
+use failure::Context;
 use libra_logger::prelude::*;
 use std::{
     sync::{Arc, Mutex},
@@ -199,7 +199,7 @@ impl<T: Payload> ProposalGenerator<T> {
             self.txn_manager
                 .pull_txns(self.max_block_size, exclude_payload)
                 .await
-                .with_context(|e| format!("Fail to retrieve txn: {}", e))?
+                .context("Fail to retrieve txn")?
         };
 
         Ok(BlockData::new_proposal(

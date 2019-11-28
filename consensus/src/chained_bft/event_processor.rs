@@ -30,7 +30,7 @@ use consensus_types::{
     vote_msg::VoteMsg,
     vote_proposal::VoteProposal,
 };
-use failure::ResultExt;
+use failure::Context;
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
 use libra_prost_ext::MessageExt;
@@ -460,7 +460,7 @@ impl<T: Payload> EventProcessor<T> {
             tc_round = Some(timeout_cert.round());
             self.block_store
                 .insert_timeout_certificate(Arc::new(timeout_cert.clone()))
-                .with_context(|e| format!("Failed to process TC: {}", e))?;
+                .context("Failed to process TC")?;
         }
         if let Some(new_round_event) = self.pacemaker.process_certificates(
             Some(qc.certified_block().round()),
@@ -633,7 +633,7 @@ impl<T: Payload> EventProcessor<T> {
             .block_store
             .execute_and_insert_block(proposed_block)
             .await
-            .with_context(|e| format!("Failed to execute_and_insert the block: {:?}", e))?;
+            .context("Failed to execute_and_insert the block")?;
         let block = executed_block.block();
 
         // Checking pacemaker round again, because multiple proposed_block can now race
@@ -675,14 +675,14 @@ impl<T: Payload> EventProcessor<T> {
         let vote = self
             .safety_rules
             .construct_and_sign_vote(&vote_proposal)
-            .with_context(|e| format!("{}Rejected{} {}: {:?}", Fg(Red), Fg(Reset), block, e))?;
+            .with_context(|| format!("{}Rejected{} {}", Fg(Red), Fg(Reset), block))?;
 
         let consensus_state = self.safety_rules.consensus_state();
         counters::LAST_VOTE_ROUND.set(consensus_state.last_voted_round() as i64);
 
         self.storage
             .save_state(&vote)
-            .with_context(|e| format!("Fail to persist consensus state: {:?}", e))?;
+            .context("Fail to persist consensus state")?;
         self.last_vote_sent.replace((vote.clone(), block.round()));
         Ok(vote)
     }
@@ -761,14 +761,14 @@ impl<T: Payload> EventProcessor<T> {
                 self.create_block_retriever(deadline, preferred_peer),
             )
             .await
-            .with_context(|e| format!("Failed to process a newly aggregated QC: {}", e))?;
+            .context("Failed to process a newly aggregated QC")?;
         self.process_certificates(qc.as_ref(), None).await
     }
 
     async fn new_tc_aggregated(&mut self, tc: Arc<TimeoutCertificate>) -> failure::Result<()> {
         self.block_store
             .insert_timeout_certificate(tc.clone())
-            .with_context(|e| format!("Failed to process a newly aggregated TC: {}", e))?;
+            .context("Failed to process a newly aggregated TC")?;
 
         // Process local highest qc should be no-op
         self.process_certificates(

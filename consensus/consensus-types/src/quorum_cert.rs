@@ -120,7 +120,7 @@ impl QuorumCert {
         }
         self.ledger_info()
             .verify(validator)
-            .with_context(|e| format!("Fail to verify QuorumCert: {:?}", e))?;
+            .context("Fail to verify QuorumCert")?;
         Ok(())
     }
 }

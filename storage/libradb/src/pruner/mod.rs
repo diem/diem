@@ -11,25 +11,23 @@ use crate::{
     OP_COUNTER,
 };
 use failure::prelude::*;
+use jellyfish_merkle::StaleNodeIndex;
 use libra_logger::prelude::*;
 use libra_types::transaction::Version;
 use schemadb::{ReadOptions, SchemaBatch, SchemaIterator, DB};
+#[cfg(test)]
+use std::thread::sleep;
+use std::{
+    iter::Peekable,
+    sync::atomic::{AtomicU64, Ordering},
+    time::{Duration, Instant},
+};
 use std::{
     sync::{
         mpsc::{channel, Receiver, Sender},
         Arc, Mutex,
     },
     thread::JoinHandle,
-};
-
-use failure::_core::sync::atomic::Ordering;
-use jellyfish_merkle::StaleNodeIndex;
-#[cfg(test)]
-use std::thread::sleep;
-use std::{
-    iter::Peekable,
-    sync::atomic::AtomicU64,
-    time::{Duration, Instant},
 };
 
 /// The `Pruner` is meant to be part of a `LibraDB` instance and runs in the background to prune old

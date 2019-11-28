@@ -46,7 +46,7 @@ impl TimeoutCertificate {
         for (author, signature) in self.signatures() {
             signature
                 .verify(validator, *author, timeout_hash)
-                .with_context(|e| format!("Fail to verify TimeoutCertificate: {:?}", e))?;
+                .context("Fail to verify TimeoutCertificate")?;
         }
         Ok(())
     }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{common::Round, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate};
-use failure::{ensure, ResultExt};
+use failure::{ensure, Context};
 use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use network;
@@ -110,7 +110,7 @@ impl SyncInfo {
                 }
                 Ok(())
             })
-            .with_context(|e| format!("Fail to verify SyncInfo: {:?}", e))?;
+            .context("Fail to verify SyncInfo")?;
         Ok(())
     }
 

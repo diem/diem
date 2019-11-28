@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{common::Author, timeout::Timeout, vote_data::VoteData};
-use failure::{ensure, ResultExt};
+use failure::{ensure, Context};
 use libra_crypto::hash::CryptoHash;
 use libra_types::{
     crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
@@ -127,11 +127,11 @@ impl Vote {
         );
         self.signature()
             .verify(validator, self.author(), self.ledger_info.hash())
-            .with_context(|e| format!("Fail to verify Vote: {:?}", e))?;
+            .context("Fail to verify Vote")?;
         if let Some(timeout_signature) = &self.timeout_signature {
             timeout_signature
                 .verify(validator, self.author(), self.timeout().hash())
-                .with_context(|e| format!("Fail to verify Vote: {:?}", e))?;
+                .context("Fail to verify Vote")?;
         }
         Ok(())
     }

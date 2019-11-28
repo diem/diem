@@ -10,6 +10,6 @@ publish = false
 edition = "2018"
 
 [dependencies]
-failure = "0.1.3"
+anyhow = "1.0"
 
 libra-failure-macros = { path = "failure-macros", version = "0.1.0" }
