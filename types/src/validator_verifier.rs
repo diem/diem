@@ -11,30 +11,33 @@ use libra_crypto::*;
 use mirai_annotations::*;
 use std::collections::BTreeMap;
 use std::fmt;
+use thiserror::Error;
 
 /// Errors possible during signature verification.
-#[derive(Debug, Fail, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum VerifyError {
-    #[fail(display = "Author is unknown")]
+    #[error("Author is unknown")]
     /// The author for this signature is unknown by this validator.
     UnknownAuthor,
-    #[fail(
-        display = "The voting power ({}) is less than quorum voting power ({})",
-        voting_power, quorum_voting_power
+    #[error(
+        "The voting power ({}) is less than quorum voting power ({})",
+        voting_power,
+        quorum_voting_power
     )]
     TooLittleVotingPower {
         voting_power: u64,
         quorum_voting_power: u64,
     },
-    #[fail(
-        display = "The number of signatures ({}) is greater than total number of authors ({})",
-        num_of_signatures, num_of_authors
+    #[error(
+        "The number of signatures ({}) is greater than total number of authors ({})",
+        num_of_signatures,
+        num_of_authors
     )]
     TooManySignatures {
         num_of_signatures: usize,
         num_of_authors: usize,
     },
-    #[fail(display = "Signature is invalid")]
+    #[error("Signature is invalid")]
     /// The signature does not match the hash.
     InvalidSignature,
 }
