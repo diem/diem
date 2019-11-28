@@ -16,7 +16,7 @@ mod node_type_test;
 use crate::nibble_path::NibblePath;
 use bincode::{deserialize, serialize};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-use failure::{Fail, Result, *};
+use failure::{Result, *};
 use libra_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
@@ -40,6 +40,7 @@ use std::{
     io::{prelude::*, Cursor, Read, SeekFrom, Write},
     mem::size_of,
 };
+use thiserror::Error;
 
 /// The unique key of each node.
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -646,24 +647,25 @@ impl Node {
 
 /// Error thrown when a [`Node`] fails to be deserialized out of a byte sequence stored in physical
 /// storage, via [`Node::decode`].
-#[derive(Debug, Fail, Eq, PartialEq)]
+#[derive(Debug, Error, Eq, PartialEq)]
 pub enum NodeDecodeError {
     /// Input is empty.
-    #[fail(display = "Missing tag due to empty input")]
+    #[error("Missing tag due to empty input")]
     EmptyInput,
 
     /// The first byte of the input is not a known tag representing one of the variants.
-    #[fail(display = "lead tag byte is unknown: {}", unknown_tag)]
+    #[error("lead tag byte is unknown: {}", unknown_tag)]
     UnknownTag { unknown_tag: u8 },
 
     /// No children found in internal node
-    #[fail(display = "No children found in internal node")]
+    #[error("No children found in internal node")]
     NoChildren,
 
     /// Extra leaf bits set
-    #[fail(
-        display = "Non-existent leaf bits set, existing: {}, leaves: {}",
-        existing, leaves
+    #[error(
+        "Non-existent leaf bits set, existing: {}, leaves: {}",
+        existing,
+        leaves
     )]
     ExtraLeaves { existing: u16, leaves: u16 },
 }
