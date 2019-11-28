@@ -24,36 +24,32 @@ pub use reboot_random_validator::{RebootRandomValidators, RebootRandomValidators
 
 use crate::cluster::Cluster;
 use crate::prometheus::Prometheus;
-use crate::thread_pool_executor::ThreadPoolExecutor;
 use crate::tx_emitter::TxEmitter;
+use futures::future::BoxFuture;
 use structopt::{clap::AppSettings, StructOpt};
 
 pub trait Experiment: Display + Send {
     fn affected_validators(&self) -> HashSet<String> {
         HashSet::new()
     }
-    fn run(&mut self, context: &mut Context) -> failure::Result<Option<String>>;
+    fn run<'a>(
+        &'a mut self,
+        context: &'a mut Context,
+    ) -> BoxFuture<'a, failure::Result<Option<String>>>;
     fn deadline(&self) -> Duration;
 }
 
 pub struct Context {
     tx_emitter: TxEmitter,
     prometheus: Prometheus,
-    thread_pool_executor: ThreadPoolExecutor,
     cluster: Cluster,
 }
 
 impl Context {
-    pub fn new(
-        tx_emitter: TxEmitter,
-        prometheus: Prometheus,
-        thread_pool_executor: ThreadPoolExecutor,
-        cluster: Cluster,
-    ) -> Self {
+    pub fn new(tx_emitter: TxEmitter, prometheus: Prometheus, cluster: Cluster) -> Self {
         Context {
             tx_emitter,
             prometheus,
-            thread_pool_executor,
             cluster,
         }
     }

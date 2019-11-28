@@ -5,6 +5,7 @@
 
 use crate::{effects::Effect, instance::Instance};
 use failure;
+use futures::future::{BoxFuture, FutureExt};
 use std::fmt;
 
 pub struct StopContainer {
@@ -18,15 +19,18 @@ impl StopContainer {
 }
 
 impl Effect for StopContainer {
-    fn activate(&self) -> failure::Result<()> {
+    fn activate(&self) -> BoxFuture<failure::Result<()>> {
         self.instance
             .run_cmd(vec!["sudo /usr/sbin/service docker stop"])
+            .boxed()
     }
 
-    fn deactivate(&self) -> failure::Result<()> {
-        self.instance.run_cmd(vec![
-            "sudo /usr/sbin/service docker start && sudo /usr/sbin/service ecs start",
-        ])
+    fn deactivate(&self) -> BoxFuture<failure::Result<()>> {
+        self.instance
+            .run_cmd(vec![
+                "sudo /usr/sbin/service docker start && sudo /usr/sbin/service ecs start",
+            ])
+            .boxed()
     }
 }
 

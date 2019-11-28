@@ -3,11 +3,12 @@
 
 #![forbid(unsafe_code)]
 
-use std::{fmt, thread, time::Duration};
+use std::{fmt, time::Duration};
 
 use structopt::StructOpt;
 
 use failure;
+use futures::future::{BoxFuture, FutureExt};
 
 use crate::experiments::Context;
 /// This module provides an experiment which introduces packet loss for
@@ -25,6 +26,7 @@ pub struct PacketLossRandomValidators {
     percent: f32,
     duration: Duration,
 }
+use tokio::time;
 
 #[derive(StructOpt, Debug)]
 pub struct PacketLossRandomValidatorsParams {
@@ -65,19 +67,22 @@ impl PacketLossRandomValidators {
 }
 
 impl Experiment for PacketLossRandomValidators {
-    fn run(&mut self, _context: &mut Context) -> failure::Result<Option<String>> {
-        let mut instances = vec![];
-        for instance in self.instances.iter() {
-            let packet_loss = PacketLoss::new(instance.clone(), self.percent);
-            packet_loss.apply()?;
-            instances.push(packet_loss)
+    fn run(&mut self, _context: &mut Context) -> BoxFuture<failure::Result<Option<String>>> {
+        async move {
+            let mut instances = vec![];
+            for instance in self.instances.iter() {
+                let packet_loss = PacketLoss::new(instance.clone(), self.percent);
+                packet_loss.apply().await?;
+                instances.push(packet_loss)
+            }
+            time::delay_for(self.duration).await;
+            for instance in self.instances.iter() {
+                let remove_network_effects = RemoveNetworkEffects::new(instance.clone());
+                remove_network_effects.apply().await?;
+            }
+            Ok(None)
         }
-        thread::sleep(self.duration);
-        for instance in self.instances.iter() {
-            let remove_network_effects = RemoveNetworkEffects::new(instance.clone());
-            remove_network_effects.apply()?;
-        }
-        Ok(None)
+            .boxed()
     }
 
     fn deadline(&self) -> Duration {
