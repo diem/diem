@@ -2691,6 +2691,7 @@ name = "network"
 version = "0.1.0"
 dependencies = [
  "admission-control-proto 0.1.0",
+ "anyhow 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "bounded-executor 0.1.0",
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2717,6 +2718,7 @@ dependencies = [
  "prost-build 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "socket-bench-server 0.1.0",
+ "thiserror 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-retry 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-util 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",

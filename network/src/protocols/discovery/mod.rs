@@ -38,8 +38,8 @@ use crate::{
     validator_network::{DiscoveryNetworkEvents, DiscoveryNetworkSender, Event},
     NetworkPublicKeys,
 };
+use anyhow::anyhow;
 use channel;
-use failure::{format_err, Fail};
 use futures::{
     future::{Future, FutureExt},
     sink::SinkExt,
@@ -460,12 +460,12 @@ fn verify_note(
     // validate PeerId
 
     let peer_id = PeerId::try_from(note.peer_id.clone())
-        .map_err(|err| err.context(NetworkErrorKind::ParsingError))?;
+        .map_err(|err| anyhow!(err).context(NetworkErrorKind::ParsingError))?;
 
     // validate PeerInfo
 
     let signed_peer_info = note.signed_peer_info.as_ref().ok_or_else(|| {
-        format_err!("Discovery Note missing signed_peer_info field")
+        anyhow!("Discovery Note missing signed_peer_info field")
             .context(NetworkErrorKind::ParsingError)
     })?;
     let peer_info_bytes = &signed_peer_info.peer_info;
@@ -535,7 +535,7 @@ fn verify_signature(
     )
     .expect("Quorum size should be valid.");
     let signature = Ed25519Signature::try_from(signature)
-        .map_err(|err| err.context(NetworkErrorKind::SignatureError))?;
+        .map_err(|err| anyhow!(err).context(NetworkErrorKind::SignatureError))?;
     verifier.verify_signature(signer, get_hash(msg), &signature)?;
     Ok(())
 }
