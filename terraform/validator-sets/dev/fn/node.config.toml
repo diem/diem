@@ -13,7 +13,7 @@ upstream_peers = ["${upstream_peer}"]
 [consensus]
 consensus_keypair_file = ""
 
-[debug-interface]
+[debug_interface]
 address = "0.0.0.0"
 
 [storage]
