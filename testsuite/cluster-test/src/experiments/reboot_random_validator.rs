@@ -3,11 +3,11 @@
 
 #![forbid(unsafe_code)]
 
-use std::{collections::HashSet, fmt, thread, time::Duration};
+use std::{collections::HashSet, fmt, time::Duration};
 
 use rand::Rng;
 
-use failure;
+use failure::{self, prelude::bail};
 
 use crate::experiments::Context;
 use crate::{
@@ -17,7 +17,8 @@ use crate::{
     instance,
     instance::Instance,
 };
-
+use futures::future::{join_all, BoxFuture, FutureExt};
+use slog_scope::warn;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -56,17 +57,24 @@ impl Experiment for RebootRandomValidators {
         instance::instancelist_to_set(&self.instances)
     }
 
-    fn run(&mut self, _context: &mut Context) -> failure::Result<Option<String>> {
-        let mut reboots = vec![];
-        for instance in self.instances.iter() {
-            let reboot = Reboot::new(instance.clone());
-            reboot.apply()?;
-            reboots.push(reboot)
+    fn run(&mut self, _context: &mut Context) -> BoxFuture<failure::Result<Option<String>>> {
+        async move {
+            let futures = self.instances.iter().map(|instance| {
+                async move {
+                    let reboot = Reboot::new(instance.clone());
+                    reboot
+                        .apply()
+                        .await
+                        .map_err(|e| warn!("Failed to reboot {}: {}", instance, e))
+                }
+            });
+            let results = join_all(futures).await;
+            if results.iter().any(Result::is_err) {
+                bail!("Failed to reboot one of nodes");
+            }
+            Ok(None)
         }
-        while reboots.iter().any(|r| !r.is_complete()) {
-            thread::sleep(Duration::from_secs(5));
-        }
-        Ok(None)
+            .boxed()
     }
 
     fn deadline(&self) -> Duration {

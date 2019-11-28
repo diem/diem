@@ -13,7 +13,6 @@ pub mod prometheus;
 pub mod slack;
 pub mod stats;
 pub mod suite;
-pub mod thread_pool_executor;
 pub mod tx_emitter;
 
 pub mod util {

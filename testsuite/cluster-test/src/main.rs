@@ -4,9 +4,7 @@
 use std::process;
 use std::{
     collections::HashSet,
-    env,
-    sync::mpsc::{self, TryRecvError},
-    thread,
+    env, thread,
     time::{Duration, Instant},
 };
 
@@ -26,14 +24,12 @@ use cluster_test::github::GitHub;
 use cluster_test::health::PrintFailures;
 use cluster_test::instance::Instance;
 use cluster_test::prometheus::Prometheus;
-use cluster_test::thread_pool_executor::ThreadPoolExecutor;
 use cluster_test::tx_emitter::{EmitJobRequest, EmitThreadParams};
 use cluster_test::util::unix_timestamp_now;
 use cluster_test::{
     aws::Aws,
     cluster::Cluster,
     deployment::{DeploymentManager, SOURCE_TAG},
-    effects,
     effects::{Action, Effect, Reboot, StopContainer},
     experiments::Experiment,
     health::{DebugPortLogThread, HealthCheckRunner, LogTail},
@@ -48,6 +44,8 @@ use failure::{
 };
 use futures::future::join_all;
 use futures::future::FutureExt;
+use futures::future::TryFutureExt;
+use futures::task::{self, noop_waker_ref, Poll};
 use tokio::runtime::Runtime;
 
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
@@ -145,10 +143,6 @@ pub fn main() {
             util.emit_tx(args.accounts_per_client, thread_params);
             return;
         }
-    } else if args.stop_experiment {
-        let util = ClusterUtil::setup(&args);
-        util.stop_experiment(args.max_stopped);
-        return;
     } else if args.discovery {
         let util = ClusterUtil::setup(&args);
         util.discovery();
@@ -190,6 +184,8 @@ pub fn main() {
         runner.start();
     } else if args.perf_run {
         runner.perf_run();
+    } else if args.stop_experiment {
+        runner.stop_experiment(args.max_stopped);
     } else if args.cleanup {
         runner.cleanup();
     } else if let Some(commit) = args.changelog {
@@ -255,7 +251,6 @@ struct ClusterTestRunner {
     health_check_runner: HealthCheckRunner,
     deployment_manager: DeploymentManager,
     experiment_interval: Duration,
-    thread_pool_executor: ThreadPoolExecutor,
     runtime: Runtime,
     slack: SlackClient,
     slack_log_url: Option<Url>,
@@ -339,7 +334,7 @@ impl ClusterUtil {
     pub fn pssh(&self, cmd: Vec<String>) {
         let mut runtime = Runtime::new().unwrap();
         let futures = self.cluster.instances().iter().map(|x| {
-            x.run_cmd_tee_err_async(&cmd).map(move |r| {
+            x.run_cmd_tee_err(&cmd).map(move |r| {
                 if let Err(e) = r {
                     warn!("Failed on {}: {}", x, e)
                 }
@@ -358,60 +353,6 @@ impl ClusterUtil {
             })
             .expect("Failed to start emit job");
         self.run_stat_loop();
-    }
-
-    pub fn stop_experiment(self, max_stopped: usize) {
-        let mut emitter = TxEmitter::new(&self.cluster);
-        let mut instances = self.cluster.instances().to_vec();
-        let mut rng = ThreadRng::default();
-        let mut stop_effects = vec![];
-        let mut stopped_instance_ids = vec![];
-        let mut results = vec![];
-        let window = Duration::from_secs(60);
-        loop {
-            let job = emitter
-                .start_job(EmitJobRequest {
-                    instances: instances.clone(),
-                    accounts_per_client: 10,
-                    thread_params: EmitThreadParams::default(),
-                })
-                .expect("Failed to start emit job");
-            thread::sleep(Duration::from_secs(30) + window);
-            let now = unix_timestamp_now();
-            match stats::txn_stats(&self.prometheus, now - window, now) {
-                Ok((avg_tps, avg_latency)) => {
-                    results.push((stop_effects.len(), avg_tps, avg_latency));
-                    info!("Tps: {:.0}, latency: {:.0} ms", avg_tps, avg_latency);
-                }
-                Err(err) => info!("Stat error: {:?}", err),
-            }
-            emitter.stop_job(job);
-            if stop_effects.len() > max_stopped {
-                break;
-            }
-            let stop_validator = rng.gen_range(0, instances.len());
-            let stop_validator = instances.remove(stop_validator);
-            stopped_instance_ids.push(stop_validator.short_hash().clone());
-            let stop_effect = StopContainer::new(stop_validator);
-            info!(
-                "Stopped {} validators: {}",
-                stopped_instance_ids.len(),
-                stopped_instance_ids.join(",")
-            );
-            stop_effect.activate().expect("Failed to stop container");
-            stop_effects.push(stop_effect);
-            thread::sleep(Duration::from_secs(30));
-        }
-        println!("Results in csv format:");
-        println!("DOWN\tTPS\tLAT");
-        for (stopped, tps, lat) in results {
-            println!("{}\t{:.0}\t{:.0}", stopped, tps, lat * 1000.);
-        }
-        for stop_effect in stop_effects {
-            if let Err(e) = stop_effect.deactivate() {
-                info!("Failed to deactivate {}: {:?}", stop_effect, e);
-            }
-        }
     }
 
     fn run_stat_loop(&self) {
@@ -457,7 +398,6 @@ impl ClusterTestRunner {
         let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
             .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
             .ok();
-        let thread_pool_executor = ThreadPoolExecutor::new("ssh-pool".into());
         let tx_emitter = TxEmitter::new(&cluster);
         let prometheus = Prometheus::new(
             cluster
@@ -473,7 +413,6 @@ impl ClusterTestRunner {
             deployment_manager,
             experiment_interval,
             slack,
-            thread_pool_executor,
             runtime,
             slack_log_url,
             slack_changelog_url,
@@ -634,7 +573,7 @@ impl ClusterTestRunner {
             .cluster
             .instances()
             .iter()
-            .map(|instance| instance.run_cmd_tee_err_async(vec![&cmd]));
+            .map(|instance| instance.run_cmd_tee_err(vec![&cmd]));
         let results = self.runtime.block_on(join_all(futures));
         if results.iter().any(Result::is_err) {
             return Err(format_err!(
@@ -706,23 +645,19 @@ impl ClusterTestRunner {
         );
         let affected_validators = experiment.affected_validators();
         let deadline = experiment.deadline();
-        let (exp_result_sender, exp_result_recv) = mpsc::channel();
         let mut context = Context::new(
             self.tx_emitter.clone(),
             self.prometheus.clone(),
-            self.thread_pool_executor.clone(),
             self.cluster.clone(),
         );
-        thread::spawn(move || {
-            let result = experiment.run(&mut context);
-            exp_result_sender
-                .send(result)
-                .expect("Failed to send experiment result");
-        });
+        let mut experiment_handle = self
+            .runtime
+            .spawn(async move { experiment.run(&mut context).await });
 
         // We expect experiments completes and cluster go into healthy state within timeout
         let experiment_deadline = Instant::now() + deadline;
-        let retval;
+        let retval: Option<String>;
+        let mut task_context = task::Context::from_waker(noop_waker_ref());
         loop {
             if Instant::now() > experiment_deadline {
                 bail!("Experiment did not complete in time");
@@ -739,17 +674,14 @@ impl ClusterTestRunner {
             ) {
                 bail!("Validators which were not under experiment failed : {}", s);
             }
-            match exp_result_recv.try_recv() {
-                Ok(result) => {
-                    retval = result.expect("Failed to run experiment");
+            match experiment_handle.poll_unpin(&mut task_context) {
+                Poll::Ready(result) => {
+                    retval = result
+                        .expect("Failed to poll join handle")
+                        .expect("Failed to run experiment");
                     break;
                 }
-                Err(TryRecvError::Empty) => {
-                    // Experiment in progress, continue monitoring health
-                }
-                Err(TryRecvError::Disconnected) => {
-                    panic!("Experiment thread exited without returning result");
-                }
+                Poll::Pending => {}
             }
         }
 
@@ -789,6 +721,63 @@ impl ClusterTestRunner {
 
         info!("Experiment completed");
         Ok(retval)
+    }
+
+    pub fn stop_experiment(mut self, max_stopped: usize) {
+        let mut instances = self.cluster.instances().to_vec();
+        let mut rng = ThreadRng::default();
+        let mut stop_effects = vec![];
+        let mut stopped_instance_ids = vec![];
+        let mut results = vec![];
+        let window = Duration::from_secs(60);
+        loop {
+            let job = self
+                .tx_emitter
+                .start_job(EmitJobRequest {
+                    instances: instances.clone(),
+                    accounts_per_client: 10,
+                    thread_params: EmitThreadParams::default(),
+                })
+                .expect("Failed to start emit job");
+            thread::sleep(Duration::from_secs(30) + window);
+            let now = unix_timestamp_now();
+            match stats::txn_stats(&self.prometheus, now - window, now) {
+                Ok((avg_tps, avg_latency)) => {
+                    results.push((stop_effects.len(), avg_tps, avg_latency));
+                    info!("Tps: {:.0}, latency: {:.0} ms", avg_tps, avg_latency);
+                }
+                Err(err) => info!("Stat error: {:?}", err),
+            }
+            self.tx_emitter.stop_job(job);
+            if stop_effects.len() > max_stopped {
+                break;
+            }
+            let stop_validator = rng.gen_range(0, instances.len());
+            let stop_validator = instances.remove(stop_validator);
+            stopped_instance_ids.push(stop_validator.short_hash().clone());
+            let stop_effect = StopContainer::new(stop_validator);
+            info!(
+                "Stopped {} validators: {}",
+                stopped_instance_ids.len(),
+                stopped_instance_ids.join(",")
+            );
+            self.runtime
+                .block_on(stop_effect.activate())
+                .expect("Failed to stop container");
+            stop_effects.push(stop_effect);
+            thread::sleep(Duration::from_secs(30));
+        }
+        println!("Results in csv format:");
+        println!("DOWN\tTPS\tLAT");
+        for (stopped, tps, lat) in results {
+            println!("{}\t{:.0}\t{:.0}", stopped, tps, lat * 1000.);
+        }
+        let futures = stop_effects.iter().map(|stop_effect| {
+            stop_effect
+                .deactivate()
+                .map_err(move |e| info!("Failed to deactivate {}: {:?}", stop_effect, e))
+        });
+        self.runtime.block_on(join_all(futures));
     }
 
     fn run_health_check(&mut self) {
@@ -883,12 +872,12 @@ impl ClusterTestRunner {
 
     async fn wipe_instance(log_file: &str, suffix: &str, instance: &Instance) {
         instance
-            .run_cmd_tee_err_async(vec!["sudo", "rm", "-rf", "/data/libra/*db"])
+            .run_cmd_tee_err(vec!["sudo", "rm", "-rf", "/data/libra/*db"])
             .await
             .map_err(|e| info!("Failed to wipe {}: {:?}", instance, e))
             .ok();
         instance
-            .run_cmd_tee_err_async(vec![format!(
+            .run_cmd_tee_err(vec![format!(
                 "! test -f {f} || (sudo timeout 45 gzip -S {s} {f} || (echo gzip failed; sudo rm -f {f}))",
                 f = log_file,
                 s = suffix
@@ -897,63 +886,53 @@ impl ClusterTestRunner {
             .ok();
     }
 
-    fn reboot(self) {
-        let mut reboots = vec![];
-        for instance in self.cluster.instances() {
-            info!("Rebooting {}", instance);
-            let reboot = Reboot::new(instance.clone());
-            if let Err(err) = reboot.apply() {
-                info!("Failed to reboot {}: {:?}", instance, err);
-            } else {
-                reboots.push(reboot);
+    fn reboot(mut self) {
+        let futures = self.cluster.instances().iter().map(|instance| {
+            async move {
+                let reboot = Reboot::new(instance.clone());
+                reboot
+                    .apply()
+                    .await
+                    .map_err(|e| info!("Failed to reboot {}: {:?}", instance, e))
             }
-        }
-        info!("Waiting to complete");
-        while reboots.iter().any(|r| !r.is_complete()) {
-            thread::sleep(Duration::from_secs(5));
-        }
+        });
+        self.runtime.block_on(join_all(futures));
         info!("Completed");
     }
 
-    fn restart(&self) {
+    fn restart(&mut self) {
         self.stop();
         self.start();
         info!("Completed");
     }
 
-    fn cleanup(&self) {
-        let cleanup_all_instances: Vec<_> = self
-            .cluster
-            .instances()
-            .clone()
-            .into_iter()
-            .map(|instance| {
-                move || {
-                    if let Err(e) = RemoveNetworkEffects::new(instance.clone()).apply() {
+    fn cleanup(&mut self) {
+        let futures = self.cluster.instances().iter().map(|instance| {
+            async move {
+                RemoveNetworkEffects::new(instance.clone())
+                    .apply()
+                    .await
+                    .map_err(|e| {
                         info!(
                             "Failed to remove network effects for {}. Error: {}",
                             instance, e
                         );
-                    }
-                }
-            })
-            .collect();
-        self.thread_pool_executor
-            .execute_jobs(cleanup_all_instances);
+                    })
+            }
+        });
+        self.runtime.block_on(join_all(futures));
     }
 
-    pub fn stop(&self) {
-        effects::activate_all(
-            self.thread_pool_executor.clone(),
-            &mut self.make_stop_effects(),
-        )
+    pub fn stop(&mut self) {
+        let effects = self.make_stop_effects();
+        let futures = effects.iter().map(|e| e.activate());
+        self.runtime.block_on(join_all(futures));
     }
 
-    pub fn start(&self) {
-        effects::deactivate_all(
-            self.thread_pool_executor.clone(),
-            &mut self.make_stop_effects(),
-        )
+    pub fn start(&mut self) {
+        let effects = self.make_stop_effects();
+        let futures = effects.iter().map(|e| e.deactivate());
+        self.runtime.block_on(join_all(futures));
     }
 
     fn make_stop_effects(&self) -> Vec<StopContainer> {

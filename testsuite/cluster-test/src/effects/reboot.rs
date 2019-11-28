@@ -5,8 +5,11 @@
 
 use crate::{effects::Action, instance::Instance};
 use failure;
+use futures::future::{BoxFuture, FutureExt};
 use slog_scope::info;
 use std::fmt;
+use std::time::Duration;
+use tokio::time;
 
 pub struct Reboot {
     instance: Instance,
@@ -19,30 +22,35 @@ impl Reboot {
 }
 
 impl Action for Reboot {
-    fn apply(&self) -> failure::Result<()> {
-        info!("Rebooting {}", self.instance);
-        self.instance.run_cmd(vec![
-            "touch /dev/shm/cluster_test_reboot; nohup sudo /usr/sbin/reboot &",
-        ])
-    }
-
-    fn is_complete(&self) -> bool {
-        match self
-            .instance
-            .run_cmd(vec!["! cat /dev/shm/cluster_test_reboot"])
-        {
-            Ok(..) => {
-                info!("Rebooting {} complete", self.instance);
-                true
-            }
-            Err(..) => {
-                info!(
-                    "Rebooting {} in progress - did not reboot yet",
-                    self.instance
-                );
-                false
+    fn apply(&self) -> BoxFuture<failure::Result<()>> {
+        async move {
+            info!("Rebooting {}", self.instance);
+            self.instance
+                .run_cmd(vec![
+                    "touch /dev/shm/cluster_test_reboot; nohup sudo /usr/sbin/reboot &",
+                ])
+                .await?;
+            loop {
+                time::delay_for(Duration::from_secs(5)).await;
+                match self
+                    .instance
+                    .run_cmd(vec!["! cat /dev/shm/cluster_test_reboot"])
+                    .await
+                {
+                    Ok(..) => {
+                        info!("Rebooting {} complete", self.instance);
+                        return Ok(());
+                    }
+                    Err(..) => {
+                        info!(
+                            "Rebooting {} in progress - did not reboot yet",
+                            self.instance
+                        );
+                    }
+                }
             }
         }
+            .boxed()
     }
 }
 

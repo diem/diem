@@ -7,11 +7,12 @@ use failure::_core::fmt::{Error, Formatter};
 use failure::_core::time::Duration;
 
 use crate::cluster::Cluster;
-use crate::effects::StopContainer;
+use crate::effects::{Effect, StopContainer};
 use crate::experiments::Context;
 use crate::experiments::Experiment;
 use crate::instance::Instance;
-use crate::{effects, instance, stats};
+use crate::{instance, stats};
+use futures::future::{join_all, BoxFuture, FutureExt};
 
 use crate::util::unix_timestamp_now;
 
@@ -49,26 +50,34 @@ impl Experiment for PerformanceBenchmarkNodesDown {
         instance::instancelist_to_set(&self.down_instances)
     }
 
-    fn run(&mut self, context: &mut Context) -> failure::Result<Option<String>> {
-        let mut stop_effects: Vec<_> = self
-            .down_instances
-            .clone()
-            .into_iter()
-            .map(StopContainer::new)
-            .collect();
-        effects::activate_all(context.thread_pool_executor.clone(), &mut stop_effects);
-        let window = Duration::from_secs(180);
-        context
-            .tx_emitter
-            .emit_txn_for(window + Duration::from_secs(60), self.up_instances.clone())?;
-        let end = unix_timestamp_now();
-        let start = end - window;
-        let (avg_tps, avg_latency) = stats::txn_stats(&context.prometheus, start, end)?;
-        effects::deactivate_all(context.thread_pool_executor.clone(), &mut stop_effects);
-        Ok(Some(format!(
-            "{} : {:.0} TPS, {:.1} ms latency",
-            self, avg_tps, avg_latency
-        )))
+    fn run<'a>(
+        &'a mut self,
+        context: &'a mut Context,
+    ) -> BoxFuture<'a, failure::Result<Option<String>>> {
+        async move {
+            let stop_effects: Vec<_> = self
+                .down_instances
+                .clone()
+                .into_iter()
+                .map(StopContainer::new)
+                .collect();
+            let futures = stop_effects.iter().map(|e| e.activate());
+            join_all(futures).await;
+            let window = Duration::from_secs(180);
+            context
+                .tx_emitter
+                .emit_txn_for(window + Duration::from_secs(60), self.up_instances.clone())?;
+            let end = unix_timestamp_now();
+            let start = end - window;
+            let (avg_tps, avg_latency) = stats::txn_stats(&context.prometheus, start, end)?;
+            let futures = stop_effects.iter().map(|e| e.deactivate());
+            join_all(futures).await;
+            Ok(Some(format!(
+                "{} : {:.0} TPS, {:.1} ms latency",
+                self, avg_tps, avg_latency
+            )))
+        }
+            .boxed()
     }
 
     fn deadline(&self) -> Duration {

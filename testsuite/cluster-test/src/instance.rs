@@ -5,11 +5,7 @@
 
 use failure::{self, prelude::*};
 use std::collections::HashSet;
-use std::{
-    ffi::OsStr,
-    fmt,
-    process::{Command, Stdio},
-};
+use std::{ffi::OsStr, fmt, process::Stdio};
 use tokio;
 
 #[derive(Clone)]
@@ -28,68 +24,23 @@ impl Instance {
         }
     }
 
-    pub fn run_cmd_tee_err<I, S>(&self, args: I) -> failure::Result<()>
+    pub async fn run_cmd_tee_err<I, S>(&self, args: I) -> failure::Result<()>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
-        self.run_cmd_inner(false, args)
+        self.run_cmd_inner(false, args).await
     }
 
-    pub async fn run_cmd_tee_err_async<I, S>(&self, args: I) -> failure::Result<()>
+    pub async fn run_cmd<I, S>(&self, args: I) -> failure::Result<()>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
-        self.run_cmd_inner_async(false, args).await
+        self.run_cmd_inner(true, args).await
     }
 
-    pub async fn run_cmd_async<I, S>(&self, args: I) -> failure::Result<()>
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<OsStr>,
-    {
-        self.run_cmd_inner_async(true, args).await
-    }
-
-    pub fn run_cmd<I, S>(&self, args: I) -> failure::Result<()>
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<OsStr>,
-    {
-        self.run_cmd_inner(true, args)
-    }
-
-    pub fn run_cmd_inner<I, S>(&self, no_std_err: bool, args: I) -> failure::Result<()>
-    where
-        I: IntoIterator<Item = S>,
-        S: AsRef<OsStr>,
-    {
-        let ssh_dest = format!("ec2-user@{}", self.ip);
-        let ssh_args = vec![
-            "ssh",
-            "-i",
-            "/libra_rsa",
-            "-oStrictHostKeyChecking=no",
-            "-oConnectTimeout=3",
-            "-oConnectionAttempts=10",
-            ssh_dest.as_str(),
-        ];
-        let mut ssh_cmd = Command::new("timeout");
-        ssh_cmd.arg("60").args(ssh_args).args(args);
-        if no_std_err {
-            ssh_cmd.stderr(Stdio::null());
-        }
-        let status = ssh_cmd.status()?;
-        ensure!(
-            status.success(),
-            "Failed with code {}",
-            status.code().unwrap_or(-1)
-        );
-        Ok(())
-    }
-
-    pub async fn run_cmd_inner_async<I, S>(&self, no_std_err: bool, args: I) -> failure::Result<()>
+    pub async fn run_cmd_inner<I, S>(&self, no_std_err: bool, args: I) -> failure::Result<()>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
