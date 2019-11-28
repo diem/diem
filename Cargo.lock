@@ -1854,6 +1854,7 @@ dependencies = [
  "libra-failure-ext 0.1.0",
  "libra-types 0.1.0",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
 ]
 
