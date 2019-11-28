@@ -114,7 +114,7 @@ impl ClientProxy {
         mnemonic_file: Option<String>,
     ) -> Result<Self> {
         let validator_verifier = Arc::new(
-            ConsensusPeersConfig::load_config(validator_set_file).get_validator_verifier(),
+            ConsensusPeersConfig::load_config(validator_set_file)?.get_validator_verifier(),
         );
         ensure!(
             !validator_verifier.is_empty(),

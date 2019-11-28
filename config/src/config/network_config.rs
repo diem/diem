@@ -107,13 +107,13 @@ impl NetworkConfig {
 
     pub fn load(&mut self, network_role: RoleType) -> Result<()> {
         if !self.network_peers_file.as_os_str().is_empty() {
-            self.network_peers = NetworkPeersConfig::load_config(self.network_peers_file());
+            self.network_peers = NetworkPeersConfig::load_config(self.network_peers_file())?;
         }
         if !self.network_keypairs_file.as_os_str().is_empty() {
-            self.network_keypairs = NetworkKeyPairs::load_config(self.network_keypairs_file());
+            self.network_keypairs = NetworkKeyPairs::load_config(self.network_keypairs_file())?;
         }
         if !self.seed_peers_file.as_os_str().is_empty() {
-            self.seed_peers = SeedPeersConfig::load_config(self.seed_peers_file());
+            self.seed_peers = SeedPeersConfig::load_config(self.seed_peers_file())?;
         }
         if self.advertised_address.to_string().is_empty() {
             self.advertised_address =
