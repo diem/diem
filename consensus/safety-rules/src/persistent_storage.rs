@@ -98,7 +98,8 @@ pub struct OnDiskStorage {
 
 impl OnDiskStorage {
     pub fn new_storage(file_path: PathBuf) -> Box<dyn PersistentStorage> {
-        let internal_data = InMemoryStorage::load_config(file_path.clone());
+        let internal_data =
+            InMemoryStorage::load_config(file_path.clone()).expect("Unable to parse config");
         Box::new(Self {
             file_path,
             internal_data,

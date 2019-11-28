@@ -110,10 +110,10 @@ impl ConsensusConfig {
 
     pub fn load(&mut self) -> Result<()> {
         if !self.consensus_keypair_file.as_os_str().is_empty() {
-            self.consensus_keypair = ConsensusKeyPair::load_config(self.consensus_keypair_file());
+            self.consensus_keypair = ConsensusKeyPair::load_config(self.consensus_keypair_file())?;
         }
         if !self.consensus_peers_file.as_os_str().is_empty() {
-            self.consensus_peers = ConsensusPeersConfig::load_config(self.consensus_peers_file());
+            self.consensus_peers = ConsensusPeersConfig::load_config(self.consensus_peers_file())?;
         }
         Ok(())
     }

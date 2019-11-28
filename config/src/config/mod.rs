@@ -213,7 +213,7 @@ impl NodeConfig {
     /// post-processing of the config
     /// Paths used in the config are either absolute or relative to the config location
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let mut config = Self::load_config(&path);
+        let mut config = Self::load_config(&path)?;
         if config.base.role.is_validator() {
             ensure!(
                 config.validator_network.is_some(),
@@ -314,15 +314,11 @@ impl NodeConfig {
 }
 
 pub trait PersistableConfig: Serialize + DeserializeOwned {
-    // TODO: Return Result<Self> instead of panic.
-    fn load_config<P: AsRef<Path>>(path: P) -> Self {
-        let path = path.as_ref();
-        let mut file =
-            File::open(path).unwrap_or_else(|_| panic!("Cannot open config file {:?}", path));
+    fn load_config<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let mut file = File::open(&path)?;
         let mut contents = String::new();
-        file.read_to_string(&mut contents)
-            .unwrap_or_else(|_| panic!("Error reading config file {:?}", path));
-        Self::parse(&contents).expect("Unable to parse config")
+        file.read_to_string(&mut contents)?;
+        Self::parse(&contents)
     }
 
     fn save_config<P: AsRef<Path>>(&self, output_file: P) {
@@ -398,15 +394,36 @@ mod test {
 
     #[test]
     fn verify_all_configs() {
+        // First test well defined configs
+        let _ = vec!["data/configs/single.node.config.toml"]
+            .iter()
+            .map(|path| {
+                NodeConfig::load(PathBuf::from(path))
+                    .unwrap_or_else(|_| panic!("Error in {}", path))
+            })
+            .collect::<Vec<_>>();
+
+        // Now test configs that require some additional manipulation
         let _ = vec![
-            PathBuf::from("data/configs/overrides/persistent_data.node.config.override.toml"),
-            PathBuf::from("data/configs/single.node.config.toml"),
-            PathBuf::from("../terraform/validator-sets/100/fn/node.config.toml"),
-            PathBuf::from("../terraform/validator-sets/100/val/node.config.toml"),
-            PathBuf::from("../terraform/validator-sets/dev/fn/node.config.toml"),
-            PathBuf::from("../terraform/validator-sets/dev/val/node.config.toml"),
+            "../terraform/validator-sets/100/fn/node.config.toml",
+            "../terraform/validator-sets/100/val/node.config.toml",
+            "../terraform/validator-sets/dev/fn/node.config.toml",
+            "../terraform/validator-sets/dev/val/node.config.toml",
         ]
         .iter()
-        .map(|path| NodeConfig::load(path).expect("NodeConfig"));
+        .map(|path| {
+            let mut file =
+                File::open(&path).unwrap_or_else(|_| panic!("Unable to open file: {}", path));
+            let mut contents = String::new();
+            file.read_to_string(&mut contents)
+                .unwrap_or_else(|_| panic!("Unable to read file: {}", path));
+            let new_contents = contents
+                .replace("${peer_id}", &PeerId::default().to_string())
+                .replace("${fullnode_id}", &PeerId::default().to_string())
+                .replace("${upstream_peer}", &PeerId::default().to_string())
+                .replace("${self_ip}", "0.0.0.0");
+            NodeConfig::parse(&new_contents).unwrap_or_else(|_| panic!("Error in {}", path));
+        })
+        .collect::<Vec<_>>();
     }
 }

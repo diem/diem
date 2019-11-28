@@ -139,7 +139,7 @@ impl SwarmConfigBuilder {
         }
 
         let template = if let Some(template_path) = &&self.template_path {
-            NodeConfig::load_config(template_path)
+            NodeConfig::load_config(template_path)?
         } else {
             NodeConfig::default()
         };
