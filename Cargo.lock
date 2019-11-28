@@ -792,6 +792,7 @@ dependencies = [
  "storage-client 0.1.0",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "termion 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm-genesis 0.1.0",
  "vm-runtime 0.1.0",
