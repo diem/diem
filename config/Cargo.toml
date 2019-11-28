@@ -16,6 +16,7 @@ mirai-annotations = "1.4.0"
 parity-multiaddr = { version = "0.5.0", default-features = false }
 rand = "0.6.5"
 serde = { version = "1.0.99", features = ["rc"], default-features = false }
+thiserror = "1.0"
 toml = { version = "0.5.3", default-features = false }
 
 failure = { path = "../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
