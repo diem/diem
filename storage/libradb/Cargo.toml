@@ -24,6 +24,7 @@ rusty-fork = "0.2.1"
 strum = "0.15.0"
 strum_macros = "0.15.0"
 serde = "1.0.96"
+thiserror = "1.0"
 
 accumulator = { path = "../accumulator", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
