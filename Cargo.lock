@@ -2094,6 +2094,7 @@ dependencies = [
  "sha2 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha3 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "static_assertions 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "threshold_crypto 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tiny-keccak 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "x25519-dalek 0.5.2 (git+https://github.com/calibra/x25519-dalek.git?branch=fiat)",
@@ -4635,6 +4636,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "thiserror"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "thiserror-impl 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "proc-macro2 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "thread-id"
 version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5908,6 +5927,8 @@ dependencies = [
 "checksum termion 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)" = "6a8fb22f7cde82c8220e5aeacb3258ed7ce996142c77cba193f203515e26c330"
 "checksum text-diff 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "309238dd66f8bf11a20d015b727b926f294a13fcb8d56770bb984e7a22c43897"
 "checksum textwrap 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d326610f408c7a4eb6f51c37c330e496b08506c9457c9d34287ecc38809fb060"
+"checksum thiserror 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "cc6b305ec0e323c7b6cfff6098a22516e0063d0bb7c3d88660a890217dca099a"
+"checksum thiserror-impl 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "45ba8d810d9c48fc456b7ad54574e8bfb7c7918a57ad7a6e6a0985d7959e8597"
 "checksum thread-id 3.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c7fbf4c9d56b320106cd64fd024dadfa0be7cb4706725fc44a7d7ce952d820c1"
 "checksum thread_local 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "c6b53e329000edc2b34dbe8545fd20e55a333362d0a321909685a19bd28c3f1b"
 "checksum threshold_crypto 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "95be1032c63011f20b01c5edb64930e2b51512782b43b458b1e3449613d70f87"
