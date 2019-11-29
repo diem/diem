@@ -124,7 +124,7 @@ where
     fn verify_script(
         script: &Script,
         script_cache: &'txn ScriptCache<'alloc>,
-    ) -> Result<FunctionRef<'alloc>, VMStatus> {
+    ) -> Result<FunctionRef<'txn>, VMStatus> {
         // Ensure the script can correctly be resolved into main.
         let main = script_cache.cache_script(&script.code())?;
 
@@ -166,15 +166,15 @@ where
     P: ModuleCache<'alloc>,
 {
     pub(super) txn_executor: TransactionExecutor<'alloc, 'txn, P>,
-    pub(super) verified_txn: VerTxn<'alloc>,
+    pub(super) verified_txn: VerTxn<'txn>,
 }
 
 /// A verified transaction is a transaction executing code that has gone through the verifier.
 ///
 /// It can be a program, a script or a module. A transaction script gets executed by the VM.
 /// A module script publishes the module provided.
-pub enum VerTxn<'alloc> {
-    Script(FunctionRef<'alloc>),
+pub enum VerTxn<'txn> {
+    Script(FunctionRef<'txn>),
     Module(Box<VerifiedModule>),
 }
 
