@@ -13,7 +13,7 @@ use crate::{
         jellyfish_merkle_node::JellyfishMerkleNodeSchema, stale_node_index::StaleNodeIndexSchema,
     },
 };
-use failure::prelude::*;
+use anyhow::Result;
 use jellyfish_merkle::{
     iterator::JellyfishMerkleIterator,
     node_type::{LeafNode, Node, NodeKey},

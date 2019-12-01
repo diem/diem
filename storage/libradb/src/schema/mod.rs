@@ -19,7 +19,7 @@ pub(crate) mod transaction_accumulator;
 pub(crate) mod transaction_by_account;
 pub(crate) mod transaction_info;
 
-use failure::prelude::*;
+use anyhow::{ensure, Result};
 use schemadb::ColumnFamilyName;
 
 pub(super) const EPOCH_BY_VERSION_CF_NAME: ColumnFamilyName = "epoch_by_version";

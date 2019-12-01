@@ -16,7 +16,7 @@ use crate::{
     },
 };
 use accumulator::{HashReader, MerkleAccumulator};
-use failure::prelude::*;
+use anyhow::{ensure, format_err, Result};
 use libra_crypto::{
     hash::{CryptoHash, EventAccumulatorHasher},
     HashValue,

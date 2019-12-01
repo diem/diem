@@ -13,8 +13,8 @@
 //! numeric value.
 
 use crate::schema::TRANSACTION_INFO_CF_NAME;
+use anyhow::{ensure, Result};
 use byteorder::{BigEndian, ReadBytesExt};
-use failure::prelude::*;
 use libra_prost_ext::MessageExt;
 use libra_types::transaction::{TransactionInfo, Version};
 use prost::Message;

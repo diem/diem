@@ -4,7 +4,7 @@
 //! This module provides helpers to initialize [`LibraDB`] with fake generic state in tests.
 
 use crate::LibraDB;
-use failure::Result;
+use anyhow::Result;
 use lazy_static::lazy_static;
 use libra_crypto::{
     ed25519::*,

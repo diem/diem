@@ -10,7 +10,7 @@ use crate::{
     },
     OP_COUNTER,
 };
-use failure::prelude::*;
+use anyhow::Result;
 use jellyfish_merkle::StaleNodeIndex;
 use libra_logger::prelude::*;
 use libra_types::transaction::Version;
@@ -102,7 +102,7 @@ impl Pruner {
                 }
                 sleep(Duration::from_millis(1));
             }
-            bail!("Timeout waiting for pruner worker.");
+            anyhow::bail!("Timeout waiting for pruner worker.");
         }
         Ok(())
     }

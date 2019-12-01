@@ -42,7 +42,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use failure::prelude::*;
+use anyhow::{bail, ensure, format_err, Result};
 use itertools::{izip, zip_eq};
 use lazy_static::lazy_static;
 use libra_crypto::hash::{CryptoHash, HashValue};
@@ -135,10 +135,7 @@ impl LibraDB {
 
         let path = db_root_path.as_ref().join("libradb");
         let instant = Instant::now();
-        let db = Arc::new(
-            DB::open(path.clone(), cf_opts_map)
-                .unwrap_or_else(|e| unrecoverable!("LibraDB open failed: {:?}", e)),
-        );
+        let db = Arc::new(DB::open(path.clone(), cf_opts_map).expect("LibraDB open failed"));
 
         info!(
             "Opened LibraDB at {:?} in {} ms",

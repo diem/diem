@@ -11,8 +11,8 @@
 //! ```
 
 use crate::schema::{ensure_slice_len_eq, EVENT_ACCUMULATOR_CF_NAME};
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::prelude::*;
 use libra_crypto::hash::HashValue;
 use libra_types::{proof::position::Position, transaction::Version};
 use schemadb::{
