@@ -18,11 +18,11 @@ pub use anyhow::{anyhow, bail, ensure, format_err, Chain, Context, Error, Result
 // Custom error handling macros are placed in the failure-macros crate. Due to
 // the way intra-crate macro exports currently work, macros can't be exported
 // from anywhere but the top level when they are defined in the same crate.
-pub use libra_failure_macros::{bail_err, unrecoverable};
+pub use libra_failure_macros::bail_err;
 
 /// Prelude module containing most commonly used types/macros this crate exports.
 pub mod prelude {
     pub use crate::Result;
     pub use anyhow::{anyhow, bail, ensure, format_err, Context, Error};
-    pub use libra_failure_macros::{bail_err, unrecoverable};
+    pub use libra_failure_macros::bail_err;
 }
