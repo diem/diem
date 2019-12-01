@@ -6,8 +6,8 @@
 /// ---------------------------------------------------------------------------------- ///
 use crate::OP_COUNTER;
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
+use anyhow::Result;
 use client::{AccountData, AccountStatus};
-use failure::prelude::*;
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,

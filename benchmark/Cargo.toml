@@ -10,6 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 futures = "0.1.28"
 grpcio = { version = "=0.5.0-alpha.4", default-features = false }
 lazy_static = "1.2.0"
@@ -23,7 +24,6 @@ walkdir = "2.2.9"
 admission-control-proto = { path = "../admission_control/admission-control-proto", version = "0.1.0" }
 client = { path = "../client", version = "0.1.0" }
 libra-config = { path = "../config", version = "0.1.0" }
-failure = { package = "libra-failure-ext", path = "../common/failure-ext", version = "0.1.0" }
 generate-keypair = { path = "../config/generate-keypair", version = "0.1.0" }
 libra-wallet = { path = "../client/libra_wallet", version = "0.1.0" }
 libra-swarm = { path = "../libra-swarm", version = "0.1.0" }

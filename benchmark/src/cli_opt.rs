@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use failure::prelude::*;
+use anyhow::{bail, Result};
 use libra_config::config::{NodeConfig, PersistableConfig};
 use libra_logger::prelude::*;
 use std::{ffi::OsStr, fs, net::IpAddr, path::PathBuf, str::FromStr};
