@@ -6,7 +6,7 @@ use crate::{
     common::{Author, Payload, Round},
     sync_info::SyncInfo,
 };
-use failure::prelude::*;
+use anyhow::{bail, ensure, format_err, Context, Error, Result};
 use libra_types::crypto_proxies::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
@@ -26,17 +26,17 @@ pub struct ProposalMsg<T> {
 pub struct ProposalUncheckedSignatures<T>(ProposalMsg<T>);
 
 impl<T: Payload> TryFrom<network::proto::Proposal> for ProposalUncheckedSignatures<T> {
-    type Error = failure::Error;
+    type Error = Error;
 
-    fn try_from(proto: network::proto::Proposal) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::Proposal) -> Result<Self> {
         Ok(ProposalUncheckedSignatures(lcs::from_bytes(&proto.bytes)?))
     }
 }
 
 impl<T: Payload> TryFrom<network::proto::ConsensusMsg> for ProposalUncheckedSignatures<T> {
-    type Error = failure::Error;
+    type Error = Error;
 
-    fn try_from(proto: network::proto::ConsensusMsg) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::ConsensusMsg) -> Result<Self> {
         match proto.message {
             Some(network::proto::ConsensusMsg_oneof::Proposal(proposal)) => proposal.try_into(),
             _ => bail!("Missing proposal"),
@@ -164,9 +164,9 @@ impl<T: Payload> fmt::Display for ProposalMsg<T> {
 }
 
 impl<T: Payload> TryFrom<ProposalMsg<T>> for network::proto::Proposal {
-    type Error = failure::Error;
+    type Error = Error;
 
-    fn try_from(proposal: ProposalMsg<T>) -> failure::Result<Self> {
+    fn try_from(proposal: ProposalMsg<T>) -> Result<Self> {
         Ok(Self {
             bytes: lcs::to_bytes(&proposal)?,
         })

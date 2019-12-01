@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{common::Author, timeout::Timeout, vote_data::VoteData};
-use failure::{ensure, Context};
+use anyhow::{ensure, Context};
 use libra_crypto::hash::CryptoHash;
 use libra_types::{
     crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
@@ -120,7 +120,7 @@ impl Vote {
 
     /// Verifies that the consensus data hash of LedgerInfo corresponds to the vote info,
     /// and then verifies the signature.
-    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
         ensure!(
             self.ledger_info.consensus_data_hash() == self.vote_data.hash(),
             "Vote's hash mismatch with LedgerInfo"

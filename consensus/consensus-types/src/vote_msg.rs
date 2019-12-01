@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{sync_info::SyncInfo, vote::Vote};
-#[cfg(any(test, feature = "fuzzing"))]
-use failure::bail;
-use failure::ensure;
+use anyhow::ensure;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 #[cfg(any(test, feature = "fuzzing"))]
@@ -51,7 +49,7 @@ impl VoteMsg {
         self.vote.epoch()
     }
 
-    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
         ensure!(
             self.vote().epoch() == self.sync_info.epoch(),
             "VoteMsg has different epoch"
@@ -65,28 +63,28 @@ impl VoteMsg {
 
 #[cfg(any(test, feature = "fuzzing"))]
 impl TryFrom<network::proto::ConsensusMsg> for VoteMsg {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(proto: network::proto::ConsensusMsg) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::ConsensusMsg) -> anyhow::Result<Self> {
         match proto.message {
             Some(network::proto::ConsensusMsg_oneof::VoteMsg(vote_msg)) => vote_msg.try_into(),
-            _ => bail!("Missing vote"),
+            _ => anyhow::bail!("Missing vote"),
         }
     }
 }
 
 impl TryFrom<network::proto::VoteMsg> for VoteMsg {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(proto: network::proto::VoteMsg) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::VoteMsg) -> anyhow::Result<Self> {
         Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }
 
 impl TryFrom<VoteMsg> for network::proto::VoteMsg {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(vote_msg: VoteMsg) -> failure::Result<Self> {
+    fn try_from(vote_msg: VoteMsg) -> anyhow::Result<Self> {
         Ok(Self {
             bytes: lcs::to_bytes(&vote_msg)?,
         })

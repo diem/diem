@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{common::Round, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate};
-use failure::{ensure, Context};
+use anyhow::{ensure, Context};
 use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use network;
@@ -82,7 +82,7 @@ impl SyncInfo {
         std::cmp::max(self.hqc_round(), self.htc_round())
     }
 
-    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
         let epoch = self.highest_quorum_cert.certified_block().epoch();
         ensure!(
             epoch == self.highest_commit_cert.certified_block().epoch(),
@@ -120,17 +120,17 @@ impl SyncInfo {
 }
 
 impl TryFrom<network::proto::SyncInfo> for SyncInfo {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(proto: network::proto::SyncInfo) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::SyncInfo) -> anyhow::Result<Self> {
         Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }
 
 impl TryFrom<SyncInfo> for network::proto::SyncInfo {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(info: SyncInfo) -> failure::Result<Self> {
+    fn try_from(info: SyncInfo) -> anyhow::Result<Self> {
         Ok(Self {
             bytes: lcs::to_bytes(&info)?,
         })
