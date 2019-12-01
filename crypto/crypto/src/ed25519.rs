@@ -30,9 +30,9 @@
 //! testing purposes. Production code should find an alternate means for secure key generation.
 
 use crate::{traits::*, HashValue};
+use anyhow::{anyhow, Result};
 use core::convert::TryFrom;
 use ed25519_dalek;
-use failure::prelude::*;
 use libra_crypto_derive::{SilentDebug, SilentDisplay};
 use serde::{de, ser};
 use std::fmt;
