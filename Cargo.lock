@@ -202,6 +202,7 @@ name = "benchmark"
 version = "0.1.0"
 dependencies = [
  "admission-control-proto 0.1.0",
+ "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "client 0.1.0",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "generate-keypair 0.1.0",
@@ -209,7 +210,6 @@ dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
- "libra-failure-ext 0.1.0",
  "libra-logger 0.1.0",
  "libra-metrics 0.1.0",
  "libra-swarm 0.1.0",

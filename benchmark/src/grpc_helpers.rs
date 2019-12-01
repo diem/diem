@@ -5,8 +5,8 @@ use admission_control_proto::proto::admission_control::{
     AdmissionControlClient, AdmissionControlStatusCode,
     SubmitTransactionResponse as ProtoSubmitTransactionResponse,
 };
+use anyhow::{bail, Result};
 use client::AccountStatus;
-use failure::prelude::*;
 use futures::{
     stream::{self, Stream},
     Future,
@@ -194,7 +194,7 @@ pub fn submit_and_wait_requests(
 fn get_account_state_async(
     client: &AdmissionControlClient,
     address: AccountAddress,
-) -> Result<impl Future<Item = (AccountAddress, ResponseItem), Error = failure::Error>> {
+) -> Result<impl Future<Item = (AccountAddress, ResponseItem), Error = anyhow::Error>> {
     let requested_item = RequestItem::GetAccountState { address };
     let requested_items = vec![requested_item];
     let req = UpdateToLatestLedgerRequest::new(0, requested_items);
