@@ -38,6 +38,7 @@ name = "admission-control-service"
 version = "0.1.0"
 dependencies = [
  "admission-control-proto 0.1.0",
+ "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "assert_matches 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bounded-executor 0.1.0",
  "bytes 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -50,7 +51,6 @@ dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
- "libra-failure-ext 0.1.0",
  "libra-logger 0.1.0",
  "libra-mempool 0.1.0",
  "libra-mempool-shared-proto 0.1.0",

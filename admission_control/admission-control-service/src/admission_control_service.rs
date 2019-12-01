@@ -8,7 +8,7 @@
 use admission_control_proto::proto::admission_control::{
     AdmissionControl, SubmitTransactionRequest, SubmitTransactionResponse,
 };
-use failure::prelude::*;
+use anyhow::{format_err, Result};
 use futures::{
     channel::{mpsc, oneshot},
     executor::block_on,
@@ -38,7 +38,7 @@ impl AdmissionControlService {
     pub fn new(
         ac_sender: mpsc::Sender<(
             SubmitTransactionRequest,
-            oneshot::Sender<failure::Result<SubmitTransactionResponse>>,
+            oneshot::Sender<Result<SubmitTransactionResponse>>,
         )>,
         storage_read_client: Arc<dyn StorageRead>,
     ) -> Self {

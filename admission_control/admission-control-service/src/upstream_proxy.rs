@@ -8,9 +8,9 @@ use admission_control_proto::proto::admission_control::{
     SubmitTransactionResponse,
 };
 use admission_control_proto::AdmissionControlStatus;
+use anyhow::{format_err, Result};
 use bounded_executor::BoundedExecutor;
 use bytes::Bytes;
-use failure::format_err;
 use futures::compat::Future01CompatExt;
 use futures::{
     channel::{mpsc, oneshot},
@@ -95,7 +95,7 @@ pub async fn process_network_messages<M, V>(
     executor: Handle,
     mut client_events: mpsc::Receiver<(
         SubmitTransactionRequest,
-        oneshot::Sender<failure::Result<SubmitTransactionResponse>>,
+        oneshot::Sender<Result<SubmitTransactionResponse>>,
     )>,
 ) where
     M: MempoolClientTrait + Clone + 'static,
@@ -180,7 +180,7 @@ async fn submit_transaction<M, V>(
     request: SubmitTransactionRequest,
     mut upstream_proxy_data: UpstreamProxyData<M, V>,
     peer_id: Option<PeerId>,
-    callback: oneshot::Sender<failure::Result<SubmitTransactionResponse>>,
+    callback: oneshot::Sender<Result<SubmitTransactionResponse>>,
 ) where
     M: MempoolClientTrait,
     V: TransactionValidation,
@@ -249,7 +249,7 @@ async fn submit_transaction_upstream<M, V>(
     request: SubmitTransactionRequest,
     upstream_proxy_data: &mut UpstreamProxyData<M, V>,
     peer_id: Option<PeerId>,
-) -> failure::Result<SubmitTransactionResponse> {
+) -> Result<SubmitTransactionResponse> {
     if let Some(peer_id) = peer_id {
         let result = upstream_proxy_data
             .network_sender
@@ -342,7 +342,7 @@ async fn process_submit_transaction_request<M, V>(
 pub(crate) async fn submit_transaction_to_mempool<M, V>(
     upstream_proxy_data: UpstreamProxyData<M, V>,
     req: SubmitTransactionRequest,
-) -> failure::Result<SubmitTransactionResponse>
+) -> Result<SubmitTransactionResponse>
 where
     M: MempoolClientTrait,
     V: TransactionValidation,
@@ -423,9 +423,7 @@ where
     add_txn_to_mempool(&upstream_proxy_data, add_transaction_request)
 }
 
-fn can_send_txn_to_mempool<M, V>(
-    upstream_proxy_data: &UpstreamProxyData<M, V>,
-) -> failure::Result<bool>
+fn can_send_txn_to_mempool<M, V>(upstream_proxy_data: &UpstreamProxyData<M, V>) -> Result<bool>
 where
     M: MempoolClientTrait,
 {
@@ -444,7 +442,7 @@ where
 fn add_txn_to_mempool<M, V>(
     upstream_proxy_data: &UpstreamProxyData<M, V>,
     add_transaction_request: AddTransactionWithValidationRequest,
-) -> failure::Result<SubmitTransactionResponse>
+) -> Result<SubmitTransactionResponse>
 where
     M: MempoolClientTrait,
 {
