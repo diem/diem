@@ -12,17 +12,17 @@ pub struct EpochRetrievalRequest {
 }
 
 impl TryFrom<network::proto::RequestEpoch> for EpochRetrievalRequest {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(proto: network::proto::RequestEpoch) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::RequestEpoch) -> anyhow::Result<Self> {
         Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }
 
 impl TryFrom<EpochRetrievalRequest> for network::proto::RequestEpoch {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(epoch_retrieval_request: EpochRetrievalRequest) -> failure::Result<Self> {
+    fn try_from(epoch_retrieval_request: EpochRetrievalRequest) -> anyhow::Result<Self> {
         Ok(Self {
             bytes: lcs::to_bytes(&epoch_retrieval_request)?,
         })

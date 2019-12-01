@@ -7,7 +7,7 @@ use crate::{
     quorum_cert::QuorumCert,
     vote_data::VoteData,
 };
-use failure::{bail, ensure, format_err};
+use anyhow::{bail, ensure, format_err};
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::account_address::{AccountAddress, ADDRESS_LENGTH};
 use libra_types::block_info::BlockInfo;
@@ -227,7 +227,7 @@ where
 
     /// Verifies that the proposal and the QC are correctly signed.
     /// If this is the genesis block, we skip these checks.
-    pub fn validate_signatures(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
+    pub fn validate_signatures(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
         match self.block_data.block_type() {
             BlockType::Genesis => bail!("We should not accept genesis from others"),
             BlockType::NilBlock => self.quorum_cert().verify(validator),
@@ -244,7 +244,7 @@ where
 
     /// Makes sure that the proposal makes sense, independently of the current state.
     /// If this is the genesis block, we skip these checks.
-    pub fn verify_well_formed(&self) -> failure::Result<()> {
+    pub fn verify_well_formed(&self) -> anyhow::Result<()> {
         ensure!(
             !self.is_genesis_block(),
             "We should not accept genesis from others"
@@ -268,9 +268,9 @@ impl<T> TryFrom<network::proto::Block> for Block<T>
 where
     T: DeserializeOwned + Serialize,
 {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(proto: network::proto::Block) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::Block) -> anyhow::Result<Self> {
         Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }
@@ -279,9 +279,9 @@ impl<T> TryFrom<Block<T>> for network::proto::Block
 where
     T: Serialize + Default + PartialEq,
 {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(block: Block<T>) -> failure::Result<Self> {
+    fn try_from(block: Block<T>) -> anyhow::Result<Self> {
         Ok(Self {
             bytes: lcs::to_bytes(&block)?,
         })
