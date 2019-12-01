@@ -7,13 +7,13 @@ use crate::{
     state_replication::TxnManager,
     util::time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},
 };
+use anyhow::{bail, ensure, format_err, Context};
 use consensus_types::{
     block::Block,
     block_data::BlockData,
     common::{Author, Payload, Round},
     quorum_cert::QuorumCert,
 };
-use failure::Context;
 use libra_logger::prelude::*;
 use std::{
     sync::{Arc, Mutex},
@@ -72,7 +72,7 @@ impl<T: Payload> ProposalGenerator<T> {
     }
 
     /// Creates a NIL block proposal extending the highest certified block from the block store.
-    pub fn generate_nil_block(&self, round: Round) -> failure::Result<Block<T>> {
+    pub fn generate_nil_block(&self, round: Round) -> anyhow::Result<Block<T>> {
         let hqc = self.ensure_highest_quorum_cert(round)?;
         Ok(Block::new_nil(round, hqc.as_ref().clone()))
     }
@@ -91,7 +91,7 @@ impl<T: Payload> ProposalGenerator<T> {
         &self,
         round: Round,
         round_deadline: Instant,
-    ) -> failure::Result<BlockData<T>> {
+    ) -> anyhow::Result<BlockData<T>> {
         {
             let mut last_round_generated = self.last_round_generated.lock().unwrap();
             if *last_round_generated < round {
@@ -211,7 +211,7 @@ impl<T: Payload> ProposalGenerator<T> {
         ))
     }
 
-    fn ensure_highest_quorum_cert(&self, round: Round) -> failure::Result<Arc<QuorumCert>> {
+    fn ensure_highest_quorum_cert(&self, round: Round) -> anyhow::Result<Arc<QuorumCert>> {
         let hqc = self.block_store.highest_quorum_cert();
         ensure!(
             hqc.certified_block().round() < round,

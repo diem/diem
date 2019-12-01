@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{counters, state_replication::TxnManager};
+use anyhow::Result;
 use executor::StateComputeResult;
-use failure::Result;
 use futures::{compat::Future01CompatExt, future, Future, FutureExt};
 use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::{

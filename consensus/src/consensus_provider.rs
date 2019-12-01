@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use failure::prelude::*;
+use anyhow::Result;
 use libra_config::config::NodeConfig;
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 

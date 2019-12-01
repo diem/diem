@@ -9,12 +9,12 @@ use crate::{
     counters,
     state_replication::StateComputer,
 };
+use anyhow::{bail, ensure, format_err, Context};
 use consensus_types::{
     block::Block, common::Payload, executed_block::ExecutedBlock, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use executor::ProcessedVMOutput;
-use failure::Context;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 
@@ -159,7 +159,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn commit(
         &self,
         finality_proof: LedgerInfoWithSignatures,
-    ) -> failure::Result<Vec<Arc<ExecutedBlock<T>>>> {
+    ) -> anyhow::Result<Vec<Arc<ExecutedBlock<T>>>> {
         let block_id_to_commit = finality_proof.ledger_info().consensus_block_id();
         let block_to_commit = self
             .get_block(block_id_to_commit)
@@ -181,7 +181,7 @@ impl<T: Payload> BlockStore<T> {
                 finality_proof,
             )
             .await
-            .unwrap_or_else(|e| unrecoverable!("Failed to persist commit due to {:?}", e));
+            .expect("Failed to persist commit");
         counters::LAST_COMMITTED_ROUND.set(block_to_commit.round() as i64);
         debug!("{}Committed{} {}", Fg(Blue), Fg(Reset), *block_to_commit);
         event!("committed",
@@ -241,7 +241,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn execute_and_insert_block(
         &self,
         block: Block<T>,
-    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
+    ) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
         if let Some(existing_block) = self.get_block(block.id()) {
             return Ok(existing_block);
         }
@@ -252,7 +252,7 @@ impl<T: Payload> BlockStore<T> {
         self.inner.write().unwrap().insert_block(executed_block)
     }
 
-    async fn execute_block(&self, block: Block<T>) -> failure::Result<ExecutedBlock<T>> {
+    async fn execute_block(&self, block: Block<T>) -> anyhow::Result<ExecutedBlock<T>> {
         let parent_block = match self.verify_and_get_parent(&block) {
             Ok(t) => t,
             Err(e) => {
@@ -291,7 +291,7 @@ impl<T: Payload> BlockStore<T> {
     }
 
     /// Validates quorum certificates and inserts it into block tree assuming dependencies exist.
-    pub fn insert_single_quorum_cert(&self, qc: QuorumCert) -> failure::Result<()> {
+    pub fn insert_single_quorum_cert(&self, qc: QuorumCert) -> anyhow::Result<()> {
         // If the parent block is not the root block (i.e not None), ensure the executed state
         // of a block is consistent with its QuorumCert, otherwise persist the QuorumCert's
         // state and on restart, a new execution will agree with it.  A new execution will match
@@ -318,7 +318,7 @@ impl<T: Payload> BlockStore<T> {
 
     /// Replace the highest timeout certificate in case the given one has a higher round.
     /// In case a timeout certificate is updated, persist it to storage.
-    pub fn insert_timeout_certificate(&self, tc: Arc<TimeoutCertificate>) -> failure::Result<()> {
+    pub fn insert_timeout_certificate(&self, tc: Arc<TimeoutCertificate>) -> anyhow::Result<()> {
         let cur_tc_round = self.highest_timeout_cert().map_or(0, |tc| tc.round());
         if tc.round() <= cur_tc_round {
             return Ok(());
@@ -383,7 +383,7 @@ impl<T: Payload> BlockStore<T> {
         id_to_remove
     }
 
-    fn verify_and_get_parent(&self, block: &Block<T>) -> failure::Result<Arc<ExecutedBlock<T>>> {
+    fn verify_and_get_parent(&self, block: &Block<T>) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
         ensure!(
             self.inner.read().unwrap().root().round() < block.round(),
             "Block with old round"
@@ -480,7 +480,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn insert_block_with_qc(
         &self,
         block: Block<T>,
-    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
+    ) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
         Ok(self.execute_and_insert_block(block).await?)
     }
@@ -489,7 +489,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn insert_reconfiguration_block(
         &self,
         block: Block<T>,
-    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
+    ) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
         let executed_block = self.execute_block(block).await?;
         let mut output = executed_block.output().as_ref().clone();

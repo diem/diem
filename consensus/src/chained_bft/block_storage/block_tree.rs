@@ -6,6 +6,7 @@ use crate::{
     chained_bft::block_storage::VoteReceptionResult, counters,
     util::time_service::duration_since_epoch,
 };
+use anyhow::bail;
 use consensus_types::{
     executed_block::ExecutedBlock, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
@@ -204,7 +205,7 @@ where
     pub(super) fn insert_block(
         &mut self,
         block: ExecutedBlock<T>,
-    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
+    ) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
         let block_id = block.id();
         if let Some(existing_block) = self.get_block(&block_id) {
             debug!("Already had block {:?} for id {:?} when trying to add another block {:?} for the same id",
@@ -226,7 +227,7 @@ where
         }
     }
 
-    pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> failure::Result<()> {
+    pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> anyhow::Result<()> {
         let block_id = qc.certified_block().id();
         let qc = Arc::new(qc);
 

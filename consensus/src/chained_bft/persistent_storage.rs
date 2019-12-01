@@ -4,11 +4,11 @@
 use crate::{
     chained_bft::consensusdb::ConsensusDB, consensus_provider::create_storage_read_client,
 };
+use anyhow::{format_err, Context, Result};
 use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
-use failure::{Context, Result};
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -310,7 +310,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
                     .into(),
             ),
         )
-        .unwrap_or_else(|e| unrecoverable!("Can not construct recovery data due to {}", e));
+        .expect("Cannot construct recovery data");
 
         (self as &dyn PersistentStorage<T>)
             .prune_tree(initial_data.take_blocks_to_prune())
