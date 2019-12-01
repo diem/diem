@@ -73,7 +73,7 @@ use crate::{
     node_type::{Node, NodeKey},
     StaleNodeIndex, TreeReader, TreeUpdateBatch,
 };
-use failure::prelude::*;
+use anyhow::{bail, Result};
 use libra_crypto::HashValue;
 use libra_types::transaction::Version;
 use std::{

@@ -5,7 +5,7 @@ use crate::{
     iterator::JellyfishMerkleIterator, mock_tree_store::MockTreeStore, test_helper::plus_one,
     JellyfishMerkleTree,
 };
-use failure::prelude::*;
+use anyhow::Result;
 use libra_crypto::HashValue;
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 use rand::{rngs::StdRng, SeedableRng};
