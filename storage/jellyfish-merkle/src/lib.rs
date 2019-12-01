@@ -80,7 +80,7 @@ pub mod restore;
 mod test_helper;
 mod tree_cache;
 
-use failure::prelude::*;
+use anyhow::{bail, ensure, format_err, Result};
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
     account_state_blob::AccountStateBlob,
