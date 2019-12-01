@@ -8,9 +8,9 @@ pub mod util;
 #[cfg(test)]
 mod unit_tests;
 
+use anyhow::Result;
 use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
 use bytecode_verifier::VerifiedModule;
-use failure::prelude::*;
 use ir_to_bytecode::{
     compiler::{compile_module, compile_program},
     parser::{ast::Loc, parse_program},

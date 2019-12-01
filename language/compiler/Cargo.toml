@@ -10,8 +10,8 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
-failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
 ir-to-bytecode = { path = "ir-to-bytecode", version = "0.1.0" }
 bytecode-source-map = { path = "bytecode-source-map", version = "0.1.0" }
 stdlib = { path = "../stdlib", version = "0.1.0" }

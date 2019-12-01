@@ -718,10 +718,10 @@ dependencies = [
 name = "compiler"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecode-source-map 0.1.0",
  "bytecode-verifier 0.1.0",
  "ir-to-bytecode 0.1.0",
- "libra-failure-ext 0.1.0",
  "libra-types 0.1.0",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
