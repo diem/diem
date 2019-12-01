@@ -16,4 +16,4 @@ quote = "1.0.0"
 proc-macro2 = "1.0.1"
 
 [dev-dependencies]
-failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext"}
+anyhow = "1.0"

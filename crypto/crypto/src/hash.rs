@@ -88,8 +88,8 @@
 //! }
 //! ```
 
+use anyhow::{ensure, Result};
 use bytes::Bytes;
-use failure::prelude::*;
 use lazy_static::lazy_static;
 use libra_nibble::Nibble;
 use mirai_annotations::*;

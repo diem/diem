@@ -7,8 +7,8 @@
 //! [`bls12381`] modules.
 
 use crate::HashValue;
+use anyhow::Result;
 use core::convert::{From, TryFrom};
-use failure::prelude::*;
 use std::{fmt::Debug, hash::Hash};
 use thiserror::Error;
 
