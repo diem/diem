@@ -5,7 +5,7 @@
 
 pub mod proto;
 
-use failure::prelude::*;
+use anyhow::{format_err, Error, Result};
 use libra_logger::prelude::*;
 use libra_mempool_shared_proto::MempoolAddTransactionStatus;
 use libra_types::vm_error::VMStatus;
