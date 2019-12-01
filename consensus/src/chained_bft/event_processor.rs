@@ -18,6 +18,7 @@ use crate::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },
 };
+use anyhow::{ensure, format_err, Context};
 use consensus_types::{
     accumulator_extension_proof::AccumulatorExtensionProof,
     block::Block,
@@ -30,7 +31,6 @@ use consensus_types::{
     vote_msg::VoteMsg,
     vote_proposal::VoteProposal,
 };
-use failure::Context;
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
 use libra_prost_ext::MessageExt;
@@ -167,7 +167,7 @@ impl<T: Payload> EventProcessor<T> {
     async fn generate_proposal(
         &self,
         new_round_event: NewRoundEvent,
-    ) -> failure::Result<ProposalMsg<T>> {
+    ) -> anyhow::Result<ProposalMsg<T>> {
         // Proposal generator will ensure that at most one proposal is generated per round
         let proposal = self
             .proposal_generator
@@ -279,7 +279,7 @@ impl<T: Payload> EventProcessor<T> {
         sync_info: &SyncInfo,
         author: Author,
         help_remote: bool,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         if help_remote {
             self.help_remote_if_stale(author, sync_info.highest_round(), sync_info.hqc_round())
                 .await;
@@ -412,7 +412,7 @@ impl<T: Payload> EventProcessor<T> {
         self.network.broadcast_vote(timeout_vote_msg).await
     }
 
-    async fn gen_backup_vote(&mut self, round: Round) -> failure::Result<Vote> {
+    async fn gen_backup_vote(&mut self, round: Round) -> anyhow::Result<Vote> {
         // We generally assume that this function is called only if no votes have been sent in this
         // round, but having a duplicate proposal here would work ok because block store makes
         // sure the calls to `execute_and_insert_block` are idempotent.
@@ -439,7 +439,7 @@ impl<T: Payload> EventProcessor<T> {
         &mut self,
         qc: &QuorumCert,
         tc: Option<&TimeoutCertificate>,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         self.safety_rules.update(qc);
         let consensus_state = self.safety_rules.consensus_state();
         counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
@@ -628,7 +628,7 @@ impl<T: Payload> EventProcessor<T> {
     /// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.
     ///
     /// This function assumes that it might be called from different tasks concurrently.
-    async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> failure::Result<Vote> {
+    async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> anyhow::Result<Vote> {
         let executed_block = self
             .block_store
             .execute_and_insert_block(proposed_block)
@@ -733,7 +733,7 @@ impl<T: Payload> EventProcessor<T> {
     /// If a new QC / TC is formed then
     /// 1) fetch missing dependencies if required, and then
     /// 2) call process_certificates(), which will start a new round in return.
-    async fn add_vote(&mut self, vote: &Vote) -> failure::Result<()> {
+    async fn add_vote(&mut self, vote: &Vote) -> anyhow::Result<()> {
         // Add the vote and check whether it completes a new QC or a TC
         match self.block_store.insert_vote(vote, &self.validators) {
             VoteReceptionResult::NewQuorumCertificate(qc) => {
@@ -748,7 +748,7 @@ impl<T: Payload> EventProcessor<T> {
         &mut self,
         qc: Arc<QuorumCert>,
         preferred_peer: Author,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         let deadline = self.pacemaker.current_round_deadline();
         // Process local highest commit cert should be no-op, this will sync us to the QC
         self.block_store
@@ -765,7 +765,7 @@ impl<T: Payload> EventProcessor<T> {
         self.process_certificates(qc.as_ref(), None).await
     }
 
-    async fn new_tc_aggregated(&mut self, tc: Arc<TimeoutCertificate>) -> failure::Result<()> {
+    async fn new_tc_aggregated(&mut self, tc: Arc<TimeoutCertificate>) -> anyhow::Result<()> {
         self.block_store
             .insert_timeout_certificate(tc.clone())
             .context("Failed to process a newly aggregated TC")?;

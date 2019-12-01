@@ -3,11 +3,11 @@
 
 use crate::chained_bft::persistent_storage::{PersistentStorage, RecoveryData};
 
+use anyhow::Result;
 use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
-use failure::Result;
 use libra_crypto::HashValue;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use libra_types::ledger_info::LedgerInfo;

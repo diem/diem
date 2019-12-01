@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{counters, state_replication::StateComputer};
+use anyhow::Result;
 use consensus_types::block::Block;
 use consensus_types::executed_block::ExecutedBlock;
 use executor::{CommittableBlock, ExecutedTrees, Executor, ProcessedVMOutput};
-use failure::Result;
 use futures::{Future, FutureExt};
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::ValidatorChangeEventWithProof;

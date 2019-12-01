@@ -14,9 +14,9 @@ use crate::{
     state_replication::{StateComputer, StateMachineReplication, TxnManager},
     util::time_service::ClockTimeService,
 };
+use anyhow::Result;
 use channel;
 use consensus_types::common::{Payload, Round};
-use failure::prelude::*;
 use futures::{select, stream::StreamExt};
 use libra_config::config::{ConsensusConfig, ConsensusProposerType, SafetyRulesConfig};
 use libra_logger::prelude::*;

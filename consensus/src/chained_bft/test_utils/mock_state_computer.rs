@@ -5,10 +5,10 @@ use crate::{
     chained_bft::test_utils::{mock_storage::MockStorage, TestPayload},
     state_replication::StateComputer,
 };
+use anyhow::{format_err, Result};
 use consensus_types::block::Block;
 use consensus_types::executed_block::ExecutedBlock;
 use executor::{ExecutedTrees, ProcessedVMOutput};
-use failure::Result;
 use futures::{channel::mpsc, future, Future, FutureExt};
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof};

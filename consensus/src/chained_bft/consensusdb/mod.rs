@@ -10,8 +10,8 @@ use crate::chained_bft::consensusdb::schema::{
     quorum_certificate::QCSchema,
     single_entry::{SingleEntryKey, SingleEntrySchema},
 };
+use anyhow::{ensure, Result};
 use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert};
-use failure::prelude::*;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
@@ -44,9 +44,8 @@ impl ConsensusDB {
 
         let path = db_root_path.as_ref().join("consensusdb");
         let instant = Instant::now();
-        let db = DB::open(path.clone(), cf_opts_map).unwrap_or_else(|e| {
-            unrecoverable!("ConsensusDB open failed due to {:?}, unable to continue", e)
-        });
+        let db = DB::open(path.clone(), cf_opts_map)
+            .expect("ConsensusDB open failed; unable to continue");
 
         info!(
             "Opened ConsensusDB at {:?} in {} ms",

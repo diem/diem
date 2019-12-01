@@ -8,6 +8,7 @@ use crate::{
     },
     counters,
 };
+use anyhow::{bail, format_err};
 use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus};
 use consensus_types::{
     block::Block,
@@ -15,7 +16,6 @@ use consensus_types::{
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
 };
-use failure;
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
 use libra_types::validator_change::ValidatorChangeEventWithProof;
@@ -77,7 +77,7 @@ impl<T: Payload> BlockStore<T> {
         &self,
         sync_info: &SyncInfo,
         mut retriever: BlockRetriever,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         self.process_highest_commit_cert(sync_info.highest_commit_cert().clone(), &mut retriever)
             .await?;
 
@@ -102,7 +102,7 @@ impl<T: Payload> BlockStore<T> {
         &self,
         qc: QuorumCert,
         mut retriever: BlockRetriever,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         let mut pending = vec![];
         let mut retrieve_qc = qc.clone();
         loop {
@@ -136,7 +136,7 @@ impl<T: Payload> BlockStore<T> {
         &self,
         highest_commit_cert: QuorumCert,
         retriever: &mut BlockRetriever,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         if !self.need_sync_for_quorum_cert(&highest_commit_cert) {
             return Ok(());
         }
@@ -218,7 +218,7 @@ impl BlockRetriever {
         &'a mut self,
         qc: &'a QuorumCert,
         num_blocks: u64,
-    ) -> failure::Result<Vec<Block<T>>>
+    ) -> anyhow::Result<Vec<Block<T>>>
     where
         T: Payload,
     {

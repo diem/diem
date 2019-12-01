@@ -12,9 +12,9 @@ use crate::{
     state_replication::StateMachineReplication,
     txn_manager::MempoolProxy,
 };
+use anyhow::Result;
 use consensus_types::common::Author;
 use executor::Executor;
-use failure::prelude::*;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
