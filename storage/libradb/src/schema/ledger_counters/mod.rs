@@ -14,8 +14,8 @@
 
 use super::LEDGER_COUNTERS_CF_NAME;
 use crate::{ledger_counters::LedgerCounters, schema::ensure_slice_len_eq};
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt};
-use failure::prelude::*;
 use libra_types::transaction::Version;
 use schemadb::{
     define_schema,
