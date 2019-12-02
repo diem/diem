@@ -1,0 +1,73 @@
+import 0x0.Vector;
+
+main() {
+  let vec: Vector.T<u64>;
+  let zero: u64;
+  let one: u64;
+  let two: u64;
+  let three: u64;
+
+  zero = 0;
+  one = 1;
+  two = 2;
+  three = 3;
+
+  vec = Vector.empty<u64>();
+
+  // test on vector of size 1
+  Vector.push_back<u64>(&mut vec, copy(zero));
+  assert(Vector.remove_unstable<u64>(&mut vec, 0) == 0, 70);
+  assert(Vector.length<u64>(&vec) == 0, 71);
+
+  // test normal case
+  Vector.push_back<u64>(&mut vec, copy(zero));
+  Vector.push_back<u64>(&mut vec, copy(one));
+  Vector.push_back<u64>(&mut vec, copy(two));
+  Vector.push_back<u64>(&mut vec, copy(three));
+  assert(Vector.remove_unstable<u64>(&mut vec, 1) == 1, 72);
+  assert(Vector.length<u64>(&vec) == 3, 73);
+  assert(Vector.get<u64>(&vec, 0) == 0, 74);
+  assert(Vector.get<u64>(&vec, 1) == 3, 75);
+  assert(Vector.get<u64>(&vec, 2) == 2, 76);
+
+  // test remove last element case
+  assert(Vector.remove_unstable<u64>(&mut vec, 2) == 2, 77);
+  assert(Vector.length<u64>(&vec) == 2, 73);
+  assert(Vector.get<u64>(&vec, 0) == 0, 74);
+  assert(Vector.get<u64>(&vec, 1) == 3, 75);
+
+  return;
+}
+
+// check: EXECUTED
+
+//! new-transaction
+import 0x0.Vector;
+// remove on empty vector should fail
+main() {
+  let vec: Vector.T<u64>;
+
+  vec = Vector.empty<u64>();
+  _  = Vector.remove_unstable<u64>(&mut vec, 0);
+
+  return;
+}
+
+// check: ABORTED
+// check: 10
+
+//! new-transaction
+import 0x0.Vector;
+// remove on out-of-bounds index should fail
+main() {
+  let vec: Vector.T<u64>;
+
+  vec = Vector.empty<u64>();
+  Vector.push_back<u64>(&mut vec, 0);
+  _ = Vector.remove_unstable<u64>(&mut vec, 1);
+
+  return;
+}
+
+// check: NATIVE_FUNCTION_ERROR
+// check: 1

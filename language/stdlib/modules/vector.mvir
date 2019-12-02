@@ -25,7 +25,8 @@ module Vector {
   // Destroy the vector, abort if not empty.
   native public destroy_empty<Element>(v: Self.T<Element>);
 
-  // Swaps the elements at the i'th and j'th indices in the vector.
+  // Swaps the elements at the `i`th and `j`th indices in the vector.
+  // Aborts if either index is out of bounds.
   native public swap<Element>(v: &mut Self.T<Element>, i: u64, j: u64);
 
   // Reverses the order of the elements in the vector in place.
@@ -103,6 +104,26 @@ module Vector {
     }
 
     return false;
+  }
+
+  // Remove the `i`th element E of the vector by swapping it with the last element L, popping E
+  // off the back of the vector, and returning it. L will now be stored at index i.
+  // Note: this may violate any ordering invariant that has been established for the vector (e.g.,
+  // sorting).
+  // Aborts if `i` is out of bounds.
+  public remove_unstable<Element>(v: &mut Self.T<Element>, i: u64): Element {
+    let last_index: u64;
+
+    if (Self.is_empty<Element>(freeze(copy(v)))) {
+        // i out of bounds; abort
+        abort(10);
+    }
+
+    last_index = Self.length<Element>(freeze(copy(v))) - 1;
+    if (copy(i) != copy(last_index)) {
+        Self.swap<Element>(copy(v), move(i), move(last_index));
+    } // else, no need for swap, since i is already the last index
+    return Self.pop_back<Element>(move(v));
   }
 
 }
