@@ -40,7 +40,7 @@ resource "aws_instance" "fullnode" {
 
 data "local_file" "fullnode_keys" {
   count    = var.num_fullnodes
-  filename = "${var.validator_set}/fn/${var.fullnode_ids[count.index]}.node.network.keys.toml"
+  filename = "${var.validator_set}/fn/${var.fullnode_ids[count.index]}.network.keys.toml"
 }
 
 resource "aws_secretsmanager_secret" "fullnode_network" {

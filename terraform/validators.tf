@@ -189,7 +189,7 @@ resource "aws_instance" "validator" {
 
 data "local_file" "consensus_keys" {
   count    = length(var.peer_ids)
-  filename = "${var.validator_set}/val/${var.peer_ids[count.index]}.node.consensus.keys.toml"
+  filename = "${var.validator_set}/val/${var.peer_ids[count.index]}.consensus.keys.toml"
 }
 
 resource "aws_secretsmanager_secret" "validator_consensus" {
@@ -206,7 +206,7 @@ resource "aws_secretsmanager_secret_version" "validator_consensus" {
 
 data "local_file" "network_keys" {
   count    = length(var.peer_ids)
-  filename = "${var.validator_set}/val/${var.peer_ids[count.index]}.node.network.keys.toml"
+  filename = "${var.validator_set}/val/${var.peer_ids[count.index]}.network.keys.toml"
 }
 
 resource "aws_secretsmanager_secret" "validator_network" {
