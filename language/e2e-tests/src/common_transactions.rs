@@ -11,6 +11,7 @@ use libra_types::{
     transaction::{SignedTransaction, TransactionArgument},
 };
 use stdlib::transaction_scripts;
+use transaction_builder::{ADD_VALIDATOR_TXN, REGISTER_VALIDATOR_TXN};
 
 lazy_static! {
     /// A serialized transaction to create a new account.
@@ -22,6 +23,24 @@ lazy_static! {
     pub static ref PEER_TO_PEER: Vec<u8> = { peer_to_peer() };
     /// A serialized transaction to change the keys for an account.
     pub static ref ROTATE_KEY: Vec<u8> = { rotate_key() };
+}
+
+/// Returns a transaction to add a new validator
+pub fn add_validator_txn(
+    sender: &Account,
+    new_validator: &Account,
+    seq_num: u64,
+) -> SignedTransaction {
+    let mut args: Vec<TransactionArgument> = Vec::new();
+    args.push(TransactionArgument::Address(*new_validator.address()));
+
+    sender.create_signed_txn_with_args(
+        ADD_VALIDATOR_TXN.clone(),
+        args,
+        seq_num,
+        gas_costs::TXN_RESERVED,
+        1,
+    )
 }
 
 /// Returns a transaction to create a new account with the given arguments.
@@ -63,6 +82,28 @@ pub fn peer_to_peer_txn(
         seq_num,
         gas_costs::TXN_RESERVED, // this is a default for gas
         1,                       // this is a default for gas
+    )
+}
+
+/// Returns a transaction to register the sender as a candidate validator
+pub fn register_validator_txn(
+    sender: &Account,
+    network_signing_pubkey: Vec<u8>,
+    network_identity_pubkey: Vec<u8>,
+    consensus_pubkey: Vec<u8>,
+    seq_num: u64,
+) -> SignedTransaction {
+    let args = vec![
+        TransactionArgument::ByteArray(ByteArray::new(network_signing_pubkey)),
+        TransactionArgument::ByteArray(ByteArray::new(network_identity_pubkey)),
+        TransactionArgument::ByteArray(ByteArray::new(consensus_pubkey)),
+    ];
+    sender.create_signed_txn_with_args(
+        REGISTER_VALIDATOR_TXN.clone(),
+        args,
+        seq_num,
+        gas_costs::TXN_RESERVED,
+        1,
     )
 }
 
