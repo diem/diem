@@ -170,7 +170,7 @@ impl WalletLibrary {
 
 /// WalletLibrary naturally support TransactionSigner trait.
 impl TransactionSigner for WalletLibrary {
-    fn sign_txn(&self, raw_txn: RawTransaction) -> failure::prelude::Result<SignedTransaction> {
+    fn sign_txn(&self, raw_txn: RawTransaction) -> Result<SignedTransaction, anyhow::Error> {
         Ok(self.sign_txn(raw_txn)?)
     }
 }

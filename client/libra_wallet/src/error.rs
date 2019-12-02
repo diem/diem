@@ -1,12 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use failure;
 use libra_crypto::hkdf::HkdfError;
 use std::{convert, error::Error, fmt, io};
 
-/// We define our own Result type in order to not have to import the libra/common/failure_ext
-pub type Result<T> = ::std::result::Result<T, WalletError>;
+pub type Result<T, E = WalletError> = ::std::result::Result<T, E>;
 
 /// Libra Wallet Error is a convenience enum for generating arbitrary WalletErrors. Currently, only
 /// the LibraWalletGeneric error is being used, but there are plans to add more specific errors as
@@ -58,8 +56,8 @@ impl convert::From<io::Error> for WalletError {
     }
 }
 
-impl convert::From<failure::prelude::Error> for WalletError {
-    fn from(err: failure::prelude::Error) -> WalletError {
+impl convert::From<anyhow::Error> for WalletError {
+    fn from(err: anyhow::Error) -> WalletError {
         WalletError::LibraWalletGeneric(format!("{}", err))
     }
 }
