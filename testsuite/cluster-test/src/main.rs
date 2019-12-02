@@ -463,16 +463,16 @@ impl ClusterTestRunner {
         self.cleanup();
         loop {
             let hash = self.wait_for_new_tag();
-            let upstream_tag = self
+            let master_tag = self
                 .deployment_manager
-                .get_upstream_tag(&hash)
+                .get_master_tag(&hash)
                 .unwrap_or_else(|e| {
                     warn!("Failed to get upstream tag for {}: {}", hash, e);
                     "<unknown tag>".to_string()
                 });
             info!(
                 "New version of `{}` tag({}) is available: `{}`",
-                SOURCE_TAG, upstream_tag, hash
+                SOURCE_TAG, master_tag, hash
             );
             match self.redeploy(&hash) {
                 Err(e) => {
@@ -549,7 +549,7 @@ impl ClusterTestRunner {
         }
         let marker = self
             .deployment_manager
-            .get_upstream_tag(hash)
+            .get_master_tag(hash)
             .map_err(|e| format_err!("Failed to get upstream tag: {}", e))?;
         self.fetch_genesis(&marker)?;
         self.deployment_manager.redeploy(hash.to_string())?;
