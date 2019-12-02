@@ -10,10 +10,10 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 grpcio = { version = "=0.5.0-alpha.4", default-features = false }
 futures = { version = "0.3.0", features = ["compat"] }
 futures_01 = { version = "0.1.28", package = "futures" }
 
-failure = { package = "libra-failure-ext", path = "../failure-ext", version = "0.1.0" }
 libra-logger = { path = "../logger", version = "0.1.0" }
 libra-metrics = { path = "../metrics", version = "0.1.0" }
