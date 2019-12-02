@@ -1,0 +1,9 @@
+// Script for adding a new validator
+// Will only succeed when run by the Association address
+
+import 0x0.LibraSystem;
+main(new_validator: address) {
+  LibraSystem.remove_validator(move(new_validator));
+
+  return;
+}
