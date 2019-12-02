@@ -11,6 +11,9 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Tool to manage and create Libra Configs")]
 struct Args {
+    #[structopt(short = "4", long)]
+    /// Use IPv4 Addresses
+    ipv4: bool,
     #[structopt(short = "b", long, parse(from_os_str))]
     /// Base config to use
     base: Option<PathBuf>,
@@ -57,6 +60,9 @@ fn main() {
         .with_faucet_keypair(faucet_account_keypair)
         .with_upstream_config_dir(args.upstream_config_dir.clone());
 
+    if args.ipv4 {
+        config_builder.with_ipv4();
+    }
     if args.discovery {
         config_builder.force_discovery();
     }
