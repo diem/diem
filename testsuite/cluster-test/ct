@@ -5,7 +5,7 @@ set -e
 
 DOCKER_IMAGE="cluster-test:latest"
 WAIT_TO="45m"
-CONTAINER="cluster-test-$RANDOM"
+export CONTAINER="cluster-test-$RANDOM"
 WORKPLACE="cluster-test"
 
 while (( "$#" )); do
