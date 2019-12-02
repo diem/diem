@@ -251,6 +251,16 @@ impl HashValue {
     pub fn short_str(&self) -> String {
         hex::encode(&self.hash[0..SHORT_STRING_LENGTH]).to_string()
     }
+
+    /// Full hex representation of a given hash value.
+    pub fn to_hex(&self) -> String {
+        hex::encode(self.hash).to_string()
+    }
+
+    /// Parse a given hex string to a hash value.
+    pub fn from_hex(hex_str: &str) -> Result<Self> {
+        Self::from_slice(hex::decode(hex_str)?.as_slice())
+    }
 }
 
 // TODO(#1307)
