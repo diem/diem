@@ -7,3 +7,4 @@ pub mod config;
 pub mod generator;
 pub mod keys;
 pub mod utils;
+pub mod waypoint;

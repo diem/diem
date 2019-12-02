@@ -40,6 +40,7 @@ pub use safety_rules_config::*;
 mod test_config;
 pub use test_config::*;
 mod vm_config;
+use crate::waypoint::Waypoint;
 pub use vm_config::*;
 
 /// Config pulls in configuration information from the config file.
@@ -85,6 +86,7 @@ pub struct NodeConfig {
 pub struct BaseConfig {
     pub data_dir: PathBuf,
     pub role: RoleType,
+    pub waypoint: Option<Waypoint>,
 }
 
 impl Default for BaseConfig {
@@ -92,13 +94,18 @@ impl Default for BaseConfig {
         BaseConfig {
             data_dir: PathBuf::from("."),
             role: RoleType::Validator,
+            waypoint: None,
         }
     }
 }
 
 impl BaseConfig {
     pub fn new(data_dir: PathBuf, role: RoleType) -> Self {
-        BaseConfig { data_dir, role }
+        BaseConfig {
+            data_dir,
+            role,
+            waypoint: None,
+        }
     }
 
     /// Returns the full path to a file path. If the file_path is relative, it prepends with the
@@ -128,6 +135,10 @@ impl BaseConfig {
         if self.full_path(&PathBuf::from(default_path)).is_file() {
             config_path.push(default_path);
         }
+    }
+
+    pub fn set_waypoint(&mut self, waypoint: Waypoint) {
+        self.waypoint.replace(waypoint);
     }
 }
 
@@ -209,6 +220,13 @@ impl NodeConfig {
         self.base = Arc::new(BaseConfig::new(self.base.data_dir.clone(), role));
         self.prepare();
         Ok(())
+    }
+
+    pub fn set_waypoint(&mut self, waypoint: Waypoint) {
+        let mut base = BaseConfig::new(self.base.data_dir.clone(), self.base.role);
+        base.set_waypoint(waypoint);
+        self.base = Arc::new(base);
+        self.prepare();
     }
 
     pub fn base(&self) -> &Arc<BaseConfig> {
