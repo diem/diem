@@ -39,6 +39,7 @@ pub use safety_rules_config::*;
 mod test_config;
 pub use test_config::*;
 mod vm_config;
+use crate::waypoint::Waypoint;
 pub use vm_config::*;
 
 /// Config pulls in configuration information from the config file.
@@ -84,6 +85,7 @@ pub struct NodeConfig {
 pub struct BaseConfig {
     data_dir: PathBuf,
     pub role: RoleType,
+    pub waypoint: Option<Waypoint>,
 }
 
 impl Default for BaseConfig {
@@ -91,6 +93,7 @@ impl Default for BaseConfig {
         BaseConfig {
             data_dir: PathBuf::from("/opt/libra/data"),
             role: RoleType::Validator,
+            waypoint: None,
         }
     }
 }
