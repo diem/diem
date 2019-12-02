@@ -143,8 +143,8 @@ impl DeploymentManager {
         let digest = self
             .image_digest_by_tag(TESTED_TAG)
             .map_err(|e| format_err!("Failed to get image digest for {}:{}", TESTED_TAG, e))?;
-        let prev_upstream_tag = self.get_upstream_tag(&digest)?;
-        Ok(prev_upstream_tag[UPSTREAM_PREFIX.len()..].to_string())
+        let prev_master_tag = self.get_master_tag(&digest)?;
+        Ok(prev_master_tag[MASTER_PREFIX.len()..].to_string())
     }
 
     pub fn tag_tested_image(&mut self, hash: String) -> failure::Result<String> {
@@ -153,12 +153,12 @@ impl DeploymentManager {
             image_tag: None,
         };
         self.tag_image(VALIDATOR_IMAGE_REPO, &image_id, TESTED_TAG)?;
-        let upstream_tag = self.get_upstream_tag(&hash)?;
+        let master_tag = self.get_master_tag(&hash)?;
         self.tag_image(
             CLIENT_IMAGE_REPO,
             &ImageIdentifier {
                 image_digest: None,
-                image_tag: Some(upstream_tag.clone()),
+                image_tag: Some(master_tag.clone()),
             },
             TESTED_TAG,
         )?;
@@ -166,16 +166,16 @@ impl DeploymentManager {
             FAUCET_IMAGE_REPO,
             &ImageIdentifier {
                 image_digest: None,
-                image_tag: Some(upstream_tag.clone()),
+                image_tag: Some(master_tag.clone()),
             },
             TESTED_TAG,
         )?;
 
-        let upstream_commit = upstream_tag[UPSTREAM_PREFIX.len()..].to_string();
+        let upstream_commit = master_tag[MASTER_PREFIX.len()..].to_string();
         Ok(upstream_commit)
     }
 
-    pub fn get_upstream_tag(&self, digest: &str) -> failure::Result<String> {
+    pub fn get_master_tag(&self, digest: &str) -> failure::Result<String> {
         let image_id = ImageIdentifier {
             image_digest: Some(digest.to_string()),
             image_tag: None,
@@ -190,7 +190,7 @@ impl DeploymentManager {
                 Some(tag) => tag,
                 None => continue,
             };
-            if tag.starts_with(UPSTREAM_PREFIX) {
+            if tag.starts_with(MASTER_PREFIX) {
                 return Ok(tag.clone());
             }
         }
