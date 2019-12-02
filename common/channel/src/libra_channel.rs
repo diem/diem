@@ -8,7 +8,7 @@
 //! to be sent out from this channel.
 //! Internally, it uses the `PerKeyQueue` to store messages
 use crate::message_queues::{PerKeyQueue, QueueStyle};
-use failure::prelude::*;
+use anyhow::{ensure, Result};
 use futures::{async_await::FusedStream, stream::Stream};
 use libra_metrics::IntCounterVec;
 use std::{
@@ -49,7 +49,7 @@ impl<K: Eq + Hash + Clone, M> Sender<K, M> {
     /// This adds the message into the internal queue data structure. This is a
     /// synchronous call.
     /// TODO: We can have this return a boolean if the queue of a key is capacity
-    pub fn push(&mut self, key: K, message: M) -> failure::Result<()> {
+    pub fn push(&mut self, key: K, message: M) -> Result<()> {
         let mut shared_state = self.shared_state.lock().unwrap();
         ensure!(!shared_state.receiver_dropped, "Channel is closed");
         shared_state.internal_queue.push(key, message);

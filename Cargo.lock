@@ -530,9 +530,9 @@ dependencies = [
 name = "channel"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libra-failure-ext 0.1.0",
  "libra-logger 0.1.0",
  "libra-metrics 0.1.0",
  "libra-types 0.1.0",
