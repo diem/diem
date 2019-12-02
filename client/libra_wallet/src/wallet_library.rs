@@ -3,7 +3,7 @@
 
 //! The following document is a minimalist version of Libra Wallet. Note that this Wallet does
 //! not promote security as the mnemonic is stored in unencrypted form. In future iterations,
-//! we will be realesing more robust Wallet implementations. It is our intention to present a
+//! we will be releasing more robust Wallet implementations. It is our intention to present a
 //! foundation that is simple to understand and incrementally improve the LibraWallet
 //! implementation and it's security guarantees throughout testnet. For a more robust wallet
 //! reference, the authors suggest to audit the file of the same name in the rust-wallet crate.
@@ -58,7 +58,7 @@ impl WalletLibrary {
         }
     }
 
-    /// Function that returns the string representation of the WalletLibrary Menmonic
+    /// Function that returns the string representation of the WalletLibrary Mnemonic
     /// NOTE: This is not secure, and in general the mnemonic should be stored in encrypted format
     pub fn mnemonic(&self) -> String {
         self.mnemonic.to_string()
