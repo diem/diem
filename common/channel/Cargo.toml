@@ -10,12 +10,12 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 futures = "0.3.0"
 lazy_static = "1.3.0"
 libra-logger = { path = "../logger", version = "0.1.0" }
 libra-metrics = { path = "../metrics", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0"  }
-failure = { path = "../failure-ext", version = "0.1.0", package = "libra-failure-ext" }
 
 [dev-dependencies]
 rusty-fork = "0.2.1"
