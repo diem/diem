@@ -187,7 +187,9 @@ pub fn call_details(op: &Bytecode) -> Vec<CallDetails> {
         | Bytecode::Div
         | Bytecode::BitOr
         | Bytecode::BitAnd
-        | Bytecode::Xor => type_transition! { u64s(2) => u64s(1) },
+        | Bytecode::Xor
+        | Bytecode::Shl
+        | Bytecode::Shr => type_transition! { u64s(2) => u64s(1) },
         Bytecode::Eq | Bytecode::Neq => type_transition! {
             fixed: non_variable_values(2) => bools(1)
         },

@@ -31,10 +31,12 @@ pub enum Tok {
     Semicolon,
     Less,
     LessEqual,
+    LessLess,
     Equal,
     EqualEqual,
     Greater,
     GreaterEqual,
+    GreaterGreater,
     Caret,
     Underscore,
     /// Abort statement in the Move language
@@ -116,57 +118,63 @@ impl<'a> fmt::Display for Token<'a> {
 
 pub struct Lexer<'input> {
     text: &'input str,
-    consumed: usize,
-    previous_end: usize,
-    token: (usize, Token<'input>, usize),
+    prev_end: usize,
+    cur_start: usize,
+    cur_end: usize,
+    token: Tok,
 }
 
 impl<'input> Lexer<'input> {
     pub fn new(s: &'input str) -> Lexer {
         Lexer {
             text: s,
-            consumed: 0,
-            previous_end: 0,
-            token: (0, Token(Tok::EOF, ""), 0),
+            prev_end: 0,
+            cur_start: 0,
+            cur_end: 0,
+            token: Tok::EOF,
         }
     }
 
     pub fn peek(&self) -> Tok {
-        (self.token.1).0
+        self.token
     }
 
     pub fn content(&self) -> &str {
-        (self.token.1).1
+        &self.text[self.cur_start..self.cur_end]
     }
 
     pub fn start_loc(&self) -> usize {
-        self.token.0
+        self.cur_start
     }
 
     pub fn previous_end_loc(&self) -> usize {
-        self.previous_end
+        self.prev_end
     }
 
     pub fn lookahead(&self) -> Result<Tok, ParseError<usize, anyhow::Error>> {
-        let text = self.text.trim_start();
-        let whitespace = self.text.len() - text.len();
-        let start_offset = self.consumed + whitespace;
-        let (tok, _) = find_token(text, start_offset)?;
+        let text = self.text[self.cur_end..].trim_start();
+        let offset = self.text.len() - text.len();
+        let (tok, _) = find_token(text, offset)?;
         Ok(tok)
     }
 
     pub fn advance(&mut self) -> Result<(), ParseError<usize, anyhow::Error>> {
-        self.previous_end = self.token.2;
-        let text = self.text.trim_start();
-        let whitespace = self.text.len() - text.len();
-        let start_offset = self.consumed + whitespace;
-        let (tok, len) = find_token(text, start_offset)?;
-        let result = &text[..len];
-        let remaining = &text[len..];
-        let end_offset = start_offset + len;
-        self.text = remaining;
-        self.consumed = end_offset;
-        self.token = (start_offset, Token(tok, result), end_offset);
+        self.prev_end = self.cur_end;
+        let text = self.text[self.cur_end..].trim_start();
+        self.cur_start = self.text.len() - text.len();
+        let (token, len) = find_token(text, self.cur_start)?;
+        self.cur_end = self.cur_start + len;
+        self.token = token;
+        Ok(())
+    }
+
+    pub fn replace_token(
+        &mut self,
+        token: Tok,
+        len: usize,
+    ) -> Result<(), ParseError<usize, anyhow::Error>> {
+        self.token = token;
+        self.cur_end = self.cur_start + len;
         Ok(())
     }
 }
@@ -277,6 +285,8 @@ fn find_token(
         '<' => {
             if text.starts_with("<=") {
                 (Tok::LessEqual, 2)
+            } else if text.starts_with("<<") {
+                (Tok::LessLess, 2)
             } else {
                 (Tok::Less, 1)
             }
@@ -284,6 +294,8 @@ fn find_token(
         '>' => {
             if text.starts_with(">=") {
                 (Tok::GreaterEqual, 2)
+            } else if text.starts_with(">>") {
+                (Tok::GreaterGreater, 2)
             } else {
                 (Tok::Greater, 1)
             }

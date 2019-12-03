@@ -476,6 +476,10 @@ pub enum BinOp {
     BitAnd,
     /// `^`
     Xor,
+    /// `<<`
+    Shl,
+    /// `>>`
+    Shr,
 
     // Bool ops
     /// `&&`
@@ -1509,6 +1513,8 @@ impl fmt::Display for BinOp {
                 BinOp::BitOr => "|",
                 BinOp::BitAnd => "&",
                 BinOp::Xor => "^",
+                BinOp::Shl => "<<",
+                BinOp::Shr => ">>",
 
                 // Bool ops
                 BinOp::Or => "||",

@@ -537,6 +537,14 @@ where
                         gas!(const_instr: context, self, Opcodes::XOR)?;
                         self.binop_int(|l: u64, r| Some(l ^ r))?
                     }
+                    Bytecode::Shl => {
+                        gas!(const_instr: context, self, Opcodes::SHL)?;
+                        self.binop_int(|l: u64, r| if r < 64 { Some(l << r) } else { None })?
+                    }
+                    Bytecode::Shr => {
+                        gas!(const_instr: context, self, Opcodes::SHR)?;
+                        self.binop_int(|l: u64, r| if r < 64 { Some(l >> r) } else { None })?
+                    }
                     Bytecode::Or => {
                         gas!(const_instr: context, self, Opcodes::OR)?;
                         self.binop_bool(|l, r| l || r)?

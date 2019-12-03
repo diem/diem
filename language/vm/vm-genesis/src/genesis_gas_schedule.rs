@@ -61,6 +61,8 @@ lazy_static! {
             (LdAddr(AddressPoolIndex::new(0)), GasCost::new(36, 1)),
             (Ge, GasCost::new(46, 1)),
             (Xor, GasCost::new(46, 1)),
+            (Shl, GasCost::new(46, 1)),
+            (Shr, GasCost::new(46, 1)),
             (Neq, GasCost::new(51, 1)),
             (Not, GasCost::new(35, 1)),
             (
