@@ -13,10 +13,6 @@
 #![cfg_attr(feature = "fuzzing", allow(dead_code))]
 #![recursion_limit = "512"]
 
-#[allow(unused_imports)]
-#[macro_use]
-extern crate debug_interface;
-
 #[macro_use]
 extern crate prometheus;
 
