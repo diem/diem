@@ -14,6 +14,7 @@ use consensus_types::{
     block::Block, common::Payload, executed_block::ExecutedBlock, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
+use debug_interface::event;
 use executor::ProcessedVMOutput;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
