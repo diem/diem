@@ -733,12 +733,12 @@ dependencies = [
 name = "config-builder"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "generate-keypair 0.1.0",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
- "libra-failure-ext 0.1.0",
  "libra-logger 0.1.0",
  "libra-types 0.1.0",
  "parity-multiaddr 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
