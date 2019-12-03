@@ -1,9 +1,16 @@
 [base]
 role = "validator"
 
+[consensus]
+consensus_keypair_file = "consensus_keypair.config.toml"
+consensus_peers_file = "consensus_peers.config.toml"
+
 [validator_network]
 advertised_address = "/ip4/${self_ip}/tcp/6180"
 peer_id = "${peer_id}"
+network_keypairs_file = "network_keypairs.config.toml"
+network_peers_file = "network_peers.config.toml"
+seed_peers_file = "seed_peers.config.toml"
 
 [[full_node_networks]]
 listen_address = "/ip4/0.0.0.0/tcp/6181"
