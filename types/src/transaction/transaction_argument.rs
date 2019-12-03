@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use crate::{account_address::AccountAddress, byte_array::ByteArray};
-use failure::prelude::*;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 use thiserror::Error;

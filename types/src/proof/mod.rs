@@ -17,7 +17,7 @@ use crate::{
     ledger_info::LedgerInfo,
     transaction::{TransactionInfo, Version},
 };
-use failure::prelude::*;
+use anyhow::{ensure, Result};
 use libra_crypto::{
     hash::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, SparseMerkleInternalHasher,

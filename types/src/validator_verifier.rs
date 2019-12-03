@@ -5,7 +5,7 @@
 
 use crate::account_address::AccountAddress;
 use crate::validator_set::ValidatorSet;
-use failure::prelude::*;
+use anyhow::{ensure, Result};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_crypto::*;
 use mirai_annotations::*;

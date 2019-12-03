@@ -7,7 +7,7 @@ use crate::{
     account_config::AccountEvent, event::EventKey, language_storage::TypeTag,
     ledger_info::LedgerInfo, proof::EventProof, transaction::Version,
 };
-use failure::prelude::*;
+use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher},
     HashValue,

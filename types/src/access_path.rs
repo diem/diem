@@ -47,8 +47,7 @@ use crate::{
     language_storage::{ModuleId, ResourceKey, StructTag},
     validator_set::validator_set_path,
 };
-use failure::prelude::*;
-use hex;
+use anyhow::{Error, Result};
 use lazy_static::lazy_static;
 use libra_crypto::hash::{CryptoHash, HashValue};
 use mirai_annotations::*;

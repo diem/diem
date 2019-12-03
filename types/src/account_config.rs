@@ -12,7 +12,7 @@ use crate::{
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
-use failure::prelude::*;
+use anyhow::{bail, Result};
 use lazy_static::lazy_static;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;

@@ -7,7 +7,7 @@
 //! path it updates. For each access path, the VM can either give its new value or delete it.
 
 use crate::access_path::AccessPath;
-use failure::prelude::*;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]

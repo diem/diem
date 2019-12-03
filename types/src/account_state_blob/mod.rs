@@ -9,7 +9,7 @@ use crate::{
     account_address::AccountAddress, account_config::get_account_resource_or_default,
     ledger_info::LedgerInfo, proof::AccountStateProof, transaction::Version,
 };
-use failure::prelude::*;
+use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher},
     HashValue,
@@ -68,7 +68,7 @@ impl From<Vec<u8>> for AccountStateBlob {
 }
 
 impl TryFrom<&BTreeMap<Vec<u8>, Vec<u8>>> for AccountStateBlob {
-    type Error = failure::Error;
+    type Error = Error;
 
     fn try_from(map: &BTreeMap<Vec<u8>, Vec<u8>>) -> Result<Self> {
         Ok(Self {
@@ -104,7 +104,7 @@ impl From<AccountResource> for AccountStateBlob {
 }
 
 impl TryFrom<&AccountStateBlob> for BTreeMap<Vec<u8>, Vec<u8>> {
-    type Error = failure::Error;
+    type Error = Error;
 
     fn try_from(account_state_blob: &AccountStateBlob) -> Result<Self> {
         lcs::from_bytes(&account_state_blob.blob).map_err(Into::into)

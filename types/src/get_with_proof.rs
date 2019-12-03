@@ -21,7 +21,7 @@ use crate::{
     validator_change::ValidatorChangeEventWithProof,
     validator_verifier::ValidatorVerifier,
 };
-use failure::prelude::*;
+use anyhow::{bail, ensure, format_err, Error, Result};
 use libra_crypto::{hash::CryptoHash, *};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
