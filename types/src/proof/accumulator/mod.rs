@@ -17,7 +17,7 @@ mod accumulator_test;
 
 use super::MerkleTreeInternalNode;
 use crate::proof::definition::{LeafCount, MAX_ACCUMULATOR_LEAVES};
-use failure::prelude::*;
+use anyhow::{ensure, format_err, Result};
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher, ACCUMULATOR_PLACEHOLDER_HASH},
     HashValue,

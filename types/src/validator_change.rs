@@ -5,7 +5,7 @@
 
 use crate::crypto_proxies::ValidatorVerifier;
 use crate::ledger_info::LedgerInfoWithSignatures;
-use failure::*;
+use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::ed25519::*;
 use libra_crypto::*;
 use std::convert::{TryFrom, TryInto};

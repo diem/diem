@@ -10,7 +10,7 @@ use crate::{
     validator_set::ValidatorSet,
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
-use failure::prelude::*;
+use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher},
     HashValue, *,

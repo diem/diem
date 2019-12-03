@@ -3,9 +3,9 @@
 
 #![forbid(unsafe_code)]
 
+use anyhow::{ensure, Error, Result};
 use bech32::{Bech32, FromBase32, ToBase32};
 use bytes05::Bytes;
-use failure::prelude::*;
 use hex;
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher},
@@ -15,7 +15,7 @@ use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
-use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use std::{convert::TryFrom, fmt, str::FromStr};
 
 pub const ADDRESS_LENGTH: usize = 32;
@@ -113,7 +113,7 @@ impl fmt::LowerHex for AccountAddress {
 }
 
 impl TryFrom<&[u8]> for AccountAddress {
-    type Error = failure::Error;
+    type Error = Error;
 
     /// Tries to convert the provided byte array into Address.
     fn try_from(bytes: &[u8]) -> Result<AccountAddress> {
@@ -129,7 +129,7 @@ impl TryFrom<&[u8]> for AccountAddress {
 }
 
 impl TryFrom<&[u8; 32]> for AccountAddress {
-    type Error = failure::Error;
+    type Error = Error;
 
     /// Tries to convert the provided byte array into Address.
     fn try_from(bytes: &[u8; 32]) -> Result<AccountAddress> {
@@ -138,7 +138,7 @@ impl TryFrom<&[u8; 32]> for AccountAddress {
 }
 
 impl TryFrom<Vec<u8>> for AccountAddress {
-    type Error = failure::Error;
+    type Error = Error;
 
     /// Tries to convert the provided byte buffer into Address.
     fn try_from(bytes: Vec<u8>) -> Result<AccountAddress> {
@@ -159,7 +159,7 @@ impl From<&AccountAddress> for Vec<u8> {
 }
 
 impl TryFrom<Bytes> for AccountAddress {
-    type Error = failure::Error;
+    type Error = Error;
 
     fn try_from(bytes: Bytes) -> Result<AccountAddress> {
         AccountAddress::try_from(bytes.as_ref())
@@ -179,7 +179,7 @@ impl From<&AccountAddress> for String {
 }
 
 impl TryFrom<String> for AccountAddress {
-    type Error = failure::Error;
+    type Error = Error;
 
     fn try_from(s: String) -> Result<AccountAddress> {
         assert!(!s.is_empty());
@@ -189,7 +189,7 @@ impl TryFrom<String> for AccountAddress {
 }
 
 impl TryFrom<Bech32> for AccountAddress {
-    type Error = failure::Error;
+    type Error = Error;
 
     fn try_from(encoded_input: Bech32) -> Result<AccountAddress> {
         let base32_hash = encoded_input.data();
@@ -199,7 +199,7 @@ impl TryFrom<Bech32> for AccountAddress {
 }
 
 impl FromStr for AccountAddress {
-    type Err = failure::Error;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
         assert!(!s.is_empty());
@@ -209,7 +209,7 @@ impl FromStr for AccountAddress {
 }
 
 impl TryFrom<AccountAddress> for Bech32 {
-    type Error = failure::Error;
+    type Error = Error;
 
     fn try_from(addr: AccountAddress) -> Result<Bech32> {
         let base32_hash = addr.0.to_base32();

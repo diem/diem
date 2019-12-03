@@ -5,7 +5,7 @@
 
 use crate::account_address::AccountAddress;
 use crate::byte_array::ByteArray;
-use failure::prelude::*;
+use anyhow::Result;
 use libra_crypto::{ed25519::Ed25519Signature, HashValue};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
