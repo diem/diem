@@ -10,8 +10,8 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 libra-config = { path = "../config", version = "0.1.0" }
-failure = { path = "../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
 futures = "0.1.28"
 scratchpad = { path = "../storage/scratchpad", version = "0.1.0" }
 libra-state-view = { path = "../storage/state-view", version = "0.1.0" }

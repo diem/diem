@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use failure::prelude::*;
+use anyhow::{bail, format_err, Error, Result};
 use futures::future::{err, ok, Future};
 use libra_config::config::NodeConfig;
 use libra_types::{
@@ -26,7 +26,7 @@ pub trait TransactionValidation: Send + Sync {
     fn validate_transaction(
         &self,
         _txn: SignedTransaction,
-    ) -> Box<dyn Future<Item = Option<VMStatus>, Error = failure::Error> + Send>;
+    ) -> Box<dyn Future<Item = Option<VMStatus>, Error = Error> + Send>;
 }
 
 #[derive(Clone)]
@@ -50,7 +50,7 @@ impl TransactionValidation for VMValidator {
     fn validate_transaction(
         &self,
         txn: SignedTransaction,
-    ) -> Box<dyn Future<Item = Option<VMStatus>, Error = failure::Error> + Send> {
+    ) -> Box<dyn Future<Item = Option<VMStatus>, Error = Error> + Send> {
         // TODO: For transaction validation, there are two options to go:
         // 1. Trust storage: there is no need to get root hash from storage here. We will
         // create another struct similar to `VerifiedStateView` that implements `StateView`
