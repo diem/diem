@@ -14,7 +14,7 @@ pub enum PeerManagerError {
     IoError(#[from] ::std::io::Error),
 
     #[error("Transport error: {0}")]
-    TransportError(::failure::Error),
+    TransportError(::anyhow::Error),
 
     #[error("Shutting down Peer")]
     ShuttingDownPeer,
@@ -30,7 +30,7 @@ pub enum PeerManagerError {
 }
 
 impl PeerManagerError {
-    pub fn from_transport_error<E: Into<::failure::Error>>(error: E) -> Self {
+    pub fn from_transport_error<E: Into<::anyhow::Error>>(error: E) -> Self {
         PeerManagerError::TransportError(error.into())
     }
 }

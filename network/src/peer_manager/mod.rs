@@ -671,7 +671,7 @@ where
                     self.connection_handler_notifs_tx.send(event).await.unwrap();
                     Ok(())
                 } else {
-                    let e = ::failure::format_err!(
+                    let e = ::anyhow::format_err!(
                         "Dialed PeerId ({}) differs from expected PeerId ({})",
                         identity.peer_id().short_str(),
                         peer_id.short_str()
