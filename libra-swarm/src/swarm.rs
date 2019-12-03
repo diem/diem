@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::utils;
+use anyhow::{Context, Result};
 use config_builder::swarm_config::{SwarmConfig, SwarmConfigBuilder};
 use debug_interface::NodeDebugClient;
-use failure::prelude::*;
 use libra_config::config::{NodeConfig, RoleType};
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_logger::prelude::*;
@@ -176,7 +176,7 @@ impl LibraNode {
 pub enum HealthStatus {
     Healthy,
     Crashed(::std::process::ExitStatus),
-    RpcFailure(failure::Error),
+    RpcFailure(anyhow::Error),
 }
 
 /// A wrapper that unifies PathBuf and TempPath.
@@ -312,7 +312,7 @@ impl LibraSwarm {
         &mut self,
         role: RoleType,
         disable_logging: bool,
-    ) -> std::result::Result<(), SwarmLaunchFailure> {
+    ) -> Result<(), SwarmLaunchFailure> {
         let logs_dir_path = self.dir.as_ref().join("logs");
         std::fs::create_dir(&logs_dir_path)?;
         // For each config launch a node
@@ -335,7 +335,7 @@ impl LibraSwarm {
         Ok(())
     }
 
-    fn wait_for_connectivity(&self) -> std::result::Result<(), SwarmLaunchFailure> {
+    fn wait_for_connectivity(&self) -> Result<(), SwarmLaunchFailure> {
         // Early return if we're only launching a single node
         if self.nodes.len() == 1 {
             return Ok(());
@@ -361,7 +361,7 @@ impl LibraSwarm {
         Err(SwarmLaunchFailure::ConnectivityTimeout)
     }
 
-    fn wait_for_startup(&mut self) -> std::result::Result<(), SwarmLaunchFailure> {
+    fn wait_for_startup(&mut self) -> Result<(), SwarmLaunchFailure> {
         let num_attempts = 120;
         let mut done = vec![false; self.nodes.len()];
         for i in 0..num_attempts {
@@ -509,7 +509,7 @@ impl LibraSwarm {
         idx: usize,
         role: RoleType,
         disable_logging: bool,
-    ) -> std::result::Result<(), SwarmLaunchFailure> {
+    ) -> Result<(), SwarmLaunchFailure> {
         // First take the configs out to not keep immutable borrow on self when calling
         // `launch_node`.
         let path = self

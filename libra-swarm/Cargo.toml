@@ -10,6 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 client_lib = { package = "client", path = "../client", version = "0.1.0" }
 ctrlc = { version = "3.1.3", default-features = false }
 lazy_static = { version = "1.3.0", default-features = false }
@@ -19,7 +20,6 @@ thiserror = "1.0"
 libra-config = { path = "../config", version = "0.1.0", features = ["fuzzing"] }
 config-builder = { path = "../config/config-builder", version = "0.1.0" }
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
-failure = { path = "../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
 generate-keypair = { path = "../config/generate-keypair", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["cloneable-private-keys"] }
