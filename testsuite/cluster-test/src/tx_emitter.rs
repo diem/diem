@@ -44,12 +44,14 @@ use rand::{
     seq::SliceRandom,
     Rng, SeedableRng,
 };
-use slog_scope::{debug, info, warn};
-use std::env;
+use slog_scope::{debug, info};
+
+use std::cmp::min;
 use std::fmt;
 use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
+use util::retry;
 
 const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempool
 
@@ -145,30 +147,61 @@ impl TxEmitter {
             info!("Not minting accounts");
             return Ok(()); // Early return to skip printing 'Minting ...' logs
         }
-        let mut mint_client = Self::pick_mint_client(&req.instances);
-        let mut mint_failures = 0;
-        info!("Minting accounts on {}", mint_client);
-        let retry_mint = env::var_os("NO_MINT_RETRY").is_none();
-        let mut faucet_account = load_faucet_account(&mint_client, &self.mint_file)?;
-        while self.accounts.len() < num_accounts {
-            let mut accounts = gen_random_accounts(MAX_TXN_BATCH_SIZE);
-            let mint_requests = gen_mint_txn_requests(&mut faucet_account, &accounts);
-            if let Err(e) =
-                execute_and_wait_transactions(&mint_client, &mut faucet_account, mint_requests)
-            {
-                mint_failures += 1;
-                if retry_mint && mint_failures > 5 {
-                    return Err(e);
-                }
-                mint_client = Self::pick_mint_client(&req.instances);
-                warn!(
-                    "Mint attempt {} failed, retrying on {}",
-                    mint_failures, mint_client
+        let mut faucet_account =
+            load_faucet_account(&Self::pick_mint_client(&req.instances), &self.mint_file)?;
+        let faucet_address = faucet_account.address;
+        let mint_txn = gen_mint_request(
+            &mut faucet_account,
+            &faucet_address,
+            LIBRA_PER_NEW_ACCOUNT * num_accounts as u64,
+        );
+        execute_and_wait_transactions(
+            &Self::pick_mint_client(&req.instances),
+            &mut faucet_account,
+            vec![mint_txn],
+        )?;
+        let libra_per_seed =
+            (LIBRA_PER_NEW_ACCOUNT * num_accounts as u64) / req.instances.len() as u64;
+        // Create seed accounts with which we can create actual accounts concurrently
+        let seed_accounts = create_new_accounts(
+            &mut faucet_account,
+            req.instances.len(),
+            libra_per_seed,
+            Self::pick_mint_client(&req.instances),
+        )
+        .map_err(|e| format_err!("Failed to mint seed_accounts: {}", e))?;
+        info!("Completed minting seed accounts");
+        // For each seed account, create a thread and transfer libra from that seed account to new accounts
+        self.accounts = seed_accounts
+            .into_iter()
+            .enumerate()
+            .map(|(i, mut seed_account)| {
+                // Spawn new threads
+                let instance = req.instances[i].clone();
+                let num_new_accounts = num_accounts / req.instances.len();
+                thread::spawn(move || {
+                    let client =
+                        NamedAdmissionControlClient(instance.clone(), Self::make_client(&instance));
+                    create_new_accounts(
+                        &mut seed_account,
+                        num_new_accounts,
+                        LIBRA_PER_NEW_ACCOUNT,
+                        client,
+                    )
+                })
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .fold(vec![], |mut accumulator, join_handle| {
+                // Join threads and accumulate results
+                accumulator.extend(
+                    join_handle
+                        .join()
+                        .expect("Failed to join thread")
+                        .expect("Failed to mint accounts"),
                 );
-                continue;
-            }
-            self.accounts.append(&mut accounts);
-        }
+                accumulator
+            });
         info!("Mint is done");
         Ok(())
     }
@@ -352,6 +385,7 @@ const MAX_GAS_AMOUNT: u64 = 1_000_000;
 const GAS_UNIT_PRICE: u64 = 0;
 const TXN_EXPIRATION_SECONDS: i64 = 50;
 const TXN_MAX_WAIT: Duration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64 + 10);
+const LIBRA_PER_NEW_ACCOUNT: u64 = 1_000_000;
 
 fn gen_submit_transaction_request(
     script: Script,
@@ -373,13 +407,26 @@ fn gen_submit_transaction_request(
     req
 }
 
+fn gen_mint_request(
+    sender: &mut AccountData,
+    receiver: &AccountAddress,
+    num_coins: u64,
+) -> SubmitTransactionRequest {
+    gen_submit_transaction_request(
+        transaction_builder::encode_mint_script(receiver, num_coins),
+        sender,
+    )
+}
+
 fn gen_transfer_txn_request(
     sender: &mut AccountData,
     receiver: &AccountAddress,
     num_coins: u64,
 ) -> SubmitTransactionRequest {
-    let script = transaction_builder::encode_transfer_script(&receiver, num_coins);
-    gen_submit_transaction_request(script, sender)
+    gen_submit_transaction_request(
+        transaction_builder::encode_transfer_script(receiver, num_coins),
+        sender,
+    )
 }
 
 fn gen_random_account(rng: &mut StdRng) -> AccountData {
@@ -399,21 +446,14 @@ fn gen_random_accounts(num_accounts: usize) -> Vec<AccountData> {
         .collect()
 }
 
-fn gen_mint_txn_request(
-    faucet_account: &mut AccountData,
-    receiver: &AccountAddress,
-) -> SubmitTransactionRequest {
-    let program = transaction_builder::encode_mint_script(receiver, 1_000_000);
-    gen_submit_transaction_request(program, faucet_account)
-}
-
-fn gen_mint_txn_requests(
-    faucet_account: &mut AccountData,
+fn gen_transfer_txn_requests(
+    source_account: &mut AccountData,
     accounts: &[AccountData],
+    amount: u64,
 ) -> Vec<SubmitTransactionRequest> {
     accounts
         .iter()
-        .map(|account| gen_mint_txn_request(faucet_account, &account.address))
+        .map(|account| gen_transfer_txn_request(source_account, &account.address, amount))
         .collect()
 }
 
@@ -430,20 +470,26 @@ fn execute_and_wait_transactions(
         account.address
     );
     for request in txn {
-        let resp = client.submit_transaction(&request);
-        match resp {
-            Err(e) => info!("[{}] Failed to submit request: {:?}", client, e),
-            Ok(r) => {
-                let r = SubmitTransactionResponse::try_from(r)
-                    .expect("Failed to parse SubmitTransactionResponse");
-                if !is_accepted(&r) {
-                    info!("[{}] Request declined: {:?}", client, r);
+        retry::retry(retry::fixed_retry_strategy(5_000, 20), || {
+            let resp = client.submit_transaction(&request);
+            match resp {
+                Err(e) => {
+                    bail!("[{}] Failed to submit request: {:?}", client, e);
+                }
+                Ok(r) => {
+                    let r = SubmitTransactionResponse::try_from(r)
+                        .expect("Failed to parse SubmitTransactionResponse");
+                    if !is_accepted(&r) {
+                        bail!("[{}] Request declined: {:?}", client, r);
+                    } else {
+                        Ok(())
+                    }
                 }
             }
-        }
+        })?;
     }
     let r = wait_for_accounts_sequence(client, slice::from_mut(account))
-        .map_err(|_| format_err!("Mint transactions was not committed before expiration"));
+        .map_err(|_| format_err!("Mint transactions were not committed before expiration"));
     debug!(
         "[{}] Account {} is at sequence number {} now",
         client, account.address, account.sequence_number
@@ -470,6 +516,26 @@ fn load_faucet_account(
         key_pair,
         sequence_number,
     })
+}
+
+/// Create `num_new_accounts` by transferring libra from `source_account`. Return Vec of created
+/// accounts
+fn create_new_accounts(
+    source_account: &mut AccountData,
+    num_new_accounts: usize,
+    libra_per_new_account: u64,
+    client: NamedAdmissionControlClient,
+) -> failure::Result<Vec<AccountData>> {
+    let mut i = 0;
+    let mut accounts = vec![];
+    while i < num_new_accounts {
+        let mut batch = gen_random_accounts(min(MAX_TXN_BATCH_SIZE, num_new_accounts - i));
+        let requests = gen_transfer_txn_requests(source_account, &batch, libra_per_new_account);
+        execute_and_wait_transactions(&client, source_account, requests)?;
+        i += batch.len();
+        accounts.append(&mut batch);
+    }
+    Ok(accounts)
 }
 
 #[derive(Clone)]
