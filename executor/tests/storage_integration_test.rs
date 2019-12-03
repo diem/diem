@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::{ensure, format_err, Result};
 use config_builder::util::get_test_config;
 use executor::{CommittableBlock, Executor};
-use failure::prelude::*;
 use futures::executor::block_on;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;

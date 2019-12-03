@@ -5,7 +5,7 @@ use crate::{
     Chunk, Command, CommittableBlock, CommittableBlockBatch, ExecutableBlock, ExecutedTrees,
     ProcessedVMOutput, TransactionData, OP_COUNTERS,
 };
-use failure::prelude::*;
+use anyhow::{bail, ensure, format_err, Result};
 use futures::channel::oneshot;
 use libra_config::config::VMConfig;
 use libra_crypto::{

@@ -11,7 +11,7 @@ mod executor_test;
 mod mock_vm;
 
 use crate::block_processor::{BlockProcessor, GENESIS_EPOCH, GENESIS_ROUND};
-use failure::{format_err, Result};
+use anyhow::{format_err, Result};
 use futures::channel::oneshot;
 use futures::executor::block_on;
 use lazy_static::lazy_static;
