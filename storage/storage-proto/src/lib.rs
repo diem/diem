@@ -27,7 +27,7 @@
 
 pub mod proto;
 
-use failure::prelude::*;
+use anyhow::{format_err, Error, Result};
 use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
