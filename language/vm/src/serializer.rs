@@ -628,6 +628,8 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
         Bytecode::BitOr => binary.push(Opcodes::BIT_OR as u8),
         Bytecode::BitAnd => binary.push(Opcodes::BIT_AND as u8),
         Bytecode::Xor => binary.push(Opcodes::XOR as u8),
+        Bytecode::Shl => binary.push(Opcodes::SHL as u8),
+        Bytecode::Shr => binary.push(Opcodes::SHR as u8),
         Bytecode::Or => binary.push(Opcodes::OR as u8),
         Bytecode::And => binary.push(Opcodes::AND as u8),
         Bytecode::Not => binary.push(Opcodes::NOT as u8),

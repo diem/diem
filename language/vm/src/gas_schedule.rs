@@ -225,6 +225,8 @@ pub fn instruction_key(instruction: &Bytecode) -> u8 {
         BitOr => Opcodes::BIT_OR,
         BitAnd => Opcodes::BIT_AND,
         Xor => Opcodes::XOR,
+        Shl => Opcodes::SHL,
+        Shr => Opcodes::SHR,
         Or => Opcodes::OR,
         And => Opcodes::AND,
         Not => Opcodes::NOT,
@@ -360,6 +362,8 @@ impl CostTable {
             (LdAddr(AddressPoolIndex::new(0)), GasCost::new(0, 0)),
             (Ge, GasCost::new(0, 0)),
             (Xor, GasCost::new(0, 0)),
+            (Shl, GasCost::new(0, 0)),
+            (Shr, GasCost::new(0, 0)),
             (Neq, GasCost::new(0, 0)),
             (Not, GasCost::new(0, 0)),
             (

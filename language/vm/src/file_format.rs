@@ -1157,12 +1157,24 @@ pub enum Bytecode {
     ///
     /// ```..., -> ..., bytearray_value```
     GetTxnPublicKey,
+    /// Shift the (second top value) left (top value) bits and pushes the result on the stack.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., u64_value(1), u64_value(2) -> ..., u64_value```
+    Shl,
+    /// Shift the (second top value) right (top value) bits and pushes the result on the stack.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., u64_value(1), u64_value(2) -> ..., u64_value```
+    Shr,
 }
 
 /// The number of bytecode instructions.
 /// This is necessary for checking that all instructions are covered since Rust
 /// does not provide a way of determining the number of variants of an enum.
-pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 52;
+pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 54;
 
 pub const NUMBER_OF_NATIVE_FUNCTIONS: usize = 17;
 
@@ -1202,6 +1214,8 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::BitOr => write!(f, "BitOr"),
             Bytecode::BitAnd => write!(f, "BitAnd"),
             Bytecode::Xor => write!(f, "Xor"),
+            Bytecode::Shl => write!(f, "Shl"),
+            Bytecode::Shr => write!(f, "Shr"),
             Bytecode::Or => write!(f, "Or"),
             Bytecode::And => write!(f, "And"),
             Bytecode::Not => write!(f, "Not"),

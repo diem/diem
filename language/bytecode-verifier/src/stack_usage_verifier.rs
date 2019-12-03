@@ -119,6 +119,8 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::BitOr
             | Bytecode::BitAnd
             | Bytecode::Xor
+            | Bytecode::Shl
+            | Bytecode::Shr
             | Bytecode::Or
             | Bytecode::And
             | Bytecode::Eq

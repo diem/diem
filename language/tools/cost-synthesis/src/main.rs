@@ -127,6 +127,8 @@ fn stack_instructions(options: &Opt) {
         BitOr,
         BitAnd,
         Xor,
+        Shl,
+        Shr,
         Or,
         And,
         Eq,

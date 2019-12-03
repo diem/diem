@@ -724,7 +724,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             | Bytecode::Div
             | Bytecode::BitOr
             | Bytecode::BitAnd
-            | Bytecode::Xor => {
+            | Bytecode::Xor
+            | Bytecode::Shl
+            | Bytecode::Shr => {
                 let operand1 = self.stack.pop().unwrap();
                 let operand2 = self.stack.pop().unwrap();
                 if operand1.signature == SignatureToken::U64

@@ -84,6 +84,8 @@ pub enum StacklessBytecode {
     BitOr(TempIndex, TempIndex, TempIndex),
     BitAnd(TempIndex, TempIndex, TempIndex),
     Xor(TempIndex, TempIndex, TempIndex),
+    Shl(TempIndex, TempIndex, TempIndex),
+    Shr(TempIndex, TempIndex, TempIndex),
     Lt(TempIndex, TempIndex, TempIndex),
     Gt(TempIndex, TempIndex, TempIndex),
     Le(TempIndex, TempIndex, TempIndex),
