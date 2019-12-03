@@ -282,10 +282,10 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                     // List out the other options explicitly so there's a compile error if a new
                     // bytecode gets added.
                     FreezeRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse | ReadRef | WriteRef
-                    | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Or | And | Not | Eq
-                    | Neq | Lt | Gt | Le | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits
-                    | GetGasRemaining | GetTxnSenderAddress | GetTxnSequenceNumber
-                    | GetTxnPublicKey => {
+                    | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Shl | Shr | Or | And
+                    | Not | Eq | Neq | Lt | Gt | Le | Ge | Abort | GetTxnGasUnitPrice
+                    | GetTxnMaxGasUnits | GetGasRemaining | GetTxnSenderAddress
+                    | GetTxnSequenceNumber | GetTxnPublicKey => {
                         panic!("Bytecode has no internal index: {:?}", code[bytecode_idx])
                     }
                 };
@@ -326,8 +326,8 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
         // List out the other options explicitly so there's a compile error if a new
         // bytecode gets added.
         FreezeRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse | ReadRef | WriteRef | Add | Sub
-        | Mul | Mod | Div | BitOr | BitAnd | Xor | Or | And | Not | Eq | Neq | Lt | Gt | Le
-        | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
+        | Mul | Mod | Div | BitOr | BitAnd | Xor | Shl | Shr | Or | And | Not | Eq | Neq | Lt
+        | Gt | Le | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
         | GetTxnSenderAddress | GetTxnSequenceNumber | GetTxnPublicKey => false,
     }
 }

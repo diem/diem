@@ -1097,6 +1097,14 @@ fn compile_expression(
                     push_instr!(exp.span, Bytecode::Xor);
                     vec_deque![InferredType::U64]
                 }
+                BinOp::Shl => {
+                    push_instr!(exp.span, Bytecode::Shl);
+                    vec_deque![InferredType::U64]
+                }
+                BinOp::Shr => {
+                    push_instr!(exp.span, Bytecode::Shr);
+                    vec_deque![InferredType::U64]
+                }
                 BinOp::Or => {
                     push_instr!(exp.span, Bytecode::Or);
                     vec_deque![InferredType::Bool]

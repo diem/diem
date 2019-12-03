@@ -960,6 +960,8 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
             Opcodes::BIT_OR => Bytecode::BitOr,
             Opcodes::BIT_AND => Bytecode::BitAnd,
             Opcodes::XOR => Bytecode::Xor,
+            Opcodes::SHL => Bytecode::Shl,
+            Opcodes::SHR => Bytecode::Shr,
             Opcodes::OR => Bytecode::Or,
             Opcodes::AND => Bytecode::And,
             Opcodes::NOT => Bytecode::Not,
@@ -1179,6 +1181,8 @@ impl Opcodes {
             0x32 => Ok(Opcodes::GET_TXN_SEQUENCE_NUMBER),
             0x33 => Ok(Opcodes::GET_TXN_PUBLIC_KEY),
             0x34 => Ok(Opcodes::FREEZE_REF),
+            0x35 => Ok(Opcodes::SHL),
+            0x36 => Ok(Opcodes::SHR),
             _ => Err(VMStatus::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }

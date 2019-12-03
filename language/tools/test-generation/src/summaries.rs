@@ -250,6 +250,28 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
                 state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
             ],
         },
+        Bytecode::Shl => Summary {
+            preconditions: vec![
+                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
+                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
+            ],
+            effects: vec![
+                state_stack_pop!(),
+                state_stack_pop!(),
+                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
+            ],
+        },
+        Bytecode::Shr => Summary {
+            preconditions: vec![
+                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
+                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
+            ],
+            effects: vec![
+                state_stack_pop!(),
+                state_stack_pop!(),
+                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
+            ],
+        },
         Bytecode::Or => Summary {
             preconditions: vec![
                 state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::Bool))),

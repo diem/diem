@@ -454,7 +454,9 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             | Bytecode::Div
             | Bytecode::BitOr
             | Bytecode::BitAnd
-            | Bytecode::Xor => {
+            | Bytecode::Xor
+            | Bytecode::Shl
+            | Bytecode::Shr => {
                 let operand2_index = self.temp_stack.pop().unwrap();
                 let operand1_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
@@ -513,6 +515,20 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     }
                     Bytecode::Xor => {
                         self.code.push(StacklessBytecode::Xor(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
+                    }
+                    Bytecode::Shl => {
+                        self.code.push(StacklessBytecode::Shl(
+                            temp_index,
+                            operand1_index,
+                            operand2_index,
+                        ));
+                    }
+                    Bytecode::Shr => {
+                        self.code.push(StacklessBytecode::Shr(
                             temp_index,
                             operand1_index,
                             operand2_index,
