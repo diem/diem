@@ -7,7 +7,7 @@ use crate::{
     peer_manager::{PeerManager, PeerScoreUpdateType},
     PeerId, SynchronizerState,
 };
-use failure::prelude::*;
+use anyhow::{bail, format_err, Result};
 use futures::{
     channel::{mpsc, oneshot},
     stream::{futures_unordered::FuturesUnordered, select_all},
