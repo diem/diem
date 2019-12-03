@@ -11,7 +11,7 @@ use crate::{
     },
     OP_COUNTERS,
 };
-use failure::prelude::*;
+use anyhow::{format_err, Result};
 use libra_config::config::MempoolConfig;
 use libra_logger::prelude::*;
 use libra_mempool_shared_proto::{
