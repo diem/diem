@@ -12,7 +12,7 @@
 #[cfg(feature = "fuzzing")]
 pub mod mocks;
 
-use failure::prelude::*;
+use anyhow::Result;
 use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle};
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;

@@ -3,7 +3,7 @@
 
 //! This module provides mock storage clients for tests.
 
-use failure::prelude::*;
+use anyhow::Result;
 use futures::prelude::*;
 use libra_crypto::{ed25519::*, HashValue};
 use libra_types::{
