@@ -18,7 +18,6 @@ pub(crate) mod transaction;
 pub(crate) mod transaction_accumulator;
 pub(crate) mod transaction_by_account;
 pub(crate) mod transaction_info;
-pub(crate) mod validator;
 
 use failure::prelude::*;
 use schemadb::ColumnFamilyName;
@@ -34,7 +33,6 @@ pub(super) const TRANSACTION_CF_NAME: ColumnFamilyName = "transaction";
 pub(super) const TRANSACTION_ACCUMULATOR_CF_NAME: ColumnFamilyName = "transaction_accumulator";
 pub(super) const TRANSACTION_BY_ACCOUNT_CF_NAME: ColumnFamilyName = "transaction_by_account";
 pub(super) const TRANSACTION_INFO_CF_NAME: ColumnFamilyName = "transaction_info";
-pub(super) const VALIDATOR_CF_NAME: ColumnFamilyName = "validator";
 
 fn ensure_slice_len_eq(data: &[u8], len: usize) -> Result<()> {
     ensure!(
