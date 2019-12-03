@@ -49,6 +49,10 @@ service Storage {
     // Returns latest ledger infos per epoch.
     rpc GetEpochChangeLedgerInfos(GetEpochChangeLedgerInfosRequest)
     returns (GetEpochChangeLedgerInfosResponse);
+
+    // Returns a stream of account states.
+    rpc BackupAccountState(BackupAccountStateRequest)
+    returns (stream BackupAccountStateResponse);
 }
 
 message SaveTransactionsRequest {
@@ -139,4 +143,17 @@ message GetEpochChangeLedgerInfosRequest {
 message GetEpochChangeLedgerInfosResponse {
     /// Vector of latest ledger infos per epoch (not sorted)
     repeated types.LedgerInfoWithSignatures latest_ledger_infos = 1;
+}
+
+message BackupAccountStateRequest {
+    // Version at which to start the backup
+    uint64 version = 1;
+}
+
+message BackupAccountStateResponse {
+    // Account Key (32-byte hash value)
+    bytes account_key = 1;
+
+    // Raw account state
+    types.AccountStateBlob account_state_blob = 2;
 }

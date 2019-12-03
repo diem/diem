@@ -32,6 +32,8 @@ fn gen_mock_genesis() -> (
     TransactionInfo,
     LedgerInfoWithSignatures,
     TransactionToCommit,
+    AccountAddress,
+    AccountStateBlob,
 ) {
     let mut seed_rng = OsRng::new().expect("can't access OsRng");
     let seed_buf: [u8; 32] = seed_rng.gen();
@@ -92,7 +94,13 @@ fn gen_mock_genesis() -> (
     let ledger_info_with_sigs =
         LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new() /* signatures */);
 
-    (txn_info, ledger_info_with_sigs, txn_to_commit)
+    (
+        txn_info,
+        ledger_info_with_sigs,
+        txn_to_commit,
+        some_addr,
+        some_blob,
+    )
 }
 
 lazy_static! {
@@ -109,7 +117,9 @@ lazy_static! {
     pub static ref GENESIS_INFO: (
         TransactionInfo,
         LedgerInfoWithSignatures,
-        TransactionToCommit
+        TransactionToCommit,
+        AccountAddress,
+        AccountStateBlob,
     ) = gen_mock_genesis();
 }
 

@@ -12,8 +12,11 @@
 mod state_view;
 
 use anyhow::{format_err, Error, Result};
-use futures::{compat::Future01CompatExt, executor::block_on, prelude::*};
-use futures_01::future::Future as Future01;
+use futures::{
+    compat::Future01CompatExt, compat::Stream01CompatExt, executor::block_on, prelude::*,
+    stream::BoxStream,
+};
+use futures_01::{future::Future as Future01, stream::Stream as Stream01};
 use grpcio::{ChannelBuilder, Environment};
 use libra_types::{
     account_address::AccountAddress,
@@ -31,6 +34,7 @@ use std::convert::TryFrom;
 use std::{pin::Pin, sync::Arc};
 use storage_proto::{
     proto::storage::{GetStartupInfoRequest, StorageClient},
+    BackupAccountStateRequest, BackupAccountStateResponse,
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
     GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse, GetStartupInfoResponse,
     GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest, StartupInfo,
@@ -71,6 +75,12 @@ fn convert_grpc_response<T>(
     future::ready(response.map_err(convert_grpc_err))
         .map_ok(Future01CompatExt::compat)
         .and_then(|x| x.map_err(convert_grpc_err))
+}
+
+fn convert_grpc_stream<T>(
+    stream: impl Stream01<Item = T, Error = grpcio::Error>,
+) -> impl Stream<Item = Result<T, Error>> {
+    stream.map_err(convert_grpc_err).compat()
 }
 
 /// This provides storage read interfaces backed by real storage service.
@@ -233,6 +243,21 @@ impl StorageRead for StorageReadServiceClient {
             Ok(resp.into())
         })
         .boxed()
+    }
+
+    fn backup_account_state_async(
+        &self,
+        version: Version,
+    ) -> Result<BoxStream<Result<BackupAccountStateResponse, Error>>> {
+        let proto_req = BackupAccountStateRequest::new(version);
+        Ok(
+            convert_grpc_stream(self.client().backup_account_state(&proto_req.into())?)
+                .map(|resp| {
+                    let resp = BackupAccountStateResponse::try_from(resp?)?;
+                    Ok(resp)
+                })
+                .boxed(),
+        )
     }
 }
 
@@ -398,6 +423,17 @@ pub trait StorageRead: Send + Sync {
         &self,
         start_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>>;
+
+    /// See [`LibraDB::backup_account_state`].
+    ///
+    /// Due to the streaming nature of this API, only an async version is provided.
+    ///
+    /// [`LibraDB::backup_account_state`]:
+    /// ../libradb/struct.LibraDB.html#method.backup_account_state
+    fn backup_account_state_async(
+        &self,
+        version: u64,
+    ) -> Result<BoxStream<Result<BackupAccountStateResponse, Error>>>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.

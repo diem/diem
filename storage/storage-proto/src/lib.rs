@@ -15,15 +15,15 @@
 //!       * In [`proto::storage`] are structs corresponding to our Protocol Buffers messages.
 //!       * In [`proto::storage_grpc`] live the [GRPC](grpc.io) client struct and the service trait
 //! which correspond to our Protocol Buffers services.
-//!   1. Structs we wrote manually as helpers to ease the manipulation of the above category of
+//!   2. Structs we wrote manually as helpers to ease the manipulation of the above category of
 //! structs. By implementing the [`TryFrom`](std::convert::TryFrom) and
 //! [`From`](std::convert::From) traits, these structs convert from/to the above category of
 //! structs in a single method call and in that process data integrity check can be done. These live
 //! right in the root module of this crate (this page).
 //!
-//! Ihis is provided as a separate crate so that crates that use the storage service via
+//! This is provided as a separate crate so that crates that use the storage service via
 //! [`storage-client`](../storage-client/index.html) don't need to depending on the entire
-//! [`storage_service`](../storage-client/index.html).
+//! [`storage-service`](../storage-service/index.html).
 
 pub mod proto;
 
@@ -522,6 +522,89 @@ impl From<GetEpochChangeLedgerInfosResponse>
 impl Into<Vec<LedgerInfoWithSignatures>> for GetEpochChangeLedgerInfosResponse {
     fn into(self) -> Vec<LedgerInfoWithSignatures> {
         self.ledger_infos_with_sigs
+    }
+}
+
+/// Helper to construct and parse [`proto::storage::BackupAccountStateRequest`]
+#[derive(PartialEq, Eq, Clone)]
+pub struct BackupAccountStateRequest {
+    /// The version of state to backup.
+    pub version: Version,
+}
+
+impl BackupAccountStateRequest {
+    /// Constructor.
+    pub fn new(version: Version) -> Self {
+        Self { version }
+    }
+}
+
+impl TryFrom<crate::proto::storage::BackupAccountStateRequest> for BackupAccountStateRequest {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::BackupAccountStateRequest) -> Result<Self> {
+        Ok(Self {
+            version: proto.version,
+        })
+    }
+}
+
+impl From<BackupAccountStateRequest> for crate::proto::storage::BackupAccountStateRequest {
+    fn from(request: BackupAccountStateRequest) -> Self {
+        Self {
+            version: request.version,
+        }
+    }
+}
+
+/// Helper to construct and parse [`proto::storage::BackupAccountStateResponse`]
+#[derive(PartialEq, Eq, Clone)]
+pub struct BackupAccountStateResponse {
+    /// The hashed account address
+    pub account_key: HashValue,
+
+    /// The accompanying account state blob
+    pub account_state_blob: AccountStateBlob,
+}
+
+impl BackupAccountStateResponse {
+    /// Constructor.
+    pub fn new(account_key: HashValue, account_state_blob: AccountStateBlob) -> Self {
+        Self {
+            account_key,
+            account_state_blob,
+        }
+    }
+}
+
+impl TryFrom<crate::proto::storage::BackupAccountStateResponse> for BackupAccountStateResponse {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::BackupAccountStateResponse) -> Result<Self> {
+        let account_key = HashValue::from_slice(&proto.account_key[..])?;
+        let account_state_blob = proto
+            .account_state_blob
+            .ok_or_else(|| format_err!("Missing account state blob"))?
+            .try_into()?;
+        Ok(Self {
+            account_key,
+            account_state_blob,
+        })
+    }
+}
+
+impl From<BackupAccountStateResponse> for crate::proto::storage::BackupAccountStateResponse {
+    fn from(response: BackupAccountStateResponse) -> Self {
+        Self {
+            account_key: response.account_key.to_vec(),
+            account_state_blob: Some(response.account_state_blob.into()),
+        }
+    }
+}
+
+impl Into<(HashValue, AccountStateBlob)> for BackupAccountStateResponse {
+    fn into(self) -> (HashValue, AccountStateBlob) {
+        (self.account_key, self.account_state_blob)
     }
 }
 

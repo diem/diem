@@ -232,7 +232,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
 
     #[test]
-    fn test_iter_accounts(
+    fn test_get_account_iter(
         input in hash_map(any::<AccountAddress>(), any::<AccountStateBlob>(), 1..200)
     ) {
         // Convert to a vector so iteration order becomes deterministic.
@@ -254,8 +254,7 @@ proptest! {
 
         // Test iterator at each version.
         for i in 0..kvs.len() {
-            let actual_values = store
-                .iter_accounts(i as Version, HashValue::zero())
+            let actual_values = db.get_account_iter(i as Version)
                 .unwrap()
                 .collect::<Result<Vec<_>>>()
                 .unwrap();

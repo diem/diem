@@ -13,6 +13,7 @@
 pub mod mocks;
 
 use anyhow::Result;
+use futures01::{Future, Sink};
 use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle};
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
@@ -26,11 +27,11 @@ use std::{
     sync::{mpsc, Arc, Mutex},
 };
 use storage_proto::proto::storage::{
-    create_storage, GetAccountStateWithProofByVersionRequest,
-    GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
-    GetEpochChangeLedgerInfosResponse, GetStartupInfoRequest, GetStartupInfoResponse,
-    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
-    SaveTransactionsResponse, Storage,
+    create_storage, BackupAccountStateRequest, BackupAccountStateResponse,
+    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
+    GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse, GetStartupInfoRequest,
+    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
+    SaveTransactionsRequest, SaveTransactionsResponse, Storage,
 };
 
 /// Starts storage service according to config.
@@ -303,6 +304,47 @@ impl Storage for StorageService {
         let _timer = SVC_COUNTERS.req(&ctx);
         let resp = self.get_epoch_change_ledger_infos_inner(req);
         provide_grpc_response(resp, ctx, sink);
+    }
+
+    fn backup_account_state(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: BackupAccountStateRequest,
+        sink: grpcio::ServerStreamingSink<BackupAccountStateResponse>,
+    ) {
+        debug!("[GRPC] Storage::backup_account_state");
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let mut success = true;
+        let iter = self.db.get_account_iter(req.version);
+        match iter {
+            Ok(iter) => {
+                let f = sink
+                    .send_all(futures01::stream::iter_result(iter.map(|res| match res {
+                        Ok((hash, blob)) => Ok((
+                            storage_proto::BackupAccountStateResponse::new(hash, blob).into(),
+                            grpcio::WriteFlags::default(),
+                        )),
+                        Err(e) => Err(grpcio::Error::RpcFailure(grpcio::RpcStatus::new(
+                            grpcio::RpcStatusCode::INTERNAL,
+                            Some(e.to_string()),
+                        ))),
+                    })))
+                    .map(|_| ())
+                    .map_err(|e| error!("error during backup_account_state: {}", e));
+                ctx.spawn(f);
+            }
+            Err(err) => {
+                let f = sink
+                    .fail(::grpcio::RpcStatus::new(
+                        ::grpcio::RpcStatusCode::INTERNAL,
+                        Some(err.to_string()),
+                    ))
+                    .map_err(|e| error!("error while failing backup_account_state: {}", e));
+                ctx.spawn(f);
+                success = false;
+            }
+        }
+        SVC_COUNTERS.resp(&ctx, success);
     }
 }
 

@@ -3,8 +3,9 @@
 
 //! This module provides mock storage clients for tests.
 
-use anyhow::Result;
+use anyhow::{Error, Result};
 use futures::prelude::*;
+use futures::stream::BoxStream;
 use libra_crypto::{ed25519::*, HashValue};
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -31,7 +32,7 @@ use rand::{
 };
 use std::{collections::BTreeMap, convert::TryFrom, pin::Pin};
 use storage_client::StorageRead;
-use storage_proto::StartupInfo;
+use storage_proto::{BackupAccountStateResponse, StartupInfo};
 
 /// This is a mock of the storage read client used in tests.
 ///
@@ -150,6 +151,13 @@ impl StorageRead for MockStorageReadClient {
         &self,
         _start_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>> {
+        unimplemented!()
+    }
+
+    fn backup_account_state_async(
+        &self,
+        _version: u64,
+    ) -> Result<BoxStream<Result<BackupAccountStateResponse, Error>>> {
         unimplemented!()
     }
 }

@@ -15,7 +15,6 @@ use crate::{
 };
 use anyhow::Result;
 use jellyfish_merkle::{
-    iterator::JellyfishMerkleIterator,
     node_type::{LeafNode, Node, NodeKey},
     JellyfishMerkleTree, TreeReader,
 };
@@ -97,17 +96,6 @@ impl StateStore {
             .collect::<Result<Vec<()>>>()?;
 
         Ok(new_root_hash_vec)
-    }
-
-    /// Returns an iterator that yields all accounts from left to right that is not less than
-    /// `starting_key`, one entry at a time, at given version.
-    #[allow(dead_code)]
-    pub fn iter_accounts<'a>(
-        &'a self,
-        version: Version,
-        starting_key: HashValue,
-    ) -> Result<JellyfishMerkleIterator<'a, Self>> {
-        JellyfishMerkleIterator::new(self, version, starting_key)
     }
 }
 
