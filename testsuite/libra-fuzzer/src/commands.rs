@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::FuzzTarget;
-use failure::prelude::*;
+use anyhow::{bail, format_err, Context, Result};
 use libra_proptest_helpers::ValueGenerator;
 use sha1::{Digest, Sha1};
 use std::{
