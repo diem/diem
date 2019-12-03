@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/expr_while_braces.move:4:26 ───
+   │
+ 4 │         while (v < 10) v = v + 1
+   │                          ^ Unrecognized Token: =
+   ·
+ 4 │         while (v < 10) v = v + 1
+   │                          - Expected:  "!=", "%", "&", "&&", ")", "*", "+", ",", "-", "/", ":", ";", "<", "<=", "==", ">", ">=", "^", "else", "|", "||", "}",
+   │
+

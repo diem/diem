@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/let_binding_trailing_comma.move:3:21 ───
+   │
+ 3 │         let (x1, x2,) = (1, 2);
+   │                     ^ Unrecognized Token: )
+   ·
+ 3 │         let (x1, x2,) = (1, 2);
+   │                     - Expected:  r#"0[xX][0-9a-fA-F]+"#, r#"[a-zA-Z_][a-zA-Z0-9_]*"#, r#"[a-zA-Z_][a-zA-Z0-9_]*<"#,
+   │
+
