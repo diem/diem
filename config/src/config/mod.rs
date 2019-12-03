@@ -342,7 +342,7 @@ pub trait PersistableConfig: Serialize + DeserializeOwned {
 
     fn save_config<P: AsRef<Path>>(&self, output_file: P) {
         let contents = toml::to_vec(&self).expect("Error serializing");
-        let mut file = File::create(output_file).expect("Error opening file");
+        let mut file = File::create(output_file).expect("Error creating file");
         file.write_all(&contents).expect("Error writing file");
     }
 
@@ -357,16 +357,16 @@ impl<T: ?Sized> PersistableConfig for T where T: Serialize + DeserializeOwned {}
 mod test {
     use super::*;
 
-    static EXPECTED_SINGLE_NODE_CONFIG: &[u8] =
-        include_bytes!("../../data/configs/single.node.config.toml");
+    const DEFAULT: &str = "data/configs/single.node.config.toml";
+    const RANDOM_DEFAULT: &str = "data/configs/random.default.node.config.toml";
+    const RANDOM_COMPLETE: &str = "data/configs/random.complete.node.config.toml";
 
     #[test]
-    fn verify_test_config() {
+    fn verify_default_config() {
         // This test likely failed because there was a breaking change in the NodeConfig. It may be
         // desirable to reverse the change or to change the test config and potentially documentation.
         let mut actual = NodeConfig::random();
-        let mut expected = NodeConfig::parse(&String::from_utf8_lossy(EXPECTED_SINGLE_NODE_CONFIG))
-            .expect("Error parsing expected single node config");
+        let mut expected = NodeConfig::load(DEFAULT).expect("Unable to load config");
 
         // These are randomly generated, so let's force them to be the same, perhaps we can use a
         // random seed so that these can be made uniform...
@@ -391,6 +391,42 @@ mod test {
         expected_network.network_peers = actual_network.network_peers.clone();
         expected_network.seed_peers = actual_network.seed_peers.clone();
 
+        compare_configs(&actual, &expected);
+    }
+
+    #[test]
+    fn verify_random_complete_config() {
+        let mut rng = StdRng::from_seed([255u8; 32]);
+        let mut expected = NodeConfig::random_with_rng(&mut rng);
+        // Required to update paths
+        expected.save(&PathBuf::from("node.config.toml"));
+
+        let actual = NodeConfig::load(RANDOM_COMPLETE).expect("Unable to load config");
+        // This is randomly generated, so make them consistent, loading has already occurred
+        expected
+            .set_data_dir(actual.base.data_dir.clone())
+            .expect("Unable to set data_dir");
+
+        compare_configs(&actual, &expected);
+    }
+
+    #[test]
+    fn verify_random_default_config() {
+        let mut rng = StdRng::from_seed([255u8; 32]);
+        let mut expected = NodeConfig::random_with_rng(&mut rng);
+        // Required to update paths
+        expected.save(&PathBuf::from("node.config.toml"));
+
+        let actual = NodeConfig::load(RANDOM_DEFAULT).expect("Unable to load config");
+        // This is randomly generated, so make them consistent, loading has already occurred
+        expected
+            .set_data_dir(actual.base.data_dir.clone())
+            .expect("Unable to set data_dir");
+
+        compare_configs(&actual, &expected);
+    }
+
+    fn compare_configs(actual: &NodeConfig, expected: &NodeConfig) {
         // This is broken down first into smaller evaluations to improve idenitfying what is broken.
         // The output for a broken config leveraging assert at the top level config is not readable.
         assert_eq!(actual.admission_control, expected.admission_control);
@@ -414,13 +450,24 @@ mod test {
     #[test]
     fn verify_all_configs() {
         // First test well defined configs
-        let _ = vec!["data/configs/single.node.config.toml"]
-            .iter()
-            .map(|path| {
-                NodeConfig::load(PathBuf::from(path))
-                    .unwrap_or_else(|_| panic!("Error in {}", path))
-            })
-            .collect::<Vec<_>>();
+        let _ = vec![
+            // This contains all the default fields written to disk, it verifies that the default
+            // is consistent and can be loaded without failure
+            DEFAULT,
+            // This config leverages default fields but uses the same PeerId and secondary files as
+            // the random.complete.node.config.toml. It verifies the assumptions about loading
+            // files even if the paths aren't present
+            RANDOM_DEFAULT,
+            // This config explicitly writes all the default values for a random peer to disk and
+            // verifies that it correctly loads. It shares the same PeerId as
+            // random.default.node.config.toml
+            RANDOM_COMPLETE,
+        ]
+        .iter()
+        .map(|path| {
+            NodeConfig::load(PathBuf::from(path)).unwrap_or_else(|_| panic!("Error in {}", path))
+        })
+        .collect::<Vec<_>>();
 
         // Now test configs that require some additional manipulation
         let _ = vec![
