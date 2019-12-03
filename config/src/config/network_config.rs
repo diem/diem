@@ -238,8 +238,8 @@ impl NetworkConfig {
         peers.peers.insert(
             peer_id.clone(),
             NetworkPeerInfo {
-                network_identity_pubkey: keypair.identity_keys.public().clone(),
-                network_signing_pubkey: keypair.signing_keys.public().clone(),
+                identity_public_key: keypair.identity_keys.public().clone(),
+                signing_public_key: keypair.signing_keys.public().clone(),
             },
         );
         peers
@@ -292,11 +292,11 @@ pub struct NetworkPeerInfo {
     #[serde(serialize_with = "keys::serialize_key")]
     #[serde(deserialize_with = "keys::deserialize_key")]
     #[serde(rename = "ns")]
-    pub network_signing_pubkey: Ed25519PublicKey,
+    pub signing_public_key: Ed25519PublicKey,
     #[serde(serialize_with = "keys::serialize_key")]
     #[serde(deserialize_with = "keys::deserialize_key")]
     #[serde(rename = "ni")]
-    pub network_identity_pubkey: X25519StaticPublicKey,
+    pub identity_public_key: X25519StaticPublicKey,
 }
 
 #[cfg(test)]

@@ -162,14 +162,15 @@ impl SMRNode {
         executor_with_reconfig: bool,
     ) -> Vec<Self> {
         let (mut signers, validators) = random_validator_verifier(num_nodes, None, true);
-        let validator_set = if executor_with_reconfig {
-            Some((&validators).into())
+        let validator_set: ValidatorSet = (&validators).into();
+        let executor_validator_set = if executor_with_reconfig {
+            Some(validator_set.clone())
         } else {
             None
         };
         let mut nodes = vec![];
         for smr_id in 0..num_nodes {
-            let (initial_data, storage) = MockStorage::start_for_testing(validators.clone());
+            let (initial_data, storage) = MockStorage::start_for_testing(validator_set.clone());
             let safety_rules_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
             OnDiskStorage::default_storage(safety_rules_path.clone());
             nodes.push(Self::start(
@@ -179,7 +180,7 @@ impl SMRNode {
                 storage,
                 initial_data,
                 proposer_type,
-                validator_set.clone(),
+                executor_validator_set.clone(),
                 safety_rules_path,
             ));
         }

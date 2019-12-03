@@ -194,13 +194,13 @@ impl ConsensusPeersConfig {
                         .peers
                         .get(peer_id)
                         .unwrap()
-                        .network_signing_pubkey
+                        .signing_public_key
                         .clone(),
                     network_peers_config
                         .peers
                         .get(peer_id)
                         .unwrap()
-                        .network_identity_pubkey
+                        .identity_public_key
                         .clone(),
                 )
             })

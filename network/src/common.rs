@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::ProtocolId;
-use libra_crypto::{ed25519::*, x25519::X25519StaticPublicKey};
+use libra_config::config::NetworkPeerInfo;
 use std::fmt;
 
 /// A Negotiated substream encapsulates a protocol and a substream for which that protocol has been
@@ -25,10 +25,4 @@ impl<TSubstream> fmt::Debug for NegotiatedSubstream<TSubstream> {
 }
 
 /// Public keys used at the network layer
-#[derive(Debug, Clone)]
-pub struct NetworkPublicKeys {
-    /// This key can validate signed messages at the network layer.
-    pub signing_public_key: Ed25519PublicKey,
-    /// This key establishes a node's identity in the p2p network.
-    pub identity_public_key: X25519StaticPublicKey,
-}
+pub type NetworkPublicKeys = NetworkPeerInfo;

@@ -171,8 +171,8 @@ fn add_peer(
     network_peers.peers.insert(
         peer.peer_id,
         NetworkPeerInfo {
-            network_identity_pubkey: peer.network_keypairs.identity_keys.public().clone(),
-            network_signing_pubkey: peer.network_keypairs.signing_keys.public().clone(),
+            identity_public_key: peer.network_keypairs.identity_keys.public().clone(),
+            signing_public_key: peer.network_keypairs.signing_keys.public().clone(),
         },
     );
 }

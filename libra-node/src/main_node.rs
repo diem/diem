@@ -23,9 +23,10 @@ use network::{
         MEMPOOL_DIRECT_SEND_PROTOCOL,
         STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
     },
-    NetworkPublicKeys, ProtocolId,
+    ProtocolId,
 };
 use state_synchronizer::StateSynchronizer;
+use std::collections::HashMap;
 use std::{sync::Arc, thread, time::Instant};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
@@ -121,20 +122,6 @@ pub fn setup_network(
             config.enable_encryption_and_authentication,
             "Permissioned network end-points should use authentication"
         );
-        let trusted_peers = config
-            .network_peers
-            .peers
-            .iter()
-            .map(|(peer_id, keys)| {
-                (
-                    *peer_id,
-                    NetworkPublicKeys {
-                        signing_public_key: keys.network_signing_pubkey.clone(),
-                        identity_public_key: keys.network_identity_pubkey.clone(),
-                    },
-                )
-            })
-            .collect();
         let seed_peers = config.seed_peers.seed_peers.clone();
         let signing_private = config
             .network_keypairs
@@ -148,6 +135,12 @@ pub fn setup_network(
             .take_private()
             .expect("Failed to take Network identity private key, key absent or already read");
         let identity_public = config.network_keypairs.identity_keys.public().clone();
+        let trusted_peers = if role == RoleType::Validator {
+            // for validators, trusted_peers is empty will be populated from consensus
+            HashMap::new()
+        } else {
+            config.network_peers.peers.clone()
+        };
         network_builder
             .transport(TransportType::TcpNoise(Some((
                 identity_private,

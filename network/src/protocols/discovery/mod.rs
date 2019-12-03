@@ -48,14 +48,10 @@ use futures::{
 use libra_crypto::{
     ed25519::*,
     hash::{CryptoHasher, DiscoveryMsgHasher},
-    HashValue,
+    HashValue, Signature,
 };
 use libra_logger::prelude::*;
-use libra_types::{
-    crypto_proxies::{ValidatorSigner as Signer, ValidatorVerifier as SignatureValidator},
-    validator_verifier::ValidatorInfo as SignatureInfo,
-    PeerId,
-};
+use libra_types::{crypto_proxies::ValidatorSigner as Signer, PeerId};
 use parity_multiaddr::Multiaddr;
 use prost::Message;
 use rand::{rngs::SmallRng, FromEntropy, Rng};
@@ -119,7 +115,7 @@ where
         // TODO(philiphayes): wire through config
         let dns_seed_addr = b"example.com";
 
-        let self_peer_info = create_peer_info(self_addrs);
+        let self_peer_info = create_peer_info(self_addrs.clone());
         let self_full_node_payload = create_full_node_payload(dns_seed_addr);
         let self_note = create_note(
             &signer,
@@ -127,13 +123,17 @@ where
             self_peer_info.clone(),
             self_full_node_payload.clone(),
         );
+        // We don't verify the self note because trusted_peers may not be populated yet
+        let self_verified_note = VerifiedNote {
+            peer_id: self_peer_id,
+            addrs: self_addrs,
+            epoch: self_peer_info.epoch,
+            raw_note: self_note.clone(),
+        };
 
-        let known_peers = vec![(
-            self_peer_id,
-            verify_note(&self_note, &trusted_peers).expect("The note is not valid"),
-        )]
-        .into_iter()
-        .collect();
+        let known_peers = vec![(self_peer_id, self_verified_note)]
+            .into_iter()
+            .collect();
         Self {
             _note: self_note,
             peer_id: self_peer_id,
@@ -519,24 +519,15 @@ fn verify_signature(
     signature: &[u8],
     msg: &[u8],
 ) -> Result<(), NetworkError> {
-    let verifier = SignatureValidator::new_with_quorum_voting_power(
-        trusted_peers
-            .read()
-            .unwrap()
-            .iter()
-            .map(|(peer_id, network_public_keys)| {
-                (
-                    *peer_id,
-                    SignatureInfo::new(network_public_keys.signing_public_key.clone(), 1),
-                )
-            })
-            .collect(),
-        1, /* quorum size */
-    )
-    .expect("Quorum size should be valid.");
+    let rlock = trusted_peers.read().unwrap();
+    let pub_key = rlock
+        .get(&signer)
+        .ok_or_else(|| NetworkErrorKind::SignatureError)?;
     let signature = Ed25519Signature::try_from(signature)
         .map_err(|err| anyhow!(err).context(NetworkErrorKind::SignatureError))?;
-    verifier.verify_signature(signer, get_hash(msg), &signature)?;
+    signature
+        .verify(&get_hash(msg), &pub_key.signing_public_key)
+        .map_err(|_| NetworkErrorKind::SignatureError)?;
     Ok(())
 }
 
