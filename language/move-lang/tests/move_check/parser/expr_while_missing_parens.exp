@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/expr_while_missing_parens.move:4:15 ───
+   │
+ 4 │         while v < 3 { v = v + 1 }
+   │               ^ Unrecognized Token: v
+   ·
+ 4 │         while v < 3 { v = v + 1 }
+   │               - Expected:  "(",
+   │
+

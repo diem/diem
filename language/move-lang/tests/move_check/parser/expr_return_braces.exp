@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/expr_return_braces.move:4:16 ───
+   │
+ 4 │         return if (v > 10) 10 else v
+   │                ^^ Unrecognized Token: if
+   ·
+ 4 │         return if (v > 10) 10 else v
+   │                -- Expected:  "!", "&", "&mut ", "(", "()", "*", "-", "::", "abort", "break", "continue", "copy", "false", "move", "return", "true", "{", r#"0[xX][0-9a-fA-F]+"#, r#"[0-9]+"#, r#"[a-zA-Z_][a-zA-Z0-9_]*"#, r#"[a-zA-Z_][a-zA-Z0-9_]*<"#,
+   │
+

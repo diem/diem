@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parsing/let_binding_missing_fields.move:6:26 ───
+   │
+ 6 │         let Generic<u64> = g;
+   │                          ^ Unrecognized Token: =
+   ·
+ 6 │         let Generic<u64> = g;
+   │                          - Expected:  "{",
+   │
+
