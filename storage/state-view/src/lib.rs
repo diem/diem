@@ -5,9 +5,7 @@
 
 //! This crate defines [`trait StateView`](StateView).
 
-#![forbid(unsafe_code)]
-
-use failure::prelude::*;
+use anyhow::Result;
 use libra_types::access_path::AccessPath;
 
 /// `StateView` is a trait that defines a read-only snapshot of the global state. It is passed to
