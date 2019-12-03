@@ -11,7 +11,7 @@
 
 mod state_view;
 
-use failure::prelude::*;
+use anyhow::{format_err, Error, Result};
 use futures::{compat::Future01CompatExt, executor::block_on, prelude::*};
 use futures_01::future::Future as Future01;
 use grpcio::{ChannelBuilder, Environment};

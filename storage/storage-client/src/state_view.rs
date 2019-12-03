@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::StorageRead;
-use failure::prelude::*;
+use anyhow::{format_err, Result};
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_state_view::StateView;
 use libra_types::{
