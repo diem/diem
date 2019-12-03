@@ -110,6 +110,25 @@ impl BaseConfig {
             file_path.clone()
         }
     }
+
+    /// Returns true if the default is set, the current file path is empty, and the default file
+    /// path points to an existing file.
+    pub fn test_and_set_full_path<T>(
+        &self,
+        config_value: &T,
+        default_value: &T,
+        config_path: &mut PathBuf,
+        default_path: &str,
+    ) where
+        T: PartialEq,
+    {
+        if *config_path != PathBuf::new() || config_value != default_value {
+            return;
+        }
+        if self.full_path(&PathBuf::from(default_path)).is_file() {
+            config_path.push(default_path);
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
