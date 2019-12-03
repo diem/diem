@@ -25,7 +25,7 @@ mod unit_tests;
 // Re-export counter types from prometheus crate
 pub use prometheus::{Histogram, IntCounter, IntCounterVec, IntGauge, IntGaugeVec};
 
-use failure::Result;
+use anyhow::Result;
 use libra_logger::prelude::*;
 use prometheus::{
     core::{Collector, Metric},
