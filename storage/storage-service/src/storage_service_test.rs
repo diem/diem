@@ -2,15 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use futures::{executor::block_on, stream::StreamExt};
 use grpcio::EnvBuilder;
 use itertools::zip_eq;
 use libra_config::config::NodeConfig;
+use libra_crypto::hash::CryptoHash;
 use libra_types::get_with_proof::{RequestItem, ResponseItem};
-use libradb::mock_genesis::db_with_mock_genesis;
+use libradb::mock_genesis::{db_with_mock_genesis, GENESIS_INFO};
 #[cfg(test)]
 use libradb::test_helper::arb_blocks_to_commit;
 use proptest::prelude::*;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use storage_client::{
     StorageRead, StorageReadServiceClient, StorageWrite, StorageWriteServiceClient,
 };
@@ -58,6 +60,12 @@ proptest! {
             start_test_storage_with_read_write_client(/* need_to_use_genesis = */ true);
 
         let mut version = 0;
+        let mut all_accounts = BTreeMap::new();
+
+        // Add the genesis account to the list of all accounts; we will validate
+        // it when testing the backup API.
+        all_accounts.insert(GENESIS_INFO.3.hash(), GENESIS_INFO.4.clone());
+
         for (txns_to_commit, ledger_info_with_sigs) in &blocks {
             write_client
                 .save_transactions(txns_to_commit.clone(),
@@ -74,6 +82,11 @@ proptest! {
                                                 .account_states()
                                                 .clone())
                 );
+
+            // Record all account states.
+            for (address, blob) in account_states.iter() {
+                all_accounts.insert(address.hash(), blob.clone());
+            }
 
             let account_state_request_items = account_states
                 .keys()
@@ -105,6 +118,15 @@ proptest! {
 
             // Assert ledger info.
             prop_assert_eq!(ledger_info_with_sigs, &response_ledger_info_with_sigs);
-         }
+        }
+
+        // Check state backup for all account states.
+        let backup_responses = block_on(read_client.backup_account_state_async(version).unwrap().collect::<Vec<_>>());
+        for ((hash, blob), response) in zip_eq(all_accounts, backup_responses) {
+            let resp = response.unwrap();
+            prop_assert_eq!(&hash, &resp.account_key);
+            prop_assert_eq!(&blob, &resp.account_state_blob);
+        }
+
     }
 }

@@ -18,6 +18,7 @@ use anyhow::{format_err, Result};
 use libra_crypto::HashValue;
 use libra_nibble::Nibble;
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
+use std::sync::Arc;
 
 /// `NodeVisitInfo` keeps track of the status of an internal node during the iteration process. It
 /// indicates which ones of its children have been visited.
@@ -90,9 +91,9 @@ impl NodeVisitInfo {
 }
 
 /// The `JellyfishMerkleIterator` implementation.
-pub struct JellyfishMerkleIterator<'a, R: 'a + TreeReader> {
+pub struct JellyfishMerkleIterator<R: TreeReader> {
     /// The storage engine from which we can read nodes using node keys.
-    reader: &'a R,
+    reader: Arc<R>,
 
     /// The version of the tree this iterator is running on.
     version: Version,
@@ -106,14 +107,14 @@ pub struct JellyfishMerkleIterator<'a, R: 'a + TreeReader> {
     done: bool,
 }
 
-impl<'a, R> JellyfishMerkleIterator<'a, R>
+impl<R> JellyfishMerkleIterator<R>
 where
-    R: 'a + TreeReader,
+    R: TreeReader,
 {
     /// Constructs a new iterator. This puts the internal state in the correct position, so the
     /// following `next` call will yield the smallest key that is greater or equal to
     /// `starting_key`.
-    pub fn new(reader: &'a R, version: Version, starting_key: HashValue) -> Result<Self> {
+    pub fn new(reader: Arc<R>, version: Version, starting_key: HashValue) -> Result<Self> {
         let mut parent_stack = vec![];
         let mut done = false;
 
@@ -192,9 +193,9 @@ where
     }
 }
 
-impl<'a, R> Iterator for JellyfishMerkleIterator<'a, R>
+impl<R> Iterator for JellyfishMerkleIterator<R>
 where
-    R: 'a + TreeReader,
+    R: TreeReader,
 {
     type Item = Result<(HashValue, AccountStateBlob)>;
 

@@ -44,6 +44,7 @@ use crate::{
 };
 use anyhow::{bail, ensure, format_err, Result};
 use itertools::{izip, zip_eq};
+use jellyfish_merkle::iterator::JellyfishMerkleIterator;
 use lazy_static::lazy_static;
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_logger::prelude::*;
@@ -91,7 +92,7 @@ pub struct LibraDB {
     db: Arc<DB>,
     ledger_store: LedgerStore,
     transaction_store: TransactionStore,
-    state_store: StateStore,
+    state_store: Arc<StateStore>,
     event_store: EventStore,
     system_store: SystemStore,
     pruner: Pruner,
@@ -147,7 +148,7 @@ impl LibraDB {
             db: Arc::clone(&db),
             event_store: EventStore::new(Arc::clone(&db)),
             ledger_store: LedgerStore::new(Arc::clone(&db)),
-            state_store: StateStore::new(Arc::clone(&db)),
+            state_store: Arc::new(StateStore::new(Arc::clone(&db))),
             transaction_store: TransactionStore::new(Arc::clone(&db)),
             system_store: SystemStore::new(Arc::clone(&db)),
             pruner: Pruner::new(Arc::clone(&db), Self::NUM_HISTORICAL_VERSIONS_TO_KEEP),
@@ -692,6 +693,20 @@ impl LibraDB {
             Some(start_version),
             proof,
         ))
+    }
+
+    // ================================== Backup APIs ===================================
+    /// Gets an iterator which can yield all accounts in the state tree.
+    pub fn get_account_iter(
+        &self,
+        version: Version,
+    ) -> Result<Box<dyn Iterator<Item = Result<(HashValue, AccountStateBlob)>> + Send>> {
+        let iterator = JellyfishMerkleIterator::new(
+            Arc::clone(&self.state_store),
+            version,
+            HashValue::zero(),
+        )?;
+        Ok(Box::new(iterator))
     }
 
     // ================================== Private APIs ==================================
