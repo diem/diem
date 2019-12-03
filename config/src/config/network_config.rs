@@ -6,7 +6,7 @@ use crate::{
     keys::{self, KeyPair},
     utils,
 };
-use failure::{self, anyhow, ensure, Result};
+use anyhow::{anyhow, ensure, Result};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{config::BaseConfig, utils};
-use failure::Result;
+use anyhow::Result;
 use libra_types::transaction::Transaction;
 use serde::{Deserialize, Serialize};
 use std::{
