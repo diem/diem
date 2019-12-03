@@ -7,7 +7,7 @@
 
 pub mod proto;
 use crate::proto::mempool_status::MempoolAddTransactionStatusCode;
-use failure::prelude::*;
+use anyhow::{Error, Result};
 use std::convert::TryFrom;
 
 /// Status of transaction insertion operation

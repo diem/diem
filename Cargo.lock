@@ -2214,8 +2214,8 @@ dependencies = [
 name = "libra-mempool-shared-proto"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "libra-failure-ext 0.1.0",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-build 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
