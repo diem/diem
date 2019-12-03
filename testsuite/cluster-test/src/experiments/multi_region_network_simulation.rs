@@ -4,10 +4,10 @@
 #![forbid(unsafe_code)]
 use std::{fmt, time::Duration};
 
+use anyhow::Result;
 use slog_scope::{info, warn};
 use structopt::StructOpt;
 
-use failure;
 use tokio::time;
 
 /// This module provides an experiment which simulates a multi-region environment.
@@ -67,7 +67,7 @@ impl MultiRegionSimulation {
         count: usize,
         cross_region_delay: Duration,
         context: &mut Context,
-    ) -> failure::Result<Metrics> {
+    ) -> Result<Metrics> {
         let (cluster1, cluster2) = context.cluster.split_n_random(count);
         let (region1, region2) = (cluster1.into_instances(), cluster2.into_instances());
         let (smaller_region, larger_region);
@@ -190,10 +190,7 @@ fn print_results(metrics: Vec<Metrics>) {
 }
 
 impl Experiment for MultiRegionSimulation {
-    fn run<'a>(
-        &'a mut self,
-        context: &'a mut Context,
-    ) -> BoxFuture<'a, failure::Result<Option<String>>> {
+    fn run<'a>(&'a mut self, context: &'a mut Context) -> BoxFuture<'a, Result<Option<String>>> {
         async move {
             let mut emitter = TxEmitter::new(&context.cluster);
             let mut results = vec![];

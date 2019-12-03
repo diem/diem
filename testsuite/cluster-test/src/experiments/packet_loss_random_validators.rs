@@ -3,23 +3,19 @@
 
 #![forbid(unsafe_code)]
 
-use std::{fmt, time::Duration};
-
-use structopt::StructOpt;
-
-use failure;
-use futures::future::{BoxFuture, FutureExt};
-
-use crate::experiments::Context;
 /// This module provides an experiment which introduces packet loss for
 /// a given number of instances in the cluster. It undoes the packet loss
 /// in the cluster after the given duration
 use crate::{
     cluster::Cluster,
     effects::{Action, PacketLoss, RemoveNetworkEffects},
-    experiments::Experiment,
+    experiments::{Context, Experiment},
     instance::Instance,
 };
+use anyhow::Result;
+use futures::future::{BoxFuture, FutureExt};
+use std::{fmt, time::Duration};
+use structopt::StructOpt;
 
 pub struct PacketLossRandomValidators {
     instances: Vec<Instance>,
@@ -67,7 +63,7 @@ impl PacketLossRandomValidators {
 }
 
 impl Experiment for PacketLossRandomValidators {
-    fn run(&mut self, _context: &mut Context) -> BoxFuture<failure::Result<Option<String>>> {
+    fn run(&mut self, _context: &mut Context) -> BoxFuture<Result<Option<String>>> {
         async move {
             let mut instances = vec![];
             for instance in self.instances.iter() {

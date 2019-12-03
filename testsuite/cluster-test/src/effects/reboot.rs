@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use crate::{effects::Action, instance::Instance};
-use failure;
+use anyhow::Result;
 use futures::future::{BoxFuture, FutureExt};
 use slog_scope::info;
 use std::fmt;
@@ -22,7 +22,7 @@ impl Reboot {
 }
 
 impl Action for Reboot {
-    fn apply(&self) -> BoxFuture<failure::Result<()>> {
+    fn apply(&self) -> BoxFuture<Result<()>> {
         async move {
             info!("Rebooting {}", self.instance);
             self.instance

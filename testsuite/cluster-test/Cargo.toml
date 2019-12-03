@@ -10,6 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 flate2 = { version = "1.0", features = ["rust_backend"], default-features = false }
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 itertools = "0.8.0"
@@ -31,7 +32,6 @@ slog-term = "2.4.1"
 slog-scope = "4.0"
 slog-envlogger = "2.1.0"
 
-failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
 admission-control-proto = { path = "../../admission_control/admission-control-proto", version = "0.1.0" }
 util = { path = "../../common/util", version = "0.1.0", package = "libra-util" }

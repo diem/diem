@@ -3,10 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use failure::{
-    self,
-    prelude::{bail, format_err},
-};
+use anyhow::{bail, format_err, Result};
 use reqwest::Url;
 use serde::Deserialize;
 use std::{collections::HashMap, time::Duration};
@@ -40,7 +37,7 @@ impl Prometheus {
         start: &Duration,
         end: &Duration,
         step: u64,
-    ) -> failure::Result<MatrixResponse> {
+    ) -> Result<MatrixResponse> {
         let url = self
             .url
             .join(&format!(
@@ -80,7 +77,7 @@ impl Prometheus {
         start: &Duration,
         end: &Duration,
         step: u64,
-    ) -> failure::Result<f64> {
+    ) -> Result<f64> {
         let response = self.query_range(query, start, end, step)?;
         response
             .avg()
@@ -165,7 +162,7 @@ struct PrometheusMetric {
 }
 
 impl MatrixResponse {
-    fn from_prometheus(data: PrometheusData) -> failure::Result<Self> {
+    fn from_prometheus(data: PrometheusData) -> Result<Self> {
         let mut inner = HashMap::new();
         for entry in data.result {
             let peer_id = entry.metric.peer_id;
@@ -180,7 +177,7 @@ impl MatrixResponse {
 }
 
 impl TimeSeries {
-    fn from_prometheus(values: Vec<(u64, String)>) -> failure::Result<Self> {
+    fn from_prometheus(values: Vec<(u64, String)>) -> Result<Self> {
         let mut inner = vec![];
         for (ts, value) in values {
             let value = value.parse().map_err(|e| {

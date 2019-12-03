@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use crate::{aws::Aws, instance::Instance};
-use failure::{self, prelude::*};
+use anyhow::{ensure, format_err, Result};
 use libra_config::config::AdmissionControlConfig;
 use rand::prelude::*;
 use rusoto_ec2::{DescribeInstancesRequest, Ec2, Filter, Tag};
@@ -39,7 +39,7 @@ impl Cluster {
         }
     }
 
-    pub fn discover(aws: &Aws, mint_file: &str) -> failure::Result<Self> {
+    pub fn discover(aws: &Aws, mint_file: &str) -> Result<Self> {
         let mut instances = vec![];
         let mut next_token = None;
         let mut retries_left = 10;

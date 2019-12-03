@@ -18,6 +18,7 @@ use slog_scope::{info, warn};
 use structopt::{clap::ArgGroup, StructOpt};
 use termion::{color, style};
 
+use anyhow::{bail, format_err, Result};
 use cluster_test::effects::RemoveNetworkEffects;
 use cluster_test::experiments::{get_experiment, Context};
 use cluster_test::github::GitHub;
@@ -37,10 +38,6 @@ use cluster_test::{
     stats,
     suite::ExperimentSuite,
     tx_emitter::TxEmitter,
-};
-use failure::{
-    self,
-    prelude::{bail, format_err},
 };
 use futures::future::join_all;
 use futures::future::FutureExt;
@@ -212,7 +209,7 @@ pub fn main() {
     }
 }
 
-fn exit_on_error<T>(r: failure::Result<T>) -> T {
+fn exit_on_error<T>(r: Result<T>) -> T {
     match r {
         Ok(r) => r,
         Err(err) => {
@@ -260,7 +257,7 @@ struct ClusterTestRunner {
     github: GitHub,
 }
 
-fn parse_host_port(s: &str) -> failure::Result<(String, u32)> {
+fn parse_host_port(s: &str) -> Result<(String, u32)> {
     let v = s.split(':').collect::<Vec<&str>>();
     if v.len() != 2 {
         return Err(format_err!("Failed to parse {:?} in host:port format", s));
@@ -422,7 +419,7 @@ impl ClusterTestRunner {
         }
     }
 
-    pub fn run_ci_suite(&mut self, hash_to_tag: Option<String>) -> failure::Result<()> {
+    pub fn run_ci_suite(&mut self, hash_to_tag: Option<String>) -> Result<()> {
         let suite = ExperimentSuite::new_pre_release(&self.cluster);
         let results = self.run_suite(suite)?;
         let output = results
@@ -536,7 +533,7 @@ impl ClusterTestRunner {
         self.slack_message(msg);
     }
 
-    fn redeploy(&mut self, hash: &str) -> failure::Result<()> {
+    fn redeploy(&mut self, hash: &str) -> Result<()> {
         info!("Cleaning up before deploy");
         self.cleanup();
         info!("Stopping validators");
@@ -563,7 +560,7 @@ impl ClusterTestRunner {
         Ok(())
     }
 
-    fn fetch_genesis(&mut self, marker: &str) -> failure::Result<()> {
+    fn fetch_genesis(&mut self, marker: &str) -> Result<()> {
         let cmd = format!(
             "sudo aws s3 cp s3://toro-validator-sets/{}/100/genesis.blob /opt/libra/genesis.blob",
             marker
@@ -583,7 +580,7 @@ impl ClusterTestRunner {
         Ok(())
     }
 
-    fn run_suite(&mut self, suite: ExperimentSuite) -> failure::Result<Vec<Option<String>>> {
+    fn run_suite(&mut self, suite: ExperimentSuite) -> Result<Vec<Option<String>>> {
         info!("Starting suite");
         let mut results = vec![];
         let suite_started = Instant::now();
@@ -612,10 +609,7 @@ impl ClusterTestRunner {
         println!("Performance report:\n```\n{}\n```", output);
     }
 
-    pub fn cleanup_and_run(
-        &mut self,
-        experiment: Box<dyn Experiment>,
-    ) -> failure::Result<Option<String>> {
+    pub fn cleanup_and_run(&mut self, experiment: Box<dyn Experiment>) -> Result<Option<String>> {
         self.cleanup();
         self.run_single_experiment(experiment)
     }
@@ -623,7 +617,7 @@ impl ClusterTestRunner {
     pub fn run_single_experiment(
         &mut self,
         mut experiment: Box<dyn Experiment>,
-    ) -> failure::Result<Option<String>> {
+    ) -> Result<Option<String>> {
         let events = self.logs.recv_all();
         if let Err(s) =
             self.health_check_runner
@@ -793,7 +787,7 @@ impl ClusterTestRunner {
         }
     }
 
-    fn wait_until_all_healthy(&mut self) -> failure::Result<()> {
+    fn wait_until_all_healthy(&mut self) -> Result<()> {
         let wait_deadline = Instant::now() + Duration::from_secs(20 * 60);
         for instance in self.cluster.instances() {
             self.health_check_runner.invalidate(instance.short_hash());

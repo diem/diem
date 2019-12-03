@@ -35,7 +35,7 @@ pub trait Experiment: Display + Send {
     fn run<'a>(
         &'a mut self,
         context: &'a mut Context,
-    ) -> BoxFuture<'a, failure::Result<Option<String>>>;
+    ) -> BoxFuture<'a, anyhow::Result<Option<String>>>;
     fn deadline(&self) -> Duration;
 }
 

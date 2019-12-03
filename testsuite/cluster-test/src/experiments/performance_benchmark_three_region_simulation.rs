@@ -31,7 +31,7 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
     fn run<'a>(
         &'a mut self,
         context: &'a mut Context,
-    ) -> BoxFuture<'a, failure::Result<Option<String>>> {
+    ) -> BoxFuture<'a, anyhow::Result<Option<String>>> {
         async move {
             let (us, euro) = self.cluster.split_n_random(80);
             let (us_west, us_east) = us.split_n_random(40);
