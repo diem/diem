@@ -11,7 +11,7 @@ use crate::{
     },
     utils,
 };
-use failure::Result;
+use anyhow::Result;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashMap, path::PathBuf};
 

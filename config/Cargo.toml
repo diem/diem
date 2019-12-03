@@ -10,6 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 get_if_addrs = { version = "0.5.3", default-features = false }
 hex = { version = "0.3.2", default-features = false }
 mirai-annotations = "1.4.0"
@@ -19,7 +20,6 @@ serde = { version = "1.0.99", features = ["rc"], default-features = false }
 thiserror = "1.0"
 toml = { version = "0.5.3", default-features = false }
 
-failure = { path = "../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-tools = { path = "../common/tools", version = "0.1.0" }
