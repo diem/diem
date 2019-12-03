@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Convenience structs and functions for generating configuration for a swarm of libra nodes
-use failure::{bail, ensure, format_err, Result};
+use anyhow::{bail, ensure, format_err, Result};
 use libra_config::{
     config::{NodeConfig, PersistableConfig, RoleType},
     generator,
