@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{FuzzTarget, FuzzTargetImpl};
-use failure::prelude::*;
+use anyhow::{format_err, Result};
 use lazy_static::lazy_static;
 use std::{collections::BTreeMap, env};
 
