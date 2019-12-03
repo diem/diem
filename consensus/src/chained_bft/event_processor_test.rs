@@ -96,7 +96,7 @@ impl NodeSetup {
         let mut nodes = vec![];
         for signer in signers.iter().take(num_nodes) {
             let (initial_data, storage) =
-                MockStorage::<TestPayload>::start_for_testing(validators.clone());
+                MockStorage::<TestPayload>::start_for_testing((&validators).into());
 
             let safety_rules_file = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
             OnDiskStorage::default_storage(safety_rules_file.clone());

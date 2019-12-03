@@ -14,6 +14,8 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use libra_types::ledger_info::LedgerInfo;
+use libra_types::validator_public_keys::ValidatorPublicKeys;
+use libra_types::validator_set::ValidatorSet;
 use rmp_serde::{from_slice, to_vec_named};
 use std::{collections::HashSet, sync::Arc};
 use storage_client::StorageRead;
@@ -57,6 +59,7 @@ pub struct RecoveryData<T> {
 
     // Liveness data
     highest_timeout_certificate: Option<TimeoutCertificate>,
+    validator_keys: ValidatorSet,
     validators: Arc<ValidatorVerifier>,
 }
 
@@ -67,7 +70,7 @@ impl<T: Payload> RecoveryData<T> {
         mut quorum_certs: Vec<QuorumCert>,
         storage_ledger: &LedgerInfo,
         highest_timeout_certificate: Option<TimeoutCertificate>,
-        validators: Arc<ValidatorVerifier>,
+        validator_keys: ValidatorSet,
     ) -> Result<Self> {
         let root =
             Self::find_root(&mut blocks, &mut quorum_certs, storage_ledger).with_context(|| {
@@ -108,7 +111,8 @@ impl<T: Payload> RecoveryData<T> {
                 Some(tc) if tc.epoch() == epoch => Some(tc),
                 _ => None,
             },
-            validators,
+            validators: Arc::new((&validator_keys).into()),
+            validator_keys,
         })
     }
 
@@ -146,6 +150,10 @@ impl<T: Payload> RecoveryData<T> {
 
     pub fn validators(&self) -> Arc<ValidatorVerifier> {
         Arc::clone(&self.validators)
+    }
+
+    pub fn validator_keys(&self) -> Vec<ValidatorPublicKeys> {
+        self.validator_keys.payload().to_vec()
     }
 
     /// Finds the root (last committed block) and returns the root block, the QC to the root block
@@ -301,14 +309,12 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             quorum_certs,
             startup_info.ledger_info.ledger_info(),
             highest_timeout_certificate,
-            Arc::new(
-                startup_info
-                    .ledger_info_with_validators
-                    .ledger_info()
-                    .next_validator_set()
-                    .expect("should have ValidatorSet when start new epoch")
-                    .into(),
-            ),
+            startup_info
+                .ledger_info_with_validators
+                .ledger_info()
+                .next_validator_set()
+                .expect("should have ValidatorSet when start new epoch")
+                .clone(),
         )
         .expect("Cannot construct recovery data");
 

@@ -184,7 +184,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         let signer = Arc::new(initial_setup.signer);
         let epoch = initial_data.epoch();
         let validators = initial_data.validators();
-        let epoch_mgr = EpochManager::new(
+        let mut epoch_mgr = EpochManager::new(
             epoch,
             self.config.take().expect("already started, config is None"),
             time_service,

@@ -86,9 +86,10 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
 
     // TODO: remove
     let validator = ValidatorVerifier::new_single(signer.author(), signer.public_key());
+    let validator_set = (&validator).into();
 
     // TODO: EmptyStorage
-    let (initial_data, storage) = MockStorage::<TestPayload>::start_for_testing(validator);
+    let (initial_data, storage) = MockStorage::<TestPayload>::start_for_testing(validator_set);
 
     // TODO: remove
     let safety_rules =
