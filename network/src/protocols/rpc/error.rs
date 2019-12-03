@@ -36,7 +36,7 @@ pub enum RpcError {
     UnexpectedResponseChannelCancel,
 
     #[error("Error in application layer handling rpc request: {0:?}")]
-    ApplicationError(failure::Error),
+    ApplicationError(anyhow::Error),
 
     #[error("Error sending on mpsc channel: {0:?}")]
     MpscSendError(#[from] mpsc::SendError),
