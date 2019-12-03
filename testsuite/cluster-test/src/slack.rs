@@ -3,10 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use failure::{
-    self,
-    prelude::{bail, format_err},
-};
+use anyhow::{bail, format_err, Result};
 use reqwest::{self, Url};
 use serde_json::{self, json};
 
@@ -20,7 +17,7 @@ impl SlackClient {
         Self { client }
     }
 
-    pub fn send_message(&self, url: &Url, msg: &str) -> failure::Result<()> {
+    pub fn send_message(&self, url: &Url, msg: &str) -> Result<()> {
         let msg = json!({ "text": msg });
         let msg = serde_json::to_string(&msg)
             .map_err(|e| format_err!("Failed to serialize message for slack: {:?}", e))?;

@@ -7,7 +7,7 @@ use crate::effects::Effect;
 /// NetworkDelay introduces network delay from a given instance to a provided list of instances
 /// If no instances are provided, network delay is introduced on all outgoing packets
 use crate::instance::Instance;
-use failure;
+use anyhow::Result;
 use futures::future::{BoxFuture, FutureExt};
 use slog_scope::info;
 use std::fmt;
@@ -30,7 +30,7 @@ impl NetworkDelay {
 }
 
 impl Effect for NetworkDelay {
-    fn activate(&self) -> BoxFuture<failure::Result<()>> {
+    fn activate(&self) -> BoxFuture<Result<()>> {
         info!("Injecting NetworkDelays for {}", self.instance);
         let mut command = "".to_string();
         command += "sudo tc qdisc delete dev eth0 root; ";
@@ -64,7 +64,7 @@ impl Effect for NetworkDelay {
         self.instance.run_cmd(vec![command]).boxed()
     }
 
-    fn deactivate(&self) -> BoxFuture<failure::Result<()>> {
+    fn deactivate(&self) -> BoxFuture<Result<()>> {
         self.instance
             .run_cmd(vec!["sudo tc qdisc delete dev eth0 root; true".to_string()])
             .boxed()

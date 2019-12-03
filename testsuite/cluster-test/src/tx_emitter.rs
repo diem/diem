@@ -17,10 +17,7 @@ use std::{
 };
 
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
-use failure::{
-    self,
-    prelude::{bail, format_err},
-};
+use anyhow::{bail, format_err, Result};
 use generate_keypair::load_key_from_file;
 use itertools::zip;
 use libra_crypto::{
@@ -107,7 +104,7 @@ impl TxEmitter {
         NamedAdmissionControlClient(mint_instance.clone(), Self::make_client(mint_instance))
     }
 
-    pub fn start_job(&mut self, req: EmitJobRequest) -> failure::Result<EmitJob> {
+    pub fn start_job(&mut self, req: EmitJobRequest) -> Result<EmitJob> {
         let num_clients = req.instances.len();
         let num_accounts = req.accounts_per_client * num_clients;
         self.mint_accounts(&req, num_accounts)?;
@@ -142,7 +139,7 @@ impl TxEmitter {
         Ok(EmitJob { workers, stop })
     }
 
-    fn mint_accounts(&mut self, req: &EmitJobRequest, num_accounts: usize) -> failure::Result<()> {
+    fn mint_accounts(&mut self, req: &EmitJobRequest, num_accounts: usize) -> Result<()> {
         if self.accounts.len() >= num_accounts {
             info!("Not minting accounts");
             return Ok(()); // Early return to skip printing 'Minting ...' logs
@@ -224,11 +221,7 @@ impl TxEmitter {
         AdmissionControlClient::new(ch)
     }
 
-    pub fn emit_txn_for(
-        &mut self,
-        duration: Duration,
-        instances: Vec<Instance>,
-    ) -> failure::Result<()> {
+    pub fn emit_txn_for(&mut self, duration: Duration, instances: Vec<Instance>) -> Result<()> {
         let job = self.start_job(EmitJobRequest {
             instances,
             accounts_per_client: 10,
@@ -346,7 +339,7 @@ fn is_sequence_equal(accounts: &[AccountData], sequence_numbers: &[u64]) -> bool
 fn query_sequence_numbers(
     client: &AdmissionControlClient,
     addresses: &[AccountAddress],
-) -> failure::Result<Vec<u64>> {
+) -> Result<Vec<u64>> {
     let mut update_request = UpdateToLatestLedgerRequest::default();
     for address in addresses {
         let mut request_item = RequestItem::default();
@@ -461,7 +454,7 @@ fn execute_and_wait_transactions(
     client: &NamedAdmissionControlClient,
     account: &mut AccountData,
     txn: Vec<SubmitTransactionRequest>,
-) -> failure::Result<()> {
+) -> Result<()> {
     debug!(
         "[{}] Submitting transactions {} - {} for {}",
         client,
@@ -500,7 +493,7 @@ fn execute_and_wait_transactions(
 fn load_faucet_account(
     client: &NamedAdmissionControlClient,
     faucet_account_path: &str,
-) -> failure::Result<AccountData> {
+) -> Result<AccountData> {
     let key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
         load_key_from_file(faucet_account_path).expect("invalid faucet keypair file");
     let address = association_address();
@@ -525,7 +518,7 @@ fn create_new_accounts(
     num_new_accounts: usize,
     libra_per_new_account: u64,
     client: NamedAdmissionControlClient,
-) -> failure::Result<Vec<AccountData>> {
+) -> Result<Vec<AccountData>> {
     let mut i = 0;
     let mut accounts = vec![];
     while i < num_new_accounts {

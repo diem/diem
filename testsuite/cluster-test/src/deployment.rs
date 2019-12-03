@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use crate::{aws::Aws, cluster::Cluster};
-use failure::prelude::{bail, format_err};
+use anyhow::{bail, format_err, Result};
 use rusoto_core::RusotoError;
 use rusoto_ecr::{
     BatchGetImageRequest, DescribeImagesRequest, DescribeImagesResponse, Ecr, Image,
@@ -65,7 +65,7 @@ impl DeploymentManager {
         Some(hash)
     }
 
-    pub fn redeploy(&mut self, hash: String) -> failure::Result<()> {
+    pub fn redeploy(&mut self, hash: String) -> Result<()> {
         info!("Will deploy with digest {}", hash);
         self.tag_image(
             VALIDATOR_IMAGE_REPO,
@@ -79,7 +79,7 @@ impl DeploymentManager {
         Ok(())
     }
 
-    pub fn update_all_services(&self) -> failure::Result<()> {
+    pub fn update_all_services(&self) -> Result<()> {
         for instance in self.cluster.instances() {
             let mut request = UpdateServiceRequest::default();
             request.cluster = Some(self.aws.workplace().clone());
@@ -100,7 +100,7 @@ impl DeploymentManager {
         Ok(())
     }
 
-    fn image_digest_by_tag(&self, tag: &str) -> failure::Result<String> {
+    fn image_digest_by_tag(&self, tag: &str) -> Result<String> {
         let result = self.describe_images(tag);
         let images = result
             .image_details
@@ -139,7 +139,7 @@ impl DeploymentManager {
         }
     }
 
-    pub fn get_tested_upstream_commit(&self) -> failure::Result<String> {
+    pub fn get_tested_upstream_commit(&self) -> Result<String> {
         let digest = self
             .image_digest_by_tag(TESTED_TAG)
             .map_err(|e| format_err!("Failed to get image digest for {}:{}", TESTED_TAG, e))?;
@@ -147,7 +147,7 @@ impl DeploymentManager {
         Ok(prev_master_tag[MASTER_PREFIX.len()..].to_string())
     }
 
-    pub fn tag_tested_image(&mut self, hash: String) -> failure::Result<String> {
+    pub fn tag_tested_image(&mut self, hash: String) -> Result<String> {
         let image_id = ImageIdentifier {
             image_digest: Some(hash.clone()),
             image_tag: None,
@@ -175,7 +175,7 @@ impl DeploymentManager {
         Ok(upstream_commit)
     }
 
-    pub fn get_master_tag(&self, digest: &str) -> failure::Result<String> {
+    pub fn get_master_tag(&self, digest: &str) -> Result<String> {
         let image_id = ImageIdentifier {
             image_digest: Some(digest.to_string()),
             image_tag: None,
@@ -201,11 +201,7 @@ impl DeploymentManager {
         ))
     }
 
-    fn get_images(
-        &self,
-        repository: &str,
-        image_id: &ImageIdentifier,
-    ) -> failure::Result<Vec<Image>> {
+    fn get_images(&self, repository: &str, image_id: &ImageIdentifier) -> Result<Vec<Image>> {
         let mut get_request = BatchGetImageRequest::default();
         get_request.repository_name = repository.to_string();
         get_request.image_ids = vec![image_id.clone()];
@@ -235,12 +231,7 @@ impl DeploymentManager {
             .ok_or_else(|| format_err!("No images in batch_get_image response"))
     }
 
-    fn tag_image(
-        &self,
-        repository: &str,
-        image_id: &ImageIdentifier,
-        new_tag: &str,
-    ) -> failure::Result<()> {
+    fn tag_image(&self, repository: &str, image_id: &ImageIdentifier, new_tag: &str) -> Result<()> {
         let images = self.get_images(repository, &image_id)?;
         let image = images
             .into_iter()
@@ -266,7 +257,7 @@ impl DeploymentManager {
         }
     }
 
-    pub fn resolve(&self, hash_or_tag: &str) -> failure::Result<String> {
+    pub fn resolve(&self, hash_or_tag: &str) -> Result<String> {
         if hash_or_tag.starts_with("sha256:") {
             Ok(hash_or_tag.to_string())
         } else {

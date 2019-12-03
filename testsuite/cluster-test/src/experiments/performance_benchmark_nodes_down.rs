@@ -54,7 +54,7 @@ impl Experiment for PerformanceBenchmarkNodesDown {
     fn run<'a>(
         &'a mut self,
         context: &'a mut Context,
-    ) -> BoxFuture<'a, failure::Result<Option<String>>> {
+    ) -> BoxFuture<'a, anyhow::Result<Option<String>>> {
         async move {
             let stop_effects: Vec<_> = self
                 .down_instances

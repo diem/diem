@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use failure::{self, prelude::*};
+use anyhow::{ensure, Result};
 use std::collections::HashSet;
 use std::{ffi::OsStr, fmt, process::Stdio};
 use tokio;
@@ -24,7 +24,7 @@ impl Instance {
         }
     }
 
-    pub async fn run_cmd_tee_err<I, S>(&self, args: I) -> failure::Result<()>
+    pub async fn run_cmd_tee_err<I, S>(&self, args: I) -> Result<()>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
@@ -32,7 +32,7 @@ impl Instance {
         self.run_cmd_inner(false, args).await
     }
 
-    pub async fn run_cmd<I, S>(&self, args: I) -> failure::Result<()>
+    pub async fn run_cmd<I, S>(&self, args: I) -> Result<()>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
@@ -40,7 +40,7 @@ impl Instance {
         self.run_cmd_inner(true, args).await
     }
 
-    pub async fn run_cmd_inner<I, S>(&self, no_std_err: bool, args: I) -> failure::Result<()>
+    pub async fn run_cmd_inner<I, S>(&self, no_std_err: bool, args: I) -> Result<()>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,

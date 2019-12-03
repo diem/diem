@@ -7,7 +7,7 @@ use std::{collections::HashSet, fmt, time::Duration};
 
 use rand::Rng;
 
-use failure::{self, prelude::bail};
+use anyhow::{bail, Result};
 
 use crate::experiments::Context;
 use crate::{
@@ -57,7 +57,7 @@ impl Experiment for RebootRandomValidators {
         instance::instancelist_to_set(&self.instances)
     }
 
-    fn run(&mut self, _context: &mut Context) -> BoxFuture<failure::Result<Option<String>>> {
+    fn run(&mut self, _context: &mut Context) -> BoxFuture<Result<Option<String>>> {
         async move {
             let futures = self.instances.iter().map(|instance| {
                 async move {
