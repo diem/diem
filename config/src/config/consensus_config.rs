@@ -23,6 +23,9 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
 
+const CONSENSUS_KEYPAIR_DEFAULT: &str = "consensus.keys.toml";
+const CONSENSUS_PEERS_DEFAULT: &str = "consensus_peers.config.toml";
+
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
@@ -109,6 +112,19 @@ impl ConsensusConfig {
     }
 
     pub fn load(&mut self) -> Result<()> {
+        self.base.test_and_set_full_path(
+            &self.consensus_keypair,
+            &ConsensusKeyPair::default(),
+            &mut self.consensus_keypair_file,
+            CONSENSUS_KEYPAIR_DEFAULT,
+        );
+        self.base.test_and_set_full_path(
+            &self.consensus_peers,
+            &Self::default_peers(&ConsensusKeyPair::default(), PeerId::default()),
+            &mut self.consensus_peers_file,
+            CONSENSUS_PEERS_DEFAULT,
+        );
+
         if !self.consensus_keypair_file.as_os_str().is_empty() {
             self.consensus_keypair = ConsensusKeyPair::load_config(self.consensus_keypair_file())?;
         }
@@ -121,7 +137,7 @@ impl ConsensusConfig {
     pub fn save(&mut self) {
         if self.consensus_keypair != ConsensusKeyPair::default() {
             if self.consensus_keypair_file.as_os_str().is_empty() {
-                self.consensus_keypair_file = PathBuf::from("consensus.keys.toml");
+                self.consensus_keypair_file = PathBuf::from(CONSENSUS_KEYPAIR_DEFAULT);
             }
 
             self.consensus_keypair
@@ -129,7 +145,7 @@ impl ConsensusConfig {
         }
 
         if self.consensus_peers_file.as_os_str().is_empty() {
-            self.consensus_peers_file = PathBuf::from("consensus_peers.config.toml");
+            self.consensus_peers_file = PathBuf::from(CONSENSUS_PEERS_DEFAULT);
         }
         self.consensus_peers
             .save_config(self.consensus_peers_file());
@@ -216,4 +232,99 @@ pub struct ConsensusPeerInfo {
     #[serde(deserialize_with = "keys::deserialize_key")]
     #[serde(rename = "c")]
     pub consensus_pubkey: Ed25519PublicKey,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::config::RoleType;
+    use libra_tools::tempdir::TempPath;
+    use rand::{rngs::StdRng, SeedableRng};
+
+    #[test]
+    fn test_with_defaults() {
+        let keypair = ConsensusKeyPair::default();
+        let peers = ConsensusConfig::default_peers(&keypair, PeerId::default());
+
+        // Assert default exists
+        let (mut config, _path) = generate_config();
+        assert_eq!(config.consensus_keypair, keypair);
+        assert_eq!(config.consensus_keypair_file, PathBuf::new());
+        assert_eq!(config.consensus_peers, peers);
+        assert_eq!(config.consensus_peers_file, PathBuf::new());
+
+        // Assert default loading doesn't affect paths and default remain in place
+        let result = config.load();
+        assert!(result.is_ok());
+        assert_eq!(config.consensus_keypair, keypair);
+        assert_eq!(config.consensus_keypair_file, PathBuf::new());
+        assert_eq!(config.consensus_peers, peers);
+        assert_eq!(config.consensus_peers_file, PathBuf::new());
+
+        // Assert saving updates peers but not key pairs due to default behavior
+        config.save();
+        assert_eq!(config.consensus_keypair, keypair);
+        assert_eq!(config.consensus_keypair_file, PathBuf::new());
+        assert_eq!(config.consensus_peers, peers);
+        assert_eq!(
+            config.consensus_peers_file,
+            PathBuf::from(CONSENSUS_PEERS_DEFAULT)
+        );
+    }
+
+    #[test]
+    fn test_with_random() {
+        let (mut config, _path) = generate_config();
+        let mut rng = StdRng::from_seed([6u8; 32]);
+        config.random(&mut rng, PeerId::random());
+
+        let keypair = config.consensus_keypair.clone();
+        let peers = config.consensus_peers.clone();
+
+        // Assert empty paths
+        assert_eq!(config.consensus_keypair_file, PathBuf::new());
+        assert_eq!(config.consensus_peers_file, PathBuf::new());
+
+        // Assert saving updates paths
+        config.save();
+        assert_eq!(config.consensus_keypair, keypair);
+        assert_eq!(
+            config.consensus_keypair_file,
+            PathBuf::from(CONSENSUS_KEYPAIR_DEFAULT)
+        );
+        assert_eq!(config.consensus_peers, peers);
+        assert_eq!(
+            config.consensus_peers_file,
+            PathBuf::from(CONSENSUS_PEERS_DEFAULT)
+        );
+
+        // Assert a fresh load correctly populates the config
+        let mut new_config = ConsensusConfig::default();
+        new_config.base = Arc::clone(&config.base);
+        // First that paths are empty
+        assert_eq!(new_config.consensus_keypair_file, PathBuf::new());
+        assert_eq!(new_config.consensus_peers_file, PathBuf::new());
+        // Loading populates things correctly
+        let result = new_config.load();
+        assert!(result.is_ok());
+        assert_eq!(new_config.consensus_keypair, keypair);
+        assert_eq!(
+            new_config.consensus_keypair_file,
+            PathBuf::from(CONSENSUS_KEYPAIR_DEFAULT)
+        );
+        assert_eq!(new_config.consensus_peers, peers);
+        assert_eq!(
+            new_config.consensus_peers_file,
+            PathBuf::from(CONSENSUS_PEERS_DEFAULT)
+        );
+    }
+
+    fn generate_config() -> (ConsensusConfig, TempPath) {
+        let temp_dir = TempPath::new();
+        temp_dir.create_as_dir().expect("error creating tempdir");
+        let base_config = BaseConfig::new(temp_dir.path().into(), RoleType::Validator);
+        let mut consensus_config = ConsensusConfig::default();
+        consensus_config.base = Arc::new(base_config);
+        (consensus_config, temp_dir)
+    }
 }
