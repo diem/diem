@@ -10,6 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 bytes = "0.4.12"
 chrono = "0.4.7"
 futures = "0.1.28"
@@ -25,7 +26,6 @@ ttl_cache = "0.4.2"
 libra-mempool-shared-proto = { path = "mempool-shared-proto", version = "0.1.0" }
 bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }
 libra-config = { path = "../config", version = "0.1.0" }
-failure = { path = "../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
 grpc-helpers = { path = "../common/grpc-helpers", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
