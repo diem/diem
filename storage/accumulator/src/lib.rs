@@ -103,7 +103,7 @@
 //! |  ...  |   ...     |
 //! ```
 
-use failure::prelude::*;
+use anyhow::{ensure, format_err, Result};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
 use libra_types::proof::{
     definition::{LeafCount, MAX_ACCUMULATOR_PROOF_DEPTH},
