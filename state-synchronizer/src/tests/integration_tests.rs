@@ -6,8 +6,8 @@ use crate::{
     executor_proxy::ExecutorProxyTrait, PeerId, StateSyncClient, StateSynchronizer,
     SynchronizerState,
 };
+use anyhow::{bail, Result};
 use config_builder::util::get_test_config;
-use failure::{prelude::*, Result};
 use futures::{executor::block_on, future::FutureExt, Future};
 use libra_config::config::RoleType;
 use libra_crypto::x25519::X25519StaticPublicKey;

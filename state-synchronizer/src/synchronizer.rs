@@ -6,8 +6,8 @@ use crate::{
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     SynchronizerState,
 };
+use anyhow::Result;
 use executor::Executor;
-use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
     executor::block_on,

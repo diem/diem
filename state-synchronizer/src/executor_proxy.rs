@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::SynchronizerState;
+use anyhow::{format_err, Result};
 use executor::Executor;
-use failure::prelude::*;
 use futures::{channel::oneshot, Future, FutureExt};
 use grpcio::EnvBuilder;
 use libra_config::config::NodeConfig;
