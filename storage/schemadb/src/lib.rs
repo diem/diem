@@ -17,7 +17,7 @@
 pub mod schema;
 
 use crate::schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec};
-use failure::prelude::*;
+use anyhow::{format_err, Result};
 use lazy_static::lazy_static;
 use libra_metrics::OpMetrics;
 use rocksdb::{
@@ -167,8 +167,8 @@ fn db_exists(path: &Path) -> bool {
 }
 
 /// All the RocksDB methods return `std::result::Result<T, String>`. Since our methods return
-/// `failure::Result<T>`, manual conversion is needed.
-fn convert_rocksdb_err(msg: String) -> failure::Error {
+/// `anyhow::Result<T>`, manual conversion is needed.
+fn convert_rocksdb_err(msg: String) -> anyhow::Error {
     format_err!("RocksDB internal error: {}.", msg)
 }
 
