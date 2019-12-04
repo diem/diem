@@ -4,7 +4,7 @@
 //! Support for mocking the Libra data store.
 
 use crate::account::AccountData;
-use failure::prelude::*;
+use anyhow::Result;
 use lazy_static::lazy_static;
 use libra_state_view::StateView;
 use libra_types::{
