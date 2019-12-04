@@ -8,26 +8,12 @@
         "portMappings": [
             {"containerPort": 8000, "hostPort": 8000}
         ],
-        "mountPoints": [
-            {"sourceVolume": "consensus-peers", "containerPath": "/opt/libra/etc/consensus_peers.config.toml"}
-        ],
         "environment": [
-            {"name": "AC_PORT", "value": "8000"},
+            {"name": "AC_PORT", "value": "8001"},
             {"name": "AC_HOST", "value": "${ac_hosts}"},
+	    {"name": "CFG_SEED", "value": "${cfg_seed}"},
+	    {"name": "CFG_NUM_VALIDATORS", "value": "${cfg_num_validators}"},
             {"name": "LOG_LEVEL", "value": "${log_level}"}
-        ],
-%{ if log_group != "" }
-        "logConfiguration": {
-            "logDriver": "awslogs",
-            "options": {
-                "awslogs-group": "${log_group}",
-                "awslogs-region": "${log_region}",
-                "awslogs-stream-prefix": "${log_prefix}"
-            }
-        },
-%{ endif }
-        "secrets": [
-            {"name": "MINT_KEY", "valueFrom": "${secret}"}
         ]
     }
 ]

@@ -30,51 +30,14 @@ resource "aws_instance" "fullnode" {
   }
 
   tags = {
-    Name      = "${terraform.workspace}-fullnode-${substr(var.fullnode_ids[count.index], 0, 8)}"
-    Role      = "fullnode"
-    Workspace = terraform.workspace
-    PeerId    = var.fullnode_ids[count.index]
+    Name          = "${terraform.workspace}-fullnode-${count.index}"
+    Role          = "fullnode"
+    Workspace     = terraform.workspace
+    FullnodeIndex = count.index
   }
 
 }
 
-data "local_file" "fullnode_keys" {
-  count    = var.num_fullnodes
-  filename = "${var.validator_set}/fn/${var.fullnode_ids[count.index]}.network.keys.toml"
-}
-
-resource "aws_secretsmanager_secret" "fullnode_network" {
-  count                   = var.num_fullnodes
-  name                    = "${terraform.workspace}-fullnode-${substr(var.fullnode_ids[count.index], 0, 8)}"
-  recovery_window_in_days = 0
-}
-
-resource "aws_secretsmanager_secret_version" "fullnode_network" {
-  count         = var.num_fullnodes
-  secret_id     = element(aws_secretsmanager_secret.fullnode_network.*.id, count.index)
-  secret_string = element(data.local_file.fullnode_keys.*.content, count.index)
-}
-
-data "template_file" "fullnode_config" {
-  count    = var.num_fullnodes
-  template = file("${var.validator_set}/fn/node.config.toml")
-
-  vars = {
-    self_ip = element(aws_instance.fullnode.*.private_ip, count.index)
-    peer_id = var.fullnode_ids[count.index]
-    upstream_peer = var.validator_fullnode_id[local.fullnode_list[count.index]]
-  }
-}
-
-data "template_file" "fullnode_seeds" {
-  count    = var.num_fullnodes
-  template = file("templates/seed_peers.config.toml")
-
-  vars = {
-    validators = "${var.validator_fullnode_id[local.fullnode_list[count.index]]}:${element(aws_instance.validator.*.private_ip, local.fullnode_list[count.index])}"
-    port       = 6181
-  }
-}
 
 data "template_file" "fullnode_ecs_task_definition" {
   count    = var.num_fullnodes
@@ -85,17 +48,11 @@ data "template_file" "fullnode_ecs_task_definition" {
     image_version    = local.image_version
     cpu              = local.cpu_by_instance[var.validator_type]
     mem              = local.mem_by_instance[var.validator_type]
-    node_config      = jsonencode(element(data.template_file.fullnode_config.*.rendered, count.index))
-    seed_peers       = jsonencode(element(data.template_file.fullnode_seeds.*.rendered, count.index))
-    genesis_blob     = jsonencode(filebase64("${var.validator_set}/genesis.blob"))
-    peer_id          = var.fullnode_ids[count.index]
-    network_secret   = element(aws_secretsmanager_secret.fullnode_network.*.arn, count.index)
-    consensus_secret = ""
-    fullnode_secret  = ""
+    fullnode_id      = count.index
     log_level        = var.validator_log_level
     log_group        = var.cloudwatch_logs ? aws_cloudwatch_log_group.testnet.name : ""
     log_region       = var.region
-    log_prefix       = "fullnode-${substr(var.fullnode_ids[count.index], 0, 8)}"
+    log_prefix       = "fullnode-${count.index}"
     capabilities     = jsonencode(var.validator_linux_capabilities)
     command          = local.validator_command
   }
@@ -103,7 +60,7 @@ data "template_file" "fullnode_ecs_task_definition" {
 
 resource "aws_ecs_task_definition" "fullnode" {
   count  = var.num_fullnodes
-  family = "${terraform.workspace}-fullnode-${substr(var.fullnode_ids[count.index], 0, 8)}"
+  family = "${terraform.workspace}-fullnode-${count.index}"
   container_definitions = element(
     data.template_file.fullnode_ecs_task_definition.*.rendered,
     count.index,
@@ -116,49 +73,29 @@ resource "aws_ecs_task_definition" "fullnode" {
     host_path = "/data/libra"
   }
 
-  volume {
-    name      = "consensus-peers"
-    host_path = "/opt/libra/consensus_peers.config.toml"
-  }
-
-  volume {
-    name      = "network-peers"
-    host_path = "/opt/libra/network_peers.config.toml"
-  }
-
-  volume {
-    name      = "fullnode-peers"
-    host_path = "/opt/libra/fullnode_peers.config.toml"
-  }
-
-  volume {
-    name      = "genesis-blob"
-    host_path = "/opt/libra/genesis.blob"
-  }
-
   placement_constraints {
     type       = "memberOf"
     expression = "ec2InstanceId == ${element(aws_instance.fullnode.*.id, count.index)}"
   }
 
   tags = {
-    PeerId    = "${substr(var.fullnode_ids[count.index], 0, 8)}"
-    Role      = "validator"
-    Workspace = terraform.workspace
+    FullnodeId = count.index
+    Role       = "fullnode"
+    Workspace  = terraform.workspace
   }
 }
 
 resource "aws_ecs_service" "fullnode" {
   count                              = var.num_fullnodes
-  name                               = "${terraform.workspace}-fullnode-${substr(var.fullnode_ids[count.index], 0, 8)}"
+  name                               = "${terraform.workspace}-fullnode-${count.index}"
   cluster                            = aws_ecs_cluster.testnet.id
   task_definition                    = element(aws_ecs_task_definition.fullnode.*.arn, count.index)
   desired_count                      = 1
   deployment_minimum_healthy_percent = 0
 
   tags = {
-    PeerId    = "${substr(var.fullnode_ids[count.index], 0, 8)}"
-    Role      = "fullnode"
-    Workspace = terraform.workspace
+    FullnodeId = count.index
+    Role       = "fullnode"
+    Workspace  = terraform.workspace
   }
 }

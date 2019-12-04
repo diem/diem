@@ -3,8 +3,8 @@ data "template_file" "prometheus_yml" {
 
   vars = {
     workspace             = terraform.workspace
-    validators            = join(",", formatlist("%s:%s", aws_instance.validator.*.private_ip, var.peer_ids))
-    fullnodes             = join(",", formatlist("%s:%s", aws_instance.fullnode.*.private_ip, slice(var.fullnode_ids, 0, var.num_fullnodes)))
+    validators            = join(",", formatlist("%s:%s", aws_instance.validator.*.private_ip, range(var.num_validators)))
+    fullnodes             = join(",", formatlist("%s:%s", aws_instance.fullnode.*.private_ip, range(var.num_fullnodes)))
     other_nodes           = join(",", ["${aws_instance.monitoring.private_ip}:monitoring", "${aws_instance.faucet.private_ip}:faucet"])
     monitoring_private_ip = aws_instance.monitoring.private_ip
   }

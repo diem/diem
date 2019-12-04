@@ -16,16 +16,17 @@
             {"containerPort": 6191, "hostPort": 6191}
         ],
         "mountPoints": [
-            {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"},
-            {"sourceVolume": "consensus-peers", "containerPath": "/opt/libra/etc/consensus_peers.config.toml"},
-            {"sourceVolume": "network-peers", "containerPath": "/opt/libra/etc/network_peers.config.toml"},
-            {"sourceVolume": "fullnode-peers", "containerPath": "/opt/libra/etc/fullnode_peers.config.toml"},
-            {"sourceVolume": "genesis-blob", "containerPath": "/opt/libra/etc/genesis.blob"}
+            {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"}
         ],
         "environment": [
-            {"name": "PEER_ID", "value": "${peer_id}"},
-            {"name": "NODE_CONFIG", "value": ${node_config}},
-            {"name": "SEED_PEERS", "value": ${seed_peers}},
+            %{ if cfg_upstream_node_index != "" }
+	    {"name": "CFG_UPSTREAM_NODE_INDEX", "value": ${cfg_upstream_node_index}},
+	    %{ endif }
+	    {"name": "CFG_LISTEN_ADDR", "value": "${cfg_listen_addr}"},
+            {"name": "CFG_NODE_INDEX", "value": "${cfg_node_index}"},
+            {"name": "CFG_NUM_VALIDATORS", "value": "${cfg_num_validators}"},
+            {"name": "CFG_SEED", "value": "${cfg_seed}"},
+            {"name": "CFG_SEED_PEER_IP", "value": "${cfg_seed_peer_ip}"},
             {"name": "RUST_LOG", "value": "${log_level}"}
         ],
         "linuxParameters": {
@@ -52,15 +53,6 @@
                 "compress": "true"
             }
 %{ endif }
-        },
-        "secrets": [
-%{if fullnode_secret != "" }
-            {"name": "FULLNODE_KEYPAIRS", "valueFrom": "${fullnode_secret}"},
-%{ endif }
-%{if consensus_secret != "" }
-            {"name": "CONSENSUS_KEYPAIR", "valueFrom": "${consensus_secret}"},
-%{ endif }
-            {"name": "NETWORK_KEYPAIRS", "valueFrom": "${network_secret}"}
-        ]
+        }
     }
 ]

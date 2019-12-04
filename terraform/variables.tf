@@ -36,22 +36,17 @@ variable "image_repo" {
 variable "image_tag" {
   type        = string
   description = "Docker image tag to use for validator"
-  default     = "latest"
+  default     = "latest_dynamic"
 }
 
-variable "peer_ids" {
-  type        = list(string)
-  description = "List of validator PeerIds"
+variable "config_seed" {
+  default     = 1337133713371337133713371337133713371337133713371337133713371337
+  description = "Seed to be used by libra-config for"
 }
 
-variable "fullnode_ids" {
-  type        = list(string)
-  description = "List of full node PeerIds"
-}
-
-variable "validator_fullnode_id" {
-  type        = list(string)
-  description = "List of PeerId of the validator on the full node network"
+variable "num_validators" {
+  default     = 4
+  description = "Number of validator nodes to run on this network"
 }
 
 variable "num_fullnodes" {

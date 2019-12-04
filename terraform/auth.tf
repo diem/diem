@@ -64,31 +64,6 @@ resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-locals {
-  consensus_secrets_arn = split(":", aws_secretsmanager_secret.validator_network[0].arn)
-  network_secrets_arn   = split(":", aws_secretsmanager_secret.validator_consensus[0].arn)
-}
-
-data "aws_iam_policy_document" "validator" {
-  statement {
-    actions = ["secretsmanager:GetSecretValue"]
-    resources = [
-      "${join(":", slice(local.consensus_secrets_arn, 0, length(local.consensus_secrets_arn) - 1), )}:*",
-      "${join(":", slice(local.network_secrets_arn, 0, length(local.network_secrets_arn) - 1), )}:*"
-    ]
-  }
-}
-
-resource "aws_iam_policy" "validator" {
-  name   = "${terraform.workspace}-validator"
-  policy = data.aws_iam_policy_document.validator.json
-}
-
-resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole-secrets" {
-  role       = aws_iam_role.ecsTaskExecutionRole.name
-  policy_arn = aws_iam_policy.validator.arn
-}
-
 resource "aws_key_pair" "libra" {
   key_name   = "${terraform.workspace}-libra"
   public_key = var.ssh_pub_key
