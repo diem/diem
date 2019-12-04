@@ -291,6 +291,8 @@ pub struct Function {
     /// This list of acquires grants the borrow checker the ability to statically verify the safety
     /// of references into global storage
     pub acquires: Vec<StructName>,
+    /// List of postconditions
+    pub ensures: Vec<Ensures>,
     /// The code for the procedure
     pub body: FunctionBody,
 }
@@ -845,6 +847,7 @@ impl Function {
         return_type: Vec<Type>,
         type_formals: Vec<(TypeVar_, Kind)>,
         acquires: Vec<StructName>,
+        ensures: Vec<Ensures>,
         body: FunctionBody,
     ) -> Self {
         let signature = FunctionSignature::new(formals, return_type, type_formals);
@@ -852,6 +855,7 @@ impl Function {
             visibility,
             signature,
             acquires,
+            ensures,
             body,
         }
     }
@@ -1586,3 +1590,10 @@ impl fmt::Display for Exp {
         }
     }
 }
+
+// Spec language constructs. TODO: move to separate file?
+
+/// A postcondition to be checked by the Move prover
+// TODO: use prover-specific expression language
+#[derive(PartialEq, Debug, Clone)]
+pub struct Ensures(pub Exp_);

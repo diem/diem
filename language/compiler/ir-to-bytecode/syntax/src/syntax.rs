@@ -6,12 +6,12 @@ use std::fmt;
 use std::str::FromStr;
 
 use crate::ast::{
-    parse_field, BinOp, Block, Block_, Builtin, Cmd, CopyableVal, CopyableVal_, Exp, Exp_, Field_,
-    Fields, Function, FunctionBody, FunctionCall, FunctionCall_, FunctionName, FunctionVisibility,
-    Function_, IfElse, ImportDefinition, Kind, LValue, LValue_, Loop, ModuleDefinition,
-    ModuleIdent, ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent, Script,
-    ScriptOrModule, Spanned, Statement, StructDefinition, StructDefinition_, StructName, Type,
-    TypeVar, TypeVar_, UnaryOp, Var, Var_, While,
+    parse_field, BinOp, Block, Block_, Builtin, Cmd, CopyableVal, CopyableVal_, Ensures, Exp, Exp_,
+    Field_, Fields, Function, FunctionBody, FunctionCall, FunctionCall_, FunctionName,
+    FunctionVisibility, Function_, IfElse, ImportDefinition, Kind, LValue, LValue_, Loop,
+    ModuleDefinition, ModuleIdent, ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent,
+    Script, ScriptOrModule, Spanned, Statement, StructDefinition, StructDefinition_, StructName,
+    Type, TypeVar, TypeVar_, UnaryOp, Var, Var_, While,
 };
 use crate::lexer::*;
 use hex;
@@ -1318,6 +1318,14 @@ fn parse_acquire_list<'input>(
     Ok(al)
 }
 
+fn parse_ensures<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<Ensures, ParseError<usize, failure::Error>> {
+    consume_token(tokens, Tok::Ensures)?;
+    let e = parse_exp_(tokens)?;
+    Ok(Ensures(e))
+}
+
 // FunctionDecl : (FunctionName, Function_) = {
 //   <f: Sp<MoveFunctionDecl>> => (f.value.0, Spanned { span: f.span, value: f.value.1 }),
 //   <f: Sp<NativeFunctionDecl>> => (f.value.0, Spanned { span: f.span, value: f.value.1 }),
@@ -1376,6 +1384,12 @@ fn parse_function_decl<'input>(
         None
     };
 
+    // parse each ensures clause--there may be zero or more
+    let mut ensures = Vec::new();
+    while tokens.peek() == Tok::Ensures {
+        ensures.push(parse_ensures(tokens)?)
+    }
+
     let func_name = FunctionName::parse(name)?;
     let func = Function::new(
         if is_public {
@@ -1387,6 +1401,7 @@ fn parse_function_decl<'input>(
         ret.unwrap_or_else(|| vec![]),
         type_formals,
         acquires.unwrap_or_else(Vec::new),
+        ensures,
         if is_native {
             consume_token(tokens, Tok::Semicolon)?;
             FunctionBody::Native
@@ -1457,6 +1472,7 @@ fn parse_program<'input>(
             vec![],
             vec![],
             vec![],
+            vec![],
             body,
         );
         Ok(Program::new(
@@ -1499,6 +1515,7 @@ fn parse_script<'input>(
     let main = Function::new(
         FunctionVisibility::Public,
         args,
+        vec![],
         vec![],
         vec![],
         vec![],
