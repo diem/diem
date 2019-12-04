@@ -10,9 +10,9 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
+anyhow = "1.0"
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../../../config", version = "0.1.0" }
-failure = { path = "../../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
 transaction-builder = { path = "../../transaction-builder", version = "0.1.0"}
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 stdlib = { path = "../../stdlib", version = "0.1.0" }
