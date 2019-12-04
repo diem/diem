@@ -5,7 +5,7 @@ use crate::mapping::SourceMapping;
 use crate::source_map::{FunctionSourceMap, SourceName};
 use anyhow::{bail, format_err, Result};
 use bytecode_verifier::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
-use libra_types::identifier::IdentStr;
+use libra_types::identifier::{IdentStr, Identifier};
 use vm::access::ModuleAccess;
 use vm::file_format::{
     Bytecode, FieldDefinitionIndex, FunctionDefinition, FunctionDefinitionIndex, FunctionSignature,
@@ -381,56 +381,54 @@ impl<Location: Clone + Eq + Default> Disassembler<Location> {
                     struct_idx, name, ty_params
                 ))
             }
-            // TODO: Handle type parameters
-            Bytecode::Call(method_idx, _) => {
+            Bytecode::Call(method_idx, locals_sig_index) => {
                 let function_handle = self.source_mapper.bytecode.function_handle_at(*method_idx);
                 let fcall_name = self
                     .source_mapper
                     .bytecode
                     .identifier_at(function_handle.name)
                     .to_string();
-                let fdef_index = self
-                    .source_mapper
-                    .bytecode
-                    .function_defs()
-                    .iter()
-                    .position(|fdef| fdef.function == *method_idx)
-                    .ok_or_else(|| {
-                        format_err!("Unable to find function definition for function call")
-                    })?;
                 let function_signature = self
                     .source_mapper
                     .bytecode
                     .function_signature_at(function_handle.signature);
-                let function_source_map = self
+                let ty_params = self
                     .source_mapper
-                    .source_map
-                    .get_function_source_map(FunctionDefinitionIndex(fdef_index as TableIndex))?;
+                    .bytecode
+                    .locals_signature_at(*locals_sig_index)
+                    .0
+                    .iter()
+                    .map(|sig_tok| {
+                        Ok((
+                            Identifier::new(self.disassemble_sig_tok(
+                                sig_tok.clone(),
+                                &function_source_map.type_parameters,
+                            )?)?,
+                            Location::default(),
+                        ))
+                    })
+                    .collect::<Result<Vec<_>>>()?;
                 let type_arguments = function_signature
                     .arg_types
                     .iter()
-                    .map(|sig_tok| {
-                        Ok(self.disassemble_sig_tok(
-                            sig_tok.clone(),
-                            &function_source_map.type_parameters,
-                        )?)
-                    })
+                    .map(|sig_tok| Ok(self.disassemble_sig_tok(sig_tok.clone(), &ty_params)?))
                     .collect::<Result<Vec<String>>>()?
                     .join(", ");
                 let type_rets = function_signature
                     .return_types
                     .iter()
-                    .map(|sig_tok| {
-                        Ok(self.disassemble_sig_tok(
-                            sig_tok.clone(),
-                            &function_source_map.type_parameters,
-                        )?)
-                    })
+                    .map(|sig_tok| Ok(self.disassemble_sig_tok(sig_tok.clone(), &ty_params)?))
                     .collect::<Result<Vec<String>>>()?;
                 Ok(format!(
-                    "Call[{}]({}({}){})",
+                    "Call[{}]({}{}({}){})",
                     method_idx,
                     fcall_name,
+                    Self::format_type_params(
+                        &ty_params
+                            .into_iter()
+                            .map(|x| x.0.to_string())
+                            .collect::<Vec<_>>()
+                    ),
                     type_arguments,
                     Self::format_ret_type(&type_rets)
                 ))
