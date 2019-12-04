@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-pub use failure::{anyhow, Error, Result};
+pub use anyhow::{anyhow, Error, Result};
 use libra_types::{transaction::TransactionOutput, vm_error::VMStatus};
 use thiserror::Error;
 
