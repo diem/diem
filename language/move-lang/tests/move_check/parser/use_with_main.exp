@@ -1,0 +1,48 @@
+error: 
+
+   ┌── tests/move_check/parser/use_with_main.move:2:5 ───
+   │
+ 2 │ use 0x0::Module;
+   │     ^^^^^^^^^^^ Invalid 'use'. Unbound module: '0x0::Module'
+   │
+
+error: 
+
+   ┌── tests/move_check/parser/use_with_main.move:2:10 ───
+   │
+ 2 │ use 0x0::Module;
+   │          ^^^^^^ Unused 'use' of alias 'Module'. Consider removing it
+   │
+
+error: 
+
+   ┌── tests/move_check/parser/use_with_main.move:3:5 ───
+   │
+ 3 │ use 0XaBcD::Module as M;
+   │     ^^^^^^^^^^^^^^ Invalid 'use'. Unbound module: '0xabcd::Module'
+   │
+
+error: 
+
+   ┌── tests/move_check/parser/use_with_main.move:3:23 ───
+   │
+ 3 │ use 0XaBcD::Module as M;
+   │                       ^ Unused 'use' of alias 'M'. Consider removing it
+   │
+
+error: 
+
+   ┌── tests/move_check/parser/use_with_main.move:4:5 ───
+   │
+ 4 │ use 0x0000::Z;
+   │     ^^^^^^^^^ Invalid 'use'. Unbound module: '0x0::Z'
+   │
+
+error: 
+
+   ┌── tests/move_check/parser/use_with_main.move:4:13 ───
+   │
+ 4 │ use 0x0000::Z;
+   │             ^ Unused 'use' of alias 'Z'. Consider removing it
+   │
+

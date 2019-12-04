@@ -12,6 +12,7 @@ hex = "0.3.2"
 regex = "1.1.6"
 structopt = "0.3.3"
 text-diff = "0.4.0"
+petgraph = "0.4.13"
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
 
 move-vm = { path = "../vm", package = "vm" }

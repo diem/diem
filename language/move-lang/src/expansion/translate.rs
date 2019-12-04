@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::shared::remembering_unique_map::RememberingUniqueMap;
 use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::*,
@@ -11,13 +12,13 @@ use crate::{
     },
     shared::*,
 };
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 //**************************************************************************************************
 // Context
 //**************************************************************************************************
 
-type AliasMap = UniqueMap<Name, ModuleIdent>;
+type AliasMap = RememberingUniqueMap<Name, ModuleIdent>;
 
 struct Context {
     errors: Errors,
@@ -29,7 +30,7 @@ impl Context {
         Self {
             errors: vec![],
             address: None,
-            aliases: UniqueMap::new(),
+            aliases: AliasMap::new(),
         }
     }
 
@@ -60,6 +61,8 @@ impl Context {
         self.error(vec![(name.loc, msg)])
     }
 
+    /// Adds the elements of `alias_map` to the current set of aliases in `self`, shadowing any
+    /// existing module aliases
     pub fn set_and_shadow_aliases(&mut self, alias_map: AliasMap) {
         for (alias, ident) in alias_map {
             if self.aliases.contains_key(&alias) {
@@ -69,8 +72,10 @@ impl Context {
         }
     }
 
-    pub fn clear_aliases(&mut self) {
-        self.aliases = AliasMap::new();
+    /// Resets the alias map and gives the set of aliases that were used
+    pub fn clear_aliases(&mut self) -> BTreeSet<Name> {
+        let old = std::mem::replace(&mut self.aliases, AliasMap::new());
+        old.remember()
     }
 
     pub fn module_alias_get(&mut self, n: &Name) -> Option<&ModuleIdent> {
@@ -213,23 +218,24 @@ fn module(
     let self_aliases = module_self_aliases(&current_module);
     context.set_and_shadow_aliases(self_aliases);
     let alias_map = aliases(context, uses);
-    context.set_and_shadow_aliases(alias_map);
+    context.set_and_shadow_aliases(alias_map.clone());
     let structs = structs(context, &name, pstructs);
     let functions = functions(context, &name, pfunctions);
-    context.clear_aliases();
-    (
-        current_module,
-        E::ModuleDefinition {
-            is_source_module,
-            structs,
-            functions,
-        },
-    )
+    let used_aliases = context.clear_aliases();
+    let (uses, unused_aliases) = check_aliases(context, used_aliases, alias_map);
+    let def = E::ModuleDefinition {
+        uses,
+        unused_aliases,
+        is_source_module,
+        structs,
+        functions,
+    };
+    (current_module, def)
 }
 
 fn main(
     context: &mut Context,
-    main_opt: &mut Option<(Address, FunctionName, E::Function)>,
+    main_opt: &mut Option<(Vec<ModuleIdent>, Address, FunctionName, E::Function)>,
     addr: Address,
     main_def: P::Main,
 ) {
@@ -239,7 +245,7 @@ fn main(
         function: pfunction,
     } = main_def;
     let alias_map = aliases(context, uses);
-    context.set_and_shadow_aliases(alias_map);
+    context.set_and_shadow_aliases(alias_map.clone());
     let (fname, function) = function_def(context, pfunction);
     if fname.value() != FunctionName::MAIN_NAME {
         context.error(vec![
@@ -260,9 +266,11 @@ fn main(
             "Invalid 'native' function. This top-level function must have a defined body",
         )]),
     }
+    let used_aliases = context.clear_aliases();
+    let (_uses, unused_aliases) = check_aliases(context, used_aliases, alias_map);
     match main_opt {
-        None => *main_opt = Some((addr, fname, function)),
-        Some((_, old_name, _)) => context.error(vec![
+        None => *main_opt = Some((unused_aliases, addr, fname, function)),
+        Some((_, _, old_name, _)) => context.error(vec![
             (
                 fname.loc(),
                 format!("Duplicate definition of '{}'", FunctionName::MAIN_NAME),
@@ -270,7 +278,6 @@ fn main(
             (old_name.loc(), "Previously defined here".into()),
         ]),
     }
-    context.clear_aliases();
 }
 
 //**************************************************************************************************
@@ -301,6 +308,27 @@ fn aliases(context: &mut Context, uses: Vec<(ModuleIdent, Option<ModuleName>)>) 
         }
     }
     alias_map
+}
+
+fn check_aliases(
+    context: &mut Context,
+    used_aliases: BTreeSet<Name>,
+    declared_aliases: AliasMap,
+) -> (BTreeMap<ModuleIdent, Loc>, Vec<ModuleIdent>) {
+    let mut uses = BTreeMap::new();
+    let mut unused = Vec::new();
+    for (alias, mident) in declared_aliases {
+        if used_aliases.contains(&alias) {
+            uses.insert(mident, alias.loc);
+        } else {
+            unused.push(mident);
+            context.error(vec![(
+                alias.loc,
+                format!("Unused 'use' of alias '{}'. Consider removing it", alias),
+            )])
+        }
+    }
+    (uses, unused)
 }
 
 //**************************************************************************************************

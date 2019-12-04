@@ -61,6 +61,7 @@ impl ResolvedFunction {
 
 struct Context {
     errors: Errors,
+    modules: BTreeSet<ModuleIdent>,
     current_module: Option<ModuleIdent>,
     scoped_types: BTreeMap<ModuleIdent, BTreeMap<String, (Loc, ModuleIdent, Option<Kind>)>>,
     unscoped_types: BTreeMap<String, ResolvedType>,
@@ -72,6 +73,7 @@ impl Context {
     fn new(prog: &E::Program, errors: Errors) -> Self {
         use ResolvedFunction as RF;
         use ResolvedType as RT;
+        let modules = prog.modules.iter().map(|(mident, _)| mident).collect();
         let scoped_types = prog
             .modules
             .iter()
@@ -109,6 +111,7 @@ impl Context {
             .collect();
         Self {
             errors,
+            modules,
             current_module: None,
             scoped_types,
             scoped_functions,
@@ -279,8 +282,9 @@ impl Context {
 
 pub fn program(prog: E::Program, errors: Errors) -> (N::Program, Errors) {
     let mut context = Context::new(&prog, errors);
-    let modules = modules(&mut context, prog.modules);
+    let mut modules = modules(&mut context, prog.modules);
     let main = main_function(&mut context, prog.main);
+    super::uses::verify(&mut context.errors, &mut modules);
     (N::Program { modules, main }, context.get_errors())
 }
 
@@ -299,6 +303,8 @@ fn module(
     context.current_module = Some(ident.clone());
     let outer_unscoped = context.save_unscoped();
     let is_source_module = mdef.is_source_module;
+    let uses = mdef.uses;
+    check_unused_aliases(context, mdef.unused_aliases);
     for (s, sdef) in &mdef.structs {
         let kopt = sdef.resource_opt.map(|l| sp(l, Kind_::Resource));
         let rt = ResolvedType::Struct(s.loc(), ident.clone(), kopt);
@@ -319,19 +325,32 @@ fn module(
     });
     context.restore_unscoped(outer_unscoped);
     N::ModuleDefinition {
-        is_source_module,
+        uses,
+        is_source_module: if is_source_module { Some(0) } else { None },
         structs,
         functions,
     }
 }
 
+fn check_unused_aliases(context: &mut Context, unused_aliases: Vec<ModuleIdent>) {
+    for mident in unused_aliases {
+        if !context.modules.contains(&mident) {
+            context.error(vec![(
+                mident.loc(),
+                format!("Invalid 'use'. Unbound module: '{}'", mident),
+            )]);
+        }
+    }
+}
+
 fn main_function(
     context: &mut Context,
-    main: Option<(Address, FunctionName, E::Function)>,
+    main: Option<(Vec<ModuleIdent>, Address, FunctionName, E::Function)>,
 ) -> Option<(Address, FunctionName, N::Function)> {
     match main {
         None => None,
-        Some((addr, name, f)) => {
+        Some((unused_aliases, addr, name, f)) => {
+            check_unused_aliases(context, unused_aliases);
             if let Some((tparam, _)) = f.signature.type_parameters.get(0) {
                 context.error(
                     vec![(tparam.loc, format!("Invalid '{}' declaration. Found type parameter '{}'. The main function cannot have type parameters", &name, tparam))]

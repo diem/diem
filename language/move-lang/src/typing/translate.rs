@@ -49,6 +49,7 @@ fn module(
         is_source_module,
         mut structs,
         functions: n_functions,
+        ..
     } = mdef;
     structs
         .iter_mut()

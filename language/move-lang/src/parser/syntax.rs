@@ -720,7 +720,7 @@ fn parse_return_abort_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Par
 // binary operators, this returns a value of zero so that they will be
 // below the minimum value and will mark the end of the binary expression
 // for the code in parse_binop_exp.
-fn get_precedence(token: &Tok) -> u32 {
+fn get_precedence(token: Tok) -> u32 {
     match token {
         // Reserved minimum precedence value is 1
         Tok::PipePipe => 2,
@@ -765,7 +765,7 @@ fn parse_binop_exp<'input>(
     min_prec: u32,
 ) -> Result<Exp, ParseError> {
     let mut result = lhs;
-    let mut next_tok_prec = get_precedence(&tokens.peek());
+    let mut next_tok_prec = get_precedence(tokens.peek());
 
     while next_tok_prec >= min_prec {
         // Parse the operator.
@@ -779,10 +779,10 @@ fn parse_binop_exp<'input>(
         // If the next token is another binary operator with a higher
         // precedence, then recursively parse that expression as the RHS.
         let this_prec = next_tok_prec;
-        next_tok_prec = get_precedence(&tokens.peek());
+        next_tok_prec = get_precedence(tokens.peek());
         if this_prec < next_tok_prec {
             rhs = parse_binop_exp(tokens, rhs, this_prec + 1)?;
-            next_tok_prec = get_precedence(&tokens.peek());
+            next_tok_prec = get_precedence(tokens.peek());
         }
 
         let op = match op_token {
@@ -1333,10 +1333,7 @@ fn parse_file<'input>(tokens: &mut Lexer<'input>) -> Result<FileDefinition, Pars
 /// Parse the `input` string as a file of Move source code and return the
 /// result as either a FileDefinition value or a ParseError. The `file` name
 /// is used to identify source locations in error messages.
-pub fn parse_file_string<'input>(
-    file: &'static str,
-    input: &'input str,
-) -> Result<FileDefinition, ParseError> {
+pub fn parse_file_string(file: &'static str, input: &str) -> Result<FileDefinition, ParseError> {
     let mut tokens = Lexer::new(input, file);
     tokens.advance()?;
     parse_file(&mut tokens)
