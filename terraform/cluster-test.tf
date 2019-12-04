@@ -19,10 +19,6 @@ data "aws_iam_policy_document" "cluster-test-runner" {
     actions   = ["ecs:*"]
     resources = ["arn:aws:ecs:${var.region}:${data.aws_caller_identity.current.account_id}:service/${terraform.workspace}/*"]
   }
-  statement {
-    actions   = ["secretsmanager:GetSecretValue"]
-    resources = ["${aws_secretsmanager_secret.faucet.arn}"]
-  }
 }
 
 resource "aws_iam_role_policy" "cluster-test-runner" {
