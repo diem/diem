@@ -307,7 +307,11 @@ impl ClusterUtil {
                 .prometheus_ip()
                 .expect("Failed to discover prometheus ip in aws"),
         );
-        info!("Discovered {} peers", cluster.instances().len());
+        info!(
+            "Discovered {} peers in {} workspace",
+            cluster.instances().len(),
+            aws.workspace()
+        );
         Self {
             cluster,
             aws,

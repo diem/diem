@@ -32,15 +32,15 @@ const MASTER_PREFIX: &str = "master_";
 
 impl DeploymentManager {
     pub fn new(aws: Aws, cluster: Cluster) -> Self {
-        let running_tag = env::var("TAG").unwrap_or_else(|_| aws.workplace().to_string());
+        let running_tag = env::var("TAG").unwrap_or_else(|_| aws.workspace().to_string());
         if running_tag == SOURCE_TAG
             || running_tag == TESTED_TAG
             || running_tag.starts_with(UPSTREAM_PREFIX)
             || running_tag.starts_with(MASTER_PREFIX)
         {
             panic!(
-                "Cluster test can not deploy if workplace is configured to use {} tag.\
-                 Use custom tag for your workplace to use --deploy",
+                "Cluster test can not deploy if workspace is configured to use {} tag.\
+                 Use custom tag for your workspace to use --deploy",
                 running_tag
             );
         }
@@ -82,11 +82,11 @@ impl DeploymentManager {
     pub fn update_all_services(&self) -> Result<()> {
         for instance in self.cluster.instances() {
             let mut request = UpdateServiceRequest::default();
-            request.cluster = Some(self.aws.workplace().clone());
+            request.cluster = Some(self.aws.workspace().clone());
             request.force_new_deployment = Some(true);
             request.service = format!(
                 "{w}/{w}-validator-{hash}",
-                w = self.aws.workplace(),
+                w = self.aws.workspace(),
                 hash = instance.short_hash()
             );
 
