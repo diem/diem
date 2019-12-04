@@ -18,6 +18,8 @@ while (( "$#" )); do
       shift 1
       ;;
     -i|--image)
+      echo "Logging in to ECR repo"
+      $(aws ecr get-login --no-include-email --region us-west-2)
       DOCKER_IMAGE=$2
       shift 2
       ;;
@@ -48,4 +50,4 @@ VARS="-e SLACK_LOG_URL -e SLACK_CHANGELOG_URL"
 # This could in theory fail due to concurrency, but it seem unlikely
 docker run $VARS -v /libra_rsa:/libra_rsa --name $CONTAINER --rm $DOCKER_IMAGE $* &
 
-wait
+wait $!
