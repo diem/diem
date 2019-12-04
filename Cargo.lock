@@ -382,11 +382,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "bytecode-source-map"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecode-verifier 0.1.0",
  "codespan 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan-reporting 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ir-to-bytecode-syntax 0.1.0",
- "libra-failure-ext 0.1.0",
  "libra-types 0.1.0",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
