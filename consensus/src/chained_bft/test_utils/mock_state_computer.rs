@@ -41,20 +41,21 @@ impl StateComputer for MockStateComputer {
     fn compute(
         &self,
         _block: &Block<Self::Payload>,
-        _parent_executed_trees: ExecutedTrees,
-    ) -> Pin<Box<dyn Future<Output = Result<ProcessedVMOutput>> + Send>> {
-        future::ok(ProcessedVMOutput::new(
+        _parent_executed_trees: &ExecutedTrees,
+        _committed_trees: &ExecutedTrees,
+    ) -> Result<ProcessedVMOutput> {
+        Ok(ProcessedVMOutput::new(
             vec![],
             ExecutedTrees::new_empty(),
             self.reconfig.clone(),
         ))
-        .boxed()
     }
 
     fn commit(
         &self,
         _blocks: Vec<&ExecutedBlock<Self::Payload>>,
         commit: LedgerInfoWithSignatures,
+        _num_persistent_txns: u64,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         self.consensus_db
             .commit_to_storage(commit.ledger_info().clone());
@@ -62,7 +63,7 @@ impl StateComputer for MockStateComputer {
         self.commit_callback
             .unbounded_send(commit)
             .expect("Fail to notify about commit.");
-        future::ok(()).boxed()
+        async { Ok(()) }.boxed()
     }
 
     fn sync_to(
@@ -83,10 +84,6 @@ impl StateComputer for MockStateComputer {
         async { Ok(()) }.boxed()
     }
 
-    fn committed_trees(&self) -> ExecutedTrees {
-        ExecutedTrees::new_empty()
-    }
-
     fn get_epoch_proof(
         &self,
         _start_epoch: u64,
@@ -105,22 +102,23 @@ impl StateComputer for EmptyStateComputer {
     fn compute(
         &self,
         _block: &Block<Self::Payload>,
-        _parent_executed_trees: ExecutedTrees,
-    ) -> Pin<Box<dyn Future<Output = Result<ProcessedVMOutput>> + Send>> {
-        future::ok(ProcessedVMOutput::new(
+        _parent_executed_trees: &ExecutedTrees,
+        _committed_trees: &ExecutedTrees,
+    ) -> Result<ProcessedVMOutput> {
+        Ok(ProcessedVMOutput::new(
             vec![],
             ExecutedTrees::new_empty(),
             None,
         ))
-        .boxed()
     }
 
     fn commit(
         &self,
         _blocks: Vec<&ExecutedBlock<Self::Payload>>,
         _commit: LedgerInfoWithSignatures,
+        _num_persistent_txns: u64,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
-        future::ok(()).boxed()
+        async { Ok(()) }.boxed()
     }
 
     fn sync_to(
@@ -128,10 +126,6 @@ impl StateComputer for EmptyStateComputer {
         _commit: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         async { Ok(()) }.boxed()
-    }
-
-    fn committed_trees(&self) -> ExecutedTrees {
-        ExecutedTrees::new_empty()
     }
 
     fn get_epoch_proof(

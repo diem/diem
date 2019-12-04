@@ -3,8 +3,7 @@
 
 use anyhow::{ensure, format_err, Result};
 use config_builder::util::get_test_config;
-use executor::{CommittableBlock, Executor};
-use futures::executor::block_on;
+use executor::{ExecutedTrees, Executor};
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_config::config::{NodeConfig, VMConfig, VMPublishingOption};
@@ -52,7 +51,9 @@ fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
     BlockMetadata::new(gen_block_id(index), index as u64, BTreeMap::new(), proposer)
 }
 
-fn create_storage_service_and_executor(config: &NodeConfig) -> (ServerHandle, Executor<MoveVM>) {
+fn create_storage_service_and_executor(
+    config: &NodeConfig,
+) -> (ServerHandle, Executor<MoveVM>, ExecutedTrees) {
     let storage_server_handle = start_storage_service(config);
 
     let client_env = Arc::new(EnvBuilder::new().build());
@@ -74,7 +75,18 @@ fn create_storage_service_and_executor(config: &NodeConfig) -> (ServerHandle, Ex
         config,
     );
 
-    (storage_server_handle, executor)
+    let startup_info = storage_read_client
+        .get_startup_info()
+        .expect("unable to read ledger info from storage")
+        .expect("startup info is None");
+    let committed_trees = ExecutedTrees::new(
+        startup_info.committed_tree_state.account_state_root_hash,
+        startup_info
+            .committed_tree_state
+            .ledger_frozen_subtree_hashes,
+        startup_info.committed_tree_state.version + 1,
+    );
+    (storage_server_handle, executor, committed_trees)
 }
 
 fn get_test_signed_transaction(
@@ -102,7 +114,8 @@ fn test_reconfiguration() {
     config.vm_config = VMConfig {
         publishing_options: VMPublishingOption::CustomScripts,
     };
-    let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
+    let (_storage_server_handle, executor, committed_trees) =
+        create_storage_service_and_executor(&config);
 
     let genesis_account = association_address();
     let network_config = config.validator_network.as_ref().unwrap();
@@ -141,14 +154,15 @@ fn test_reconfiguration() {
     let txn3 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
     let txn_block = vec![txn1, txn2, txn3];
     let block1_id = gen_block_id(1);
-    let vm_output = block_on(executor.execute_block(
-        txn_block,
-        executor.committed_trees().clone(),
-        *GENESIS_BLOCK_ID,
-        block1_id,
-    ))
-    .unwrap()
-    .unwrap();
+    let vm_output = executor
+        .execute_block(
+            txn_block,
+            &committed_trees,
+            &committed_trees,
+            *GENESIS_BLOCK_ID,
+            block1_id,
+        )
+        .unwrap();
 
     // Make sure the execution result sees the reconfiguration
     assert!(
@@ -169,14 +183,15 @@ fn test_reconfiguration() {
     let txn5 = encode_block_prologue_script(gen_block_metadata(2, validator_account));
     let txn_block = vec![txn4, txn5];
     let block2_id = gen_block_id(2);
-    let output = block_on(executor.execute_block(
-        txn_block,
-        executor.committed_trees().clone(),
-        block1_id,
-        block2_id,
-    ))
-    .unwrap()
-    .unwrap();
+    let output = executor
+        .execute_block(
+            txn_block,
+            &committed_trees,
+            &committed_trees,
+            block1_id,
+            block2_id,
+        )
+        .unwrap();
 
     assert!(
         !output.state_compute_result().has_reconfiguration(),
@@ -190,7 +205,8 @@ fn test_reconfiguration() {
 #[test]
 fn test_execution_with_storage() {
     let (config, genesis_keypair) = get_test_config();
-    let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
+    let (_storage_server_handle, executor, mut committed_trees) =
+        create_storage_service_and_executor(&config);
 
     let storage_read_client = Arc::new(StorageReadServiceClient::new(
         Arc::new(EnvBuilder::new().build()),
@@ -286,22 +302,25 @@ fn test_execution_with_storage() {
         ));
     }
 
-    let output1 = block_on(executor.execute_block(
-        block1.clone(),
-        executor.committed_trees().clone(),
-        *GENESIS_BLOCK_ID,
-        block1_id,
-    ))
-    .unwrap()
-    .unwrap();
-    let block1_trees = output1.executed_trees().clone();
+    let output1 = executor
+        .execute_block(
+            block1.clone(),
+            &committed_trees,
+            &committed_trees,
+            *GENESIS_BLOCK_ID,
+            block1_id,
+        )
+        .unwrap();
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(6, output1.accu_root(), block1_id);
-    block_on(executor.commit_blocks(
-        vec![CommittableBlock::new(block1.clone(), Arc::new(output1))],
-        ledger_info_with_sigs,
-    ))
-    .unwrap()
-    .unwrap();
+    let num_persistent_txns = committed_trees.txn_accumulator().num_leaves();
+    committed_trees = output1.executed_trees().clone();
+    executor
+        .commit_blocks(
+            vec![(block1.clone(), Arc::new(output1))],
+            ledger_info_with_sigs,
+            num_persistent_txns,
+        )
+        .unwrap();
 
     let request_items = vec![
         RequestItem::GetAccountTransactionBySequenceNumber {
@@ -530,17 +549,23 @@ fn test_execution_with_storage() {
     assert_eq!(account3_received_events.len(), 3);
 
     // Execution the 2nd block.
-    let output2 =
-        block_on(executor.execute_block(block2.clone(), block1_trees, block1_id, block2_id))
-            .unwrap()
-            .unwrap();
+    let output2 = executor
+        .execute_block(
+            block2.clone(),
+            &committed_trees,
+            &committed_trees,
+            block1_id,
+            block2_id,
+        )
+        .unwrap();
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(20, output2.accu_root(), block2_id);
-    block_on(executor.commit_blocks(
-        vec![CommittableBlock::new(block2.clone(), Arc::new(output2))],
-        ledger_info_with_sigs,
-    ))
-    .unwrap()
-    .unwrap();
+    executor
+        .commit_blocks(
+            vec![(block2.clone(), Arc::new(output2))],
+            ledger_info_with_sigs,
+            committed_trees.txn_accumulator().num_leaves(),
+        )
+        .unwrap();
 
     let request_items = vec![
         RequestItem::GetAccountTransactionBySequenceNumber {

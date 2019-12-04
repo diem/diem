@@ -154,12 +154,12 @@ impl NodeSetup {
             None,
         ));
 
-        let block_store = Arc::new(block_on(BlockStore::new(
+        let block_store = Arc::new(BlockStore::new(
             storage.clone(),
             initial_data,
             state_computer.clone(),
             10, // max pruned blocks in mem
-        )));
+        ));
 
         let time_service = Arc::new(ClockTimeService::new(executor.clone()));
 
@@ -468,18 +468,14 @@ fn process_vote_timeout_msg_test() {
 
     let qc = non_proposer.block_store.highest_quorum_cert();
     let block_0 = Block::new_proposal(vec![1], 1, 1, qc.as_ref().clone(), &non_proposer.signer);
-    block_on(
-        non_proposer
-            .block_store
-            .execute_and_insert_block(block_0.clone()),
-    )
-    .unwrap();
-    block_on(
-        static_proposer
-            .block_store
-            .execute_and_insert_block(block_0.clone()),
-    )
-    .unwrap();
+    non_proposer
+        .block_store
+        .execute_and_insert_block(block_0.clone())
+        .unwrap();
+    static_proposer
+        .block_store
+        .execute_and_insert_block(block_0.clone())
+        .unwrap();
 
     let parent_block_info = block_0.quorum_cert().certified_block();
     // Populate block_0 and a quorum certificate for block_0 on non_proposer

@@ -9,6 +9,7 @@ use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
+use executor::ExecutedTrees;
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -51,6 +52,7 @@ pub struct RecoveryData<T> {
     // The last vote message sent by this validator.
     last_vote: Option<Vote>,
     root: (Block<T>, QuorumCert, QuorumCert),
+    root_executed_trees: ExecutedTrees,
     // 1. the blocks guarantee the topological ordering - parent <- child.
     // 2. all blocks are children of the root.
     blocks: Vec<Block<T>>,
@@ -69,6 +71,7 @@ impl<T: Payload> RecoveryData<T> {
         mut blocks: Vec<Block<T>>,
         mut quorum_certs: Vec<QuorumCert>,
         storage_ledger: &LedgerInfo,
+        root_executed_trees: ExecutedTrees,
         highest_timeout_certificate: Option<TimeoutCertificate>,
         validator_keys: ValidatorSet,
     ) -> Result<Self> {
@@ -104,6 +107,7 @@ impl<T: Payload> RecoveryData<T> {
                 _ => None,
             },
             root,
+            root_executed_trees,
             blocks,
             quorum_certs,
             blocks_to_prune,
@@ -132,10 +136,16 @@ impl<T: Payload> RecoveryData<T> {
         self,
     ) -> (
         (Block<T>, QuorumCert, QuorumCert),
+        ExecutedTrees,
         Vec<Block<T>>,
         Vec<QuorumCert>,
     ) {
-        (self.root, self.blocks, self.quorum_certs)
+        (
+            self.root,
+            self.root_executed_trees,
+            self.blocks,
+            self.quorum_certs,
+        )
     }
 
     pub fn take_blocks_to_prune(&mut self) -> Vec<HashValue> {
@@ -303,11 +313,19 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             .get_startup_info()
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
+        let root_executed_trees = ExecutedTrees::new(
+            startup_info.committed_tree_state.account_state_root_hash,
+            startup_info
+                .committed_tree_state
+                .ledger_frozen_subtree_hashes,
+            startup_info.committed_tree_state.version + 1,
+        );
         let mut initial_data = RecoveryData::new(
             last_vote,
             blocks,
             quorum_certs,
             startup_info.ledger_info.ledger_info(),
+            root_executed_trees,
             highest_timeout_certificate,
             startup_info
                 .ledger_info_with_validators

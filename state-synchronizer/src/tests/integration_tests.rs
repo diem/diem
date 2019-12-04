@@ -8,6 +8,7 @@ use crate::{
 };
 use anyhow::{bail, Result};
 use config_builder::util::get_test_config;
+use executor::ExecutedTrees;
 use futures::{executor::block_on, future::FutureExt, Future};
 use libra_config::config::RoleType;
 use libra_crypto::x25519::X25519StaticPublicKey;
@@ -70,12 +71,13 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         &self,
         txn_list_with_proof: TransactionListWithProof,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+        _synced_trees: &mut ExecutedTrees,
+    ) -> Result<()> {
         self.storage
             .write()
             .unwrap()
             .add_txns_with_li(txn_list_with_proof.transactions, ledger_info_with_sigs);
-        async move { Ok(()) }.boxed()
+        Ok(())
     }
 
     fn get_chunk(
@@ -323,7 +325,7 @@ impl SynchronizerEnv {
         let max_retries = 30;
         for _ in 0..max_retries {
             let state = block_on(self.clients[peer_id].get_state()).unwrap();
-            if state.highest_synced_version == target_version {
+            if state.synced_trees.version().unwrap_or(0) == target_version {
                 return true;
             }
             std::thread::sleep(std::time::Duration::from_millis(1000));

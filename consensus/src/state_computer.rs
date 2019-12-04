@@ -5,7 +5,7 @@ use crate::{counters, state_replication::StateComputer};
 use anyhow::Result;
 use consensus_types::block::Block;
 use consensus_types::executed_block::ExecutedBlock;
-use executor::{CommittableBlock, ExecutedTrees, Executor, ProcessedVMOutput};
+use executor::{ExecutedTrees, Executor, ProcessedVMOutput};
 use futures::{Future, FutureExt};
 use libra_logger::prelude::*;
 use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
@@ -58,43 +58,39 @@ impl StateComputer for ExecutionProxy {
         // The block to be executed.
         block: &Block<Self::Payload>,
         // The executed trees after executing the parent block.
-        parent_executed_trees: ExecutedTrees,
-    ) -> Pin<Box<dyn Future<Output = Result<ProcessedVMOutput>> + Send>> {
+        parent_executed_trees: &ExecutedTrees,
+        // The last committed trees.
+        committed_trees: &ExecutedTrees,
+    ) -> Result<ProcessedVMOutput> {
         let pre_execution_instant = Instant::now();
         // TODO: figure out error handling for the prologue txn
-        let execute_future = self.executor.execute_block(
-            Self::transactions_from_block(block),
-            parent_executed_trees,
-            block.parent_id(),
-            block.id(),
-        );
-        async move {
-            match execute_future.await {
-                Ok(Ok(output)) => {
-                    let execution_duration = pre_execution_instant.elapsed();
-                    let num_txns = output.transaction_data().len();
-                    if num_txns == 0 {
-                        // no txns in that block
-                        counters::EMPTY_BLOCK_EXECUTION_DURATION_S
-                            .observe_duration(execution_duration);
-                    } else {
-                        counters::BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
-                        if let Ok(nanos_per_txn) =
-                            u64::try_from(execution_duration.as_nanos() / num_txns as u128)
-                        {
-                            // TODO: use duration_float once it's stable
-                            // Tracking: https://github.com/rust-lang/rust/issues/54361
-                            counters::TXN_EXECUTION_DURATION_S
-                                .observe_duration(Duration::from_nanos(nanos_per_txn));
-                        }
+        self.executor
+            .execute_block(
+                Self::transactions_from_block(block),
+                parent_executed_trees,
+                committed_trees,
+                block.parent_id(),
+                block.id(),
+            )
+            .map(|output| {
+                let execution_duration = pre_execution_instant.elapsed();
+                let num_txns = output.transaction_data().len();
+                if num_txns == 0 {
+                    // no txns in that block
+                    counters::EMPTY_BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
+                } else {
+                    counters::BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
+                    if let Ok(nanos_per_txn) =
+                        u64::try_from(execution_duration.as_nanos() / num_txns as u128)
+                    {
+                        // TODO: use duration_float once it's stable
+                        // Tracking: https://github.com/rust-lang/rust/issues/54361
+                        counters::TXN_EXECUTION_DURATION_S
+                            .observe_duration(Duration::from_nanos(nanos_per_txn));
                     }
-                    Ok(output)
                 }
-                Ok(Err(e)) => Err(e),
-                Err(e) => Err(e.into()),
-            }
-        }
-            .boxed()
+                output
+            })
     }
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
@@ -102,6 +98,7 @@ impl StateComputer for ExecutionProxy {
         &self,
         blocks: Vec<&ExecutedBlock<Self::Payload>>,
         finality_proof: LedgerInfoWithSignatures,
+        num_persistent_txns: u64,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         let version = finality_proof.ledger_info().version();
         counters::LAST_COMMITTED_VERSION.set(version as i64);
@@ -112,19 +109,19 @@ impl StateComputer for ExecutionProxy {
         let committable_blocks = blocks
             .into_iter()
             .map(|executed_block| {
-                CommittableBlock::new(
+                (
                     Self::transactions_from_block(executed_block.block()),
                     Arc::clone(executed_block.output()),
                 )
             })
             .collect();
 
-        let commit_future = self
-            .executor
-            .commit_blocks(committable_blocks, finality_proof);
+        let commit_result =
+            self.executor
+                .commit_blocks(committable_blocks, finality_proof, num_persistent_txns);
         async move {
-            match commit_future.await {
-                Ok(Ok(())) => {
+            match commit_result {
+                Ok(()) => {
                     counters::BLOCK_COMMIT_DURATION_S
                         .observe_duration(pre_commit_instant.elapsed());
                     if let Err(e) = synchronizer.commit().await {
@@ -132,8 +129,7 @@ impl StateComputer for ExecutionProxy {
                     }
                     Ok(())
                 }
-                Ok(Err(e)) => Err(e),
-                Err(e) => Err(e.into()),
+                Err(e) => Err(e),
             }
         }
             .boxed()
@@ -146,10 +142,6 @@ impl StateComputer for ExecutionProxy {
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         counters::STATE_SYNC_COUNT.inc();
         self.synchronizer.sync_to(target).boxed()
-    }
-
-    fn committed_trees(&self) -> ExecutedTrees {
-        self.executor.committed_trees()
     }
 
     fn get_epoch_proof(

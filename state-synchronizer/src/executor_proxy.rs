@@ -3,8 +3,8 @@
 
 use crate::SynchronizerState;
 use anyhow::{format_err, Result};
-use executor::Executor;
-use futures::{channel::oneshot, Future, FutureExt};
+use executor::{ExecutedTrees, Executor};
+use futures::{Future, FutureExt};
 use grpcio::EnvBuilder;
 use libra_config::config::NodeConfig;
 use libra_types::{
@@ -27,7 +27,8 @@ pub trait ExecutorProxyTrait: Sync + Send {
         &self,
         txn_list_with_proof: TransactionListWithProof,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
+        synced_trees: &mut ExecutedTrees,
+    ) -> Result<()>;
 
     /// Gets chunk of transactions given the known version, target version and the max limit.
     fn get_chunk(
@@ -60,21 +61,6 @@ impl ExecutorProxy {
     }
 }
 
-fn convert_to_future<T: Send + 'static>(
-    receiver: oneshot::Receiver<Result<T>>,
-) -> Pin<Box<dyn Future<Output = Result<T>> + Send>> {
-    async move {
-        match receiver.await {
-            Ok(Ok(t)) => Ok(t),
-            Ok(Err(err)) => Err(format_err!("Failed to process request: {}", err)),
-            Err(oneshot::Canceled) => {
-                Err(format_err!("Executor Internal error: sender is dropped."))
-            }
-        }
-    }
-        .boxed()
-}
-
 impl ExecutorProxyTrait for ExecutorProxy {
     fn get_local_storage_state(
         &self,
@@ -85,10 +71,21 @@ impl ExecutorProxyTrait for ExecutorProxy {
                 .get_startup_info_async()
                 .await?
                 .ok_or_else(|| format_err!("[state sync] Failed to access storage info"))?;
-            let highest_synced_version = std::cmp::max(
-                storage_info.ledger_info.ledger_info().version(),
-                storage_info.synced_tree_state.map_or(0, |t| t.version),
-            );
+            let synced_trees = if let Some(synced_tree_state) = storage_info.synced_tree_state {
+                ExecutedTrees::new(
+                    synced_tree_state.account_state_root_hash,
+                    synced_tree_state.ledger_frozen_subtree_hashes,
+                    synced_tree_state.version + 1,
+                )
+            } else {
+                ExecutedTrees::new(
+                    storage_info.committed_tree_state.account_state_root_hash,
+                    storage_info
+                        .committed_tree_state
+                        .ledger_frozen_subtree_hashes,
+                    storage_info.committed_tree_state.version + 1,
+                )
+            };
             let current_verifier = storage_info
                 .ledger_info_with_validators
                 .ledger_info()
@@ -97,7 +94,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
                 .into();
             Ok(SynchronizerState::new(
                 storage_info.ledger_info,
-                highest_synced_version,
+                synced_trees,
                 current_verifier,
             ))
         }
@@ -108,10 +105,12 @@ impl ExecutorProxyTrait for ExecutorProxy {
         &self,
         txn_list_with_proof: TransactionListWithProof,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
-        convert_to_future(
-            self.executor
-                .execute_and_commit_chunk(txn_list_with_proof, ledger_info_with_sigs),
+        synced_trees: &mut ExecutedTrees,
+    ) -> Result<()> {
+        self.executor.execute_and_commit_chunk(
+            txn_list_with_proof,
+            ledger_info_with_sigs,
+            synced_trees,
         )
     }
 

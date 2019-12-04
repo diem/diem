@@ -632,7 +632,6 @@ impl<T: Payload> EventProcessor<T> {
         let executed_block = self
             .block_store
             .execute_and_insert_block(proposed_block)
-            .await
             .context("Failed to execute_and_insert the block")?;
         let block = executed_block.block();
 

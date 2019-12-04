@@ -9,7 +9,6 @@ use consensus_types::{
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
 };
-use futures::executor::block_on;
 use libra_crypto::HashValue;
 use libra_logger::{set_simple_logger, set_simple_logger_prefix};
 use libra_types::{crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo};
@@ -76,12 +75,12 @@ pub fn build_chain() -> Vec<Arc<ExecutedBlock<TestPayload>>> {
 
 pub fn build_empty_tree() -> Arc<BlockStore<TestPayload>> {
     let (initial_data, storage) = EmptyStorage::start_for_testing();
-    Arc::new(block_on(BlockStore::new(
+    Arc::new(BlockStore::new(
         storage,
         initial_data,
         Arc::new(EmptyStateComputer),
         10, // max pruned blocks in mem
-    )))
+    ))
 }
 
 pub struct TreeInserter {
@@ -144,16 +143,14 @@ impl TreeInserter {
         round: Round,
     ) -> Arc<ExecutedBlock<TestPayload>> {
         self.payload_val += 1;
-        block_on(
-            self.block_store
-                .insert_block_with_qc(self.create_block_with_qc(
-                    parent_qc,
-                    parent.timestamp_usecs() + 1,
-                    round,
-                    vec![self.payload_val],
-                )),
-        )
-        .unwrap()
+        self.block_store
+            .insert_block_with_qc(self.create_block_with_qc(
+                parent_qc,
+                parent.timestamp_usecs() + 1,
+                round,
+                vec![self.payload_val],
+            ))
+            .unwrap()
     }
 
     pub fn create_qc_for_block(
@@ -195,16 +192,14 @@ impl TreeInserter {
         round: Round,
     ) -> Arc<ExecutedBlock<TestPayload>> {
         self.payload_val += 1;
-        block_on(
-            self.block_store
-                .insert_reconfiguration_block(self.create_block_with_qc(
-                    self.create_qc_for_block(parent, None),
-                    parent.timestamp_usecs() + 1,
-                    round,
-                    vec![self.payload_val],
-                )),
-        )
-        .unwrap()
+        self.block_store
+            .insert_reconfiguration_block(self.create_block_with_qc(
+                self.create_qc_for_block(parent, None),
+                parent.timestamp_usecs() + 1,
+                round,
+                vec![self.payload_val],
+            ))
+            .unwrap()
     }
 }
 

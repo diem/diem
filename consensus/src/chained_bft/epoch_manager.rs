@@ -209,12 +209,12 @@ impl<T: Payload> EpochManager<T> {
         };
         let mut safety_rules = SafetyRules::new(safety_rules_storage, signer);
 
-        let block_store = Arc::new(block_on(BlockStore::new(
+        let block_store = Arc::new(BlockStore::new(
             Arc::clone(&self.storage),
             initial_data,
             Arc::clone(&self.state_computer),
             self.config.max_pruned_blocks_in_mem,
-        )));
+        ));
 
         safety_rules.start_new_epoch(block_store.highest_quorum_cert().as_ref());
 
