@@ -490,7 +490,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         self.send_chunk_request(new_version, new_epoch).await?;
 
         self.validate_and_store_chunk(txn_list_with_proof, response_li)
-            .await
             .map_err(|e| {
                 self.peer_manager
                     .update_score(peer_id, PeerScoreUpdateType::InvalidChunk);
@@ -513,15 +512,29 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         self.process_commit().await
     }
 
-    async fn validate_and_store_chunk(
-        &self,
+    fn validate_and_store_chunk(
+        &mut self,
         txn_list_with_proof: TransactionListWithProof,
         target: LedgerInfoWithSignatures,
     ) -> Result<()> {
+        let target_epoch_and_round = (target.ledger_info().epoch(), target.ledger_info().round());
+        let local_epoch_and_round = (
+            self.local_state.highest_local_li.ledger_info().epoch(),
+            self.local_state.highest_local_li.ledger_info().round(),
+        );
+        if target_epoch_and_round < local_epoch_and_round {
+            warn!(
+                "Ledger info is too old: local epoch/round: {:?}, epoch/round in request: {:?}.",
+                local_epoch_and_round, target_epoch_and_round,
+            );
+            return Ok(());
+        }
         target.verify(self.local_state.verifier())?;
-        self.executor_proxy
-            .execute_chunk(txn_list_with_proof, target)
-            .await?;
+        self.executor_proxy.execute_chunk(
+            txn_list_with_proof,
+            target,
+            &mut self.local_state.synced_trees,
+        )?;
         Ok(())
     }
 

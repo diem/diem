@@ -47,14 +47,17 @@ pub trait StateComputer: Send + Sync {
         // The block that will be computed.
         block: &Block<Self::Payload>,
         // The executed trees of parent block.
-        executed_trees: ExecutedTrees,
-    ) -> Pin<Box<dyn Future<Output = Result<ProcessedVMOutput>> + Send>>;
+        parent_executed_trees: &ExecutedTrees,
+        // The last committed trees.
+        committed_trees: &ExecutedTrees,
+    ) -> Result<ProcessedVMOutput>;
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
         blocks: Vec<&ExecutedBlock<Self::Payload>>,
         finality_proof: LedgerInfoWithSignatures,
+        num_persistent_txns: u64,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
     /// Best effort state synchronization to the given target LedgerInfo.
@@ -65,8 +68,6 @@ pub trait StateComputer: Send + Sync {
         &self,
         target: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
-
-    fn committed_trees(&self) -> ExecutedTrees;
 
     fn sync_to_or_bail(&self, commit: LedgerInfoWithSignatures) {
         let status = futures::executor::block_on(self.sync_to(commit));

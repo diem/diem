@@ -10,10 +10,9 @@
 #[macro_use]
 extern crate prometheus;
 
-use libra_types::{account_address::AccountAddress, crypto_proxies::LedgerInfoWithSignatures};
-
+use executor::ExecutedTrees;
 use libra_types::crypto_proxies::ValidatorVerifier;
-
+use libra_types::{account_address::AccountAddress, crypto_proxies::LedgerInfoWithSignatures};
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
 
 mod coordinator;
@@ -32,18 +31,17 @@ pub struct EpochInfo {
     pub verifier: ValidatorVerifier,
 }
 
-#[derive(Clone)]
 /// The state distinguishes between the following fields:
 /// * highest_local_li is keeping the latest certified ledger info
-/// * highest_synced_version is keeping the latest version in the transaction accumulator in case
-/// the accumulator is ahead of the LedgerInfo.
+/// * synced_trees is keeping the latest state in the transaction accumulator and state tree.
 ///
 /// While `highest_local_li` can be used for helping the others (corresponding to the highest
-/// version we have a proof for), `highest_synced_version` is used for retrieving missing chunks
+/// version we have a proof for), `synced_trees` is used for retrieving missing chunks
 /// for the local storage.
+#[derive(Clone)]
 pub struct SynchronizerState {
     pub highest_local_li: LedgerInfoWithSignatures,
-    pub highest_synced_version: u64,
+    pub synced_trees: ExecutedTrees,
     // Corresponds to the current epoch if the highest local LI is in the middle of the epoch,
     // or the next epoch if the highest local LI is the final LI in the current epoch.
     pub trusted_epoch: EpochInfo,
@@ -52,7 +50,7 @@ pub struct SynchronizerState {
 impl SynchronizerState {
     pub fn new(
         highest_local_li: LedgerInfoWithSignatures,
-        highest_synced_version: u64,
+        synced_trees: ExecutedTrees,
         current_verifier: ValidatorVerifier,
     ) -> Self {
         let current_epoch = highest_local_li.ledger_info().epoch();
@@ -68,14 +66,14 @@ impl SynchronizerState {
         };
         SynchronizerState {
             highest_local_li,
-            highest_synced_version,
+            synced_trees,
             trusted_epoch,
         }
     }
 
     /// The highest available version in the local storage (even if it's not covered by the LI).
     pub fn highest_version_in_local_storage(&self) -> u64 {
-        self.highest_synced_version
+        self.synced_trees.version().unwrap_or(0)
     }
 
     pub fn epoch(&self) -> u64 {

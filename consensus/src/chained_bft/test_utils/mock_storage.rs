@@ -8,6 +8,7 @@ use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
+use executor::ExecutedTrees;
 use libra_crypto::HashValue;
 use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::ledger_info::LedgerInfo;
@@ -75,6 +76,7 @@ impl<T: Payload> MockStorage<T> {
             blocks,
             quorum_certs,
             &self.storage_ledger.lock().unwrap(),
+            ExecutedTrees::new_empty(),
             self.shared_storage
                 .highest_timeout_certificate
                 .lock()
@@ -191,6 +193,7 @@ impl<T: Payload> PersistentStorage<T> for EmptyStorage {
             vec![],
             vec![],
             &LedgerInfo::genesis(),
+            ExecutedTrees::new_empty(),
             None,
             ValidatorSet::new(vec![]),
         )

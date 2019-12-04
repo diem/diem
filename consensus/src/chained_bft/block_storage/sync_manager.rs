@@ -119,7 +119,7 @@ impl<T: Payload> BlockStore<T> {
         while let Some(block) = pending.pop() {
             let block_qc = block.quorum_cert().clone();
             self.insert_single_quorum_cert(block_qc)?;
-            self.execute_and_insert_block(block).await?;
+            self.execute_and_insert_block(block)?;
         }
         self.insert_single_quorum_cert(qc)
     }
@@ -146,7 +146,7 @@ impl<T: Payload> BlockStore<T> {
             highest_commit_cert.commit_info(),
             self.root()
         );
-        let mut blocks = retriever
+        let blocks = retriever
             .retrieve_block_for_qc(&highest_commit_cert, 3)
             .await?;
         assert_eq!(
@@ -165,15 +165,10 @@ impl<T: Payload> BlockStore<T> {
         self.state_computer
             .sync_to_or_bail(highest_commit_cert.ledger_info().clone());
         counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());
-        let root = (
-            blocks.pop().expect("should have 3-chain"),
-            quorum_certs.last().expect("should have 3-chain").clone(),
-            highest_commit_cert.clone(),
-        );
+        let (root, root_executed_trees, blocks, quorum_certs) = self.storage.start().take();
         debug!("{}Sync to{} {}", Fg(Blue), Fg(Reset), root.0);
-        // ensure it's [b1, b2]
-        blocks.reverse();
-        self.rebuild(root, blocks, quorum_certs).await;
+        self.rebuild(root, root_executed_trees, blocks, quorum_certs)
+            .await;
 
         if highest_commit_cert.ends_epoch() {
             retriever

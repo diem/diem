@@ -138,7 +138,7 @@ fn test_empty_proposal_after_reconfiguration() {
         3,
         vec![],
     );
-    let a3 = block_on(block_store.execute_and_insert_block(a3)).unwrap();
+    let a3 = block_store.execute_and_insert_block(a3).unwrap();
     inserter.insert_qc_for_block(a3.as_ref(), None);
     // Indirect child is empty too
     let empty_proposal_2 =
@@ -151,7 +151,7 @@ fn test_empty_proposal_after_reconfiguration() {
         4,
         vec![],
     );
-    let a4 = block_on(block_store.execute_and_insert_block(a4)).unwrap();
+    let a4 = block_store.execute_and_insert_block(a4).unwrap();
     let li = gen_test_certificate(
         vec![inserter.signer()],
         a4.block_info(),

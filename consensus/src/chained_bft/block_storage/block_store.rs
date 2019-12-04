@@ -15,7 +15,7 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use debug_interface::event;
-use executor::ProcessedVMOutput;
+use executor::{ExecutedTrees, ProcessedVMOutput};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 
@@ -60,25 +60,23 @@ pub struct BlockStore<T> {
 }
 
 impl<T: Payload> BlockStore<T> {
-    pub async fn new(
+    pub fn new(
         storage: Arc<dyn PersistentStorage<T>>,
         initial_data: RecoveryData<T>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         max_pruned_blocks_in_mem: usize,
     ) -> Self {
         let highest_tc = initial_data.highest_timeout_certificate();
-        let (root, blocks, quorum_certs) = initial_data.take();
-        let inner = Arc::new(RwLock::new(
-            Self::build_block_tree(
-                root,
-                blocks,
-                quorum_certs,
-                highest_tc,
-                Arc::clone(&state_computer),
-                max_pruned_blocks_in_mem,
-            )
-            .await,
-        ));
+        let (root, root_executed_trees, blocks, quorum_certs) = initial_data.take();
+        let inner = Arc::new(RwLock::new(Self::build_block_tree(
+            root,
+            root_executed_trees,
+            blocks,
+            quorum_certs,
+            highest_tc,
+            Arc::clone(&state_computer),
+            max_pruned_blocks_in_mem,
+        )));
         BlockStore {
             inner,
             state_computer,
@@ -86,8 +84,9 @@ impl<T: Payload> BlockStore<T> {
         }
     }
 
-    async fn build_block_tree(
+    fn build_block_tree(
         root: (Block<T>, QuorumCert, QuorumCert),
+        root_executed_trees: ExecutedTrees,
         blocks: Vec<Block<T>>,
         quorum_certs: Vec<QuorumCert>,
         highest_timeout_cert: Option<TimeoutCertificate>,
@@ -97,21 +96,21 @@ impl<T: Payload> BlockStore<T> {
         let (root_block, root_qc, root_li) = (root.0, root.1, root.2);
         assert_eq!(
             root_qc.certified_block().version(),
-            state_computer.committed_trees().version().unwrap_or(0),
+            root_executed_trees.version().unwrap_or(0),
             "root qc version {} doesn't match committed trees {}",
             root_qc.certified_block().version(),
-            state_computer.committed_trees().version().unwrap_or(0),
+            root_executed_trees.version().unwrap_or(0),
         );
         assert_eq!(
             root_qc.certified_block().executed_state_id(),
-            state_computer.committed_trees().state_id(),
+            root_executed_trees.state_id(),
             "root qc state id {} doesn't match committed trees {}",
             root_qc.certified_block().executed_state_id(),
-            state_computer.committed_trees().state_id(),
+            root_executed_trees.state_id(),
         );
         let root_output = ProcessedVMOutput::new(
-            vec![],
-            state_computer.committed_trees(),
+            vec![], /* not used */
+            root_executed_trees,
             root_qc.certified_block().next_validator_set().cloned(),
         );
         let executed_root_block = ExecutedBlock::new(root_block, root_output);
@@ -134,8 +133,7 @@ impl<T: Payload> BlockStore<T> {
                 .executed_trees()
                 .clone();
             let output = state_computer
-                .compute(&block, parent_trees)
-                .await
+                .compute(&block, &parent_trees, tree.root().executed_trees())
                 .expect("fail to rebuild scratchpad");
             // if this block is certified, ensure we agree with the certified state.
             if let Some(qc) = quorum_certs.get(&block.id()) {
@@ -180,6 +178,7 @@ impl<T: Payload> BlockStore<T> {
             .commit(
                 blocks_to_commit.iter().map(|b| b.as_ref()).collect(),
                 finality_proof,
+                self.root().executed_trees().txn_accumulator().num_leaves(),
             )
             .await
             .expect("Failed to persist commit");
@@ -197,6 +196,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn rebuild(
         &self,
         root: (Block<T>, QuorumCert, QuorumCert),
+        root_executed_trees: ExecutedTrees,
         blocks: Vec<Block<T>>,
         quorum_certs: Vec<QuorumCert>,
     ) {
@@ -205,13 +205,13 @@ impl<T: Payload> BlockStore<T> {
         let prev_htc = self.highest_timeout_cert().map(|tc| tc.as_ref().clone());
         let tree = Self::build_block_tree(
             root,
+            root_executed_trees,
             blocks,
             quorum_certs,
             prev_htc,
             Arc::clone(&self.state_computer),
             max_pruned_blocks_in_mem,
-        )
-        .await;
+        );
         let to_remove = self.inner.read().unwrap().get_all_block_id();
         if let Err(e) = self.storage.prune_tree(to_remove) {
             // it's fine to fail here, the next restart will try to clean up dangling blocks again.
@@ -239,21 +239,21 @@ impl<T: Payload> BlockStore<T> {
     /// Duplicate inserts will return the previously inserted block (
     /// note that it is considered a valid non-error case, for example, it can happen if a validator
     /// receives a certificate for a block that is currently being added).
-    pub async fn execute_and_insert_block(
+    pub fn execute_and_insert_block(
         &self,
         block: Block<T>,
     ) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
         if let Some(existing_block) = self.get_block(block.id()) {
             return Ok(existing_block);
         }
-        let executed_block = self.execute_block(block).await?;
+        let executed_block = self.execute_block(block)?;
         self.storage
             .save_tree(vec![executed_block.block().clone()], vec![])
             .context("Insert block failed when saving block")?;
         self.inner.write().unwrap().insert_block(executed_block)
     }
 
-    async fn execute_block(&self, block: Block<T>) -> anyhow::Result<ExecutedBlock<T>> {
+    fn execute_block(&self, block: Block<T>) -> anyhow::Result<ExecutedBlock<T>> {
         ensure!(
             self.inner.read().unwrap().root().round() < block.round(),
             "Block with old round"
@@ -276,8 +276,7 @@ impl<T: Payload> BlockStore<T> {
             // Although NIL blocks don't have payload, we still send a T::default() to compute
             // because we may inject a block prologue transaction.
             self.state_computer
-                .compute(&block, parent_trees)
-                .await
+                .compute(&block, &parent_trees, self.root().executed_trees())
                 .with_context(|| format!("Execution failure for block {}", block))?
         };
         Ok(ExecutedBlock::new(block, output))
@@ -452,21 +451,18 @@ impl<T: Payload> BlockStore<T> {
     }
 
     /// Helper function to insert the block with the qc together
-    pub async fn insert_block_with_qc(
-        &self,
-        block: Block<T>,
-    ) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
+    pub fn insert_block_with_qc(&self, block: Block<T>) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
-        Ok(self.execute_and_insert_block(block).await?)
+        Ok(self.execute_and_insert_block(block)?)
     }
 
     /// Helper function to insert a reconfiguration block
-    pub async fn insert_reconfiguration_block(
+    pub fn insert_reconfiguration_block(
         &self,
         block: Block<T>,
     ) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
-        let executed_block = self.execute_block(block).await?;
+        let executed_block = self.execute_block(block)?;
         let mut output = executed_block.output().as_ref().clone();
         output.set_validators(ValidatorSet::new(vec![]));
         Ok(self

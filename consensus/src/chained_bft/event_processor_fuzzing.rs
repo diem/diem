@@ -62,12 +62,12 @@ fn build_empty_store(
 ) -> Arc<BlockStore<TestPayload>> {
     let (_commit_cb_sender, _commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
 
-    Arc::new(block_on(BlockStore::new(
+    Arc::new(BlockStore::new(
         storage,
         initial_data,
         Arc::new(EmptyStateComputer),
         10, // max pruned blocks in mem
-    )))
+    ))
 }
 
 // TODO: MockStorage -> EmptyStorage

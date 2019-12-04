@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::SynchronizerState;
+use executor::ExecutedTrees;
 use libra_crypto::hash::CryptoHash;
 use libra_crypto::HashValue;
 use libra_types::block_info::BlockInfo;
@@ -21,6 +22,8 @@ use vm_genesis::GENESIS_KEYPAIR;
 pub struct MockStorage {
     // some mock transactions in the storage
     transactions: Vec<Transaction>,
+    // the executed trees after applying the txns above.
+    synced_trees: ExecutedTrees,
     // latest ledger info per epoch
     ledger_infos: HashMap<u64, LedgerInfoWithSignatures>,
     // latest epoch number (starts with 1)
@@ -44,6 +47,7 @@ impl MockStorage {
         ledger_infos.insert(0, genesis_li);
         Self {
             transactions: vec![],
+            synced_trees: ExecutedTrees::new_empty(),
             ledger_infos,
             epoch_num,
             signer,
@@ -51,8 +55,23 @@ impl MockStorage {
         }
     }
 
+    fn add_txns(&mut self, txns: &mut Vec<Transaction>) {
+        self.transactions.append(txns);
+        let num_leaves = self.transactions.len();
+        let frozen_subtree_roots = vec![HashValue::zero(); num_leaves.count_ones() as usize];
+        self.synced_trees = ExecutedTrees::new(
+            HashValue::zero(), /* dummy_state_root */
+            frozen_subtree_roots,
+            num_leaves as u64,
+        );
+    }
+
     pub fn version(&self) -> u64 {
         self.transactions.len() as u64
+    }
+
+    pub fn synced_trees(&self) -> &ExecutedTrees {
+        &self.synced_trees
     }
 
     pub fn epoch_num(&self) -> u64 {
@@ -72,7 +91,7 @@ impl MockStorage {
     pub fn get_local_storage_state(&self) -> SynchronizerState {
         SynchronizerState::new(
             self.highest_local_li(),
-            self.version(),
+            self.synced_trees().clone(),
             self.verifier.clone(),
         )
     }
@@ -107,7 +126,7 @@ impl MockStorage {
         li: LedgerInfoWithSignatures,
     ) {
         assert_eq!(self.epoch_num, li.ledger_info().epoch());
-        self.transactions.append(&mut transactions);
+        self.add_txns(&mut transactions);
         self.ledger_infos.insert(self.epoch_num(), li.clone());
         if let Some(next_validator_set) = li.ledger_info().next_validator_set() {
             self.epoch_num += 1;
@@ -119,7 +138,7 @@ impl MockStorage {
     // with the version corresponding to the new transactions, signed by this storage signer.
     pub fn commit_new_txns(&mut self, num_txns: u64) {
         for _ in 0..num_txns {
-            self.transactions.push(Self::gen_mock_user_txn());
+            self.add_txns(&mut vec![Self::gen_mock_user_txn()]);
         }
         self.add_li(None);
     }

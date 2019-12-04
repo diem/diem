@@ -18,7 +18,6 @@ use consensus_types::{
     vote::Vote,
     vote_data::VoteData,
 };
-use futures::executor::block_on;
 use libra_crypto::{HashValue, PrivateKey};
 use libra_types::crypto_proxies::random_validator_verifier;
 use libra_types::{account_address::AccountAddress, crypto_proxies::ValidatorSigner};
@@ -116,7 +115,7 @@ proptest! {
                 let known_parent = block_store.block_exists(block.parent_id());
                 let certified_parent = block.quorum_cert().certified_block().id() == block.parent_id();
                 let verify_res = block.verify_well_formed();
-                let res = block_on(block_store.execute_and_insert_block(block.clone()));
+                let res = block_store.execute_and_insert_block(block.clone());
                 if !certified_parent {
                     prop_assert!(verify_res.is_err());
                 } else if !known_parent {
@@ -329,7 +328,7 @@ fn test_illegal_timestamp() {
         certificate_for_genesis(),
         &signer,
     );
-    let result = block_on(block_store.execute_and_insert_block(block_with_illegal_timestamp));
+    let result = block_store.execute_and_insert_block(block_with_illegal_timestamp);
     assert!(result.is_err());
 }
 
@@ -418,7 +417,7 @@ fn test_empty_reconfiguration_suffix() {
         vec![],
     );
     // Child of reconfiguration doesn't carry payload will succeed and roll over the validator set
-    let a5 = block_on(block_store.execute_and_insert_block(a5)).unwrap();
+    let a5 = block_store.execute_and_insert_block(a5).unwrap();
     assert!(a5.compute_result().has_reconfiguration());
     // Block continues another branch can carry payload
     inserter.insert_block(&a2, 4, None);
