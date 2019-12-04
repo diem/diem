@@ -1,8 +1,6 @@
 address 0x1:
 
 module M {
-    use 0x1::X;
-
     struct S {}
 
     foo<S>(s1: S, s2: S): S {

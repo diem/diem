@@ -194,10 +194,12 @@ pub fn program(prog: G::Program) -> std::result::Result<Vec<CompiledUnit>, Error
         })
         .collect();
 
-    let source_modules = prog
+    let mut source_modules = prog
         .modules
         .into_iter()
-        .filter(|(_, mdef)| mdef.is_source_module);
+        .filter(|(_, mdef)| mdef.is_source_module.is_some())
+        .collect::<Vec<_>>();
+    source_modules.sort_by_key(|(_, mdef)| mdef.is_source_module.unwrap());
     for (m, mdef) in source_modules {
         match module(m, mdef, &sdecls, &fdecls) {
             Ok((n, cm)) => units.push(CompiledUnit::Module(n, cm)),

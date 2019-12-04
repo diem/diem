@@ -9,7 +9,7 @@ use crate::{
     },
     shared::*,
 };
-use std::{collections::VecDeque, fmt};
+use std::{collections::BTreeMap, collections::VecDeque, fmt};
 
 //**************************************************************************************************
 // Program
@@ -18,7 +18,7 @@ use std::{collections::VecDeque, fmt};
 #[derive(Debug)]
 pub struct Program {
     pub modules: UniqueMap<ModuleIdent, ModuleDefinition>,
-    pub main: Option<(Address, FunctionName, Function)>,
+    pub main: Option<(Vec<ModuleIdent>, Address, FunctionName, Function)>,
 }
 
 //**************************************************************************************************
@@ -27,6 +27,8 @@ pub struct Program {
 
 #[derive(Debug)]
 pub struct ModuleDefinition {
+    pub uses: BTreeMap<ModuleIdent, Loc>,
+    pub unused_aliases: Vec<ModuleIdent>,
     pub is_source_module: bool,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,

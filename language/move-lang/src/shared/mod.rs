@@ -12,6 +12,7 @@ use std::{
 };
 
 pub mod fake_natives;
+pub mod remembering_unique_map;
 pub mod unique_map;
 
 //**************************************************************************************************

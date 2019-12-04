@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use std::fmt::Debug;
 use std::{collections::BTreeMap, iter::IntoIterator};
 
 //**************************************************************************************************
@@ -151,6 +152,7 @@ impl<K: TName, V: PartialEq> PartialEq for UniqueMap<K, V> {
             && other.iter().all(|(k, _)| self.contains_key(&k))
     }
 }
+impl<K: TName, V: Eq> Eq for UniqueMap<K, V> {}
 
 //**************************************************************************************************
 // IntoIter

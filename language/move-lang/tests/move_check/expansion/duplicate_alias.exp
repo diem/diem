@@ -9,3 +9,11 @@ error:
    │                   - Previously defined here
    │
 
+error: 
+
+   ┌── tests/move_check/expansion/duplicate_alias.move:8:19 ───
+   │
+ 8 │     use 0x1::Y as Z;
+   │                   ^ Unused 'use' of alias 'Z'. Consider removing it
+   │
+
