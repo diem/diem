@@ -9,7 +9,7 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+anyhow = "1.0"
 ir-to-bytecode-syntax = { path = "../compiler/ir-to-bytecode/syntax", version = "0.1.0" }
 ir-to-bytecode = { path = "../compiler/ir-to-bytecode", version = "0.1.0" }
 stdlib = { path = "../stdlib", version = "0.1.0" }
