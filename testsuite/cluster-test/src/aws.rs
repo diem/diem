@@ -13,7 +13,7 @@ use std::{thread, time::Duration};
 
 #[derive(Clone)]
 pub struct Aws {
-    workplace: String,
+    workspace: String,
     ec2: Ec2Client,
     ecr: EcrClient,
     ecs: EcsClient,
@@ -22,9 +22,9 @@ pub struct Aws {
 impl Aws {
     pub fn new() -> Self {
         let ec2 = Ec2Client::new(Region::UsWest2);
-        let workplace = discover_workplace(&ec2);
+        let workspace = discover_workspace(&ec2);
         Self {
-            workplace,
+            workspace,
             ec2,
             ecr: EcrClient::new(Region::UsWest2),
             ecs: EcsClient::new(Region::UsWest2),
@@ -43,8 +43,8 @@ impl Aws {
         &self.ecs
     }
 
-    pub fn workplace(&self) -> &String {
-        &self.workplace
+    pub fn workspace(&self) -> &String {
+        &self.workspace
     }
 
     pub fn region(&self) -> &str {
@@ -52,7 +52,7 @@ impl Aws {
     }
 }
 
-fn discover_workplace(ec2: &Ec2Client) -> String {
+fn discover_workspace(ec2: &Ec2Client) -> String {
     let instance_id = current_instance_id();
     let mut attempt = 0;
     loop {
@@ -70,10 +70,10 @@ fn discover_workplace(ec2: &Ec2Client) -> String {
             Err(e) => {
                 attempt += 1;
                 if attempt > 10 {
-                    panic!("Failed to discover workplace");
+                    panic!("Failed to discover workspace");
                 }
                 error!(
-                    "Transient failure when discovering workplace(attempt {}): {}",
+                    "Transient failure when discovering workspace(attempt {}): {}",
                     attempt, e
                 );
                 thread::sleep(Duration::from_secs(1));
@@ -82,23 +82,23 @@ fn discover_workplace(ec2: &Ec2Client) -> String {
         };
         let reservation = result
             .reservations
-            .expect("discover_workplace: no reservations")
+            .expect("discover_workspace: no reservations")
             .remove(0)
             .instances
-            .expect("discover_workplace: no instances")
+            .expect("discover_workspace: no instances")
             .remove(0);
-        let tags = reservation.tags.expect("discover_workplace: no tags");
+        let tags = reservation.tags.expect("discover_workspace: no tags");
         for tag in tags.iter() {
             if tag.key == Some("Workspace".to_string()) {
                 return tag
                     .value
                     .as_ref()
-                    .expect("discover_workplace: no tag value")
+                    .expect("discover_workspace: no tag value")
                     .to_string();
             }
         }
         panic!(
-            "discover_workplace: no workplace tag. Instance id: {}, tags: {:?}",
+            "discover_workspace: no workspace tag. Instance id: {}, tags: {:?}",
             instance_id, tags
         );
     }

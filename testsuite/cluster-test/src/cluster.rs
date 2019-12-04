@@ -48,7 +48,7 @@ impl Cluster {
             let filters = vec![
                 Filter {
                     name: Some("tag:Workspace".into()),
-                    values: Some(vec![aws.workplace().clone()]),
+                    values: Some(vec![aws.workspace().clone()]),
                 },
                 Filter {
                     name: Some("instance-state-name".into()),
@@ -110,7 +110,7 @@ impl Cluster {
             "No instances were discovered for cluster"
         );
         let prometheus_ip =
-            prometheus_ip.ok_or_else(|| format_err!("Prometheus was not found in workplace"))?;
+            prometheus_ip.ok_or_else(|| format_err!("Prometheus was not found in workspace"))?;
         Ok(Self {
             instances,
             prometheus_ip: Some(prometheus_ip),
