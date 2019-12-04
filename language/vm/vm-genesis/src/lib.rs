@@ -6,7 +6,7 @@
 mod genesis_gas_schedule;
 
 use crate::genesis_gas_schedule::initial_gas_schedule;
-use failure::prelude::*;
+use anyhow::Result;
 use lazy_static::lazy_static;
 use libra_crypto::{ed25519::*, traits::ValidKey};
 use libra_state_view::StateView;
