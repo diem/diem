@@ -6,7 +6,6 @@ set -e
 DOCKER_IMAGE="cluster-test:latest"
 WAIT_TO="45m"
 export CONTAINER="cluster-test-$RANDOM"
-WORKPLACE="cluster-test"
 
 while (( "$#" )); do
   case "$1" in
@@ -24,10 +23,6 @@ while (( "$#" )); do
       ;;
     -T|--wait-timeout)
       WAIT_TO=$2
-      shift 2
-      ;;
-    -w|--workplace)
-      WORKPLACE=$2
       shift 2
       ;;
     --) # end argument parsing
@@ -49,6 +44,6 @@ docker rm $CONTAINER 2>/dev/null >/dev/null || :
 trap "echo Terminating on signal; docker rm -f $CONTAINER >/dev/null" SIGINT SIGTERM
 
 # This could in theory fail due to concurrency, but it seem unlikely
-docker run -v /libra_rsa:/libra_rsa --name $CONTAINER --rm $DOCKER_IMAGE --workplace $WORKPLACE $* &
+docker run -v /libra_rsa:/libra_rsa --name $CONTAINER --rm $DOCKER_IMAGE $* &
 
 wait

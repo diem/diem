@@ -50,8 +50,6 @@ const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 #[derive(StructOpt, Debug)]
 #[structopt(group = ArgGroup::with_name("action").required(true))]
 struct Args {
-    #[structopt(short = "w", long, conflicts_with = "swarm")]
-    workplace: Option<String>,
     #[structopt(short = "p", long, use_delimiter = true)]
     peers: Vec<String>,
 
@@ -297,12 +295,7 @@ impl BasicSwarmUtil {
 
 impl ClusterUtil {
     pub fn setup(args: &Args) -> Self {
-        let aws = Aws::new(
-            args.workplace
-                .as_ref()
-                .expect("--workplace not set")
-                .clone(),
-        );
+        let aws = Aws::new();
         let cluster = Cluster::discover(&aws, &args.mint_file).expect("Failed to discover cluster");
         let cluster = if args.peers.is_empty() {
             cluster

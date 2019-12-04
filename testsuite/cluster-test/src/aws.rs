@@ -3,10 +3,13 @@
 
 #![forbid(unsafe_code)]
 
+use reqwest::{self, Url};
 use rusoto_core::Region;
-use rusoto_ec2::Ec2Client;
+use rusoto_ec2::{DescribeInstancesRequest, Ec2, Ec2Client};
 use rusoto_ecr::EcrClient;
 use rusoto_ecs::EcsClient;
+use slog_scope::*;
+use std::{thread, time::Duration};
 
 #[derive(Clone)]
 pub struct Aws {
@@ -17,10 +20,12 @@ pub struct Aws {
 }
 
 impl Aws {
-    pub fn new(workplace: String) -> Self {
+    pub fn new() -> Self {
+        let ec2 = Ec2Client::new(Region::UsWest2);
+        let workplace = discover_workplace(&ec2);
         Self {
             workplace,
-            ec2: Ec2Client::new(Region::UsWest2),
+            ec2,
             ecr: EcrClient::new(Region::UsWest2),
             ecs: EcsClient::new(Region::UsWest2),
         }
@@ -45,4 +50,65 @@ impl Aws {
     pub fn region(&self) -> &str {
         Region::UsWest2.name()
     }
+}
+
+fn discover_workplace(ec2: &Ec2Client) -> String {
+    let instance_id = current_instance_id();
+    let mut attempt = 0;
+    loop {
+        let result = match ec2
+            .describe_instances(DescribeInstancesRequest {
+                filters: None,
+                max_results: None,
+                dry_run: None,
+                instance_ids: Some(vec![instance_id.clone()]),
+                next_token: None,
+            })
+            .sync()
+        {
+            Ok(result) => result,
+            Err(e) => {
+                attempt += 1;
+                if attempt > 10 {
+                    panic!("Failed to discover workplace");
+                }
+                error!(
+                    "Transient failure when discovering workplace(attempt {}): {}",
+                    attempt, e
+                );
+                thread::sleep(Duration::from_secs(1));
+                continue;
+            }
+        };
+        let reservation = result
+            .reservations
+            .expect("discover_workplace: no reservations")
+            .remove(0)
+            .instances
+            .expect("discover_workplace: no instances")
+            .remove(0);
+        let tags = reservation.tags.expect("discover_workplace: no tags");
+        for tag in tags.iter() {
+            if tag.key == Some("Workspace".to_string()) {
+                return tag
+                    .value
+                    .as_ref()
+                    .expect("discover_workplace: no tag value")
+                    .to_string();
+            }
+        }
+        panic!(
+            "discover_workplace: no workplace tag. Instance id: {}, tags: {:?}",
+            instance_id, tags
+        );
+    }
+}
+
+fn current_instance_id() -> String {
+    let client = reqwest::Client::new();
+    let url = Url::parse("http://169.254.169.254/1.0/meta-data/instance-id");
+    let url = url.expect("Failed to parse metadata url");
+    let response = client.get(url).send();
+    let mut response = response.expect("Metadata request failed");
+    response.text().expect("Failed to parse metadata response")
 }
