@@ -12,8 +12,6 @@ members = [
     "common/datatest-stable",
     "common/debug-interface",
     "common/executable-helpers",
-    "common/failure-ext",
-    "common/failure-ext/failure-macros",
     "common/futures-semaphore",
     "common/grpc-helpers",
     "common/lcs",

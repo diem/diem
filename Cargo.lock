@@ -2117,18 +2117,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "libra-failure-ext"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
- "libra-failure-macros 0.1.0",
-]
-
-[[package]]
-name = "libra-failure-macros"
-version = "0.1.0"
-
-[[package]]
 name = "libra-fuzzer"
 version = "0.1.0"
 dependencies = [
