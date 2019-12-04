@@ -126,7 +126,7 @@ impl<'input> Lexer<'input> {
         self.previous_end
     }
 
-    pub fn lookahead(&self) -> Result<Tok, ParseError<usize, failure::Error>> {
+    pub fn lookahead(&self) -> Result<Tok, ParseError<usize, anyhow::Error>> {
         let text = self.text.trim_start();
         let whitespace = self.text.len() - text.len();
         let start_offset = self.consumed + whitespace;
@@ -134,7 +134,7 @@ impl<'input> Lexer<'input> {
         Ok(tok)
     }
 
-    pub fn advance(&mut self) -> Result<(), ParseError<usize, failure::Error>> {
+    pub fn advance(&mut self) -> Result<(), ParseError<usize, anyhow::Error>> {
         self.previous_end = self.token.2;
         let text = self.text.trim_start();
         let whitespace = self.text.len() - text.len();
@@ -154,7 +154,7 @@ impl<'input> Lexer<'input> {
 fn find_token(
     text: &str,
     start_offset: usize,
-) -> Result<(Tok, usize), ParseError<usize, failure::Error>> {
+) -> Result<(Tok, usize), ParseError<usize, anyhow::Error>> {
     let c: char = match text.chars().next() {
         Some(next_char) => next_char,
         None => {

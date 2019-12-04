@@ -603,7 +603,7 @@ impl ModuleName {
     }
 
     /// Creates a new `ModuleName` from a raw string. Intended for use by the parser.
-    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
+    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, anyhow::Error>> {
         Ok(ModuleName::new(parse_identifier(s.into())?))
     }
 
@@ -664,7 +664,7 @@ impl ModuleDefinition {
         imports: Vec<ImportDefinition>,
         structs: Vec<StructDefinition_>,
         functions: Vec<(FunctionName, Function_)>,
-    ) -> Result<Self, ParseError<L, failure::Error>> {
+    ) -> Result<Self, ParseError<L, anyhow::Error>> {
         Ok(ModuleDefinition {
             name: ModuleName::parse(name.into())?,
             imports,
@@ -747,7 +747,7 @@ impl StructName {
     }
 
     /// Creates a new `StructName` from a raw string. Intended for use by the parser.
-    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
+    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, anyhow::Error>> {
         Ok(StructName::new(parse_identifier(s.into())?))
     }
 
@@ -773,7 +773,7 @@ impl StructDefinition {
         name: impl Into<Box<str>>,
         type_formals: Vec<(TypeVar_, Kind)>,
         fields: Fields<Type>,
-    ) -> Result<Self, ParseError<L, failure::Error>> {
+    ) -> Result<Self, ParseError<L, anyhow::Error>> {
         Ok(StructDefinition {
             is_nominal_resource,
             name: StructName::parse(name)?,
@@ -789,7 +789,7 @@ impl StructDefinition {
         is_nominal_resource: bool,
         name: impl Into<Box<str>>,
         type_formals: Vec<(TypeVar_, Kind)>,
-    ) -> Result<Self, ParseError<L, failure::Error>> {
+    ) -> Result<Self, ParseError<L, anyhow::Error>> {
         Ok(StructDefinition {
             is_nominal_resource,
             name: StructName::parse(name)?,
@@ -806,7 +806,7 @@ impl FunctionName {
     }
 
     /// Creates a new `FunctionName` from a raw string. Intended for use by the parser.
-    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
+    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, anyhow::Error>> {
         Ok(FunctionName::new(parse_identifier(s.into())?))
     }
 
@@ -869,7 +869,7 @@ impl Var {
     }
 
     /// Creates a new `Var` from a raw string. Intended for use by the parser.
-    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
+    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, anyhow::Error>> {
         Ok(Var::new(parse_identifier(s.into())?))
     }
 
@@ -886,7 +886,7 @@ impl TypeVar {
     }
 
     /// Creates a new `TypeVar` from a raw string. Intended for use by the parser.
-    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, failure::Error>> {
+    pub fn parse<L>(s: impl Into<Box<str>>) -> Result<Self, ParseError<L, anyhow::Error>> {
         Ok(TypeVar::new(parse_identifier(s.into())?))
     }
 
@@ -1058,11 +1058,11 @@ impl Exp {
 }
 
 /// Parses a field.
-pub fn parse_field<L>(s: impl Into<Box<str>>) -> Result<Field, ParseError<L, failure::Error>> {
+pub fn parse_field<L>(s: impl Into<Box<str>>) -> Result<Field, ParseError<L, anyhow::Error>> {
     Ok(Field::new(parse_identifier(s.into())?))
 }
 
-fn parse_identifier<L>(s: Box<str>) -> Result<Identifier, ParseError<L, failure::Error>> {
+fn parse_identifier<L>(s: Box<str>) -> Result<Identifier, ParseError<L, anyhow::Error>> {
     Identifier::new(s).map_err(|error| ParseError::User { error })
 }
 
