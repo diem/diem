@@ -18,7 +18,7 @@ FROM toolchain AS builder
 
 COPY . /libra
 
-RUN cargo build --release -p libra-node -p client -p benchmark && cd target/release && rm -r build deps incremental
+RUN cargo build --release -p libra-node -p client && cd target/release && rm -r build deps incremental
 RUN strip target/release/client
 
 ### Production Image ###
