@@ -43,7 +43,9 @@ docker rm $CONTAINER 2>/dev/null >/dev/null || :
 
 trap "echo Terminating on signal; docker rm -f $CONTAINER >/dev/null" SIGINT SIGTERM
 
+VARS="-e SLACK_LOG_URL -e SLACK_CHANGELOG_URL"
+
 # This could in theory fail due to concurrency, but it seem unlikely
-docker run -v /libra_rsa:/libra_rsa --name $CONTAINER --rm $DOCKER_IMAGE $* &
+docker run $VARS -v /libra_rsa:/libra_rsa --name $CONTAINER --rm $DOCKER_IMAGE $* &
 
 wait
