@@ -12,8 +12,8 @@
 //! We use LEB128 for integer compression. LEB128 is a representation from the DWARF3 spec,
 //! http://dwarfstd.org/Dwarf3Std.php or https://en.wikipedia.org/wiki/LEB128.
 //! It's used to compress mostly indexes into the main binary tables.
+use anyhow::{bail, Result};
 use byteorder::ReadBytesExt;
-use failure::*;
 use std::{io::Cursor, mem::size_of};
 
 /// Constant values for the binary format header.

@@ -10,7 +10,7 @@
 //! `CompiledModule`.
 
 use crate::{file_format::*, file_format_common::*, vm_string::VMString};
-use failure::*;
+use anyhow::{bail, Result};
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
 use std::ops::Deref;
 
