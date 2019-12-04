@@ -14,8 +14,8 @@ use crate::{
     },
 };
 
+use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
-use failure::*;
 use libra_types::{account_address::AccountAddress, identifier::Identifier};
 use std::{
     clone::Clone,
