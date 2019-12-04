@@ -5241,6 +5241,7 @@ dependencies = [
 name = "vm-runtime"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecode-verifier 0.1.0",
  "compiler 0.1.0",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5248,7 +5249,6 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
- "libra-failure-ext 0.1.0",
  "libra-logger 0.1.0",
  "libra-metrics 0.1.0",
  "libra-state-view 0.1.0",
