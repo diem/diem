@@ -155,16 +155,22 @@ pub fn encode_create_account_script(
 /// `network_identity_pubkey` should be a X25519 public key
 /// `consensus_pubkey` should be a Ed25519 public c=key
 pub fn encode_register_validator_script(
-    network_signing_pubkey: Vec<u8>,
-    network_identity_pubkey: Vec<u8>,
     consensus_pubkey: Vec<u8>,
+    validator_network_signing_pubkey: Vec<u8>,
+    validator_network_identity_pubkey: Vec<u8>,
+    validator_network_address: Vec<u8>,
+    fullnodes_network_identity_pubkey: Vec<u8>,
+    fullnodes_network_address: Vec<u8>,
 ) -> Script {
     Script::new(
         REGISTER_VALIDATOR_TXN.clone(),
         vec![
-            TransactionArgument::ByteArray(ByteArray::new(network_signing_pubkey)),
-            TransactionArgument::ByteArray(ByteArray::new(network_identity_pubkey)),
             TransactionArgument::ByteArray(ByteArray::new(consensus_pubkey)),
+            TransactionArgument::ByteArray(ByteArray::new(validator_network_signing_pubkey)),
+            TransactionArgument::ByteArray(ByteArray::new(validator_network_identity_pubkey)),
+            TransactionArgument::ByteArray(ByteArray::new(validator_network_address)),
+            TransactionArgument::ByteArray(ByteArray::new(fullnodes_network_identity_pubkey)),
+            TransactionArgument::ByteArray(ByteArray::new(fullnodes_network_address)),
         ],
     )
 }

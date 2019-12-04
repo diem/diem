@@ -183,7 +183,7 @@ impl FakeExecutor {
                 );
                 output
             }
-            TransactionStatus::Discard(_) => panic!("transaction discarded"),
+            TransactionStatus::Discard(status) => panic!("transaction discarded with {:?}", status),
         }
     }
 

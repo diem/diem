@@ -88,15 +88,21 @@ pub fn peer_to_peer_txn(
 /// Returns a transaction to register the sender as a candidate validator
 pub fn register_validator_txn(
     sender: &Account,
-    network_signing_pubkey: Vec<u8>,
-    network_identity_pubkey: Vec<u8>,
     consensus_pubkey: Vec<u8>,
+    validator_network_signing_pubkey: Vec<u8>,
+    validator_network_identity_pubkey: Vec<u8>,
+    validator_network_address: Vec<u8>,
+    fullnodes_network_identity_pubkey: Vec<u8>,
+    fullnodes_network_address: Vec<u8>,
     seq_num: u64,
 ) -> SignedTransaction {
     let args = vec![
-        TransactionArgument::ByteArray(ByteArray::new(network_signing_pubkey)),
-        TransactionArgument::ByteArray(ByteArray::new(network_identity_pubkey)),
         TransactionArgument::ByteArray(ByteArray::new(consensus_pubkey)),
+        TransactionArgument::ByteArray(ByteArray::new(validator_network_signing_pubkey)),
+        TransactionArgument::ByteArray(ByteArray::new(validator_network_identity_pubkey)),
+        TransactionArgument::ByteArray(ByteArray::new(validator_network_address)),
+        TransactionArgument::ByteArray(ByteArray::new(fullnodes_network_identity_pubkey)),
+        TransactionArgument::ByteArray(ByteArray::new(fullnodes_network_address)),
     ];
     sender.create_signed_txn_with_args(
         REGISTER_VALIDATOR_TXN.clone(),

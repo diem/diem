@@ -2,8 +2,11 @@ module ValidatorConfig {
 
     struct Config {
         consensus_pubkey: bytearray,
-        network_identity_pubkey: bytearray,
-        network_signing_pubkey: bytearray,
+        validator_network_signing_pubkey: bytearray,
+        validator_network_identity_pubkey: bytearray,
+        validator_network_address: bytearray,
+        fullnodes_network_identity_pubkey: bytearray,
+        fullnodes_network_address: bytearray,
     }
 
     // A current or prospective validator should publish one of these under their address
@@ -31,14 +34,19 @@ module ValidatorConfig {
         return *&move(config_ref).consensus_pubkey;
     }
 
-    // Public accessor for network_identity_pubkey
-    public network_identity_pubkey(config_ref: &Self.Config): bytearray {
-        return *&move(config_ref).network_identity_pubkey;
+    // Public accessor for validator_network_signing_pubkey
+    public validator_network_signing_pubkey(config_ref: &Self.Config): bytearray {
+        return *&move(config_ref).validator_network_signing_pubkey;
     }
 
-    // Public accessor for network_signing_pubkey
-    public network_signing_pubkey(config_ref: &Self.Config): bytearray {
-        return *&move(config_ref).network_signing_pubkey;
+    // Public accessor for validator_network_identity_pubkey
+    public validator_network_identity_pubkey(config_ref: &Self.Config): bytearray {
+        return *&move(config_ref).validator_network_identity_pubkey;
+    }
+
+    // Public accessor for validator_network_address
+    public validator_network_address(config_ref: &Self.Config): bytearray {
+        return *&move(config_ref).validator_network_address;
     }
 
     // The following are self methods for initializing and maintaining a Validator's config
@@ -46,16 +54,22 @@ module ValidatorConfig {
     // Register the transaction sender as a candidate validator by creating a ValidatorConfig
     // resource under their account
     public register_candidate_validator(
-        network_signing_pubkey: bytearray,
-        network_identity_pubkey: bytearray,
-        consensus_pubkey: bytearray) {
+        consensus_pubkey: bytearray,
+        validator_network_signing_pubkey: bytearray,
+        validator_network_identity_pubkey: bytearray,
+        validator_network_address: bytearray,
+        fullnodes_network_identity_pubkey: bytearray,
+        fullnodes_network_address: bytearray) {
 
         move_to_sender<T>(
             T {
                 config: Config {
                     consensus_pubkey: move(consensus_pubkey),
-                    network_identity_pubkey: move(network_identity_pubkey),
-                    network_signing_pubkey: move(network_signing_pubkey),
+                    validator_network_signing_pubkey: move(validator_network_signing_pubkey),
+                    validator_network_identity_pubkey: move(validator_network_identity_pubkey),
+                    validator_network_address: move(validator_network_address),
+                    fullnodes_network_identity_pubkey: move(fullnodes_network_identity_pubkey),
+                    fullnodes_network_address: move(fullnodes_network_address),
                 }
             }
         );
@@ -74,6 +88,25 @@ module ValidatorConfig {
         config_ref = &mut move(t_ref).config;
         key_ref = &mut move(config_ref).consensus_pubkey;
         *move(key_ref) = move(consensus_pubkey);
+
+        return;
+    }
+
+    // TODO(philiphayes): fill out the rest of the rotate methods
+
+    // Rotate the network public key for validator discovery. This change will be
+    // committed in the next reconfiguration.
+    public rotate_validator_network_identity_pubkey(
+        validator_network_identity_pubkey: bytearray) acquires T {
+
+        let t_ref: &mut Self.T;
+        let config_ref: &mut Self.Config;
+        let key_ref: &mut bytearray;
+
+        t_ref = borrow_global_mut<T>(get_txn_sender());
+        config_ref = &mut move(t_ref).config;
+        key_ref = &mut move(config_ref).validator_network_identity_pubkey;
+        *move(key_ref) = move(validator_network_identity_pubkey);
 
         return;
     }

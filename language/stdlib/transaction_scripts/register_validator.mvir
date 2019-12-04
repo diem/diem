@@ -3,14 +3,20 @@
 
 import 0x0.ValidatorConfig;
 main(
-    network_signing_pubkey: bytearray,
-    network_identity_pubkey: bytearray,
-    consensus_pubkey: bytearray
+    consensus_pubkey: bytearray,
+    validator_network_signing_pubkey: bytearray,
+    validator_network_identity_pubkey: bytearray,
+    validator_network_address: bytearray,
+    fullnodes_network_identity_pubkey: bytearray,
+    fullnodes_network_address: bytearray,
 ) {
   ValidatorConfig.register_candidate_validator(
-      move(network_signing_pubkey),
-      move(network_identity_pubkey),
-      move(consensus_pubkey)
+      move(consensus_pubkey),
+      move(validator_network_signing_pubkey),
+      move(validator_network_identity_pubkey),
+      move(validator_network_address),
+      move(fullnodes_network_identity_pubkey),
+      move(fullnodes_network_address)
   );
   return;
 }
