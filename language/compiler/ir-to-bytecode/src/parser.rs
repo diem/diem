@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::{bail, Result};
 use codespan::{ByteIndex, CodeMap, Span};
 use codespan_reporting::{emit, termcolor::Buffer, Diagnostic, Label, Severity};
-use failure::*;
 use ir_to_bytecode_syntax::syntax::{self, ParseError};
 use libra_types::account_address::AccountAddress;
 use std::{
@@ -117,7 +117,7 @@ pub fn parse_cmd(cmd_str: &str, _sender_address: AccountAddress) -> Result<ast::
 }
 
 fn handle_error<'input, T>(
-    e: syntax::ParseError<usize, failure::Error>,
+    e: syntax::ParseError<usize, anyhow::Error>,
     code_str: &'input str,
 ) -> Result<T> {
     let mut s = DefaultHasher::new();

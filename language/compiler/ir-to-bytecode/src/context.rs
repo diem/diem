@@ -6,8 +6,8 @@ use crate::parser::ast::{
     TypeVar,
 };
 
+use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::ModuleSourceMap;
-use failure::*;
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
