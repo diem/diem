@@ -340,35 +340,40 @@ fn query_sequence_numbers(
     client: &AdmissionControlClient,
     addresses: &[AccountAddress],
 ) -> Result<Vec<u64>> {
-    let mut update_request = UpdateToLatestLedgerRequest::default();
-    for address in addresses {
-        let mut request_item = RequestItem::default();
-        let mut account_state_request = GetAccountStateRequest::default();
-        account_state_request.address = address.to_vec();
-        request_item.requested_items = Some(RequestedItems::GetAccountStateRequest(
-            account_state_request,
-        ));
-        update_request.requested_items.push(request_item);
-    }
-    let resp = client
-        .update_to_latest_ledger(&update_request)
-        .map_err(|e| format_err!("update_to_latest_ledger failed: {:?} ", e))?;
-    let mut result = Vec::with_capacity(resp.response_items.len());
-    for item in resp.response_items.into_iter() {
-        let item = ResponseItem::try_from(item)
-            .map_err(|e| format_err!("ResponseItem::from_proto failed: {:?} ", e))?;
-        if let ResponseItem::GetAccountState {
-            account_state_with_proof,
-        } = item
-        {
-            let account_resource = get_account_resource_or_default(&account_state_with_proof.blob)
+    let mut result = vec![];
+    for addresses_batch in addresses.chunks(MAX_TXN_BATCH_SIZE) {
+        let mut update_request = UpdateToLatestLedgerRequest::default();
+        for address in addresses_batch {
+            let mut request_item = RequestItem::default();
+            let mut account_state_request = GetAccountStateRequest::default();
+            account_state_request.address = address.to_vec();
+            request_item.requested_items = Some(RequestedItems::GetAccountStateRequest(
+                account_state_request,
+            ));
+            update_request.requested_items.push(request_item);
+        }
+        let resp = client
+            .update_to_latest_ledger(&update_request)
+            .map_err(|e| format_err!("update_to_latest_ledger failed: {:?} ", e))?;
+
+        for item in resp.response_items.into_iter() {
+            let item = ResponseItem::try_from(item)
+                .map_err(|e| format_err!("ResponseItem::from_proto failed: {:?} ", e))?;
+            if let ResponseItem::GetAccountState {
+                account_state_with_proof,
+            } = item
+            {
+                let account_resource = get_account_resource_or_default(
+                    &account_state_with_proof.blob,
+                )
                 .map_err(|e| format_err!("get_account_resource_or_default failed: {:?} ", e))?;
-            result.push(account_resource.sequence_number());
-        } else {
-            bail!(
-                "Unexpected item in UpdateToLatestLedgerResponse: {:?}",
-                item
-            );
+                result.push(account_resource.sequence_number());
+            } else {
+                bail!(
+                    "Unexpected item in UpdateToLatestLedgerResponse: {:?}",
+                    item
+                );
+            }
         }
     }
     Ok(result)
