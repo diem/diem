@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use failure::prelude::*;
+use anyhow::{format_err, Result};
 use ir_to_bytecode_syntax::ast::{ModuleName, QualifiedModuleIdent};
 use libra_types::account_address::AccountAddress;
 use libra_types::identifier::Identifier;

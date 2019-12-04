@@ -3,8 +3,8 @@
 
 use crate::mapping::SourceMapping;
 use crate::source_map::{FunctionSourceMap, SourceName};
+use anyhow::{bail, format_err, Result};
 use bytecode_verifier::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
-use failure::prelude::*;
 use libra_types::identifier::IdentStr;
 use vm::access::ModuleAccess;
 use vm::file_format::{
