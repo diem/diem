@@ -7,7 +7,7 @@ use crate::{
     instantiation_loops::InstantiationLoopChecker, resources::ResourceTransitiveChecker,
     signature::SignatureChecker, struct_defs::RecursiveStructDefChecker,
 };
-use failure::Error;
+use anyhow::Error;
 use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},

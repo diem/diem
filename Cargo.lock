@@ -418,8 +418,8 @@ dependencies = [
 name = "bytecode-verifier"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "invalid-mutations 0.1.0",
- "libra-failure-ext 0.1.0",
  "libra-types 0.1.0",
  "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "petgraph 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
