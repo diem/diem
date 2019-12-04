@@ -284,8 +284,8 @@ module LibraSystem {
 
         config = ValidatorConfig.config(*&copy(validator_info).addr);
         consensus_pubkey = ValidatorConfig.consensus_pubkey(&config);
-        network_signing_pubkey = ValidatorConfig.network_signing_pubkey(&config);
-        network_identity_pubkey = ValidatorConfig.network_identity_pubkey(&config);
+        network_signing_pubkey = ValidatorConfig.validator_network_signing_pubkey(&config);
+        network_identity_pubkey = ValidatorConfig.validator_network_identity_pubkey(&config);
 
         changed = false;
         if (&consensus_pubkey != &copy(validator_info).consensus_pubkey) {
@@ -314,8 +314,8 @@ module LibraSystem {
            addr: move(addr),
            consensus_pubkey: ValidatorConfig.consensus_pubkey(&config),
            consensus_voting_power: 1,
-           network_signing_pubkey: ValidatorConfig.network_signing_pubkey(&config),
-           network_identity_pubkey: ValidatorConfig.network_identity_pubkey(&config),
+           network_signing_pubkey: ValidatorConfig.validator_network_signing_pubkey(&config),
+           network_identity_pubkey: ValidatorConfig.validator_network_identity_pubkey(&config),
        };
     }
 

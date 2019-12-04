@@ -19,7 +19,7 @@ main() {
     assert(!LibraSystem.is_validator(0x88), 80);
 
     // registering a new *candidate* validator shouldn't change the validator set size
-    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30");
+    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30", h"40", h"50", h"60");
     assert(LibraSystem.validator_set_size() == 10, 81);
 
     return;

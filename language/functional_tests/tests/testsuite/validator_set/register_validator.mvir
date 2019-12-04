@@ -44,11 +44,21 @@ import 0x0.ValidatorConfig;
 main() {
     let config: ValidatorConfig.Config;
 
-    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30");
+    // Alice registers as a validator candidate
+    assert(!ValidatorConfig.has(get_txn_sender()), 9);
+    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30", h"40", h"50", h"60");
+    assert(ValidatorConfig.has(get_txn_sender()), 10);
+
+    // Rotating the consensus_pubkey should work
     config = ValidatorConfig.config(get_txn_sender());
-    assert(ValidatorConfig.consensus_pubkey(&config) == h"30", 77);
-    ValidatorConfig.rotate_consensus_pubkey(h"40");
-    assert(ValidatorConfig.consensus_pubkey(&config) == h"40", 88);
+    assert(ValidatorConfig.consensus_pubkey(&config) == h"10", 11);
+    ValidatorConfig.rotate_consensus_pubkey(h"70");
+    assert(ValidatorConfig.consensus_pubkey(&config) == h"70", 12);
+
+    // Rotating the validator_network_pubkey should work
+    assert(ValidatorConfig.validator_network_identity_pubkey(&config) == h"30", 13);
+    ValidatorConfig.rotate_validator_network_identity_pubkey(h"80");
+    assert(ValidatorConfig.validator_network_identity_pubkey(&config) == h"80", 14);
 
     return;
 }

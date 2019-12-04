@@ -308,21 +308,31 @@ pub fn encode_genesis_transaction_with_validator(
                         &VALIDATOR_CONFIG_MODULE,
                         &REGISTER_CANDIDATE_VALIDATOR,
                         vec![
+                            // consensus_pubkey
+                            Value::byte_array(ByteArray::new(
+                                validator_keys.consensus_public_key().to_bytes().to_vec(),
+                            )),
+                            // network_signing_pubkey
                             Value::byte_array(ByteArray::new(
                                 validator_keys
                                     .network_signing_public_key()
                                     .to_bytes()
                                     .to_vec(),
                             )),
+                            // validator_network_identity_pubkey
                             Value::byte_array(ByteArray::new(
                                 validator_keys
                                     .network_identity_public_key()
                                     .to_bytes()
                                     .to_vec(),
                             )),
-                            Value::byte_array(ByteArray::new(
-                                validator_keys.consensus_public_key().to_bytes().to_vec(),
-                            )),
+                            // TODO(philiphayes): need some config here
+                            // validator_network_address placeholder
+                            Value::byte_array(ByteArray::new(vec![])),
+                            // fullnodes_network_identity_pubkey placeholder
+                            Value::byte_array(ByteArray::new(vec![])),
+                            // fullnodes_network_address placeholder
+                            Value::byte_array(ByteArray::new(vec![])),
                         ],
                     )
                     .unwrap();

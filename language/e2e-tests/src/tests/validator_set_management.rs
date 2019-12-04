@@ -20,7 +20,16 @@ fn validator_add() {
     // create a FakeExecutor with a genesis from file
     executor.add_account_data(&new_validator);
 
-    let txn = register_validator_txn(new_validator.account(), vec![], vec![], vec![], 0);
+    let txn = register_validator_txn(
+        new_validator.account(),
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        vec![],
+        0,
+    );
     executor.execute_and_apply(txn);
     let txn = add_validator_txn(&genesis_account, new_validator.account(), 1);
 

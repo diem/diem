@@ -10,7 +10,7 @@ import 0x0.ValidatorConfig;
 main() {
     let config: ValidatorConfig.Config;
 
-    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30");
+    ValidatorConfig.register_candidate_validator(h"10", h"20", h"30", h"40", h"50", h"60");
     return;
 }
 
