@@ -38,12 +38,13 @@ use libra_types::{
 use rand::{
     prelude::ThreadRng,
     rngs::{EntropyRng, StdRng},
+    seq::IteratorRandom,
     seq::SliceRandom,
     Rng, SeedableRng,
 };
 use slog_scope::{debug, info};
 
-use std::cmp::min;
+use std::cmp::{max, min};
 use std::fmt;
 use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -164,6 +165,7 @@ impl TxEmitter {
             &mut faucet_account,
             req.instances.len(),
             libra_per_seed,
+            100,
             Self::pick_mint_client(&req.instances),
         )
         .map_err(|e| format_err!("Failed to mint seed_accounts: {}", e))?;
@@ -183,6 +185,7 @@ impl TxEmitter {
                         &mut seed_account,
                         num_new_accounts,
                         LIBRA_PER_NEW_ACCOUNT,
+                        20,
                         client,
                     )
                 })
@@ -288,10 +291,12 @@ impl SubmissionThread {
     }
 
     fn gen_requests(&mut self, rng: &mut ThreadRng) -> Vec<SubmitTransactionRequest> {
-        let mut requests = Vec::with_capacity(self.accounts.len());
-        let all_addresses = &self.all_addresses;
-        for sender in &mut self.accounts {
-            let receiver = all_addresses
+        let batch_size = max(MAX_TXN_BATCH_SIZE, self.accounts.len());
+        let accounts = self.accounts.iter_mut().choose_multiple(rng, batch_size);
+        let mut requests = Vec::with_capacity(accounts.len());
+        for sender in accounts {
+            let receiver = self
+                .all_addresses
                 .choose(rng)
                 .expect("all_addresses can't be empty");
             let request = gen_transfer_txn_request(sender, receiver, 1);
@@ -522,12 +527,16 @@ fn create_new_accounts(
     source_account: &mut AccountData,
     num_new_accounts: usize,
     libra_per_new_account: u64,
+    max_num_accounts_per_batch: u64,
     client: NamedAdmissionControlClient,
 ) -> Result<Vec<AccountData>> {
     let mut i = 0;
     let mut accounts = vec![];
     while i < num_new_accounts {
-        let mut batch = gen_random_accounts(min(MAX_TXN_BATCH_SIZE, num_new_accounts - i));
+        let mut batch = gen_random_accounts(min(
+            max_num_accounts_per_batch as usize,
+            min(MAX_TXN_BATCH_SIZE, num_new_accounts - i),
+        ));
         let requests = gen_transfer_txn_requests(source_account, &batch, libra_per_new_account);
         execute_and_wait_transactions(&client, source_account, requests)?;
         i += batch.len();
