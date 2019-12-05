@@ -247,19 +247,43 @@ where
     pub fn verify_well_formed(&self) -> anyhow::Result<()> {
         ensure!(
             !self.is_genesis_block(),
-            "We should not accept genesis from others"
+            "We must not accept genesis from others"
+        );
+        let parent = self.quorum_cert().certified_block();
+        ensure!(
+            parent.round() < self.round(),
+            "Block must have a greater round than parent's block"
         );
         ensure!(
-            self.quorum_cert().certified_block().round() < self.round(),
-            "Block has invalid round"
+            parent.epoch() == self.epoch(),
+            "block's parent should be in the same epoch"
+        );
+        if parent.has_reconfiguration() {
+            ensure!(
+                self.payload().filter(|p| **p != T::default()).is_none(),
+                "Reconfiguration suffix should not carry payload"
+            );
+        }
+        if self.is_nil_block() || parent.has_reconfiguration() {
+            ensure!(
+                self.timestamp_usecs() == parent.timestamp_usecs(),
+                "Nil/reconfig suffix block must have same timestamp as parent"
+            );
+        } else {
+            ensure!(
+                self.timestamp_usecs() > parent.timestamp_usecs(),
+                "Blocks must have strictly increasing timestamps"
+            );
+        }
+        ensure!(
+            !self.quorum_cert().ends_epoch(),
+            "Block cannot be proposed in an epoch that has ended"
         );
         debug_checked_verify_eq!(
             self.id(),
             self.block_data.hash(),
             "Block id mismatch the hash"
         );
-
-        ensure!(!self.quorum_cert().ends_epoch(), "Block after epoch ends");
         Ok(())
     }
 }

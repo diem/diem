@@ -410,7 +410,7 @@ fn test_empty_reconfiguration_suffix() {
         vec![42],
     );
     // Child of reconfiguration carries a payload will fail to insert
-    assert!(block_on(block_store.execute_and_insert_block(a4)).is_err());
+    assert!(a4.verify_well_formed().is_err());
     let a5 = inserter.create_block_with_qc(
         inserter.create_qc_for_block(a3.as_ref(), None),
         a3.as_ref().timestamp_usecs(),
@@ -430,5 +430,5 @@ fn test_empty_reconfiguration_suffix() {
         5,
         vec![42],
     );
-    assert!(block_on(block_store.execute_and_insert_block(a6)).is_err());
+    assert!(a6.verify_well_formed().is_err());
 }
