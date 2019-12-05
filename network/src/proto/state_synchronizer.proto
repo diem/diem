@@ -5,27 +5,12 @@ syntax = "proto3";
 
 package state_synchronizer;
 
-import "ledger_info.proto";
-import "transaction.proto";
-
 message GetChunkRequest {
-  uint64 known_version = 1;
-  // Epoch the chunk response is supposed to belong to (i.e., epoch of known_version + 1)
-  uint64 current_epoch = 2;
-  uint64 limit = 3;
-  uint64 timeout = 4;
-  // An optional field specifying the target.
-  types.LedgerInfoWithSignatures ledger_info_with_sigs = 5;
+  bytes bytes = 1;
 }
 
-// The returned chunk is bounded by the end of the known_epoch of the requester (i.e., a chunk never crosses epoch
-// boundaries).
 message GetChunkResponse {
-  // Transaction proofs are built relative to this ledger info.
-  // It could either be the end of the epoch of the known version in the request, or a target / highest LI.
-  types.LedgerInfoWithSignatures ledger_info_with_sigs = 1;
-  // chunk of transactions with proof corresponding to version in `ledger_info_with_sigs`
-  types.TransactionListWithProof txn_list_with_proof = 2;
+  bytes bytes = 1;
 }
 
 message StateSynchronizerMsg {

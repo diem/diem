@@ -16,6 +16,8 @@ use libra_types::crypto_proxies::ValidatorVerifier;
 
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
 
+mod chunk_request;
+mod chunk_response;
 mod coordinator;
 mod counters;
 mod executor_proxy;

@@ -886,7 +886,7 @@ impl From<TransactionToCommit> for crate::proto::types::TransactionToCommit {
 /// 2. The list has only 1 transaction/transaction_info. Then `proof_of_first_transaction`
 /// must exist and `proof_of_last_transaction` must be `None`.
 /// 3. The list has 2+ transactions/transaction_infos. The both proofs must exist.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct TransactionListWithProof {
     pub transactions: Vec<Transaction>,
     pub events: Option<Vec<Vec<ContractEvent>>>,
