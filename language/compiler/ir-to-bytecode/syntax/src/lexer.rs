@@ -37,7 +37,10 @@ pub enum Tok {
     GreaterEqual,
     Caret,
     Underscore,
+    /// Abort statement in the Move language
     Abort,
+    /// Aborts if in the spec language
+    AbortsIf,
     Acquires,
     Address,
     As,
@@ -58,8 +61,13 @@ pub enum Tok {
     GetTxnGasUnitPrice,
     GetTxnMaxGasUnits,
     GetTxnPublicKey,
+    /// Function to get transaction sender in the Move language
     GetTxnSender,
     GetTxnSequenceNumber,
+    /// Like borrow_global, but for spec language
+    Global,
+    /// Like exists, but for spec language
+    GlobalExists,
     If,
     Import,
     Let,
@@ -71,12 +79,17 @@ pub enum Tok {
     MoveFrom,
     MoveToSender,
     Native,
+    Old,
     Public,
+    Requires,
     Resource,
     Return,
     Script,
     Struct,
+    SucceedsIf,
     True,
+    /// Transaction sender in the specification language
+    TxnSender,
     U64,
     Unrestricted,
     While,
@@ -86,8 +99,20 @@ pub enum Tok {
     RBrace,
 }
 
+impl Tok {
+    /// Return true if the given token is the beginning of a specification directive for the Move
+    /// prover
+    pub fn is_spec_directive(&self) -> bool {
+        match self {
+            Tok::Ensures | Tok::Requires | Tok::SucceedsIf | Tok::AbortsIf => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Token<'input>(pub Tok, pub &'input str);
+
 impl<'a> fmt::Display for Token<'a> {
     fn fmt<'f>(&self, formatter: &mut fmt::Formatter<'f>) -> Result<(), fmt::Error> {
         fmt::Display::fmt(self.1, formatter)
@@ -203,6 +228,8 @@ fn find_token(
                 Some('<') => match name {
                     "borrow_global" => (Tok::BorrowGlobal, len + 1),
                     "borrow_global_mut" => (Tok::BorrowGlobalMut, len + 1),
+                    "global" => (Tok::Global, len + 1),
+                    "global_exists" => (Tok::GlobalExists, len + 1),
                     "exists" => (Tok::Exists, len + 1),
                     "move_from" => (Tok::MoveFrom, len + 1),
                     "move_to_sender" => (Tok::MoveToSender, len + 1),
@@ -340,6 +367,7 @@ fn get_name_token(name: &str) -> Tok {
     match name {
         "_" => Tok::Underscore,
         "abort" => Tok::Abort,
+        "aborts_if" => Tok::AbortsIf,
         "acquires" => Tok::Acquires,
         "address" => Tok::Address,
         "as" => Tok::As,
@@ -364,11 +392,15 @@ fn get_name_token(name: &str) -> Tok {
         "main" => Tok::Main,
         "module" => Tok::Module,
         "native" => Tok::Native,
+        "old" => Tok::Old,
         "public" => Tok::Public,
+        "requires" => Tok::Requires,
         "resource" => Tok::Resource,
         "return" => Tok::Return,
         "struct" => Tok::Struct,
+        "succeeds_if" => Tok::SucceedsIf,
         "true" => Tok::True,
+        "txn_sender" => Tok::TxnSender,
         "u64" => Tok::U64,
         "unrestricted" => Tok::Unrestricted,
         "while" => Tok::While,
