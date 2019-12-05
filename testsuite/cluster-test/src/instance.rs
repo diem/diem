@@ -3,7 +3,8 @@
 
 #![forbid(unsafe_code)]
 
-use anyhow::{ensure, Result};
+use anyhow::{ensure, format_err, Result};
+use serde_json::Value;
 use std::collections::HashSet;
 use std::{ffi::OsStr, fmt, process::Stdio};
 use tokio;
@@ -67,6 +68,34 @@ impl Instance {
             status.code().unwrap_or(-1)
         );
         Ok(())
+    }
+
+    pub fn counter(&self, counter: &str) -> Result<f64> {
+        let response: Value =
+            reqwest::get(format!("http://{}:9101/counters", self.ip).as_str())?.json()?;
+        if let Value::Number(ref response) = response[counter] {
+            if let Some(response) = response.as_f64() {
+                Ok(response)
+            } else {
+                Err(format_err!(
+                    "Failed to parse counter({}) as f64: {:?}",
+                    counter,
+                    response
+                ))
+            }
+        } else {
+            Err(format_err!(
+                "Counter({}) was not a Value::Number: {:?}",
+                counter,
+                response[counter]
+            ))
+        }
+    }
+
+    pub fn is_up(&self) -> bool {
+        reqwest::get(format!("http://{}:9101/counters", self.ip).as_str())
+            .map(|x| x.status().is_success())
+            .unwrap_or(false)
     }
 
     pub fn short_hash(&self) -> &String {
