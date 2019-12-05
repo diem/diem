@@ -4,7 +4,7 @@
 //! Convenience structs and functions for generating configuration for a swarm of libra nodes
 use anyhow::{bail, ensure, format_err, Result};
 use libra_config::{
-    config::{NodeConfig, PersistableConfig, RoleType},
+    config::{NodeConfig, PersistableConfig, RoleType, VMPublishingOption},
     generator,
 };
 use libra_crypto::{
@@ -138,11 +138,15 @@ impl SwarmConfigBuilder {
             );
         }
 
-        let template = if let Some(template_path) = &&self.template_path {
+        let mut template = if let Some(template_path) = &&self.template_path {
             NodeConfig::load_config(template_path)?
         } else {
             NodeConfig::default()
         };
+
+        // @TODO this shouldn't be hardcode and instead should be passed in via the template but
+        // this interface expects a path not a NodeConfig complicating things...
+        template.vm_config.publishing_options = VMPublishingOption::Open;
 
         let mut configs;
         let genesis;
@@ -154,6 +158,7 @@ impl SwarmConfigBuilder {
                 self.force_discovery,
                 self.is_ipv4,
                 self.key_seed,
+                true,
             )?;
             let config = configs
                 .get(0)
@@ -188,6 +193,7 @@ impl SwarmConfigBuilder {
                 self.is_ipv4,
                 self.key_seed,
                 self.is_permissioned,
+                true,
             )?;
             upstream_peer.save(&PathBuf::from("node.config.toml"));
         }
