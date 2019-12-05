@@ -42,6 +42,7 @@ main() {
     return;
 }
 // not: ValidatorSetChangeEvent
+// not: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
