@@ -49,6 +49,16 @@ module ValidatorConfig {
         return *&move(config_ref).validator_network_address;
     }
 
+    // Public accessor for fullnodes_network_identity_pubkey
+    public fullnodes_network_identity_pubkey(config_ref: &Self.Config): bytearray {
+        return *&move(config_ref).fullnodes_network_identity_pubkey;
+    }
+
+    // Public accessor for fullnodes_network_address
+    public fullnodes_network_address(config_ref: &Self.Config): bytearray {
+        return *&move(config_ref).fullnodes_network_address;
+    }
+
     // The following are self methods for initializing and maintaining a Validator's config
 
     // Register the transaction sender as a candidate validator by creating a ValidatorConfig

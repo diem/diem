@@ -62,6 +62,11 @@ pub fn validator_set_address() -> AccountAddress {
         .expect("Parsing valid hex literal should always succeed")
 }
 
+pub fn discovery_set_address() -> AccountAddress {
+    AccountAddress::from_hex_literal("0xD15C0")
+        .expect("Parsing valid hex literal should always succeed")
+}
+
 pub fn account_struct_tag() -> StructTag {
     StructTag {
         address: core_code_address(),

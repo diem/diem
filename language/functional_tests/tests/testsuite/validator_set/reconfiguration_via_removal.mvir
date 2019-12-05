@@ -47,6 +47,7 @@ main() {
 }
 
 // check: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
