@@ -28,6 +28,7 @@ use libra_crypto::{
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
+use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 use std::marker::PhantomData;
 
@@ -430,7 +431,7 @@ impl From<AccumulatorConsistencyProof> for crate::proto::types::AccumulatorConsi
 ///
 /// if the proof wants to show that `[a, b, c]` exists in the accumulator, it would need `X` on the
 /// left and `Y` and `Z` on the right.
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct AccumulatorRangeProof<H> {
     /// The siblings on the left of the path from the first leaf to the root. Siblings near the root
     /// are at the beginning of the vector.
@@ -974,7 +975,7 @@ impl From<EventProof> for crate::proto::types::EventProof {
 }
 
 /// The complete proof used to authenticate a list of consecutive transactions.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct TransactionListProof {
     /// The accumulator range proof from ledger info root to leaves that authenticates the hashes

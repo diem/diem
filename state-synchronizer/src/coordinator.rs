@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::chunk_request::{GetChunkRequest, TargetType};
+use crate::chunk_response::GetChunkResponse;
 use crate::{
     counters,
     executor_proxy::ExecutorProxyTrait,
@@ -21,7 +23,7 @@ use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures, transaction::TransactionListWithProof,
 };
 use network::{
-    proto::{GetChunkRequest, GetChunkResponse, StateSynchronizerMsg, StateSynchronizerMsg_oneof},
+    proto::{StateSynchronizerMsg, StateSynchronizerMsg_oneof},
     validator_network::{Event, StateSynchronizerEvents, StateSynchronizerSender},
 };
 use std::{
@@ -171,18 +173,33 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                 }
                                 Event::Message((peer_id, mut message)) => {
                                     match message.message.unwrap() {
-                                        StateSynchronizerMsg_oneof::ChunkRequest(request) => {
-                                            if let Err(err) = self.process_chunk_request(peer_id, request).await {
-                                                error!("[state sync] failed to serve chunk request from {}, local LI version {}: {}", peer_id, self.local_state.highest_local_li.ledger_info().version(), err);
+                                        StateSynchronizerMsg_oneof::ChunkRequest(request_msg) => {
+                                            match request_msg.try_into() {
+                                                Ok(request) => {
+                                                    if let Err(err) = self.process_chunk_request(peer_id, request).await {
+                                                        error!("[state sync] failed to serve chunk request from {}, local LI version {}: {}", peer_id, self.local_state.highest_local_li.ledger_info().version(), err);
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    error!("[state sync] failed to parse request_msg: {}", e);
+                                                }
                                             }
                                         }
-                                        StateSynchronizerMsg_oneof::ChunkResponse(response) => {
-                                            if let Err(err) = self.process_chunk_response(&peer_id, response).await {
-                                                error!("[state sync] failed to process chunk response from {}: {}", peer_id, err);
-                                                counters::APPLY_CHUNK_FAILURE.with_label_values(&[&*peer_id.to_string()]).inc();
-                                            } else {
-                                                self.peer_manager.update_score(&peer_id, PeerScoreUpdateType::Success);
-                                                counters::APPLY_CHUNK_SUCCESS.with_label_values(&[&*peer_id.to_string()]).inc();
+                                        StateSynchronizerMsg_oneof::ChunkResponse(response_msg) => {
+                                            match response_msg.try_into() {
+                                                Ok(response) => {
+                                                    if let Err(err) = self.process_chunk_response(&peer_id, response).await {
+                                                        error!("[state sync] failed to process chunk response from {}: {}", peer_id, err);
+                                                        counters::APPLY_CHUNK_FAILURE.with_label_values(&[&*peer_id.to_string()]).inc();
+                                                    } else {
+                                                        self.peer_manager.update_score(&peer_id, PeerScoreUpdateType::Success);
+                                                        counters::APPLY_CHUNK_SUCCESS.with_label_values(&[&*peer_id.to_string()]).inc();
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    error!("[state sync] failed to parse response_msg: {}", e);
+                                                    counters::APPLY_CHUNK_FAILURE.with_label_values(&[&*peer_id.to_string()]).inc();
+                                                }
                                             }
                                         }
                                     }
@@ -300,63 +317,93 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     async fn process_chunk_request(
         &mut self,
         peer_id: PeerId,
-        mut request: GetChunkRequest,
+        request: GetChunkRequest,
     ) -> Result<()> {
-        if request.timeout > self.config.max_timeout_ms
-            || request.limit > self.config.max_chunk_limit
-        {
-            bail!(
-                "[state sync] Request timeout: {}, chunk limit: {}; configured max timeout is {} ms, and chunk limit is {}",
-                request.timeout,
-                request.limit,
-                self.config.max_timeout_ms,
-                self.config.max_chunk_limit
-            );
-        }
-        let target = request
-            .ledger_info_with_sigs
-            .take()
-            .map(TryInto::try_into)
-            .transpose()?;
         self.sync_state_with_local_storage().await?;
-        let local_li_version = self.local_state.highest_local_li.ledger_info().version();
         debug!(
-            "[state sync] chunk request: peer_id: {}, request known version: {}, target version: {}, local li version: {}",
+            "[state sync] chunk request: peer_id: {}, local li version: {}, req: {}",
             peer_id.short_str(),
-            request.known_version,
-            target.as_ref().map_or("None".to_string(), |t: &LedgerInfoWithSignatures| t.ledger_info().version().to_string()),
-            local_li_version,
+            self.local_state.highest_local_li.ledger_info().version(),
+            request,
         );
+
+        let sender = self
+            .peer_manager
+            .get_network_sender(&peer_id)
+            .ok_or_else(|| format_err!("ChunkRequest from unknown peer {}", peer_id.short_str()))?;
+        match request.target().clone() {
+            TargetType::TargetLedgerInfo(li) => {
+                self.process_request_target_li(sender, peer_id, request, li)
+                    .await
+            }
+            TargetType::HighestAvailable { timeout_ms } => {
+                self.process_request_highest_available(sender, peer_id, request, timeout_ms)
+                    .await
+            }
+            TargetType::Waypoint(_) => panic!("Waypoint processing not supported."),
+        }
+    }
+
+    /// Processing requests with a specified target LedgerInfo.
+    /// Assumes that the local state is uptodate with storage.
+    async fn process_request_target_li(
+        &self,
+        sender: StateSynchronizerSender,
+        peer_id: PeerId,
+        request: GetChunkRequest,
+        target_li: LedgerInfoWithSignatures,
+    ) -> Result<()> {
+        let limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
+        // In case known_version is lower than the requested ledger info an empty response might be
+        // sent.
+        self.deliver_chunk(
+            peer_id,
+            request.known_version,
+            request.current_epoch,
+            limit,
+            Some(target_li),
+            sender,
+        )
+        .await
+    }
+
+    /// Processing requests with no target LedgerInfo (highest available) and potentially long
+    /// polling.
+    /// Assumes that the local state is uptodate with storage.
+    async fn process_request_highest_available(
+        &mut self,
+        sender: StateSynchronizerSender,
+        peer_id: PeerId,
+        request: GetChunkRequest,
+        timeout_ms: u64,
+    ) -> Result<()> {
+        let limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
+        let timeout = std::cmp::min(timeout_ms, self.config.max_timeout_ms);
 
         // If there is nothing a node can help with, and the request supports long polling,
         // add it to the subscriptions.
-        if local_li_version <= request.known_version && request.timeout > 0 {
-            let expiration_time =
-                SystemTime::now().checked_add(Duration::from_millis(request.timeout));
+        if self.local_state.highest_local_li.ledger_info().version() <= request.known_version
+            && timeout > 0
+        {
+            let expiration_time = SystemTime::now().checked_add(Duration::from_millis(timeout));
             if let Some(time) = expiration_time {
                 let request_info = PendingRequestInfo {
                     expiration_time: time,
                     known_version: request.known_version,
                     request_epoch: request.current_epoch,
-                    limit: request.limit,
+                    limit,
                 };
                 self.subscriptions.insert(peer_id, request_info);
             }
             return Ok(());
         }
 
-        // Send the chunk response right away (even if empty: empty response is better than no
-        // response at all because it triggers another attempt without timing out).
-        let sender = self
-            .peer_manager
-            .get_network_sender(&peer_id)
-            .ok_or_else(|| format_err!("ChunkRequest from unknown peer {}", peer_id.short_str()))?;
         self.deliver_chunk(
             peer_id,
             request.known_version,
             request.current_epoch,
-            request.limit,
-            target,
+            limit,
+            None,
             sender,
         )
         .await
@@ -381,12 +428,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .executor_proxy
             .get_chunk(known_version, limit, response_li.ledger_info().version())
             .await?;
-        let chunk_response = GetChunkResponse {
-            ledger_info_with_sigs: Some(response_li.into()),
-            txn_list_with_proof: Some(txns.into()),
-        };
+        let chunk_response = GetChunkResponse::new(response_li, txns);
         let msg = StateSynchronizerMsg {
-            message: Some(StateSynchronizerMsg_oneof::ChunkResponse(chunk_response)),
+            message: Some(StateSynchronizerMsg_oneof::ChunkResponse(
+                chunk_response.try_into()?,
+            )),
         };
         if network_sender.send_to(peer_id, msg).await.is_err() {
             error!("[state sync] failed to send p2p message");
@@ -435,10 +481,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         counters::RESPONSES_RECEIVED
             .with_label_values(&[&*peer_id.to_string()])
             .inc();
-        let txn_list_with_proof: TransactionListWithProof = response
-            .txn_list_with_proof
-            .ok_or_else(|| format_err!("Missing txn_list_with_proof"))?
-            .try_into()?;
+        debug!("Processing chunk response {}", response);
+        let txn_list_with_proof = response.txn_list_with_proof.clone();
 
         let known_version = self.local_state.highest_version_in_local_storage();
         let chunk_start_version =
@@ -461,10 +505,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 chunk_start_version
             );
         }
-        let response_li: LedgerInfoWithSignatures = response
-            .ledger_info_with_sigs
-            .ok_or_else(|| format_err!("Missing ledger_info_with_sigs"))?
-            .try_into()?;
+        let response_li = response.ledger_info_with_sigs;
 
         if let Some(sync_req) = self.sync_request.as_ref() {
             // Valid responses should not exceed the LI version of the request.
@@ -580,38 +621,29 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .pick_peer()
             .ok_or_else(|| format_err!("No peers found for chunk request."))?;
 
-        let mut req = GetChunkRequest::default();
-        req.known_version = known_version;
-        req.current_epoch = known_epoch;
-        req.limit = self.config.chunk_limit;
-        if self.role == RoleType::Validator {
-            let target = self
-                .sync_request
-                .as_ref()
-                .ok_or_else(|| {
-                    format_err!("[state sync] Validator chunk request without a sync request.")
-                })?
-                .target
-                .clone();
-            if target.ledger_info().version() <= known_version {
-                debug!(
-                    "[state sync] Reached version {}, no need to send more requests",
-                    known_version
-                );
-                return Ok(());
+        let target = match self.sync_request.as_ref() {
+            None => TargetType::HighestAvailable {
+                timeout_ms: self.config.long_poll_timeout_ms,
+            },
+            Some(sync_req) => {
+                if sync_req.target.ledger_info().version() <= known_version {
+                    debug!(
+                        "[state sync] Reached version {}, no need to send more requests",
+                        known_version
+                    );
+                    return Ok(());
+                }
+                TargetType::TargetLedgerInfo(sync_req.target.clone())
             }
-            req.ledger_info_with_sigs = Some(target.into());
-        } else {
-            req.timeout = self.config.long_poll_timeout_ms;
-        }
+        };
+        let req = GetChunkRequest::new(known_version, known_epoch, self.config.chunk_limit, target);
         debug!(
-            "[state sync] request next chunk. peer_id: {}, known_version: {}, timeout: {}",
+            "[state sync] request next chunk. peer_id: {}, chunk req: {}",
             peer_id.short_str(),
-            known_version,
-            req.timeout
+            req,
         );
         let msg = StateSynchronizerMsg {
-            message: Some(StateSynchronizerMsg_oneof::ChunkRequest(req)),
+            message: Some(StateSynchronizerMsg_oneof::ChunkRequest(req.try_into()?)),
         };
 
         self.peer_manager
