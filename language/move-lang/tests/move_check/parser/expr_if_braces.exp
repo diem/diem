@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/expr_if_braces.move:4:19 ───
+   ┌── tests/move_check/parser/expr_if_braces.move:4:19 ───
    │
  4 │         if (cond) if (cond) ()
    │                   ^^ Unrecognized Token: if

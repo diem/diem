@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/expr_abort_braces.move:4:15 ───
+   ┌── tests/move_check/parser/expr_abort_braces.move:4:15 ───
    │
  4 │         abort if (v == 0) 10 else v
    │               ^^ Unrecognized Token: if

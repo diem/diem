@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/expr_return_missing_value.move:5:5 ───
+   ┌── tests/move_check/parser/expr_return_missing_value.move:5:5 ───
    │
  5 │     }
    │     ^ Unrecognized Token: }

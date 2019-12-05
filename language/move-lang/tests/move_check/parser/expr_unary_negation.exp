@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/expr_unary_negation.move:5:32 ───
+   ┌── tests/move_check/parser/expr_unary_negation.move:5:32 ───
    │
  5 │     Transaction::assert(((1 - -2) == 3) && (-(1 - 2) == 1), 100);
    │                                ^ Invalid argument to '-'
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/parsing/expr_unary_negation.move:5:46 ───
+   ┌── tests/move_check/parser/expr_unary_negation.move:5:46 ───
    │
  5 │     Transaction::assert(((1 - -2) == 3) && (-(1 - 2) == 1), 100);
    │                                              ^^^^^^^ Invalid argument to '-'

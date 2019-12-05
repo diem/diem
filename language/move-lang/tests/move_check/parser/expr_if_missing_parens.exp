@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/expr_if_missing_parens.move:4:12 ───
+   ┌── tests/move_check/parser/expr_if_missing_parens.move:4:12 ───
    │
  4 │         if v < 3 ()
    │            ^ Unrecognized Token: v

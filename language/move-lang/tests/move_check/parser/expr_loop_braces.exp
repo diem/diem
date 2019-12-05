@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/expr_loop_braces.move:4:14 ───
+   ┌── tests/move_check/parser/expr_loop_braces.move:4:14 ───
    │
  4 │         loop if (v < 10) break
    │              ^^ Unrecognized Token: if
