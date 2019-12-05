@@ -212,6 +212,7 @@ impl ModuleGenerator {
         let fun = Function {
             visibility: FunctionVisibility::Public,
             acquires: Vec::new(),
+            specifications: Vec::new(),
             signature,
             body: FunctionBody::Move {
                 locals,

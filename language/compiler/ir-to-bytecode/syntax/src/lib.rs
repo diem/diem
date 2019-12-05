@@ -207,4 +207,5 @@
 
 pub mod ast;
 mod lexer;
+pub mod spec_language_ast;
 pub mod syntax;

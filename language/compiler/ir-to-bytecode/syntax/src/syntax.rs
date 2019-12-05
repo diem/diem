@@ -6,14 +6,15 @@ use std::fmt;
 use std::str::FromStr;
 
 use crate::ast::{
-    parse_field, BinOp, Block, Block_, Builtin, Cmd, CopyableVal, CopyableVal_, Ensures, Exp, Exp_,
-    Field_, Fields, Function, FunctionBody, FunctionCall, FunctionCall_, FunctionName,
-    FunctionVisibility, Function_, IfElse, ImportDefinition, Kind, LValue, LValue_, Loop,
-    ModuleDefinition, ModuleIdent, ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent,
-    Script, ScriptOrModule, Spanned, Statement, StructDefinition, StructDefinition_, StructName,
-    Type, TypeVar, TypeVar_, UnaryOp, Var, Var_, While,
+    parse_field, BinOp, Block, Block_, Builtin, Cmd, CopyableVal, CopyableVal_, Exp, Exp_, Field_,
+    Fields, Function, FunctionBody, FunctionCall, FunctionCall_, FunctionName, FunctionVisibility,
+    Function_, IfElse, ImportDefinition, Kind, LValue, LValue_, Loop, ModuleDefinition,
+    ModuleIdent, ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent, Script,
+    ScriptOrModule, Spanned, Statement, StructDefinition, StructDefinition_, StructName, Type,
+    TypeVar, TypeVar_, UnaryOp, Var, Var_, While,
 };
 use crate::lexer::*;
+use crate::spec_language_ast::*;
 use hex;
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 
@@ -1318,12 +1319,110 @@ fn parse_acquire_list<'input>(
     Ok(al)
 }
 
-fn parse_ensures<'input>(
+//// Spec langauge parsing ////
+
+fn parse_storage_location<'input>(
     tokens: &mut Lexer<'input>,
-) -> Result<Ensures, ParseError<usize, failure::Error>> {
-    consume_token(tokens, Tok::Ensures)?;
-    let e = parse_exp_(tokens)?;
-    Ok(Ensures(e))
+) -> Result<StorageLocation, ParseError<usize, anyhow::Error>> {
+    let base = match tokens.peek() {
+        // TODO: probably shouldn't reuse the Move return operator, but reserving "ret" as a
+        // keyword caused too many parse errors in existing code
+        Tok::Return => {
+            tokens.advance()?;
+            StorageLocation::Ret
+        }
+        Tok::TxnSender => {
+            tokens.advance()?;
+            StorageLocation::TxnSenderAddress
+        }
+        Tok::AccountAddressValue => StorageLocation::Address(parse_account_address(tokens)?),
+        Tok::Global => {
+            tokens.advance()?; // this consumes 'global<' due to parser funkiness
+            let type_ = parse_struct_name(tokens)?;
+            consume_token(tokens, Tok::Greater)?;
+            consume_token(tokens, Tok::LParen)?;
+            let address = Box::new(parse_storage_location(tokens)?);
+            consume_token(tokens, Tok::RParen)?;
+            StorageLocation::GlobalResource { type_, address }
+        }
+        Tok::Old => {
+            tokens.advance()?;
+            consume_token(tokens, Tok::LParen)?;
+            let stloc = parse_storage_location(tokens)?;
+            consume_token(tokens, Tok::RParen)?;
+            StorageLocation::Old(Box::new(stloc))
+        }
+        _ => StorageLocation::Formal(parse_name(tokens)?),
+    };
+
+    // parsed the storage location base. now parse its fields (if any)
+    let mut fields = vec![];
+    // TODO: in the long term, using slash is a bad choice because of the conflict with division
+    // (e.g., x/f / y == 7 is ambiguous), but the current parser has a hangup with our desired
+    // syntax '.' (see DotNameValue)
+    while tokens.peek() == Tok::Slash {
+        tokens.advance()?;
+        fields.push(parse_field_(tokens)?.value);
+    }
+    if fields.is_empty() {
+        Ok(base)
+    } else {
+        Ok(StorageLocation::AccessPath {
+            base: Box::new(base),
+            fields,
+        })
+    }
+}
+
+fn parse_spec_exp<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<SpecExp, ParseError<usize, anyhow::Error>> {
+    Ok(match tokens.peek() {
+        Tok::AccountAddressValue | Tok::True | Tok::False | Tok::U64Value | Tok::ByteArrayValue => {
+            SpecExp::Constant(parse_copyable_val_(tokens)?.value)
+        }
+        Tok::GlobalExists => {
+            tokens.advance()?; // this consumes 'global_exists<' due to parser funkiness
+            let type_ = parse_struct_name(tokens)?;
+            consume_token(tokens, Tok::Greater)?;
+            consume_token(tokens, Tok::LParen)?;
+            let address = parse_storage_location(tokens)?;
+            consume_token(tokens, Tok::RParen)?;
+            SpecExp::GlobalExists { type_, address }
+        }
+        // TODO: unary ops
+        // TODO: binary ops
+        // TODO: implies
+        _ => SpecExp::StorageLocation(parse_storage_location(tokens)?),
+    })
+}
+
+fn parse_spec_condition<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<Condition, ParseError<usize, anyhow::Error>> {
+    Ok(match tokens.peek() {
+        Tok::AbortsIf => {
+            tokens.advance()?;
+            Condition::AbortsIf(parse_spec_exp(tokens)?)
+        }
+        Tok::Ensures => {
+            tokens.advance()?;
+            Condition::Ensures(parse_spec_exp(tokens)?)
+        }
+        Tok::Requires => {
+            tokens.advance()?;
+            Condition::Requires(parse_spec_exp(tokens)?)
+        }
+        Tok::SucceedsIf => {
+            tokens.advance()?;
+            Condition::SucceedsIf(parse_spec_exp(tokens)?)
+        }
+        _ => {
+            return Err(ParseError::InvalidToken {
+                location: tokens.start_loc(),
+            })
+        }
+    })
 }
 
 // FunctionDecl : (FunctionName, Function_) = {
@@ -1384,10 +1483,10 @@ fn parse_function_decl<'input>(
         None
     };
 
-    // parse each ensures clause--there may be zero or more
-    let mut ensures = Vec::new();
-    while tokens.peek() == Tok::Ensures {
-        ensures.push(parse_ensures(tokens)?)
+    // parse each specification directive--there may be zero or more
+    let mut specifications = Vec::new();
+    while tokens.peek().is_spec_directive() {
+        specifications.push(parse_spec_condition(tokens)?)
     }
 
     let func_name = FunctionName::parse(name)?;
@@ -1401,7 +1500,7 @@ fn parse_function_decl<'input>(
         ret.unwrap_or_else(|| vec![]),
         type_formals,
         acquires.unwrap_or_else(Vec::new),
-        ensures,
+        specifications,
         if is_native {
             consume_token(tokens, Tok::Semicolon)?;
             FunctionBody::Native
