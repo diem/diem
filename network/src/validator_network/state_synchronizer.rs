@@ -77,8 +77,7 @@ mod tests {
         let peer_id = PeerId::random();
 
         // Create GetChunkRequest and embed in StateSynchronizerMsg.
-        let mut chunk_request = GetChunkRequest::default();
-        chunk_request.limit = 100;
+        let chunk_request = GetChunkRequest::default();
         let mut send_msg = StateSynchronizerMsg::default();
         send_msg.message = Some(StateSynchronizerMsg_oneof::ChunkRequest(chunk_request));
 

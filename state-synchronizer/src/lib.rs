@@ -15,6 +15,8 @@ use libra_types::crypto_proxies::{EpochInfo, ValidatorVerifier};
 use libra_types::{account_address::AccountAddress, crypto_proxies::LedgerInfoWithSignatures};
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
 
+mod chunk_request;
+mod chunk_response;
 mod coordinator;
 mod counters;
 mod executor_proxy;
