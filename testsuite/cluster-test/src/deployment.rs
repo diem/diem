@@ -23,18 +23,14 @@ pub struct DeploymentManager {
 }
 
 const VALIDATOR_IMAGE_REPO: &str = "libra_e2e";
-const CLIENT_IMAGE_REPO: &str = "libra_client";
-const FAUCET_IMAGE_REPO: &str = "libra_faucet";
-pub const SOURCE_TAG: &str = "nightly";
-pub const TESTED_TAG: &str = "nightly_tested";
+const NIGHTLY_PREFIX: &str = "nightly";
 const UPSTREAM_PREFIX: &str = "upstream_";
 const MASTER_PREFIX: &str = "master_";
 
 impl DeploymentManager {
     pub fn new(aws: Aws, cluster: Cluster) -> Self {
         let running_tag = env::var("TAG").unwrap_or_else(|_| aws.workspace().to_string());
-        if running_tag == SOURCE_TAG
-            || running_tag == TESTED_TAG
+        if running_tag.starts_with(NIGHTLY_PREFIX)
             || running_tag.starts_with(UPSTREAM_PREFIX)
             || running_tag.starts_with(MASTER_PREFIX)
         {
@@ -50,19 +46,6 @@ impl DeploymentManager {
             cluster,
             running_tag,
         }
-    }
-
-    pub fn latest_hash_changed(&self) -> Option<String> {
-        let hash = self
-            .image_digest_by_tag(SOURCE_TAG)
-            .expect("Failed to get image digest for SOURCE_TAG");
-        let last_tested = self
-            .image_digest_by_tag(TESTED_TAG)
-            .expect("Failed to get image digest for TESTED_TAG");
-        if hash == last_tested {
-            return None;
-        }
-        Some(hash)
     }
 
     pub fn redeploy(&mut self, hash: String) -> Result<()> {
@@ -137,42 +120,6 @@ impl DeploymentManager {
                 }
             }
         }
-    }
-
-    pub fn get_tested_upstream_commit(&self) -> Result<String> {
-        let digest = self
-            .image_digest_by_tag(TESTED_TAG)
-            .map_err(|e| format_err!("Failed to get image digest for {}:{}", TESTED_TAG, e))?;
-        let prev_master_tag = self.get_master_tag(&digest)?;
-        Ok(prev_master_tag[MASTER_PREFIX.len()..].to_string())
-    }
-
-    pub fn tag_tested_image(&mut self, hash: String) -> Result<String> {
-        let image_id = ImageIdentifier {
-            image_digest: Some(hash.clone()),
-            image_tag: None,
-        };
-        self.tag_image(VALIDATOR_IMAGE_REPO, &image_id, TESTED_TAG)?;
-        let master_tag = self.get_master_tag(&hash)?;
-        self.tag_image(
-            CLIENT_IMAGE_REPO,
-            &ImageIdentifier {
-                image_digest: None,
-                image_tag: Some(master_tag.clone()),
-            },
-            TESTED_TAG,
-        )?;
-        self.tag_image(
-            FAUCET_IMAGE_REPO,
-            &ImageIdentifier {
-                image_digest: None,
-                image_tag: Some(master_tag.clone()),
-            },
-            TESTED_TAG,
-        )?;
-
-        let upstream_commit = master_tag[MASTER_PREFIX.len()..].to_string();
-        Ok(upstream_commit)
     }
 
     pub fn get_master_tag(&self, digest: &str) -> Result<String> {

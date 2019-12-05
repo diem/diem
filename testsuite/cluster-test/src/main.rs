@@ -30,7 +30,7 @@ use cluster_test::util::unix_timestamp_now;
 use cluster_test::{
     aws::Aws,
     cluster::Cluster,
-    deployment::{DeploymentManager, SOURCE_TAG},
+    deployment::DeploymentManager,
     effects::{Action, Effect, Reboot, StopContainer},
     experiments::Experiment,
     health::{DebugPortLogThread, HealthCheckRunner, LogTail},
@@ -66,7 +66,7 @@ struct Args {
     #[structopt(long, group = "action")]
     pssh: bool,
     #[structopt(long, group = "action")]
-    run: bool,
+    run: Option<String>,
     #[structopt(long, group = "action")]
     tail_logs: bool,
     #[structopt(long, group = "action")]
@@ -89,8 +89,6 @@ struct Args {
     cleanup: bool,
     #[structopt(long, group = "action")]
     run_ci_suite: bool,
-    #[structopt(long, group = "action")]
-    run_experiment: Option<String>,
 
     #[structopt(last = true)]
     last: Vec<String>,
@@ -161,9 +159,7 @@ pub fn main() {
 
     let mut perf_msg = None;
 
-    if args.run {
-        runner.run_suite_in_loop();
-    } else if args.tail_logs {
+    if args.tail_logs {
         runner.tail_logs();
         return;
     } else if args.health_check {
@@ -188,7 +184,7 @@ pub fn main() {
         runner.cleanup();
     } else if args.run_ci_suite {
         perf_msg = Some(exit_on_error(runner.run_ci_suite()));
-    } else if let Some(experiment_name) = args.run_experiment {
+    } else if let Some(experiment_name) = args.run {
         runner
             .cleanup_and_run(get_experiment(
                 &experiment_name,
@@ -259,7 +255,6 @@ struct ClusterTestRunner {
     experiment_interval: Duration,
     runtime: Runtime,
     slack: SlackClient,
-    slack_log_url: Option<Url>,
     slack_changelog_url: Option<Url>,
     tx_emitter: TxEmitter,
     prometheus: Prometheus,
@@ -397,9 +392,6 @@ impl ClusterTestRunner {
         let experiment_interval = Duration::from_secs(experiment_interval_sec);
         let deployment_manager = DeploymentManager::new(aws.clone(), cluster.clone());
         let slack = SlackClient::new();
-        let slack_log_url = env::var("SLACK_LOG_URL")
-            .map(|u| u.parse().expect("Failed to parse SLACK_LOG_URL"))
-            .ok();
         let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
             .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
             .ok();
@@ -419,7 +411,6 @@ impl ClusterTestRunner {
             experiment_interval,
             slack,
             runtime,
-            slack_log_url,
             slack_changelog_url,
             tx_emitter,
             prometheus,
@@ -439,55 +430,6 @@ impl ClusterTestRunner {
         Ok(perf_msg)
     }
 
-    pub fn run_suite_in_loop(&mut self) {
-        self.cleanup();
-        loop {
-            let hash = self.wait_for_new_tag();
-            let master_tag = self
-                .deployment_manager
-                .get_master_tag(&hash)
-                .unwrap_or_else(|e| {
-                    warn!("Failed to get upstream tag for {}: {}", hash, e);
-                    "<unknown tag>".to_string()
-                });
-            info!(
-                "New version of `{}` tag({}) is available: `{}`",
-                SOURCE_TAG, master_tag, hash
-            );
-            match self.redeploy(&hash) {
-                Err(e) => {
-                    self.report_failure(format!("Failed to deploy `{}`: {}", hash, e));
-                    return;
-                }
-                Ok(()) => {
-                    info!("Deployed new version `{}`, running test suite", hash);
-                }
-            }
-            match self.run_ci_suite() {
-                Err(e) => {
-                    self.report_failure(format!("{}", e));
-                    return;
-                }
-                Ok(perf_msg) => {
-                    info!("Test suite succeed first time for `{}`", hash);
-                    let prev_commit = self
-                        .deployment_manager
-                        .get_tested_upstream_commit()
-                        .map_err(|e| warn!("Failed to get prev_commit: {}", e))
-                        .ok();
-                    let upstream_commit = match self.deployment_manager.tag_tested_image(hash) {
-                        Err(e) => {
-                            self.report_failure(format!("Failed to tag tested image: {}", e));
-                            return;
-                        }
-                        Ok(upstream_commit) => upstream_commit,
-                    };
-                    self.send_changelog_message(&perf_msg, &prev_commit, &upstream_commit)
-                }
-            }
-        }
-    }
-
     pub fn send_changelog_message(
         &self,
         perf_msg: &str,
@@ -500,21 +442,6 @@ impl ClusterTestRunner {
         );
         let changelog = self.get_changelog(from_commit.as_ref(), &to_commit);
         self.slack_changelog_message(format!("{}\n\n{}", changelog, perf_msg));
-    }
-
-    fn wait_for_new_tag(&self) -> String {
-        let mut first = true;
-        loop {
-            if let Some(hash) = self.deployment_manager.latest_hash_changed() {
-                return hash;
-            }
-            self.logs.recv_all();
-            if first {
-                info!("Last deployed digest matches latest digest we expect, not doing redeploy");
-                first = false;
-            }
-            thread::sleep(Duration::from_secs(60));
-        }
     }
 
     fn get_changelog(&self, prev_commit: Option<&String>, upstream_commit: &str) -> String {
@@ -543,10 +470,6 @@ impl ClusterTestRunner {
                 msg
             }
         }
-    }
-
-    fn report_failure(&self, msg: String) {
-        self.slack_message(msg);
     }
 
     fn redeploy(&mut self, hash: &str) -> Result<()> {
@@ -829,15 +752,6 @@ impl ClusterTestRunner {
     fn tail_logs(self) {
         for log in self.logs.event_receiver {
             info!("{:?}", log);
-        }
-    }
-
-    fn slack_message(&self, msg: String) {
-        info!("{}", msg);
-        if let Some(ref log_url) = self.slack_log_url {
-            if let Err(e) = self.slack.send_message(log_url, &msg) {
-                info!("Failed to send slack message: {}", e);
-            }
         }
     }
 
