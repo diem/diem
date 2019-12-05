@@ -23,6 +23,7 @@ members = [
     "common/util",
     "config",
     "config/config-builder",
+    "config/dynamic-config-builder",
     "config/generate-keypair",
     "consensus",
     "consensus/consensus-types",

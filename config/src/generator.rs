@@ -26,6 +26,7 @@ pub fn full_node_swarm(
     is_ipv4: bool,
     key_seed: Option<[u8; 32]>,
     is_permissioned: bool,
+    randomize_ports: bool,
 ) -> Result<Vec<NodeConfig>> {
     init(&mut template, is_ipv4);
     let seed = key_seed.unwrap_or([0u8; 32]);
@@ -61,7 +62,9 @@ pub fn full_node_swarm(
 
     for _index in 0..num_nodes {
         let mut config = NodeConfig::random_with_template(&template, &mut rng);
-        config.randomize_ports();
+        if randomize_ports {
+            config.randomize_ports();
+        }
         let network = &mut config.full_node_networks[0];
         network.listen_address = utils::get_available_port_in_multiaddr(is_ipv4);
         network.advertised_address = network.listen_address.clone();
@@ -95,6 +98,7 @@ pub fn validator_swarm(
     prune_seed_peers: bool,
     is_ipv4: bool,
     key_seed: Option<[u8; 32]>,
+    randomize_ports: bool,
 ) -> Result<Vec<NodeConfig>> {
     init(&mut template, is_ipv4);
     let seed = key_seed.unwrap_or([1u8; 32]);
@@ -111,7 +115,9 @@ pub fn validator_swarm(
 
     for _index in 0..num_nodes {
         let mut config = NodeConfig::random_with_template(&template, &mut rng);
-        config.randomize_ports();
+        if randomize_ports {
+            config.randomize_ports();
+        }
 
         config.consensus.safety_rules.backend =
             SafetyRulesBackend::OnDiskStorage(OnDiskStorageConfig {
@@ -157,7 +163,9 @@ pub fn validator_swarm(
 }
 
 pub fn validator_swarm_for_testing(num_nodes: usize) -> Result<Vec<NodeConfig>> {
-    validator_swarm(NodeConfig::default(), num_nodes, true, true, None)
+    let mut config = NodeConfig::default();
+    config.vm_config.publishing_options = VMPublishingOption::Open;
+    validator_swarm(NodeConfig::default(), num_nodes, true, true, None, true)
 }
 
 fn add_peer(
@@ -182,5 +190,4 @@ fn init(template: &mut NodeConfig, is_ipv4: bool) {
     let listen_address = listen_address.to_string();
     template.admission_control.address = listen_address.clone();
     template.debug_interface.address = listen_address;
-    template.vm_config.publishing_options = VMPublishingOption::Open;
 }

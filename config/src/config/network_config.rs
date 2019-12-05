@@ -272,6 +272,13 @@ impl NetworkKeyPairs {
             identity_keys: KeyPair::load(identity_private_key),
         }
     }
+
+    pub fn as_peer_info(&self) -> NetworkPeerInfo {
+        NetworkPeerInfo {
+            signing_public_key: self.signing_keys.public().clone(),
+            identity_public_key: self.identity_keys.public().clone(),
+        }
+    }
 }
 
 #[derive(Clone, Default, Deserialize, PartialEq, Serialize)]
