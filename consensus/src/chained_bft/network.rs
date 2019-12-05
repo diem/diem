@@ -108,11 +108,20 @@ impl NetworkSender {
             .await?;
         counters::BLOCK_RETRIEVAL_DURATION_S.observe_duration(pre_retrieval_instant.elapsed());
         let response = BlockRetrievalResponse::<T>::try_from(response_msg)?;
-        response.verify(
-            retrieval_request.block_id(),
-            retrieval_request.num_blocks(),
-            self.validators.as_ref(),
-        )?;
+        response
+            .verify(
+                retrieval_request.block_id(),
+                retrieval_request.num_blocks(),
+                self.validators.as_ref(),
+            )
+            .map_err(|e| {
+                security_log(SecurityEvent::InvalidRetrievedBlock)
+                    .error(&e)
+                    .data(&response)
+                    .log();
+                e
+            })?;
+
         Ok(response)
     }
 
