@@ -254,24 +254,18 @@ impl<T: Payload> BlockStore<T> {
     }
 
     async fn execute_block(&self, block: Block<T>) -> anyhow::Result<ExecutedBlock<T>> {
-        let parent_block = match self.verify_and_get_parent(&block) {
-            Ok(t) => t,
-            Err(e) => {
-                security_log(SecurityEvent::InvalidBlock)
-                    .error(&e)
-                    .data(&block)
-                    .log();
-                return Err(e);
-            }
-        };
+        ensure!(
+            self.inner.read().unwrap().root().round() < block.round(),
+            "Block with old round"
+        );
+
+        let parent_block = self
+            .get_block(block.parent_id())
+            .ok_or_else(|| format_err!("Block with missing parent {}", block.parent_id()))?;
 
         // Reconfiguration rule - if a block is a child of pending reconfiguration, it needs to be empty
         // So we roll over the executed state until it's committed and we start new epoch.
         let output = if parent_block.compute_result().has_reconfiguration() {
-            ensure!(
-                block.payload().filter(|p| **p != T::default()).is_none(),
-                "Reconfiguration suffix should not carry payload"
-            );
             ProcessedVMOutput::new(
                 vec![],
                 parent_block.output().executed_trees().clone(),
@@ -380,31 +374,6 @@ impl<T: Payload> BlockStore<T> {
             .unwrap()
             .process_pruned_blocks(next_root_id, id_to_remove.clone());
         id_to_remove
-    }
-
-    fn verify_and_get_parent(&self, block: &Block<T>) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
-        ensure!(
-            self.inner.read().unwrap().root().round() < block.round(),
-            "Block with old round"
-        );
-
-        let parent = self
-            .get_block(block.parent_id())
-            .ok_or_else(|| format_err!("Block with missing parent {}", block.parent_id()))?;
-        ensure!(parent.round() < block.round(), "Block with invalid round");
-        if block.is_nil_block() || parent.compute_result().has_reconfiguration() {
-            ensure!(
-                block.timestamp_usecs() == parent.timestamp_usecs(),
-                "Nil/reconfig suffix block has different timestamp than parent"
-            );
-        } else {
-            ensure!(
-                block.timestamp_usecs() > parent.timestamp_usecs(),
-                "Block with non-increasing timestamp"
-            );
-        }
-
-        Ok(parent)
     }
 }
 
