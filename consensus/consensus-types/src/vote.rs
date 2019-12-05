@@ -131,7 +131,7 @@ impl Vote {
         if let Some(timeout_signature) = &self.timeout_signature {
             timeout_signature
                 .verify(validator, self.author(), self.timeout().hash())
-                .context("Fail to verify Vote")?;
+                .context("Fail to verify Timeout Vote")?;
         }
         Ok(())
     }
