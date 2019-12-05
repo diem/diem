@@ -8,6 +8,7 @@ mod packet_loss_random_validators;
 mod performance_benchmark_nodes_down;
 mod performance_benchmark_three_region_simulation;
 mod reboot_random_validator;
+mod recovery_time;
 
 use std::time::Duration;
 use std::{collections::HashSet, fmt::Display};
@@ -23,6 +24,7 @@ pub use performance_benchmark_three_region_simulation::PerformanceBenchmarkThree
 pub use reboot_random_validator::{RebootRandomValidators, RebootRandomValidatorsParams};
 
 use crate::cluster::Cluster;
+use crate::experiments::recovery_time::{RecoveryTime, RecoveryTimeParams};
 use crate::prometheus::Prometheus;
 use crate::tx_emitter::TxEmitter;
 use futures::future::BoxFuture;
@@ -88,6 +90,14 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
         "reboot_random_validators" => Box::new(RebootRandomValidators::new(
             RebootRandomValidatorsParams::from_clap(
                 &RebootRandomValidatorsParams::clap()
+                    .global_setting(AppSettings::NoBinaryName)
+                    .get_matches_from(args),
+            ),
+            cluster,
+        )),
+        "recovery_time" => Box::new(RecoveryTime::new(
+            RecoveryTimeParams::from_clap(
+                &RecoveryTimeParams::clap()
                     .global_setting(AppSettings::NoBinaryName)
                     .get_matches_from(args),
             ),

@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+mod delete_libra_data;
 mod network_delay;
 mod packet_loss;
 mod reboot;
@@ -10,6 +11,7 @@ mod remove_network_effects;
 mod stop_container;
 
 use anyhow::Result;
+pub use delete_libra_data::DeleteLibraData;
 use futures::future::BoxFuture;
 pub use network_delay::three_region_simulation_effects;
 pub use network_delay::NetworkDelay;

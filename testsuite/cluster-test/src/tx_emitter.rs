@@ -139,7 +139,7 @@ impl TxEmitter {
         Ok(EmitJob { workers, stop })
     }
 
-    fn mint_accounts(&mut self, req: &EmitJobRequest, num_accounts: usize) -> Result<()> {
+    pub fn mint_accounts(&mut self, req: &EmitJobRequest, num_accounts: usize) -> Result<()> {
         if self.accounts.len() >= num_accounts {
             info!("Not minting accounts");
             return Ok(()); // Early return to skip printing 'Minting ...' logs
