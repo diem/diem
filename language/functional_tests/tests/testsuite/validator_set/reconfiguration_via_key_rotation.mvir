@@ -66,6 +66,7 @@ main() {
 }
 
 // check: ValidatorSetChangeEvent
+// not: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -83,6 +84,7 @@ main() {
 }
 
 // not: ValidatorSetChangeEvent
+// not: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -125,14 +127,15 @@ main() {
     LibraSystem.block_prologue(4, h"aa", h"bb", {{vivian}});
     // check that the validator set contains Viola's new key
     info = LibraSystem.get_ith_validator_info(0);
-    assert(*LibraSystem.get_address(&info) == {{viola}}, 14);
+    assert(*LibraSystem.get_validator_address(&info) == {{viola}}, 14);
     assert(*LibraSystem.get_consensus_pubkey(&info) == h"80", 15);
     // check that the validator set contains Vivian's new key
     info = LibraSystem.get_ith_validator_info(1);
-    assert(*LibraSystem.get_address(&info) == {{vivian}}, 16);
+    assert(*LibraSystem.get_validator_address(&info) == {{vivian}}, 16);
     assert(*LibraSystem.get_consensus_pubkey(&info) == h"90", 17);
     return;
 }
 
 // check: ValidatorSetChangeEvent
+// not: DiscoverySetChangeEvent
 // check: EXECUTED

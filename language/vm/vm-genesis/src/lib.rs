@@ -16,6 +16,7 @@ use libra_types::{
     account_config,
     byte_array::ByteArray,
     crypto_proxies::ValidatorSet,
+    discovery_set::DiscoverySet,
     identifier::Identifier,
     transaction::{
         ChangeSet, RawTransaction, Script, SignatureCheckedTransaction, TransactionArgument,
@@ -68,8 +69,10 @@ lazy_static! {
     static ref INITIALIZE_BLOCK: Identifier = Identifier::new("initialize_block_metadata").unwrap();
     static ref INITIALIZE_TXN_FEES: Identifier =
         Identifier::new("initialize_transaction_fees").unwrap();
-    static ref INITIALIZE_VALIDATOR: Identifier =
+    static ref INITIALIZE_VALIDATOR_SET: Identifier =
         Identifier::new("initialize_validator_set").unwrap();
+    static ref INITIALIZE_DISCOVERY_SET: Identifier =
+        Identifier::new("initialize_discovery_set").unwrap();
     static ref MINT_TO_ADDRESS: Identifier = Identifier::new("mint_to_address").unwrap();
     static ref RECONFIGURE: Identifier = Identifier::new("reconfigure").unwrap();
     static ref REGISTER_CANDIDATE_VALIDATOR: Identifier =
@@ -294,10 +297,25 @@ pub fn encode_genesis_transaction_with_validator(
                 .execute_function_with_sender_FOR_GENESIS_ONLY(
                     account_config::validator_set_address(),
                     &LIBRA_SYSTEM_MODULE,
-                    &INITIALIZE_VALIDATOR,
+                    &INITIALIZE_VALIDATOR_SET,
                     vec![],
                 )
                 .unwrap();
+
+            // Initialize the discovery set.
+            txn_executor
+                .create_account(account_config::discovery_set_address())
+                .unwrap();
+            txn_executor
+                .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    account_config::discovery_set_address(),
+                    &LIBRA_SYSTEM_MODULE,
+                    &INITIALIZE_DISCOVERY_SET,
+                    vec![],
+                )
+                .unwrap();
+
+            // Initialize each validator.
             for validator_keys in validator_set.payload().iter().rev() {
                 // First, add a ValidatorConfig resource under each account
                 let validator_address = *validator_keys.account_address();
@@ -368,17 +386,20 @@ pub fn encode_genesis_transaction_with_validator(
                 .collect();
 
             let txn_output = txn_executor.make_write_set(stdlib_modules, Ok(())).unwrap();
+
             // Sanity checks on emitted events:
-            // (1) The genesis tx should emit 3 events: a pair of payment sent/received events for
-            // minting to the genesis address, and a ValidatorSet.ChangeEvent
+            // (1) The genesis tx should emit 4 events: a pair of payment sent/received events for
+            // minting to the genesis address, a ValidatorSetChangeEvent, and a
+            // DiscoverySetChangeEvent.
             assert_eq!(
                 txn_output.events().len(),
-                3,
-                "Genesis transaction should emit three events, but found {} events: {:?}",
+                4,
+                "Genesis transaction should emit four events, but found {} events: {:?}",
                 txn_output.events().len(),
                 txn_output.events()
             );
-            // (2) The last event should be the validator set change event
+
+            // (2) The third event should be the validator set change event
             let validator_set_change_event = &txn_output.events()[2];
             assert_eq!(
                 *validator_set_change_event.key(),
@@ -400,6 +421,24 @@ pub fn encode_genesis_transaction_with_validator(
                 validator_set,
                 "Validator set in emitted event does not match validator set fed into genesis transaction"
             );
+
+            // (5) The fourth event should be the discovery set change event
+            let discovery_set_change_event = &txn_output.events()[3];
+            assert_eq!(
+                *discovery_set_change_event.key(),
+                DiscoverySet::change_event_key(),
+                "Key of emitted event {:?} does not match change event key {:?}",
+                *discovery_set_change_event.key(),
+                DiscoverySet::change_event_key()
+            );
+            // (6) This should be the first discovery set change event
+            assert_eq!(
+                discovery_set_change_event.sequence_number(),
+                0,
+                "Expected sequence number 0 for discovery set change event but got {}",
+                discovery_set_change_event.sequence_number()
+            );
+            // TODO(philiphayes): add DiscoverySet deserialize into rust struct
 
             ChangeSet::new(txn_output.write_set().clone(), txn_output.events().to_vec())
         }

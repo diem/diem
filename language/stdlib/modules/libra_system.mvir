@@ -27,6 +27,25 @@ module LibraSystem {
         change_events: LibraAccount.EventHandle<Self.ValidatorSetChangeEvent>,
     }
 
+    struct DiscoveryInfo {
+        addr: address,
+        validator_network_identity_pubkey: bytearray,
+        validator_network_address: bytearray,
+        fullnodes_network_identity_pubkey: bytearray,
+        fullnodes_network_address: bytearray,
+    }
+
+    struct DiscoverySetChangeEvent {
+        new_discovery_set: Vector.T<Self.DiscoveryInfo>,
+    }
+
+    resource DiscoverySet {
+        // The current discovery set. Updated only at epoch boundaries via reconfiguration.
+        discovery_set: Vector.T<Self.DiscoveryInfo>,
+        // Handle where discovery set change events are emitted
+        change_events: LibraAccount.EventHandle<Self.DiscoverySetChangeEvent>,
+    }
+
     resource BlockMetadata {
       // Height of the current block
       // TODO: Should we keep the height?
@@ -62,6 +81,17 @@ module LibraSystem {
       return;
     }
 
+    public initialize_discovery_set() {
+        // Only callable by the discovery set address
+        assert(get_txn_sender() == 0xD15C0, 1);
+
+        move_to_sender<DiscoverySet>(DiscoverySet {
+            discovery_set: Vector.empty<Self.DiscoveryInfo>(),
+            change_events: LibraAccount.new_event_handle<Self.DiscoverySetChangeEvent>(),
+        });
+        return;
+    }
+
     // This can only be invoked by the Association address, and only a single time.
     // Currently, it is invoked in the genesis transaction
     public initialize_block_metadata() {
@@ -79,7 +109,9 @@ module LibraSystem {
       return;
     }
 
-    public get_address(v: &Self.ValidatorInfo): &address {
+    // ValidatorInfo public accessors
+
+    public get_validator_address(v: &Self.ValidatorInfo): &address {
       return &move(v).addr;
     }
 
@@ -99,6 +131,28 @@ module LibraSystem {
       return &move(v).network_identity_pubkey;
     }
 
+    // DiscoveryInfo public accessors
+
+    public get_discovery_address(d: &Self.DiscoveryInfo): &address {
+        return &move(d).addr;
+    }
+
+    public get_validator_network_identity_pubkey(d: &Self.DiscoveryInfo): &bytearray {
+        return &move(d).validator_network_identity_pubkey;
+    }
+
+    public get_validator_network_address(d: &Self.DiscoveryInfo): &bytearray {
+        return &move(d).validator_network_address;
+    }
+
+    public get_fullnodes_network_identity_pubkey(d: &Self.DiscoveryInfo): &bytearray {
+        return &move(d).fullnodes_network_identity_pubkey;
+    }
+
+    public get_fullnodes_network_address(d: &Self.DiscoveryInfo): &bytearray {
+        return &move(d).fullnodes_network_address;
+    }
+
     // Set the metadata for the current block.
     // The runtime always runs this before executing the transactions in a block.
     // TODO: 1. Make this private, support other metadata
@@ -109,7 +163,7 @@ module LibraSystem {
         new_block_hash: bytearray,
         previous_block_votes: bytearray,
         proposer: address
-    ) acquires BlockMetadata, ValidatorSet, TransactionFees {
+    ) acquires BlockMetadata, ValidatorSet, DiscoverySet, TransactionFees {
       Self.process_block_prologue(move(timestamp), move(new_block_hash), move(previous_block_votes), move(proposer));
 
       // Currently distribute once per-block.
@@ -171,28 +225,28 @@ module LibraSystem {
         return Vector.length<Self.ValidatorInfo>(&move(validator_set_ref).validators);
     }
 
-   is_validator_(addr: &address, vector_ref: &Vector.T<Self.ValidatorInfo>): bool {
+   is_validator_(addr: &address, validators_vec_ref: &Vector.T<Self.ValidatorInfo>): bool {
         let size: u64;
         let i: u64;
-        let info_ref: &Self.ValidatorInfo;
+        let validator_info_ref: &Self.ValidatorInfo;
 
-        size = Vector.length<Self.ValidatorInfo>(copy(vector_ref));
+        size = Vector.length<Self.ValidatorInfo>(copy(validators_vec_ref));
         if (copy(size) == 0) {
             return false;
         }
 
         i = 0;
         // this is only needed to make the bytecode verifier happy
-        info_ref = Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i));
+        validator_info_ref = Vector.borrow<Self.ValidatorInfo>(copy(validators_vec_ref), copy(i));
         loop {
-            if (&copy(info_ref).addr == copy(addr)) {
+            if (&copy(validator_info_ref).addr == copy(addr)) {
                 return true;
             }
             i = copy(i) + 1;
             if (copy(i) >= copy(size)) {
                 break;
             }
-            info_ref = Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i));
+            validator_info_ref = Vector.borrow<Self.ValidatorInfo>(copy(validators_vec_ref), copy(i));
         }
 
         return false;
@@ -272,9 +326,10 @@ module LibraSystem {
         return;
     }
 
-    // Return true if the ValidatorInfo given as input is different than the ValidatorConfig
-    // published at validator_info.addr + copies the differing fields. Aborts if there is no
-    // ValidatorConfig at validator_info.addr
+    // Return true if the ValidatorInfo given as input is different than the one
+    // derived from the ValidatorConfig published at validator_info.addr + copies
+    // the differing fields. Aborts if there is no ValidatorConfig at
+    // validator_info.addr
     public copy_validator_info(validator_info: &mut Self.ValidatorInfo): bool {
         let consensus_pubkey: bytearray;
         let network_signing_pubkey: bytearray;
@@ -306,7 +361,7 @@ module LibraSystem {
 
     // Create a ValidatorInfo from the ValidatorConfig stored at addr.
     // Aborts if addr does not have a ValidatorConfig
-    make_info(addr: address): Self.ValidatorInfo {
+    make_validator_info(addr: address): Self.ValidatorInfo {
         let config: ValidatorConfig.Config;
         config = ValidatorConfig.config(copy(addr));
 
@@ -319,6 +374,64 @@ module LibraSystem {
        };
     }
 
+    // Return true if the DiscoveryInfo given as input is different than the one
+    // derived from the ValidatorConfig published at discovery_info.addr + copies
+    // the differing fields. Aborts if there is no ValidatorConfig at
+    // discovery_info.addr
+    public copy_discovery_info(discovery_info: &mut Self.DiscoveryInfo): bool {
+        let validator_network_identity_pubkey: bytearray;
+        let validator_network_address: bytearray;
+        let fullnodes_network_identity_pubkey: bytearray;
+        let fullnodes_network_address: bytearray;
+        let config: ValidatorConfig.Config;
+        let changed: bool;
+
+        config = ValidatorConfig.config(*&copy(discovery_info).addr);
+        validator_network_identity_pubkey = ValidatorConfig.validator_network_identity_pubkey(&config);
+        validator_network_address = ValidatorConfig.validator_network_address(&config);
+        fullnodes_network_identity_pubkey = ValidatorConfig.fullnodes_network_identity_pubkey(&config);
+        fullnodes_network_address = ValidatorConfig.fullnodes_network_address(&config);
+
+        changed = false;
+        if (&validator_network_identity_pubkey != &copy(discovery_info).validator_network_identity_pubkey) {
+            *&mut copy(discovery_info).validator_network_identity_pubkey = move(validator_network_identity_pubkey);
+            changed = true;
+        }
+        if (&validator_network_address != &copy(discovery_info).validator_network_address) {
+            *&mut copy(discovery_info).validator_network_address = move(validator_network_address);
+            changed = true;
+        }
+        if (&fullnodes_network_identity_pubkey != &copy(discovery_info).fullnodes_network_identity_pubkey) {
+            *&mut copy(discovery_info).fullnodes_network_identity_pubkey = move(fullnodes_network_identity_pubkey);
+            changed = true;
+        }
+        if (&fullnodes_network_address != &copy(discovery_info).fullnodes_network_address) {
+            *&mut copy(discovery_info).fullnodes_network_address = move(fullnodes_network_address);
+            changed = true;
+        }
+
+        return move(changed);
+    }
+
+    // Create a DiscoveryInfo from the ValidatorConfig stored at addr.
+    // Aborts if addr does not have a ValidatorConfig
+    make_discovery_info(addr: address): Self.DiscoveryInfo {
+        let config: ValidatorConfig.Config;
+        config = ValidatorConfig.config(copy(addr));
+
+       return DiscoveryInfo {
+           addr: move(addr),
+           validator_network_identity_pubkey:
+               ValidatorConfig.validator_network_identity_pubkey(&config),
+           validator_network_address:
+               ValidatorConfig.validator_network_address(&config),
+           fullnodes_network_identity_pubkey:
+               ValidatorConfig.fullnodes_network_identity_pubkey(&config),
+           fullnodes_network_address:
+               ValidatorConfig.fullnodes_network_address(&config),
+       };
+    }
+
     // Trigger a reconfiguation the Libra system by:
     // (1) Checking if there have been any additions since the last reconfiguration (and adding
     //     the validator's config if so)
@@ -326,17 +439,23 @@ module LibraSystem {
     //     the validator if so)
     // (3) Checking if there have been any key rotations since the last reconfiguration (and
     //     updating the key info if so)
-    // (4) Emitting an event containing new validator set, which will be passed to the executor
-    reconfigure() acquires ValidatorSet {
+    // (4) Emitting an event containing new validator set or discovery set, which will be
+    //     passed to the executor
+    reconfigure() acquires ValidatorSet, DiscoverySet {
         let validator_set_ref: &mut Self.ValidatorSet;
         let additions_ref: &mut Vector.T<address>;
         let removals_ref: &mut Vector.T<address>;
-        let vector_ref: &mut Vector.T<Self.ValidatorInfo>;
-        let info_ref: &mut Self.ValidatorInfo;
+        let validators_vec_ref: &mut Vector.T<Self.ValidatorInfo>;
+        let validator_info_ref: &mut Self.ValidatorInfo;
+        let discovery_set_ref: &mut Self.DiscoverySet;
+        let discovery_vec_ref: &mut Vector.T<Self.DiscoveryInfo>;
+        let discovery_info_ref: &mut Self.DiscoveryInfo;
+        let addr: address;
         let to_remove_index: u64;
         let i: u64;
         let len: u64;
-        let changed: bool;
+        let validator_set_changed: bool;
+        let discovery_set_changed: bool;
 
         // For now, this only supports a simple form of reconfiguration: allowing a fixed set of
         // validators to rotate their keys.
@@ -345,8 +464,11 @@ module LibraSystem {
         validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
         additions_ref = &mut copy(validator_set_ref).additions;
         removals_ref = &mut copy(validator_set_ref).removals;
-        vector_ref = &mut copy(validator_set_ref).validators;
-        changed = false;
+        validators_vec_ref = &mut copy(validator_set_ref).validators;
+        discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
+        discovery_vec_ref = &mut copy(discovery_set_ref).discovery_set;
+        validator_set_changed = false;
+        discovery_set_changed = false;
 
         // (1) Check for additions
         i = 0;
@@ -355,10 +477,15 @@ module LibraSystem {
         if (copy(len) > 0) {
             loop {
                 // remove validator address from additions and add corresponding ValidatorInfo to
-                // the validator set
+                // the validator set and DiscoveryInfo to discovery set
+                addr = Vector.pop_back<address>(copy(additions_ref));
                 Vector.push_back<Self.ValidatorInfo>(
-                    copy(vector_ref),
-                    Self.make_info(Vector.pop_back<address>(copy(additions_ref)))
+                    copy(validators_vec_ref),
+                    Self.make_validator_info(copy(addr))
+                );
+                Vector.push_back<Self.DiscoveryInfo>(
+                    copy(discovery_vec_ref),
+                    Self.make_discovery_info(move(addr))
                 );
                 i = move(i) + 1;
                 if (copy(i) >= copy(len)) {
@@ -367,7 +494,9 @@ module LibraSystem {
             }
             // ensures additions.length == 0
             // ensures validators.length == old(validators).length + old(additions).length
-            changed = true;
+            // ensures discovery_set.length == old(discovery_set).length + old(additions).length
+            validator_set_changed = true;
+            discovery_set_changed = true;
         }
 
         // (2) Check for removals
@@ -377,13 +506,18 @@ module LibraSystem {
             loop {
                 // remove validator address from removals
                 to_remove_index = Self.get_validator_index(
-                    freeze(copy(vector_ref)),
+                    freeze(copy(validators_vec_ref)),
                     Vector.pop_back<address>(copy(removals_ref))
                 );
-                // remove corresponding Validator info from the validator set
+                // remove corresponding ValidatorInfo from the validator set
                 _  = Vector.remove_unstable<Self.ValidatorInfo>(
-                    copy(vector_ref),
-                    move(to_remove_index)
+                    copy(validators_vec_ref),
+                    copy(to_remove_index)
+                );
+                // remove corresponding DiscoveryInfo from the discovery set
+                _ = Vector.remove_unstable<Self.DiscoveryInfo>(
+                    copy(discovery_vec_ref),
+                    move(to_remove_index),
                 );
                 i = move(i) + 1;
                 if (copy(i) >= copy(len)) {
@@ -392,49 +526,79 @@ module LibraSystem {
             }
             // ensures removals.length == 0
             // ensures validators.length == old(validators).length - old(removals).length
-            changed = true;
+            // ensures discovery_set.length == old(discovery_set).length - old(removals).length
+            validator_set_changed = true;
+            discovery_set_changed = true;
         }
 
-        // (3) Check for key rotation
+        // (3) Check for key rotations in the validator set
         i = 0;
-        len = Vector.length<Self.ValidatorInfo>(freeze(copy(vector_ref)));
+        len = Vector.length<Self.ValidatorInfo>(freeze(copy(validators_vec_ref)));
         // assume(len > 0), since an empty validator set is nonsensical
-        info_ref = Vector.borrow_mut<Self.ValidatorInfo>(copy(vector_ref), copy(i));
+        validator_info_ref = Vector.borrow_mut<Self.ValidatorInfo>(copy(validators_vec_ref), copy(i));
         // check if each validator has rotated their keys, copy their new info and note the change
         // if so.
         loop {
-            if (Self.copy_validator_info(move(info_ref))) {
-                changed = true;
+            if (Self.copy_validator_info(move(validator_info_ref))) {
+                validator_set_changed = true;
             }
 
             i = move(i) + 1;
             if (copy(i) >= copy(len)) {
                 break;
             }
-            info_ref = Vector.borrow_mut<Self.ValidatorInfo>(copy(vector_ref), copy(i));
+            validator_info_ref = Vector.borrow_mut<Self.ValidatorInfo>(copy(validators_vec_ref), copy(i));
         }
 
-        // (4) emit changed event if appropriate
-        if (move(changed)) {
+        // (4) Check for changes in the discovery set
+        i = 0;
+        len = Vector.length<Self.DiscoveryInfo>(freeze(copy(discovery_vec_ref)));
+        // assume(len > 0), since an empty validator set is nonsensical
+        discovery_info_ref = Vector.borrow_mut<Self.DiscoveryInfo>(copy(discovery_vec_ref), copy(i));
+        // check if each validator has changed their discovery info, copy their new info, and
+        // note the change if so.
+        loop {
+            if (Self.copy_discovery_info(move(discovery_info_ref))) {
+                discovery_set_changed = true;
+            }
+
+            i = move(i) + 1;
+            if (copy(i) >= copy(len)) {
+                break;
+            }
+            discovery_info_ref = Vector.borrow_mut<Self.DiscoveryInfo>(copy(discovery_vec_ref), copy(i));
+        }
+
+        // (5) Emit validator set changed event if appropriate
+        if (move(validator_set_changed)) {
             LibraAccount.emit_event<Self.ValidatorSetChangeEvent>(
-                &mut move(validator_set_ref).change_events,
+                &mut copy(validator_set_ref).change_events,
                 ValidatorSetChangeEvent {
-                    new_validator_set: *move(vector_ref),
+                    new_validator_set: *copy(validators_vec_ref),
                 },
             );
-            return;
-        } else {
-            return;
         }
+
+        // (6) Emit discovery set changed event if appropriate
+        if (move(discovery_set_changed)) {
+            LibraAccount.emit_event<Self.DiscoverySetChangeEvent>(
+                &mut copy(discovery_set_ref).change_events,
+                DiscoverySetChangeEvent {
+                    new_discovery_set: *copy(discovery_vec_ref),
+                },
+            );
+        }
+
+        return;
     }
 
     // Get the ValidatorInfo for the ith validator
     public get_ith_validator_info(i: u64): Self.ValidatorInfo acquires ValidatorSet {
-      let vector_ref: &Vector.T<Self.ValidatorInfo>;
+      let validators_vec_ref: &Vector.T<Self.ValidatorInfo>;
 
-      vector_ref = &borrow_global<ValidatorSet>(0x1D8).validators;
-      assert(copy(i) < Vector.length<Self.ValidatorInfo>(copy(vector_ref)), 3);
-      return *Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), move(i));
+      validators_vec_ref = &borrow_global<ValidatorSet>(0x1D8).validators;
+      assert(copy(i) < Vector.length<Self.ValidatorInfo>(copy(validators_vec_ref)), 3);
+      return *Vector.borrow<Self.ValidatorInfo>(copy(validators_vec_ref), move(i));
     }
 
     // Get the address of the i'th validator.
@@ -581,7 +745,7 @@ module LibraSystem {
         len = Vector.length<Self.ValidatorInfo>(copy(validators));
         i = 0;
         loop {
-            if (Self.get_address(Vector.borrow<Self.ValidatorInfo>(copy(validators), copy(i)))
+            if (Self.get_validator_address(Vector.borrow<Self.ValidatorInfo>(copy(validators), copy(i)))
                 ==
                 &addr
             ) {

@@ -44,6 +44,7 @@ main() {
 }
 
 // check: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -55,7 +56,7 @@ main() {
     assert(LibraSystem.is_validator({{alice}}), 70);
 
     info = LibraSystem.get_ith_validator_info(0);
-    assert(*LibraSystem.get_address(&info) == {{vivian}}, 71);
+    assert(*LibraSystem.get_validator_address(&info) == {{vivian}}, 71);
     assert(*LibraSystem.get_consensus_pubkey(&info) == h"beefbeef", 72);
 
     return;

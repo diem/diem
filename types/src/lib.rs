@@ -10,6 +10,7 @@ pub mod block_metadata;
 pub mod byte_array;
 pub mod contract_event;
 pub mod crypto_proxies;
+pub mod discovery_set;
 pub mod event;
 pub mod get_with_proof;
 pub mod identifier;
