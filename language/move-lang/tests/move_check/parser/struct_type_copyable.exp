@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/struct_type_copyable.move:3:17 ───
+   ┌── tests/move_check/parser/struct_type_copyable.move:3:17 ───
    │
  3 │     struct S<T: copy> { }
    │                 ^^^^ Unrecognized Token: copy

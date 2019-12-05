@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/use_with_address.move:3:9 ───
+   ┌── tests/move_check/parser/use_with_address.move:3:9 ───
    │
  3 │ address 0x1:
    │         ^^^ Unrecognized Token: 0x1

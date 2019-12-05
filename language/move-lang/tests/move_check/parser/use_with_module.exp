@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/use_with_module.move:3:1 ───
+   ┌── tests/move_check/parser/use_with_module.move:3:1 ───
    │
  3 │ module M {
    │ ^^^^^^ Unrecognized Token: module

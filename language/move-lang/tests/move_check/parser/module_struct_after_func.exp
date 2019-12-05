@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/module_struct_after_func.move:4:5 ───
+   ┌── tests/move_check/parser/module_struct_after_func.move:4:5 ───
    │
  4 │     struct S {}
    │     ^^^^^^ Unrecognized Token: struct

@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/module_use_after_func.move:4:5 ───
+   ┌── tests/move_check/parser/module_use_after_func.move:4:5 ───
    │
  4 │     use 0x1::X;
    │     ^^^ Unrecognized Token: use

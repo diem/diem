@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/function_acquires_trailing_comma.move:4:21 ───
+   ┌── tests/move_check/parser/function_acquires_trailing_comma.move:4:21 ───
    │
  4 │     f() acquires X, {
    │                     ^ Unrecognized Token: {

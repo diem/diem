@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/module_missing_rbrace.move:2:11 ───
+   ┌── tests/move_check/parser/module_missing_rbrace.move:2:11 ───
    │
  2 │     f() {}
    │           ^ Unrecognized End of File

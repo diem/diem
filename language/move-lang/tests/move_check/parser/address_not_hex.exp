@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parsing/address_not_hex.move:1:9 ───
+   ┌── tests/move_check/parser/address_not_hex.move:1:9 ───
    │
  1 │ address 1:
    │         ^ Unrecognized Token: 1
