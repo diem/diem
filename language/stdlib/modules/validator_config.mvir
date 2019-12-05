@@ -1,5 +1,7 @@
 module ValidatorConfig {
 
+    // TODO(philiphayes): We should probably enforce a max length for these fields
+
     struct Config {
         consensus_pubkey: bytearray,
         validator_network_signing_pubkey: bytearray,
@@ -117,6 +119,23 @@ module ValidatorConfig {
         config_ref = &mut move(t_ref).config;
         key_ref = &mut move(config_ref).validator_network_identity_pubkey;
         *move(key_ref) = move(validator_network_identity_pubkey);
+
+        return;
+    }
+
+    // Rotate the network address for validator discovery. This change will be
+    // committed in the next reconfiguration.
+    public rotate_validator_network_address(
+        validator_network_address: bytearray) acquires T {
+
+        let t_ref: &mut Self.T;
+        let config_ref: &mut Self.Config;
+        let key_ref: &mut bytearray;
+
+        t_ref = borrow_global_mut<T>(get_txn_sender());
+        config_ref = &mut move(t_ref).config;
+        key_ref = &mut move(config_ref).validator_network_address;
+        *move(key_ref) = move(validator_network_address);
 
         return;
     }
