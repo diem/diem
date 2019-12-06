@@ -79,13 +79,7 @@ fn create_storage_service_and_executor(
         .get_startup_info()
         .expect("unable to read ledger info from storage")
         .expect("startup info is None");
-    let committed_trees = ExecutedTrees::new(
-        startup_info.committed_tree_state.account_state_root_hash,
-        startup_info
-            .committed_tree_state
-            .ledger_frozen_subtree_hashes,
-        startup_info.committed_tree_state.version + 1,
-    );
+    let committed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
     (storage_server_handle, executor, committed_trees)
 }
 

@@ -46,6 +46,7 @@ use std::{
     sync::Arc,
 };
 use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
+use storage_proto::TreeState;
 use vm_runtime::VMExecutor;
 
 lazy_static! {
@@ -466,7 +467,6 @@ where
                 ));
             }
         }
-        let num_txns_to_keep = txns_to_keep.len() as u64;
 
         let last_block = blocks
             .last()
@@ -485,6 +485,8 @@ where
             version + 1,
             num_txns_in_speculative_accumulator,
         );
+
+        let num_txns_to_keep = txns_to_keep.len() as u64;
 
         // Skip txns that are already committed to allow failures in state sync process.
         let first_version_to_keep = version + 1 - num_txns_to_keep;
@@ -887,6 +889,16 @@ pub struct ExecutedTrees {
     /// The in-memory Merkle Accumulator representing a blockchain state consistent with the
     /// `state_tree`.
     transaction_accumulator: Arc<InMemoryAccumulator<TransactionAccumulatorHasher>>,
+}
+
+impl From<TreeState> for ExecutedTrees {
+    fn from(tree_state: TreeState) -> Self {
+        ExecutedTrees::new(
+            tree_state.account_state_root_hash,
+            tree_state.ledger_frozen_subtree_hashes,
+            tree_state.version + 1,
+        )
+    }
 }
 
 impl ExecutedTrees {

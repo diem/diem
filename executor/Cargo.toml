@@ -28,6 +28,7 @@ lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-se
 scratchpad = { path = "../storage/scratchpad", version = "0.1.0" }
 libra-state-view = { path = "../storage/state-view", version = "0.1.0" }
 storage-client = { path = "../storage/storage-client", version = "0.1.0" }
+storage-proto = { path = "../storage/storage-proto", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 vm-runtime = { path = "../language/vm/vm-runtime", version = "0.1.0" }
 
@@ -39,7 +40,6 @@ rusty-fork = "0.2.1"
 
 grpc-helpers = { path = "../common/grpc-helpers", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-storage-proto = { path = "../storage/storage-proto", version = "0.1.0" }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 vm-genesis = { path = "../language/vm/vm-genesis", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
