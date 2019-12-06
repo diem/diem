@@ -174,7 +174,7 @@ variable "log_to_file" {
 }
 
 locals {
-  validator_command = var.log_to_file ? jsonencode(["bash", "-c", "/docker-run.sh >> /opt/libra/data/libra.log 2>&1"]) : ""
+  validator_command = var.log_to_file ? jsonencode(["bash", "-c", "/docker-run-dynamic.sh >> /opt/libra/data/libra.log 2>&1"]) : ""
 }
 
 data "template_file" "ecs_task_definition" {
