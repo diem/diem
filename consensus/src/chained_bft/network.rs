@@ -496,6 +496,7 @@ impl<T: Payload> NetworkTask<T> {
                     None => bail!("Epoch change doesn't carry next validator set"),
                 };
                 self.epoch = target_ledger_info.ledger_info().epoch() + 1;
+                debug!("Received epoch change to {}", self.epoch);
                 self.validators = Arc::new(validators);
                 self.epoch_change_tx.push(peer_id, target_ledger_info)
             }
@@ -511,6 +512,10 @@ impl<T: Payload> NetworkTask<T> {
         request: RequestEpoch,
     ) -> anyhow::Result<()> {
         let request = EpochRetrievalRequest::try_from(request)?;
+        debug!(
+            "Received epoch retrieval from {} to {}",
+            peer_id, request.start_epoch
+        );
         match request.target_epoch.cmp(&self.epoch) {
             Ordering::Less | Ordering::Equal => self
                 .epoch_retrieval_tx
