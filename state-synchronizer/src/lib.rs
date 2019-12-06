@@ -11,7 +11,7 @@
 extern crate prometheus;
 
 use executor::ExecutedTrees;
-use libra_types::crypto_proxies::ValidatorVerifier;
+use libra_types::crypto_proxies::{EpochInfo, ValidatorVerifier};
 use libra_types::{account_address::AccountAddress, crypto_proxies::LedgerInfoWithSignatures};
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
 
@@ -22,14 +22,6 @@ mod peer_manager;
 mod synchronizer;
 
 type PeerId = AccountAddress;
-
-#[derive(Clone)]
-/// EpochInfo represents the highest trusted validator set: it is updated every time we're crossing
-/// the epoch boundary.
-pub struct EpochInfo {
-    pub epoch: u64,
-    pub verifier: ValidatorVerifier,
-}
 
 /// The state distinguishes between the following fields:
 /// * highest_local_li is keeping the latest certified ledger info

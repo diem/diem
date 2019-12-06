@@ -7,7 +7,6 @@ use crate::{
     },
     proto,
 };
-use libra_crypto::ed25519::*;
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;
 use std::convert::TryFrom;
@@ -36,9 +35,9 @@ proptest! {
 
     #[test]
     fn test_update_to_latest_ledger_response(
-        response in any::<UpdateToLatestLedgerResponse<Ed25519Signature>>()
+        response in any::<UpdateToLatestLedgerResponse>()
     ) {
-        assert_protobuf_encode_decode::<crate::proto::types::UpdateToLatestLedgerResponse, UpdateToLatestLedgerResponse<_>>(&response);
+        assert_protobuf_encode_decode::<crate::proto::types::UpdateToLatestLedgerResponse, UpdateToLatestLedgerResponse>(&response);
     }
 }
 

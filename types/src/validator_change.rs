@@ -1,22 +1,22 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
+use crate::crypto_proxies::LedgerInfoWithSignatures;
 use crate::crypto_proxies::ValidatorVerifier;
-use crate::ledger_info::LedgerInfoWithSignatures;
 use anyhow::{ensure, format_err, Error, Result};
-use libra_crypto::ed25519::*;
-use libra_crypto::*;
 use std::convert::{TryFrom, TryInto};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 /// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of
 /// validator changes from the first LedgerInfo's epoch.
-pub struct ValidatorChangeEventWithProof<Sig> {
-    pub ledger_info_with_sigs: Vec<LedgerInfoWithSignatures<Sig>>,
+pub struct ValidatorChangeEventWithProof {
+    pub ledger_info_with_sigs: Vec<LedgerInfoWithSignatures>,
 }
 
-impl<Sig: Signature> ValidatorChangeEventWithProof<Sig> {
-    pub fn new(ledger_info_with_sigs: Vec<LedgerInfoWithSignatures<Sig>>) -> Self {
+impl ValidatorChangeEventWithProof {
+    pub fn new(ledger_info_with_sigs: Vec<LedgerInfoWithSignatures>) -> Self {
         Self {
             ledger_info_with_sigs,
         }
@@ -30,14 +30,14 @@ impl<Sig: Signature> ValidatorChangeEventWithProof<Sig> {
             .ok_or_else(|| format_err!("Empty ValidatorChangeEventWithProof"))
     }
 }
-impl ValidatorChangeEventWithProof<Ed25519Signature> {
+impl ValidatorChangeEventWithProof {
     /// Verify the proof is correctly chained with known epoch and validator verifier
     /// and return the LedgerInfo to start target epoch
     pub fn verify(
         &self,
         epoch: u64,
         validator_verifier: &ValidatorVerifier,
-    ) -> Result<LedgerInfoWithSignatures<Ed25519Signature>> {
+    ) -> Result<LedgerInfoWithSignatures> {
         ensure!(
             !self.ledger_info_with_sigs.is_empty(),
             "Empty ValidatorChangeEventWithProof"
@@ -65,7 +65,7 @@ impl ValidatorChangeEventWithProof<Ed25519Signature> {
 fn verify_validator_set_change_proof() {
     use crate::crypto_proxies::random_validator_verifier;
     use crate::ledger_info::LedgerInfo;
-    use libra_crypto::hash::CryptoHash;
+    use libra_crypto::hash::{CryptoHash, HashValue};
     use std::collections::BTreeMap;
 
     let all_epoch: Vec<u64> = (1..=10).collect();
@@ -138,9 +138,7 @@ fn verify_validator_set_change_proof() {
         .is_err());
 }
 
-impl<Sig: Signature> TryFrom<crate::proto::types::ValidatorChangeEventWithProof>
-    for ValidatorChangeEventWithProof<Sig>
-{
+impl TryFrom<crate::proto::types::ValidatorChangeEventWithProof> for ValidatorChangeEventWithProof {
     type Error = Error;
 
     fn try_from(proto: crate::proto::types::ValidatorChangeEventWithProof) -> Result<Self> {
@@ -155,10 +153,8 @@ impl<Sig: Signature> TryFrom<crate::proto::types::ValidatorChangeEventWithProof>
     }
 }
 
-impl<Sig: Signature> From<ValidatorChangeEventWithProof<Sig>>
-    for crate::proto::types::ValidatorChangeEventWithProof
-{
-    fn from(change: ValidatorChangeEventWithProof<Sig>) -> Self {
+impl From<ValidatorChangeEventWithProof> for crate::proto::types::ValidatorChangeEventWithProof {
+    fn from(change: ValidatorChangeEventWithProof) -> Self {
         Self {
             ledger_info_with_sigs: change
                 .ledger_info_with_sigs
@@ -178,8 +174,8 @@ use proptest::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
 prop_compose! {
     fn arb_validator_change_event_with_proof()(
-        ledger_info_with_sigs in vec(any::<LedgerInfoWithSignatures<Ed25519Signature>>(), 0..10),
-    ) -> ValidatorChangeEventWithProof<Ed25519Signature> {
+        ledger_info_with_sigs in vec(any::<LedgerInfoWithSignatures>(), 0..10),
+    ) -> ValidatorChangeEventWithProof {
         ValidatorChangeEventWithProof{
             ledger_info_with_sigs
         }
@@ -187,7 +183,7 @@ prop_compose! {
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-impl Arbitrary for ValidatorChangeEventWithProof<Ed25519Signature> {
+impl Arbitrary for ValidatorChangeEventWithProof {
     type Parameters = ();
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         arb_validator_change_event_with_proof().boxed()

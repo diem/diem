@@ -8,6 +8,7 @@ use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_config::config::{NodeConfig, VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue};
+use libra_types::crypto_proxies::EpochInfo;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -401,17 +402,21 @@ fn test_execution_with_storage() {
     let (
         mut response_items,
         ledger_info_with_sigs,
-        _validator_change_events,
+        validator_change_events,
         _ledger_consistency_proof,
     ) = storage_read_client
         .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     verify_update_to_latest_ledger_response(
-        Arc::new(ValidatorVerifier::new(BTreeMap::new())),
+        &mut EpochInfo {
+            epoch: 0,
+            verifier: ValidatorVerifier::new(BTreeMap::new()),
+        },
         0,
         &request_items,
         &response_items,
         &ledger_info_with_sigs,
+        &validator_change_events,
     )
     .unwrap();
     response_items.reverse();
@@ -607,17 +612,21 @@ fn test_execution_with_storage() {
     let (
         mut response_items,
         ledger_info_with_sigs,
-        _validator_change_events,
+        validator_change_events,
         _ledger_consistency_proof,
     ) = storage_read_client
         .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     verify_update_to_latest_ledger_response(
-        Arc::new(ValidatorVerifier::new(BTreeMap::new())),
+        &mut EpochInfo {
+            epoch: 0,
+            verifier: ValidatorVerifier::new(BTreeMap::new()),
+        },
         0,
         &request_items,
         &response_items,
         &ledger_info_with_sigs,
+        &validator_change_events,
     )
     .unwrap();
     response_items.reverse();

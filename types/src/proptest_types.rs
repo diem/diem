@@ -13,18 +13,18 @@ use crate::{
     block_metadata::BlockMetadata,
     byte_array::ByteArray,
     contract_event::ContractEvent,
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     event::{EventHandle, EventKey},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    ledger_info::LedgerInfo,
     proof::{AccumulatorConsistencyProof, TransactionListProof},
     transaction::{
         Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction,
         TransactionArgument, TransactionListWithProof, TransactionPayload, TransactionStatus,
         TransactionToCommit, Version,
     },
-    validator_change::ValidatorChangeEventWithProof,
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -547,7 +547,7 @@ prop_compose! {
     }
 }
 
-impl Arbitrary for LedgerInfoWithSignatures<Ed25519Signature> {
+impl Arbitrary for LedgerInfoWithSignatures {
     type Parameters = SizeRange;
     fn arbitrary_with(num_validators_range: Self::Parameters) -> Self::Strategy {
         (any::<LedgerInfo>(), Just(num_validators_range))
@@ -573,10 +573,10 @@ impl Arbitrary for LedgerInfoWithSignatures<Ed25519Signature> {
 prop_compose! {
     fn arb_update_to_latest_ledger_response()(
         response_items in vec(any::<ResponseItem>(), 0..10),
-        ledger_info_with_sigs in any::<LedgerInfoWithSignatures<Ed25519Signature>>(),
-        validator_change_events in any::<ValidatorChangeEventWithProof<Ed25519Signature>>(),
+        ledger_info_with_sigs in any::<LedgerInfoWithSignatures>(),
+        validator_change_events in any::<ValidatorChangeEventWithProof>(),
         ledger_consistency_proof in any::<AccumulatorConsistencyProof>(),
-    ) -> UpdateToLatestLedgerResponse<Ed25519Signature> {
+    ) -> UpdateToLatestLedgerResponse {
         UpdateToLatestLedgerResponse::new(
             response_items,
             ledger_info_with_sigs,
@@ -586,7 +586,7 @@ prop_compose! {
     }
 }
 
-impl Arbitrary for UpdateToLatestLedgerResponse<Ed25519Signature> {
+impl Arbitrary for UpdateToLatestLedgerResponse {
     type Parameters = ();
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         arb_update_to_latest_ledger_response().boxed()
@@ -1022,7 +1022,7 @@ impl LedgerInfoWithSignaturesGen {
         self,
         universe: &mut AccountInfoUniverse,
         block_size: usize,
-    ) -> LedgerInfoWithSignatures<Ed25519Signature> {
+    ) -> LedgerInfoWithSignatures {
         let ledger_info = self.ledger_info_gen.materialize(universe, block_size);
         let ledger_info_hash = ledger_info.hash();
         let signatures = self

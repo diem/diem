@@ -342,20 +342,22 @@ fn test_basic_restartability() {
 
 #[test]
 fn test_startup_sync_state() {
-    let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(4, 0);
-    client_proxy.create_next_account(false).unwrap();
-    client_proxy.create_next_account(false).unwrap();
-    client_proxy.mint_coins(&["mb", "0", "100"], true).unwrap();
-    client_proxy
+    let (mut env, mut client_proxy_1) = setup_swarm_and_client_proxy(4, 1);
+    client_proxy_1.create_next_account(false).unwrap();
+    client_proxy_1.create_next_account(false).unwrap();
+    client_proxy_1
+        .mint_coins(&["mb", "0", "100"], true)
+        .unwrap();
+    client_proxy_1
         .transfer_coins(&["tb", "0", "1", "10"], true)
         .unwrap();
     assert_eq!(
         Decimal::from_f64(90.0),
-        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+        Decimal::from_str(&client_proxy_1.get_balance(&["b", "0"]).unwrap()).ok()
     );
     assert_eq!(
         Decimal::from_f64(10.0),
-        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
+        Decimal::from_str(&client_proxy_1.get_balance(&["b", "1"]).unwrap()).ok()
     );
     let peer_to_stop = 0;
     env.validator_swarm.kill_node(peer_to_stop);
@@ -380,38 +382,31 @@ fn test_startup_sync_state() {
         .validator_swarm
         .add_node(peer_to_stop, RoleType::Validator, false)
         .is_ok());
-    let max_tries = 60;
-    for retry in 0..max_tries {
-        if retry == max_tries - 1 {
-            panic!("Sync failed to complete");
-        }
-        let expected_balance = Decimal::from_f64(90.0);
-        let actual_balance =
-            Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok();
-        if actual_balance == expected_balance {
-            break;
-        }
-        println!("Sync not complete. Retrying...");
-        thread::sleep(time::Duration::from_secs(1));
-    }
+    // create the client for the restarted node
+    let accounts = client_proxy_1.copy_all_accounts();
+    let mut client_proxy_0 = env.get_validator_ac_client(0);
+    let sender_address = accounts[0].address;
+    client_proxy_0.set_accounts(accounts);
+    client_proxy_0.wait_for_transaction(sender_address, 1);
     assert_eq!(
         Decimal::from_f64(90.0),
-        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
     );
     assert_eq!(
         Decimal::from_f64(10.0),
-        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "1"]).unwrap()).ok()
     );
-    client_proxy
+    client_proxy_1
         .transfer_coins(&["tb", "0", "1", "10"], true)
         .unwrap();
+    client_proxy_0.wait_for_transaction(sender_address, 2);
     assert_eq!(
         Decimal::from_f64(80.0),
-        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
     );
     assert_eq!(
         Decimal::from_f64(20.0),
-        Decimal::from_str(&client_proxy.get_balance(&["b", "1"]).unwrap()).ok()
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "1"]).unwrap()).ok()
     );
 }
 
