@@ -28,8 +28,9 @@ use vm_runtime::{
     },
     data_cache::BlockDataCache,
     txn_executor::{
-        TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE, GAS_SCHEDULE_MODULE, LIBRA_SYSTEM_MODULE,
-        TRANSACTION_FEE_DISTRIBUTION_MODULE, VALIDATOR_CONFIG_MODULE,
+        TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE, CONSENSUS_CONF_MODULE,
+        GAS_SCHEDULE_MODULE, LIBRA_SYSTEM_MODULE, TRANSACTION_FEE_DISTRIBUTION_MODULE,
+        VALIDATOR_CONFIG_MODULE,
     },
 };
 use vm_runtime_types::value::Value;
@@ -68,6 +69,10 @@ lazy_static! {
     static ref ROTATE_AUTHENTICATION_KEY: Identifier =
         { Identifier::new("rotate_authentication_key").unwrap() };
     static ref EPILOGUE: Identifier = Identifier::new("epilogue").unwrap();
+    static ref INITIALIZE_CHANNEL: Identifier = Identifier::new("initialize_channel").unwrap();
+    static ref PAY: Identifier = Identifier::new("pay_from_sender").unwrap();
+    static ref POW_INIT: Identifier = Identifier::new("consensus").unwrap();
+    static ref SUBSIDY_INIT: Identifier = Identifier::new("initialize_subsidy_info").unwrap();
 }
 
 #[derive(Debug)]
@@ -199,7 +204,20 @@ pub fn encode_genesis_transaction_with_validator(
     public_key: Ed25519PublicKey,
     validator_set: ValidatorSet,
 ) -> SignatureCheckedTransaction {
-    const INIT_BALANCE: u64 = 1_000_000_000;
+    encode_genesis_transaction_with_validator_and_consensus(
+        private_key,
+        public_key,
+        validator_set,
+        false,
+    )
+}
+pub fn encode_genesis_transaction_with_validator_and_consensus(
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    validator_set: ValidatorSet,
+    is_pow: bool,
+) -> SignatureCheckedTransaction {
+    const INIT_BALANCE: u64 = 1_000_000_000_000;
 
     // Compile the needed stdlib modules.
     let modules = stdlib_modules();
@@ -228,8 +246,44 @@ pub fn encode_genesis_transaction_with_validator(
                 .create_account(account_config::core_code_address())
                 .unwrap();
             txn_executor
+                .create_account(account_config::channel_global_events_address())
+                .unwrap();
+
+            if is_pow {
+                txn_executor
+                    .create_account(account_config::subsidy_address())
+                    .unwrap();
+            }
+            txn_executor
                 .execute_function(&COIN_MODULE, &INITIALIZE, vec![])
                 .unwrap();
+
+            //Initialize consensus config module.
+            txn_executor
+                .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    account_config::subsidy_address(),
+                    &CONSENSUS_CONF_MODULE,
+                    &INITIALIZE,
+                    vec![],
+                )
+                .unwrap();
+
+            if is_pow {
+                txn_executor
+                    .execute_function_with_sender_FOR_GENESIS_ONLY(
+                        account_config::subsidy_address(),
+                        &CONSENSUS_CONF_MODULE,
+                        &POW_INIT,
+                        vec![
+                            Value::bool(true),
+                            Value::u64(10 as u64),
+                            Value::u64(50_000_000 as u64),
+                            Value::u64(2 as u64),
+                        ],
+                    )
+                    .unwrap();
+            }
+
             txn_executor
                 .execute_function(&LIBRA_SYSTEM_MODULE, &INITIALIZE_BLOCK, vec![])
                 .unwrap();
@@ -246,9 +300,33 @@ pub fn encode_genesis_transaction_with_validator(
                 .execute_function(
                     &ACCOUNT_MODULE,
                     &MINT_TO_ADDRESS,
-                    vec![Value::address(genesis_addr), Value::u64(INIT_BALANCE)],
+                    vec![Value::address(genesis_addr), Value::u64(INIT_BALANCE * 2)],
                 )
                 .unwrap();
+
+            if is_pow {
+                txn_executor
+                    .execute_function_with_sender_FOR_GENESIS_ONLY(
+                        account_config::association_address(),
+                        &ACCOUNT_MODULE,
+                        &PAY,
+                        vec![
+                            Value::address(account_config::subsidy_address()),
+                            Value::u64(INIT_BALANCE),
+                        ],
+                    )
+                    .unwrap();
+
+                //Initialize subsidy.
+                txn_executor
+                    .execute_function_with_sender_FOR_GENESIS_ONLY(
+                        account_config::subsidy_address(),
+                        &LIBRA_SYSTEM_MODULE,
+                        &SUBSIDY_INIT,
+                        vec![],
+                    )
+                    .unwrap();
+            }
 
             txn_executor
                 .execute_function(
@@ -288,6 +366,7 @@ pub fn encode_genesis_transaction_with_validator(
                     vec![],
                 )
                 .unwrap();
+
             for validator_keys in validator_set.payload() {
                 // First, add a ValidatorConfig resource under each account
                 let validator_address = *validator_keys.account_address();
@@ -338,6 +417,16 @@ pub fn encode_genesis_transaction_with_validator(
                 )
                 .unwrap();
 
+            // Initialize the channel global events.
+            txn_executor
+                .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    account_config::channel_global_events_address(),
+                    &ACCOUNT_MODULE,
+                    &INITIALIZE_CHANNEL,
+                    vec![],
+                )
+                .unwrap();
+
             let stdlib_modules = modules
                 .iter()
                 .map(|m| {
@@ -349,17 +438,21 @@ pub fn encode_genesis_transaction_with_validator(
 
             let txn_output = txn_executor.make_write_set(stdlib_modules, Ok(())).unwrap();
             // Sanity checks on emitted events:
-            // (1) The genesis tx should emit 3 events: a pair of payment sent/received events for
+            // (1) The genesis tx should emit 3/5 events: a pair of payment sent/received events for
             // minting to the genesis address, and a ValidatorSet.ChangeEvent
             assert_eq!(
                 txn_output.events().len(),
-                3,
+                if is_pow { 5 } else { 3 },
                 "Genesis transaction should emit three events, but found {} events: {:?}",
                 txn_output.events().len(),
                 txn_output.events()
             );
             // (2) The last event should be the validator set change event
-            let validator_set_change_event = &txn_output.events()[2];
+            let validator_set_change_event = if is_pow {
+                &txn_output.events()[4]
+            } else {
+                &txn_output.events()[2]
+            };
             assert_eq!(
                 *validator_set_change_event.key(),
                 ValidatorSet::change_event_key(),

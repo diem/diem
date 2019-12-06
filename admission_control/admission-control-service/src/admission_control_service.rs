@@ -5,6 +5,8 @@
 //! from external clients (such as wallets) and performs necessary processing before sending them to
 //! next step.
 
+use crate::upstream_proxy::submit_transaction;
+use crate::UpstreamProxyData;
 use admission_control_proto::proto::admission_control::{
     AdmissionControl, SubmitTransactionRequest, SubmitTransactionResponse,
 };
@@ -16,11 +18,14 @@ use futures::{
 };
 use grpc_helpers::provide_grpc_response;
 use libra_logger::prelude::*;
+use libra_mempool::core_mempool_client::CoreMemPoolClient;
 use libra_metrics::counters::SVC_COUNTERS;
 use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
 use std::convert::TryFrom;
 use std::sync::Arc;
 use storage_client::StorageRead;
+use tokio::runtime::TaskExecutor;
+use vm_validator::vm_validator::VMValidator;
 
 /// Struct implementing trait (service handle) AdmissionControlService.
 #[derive(Clone)]
@@ -49,7 +54,7 @@ impl AdmissionControlService {
     }
 
     /// Pass the UpdateToLatestLedgerRequest to Storage for read query.
-    fn update_to_latest_ledger_inner(
+    pub(super) fn update_to_latest_ledger_inner(
         &self,
         req: UpdateToLatestLedgerRequest,
     ) -> Result<UpdateToLatestLedgerResponse> {
@@ -69,6 +74,23 @@ impl AdmissionControlService {
             ledger_consistency_proof,
         );
         Ok(rust_resp.into())
+    }
+
+    pub(super) fn submit_transaction_inner(
+        &self,
+        executor: TaskExecutor,
+        proxy: UpstreamProxyData<CoreMemPoolClient, VMValidator>,
+        req: SubmitTransactionRequest,
+    ) -> Result<SubmitTransactionResponse> {
+        let (req_sender, res_receiver) = oneshot::channel();
+
+        let f = async move {
+            submit_transaction(req, proxy, None, req_sender).await;
+        };
+        executor.spawn(f);
+
+        let result = block_on(res_receiver).unwrap();
+        result
     }
 }
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::data_cache::{RemoteCache, TransactionDataCache};
+use libra_config::config::VMMode;
 use libra_types::{
     access_path::AccessPath,
     contract_event::ContractEvent,
@@ -28,6 +29,7 @@ pub struct TransactionExecutionContext<'txn> {
     event_data: Vec<ContractEvent>,
     /// Data store
     data_view: TransactionDataCache<'txn>,
+    vm_mode: VMMode,
 }
 
 /// The transaction
@@ -37,6 +39,21 @@ impl<'txn> TransactionExecutionContext<'txn> {
             gas_left,
             event_data: Vec::new(),
             data_view: TransactionDataCache::new(data_cache),
+            vm_mode: VMMode::Onchain,
+        }
+    }
+
+    pub fn new_with_write_set(
+        gas_left: GasUnits<GasCarrier>,
+        data_cache: &'txn dyn RemoteCache,
+        pre_cache_write_set: Option<WriteSet>,
+        vm_mode: VMMode,
+    ) -> Self {
+        Self {
+            gas_left,
+            event_data: Vec::new(),
+            data_view: TransactionDataCache::new_with_write_set(data_cache, pre_cache_write_set),
+            vm_mode,
         }
     }
 
@@ -94,6 +111,10 @@ pub trait InterpreterContext {
     fn deduct_gas(&mut self, amount: GasUnits<GasCarrier>) -> VMResult<()>;
 
     fn remaining_gas(&self) -> GasUnits<GasCarrier>;
+
+    fn vm_mode(&self) -> VMMode {
+        VMMode::Onchain
+    }
 }
 
 impl<'txn> InterpreterContext for TransactionExecutionContext<'txn> {
@@ -142,5 +163,9 @@ impl<'txn> InterpreterContext for TransactionExecutionContext<'txn> {
             self.gas_left = GasUnits::new(0);
             Err(VMStatus::new(StatusCode::OUT_OF_GAS))
         }
+    }
+
+    fn vm_mode(&self) -> VMMode {
+        self.vm_mode
     }
 }

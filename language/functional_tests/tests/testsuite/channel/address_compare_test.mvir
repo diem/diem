@@ -1,0 +1,35 @@
+module Test{
+    import 0x0.AddressUtil;
+
+    public test_address_compare(one: address, two: address, expect: u64){
+        assert(AddressUtil.compare_address(move(one), move(two)) == move(expect), 101);
+        return;
+    }
+}
+
+//! new-transaction
+//! args: 0x0bf805124cf7ca2266a7a7526dd25a54d8612e6b03389a1c1d3466e1581bcea3,0x832bdf8b8c2ee8b81f9b6c5e38ed167cbbaac92fd6ed7e3b9226c8d7ae7cede8,0
+import {{default}}.Test;
+
+main(one: address, two:address, expect: u64){
+    Test.test_address_compare(move(one), move(two), move(expect));
+    return;
+}
+
+//! new-transaction
+//! args: 0x0bf805124cf7ca2266a7a7526dd25a54d8612e6b03389a1c1d3466e1581bcea3,0x0bf805124cf7ca2266a7a7526dd25a54d8612e6b03389a1c1d3466e1581bcea3,1
+import {{default}}.Test;
+
+main(one: address, two:address, expect: u64){
+    Test.test_address_compare(move(one), move(two), move(expect));
+    return;
+}
+
+//! new-transaction
+//! args: 0x832bdf8b8c2ee8b81f9b6c5e38ed167cbbaac92fd6ed7e3b9226c8d7ae7cede8,0x0bf805124cf7ca2266a7a7526dd25a54d8612e6b03389a1c1d3466e1581bcea3,2
+import {{default}}.Test;
+
+main(one: address, two:address, expect: u64){
+    Test.test_address_compare(move(one), move(two), move(expect));
+    return;
+}

@@ -122,4 +122,7 @@ lazy_static::lazy_static! {
 
     /// Counter of pending outbound messages in Direct Send for each remote peer
     pub static ref PENDING_DIRECT_SEND_OUTBOUND_MESSAGES: &'static str = "pending_direct_send_outbound_messages";
+
+    /// Counter of test
+    pub static ref TEST_NETWORK_REQUESTS: IntGauge = OP_COUNTERS.gauge("test_network_requests");
 }

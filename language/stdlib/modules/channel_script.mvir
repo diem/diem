@@ -1,0 +1,80 @@
+// The module for keep the channel scripts.
+module ChannelScript {
+    import 0x0.LibraAccount;
+    import 0x0.LibraCoin;
+    import 0x0.LibraSystem;
+    import 0x0.HashTimeLock;
+    import 0x0.ChannelTransaction;
+
+    public open(participant: address, sender_amount: u64, participant_amount: u64){
+        LibraAccount.open_channel(move(participant), move(sender_amount), move(participant_amount));
+        return;
+    }
+
+    // Transfer LibraCoin from proposer's LibraAccount to ChannelParticipantAccount
+    public deposit(amount: u64){
+        let deposit_coin: LibraCoin.T;
+        let proposer: address;
+
+        proposer = ChannelTransaction.get_proposer();
+        //should allow deposit to other participant?
+        assert(get_txn_sender() == copy(proposer), 1006);
+        deposit_coin = LibraAccount.withdraw_from_sender(copy(amount));
+
+        LibraAccount.deposit_to_channel(move(deposit_coin));
+        LibraAccount.emit_channel_event(ChannelTransaction.get_channel_address());
+        return;
+    }
+
+    // Transfer LibraCoin from proposer's ChannelParticipantAccount to LibraAccount
+    public withdraw(amount: u64){
+        let proposer: address;
+        let withdraw_coin: LibraCoin.T;
+
+        proposer = ChannelTransaction.get_proposer();
+        assert(get_txn_sender() == copy(proposer), 1117);
+        withdraw_coin = LibraAccount.withdraw_from_channel(move(amount));
+        LibraAccount.deposit(move(proposer), move(withdraw_coin));
+        LibraAccount.emit_channel_event(ChannelTransaction.get_channel_address());
+        return;
+    }
+
+    // Send payment to channel participant at payee
+    public send_payment(payee: address, amount: u64, hash_lock: bytearray, time_lock: u64){
+        let coin: LibraCoin.T;
+        assert(copy(time_lock) > 0, 1120);
+        coin = LibraAccount.withdraw_from_channel(copy(amount));
+        //TODO payment timeout
+        HashTimeLock.lock_in_channel(copy(payee), move(coin), move(hash_lock), LibraSystem.get_current_block_height() + move(time_lock));
+        return;
+    }
+
+    // Receive payment from channel.
+    public receive_payment(preimage: bytearray){
+        let coin: LibraCoin.T;
+
+        coin = HashTimeLock.unlock_in_channel(move(preimage));
+        LibraAccount.deposit_to_channel(move(coin));
+        return;
+    }
+
+    // Cancel send payment.
+    public cancel_payment_after_timeout(){
+        let coin: LibraCoin.T;
+
+        coin = HashTimeLock.unlock_in_channel_after_timeout();
+        LibraAccount.deposit_to_channel(move(coin));
+        return;
+    }
+
+    //TODO remove this function after transfer by hash time lock.
+    //Transfer proposer's coin to payee at channel directly.
+    //This operation need payee to conform.
+    public transfer(payee: address, amount: u64){
+        let coin: LibraCoin.T;
+
+        coin = LibraAccount.withdraw_from_channel(copy(amount));
+        LibraAccount.deposit_to_participant(copy(payee), move(coin));
+        return;
+    }
+}

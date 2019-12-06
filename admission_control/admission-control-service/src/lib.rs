@@ -21,6 +21,8 @@ mod admission_control_service_test;
 #[cfg(feature = "fuzzing")]
 /// Fuzzer for admission control
 pub mod admission_control_fuzzing;
+/// AC client mock
+pub mod admission_control_mock_client;
 /// AC gRPC service.
 pub mod admission_control_service;
 mod counters;
@@ -33,4 +35,5 @@ pub mod runtime;
 mod upstream_proxy;
 
 use libra_types::account_address::AccountAddress;
+pub use upstream_proxy::UpstreamProxyData;
 type PeerId = AccountAddress;

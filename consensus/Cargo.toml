@@ -51,6 +51,13 @@ storage-client = { path = "../storage/storage-client", version = "0.1.0" }
 libra-tools = { path = "../common/tools", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 vm-runtime = { path = "../language/vm/vm-runtime", version = "0.1.0" }
+atomic_refcell = "0.1.3"
+futures_locks = { version = "=0.3.0", package = "futures-locks", features=["tokio"]}
+tokio-timer = "0.2.11"
+miner = { path = "miner" }
+cuckoo = { path = "cuckoo" }
+async-std = { version = "1.0.1", features = ["unstable"]}
+itertools = { version = "0.8.0", default-features = false }
 
 [dev-dependencies]
 cached = "0.9.0"
@@ -58,6 +65,7 @@ parity-multiaddr = "0.5.0"
 proptest = "0.9.4"
 rusty-fork = "0.2.2"
 tempfile = "3.1.0"
+waitout = "0.1.1"
 
 vm-genesis = { path = "../language/vm/vm-genesis", version = "0.1.0" }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }

@@ -165,15 +165,15 @@ impl TransactionData {
         }
     }
 
-    fn account_blobs(&self) -> &HashMap<AccountAddress, AccountStateBlob> {
+    pub fn account_blobs(&self) -> &HashMap<AccountAddress, AccountStateBlob> {
         &self.account_blobs
     }
 
-    fn events(&self) -> &[ContractEvent] {
+    pub fn events(&self) -> &[ContractEvent] {
         &self.events
     }
 
-    fn status(&self) -> &TransactionStatus {
+    pub fn status(&self) -> &TransactionStatus {
         &self.status
     }
 
@@ -185,7 +185,7 @@ impl TransactionData {
         self.event_tree.root_hash()
     }
 
-    fn gas_used(&self) -> u64 {
+    pub fn gas_used(&self) -> u64 {
         self.gas_used
     }
 
@@ -440,7 +440,44 @@ where
                         parent_trees,
                         parent_id,
                         id,
+                        pbft: true,
                     },
+                    resp_sender,
+                })
+                .expect("Did block processor thread panic?"),
+            None => resp_sender
+                .send(Err(format_err!("Executor is shutting down.")))
+                .expect("Failed to send error message."),
+        }
+        resp_receiver
+    }
+
+    /// Executes a block.
+    pub fn execute_block_by_id(
+        &self,
+        transactions: Vec<Transaction>,
+        grandpa_id: HashValue,
+        parent_id: HashValue,
+        id: HashValue,
+    ) -> oneshot::Receiver<Result<ProcessedVMOutput>> {
+        debug!(
+            "Received request to execute block. Grandpa id: {:x}. Parent id: {:x}. Id: {:x}.",
+            grandpa_id, parent_id, id
+        );
+
+        let (resp_sender, resp_receiver) = oneshot::channel();
+        match self
+            .command_sender
+            .lock()
+            .expect("Failed to lock mutex.")
+            .as_ref()
+        {
+            Some(sender) => sender
+                .send(Command::ExecuteBlockById {
+                    transactions,
+                    grandpa_id,
+                    parent_id,
+                    id,
                     resp_sender,
                 })
                 .expect("Did block processor thread panic?"),
@@ -570,6 +607,7 @@ struct ExecutableBlock {
     parent_id: HashValue,
     parent_trees: ExecutedTrees,
     transactions: Vec<Transaction>,
+    pbft: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -589,6 +627,13 @@ impl Chunk {
 enum Command {
     ExecuteBlock {
         executable_block: ExecutableBlock,
+        resp_sender: oneshot::Sender<Result<ProcessedVMOutput>>,
+    },
+    ExecuteBlockById {
+        transactions: Vec<Transaction>,
+        grandpa_id: HashValue,
+        parent_id: HashValue,
+        id: HashValue,
         resp_sender: oneshot::Sender<Result<ProcessedVMOutput>>,
     },
     CommitBlockBatch {
@@ -656,5 +701,18 @@ impl ExecutedTrees {
 
     pub fn new_empty() -> ExecutedTrees {
         Self::new(*SPARSE_MERKLE_PLACEHOLDER_HASH, vec![], 0)
+    }
+
+    /// Reset ExecutedTrees
+    pub fn reset(
+        &mut self,
+        state_tree: Arc<SparseMerkleTree>,
+        transaction_accumulator: Arc<InMemoryAccumulator<TransactionAccumulatorHasher>>,
+    ) {
+        let mut executed_trees = ExecutedTrees {
+            state_tree,
+            transaction_accumulator,
+        };
+        std::mem::swap(self, &mut executed_trees);
     }
 }

@@ -1,0 +1,12 @@
+// The module for the channel txn
+module ChannelTransaction {
+   import 0x0.Vector;
+
+    native public is_offchain(): bool;
+    native public is_channel_txn():bool;
+    native public get_txn_channel_sequence_number(): u64;
+    native public get_channel_address(): address;
+    native public get_proposer(): address;
+    native public get_public_keys(): Vector.T<bytearray>;
+    native public get_signatures(): Vector.T<bytearray>;
+}

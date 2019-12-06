@@ -1,0 +1,15 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+// This file contains proto definitions related to events.  Events are emitted
+// by smart contract execution.  These could include events such as received
+// transactions, sent transactions, etc.
+
+syntax = "proto3";
+
+package types;
+
+message BlockIndex {
+    bytes block_id = 1;
+    bytes parent_block_id = 2;
+}

@@ -1,3 +1,8 @@
 module AddressUtil {
+
     native public address_to_bytes(addr: address): bytearray;
+    native public bytes_to_address(bytes: bytearray): address;
+    /// 0 less, 1 equals, 2 greater
+    native public compare_address(first: address, second: address): u64;
+
 }

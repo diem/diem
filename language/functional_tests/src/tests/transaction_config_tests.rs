@@ -145,3 +145,20 @@ fn build_transaction_config_3() {
         //! args: {{bob}}
     ").unwrap_err();
 }
+
+#[rustfmt::skip]
+#[test]
+fn build_transaction_config_channel() {
+    let global = parse_and_build_global_config(r"
+        //! account: bob
+        //! account: alice
+        //! channel: ch1,alice|bob
+    ").unwrap();
+
+    let txn_config = parse_and_build_config(&global, r"
+        //! sender: alice
+        //! txn-channel: ch1, alice, false
+        //! args: {{bob}}, {{alice}}
+    ").unwrap();
+    assert!(!txn_config.channel.unwrap().signed_by_participants);
+}

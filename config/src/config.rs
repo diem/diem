@@ -135,7 +135,9 @@ impl NodeConfig {
     /// Paths used in the config are either absolute or relative to the config location
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut config = Self::load_config(&path);
+        config.consensus.load(path.as_ref())?;
         let mut validator_count = 0;
+        let is_public = config.consensus.consensus_type == ConsensusType::POW;
         for network in &mut config.networks {
             // We use provided peer id for validator role. Otherwise peer id is generated using
             // network identity key.
@@ -149,8 +151,9 @@ impl NodeConfig {
             } else {
                 network.load(path.as_ref())?;
             }
+            network.is_public_network = is_public;
         }
-        config.consensus.load(path.as_ref())?;
+
         Ok(config)
     }
 
@@ -254,6 +257,34 @@ impl NodeConfigHelpers {
     /// consensus_peers_file, network_keypairs_file, consensus_keypair_file, and seed_peers_file
     /// set. It is expected that the callee will provide these.
     pub fn get_single_node_test_config(random_ports: bool) -> NodeConfig {
+        Self::get_single_node_test_config_times(random_ports, 0)
+    }
+
+    /// times
+    pub fn get_single_node_test_config_times(random_ports: bool, times: usize) -> NodeConfig {
+        Self::get_single_node_test_config_publish_options_times(
+            random_ports,
+            Some(VMPublishingOption::Open),
+            times,
+        )
+    }
+
+    /// Returns a simple test config for single node. It does not have correct network_peers_file,
+    /// consensus_peers_file, network_keypairs_file, consensus_keypair_file, and seed_peers_file
+    /// set. It is expected that the callee will provide these.
+    /// `publishing_options` is either one of either `Open` or `CustomScripts` only.
+    pub fn get_single_node_test_config_publish_options(
+        random_ports: bool,
+        publishing_options: Option<VMPublishingOption>,
+    ) -> NodeConfig {
+        Self::get_single_node_test_config_publish_options_times(random_ports, publishing_options, 0)
+    }
+
+    pub fn get_single_node_test_config_publish_options_times(
+        random_ports: bool,
+        publishing_options: Option<VMPublishingOption>,
+        times: usize,
+    ) -> NodeConfig {
         let config_string = String::from_utf8_lossy(CONFIG_TEMPLATE);
         let mut config =
             NodeConfig::parse(&config_string).expect("Error parsing single node test config");
@@ -265,8 +296,11 @@ impl NodeConfigHelpers {
         if random_ports {
             NodeConfigHelpers::randomize_config_ports(&mut config);
         }
+        if let Some(vm_publishing_option) = publishing_options {
+            config.vm_config.publishing_options = vm_publishing_option;
+        }
         let (mut private_keys, test_consensus_peers, test_network_peers) =
-            ConfigHelpers::gen_validator_nodes(1, None);
+            ConfigHelpers::gen_validator_nodes_times(1, None, times);
         let peer_id = *private_keys.keys().nth(0).unwrap();
         let (
             ConsensusPrivateKey {
@@ -307,6 +341,8 @@ impl NodeConfigHelpers {
         config.execution.port = get_available_port();
         config.mempool.mempool_service_port = get_available_port();
         config.storage.port = get_available_port();
+        config.consensus.miner_rpc_address =
+            format!("127.0.0.1:{}", get_available_port()).to_string();
     }
 }
 

@@ -8,7 +8,7 @@ use crate::{
     gas_meter::load_gas_schedule,
     process_txn::{execute::ExecutedTransaction, validate::ValidationMode, ProcessTransaction},
 };
-use libra_config::config::VMPublishingOption;
+use libra_config::config::{VMMode, VMPublishingOption};
 use libra_logger::prelude::*;
 use libra_types::{
     transaction::{SignatureCheckedTransaction, SignedTransaction, TransactionOutput},
@@ -23,6 +23,7 @@ pub fn execute_user_transaction_block<'alloc, P>(
     script_cache: &ScriptCache<'alloc>,
     data_cache: &mut BlockDataCache<'_>,
     publishing_option: &VMPublishingOption,
+    vm_mode: VMMode,
 ) -> Result<Vec<TransactionOutput>, VMStatus>
 where
     P: ModuleCache<'alloc>,
@@ -66,7 +67,8 @@ where
     for transaction in signature_verified_block {
         record_stats! {time_hist | TXN_TOTAL_TIME_TAKEN | {
                 let output = match transaction {
-                    Ok(t) => transaction_flow(
+                    Ok(t) => {
+                    transaction_flow(
                         t,
                         &module_cache,
                         script_cache,
@@ -74,7 +76,8 @@ where
                         mode,
                         publishing_option,
                         &gas_schedule,
-                    ),
+                        vm_mode,
+                    )},
                     Err(vm_status) => ExecutedTransaction::discard_error_output(vm_status),
                 };
                 report_execution_status(output.status());
@@ -113,6 +116,7 @@ fn transaction_flow<'alloc, P>(
     mode: ValidationMode,
     publishing_option: &VMPublishingOption,
     gas_schedule: &CostTable,
+    vm_mode: VMMode,
 ) -> TransactionOutput
 where
     P: ModuleCache<'alloc>,
@@ -120,7 +124,7 @@ where
     let process_txn = ProcessTransaction::new(txn, gas_schedule, &module_cache, data_cache);
 
     let validated_txn = record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
-    match process_txn.validate(mode, publishing_option) {
+    match process_txn.validate(mode, publishing_option, vm_mode) {
         Ok(validated_txn) => validated_txn,
         Err(vm_status) => {
             return ExecutedTransaction::discard_error_output(vm_status);

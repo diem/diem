@@ -127,6 +127,7 @@ where
             parent_trees: ExecutedTrees::new_empty(),
             parent_id: *PRE_GENESIS_BLOCK_ID,
             id: HashValue::zero(), /* we use 0 as genesis block id in executor internally but it may be different in consensus */
+            pbft: true,
         };
         let output = self
             .execute_block(genesis_block)
@@ -219,6 +220,26 @@ where
                 self.blocks_to_execute
                     .push_back((executable_block, resp_sender));
             }
+            Command::ExecuteBlockById {
+                transactions,
+                grandpa_id,
+                parent_id,
+                id,
+                resp_sender,
+            } => {
+                let parent_executed_trees = self.executed_trees_by_id(grandpa_id);
+
+                let executable_block = ExecutableBlock {
+                    transactions,
+                    parent_trees: parent_executed_trees,
+                    parent_id,
+                    id,
+                    pbft: false,
+                };
+
+                self.blocks_to_execute
+                    .push_back((executable_block, resp_sender));
+            }
             Command::CommitBlockBatch {
                 committable_block_batch,
                 resp_sender,
@@ -242,6 +263,21 @@ where
                 }
             }
         }
+    }
+
+    /// Query from storage
+    fn executed_trees_by_id(&self, id: HashValue) -> ExecutedTrees {
+        let info = self
+            .storage_read_client
+            .get_history_startup_info_by_block_id(id)
+            .expect("Failed to read startup info from storage.")
+            .expect("startup info is none.");
+
+        ExecutedTrees::new(
+            info.committed_tree_state.account_state_root_hash,
+            info.committed_tree_state.ledger_frozen_subtree_hashes,
+            info.committed_tree_state.version + 1,
+        )
     }
 
     /// Verifies the transactions based on the provided proofs and ledger info. If the transactions
@@ -577,13 +613,22 @@ where
     fn execute_block(&mut self, executable_block: ExecutableBlock) -> Result<ProcessedVMOutput> {
         // Construct a StateView and pass the transactions to VM.
         let state_view = {
-            let committed_trees = self.committed_trees.lock().unwrap();
-            VerifiedStateView::new(
-                Arc::clone(&self.storage_read_client),
-                committed_trees.version(),
-                committed_trees.state_root(),
-                executable_block.parent_trees.state_tree(),
-            )
+            if executable_block.pbft {
+                let committed_trees = self.committed_trees.lock().unwrap();
+                VerifiedStateView::new(
+                    Arc::clone(&self.storage_read_client),
+                    committed_trees.version(),
+                    committed_trees.state_root(),
+                    executable_block.parent_trees.state_tree(),
+                )
+            } else {
+                VerifiedStateView::new(
+                    Arc::clone(&self.storage_read_client),
+                    executable_block.parent_trees.version(),
+                    executable_block.parent_trees.state_root(),
+                    executable_block.parent_trees.state_tree(),
+                )
+            }
         };
 
         let vm_outputs = {
@@ -759,6 +804,7 @@ where
                     match transaction.as_signed_user_txn()?.payload() {
                         TransactionPayload::Program
                         | TransactionPayload::Module(_)
+                        | TransactionPayload::Channel(_)
                         | TransactionPayload::Script(_) => {
                             bail!("Write set should be a subset of read set.")
                         }

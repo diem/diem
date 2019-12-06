@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::config::global::{ChannelData, ChannelParticipant};
 use crate::{
     config::{global::Config as GlobalConfig, strip},
     errors::*,
@@ -39,6 +40,8 @@ pub enum Entry {
     Arguments(Vec<Argument>),
     MaxGas(u64),
     SequenceNumber(u64),
+    /// Channel name, Channel txn proposer, Channel txn signed by participants.
+    Channel(String, String, bool),
 }
 
 impl FromStr for Entry {
@@ -80,6 +83,47 @@ impl FromStr for Entry {
         if let Some(s) = strip(s, "sequence-number:") {
             return Ok(Entry::SequenceNumber(s.parse::<u64>()?));
         }
+        if let Some(s) = strip(s, "txn-channel:") {
+            let s = s.to_ascii_lowercase();
+            if s.len() < 2 {
+                return Err(ErrorKind::Other(
+                    "channel config must contains channel name and proposer.".to_string(),
+                )
+                .into());
+            }
+            let parts: Vec<&str> = s.split(",").map(|s| s.trim()).collect();
+            let name: Result<String> = parts
+                .get(0)
+                .and_then(|s| {
+                    if s.is_empty() {
+                        None
+                    } else {
+                        Some(s.to_string())
+                    }
+                })
+                .ok_or(ErrorKind::Other("channel name can not be empty.".to_string()).into());
+            let proposer: Result<String> = parts
+                .get(1)
+                .and_then(|s| {
+                    if s.is_empty() {
+                        None
+                    } else {
+                        Some(s.to_string())
+                    }
+                })
+                .ok_or(ErrorKind::Other("channel proposer can not be empty.".to_string()).into());
+            let signed_by_participants = parts
+                .get(2)
+                .and_then(|s| {
+                    if s.to_string() == "false".to_string() {
+                        Some(false)
+                    } else {
+                        Some(true)
+                    }
+                })
+                .unwrap_or(true);
+            return Ok(Entry::Channel(name?, proposer?, signed_by_participants));
+        }
         Err(ErrorKind::Other(format!(
             "failed to parse '{}' as transaction config entry",
             s
@@ -107,6 +151,13 @@ impl Entry {
     }
 }
 
+#[derive(Debug)]
+pub struct ChannelTransactionConfig<'a> {
+    pub channel: ChannelData<'a>,
+    pub proposer: &'a Account,
+    pub signed_by_participants: bool,
+}
+
 /// A table of options specific to one transaction, fine tweaking how the transaction
 /// is handled by the testing infra.
 #[derive(Debug)]
@@ -116,6 +167,7 @@ pub struct Config<'a> {
     pub args: Vec<TransactionArgument>,
     pub max_gas: Option<u64>,
     pub sequence_number: Option<u64>,
+    pub channel: Option<ChannelTransactionConfig<'a>>,
 }
 
 impl<'a> Config<'a> {
@@ -126,6 +178,7 @@ impl<'a> Config<'a> {
         let mut args = None;
         let mut max_gas = None;
         let mut sequence_number = None;
+        let mut channel_transaction_config = None;
 
         for entry in entries {
             match entry {
@@ -181,6 +234,31 @@ impl<'a> Config<'a> {
                         )
                     }
                 },
+                Entry::Channel(name, proposer, signed_by_participants) => {
+                    match channel_transaction_config {
+                        None => {
+                            let channel_config = config.get_channel_for_name(name)?;
+                            let channel = ChannelData {
+                                channel_address: channel_config.channel_address,
+                                participants: channel_config
+                                    .participants
+                                    .iter()
+                                    .map(|addr| ChannelParticipant {
+                                        address: *addr,
+                                        account: config.get_account_for_address(addr).unwrap(),
+                                    })
+                                    .collect(),
+                            };
+                            let proposer = config.get_account_for_name(proposer)?;
+                            channel_transaction_config = Some(ChannelTransactionConfig {
+                                channel,
+                                proposer,
+                                signed_by_participants: *signed_by_participants,
+                            });
+                        }
+                        _ => return Err(ErrorKind::Other("channel already set".to_string()).into()),
+                    }
+                }
             }
         }
 
@@ -190,11 +268,16 @@ impl<'a> Config<'a> {
             args: args.unwrap_or_else(|| vec![]),
             max_gas,
             sequence_number,
+            channel: channel_transaction_config,
         })
     }
 
     #[inline]
     pub fn is_stage_disabled(&self, stage: Stage) -> bool {
         self.disabled_stages.contains(&stage)
+    }
+
+    pub fn is_channel_transaction(&self) -> bool {
+        return self.channel.is_some();
     }
 }

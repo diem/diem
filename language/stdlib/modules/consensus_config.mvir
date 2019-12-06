@@ -1,0 +1,102 @@
+module ConsensusConfig {
+    import 0x0.LibraAccount;
+    import 0x0.Vector;
+
+    resource T {
+        consensus_type_pow: bool,
+        subsidy_halving_interval: u64,
+        subsidy_base: u64,
+        subsidy_delay: u64,
+        already_set: bool,
+    }
+
+    public initialize() {
+        let transaction_sender: address;
+
+        assert(get_txn_sender() == 0x6d696e74, 6101);
+        transaction_sender = get_txn_sender();
+        assert(!exists<T>(copy(transaction_sender)), 6102);
+
+        move_to_sender<T>(T {
+            consensus_type_pow: false,
+            subsidy_halving_interval: 0,
+            subsidy_base: 0,
+            subsidy_delay: 0,
+            already_set: false,
+        });
+
+        return;
+    }
+
+    public consensus(is_pow: bool, halving: u64, subsidy: u64, delay: u64) acquires T {
+        let transaction_sender:address;
+        let consensus_account: &mut Self.T;
+
+        assert(get_txn_sender() == 0x6d696e74, 6103);
+        transaction_sender = get_txn_sender();
+        assert(exists<T>(copy(transaction_sender)), 6104);
+
+        consensus_account = borrow_global_mut<T>(copy(transaction_sender));
+
+        assert(!(*&copy(consensus_account).already_set), 6105);
+
+        if (copy(is_pow)) {
+            assert(copy(halving) > 0, 6106);
+            assert(copy(subsidy) > 0, 6107);
+            assert(copy(delay) > 0, 6108);
+
+            *(&mut copy(consensus_account).consensus_type_pow) = true;
+            *(&mut copy(consensus_account).subsidy_halving_interval) = move(halving);
+            *(&mut copy(consensus_account).subsidy_base) = move(subsidy);
+            *(&mut copy(consensus_account).subsidy_delay) = move(delay);
+        }
+
+        *(&mut copy(consensus_account).already_set) = true;
+        return;
+    }
+
+    public subsidy_coin(height:u64): u64 acquires T {
+        let halving:u64;
+        let subsidy:u64;
+        let times: u64;
+        let index: u64;
+
+        halving = Self.subsidy_halving();
+        subsidy = Self.subsidy_base();
+
+        assert(copy(height) > 0, 6109);
+        assert(copy(halving) > 0, 6110);
+        assert(copy(subsidy) > 0, 6111);
+
+        times = copy(height) / copy(halving);
+        index = 0;
+
+        while (copy(index) < copy(times)) {
+            assert(copy(subsidy) > 0, 6112);
+            subsidy = copy(subsidy) / 2;
+            index = copy(index) + 1;
+        }
+
+        return copy(subsidy);
+    }
+
+    public is_pow() : bool acquires T {
+        return *&(borrow_global<T>(0x6d696e74)).consensus_type_pow;
+    }
+
+    public subsidy_halving(): u64 acquires T {
+        return *&(borrow_global<T>(0x6d696e74)).subsidy_halving_interval;
+    }
+
+    public subsidy_base(): u64 acquires T {
+        return *&(borrow_global<T>(0x6d696e74)).subsidy_base;
+    }
+
+    public subsidy_delay(): u64 acquires T {
+        return *&(borrow_global<T>(0x6d696e74)).subsidy_delay;
+    }
+
+    public already_set(): bool acquires T {
+        return *&(borrow_global<T>(0x6d696e74)).already_set;
+    }
+}

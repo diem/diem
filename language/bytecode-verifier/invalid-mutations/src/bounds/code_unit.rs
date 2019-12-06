@@ -287,6 +287,66 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                         locals_bytecode!(locals_len, bytecode_idx, offset, ImmBorrowLoc)
                     }
 
+                    ExistSenderChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        ExistSenderChannel
+                    ),
+
+                    ExistReceiverChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        ExistReceiverChannel
+                    ),
+                    BorrowSenderChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        BorrowSenderChannel
+                    ),
+
+                    BorrowReceiverChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        BorrowReceiverChannel
+                    ),
+                    MoveFromSenderChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        MoveFromSenderChannel
+                    ),
+
+                    MoveFromReceiverChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        MoveFromReceiverChannel
+                    ),
+                    MoveToSenderChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        MoveToSenderChannel
+                    ),
+
+                    MoveToReceiverChannel(_, _) => struct_bytecode!(
+                        struct_defs_len,
+                        bytecode_idx,
+                        offset,
+                        StructDefinitionIndex,
+                        MoveToReceiverChannel
+                    ),
                     // List out the other options explicitly so there's a compile error if a new
                     // bytecode gets added.
                     FreezeRef | Pop | Ret | LdConst(_) | LdTrue | LdFalse | ReadRef | WriteRef

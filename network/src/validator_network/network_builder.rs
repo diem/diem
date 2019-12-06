@@ -25,7 +25,7 @@ use crate::{
     ProtocolId,
 };
 use channel;
-use futures::StreamExt;
+use futures::{lock::Mutex, StreamExt};
 use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::*,
@@ -36,7 +36,7 @@ use libra_types::{validator_signer::ValidatorSigner, PeerId};
 use netcore::{multiplexing::StreamMultiplexer, transport::boxed::BoxedTransport};
 use parity_multiaddr::Multiaddr;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
     time::Duration,
 };
@@ -101,6 +101,7 @@ pub struct NetworkBuilder {
     signing_keys: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
     is_permissioned: bool,
     health_checker_enabled: bool,
+    is_public: bool,
 }
 
 impl NetworkBuilder {
@@ -138,6 +139,7 @@ impl NetworkBuilder {
             signing_keys: None,
             is_permissioned: true,
             health_checker_enabled: true,
+            is_public: false,
         }
     }
 
@@ -293,6 +295,11 @@ impl NetworkBuilder {
         self
     }
 
+    pub fn is_public(&mut self, is_public: bool) -> &mut Self {
+        self.is_public = is_public;
+        self
+    }
+
     fn supported_protocols(&self) -> Vec<ProtocolId> {
         self.direct_send_protocols
             .iter()
@@ -339,7 +346,9 @@ impl NetworkBuilder {
             TransportType::PermissionlessMemoryNoise(ref mut keys) => {
                 let keys = keys.take().expect("Identity keys not set");
                 self.build_with_transport(build_permissionless_memory_noise_transport(
-                    identity, keys,
+                    identity,
+                    keys,
+                    self.is_public,
                 ))
             }
             TransportType::Tcp => self.build_with_transport(build_tcp_transport(identity)),
@@ -349,7 +358,11 @@ impl NetworkBuilder {
             }
             TransportType::PermissionlessTcpNoise(ref mut keys) => {
                 let keys = keys.take().expect("Identity keys not set");
-                self.build_with_transport(build_permissionless_tcp_noise_transport(identity, keys))
+                self.build_with_transport(build_permissionless_tcp_noise_transport(
+                    identity,
+                    keys,
+                    self.is_public,
+                ))
             }
         }
     }
@@ -426,7 +439,7 @@ impl NetworkBuilder {
         // We start the connectivity_manager module only if the network is
         // permissioned.
         let mut net_conn_mgr_reqs_tx = None;
-        if self.is_permissioned {
+        if self.is_permissioned || self.is_public {
             // Initialize and start connectivity manager.
             let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
                 self.channel_size,
@@ -447,6 +460,7 @@ impl NetworkBuilder {
                 conn_mgr_reqs_rx,
                 ExponentialBackoff::from_millis(2).factor(1000 /* seconds */),
                 self.max_connection_delay_ms,
+                self.is_public,
             );
             self.executor.spawn(conn_mgr.start());
             debug!("Started connection manager");
@@ -458,6 +472,7 @@ impl NetworkBuilder {
             &counters::PENDING_PEER_MANAGER_NET_NOTIFICATIONS,
         );
         peer_event_handlers.push(pm_net_notifs_tx);
+        let peer_ids = Arc::new(Mutex::new(HashSet::new()));
         let peer_mgr = PeerManager::new(
             transport,
             self.executor.clone(),
@@ -466,6 +481,7 @@ impl NetworkBuilder {
             pm_reqs_rx,
             protocol_handlers,
             peer_event_handlers,
+            peer_ids.clone(),
         );
         let listen_addr = peer_mgr.listen_addr().clone();
         self.executor.spawn(peer_mgr.start());
@@ -487,6 +503,7 @@ impl NetworkBuilder {
             self.max_concurrent_network_reqs,
             self.max_concurrent_network_notifs,
             self.channel_size,
+            peer_ids,
         );
 
         if self.health_checker_enabled {
@@ -507,7 +524,7 @@ impl NetworkBuilder {
         // We start the discovery module only if the network is permissioned.
         // Note: We use the `is_permissioned` flag as a proxy for whether we need to run the
         // discovery module or not. We should make this more explicit eventually.
-        if self.is_permissioned {
+        if self.is_permissioned || self.is_public {
             // Initialize and start Discovery actor.
             let (signing_private_key, _signing_public_key) =
                 self.signing_keys.take().expect("Signing keys not set");
@@ -531,6 +548,7 @@ impl NetworkBuilder {
                 discovery_network_rx,
                 net_conn_mgr_reqs_tx.take().unwrap(),
                 Duration::from_millis(self.discovery_msg_timeout_ms),
+                self.is_public,
             );
             self.executor.spawn(discovery.start());
             debug!("Started discovery protocol actor");

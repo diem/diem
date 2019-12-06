@@ -17,6 +17,7 @@ fn main() {
         "src/proto/validator_change.proto",
         "src/proto/validator_set.proto",
         "src/proto/vm_errors.proto",
+        "src/proto/block_index.proto",
     ];
 
     let includes = ["src/proto"];

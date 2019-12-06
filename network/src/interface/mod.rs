@@ -36,6 +36,9 @@ use parity_multiaddr::Multiaddr;
 use std::{collections::HashMap, fmt::Debug, time::Duration};
 
 pub use crate::peer_manager::PeerManagerError;
+use futures::lock::Mutex;
+use std::collections::HashSet;
+use std::sync::Arc;
 
 pub const CONSENSUS_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
 pub const MEMPOOL_INBOUND_MSG_TIMEOUT_MS: u64 = 10 * 1000; // 10 seconds
@@ -65,6 +68,8 @@ pub enum NetworkRequest {
     /// if, for example, we are not currently connected with the peer. Results
     /// are sent back to the caller via the oneshot channel.
     DisconnectPeer(PeerId, oneshot::Sender<Result<(), PeerManagerError>>),
+
+    BroadCastMessage(Message, Vec<PeerId>),
 }
 
 /// Notifications that [`NetworkProvider`] sends to consumers of its API. The
@@ -141,6 +146,7 @@ pub struct NetworkProvider<TSubstream> {
     max_concurrent_notifs: u32,
     /// Size of channels between different actors.
     channel_size: usize,
+    peer_ids: Arc<Mutex<HashSet<PeerId>>>,
 }
 
 impl<TSubstream> LibraNetworkProvider for NetworkProvider<TSubstream>
@@ -263,6 +269,7 @@ where
             let rpc_reqs_tx = self.rpc_reqs_tx.clone();
             let ds_reqs_tx = self.ds_reqs_tx.clone();
             let conn_mgr_reqs_tx = self.conn_mgr_reqs_tx.clone();
+            let peer_ids = self.peer_ids.clone();
             let mut reqs = self
                 .requests_rx
                 .map(move |req| {
@@ -272,6 +279,7 @@ where
                         rpc_reqs_tx.clone(),
                         ds_reqs_tx.clone(),
                         conn_mgr_reqs_tx.clone(),
+                        peer_ids.clone(),
                     )
                     .boxed()
                 })
@@ -333,6 +341,7 @@ where
         max_concurrent_reqs: u32,
         max_concurrent_notifs: u32,
         channel_size: usize,
+        peer_ids: Arc<Mutex<HashSet<PeerId>>>,
     ) -> Self {
         Self {
             upstream_handlers: HashMap::new(),
@@ -348,6 +357,7 @@ where
             max_concurrent_reqs,
             max_concurrent_notifs,
             channel_size,
+            peer_ids,
         }
     }
 
@@ -357,6 +367,7 @@ where
         mut rpc_reqs_tx: channel::Sender<RpcRequest>,
         mut ds_reqs_tx: channel::Sender<DirectSendRequest>,
         conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
+        peer_ids: Arc<Mutex<HashSet<PeerId>>>,
     ) {
         trace!("NetworkRequest::{:?}", req);
         match req {
@@ -377,6 +388,17 @@ where
                     .send(DirectSendRequest::SendMessage(peer_id, msg))
                     .await
                     .unwrap();
+            }
+            NetworkRequest::BroadCastMessage(msg, ignore_peers) => {
+                let peer_ids_clone = peer_ids.lock().await;
+                for peer_id in peer_ids_clone.iter() {
+                    if !ignore_peers.contains(&peer_id) {
+                        ds_reqs_tx
+                            .send(DirectSendRequest::SendMessage(peer_id.clone(), msg.clone()))
+                            .await
+                            .unwrap();
+                    }
+                }
             }
             NetworkRequest::UpdateEligibleNodes(nodes) => {
                 let mut conn_mgr_reqs_tx = conn_mgr_reqs_tx

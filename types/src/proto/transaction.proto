@@ -17,8 +17,10 @@ message TransactionArgument {
         U64 = 0;
         ADDRESS = 1;
         STRING = 2;
-        BYTEARRAY = 3;
+        BYTE_ARRAY = 3;
     }
+    ArgType arg_type = 1;
+    bytes arg_value = 2;
 }
 
 // A generic structure that represents signed RawTransaction
@@ -56,6 +58,30 @@ message SignedTransactionsBlock {
     bytes validator_public_key = 2;
     // Signature of the validator that created this block
     bytes validator_signature = 3;
+}
+
+// Set of WriteOps to save to storage.
+message WriteSet {
+    // Set of WriteOp for storage update.
+    repeated WriteOp write_set = 1;
+}
+
+// Write Operation on underlying storage.
+message WriteOp {
+    // AccessPath of the write set.
+    AccessPath access_path = 1;
+    // The value of the write op. Empty if `type` is Delete.
+    bytes value = 2;
+    // WriteOp type.
+    WriteOpType type = 3;
+}
+
+// Type of write operation
+enum WriteOpType {
+    // The WriteOp is to create/update the field from storage.
+    Write = 0;
+    // The WriteOp is to delete the field from storage.
+    Delete = 1;
 }
 
 // Account state as a whole.

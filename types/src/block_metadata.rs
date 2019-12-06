@@ -50,4 +50,8 @@ impl BlockMetadata {
         let vote_maps = ByteArray::new(lcs::to_bytes(&self.previous_block_votes)?);
         Ok((id, self.timestamp_usec, vote_maps, self.proposer))
     }
+
+    pub fn id(self) -> HashValue {
+        self.id.clone()
+    }
 }

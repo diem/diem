@@ -1,0 +1,60 @@
+//! account: alice, 10000000
+//! account: bob, 10000000
+//! channel: ch1, alice|bob
+
+//! new-transaction
+//! sender: alice
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1, alice
+//! args: {{bob}},50000,40000
+
+0x0.ChannelScript.open
+
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+import 0x0.ChannelTransaction;
+import 0x0.ChannelScript;
+import 0x0.LibraAccount;
+import 0x0.Hash;
+main() {
+   let hash_lock: bytearray;
+   hash_lock = Hash.sha3_256(h"aa");
+   ChannelScript.send_payment({{bob}}, 10000, move(hash_lock), 10);
+      assert(LibraAccount.channel_balance({{alice}}) == 40000, 106);
+      assert(LibraAccount.channel_balance({{bob}}) == 40000, 107);
+   return;
+}
+
+// bob execute channel transaction without alice signature,but try to change alice's data, execute fail.
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1,bob,false
+import 0x0.ChannelTransaction;
+import 0x0.LibraAccount;
+import 0x0.LibraCoin;
+main() {
+   let coin: LibraCoin.T;
+   coin = LibraAccount.withdraw_from_channel(10000);
+   LibraAccount.deposit_to_participant({{alice}}, move(coin));
+   return;
+}
+
+// should fail with MISSING_SIGNATURE_ERROR "Access to private resource not authorized"
+// check: MISSING_SIGNATURE_ERROR

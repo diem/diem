@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{code_cache::module_cache::ModuleCache, data_cache::RemoteCache};
-use libra_config::config::VMPublishingOption;
+use libra_config::config::{VMMode, VMPublishingOption};
 use libra_types::transaction::SignatureCheckedTransaction;
 use std::marker::PhantomData;
 use vm::{errors::VMResult, gas_schedule::CostTable};
@@ -54,7 +54,8 @@ where
         self,
         mode: ValidationMode,
         publishing_option: &VMPublishingOption,
+        vm_mode: VMMode,
     ) -> VMResult<ValidatedTransaction<'alloc, 'txn, P>> {
-        ValidatedTransaction::new(self, mode, publishing_option)
+        ValidatedTransaction::new(self, mode, publishing_option, vm_mode)
     }
 }

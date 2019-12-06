@@ -1,0 +1,18 @@
+[package]
+name = "proto"
+version = "0.1.0"
+authors = ["Starcoin Core Dev <dev@starcoin.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+protobuf = "2.7"
+grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
+prost = "0.5.0"
+bytes = { version = "0.4.12", default-features = false }
+futures = "0.1.28"
+
+[build-dependencies]
+grpcio-compiler = { version = "0.5.0-alpha.2", default-features = false, features = ["prost-codec"] }
+prost-build = "0.5.0"

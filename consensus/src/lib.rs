@@ -9,7 +9,7 @@
 
 #![cfg_attr(not(feature = "fuzzing"), deny(missing_docs))]
 #![cfg_attr(feature = "fuzzing", allow(dead_code))]
-#![recursion_limit = "512"]
+#![recursion_limit = "2048"]
 extern crate failure;
 
 #[allow(unused_imports)]
@@ -20,6 +20,7 @@ extern crate debug_interface;
 extern crate prometheus;
 
 mod chained_bft;
+mod pow;
 
 mod util;
 
@@ -35,3 +36,5 @@ mod counters;
 mod state_computer;
 mod state_replication;
 mod txn_manager;
+
+pub use miner::MineClient;

@@ -5,28 +5,67 @@ use libra_types::transaction::SCRIPT_HASH_LENGTH;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::HashSet, hash::BuildHasher};
 
+#[derive(Clone, Debug, Deserialize, Serialize, Copy, Eq, PartialEq)]
+#[serde(tag = "type")]
+pub enum VMMode {
+    Onchain,
+    Offchain,
+}
+
+impl VMMode {
+    pub fn is_offchain(&self) -> bool {
+        match self {
+            VMMode::Offchain => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_onchain(&self) -> bool {
+        match self {
+            VMMode::Onchain => true,
+            _ => false,
+        }
+    }
+}
+
 /// Holds the VM configuration, currently this is only the publishing options for scripts and
 /// modules, but in the future this may need to be expanded to hold more information.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct VMConfig {
     pub publishing_options: VMPublishingOption,
+    pub mode: VMMode,
+}
+
+impl VMConfig {
+    pub fn onchain() -> VMConfig {
+        Self {
+            publishing_options: VMPublishingOption::Open,
+            mode: VMMode::Onchain,
+        }
+    }
+
+    pub fn offchain() -> VMConfig {
+        Self {
+            publishing_options: VMPublishingOption::Open,
+            mode: VMMode::Offchain,
+        }
+    }
+
+    pub fn is_offchain(&self) -> bool {
+        self.mode.is_offchain()
+    }
+
+    pub fn is_onchain(&self) -> bool {
+        self.mode.is_onchain()
+    }
 }
 
 impl Default for VMConfig {
     fn default() -> VMConfig {
-        let whitelist = vec![
-            "6aabc87f543f85e10216432d02b0251297d4c7723e906de481dfa04b057c2371",
-            "1cf66b5f5c911e80dad222b8ee8dfe3ad4830f75bb412ba12ea8e429203d9c83",
-            "a2180395d1632a0793f34e8a8a6be20b3b03bdceee35affe8c751fc8467b73a4",
-            "5ee07d4ac1ecf88f1b41c2c458f15699fe9d811c61563338253b3807b75c04c1",
-        ]
-        .iter()
-        .map(|s| string_to_script_hash(s))
-        .collect();
-
         VMConfig {
-            publishing_options: VMPublishingOption::Locked(whitelist),
+            publishing_options: VMPublishingOption::Open,
+            mode: VMMode::Onchain,
         }
     }
 }
@@ -39,6 +78,7 @@ impl VMConfig {
     pub fn empty_whitelist_FOR_TESTING() -> Self {
         VMConfig {
             publishing_options: VMPublishingOption::Locked(HashSet::new()),
+            mode: VMMode::Onchain,
         }
     }
 }

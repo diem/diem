@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::transaction::ChannelTransactionPayloadBody;
 use crate::{
     account_address::AccountAddress,
     proto::types::SignedTransaction as ProtoSignedTransaction,
@@ -46,8 +47,31 @@ pub fn create_unsigned_txn(
     )
 }
 
+pub fn create_unsigned_payload_txn(
+    payload: TransactionPayload,
+    sender_address: AccountAddress,
+    sender_sequence_number: u64,
+    max_gas_amount: u64,
+    gas_unit_price: u64,
+    txn_expiration: i64, // for compatibility with UTC's timestamp.
+) -> RawTransaction {
+    RawTransaction::new_payload_txn(
+        sender_address,
+        sender_sequence_number,
+        payload,
+        max_gas_amount,
+        gas_unit_price,
+        std::time::Duration::new((Utc::now().timestamp() + txn_expiration) as u64, 0),
+    )
+}
+
 pub trait TransactionSigner {
     fn sign_txn(&self, raw_txn: RawTransaction) -> Result<SignedTransaction>;
+}
+
+pub trait ChannelTransactionSigner {
+    /// sign method should return (participant index, participant signature)
+    fn sign(&self, body: &ChannelTransactionPayloadBody) -> (usize, Ed25519Signature);
 }
 
 /// Craft a transaction request.
@@ -61,6 +85,27 @@ pub fn create_user_txn<T: TransactionSigner + ?Sized>(
     txn_expiration: i64, // for compatibility with UTC's timestamp.
 ) -> Result<SignedTransaction> {
     let raw_txn = create_unsigned_txn(
+        payload,
+        sender_address,
+        sender_sequence_number,
+        max_gas_amount,
+        gas_unit_price,
+        txn_expiration,
+    );
+    signer.sign_txn(raw_txn)
+}
+
+/// Craft a transaction request.
+pub fn create_signed_payload_txn<T: TransactionSigner + ?Sized>(
+    signer: &T,
+    payload: TransactionPayload,
+    sender_address: AccountAddress,
+    sender_sequence_number: u64,
+    max_gas_amount: u64,
+    gas_unit_price: u64,
+    txn_expiration: i64, // for compatibility with UTC's timestamp.
+) -> Result<SignedTransaction> {
+    let raw_txn = create_unsigned_payload_txn(
         payload,
         sender_address,
         sender_sequence_number,

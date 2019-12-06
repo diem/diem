@@ -1,0 +1,38 @@
+//! account: alice, 10000000
+//! account: bob, 10000000
+//! channel: ch1, alice|bob
+
+//! new-transaction
+//! sender: alice
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1, alice
+//! args: {{bob}},50000,40000
+
+0x0.ChannelScript.open
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1, alice
+import 0x0.LibraAccount;
+main(){
+    assert(LibraAccount.channel_sequence_number() == 1, 1024);
+    return;
+}
+
+

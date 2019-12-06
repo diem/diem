@@ -163,6 +163,17 @@ lazy_static! {
             vec![Address],
             vec![ByteArray]
         );
+        // AddressUtil
+        add!(m, addr, "AddressUtil", "bytes_to_address",
+            primitive_helpers::native_bytes_to_address,
+            vec![ByteArray],
+            vec![Address]
+        );
+        add!(m, addr, "AddressUtil", "compare_address",
+            primitive_helpers::native_compare_address,
+            vec![Address, Address],
+            vec![U64]
+        );
         // U64Util
         add!(m, addr, "U64Util", "u64_to_bytes",
             primitive_helpers::native_u64_to_bytes,
@@ -280,6 +291,193 @@ lazy_static! {
                 Struct(StructHandleIndex::new(0), vec![]),
             ],
             vec![]
+        );
+        //ChannelTransaction
+        add!(m, addr, "ChannelTransaction", "is_offchain",
+            |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "is_offchain does not have a native implementation"
+                                .to_string()))
+             },
+            vec![],
+            vec![],
+            vec![Bool]
+        );
+        add!(m, addr, "ChannelTransaction", "is_channel_txn",
+            |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "is_channel_txn does not have a native implementation"
+                                .to_string()))
+             },
+            vec![],
+            vec![],
+            vec![Bool]
+        );
+         add!(m, addr, "ChannelTransaction", "get_txn_channel_sequence_number",
+            |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "get_txn_channel_sequence_number does not have a native implementation"
+                                .to_string()))
+             },
+            vec![],
+            vec![],
+            vec![U64]
+        );
+        add!(m, addr, "ChannelTransaction", "get_channel_address",
+            |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "get_channel_address does not have a native implementation"
+                                .to_string()))
+             },
+            vec![],
+            vec![],
+            vec![Address]
+        );
+         add!(m, addr, "ChannelTransaction", "get_proposer",
+            |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "get_proposer does not have a native implementation"
+                                .to_string()))
+             },
+            vec![],
+            vec![],
+            vec![Address]
+        );
+        add!(m, addr, "ChannelTransaction", "get_public_keys",
+            |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "get_public_keys does not have a native implementation"
+                                .to_string()))
+             },
+            vec![],
+            vec![],
+            vec![
+                tstruct(addr, "Vector", "T", vec![ByteArray]),
+            ]
+        );
+        add!(m, addr, "ChannelTransaction", "get_signatures",
+            |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "get_signatures does not have a native implementation"
+                                .to_string()))
+             },
+            vec![],
+            vec![],
+            vec![
+                tstruct(addr, "Vector", "T", vec![ByteArray]),
+            ]
+        );
+         // Channel
+        add!(m, addr, "LibraAccount", "move_to_channel",
+           |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "move_to_channel does not have a native implementation"
+                                .to_string()))
+             },
+            vec![Kind::Resource],
+            vec![TypeParameter(0)],
+            vec![]
+        );
+        add!(m, addr, "LibraAccount", "move_from_channel",
+          |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "move_from_channel does not have a native implementation"
+                                .to_string()))
+             },
+            vec![Kind::Resource],
+            vec![],
+            vec![TypeParameter(0)]
+        );
+        //ChannelUtil
+        add!(m, addr, "ChannelUtil", "move_to_participant",
+           |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "move_to_participant does not have a native implementation"
+                                .to_string()))
+             },
+            vec![Kind::Resource],
+            vec![Address, TypeParameter(0)],
+            vec![]
+        );
+        add!(m, addr, "ChannelUtil", "move_to_shared",
+           |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "move_to_shared does not have a native implementation"
+                                .to_string()))
+             },
+            vec![Kind::Resource],
+            vec![TypeParameter(0)],
+            vec![]
+        );
+        add!(m, addr, "ChannelUtil", "move_from_participant",
+          |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "move_from_participant does not have a native implementation"
+                                .to_string()))
+             },
+            vec![Kind::Resource],
+            vec![Address],
+            vec![TypeParameter(0)]
+        );
+        add!(m, addr, "ChannelUtil", "move_from_shared",
+          |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "move_from_shared does not have a native implementation"
+                                .to_string()))
+             },
+            vec![Kind::Resource],
+            vec![],
+            vec![TypeParameter(0)]
+        );
+        add!(m, addr, "ChannelUtil", "borrow_from_participant",
+           |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "borrow_from_participant does not have a native implementation"
+                                .to_string()))
+             },
+            vec![Kind::Resource],
+            vec![Address],
+            vec![Reference(Box::new(TypeParameter(0)))]
+        );
+        add!(m, addr, "ChannelUtil", "borrow_from_participant_mut",
+           |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "borrow_from_participant_mut does not have a native implementation"
+                                .to_string()))
+             },
+            vec![Kind::Resource],
+            vec![Address],
+            vec![MutableReference(Box::new(TypeParameter(0)))]
+        );
+        add!(m, addr, "ChannelUtil", "borrow_from_shared",
+           |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "borrow_from_shared does not have a native implementation"
+                                .to_string()))
+             },
+            vec![Kind::Resource],
+            vec![],
+            vec![Reference(Box::new(TypeParameter(0)))]
+        );
+        add!(m, addr, "ChannelUtil", "borrow_from_shared_mut",
+           |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "borrow_from_shared_mut does not have a native implementation"
+                                .to_string()))
+             },
+            vec![Kind::Resource],
+            vec![],
+            vec![MutableReference(Box::new(TypeParameter(0)))]
+        );
+        add!(m, addr, "ChannelUtil", "exist_channel_participant",
+          |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "exist_channel_participant does not have a native implementation"
+                                .to_string()))
+             },
+            vec![Kind::Resource],
+            vec![Address],
+            vec![Bool]
         );
         m
     };

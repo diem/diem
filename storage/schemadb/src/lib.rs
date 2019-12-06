@@ -47,7 +47,7 @@ pub type ColumnFamilyOptionsMap = HashMap<ColumnFamilyName, ColumnFamilyOptions>
 pub const DEFAULT_CF_NAME: ColumnFamilyName = "default";
 
 #[derive(Debug)]
-enum WriteOp {
+pub enum WriteOp {
     Value(Vec<u8>),
     Deletion,
 }
@@ -56,7 +56,7 @@ enum WriteOp {
 /// will be applied in the order in which they are added to the `SchemaBatch`.
 #[derive(Debug, Default)]
 pub struct SchemaBatch {
-    rows: HashMap<ColumnFamilyName, BTreeMap<Vec<u8>, WriteOp>>,
+    pub rows: HashMap<ColumnFamilyName, BTreeMap<Vec<u8>, WriteOp>>,
 }
 
 impl SchemaBatch {

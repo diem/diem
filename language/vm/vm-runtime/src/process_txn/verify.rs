@@ -9,6 +9,7 @@ use crate::{
 };
 use bytecode_verifier::VerifiedModule;
 use libra_logger::prelude::*;
+use libra_types::transaction::{Action, ScriptAction};
 use libra_types::{
     account_address::AccountAddress,
     transaction::{
@@ -76,6 +77,21 @@ where
                     verified_txn: VerTxn::Script(main),
                 })
             }
+            TransactionPayload::Channel(channel_payload) => {
+                let txn_state = txn_state
+                    .expect("script-based transactions should always have associated state");
+
+                let func = Self::verify_script_action(
+                    channel_payload.action(),
+                    txn_state.txn_executor.module_cache(),
+                    script_cache,
+                )?;
+
+                Some(VerifiedTransactionState {
+                    txn_executor: txn_state.txn_executor,
+                    verified_txn: VerTxn::ScriptAction(func),
+                })
+            }
         };
 
         Ok(Self {
@@ -136,6 +152,40 @@ where
         Ok(main)
     }
 
+    fn verify_script_action(
+        action: &ScriptAction,
+        module_cache: &P,
+        script_cache: &'txn ScriptCache<'alloc>,
+    ) -> Result<FunctionRef<'txn>, VMStatus> {
+        let func = match action.action() {
+            Action::Call(module, function) => {
+                let loaded_module = module_cache.get_loaded_module(module)?;
+                let func_idx =
+                    loaded_module
+                        .function_defs_table
+                        .get(function)
+                        .ok_or_else(|| {
+                            VMStatus::new(StatusCode::LINKER_ERROR).with_message(format!(
+                                "Can not find function when verify script action: {:?}",
+                                action
+                            ))
+                        })?;
+                FunctionRef::new(loaded_module, *func_idx)
+            }
+            Action::Code(code) => script_cache.cache_script(code)?,
+        };
+
+        if !verify_actuals(func.signature(), action.args()) {
+            return Err(
+                VMStatus::new(StatusCode::TYPE_MISMATCH).with_message(format!(
+                    "Actual Type Mismatch. function signature: {:?}",
+                    func.signature()
+                )),
+            );
+        }
+        Ok(func)
+    }
+
     /// Executes this transaction.
     pub fn execute(self) -> ExecutedTransaction {
         ExecutedTransaction::new(self)
@@ -166,16 +216,18 @@ where
     P: ModuleCache<'alloc>,
 {
     pub(super) txn_executor: TransactionExecutor<'alloc, 'txn, P>,
-    pub(super) verified_txn: VerTxn<'alloc>,
+    pub(super) verified_txn: VerTxn<'txn>,
 }
 
 /// A verified transaction is a transaction executing code that has gone through the verifier.
 ///
 /// It can be a program, a script or a module. A transaction script gets executed by the VM.
 /// A module script publishes the module provided.
-pub enum VerTxn<'alloc> {
-    Script(FunctionRef<'alloc>),
+pub enum VerTxn<'txn> {
+    Script(FunctionRef<'txn>),
     Module(Box<VerifiedModule>),
+    //TODO ScriptAction will be a FunctionRef with lifetime 'txn
+    ScriptAction(FunctionRef<'txn>),
 }
 
 /// Verify if the transaction arguments match the type signature of the main function.
@@ -194,6 +246,7 @@ fn verify_actuals(signature: &FunctionSignature, args: &[TransactionArgument]) -
             (SignatureToken::Address, TransactionArgument::Address(_)) => (),
             (SignatureToken::ByteArray, TransactionArgument::ByteArray(_)) => (),
             (SignatureToken::String, TransactionArgument::String(_)) => (),
+            (SignatureToken::Bool, TransactionArgument::Bool(_)) => (),
             _ => {
                 warn!(
                     "[VM] different argument type: formal {:?}, actual {:?}",
