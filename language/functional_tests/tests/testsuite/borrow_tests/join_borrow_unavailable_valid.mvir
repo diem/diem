@@ -7,7 +7,6 @@ module M {
 
         u = 0;
 
-        // INVALID
         if (move(cond)) {
             x = &u;
         } else {
@@ -17,5 +16,3 @@ module M {
         return;
     }
 }
-
-// check: JOIN_FAILURE

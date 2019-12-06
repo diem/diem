@@ -54,6 +54,15 @@ impl AbstractValue {
         }
     }
 
+    /// checks if self is a resource or all value
+    pub fn is_possibly_resource(&self) -> bool {
+        match self {
+            AbstractValue::Reference(_) => false,
+            AbstractValue::Value(Kind::Unrestricted) => false,
+            AbstractValue::Value(Kind::All) | AbstractValue::Value(Kind::Resource) => true,
+        }
+    }
+
     /// possibly extracts nonce from self
     pub fn extract_nonce(&self) -> Option<Nonce> {
         match self {
@@ -82,7 +91,7 @@ impl Default for LabelElem {
 pub struct AbstractState {
     locals: BTreeMap<LocalIndex, TypedAbstractValue>,
     borrow_graph: BorrowGraph<LabelElem>,
-    frame_root: Nonce,
+    num_locals: usize,
     next_id: usize,
 }
 
@@ -115,16 +124,17 @@ impl AbstractState {
                 );
             }
         }
-        let frame_root = Nonce::new(function_definition_view.locals_signature().len());
-        borrow_graph.add_nonce(frame_root);
-        // nonces in [0, frame_root.inner()] are reserved for constructing canonical state
-        let next_id = frame_root.inner() + 1;
-        AbstractState {
+        let num_locals = function_definition_view.locals_signature().len();
+        // nonces in [0, num_locals] are reserved for constructing canonical state
+        let next_id = num_locals + 1;
+        let mut new_state = AbstractState {
             locals,
             borrow_graph,
-            frame_root,
+            num_locals,
             next_id,
-        }
+        };
+        new_state.borrow_graph.add_nonce(new_state.frame_root());
+        new_state
     }
 
     /// checks if local@idx is available
@@ -163,7 +173,7 @@ impl AbstractState {
         self.locals
             .values()
             .all(|x| x.value.is_unrestricted_value())
-            && !self.is_nonce_borrowed(self.frame_root)
+            && !self.is_nonce_borrowed(self.frame_root())
     }
 
     /// destroys local@idx
@@ -176,6 +186,11 @@ impl AbstractState {
                 checked_verify!(kind == Kind::Unrestricted);
             }
         }
+    }
+
+    /// Returns the frame root reference
+    fn frame_root(&self) -> Nonce {
+        Nonce::new(self.num_locals)
     }
 
     /// adds new nonce to borrow graph
@@ -200,7 +215,7 @@ impl AbstractState {
     pub fn is_local_borrowed(&self, idx: LocalIndex) -> bool {
         !self
             .borrow_graph
-            .consistent_borrows(self.frame_root, LabelElem::Local(idx))
+            .consistent_borrows(self.frame_root(), LabelElem::Local(idx))
             .is_empty()
     }
 
@@ -208,7 +223,7 @@ impl AbstractState {
     pub fn is_global_borrowed(&self, idx: StructDefinitionIndex) -> bool {
         !self
             .borrow_graph
-            .consistent_borrows(self.frame_root, LabelElem::Global(idx))
+            .consistent_borrows(self.frame_root(), LabelElem::Global(idx))
             .is_empty()
     }
 
@@ -227,14 +242,14 @@ impl AbstractState {
         } else {
             let borrowed_nonces = self
                 .borrow_graph
-                .consistent_borrows(self.frame_root, LabelElem::Global(idx));
+                .consistent_borrows(self.frame_root(), LabelElem::Global(idx));
             if !self.all_nonces_immutable(borrowed_nonces) {
                 return None;
             }
         }
         let new_nonce = self.add_nonce();
         self.borrow_graph
-            .add_weak_edge(self.frame_root, vec![LabelElem::Global(idx)], new_nonce);
+            .add_weak_edge(self.frame_root(), vec![LabelElem::Global(idx)], new_nonce);
         Some(new_nonce)
     }
 
@@ -271,14 +286,17 @@ impl AbstractState {
             // nothing to check in case borrow is mutable since the frame cannot have a NIL outgoing edge
             let borrowed_nonces = self
                 .borrow_graph
-                .consistent_borrows(self.frame_root, LabelElem::Local(idx));
+                .consistent_borrows(self.frame_root(), LabelElem::Local(idx));
             if !self.all_nonces_immutable(borrowed_nonces) {
                 return None;
             }
         }
         let new_nonce = self.add_nonce();
-        self.borrow_graph
-            .add_strong_edge(self.frame_root, vec![LabelElem::Local(idx)], new_nonce);
+        self.borrow_graph.add_strong_edge(
+            self.frame_root(),
+            vec![LabelElem::Local(idx)],
+            new_nonce,
+        );
         Some(new_nonce)
     }
 
@@ -305,29 +323,32 @@ impl AbstractState {
 
     /// returns the canonical representation of self
     pub fn construct_canonical_state(&self) -> Self {
-        let mut new_locals = BTreeMap::new();
         let mut nonce_map = BTreeMap::new();
-        for (idx, abs_type) in &self.locals {
-            if let AbstractValue::Reference(nonce) = abs_type.value {
-                let new_nonce = Nonce::new(*idx as usize);
-                new_locals.insert(
-                    *idx,
-                    TypedAbstractValue {
-                        signature: abs_type.signature.clone(),
-                        value: AbstractValue::Reference(new_nonce),
-                    },
-                );
-                nonce_map.insert(nonce, new_nonce);
-            } else {
-                new_locals.insert(*idx, abs_type.clone());
-            }
-        }
-        nonce_map.insert(self.frame_root, self.frame_root);
+        nonce_map.insert(self.frame_root(), self.frame_root());
+        let locals = self
+            .locals
+            .iter()
+            .map(|(idx, abs)| {
+                let new_abs = match &abs.value {
+                    AbstractValue::Reference(nonce) => {
+                        let new_nonce = Nonce::new(*idx as usize);
+                        nonce_map.insert(*nonce, new_nonce);
+                        TypedAbstractValue {
+                            signature: abs.signature.clone(),
+                            value: AbstractValue::Reference(new_nonce),
+                        }
+                    }
+                    _ => abs.clone(),
+                };
+                (*idx, new_abs)
+            })
+            .collect::<BTreeMap<_, _>>();
+        checked_verify!(self.locals.len() == locals.len());
         let canonical_state = AbstractState {
-            locals: new_locals,
+            locals,
             borrow_graph: self.borrow_graph.rename_nonces(nonce_map),
-            frame_root: self.frame_root,
-            next_id: self.frame_root.inner() + 1,
+            num_locals: self.num_locals,
+            next_id: self.num_locals + 1,
         };
         checked_postcondition!(canonical_state.is_canonical());
         canonical_state
@@ -341,101 +362,91 @@ impl AbstractState {
     }
 
     fn is_canonical(&self) -> bool {
-        self.locals.iter().all(|(x, y)| {
-            !y.value.is_reference() || Nonce::new(*x as usize) == y.value.extract_nonce().unwrap()
-        })
+        self.num_locals + 1 == self.next_id
+            && self.locals.iter().all(|(x, y)| {
+                !y.value.is_reference()
+                    || Nonce::new(*x as usize) == y.value.extract_nonce().unwrap()
+            })
     }
 
-    fn borrowed_value_unavailable(state1: &AbstractState, state2: &AbstractState) -> bool {
-        state1.locals.keys().any(|idx| {
-            state1.locals[idx].value.is_value()
-                && state1.is_local_borrowed(*idx)
-                && !state2.locals.contains_key(idx)
-        })
+    fn iter_locals(&self) -> impl Iterator<Item = LocalIndex> {
+        (0..(self.num_locals as LocalIndex))
     }
 
-    fn split_locals(
-        locals: &BTreeMap<LocalIndex, TypedAbstractValue>,
-        values: &mut BTreeMap<LocalIndex, Kind>,
-        references: &mut BTreeMap<LocalIndex, Nonce>,
-    ) {
-        for (idx, abs_type) in locals {
-            match abs_type.value {
-                AbstractValue::Reference(nonce) => {
-                    references.insert(idx.clone(), nonce);
+    /// Returns `Some` of the self joined with other,
+    /// Returns `None` if there is a join error
+    pub fn join_(&self, other: &Self) -> Option<Self> {
+        checked_precondition!(self.is_canonical() && other.is_canonical());
+        checked_precondition!(self.next_id == other.next_id);
+        checked_precondition!(self.num_locals == other.num_locals);
+        let mut locals = BTreeMap::new();
+        let mut self_graph = self.borrow_graph.clone();
+        let mut other_graph = other.borrow_graph.clone();
+        for idx in self.iter_locals() {
+            let self_value = self.locals.get(&idx);
+            let other_value = other.locals.get(&idx);
+            match (self_value, other_value) {
+                // Unavailable on both sides, nothing to add
+                (None, None) => (),
+
+                // Join error, a resource is available along one path but not the other
+                (None, Some(v)) | (Some(v), None) if v.value.is_possibly_resource() => return None,
+
+                // The local has a unrestricted value on one side but not the other, nothing to add
+                (Some(v), None) => {
+                    // A reference exists on one side, but not the other. Release
+                    if let AbstractValue::Reference(id) = &v.value {
+                        self_graph.remove_nonce(*id);
+                    }
                 }
-                AbstractValue::Value(kind) => {
-                    values.insert(idx.clone(), kind);
+                (None, Some(v)) => {
+                    // A reference exists on one side, but not the other. Release
+                    if let AbstractValue::Reference(id) = &v.value {
+                        other_graph.remove_nonce(*id);
+                    }
+                }
+
+                // The local has a value on each side, add it to the state
+                (Some(v1), Some(v2)) => {
+                    checked_verify!(v1 == v2);
+                    checked_verify!(!locals.contains_key(&idx));
+                    locals.insert(idx, v1.clone());
                 }
             }
         }
+
+        let borrow_graph = {
+            self_graph.join(&other_graph);
+            self_graph
+        };
+        let next_id = self.next_id;
+        let num_locals = self.num_locals;
+
+        Some(Self {
+            locals,
+            borrow_graph,
+            next_id,
+            num_locals,
+        })
     }
 }
 
 impl AbstractDomain for AbstractState {
     /// attempts to join state to self and returns the result
     fn join(&mut self, state: &AbstractState) -> JoinResult {
-        checked_precondition!(self.is_canonical() && state.is_canonical());
-        // A join failure occurs in each of the following situations:
-        // - a reference or resource is available along one path but not the other
-        // - a value is borrowed along one path but unavailable along the other
-        if self
-            .locals
-            .keys()
-            .filter(|idx| !self.locals[idx].value.is_unrestricted_value())
-            .collect::<BTreeSet<_>>()
-            != state
-                .locals
-                .keys()
-                .filter(|idx| !state.locals[idx].value.is_unrestricted_value())
-                .collect::<BTreeSet<_>>()
-        {
-            return JoinResult::Error;
-        }
-        if Self::borrowed_value_unavailable(self, state)
-            || Self::borrowed_value_unavailable(state, self)
-        {
-            return JoinResult::Error;
-        }
-
-        let mut values1 = BTreeMap::new();
-        let mut references1 = BTreeMap::new();
-        Self::split_locals(&self.locals, &mut values1, &mut references1);
-        let mut values2 = BTreeMap::new();
-        let mut references2 = BTreeMap::new();
-        Self::split_locals(&state.locals, &mut values2, &mut references2);
-        checked_verify!(references1 == references2);
-
-        let mut locals = BTreeMap::new();
-        for (idx, nonce) in &references1 {
-            locals.insert(
-                idx.clone(),
-                TypedAbstractValue {
-                    signature: self.locals[idx].signature.clone(),
-                    value: AbstractValue::Reference(*nonce),
-                },
-            );
-        }
-        for (idx, kind1) in &values1 {
-            if let Some(kind2) = values2.get(idx) {
-                checked_verify!(kind1 == kind2);
-                locals.insert(
-                    idx.clone(),
-                    TypedAbstractValue {
-                        signature: self.locals[idx].signature.clone(),
-                        value: AbstractValue::Value(*kind1),
-                    },
-                );
-            }
-        }
-
-        let locals_unchanged = self.locals.keys().all(|idx| locals.contains_key(idx));
-        let borrow_graph_unchanged = self.borrow_graph.abstracts(&state.borrow_graph);
+        let joined = match Self::join_(self, state) {
+            None => return JoinResult::Error,
+            Some(joined) => joined,
+        };
+        checked_verify!(self.num_locals == joined.num_locals);
+        let locals_unchanged = self
+            .iter_locals()
+            .all(|idx| self.locals.get(&idx) == joined.locals.get(&idx));
+        let borrow_graph_unchanged = self.borrow_graph.abstracts(&joined.borrow_graph);
         if locals_unchanged && borrow_graph_unchanged {
             JoinResult::Unchanged
         } else {
-            self.locals = locals;
-            self.borrow_graph.join(&state.borrow_graph);
+            *self = joined;
             JoinResult::Changed
         }
     }
