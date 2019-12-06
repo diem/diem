@@ -9,6 +9,8 @@
 //! It relays read/write operations on the physical storage via [`schemadb`] to the underlying
 //! Key-Value storage system, and implements libra data structures on top of it.
 
+#[macro_use]
+extern crate prometheus;
 // Used in other crates for testing.
 pub mod mock_genesis;
 // Used in this and other crates for testing.
@@ -66,6 +68,7 @@ use libra_types::{
         Version,
     },
 };
+use prometheus::{IntCounter, IntGauge, IntGaugeVec};
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{convert::TryInto, iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_proto::StartupInfo;
@@ -73,6 +76,27 @@ use storage_proto::TreeState;
 
 lazy_static! {
     static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("storage");
+}
+
+lazy_static! {
+    pub static ref LIBRA_STORAGE_CF_SIZE_BYTES: IntGaugeVec = register_int_gauge_vec!(
+        // metric name
+        "libra_storage_cf_size_bytes",
+        // metric description
+        "Libra storage Column Family size in bytes",
+        // metric labels (dimensions)
+        &["cf_name"]
+    ).unwrap();
+
+    pub static ref LIBRA_STORAGE_COMMITTED_TXNS: IntCounter = register_int_counter!(
+        "libra_storage_committed_txns",
+        "Libra storage committed transactions"
+    ).unwrap();
+
+    pub static ref LIBRA_STORAGE_LATEST_TXN_VERSION: IntGauge = register_int_gauge!(
+        "libra_storage_latest_transaction_version",
+        "Libra storage latest transaction version"
+    ).unwrap();
 }
 
 const MAX_LIMIT: u64 = 1000;
@@ -376,7 +400,9 @@ impl LibraDB {
         if num_txns > 0 {
             let last_version = first_version + num_txns - 1;
             OP_COUNTER.inc_by("committed_txns", num_txns as usize);
+            LIBRA_STORAGE_COMMITTED_TXNS.inc_by(num_txns as i64);
             OP_COUNTER.set("latest_transaction_version", last_version as usize);
+            LIBRA_STORAGE_LATEST_TXN_VERSION.set(last_version as i64);
             counters
                 .expect("Counters should be bumped with transactions being saved.")
                 .bump_op_counters();
@@ -740,6 +766,9 @@ impl LibraDB {
             Ok(cf_sizes) => {
                 for (cf_name, size) in cf_sizes {
                     OP_COUNTER.set(&format!("cf_size_bytes_{}", cf_name), size as usize);
+                    LIBRA_STORAGE_CF_SIZE_BYTES
+                        .with_label_values(&[&cf_name])
+                        .set(size as i64);
                 }
             }
             Err(err) => warn!(
