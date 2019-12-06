@@ -3,6 +3,7 @@
 
 use crate::utils;
 use anyhow::{Context, Result};
+use client_lib::AccountAddress;
 use config_builder::swarm_config::{SwarmConfig, SwarmConfigBuilder};
 use debug_interface::NodeDebugClient;
 use libra_config::config::{NodeConfig, RoleType};
@@ -25,6 +26,7 @@ const LIBRA_NODE_BIN: &str = "libra-node";
 pub struct LibraNode {
     node: Child,
     node_id: String,
+    validator_peer_id: Option<AccountAddress>,
     role: RoleType,
     debug_client: NodeDebugClient,
     ac_port: u16,
@@ -60,6 +62,10 @@ impl LibraNode {
         let config = NodeConfig::load(&config_path)
             .unwrap_or_else(|_| panic!("Failed to load NodeConfig from file: {:?}", config_path));
         let log_file = File::create(&log_path)?;
+        let validator_peer_id = match role {
+            RoleType::Validator => Some(config.validator_network.unwrap().peer_id),
+            RoleType::FullNode => None,
+        };
         let mut node_command = Command::new(utils::get_bin(LIBRA_NODE_BIN));
         node_command
             .current_dir(utils::workspace_root())
@@ -85,11 +91,16 @@ impl LibraNode {
         Ok(Self {
             node,
             node_id,
+            validator_peer_id,
             role,
             debug_client,
             ac_port: config.admission_control.admission_control_service_port,
             log: log_path,
         })
+    }
+
+    pub fn validator_peer_id(&self) -> Option<AccountAddress> {
+        self.validator_peer_id
     }
 
     pub fn ac_port(&self) -> u16 {

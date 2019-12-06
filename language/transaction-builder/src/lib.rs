@@ -179,7 +179,7 @@ pub fn encode_register_validator_script(
 /// the `to_remove` address is already in the validator set or already in the pending removals.
 pub fn encode_remove_validator_script(to_remove: &AccountAddress) -> Script {
     Script::new(
-        ADD_VALIDATOR_TXN.clone(),
+        REMOVE_VALIDATOR_TXN.clone(),
         vec![TransactionArgument::Address(*to_remove)],
     )
 }

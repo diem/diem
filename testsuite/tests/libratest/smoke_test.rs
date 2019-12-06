@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused_mut)]
 use cli::{
-    client_proxy::ClientProxy, AccountAddress, CryptoHash, TransactionArgument, TransactionPayload,
+    association_address, client_proxy::ClientProxy, AccountAddress, CryptoHash,
+    TransactionArgument, TransactionPayload,
 };
 use libra_config::config::{NodeConfig, RoleType};
 use libra_crypto::{ed25519::*, test_utils::KeyPair, SigningKey};
 use libra_logger::prelude::*;
+use libra_swarm::swarm::LibraNode;
 use libra_swarm::{swarm::LibraSwarm, utils};
 use libra_tools::tempdir::TempPath;
 use num_traits::cast::FromPrimitive;
@@ -137,6 +139,10 @@ impl TestEnvironment {
                 panic!("Full Node swarm is not initialized");
             }
         }
+    }
+
+    fn get_validator(&self, node_index: usize) -> Option<&LibraNode> {
+        self.validator_swarm.get_validator(node_index)
     }
 }
 
@@ -688,5 +694,50 @@ fn test_full_node_basic_flow() {
     assert_eq!(
         Decimal::from_f64(30.0),
         Decimal::from_str(&full_node_client_2.get_balance(&["b", "4"]).unwrap()).ok()
+    );
+}
+
+#[test]
+fn test_e2e_reconfiguration() {
+    let (mut env, mut client_proxy_1) = setup_swarm_and_client_proxy(5, 1);
+    // the client connected to the removed validator
+    let mut client_proxy_0 = env.get_validator_ac_client(0);
+    client_proxy_1.create_next_account(false).unwrap();
+    client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());
+    client_proxy_1
+        .mint_coins(&["mintb", "0", "10"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy_1.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    // wait for the mint txn in node 0
+    client_proxy_0.wait_for_transaction(association_address(), 1);
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    let peer_id = env.get_validator(0).unwrap().validator_peer_id().unwrap();
+    client_proxy_1.remove_validator(peer_id, true).unwrap();
+    // mint another 10 coins after remove node 0
+    client_proxy_1
+        .mint_coins(&["mintb", "0", "10"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(20.0),
+        Decimal::from_str(&client_proxy_1.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    // client connected to removed validator can not see the update
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    // Add the node back
+    client_proxy_1.add_validator(peer_id, true).unwrap();
+    // Wait for it catches up, mint1 + remove + mint2 + add => seq == 4
+    client_proxy_0.wait_for_transaction(association_address(), 4);
+    assert_eq!(
+        Decimal::from_f64(20.0),
+        Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
     );
 }

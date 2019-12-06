@@ -230,15 +230,15 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         );
 
         if target_version <= highest_local_li.version() {
-            request
-                .callback
-                .send(Err(format_err!("Sync request for an old version")))
-                .map_err(|_| format_err!("Callback error"))?;
-            bail!(
+            warn!(
                 "[state sync] Sync request for version {} <= known version {}",
                 target_version,
                 highest_local_li.version()
             );
+            return request
+                .callback
+                .send(Ok(()))
+                .map_err(|_| format_err!("Callback error"));
         }
 
         self.peer_manager
