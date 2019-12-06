@@ -12,7 +12,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_types::block_info::BlockInfo;
-use libra_types::validator_set::ValidatorSet;
+use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,

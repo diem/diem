@@ -12,7 +12,7 @@ use crate::{
     NetworkPublicKeys, ProtocolId,
 };
 use channel;
-use libra_types::{validator_public_keys::ValidatorPublicKeys, PeerId};
+use libra_types::{crypto_proxies::ValidatorPublicKeys, PeerId};
 use std::time::Duration;
 
 /// Protocol id for consensus RPC calls

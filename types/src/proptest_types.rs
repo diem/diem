@@ -4,9 +4,9 @@
 #![forbid(unsafe_code)]
 
 use crate::block_info::{BlockInfo, Round};
+use crate::crypto_proxies::ValidatorSet;
 use crate::event::EVENT_KEY_LENGTH;
 use crate::transaction::{ChangeSet, Transaction};
-use crate::validator_set::ValidatorSet;
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,

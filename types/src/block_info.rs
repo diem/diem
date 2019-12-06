@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::{transaction::Version, validator_set::ValidatorSet};
+use crate::{crypto_proxies::ValidatorSet, transaction::Version};
 use libra_crypto::hash::HashValue;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;

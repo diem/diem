@@ -18,13 +18,13 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::LedgerInfoWithSignatures,
+    crypto_proxies::ValidatorSet,
     ledger_info::LedgerInfo,
     proof::{accumulator::InMemoryAccumulator, definition::LeafCount, SparseMerkleProof},
     transaction::{
         Transaction, TransactionInfo, TransactionOutput, TransactionPayload, TransactionStatus,
         TransactionToCommit, Version,
     },
-    validator_set::ValidatorSet,
     write_set::{WriteOp, WriteSet},
 };
 use scratchpad::{ProofRead, SparseMerkleTree};

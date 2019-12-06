@@ -25,6 +25,8 @@ use crate::{
     account_address::AccountAddress,
     ledger_info::LedgerInfoWithSignatures as RawLedgerInfoWithSignatures,
     validator_change::ValidatorChangeEventWithProof as RawValidatorChangeEventWithProof,
+    validator_public_keys::ValidatorPublicKeys as RawValidatorPublicKeys,
+    validator_set::ValidatorSet as RawValidatorSet,
     validator_signer::ValidatorSigner as RawValidatorSigner,
     validator_verifier::{
         ValidatorInfo as RawValidatorInfo, ValidatorVerifier as RawValidatorVerifier, VerifyError,
@@ -93,6 +95,8 @@ pub type ValidatorInfo = RawValidatorInfo<Ed25519PublicKey>;
 pub type ValidatorVerifier = RawValidatorVerifier<Ed25519PublicKey>;
 pub type ValidatorSigner = RawValidatorSigner<Ed25519PrivateKey>;
 pub type ValidatorChangeEventWithProof = RawValidatorChangeEventWithProof<Ed25519Signature>;
+pub type ValidatorPublicKeys = RawValidatorPublicKeys<Ed25519PublicKey>;
+pub type ValidatorSet = RawValidatorSet<Ed25519PublicKey>;
 
 /// Helper function to get random validator signers and a corresponding validator verifier for
 /// testing.  If custom_voting_power_quorum is not None, set a custom voting power quorum amount.

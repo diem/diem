@@ -9,8 +9,8 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use libra_crypto::HashValue;
+use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::ledger_info::LedgerInfo;
-use libra_types::validator_set::ValidatorSet;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},

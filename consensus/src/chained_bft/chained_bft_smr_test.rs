@@ -27,11 +27,11 @@ use libra_config::config::{
 };
 use libra_crypto::hash::CryptoHash;
 use libra_types::{
+    crypto_proxies::ValidatorSet,
     crypto_proxies::{
         random_validator_verifier, LedgerInfoWithSignatures, ValidatorChangeEventWithProof,
         ValidatorSigner, ValidatorVerifier,
     },
-    validator_set::ValidatorSet,
 };
 use network::{
     proto::ConsensusMsg_oneof,

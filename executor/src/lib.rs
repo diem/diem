@@ -30,10 +30,10 @@ use libra_types::{
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     crypto_proxies::LedgerInfoWithSignatures,
+    crypto_proxies::ValidatorSet,
     ledger_info::LedgerInfo,
     proof::accumulator::InMemoryAccumulator,
     transaction::{Transaction, TransactionListWithProof, TransactionStatus, Version},
-    validator_set::ValidatorSet,
 };
 use scratchpad::SparseMerkleTree;
 use serde::{Deserialize, Serialize};

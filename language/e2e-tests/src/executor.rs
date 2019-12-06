@@ -12,11 +12,11 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_config::AccountResource,
+    crypto_proxies::ValidatorSet,
     language_storage::ModuleId,
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionPayload, TransactionStatus,
     },
-    validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
