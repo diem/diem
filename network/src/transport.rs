@@ -129,6 +129,7 @@ pub fn build_memory_noise_transport(
 pub fn build_permissionless_memory_noise_transport(
     own_identity: Identity,
     identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
+    is_public: bool,
 ) -> boxed::BoxedTransport<(Identity, impl StreamMultiplexer), impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
     let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
@@ -157,9 +158,13 @@ pub fn build_permissionless_memory_noise_transport(
         .and_then(move |(peer_id, muxer), origin| {
             async move {
                 let (identity, muxer) = exchange_identity(&own_identity, muxer, origin).await?;
-                match_peer_id(identity, peer_id)
-                    .and_then(|identity| check_role(&own_identity, identity))
-                    .and_then(|identity| Ok((identity, muxer)))
+                if !is_public {
+                    match_peer_id(identity, peer_id)
+                        .and_then(|identity| check_role(&own_identity, identity))
+                        .and_then(|identity| Ok((identity, muxer)))
+                } else {
+                    check_role(&own_identity, identity).and_then(|identity| Ok((identity, muxer)))
+                }
             }
         })
         .with_timeout(TRANSPORT_TIMEOUT)
@@ -235,6 +240,7 @@ pub fn build_tcp_noise_transport(
 pub fn build_permissionless_tcp_noise_transport(
     own_identity: Identity,
     identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
+    is_public: bool,
 ) -> boxed::BoxedTransport<(Identity, impl StreamMultiplexer), impl ::std::error::Error> {
     let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
     LIBRA_TCP_TRANSPORT
@@ -262,9 +268,13 @@ pub fn build_permissionless_tcp_noise_transport(
         .and_then(move |(peer_id, muxer), origin| {
             async move {
                 let (identity, muxer) = exchange_identity(&own_identity, muxer, origin).await?;
-                match_peer_id(identity, peer_id)
-                    .and_then(|identity| check_role(&own_identity, identity))
-                    .and_then(|identity| Ok((identity, muxer)))
+                if !is_public {
+                    match_peer_id(identity, peer_id)
+                        .and_then(|identity| check_role(&own_identity, identity))
+                        .and_then(|identity| Ok((identity, muxer)))
+                } else {
+                    check_role(&own_identity, identity).and_then(|identity| Ok((identity, muxer)))
+                }
             }
         })
         .with_timeout(TRANSPORT_TIMEOUT)

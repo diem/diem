@@ -1,0 +1,122 @@
+module HashTimeLock {
+    import 0x0.LibraCoin;
+    import 0x0.Hash;
+    import 0x0.LibraSystem;
+    import 0x0.ChannelTransaction;
+    import 0x0.ChannelUtil;
+
+    resource T {
+        locker: address,
+        unlocker: address,
+        //TODO use generic to represent generic resource.
+        locked_rs: LibraCoin.T,
+        hash_lock: bytearray,
+        time_lock: u64,
+    }
+
+    public lock(unlocker: address, locked_rs: LibraCoin.T, hash_lock: bytearray, time_lock: u64){
+        let sender: address;
+        let t: Self.T;
+
+        sender = get_txn_sender();
+        t = T {
+            locker: move(sender),
+            unlocker: move(unlocker),
+            locked_rs: move(locked_rs),
+            hash_lock: move(hash_lock),
+            time_lock: move(time_lock),
+        };
+        //TODO fire event
+        move_to_sender<T>(move(t));
+        return;
+    }
+
+   public unlock(locker: address, preimage: bytearray): LibraCoin.T acquires T {
+       let sender: address;
+       let t: &Self.T;
+       let hash: bytearray;
+
+       sender = get_txn_sender();
+       t = borrow_global<T>(copy(locker));
+       assert(*&copy(t).locker == copy(locker), 100);
+       assert(*&copy(t).unlocker == move(sender), 100);
+       assert(*&copy(t).time_lock < LibraSystem.get_current_block_height(), 101)
+
+       hash = Hash.sha3_256(move(preimage));
+       assert(*&move(t).hash_lock == move(hash), 102);
+
+       return Self.unpark_rs(move_from<T>(move(locker)));
+   }
+
+   public unlock_after_timeout(): LibraCoin.T acquires T {
+          let sender: address;
+          let t: &Self.T;
+
+          sender = get_txn_sender();
+          t = borrow_global<T>(copy(sender));
+          assert(*&copy(t).locker == copy(sender), 100);
+          assert(*&move(t).time_lock >= LibraSystem.get_current_block_height(), 101)
+
+          return Self.unpark_rs(move_from<T>(move(sender)));
+   }
+
+
+    public lock_in_channel(unlocker: address, locked_rs: LibraCoin.T, hash_lock: bytearray, time_lock: u64){
+        let t: Self.T;
+        let proposer: address;
+
+        proposer = ChannelTransaction.get_proposer();
+        t = T {
+            locker: move(proposer),
+            unlocker: move(unlocker),
+            locked_rs: move(locked_rs),
+            hash_lock: move(hash_lock),
+            time_lock: move(time_lock),
+        };
+        ChannelUtil.move_to_shared<Self.T>(move(t));
+        return;
+    }
+
+    public unlock_in_channel(preimage: bytearray): LibraCoin.T{
+        let channel_address: address;
+        let proposer: address;
+        let t: &Self.T;
+        let hash: bytearray;
+
+        channel_address = get_txn_sender();
+        proposer = ChannelTransaction.get_proposer();
+
+        t = ChannelUtil.borrow_from_shared<Self.T>();
+        assert(*&copy(t).unlocker == move(proposer), 100);
+
+        hash = Hash.sha3_256(move(preimage));
+        assert(*&move(t).hash_lock == move(hash), 102);
+
+        return Self.unpark_rs(ChannelUtil.move_from_shared<Self.T>());
+    }
+
+    public unlock_in_channel_after_timeout(): LibraCoin.T {
+        let proposer: address;
+        let t: &Self.T;
+        let hash: bytearray;
+
+        proposer = ChannelTransaction.get_proposer();
+        t = ChannelUtil.borrow_from_shared<Self.T>();
+
+        assert(*&copy(t).locker == copy(proposer), 100);
+        assert(*&copy(t).time_lock >= LibraSystem.get_current_block_height(), 101)
+
+        return Self.unpark_rs(ChannelUtil.move_from_shared<Self.T>());
+    }
+
+    unpark_rs(t: Self.T): LibraCoin.T {
+        let locker: address;
+        let unlocker: address;
+        let locked_rs: LibraCoin.T;
+        let hash_lock: bytearray;
+        let time_lock: u64;
+        T{locker, unlocker, locked_rs, hash_lock, time_lock} = move(t);
+        return move(locked_rs);
+    }
+
+}

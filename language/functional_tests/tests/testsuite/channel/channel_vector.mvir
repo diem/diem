@@ -1,0 +1,94 @@
+//! account: bob
+//! account: alice
+//! channel: ch1, alice|bob
+
+//! new-transaction
+module VecTest{
+    import 0x0.Vector;
+    import 0x0.ChannelUtil;
+    import 0x0.LibraAccount;
+    import 0x0.ChannelTransaction;
+
+    resource VecBox {
+        grid: Vector.T<bool>,
+    }
+
+    public test_move_vec_to_participant(participant: address) {
+        let t: Self.VecBox;
+        let grid: Vector.T<bool>;
+
+        grid = Vector.empty<bool>();
+
+        t = VecBox {
+            grid: move(grid),
+        };
+
+        ChannelUtil.move_to_participant<Self.VecBox>(copy(participant),move(t));
+
+        return;
+    }
+
+    public test_move_vec_from_participant(participant: address) {
+        let t: Self.VecBox;
+        let grid: Vector.T<bool>;
+
+        t = ChannelUtil.move_from_participant<Self.VecBox>(copy(participant));
+        VecBox{ grid } = move(t);
+        Vector.destroy_empty<bool>(move(grid));
+        return;
+    }
+
+}
+
+//! new-transaction
+//! sender: alice
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1, alice
+//! args: {{bob}},50000,40000
+
+0x0.ChannelScript.open
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{alice}}
+
+{{default}}.VecTest.test_move_vec_to_participant
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{alice}}
+
+{{default}}.VecTest.test_move_vec_from_participant
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{bob}}
+
+{{default}}.VecTest.test_move_vec_to_participant
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{bob}}
+
+{{default}}.VecTest.test_move_vec_from_participant
+
+

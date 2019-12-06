@@ -170,7 +170,7 @@ fn pick_peer(peer_info: &HashMap<PeerId, bool>) -> Option<PeerId> {
     None
 }
 
-async fn submit_transaction<M, V>(
+pub async fn submit_transaction<M, V>(
     request: SubmitTransactionRequest,
     mut upstream_proxy_data: UpstreamProxyData<M, V>,
     peer_id: Option<PeerId>,

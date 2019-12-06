@@ -7,12 +7,16 @@ use crate::{
     process_txn::{verify::VerifiedTransaction, ProcessTransaction},
     txn_executor::TransactionExecutor,
 };
-use libra_config::config::VMPublishingOption;
+use libra_config::config::{VMMode, VMPublishingOption};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
-    transaction::{SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES},
+    transaction::{
+        ChannelTransactionPayload, SignatureCheckedTransaction, TransactionPayload,
+        MAX_TRANSACTION_SIZE_IN_BYTES,
+    },
     vm_error::{StatusCode, VMStatus},
+    write_set::WriteSet,
 };
 use vm::{
     errors::convert_prologue_runtime_error,
@@ -67,6 +71,7 @@ where
         process_txn: ProcessTransaction<'alloc, 'txn, P>,
         mode: ValidationMode,
         publishing_option: &VMPublishingOption,
+        vm_mode: VMMode,
     ) -> Result<Self, VMStatus> {
         let ProcessTransaction {
             txn,
@@ -85,6 +90,7 @@ where
                     module_cache,
                     data_cache,
                     mode,
+                    vm_mode,
                     || {
                         // Verify against whitelist if we are locked. Otherwise allow.
                         if !is_allowed_script(&publishing_option, &script.code()) {
@@ -103,6 +109,7 @@ where
                     module_cache,
                     data_cache,
                     mode,
+                    vm_mode,
                     || {
                         if !publishing_option.is_open() {
                             warn!("[VM] Custom modules not allowed");
@@ -133,9 +140,43 @@ where
 
                 None
             }
+            TransactionPayload::Channel(channel_payload) => Some(ValidatedTransaction::validate(
+                &txn,
+                gas_schedule,
+                module_cache,
+                data_cache,
+                mode,
+                vm_mode,
+                || {
+                    Self::check_channel_payload(channel_payload)?;
+                    Ok(())
+                },
+            )?),
         };
 
         Ok(Self { txn, txn_state })
+    }
+
+    fn check_channel_payload(channel_payload: &ChannelTransactionPayload) -> Result<(), VMStatus> {
+        let channel_address = channel_payload.channel_address();
+        let witness = channel_payload.witness();
+        match channel_payload.verify() {
+            Err(e) => {
+                warn!("[VM] Verify channel payload signature fail: {:?}", e);
+                return Err(
+                    VMStatus::new(StatusCode::INVALID_SIGNATURE).with_message(format!("{:?}", e))
+                );
+            }
+            Ok(_) => {}
+        }
+        let write_set = witness.write_set();
+        for (ap, _op) in write_set {
+            if &ap.address != &channel_address {
+                warn!("[VM] Attempt to access a resource out of channel.");
+                return Err(VMStatus::new(StatusCode::INVALID_WRITE_SET));
+            }
+        }
+        Ok(())
     }
 
     /// Verifies the bytecode in this transaction.
@@ -168,6 +209,7 @@ where
         module_cache: P,
         data_cache: &'txn dyn RemoteCache,
         mode: ValidationMode,
+        vm_mode: VMMode,
         payload_check: impl Fn() -> Result<(), VMStatus>,
     ) -> Result<ValidatedTransactionState<'alloc, 'txn, P>, VMStatus> {
         let raw_bytes_len = AbstractMemorySize::new(txn.raw_txn_bytes_len() as GasCarrier);
@@ -195,7 +237,10 @@ where
         // The submitted max gas units that the transaction can consume is greater than the
         // maximum number of gas units bound that we have set for any
         // transaction.
-        if txn.max_gas_amount() > gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() {
+        // Only Onchain vm limit max gas.
+        if vm_mode == VMMode::Onchain
+            && txn.max_gas_amount() > gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get()
+        {
             let error_str = format!(
                 "max gas units: {}, gas units submitted: {}",
                 gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
@@ -273,9 +318,24 @@ where
 
         payload_check()?;
 
+        // Check channel write_set asset balance, offchain channel transaction should keep asset
+        // balance, then cache the write_set to transaction cache for Move script to use.
+        let pre_cache_write_set = match txn.payload() {
+            TransactionPayload::Channel(channel_payload) => {
+                Some(channel_payload.witness().write_set().clone())
+            }
+            _ => None,
+        };
+
         let metadata = TransactionMetadata::new(&txn);
-        let mut txn_state =
-            ValidatedTransactionState::new(metadata, gas_schedule, module_cache, data_cache);
+        let mut txn_state = ValidatedTransactionState::new(
+            metadata,
+            gas_schedule,
+            module_cache,
+            data_cache,
+            pre_cache_write_set,
+            vm_mode,
+        );
 
         // Run the prologue to ensure that clients have enough gas and aren't tricking us by
         // sending us garbage.
@@ -322,9 +382,17 @@ where
         gas_schedule: &'txn CostTable,
         module_cache: P,
         data_cache: &'txn dyn RemoteCache,
+        pre_cache_write_set: Option<WriteSet>,
+        vm_mode: VMMode,
     ) -> Self {
-        let txn_executor =
-            TransactionExecutor::new(module_cache, gas_schedule, data_cache, metadata);
+        let txn_executor = TransactionExecutor::new_with_vm_mode(
+            module_cache,
+            gas_schedule,
+            data_cache,
+            metadata,
+            pre_cache_write_set,
+            vm_mode,
+        );
         Self { txn_executor }
     }
 }

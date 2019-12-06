@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use admission_control_service::runtime::AdmissionControlRuntime;
-use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
+use consensus::consensus_provider::{
+    make_consensus_provider, make_pow_consensus_provider, ConsensusProvider,
+};
 use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use executor::Executor;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
-use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
+use libra_config::config::{ConsensusType::POW, NetworkConfig, NodeConfig, RoleType};
 use libra_crypto::{ed25519::*, ValidKey};
 use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
@@ -41,13 +43,13 @@ use tokio::runtime::{Builder, Runtime};
 use vm_runtime::MoveVM;
 
 pub struct LibraHandle {
-    _ac: AdmissionControlRuntime,
-    _mempool: Option<MempoolRuntime>,
-    _state_synchronizer: StateSynchronizer,
-    _network_runtimes: Vec<Runtime>,
-    consensus: Option<Box<dyn ConsensusProvider>>,
-    _storage: ServerHandle,
-    _debug: ServerHandle,
+    pub _ac: AdmissionControlRuntime,
+    pub _mempool: Option<MempoolRuntime>,
+    pub _state_synchronizer: StateSynchronizer,
+    pub _network_runtimes: Vec<Runtime>,
+    pub consensus: Option<Box<dyn ConsensusProvider>>,
+    pub _storage: ServerHandle,
+    pub _debug: ServerHandle,
 }
 
 impl Drop for LibraHandle {
@@ -58,7 +60,7 @@ impl Drop for LibraHandle {
     }
 }
 
-fn setup_executor(config: &NodeConfig) -> Arc<Executor<MoveVM>> {
+pub fn setup_executor(config: &NodeConfig) -> Arc<Executor<MoveVM>> {
     let client_env = Arc::new(EnvBuilder::new().name_prefix("grpc-exe-sto-").build());
     let storage_read_client = Arc::new(StorageReadServiceClient::new(
         Arc::clone(&client_env),
@@ -79,7 +81,7 @@ fn setup_executor(config: &NodeConfig) -> Arc<Executor<MoveVM>> {
     ))
 }
 
-fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
+pub fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
     let env = Arc::new(EnvBuilder::new().name_prefix("grpc-debug-").build());
     // Start Debug interface
     let debug_service = create_node_debug_interface(NodeDebugService::new());
@@ -119,7 +121,8 @@ pub fn setup_network(
         .rpc_protocols(vec![
             ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
             ProtocolId::from_static(ADMISSION_CONTROL_RPC_PROTOCOL),
-        ]);
+        ])
+        .is_public(config.is_public_network);
     if config.is_permissioned {
         // If the node wants to run in permissioned mode, it should also have authentication and
         // encryption.
@@ -166,6 +169,25 @@ pub fn setup_network(
         network_builder.transport(TransportType::PermissionlessTcpNoise(Some(
             config.network_keypairs.get_network_identity_keypair(),
         )));
+    } else if config.is_public_network {
+        let seed_peers = config
+            .seed_peers
+            .seed_peers
+            .clone()
+            .into_iter()
+            .map(|(peer_id, addrs)| (peer_id.try_into().expect("Invalid PeerId"), addrs))
+            .collect();
+        let network_signing_private = config.network_keypairs.take_network_signing_private()
+            .expect("Failed to move network signing private key out of NodeConfig, key not set or moved already");
+        let network_signing_public: Ed25519PublicKey = (&network_signing_private).into();
+        network_builder
+            .transport(TransportType::PermissionlessTcpNoise(Some(
+                config.network_keypairs.get_network_identity_keypair(),
+            )))
+            .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
+            .seed_peers(seed_peers)
+            .signing_keys((network_signing_private, network_signing_public))
+            .discovery_interval_ms(config.discovery_interval_ms);
     } else {
         network_builder.transport(TransportType::Tcp);
     }
@@ -178,10 +200,17 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     // Some of our code uses the rayon global thread pool. Name the rayon threads so it doesn't
     // cause confusion, otherwise the threads would have their parent's name.
-    rayon::ThreadPoolBuilder::new()
+    match rayon::ThreadPoolBuilder::new()
         .thread_name(|index| format!("rayon-global-{}", index))
         .build_global()
-        .expect("Building rayon global thread pool should work.");
+    {
+        Ok(_) => {
+            debug!("ThreadPool build succ.");
+        }
+        Err(e) => {
+            warn!("ThreadPoolBuild err: {:?}", e);
+        }
+    }
 
     let mut instant = Instant::now();
     let storage = start_storage_service(&node_config);
@@ -296,13 +325,23 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
         // Initialize and start consensus.
         instant = Instant::now();
-        let mut consensus_provider = make_consensus_provider(
-            node_config,
-            consensus_network_sender,
-            consensus_network_events,
-            executor,
-            state_synchronizer.create_client(),
-        );
+        let mut consensus_provider = match node_config.consensus.consensus_type {
+            POW => make_pow_consensus_provider(
+                node_config,
+                consensus_network_sender,
+                consensus_network_events,
+                executor,
+                state_synchronizer.create_client(),
+                false,
+            ),
+            _ => make_consensus_provider(
+                node_config,
+                consensus_network_sender,
+                consensus_network_events,
+                executor,
+                state_synchronizer.create_client(),
+            ),
+        };
         consensus_provider
             .start()
             .expect("Failed to start consensus. Can't proceed.");

@@ -314,6 +314,14 @@ fn new_raw_transaction(
             // not used, but it isn't a huge deal.
             RawTransaction::new_write_set(sender, sequence_number, write_set)
         }
+        TransactionPayload::Channel(channel) => RawTransaction::new_channel(
+            sender,
+            sequence_number,
+            channel,
+            max_gas_amount,
+            gas_unit_price,
+            Duration::from_secs(expiration_time_secs),
+        ),
     }
 }
 

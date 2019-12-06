@@ -31,11 +31,21 @@ impl MempoolProxy {
         compute_result: &StateComputeResult,
         timestamp_usecs: u64,
     ) -> CommitTransactionsRequest {
-        let mut all_updates = Vec::new();
         // we exclude the prologue txn, we probably need a way to ensure this aligns with state_computer
         let status = compute_result.compute_status[1..].to_vec();
-        assert_eq!(txns.len(), status.len());
-        for (txn, status) in txns.iter().zip(compute_result.compute_status.iter()) {
+        Self::gen_commit_transactions_request_with_txn_status(txns, status, timestamp_usecs)
+    }
+
+    /// Generate mempool commit transactions request given the set of txns and their status
+    fn gen_commit_transactions_request_with_txn_status(
+        txns: &[SignedTransaction],
+        compute_status: Vec<TransactionStatus>,
+        timestamp_usecs: u64,
+    ) -> CommitTransactionsRequest {
+        let mut all_updates = Vec::new();
+        // we exclude the prologue txn, we probably need a way to ensure this aligns with state_computer
+        assert_eq!(txns.len(), compute_status.len());
+        for (txn, status) in txns.iter().zip(compute_status.iter()) {
             let mut transaction = CommittedTransaction::default();
             transaction.sender = txn.sender().as_ref().to_vec();
             transaction.sequence_number = txn.sequence_number();
@@ -140,6 +150,23 @@ impl TxnManager for MempoolProxy {
         counters::NUM_TXNS_PER_BLOCK.observe(txns.len() as f64);
         let req =
             Self::gen_commit_transactions_request(txns.as_slice(), compute_result, timestamp_usecs);
+        self.submit_commit_transactions_request(req)
+    }
+
+    fn commit_txns_with_status<'a>(
+        &'a self,
+        txns: &Self::Payload,
+        txns_status: Vec<TransactionStatus>,
+        // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
+        timestamp_usecs: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
+        counters::COMMITTED_BLOCKS_COUNT.inc();
+        counters::NUM_TXNS_PER_BLOCK.observe(txns.len() as f64);
+        let req = Self::gen_commit_transactions_request_with_txn_status(
+            txns.as_slice(),
+            txns_status,
+            timestamp_usecs,
+        );
         self.submit_commit_transactions_request(req)
     }
 }

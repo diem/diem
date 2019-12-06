@@ -9,7 +9,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use proptest::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
-use serde::{de, ser};
+use serde::{de, ser, Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 
 /// The minimum status code for validation statuses
@@ -44,7 +44,7 @@ pub static EXECUTION_STATUS_MAX_CODE: u64 = 4999;
 
 /// A `VMStatus` is represented as a required major status that is semantic coupled with with
 /// an optional sub status and message.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 pub struct VMStatus {
@@ -451,6 +451,7 @@ pub enum StatusCode {
     CALL_STACK_OVERFLOW = 4021,
     NATIVE_FUNCTION_ERROR = 4022,
     GAS_SCHEDULE_ERROR = 4023,
+    MISSING_SIGNATURE_ERROR = 4024,
 
     // A reserved status to represent an unknown vm status.
     UNKNOWN_STATUS = std::u64::MAX,

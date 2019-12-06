@@ -29,14 +29,18 @@ use std::{
     time::Duration,
 };
 
+mod channel_transaction_payload;
 pub mod helpers;
 mod module;
 mod script;
+mod script_action;
 mod transaction_argument;
 
 pub use module::Module;
 pub use script::{Script, SCRIPT_HASH_LENGTH};
+pub use script_action::{Action, ScriptAction};
 
+pub use channel_transaction_payload::{ChannelTransactionPayload, ChannelTransactionPayloadBody};
 use std::ops::Deref;
 pub use transaction_argument::{parse_as_transaction_argument, TransactionArgument};
 
@@ -183,6 +187,42 @@ impl RawTransaction {
         }
     }
 
+    pub fn new_channel(
+        sender: AccountAddress,
+        sequence_number: u64,
+        channel_payload: ChannelTransactionPayload,
+        max_gas_amount: u64,
+        gas_unit_price: u64,
+        expiration_time: Duration,
+    ) -> Self {
+        RawTransaction {
+            sender,
+            sequence_number,
+            payload: TransactionPayload::Channel(channel_payload),
+            max_gas_amount,
+            gas_unit_price,
+            expiration_time,
+        }
+    }
+
+    pub fn new_payload_txn(
+        sender: AccountAddress,
+        sequence_number: u64,
+        payload: TransactionPayload,
+        max_gas_amount: u64,
+        gas_unit_price: u64,
+        expiration_time: Duration,
+    ) -> Self {
+        RawTransaction {
+            sender,
+            sequence_number,
+            payload,
+            max_gas_amount,
+            gas_unit_price,
+            expiration_time,
+        }
+    }
+
     /// Signs the given `RawTransaction`. Note that this consumes the `RawTransaction` and turns it
     /// into a `SignatureCheckedTransaction`.
     ///
@@ -202,6 +242,10 @@ impl RawTransaction {
         self.payload
     }
 
+    pub fn payload(&self) -> &TransactionPayload {
+        &self.payload
+    }
+
     pub fn format_for_client(&self, get_transaction_name: impl Fn(&[u8]) -> String) -> String {
         let empty_vec = vec![];
         let (code, args) = match &self.payload {
@@ -213,6 +257,7 @@ impl RawTransaction {
                 (get_transaction_name(script.code()), script.args())
             }
             TransactionPayload::Module(_) => ("module publishing".to_string(), &empty_vec[..]),
+            TransactionPayload::Channel(_) => ("channel".to_string(), &empty_vec[..]),
         };
         let mut f_args: String = "".to_string();
         for arg in args {
@@ -244,6 +289,22 @@ impl RawTransaction {
     pub fn sender(&self) -> AccountAddress {
         self.sender
     }
+
+    pub fn sequence_number(&self) -> u64 {
+        self.sequence_number
+    }
+
+    pub fn max_gas_amount(&self) -> u64 {
+        self.max_gas_amount
+    }
+
+    pub fn gas_unit_price(&self) -> u64 {
+        self.gas_unit_price
+    }
+
+    pub fn expiration_time(&self) -> Duration {
+        self.expiration_time
+    }
 }
 
 impl CryptoHash for RawTransaction {
@@ -270,6 +331,17 @@ pub enum TransactionPayload {
     Script(Script),
     /// A transaction that publishes code.
     Module(Module),
+    /// New Channel transaction.
+    Channel(ChannelTransactionPayload),
+}
+
+impl TransactionPayload {
+    pub fn is_channel(&self) -> bool {
+        match self {
+            TransactionPayload::Channel(_) => true,
+            _ => false,
+        }
+    }
 }
 
 /// A transaction that has been signed.
@@ -388,12 +460,17 @@ impl SignedTransaction {
             .len()
     }
 
+    pub fn raw_txn(&self) -> &RawTransaction {
+        &self.raw_txn
+    }
+
     /// Checks that the signature of given transaction. Returns `Ok(SignatureCheckedTransaction)` if
     /// the signature is valid.
     pub fn check_signature(self) -> Result<SignatureCheckedTransaction> {
         self.public_key
             .verify_signature(&self.raw_txn.hash(), &self.signature)?;
         Ok(SignatureCheckedTransaction(self))
+        //TODO(jole) check receiver signature.
     }
 
     pub fn format_for_client(&self, get_transaction_name: impl Fn(&[u8]) -> String) -> String {
@@ -543,7 +620,7 @@ impl From<TransactionWithProof> for crate::proto::types::TransactionWithProof {
 /// The status of executing a transaction. The VM decides whether or not we should `Keep` the
 /// transaction output or `Discard` it based upon the execution of the transaction. We wrap these
 /// decisions around a `VMStatus` that provides more detail on the final execution state of the VM.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionStatus {
     /// Discard the transaction output
     Discard(VMStatus),
@@ -593,7 +670,7 @@ impl From<VMStatus> for TransactionStatus {
 }
 
 /// The output of executing a transaction.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct TransactionOutput {
     /// The list of writes this transaction intends to do.
     write_set: WriteSet,
@@ -623,6 +700,15 @@ impl TransactionOutput {
         }
     }
 
+    pub fn new_with_write_set(write_set: WriteSet) -> Self {
+        Self::new(
+            write_set,
+            vec![],
+            0,
+            VMStatus::new(StatusCode::EXECUTED).into(),
+        )
+    }
+
     pub fn write_set(&self) -> &WriteSet {
         &self.write_set
     }
@@ -637,6 +723,21 @@ impl TransactionOutput {
 
     pub fn status(&self) -> &TransactionStatus {
         &self.status
+    }
+
+    pub fn is_travel_txn(&self) -> bool {
+        self.write_set.contains_onchain_resource()
+    }
+}
+
+impl fmt::Display for TransactionOutput {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "TransactionOutput\t")?;
+        write!(f, "write_set: {}\t", self.write_set.len())?;
+        write!(f, "events: {}\t", self.events.len())?;
+        write!(f, "status: {:?}\t", self.status)?;
+        write!(f, "gas_used: {:?}\t", self.gas_used)?;
+        Ok(())
     }
 }
 

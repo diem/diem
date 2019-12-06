@@ -16,6 +16,7 @@ pub mod test_helper;
 pub mod errors;
 pub mod schema;
 
+mod block_index_store;
 mod change_set;
 mod event_store;
 mod ledger_counters;
@@ -29,6 +30,7 @@ mod transaction_store;
 mod libradb_test;
 
 use crate::{
+    block_index_store::BlockIndexStore,
     change_set::{ChangeSet, SealedChangeSet},
     errors::LibraDbError,
     event_store::EventStore,
@@ -46,6 +48,12 @@ use lazy_static::lazy_static;
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_logger::prelude::*;
 use libra_metrics::OpMetrics;
+use libra_types::account_config::channel_global_events_address;
+use libra_types::block_index::BlockIndex;
+use libra_types::channel::{
+    channel_global_events_resource_path, channel_resource_path, ChannelGlobalEventsResource,
+    ChannelResource,
+};
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -64,6 +72,8 @@ use libra_types::{
     },
 };
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
+use std::collections::BTreeMap;
+use std::convert::TryFrom;
 use std::{convert::TryInto, iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_proto::StartupInfo;
 use storage_proto::TreeState;
@@ -92,6 +102,7 @@ pub struct LibraDB {
     state_store: StateStore,
     event_store: EventStore,
     system_store: SystemStore,
+    block_index_store: BlockIndexStore,
     pruner: Pruner,
 }
 
@@ -114,6 +125,7 @@ impl LibraDB {
                 JELLYFISH_MERKLE_NODE_CF_NAME,
                 ColumnFamilyOptions::default(),
             ),
+            (LEDGER_HISTORY_CF_NAME, ColumnFamilyOptions::default()),
             (LEDGER_COUNTERS_CF_NAME, ColumnFamilyOptions::default()),
             (STALE_NODE_INDEX_CF_NAME, ColumnFamilyOptions::default()),
             (TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
@@ -127,6 +139,7 @@ impl LibraDB {
             ),
             (TRANSACTION_INFO_CF_NAME, ColumnFamilyOptions::default()),
             (VALIDATOR_CF_NAME, ColumnFamilyOptions::default()),
+            (BLOCK_INDEX_CF_NAME, ColumnFamilyOptions::default()),
         ]
         .iter()
         .cloned()
@@ -152,6 +165,7 @@ impl LibraDB {
             state_store: StateStore::new(Arc::clone(&db)),
             transaction_store: TransactionStore::new(Arc::clone(&db)),
             system_store: SystemStore::new(Arc::clone(&db)),
+            block_index_store: BlockIndexStore::new(Arc::clone(&db)),
             pruner: Pruner::new(Arc::clone(&db), Self::NUM_HISTORICAL_VERSIONS_TO_KEEP),
         }
     }
@@ -209,14 +223,43 @@ impl LibraDB {
         let get_latest = !ascending && start_seq_num == u64::max_value();
         let account_state =
             self.get_account_state_with_proof(query_path.address, ledger_version, ledger_version)?;
-        let account_resource = if let Some(account_blob) = &account_state.blob {
-            AccountResource::make_from(&(&account_blob.try_into()?))?
+        let (account_resource, account_state_tree) = if let Some(account_blob) = &account_state.blob
+        {
+            (
+                AccountResource::make_from(&(&account_blob.try_into()?))?,
+                BTreeMap::<Vec<u8>, Vec<u8>>::try_from(account_blob)?,
+            )
         } else {
             bail!("Nothing stored under address: {}", query_path.address);
         };
-        let event_key = account_resource
-            .get_event_handle_by_query_path(&query_path.path)?
-            .key();
+        //TODO(jole) refactor this after Event AccessPath refactor.
+        let event_handle = account_resource
+            .get_event_handle_by_query_path(&query_path.path)
+            .map(|r| r.clone())
+            .or_else(|e| {
+                let channel_resource_bytes =
+                    account_state_tree.get(&channel_resource_path()).ok_or(e)?;
+                let channel_resource = ChannelResource::make_from(channel_resource_bytes.to_vec())?;
+                channel_resource
+                    .get_event_handle_by_query_path(&query_path.path)
+                    .map(|r| r.clone())
+            })
+            .or_else(|e| {
+                if query_path.address == channel_global_events_address() {
+                    let channel_global_events_resource_bytes = account_state_tree
+                        .get(&channel_global_events_resource_path())
+                        .ok_or(e)?;
+                    let channel_global_events_resource = ChannelGlobalEventsResource::make_from(
+                        channel_global_events_resource_bytes.to_vec(),
+                    )?;
+                    channel_global_events_resource
+                        .get_event_handle_by_query_path(&query_path.path)
+                        .map(|r| r.clone())
+                } else {
+                    Err(e)
+                }
+            })?;
+        let event_key = event_handle.key();
         let cursor = if get_latest {
             // Caller wants the latest, figure out the latest seq_num.
             // In the case of no events on that path, use 0 and expect empty result below.
@@ -422,6 +465,7 @@ impl LibraDB {
             .collect::<Result<()>>()?;
 
         // Transaction accumulator updates. Get result root hash.
+
         let txn_infos = izip!(txns_to_commit, state_root_hashes, event_root_hashes)
             .map(|(t, s, e)| {
                 Ok(TransactionInfo::new(
@@ -630,6 +674,39 @@ impl LibraDB {
         Ok(Some(startup_info))
     }
 
+    /// Get for pre compute
+    pub fn get_history_startup_info_by_block_id(
+        &self,
+        block_id: &HashValue,
+    ) -> Result<Option<StartupInfo>> {
+        let ledger_info_with_sigs = match self.ledger_store.get_ledger_info_by_block_id(block_id) {
+            Ok(x) => x,
+            Err(err) => {
+                warn!("err:{:?}", err);
+                return Ok(None);
+            }
+        };
+        let ledger_info = ledger_info_with_sigs.ledger_info().clone();
+
+        let version = ledger_info.version();
+        let txn_info = self.ledger_store.get_transaction_info(version)?;
+
+        let account_state_root_hash = txn_info.state_root_hash();
+
+        let ledger_frozen_subtree_hashes = self
+            .ledger_store
+            .get_ledger_frozen_subtree_hashes(version)?;
+        Ok(Some(StartupInfo {
+            ledger_info: ledger_info_with_sigs,
+            committed_tree_state: TreeState::new(
+                version,
+                ledger_frozen_subtree_hashes,
+                account_state_root_hash,
+            ),
+            synced_tree_state: None,
+        }))
+    }
+
     // ======================= State Synchronizer Internal APIs ===================================
     /// Gets a batch of transactions for the purpose of synchronizing state to another node.
     ///
@@ -755,6 +832,26 @@ impl LibraDB {
             events,
             proof,
         })
+    }
+
+    pub fn rollback_by_block_id(&self, block_id: &HashValue) -> Result<()> {
+        let mut cs = ChangeSet::new();
+        self.ledger_store.rollback_by_block_id(block_id, &mut cs)?;
+        let sealed_cs = SealedChangeSet { batch: cs.batch };
+        self.commit(sealed_cs)
+    }
+
+    pub fn insert_block_index(&self, height: &u64, block_index: &BlockIndex) -> Result<()> {
+        self.block_index_store
+            .insert_block_index(height, block_index)
+    }
+
+    pub fn query_block_index_list_by_height(
+        &self,
+        height: Option<u64>,
+        size: usize,
+    ) -> Result<Vec<BlockIndex>> {
+        self.block_index_store.query_block_index(height, size)
     }
 }
 

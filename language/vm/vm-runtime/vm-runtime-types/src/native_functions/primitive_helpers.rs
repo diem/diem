@@ -10,7 +10,9 @@ use libra_types::{
     byte_array::ByteArray,
     vm_error::{StatusCode, VMStatus},
 };
+use std::cmp::Ordering;
 use std::collections::VecDeque;
+use std::convert::TryFrom;
 use vm::{
     errors::VMResult,
     gas_schedule::{CostTable, NativeCostIndex},
@@ -61,6 +63,66 @@ pub fn native_address_to_bytes(
         return_val.len(),
     );
     let return_values = vec![Value::byte_array(ByteArray::new(return_val))];
+    Ok(NativeResult::ok(cost, return_values))
+}
+
+pub fn native_bytes_to_address(
+    mut arguments: VecDeque<Value>,
+    cost_table: &CostTable,
+) -> VMResult<NativeResult> {
+    if arguments.len() != 1 {
+        let msg = format!(
+            "wrong number of arguments for native_bytes_to_address expected 1 found {}",
+            arguments.len()
+        );
+        return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
+    }
+    let arg = pop_arg!(arguments, ByteArray);
+    let return_val = arg.as_bytes();
+
+    let cost = native_gas(
+        cost_table,
+        //TODO define CostIndex
+        NativeCostIndex::ADDRESS_TO_BYTES,
+        return_val.len(),
+    );
+    let address = match AccountAddress::try_from(return_val) {
+        Ok(address) => address,
+        Err(e) => {
+            return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(format!("{:?}", e)));
+        }
+    };
+    let return_values = vec![Value::address(address)];
+    Ok(NativeResult::ok(cost, return_values))
+}
+
+pub fn native_compare_address(
+    mut arguments: VecDeque<Value>,
+    cost_table: &CostTable,
+) -> VMResult<NativeResult> {
+    if arguments.len() != 2 {
+        let msg = format!(
+            "wrong number of arguments for native_compare_address expected 2 found {}",
+            arguments.len()
+        );
+        return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
+    }
+    // pop arg is from back to front
+    let arg2 = pop_arg!(arguments, AccountAddress);
+    let arg1 = pop_arg!(arguments, AccountAddress);
+    let order = arg1.cmp(&arg2);
+    let return_val = match order {
+        Ordering::Less => 0,
+        Ordering::Equal => 1,
+        Ordering::Greater => 2,
+    };
+    let cost = native_gas(
+        cost_table,
+        //TODO define CostIndex
+        NativeCostIndex::ADDRESS_TO_BYTES,
+        8,
+    );
+    let return_values = vec![Value::u64(return_val)];
     Ok(NativeResult::ok(cost, return_values))
 }
 

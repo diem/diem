@@ -14,6 +14,7 @@ use libra_crypto_derive::CryptoHasher;
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::{convert::TryFrom, fmt, str::FromStr};
 
 pub const ADDRESS_LENGTH: usize = 32;
@@ -39,6 +40,17 @@ impl AccountAddress {
         let mut rng = OsRng::new().expect("can't access OsRng");
         let buf: [u8; 32] = rng.gen();
         AccountAddress::new(buf)
+    }
+    /// Generate channel address by participant's address.
+    pub fn channel_address(participants: &[AccountAddress]) -> Self {
+        let mut participants = participants.to_vec();
+        participants.sort();
+        let mut data = Vec::new();
+        for participant in participants.iter() {
+            data.extend_from_slice(participant.as_ref());
+        }
+        let hash = *HashValue::from_sha3_256(&data).as_ref();
+        AccountAddress::new(hash)
     }
 
     // Helpful in log messages
@@ -214,5 +226,23 @@ impl TryFrom<AccountAddress> for Bech32 {
     fn try_from(addr: AccountAddress) -> Result<Bech32> {
         let base32_hash = addr.0.to_base32();
         bech32::Bech32::new(LIBRA_NETWORK_ID_SHORT.into(), base32_hash).map_err(Into::into)
+    }
+}
+
+impl From<&BTreeSet<AccountAddress>> for AccountAddress {
+    // keep the same logic with onchain
+    fn from(participants: &BTreeSet<AccountAddress>) -> AccountAddress {
+        let mut data = Vec::new();
+        for participant in participants.iter() {
+            data.extend_from_slice(participant.as_ref());
+        }
+        let hash = *HashValue::from_sha3_256(&data).as_ref();
+        AccountAddress::new(hash)
+    }
+}
+
+impl From<BTreeSet<AccountAddress>> for AccountAddress {
+    fn from(participants: BTreeSet<AccountAddress>) -> AccountAddress {
+        AccountAddress::from(&participants)
     }
 }

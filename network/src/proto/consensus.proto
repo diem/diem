@@ -16,6 +16,7 @@ message ConsensusMsg {
     SyncInfo sync_info = 5;
     types.ValidatorChangeEventWithProof epoch_change = 6;
     RequestEpoch request_epoch = 7;
+    Block new_block = 8;
   }
 }
 
@@ -49,4 +50,8 @@ message RespondBlock {
 
 message RequestEpoch {
   bytes bytes = 1;
+}
+
+message BlockPayloadExt {
+    bytes bytes = 1;
 }

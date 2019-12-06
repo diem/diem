@@ -15,7 +15,7 @@ use crate::{
     process_txn::{validate::ValidationMode, ProcessTransaction},
     system_txn::block_metadata_processor::process_block_metadata,
 };
-use libra_config::config::{VMConfig, VMPublishingOption};
+use libra_config::config::{VMConfig, VMMode, VMPublishingOption};
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
@@ -39,6 +39,7 @@ pub struct VMRuntime<'alloc> {
     code_cache: VMModuleCache<'alloc>,
     script_cache: ScriptCache<'alloc>,
     publishing_option: VMPublishingOption,
+    vm_mode: VMMode,
 }
 
 impl<'alloc> VMRuntime<'alloc> {
@@ -49,6 +50,7 @@ impl<'alloc> VMRuntime<'alloc> {
             code_cache: VMModuleCache::new(allocator),
             script_cache: ScriptCache::new(allocator),
             publishing_option: config.publishing_options.clone(),
+            vm_mode: config.mode.clone(),
         }
     }
 
@@ -108,7 +110,8 @@ impl<'alloc> VMRuntime<'alloc> {
             ValidationMode::Validating
         };
 
-        let validated_txn = match process_txn.validate(mode, &self.publishing_option) {
+        let validated_txn = match process_txn.validate(mode, &self.publishing_option, self.vm_mode)
+        {
             Ok(validated_txn) => validated_txn,
             Err(vm_status) => {
                 let res = Some(vm_status);
@@ -148,6 +151,7 @@ impl<'alloc> VMRuntime<'alloc> {
                         &self.script_cache,
                         &mut data_cache,
                         &self.publishing_option,
+                        self.vm_mode,
                     )?)
                 }
                 TransactionBlock::BlockPrologue(block_metadata) => result.push(

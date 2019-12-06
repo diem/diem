@@ -474,6 +474,14 @@ impl DefaultHasher {
     }
 }
 
+/// define a hasher with specified salt
+/// usage:
+/// ```
+/// define_hasher! {
+/// (TransactionHasher, "TRANSACTION_HASHER", "TRANSACTION")
+/// }
+/// ```
+#[macro_export]
 macro_rules! define_hasher {
     (
         $(#[$attr:meta])*
@@ -548,6 +556,11 @@ define_hasher! {
 define_hasher! {
     /// The hasher used to compute the hash of a DiscoveryMsg object.
     (DiscoveryMsgHasher, DISCOVERY_MSG_HASHER, b"DiscoveryMsg")
+}
+
+define_hasher! {
+    /// The hasher used to compute the hash of a DiscoveryMsg object.
+    (BlockPayloadExtHasher, BLOCK_PAYLOAD_EXT, b"BlockPayloadExt")
 }
 
 fn create_literal_hash(word: &str) -> HashValue {

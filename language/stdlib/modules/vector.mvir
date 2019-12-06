@@ -105,4 +105,13 @@ module Vector {
     return false;
   }
 
+  public remove_head<Element: unrestricted>(v: &mut Self.T<Element>) {
+    Self.reverse<Element>(copy(v));
+
+    _ = Self.pop_back<Element>(copy(v));
+    Self.reverse<Element>(copy(v));
+
+    return;
+  }
+
 }

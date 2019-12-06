@@ -38,6 +38,7 @@ use vm_cache_map::Arena;
 use vm_runtime_types::value::Value;
 
 pub use crate::gas_meter::GAS_SCHEDULE_MODULE;
+use libra_config::config::VMMode;
 
 // Metadata needed for resolving the account module.
 lazy_static! {
@@ -53,6 +54,11 @@ lazy_static! {
     /// The ModuleId for the validator config
     pub static ref VALIDATOR_CONFIG_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("ValidatorConfig").unwrap()) };
+
+    /// The ModuleId for the consensus config module
+    pub static ref CONSENSUS_CONF_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), Identifier::new("ConsensusConfig").unwrap()) };
+
     /// The ModuleId for the libra system module
     pub static ref LIBRA_SYSTEM_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("LibraSystem").unwrap()) };
@@ -60,6 +66,7 @@ lazy_static! {
     /// The ModuleId for the transaction fee distribution module
     pub static ref TRANSACTION_FEE_DISTRIBUTION_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("TransactionFeeDistribution").unwrap()) };
+
 }
 
 // Names for special functions.
@@ -104,6 +111,29 @@ where
     ) -> Self {
         let interpreter_context =
             TransactionExecutionContext::new(txn_data.max_gas_amount(), data_cache);
+        TransactionExecutor {
+            interpreter_context,
+            module_cache,
+            txn_data,
+            gas_schedule,
+            phantom: PhantomData,
+        }
+    }
+
+    pub fn new_with_vm_mode(
+        module_cache: P,
+        gas_schedule: &'txn CostTable,
+        data_cache: &'txn dyn RemoteCache,
+        txn_data: TransactionMetadata,
+        pre_cache_write_set: Option<WriteSet>,
+        vm_mode: VMMode,
+    ) -> Self {
+        let interpreter_context = TransactionExecutionContext::new_with_write_set(
+            txn_data.max_gas_amount(),
+            data_cache,
+            pre_cache_write_set,
+            vm_mode,
+        );
         TransactionExecutor {
             interpreter_context,
             module_cache,

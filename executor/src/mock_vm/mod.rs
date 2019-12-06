@@ -324,5 +324,8 @@ fn decode_transaction(txn: &SignedTransaction) -> MockVMTransaction {
         TransactionPayload::Module(_) => {
             unimplemented!("MockVM does not support Module transaction payload.")
         }
+        TransactionPayload::Channel(_) => {
+            unimplemented!("MockVM does not support ChannelScript transaction payload.")
+        }
     }
 }

@@ -86,3 +86,17 @@ fn build_global_config_4() {
     let default = config.accounts.get("default").unwrap();
     assert_eq!(default.balance(), 50);
 }
+
+#[rustfmt::skip]
+#[test]
+fn build_global_config_channel() {
+    let config = parse_and_build_config(r"
+        //! account: alice
+        //! account: bob 
+        //! channel: ch1, alice|bob 
+    ").unwrap();
+
+    assert_eq!(config.accounts.len(), 3);
+    assert_eq!(config.channels.len(), 1);
+    assert!(config.channels.get("ch1").is_some());
+}

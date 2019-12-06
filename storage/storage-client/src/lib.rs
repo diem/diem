@@ -29,12 +29,17 @@ use std::convert::TryFrom;
 use std::{pin::Pin, sync::Arc};
 use storage_proto::{
     proto::storage::{GetStartupInfoRequest, StorageClient},
-    GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
-    GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse, GetStartupInfoResponse,
-    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest, StartupInfo,
+    BlockHeight, GetAccountStateWithProofByVersionRequest,
+    GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
+    GetEpochChangeLedgerInfosResponse, GetHistoryStartupInfoByBlockIdRequest,
+    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
+    InsertBlockIndexRequest, QueryBlockIndexListByHeightRequest,
+    QueryBlockIndexListByHeightResponse, RollbackRequest, SaveTransactionsRequest, StartupInfo,
 };
 
 pub use crate::state_view::VerifiedStateView;
+use libra_crypto::HashValue;
+use libra_types::block_index::BlockIndex;
 
 fn pick<T>(items: &[T]) -> &T {
     let mut rng = rand::thread_rng();
@@ -198,6 +203,18 @@ impl StorageRead for StorageReadServiceClient {
         block_on(self.get_startup_info_async())
     }
 
+    fn get_history_startup_info_by_block_id(
+        &self,
+        block_id: HashValue,
+    ) -> Result<Option<StartupInfo>> {
+        let req = GetHistoryStartupInfoByBlockIdRequest { block_id };
+        let startup_info_resp = self
+            .client()
+            .get_history_startup_info_by_block_id(&req.into());
+        let resp = GetStartupInfoResponse::try_from(startup_info_resp?)?;
+        Ok(resp.info)
+    }
+
     fn get_startup_info_async(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>> {
@@ -231,6 +248,33 @@ impl StorageRead for StorageReadServiceClient {
             Ok(resp.into())
         })
         .boxed()
+    }
+
+    fn query_block_index_list_by_height(
+        &self,
+        height: Option<u64>,
+        size: u64,
+    ) -> Result<Vec<BlockIndex>> {
+        let block_height = match height {
+            Some(h) => Some(BlockHeight { height: h }),
+            None => None,
+        };
+        let req = QueryBlockIndexListByHeightRequest {
+            begin: block_height,
+            size,
+        };
+
+        block_on(
+            convert_grpc_response(
+                self.client()
+                    .query_block_index_list_by_height_async(&req.into()),
+            )
+            .map(|resp| {
+                let resp = QueryBlockIndexListByHeightResponse::try_from(resp?)?;
+                Ok(resp.block_index_list)
+            })
+            .boxed(),
+        )
     }
 }
 
@@ -278,6 +322,24 @@ impl StorageWrite for StorageWriteServiceClient {
         convert_grpc_response(self.client().save_transactions_async(&req.into()))
             .map_ok(|_| ())
             .boxed()
+    }
+
+    fn rollback_by_block_id(&self, block_id: HashValue) {
+        let req = RollbackRequest { block_id };
+        self.client()
+            .rollback_by_block_id(&req.into())
+            .expect("rollback err.");
+    }
+
+    /// BlockIndex
+    fn insert_block_index(&self, height: u64, block_index: BlockIndex) {
+        let req = InsertBlockIndexRequest {
+            height,
+            block_index: Some(block_index),
+        };
+        convert_grpc_response(self.client().insert_block_index_async(&req.into()))
+            .map_ok(|_| ())
+            .boxed();
     }
 }
 
@@ -371,6 +433,12 @@ pub trait StorageRead: Send + Sync {
     /// ../libradb/struct.LibraDB.html#method.get_startup_info
     fn get_startup_info(&self) -> Result<Option<StartupInfo>>;
 
+    /// history startup info
+    fn get_history_startup_info_by_block_id(
+        &self,
+        block_id: HashValue,
+    ) -> Result<Option<StartupInfo>>;
+
     /// See [`LibraDB::get_startup_info`].
     ///
     /// [`LibraDB::get_startup_info`]:
@@ -396,6 +464,12 @@ pub trait StorageRead: Send + Sync {
         &self,
         start_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>>;
+
+    fn query_block_index_list_by_height(
+        &self,
+        height: Option<u64>,
+        size: u64,
+    ) -> Result<Vec<BlockIndex>>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.
@@ -423,6 +497,12 @@ pub trait StorageWrite: Send + Sync {
         first_version: Version,
         ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
+
+    /// Rollback
+    fn rollback_by_block_id(&self, block_id: HashValue);
+
+    /// BlockIndex
+    fn insert_block_index(&self, height: u64, block_index: BlockIndex);
 }
 
 fn convert_grpc_err(e: grpcio::Error) -> Error {

@@ -10,6 +10,7 @@ import "ledger_info.proto";
 import "transaction.proto";
 import "account_state_blob.proto";
 import "proof.proto";
+import "block_index.proto";
 
 // -----------------------------------------------------------------------------
 // ---------------- Service definition for storage
@@ -46,9 +47,25 @@ service Storage {
     rpc GetStartupInfo(GetStartupInfoRequest)
     returns (GetStartupInfoResponse);
 
+    // Returns history information needed for libra core to start up for pre compute.
+    rpc GetHistoryStartupInfoByBlockId(GetHistoryStartupInfoByBlockIdRequest)
+    returns (GetStartupInfoResponse);
+
     // Returns latest ledger infos per epoch.
     rpc GetEpochChangeLedgerInfos(GetEpochChangeLedgerInfosRequest)
     returns (GetEpochChangeLedgerInfosResponse);
+
+    // Rollback
+    rpc RollbackByBlockId(RollbackRequest)
+    returns (EmptyResponse);
+
+    // Block Index
+    rpc InsertBlockIndex(InsertBlockIndexRequest)
+    returns (EmptyResponse);
+
+    // Query Block Index
+    rpc QueryBlockIndexListByHeight(QueryBlockIndexListByHeightRequest)
+    returns (QueryBlockIndexListByHeightResponse);
 }
 
 message SaveTransactionsRequest {
@@ -100,6 +117,10 @@ message GetAccountStateWithProofByVersionResponse {
 
 message GetStartupInfoRequest {}
 
+message GetHistoryStartupInfoByBlockIdRequest {
+    bytes block_id = 1;
+}
+
 message GetStartupInfoResponse {
     // When this is empty, Storage needs to be bootstrapped via the bootstrap API
     StartupInfo info = 1;
@@ -136,4 +157,30 @@ message GetEpochChangeLedgerInfosRequest {
 message GetEpochChangeLedgerInfosResponse {
     /// Vector of latest ledger infos per epoch (not sorted)
     repeated types.LedgerInfoWithSignatures latest_ledger_infos = 1;
+}
+
+message RollbackRequest {
+    bytes block_id = 1;
+}
+
+message EmptyResponse {
+
+}
+
+message InsertBlockIndexRequest {
+    uint64 height = 1;
+    types.BlockIndex block_index = 2;
+}
+
+message BlockHeight {
+    uint64 height = 1;
+}
+
+message QueryBlockIndexListByHeightRequest {
+    BlockHeight begin = 1;
+    uint64 size = 2;
+}
+
+message QueryBlockIndexListByHeightResponse {
+    repeated types.BlockIndex block_index_list = 1;
 }

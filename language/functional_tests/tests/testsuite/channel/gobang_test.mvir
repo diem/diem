@@ -1,0 +1,607 @@
+//! account: alice, 10000000
+//! account: bob, 10000000
+//! channel: ch1, alice|bob
+
+//! new-transaction
+module TheFive {
+    import 0x0.ChannelUtil;
+    import 0x0.Vector;
+
+    resource T {
+        grid: Vector.T<Vector.T<bool>>,  // 22x22, include borders
+        is_my_turn: bool,
+    }
+
+    resource Score {
+        total: u64,
+    }
+
+    public new(receiver: address): u64 {
+        let t: Self.T;
+        let grid: Vector.T<Vector.T<bool>>;
+        let row: Vector.T<bool>;
+        let x: u64;
+        let y: u64;
+        let is_black: bool;
+        let t1: Self.Score;
+        let sender: address;
+
+        sender = get_txn_sender();
+        if (!ChannelUtil.exist_channel_participant<Self.Score>(copy(sender))) {
+            t1 = Score {
+                total: 0,
+            };
+            ChannelUtil.move_to_participant<Self.Score>(copy(sender),move(t1));
+        }
+
+        is_black = !ChannelUtil.exist_channel_participant<Self.T>(copy(receiver)); // first come first play
+        if (move(is_black)) {
+            grid = Vector.empty<Vector.T<bool>>();
+            y = 0;
+            while (copy(y) < 22) {
+                row = Vector.empty<bool>();
+                x = 0;
+                while (copy(x) < 22) {
+                    Vector.push_back<bool>(&mut row, false);
+                    x = copy(x) + 1;
+                }
+
+                Vector.push_back<Vector.T<bool>>(&mut grid, move(row));
+                y = copy(y) + 1;
+            }
+
+            t = T {
+                grid: move(grid),
+                is_my_turn: true,
+            };
+            ChannelUtil.move_to_participant<Self.T>(copy(sender), move(t));
+
+            return 0;
+        } else {
+            return 1;
+        }
+    }
+
+    public join(): u64 {
+        let t: Self.T;
+        let grid: Vector.T<Vector.T<bool>>;
+        let row: Vector.T<bool>;
+        let x: u64;
+        let y: u64;
+        let t1: Self.Score;
+        let sender: address;
+
+        sender = get_txn_sender();
+        if (!ChannelUtil.exist_channel_participant<Self.Score>(copy(sender))) {
+            t1 = Score {
+                total: 0,
+            };
+            ChannelUtil.move_to_participant<Self.Score>(copy(sender), move(t1));
+        }
+
+        grid = Vector.empty<Vector.T<bool>>();
+        y = 0;
+        while (copy(y) < 22) {
+            row = Vector.empty<bool>();
+            x = 0;
+            while (copy(x) < 22) {
+                Vector.push_back<bool>(&mut row, false);
+                x = copy(x) + 1;
+            }
+
+            Vector.push_back<Vector.T<bool>>(&mut grid, move(row));
+            y = copy(y) + 1;
+        }
+
+        t = T {
+            grid: move(grid),
+            is_my_turn: false,
+        };
+        ChannelUtil.move_to_participant<Self.T>(copy(sender), move(t));
+        return 0;
+    }
+
+    is_blank_internal(t_ref: &mut Self.T, x: u64, y: u64): bool {
+        let grid_ref: &Vector.T<Vector.T<bool>>;
+        let row_ref: &Vector.T<bool>;
+        let value_ref: &bool;
+
+        grid_ref = &copy(t_ref).grid;
+        row_ref = Vector.borrow<Vector.T<bool>>(move(grid_ref), move(y));
+        value_ref = Vector.borrow<bool>(move(row_ref), move(x));
+
+        return !*copy(value_ref);
+    }
+
+    is_blank(x: u64, y: u64, receiver: address): bool {
+        let t_ref_sender: &mut Self.T;
+        let t_ref_receiver: &mut Self.T;
+        let is_blank_1: bool;
+        let is_blank_2: bool;
+        let sender: address;
+
+        sender = get_txn_sender();
+        if ((copy(x) < 1) || (copy(x) > 20) || (copy(y) < 1) || (copy(y) > 20)) {
+            return false;
+        }
+
+        t_ref_sender = ChannelUtil.borrow_from_participant_mut<Self.T>(copy(sender));
+        is_blank_1 = Self.is_blank_internal(move(t_ref_sender), copy(x), copy(y));
+
+        t_ref_receiver = ChannelUtil.borrow_from_participant_mut<Self.T>(copy(receiver));
+        is_blank_2 = Self.is_blank_internal(move(t_ref_receiver), copy(x), copy(y));
+
+        return move(is_blank_1) && move(is_blank_2);
+    }
+
+    let_receiver_play(receiver: address) {
+        let t_ref: &mut Self.T;
+        let is_my_turn_ref: &mut bool;
+
+        t_ref = ChannelUtil.borrow_from_participant_mut<Self.T>(copy(receiver));
+        is_my_turn_ref = &mut copy(t_ref).is_my_turn;
+        *copy(is_my_turn_ref) = true;
+
+        return;
+    }
+
+
+    set_value(x: u64, y: u64, receiver: address) {
+        let t_ref: &mut Self.T;
+        let grid_ref: &mut Vector.T<Vector.T<bool>>;
+        let row_ref: &mut Vector.T<bool>;
+        let value_ref: &mut bool;
+        let is_my_turn_ref: &mut bool;
+        let sender: address;
+
+        sender = get_txn_sender();
+        t_ref = ChannelUtil.borrow_from_participant_mut<Self.T>(copy(sender));
+        grid_ref = &mut copy(t_ref).grid;
+        row_ref = Vector.borrow_mut<Vector.T<bool>>(move(grid_ref), move(y));
+        value_ref = Vector.borrow_mut<bool>(move(row_ref), move(x));
+        *copy(value_ref) = true;
+
+        is_my_turn_ref = &mut copy(t_ref).is_my_turn;
+        *copy(is_my_turn_ref) = false;
+        Self.let_receiver_play(copy(receiver));
+
+        return;
+    }
+
+    public is_my_turn(): bool {
+        let t_ref_sender: &mut Self.T;
+        let is_my_turn_ref: &bool;
+        let sender: address;
+
+        sender = get_txn_sender();
+        t_ref_sender = ChannelUtil.borrow_from_participant_mut<Self.T>(copy(sender));
+        is_my_turn_ref = &copy(t_ref_sender).is_my_turn;
+
+        if (*copy(is_my_turn_ref)) {
+            return true;
+        } else {
+            return false;
+        }
+
+    }
+
+    //  directions:
+    //  0: horizontal right
+    //  1: vertical down
+    //  2: diagonal(\) down-right
+    //  3: diagonal(/) up-right
+    next_x(x: u64, direction: u64, opposite: bool): u64 {
+        let i: u64;
+
+        i = copy(x);
+
+        if (!move(opposite)) {
+            if (copy(direction) == 0) {
+                i = copy(x) + 1;
+            }
+            if (copy(direction) == 1) {
+                i = copy(x);
+            }
+            if (copy(direction) == 2) {
+                i = copy(x) + 1;
+            }
+            if (copy(direction) == 3) {
+                i = copy(x) + 1;
+            }
+        } else {
+            if (copy(direction) == 0) {
+                i = copy(x) - 1;
+            }
+            if (copy(direction) == 1) {
+                i = copy(x);
+            }
+            if (copy(direction) == 2) {
+                i = copy(x) - 1;
+            }
+            if (copy(direction) == 3) {
+                i = copy(x) - 1;
+            }
+        }
+        return move(i);
+    }
+
+    next_y(y: u64, direction: u64, opposite: bool): u64 {
+        let i: u64;
+
+        i = copy(y);
+
+        if (!move(opposite)) {
+            if (copy(direction) == 0) {
+                i = copy(y);
+            }
+            if (copy(direction) == 1) {
+                i = copy(y) + 1;
+            }
+            if (copy(direction) == 2) {
+                i = copy(y) + 1;
+            }
+            if (copy(direction) == 3) {
+                i = copy(y) - 1;
+            }
+        } else {
+            if (copy(direction) == 0) {
+                i = copy(y);
+            }
+            if (copy(direction) == 1) {
+                i = copy(y) - 1;
+            }
+            if (copy(direction) == 2) {
+                i = copy(y) - 1;
+            }
+            if (copy(direction) == 3) {
+                i = copy(y) + 1;
+            }
+        }
+        return move(i);
+    }
+
+    logic(t_ref: &mut Self.T, x: u64, y: u64, direction: u64): bool {
+        let grid_ref: &Vector.T<Vector.T<bool>>;
+        let row_ref: &Vector.T<bool>;
+        let value_ref: &bool;
+        let i: u64;
+        let j: u64;
+        let num: u64;
+
+        grid_ref = &copy(t_ref).grid;
+        num = 1;
+
+        i = Self.next_x(copy(x), copy(direction), false);
+        j = Self.next_y(copy(y), copy(direction), false);
+        row_ref = Vector.borrow<Vector.T<bool>>(copy(grid_ref), copy(j));
+        value_ref = Vector.borrow<bool>(copy(row_ref), copy(i));
+        while (*copy(value_ref)) {
+            num = copy(num) + 1;
+            i = Self.next_x(copy(i), copy(direction), false);
+            j = Self.next_y(copy(j), copy(direction), false);
+            row_ref = Vector.borrow<Vector.T<bool>>(copy(grid_ref), copy(j));
+            value_ref = Vector.borrow<bool>(copy(row_ref), copy(i));
+        }
+
+        i = Self.next_x(copy(x), copy(direction), true);
+        j = Self.next_y(copy(y), copy(direction), true);
+        row_ref = Vector.borrow<Vector.T<bool>>(copy(grid_ref), copy(j));
+        value_ref = Vector.borrow<bool>(copy(row_ref), copy(i));
+        while (*copy(value_ref)) {
+            num = copy(num) + 1;
+            i = Self.next_x(copy(i), copy(direction), true);
+            j = Self.next_y(copy(j), copy(direction), true);
+            row_ref = Vector.borrow<Vector.T<bool>>(copy(grid_ref), copy(j));
+            value_ref = Vector.borrow<bool>(copy(row_ref), copy(i));
+        }
+
+        if (copy(num) >= 5) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    is_five(x: u64, y: u64): bool {
+        let t_ref: &mut Self.T;
+        let result: bool;
+        let direction: u64;
+        let sender: address;
+
+        sender = get_txn_sender();
+        t_ref = ChannelUtil.borrow_from_participant_mut<Self.T>(copy(sender));
+        direction = 0;
+        while (copy(direction) < 4) {
+            result = Self.logic(copy(t_ref), copy(x), copy(y), copy(direction));
+            if (copy(result)) {
+                return true;
+            }
+            direction = copy(direction) + 1;
+        }
+
+        return false;
+    }
+
+    unwrap_T(t: Self.T) {
+        let grid: Vector.T<Vector.T<bool>>;
+        let is_my_turn: bool;
+
+        T { grid, is_my_turn } = move(t);
+        return;
+    }
+
+    end_game(receiver: address) {
+        let t1: Self.T;
+        let t2: Self.T;
+        let sender: address;
+
+        sender = get_txn_sender();
+        t1 = ChannelUtil.move_from_participant<Self.T>(copy(sender));
+        t2 = ChannelUtil.move_from_participant<Self.T>(copy(receiver));
+        Self.unwrap_T(move(t1));
+        Self.unwrap_T(move(t2));
+
+        Self.update_score();
+        return;
+    }
+
+    update_score() {
+        let score_ref: &mut Self.Score;
+        let total_ref: &mut u64;
+        let sender: address;
+
+        sender = get_txn_sender();
+        score_ref = ChannelUtil.borrow_from_participant_mut<Self.Score>(copy(sender));
+        total_ref = &mut copy(score_ref).total;
+        *copy(total_ref) = *copy(total_ref) + 1;
+        return;
+    }
+
+    public play(receiver: address, x: u64, y: u64): u64 {
+        let win: bool;
+
+        if (!Self.is_my_turn()) {
+            return 1;
+        }
+
+        if (!Self.is_blank(copy(x), copy(y), copy(receiver))) {
+            return 2;
+        }
+
+        Self.set_value(copy(x), copy(y), copy(receiver));
+        win = Self.is_five(move(x), move(y));
+
+        if (move(win)) {
+            Self.end_game(copy(receiver));
+        }
+        return 0;
+    }
+
+    public get_score(): u64 {
+        let score_ref: &mut Self.Score;
+        let total_ref: &mut u64;
+        let sender: address;
+
+        sender = get_txn_sender();
+        score_ref = ChannelUtil.borrow_from_participant_mut<Self.Score>(copy(sender));
+        total_ref = &mut copy(score_ref).total;
+        return *copy(total_ref);
+    }
+
+    public clean_score() {
+        let score: Self.Score;
+        let total: u64;
+        let sender: address;
+
+        sender = get_txn_sender();
+        score = ChannelUtil.move_from_participant<Self.Score>(copy(sender));
+        Score { total } = move(score);
+        return;
+    }
+}
+
+//! new-transaction
+//! sender: alice
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{bob}},10,10
+
+0x0.LibraAccount.open_channel
+
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{bob}}
+import {{default}}.TheFive;
+
+main(receiver: address){
+    let result: u64;
+    result = TheFive.new(move(receiver));
+    assert(move(result) == 0, 61);
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1,bob
+import {{default}}.TheFive;
+
+main(){
+    let result: u64;
+    result = TheFive.join();
+    assert(move(result) == 0, 61);
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{bob}},2,2
+import {{default}}.TheFive;
+
+main(receiver: address, x: u64, y: u64) {
+    let result: u64;
+
+    result = TheFive.play(move(receiver), move(x), move(y));
+    assert(move(result) == 0, 66);
+    return;
+}
+
+
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1,bob
+//! args: {{alice}},3,2
+import {{default}}.TheFive;
+
+main(receiver: address, x: u64, y: u64) {
+    let result: u64;
+
+    result = TheFive.play(move(receiver), move(x), move(y));
+    assert(move(result) == 0, 66);
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{bob}},2,3
+import {{default}}.TheFive;
+
+main(receiver: address, x: u64, y: u64) {
+    let result: u64;
+
+    result = TheFive.play(move(receiver), move(x), move(y));
+    assert(move(result) == 0, 66);
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1,bob
+//! args: {{alice}},3,3
+import {{default}}.TheFive;
+
+main(receiver: address, x: u64, y: u64) {
+    let result: u64;
+
+    result = TheFive.play(move(receiver), move(x), move(y));
+    assert(move(result) == 0, 66);
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{bob}},2,4
+import {{default}}.TheFive;
+
+main(receiver: address, x: u64, y: u64) {
+    let result: u64;
+
+    result = TheFive.play(move(receiver), move(x), move(y));
+    assert(move(result) == 0, 66);
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1,alice
+//! args: {{alice}},3,4
+import {{default}}.TheFive;
+
+main(receiver: address, x: u64, y: u64) {
+    let result: u64;
+
+    result = TheFive.play(move(receiver), move(x), move(y));
+    assert(move(result) == 0, 66);
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{bob}},2,5
+import {{default}}.TheFive;
+
+main(receiver: address, x: u64, y: u64) {
+    let result: u64;
+
+    result = TheFive.play(move(receiver), move(x), move(y));
+    assert(move(result) == 0, 66);
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1,alice
+//! args: {{alice}},3,5
+import {{default}}.TheFive;
+
+main(receiver: address, x: u64, y: u64) {
+    let result: u64;
+
+    result = TheFive.play(move(receiver), move(x), move(y));
+    assert(move(result) == 0, 66);
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{bob}},2,6
+import {{default}}.TheFive;
+
+main(receiver: address, x: u64, y: u64) {
+    let result: u64;
+    let win: bool;
+
+    result = TheFive.play(move(receiver), copy(x), copy(y));
+    assert(move(result) == 0, 55);
+
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+import {{default}}.TheFive;
+
+main() {
+    let result: u64;
+
+    result = TheFive.get_score();
+    assert(move(result) == 1, 55);
+
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1,bob
+import {{default}}.TheFive;
+
+main() {
+    let result: u64;
+
+    result = TheFive.get_score();
+    assert(move(result) == 0, 55);
+
+    return;
+}

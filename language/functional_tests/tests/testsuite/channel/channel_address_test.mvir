@@ -1,0 +1,14 @@
+//! new-transaction
+//! args: 0x7e9aecae32924394473216f8895b4122ebfeae77973bdd6051c5271b38e06405,0x240e7b460be31117c1cfe2910f121f80f66852462a85750285273bff635a518b,0xdd60d7fba302b141779b443044e6a66ebb0de3518a58a2e53b4f48fdd5a8be2b
+import 0x0.LibraAccount;
+import 0x0.Vector;
+
+main(one: address, two:address, expect_channel_address:address){
+    let channel_address: address;
+    let participants: Vector.T<address>;
+
+    participants = LibraAccount.new_participants_vector(move(one), move(two));
+    channel_address = LibraAccount.generate_channel_address(&participants);
+    assert(move(channel_address) == move(expect_channel_address), 101);
+    return;
+}

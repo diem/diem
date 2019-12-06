@@ -529,5 +529,9 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
             ],
             effects: vec![state_stack_pop!()],
         },
+        _ => {
+            //TODO(jole) support channel's Bytecode
+            unimplemented!()
+        }
     }
 }

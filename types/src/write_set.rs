@@ -5,8 +5,10 @@
 //! path it updates. For each access path, the VM can either give its new value or delete it.
 
 use crate::access_path::AccessPath;
+use crate::account_address::AccountAddress;
 use failure::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::mem;
 
 #[derive(Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub enum WriteOp {
@@ -21,6 +23,10 @@ impl WriteOp {
             WriteOp::Deletion => true,
             WriteOp::Value(_) => false,
         }
+    }
+
+    pub fn merge_with(&mut self, other: WriteOp) {
+        mem::replace(self, other);
     }
 }
 
@@ -59,6 +65,45 @@ impl WriteSet {
     pub fn into_mut(self) -> WriteSetMut {
         self.0
     }
+
+    /// Check whether the write set modifies the `participant_address`'s private channel resources.
+    pub fn contains_channel_resource(&self, participant_address: &AccountAddress) -> bool {
+        for (ap, _op) in self {
+            if ap
+                .data_path()
+                .and_then(|data_path| data_path.participant())
+                .and_then(|addr| Some(&addr == participant_address))
+                .unwrap_or(false)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    pub fn contains_onchain_resource(&self) -> bool {
+        for (access_path, _) in self.iter() {
+            if access_path.is_onchain_resource() {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    pub fn merge(first: &WriteSet, second: &WriteSet) -> Self {
+        WriteSetMut::merge(&first.0, &second.0)
+            .freeze()
+            .expect("freeze should success.")
+    }
+
+    pub fn get(&self, access_path: &AccessPath) -> Option<&WriteOp> {
+        for (ap, op) in self {
+            if ap == access_path {
+                return Some(op);
+            }
+        }
+        None
+    }
 }
 
 /// A mutable version of `WriteSet`.
@@ -91,6 +136,31 @@ impl WriteSetMut {
     pub fn freeze(self) -> Result<WriteSet> {
         // TODO: add structural validation
         Ok(WriteSet(self))
+    }
+
+    pub fn merge_with(&mut self, other: &WriteSetMut) {
+        let new_set = Self::merge(self, other);
+        mem::replace(self, new_set);
+    }
+
+    pub(crate) fn find_write_op_mut(&mut self, access_path: &AccessPath) -> Option<&mut WriteOp> {
+        self.write_set
+            .iter_mut()
+            .find(|(ap, _)| ap == access_path)
+            .map(|(_, op)| op)
+    }
+
+    pub fn merge(first: &WriteSetMut, second: &WriteSetMut) -> WriteSetMut {
+        let mut write_set = first.clone();
+        for (ap, second_op) in &second.write_set {
+            match write_set.find_write_op_mut(ap) {
+                Some(first_op) => {
+                    first_op.merge_with(second_op.clone());
+                }
+                None => write_set.push((ap.clone(), second_op.clone())),
+            }
+        }
+        write_set
     }
 }
 

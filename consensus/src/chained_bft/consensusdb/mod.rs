@@ -177,4 +177,28 @@ impl ConsensusDB {
         iter.seek_to_first();
         iter.collect::<Result<HashMap<HashValue, QuorumCert>>>()
     }
+
+    /// Get block by hash
+    pub fn get_block_by_hash<T: Payload>(&self, hash: &HashValue) -> Option<Block<T>> {
+        match self.db.get::<BlockSchema<T>>(&hash) {
+            Ok(block) => match block {
+                Some(b) => Some(b.borrow_into_block().clone()),
+                None => None,
+            },
+            _ => None,
+        }
+    }
+
+    /// Get blocks by hashs
+    pub fn get_blocks_by_hashs<T: Payload>(&self, hashs: Vec<HashValue>) -> Option<Vec<Block<T>>> {
+        let mut blocks = vec![];
+        for hash in hashs {
+            match self.get_block_by_hash(&hash) {
+                Some(b) => blocks.push(b),
+                None => return None,
+            }
+        }
+
+        return Some(blocks);
+    }
 }

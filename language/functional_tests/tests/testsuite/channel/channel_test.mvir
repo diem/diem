@@ -1,0 +1,125 @@
+//! account: alice, 10000000
+//! account: bob, 10000000
+//! channel: ch1, alice|bob
+
+//! new-transaction
+//! sender: alice
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+//! new-transaction
+//! sender: bob
+import 0x0.LibraAccount;
+main(){
+    LibraAccount.enable_channel();
+    return;
+}
+
+//! new-transaction
+//! sender: alice
+import 0x0.ChannelTransaction;
+main() {
+   assert(!ChannelTransaction.is_channel_txn(), 100);
+   return;
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1, alice
+//! args: {{bob}},50000,40000
+
+0x0.ChannelScript.open
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1, alice
+import 0x0.ChannelTransaction;
+import 0x0.LibraAccount;
+main() {
+   assert(ChannelTransaction.is_channel_txn(), 101);
+   assert(LibraAccount.channel_balance({{alice}}) == 50000, 102);
+   assert(LibraAccount.channel_balance({{bob}}) == 40000, 103);
+   return;
+}
+
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1, bob
+import 0x0.ChannelTransaction;
+import 0x0.ChannelScript;
+import 0x0.LibraAccount;
+main() {
+   ChannelScript.deposit(20000);
+   assert(LibraAccount.channel_balance({{bob}}) == 60000, 104);
+   return;
+}
+
+// Test transfer
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1,bob
+import 0x0.ChannelTransaction;
+import 0x0.ChannelScript;
+import 0x0.LibraAccount;
+main() {
+   ChannelScript.transfer({{alice}}, 20000);
+   assert(LibraAccount.channel_balance({{alice}}) == 70000, 104);
+   assert(LibraAccount.channel_balance({{bob}}) == 40000, 105);
+   return;
+}
+
+// Test payment send.
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+import 0x0.ChannelTransaction;
+import 0x0.ChannelScript;
+import 0x0.LibraAccount;
+import 0x0.Hash;
+main() {
+   let hash_lock: bytearray;
+   hash_lock = Hash.sha3_256(h"aa");
+   ChannelScript.send_payment({{bob}}, 10000, move(hash_lock), 10);
+   assert(LibraAccount.channel_balance({{alice}}) == 60000, 106);
+   assert(LibraAccount.channel_balance({{bob}}) == 40000, 107);
+   return;
+}
+
+// Test payment receive.
+//! new-transaction
+//! sender: bob
+//! txn-channel: ch1,bob
+import 0x0.ChannelTransaction;
+import 0x0.ChannelScript;
+import 0x0.LibraAccount;
+import 0x0.Hash;
+main() {
+   ChannelScript.receive_payment(h"aa");
+   assert(LibraAccount.channel_balance({{alice}}) == 60000, 106);
+   assert(LibraAccount.channel_balance({{bob}}) == 50000, 107);
+   return;
+}
+
+// Test withdraw.
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+import 0x0.ChannelTransaction;
+import 0x0.ChannelScript;
+import 0x0.LibraAccount;
+import 0x0.Hash;
+main() {
+   let balance: u64;
+   let sender: address;
+
+   sender = get_txn_sender();
+   balance = LibraAccount.balance(copy(sender));
+   ChannelScript.withdraw(60000);
+   assert(LibraAccount.balance(copy(sender)) == copy(balance)+60000, 108)
+   assert(LibraAccount.channel_balance({{alice}}) == 0, 109);
+   assert(LibraAccount.channel_balance({{bob}}) == 50000, 110);
+   return;
+}
