@@ -11,10 +11,9 @@ use crate::{
     validator_network::{NetworkEvents, NetworkSender},
     NetworkPublicKeys, ProtocolId,
 };
-use bytes::Bytes;
+use bytes05::Bytes;
 use channel;
 use futures::SinkExt;
-use libra_logger::prelude::*;
 use libra_types::{validator_public_keys::ValidatorPublicKeys, PeerId};
 use std::time::Duration;
 
@@ -75,7 +74,6 @@ impl ConsensusNetworkSender {
         message_bytes: Bytes,
         ignore_peers: Vec<PeerId>,
     ) -> Result<(), NetworkError> {
-        warn!("broadcast message");
         self.inner
             .get_mut()
             .send(NetworkRequest::BroadCastMessage(

@@ -32,7 +32,11 @@ use netcore::{
     transport::{ConnectionOrigin, Transport},
 };
 use parity_multiaddr::Multiaddr;
-use std::{collections::HashMap, marker::PhantomData};
+use std::{
+    collections::{HashMap, HashSet},
+    marker::PhantomData,
+    sync::Arc,
+};
 use tokio::runtime::Handle;
 
 mod error;

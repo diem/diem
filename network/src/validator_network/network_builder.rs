@@ -295,7 +295,7 @@ impl NetworkBuilder {
         self
     }
 
-    pub fn is_public(&mut self, is_public: bool) -> &mut Self {
+    pub fn public(&mut self, is_public: bool) -> &mut Self {
         self.is_public = is_public;
         self
     }
@@ -455,6 +455,7 @@ impl NetworkBuilder {
             let max_connection_delay_ms = self.max_connection_delay_ms;
             let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
             let pm_reqs_tx = pm_reqs_tx.clone();
+            let is_public = self.is_public;
             let f = async move {
                 let conn_mgr = ConnectivityManager::new(
                     trusted_peers,
@@ -464,7 +465,7 @@ impl NetworkBuilder {
                     conn_mgr_reqs_rx,
                     ExponentialBackoff::from_millis(2).factor(1000 /* seconds */),
                     max_connection_delay_ms,
-                    self.is_public,
+                    is_public,
                 );
                 conn_mgr.start().await
             };
@@ -555,6 +556,7 @@ impl NetworkBuilder {
             let trusted_peers = self.trusted_peers.clone();
             let discovery_interval_ms = self.discovery_interval_ms;
             let discovery_msg_timeout_ms = self.discovery_msg_timeout_ms;
+            let is_public = self.is_public;
             let f = async move {
                 let discovery = Discovery::new(
                     peer_id,
@@ -567,7 +569,7 @@ impl NetworkBuilder {
                     discovery_network_rx,
                     net_conn_mgr_reqs_tx.take().unwrap(),
                     Duration::from_millis(discovery_msg_timeout_ms),
-                    self.is_public,
+                    is_public,
                 );
                 discovery.start().await
             };

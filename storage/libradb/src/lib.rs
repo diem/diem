@@ -709,8 +709,25 @@ impl LibraDB {
         let ledger_frozen_subtree_hashes = self
             .ledger_store
             .get_ledger_frozen_subtree_hashes(version)?;
+
+        let current_epoch = if ledger_info_with_sigs
+            .ledger_info()
+            .next_validator_set()
+            .is_some()
+        {
+            ledger_info_with_sigs.ledger_info().epoch() + 1
+        } else {
+            ledger_info_with_sigs.ledger_info().epoch()
+        };
+
+        let ledger_info_with_validators = self
+            .get_epoch_change_ledger_infos(current_epoch - 1)?
+            .pop()
+            .ok_or_else(|| format_err!("ledger info with validators not found"))?;
+
         Ok(Some(StartupInfo {
             ledger_info: ledger_info_with_sigs,
+            ledger_info_with_validators,
             committed_tree_state: TreeState::new(
                 version,
                 ledger_frozen_subtree_hashes,

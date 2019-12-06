@@ -3,9 +3,9 @@ use crate::{
     consensus_provider::ConsensusProvider, state_computer::ExecutionProxy,
     txn_manager::MempoolProxy, MineClient,
 };
+use anyhow::Result;
 use async_std::task;
 use executor::Executor;
-use failure::prelude::*;
 use grpcio::Server;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
@@ -80,7 +80,7 @@ impl PowConsensusProvider {
             txn_manager,
             state_computer,
             author,
-            node_config.get_storage_dir(),
+            node_config.storage.dir(),
             rollback_flag,
             mine_state,
             read_storage,

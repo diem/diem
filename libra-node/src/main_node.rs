@@ -118,7 +118,7 @@ pub fn setup_network(
             ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
             ProtocolId::from_static(ADMISSION_CONTROL_RPC_PROTOCOL),
         ])
-        .is_public(config.is_public_network);
+        .public(config.is_public_network);
     if config.is_permissioned {
         // If the node wants to run in permissioned mode, it should also have authentication and
         // encryption.

@@ -50,6 +50,7 @@ fn setup_conn_mgr(
             conn_mgr_reqs_rx,
             FixedInterval::from_millis(100),
             300, /* ms */
+            false,
         )
     };
     rt.spawn(conn_mgr.start());

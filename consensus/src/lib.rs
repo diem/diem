@@ -11,7 +11,7 @@
 
 #![cfg_attr(not(feature = "fuzzing"), deny(missing_docs))]
 #![cfg_attr(feature = "fuzzing", allow(dead_code))]
-#![recursion_limit = "512"]
+#![recursion_limit = "1024"]
 
 #[macro_use]
 extern crate prometheus;

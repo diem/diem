@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::schema::block_index::BlockIndexSchema;
-use failure::prelude::*;
+use anyhow::Result;
 use libra_types::block_index::BlockIndex;
 use schemadb::{ReadOptions, SchemaBatch, DB};
 use std::sync::Arc;

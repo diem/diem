@@ -15,6 +15,7 @@ use futures::{
     executor::block_on,
     future::join,
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
+    lock::Mutex,
     stream::StreamExt,
 };
 use libra_config::config::RoleType;
@@ -29,7 +30,9 @@ use netcore::{
     transport::{boxed::BoxedTransport, memory::MemoryTransport, ConnectionOrigin, TransportExt},
 };
 use parity_multiaddr::Multiaddr;
+use std::collections::HashSet;
 use std::fmt::Debug;
+use std::sync::Arc;
 use std::{collections::HashMap, io, time::Duration};
 use tokio::{runtime::Handle, time::timeout};
 
@@ -306,6 +309,7 @@ fn build_test_peer_manager(
         peer_manager_request_rx,
         protocol_handlers,
         Vec::new(),
+        Arc::new(Mutex::new(HashSet::new())),
     );
 
     (peer_manager, peer_manager_request_tx, hello_rx)

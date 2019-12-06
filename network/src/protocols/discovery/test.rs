@@ -93,6 +93,7 @@ fn setup_discovery(
             DiscoveryNetworkEvents::new(network_notifs_rx),
             conn_mgr_reqs_tx,
             Duration::from_secs(180),
+            false,
         )
     };
     rt.spawn(discovery.start());

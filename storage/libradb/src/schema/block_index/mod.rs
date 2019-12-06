@@ -1,6 +1,6 @@
 use crate::schema::{ensure_slice_len_eq, BLOCK_INDEX_CF_NAME};
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt};
-use failure::prelude::*;
 use libra_crypto::HashValue;
 use libra_types::block_index::BlockIndex;
 use schemadb::{

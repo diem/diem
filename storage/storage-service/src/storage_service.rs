@@ -1,5 +1,5 @@
 use crate::StorageService;
-use failure::prelude::*;
+use anyhow::Result;
 use futures::{executor::block_on, prelude::*};
 use grpc_helpers::{spawn_service_thread_with_drop_closure, ServerHandle};
 use libra_config::config::NodeConfig;
@@ -27,7 +27,7 @@ use storage_proto::proto::storage::{create_storage, GetAccountStateWithProofByVe
 pub fn start_storage_service_and_return_service(
     config: &NodeConfig,
 ) -> (ServerHandle, Arc<StorageService>) {
-    let (storage_service, shutdown_receiver) = StorageService::new(&config.get_storage_dir());
+    let (storage_service, shutdown_receiver) = StorageService::new(&config.storage.dir());
     (
         spawn_service_thread_with_drop_closure(
             create_storage(storage_service.clone()),
