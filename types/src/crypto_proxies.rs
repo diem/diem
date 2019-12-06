@@ -22,7 +22,6 @@
 use crate::{
     account_address::AccountAddress,
     ledger_info::LedgerInfoWithSignatures as RawLedgerInfoWithSignatures,
-    validator_change::ValidatorChangeEventWithProof as RawValidatorChangeEventWithProof,
     validator_public_keys::ValidatorPublicKeys as RawValidatorPublicKeys,
     validator_set::ValidatorSet as RawValidatorSet,
     validator_signer::ValidatorSigner as RawValidatorSigner,
@@ -92,9 +91,17 @@ pub type LedgerInfoWithSignatures = RawLedgerInfoWithSignatures<Ed25519Signature
 pub type ValidatorInfo = RawValidatorInfo<Ed25519PublicKey>;
 pub type ValidatorVerifier = RawValidatorVerifier<Ed25519PublicKey>;
 pub type ValidatorSigner = RawValidatorSigner<Ed25519PrivateKey>;
-pub type ValidatorChangeEventWithProof = RawValidatorChangeEventWithProof<Ed25519Signature>;
 pub type ValidatorPublicKeys = RawValidatorPublicKeys<Ed25519PublicKey>;
 pub type ValidatorSet = RawValidatorSet<Ed25519PublicKey>;
+pub use crate::validator_change::ValidatorChangeEventWithProof;
+
+#[derive(Clone)]
+/// EpochInfo represents a trusted validator set to validate messages from the specific epoch,
+/// it could be updated with ValidatorChangeEventWithProof.
+pub struct EpochInfo {
+    pub epoch: u64,
+    pub verifier: ValidatorVerifier,
+}
 
 /// Helper function to get random validator signers and a corresponding validator verifier for
 /// testing.  If custom_voting_power_quorum is not None, set a custom voting power quorum amount.

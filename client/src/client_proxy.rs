@@ -8,6 +8,7 @@ use libra_config::config::{ConsensusPeersConfig, PersistableConfig};
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_logger::prelude::*;
 use libra_tools::tempdir::TempPath;
+use libra_types::crypto_proxies::EpochInfo;
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -39,7 +40,6 @@ use std::{
     path::{Display, Path, PathBuf},
     process::{Command, Stdio},
     str::{self, FromStr},
-    sync::Arc,
     thread, time,
 };
 
@@ -113,14 +113,13 @@ impl ClientProxy {
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
     ) -> Result<Self> {
-        let validator_verifier = Arc::new(
-            ConsensusPeersConfig::load_config(validator_set_file)?.get_validator_verifier(),
-        );
+        let verifier =
+            ConsensusPeersConfig::load_config(validator_set_file)?.get_validator_verifier();
         ensure!(
-            !validator_verifier.is_empty(),
+            !verifier.is_empty(),
             "Not able to load any validators from trusted peers config!"
         );
-        let client = GRPCClient::new(host, ac_port, validator_verifier)?;
+        let client = GRPCClient::new(host, ac_port, EpochInfo { epoch: 1, verifier })?;
 
         let accounts = vec![];
 

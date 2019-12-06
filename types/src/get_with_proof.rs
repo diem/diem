@@ -1,13 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
+use crate::crypto_proxies::EpochInfo;
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::get_account_resource_or_default,
     account_state_blob::AccountStateWithProof,
     contract_event::EventWithProof,
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    crypto_proxies::LedgerInfoWithSignatures,
+    crypto_proxies::ValidatorChangeEventWithProof,
+    ledger_info::LedgerInfo,
     proof::AccumulatorConsistencyProof,
     proto::types::{
         GetAccountStateRequest, GetAccountStateResponse,
@@ -16,18 +21,14 @@ use crate::{
         GetEventsByEventAccessPathResponse, GetTransactionsRequest, GetTransactionsResponse,
     },
     transaction::{TransactionListWithProof, TransactionWithProof, Version},
-    validator_change::ValidatorChangeEventWithProof,
-    validator_verifier::ValidatorVerifier,
 };
 use anyhow::{bail, ensure, format_err, Error, Result};
-use libra_crypto::{hash::CryptoHash, *};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use std::{
     cmp,
     convert::{TryFrom, TryInto},
     mem,
-    sync::Arc,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -75,16 +76,14 @@ impl From<UpdateToLatestLedgerRequest> for crate::proto::types::UpdateToLatestLe
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct UpdateToLatestLedgerResponse<Sig> {
+pub struct UpdateToLatestLedgerResponse {
     pub response_items: Vec<ResponseItem>,
-    pub ledger_info_with_sigs: LedgerInfoWithSignatures<Sig>,
-    pub validator_change_events: ValidatorChangeEventWithProof<Sig>,
+    pub ledger_info_with_sigs: LedgerInfoWithSignatures,
+    pub validator_change_events: ValidatorChangeEventWithProof,
     pub ledger_consistency_proof: AccumulatorConsistencyProof,
 }
 
-impl<Sig: Signature> TryFrom<crate::proto::types::UpdateToLatestLedgerResponse>
-    for UpdateToLatestLedgerResponse<Sig>
-{
+impl TryFrom<crate::proto::types::UpdateToLatestLedgerResponse> for UpdateToLatestLedgerResponse {
     type Error = Error;
 
     fn try_from(proto: crate::proto::types::UpdateToLatestLedgerResponse) -> Result<Self> {
@@ -115,10 +114,8 @@ impl<Sig: Signature> TryFrom<crate::proto::types::UpdateToLatestLedgerResponse>
     }
 }
 
-impl<Sig: Signature> From<UpdateToLatestLedgerResponse<Sig>>
-    for crate::proto::types::UpdateToLatestLedgerResponse
-{
-    fn from(response: UpdateToLatestLedgerResponse<Sig>) -> Self {
+impl From<UpdateToLatestLedgerResponse> for crate::proto::types::UpdateToLatestLedgerResponse {
+    fn from(response: UpdateToLatestLedgerResponse) -> Self {
         let response_items = response
             .response_items
             .into_iter()
@@ -137,12 +134,12 @@ impl<Sig: Signature> From<UpdateToLatestLedgerResponse<Sig>>
     }
 }
 
-impl<Sig: Signature> UpdateToLatestLedgerResponse<Sig> {
+impl UpdateToLatestLedgerResponse {
     /// Constructor.
     pub fn new(
         response_items: Vec<ResponseItem>,
-        ledger_info_with_sigs: LedgerInfoWithSignatures<Sig>,
-        validator_change_events: ValidatorChangeEventWithProof<Sig>,
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        validator_change_events: ValidatorChangeEventWithProof,
         ledger_consistency_proof: AccumulatorConsistencyProof,
     ) -> Self {
         UpdateToLatestLedgerResponse {
@@ -160,32 +157,32 @@ impl<Sig: Signature> UpdateToLatestLedgerResponse<Sig> {
     /// verification.
     pub fn verify(
         &self,
-        validator_verifier: Arc<ValidatorVerifier<Sig::VerifyingKeyMaterial>>,
+        current_epoch_info: &EpochInfo,
         request: &UpdateToLatestLedgerRequest,
-    ) -> Result<()> {
+    ) -> Result<Option<EpochInfo>> {
         verify_update_to_latest_ledger_response(
-            validator_verifier,
+            current_epoch_info,
             request.client_known_version,
             &request.requested_items,
             &self.response_items,
             &self.ledger_info_with_sigs,
+            &self.validator_change_events,
         )
     }
 }
 
 /// Verifies content of an [`UpdateToLatestLedgerResponse`] against the proofs it
 /// carries and the content of the corresponding [`UpdateToLatestLedgerRequest`]
-pub fn verify_update_to_latest_ledger_response<Sig: Signature>(
-    validator_verifier: Arc<ValidatorVerifier<Sig::VerifyingKeyMaterial>>,
+/// Return EpochInfo if there're validator change events.
+pub fn verify_update_to_latest_ledger_response(
+    current_epoch_info: &EpochInfo,
     req_client_known_version: u64,
     req_request_items: &[RequestItem],
     response_items: &[ResponseItem],
-    ledger_info_with_sigs: &LedgerInfoWithSignatures<Sig>,
-) -> Result<()> {
-    let (ledger_info, signatures) = (
-        ledger_info_with_sigs.ledger_info(),
-        ledger_info_with_sigs.signatures(),
-    );
+    ledger_info_with_sigs: &LedgerInfoWithSignatures,
+    validator_change_events: &ValidatorChangeEventWithProof,
+) -> Result<Option<EpochInfo>> {
+    let ledger_info = ledger_info_with_sigs.ledger_info();
 
     // Verify that the same or a newer ledger info is returned.
     ensure!(
@@ -194,11 +191,6 @@ pub fn verify_update_to_latest_ledger_response<Sig: Signature>(
         ledger_info.version(),
         req_client_known_version,
     );
-
-    // Verify ledger info signatures.
-    if !(ledger_info.version() == 0 && signatures.is_empty()) {
-        validator_verifier.batch_verify_aggregated_signature(ledger_info.hash(), signatures)?;
-    }
 
     // Verify each sub response.
     ensure!(
@@ -211,7 +203,28 @@ pub fn verify_update_to_latest_ledger_response<Sig: Signature>(
         .map(|(req, res)| verify_response_item(ledger_info, req, res))
         .collect::<Result<Vec<_>>>()?;
 
-    Ok(())
+    // TODO: use waypoint instead of skipping the genesis ledger info
+    if ledger_info.version() == 0 && ledger_info_with_sigs.signatures().is_empty() {
+        return Ok(None);
+    }
+    // Verify ledger info signatures and potential epoch changes
+    if ledger_info.epoch() > current_epoch_info.epoch {
+        let epoch_change_li = validator_change_events
+            .verify(current_epoch_info.epoch, &current_epoch_info.verifier)?;
+        let new_epoch_info = EpochInfo {
+            epoch: epoch_change_li.ledger_info().epoch() + 1,
+            verifier: epoch_change_li
+                .ledger_info()
+                .next_validator_set()
+                .ok_or_else(|| format_err!("No ValidatorSet in EpochProof"))?
+                .into(),
+        };
+        ledger_info_with_sigs.verify(&new_epoch_info.verifier)?;
+        Ok(Some(new_epoch_info))
+    } else {
+        ledger_info_with_sigs.verify(&current_epoch_info.verifier)?;
+        Ok(None)
+    }
 }
 
 fn verify_response_item(

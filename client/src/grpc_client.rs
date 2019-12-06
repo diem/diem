@@ -12,15 +12,14 @@ use admission_control_proto::{
 use anyhow::{bail, Result};
 use futures::Future;
 use grpcio::{CallOption, ChannelBuilder, EnvBuilder};
-use libra_crypto::ed25519::*;
 use libra_logger::prelude::*;
+use libra_types::crypto_proxies::EpochInfo;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::get_account_resource_or_default,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
-    crypto_proxies::ValidatorVerifier,
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
@@ -28,19 +27,20 @@ use libra_types::{
     vm_error::StatusCode,
 };
 use std::convert::TryFrom;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 const MAX_GRPC_RETRY_COUNT: u64 = 1;
 
-/// Struct holding dependencies of client.
+/// Struct holding dependencies of client, known_version_and_epoch is updated when learning about
+/// new LedgerInfo
 pub struct GRPCClient {
     client: AdmissionControlClient,
-    validator_verifier: Arc<ValidatorVerifier>,
+    known_version_and_epoch: Arc<Mutex<(Version, EpochInfo)>>,
 }
 
 impl GRPCClient {
     /// Construct a new Client instance.
-    pub fn new(host: &str, port: u16, validator_verifier: Arc<ValidatorVerifier>) -> Result<Self> {
+    pub fn new(host: &str, port: u16, initial_epoch_info: EpochInfo) -> Result<Self> {
         let conn_addr = format!("{}:{}", host, port);
 
         // Create a GRPC client
@@ -50,7 +50,7 @@ impl GRPCClient {
 
         Ok(GRPCClient {
             client,
-            validator_verifier,
+            known_version_and_epoch: Arc::new(Mutex::new((0, initial_epoch_info))),
         })
     }
 
@@ -132,22 +132,24 @@ impl GRPCClient {
     fn get_with_proof_async(
         &self,
         requested_items: Vec<RequestItem>,
-    ) -> Result<
-        impl Future<Item = UpdateToLatestLedgerResponse<Ed25519Signature>, Error = anyhow::Error>,
-    > {
-        let req = UpdateToLatestLedgerRequest::new(0, requested_items.clone());
+    ) -> Result<impl Future<Item = UpdateToLatestLedgerResponse, Error = anyhow::Error>> {
+        let known_version_and_epoch = Arc::clone(&self.known_version_and_epoch);
+        let req = UpdateToLatestLedgerRequest::new(
+            known_version_and_epoch.lock().unwrap().0,
+            requested_items.clone(),
+        );
         debug!("get_with_proof with request: {:?}", req);
         let proto_req = req.clone().into();
-        let validator_verifier = Arc::clone(&self.validator_verifier);
         let ret = self
             .client
             .update_to_latest_ledger_async_opt(&proto_req, Self::get_default_grpc_call_option())?
             .then(move |get_with_proof_resp| {
-                // TODO: Cache/persist client_known_version to work with validator set change when
-                // the feature is available.
-
                 let resp = UpdateToLatestLedgerResponse::try_from(get_with_proof_resp?)?;
-                resp.verify(validator_verifier, &req)?;
+                let mut wlock = known_version_and_epoch.lock().unwrap();
+                if let Some(new_epoch_info) = resp.verify(&wlock.1, &req)? {
+                    wlock.1 = new_epoch_info;
+                }
+                wlock.0 = resp.ledger_info_with_sigs.ledger_info().version();
                 Ok(resp)
             });
         Ok(ret)
@@ -172,8 +174,8 @@ impl GRPCClient {
     pub(crate) fn get_with_proof_sync(
         &self,
         requested_items: Vec<RequestItem>,
-    ) -> Result<UpdateToLatestLedgerResponse<Ed25519Signature>> {
-        let mut resp: Result<UpdateToLatestLedgerResponse<Ed25519Signature>> =
+    ) -> Result<UpdateToLatestLedgerResponse> {
+        let mut resp: Result<UpdateToLatestLedgerResponse> =
             self.get_with_proof_async(requested_items.clone())?.wait();
         let mut try_cnt = 0_u64;
 
