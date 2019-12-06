@@ -35,6 +35,7 @@ use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceC
 use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
 use vm_runtime::MoveVM;
+use std::convert::TryInto;
 
 pub struct LibraHandle {
     pub _ac: AdmissionControlRuntime,
@@ -176,16 +177,25 @@ pub fn setup_network(
             .into_iter()
             .map(|(peer_id, addrs)| (peer_id.try_into().expect("Invalid PeerId"), addrs))
             .collect();
-        let network_signing_private = config.network_keypairs.take_network_signing_private()
-            .expect("Failed to move network signing private key out of NodeConfig, key not set or moved already");
-        let network_signing_public: Ed25519PublicKey = (&network_signing_private).into();
+        let signing_private = config
+            .network_keypairs
+            .signing_keys
+            .take_private()
+            .expect("Failed to take Network signing private key, key absent or already read");
+        let signing_public = config.network_keypairs.signing_keys.public().clone();
+        let identity_private = config
+            .network_keypairs
+            .identity_keys
+            .take_private()
+            .expect("Failed to take Network identity private key, key absent or already read");
+        let identity_public = config.network_keypairs.identity_keys.public().clone();
         network_builder
             .transport(TransportType::PermissionlessTcpNoise(Some(
-                config.network_keypairs.get_network_identity_keypair(),
+                (identity_private,identity_public)
             )))
             .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
             .seed_peers(seed_peers)
-            .signing_keys((network_signing_private, network_signing_public))
+            .signing_keys((signing_private, signing_public))
             .discovery_interval_ms(config.discovery_interval_ms);
     } else {
         network_builder.transport(TransportType::Tcp);

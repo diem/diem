@@ -5,6 +5,7 @@ use libra_types::transaction::SignedTransaction;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::fmt;
+use anyhow::{Result, Error};
 
 #[derive(Clone, Eq, PartialEq, Default, Hash, Serialize, Deserialize)]
 pub struct BlockPayloadExt {
@@ -35,17 +36,17 @@ impl fmt::Debug for BlockPayloadExt {
 }
 
 impl TryFrom<network::proto::BlockPayloadExt> for BlockPayloadExt {
-    type Error = failure::Error;
+    type Error = Error;
 
-    fn try_from(proto: network::proto::BlockPayloadExt) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::BlockPayloadExt) -> Result<Self> {
         Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }
 
 impl TryFrom<BlockPayloadExt> for network::proto::BlockPayloadExt {
-    type Error = failure::Error;
+    type Error = Error;
 
-    fn try_from(payload: BlockPayloadExt) -> failure::Result<Self> {
+    fn try_from(payload: BlockPayloadExt) -> Result<Self> {
         Ok(Self {
             bytes: lcs::to_bytes(&payload)?,
         })

@@ -1,6 +1,6 @@
 use crate::pow::payload_ext::genesis_id;
 use crate::state_replication::TxnManager;
-use anyhow::Result;
+use anyhow::{Result, *};
 use atomic_refcell::AtomicRefCell;
 use executor::ProcessedVMOutput;
 use libra_crypto::hash::PRE_GENESIS_BLOCK_ID;

@@ -36,14 +36,15 @@ use std::convert::TryInto;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::Handle;
+use anyhow::Result;
 
 pub struct MintManager {
     txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,
     state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
     network_sender: ConsensusNetworkSender,
     author: AccountAddress,
-    self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+    self_sender: channel::Sender<Result<Event<ConsensusMsg>>>,
     block_store: Arc<ConsensusDB>,
     _pow_srv: Arc<dyn PowService>,
     chain_manager: Arc<AtomicRefCell<ChainManager>>,
@@ -57,7 +58,7 @@ impl MintManager {
         state_computer: Arc<dyn StateComputer<Payload = Vec<SignedTransaction>>>,
         network_sender: ConsensusNetworkSender,
         author: AccountAddress,
-        self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+        self_sender: channel::Sender<Result<Event<ConsensusMsg>>>,
         block_store: Arc<ConsensusDB>,
         pow_srv: Arc<dyn PowService>,
         chain_manager: Arc<AtomicRefCell<ChainManager>>,
@@ -78,7 +79,7 @@ impl MintManager {
         }
     }
 
-    pub fn mint(&mut self, executor: TaskExecutor) {
+    pub fn mint(&mut self, executor: Handle) {
         let mint_txn_manager = self.txn_manager.clone();
         let mint_state_computer = self.state_computer.clone();
         let mut mint_network_sender = self.network_sender.clone();

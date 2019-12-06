@@ -25,11 +25,12 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::Handle;
+use anyhow::Result;
 
 pub struct SyncManager {
     author: AccountAddress,
-    self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+    self_sender: channel::Sender<Result<Event<ConsensusMsg>>>,
     network_sender: ConsensusNetworkSender,
     block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
     sync_block_receiver: Option<mpsc::Receiver<(PeerId, BlockRetrievalResponse<BlockPayloadExt>)>>,
@@ -42,7 +43,7 @@ pub struct SyncManager {
 impl SyncManager {
     pub fn new(
         author: AccountAddress,
-        self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+        self_sender: channel::Sender<Result<Event<ConsensusMsg>>>,
         network_sender: ConsensusNetworkSender,
         block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
         sync_block_receiver: Option<
@@ -64,7 +65,7 @@ impl SyncManager {
         }
     }
 
-    pub fn sync_block_msg(&mut self, executor: TaskExecutor) {
+    pub fn sync_block_msg(&mut self, executor: Handle) {
         let mut sync_block_receiver = self
             .sync_block_receiver
             .take()

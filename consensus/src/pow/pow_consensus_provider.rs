@@ -17,7 +17,7 @@ use state_synchronizer::StateSyncClient;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageWrite};
-use tokio::runtime::{self, TaskExecutor};
+use tokio::runtime::{self, Handle};
 use vm_runtime::MoveVM;
 
 pub struct PowConsensusProvider {
@@ -39,7 +39,8 @@ impl PowConsensusProvider {
         write_storage: Arc<dyn StorageWrite>,
     ) -> Self {
         let runtime = runtime::Builder::new()
-            .name_prefix("pow-consensus-")
+            .threaded_scheduler()
+            .enable_all()
             .build()
             .expect("Failed to create Tokio runtime!");
 
@@ -47,7 +48,7 @@ impl PowConsensusProvider {
         let state_computer = Arc::new(ExecutionProxy::new(executor, synchronizer_client.clone()));
 
         let peer_id_str = node_config
-            .get_validator_network_config()
+            .validator_network.as_ref()
             .unwrap()
             .peer_id
             .clone();
@@ -72,7 +73,7 @@ impl PowConsensusProvider {
         let self_pri_key = node_config
             .consensus
             .consensus_keypair
-            .take_consensus_private()
+            .take_private()
             .expect("private key is none.");
         let event_handle = EventProcessor::new(
             network_sender,
@@ -94,7 +95,7 @@ impl PowConsensusProvider {
         }
     }
 
-    pub fn event_handle(&mut self, executor: TaskExecutor) {
+    pub fn event_handle(&mut self, executor: Handle) {
         match self.event_handle.take() {
             Some(mut handle) => {
                 //mint
@@ -124,7 +125,7 @@ impl PowConsensusProvider {
 
 impl ConsensusProvider for PowConsensusProvider {
     fn start(&mut self) -> Result<()> {
-        let executor = self.runtime.executor();
+        let executor = self.runtime.handle().clone();
         self.event_handle(executor);
         info!("PowConsensusProvider start succ.");
         Ok(())

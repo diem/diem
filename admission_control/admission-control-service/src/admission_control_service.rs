@@ -24,7 +24,7 @@ use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedge
 use std::convert::TryFrom;
 use std::sync::Arc;
 use storage_client::StorageRead;
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::Handle;
 use vm_validator::vm_validator::VMValidator;
 
 /// Struct implementing trait (service handle) AdmissionControlService.
@@ -78,7 +78,7 @@ impl AdmissionControlService {
 
     pub(super) fn submit_transaction_inner(
         &self,
-        executor: TaskExecutor,
+        executor: Handle,
         proxy: UpstreamProxyData<CoreMemPoolClient, VMValidator>,
         req: SubmitTransactionRequest,
     ) -> Result<SubmitTransactionResponse> {

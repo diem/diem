@@ -6,7 +6,7 @@ use admission_control_proto::proto::admission_control::{
 use libra_mempool::core_mempool_client::CoreMemPoolClient;
 use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
 use std::sync::Arc;
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::Handle;
 use vm_validator::vm_validator::VMValidator;
 
 /// AdmissionControlClient
@@ -14,7 +14,7 @@ use vm_validator::vm_validator::VMValidator;
 pub struct AdmissionControlMockClient {
     ac_service: Arc<AdmissionControlService>,
     proxy: UpstreamProxyData<CoreMemPoolClient, VMValidator>,
-    executor: TaskExecutor,
+    executor: Handle,
 }
 
 impl AdmissionControlMockClient {
@@ -22,7 +22,7 @@ impl AdmissionControlMockClient {
     pub fn new(
         ac_service: AdmissionControlService,
         proxy: UpstreamProxyData<CoreMemPoolClient, VMValidator>,
-        executor: TaskExecutor,
+        executor: Handle,
     ) -> Self {
         AdmissionControlMockClient {
             ac_service: Arc::new(ac_service),

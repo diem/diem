@@ -35,15 +35,16 @@ use std::convert::TryInto;
 use std::sync::Arc;
 use std::{convert::TryFrom, path::PathBuf};
 use storage_client::{StorageRead, StorageWrite};
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::Handle;
+use anyhow::{Result, Error};
 
 pub struct EventProcessor {
     block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,
     block_store: Arc<ConsensusDB>,
     network_sender: ConsensusNetworkSender,
     network_events: Option<ConsensusNetworkEvents>,
-    self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
-    self_receiver: Option<channel::Receiver<failure::Result<Event<ConsensusMsg>>>>,
+    self_sender: channel::Sender<Result<Event<ConsensusMsg>>>,
+    self_receiver: Option<channel::Receiver<Result<Event<ConsensusMsg>>>>,
     author: AccountAddress,
 
     //sync
@@ -128,12 +129,12 @@ impl EventProcessor {
         }
     }
 
-    pub fn event_process(&mut self, executor: TaskExecutor) {
+    pub fn event_process(&mut self, executor: Handle) {
         let network_events = self
             .network_events
             .take()
             .expect("[consensus] Failed to start; network_events stream is already taken")
-            .map_err(Into::<failure::Error>::into);
+            .map_err(Into::<Error>::into);
 
         let own_msgs = self
             .self_receiver
@@ -356,7 +357,7 @@ impl EventProcessor {
         network_sender: &mut ConsensusNetworkSender,
         self_flag: bool,
         self_peer_id: PeerId,
-        self_sender: &mut channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+        self_sender: &mut channel::Sender<Result<Event<ConsensusMsg>>>,
         msg: ConsensusMsg,
     ) {
         Self::broadcast_consensus_msg_but(
@@ -374,7 +375,7 @@ impl EventProcessor {
         network_sender: &mut ConsensusNetworkSender,
         self_flag: bool,
         self_peer_id: PeerId,
-        self_sender: &mut channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+        self_sender: &mut channel::Sender<Result<Event<ConsensusMsg>>>,
         msg: ConsensusMsg,
         ignore_peers: Vec<PeerId>,
     ) {
@@ -400,7 +401,7 @@ impl EventProcessor {
         send_peer_id: PeerId,
         network_sender: &mut ConsensusNetworkSender,
         self_peer_id: PeerId,
-        self_sender: &mut channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+        self_sender: &mut channel::Sender<Result<Event<ConsensusMsg>>>,
         msg: ConsensusMsg,
     ) {
         if send_peer_id == self_peer_id {

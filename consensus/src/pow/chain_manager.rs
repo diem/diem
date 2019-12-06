@@ -19,7 +19,7 @@ use libra_types::transaction::{SignedTransaction, Transaction};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageWrite};
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::Handle;
 
 pub struct ChainManager {
     block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
@@ -88,7 +88,7 @@ impl ChainManager {
         //TODO:orphan
     }
 
-    pub fn save_block(&mut self, executor: TaskExecutor) {
+    pub fn save_block(&mut self, executor: Handle) {
         let block_db = self.block_store.clone();
         let orphan_blocks = self.orphan_blocks.clone();
         let mut block_cache_receiver = self

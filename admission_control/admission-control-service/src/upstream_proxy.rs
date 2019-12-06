@@ -176,7 +176,7 @@ fn count_active_peers(peer_info: &HashMap<PeerId, bool>) -> usize {
     peer_info.iter().filter(|(_, &is_alive)| is_alive).count()
 }
 
-async fn submit_transaction<M, V>(
+pub async fn submit_transaction<M, V>(
     request: SubmitTransactionRequest,
     mut upstream_proxy_data: UpstreamProxyData<M, V>,
     peer_id: Option<PeerId>,
