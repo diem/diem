@@ -73,6 +73,15 @@ impl Serializer {
     fn end(self) -> Vec<u8> {
         self.output
     }
+
+    /// Serialize a sequence length as a u32.
+    fn serialize_seq_len(&mut self, len: usize) -> Result<()> {
+        use serde::ser::Serializer;
+        if len > crate::MAX_SEQUENCE_LENGTH {
+            return Err(Error::ExceededMaxLen(len));
+        }
+        self.serialize_u32(len as u32)
+    }
 }
 
 impl<'a> ser::Serializer for &'a mut Serializer {
@@ -154,12 +163,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
 
     // Serialize a byte array as an array of bytes.
     fn serialize_bytes(self, v: &[u8]) -> Result<()> {
-        use serde::ser::SerializeSeq;
-        let mut seq = self.serialize_seq(Some(v.len()))?;
-        for byte in v {
-            seq.serialize_element(byte)?;
-        }
-        seq.end()
+        self.serialize_seq_len(v.len())?;
+        self.output.extend_from_slice(v);
+        Ok(())
     }
 
     // An absent optional is represented as `00`
@@ -220,11 +226,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     // length structures, the length encoded as a u32.
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq> {
         if let Some(len) = len {
-            if len > crate::MAX_SEQUENCE_LENGTH {
-                return Err(Error::ExceededMaxLen(len));
-            }
-
-            self.serialize_u32(len as u32)?;
+            self.serialize_seq_len(len)?;
             Ok(self)
         } else {
             Err(Error::MissingLen)
