@@ -367,7 +367,7 @@ where
         self.commit_blocks(
             vec![(genesis_txns, Arc::new(output))],
             ledger_info_with_sigs,
-            0,
+            &pre_genesis_trees,
         )
         .expect("Failed to commit genesis block.");
         info!("GENESIS transaction is committed.")
@@ -436,12 +436,14 @@ where
         &self,
         blocks: Vec<(Vec<Transaction>, Arc<ProcessedVMOutput>)>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
-        num_persistent_txns: u64,
+        synced_trees: &ExecutedTrees,
     ) -> Result<()> {
         debug!(
             "Received request to commit block {:x}.",
             ledger_info_with_sigs.ledger_info().consensus_block_id()
         );
+        let num_persistent_txns = synced_trees.txn_accumulator().num_leaves();
+
         // All transactions that need to go to storage. In the above example, this means all the
         // transactions in A, B and C whose status == TransactionStatus::Keep.
         // This must be done before calculate potential skipping of transactions in idempotent commit.

@@ -178,7 +178,7 @@ impl<T: Payload> BlockStore<T> {
             .commit(
                 blocks_to_commit.iter().map(|b| b.as_ref()).collect(),
                 finality_proof,
-                self.root().executed_trees().txn_accumulator().num_leaves(),
+                self.root().executed_trees(),
             )
             .await
             .expect("Failed to persist commit");

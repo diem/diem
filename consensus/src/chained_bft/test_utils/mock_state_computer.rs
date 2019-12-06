@@ -55,7 +55,7 @@ impl StateComputer for MockStateComputer {
         &self,
         _blocks: Vec<&ExecutedBlock<Self::Payload>>,
         commit: LedgerInfoWithSignatures,
-        _num_persistent_txns: u64,
+        _synced_trees: &ExecutedTrees,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         self.consensus_db
             .commit_to_storage(commit.ledger_info().clone());
@@ -116,7 +116,7 @@ impl StateComputer for EmptyStateComputer {
         &self,
         _blocks: Vec<&ExecutedBlock<Self::Payload>>,
         _commit: LedgerInfoWithSignatures,
-        _num_persistent_txns: u64,
+        _synced_trees: &ExecutedTrees,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         async { Ok(()) }.boxed()
     }

@@ -312,13 +312,13 @@ fn test_execution_with_storage() {
         )
         .unwrap();
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(6, output1.accu_root(), block1_id);
-    let num_persistent_txns = committed_trees.txn_accumulator().num_leaves();
+    let committed_trees_copy = committed_trees.clone();
     committed_trees = output1.executed_trees().clone();
     executor
         .commit_blocks(
             vec![(block1.clone(), Arc::new(output1))],
             ledger_info_with_sigs,
-            num_persistent_txns,
+            &committed_trees_copy,
         )
         .unwrap();
 
@@ -563,7 +563,7 @@ fn test_execution_with_storage() {
         .commit_blocks(
             vec![(block2.clone(), Arc::new(output2))],
             ledger_info_with_sigs,
-            committed_trees.txn_accumulator().num_leaves(),
+            &committed_trees,
         )
         .unwrap();
 
