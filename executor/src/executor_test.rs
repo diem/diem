@@ -107,7 +107,7 @@ fn execute_and_commit_block(
         .commit_blocks(
             vec![(vec![txn], Arc::new(output))],
             ledger_info,
-            committed_trees.txn_accumulator().num_leaves(),
+            &committed_trees,
         )
         .unwrap();
     *committed_trees = new_trees;
@@ -249,7 +249,7 @@ fn test_executor_one_block() {
         .commit_blocks(
             vec![(txns, Arc::new(output))],
             ledger_info,
-            committed_trees.txn_accumulator().num_leaves(),
+            &committed_trees,
         )
         .unwrap();
 }
@@ -307,7 +307,7 @@ fn test_executor_two_blocks_with_failed_txns() {
                 (block2_txns, Arc::new(output2)),
             ],
             ledger_info,
-            committed_trees.txn_accumulator().num_leaves(),
+            &committed_trees,
         )
         .unwrap();
 }
@@ -393,7 +393,7 @@ fn create_transaction_chunks(
         .commit_blocks(
             vec![(txns, Arc::new(output))],
             ledger_info.clone(),
-            root_trees.txn_accumulator().num_leaves(),
+            &root_trees,
         )
         .unwrap();
 
@@ -600,7 +600,7 @@ fn run_transactions_naive(transactions: Vec<Transaction>) -> HashValue {
         .commit_blocks(
             vec![(first_txn, Arc::new(output))],
             ledger_info,
-            committed_trees.txn_accumulator().num_leaves(),
+            &committed_trees,
         )
         .unwrap();
     committed_trees = new_trees;
@@ -626,7 +626,7 @@ fn run_transactions_naive(transactions: Vec<Transaction>) -> HashValue {
             .commit_blocks(
                 vec![(vec![txn], Arc::new(output))],
                 ledger_info,
-                committed_trees.txn_accumulator().num_leaves(),
+                &committed_trees,
             )
             .unwrap();
         committed_trees = new_trees;
@@ -709,7 +709,7 @@ proptest! {
             let ledger_info = gen_ledger_info(block_a.txns.len() as u64, root_hash, block_a.id, 1);
             executor.commit_blocks(vec![(block_a.txns.clone(), Arc::new(output_a))],
                                    ledger_info,
-                                   committed_trees.txn_accumulator().num_leaves())
+                                   &committed_trees)
                 .unwrap();
         }
 
@@ -728,7 +728,7 @@ proptest! {
             );
             executor.commit_blocks(vec![(block_b.txns.clone(), Arc::new(output_b))],
                                    ledger_info,
-                                   committed_trees.txn_accumulator().num_leaves())
+                                   &committed_trees)
                 .unwrap();
             root_hash
         };
@@ -799,7 +799,7 @@ proptest! {
             vec![(first_block_txns, Arc::new(output1)),
                  (second_block_txns, Arc::new(output2))],
             ledger_info,
-            chunk_size,
+            &synced_trees,
         ).unwrap();
 
         drop(storage_server);

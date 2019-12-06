@@ -98,7 +98,7 @@ impl StateComputer for ExecutionProxy {
         &self,
         blocks: Vec<&ExecutedBlock<Self::Payload>>,
         finality_proof: LedgerInfoWithSignatures,
-        num_persistent_txns: u64,
+        committed_trees: &ExecutedTrees,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
         let version = finality_proof.ledger_info().version();
         counters::LAST_COMMITTED_VERSION.set(version as i64);
@@ -118,7 +118,7 @@ impl StateComputer for ExecutionProxy {
 
         let commit_result =
             self.executor
-                .commit_blocks(committable_blocks, finality_proof, num_persistent_txns);
+                .commit_blocks(committable_blocks, finality_proof, committed_trees);
         async move {
             match commit_result {
                 Ok(()) => {

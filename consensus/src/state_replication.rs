@@ -57,7 +57,7 @@ pub trait StateComputer: Send + Sync {
         &self,
         blocks: Vec<&ExecutedBlock<Self::Payload>>,
         finality_proof: LedgerInfoWithSignatures,
-        num_persistent_txns: u64,
+        synced_trees: &ExecutedTrees,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
     /// Best effort state synchronization to the given target LedgerInfo.
