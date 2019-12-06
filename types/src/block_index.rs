@@ -1,4 +1,4 @@
-use failure::prelude::*;
+use anyhow::{Error, Result};
 use libra_crypto::HashValue;
 use std::convert::TryFrom;
 

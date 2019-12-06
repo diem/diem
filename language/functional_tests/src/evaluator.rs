@@ -481,8 +481,17 @@ fn eval_transaction(
                 return Ok(Status::Success);
             }
             log.append(EvaluationOutput::Stage(Stage::Verifier));
-            let compiled_script =
-                unwrap_or_abort!(do_verify_script(compiled_script, &*deps)).into_inner();
+
+            let compiled_script = match do_verify_script(compiled_script, &*deps) {
+                Ok(script) => script.into_inner(),
+                Err(errs) => {
+                    for err in errs.into_iter() {
+                        let err: Error = ErrorKind::VerificationError(err).into();
+                        log.append(EvaluationOutput::Error(Box::new(err)));
+                    }
+                    return Ok(Status::Failure);
+                }
+            };
 
             // stage 4: serializer round trip
             if !transaction.config.is_stage_disabled(Stage::Serializer) {

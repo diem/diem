@@ -7,7 +7,12 @@
 use crate::{common::strip, errors::*, genesis_accounts::make_genesis_accounts};
 use language_e2e_tests::account::{Account, AccountData};
 use libra_config::generator;
-use libra_crypto::PrivateKey;
+use libra_crypto::{
+    ed25519::{Ed25519PublicKey, Ed25519Signature},
+    traits::SigningKey,
+    HashValue, PrivateKey,
+};
+use libra_types::account_address::AccountAddress;
 use libra_types::validator_set::ValidatorSet;
 use std::{
     collections::{btree_map, BTreeMap},

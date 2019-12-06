@@ -109,6 +109,9 @@ impl ConsensusConfig {
             consensus_peers_file: self.consensus_peers_file.clone(),
             safety_rules: self.safety_rules.clone(),
             base: self.base.clone(),
+            consensus_type: self.consensus_type.clone(),
+            miner_rpc_address: self.miner_rpc_address.clone(),
+            miner_client_enable: self.miner_client_enable,
         }
     }
 

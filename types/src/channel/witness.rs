@@ -1,5 +1,5 @@
 use crate::write_set::WriteSet;
-use failure::prelude::*;
+use anyhow::{ensure, Result};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_crypto::hash::CryptoHash;
 use libra_crypto::{ed25519::Ed25519Signature, hash::HashValue, VerifyingKey};

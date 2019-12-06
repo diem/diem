@@ -6,7 +6,7 @@ use crate::{
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
-use failure::prelude::*;
+use anyhow::{bail, Error, Result};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;

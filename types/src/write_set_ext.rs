@@ -4,7 +4,7 @@
 use crate::access_path::AccessPath;
 use crate::account_address::AccountAddress;
 use crate::write_set::{WriteOp, WriteSet, WriteSetMut};
-use failure::{Error, Result};
+use anyhow::{Error, Result};
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 

@@ -35,8 +35,8 @@ use vm_runtime::{
     },
     data_cache::BlockDataCache,
     txn_executor::{
-        TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE, GAS_SCHEDULE_MODULE, LIBRA_SYSTEM_MODULE,
-        VALIDATOR_CONFIG_MODULE,
+        TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE, CONSENSUS_CONF_MODULE,
+        GAS_SCHEDULE_MODULE, LIBRA_SYSTEM_MODULE, VALIDATOR_CONFIG_MODULE,
     },
 };
 use vm_runtime_types::value::Value;

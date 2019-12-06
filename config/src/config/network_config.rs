@@ -104,6 +104,7 @@ impl NetworkConfig {
             seed_peers_file: self.seed_peers_file.clone(),
             seed_peers: self.seed_peers.clone(),
             base: self.base.clone(),
+            is_public_network: self.is_public_network,
         }
     }
 

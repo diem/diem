@@ -81,7 +81,7 @@ impl Default for VMConfig {
         .collect();
 
         VMConfig {
-            publishing_options: VMPublishingOption::Open,
+            publishing_options: VMPublishingOption::Locked(whitelist),
             mode: VMMode::Onchain,
         }
     }

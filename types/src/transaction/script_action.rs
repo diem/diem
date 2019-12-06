@@ -6,7 +6,7 @@ use crate::identifier::{IdentStr, Identifier};
 use crate::language_storage::ModuleId;
 use crate::transaction::parse_as_transaction_argument;
 use crate::transaction::transaction_argument::TransactionArgument;
-use failure::prelude::*;
+use anyhow::{ensure, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
@@ -135,7 +135,7 @@ impl std::fmt::Debug for ScriptAction {
         write!(f, "{}", self.action)?;
         for arg in &self.args {
             write!(f, " ")?;
-            write!(f, "{}", arg)?;
+            write!(f, "{:?}", arg)?;
         }
         Ok(())
     }
@@ -146,7 +146,7 @@ impl std::fmt::Display for ScriptAction {
         write!(f, "{}", self.action)?;
         for arg in &self.args {
             write!(f, " ")?;
-            write!(f, "{}", arg)?;
+            write!(f, "{:?}", arg)?;
         }
         Ok(())
     }

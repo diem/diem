@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use failure::prelude::*;
+use anyhow::Result;
 use libra_crypto::{
     hash::{CryptoHash, CryptoHasher, TestOnlyHasher},
     HashValue, VerifyingKey,
