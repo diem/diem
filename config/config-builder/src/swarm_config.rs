@@ -195,7 +195,7 @@ impl SwarmConfigBuilder {
                 self.is_permissioned,
                 true,
             )?;
-            upstream_peer.save(&PathBuf::from("node.config.toml"));
+            upstream_peer.save(&PathBuf::from("node.config.toml"))?;
         }
 
         ensure!(
@@ -216,7 +216,7 @@ impl SwarmConfigBuilder {
             config.set_data_dir(node_dir.clone())?;
             config_files.push(node_dir.join("node.config.toml"));
             config.execution.genesis = genesis.clone();
-            config.save(&PathBuf::from("node.config.toml"));
+            config.save(&PathBuf::from("node.config.toml"))?;
         }
 
         Ok(SwarmConfig { config_files })

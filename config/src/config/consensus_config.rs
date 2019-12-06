@@ -132,21 +132,22 @@ impl ConsensusConfig {
         Ok(())
     }
 
-    pub fn save(&mut self) {
+    pub fn save(&mut self) -> Result<()> {
         if self.consensus_keypair != ConsensusKeyPair::default() {
             if self.consensus_keypair_file.as_os_str().is_empty() {
                 self.consensus_keypair_file = PathBuf::from(CONSENSUS_KEYPAIR_DEFAULT);
             }
 
             self.consensus_keypair
-                .save_config(self.consensus_keypair_file());
+                .save_config(self.consensus_keypair_file())?;
         }
 
         if self.consensus_peers_file.as_os_str().is_empty() {
             self.consensus_peers_file = PathBuf::from(CONSENSUS_PEERS_DEFAULT);
         }
         self.consensus_peers
-            .save_config(self.consensus_peers_file());
+            .save_config(self.consensus_peers_file())?;
+        Ok(())
     }
 
     pub fn consensus_keypair_file(&self) -> PathBuf {
@@ -252,15 +253,14 @@ mod test {
         assert_eq!(config.consensus_peers_file, PathBuf::new());
 
         // Assert default loading doesn't affect paths and default remain in place
-        let result = config.load();
-        assert!(result.is_ok());
+        config.load().unwrap();
         assert_eq!(config.consensus_keypair, keypair);
         assert_eq!(config.consensus_keypair_file, PathBuf::new());
         assert_eq!(config.consensus_peers, peers);
         assert_eq!(config.consensus_peers_file, PathBuf::new());
 
         // Assert saving updates peers but not key pairs due to default behavior
-        config.save();
+        config.save().unwrap();
         assert_eq!(config.consensus_keypair, keypair);
         assert_eq!(config.consensus_keypair_file, PathBuf::new());
         assert_eq!(config.consensus_peers, peers);
@@ -284,7 +284,7 @@ mod test {
         assert_eq!(config.consensus_peers_file, PathBuf::new());
 
         // Assert saving updates paths
-        config.save();
+        config.save().unwrap();
         assert_eq!(config.consensus_keypair, keypair);
         assert_eq!(
             config.consensus_keypair_file,
@@ -303,8 +303,7 @@ mod test {
         assert_eq!(new_config.consensus_keypair_file, PathBuf::new());
         assert_eq!(new_config.consensus_peers_file, PathBuf::new());
         // Loading populates things correctly
-        let result = new_config.load();
-        assert!(result.is_ok());
+        new_config.load().unwrap();
         assert_eq!(new_config.consensus_keypair, keypair);
         assert_eq!(
             new_config.consensus_keypair_file,

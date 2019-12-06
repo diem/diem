@@ -99,7 +99,8 @@ impl NodeSetup {
                 MockStorage::<TestPayload>::start_for_testing((&validators).into());
 
             let safety_rules_file = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
-            OnDiskStorage::default_storage(safety_rules_file.clone());
+            OnDiskStorage::default_storage(safety_rules_file.clone())
+                .expect("Unable to allocate SafetyRules storage");
 
             nodes.push(Self::new(
                 playground,
@@ -172,7 +173,8 @@ impl NodeSetup {
         );
 
         let safety_rules = SafetyRules::new(
-            OnDiskStorage::new_storage(safety_rules_file.clone()),
+            OnDiskStorage::new_storage(safety_rules_file.clone())
+                .expect("Unable to allocate SafetyRules storage"),
             Arc::new(signer.clone()),
         );
 

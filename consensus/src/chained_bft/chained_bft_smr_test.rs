@@ -173,7 +173,8 @@ impl SMRNode {
         for smr_id in 0..num_nodes {
             let (initial_data, storage) = MockStorage::start_for_testing(validator_set.clone());
             let safety_rules_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
-            OnDiskStorage::default_storage(safety_rules_path.clone());
+            OnDiskStorage::default_storage(safety_rules_path.clone())
+                .expect("Unable to allocate SafetyRules storage");
             nodes.push(Self::start(
                 playground,
                 signers.remove(0),

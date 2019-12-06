@@ -440,7 +440,7 @@ impl<T: Payload> EventProcessor<T> {
         qc: &QuorumCert,
         tc: Option<&TimeoutCertificate>,
     ) -> anyhow::Result<()> {
-        self.safety_rules.update(qc);
+        self.safety_rules.update(qc)?;
         let consensus_state = self.safety_rules.consensus_state();
         counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
 

@@ -7,6 +7,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 consensus-types = { path = "../consensus-types", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }

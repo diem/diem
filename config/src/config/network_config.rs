@@ -176,27 +176,28 @@ impl NetworkConfig {
         format!("{}.{}", self.peer_id.to_string(), config_path)
     }
 
-    pub fn save(&mut self) {
+    pub fn save(&mut self) -> Result<()> {
         if self.is_permissioned {
             if self.network_keypairs_file.as_os_str().is_empty() {
                 let file_name = self.default_path(NETWORK_KEYPAIRS_DEFAULT);
                 self.network_keypairs_file = PathBuf::from(file_name);
             }
             self.network_keypairs
-                .save_config(self.network_keypairs_file());
+                .save_config(self.network_keypairs_file())?;
         }
 
         if self.network_peers_file.as_os_str().is_empty() {
             let file_name = self.default_path(NETWORK_PEERS_DEFAULT);
             self.network_peers_file = PathBuf::from(file_name);
         }
-        self.network_peers.save_config(self.network_peers_file());
+        self.network_peers.save_config(self.network_peers_file())?;
 
         if self.seed_peers_file.as_os_str().is_empty() {
             let file_name = self.default_path(SEED_PEERS_DEFAULT);
             self.seed_peers_file = PathBuf::from(file_name);
         }
-        self.seed_peers.save_config(self.seed_peers_file());
+        self.seed_peers.save_config(self.seed_peers_file())?;
+        Ok(())
     }
 
     pub fn random(&mut self, rng: &mut StdRng) {
@@ -329,8 +330,7 @@ mod test {
         assert_eq!(config.seed_peers_file, PathBuf::new());
 
         // Assert default loading doesn't affect paths and defaults remain in place
-        let result = config.load(RoleType::Validator);
-        assert!(result.is_ok());
+        config.load(RoleType::Validator).unwrap();
         assert_eq!(config.network_peers, peers);
         assert_eq!(config.network_peers_file, PathBuf::new());
         assert_eq!(config.network_keypairs, NetworkKeyPairs::default());
@@ -339,7 +339,7 @@ mod test {
         assert_eq!(config.seed_peers, SeedPeersConfig::default());
 
         // Assert saving updates paths
-        config.save();
+        config.save().unwrap();
         assert_eq!(config.network_peers, peers);
         assert_eq!(
             config.network_keypairs_file,
@@ -375,7 +375,7 @@ mod test {
         assert_eq!(config.seed_peers_file, PathBuf::new());
 
         // Assert saving updates paths
-        config.save();
+        config.save().unwrap();
         assert_eq!(config.network_keypairs, keypairs);
         assert_eq!(
             config.network_keypairs_file,

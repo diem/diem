@@ -1109,7 +1109,8 @@ mod tests {
         let consensus_peers_path = consensus_peer_file.path();
         consensus_config
             .consensus_peers
-            .save_config(consensus_peers_path);
+            .save_config(consensus_peers_path)
+            .expect("Unable to save consensus_peers.config");
         let val_set_file = consensus_peers_path.to_str().unwrap().to_string();
 
         // We don't need to specify host/port since the client won't be used to connect, only to

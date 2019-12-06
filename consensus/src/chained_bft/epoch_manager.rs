@@ -202,8 +202,10 @@ impl<T: Payload> EpochManager<T> {
             SafetyRulesBackend::OnDiskStorage(config) => {
                 if config.default {
                     OnDiskStorage::default_storage(config.path().clone())
+                        .expect("Unable to allocate SafetyRules storage")
                 } else {
                     OnDiskStorage::new_storage(config.path().clone())
+                        .expect("Unable to instantiate SafetyRules storage")
                 }
             }
         };
@@ -216,7 +218,9 @@ impl<T: Payload> EpochManager<T> {
             self.config.max_pruned_blocks_in_mem,
         )));
 
-        safety_rules.start_new_epoch(block_store.highest_quorum_cert().as_ref());
+        safety_rules
+            .start_new_epoch(block_store.highest_quorum_cert().as_ref())
+            .expect("Unable to transition SafetyRules to the new epoch");
 
         // txn manager is required both by proposal generator (to pull the proposers)
         // and by event processor (to update their status).

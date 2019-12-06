@@ -66,16 +66,15 @@ impl ExecutionConfig {
         Ok(())
     }
 
-    pub fn save(&mut self) {
+    pub fn save(&mut self) -> Result<()> {
         if let Some(genesis) = &self.genesis {
             if self.genesis_file_location.as_os_str().is_empty() {
                 self.genesis_file_location = PathBuf::from(GENESIS_DEFAULT);
             }
-            let mut file =
-                File::create(self.genesis_file_location()).expect("Unable to create genesis.blob");
-            file.write_all(&lcs::to_bytes(&genesis).expect("Unable to serialize genesis"))
-                .expect("Unable to write genesis");
+            let mut file = File::create(self.genesis_file_location())?;
+            file.write_all(&lcs::to_bytes(&genesis)?)?;
         }
+        Ok(())
     }
 
     pub fn genesis_file_location(&self) -> PathBuf {
@@ -108,7 +107,7 @@ mod test {
         let fake_genesis = Transaction::WriteSet(WriteSetMut::new(vec![]).freeze().unwrap());
         let (mut config, _path) = generate_config();
         config.genesis = Some(fake_genesis.clone());
-        config.save();
+        config.save().expect("Unable to save");
         // Verifies some without path
         assert_eq!(config.genesis_file_location, PathBuf::from(GENESIS_DEFAULT));
 
