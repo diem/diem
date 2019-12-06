@@ -103,17 +103,23 @@ fn main() {
             .expect("Unable to write to key file");
 
         let consensus_peers_path = args.output_dir.join("consensus_peers.config.toml");
-        consensus_peers.save_config(consensus_peers_path);
+        consensus_peers
+            .save_config(consensus_peers_path)
+            .expect("Unable to save consensus_peers.config");
     } else {
         let mut node_config = config_builder.build().expect("ConfigBuilder failed");
         node_config
             .set_data_dir(args.output_dir.clone())
             .expect("Unable to set directory");
         let config_file = args.output_dir.join("node.config.toml");
-        node_config.save(&config_file);
+        node_config
+            .save(&config_file)
+            .expect("Unable to save configs");
         node_config
             .set_data_dir(args.data_dir)
             .expect("Unable to set directory");
-        node_config.save_config(&config_file);
+        node_config
+            .save_config(&config_file)
+            .expect("Unable to save node.config");
     }
 }

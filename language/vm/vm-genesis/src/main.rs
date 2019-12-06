@@ -35,7 +35,9 @@ fn main() {
         GENESIS_LOCATION, CONFIG_LOCATION
     );
     let config = default_config();
-    config.save_config(CONFIG_LOCATION);
+    config
+        .save_config(CONFIG_LOCATION)
+        .expect("Unable to save genesis config");
 
     let mut file = File::create(GENESIS_LOCATION).unwrap();
     file.write_all(&generate_genesis_blob()).unwrap();

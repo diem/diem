@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::Result;
 use consensus_types::common::Round;
 use libra_config::config::PersistableConfig;
 use serde::{Deserialize, Serialize};
@@ -15,11 +16,11 @@ use tempfile::NamedTempFile;
 /// @TODO add retrieval of private key based upon public key to persistent store
 pub trait PersistentStorage: Send + Sync {
     fn epoch(&self) -> u64;
-    fn set_epoch(&mut self, epoch: u64);
+    fn set_epoch(&mut self, epoch: u64) -> Result<()>;
     fn last_voted_round(&self) -> Round;
-    fn set_last_voted_round(&mut self, last_voted_round: Round);
+    fn set_last_voted_round(&mut self, last_voted_round: Round) -> Result<()>;
     fn preferred_round(&self) -> Round;
-    fn set_preferred_round(&mut self, last_voted_round: Round);
+    fn set_preferred_round(&mut self, last_voted_round: Round) -> Result<()>;
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -56,24 +57,27 @@ impl PersistentStorage for InMemoryStorage {
         self.epoch
     }
 
-    fn set_epoch(&mut self, epoch: u64) {
+    fn set_epoch(&mut self, epoch: u64) -> Result<()> {
         self.epoch = epoch;
+        Ok(())
     }
 
     fn preferred_round(&self) -> Round {
         self.preferred_round
     }
 
-    fn set_preferred_round(&mut self, preferred_round: Round) {
+    fn set_preferred_round(&mut self, preferred_round: Round) -> Result<()> {
         self.preferred_round = preferred_round;
+        Ok(())
     }
 
     fn last_voted_round(&self) -> Round {
         self.last_voted_round
     }
 
-    fn set_last_voted_round(&mut self, last_voted_round: Round) {
+    fn set_last_voted_round(&mut self, last_voted_round: Round) -> Result<()> {
         self.last_voted_round = last_voted_round;
+        Ok(())
     }
 }
 
@@ -83,9 +87,9 @@ fn test_in_memory_storage() {
     assert_eq!(storage.epoch(), 1);
     assert_eq!(storage.last_voted_round(), 0);
     assert_eq!(storage.preferred_round(), 0);
-    storage.set_epoch(9);
-    storage.set_last_voted_round(8);
-    storage.set_preferred_round(1);
+    storage.set_epoch(9).unwrap();
+    storage.set_last_voted_round(8).unwrap();
+    storage.set_preferred_round(1).unwrap();
     assert_eq!(storage.epoch(), 9);
     assert_eq!(storage.last_voted_round(), 8);
     assert_eq!(storage.preferred_round(), 1);
@@ -97,26 +101,25 @@ pub struct OnDiskStorage {
 }
 
 impl OnDiskStorage {
-    pub fn new_storage(file_path: PathBuf) -> Box<dyn PersistentStorage> {
-        let internal_data =
-            InMemoryStorage::load_config(file_path.clone()).expect("Unable to parse config");
-        Box::new(Self {
+    pub fn new_storage(file_path: PathBuf) -> Result<Box<dyn PersistentStorage>> {
+        let internal_data = InMemoryStorage::load_config(file_path.clone())?;
+        Ok(Box::new(Self {
             file_path,
             internal_data,
-        })
+        }))
     }
 
-    pub fn default_storage(file_path: PathBuf) -> Box<dyn PersistentStorage> {
+    pub fn default_storage(file_path: PathBuf) -> Result<Box<dyn PersistentStorage>> {
         if file_path.exists() {
             return Self::new_storage(file_path);
         }
 
         let internal_data = InMemoryStorage::default();
-        internal_data.save_config(file_path.clone());
-        Box::new(Self {
+        internal_data.save_config(file_path.clone())?;
+        Ok(Box::new(Self {
             file_path,
             internal_data,
-        })
+        }))
     }
 }
 
@@ -125,45 +128,49 @@ impl PersistentStorage for OnDiskStorage {
         self.internal_data.epoch()
     }
 
-    fn set_epoch(&mut self, epoch: u64) {
-        self.internal_data.set_epoch(epoch);
-        self.internal_data.save_config(self.file_path.clone());
+    fn set_epoch(&mut self, epoch: u64) -> Result<()> {
+        self.internal_data.set_epoch(epoch)?;
+        self.internal_data.save_config(self.file_path.clone())?;
+        Ok(())
     }
 
     fn preferred_round(&self) -> Round {
         self.internal_data.preferred_round()
     }
 
-    fn set_preferred_round(&mut self, preferred_round: Round) {
-        self.internal_data.set_preferred_round(preferred_round);
-        self.internal_data.save_config(self.file_path.clone());
+    fn set_preferred_round(&mut self, preferred_round: Round) -> Result<()> {
+        self.internal_data.set_preferred_round(preferred_round)?;
+        self.internal_data.save_config(self.file_path.clone())?;
+        Ok(())
     }
 
     fn last_voted_round(&self) -> Round {
         self.internal_data.last_voted_round()
     }
 
-    fn set_last_voted_round(&mut self, last_voted_round: Round) {
-        self.internal_data.set_last_voted_round(last_voted_round);
-        self.internal_data.save_config(self.file_path.clone());
+    fn set_last_voted_round(&mut self, last_voted_round: Round) -> Result<()> {
+        self.internal_data.set_last_voted_round(last_voted_round)?;
+        self.internal_data.save_config(self.file_path.clone())?;
+        Ok(())
     }
 }
 
 #[test]
 fn test_on_disk_storage() {
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
-    let mut storage: Box<dyn PersistentStorage> = OnDiskStorage::default_storage(file_path.clone());
+    let mut storage: Box<dyn PersistentStorage> =
+        OnDiskStorage::default_storage(file_path.clone()).unwrap();
     assert_eq!(storage.epoch(), 1);
     assert_eq!(storage.last_voted_round(), 0);
     assert_eq!(storage.preferred_round(), 0);
-    storage.set_epoch(9);
-    storage.set_last_voted_round(8);
-    storage.set_preferred_round(1);
+    storage.set_epoch(9).unwrap();
+    storage.set_last_voted_round(8).unwrap();
+    storage.set_preferred_round(1).unwrap();
     assert_eq!(storage.epoch(), 9);
     assert_eq!(storage.last_voted_round(), 8);
     assert_eq!(storage.preferred_round(), 1);
 
-    let storage: Box<dyn PersistentStorage> = OnDiskStorage::default_storage(file_path);
+    let storage: Box<dyn PersistentStorage> = OnDiskStorage::default_storage(file_path).unwrap();
     assert_eq!(storage.epoch(), 9);
     assert_eq!(storage.last_voted_round(), 8);
     assert_eq!(storage.preferred_round(), 1);

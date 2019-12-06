@@ -173,43 +173,43 @@ fn test_preferred_block_rule() {
     let a3 = make_proposal_with_parent(round + 6, &a2, None, &validator_signer);
     let a4 = make_proposal_with_parent(round + 7, &a3, None, &validator_signer);
 
-    safety_rules.update(a1.block().quorum_cert());
+    safety_rules.update(a1.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules.consensus_state().preferred_round(),
         genesis_block.round()
     );
 
-    safety_rules.update(b1.block().quorum_cert());
+    safety_rules.update(b1.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules.consensus_state().preferred_round(),
         genesis_block.round()
     );
 
-    safety_rules.update(a2.block().quorum_cert());
+    safety_rules.update(a2.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules.consensus_state().preferred_round(),
         genesis_block.round()
     );
 
-    safety_rules.update(b2.block().quorum_cert());
+    safety_rules.update(b2.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules.consensus_state().preferred_round(),
         genesis_block.round()
     );
 
-    safety_rules.update(a3.block().quorum_cert());
+    safety_rules.update(a3.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules.consensus_state().preferred_round(),
         b1.block().round()
     );
 
-    safety_rules.update(b3.block().quorum_cert());
+    safety_rules.update(b3.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules.consensus_state().preferred_round(),
         b1.block().round()
     );
 
-    safety_rules.update(a4.block().quorum_cert());
+    safety_rules.update(a4.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules.consensus_state().preferred_round(),
         a2.block().round()
@@ -245,12 +245,12 @@ fn test_voting_potential_commit_id() {
     let a5 = make_proposal_with_parent(round + 6, &a4, Some(&a3), &validator_signer);
 
     for b in &[&a1, &b1, &a2, &a3] {
-        safety_rules.update(b.block().quorum_cert());
+        safety_rules.update(b.block().quorum_cert()).unwrap();
         let vote = safety_rules.construct_and_sign_vote(b).unwrap();
         assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
     }
 
-    safety_rules.update(a4.block().quorum_cert());
+    safety_rules.update(a4.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules
             .construct_and_sign_vote(&a4)
@@ -260,7 +260,7 @@ fn test_voting_potential_commit_id() {
         a2.block().id(),
     );
 
-    safety_rules.update(a5.block().quorum_cert());
+    safety_rules.update(a5.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules
             .construct_and_sign_vote(&a5)
@@ -310,19 +310,19 @@ fn test_voting() {
     let a4 = make_proposal_with_parent(round + 7, &a3, None, &validator_signer);
     let b4 = make_proposal_with_parent(round + 8, &b2, None, &validator_signer);
 
-    safety_rules.update(a1.block().quorum_cert());
+    safety_rules.update(a1.block().quorum_cert()).unwrap();
     let mut vote = safety_rules.construct_and_sign_vote(&a1).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(b1.block().quorum_cert());
+    safety_rules.update(b1.block().quorum_cert()).unwrap();
     vote = safety_rules.construct_and_sign_vote(&b1).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(a2.block().quorum_cert());
+    safety_rules.update(a2.block().quorum_cert()).unwrap();
     vote = safety_rules.construct_and_sign_vote(&a2).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(b2.block().quorum_cert());
+    safety_rules.update(b2.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b2),
         Err(Error::OldProposal {
@@ -331,19 +331,19 @@ fn test_voting() {
         })
     );
 
-    safety_rules.update(a3.block().quorum_cert());
+    safety_rules.update(a3.block().quorum_cert()).unwrap();
     vote = safety_rules.construct_and_sign_vote(&a3).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(b3.block().quorum_cert());
+    safety_rules.update(b3.block().quorum_cert()).unwrap();
     vote = safety_rules.construct_and_sign_vote(&b3).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(a4.block().quorum_cert());
+    safety_rules.update(a4.block().quorum_cert()).unwrap();
     vote = safety_rules.construct_and_sign_vote(&a4).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(a4.block().quorum_cert());
+    safety_rules.update(a4.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules.construct_and_sign_vote(&a4),
         Err(Error::OldProposal {
@@ -351,7 +351,7 @@ fn test_voting() {
             proposal_round: 7,
         })
     );
-    safety_rules.update(b4.block().quorum_cert());
+    safety_rules.update(b4.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b4),
         Err(Error::ProposalRoundLowerThenPreferredBlock { preferred_round: 4 })

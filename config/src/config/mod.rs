@@ -256,16 +256,17 @@ impl NodeConfig {
         Ok(config)
     }
 
-    pub fn save(&mut self, output_file: &PathBuf) {
-        self.consensus.save();
-        self.execution.save();
+    pub fn save(&mut self, output_file: &PathBuf) -> Result<()> {
+        self.consensus.save()?;
+        self.execution.save()?;
         if let Some(network) = &mut self.validator_network {
-            network.save();
+            network.save()?;
         }
         for network in &mut self.full_node_networks {
-            network.save();
+            network.save()?;
         }
-        self.save_config(self.base.full_path(output_file));
+        self.save_config(self.base.full_path(output_file))?;
+        Ok(())
     }
 
     /// Returns true if network_config is for an upstream network
@@ -340,10 +341,11 @@ pub trait PersistableConfig: Serialize + DeserializeOwned {
         Self::parse(&contents)
     }
 
-    fn save_config<P: AsRef<Path>>(&self, output_file: P) {
-        let contents = toml::to_vec(&self).expect("Error serializing");
-        let mut file = File::create(output_file).expect("Error creating file");
-        file.write_all(&contents).expect("Error writing file");
+    fn save_config<P: AsRef<Path>>(&self, output_file: P) -> Result<()> {
+        let contents = toml::to_vec(&self)?;
+        let mut file = File::create(output_file)?;
+        file.write_all(&contents)?;
+        Ok(())
     }
 
     fn parse(serialized: &str) -> Result<Self> {
@@ -399,7 +401,7 @@ mod test {
         let mut rng = StdRng::from_seed([255u8; 32]);
         let mut expected = NodeConfig::random_with_rng(&mut rng);
         // Required to update paths
-        expected.save(&PathBuf::from("node.config.toml"));
+        expected.save(&PathBuf::from("node.config.toml")).unwrap();
 
         let actual = NodeConfig::load(RANDOM_COMPLETE).expect("Unable to load config");
         // This is randomly generated, so make them consistent, loading has already occurred
@@ -415,7 +417,7 @@ mod test {
         let mut rng = StdRng::from_seed([255u8; 32]);
         let mut expected = NodeConfig::random_with_rng(&mut rng);
         // Required to update paths
-        expected.save(&PathBuf::from("node.config.toml"));
+        expected.save(&PathBuf::from("node.config.toml")).unwrap();
 
         let actual = NodeConfig::load(RANDOM_DEFAULT).expect("Unable to load config");
         // This is randomly generated, so make them consistent, loading has already occurred
