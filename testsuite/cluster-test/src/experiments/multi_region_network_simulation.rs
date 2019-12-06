@@ -14,8 +14,9 @@ use tokio::time;
 /// It undoes the simulation in the cluster after the given duration
 use crate::effects::Effect;
 use crate::effects::NetworkDelay;
-use crate::experiments::Context;
+use crate::experiments::{Context, ExperimentParam};
 
+use crate::cluster::Cluster;
 use crate::experiments::Experiment;
 use crate::tx_emitter::{EmitJobRequest, EmitThreadParams, TxEmitter};
 use crate::util::unix_timestamp_now;
@@ -57,11 +58,14 @@ pub struct MultiRegionSimulationParams {
     duration_secs: u64,
 }
 
-impl MultiRegionSimulation {
-    pub fn new(params: MultiRegionSimulationParams) -> Self {
-        Self { params }
+impl ExperimentParam for MultiRegionSimulationParams {
+    type E = MultiRegionSimulation;
+    fn build(self, _cluster: &Cluster) -> Self::E {
+        Self::E { params: self }
     }
+}
 
+impl MultiRegionSimulation {
     async fn single_run(
         &self,
         count: usize,

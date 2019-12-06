@@ -7,13 +7,12 @@ use std::{collections::HashSet, fmt, time::Duration};
 
 use anyhow::Result;
 use futures::future::{BoxFuture, FutureExt};
-use rand::Rng;
 use structopt::StructOpt;
 use tokio::time;
 
 use crate::cluster::Cluster;
 use crate::effects::{DeleteLibraData, Effect, StopContainer};
-use crate::experiments::Context;
+use crate::experiments::{Context, ExperimentParam};
 use crate::instance::Instance;
 use crate::tx_emitter::{EmitJobRequest, EmitThreadParams};
 use crate::{effects::Action, experiments::Experiment};
@@ -35,11 +34,14 @@ pub struct RecoveryTime {
     instance: Instance,
 }
 
-impl RecoveryTime {
-    pub fn new(params: RecoveryTimeParams, cluster: &Cluster) -> Self {
-        let rnd_index = rand::thread_rng().gen_range(0, cluster.instances().len());
-        let instance = cluster.instances()[rnd_index].clone();
-        Self { params, instance }
+impl ExperimentParam for RecoveryTimeParams {
+    type E = RecoveryTime;
+    fn build(self, cluster: &Cluster) -> Self::E {
+        let instance = cluster.random_instance().clone();
+        Self::E {
+            params: self,
+            instance,
+        }
     }
 }
 

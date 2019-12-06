@@ -22,6 +22,7 @@ pub struct PacketLossRandomValidators {
     percent: f32,
     duration: Duration,
 }
+use crate::experiments::ExperimentParam;
 use tokio::time;
 
 #[derive(StructOpt, Debug)]
@@ -46,18 +47,19 @@ pub struct PacketLossRandomValidatorsParams {
     duration_secs: u64,
 }
 
-impl PacketLossRandomValidators {
-    pub fn new(params: PacketLossRandomValidatorsParams, cluster: &Cluster) -> Self {
+impl ExperimentParam for PacketLossRandomValidatorsParams {
+    type E = PacketLossRandomValidators;
+    fn build(self, cluster: &Cluster) -> Self::E {
         let total_instances = cluster.instances().len();
         let packet_loss_num_instances: usize = std::cmp::min(
-            ((params.percent_instances / 100.0) * total_instances as f32).ceil() as usize,
+            ((self.percent_instances / 100.0) * total_instances as f32).ceil() as usize,
             total_instances,
         );
         let (test_cluster, _) = cluster.split_n_random(packet_loss_num_instances);
-        Self {
+        Self::E {
             instances: test_cluster.into_instances(),
-            percent: params.packet_loss_percent,
-            duration: Duration::from_secs(params.duration_secs),
+            percent: self.packet_loss_percent,
+            duration: Duration::from_secs(self.duration_secs),
         }
     }
 }
