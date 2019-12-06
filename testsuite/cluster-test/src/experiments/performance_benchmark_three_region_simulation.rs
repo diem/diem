@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::experiments::ExperimentParam;
 use crate::{
     cluster::Cluster,
     effects::{three_region_simulation_effects, Effect},
@@ -14,14 +15,19 @@ use std::{
     fmt::{Display, Error, Formatter},
     time::Duration,
 };
+use structopt::StructOpt;
 
 pub struct PerformanceBenchmarkThreeRegionSimulation {
     cluster: Cluster,
 }
 
-impl PerformanceBenchmarkThreeRegionSimulation {
-    pub fn new(cluster: &Cluster) -> Self {
-        Self {
+#[derive(StructOpt, Debug)]
+pub struct PerformanceBenchmarkThreeRegionSimulationParams {}
+
+impl ExperimentParam for PerformanceBenchmarkThreeRegionSimulationParams {
+    type E = PerformanceBenchmarkThreeRegionSimulation;
+    fn build(self, cluster: &Cluster) -> Self::E {
+        Self::E {
             cluster: cluster.clone(),
         }
     }

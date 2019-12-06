@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::experiments::ExperimentParam;
 use crate::{
     cluster::Cluster,
     effects::{Effect, StopContainer},
@@ -35,13 +36,14 @@ pub struct PerformanceBenchmarkNodesDown {
     num_nodes_down: usize,
 }
 
-impl PerformanceBenchmarkNodesDown {
-    pub fn new(params: PerformanceBenchmarkNodesDownParams, cluster: &Cluster) -> Self {
-        let (down_instances, up_instances) = cluster.split_n_random(params.num_nodes_down);
-        Self {
+impl ExperimentParam for PerformanceBenchmarkNodesDownParams {
+    type E = PerformanceBenchmarkNodesDown;
+    fn build(self, cluster: &Cluster) -> Self::E {
+        let (down_instances, up_instances) = cluster.split_n_random(self.num_nodes_down);
+        Self::E {
             down_instances: down_instances.into_instances(),
             up_instances: up_instances.into_instances(),
-            num_nodes_down: params.num_nodes_down,
+            num_nodes_down: self.num_nodes_down,
         }
     }
 }
