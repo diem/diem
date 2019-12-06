@@ -6,6 +6,6 @@ error:
    │            ^ Unrecognized Token: v
    ·
  4 │         if v < 3 ()
-   │            - Expected:  "(",
+   │            - Expected:  "("
    │
 

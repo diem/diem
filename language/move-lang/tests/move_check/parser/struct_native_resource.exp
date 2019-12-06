@@ -6,6 +6,6 @@ error:
    │              ^^^^^^ Unrecognized Token: native
    ·
  3 │     resource native struct S;
-   │              ------ Expected:  "struct",
+   │              ------ Expected:  "struct"
    │
 

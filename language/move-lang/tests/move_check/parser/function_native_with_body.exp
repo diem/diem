@@ -6,6 +6,6 @@ error:
    │                 ^ Unrecognized Token: {
    ·
  3 │     native fn() {}
-   │                 - Expected:  ":", ";", "acquires",
+   │                 - Expected:  ";"
    │
 

@@ -6,6 +6,6 @@ error:
    │                 ^^^^ Unrecognized Token: copy
    ·
  3 │     struct S<T: copy> { }
-   │                 ---- Expected:  "copyable", "resource",
+   │                 ---- Expected:  "copyable", "resource"
    │
 
