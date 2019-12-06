@@ -10,6 +10,7 @@ use crate::{
     experiments::{
         Experiment, PerformanceBenchmarkNodesDownParams,
         PerformanceBenchmarkThreeRegionSimulationParams, RebootRandomValidatorsParams,
+        RecoveryTimeParams,
     },
 };
 
@@ -19,12 +20,17 @@ pub struct ExperimentSuite {
 
 impl ExperimentSuite {
     pub fn new_pre_release(cluster: &Cluster) -> Self {
-        let mut experiments = vec![];
+        let mut experiments: Vec<Box<dyn Experiment>> = vec![];
+        experiments.push(Box::new(
+            RecoveryTimeParams {
+                num_accounts_to_mint: 100_000,
+            }
+            .build(cluster),
+        ));
         let count = min(3, cluster.instances().len() / 3);
         // Reboot different sets of 3 validators *100 times
         for _ in 0..20 {
-            let b: Box<dyn Experiment> =
-                Box::new(RebootRandomValidatorsParams { count }.build(cluster));
+            let b = Box::new(RebootRandomValidatorsParams { count }.build(cluster));
             experiments.push(b);
         }
         experiments.push(Box::new(

@@ -24,9 +24,9 @@ pub use performance_benchmark_three_region_simulation::{
     PerformanceBenchmarkThreeRegionSimulation, PerformanceBenchmarkThreeRegionSimulationParams,
 };
 pub use reboot_random_validator::{RebootRandomValidators, RebootRandomValidatorsParams};
+pub use recovery_time::{RecoveryTime, RecoveryTimeParams};
 
 use crate::cluster::Cluster;
-use crate::experiments::recovery_time::RecoveryTimeParams;
 use crate::prometheus::Prometheus;
 use crate::tx_emitter::TxEmitter;
 use futures::future::BoxFuture;
