@@ -313,13 +313,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             .get_startup_info()
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
-        let root_executed_trees = ExecutedTrees::new(
-            startup_info.committed_tree_state.account_state_root_hash,
-            startup_info
-                .committed_tree_state
-                .ledger_frozen_subtree_hashes,
-            startup_info.committed_tree_state.version + 1,
-        );
+        let root_executed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
         let mut initial_data = RecoveryData::new(
             last_vote,
             blocks,

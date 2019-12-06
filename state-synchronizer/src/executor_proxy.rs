@@ -72,19 +72,9 @@ impl ExecutorProxyTrait for ExecutorProxy {
                 .await?
                 .ok_or_else(|| format_err!("[state sync] Failed to access storage info"))?;
             let synced_trees = if let Some(synced_tree_state) = storage_info.synced_tree_state {
-                ExecutedTrees::new(
-                    synced_tree_state.account_state_root_hash,
-                    synced_tree_state.ledger_frozen_subtree_hashes,
-                    synced_tree_state.version + 1,
-                )
+                ExecutedTrees::from(synced_tree_state)
             } else {
-                ExecutedTrees::new(
-                    storage_info.committed_tree_state.account_state_root_hash,
-                    storage_info
-                        .committed_tree_state
-                        .ledger_frozen_subtree_hashes,
-                    storage_info.committed_tree_state.version + 1,
-                )
+                ExecutedTrees::from(storage_info.committed_tree_state)
             };
             let current_verifier = storage_info
                 .ledger_info_with_validators
