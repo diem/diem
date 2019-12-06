@@ -1,0 +1,77 @@
+error: 
+
+   ┌── tests/move_check/locals/use_after_move_while.move:4:28 ───
+   │
+ 4 │         while (cond) { _ = move x };
+   │                            ^^^^^^ Invalid usage of local 'x'
+   ·
+ 4 │         while (cond) { _ = move x };
+   │                            ------ The local might not have a value due to this position. The local must be assigned a value before being used
+   │
+
+error: 
+
+   ┌── tests/move_check/locals/use_after_move_while.move:9:45 ───
+   │
+ 9 │         while (cond) { if (cond) break; _ = move x };
+   │                                             ^^^^^^ Invalid usage of local 'x'
+   ·
+ 9 │         while (cond) { if (cond) break; _ = move x };
+   │                                             ------ The local might not have a value due to this position. The local must be assigned a value before being used
+   │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_while.move:14:32 ───
+    │
+ 14 │         while (cond) { let y = x; _ = move x };
+    │                                ^ Invalid usage of local 'x'
+    ·
+ 14 │         while (cond) { let y = x; _ = move x };
+    │                                       ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_while.move:14:39 ───
+    │
+ 14 │         while (cond) { let y = x; _ = move x };
+    │                                       ^^^^^^ Invalid usage of local 'x'
+    ·
+ 14 │         while (cond) { let y = x; _ = move x };
+    │                                       ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_while.move:19:32 ───
+    │
+ 19 │         while (cond) { let y = x; if (cond) continue; _ = move x };
+    │                                ^ Invalid usage of local 'x'
+    ·
+ 19 │         while (cond) { let y = x; if (cond) continue; _ = move x };
+    │                                                           ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_while.move:24:32 ───
+    │
+ 24 │         while (cond) { let y = &x; _ = move y; _ = move x };
+    │                                ^^ Invalid usage of local 'x'
+    ·
+ 24 │         while (cond) { let y = &x; _ = move y; _ = move x };
+    │                                                    ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_while.move:24:52 ───
+    │
+ 24 │         while (cond) { let y = &x; _ = move y; _ = move x };
+    │                                                    ^^^^^^ Invalid usage of local 'x'
+    ·
+ 24 │         while (cond) { let y = &x; _ = move y; _ = move x };
+    │                                                    ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+

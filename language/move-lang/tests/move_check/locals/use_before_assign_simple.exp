@@ -1,0 +1,66 @@
+error: 
+
+   ┌── tests/move_check/locals/use_before_assign_simple.move:5:13 ───
+   │
+ 6 │         let y = move x + 1;
+   │                 ^^^^^^ Invalid usage of local 'x'
+   ·
+ 5 │         let x: u64;
+   │             - The local does not have a value due to this position. The local must be assigned a value before being used
+   │
+
+error: 
+
+   ┌── tests/move_check/locals/use_before_assign_simple.move:8:13 ───
+   │
+ 9 │         let s2 = s;
+   │                  ^ Invalid usage of local 's'
+   ·
+ 8 │         let s: S;
+   │             - The local does not have a value due to this position. The local must be assigned a value before being used
+   │
+
+error: 
+
+    ┌── tests/move_check/locals/use_before_assign_simple.move:13:13 ───
+    │
+ 14 │         let y = x + 1;
+    │                 ^ Invalid usage of local 'x'
+    ·
+ 13 │         let x: u64;
+    │             - The local does not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_before_assign_simple.move:16:13 ───
+    │
+ 17 │         let s3 = copy s;
+    │                  ^^^^^^ Invalid usage of local 's'
+    ·
+ 16 │         let s: S;
+    │             - The local does not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_before_assign_simple.move:21:13 ───
+    │
+ 22 │         let y = &x;
+    │                 ^^ Invalid usage of local 'x'
+    ·
+ 21 │         let x: u64;
+    │             - The local does not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_before_assign_simple.move:24:13 ───
+    │
+ 25 │         let s2 = &s;
+    │                  ^^ Invalid usage of local 's'
+    ·
+ 24 │         let s: S;
+    │             - The local does not have a value due to this position. The local must be assigned a value before being used
+    │
+

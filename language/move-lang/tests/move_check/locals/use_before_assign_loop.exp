@@ -1,0 +1,44 @@
+error: 
+
+   ┌── tests/move_check/locals/use_before_assign_loop.move:3:13 ───
+   │
+ 4 │         loop { let y = move x + 1; x = 0 }
+   │                        ^^^^^^ Invalid usage of local 'x'
+   ·
+ 3 │         let x: u64;
+   │             - The local does not have a value due to this position. The local must be assigned a value before being used
+   │
+
+error: 
+
+   ┌── tests/move_check/locals/use_before_assign_loop.move:8:13 ───
+   │
+ 9 │         loop { let y = x + 1; if (cond) { continue }; x = 0 }
+   │                        ^ Invalid usage of local 'x'
+   ·
+ 8 │         let x: u64;
+   │             - The local does not have a value due to this position. The local must be assigned a value before being used
+   │
+
+error: 
+
+    ┌── tests/move_check/locals/use_before_assign_loop.move:13:13 ───
+    │
+ 14 │         loop { let y = &x; _ = move y; x = 0 }
+    │                        ^^ Invalid usage of local 'x'
+    ·
+ 13 │         let x: u64;
+    │             - The local does not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_before_assign_loop.move:18:13 ───
+    │
+ 19 │         loop { let y = &x; _ = move y; if (cond) { x = 0 }; break }
+    │                        ^^ Invalid usage of local 'x'
+    ·
+ 18 │         let x: u64;
+    │             - The local does not have a value due to this position. The local must be assigned a value before being used
+    │
+

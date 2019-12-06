@@ -1,0 +1,108 @@
+error: 
+
+   ┌── tests/move_check/locals/unused_resource.move:4:10 ───
+   │
+ 4 │       t0() {
+   │ ╭──────────^
+ 5 │ │         let r = R{};
+ 6 │ │     }
+   │ ╰─────^ Invalid return
+   ·
+ 5 │         let r = R{};
+   │             - The local 'r' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+   │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource.move:8:20 ───
+    │
+ 8 │       t1(cond: bool) {
+    │ ╭────────────────────^
+ 9 │ │         let r;
+ 10 │ │         if (cond) { r = R{}; };
+ 11 │ │     }
+    │ ╰─────^ Invalid return
+    ·
+ 10 │         if (cond) { r = R{}; };
+    │                     - The local 'r' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource.move:13:20 ───
+    │
+ 13 │       t2(cond: bool) {
+    │ ╭────────────────────^
+ 14 │ │         let r;
+ 15 │ │         if (cond) {} else { r = R{}; };
+ 16 │ │     }
+    │ ╰─────^ Invalid return
+    ·
+ 15 │         if (cond) {} else { r = R{}; };
+    │                             - The local 'r' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource.move:18:20 ───
+    │
+ 18 │       t3(cond: bool) {
+    │ ╭────────────────────^
+ 19 │ │         let r;
+ 20 │ │         while (cond) { r = R{} };
+ 21 │ │     }
+    │ ╰─────^ Invalid return
+    ·
+ 20 │         while (cond) { r = R{} };
+    │                        - The local 'r' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource.move:20:24 ───
+    │
+ 20 │         while (cond) { r = R{} };
+    │                        ^ Invalid assignment to local 'r'
+    ·
+ 20 │         while (cond) { r = R{} };
+    │                        - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource.move:24:20 ───
+    │
+ 24 │         loop { let r = R{}; }
+    │                    ^ Invalid assignment to local 'r'
+    ·
+ 24 │         loop { let r = R{}; }
+    │                    - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource.move:27:10 ───
+    │
+ 27 │       t5() {
+    │ ╭──────────^
+ 28 │ │         let x = &R{};
+ 29 │ │     }
+    │ ╰─────^ Invalid return
+    ·
+ 28 │         let x = &R{};
+    │                 ---- The resource is created but not used. The resource must be consumed before the function returns
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource.move:31:11 ───
+    │
+ 31 │       t6<T>(x: T) {
+    │ ╭─────────────────^
+ 32 │ │     }
+    │ ╰─────^ Invalid return
+    ·
+ 31 │     t6<T>(x: T) {
+    │           - The local 'x' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+    │
+

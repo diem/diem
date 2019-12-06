@@ -1,0 +1,89 @@
+error: 
+
+   ┌── tests/move_check/locals/use_after_move_loop.move:2:24 ───
+   │
+ 2 │       tmove1(cond: bool) {
+   │ ╭────────────────────────^
+ 3 │ │         let x = 0;
+ 4 │ │         loop { _ = move x };
+ 5 │ │     }
+   │ ╰─────^ Unreachable code. This statement (and any following statements) will not be executed. In some cases, this will result in unused resource values.
+   │
+
+error: 
+
+   ┌── tests/move_check/locals/use_after_move_loop.move:4:20 ───
+   │
+ 4 │         loop { _ = move x };
+   │                    ^^^^^^ Invalid usage of local 'x'
+   ·
+ 4 │         loop { _ = move x };
+   │                    ------ The local might not have a value due to this position. The local must be assigned a value before being used
+   │
+
+error: 
+
+   ┌── tests/move_check/locals/use_after_move_loop.move:9:37 ───
+   │
+ 9 │         loop { if (cond) break; _ = move x }
+   │                                     ^^^^^^ Invalid usage of local 'x'
+   ·
+ 9 │         loop { if (cond) break; _ = move x }
+   │                                     ------ The local might not have a value due to this position. The local must be assigned a value before being used
+   │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_loop.move:14:24 ───
+    │
+ 14 │         loop { let y = x; _ = move x }
+    │                        ^ Invalid usage of local 'x'
+    ·
+ 14 │         loop { let y = x; _ = move x }
+    │                               ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_loop.move:14:31 ───
+    │
+ 14 │         loop { let y = x; _ = move x }
+    │                               ^^^^^^ Invalid usage of local 'x'
+    ·
+ 14 │         loop { let y = x; _ = move x }
+    │                               ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_loop.move:19:24 ───
+    │
+ 19 │         loop { let y = x; if (cond) continue; _ = move x }
+    │                        ^ Invalid usage of local 'x'
+    ·
+ 19 │         loop { let y = x; if (cond) continue; _ = move x }
+    │                                                   ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_loop.move:24:24 ───
+    │
+ 24 │         loop { let y = &x; _ = move y; _ = move x }
+    │                        ^^ Invalid usage of local 'x'
+    ·
+ 24 │         loop { let y = &x; _ = move y; _ = move x }
+    │                                            ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_loop.move:24:44 ───
+    │
+ 24 │         loop { let y = &x; _ = move y; _ = move x }
+    │                                            ^^^^^^ Invalid usage of local 'x'
+    ·
+ 24 │         loop { let y = &x; _ = move y; _ = move x }
+    │                                            ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+

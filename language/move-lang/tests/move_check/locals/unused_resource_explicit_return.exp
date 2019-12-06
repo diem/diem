@@ -1,0 +1,77 @@
+error: 
+
+   ┌── tests/move_check/locals/unused_resource_explicit_return.move:5:13 ───
+   │
+ 6 │         return ()
+   │         ^^^^^^^^^ Invalid return
+   ·
+ 5 │         let r = R{};
+   │             - The local 'r' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+   │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:10:13 ───
+    │
+ 11 │         if (cond) { return () };
+    │                     ^^^^^^^^^ Invalid return
+    ·
+ 10 │         let r = R {};
+    │             - The local 'r' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:16:13 ───
+    │
+ 17 │         if (cond) {} else { return () };
+    │                             ^^^^^^^^^ Invalid return
+    ·
+ 16 │         let r = R{};
+    │             - The local 'r' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:22:13 ───
+    │
+ 23 │         while (cond) { return () };
+    │                        ^^^^^^^^^ Invalid return
+    ·
+ 22 │         let r = R {};
+    │             - The local 'r' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:28:13 ───
+    │
+ 29 │         loop { return () }
+    │                ^^^^^^^^^ Invalid return
+    ·
+ 28 │         let r = R{};
+    │             - The local 'r' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:33:17 ───
+    │
+ 34 │         return ()
+    │         ^^^^^^^^^ Invalid return
+    ·
+ 33 │         let x = &R{};
+    │                 ---- The resource is created but not used. The resource must be consumed before the function returns
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:37:11 ───
+    │
+ 38 │         return ()
+    │         ^^^^^^^^^ Invalid return
+    ·
+ 37 │     t6<T>(x: T) {
+    │           - The local 'x' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+    │
+
