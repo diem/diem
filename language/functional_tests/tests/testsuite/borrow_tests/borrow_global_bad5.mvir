@@ -2,12 +2,25 @@ module A {
     resource T{v: u64}
 
     public A5(b: bool) acquires T {
-        let t_ref: &mut Self.T;
+        let u: u64;
+        let t: Self.T;
+        let t1_ref: &mut Self.T;
+        let t2_ref: &mut Self.T;
+
+        t = T { v: 0 };
         if (move(b)) {
-            t_ref = borrow_global_mut<T>(get_txn_sender());
+            t1_ref = borrow_global_mut<T>(get_txn_sender());
+        } else {
+            t1_ref = &mut t;
         }
+
+        t2_ref = borrow_global_mut<T>(get_txn_sender());
+        _ = move(t1_ref);
+        _ = move(t2_ref);
+        T { v: u } = move(t);
+
         return;
     }
 }
 
-// check: JOIN_FAILURE
+// check: GLOBAL_REFERENCE_ERROR

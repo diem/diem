@@ -1,13 +1,18 @@
-main() {
-    let x: u64;
-    let y: &u64;
-
-    x = 7;
-    if (true) {
-        y = &x;
+module M {
+    resource R { f:bool }
+    t0() {
+        let r: Self.R;
+        let f: bool;
+        r = R{ f: false };
+        if (true) {
+            R{ f: f } = move(r);
+        } else {
+            R{ f: f } = move(r);
+            r = R{ f: false };
+        }
+        R{ f: f } = move(r);
+        return;
     }
-
-    return;
 }
 
 // check: JOIN_FAILURE
