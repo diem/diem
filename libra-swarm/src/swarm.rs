@@ -113,7 +113,7 @@ impl LibraNode {
         Ok(contents)
     }
 
-    fn get_metric(&self, metric_name: &str) -> Option<i64> {
+    fn get_metric(&mut self, metric_name: &str) -> Option<i64> {
         match self.debug_client.get_node_metric(metric_name) {
             Err(e) => {
                 debug!(
@@ -131,7 +131,7 @@ impl LibraNode {
         }
     }
 
-    pub fn check_connectivity(&self, expected_peers: i64) -> bool {
+    pub fn check_connectivity(&mut self, expected_peers: i64) -> bool {
         let connected_peers = format!(
             "libra_network_peers{{role_type={},state=connected}}",
             self.role.to_string()
@@ -362,7 +362,7 @@ impl LibraSwarm {
         Ok(())
     }
 
-    fn wait_for_connectivity(&self) -> Result<(), SwarmLaunchFailure> {
+    fn wait_for_connectivity(&mut self) -> Result<(), SwarmLaunchFailure> {
         // Early return if we're only launching a single node
         if self.nodes.len() == 1 {
             return Ok(());
@@ -373,10 +373,11 @@ impl LibraSwarm {
         for i in 0..num_attempts {
             debug!("Wait for connectivity attempt: {}", i);
 
+            let len = self.nodes.len();
             if self
                 .nodes
-                .values()
-                .all(|node| node.check_connectivity(self.nodes.len() as i64 - 1))
+                .values_mut()
+                .all(|node| node.check_connectivity(len as i64 - 1))
             {
                 return Ok(());
             }
@@ -435,7 +436,7 @@ impl LibraSwarm {
         let mut last_committed_round = 0;
         // First, try to retrieve the max value across all the committed rounds
         debug!("Calculating max committed round across the validators.");
-        for node in self.nodes.values() {
+        for node in self.nodes.values_mut() {
             match node.get_metric(last_committed_round_str) {
                 Some(val) => {
                     debug!("\tNode {} last committed round = {}", node.node_id, val);

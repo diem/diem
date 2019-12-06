@@ -6,16 +6,15 @@
 use crate::{
     json_log,
     proto::{
-        Event, GetEventsRequest, GetEventsResponse, GetNodeDetailsRequest, GetNodeDetailsResponse,
-        NodeDebugInterface,
+        node_debug_interface_server::NodeDebugInterface, Event, GetEventsRequest,
+        GetEventsResponse, GetNodeDetailsRequest, GetNodeDetailsResponse,
     },
 };
-use futures::Future;
 use libra_logger::prelude::*;
-use libra_metrics::counters::COUNTER_ADMISSION_CONTROL_CANNOT_SEND_REPLY;
+use tonic::{Request, Response, Status};
 
 #[derive(Clone, Default)]
-pub struct NodeDebugService {}
+pub struct NodeDebugService;
 
 impl NodeDebugService {
     pub fn new() -> Self {
@@ -23,25 +22,23 @@ impl NodeDebugService {
     }
 }
 
+#[tonic::async_trait]
 impl NodeDebugInterface for NodeDebugService {
-    fn get_node_details(
-        &mut self,
-        ctx: ::grpcio::RpcContext<'_>,
-        _req: GetNodeDetailsRequest,
-        sink: ::grpcio::UnarySink<GetNodeDetailsResponse>,
-    ) {
+    async fn get_node_details(
+        &self,
+        _request: Request<GetNodeDetailsRequest>,
+    ) -> Result<Response<GetNodeDetailsResponse>, Status> {
         info!("[GRPC] get_node_details");
+
         let mut response = GetNodeDetailsResponse::default();
         response.stats = libra_metrics::get_all_metrics();
-        ctx.spawn(sink.success(response).map_err(default_reply_error_logger))
+        Ok(Response::new(response))
     }
 
-    fn get_events(
-        &mut self,
-        ctx: ::grpcio::RpcContext<'_>,
-        _req: GetEventsRequest,
-        sink: ::grpcio::UnarySink<GetEventsResponse>,
-    ) {
+    async fn get_events(
+        &self,
+        _request: Request<GetEventsRequest>,
+    ) -> Result<Response<GetEventsResponse>, Status> {
         let mut response = GetEventsResponse::default();
         for event in json_log::pop_last_entries() {
             let mut response_event = Event::default();
@@ -52,11 +49,6 @@ impl NodeDebugInterface for NodeDebugService {
             response_event.json = serialized_event;
             response.events.push(response_event);
         }
-        ctx.spawn(sink.success(response).map_err(default_reply_error_logger))
+        Ok(Response::new(response))
     }
-}
-
-fn default_reply_error_logger<T: ::std::fmt::Debug>(e: T) {
-    COUNTER_ADMISSION_CONTROL_CANNOT_SEND_REPLY.inc();
-    error!("Failed to reply error due to {:?}", e)
 }

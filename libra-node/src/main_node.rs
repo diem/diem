@@ -3,7 +3,10 @@
 
 use admission_control_service::runtime::AdmissionControlRuntime;
 use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
-use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
+use debug_interface::{
+    node_debug_service::NodeDebugService,
+    proto::node_debug_interface_server::NodeDebugInterfaceServer,
+};
 use executor::Executor;
 use futures::executor::block_on;
 use grpc_helpers::ServerHandle;
@@ -28,6 +31,7 @@ use network::{
 };
 use state_synchronizer::StateSynchronizer;
 use std::collections::HashMap;
+use std::net::ToSocketAddrs;
 use std::{sync::Arc, thread, time::Instant};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
@@ -41,7 +45,7 @@ pub struct LibraHandle {
     _network_runtimes: Vec<Runtime>,
     consensus: Option<Box<dyn ConsensusProvider>>,
     _storage: ServerHandle,
-    _debug: ServerHandle,
+    _debug: Runtime,
 }
 
 impl Drop for LibraHandle {
@@ -73,18 +77,22 @@ fn setup_executor(config: &NodeConfig) -> Arc<Executor<LibraVM>> {
     ))
 }
 
-fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
-    let env = Arc::new(EnvBuilder::new().name_prefix("grpc-debug-").build());
-    // Start Debug interface
-    let debug_service = create_node_debug_interface(NodeDebugService::new());
-    ::grpcio::ServerBuilder::new(env)
-        .register_service(debug_service)
-        .bind(
-            config.debug_interface.address.clone(),
-            config.debug_interface.admission_control_node_debug_port,
-        )
-        .build()
-        .expect("Unable to create grpc server")
+fn setup_debug_interface(config: &NodeConfig) -> Runtime {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let addr = format!(
+        "{}:{}",
+        config.debug_interface.address, config.debug_interface.admission_control_node_debug_port,
+    )
+    .to_socket_addrs()
+    .unwrap()
+    .next()
+    .unwrap();
+    rt.spawn(
+        tonic::transport::Server::builder()
+            .add_service(NodeDebugInterfaceServer::new(NodeDebugService::new()))
+            .serve(addr),
+    );
+    rt
 }
 
 // TODO(abhayb): Move to network crate (similar to consensus).
@@ -237,7 +245,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         debug!("Network started for peer_id: {}", network.peer_id);
     }
 
-    let debug_if = ServerHandle::setup(setup_debug_interface(&node_config));
+    let debug_if = setup_debug_interface(&node_config);
 
     let metrics_port = node_config.debug_interface.metrics_server_port;
     let metric_host = node_config.debug_interface.address.clone();

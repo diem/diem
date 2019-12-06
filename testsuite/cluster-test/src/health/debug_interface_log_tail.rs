@@ -9,11 +9,7 @@ use crate::{
     instance::Instance,
     util::unix_timestamp_now,
 };
-use debug_interface::{
-    self,
-    proto::{Event as DebugInterfaceEvent, GetEventsRequest, NodeDebugInterfaceClient},
-};
-use grpcio::{self, ChannelBuilder, EnvBuilder};
+use debug_interface::{proto::Event as DebugInterfaceEvent, NodeDebugClient};
 use serde_json::{self, value as json};
 use slog_scope::*;
 use std::{
@@ -25,7 +21,7 @@ use std::{
 
 pub struct DebugPortLogThread {
     instance: Instance,
-    client: NodeDebugInterfaceClient,
+    client: NodeDebugClient,
     event_sender: mpsc::Sender<ValidatorEvent>,
     started_sender: Option<mpsc::Sender<()>>,
 }
@@ -33,14 +29,11 @@ pub struct DebugPortLogThread {
 impl DebugPortLogThread {
     pub fn spawn_new(cluster: &Cluster) -> LogTail {
         let (event_sender, event_receiver) = mpsc::channel();
-        let env = Arc::new(EnvBuilder::new().name_prefix("grpc-log-tail-").build());
         let mut started_receivers = vec![];
         for instance in cluster.instances() {
-            let ch =
-                ChannelBuilder::new(env.clone()).connect(&format!("{}:{}", instance.ip(), 6191));
             let (started_sender, started_receiver) = mpsc::channel();
             started_receivers.push(started_receiver);
-            let client = NodeDebugInterfaceClient::new(ch);
+            let client = NodeDebugClient::new(instance.ip(), 6191);
             let debug_port_log_thread = DebugPortLogThread {
                 instance: instance.clone(),
                 client,
@@ -68,11 +61,7 @@ impl DebugPortLogThread {
     pub fn run(mut self) {
         let print_failures = env::var("VERBOSE").is_ok();
         loop {
-            let opts = grpcio::CallOption::default().timeout(Duration::from_secs(5));
-            match self
-                .client
-                .get_events_opt(&GetEventsRequest::default(), opts)
-            {
+            match self.client.get_events() {
                 Err(e) => {
                     if print_failures {
                         info!("Failed to get events from {}: {:?}", self.instance, e);
