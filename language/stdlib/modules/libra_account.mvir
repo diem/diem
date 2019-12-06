@@ -75,7 +75,7 @@ module LibraAccount {
     // 2. Storage can use this handle to prove the total number of events that happened in the past.
     resource EventHandle<T: unrestricted> {
         // Total number of events emitted to this event stream.
-        counter: u64
+        counter: u64,
         // A globally unique ID for this event stream.
         guid: bytearray,
     }

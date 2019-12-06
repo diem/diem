@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use crate::ast::{
     parse_field, BinOp, Block, Block_, Builtin, Cmd, CopyableVal, CopyableVal_, Exp, Exp_, Field_,
-    Fields, Function, FunctionBody, FunctionCall, FunctionCall_, FunctionName, FunctionVisibility,
+    Function, FunctionBody, FunctionCall, FunctionCall_, FunctionName, FunctionVisibility,
     Function_, IfElse, ImportDefinition, Kind, LValue, LValue_, Loop, ModuleDefinition,
     ModuleIdent, ModuleName, Program, QualifiedModuleIdent, QualifiedStructIdent, Script,
     ScriptOrModule, Spanned, Statement, StructDefinition, StructDefinition_, StructName, Type,
@@ -59,6 +59,31 @@ fn consume_token<'input>(
     }
     tokens.advance()?;
     Ok(())
+}
+
+fn parse_comma_list<'input, F, R>(
+    tokens: &mut Lexer<'input>,
+    list_end_token: Tok,
+    parse_list_item: F,
+    allow_trailing_comma: bool,
+) -> Result<Vec<R>, ParseError<usize, anyhow::Error>>
+where
+    F: Fn(&mut Lexer<'input>) -> Result<R, ParseError<usize, anyhow::Error>>,
+{
+    let mut v = vec![];
+    if tokens.peek() != list_end_token {
+        loop {
+            v.push(parse_list_item(tokens)?);
+            if tokens.peek() == list_end_token {
+                break;
+            }
+            consume_token(tokens, Tok::Comma)?;
+            if allow_trailing_comma && tokens.peek() == list_end_token {
+                break;
+            }
+        }
+    }
+    Ok(v)
 }
 
 fn parse_name<'input>(
@@ -500,15 +525,8 @@ fn parse_pack<'input>(
     type_actuals: Vec<Type>,
 ) -> Result<Exp, ParseError<usize, anyhow::Error>> {
     consume_token(tokens, Tok::LBrace)?;
-    let mut fs: Vec<(Field_, Exp_)> = vec![];
-    while tokens.peek() != Tok::RBrace {
-        fs.push(parse_field_exp(tokens)?);
-        if tokens.peek() == Tok::RBrace {
-            break;
-        }
-        consume_token(tokens, Tok::Comma)?;
-    }
-    tokens.advance()?; // consume the RBrace
+    let fs = parse_comma_list(tokens, Tok::RBrace, parse_field_exp, true)?;
+    consume_token(tokens, Tok::RBrace)?;
     Ok(Exp::Pack(
         StructName::parse(name)?,
         type_actuals,
@@ -549,15 +567,8 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, ParseError<usiz
         }
         Tok::LParen => {
             tokens.advance()?;
-            let mut exps: Vec<Exp_> = vec![];
-            while tokens.peek() != Tok::RParen {
-                exps.push(parse_exp_(tokens)?);
-                if tokens.peek() == Tok::RParen {
-                    break;
-                }
-                consume_token(tokens, Tok::Comma)?;
-            }
-            tokens.advance()?; // consume the RParen
+            let exps = parse_comma_list(tokens, Tok::RParen, parse_exp_, true)?;
+            consume_token(tokens, Tok::RParen)?;
             Ok(Exp::ExprList(exps))
         }
         _ => Err(ParseError::InvalidToken {
@@ -733,22 +744,6 @@ fn parse_lvalue_<'input>(
     Ok(spanned(start_loc, end_loc, lv))
 }
 
-// LValues: Vec<LValue_> = {
-//     <l:Sp<LValue>> <v: ("," <Sp<LValue>>)*> => { ... }
-// }
-
-fn parse_lvalues<'input>(
-    tokens: &mut Lexer<'input>,
-) -> Result<Vec<LValue_>, ParseError<usize, anyhow::Error>> {
-    let mut lvalues: Vec<LValue_> = vec![];
-    lvalues.push(parse_lvalue_(tokens)?);
-    while tokens.peek() == Tok::Comma {
-        tokens.advance()?;
-        lvalues.push(parse_lvalue_(tokens)?);
-    }
-    Ok(lvalues)
-}
-
 // FieldBindings: (Field_, Var_) = {
 //     <f: Sp<Field>> ":" <v: Sp<Var>> => (f, v),
 //     <f: Sp<Field>> => { ... }
@@ -774,7 +769,7 @@ fn parse_field_bindings<'input>(
 }
 
 // pub Cmd : Cmd = {
-//     <lvalues: LValues> "=" <e: Sp<Exp>> => Cmd::Assign(lvalues, e),
+//     <lvalues: Comma<Sp<LValue>>> "=" <e: Sp<Exp>> => Cmd::Assign(lvalues, e),
 //     <name_and_type_actuals: NameAndTypeActuals> "{" <bindings: Comma<FieldBindings>> "}" "=" <e: Sp<Exp>> =>? { ... },
 //     "abort" <err: Sp<Exp>?> => { ... },
 //     "return" <v: Comma<Sp<Exp>>> => Cmd::Return(Box::new(Spanned::no_loc(Exp::ExprList(v)))),
@@ -787,7 +782,12 @@ fn parse_field_bindings<'input>(
 fn parse_assign<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<Cmd, ParseError<usize, anyhow::Error>> {
-    let lvalues = parse_lvalues(tokens)?;
+    let lvalues = parse_comma_list(tokens, Tok::Equal, parse_lvalue_, false)?;
+    if lvalues.is_empty() {
+        return Err(ParseError::InvalidToken {
+            location: tokens.start_loc(),
+        });
+    }
     consume_token(tokens, Tok::Equal)?;
     let e = parse_exp_(tokens)?;
     Ok(Cmd::Assign(lvalues, e))
@@ -799,15 +799,8 @@ fn parse_unpack<'input>(
     type_actuals: Vec<Type>,
 ) -> Result<Cmd, ParseError<usize, anyhow::Error>> {
     consume_token(tokens, Tok::LBrace)?;
-    let mut bindings: Vec<(Field_, Var_)> = vec![];
-    while tokens.peek() != Tok::RBrace {
-        bindings.push(parse_field_bindings(tokens)?);
-        if tokens.peek() == Tok::RBrace {
-            break;
-        }
-        consume_token(tokens, Tok::Comma)?;
-    }
-    tokens.advance()?; // consume the RBrace
+    let bindings = parse_comma_list(tokens, Tok::RBrace, parse_field_bindings, true)?;
+    consume_token(tokens, Tok::RBrace)?;
     consume_token(tokens, Tok::Equal)?;
     let e = parse_exp_(tokens)?;
     Ok(Cmd::Unpack(
@@ -846,14 +839,7 @@ fn parse_cmd<'input>(tokens: &mut Lexer<'input>) -> Result<Cmd, ParseError<usize
         }
         Tok::Return => {
             tokens.advance()?;
-            let mut v: Vec<Exp_> = vec![];
-            while tokens.peek() != Tok::Semicolon {
-                v.push(parse_exp_(tokens)?);
-                if tokens.peek() == Tok::Semicolon {
-                    break;
-                }
-                consume_token(tokens, Tok::Comma)?;
-            }
+            let v = parse_comma_list(tokens, Tok::Semicolon, parse_exp_, true)?;
             Ok(Cmd::Return(Box::new(Spanned::no_loc(Exp::ExprList(v)))))
         }
         Tok::Continue => {
@@ -879,15 +865,8 @@ fn parse_cmd<'input>(tokens: &mut Lexer<'input>) -> Result<Cmd, ParseError<usize
         | Tok::DotNameValue => Ok(Cmd::Exp(Box::new(parse_call_(tokens)?))),
         Tok::LParen => {
             tokens.advance()?;
-            let mut v: Vec<Exp_> = vec![];
-            while tokens.peek() != Tok::RParen {
-                v.push(parse_exp_(tokens)?);
-                if tokens.peek() == Tok::RParen {
-                    break;
-                }
-                consume_token(tokens, Tok::Comma)?;
-            }
-            tokens.advance()?; // consume the RParen
+            let v = parse_comma_list(tokens, Tok::RParen, parse_exp_, true)?;
+            consume_token(tokens, Tok::RParen)?;
             Ok(Cmd::Exp(Box::new(Spanned::no_loc(Exp::ExprList(v)))))
         }
         _ => Err(ParseError::InvalidToken {
@@ -1196,18 +1175,14 @@ fn parse_type_formal<'input>(
 fn parse_type_actuals<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<Vec<Type>, ParseError<usize, anyhow::Error>> {
-    let mut tys: Vec<Type> = vec![];
-    if tokens.peek() == Tok::Less {
+    let tys = if tokens.peek() == Tok::Less {
         tokens.advance()?; // consume the "<"
-        while tokens.peek() != Tok::Greater {
-            tys.push(parse_type(tokens)?);
-            if tokens.peek() == Tok::Greater {
-                break;
-            }
-            consume_token(tokens, Tok::Comma)?;
-        }
-        tokens.advance()?; // consume the ">"
-    }
+        let list = parse_comma_list(tokens, Tok::Greater, parse_type, true)?;
+        consume_token(tokens, Tok::Greater)?;
+        list
+    } else {
+        vec![]
+    };
     Ok(tys)
 }
 
@@ -1226,17 +1201,13 @@ fn parse_name_and_type_formals<'input>(
     } else {
         parse_name(tokens)?
     };
-    let mut k: Vec<(TypeVar_, Kind)> = vec![];
-    if has_types {
-        while tokens.peek() != Tok::Greater {
-            k.push(parse_type_formal(tokens)?);
-            if tokens.peek() == Tok::Greater {
-                break;
-            }
-            consume_token(tokens, Tok::Comma)?;
-        }
-        tokens.advance()?; // consume the ">"
-    }
+    let k = if has_types {
+        let list = parse_comma_list(tokens, Tok::Greater, parse_type_formal, true)?;
+        consume_token(tokens, Tok::Greater)?;
+        list
+    } else {
+        vec![]
+    };
     Ok((n, k))
 }
 
@@ -1255,22 +1226,18 @@ fn parse_name_and_type_actuals<'input>(
     } else {
         parse_name(tokens)?
     };
-    let mut tys: Vec<Type> = vec![];
-    if has_types {
-        while tokens.peek() != Tok::Greater {
-            tys.push(parse_type(tokens)?);
-            if tokens.peek() == Tok::Greater {
-                break;
-            }
-            consume_token(tokens, Tok::Comma)?;
-        }
-        tokens.advance()?; // consume the ">"
-    }
+    let tys = if has_types {
+        let list = parse_comma_list(tokens, Tok::Greater, parse_type, true)?;
+        consume_token(tokens, Tok::Greater)?;
+        list
+    } else {
+        vec![]
+    };
     Ok((n, tys))
 }
 
 // ArgDecl : (Var_, Type) = {
-//     <v: Sp<Var>> ":" <t: Type> ","? => (v, t)
+//     <v: Sp<Var>> ":" <t: Type> => (v, t)
 // }
 
 fn parse_arg_decl<'input>(
@@ -1279,9 +1246,6 @@ fn parse_arg_decl<'input>(
     let v = parse_var_(tokens)?;
     consume_token(tokens, Tok::Colon)?;
     let t = parse_type(tokens)?;
-    if tokens.peek() == Tok::Comma {
-        tokens.advance()?;
-    }
     Ok((v, t))
 }
 
@@ -1439,7 +1403,7 @@ fn parse_spec_condition<'input>(
 
 // NativeFunctionDecl: (FunctionName, Function) = {
 //     <nat: NativeTag> <p: Public?> <name_and_type_formals: NameAndTypeFormals>
-//     "(" <args: (ArgDecl)*> ")" <ret: ReturnType?>
+//     "(" <args: Comma<ArgDecl>> ")" <ret: ReturnType?>
 //         <acquires: AcquireList?>
 //         ";" =>? { ... }
 // }
@@ -1465,11 +1429,8 @@ fn parse_function_decl<'input>(
 
     let (name, type_formals) = parse_name_and_type_formals(tokens)?;
     consume_token(tokens, Tok::LParen)?;
-    let mut args: Vec<(Var_, Type)> = vec![];
-    while tokens.peek() != Tok::RParen {
-        args.push(parse_arg_decl(tokens)?);
-    }
-    tokens.advance()?; // consume the RParen
+    let args = parse_comma_list(tokens, Tok::RParen, parse_arg_decl, true)?;
+    consume_token(tokens, Tok::RParen)?;
 
     let ret = if tokens.peek() == Tok::Colon {
         Some(parse_return_type(tokens)?)
@@ -1515,7 +1476,7 @@ fn parse_function_decl<'input>(
 }
 
 // FieldDecl : (Field_, Type) = {
-//     <f: Sp<Field>> ":" <t: Type> ","? => (f, t)
+//     <f: Sp<Field>> ":" <t: Type> => (f, t)
 // }
 
 fn parse_field_decl<'input>(
@@ -1524,9 +1485,6 @@ fn parse_field_decl<'input>(
     let f = parse_field_(tokens)?;
     consume_token(tokens, Tok::Colon)?;
     let t = parse_type(tokens)?;
-    if tokens.peek() == Tok::Comma {
-        tokens.advance()?;
-    }
     Ok((f, t))
 }
 
@@ -1591,7 +1549,7 @@ fn parse_program<'input>(
 
 // pub Script : Script = {
 //     <imports: (ImportDecl)*>
-//     "main" "(" <args: (ArgDecl)*> ")" <locals_body: FunctionBlock> => { ... }
+//     "main" "(" <args: Comma<ArgDecl>> ")" <locals_body: FunctionBlock> => { ... }
 // }
 
 fn parse_script<'input>(
@@ -1604,11 +1562,8 @@ fn parse_script<'input>(
     }
     consume_token(tokens, Tok::Main)?;
     consume_token(tokens, Tok::LParen)?;
-    let mut args: Vec<(Var_, Type)> = vec![];
-    while tokens.peek() != Tok::RParen {
-        args.push(parse_arg_decl(tokens)?);
-    }
-    tokens.advance()?; // consume the RParen
+    let args = parse_comma_list(tokens, Tok::RParen, parse_arg_decl, true)?;
+    consume_token(tokens, Tok::RParen)?;
     let (locals, body) = parse_function_block(tokens)?;
     let end_loc = tokens.previous_end_loc();
     let main = Function::new(
@@ -1630,7 +1585,7 @@ fn parse_script<'input>(
 // }
 // StructDecl: StructDefinition_ = {
 //     <is_nominal_resource: StructKind> <name_and_type_formals:
-//     NameAndTypeFormals> "{" <data: (FieldDecl)*> "}" =>? { ... }
+//     NameAndTypeFormals> "{" <data: Comma<FieldDecl>> "}" =>? { ... }
 //     <native: NativeTag> <is_nominal_resource: StructKind>
 //     <name_and_type_formals: NameAndTypeFormals> ";" =>? { ... }
 // }
@@ -1671,11 +1626,8 @@ fn parse_struct_decl<'input>(
     }
 
     consume_token(tokens, Tok::LBrace)?;
-    let mut fields = Fields::new();
-    while tokens.peek() != Tok::RBrace {
-        fields.push(parse_field_decl(tokens)?);
-    }
-    tokens.advance()?; // consume the RBrace
+    let fields = parse_comma_list(tokens, Tok::RBrace, parse_field_decl, true)?;
+    consume_token(tokens, Tok::RBrace)?;
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(
         start_loc,
