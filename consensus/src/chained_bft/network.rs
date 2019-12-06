@@ -154,11 +154,12 @@ impl NetworkSender {
             error!("Error broadcasting to self: {:?}", err);
         }
 
-        // Get the list of validators excluding our own account address.
+        // Get the list of validators excluding our own account address. Note the
+        // ordering is not important in this case.
         let self_author = self.author;
         let other_validators = self
             .validators
-            .get_account_addresses_iter()
+            .get_ordered_account_addresses_iter()
             .filter(|author| author != &self_author);
 
         // Broadcast message over direct-send to all other validators.

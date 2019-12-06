@@ -94,7 +94,9 @@ impl<T: Payload> EpochManager<T> {
         epoch: u64,
         validators: &ValidatorVerifier,
     ) -> Box<dyn ProposerElection<T> + Send + Sync> {
-        let proposers = validators.get_ordered_account_addresses();
+        let proposers = validators
+            .get_ordered_account_addresses_iter()
+            .collect::<Vec<_>>();
         match self.config.proposer_type {
             ConsensusProposerType::MultipleOrderedProposers => {
                 Box::new(MultiProposer::new(epoch, proposers, 2))

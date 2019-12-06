@@ -71,6 +71,8 @@ impl<PublicKey: VerifyingKey> ValidatorInfo<PublicKey> {
 /// verification, respectively.
 #[derive(Clone)]
 pub struct ValidatorVerifier<PublicKey> {
+    /// An ordered map of each validator's on-chain account address to its pubkeys
+    /// and voting power.
     address_to_validator_info: BTreeMap<AccountAddress, ValidatorInfo<PublicKey>>,
     /// The minimum voting power required to achieve a quorum
     quorum_voting_power: u64,
@@ -255,16 +257,10 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
             .map(|validator_info| validator_info.voting_power)
     }
 
-    /// Returns a ordered list of account addresses from smallest to largest.
-    pub fn get_ordered_account_addresses(&self) -> Vec<AccountAddress> {
-        let mut account_addresses: Vec<AccountAddress> =
-            self.address_to_validator_info.keys().cloned().collect();
-        account_addresses.sort();
-        account_addresses
-    }
-
     /// Returns an ordered list of account addresses as an `Iterator`.
-    pub fn get_account_addresses_iter(&self) -> impl Iterator<Item = AccountAddress> + '_ {
+    pub fn get_ordered_account_addresses_iter(&self) -> impl Iterator<Item = AccountAddress> + '_ {
+        // Since `address_to_validator_info` is a `BTreeMap`, the `.keys()` iterator
+        // is guaranteed to be sorted.
         self.address_to_validator_info.keys().copied()
     }
 
@@ -318,8 +314,7 @@ impl From<&ValidatorVerifier<Ed25519PublicKey>> for ValidatorSet {
         use crate::validator_public_keys::ValidatorPublicKeys;
         ValidatorSet::new(
             verifier
-                .get_ordered_account_addresses()
-                .into_iter()
+                .get_ordered_account_addresses_iter()
                 .map(|addr| {
                     ValidatorPublicKeys::new_with_random_network_keys(
                         addr,
