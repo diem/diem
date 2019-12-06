@@ -4,7 +4,7 @@
 use crate::{accumulator_extension_proof::AccumulatorExtensionProof, block::Block};
 use anyhow::{Error, Result};
 use libra_crypto::hash::TransactionAccumulatorHasher;
-use libra_types::validator_set::ValidatorSet;
+use libra_types::crypto_proxies::ValidatorSet;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     convert::TryFrom,

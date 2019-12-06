@@ -6,7 +6,6 @@
 use crate::account_address::AccountAddress;
 use crate::validator_set::ValidatorSet;
 use anyhow::{ensure, Result};
-use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_crypto::*;
 use mirai_annotations::*;
 use std::collections::BTreeMap;
@@ -290,8 +289,8 @@ impl<PublicKey> fmt::Display for ValidatorVerifier<PublicKey> {
     }
 }
 
-impl From<&ValidatorSet> for ValidatorVerifier<Ed25519PublicKey> {
-    fn from(validator_set: &ValidatorSet) -> Self {
+impl<PublicKey: VerifyingKey> From<&ValidatorSet<PublicKey>> for ValidatorVerifier<PublicKey> {
+    fn from(validator_set: &ValidatorSet<PublicKey>) -> Self {
         ValidatorVerifier::new(validator_set.payload().iter().fold(
             BTreeMap::new(),
             |mut map, key| {
@@ -309,8 +308,8 @@ impl From<&ValidatorSet> for ValidatorVerifier<Ed25519PublicKey> {
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-impl From<&ValidatorVerifier<Ed25519PublicKey>> for ValidatorSet {
-    fn from(verifier: &ValidatorVerifier<Ed25519PublicKey>) -> Self {
+impl<PublicKey: VerifyingKey> From<&ValidatorVerifier<PublicKey>> for ValidatorSet<PublicKey> {
+    fn from(verifier: &ValidatorVerifier<PublicKey>) -> Self {
         use crate::validator_public_keys::ValidatorPublicKeys;
         ValidatorSet::new(
             verifier

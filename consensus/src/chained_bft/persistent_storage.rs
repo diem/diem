@@ -12,10 +12,10 @@ use consensus_types::{
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
+use libra_types::crypto_proxies::ValidatorPublicKeys;
+use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use libra_types::ledger_info::LedgerInfo;
-use libra_types::validator_public_keys::ValidatorPublicKeys;
-use libra_types::validator_set::ValidatorSet;
 use rmp_serde::{from_slice, to_vec_named};
 use std::{collections::HashSet, sync::Arc};
 use storage_client::StorageRead;

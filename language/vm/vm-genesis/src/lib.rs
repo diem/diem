@@ -15,11 +15,11 @@ use libra_types::{
     account_address::AccountAddress,
     account_config,
     byte_array::ByteArray,
+    crypto_proxies::ValidatorSet,
     identifier::Identifier,
     transaction::{
         ChangeSet, RawTransaction, Script, SignatureCheckedTransaction, TransactionArgument,
     },
-    validator_set::ValidatorSet,
 };
 use rand::{rngs::StdRng, SeedableRng};
 use std::time::Duration;

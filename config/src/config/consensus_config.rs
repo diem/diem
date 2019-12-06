@@ -12,9 +12,7 @@ use libra_crypto::{
     Uniform,
 };
 use libra_types::{
-    crypto_proxies::{ValidatorInfo, ValidatorVerifier},
-    validator_public_keys::ValidatorPublicKeys,
-    validator_set::ValidatorSet,
+    crypto_proxies::{ValidatorInfo, ValidatorPublicKeys, ValidatorSet, ValidatorVerifier},
     PeerId,
 };
 use rand::rngs::StdRng;

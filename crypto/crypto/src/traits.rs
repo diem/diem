@@ -9,6 +9,8 @@
 use crate::HashValue;
 use anyhow::Result;
 use core::convert::{From, TryFrom};
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use std::{fmt::Debug, hash::Hash};
 use thiserror::Error;
 
@@ -48,7 +50,7 @@ pub enum CryptoMaterialError {
 /// round-trip to bytes and corresponding [`TryFrom`][TryFrom].
 pub trait ValidKey:
     // The for<'a> exactly matches the assumption "deserializable from any lifetime".
-    for<'a> TryFrom<&'a [u8], Error = CryptoMaterialError> + Debug
+    for<'a> TryFrom<&'a [u8], Error = CryptoMaterialError> + Debug + Serialize + DeserializeOwned
 {
 
     /// Convert the valid key to bytes.

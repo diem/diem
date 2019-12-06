@@ -6,8 +6,8 @@
 use crate::block_info::{BlockInfo, Round};
 use crate::{
     account_address::AccountAddress,
+    crypto_proxies::ValidatorSet,
     transaction::Version,
-    validator_set::ValidatorSet,
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
 use anyhow::{ensure, format_err, Error, Result};

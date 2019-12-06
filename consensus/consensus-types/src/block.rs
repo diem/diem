@@ -12,8 +12,8 @@ use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::account_address::{AccountAddress, ADDRESS_LENGTH};
 use libra_types::block_info::BlockInfo;
 use libra_types::block_metadata::BlockMetadata;
+use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::transaction::Version;
-use libra_types::validator_set::ValidatorSet;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,

@@ -13,6 +13,7 @@ use crate::{
 };
 use anyhow::{Error, Result};
 use lazy_static::lazy_static;
+use libra_crypto::VerifyingKey;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -49,9 +50,9 @@ pub(crate) fn validator_set_path() -> Vec<u8> {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct ValidatorSet(Vec<ValidatorPublicKeys>);
+pub struct ValidatorSet<PublicKey>(Vec<ValidatorPublicKeys<PublicKey>>);
 
-impl fmt::Display for ValidatorSet {
+impl<PublicKey> fmt::Display for ValidatorSet<PublicKey> {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         write!(f, "[")?;
         for validator in &self.0 {
@@ -61,13 +62,13 @@ impl fmt::Display for ValidatorSet {
     }
 }
 
-impl ValidatorSet {
+impl<PublicKey: VerifyingKey> ValidatorSet<PublicKey> {
     /// Constructs a ValidatorSet resource.
-    pub fn new(payload: Vec<ValidatorPublicKeys>) -> Self {
+    pub fn new(payload: Vec<ValidatorPublicKeys<PublicKey>>) -> Self {
         ValidatorSet(payload)
     }
 
-    pub fn payload(&self) -> &[ValidatorPublicKeys] {
+    pub fn payload(&self) -> &[ValidatorPublicKeys<PublicKey>] {
         &self.0
     }
 
@@ -80,7 +81,9 @@ impl ValidatorSet {
     }
 }
 
-impl TryFrom<crate::proto::types::ValidatorSet> for ValidatorSet {
+impl<PublicKey: VerifyingKey> TryFrom<crate::proto::types::ValidatorSet>
+    for ValidatorSet<PublicKey>
+{
     type Error = Error;
 
     fn try_from(proto: crate::proto::types::ValidatorSet) -> Result<Self> {
@@ -94,8 +97,8 @@ impl TryFrom<crate::proto::types::ValidatorSet> for ValidatorSet {
     }
 }
 
-impl From<ValidatorSet> for crate::proto::types::ValidatorSet {
-    fn from(set: ValidatorSet) -> Self {
+impl<PublicKey: VerifyingKey> From<ValidatorSet<PublicKey>> for crate::proto::types::ValidatorSet {
+    fn from(set: ValidatorSet<PublicKey>) -> Self {
         Self {
             validator_public_keys: set.0.into_iter().map(Into::into).collect(),
         }

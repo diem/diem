@@ -11,8 +11,8 @@ use consensus_types::executed_block::ExecutedBlock;
 use executor::{ExecutedTrees, ProcessedVMOutput};
 use futures::{channel::mpsc, future, Future, FutureExt};
 use libra_logger::prelude::*;
+use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof};
-use libra_types::validator_set::ValidatorSet;
 use std::{pin::Pin, sync::Arc};
 use termion::color::*;
 

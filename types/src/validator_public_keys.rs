@@ -9,7 +9,7 @@ use anyhow::{Error, Result};
 use libra_crypto::ed25519::compat::generate_keypair as generate_ed25519_keypair;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::x25519::compat::generate_keypair as generate_x25519_keypair;
-use libra_crypto::{ed25519::*, traits::ValidKey, x25519::X25519StaticPublicKey};
+use libra_crypto::{ed25519::*, x25519::X25519StaticPublicKey, ValidKey, VerifyingKey};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -22,11 +22,11 @@ use std::{convert::TryFrom, fmt};
 /// their public keys and voting power may or may not change between epochs.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct ValidatorPublicKeys {
+pub struct ValidatorPublicKeys<PublicKey> {
     // Hash value of the current public key of the account address
     account_address: AccountAddress,
     // This key can validate messages sent from this validator
-    consensus_public_key: Ed25519PublicKey,
+    consensus_public_key: PublicKey,
     // Voting power of this validator
     consensus_voting_power: u64,
     // This key can validate signed messages at the network layer
@@ -36,16 +36,16 @@ pub struct ValidatorPublicKeys {
     network_identity_public_key: X25519StaticPublicKey,
 }
 
-impl fmt::Display for ValidatorPublicKeys {
+impl<PublicKey> fmt::Display for ValidatorPublicKeys<PublicKey> {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         write!(f, "account_address: {}", self.account_address.short_str())
     }
 }
 
-impl ValidatorPublicKeys {
+impl<PublicKey> ValidatorPublicKeys<PublicKey> {
     pub fn new(
         account_address: AccountAddress,
-        consensus_public_key: Ed25519PublicKey,
+        consensus_public_key: PublicKey,
         consensus_voting_power: u64,
         network_signing_public_key: Ed25519PublicKey,
         network_identity_public_key: X25519StaticPublicKey,
@@ -62,7 +62,7 @@ impl ValidatorPublicKeys {
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn new_with_random_network_keys(
         account_address: AccountAddress,
-        consensus_public_key: Ed25519PublicKey,
+        consensus_public_key: PublicKey,
         consensus_voting_power: u64,
     ) -> Self {
         let (_, network_signing_public_key) = generate_ed25519_keypair(None);
@@ -83,7 +83,7 @@ impl ValidatorPublicKeys {
     }
 
     /// Returns the key for validating signed messages from this validator
-    pub fn consensus_public_key(&self) -> &Ed25519PublicKey {
+    pub fn consensus_public_key(&self) -> &PublicKey {
         &self.consensus_public_key
     }
 
@@ -103,12 +103,14 @@ impl ValidatorPublicKeys {
     }
 }
 
-impl TryFrom<crate::proto::types::ValidatorPublicKeys> for ValidatorPublicKeys {
+impl<PublicKey: VerifyingKey> TryFrom<crate::proto::types::ValidatorPublicKeys>
+    for ValidatorPublicKeys<PublicKey>
+{
     type Error = Error;
 
     fn try_from(proto: crate::proto::types::ValidatorPublicKeys) -> Result<Self> {
         let account_address = AccountAddress::try_from(proto.account_address)?;
-        let consensus_public_key = Ed25519PublicKey::try_from(&proto.consensus_public_key[..])?;
+        let consensus_public_key = PublicKey::try_from(&proto.consensus_public_key[..])?;
         let consensus_voting_power = proto.consensus_voting_power;
         let network_signing_public_key =
             Ed25519PublicKey::try_from(&proto.network_signing_public_key[..])?;
@@ -124,8 +126,10 @@ impl TryFrom<crate::proto::types::ValidatorPublicKeys> for ValidatorPublicKeys {
     }
 }
 
-impl From<ValidatorPublicKeys> for crate::proto::types::ValidatorPublicKeys {
-    fn from(keys: ValidatorPublicKeys) -> Self {
+impl<PublicKey: VerifyingKey> From<ValidatorPublicKeys<PublicKey>>
+    for crate::proto::types::ValidatorPublicKeys
+{
+    fn from(keys: ValidatorPublicKeys<PublicKey>) -> Self {
         Self {
             account_address: keys.account_address.to_vec(),
             consensus_public_key: keys.consensus_public_key.to_bytes().to_vec(),
