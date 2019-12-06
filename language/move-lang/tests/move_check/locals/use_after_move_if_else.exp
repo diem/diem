@@ -1,0 +1,66 @@
+error: 
+
+   ┌── tests/move_check/locals/use_after_move_if_else.move:4:45 ───
+   │
+ 5 │         let y = move x + 1;
+   │                 ^^^^^^ Invalid usage of local 'x'
+   ·
+ 4 │         if (cond) { _ = move x } else { _ = move x };
+   │                                             ------ The local does not have a value due to this position. The local must be assigned a value before being used
+   │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_if_else.move:10:25 ───
+    │
+ 11 │         let y = move x + 1;
+    │                 ^^^^^^ Invalid usage of local 'x'
+    ·
+ 10 │         if (cond) { _ = move x } else { _ = x };
+    │                         ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_if_else.move:16:45 ───
+    │
+ 17 │         let y = x + 1;
+    │                 ^ Invalid usage of local 'x'
+    ·
+ 16 │         if (cond) { _ = move x } else { _ = move x };
+    │                                             ------ The local does not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_if_else.move:23:25 ───
+    │
+ 24 │         let y = x + 1;
+    │                 ^ Invalid usage of local 'x'
+    ·
+ 23 │         if (cond) { _ = move x } else { _ = x };
+    │                         ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_if_else.move:29:45 ───
+    │
+ 30 │         let y = &x;
+    │                 ^^ Invalid usage of local 'x'
+    ·
+ 29 │         if (cond) { _ = move x } else { _ = move x };
+    │                                             ------ The local does not have a value due to this position. The local must be assigned a value before being used
+    │
+
+error: 
+
+    ┌── tests/move_check/locals/use_after_move_if_else.move:35:25 ───
+    │
+ 36 │         let y = &x;
+    │                 ^^ Invalid usage of local 'x'
+    ·
+ 35 │         if (cond) { _ = move x } else { _ = x };
+    │                         ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
+

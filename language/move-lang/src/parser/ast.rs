@@ -426,6 +426,13 @@ impl Var {
 impl Kind_ {
     pub const VALUE_CONSTRAINT: &'static str = "copyable";
     pub const RESOURCE_CONSTRAINT: &'static str = "resource";
+
+    pub fn is_resourceful(&self) -> bool {
+        match self {
+            Kind_::Affine | Kind_::Unrestricted => false,
+            Kind_::Resource | Kind_::Unknown => true,
+        }
+    }
 }
 
 impl Type_ {
