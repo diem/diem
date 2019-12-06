@@ -19,7 +19,7 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
-use tokio::net::tcp::{TcpListener, TcpStream};
+use tokio::net::{TcpListener, TcpStream};
 
 /// Transport to build TCP connections
 #[derive(Debug, Clone, Default)]
@@ -76,12 +76,10 @@ impl Transport for TcpTransport {
         let listener = ::std::net::TcpListener::bind(&socket_addr)?;
         let local_addr = socketaddr_to_multiaddr(listener.local_addr()?);
         let listener = TcpListener::try_from(listener)?;
-        let incoming: Pin<Box<dyn Stream<Item = io::Result<TcpStream>> + Send + 'static>> =
-            Box::pin(listener.incoming());
 
         Ok((
             TcpListenerStream {
-                inner: incoming,
+                inner: listener,
                 config,
             },
             local_addr,
@@ -99,7 +97,7 @@ impl Transport for TcpTransport {
 
 #[must_use = "streams do nothing unless polled"]
 pub struct TcpListenerStream {
-    inner: Pin<Box<dyn Stream<Item = io::Result<TcpStream>> + Send + 'static>>,
+    inner: TcpListener,
     config: TcpTransport,
 }
 
@@ -107,7 +105,7 @@ impl Stream for TcpListenerStream {
     type Item = io::Result<(future::Ready<io::Result<TcpSocket>>, Multiaddr)>;
 
     fn poll_next(mut self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
-        match Pin::new(&mut self.inner).poll_next(context) {
+        match Pin::new(&mut self.inner.incoming()).poll_next(context) {
             Poll::Ready(Some(Ok(socket))) => {
                 if let Err(e) = self.config.apply_config(&socket) {
                     return Poll::Ready(Some(Err(e)));

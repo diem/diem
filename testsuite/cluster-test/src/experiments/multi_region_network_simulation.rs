@@ -1,17 +1,26 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+use std::{fmt, time::Duration};
+
+use anyhow::Result;
+use slog_scope::{info, warn};
+use structopt::StructOpt;
+
+use tokio::time;
+
 /// This module provides an experiment which simulates a multi-region environment.
 /// It undoes the simulation in the cluster after the given duration
 use crate::effects::Effect;
 use crate::effects::NetworkDelay;
-use crate::prometheus::Prometheus;
+use crate::experiments::{Context, ExperimentParam};
+
+use crate::cluster::Cluster;
+use crate::experiments::Experiment;
 use crate::tx_emitter::{EmitJobRequest, EmitThreadParams, TxEmitter};
 use crate::util::unix_timestamp_now;
-use crate::{cluster::Cluster, experiments::Experiment, thread_pool_executor::ThreadPoolExecutor};
-use failure;
-use slog_scope::{info, warn};
-use std::{collections::HashSet, fmt, thread, time::Duration};
+use futures::future::{join_all, BoxFuture, FutureExt};
 
 #[derive(Default, Debug)]
 struct Metrics {
@@ -24,35 +33,46 @@ struct Metrics {
 }
 
 pub struct MultiRegionSimulation {
+    params: MultiRegionSimulationParams,
+}
+
+#[derive(StructOpt, Debug)]
+pub struct MultiRegionSimulationParams {
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Space separated list of various split sizes"
+    )]
     splits: Vec<usize>,
+    #[structopt(
+        long,
+        default_value = "50",
+        help = "Space separated list of various delays in ms between the two regions"
+    )]
     cross_region_latencies: Vec<u64>,
-    exp_duration_per_config: Duration,
-    thread_pool_executor: ThreadPoolExecutor,
-    cluster: Cluster,
-    prometheus: Prometheus,
+    #[structopt(
+        long,
+        default_value = "300",
+        help = "Duration in secs (per config) for which multi region experiment happens"
+    )]
+    duration_secs: u64,
+}
+
+impl ExperimentParam for MultiRegionSimulationParams {
+    type E = MultiRegionSimulation;
+    fn build(self, _cluster: &Cluster) -> Self::E {
+        Self::E { params: self }
+    }
 }
 
 impl MultiRegionSimulation {
-    pub fn new(
-        splits: Vec<usize>,
-        cross_region_latencies: Vec<u64>,
-        exp_duration_per_config: Duration,
-        cluster: Cluster,
-        thread_pool_executor: ThreadPoolExecutor,
-        prometheus: Prometheus,
-    ) -> Self {
-        Self {
-            splits,
-            cross_region_latencies,
-            exp_duration_per_config,
-            thread_pool_executor,
-            cluster,
-            prometheus,
-        }
-    }
-
-    fn single_run(&self, count: usize, cross_region_delay: Duration) -> failure::Result<Metrics> {
-        let (cluster1, cluster2) = self.cluster.split_n_random(count);
+    async fn single_run(
+        &self,
+        count: usize,
+        cross_region_delay: Duration,
+        context: &mut Context,
+    ) -> Result<Metrics> {
+        let (cluster1, cluster2) = context.cluster.split_n_random(count);
         let (region1, region2) = (cluster1.into_instances(), cluster2.into_instances());
         let (smaller_region, larger_region);
         if region1.len() < region2.len() {
@@ -67,46 +87,44 @@ impl MultiRegionSimulation {
             .map(|instance| {
                 NetworkDelay::new(
                     instance.clone(),
-                    Some(larger_region.clone()),
-                    cross_region_delay,
+                    vec![(larger_region.clone(), cross_region_delay)],
                 )
             })
             .collect();
         // Add network delay commands only to the instances of the smaller
         // region because we have to run fewer ssh commands.
-        let start_effects: Vec<_> = network_delays_effects
+        let start_effects = network_delays_effects
             .iter()
-            .map(|effect| {
-                move || {
-                    effect.activate().unwrap();
-                }
-            })
-            .collect();
-        self.thread_pool_executor.execute_jobs(start_effects);
+            .map(|effect| effect.activate());
+        join_all(start_effects).await;
 
-        thread::sleep(self.exp_duration_per_config);
-        let metrics = self.get_metrics(count, cross_region_delay.as_millis() as u64);
-        let stop_effects: Vec<_> = network_delays_effects
+        time::delay_for(self.exp_duration_per_config()).await;
+        let metrics = self.get_metrics(count, cross_region_delay.as_millis() as u64, context);
+        let stop_effects = network_delays_effects
             .iter()
-            .map(|effect| {
-                move || {
-                    effect.deactivate().unwrap();
-                }
-            })
-            .collect();
-        self.thread_pool_executor.execute_jobs(stop_effects);
+            .map(|effect| effect.deactivate());
+        join_all(stop_effects).await;
         Ok(metrics)
     }
 
-    fn get_metrics(&self, split_size: usize, cross_region_latency: u64) -> Metrics {
+    fn exp_duration_per_config(&self) -> Duration {
+        Duration::from_secs(self.params.duration_secs)
+    }
+
+    fn get_metrics(
+        &self,
+        split_size: usize,
+        cross_region_latency: u64,
+        context: &mut Context,
+    ) -> Metrics {
         let mut metrics: Metrics = Default::default();
         metrics.split_size = split_size;
         metrics.cross_region_latency = cross_region_latency;
         let step = 10;
         let end = unix_timestamp_now();
         // Measure metrics 30s after the experiment started to ignore initial warmup metrics
-        let start = end - self.exp_duration_per_config + Duration::from_secs(30);
-        metrics.txn_per_sec = self
+        let start = end - self.exp_duration_per_config() + Duration::from_secs(30);
+        metrics.txn_per_sec = context
             .prometheus
             .query_range_avg(
                 "irate(libra_consensus_last_committed_version[1m])".to_string(),
@@ -116,7 +134,7 @@ impl MultiRegionSimulation {
             )
             .map_err(|e| warn!("{}", e))
             .ok();
-        metrics.blocks_per_sec = self
+        metrics.blocks_per_sec = context
             .prometheus
             .query_range_avg(
                 "irate(libra_consensus_last_committed_round[1m])".to_string(),
@@ -126,7 +144,7 @@ impl MultiRegionSimulation {
             )
             .map_err(|e| warn!("{}", e))
             .ok();
-        metrics.avg_vote_time = self
+        metrics.avg_vote_time = context
             .prometheus
             .query_range_avg(
                 "irate(libra_consensus_creation_to_receival_s_sum[1m])/irate(libra_consensus_creation_to_receival_s_count[1m])".to_string(),
@@ -136,7 +154,7 @@ impl MultiRegionSimulation {
             )
             .map_err(|e| warn!("{}", e))
             .ok().map(|x| x * 1000f64);
-        metrics.avg_qc_time = self
+        metrics.avg_qc_time = context
             .prometheus
             .query_range_avg(
                 "irate(libra_consensus_creation_to_qc_s_sum[1m])/irate(libra_consensus_creation_to_qc_s_count[1m])".to_string(),
@@ -176,46 +194,46 @@ fn print_results(metrics: Vec<Metrics>) {
 }
 
 impl Experiment for MultiRegionSimulation {
-    fn affected_validators(&self) -> HashSet<String> {
-        let mut r = HashSet::new();
-        for instance in self.cluster.clone().into_instances() {
-            r.insert(instance.short_hash().clone());
-        }
-        r
-    }
-
-    fn run(&self) -> failure::Result<()> {
-        let mut emitter = TxEmitter::new(&self.cluster);
-        let mut results = vec![];
-        for split in &self.splits {
-            for cross_region_latency in &self.cross_region_latencies {
-                let job = emitter
-                    .start_job(EmitJobRequest {
-                        instances: self.cluster.instances().clone(),
-                        accounts_per_client: 10,
-                        thread_params: EmitThreadParams::default(),
-                    })
-                    .expect("Failed to start emit job");
-                // Wait for minting to complete and transactions to start
-                thread::sleep(Duration::from_secs(30));
-                info!(
-                    "Running multi region simulation: split: {}, cross region latency: {}ms",
-                    split, cross_region_latency
-                );
-                if let Ok(metrics) = self
-                    .single_run(*split, Duration::from_millis(*cross_region_latency))
-                    .map_err(|e| warn!("{}", e))
-                {
-                    info!("metrics for this run: {:?}", metrics);
-                    results.push(metrics);
+    fn run<'a>(&'a mut self, context: &'a mut Context) -> BoxFuture<'a, Result<Option<String>>> {
+        async move {
+            let mut emitter = TxEmitter::new(&context.cluster);
+            let mut results = vec![];
+            for split in &self.params.splits {
+                for cross_region_latency in &self.params.cross_region_latencies {
+                    let job = emitter
+                        .start_job(EmitJobRequest {
+                            instances: context.cluster.instances().clone(),
+                            accounts_per_client: 10,
+                            thread_params: EmitThreadParams::default(),
+                        })
+                        .expect("Failed to start emit job");
+                    // Wait for minting to complete and transactions to start
+                    time::delay_for(Duration::from_secs(30)).await;
+                    info!(
+                        "Running multi region simulation: split: {}, cross region latency: {}ms",
+                        split, cross_region_latency
+                    );
+                    if let Ok(metrics) = self
+                        .single_run(
+                            *split,
+                            Duration::from_millis(*cross_region_latency),
+                            context,
+                        )
+                        .await
+                        .map_err(|e| warn!("{}", e))
+                    {
+                        info!("metrics for this run: {:?}", metrics);
+                        results.push(metrics);
+                    }
+                    emitter.stop_job(job);
+                    // Sleep for a minute before different experiments
+                    time::delay_for(Duration::from_secs(60)).await;
                 }
-                emitter.stop_job(job);
-                // Sleep for a minute before different experiments
-                thread::sleep(Duration::from_secs(60));
             }
+            print_results(results);
+            Ok(None)
         }
-        print_results(results);
-        Ok(())
+            .boxed()
     }
 
     fn deadline(&self) -> Duration {
@@ -228,7 +246,7 @@ impl fmt::Display for MultiRegionSimulation {
         write!(
             f,
             "Multi Region Simulation splits: {:?} cross region latencies: {:?}",
-            self.splits, self.cross_region_latencies
+            self.params.splits, self.params.cross_region_latencies
         )
     }
 }

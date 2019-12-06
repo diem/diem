@@ -9,35 +9,35 @@ error:
    │            - The type: 'u64'
    ·
  4 │         ({ 0 } : bool);
-   │                  ---- Is is not compatible with: 'bool'
+   │                  ---- Is not compatible with: 'bool'
    │
 
 error: 
 
-   ┌── tests/move_check/typing/block_single_expr_invalid.move:5:13 ───
+   ┌── tests/move_check/typing/block_single_expr_invalid.move:5:12 ───
    │
  5 │         ({ &0 } : u64);
    │                   ^^^ Invalid type annotation
    ·
  5 │         ({ &0 } : u64);
-   │             - The type: '&u64'
+   │            -- The type: '&u64'
    ·
  5 │         ({ &0 } : u64);
-   │                   --- Is is not compatible with: 'u64'
+   │                   --- Is not compatible with: 'u64'
    │
 
 error: 
 
-   ┌── tests/move_check/typing/block_single_expr_invalid.move:6:17 ───
+   ┌── tests/move_check/typing/block_single_expr_invalid.move:6:12 ───
    │
  6 │         ({ &mut 0 } : ());
    │                       ^^ Invalid type annotation
    ·
  6 │         ({ &mut 0 } : ());
-   │                 - The type: '&mut u64'
+   │            ------ The type: '&mut u64'
    ·
  6 │         ({ &mut 0 } : ());
-   │                       -- Is is not compatible with: '()'
+   │                       -- Is not compatible with: '()'
    │
 
 error: 
@@ -47,8 +47,11 @@ error:
  7 │         ({ R {} } : R);
    │         ^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
    ·
+ 7 │         ({ R {} } : R);
+   │                     - The type: 0x8675309::M::R
+   ·
  2 │     resource struct R {}
-   │     -------- 0000000000000000000000000000000000000000000000000000000008675309.M.R is found to be a non-copyable type here
+   │     -------- Is found to be a non-copyable type here
    │
 
 error: 
@@ -62,6 +65,6 @@ error:
    │            ----------------- The type: '(u64,bool,bool)'
    ·
  8 │         ({ (0, false, false) } : (u64, bool));
-   │                                  ----------- Is is not compatible with: '(u64,bool)'
+   │                                  ----------- Is not compatible with: '(u64,bool)'
    │
 

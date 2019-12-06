@@ -6,6 +6,7 @@
 use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::parser::ast::Loc;
+use itertools::Itertools;
 use libra_types::{account_address::AccountAddress, identifier::Identifier};
 use num::{BigInt, Num};
 use stackless_bytecode_generator::{
@@ -16,8 +17,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        FieldDefinitionIndex, FunctionDefinitionIndex, FunctionHandleIndex, ModuleHandleIndex,
-        SignatureToken, StructDefinitionIndex, StructHandleIndex,
+        FieldDefinitionIndex, FunctionDefinitionIndex, FunctionHandleIndex, LocalsSignatureIndex,
+        ModuleHandleIndex, SignatureToken, StructDefinition, StructDefinitionIndex,
+        StructHandleIndex,
     },
     internals::ModuleIndex,
     views::{
@@ -32,6 +34,8 @@ pub struct BoogieTranslator {
     pub struct_defs: BTreeMap<String, usize>,
     pub max_struct_depth: usize,
     pub module_name_to_idx: BTreeMap<Identifier, usize>,
+    /// If set, this narrows down output for module code on the given modules.
+    pub target_modules: Option<Vec<String>>,
 }
 
 pub struct ModuleTranslator<'a> {
@@ -67,7 +71,28 @@ impl BoogieTranslator {
             struct_defs,
             max_struct_depth: 0,
             module_name_to_idx,
+            target_modules: None,
         }
+    }
+
+    /// Sets the target modules for this translator. If this is set, output will be pruned to
+    /// those target modules (where the compilation scheme allows). This is currently used for
+    /// testing only; the produced output will not be accepted by Boogie.
+    pub fn set_target_modules(mut self, modules: &[&str]) -> Self {
+        self.target_modules = Some(modules.iter().map(|s| (*s).to_string()).collect());
+        self
+    }
+
+    /// Returns true of this module should be ignored for output. The module will still be
+    /// processed, but all code output for it will be omitted. This is used e.g. to suppress
+    /// output for builtin modules which have special semantics in boogie, as 0x0.Vector.
+    fn shall_ignore_module(&self, module: &VerifiedModule) -> bool {
+        module.name().to_string() == "Vector"
+            && *module.address() == AccountAddress::from_hex_literal("0x0").unwrap()
+            || match &self.target_modules {
+                Some(modules) => !modules.contains(&module.name().to_string()),
+                _ => false,
+            }
     }
 
     pub fn translate(&mut self) -> String {
@@ -79,7 +104,7 @@ impl BoogieTranslator {
         res.push_str(&self.emit_stratified_functions());
 
         for (module_idx, module) in self.modules.iter().enumerate() {
-            let mut mt = ModuleTranslator::new(&module, &self.source_maps[module_idx]);
+            let mut mt = ModuleTranslator::new(self, &module, &self.source_maps[module_idx]);
             res.push_str(&mt.translate());
         }
         res
@@ -88,30 +113,68 @@ impl BoogieTranslator {
     pub fn emit_struct_code(&mut self) -> String {
         let mut res = String::new();
         for module in self.modules.iter() {
+            let shall_ignore = self.shall_ignore_module(module);
+            let mut emit_str = |s: &String| {
+                if !shall_ignore {
+                    res.push_str(s);
+                }
+            };
             for (def_idx, struct_def) in module.struct_defs().iter().enumerate() {
+                // Emit TypeName
                 let struct_name = struct_name_from_handle_index(module, struct_def.struct_handle);
-                res.push_str(&format!("const unique {}: TypeName;\n", struct_name));
-                let struct_definition_view = StructDefinitionView::new(module, struct_def);
-                if struct_definition_view.is_native() {
-                    continue;
-                }
-                let field_info = get_field_info_from_def_index(module, def_idx);
-                for (field_name, _) in field_info {
-                    res.push_str(&format!(
-                        "const unique {}_{}: FieldName;\n",
-                        struct_name, field_name
-                    ));
-                }
-                res.push_str(&self.emit_struct_specific_functions(module, def_idx));
-                let struct_handle_index = struct_def.struct_handle;
-                // calculate the max depth of a struct
-                self.max_struct_depth = std::cmp::max(
-                    self.max_struct_depth,
-                    self.get_struct_depth(
-                        module,
-                        &SignatureToken::Struct(struct_handle_index, vec![]),
-                    ),
+                emit_str(&format!("const unique {}: TypeName;\n", struct_name));
+
+                // Emit FieldNames
+                let field_infos = get_field_infos(module, struct_def);
+                field_infos
+                    .iter()
+                    .enumerate()
+                    .for_each(|(i, (field_name, _))| {
+                        emit_str(&format!(
+                            "const {}_{}: FieldName;\naxiom {}_{} == {};\n",
+                            struct_name, field_name, struct_name, field_name, i
+                        ));
+                    });
+
+                // Emit TypeValue constructor function.
+                let struct_def_view = StructDefinitionView::new(module, struct_def);
+                let type_args = struct_def_view
+                    .type_formals()
+                    .iter()
+                    .enumerate()
+                    .map(|(i, _)| format!("tv{0}: TypeValue", i))
+                    .join(", ");
+                let field_type_map = field_infos
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (_, sig))| format!("[{} := {}]", i, format_type_value(module, sig)))
+                    .join("");
+
+                let type_value = format!(
+                    "StructType({}, TypeValueArray(DefaultTypeMap{}, {}))",
+                    struct_name,
+                    field_type_map,
+                    field_infos.len(),
                 );
+                emit_str(&format!(
+                    "function {}_type_value({}): TypeValue {{\n    {}\n}}\n",
+                    struct_name, type_args, type_value
+                ));
+
+                // Emit other struct specific boilerplate.
+                if !struct_def_view.is_native() {
+                    emit_str(&self.emit_struct_specific_functions(module, def_idx));
+                    let struct_handle_index = struct_def.struct_handle;
+
+                    // Calculate the max depth of a struct
+                    self.max_struct_depth = std::cmp::max(
+                        self.max_struct_depth,
+                        self.get_struct_depth(
+                            module,
+                            &SignatureToken::Struct(struct_handle_index, vec![]),
+                        ),
+                    );
+                }
             }
         }
         self.max_struct_depth += 1;
@@ -154,26 +217,23 @@ impl BoogieTranslator {
 }
 
 impl<'a> ModuleTranslator<'a> {
-    pub fn new(module: &'a VerifiedModule, source_map: &'a ModuleSourceMap<Loc>) -> Self {
+    pub fn new(
+        parent: &BoogieTranslator,
+        module: &'a VerifiedModule,
+        source_map: &'a ModuleSourceMap<Loc>,
+    ) -> Self {
         let stackless_bytecode = StacklessModuleGenerator::new(module.as_inner()).generate_module();
         let mut all_type_strs = BTreeSet::new();
         for struct_def in module.struct_defs().iter() {
             let struct_name = struct_name_from_handle_index(module, struct_def.struct_handle);
             all_type_strs.insert(struct_name);
         }
-        // let ignore = false;
-        let module_name =
-            module.identifier_at(module.module_handle_at(ModuleHandleIndex::new(0)).name);
-        let module_address =
-            module.address_at(module.module_handle_at(ModuleHandleIndex::new(0)).address);
-        let ignore = module_name.to_string() == "Vector"
-            && *module_address == AccountAddress::from_hex_literal("0x0").unwrap();
         Self {
             module,
             source_map,
             stackless_bytecode,
             all_type_strs,
-            ignore,
+            ignore: parent.shall_ignore_module(module),
         }
     }
 
@@ -255,7 +315,7 @@ impl<'a> ModuleTranslator<'a> {
                         (String::new(), String::new())
                     };
                 vec![format!(
-                    "tmp := contents#Memory(m)[old_size + {}];\nif (!b#Boolean(tmp)) {{ {}goto Label_{}; }}{}",
+                    "tmp := contents#Memory(m)[old_size + {}];\n    if (!b#Boolean(tmp)) {{ {}goto Label_{}; }}{}",
                     idx, dbg_branch_taken_str, target, dbg_branch_not_taken_str
                 )]
             }
@@ -309,14 +369,16 @@ impl<'a> ModuleTranslator<'a> {
             ],
             WriteRef(dest, src) => vec![format!("call WriteRef(t{}, contents#Memory(m)[old_size+{}]);", dest, src)],
             FreezeRef(dest, src) => vec![format!("call t{} := FreezeRef(t{});", dest, src)],
-            Call(dests, callee_index, _, args) => {
+            Call(dests, callee_index, type_actuals, args) => {
                 let callee_name = self.function_name_from_handle_index(*callee_index);
                 let mut dest_str = String::new();
                 let mut args_str = String::new();
                 let mut dest_type_assumptions = vec![];
                 let mut tmp_assignments = vec![];
-                for (i, arg) in args.iter().enumerate() {
-                    if i > 0 {
+
+                args_str.push_str(&format_type_actuals(self.module, type_actuals));
+                for arg in args.iter() {
+                    if !args_str.is_empty() {
                         args_str.push_str(", ");
                     }
                     if self.is_local_ref(*arg, func_idx) {
@@ -353,12 +415,13 @@ impl<'a> ModuleTranslator<'a> {
                 res_vec.extend(tmp_assignments);
                 res_vec
             }
-            Pack(dest, struct_def_index, _, fields) => {
+            Pack(dest, struct_def_index, type_actuals, fields) => {
                 let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 let mut fields_str = String::new();
                 let mut res_vec = vec![];
-                for (idx, field_temp) in fields.iter().enumerate() {
-                    if idx > 0 {
+                fields_str.push_str(&format_type_actuals(self.module, type_actuals));
+                for  field_temp in fields.iter() {
+                    if !fields_str.is_empty() {
                         fields_str.push_str(", ");
                     }
                     fields_str.push_str(&format!("contents#Memory(m)[old_size+{}]", field_temp));
@@ -376,8 +439,8 @@ impl<'a> ModuleTranslator<'a> {
                 let mut dests_str = String::new();
                 let mut dest_type_assumptions = vec![];
                 let mut tmp_assignments = vec![];
-                for (idx, dest) in dests.iter().enumerate() {
-                    if idx > 0 {
+                for dest in dests.iter() {
+                    if !dests_str.is_empty() {
                         dests_str.push_str(", ");
                     }
                     dests_str.push_str(&format!("t{}", dest));
@@ -408,33 +471,34 @@ impl<'a> ModuleTranslator<'a> {
                     dest, src, field_name
                 )]
             }
-            Exists(dest, addr, struct_def_index, _) => {
-                let struct_str = self.struct_name_from_definition_index(*struct_def_index);
+            Exists(dest, addr, struct_def_index, type_actuals) => {
+                let resource_type = format_struct_type_value_from_def_idx(self.module, struct_def_index, type_actuals);
                 vec![
-                    format!("call tmp := Exists(contents#Memory(m)[old_size+{}], {});", addr, struct_str),
+                    format!("call tmp := Exists(contents#Memory(m)[old_size+{}], {});", addr, resource_type),
                     format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
                 ]
             }
-            BorrowGlobal(dest, addr, struct_def_index, _) => {
-                let struct_str = self.struct_name_from_definition_index(*struct_def_index);
+            BorrowGlobal(dest, addr, struct_def_index, type_actuals) => {
+                let resource_type = format_struct_type_value_from_def_idx(self.module, struct_def_index, type_actuals);
                 vec![format!(
                     "call t{} := BorrowGlobal(contents#Memory(m)[old_size+{}], {});",
-                    dest, addr, struct_str,
+                    dest, addr, resource_type,
                 )]
             }
-            MoveToSender(src, struct_def_index, _) => {
-                let struct_str = self.struct_name_from_definition_index(*struct_def_index);
+            MoveToSender(src, struct_def_index, type_actuals) => {
+                let resource_type = format_struct_type_value_from_def_idx(self.module, struct_def_index, type_actuals);
                 vec![format!(
                     "call MoveToSender({}, contents#Memory(m)[old_size+{}]);",
-                    struct_str, src,
+                    resource_type, src,
                 )]
             }
-            MoveFrom(dest, src, struct_def_index, _) => {
-                let struct_str = self.struct_name_from_definition_index(*struct_def_index);
+            MoveFrom(dest, src, struct_def_index, type_actuals) => {
+                let resource_type = format_struct_type_value_from_def_idx(self.module, struct_def_index, type_actuals);
+                // DO NOT SUBMIT let struct_str = self.struct_name_from_definition_index(*struct_def_index);
                 vec![
                     format!(
                         "call tmp := MoveFrom(contents#Memory(m)[old_size+{}], {});",
-                        src, struct_str,
+                        src, resource_type,
                     ),
                     format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
                     self.format_type_checking(
@@ -557,9 +621,11 @@ impl<'a> ModuleTranslator<'a> {
                 format!("m := Memory(domain#Memory(m)[{}+old_size := true], contents#Memory(m)[{}+old_size := tmp]);", dest, dest),
             ],
             Eq(dest, op1, op2) => {
+                let sig = &self.get_local_type(*op1, func_idx);
                 vec![
                     format!(
-                        "call tmp := Eq(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
+                        "tmp := Boolean(is_equal({}, contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]));",
+                        format_type_value(self.module, sig),
                         op1,
                         op2
                     ),
@@ -567,9 +633,11 @@ impl<'a> ModuleTranslator<'a> {
                 ]
             }
             Neq(dest, op1, op2) => {
+                let sig = &self.get_local_type(*op1, func_idx);
                 vec![
                     format!(
-                        "call tmp := Neq(contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]);",
+                        "tmp := Boolean(!is_equal({}, contents#Memory(m)[old_size+{}], contents#Memory(m)[old_size+{}]));",
+                        format_type_value(self.module, sig),
                         op1,
                         op2
                     ),
@@ -633,8 +701,14 @@ impl<'a> ModuleTranslator<'a> {
         let function_signature = self.module.function_signature_at(function_handle.signature);
         let mut args = String::new();
         let mut rets = String::new();
-        for (i, arg_type) in function_signature.arg_types.iter().enumerate() {
+        for i in 0..function_signature.type_formals.len() {
             if i > 0 {
+                args.push_str(", ");
+            }
+            args.push_str(&format!("tv{0}: TypeValue", i));
+        }
+        for (i, arg_type) in function_signature.arg_types.iter().enumerate() {
+            if i > 0 || !function_signature.type_formals.is_empty() {
                 args.push_str(", ");
             }
             args.push_str(&format!(
@@ -683,8 +757,19 @@ impl<'a> ModuleTranslator<'a> {
         let mut args = String::new(); // vector of ", argname"
         let mut rets = String::new(); // vector of ", argname"
                                       // return values are: <mutable references>, <actual returns>
+        for i in 0..self
+            .module
+            .function_signature_at(function_handle.signature)
+            .type_formals
+            .len()
+        {
+            if !args.is_empty() {
+                args.push_str(", ");
+            }
+            args.push_str(&format!("tv{}: TypeValue", i));
+        }
         for (i, _arg_type) in function_signature.arg_types.iter().enumerate() {
-            if i > 0 {
+            if !args.is_empty() {
                 args.push_str(", ");
             }
             args.push_str(&self.get_arg_name(i, arg_names).to_string());
@@ -772,7 +857,7 @@ impl<'a> ModuleTranslator<'a> {
                 "    var {}: {}; // {}\n",
                 self.get_local_name(i, arg_names),
                 self.format_value_or_ref(&local_type),
-                format_type(self.module, &local_type)
+                format_type_value(self.module, &local_type)
             ));
         }
         var_decls.push_str("\n    var tmp: Value;\n");
@@ -930,12 +1015,12 @@ impl<'a> ModuleTranslator<'a> {
 
     pub fn format_type_checking(&self, name: String, sig: &SignatureToken) -> String {
         match sig {
+            // Reference does not require type checking
             SignatureToken::Reference(_) | SignatureToken::MutableReference(_) => "".to_string(),
-            SignatureToken::TypeParameter(_) => "".to_string(),
-            _ => format!(
-                "assume is#{}({});\n",
-                format_value_cons(self.module, sig),
-                name,
+            sig => format!(
+                "assume has_type({}, {});\n",
+                format_type_value(self.module, sig),
+                name
             ),
         }
     }
@@ -947,6 +1032,15 @@ pub fn struct_name_from_handle_index(module: &VerifiedModule, idx: StructHandleI
     let module_name = module.identifier_at(struct_handle_view.module_handle().name);
     let struct_name = struct_handle_view.name();
     format!("{}_{}", module_name, struct_name)
+}
+
+pub fn struct_type_arity_from_handle_index(
+    module: &VerifiedModule,
+    idx: StructHandleIndex,
+) -> usize {
+    let struct_handle = module.struct_handle_at(idx);
+    let struct_handle_view = StructHandleView::new(module, struct_handle);
+    struct_handle_view.type_formals().len()
 }
 
 pub fn is_struct_vector(module: &VerifiedModule, idx: StructHandleIndex) -> bool {
@@ -973,39 +1067,89 @@ pub fn format_type(module: &VerifiedModule, sig: &SignatureToken) -> String {
     }
 }
 
-pub fn format_value_cons(module: &VerifiedModule, sig: &SignatureToken) -> String {
+/// Creates the boogie representation of a TypeValue from a SignatureToken. For type
+/// parameters, this generates a reference to `tvN` (type argument N) which must be bound
+/// in the context. For structs, instead of inlining the type value (which is not possible
+/// for an imported module anyway), we call the function `<struct_name>_type_value(type_args)`.
+pub fn format_type_value(module: &VerifiedModule, sig: &SignatureToken) -> String {
     match sig {
-        SignatureToken::Bool => "Boolean",
-        SignatureToken::U64 => "Integer",
-        SignatureToken::String => "Str",
-        SignatureToken::ByteArray => "ByteArray",
-        SignatureToken::Address => "Address",
-        SignatureToken::Struct(idx, _) => {
-            if is_struct_vector(module, *idx) {
-                "Vector"
-            } else {
-                "Map"
-            }
+        SignatureToken::Bool => "BooleanType()".to_string(),
+        SignatureToken::U64 => "IntegerType()".to_string(),
+        SignatureToken::String => "StrType()".to_string(),
+        SignatureToken::ByteArray => "ByteArrayType()".to_string(),
+        SignatureToken::Address => "AddressType()".to_string(),
+        SignatureToken::Reference(t) | SignatureToken::MutableReference(t) => {
+            format!("ReferenceType({})", format_type_value(module, &*t))
         }
-        _ => "unsupported",
+        SignatureToken::TypeParameter(index) => format!("tv{}", index),
+        SignatureToken::Struct(handle_index, args) => {
+            format_struct_type_value(module, handle_index, args)
+        }
     }
-    .into()
 }
 
-pub fn get_field_info_from_def_index(
+/// Create list of type values.
+pub fn format_type_values(module: &VerifiedModule, actuals: &[SignatureToken]) -> String {
+    actuals
+        .iter()
+        .map(|sig| format_type_value(module, sig))
+        .join(", ")
+}
+
+/// Create list of actual type parameters from LocalSignatureIndex.
+pub fn format_type_actuals(
     module: &VerifiedModule,
-    def_idx: usize,
-) -> BTreeMap<String, (String, String)> {
-    let mut name_to_type = BTreeMap::new();
-    let struct_definition = &module.struct_defs()[def_idx];
-    let struct_definition_view = StructDefinitionView::new(module, struct_definition);
-    for field_definition_view in struct_definition_view.fields().unwrap() {
-        let field_name = field_definition_view.name().to_string();
-        let sig = field_definition_view.type_signature().token().as_inner();
-        name_to_type.insert(
-            field_name,
-            (format_type(module, sig), format_value_cons(module, sig)),
-        );
+    type_actuals_idx: &LocalsSignatureIndex,
+) -> String {
+    format_type_values(module, &module.locals_signature_at(*type_actuals_idx).0)
+}
+
+/// Create type value for a struct with given type actuals.
+pub fn format_struct_type_value(
+    module: &VerifiedModule,
+    struct_handle_idx: &StructHandleIndex,
+    args: &[SignatureToken],
+) -> String {
+    let struct_name = struct_name_from_handle_index(module, *struct_handle_idx);
+    format!(
+        "{}_type_value({})",
+        struct_name,
+        format_type_values(module, args)
+    )
+}
+
+/// Create type value for a struct specified by a definition index and actuals
+/// specified by LocalsSignatureIndex.
+pub fn format_struct_type_value_from_def_idx(
+    module: &VerifiedModule,
+    struct_def_index: &StructDefinitionIndex,
+    type_actuals_idx: &LocalsSignatureIndex,
+) -> String {
+    format_struct_type_value(
+        module,
+        &module.struct_def_at(*struct_def_index).struct_handle,
+        &module.locals_signature_at(*type_actuals_idx).0,
+    )
+}
+
+/// Return a vector of pairs of field name and type for a StructDefinition.
+pub fn get_field_infos(
+    module: &VerifiedModule,
+    struct_def: &StructDefinition,
+) -> Vec<(String, SignatureToken)> {
+    let struct_def_view = StructDefinitionView::new(module, struct_def);
+    if struct_def_view.is_native() {
+        vec![]
+    } else {
+        struct_def_view
+            .fields()
+            .unwrap()
+            .map(|field_def_view| {
+                (
+                    field_def_view.name().to_string(),
+                    field_def_view.type_signature().token().as_inner().clone(),
+                )
+            })
+            .collect()
     }
-    name_to_type
 }

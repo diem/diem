@@ -9,5 +9,4 @@ main() {
     return;
 }
 
-// check: VerificationFailure
 // check: FREEZEREF_TYPE_MISMATCH_ERROR

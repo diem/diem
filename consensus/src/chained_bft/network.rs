@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::counters;
+use anyhow::{bail, ensure};
 use bytes::Bytes;
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse};
@@ -12,7 +13,6 @@ use consensus_types::{
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
 };
-use failure::{self};
 use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
@@ -71,7 +71,7 @@ pub struct NetworkSender {
     // Self sender and self receivers provide a shortcut for sending the messages to itself.
     // (self sending is not supported by the networking API).
     // Note that we do not support self rpc requests as it might cause infinite recursive calls.
-    self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+    self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
     validators: Arc<ValidatorVerifier>,
 }
 
@@ -79,7 +79,7 @@ impl NetworkSender {
     pub fn new(
         author: Author,
         network_sender: ConsensusNetworkSender,
-        self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+        self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
         validators: Arc<ValidatorVerifier>,
     ) -> Self {
         NetworkSender {
@@ -97,7 +97,7 @@ impl NetworkSender {
         retrieval_request: BlockRetrievalRequest,
         from: Author,
         timeout: Duration,
-    ) -> failure::Result<BlockRetrievalResponse<T>> {
+    ) -> anyhow::Result<BlockRetrievalResponse<T>> {
         ensure!(from != self.author, "Retrieve block from self");
         counters::BLOCK_RETRIEVAL_COUNT.inc_by(retrieval_request.num_blocks() as i64);
         let pre_retrieval_instant = Instant::now();
@@ -108,11 +108,20 @@ impl NetworkSender {
             .await?;
         counters::BLOCK_RETRIEVAL_DURATION_S.observe_duration(pre_retrieval_instant.elapsed());
         let response = BlockRetrievalResponse::<T>::try_from(response_msg)?;
-        response.verify(
-            retrieval_request.block_id(),
-            retrieval_request.num_blocks(),
-            self.validators.as_ref(),
-        )?;
+        response
+            .verify(
+                retrieval_request.block_id(),
+                retrieval_request.num_blocks(),
+                self.validators.as_ref(),
+            )
+            .map_err(|e| {
+                security_log(SecurityEvent::InvalidRetrievedBlock)
+                    .error(&e)
+                    .data(&response)
+                    .log();
+                e
+            })?;
+
         Ok(response)
     }
 
@@ -247,6 +256,16 @@ impl NetworkSender {
         };
         self.broadcast(msg).await
     }
+
+    pub async fn notify_epoch_change(&mut self, proof: ValidatorChangeEventWithProof) {
+        let msg = ConsensusMsg {
+            message: Some(ConsensusMsg_oneof::EpochChange(proof.into())),
+        };
+        let self_msg = Event::Message((self.author, msg.clone()));
+        if let Err(e) = self.self_sender.send(Ok(self_msg)).await {
+            warn!("Failed to notify to self an epoch change {:?}", e);
+        }
+    }
 }
 
 pub struct NetworkTask<T> {
@@ -258,7 +277,7 @@ pub struct NetworkTask<T> {
     epoch_change_tx: libra_channel::Sender<AccountAddress, LedgerInfoWithSignatures>,
     different_epoch_tx: libra_channel::Sender<AccountAddress, (u64, AccountAddress)>,
     epoch_retrieval_tx: libra_channel::Sender<AccountAddress, (u64, AccountAddress)>,
-    all_events: Box<dyn Stream<Item = failure::Result<Event<ConsensusMsg>>> + Send + Unpin>,
+    all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,
     validators: Arc<ValidatorVerifier>,
 }
 
@@ -267,7 +286,7 @@ impl<T: Payload> NetworkTask<T> {
     pub fn new(
         epoch: u64,
         network_events: ConsensusNetworkEvents,
-        self_receiver: channel::Receiver<failure::Result<Event<ConsensusMsg>>>,
+        self_receiver: channel::Receiver<anyhow::Result<Event<ConsensusMsg>>>,
         validators: Arc<ValidatorVerifier>,
     ) -> (NetworkTask<T>, NetworkReceivers<T>) {
         let (proposal_tx, proposal_rx) =
@@ -290,7 +309,7 @@ impl<T: Payload> NetworkTask<T> {
             libra_channel::new(QueueStyle::LIFO, 1, None);
         let (epoch_retrieval_tx, epoch_retrieval_rx) =
             libra_channel::new(QueueStyle::LIFO, 1, None);
-        let network_events = network_events.map_err(Into::<failure::Error>::into);
+        let network_events = network_events.map_err(Into::<anyhow::Error>::into);
         let all_events = Box::new(select(network_events, self_receiver));
         (
             NetworkTask {
@@ -381,51 +400,59 @@ impl<T: Payload> NetworkTask<T> {
         &mut self,
         peer_id: AccountAddress,
         proposal: Proposal,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         let proposal = ProposalUncheckedSignatures::<T>::try_from(proposal)?;
-        match proposal.epoch().cmp(&self.epoch) {
-            Ordering::Equal => {
-                let proposal = proposal
-                    .validate_signatures(self.validators.as_ref())?
-                    .verify_well_formed()?;
-                debug!("Received proposal {}", proposal);
-                self.proposal_tx.push(peer_id, proposal)
-            }
-            Ordering::Less | Ordering::Greater => self
+        if proposal.epoch() != self.epoch {
+            return self
                 .different_epoch_tx
-                .push(peer_id, (proposal.epoch(), peer_id)),
+                .push(peer_id, (proposal.epoch(), peer_id));
         }
+
+        let proposal = proposal
+            .validate_signatures(self.validators.as_ref())?
+            .verify_well_formed()?;
+        ensure!(
+            proposal.proposal().author() == Some(peer_id),
+            "proposal received must be from the sending peer"
+        );
+        debug!("Received proposal {}", proposal);
+        self.proposal_tx.push(peer_id, proposal)
     }
 
     async fn process_vote(
         &mut self,
         peer_id: AccountAddress,
         vote_msg: VoteMsgProto,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         let vote_msg = VoteMsg::try_from(vote_msg)?;
-        match vote_msg.epoch().cmp(&self.epoch) {
-            Ordering::Equal => {
-                debug!("Received {}", vote_msg);
-                vote_msg.verify(self.validators.as_ref()).map_err(|e| {
-                    security_log(SecurityEvent::InvalidConsensusVote)
-                        .error(&e)
-                        .data(&vote_msg)
-                        .log();
-                    e
-                })?;
-                self.vote_tx.push(peer_id, vote_msg)
-            }
-            Ordering::Less | Ordering::Greater => self
+
+        ensure!(
+            vote_msg.vote().author() == peer_id,
+            "vote received must be from the sending peer"
+        );
+
+        if vote_msg.epoch() != self.epoch {
+            return self
                 .different_epoch_tx
-                .push(peer_id, (vote_msg.epoch(), peer_id)),
+                .push(peer_id, (vote_msg.epoch(), peer_id));
         }
+
+        debug!("Received {}", vote_msg);
+        vote_msg.verify(self.validators.as_ref()).map_err(|e| {
+            security_log(SecurityEvent::InvalidConsensusVote)
+                .error(&e)
+                .data(&vote_msg)
+                .log();
+            e
+        })?;
+        self.vote_tx.push(peer_id, vote_msg)
     }
 
     async fn process_sync_info(
         &mut self,
         sync_info: SyncInfoProto,
         peer_id: AccountAddress,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         let sync_info = SyncInfo::try_from(sync_info)?;
         match sync_info.epoch().cmp(&self.epoch) {
             Ordering::Equal => {
@@ -443,7 +470,7 @@ impl<T: Payload> NetworkTask<T> {
         peer_id: AccountAddress,
         request_msg: RequestBlock,
         callback: oneshot::Sender<Result<Bytes, RpcError>>,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         let req = BlockRetrievalRequest::try_from(request_msg)?;
         debug!("Received block retrieval request {}", req);
         let req_with_callback = IncomingBlockRetrievalRequest {
@@ -457,7 +484,7 @@ impl<T: Payload> NetworkTask<T> {
         &mut self,
         peer_id: AccountAddress,
         proof: ValidatorChangeEventWithProofProto,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         let proof = ValidatorChangeEventWithProof::try_from(proof)?;
         let msg_epoch = proof.epoch()?;
         match msg_epoch.cmp(&self.epoch) {
@@ -481,7 +508,7 @@ impl<T: Payload> NetworkTask<T> {
         &mut self,
         peer_id: AccountAddress,
         request: RequestEpoch,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         let request = EpochRetrievalRequest::try_from(request)?;
         match request.target_epoch.cmp(&self.epoch) {
             Ordering::Less | Ordering::Equal => self

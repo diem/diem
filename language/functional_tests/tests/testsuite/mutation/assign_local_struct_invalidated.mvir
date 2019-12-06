@@ -1,4 +1,3 @@
-// check: VerificationFailure
 // check: CALL_BORROWED_MUTABLE_REFERENCE_ERROR
 
 module Tester {

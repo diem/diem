@@ -1,12 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
 };
-use failure::Result;
+use anyhow::{Error, Result};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
 use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -84,7 +86,7 @@ impl ModuleId {
 }
 
 impl TryFrom<crate::proto::types::ModuleId> for ModuleId {
-    type Error = failure::Error;
+    type Error = Error;
 
     fn try_from(proto: crate::proto::types::ModuleId) -> Result<Self> {
         Ok(Self {

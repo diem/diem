@@ -100,7 +100,7 @@ fn exp(
                         .into_iter()
                         .filter(|a| valid_acquires_annot(context, loc, a))
                         .collect::<BTreeSet<_>>();
-                    let msg = || format!("Invalid call to '{}.{}'", &call.module, &call.name);
+                    let msg = || format!("Invalid call to '{}::{}'", &call.module, &call.name);
                     for bt in acquires {
                         check_acquire_listed(context, annotated_acquires, loc, msg, &bt);
                         seen.insert(bt);
@@ -234,7 +234,7 @@ fn check_acquire_listed<F>(
         let ty_debug = global_type.value.subst_format(&HashMap::new());
         context.error(vec![
             (*loc, msg()),
-            (global_type.loc, format!("The call acquires '{}', but the 'acquires' list for the current function does not contain this type. It must be present to make this call", ty_debug))
+            (global_type.loc, format!("The call acquires '{}', but the 'acquires' list for the current function does not contain this type. It must be present in the calling context's acquires list", ty_debug))
         ]);
     }
 }

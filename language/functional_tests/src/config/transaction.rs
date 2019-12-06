@@ -2,11 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::global::{ChannelData, ChannelParticipant};
-use crate::{
-    config::{global::Config as GlobalConfig, strip},
-    errors::*,
-    evaluator::Stage,
-};
+use crate::{common::strip, config::global::Config as GlobalConfig, errors::*, evaluator::Stage};
 use language_e2e_tests::account::Account;
 use libra_types::transaction::{parse_as_transaction_argument, TransactionArgument};
 use std::{collections::BTreeSet, str::FromStr};

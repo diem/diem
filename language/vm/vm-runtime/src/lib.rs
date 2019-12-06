@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! # The VM runtime
 //!
 //! ## Transaction flow
@@ -114,7 +116,7 @@ pub mod foreign_contracts;
 
 mod block_processor;
 #[macro_use]
-mod gas_meter;
+pub mod gas_meter;
 mod move_vm;
 mod process_txn;
 mod runtime;

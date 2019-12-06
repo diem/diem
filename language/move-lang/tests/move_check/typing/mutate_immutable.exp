@@ -6,7 +6,7 @@ error:
    │          ^^^^^^^ Invalid mutation. Expected a mutable reference
    ·
  5 │         *(s: &S) = S { f: 0 };
-   │              -- The type: '&0000000000000000000000000000000000000000000000000000000008675309.M.S'
+   │              -- The type: '&0x8675309::M::S'
    ·
  5 │         *(s: &S) = S { f: 0 };
    │          ------- Is not a subtype of: '&mut _'
@@ -20,7 +20,7 @@ error:
    │          ^^ Invalid mutation. Expected a mutable reference
    ·
  6 │         *&0 = 1;
-   │           - The type: '&u64'
+   │          -- The type: '&u64'
    ·
  6 │         *&0 = 1;
    │          -- Is not a subtype of: '&mut _'

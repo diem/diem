@@ -105,7 +105,7 @@ pub fn base_type(context: &mut Context, bt: &mut BaseType) {
         }
         B::Apply(Some(_), _, bs) => base_types(context, bs),
         B::Apply(_, _, _) => {
-            let kind = core::infer_kind_base(&context, &context.subst, bt.clone());
+            let kind = core::infer_kind_base(&context, &context.subst, bt.clone()).unwrap();
             match &mut bt.value {
                 B::Apply(k_opt, _, bs) => {
                     *k_opt = Some(kind);
@@ -257,10 +257,15 @@ fn bind(context: &mut Context, b: &mut T::Bind) {
     use T::Bind_ as B;
     match &mut b.value {
         B::Ignore => (),
-        B::Var(_, st_opt) => {
-            assert!(st_opt.is_some());
-            st_opt.iter_mut().for_each(|st| single_type(context, st))
+        B::Var(v, None) => {
+            let msg = format!(
+                "Unused local '{0}'. Consider removing or prefixing with an underscore: '_{0}'",
+                v
+            );
+            context.error(vec![(b.loc, msg)]);
+            b.value = B::Ignore
         }
+        B::Var(_, Some(st)) => single_type(context, st),
         B::BorrowUnpack(_, _, _, bts, fields) | B::Unpack(_, _, bts, fields) => {
             base_types(context, bts);
             for (_, (_, (bt, innerb))) in fields.iter_mut() {

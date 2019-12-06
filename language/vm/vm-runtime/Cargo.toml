@@ -28,9 +28,9 @@ libra-types = { path = "../../../types", version = "0.1.0" }
 vm = { path = "../", version = "0.1.0" }
 vm-cache-map = { path = "vm-cache-map", version = "0.1.0" }
 vm-runtime-types = { path = "vm-runtime-types", version = "0.1.0" }
-failure = { path = "../../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
 
 [dev-dependencies]
+anyhow = "1.0"
 proptest = "0.9"
 
 compiler = { path = "../../compiler", version = "0.1.0" }

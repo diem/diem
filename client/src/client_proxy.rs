@@ -3,8 +3,8 @@
 
 use crate::{commands::*, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
-use failure::prelude::*;
-use libra_config::{config::PersistableConfig, trusted_peers::ConsensusPeersConfig};
+use anyhow::{bail, ensure, format_err, Error, Result};
+use libra_config::config::{ConsensusPeersConfig, PersistableConfig};
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_logger::prelude::*;
 use libra_tools::tempdir::TempPath;
@@ -99,6 +99,7 @@ pub struct ClientProxy {
     sync_on_wallet_recovery: bool,
     /// temp files (alive for duration of program)
     temp_files: Vec<PathBuf>,
+    // invariant self.address_to_ref_id.values().iter().all(|i| i < self.accounts.len())
 }
 
 impl ClientProxy {
@@ -113,7 +114,7 @@ impl ClientProxy {
         mnemonic_file: Option<String>,
     ) -> Result<Self> {
         let validator_verifier = Arc::new(
-            ConsensusPeersConfig::load_config(validator_set_file).get_validator_verifier(),
+            ConsensusPeersConfig::load_config(validator_set_file)?.get_validator_verifier(),
         );
         ensure!(
             !validator_verifier.is_empty(),
@@ -807,8 +808,9 @@ impl ClientProxy {
                 .address_to_ref_id
                 .get(&address)
                 .expect("Should have the key");
+            // assumption follows from invariant
             let mut account_data: &mut AccountData =
-                self.accounts.get_mut(*account_ref_id).unwrap_or_else(|| panic!("Local cache not consistent, reference id {} not available in local accounts", account_ref_id));
+                self.accounts.get_mut(*account_ref_id).unwrap_or_else(|| unreachable!("Local cache not consistent, reference id {} not available in local accounts", account_ref_id));
             if account_state.0.is_some() {
                 account_data.status = AccountStatus::Persisted;
             }
@@ -1091,7 +1093,7 @@ impl fmt::Display for AccountEntry {
 #[cfg(test)]
 mod tests {
     use crate::client_proxy::{parse_bool, AddressAndIndex, ClientProxy};
-    use libra_config::{config::PersistableConfig, trusted_peers::ConfigHelpers};
+    use libra_config::config::{ConsensusConfig, PersistableConfig};
     use libra_tools::tempdir::TempPath;
     use libra_wallet::io_utils;
     use proptest::prelude::*;
@@ -1101,10 +1103,13 @@ mod tests {
         accounts.reserve(count);
         let file = TempPath::new();
         let mnemonic_path = file.path().to_str().unwrap().to_string();
+
+        let consensus_config = ConsensusConfig::default();
         let consensus_peer_file = TempPath::new();
         let consensus_peers_path = consensus_peer_file.path();
-        let (_, consensus_peers_config, _) = ConfigHelpers::gen_validator_nodes(1, None);
-        consensus_peers_config.save_config(&consensus_peers_path);
+        consensus_config
+            .consensus_peers
+            .save_config(consensus_peers_path);
         let val_set_file = consensus_peers_path.to_str().unwrap().to_string();
 
         // We don't need to specify host/port since the client won't be used to connect, only to

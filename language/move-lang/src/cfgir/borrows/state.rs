@@ -13,9 +13,18 @@ use crate::{
     shared::*,
 };
 
-use super::borrow_map::*;
 use crate::shared::unique_map::UniqueMap;
+use borrow_graph::references::RefID;
 use std::collections::{BTreeMap, BTreeSet};
+
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+enum Label {
+    Local(String),
+    Resource(String),
+    Field(String),
+}
+
+type BorrowGraph = borrow_graph::graph::BorrowGraph<Loc, Label>;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Value {
@@ -27,7 +36,7 @@ pub type Values = Vec<Value>;
 #[derive(Clone, Debug, PartialEq)]
 pub struct BorrowState {
     locals: UniqueMap<Var, Value>,
-    borrows: BorrowMap,
+    borrows: BorrowGraph,
     next_id: usize,
 }
 
@@ -60,7 +69,7 @@ impl BorrowState {
     pub fn initial<T>(locals: &UniqueMap<Var, T>) -> Self {
         let mut new_state = BorrowState {
             locals: locals.ref_map(|_, _| Value::NonRef),
-            borrows: BorrowMap::new(),
+            borrows: BorrowGraph::new(),
             next_id: locals.len() + 1,
         };
         new_state.borrows.new_ref(Self::LOCAL_ROOT, true);
@@ -68,10 +77,10 @@ impl BorrowState {
     }
 
     fn borrow_error<F: Fn() -> String>(
-        borrows: &BorrowMap,
+        borrows: &BorrowGraph,
         loc: Loc,
-        full_borrows: &BTreeSet<LocRefID>,
-        field_borrows: &BTreeMap<&str, BTreeSet<LocRefID>>,
+        full_borrows: &BTreeMap<RefID, Loc>,
+        field_borrows: &BTreeMap<Label, BTreeMap<RefID, Loc>>,
         msg: F,
     ) -> Errors {
         if full_borrows.is_empty() && field_borrows.is_empty() {
@@ -86,16 +95,21 @@ impl BorrowState {
             }
         };
         let mut error = vec![(loc, msg())];
-        for sp!(rloc, borrower) in full_borrows {
+        for (borrower, rloc) in full_borrows {
             let adj = mut_adj(*borrower);
             error.push((
                 *rloc,
                 format!("It is still being {}borrowed by this reference", adj),
             ))
         }
-        for (field, borrowers) in field_borrows {
-            for sp!(rloc, borrower) in borrowers {
+        for (field_lbl, borrowers) in field_borrows {
+            for (borrower, rloc) in borrowers {
                 let adj = mut_adj(*borrower);
+                let field = match field_lbl {
+                    Label::Field(f) => f,
+                    Label::Local(_) |
+                    Label::Resource(_) => panic!("ICE local/resource should not be field borrows as they only exist from the virtual 'root' reference"),
+                };
                 error.push((
                     *rloc,
                     format!(
@@ -111,12 +125,16 @@ impl BorrowState {
 
     const LOCAL_ROOT: RefID = RefID::new(0);
 
-    fn local_label(local: &Var) -> String {
-        format!("local%{}", local.value())
+    fn field_label(field: &Field) -> Label {
+        Label::Field(field.value().to_owned())
     }
 
-    fn resource_label(resource: &StructName) -> String {
-        format!("resource%{}", resource.value())
+    fn local_label(local: &Var) -> Label {
+        Label::Local(local.value().to_owned())
+    }
+
+    fn resource_label(resource: &StructName) -> Label {
+        Label::Resource(resource.value().to_owned())
     }
 
     //**********************************************************************************************
@@ -142,21 +160,21 @@ impl BorrowState {
     }
 
     fn add_copy(&mut self, loc: Loc, parent: RefID, child: RefID) {
-        self.borrows.add_copy(loc, parent, child)
+        self.borrows.add_strong_borrow(loc, parent, child)
     }
 
     fn add_borrow(&mut self, loc: Loc, parent: RefID, child: RefID) {
-        self.borrows.add_borrow(loc, parent, child)
+        self.borrows.add_weak_borrow(loc, parent, child)
     }
 
     fn add_field_borrow(&mut self, loc: Loc, parent: RefID, field: Field, child: RefID) {
         self.borrows
-            .add_field_borrow(loc, parent, field.value().into(), child)
+            .add_strong_field_borrow(loc, parent, Self::field_label(&field), child)
     }
 
     fn add_local_borrow(&mut self, loc: Loc, local: &Var, id: RefID) {
         self.borrows
-            .add_field_borrow(loc, Self::LOCAL_ROOT, Self::local_label(local), id)
+            .add_strong_field_borrow(loc, Self::LOCAL_ROOT, Self::local_label(local), id)
     }
 
     fn add_resource_borrow(&mut self, loc: Loc, resource: &StructName, id: RefID) {
@@ -183,17 +201,20 @@ impl BorrowState {
     ) -> Errors {
         assert!(self.borrows.is_mutable(id), "ICE type checking failed");
         let (full_borrows, field_borrows) = self.borrows.borrowed_by(id);
-        let mut_filter_set = |s: BTreeSet<LocRefID>| {
+        let mut_filter_set = |s: BTreeMap<RefID, Loc>| {
             s.into_iter()
-                .filter(|id| self.borrows.is_mutable(id.value))
-                .collect::<BTreeSet<_>>()
+                .filter(|(id, _loc)| self.borrows.is_mutable(*id))
+                .collect::<BTreeMap<_, _>>()
         };
         let mut_full_borrows = mut_filter_set(full_borrows);
         let mut_field_borrows = field_borrows
             .into_iter()
             .filter_map(|(f, borrowers)| {
                 let valid_field = at_field_opt
-                    .map(|at_field| f == at_field.value())
+                    .map(|at_field| match &f {
+                        Label::Field(f_) => f_ == at_field.value(),
+                        _ => false,
+                    })
                     .unwrap_or(true);
                 if !valid_field {
                     return None;
@@ -202,7 +223,7 @@ impl BorrowState {
                 if borrowers.is_empty() {
                     None
                 } else {
-                    Some((f, borrowers))
+                    Some((f.clone(), borrowers))
                 }
             })
             .collect();
@@ -240,29 +261,29 @@ impl BorrowState {
         *self = Self::initial(&self.locals);
     }
 
-    fn local_borrowed_by(&self, local: &Var) -> BTreeSet<LocRefID> {
+    fn local_borrowed_by(&self, local: &Var) -> BTreeMap<RefID, Loc> {
         let (full_borrows, mut field_borrows) = self.borrows.borrowed_by(Self::LOCAL_ROOT);
         assert!(full_borrows.is_empty());
         field_borrows
-            .remove(Self::local_label(local).as_str())
-            .unwrap_or_else(BTreeSet::new)
+            .remove(&Self::local_label(local))
+            .unwrap_or_else(BTreeMap::new)
     }
 
-    fn resource_borrowed_by(&self, resource: &StructName) -> BTreeSet<LocRefID> {
+    fn resource_borrowed_by(&self, resource: &StructName) -> BTreeMap<RefID, Loc> {
         let (full_borrows, mut field_borrows) = self.borrows.borrowed_by(Self::LOCAL_ROOT);
         assert!(full_borrows.is_empty());
         field_borrows
-            .remove(Self::resource_label(resource).as_str())
-            .unwrap_or_else(BTreeSet::new)
+            .remove(&Self::resource_label(resource))
+            .unwrap_or_else(BTreeMap::new)
     }
 
     // returns empty errors if borrowed_by is empty
     // Returns errors otherwise
     fn check_use_borrowed_by(
-        borrows: &BorrowMap,
+        borrows: &BorrowGraph,
         loc: Loc,
         local: &Var,
-        full_borrows: &BTreeSet<LocRefID>,
+        full_borrows: &BTreeMap<RefID, Loc>,
         verb: &'static str,
     ) -> Errors {
         Self::borrow_error(borrows, loc, full_borrows, &BTreeMap::new(), move || {
@@ -412,8 +433,8 @@ impl BorrowState {
         } else {
             let filtered_mut = borrowed_by
                 .into_iter()
-                .filter(|id| borrows.is_mutable(id.value));
-            let mut_borrows = filtered_mut.collect::<BTreeSet<_>>();
+                .filter(|(id, _loc)| borrows.is_mutable(*id));
+            let mut_borrows = filtered_mut.collect::<BTreeMap<_, _>>();
             Self::check_use_borrowed_by(borrows, loc, local, &mut_borrows, "borrow")
         };
         self.add_local_borrow(loc, local, new_id);
@@ -485,8 +506,8 @@ impl BorrowState {
         } else {
             let filtered_mut = borrowed_by
                 .into_iter()
-                .filter(|id| borrows.is_mutable(id.value));
-            let mut_borrows = filtered_mut.collect::<BTreeSet<_>>();
+                .filter(|(id, _loc)| borrows.is_mutable(*id));
+            let mut_borrows = filtered_mut.collect::<BTreeMap<_, _>>();
             Self::borrow_error(borrows, loc, &mut_borrows, &BTreeMap::new(), msg)
         };
         self.add_resource_borrow(loc, resource, new_id);
@@ -637,12 +658,27 @@ impl BorrowState {
             next_id,
         }
     }
+
+    fn leq(&self, other: &Self) -> bool {
+        let BorrowState {
+            locals: self_locals,
+            borrows: self_borrows,
+            next_id: self_next,
+        } = self;
+        let BorrowState {
+            locals: other_locals,
+            borrows: other_borrows,
+            next_id: other_next,
+        } = other;
+        assert!(self_next == other_next, "ICE canonicalization failed");
+        self_locals == other_locals && self_borrows.leq(other_borrows)
+    }
 }
 
 impl AbstractDomain for BorrowState {
     fn join(&mut self, other: &Self) -> JoinResult {
         let joined = self.clone().join_(other.clone());
-        if self != &joined {
+        if !self.leq(&joined) {
             *self = joined;
             JoinResult::Changed
         } else {

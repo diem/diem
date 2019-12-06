@@ -31,7 +31,7 @@ impl VMMode {
 /// Holds the VM configuration, currently this is only the publishing options for scripts and
 /// modules, but in the future this may need to be expanded to hold more information.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct VMConfig {
     pub publishing_options: VMPublishingOption,
     pub mode: VMMode,
@@ -63,6 +63,23 @@ impl VMConfig {
 
 impl Default for VMConfig {
     fn default() -> VMConfig {
+        let whitelist = vec![
+            "6aabc87f543f85e10216432d02b0251297d4c7723e906de481dfa04b057c2371",
+            "1cf66b5f5c911e80dad222b8ee8dfe3ad4830f75bb412ba12ea8e429203d9c83",
+            "a2180395d1632a0793f34e8a8a6be20b3b03bdceee35affe8c751fc8467b73a4",
+            "ff47e2dcb1884af7d608eb3063dcb78f33b1af864d0e160cb3b76ba6b368b928",
+            "e4de36a91d0c0cd495d340337d3023102161425cab9aafa80aca59a763365671",
+            "6aabc87f543f85e10216432d02b0251297d4c7723e906de481dfa04b057c2371",
+            "5ee07d4ac1ecf88f1b41c2c458f15699fe9d811c61563338253b3807b75c04c1",
+            "dd5999bc3d4e5526b36ba9255a00b693bce25e3fba7a0ce4db5c3c0c00aecb65",
+            "4160344b9d9cf5c5da277014a24bb187d40a8d64a44291aa8d3eefa51b0b9488",
+            "a2180395d1632a0793f34e8a8a6be20b3b03bdceee35affe8c751fc8467b73a4",
+            "d4ed6341aada016d9d675f48445f720c61d1d66b808ec5a95bdab04db9b7856e",
+        ]
+        .iter()
+        .map(|s| string_to_script_hash(s))
+        .collect();
+
         VMConfig {
             publishing_options: VMPublishingOption::Open,
             mode: VMMode::Onchain,

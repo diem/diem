@@ -367,7 +367,6 @@ fn test_need_fetch_for_qc() {
         a3.round() + 1,
         HashValue::zero(),
         a3.round(),
-        None,
     );
     let too_old_qc = certificate_for_genesis();
     let can_insert_qc = placeholder_certificate_for_block(
@@ -376,7 +375,6 @@ fn test_need_fetch_for_qc() {
         a3.round(),
         a2.id(),
         a2.round(),
-        None,
     );
     let duplicate_qc = block_store.get_quorum_cert_for_block(a2.id()).unwrap();
     assert_eq!(
@@ -407,15 +405,15 @@ fn test_empty_reconfiguration_suffix() {
     let a3 = inserter.insert_reconfiguration_block(&a2, 3);
     let a4 = inserter.create_block_with_qc(
         inserter.create_qc_for_block(a3.as_ref(), None),
-        a3.as_ref(),
+        a3.as_ref().timestamp_usecs(),
         4,
         vec![42],
     );
     // Child of reconfiguration carries a payload will fail to insert
-    assert!(block_on(block_store.execute_and_insert_block(a4)).is_err());
+    assert!(a4.verify_well_formed().is_err());
     let a5 = inserter.create_block_with_qc(
         inserter.create_qc_for_block(a3.as_ref(), None),
-        a3.as_ref(),
+        a3.as_ref().timestamp_usecs(),
         4,
         vec![],
     );
@@ -425,6 +423,12 @@ fn test_empty_reconfiguration_suffix() {
     // Block continues another branch can carry payload
     inserter.insert_block(&a2, 4, None);
     block_store.prune_tree(a3.id());
-    // If reconfiguration is committed, the child block can carry payload
-    let _a6 = inserter.insert_block(&a3, 4, None);
+    // If reconfiguration is committed, the child block will fail to insert
+    let a6 = inserter.create_block_with_qc(
+        inserter.create_qc_for_block(a5.as_ref(), None),
+        a5.as_ref().timestamp_usecs(),
+        5,
+        vec![42],
+    );
+    assert!(a6.verify_well_formed().is_err());
 }

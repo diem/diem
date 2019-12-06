@@ -1,0 +1,24 @@
+error: 
+
+   ┌── tests/move_check/typing/implicit_deref_borrow_field_missing.move:5:9 ───
+   │
+ 5 │         s.g;
+   │         ^^^ Unbound field 'g' in '0x8675309::M::S'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/implicit_deref_borrow_field_missing.move:6:9 ───
+   │
+ 6 │         sref.g;
+   │         ^^^^^^ Unbound field 'g' in '0x8675309::M::S'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/implicit_deref_borrow_field_missing.move:7:9 ───
+   │
+ 7 │         s_mut.h;
+   │         ^^^^^^^ Unbound field 'h' in '0x8675309::M::S'
+   │
+

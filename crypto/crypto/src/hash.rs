@@ -88,8 +88,8 @@
 //! }
 //! ```
 
+use anyhow::{ensure, Result};
 use bytes::Bytes;
-use failure::prelude::*;
 use lazy_static::lazy_static;
 use libra_nibble::Nibble;
 use mirai_annotations::*;
@@ -347,7 +347,7 @@ impl fmt::Display for HashValue {
 
 impl From<HashValue> for Bytes {
     fn from(value: HashValue) -> Bytes {
-        value.hash.as_ref().into()
+        Bytes::copy_from_slice(value.hash.as_ref())
     }
 }
 

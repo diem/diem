@@ -34,7 +34,7 @@ fn get_raw_message(msg: DiscoveryMsg) -> Message {
 
 fn parse_raw_message(msg: Message) -> Result<DiscoveryMsg, NetworkError> {
     assert_eq!(msg.protocol, DISCOVERY_DIRECT_SEND_PROTOCOL);
-    let msg = DiscoveryMsg::decode(msg.mdata)?;
+    let msg = DiscoveryMsg::decode(msg.mdata.as_ref())?;
     Ok(msg)
 }
 

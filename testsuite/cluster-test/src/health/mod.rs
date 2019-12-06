@@ -1,15 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 mod commit_check;
 mod debug_interface_log_tail;
 mod liveness_check;
 mod log_tail;
 
 use crate::{cluster::Cluster, util::unix_timestamp_now};
+use anyhow::{bail, Result};
 pub use commit_check::CommitHistoryHealthCheck;
 pub use debug_interface_log_tail::DebugPortLogThread;
-use failure::prelude::*;
 use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
 pub use log_tail::LogTail;
@@ -107,7 +109,7 @@ impl HealthCheckRunner {
         events: &[ValidatorEvent],
         affected_validators_set: &HashSet<String>,
         print_failures: PrintFailures,
-    ) -> failure::Result<Vec<String>> {
+    ) -> Result<Vec<String>> {
         let mut node_health = HashMap::new();
         for instance in self.cluster.instances() {
             node_health.insert(instance.short_hash().clone(), true);

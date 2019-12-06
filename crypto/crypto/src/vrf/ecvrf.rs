@@ -46,6 +46,7 @@
 //! ```
 
 use crate::traits::*;
+use anyhow::{bail, Result};
 use core::convert::TryFrom;
 use curve25519_dalek::{
     constants::ED25519_BASEPOINT_POINT,
@@ -55,7 +56,6 @@ use curve25519_dalek::{
 use ed25519_dalek::{
     self, Digest, PublicKey as ed25519_PublicKey, SecretKey as ed25519_PrivateKey, Sha512,
 };
-use failure::prelude::*;
 use libra_crypto_derive::Deref;
 use serde::{Deserialize, Serialize};
 

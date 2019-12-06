@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::SynchronizerState;
+use anyhow::{format_err, Result};
 use executor::Executor;
-use failure::prelude::*;
 use futures::{channel::oneshot, Future, FutureExt};
 use grpcio::EnvBuilder;
 use libra_config::config::NodeConfig;
 use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof, ValidatorVerifier},
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     transaction::TransactionListWithProof,
 };
 use std::{pin::Pin, sync::Arc};
@@ -17,7 +17,7 @@ use vm_runtime::MoveVM;
 
 /// Proxies interactions with execution and storage for state synchronization
 pub trait ExecutorProxyTrait: Sync + Send {
-    /// Latest state (ledger info and synced version) in the local storage
+    /// Sync the local state with the latest in storage.
     fn get_local_storage_state(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>>;
@@ -37,15 +37,12 @@ pub trait ExecutorProxyTrait: Sync + Send {
         target_version: u64,
     ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>>;
 
-    fn validate_ledger_info(&self, target: &LedgerInfoWithSignatures) -> Result<()>;
-
     fn get_epoch_proof(&self, start_epoch: u64) -> Result<ValidatorChangeEventWithProof>;
 }
 
 pub(crate) struct ExecutorProxy {
     storage_read_client: Arc<StorageReadServiceClient>,
     executor: Arc<Executor<MoveVM>>,
-    validator_verifier: ValidatorVerifier,
 }
 
 impl ExecutorProxy {
@@ -56,11 +53,9 @@ impl ExecutorProxy {
             &config.storage.address,
             config.storage.port,
         ));
-        let validator_verifier = config.consensus.consensus_peers.get_validator_verifier();
         Self {
             storage_read_client,
             executor,
-            validator_verifier,
         }
     }
 }
@@ -94,10 +89,17 @@ impl ExecutorProxyTrait for ExecutorProxy {
                 storage_info.ledger_info.ledger_info().version(),
                 storage_info.synced_tree_state.map_or(0, |t| t.version),
             );
-            Ok(SynchronizerState {
-                highest_local_li: storage_info.ledger_info,
+            let current_verifier = storage_info
+                .ledger_info_with_validators
+                .ledger_info()
+                .next_validator_set()
+                .expect("No ValidatorSet found for the start of the epoch")
+                .into();
+            Ok(SynchronizerState::new(
+                storage_info.ledger_info,
                 highest_synced_version,
-            })
+                current_verifier,
+            ))
         }
             .boxed()
     }
@@ -126,11 +128,6 @@ impl ExecutorProxyTrait for ExecutorProxy {
                 .await
         }
             .boxed()
-    }
-
-    fn validate_ledger_info(&self, target: &LedgerInfoWithSignatures) -> Result<()> {
-        target.verify(&self.validator_verifier)?;
-        Ok(())
     }
 
     fn get_epoch_proof(&self, start_epoch: u64) -> Result<ValidatorChangeEventWithProof> {

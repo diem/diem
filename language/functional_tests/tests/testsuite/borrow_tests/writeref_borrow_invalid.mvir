@@ -15,5 +15,4 @@ module M {
     }
 }
 
-// check: VerificationFailure
 // check: WRITEREF_EXISTS_BORROW_ERROR

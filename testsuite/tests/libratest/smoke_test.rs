@@ -30,13 +30,12 @@ impl TestEnvironment {
     fn new(num_validators: usize) -> Self {
         ::libra_logger::init_for_e2e_testing();
         let faucet_key = generate_keypair::load_faucet_key_or_create_default(None);
-        let template_path = "testsuite/tests/libratest/configs/node.config.toml".to_string();
         let validator_swarm = LibraSwarm::configure_swarm(
             num_validators,
             RoleType::Validator,
             faucet_key.0.clone(),
             None,
-            Some(template_path),
+            None,
             None,
         )
         .unwrap();
@@ -94,7 +93,7 @@ impl TestEnvironment {
     }
 
     fn get_ac_client(&self, port: u16) -> ClientProxy {
-        let config = NodeConfig::load(&self.validator_swarm.config.configs[0]).unwrap();
+        let config = NodeConfig::load(&self.validator_swarm.config.config_files[0]).unwrap();
         let validator_set_file = self
             .validator_swarm
             .dir
@@ -363,13 +362,13 @@ fn test_startup_sync_state() {
     let node_config = NodeConfig::load(
         env.validator_swarm
             .config
-            .configs
+            .config_files
             .get(peer_to_stop)
             .unwrap(),
     )
     .unwrap();
     // TODO Remove hardcoded path to state db
-    let state_db_path = node_config.get_storage_dir().join("libradb");
+    let state_db_path = node_config.storage.dir().join("libradb");
     // Verify that state_db_path exists and
     // we are not deleting a non-existent directory
     assert!(state_db_path.as_path().exists());

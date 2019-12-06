@@ -1,37 +1,43 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::account_address::AccountAddress;
 use crate::validator_set::ValidatorSet;
-use failure::prelude::*;
+use anyhow::{ensure, Result};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_crypto::*;
+use mirai_annotations::*;
 use std::collections::BTreeMap;
 use std::fmt;
+use thiserror::Error;
 
 /// Errors possible during signature verification.
-#[derive(Debug, Fail, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum VerifyError {
-    #[fail(display = "Author is unknown")]
+    #[error("Author is unknown")]
     /// The author for this signature is unknown by this validator.
     UnknownAuthor,
-    #[fail(
-        display = "The voting power ({}) is less than quorum voting power ({})",
-        voting_power, quorum_voting_power
+    #[error(
+        "The voting power ({}) is less than quorum voting power ({})",
+        voting_power,
+        quorum_voting_power
     )]
     TooLittleVotingPower {
         voting_power: u64,
         quorum_voting_power: u64,
     },
-    #[fail(
-        display = "The number of signatures ({}) is greater than total number of authors ({})",
-        num_of_signatures, num_of_authors
+    #[error(
+        "The number of signatures ({}) is greater than total number of authors ({})",
+        num_of_signatures,
+        num_of_authors
     )]
     TooManySignatures {
         num_of_signatures: usize,
         num_of_authors: usize,
     },
-    #[fail(display = "Signature is invalid")]
+    #[error("Signature is invalid")]
     /// The signature does not match the hash.
     InvalidSignature,
 }
@@ -99,9 +105,11 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
         address_to_validator_info: BTreeMap<AccountAddress, ValidatorInfo<PublicKey>>,
         quorum_voting_power: u64,
     ) -> Result<Self> {
-        let total_voting_power = address_to_validator_info
-            .values()
-            .fold(0, |sum, x| sum + x.voting_power);
+        let total_voting_power = address_to_validator_info.values().fold(0, |sum, x| {
+            // The voting power of any node is assumed to be small relative to u64::max_value()
+            assume!(sum <= u64::max_value() - x.voting_power);
+            sum + x.voting_power
+        });
         ensure!(
             quorum_voting_power <= total_voting_power,
             "Quorum voting power is greater than the sum of all voting power of authors: {}, \

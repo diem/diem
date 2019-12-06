@@ -251,14 +251,14 @@ pub fn impl_enum_signature(
             type VerifyingKeyMaterial = #pub_kt;
             type SigningKeyMaterial = #priv_kt;
 
-            fn verify(&self, message: &HashValue, public_key: &Self::VerifyingKeyMaterial) -> ::std::result::Result<(), ::failure::Error> {
+            fn verify(&self, message: &HashValue, public_key: &Self::VerifyingKeyMaterial) -> ::std::result::Result<(), libra_crypto::error::Error> {
                 self.verify_arbitrary_msg(message.as_ref(), public_key)
             }
 
-            fn verify_arbitrary_msg(&self, message: &[u8], public_key: &Self::VerifyingKeyMaterial) -> std::result::Result<(), ::failure::Error> {
+            fn verify_arbitrary_msg(&self, message: &[u8], public_key: &Self::VerifyingKeyMaterial) -> std::result::Result<(), libra_crypto::error::Error> {
                 match (self, public_key) {
                     #match_arms
-                    _ => ::failure::bail!(
+                    _ => libra_crypto::error::bail!(
                         "provided the wrong alternative in {:?}!",
                         (self, public_key)
                     ),

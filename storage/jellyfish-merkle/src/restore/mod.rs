@@ -14,7 +14,7 @@ use crate::{
     },
     NodeBatch, TreeReader, TreeWriter, ROOT_NIBBLE_HEIGHT,
 };
-use failure::prelude::*;
+use anyhow::{bail, ensure, format_err, Result};
 use libra_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,

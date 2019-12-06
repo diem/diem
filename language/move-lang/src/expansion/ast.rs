@@ -82,16 +82,16 @@ pub struct Function {
 //**************************************************************************************************
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum TypeName_ {
+pub enum ModuleAccess_ {
     Name(Name),
-    ModuleType(ModuleIdent, StructName),
+    ModuleAccess(ModuleIdent, Name),
 }
-pub type TypeName = Spanned<TypeName_>;
+pub type ModuleAccess = Spanned<ModuleAccess_>;
 
 #[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum SingleType_ {
-    Apply(TypeName, Vec<SingleType>),
+    Apply(ModuleAccess, Vec<SingleType>),
     Ref(bool, Box<SingleType>),
     UnresolvedError,
 }
@@ -113,7 +113,7 @@ pub type Type = Spanned<Type_>;
 #[derive(Debug, PartialEq)]
 pub enum Assign_ {
     Var(Var),
-    Unpack(TypeName, Option<Vec<SingleType>>, Fields<Assign>),
+    Unpack(ModuleAccess, Option<Vec<SingleType>>, Fields<Assign>),
 }
 pub type Assign = Spanned<Assign_>;
 pub type AssignList = Spanned<Vec<Assign>>;
@@ -121,7 +121,7 @@ pub type AssignList = Spanned<Vec<Assign>>;
 #[derive(Debug, PartialEq)]
 pub enum Bind_ {
     Var(Var),
-    Unpack(TypeName, Option<Vec<SingleType>>, Fields<Bind>),
+    Unpack(ModuleAccess, Option<Vec<SingleType>>, Fields<Bind>),
 }
 pub type Bind = Spanned<Bind_>;
 pub type BindList = Spanned<Vec<Bind>>;
@@ -142,10 +142,9 @@ pub enum Exp_ {
     Copy(Var),
 
     Name(Name),
-    MName(Name),
-    ModuleIdent(ModuleIdent),
-    GlobalCall(Box<Exp>, Option<Vec<SingleType>>, Box<Exp>),
-    Call(Box<Exp>, Option<Vec<SingleType>>, Box<Exp>),
+    GlobalCall(Name, Option<Vec<SingleType>>, Spanned<Vec<Exp>>),
+    Call(ModuleAccess, Option<Vec<SingleType>>, Spanned<Vec<Exp>>),
+    Pack(ModuleAccess, Option<Vec<SingleType>>, Fields<Exp>),
 
     IfElse(Box<Exp>, Box<Exp>, Box<Exp>),
     While(Box<Exp>, Box<Exp>),
@@ -165,7 +164,6 @@ pub enum Exp_ {
     UnaryExp(UnaryOp, Box<Exp>),
     BinopExp(Box<Exp>, BinOp, Box<Exp>),
 
-    Pack(TypeName, Option<Vec<SingleType>>, Fields<Exp>),
     ExpList(Vec<Exp>),
     Unit,
 
@@ -191,12 +189,12 @@ pub type SequenceItem = Spanned<SequenceItem_>;
 // Display
 //**************************************************************************************************
 
-impl fmt::Display for TypeName_ {
+impl fmt::Display for ModuleAccess_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        use TypeName_::*;
+        use ModuleAccess_::*;
         match self {
             Name(n) => write!(f, "{}", n),
-            ModuleType(m, n) => write!(f, "{}.{}", m, n),
+            ModuleAccess(m, n) => write!(f, "{}::{}", m, n),
         }
     }
 }

@@ -18,7 +18,7 @@ FROM toolchain AS builder
 
 COPY . /libra
 
-RUN cargo build --release -p libra-node -p client -p benchmark && cd target/release && rm -r build deps incremental
+RUN cargo build --release -p libra-node -p client && cd target/release && rm -r build deps incremental
 RUN strip target/release/client
 
 ### Production Image ###
@@ -29,7 +29,7 @@ COPY --from=builder /libra/target/release/client /opt/libra/bin/libra_client
 COPY scripts/cli/consensus_peers.config.toml /opt/libra/etc/consensus_peers.config.toml
 
 ENTRYPOINT ["/opt/libra/bin/libra_client"]
-CMD ["--host", "ac.testnet.libra.org", "--port", "8000", "-s", "/opt/libra/etc/consensus_peers.config.toml"]
+CMD ["--host", "ac.testnet.libra.org", "--port", "8001", "-s", "/opt/libra/etc/consensus_peers.config.toml"]
 
 ARG BUILD_DATE
 ARG GIT_REV

@@ -56,12 +56,15 @@ where
             ExecutedTransaction::discard_error_output(VMStatus::new(StatusCode::MALFORMED))
         }
         // WriteSet transaction. Just proceed and use the writeset as output.
-        TransactionPayload::WriteSet(write_set) => TransactionOutput::new(
-            write_set,
-            vec![],
-            0,
-            VMStatus::new(StatusCode::EXECUTED).into(),
-        ),
+        TransactionPayload::WriteSet(write_set_payload) => {
+            let (write_set, events) = write_set_payload.into_inner();
+            TransactionOutput::new(
+                write_set,
+                events,
+                0,
+                VMStatus::new(StatusCode::EXECUTED).into(),
+            )
+        }
         TransactionPayload::Module(module) => {
             let VerifiedTransactionState {
                 mut txn_executor,

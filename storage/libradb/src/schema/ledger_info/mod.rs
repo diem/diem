@@ -13,8 +13,8 @@
 //! numeric value.
 
 use crate::schema::{ensure_slice_len_eq, LEDGER_HISTORY_CF_NAME};
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt};
-use failure::prelude::*;
 use libra_crypto::HashValue;
 use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;

@@ -1,7 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use failure::prelude::*;
+#![forbid(unsafe_code)]
+
+mod genesis_gas_schedule;
+
+use crate::genesis_gas_schedule::initial_gas_schedule;
+use anyhow::Result;
 use lazy_static::lazy_static;
 use libra_crypto::{ed25519::*, traits::ValidKey};
 use libra_state_view::StateView;
@@ -11,7 +16,9 @@ use libra_types::{
     account_config,
     byte_array::ByteArray,
     identifier::Identifier,
-    transaction::{RawTransaction, Script, SignatureCheckedTransaction, TransactionArgument},
+    transaction::{
+        ChangeSet, RawTransaction, Script, SignatureCheckedTransaction, TransactionArgument,
+    },
     validator_set::ValidatorSet,
 };
 use rand::{rngs::StdRng, SeedableRng};
@@ -28,8 +35,7 @@ use vm_runtime::{
     },
     data_cache::BlockDataCache,
     txn_executor::{
-        TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE, CONSENSUS_CONF_MODULE,
-        GAS_SCHEDULE_MODULE, LIBRA_SYSTEM_MODULE, TRANSACTION_FEE_DISTRIBUTION_MODULE,
+        TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE, GAS_SCHEDULE_MODULE, LIBRA_SYSTEM_MODULE,
         VALIDATOR_CONFIG_MODULE,
     },
 };
@@ -60,6 +66,8 @@ lazy_static! {
     static ref ADD_VALIDATOR: Identifier = Identifier::new("add_validator").unwrap();
     static ref INITIALIZE: Identifier = Identifier::new("initialize").unwrap();
     static ref INITIALIZE_BLOCK: Identifier = Identifier::new("initialize_block_metadata").unwrap();
+    static ref INITIALIZE_TXN_FEES: Identifier =
+        Identifier::new("initialize_transaction_fees").unwrap();
     static ref INITIALIZE_VALIDATOR: Identifier =
         Identifier::new("initialize_validator_set").unwrap();
     static ref MINT_TO_ADDRESS: Identifier = Identifier::new("mint_to_address").unwrap();
@@ -232,6 +240,7 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
         let fake_fetcher = FakeFetcher::new(modules.iter().map(|m| m.as_inner().clone()).collect());
         let data_cache = BlockDataCache::new(&state_view);
         let block_cache = BlockModuleCache::new(&vm_cache, fake_fetcher);
+        let initial_gas_schedule = initial_gas_schedule(&block_cache, &data_cache);
         {
             let mut txn_data = TransactionMetadata::default();
             txn_data.sender = genesis_addr;
@@ -292,7 +301,7 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
                     account_config::association_address(),
                     &GAS_SCHEDULE_MODULE,
                     &INITIALIZE,
-                    vec![],
+                    vec![initial_gas_schedule],
                 )
                 .unwrap();
 
@@ -344,12 +353,12 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
                 .execute_function(&ACCOUNT_MODULE, &EPILOGUE, vec![])
                 .unwrap();
 
-            // Initialize the transaction fee distribution module.
+            // Create the transaction fees resource under the fees account
             txn_executor
                 .execute_function_with_sender_FOR_GENESIS_ONLY(
                     account_config::transaction_fee_address(),
-                    &TRANSACTION_FEE_DISTRIBUTION_MODULE,
-                    &INITIALIZE,
+                    &LIBRA_SYSTEM_MODULE,
+                    &INITIALIZE_TXN_FEES,
                     vec![],
                 )
                 .unwrap();
@@ -366,8 +375,7 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
                     vec![],
                 )
                 .unwrap();
-
-            for validator_keys in validator_set.payload() {
+            for validator_keys in validator_set.payload().iter().rev() {
                 // First, add a ValidatorConfig resource under each account
                 let validator_address = *validator_keys.account_address();
                 txn_executor.create_account(validator_address).unwrap();
@@ -467,7 +475,6 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
                 "Expected sequence number 0 for validator set change event but got {}",
                 validator_set_change_event.sequence_number()
             );
-
             // (4) It should emit the validator set we fed into the genesis tx
             assert_eq!(
                 ValidatorSet::from_bytes(validator_set_change_event.event_data()).unwrap(),
@@ -475,10 +482,9 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
                 "Validator set in emitted event does not match validator set fed into genesis transaction"
             );
 
-            txn_output.write_set().clone().into_mut()
+            ChangeSet::new(txn_output.write_set().clone(), txn_output.events().to_vec())
         }
     };
-    let transaction =
-        RawTransaction::new_write_set(genesis_addr, 0, genesis_write_set.freeze().unwrap());
+    let transaction = RawTransaction::new_change_set(genesis_addr, 0, genesis_write_set);
     transaction.sign(private_key, public_key).unwrap()
 }

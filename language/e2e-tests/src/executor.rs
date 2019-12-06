@@ -13,9 +13,11 @@ use libra_types::{
     access_path::AccessPath,
     account_config::AccountResource,
     language_storage::ModuleId,
-    transaction::{SignedTransaction, Transaction, TransactionOutput, TransactionPayload},
+    transaction::{
+        SignedTransaction, Transaction, TransactionOutput, TransactionPayload, TransactionStatus,
+    },
     validator_set::ValidatorSet,
-    vm_error::VMStatus,
+    vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
 use vm::CompiledModule;
@@ -96,7 +98,7 @@ impl FakeExecutor {
         )
         .payload()
         {
-            TransactionPayload::WriteSet(ws) => ws.clone(),
+            TransactionPayload::WriteSet(ws) => ws.write_set().clone(),
             _ => panic!("Expected writeset txn in genesis txn"),
         };
         Self::from_genesis(&genesis_write_set, Some(publishing_options))
@@ -164,6 +166,26 @@ impl FakeExecutor {
             &self.config,
             &self.data_store,
         )
+    }
+
+    /// Executes the transaction as a singleton block and applies the resulting write set to the
+    /// data store. Panics if execution fails
+    pub fn execute_and_apply(&mut self, transaction: SignedTransaction) -> TransactionOutput {
+        let mut outputs = self.execute_block(vec![transaction]).unwrap();
+        assert!(outputs.len() == 1, "transaction outputs size mismatch");
+        let output = outputs.pop().unwrap();
+        match output.status() {
+            TransactionStatus::Keep(status) => {
+                self.apply_write_set(output.write_set());
+                assert!(
+                    status.major_status == StatusCode::EXECUTED,
+                    "transaction failed with {:?}",
+                    status
+                );
+                output
+            }
+            TransactionStatus::Discard(_) => panic!("transaction discarded"),
+        }
     }
 
     pub fn execute_transaction(&self, txn: SignedTransaction) -> TransactionOutput {

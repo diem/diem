@@ -205,7 +205,6 @@ pub enum Exp_ {
     Use(Var),
 
     ModuleCall(ModuleIdent, FunctionName, Option<Vec<BaseType>>, Box<Exp>),
-    MethodCall(ExpDotted, FunctionName, Option<Vec<BaseType>>, Box<Exp>),
     Builtin(BuiltinFunction, Box<Exp>),
 
     IfElse(Box<Exp>, Box<Exp>, Box<Exp>),
@@ -258,6 +257,15 @@ impl BuiltinTypeName_ {
     pub const BOOL: &'static str = "bool";
     pub const BYTE_ARRAY: &'static str = "bytearray";
 
+    pub fn all_names() -> BTreeSet<&'static str> {
+        let mut s = BTreeSet::new();
+        s.insert(Self::ADDRESS);
+        s.insert(Self::U_64);
+        s.insert(Self::BOOL);
+        s.insert(Self::BYTE_ARRAY);
+        s
+    }
+
     pub fn signed() -> BTreeSet<BuiltinTypeName_> {
         BTreeSet::new()
         // s.insert(BT::I64);
@@ -281,7 +289,7 @@ impl BuiltinTypeName_ {
         Self::bits()
     }
 
-    pub fn resolve(name_str: &str) -> Option<(Self)> {
+    pub fn resolve(name_str: &str) -> Option<Self> {
         use BuiltinTypeName_ as BT;
         match name_str {
             BT::ADDRESS => Some(BT::Address),
@@ -335,6 +343,29 @@ impl BuiltinFunction_ {
     // pub const GET_SEQUENCE_NUMBER: &'static str = "get_sequence_number";
     // pub const GET_GAS_REMAINING: &'static str = "get_gas_remaining";
     // pub const EMIT_EVENT: &'static str = "emit_event";
+    pub fn all_names() -> BTreeSet<&'static str> {
+        let mut s = BTreeSet::new();
+        s.insert(Self::MOVE_TO_SENDER);
+        s.insert(Self::MOVE_FROM);
+        s.insert(Self::BORROW_GLOBAL);
+        s.insert(Self::BORROW_GLOBAL_MUT);
+        s.insert(Self::EXISTS);
+        s.insert(Self::FREEZE);
+        s
+    }
+
+    pub fn resolve(name_str: &str, arg: Option<BaseType>) -> Option<Self> {
+        use BuiltinFunction_ as BF;
+        match name_str {
+            BF::MOVE_TO_SENDER => Some(BF::MoveToSender(arg)),
+            BF::MOVE_FROM => Some(BF::MoveFrom(arg)),
+            BF::BORROW_GLOBAL => Some(BF::BorrowGlobal(false, arg)),
+            BF::BORROW_GLOBAL_MUT => Some(BF::BorrowGlobal(true, arg)),
+            BF::EXISTS => Some(BF::Exists(arg)),
+            BF::FREEZE => Some(BF::Freeze(arg)),
+            _ => None,
+        }
+    }
 }
 
 impl BaseType_ {
@@ -497,7 +528,7 @@ impl fmt::Display for TypeName_ {
         use TypeName_::*;
         match self {
             Builtin(b) => write!(f, "{}", b),
-            ModuleType(m, n) => write!(f, "{}.{}", m, n),
+            ModuleType(m, n) => write!(f, "{}::{}", m, n),
         }
     }
 }

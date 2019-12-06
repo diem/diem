@@ -5,7 +5,7 @@ use crate::{
     common::{Author, Round},
     timeout::Timeout,
 };
-use failure::prelude::*;
+use anyhow::Context;
 use libra_crypto::hash::CryptoHash;
 use libra_types::crypto_proxies::{Signature, ValidatorVerifier};
 use serde::{Deserialize, Serialize};
@@ -40,13 +40,13 @@ impl TimeoutCertificate {
     }
 
     /// Verifies the signatures for the round
-    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
         validator.check_voting_power(self.signatures().keys())?;
         let timeout_hash = self.timeout.hash();
         for (author, signature) in self.signatures() {
             signature
                 .verify(validator, *author, timeout_hash)
-                .with_context(|e| format!("Fail to verify TimeoutCertificate: {:?}", e))?;
+                .context("Fail to verify TimeoutCertificate")?;
         }
         Ok(())
     }

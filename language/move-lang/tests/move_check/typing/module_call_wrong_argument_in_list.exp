@@ -1,0 +1,252 @@
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:16:19 ───
+    │
+ 20 │         foo(false, 0, S{});
+    │         ^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 'a'
+    ·
+ 20 │         foo(false, 0, S{});
+    │             ----- The type: 'bool'
+    ·
+ 16 │     public foo(a: address, u: u64, s: S) {
+    │                   ------- Is not compatible with: 'address'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:16:31 ───
+    │
+ 21 │         foo(0x0, false, S{});
+    │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 'u'
+    ·
+ 21 │         foo(0x0, false, S{});
+    │                  ----- The type: 'bool'
+    ·
+ 16 │     public foo(a: address, u: u64, s: S) {
+    │                               --- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:16:39 ───
+    │
+ 22 │         foo(0x0, 0, false);
+    │         ^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 's'
+    ·
+ 22 │         foo(0x0, 0, false);
+    │                     ----- The type: 'bool'
+    ·
+ 16 │     public foo(a: address, u: u64, s: S) {
+    │                                       - Is not compatible with: '0x1::M::S'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:16:31 ───
+    │
+ 23 │         foo(0x0, false, false);
+    │         ^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 'u'
+    ·
+ 23 │         foo(0x0, false, false);
+    │                  ----- The type: 'bool'
+    ·
+ 16 │     public foo(a: address, u: u64, s: S) {
+    │                               --- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:16:39 ───
+    │
+ 23 │         foo(0x0, false, false);
+    │         ^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 's'
+    ·
+ 23 │         foo(0x0, false, false);
+    │                         ----- The type: 'bool'
+    ·
+ 16 │     public foo(a: address, u: u64, s: S) {
+    │                                       - Is not compatible with: '0x1::M::S'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:16:19 ───
+    │
+ 24 │         foo(false, 0, false);
+    │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 'a'
+    ·
+ 24 │         foo(false, 0, false);
+    │             ----- The type: 'bool'
+    ·
+ 16 │     public foo(a: address, u: u64, s: S) {
+    │                   ------- Is not compatible with: 'address'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:16:39 ───
+    │
+ 24 │         foo(false, 0, false);
+    │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 's'
+    ·
+ 24 │         foo(false, 0, false);
+    │                       ----- The type: 'bool'
+    ·
+ 16 │     public foo(a: address, u: u64, s: S) {
+    │                                       - Is not compatible with: '0x1::M::S'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:16:19 ───
+    │
+ 25 │         foo(false, false, S{});
+    │         ^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 'a'
+    ·
+ 25 │         foo(false, false, S{});
+    │             ----- The type: 'bool'
+    ·
+ 16 │     public foo(a: address, u: u64, s: S) {
+    │                   ------- Is not compatible with: 'address'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:16:31 ───
+    │
+ 25 │         foo(false, false, S{});
+    │         ^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 'u'
+    ·
+ 25 │         foo(false, false, S{});
+    │                    ----- The type: 'bool'
+    ·
+ 16 │     public foo(a: address, u: u64, s: S) {
+    │                               --- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:8:19 ───
+    │
+ 29 │         X::foo(false, 0, X::s());
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 'a'
+    ·
+ 29 │         X::foo(false, 0, X::s());
+    │                ----- The type: 'bool'
+    ·
+ 8 │     public foo(a: address, u: u64, s: S) {
+    │                   ------- Is not compatible with: 'address'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:8:31 ───
+    │
+ 30 │         X::foo(0x0, false, X::s());
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 'u'
+    ·
+ 30 │         X::foo(0x0, false, X::s());
+    │                     ----- The type: 'bool'
+    ·
+ 8 │     public foo(a: address, u: u64, s: S) {
+    │                               --- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:8:39 ───
+    │
+ 31 │         X::foo(0x0, 0, S{});
+    │         ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 's'
+    ·
+ 31 │         X::foo(0x0, 0, S{});
+    │                        --- The type: '0x1::M::S'
+    ·
+ 8 │     public foo(a: address, u: u64, s: S) {
+    │                                       - Is not compatible with: '0x1::X::S'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:8:31 ───
+    │
+ 32 │         X::foo(0x0, false, S{});
+    │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 'u'
+    ·
+ 32 │         X::foo(0x0, false, S{});
+    │                     ----- The type: 'bool'
+    ·
+ 8 │     public foo(a: address, u: u64, s: S) {
+    │                               --- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:8:39 ───
+    │
+ 32 │         X::foo(0x0, false, S{});
+    │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 's'
+    ·
+ 32 │         X::foo(0x0, false, S{});
+    │                            --- The type: '0x1::M::S'
+    ·
+ 8 │     public foo(a: address, u: u64, s: S) {
+    │                                       - Is not compatible with: '0x1::X::S'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:8:19 ───
+    │
+ 33 │         X::foo(false, 0, S{});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 'a'
+    ·
+ 33 │         X::foo(false, 0, S{});
+    │                ----- The type: 'bool'
+    ·
+ 8 │     public foo(a: address, u: u64, s: S) {
+    │                   ------- Is not compatible with: 'address'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:8:39 ───
+    │
+ 33 │         X::foo(false, 0, S{});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 's'
+    ·
+ 33 │         X::foo(false, 0, S{});
+    │                          --- The type: '0x1::M::S'
+    ·
+ 8 │     public foo(a: address, u: u64, s: S) {
+    │                                       - Is not compatible with: '0x1::X::S'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:8:19 ───
+    │
+ 34 │         X::foo(false, false, X::s());
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 'a'
+    ·
+ 34 │         X::foo(false, false, X::s());
+    │                ----- The type: 'bool'
+    ·
+ 8 │     public foo(a: address, u: u64, s: S) {
+    │                   ------- Is not compatible with: 'address'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_argument_in_list.move:8:31 ───
+    │
+ 34 │         X::foo(false, false, X::s());
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 'u'
+    ·
+ 34 │         X::foo(false, false, X::s());
+    │                       ----- The type: 'bool'
+    ·
+ 8 │     public foo(a: address, u: u64, s: S) {
+    │                               --- Is not compatible with: 'u64'
+    │
+

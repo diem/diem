@@ -50,8 +50,27 @@ impl Context {
         self.address.unwrap()
     }
 
-    pub fn set_aliases(&mut self, alias_map: AliasMap) {
-        self.aliases = alias_map;
+    fn restricted_self_error(&mut self, case: &str, name: &Name) {
+        let msg = format!(
+            "Invalid {case} name '{name}'. '{self_ident}' is restricted and cannot be used to name a {case}",
+            case=case,
+            name=name,
+            self_ident=ModuleName::SELF_NAME,
+        );
+        self.error(vec![(name.loc, msg)])
+    }
+
+    pub fn set_and_shadow_aliases(&mut self, alias_map: AliasMap) {
+        for (alias, ident) in alias_map {
+            if self.aliases.contains_key(&alias) {
+                self.aliases.remove(&alias);
+            }
+            self.aliases.add(alias, ident).unwrap();
+        }
+    }
+
+    pub fn clear_aliases(&mut self) {
+        self.aliases = AliasMap::new();
     }
 
     pub fn module_alias_get(&mut self, n: &Name) -> Option<&ModuleIdent> {
@@ -172,13 +191,17 @@ fn module(
     addr_directive: Option<(Loc, Address)>,
     mdef: P::ModuleDefinition,
 ) -> (ModuleIdent, E::ModuleDefinition) {
+    assert!(context.aliases.is_empty());
     let P::ModuleDefinition {
-        mut uses,
+        uses,
         name,
         structs: pstructs,
         functions: pfunctions,
     } = mdef;
     let name_loc = name.loc();
+    if name.value() == ModuleName::SELF_NAME {
+        context.restricted_self_error("module", &name.0);
+    }
 
     address_directive(context, sender, name_loc, addr_directive);
 
@@ -187,12 +210,13 @@ fn module(
         name: name.clone(),
     };
     let current_module = ModuleIdent(sp(name_loc, mident_));
-    let self_name = ModuleName(sp(name_loc, ModuleName::SELF_NAME.into()));
-    uses.insert(0, (current_module.clone(), Some(self_name)));
+    let self_aliases = module_self_aliases(&current_module);
+    context.set_and_shadow_aliases(self_aliases);
     let alias_map = aliases(context, uses);
-    context.set_aliases(alias_map);
+    context.set_and_shadow_aliases(alias_map);
     let structs = structs(context, &name, pstructs);
     let functions = functions(context, &name, pfunctions);
+    context.clear_aliases();
     (
         current_module,
         E::ModuleDefinition {
@@ -209,12 +233,13 @@ fn main(
     addr: Address,
     main_def: P::Main,
 ) {
+    assert!(context.aliases.is_empty());
     let P::Main {
         uses,
         function: pfunction,
     } = main_def;
     let alias_map = aliases(context, uses);
-    context.set_aliases(alias_map);
+    context.set_and_shadow_aliases(alias_map);
     let (fname, function) = function_def(context, pfunction);
     if fname.value() != FunctionName::MAIN_NAME {
         context.error(vec![
@@ -245,16 +270,26 @@ fn main(
             (old_name.loc(), "Previously defined here".into()),
         ]),
     }
+    context.clear_aliases();
 }
 
 //**************************************************************************************************
 // Aliases
 //**************************************************************************************************
 
+fn module_self_aliases(current_module: &ModuleIdent) -> AliasMap {
+    let self_name = sp(current_module.loc(), ModuleName::SELF_NAME.into());
+    let aliases = vec![(self_name, current_module.clone())];
+    AliasMap::maybe_from_iter(aliases.into_iter()).unwrap()
+}
+
 fn aliases(context: &mut Context, uses: Vec<(ModuleIdent, Option<ModuleName>)>) -> AliasMap {
     let mut alias_map = AliasMap::new();
     for (mident, alias_opt) in uses {
         let alias = alias_opt.unwrap_or_else(|| mident.0.value.name.clone());
+        if alias.value() == ModuleName::SELF_NAME {
+            context.restricted_self_error("module alias", &alias.0);
+        }
         if let Err(old_loc) = alias_map.add(alias.0.clone(), mident) {
             context.error(vec![
                 (
@@ -468,7 +503,7 @@ fn single_type_(context: &mut Context, sp!(loc, pst_): P::SingleType) -> Option<
     use P::SingleType_ as PS;
     let st_ = match pst_ {
         PS::Apply(pn, ptyargs) => {
-            let n = type_name(context, pn)?;
+            let n = module_access(context, pn)?;
             let tyargs = single_types(context, ptyargs);
             ES::Apply(n, tyargs)
         }
@@ -477,9 +512,12 @@ fn single_type_(context: &mut Context, sp!(loc, pst_): P::SingleType) -> Option<
     Some(sp(loc, st_))
 }
 
-fn type_name(context: &mut Context, sp!(loc, ptn_): P::TypeName) -> Option<E::TypeName> {
-    use E::TypeName_ as EN;
-    use P::TypeName_ as PN;
+fn module_access(
+    context: &mut Context,
+    sp!(loc, ptn_): P::ModuleAccess,
+) -> Option<E::ModuleAccess> {
+    use E::ModuleAccess_ as EN;
+    use P::ModuleAccess_ as PN;
     let tn_ = match ptn_ {
         PN::Name(n) => {
             match context.module_alias_get(&n) {
@@ -493,7 +531,7 @@ fn type_name(context: &mut Context, sp!(loc, ptn_): P::TypeName) -> Option<E::Ty
                 None => EN::Name(n),
             }
         }
-        PN::ModuleType(mname, sn) => match context.module_alias_get(&mname.0).cloned() {
+        PN::ModuleAccess(mname, n) => match context.module_alias_get(&mname.0).cloned() {
             None => {
                 context.error(vec![(
                     mname.loc(),
@@ -501,9 +539,9 @@ fn type_name(context: &mut Context, sp!(loc, ptn_): P::TypeName) -> Option<E::Ty
                 )]);
                 return None;
             }
-            Some(mident) => EN::ModuleType(mident, sn),
+            Some(mident) => EN::ModuleAccess(mident, n),
         },
-        PN::QualifiedModuleType(mident, sn) => EN::ModuleType(mident, sn),
+        PN::QualifiedModuleAccess(mident, n) => EN::ModuleAccess(mident, n),
     };
     Some(sp(loc, tn_))
 }
@@ -560,6 +598,10 @@ fn sequence_item(context: &mut Context, sp!(loc, pitem_): P::SequenceItem) -> E:
     sp(loc, item_)
 }
 
+fn exps(context: &mut Context, pes: Vec<P::Exp>) -> Vec<E::Exp> {
+    pes.into_iter().map(|pe| exp_(context, pe)).collect()
+}
+
 fn exp(context: &mut Context, pe: P::Exp) -> Box<E::Exp> {
     Box::new(exp_(context, pe))
 }
@@ -572,46 +614,46 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::Value(v) => EE::Value(v),
         PE::Move(v) => EE::Move(v),
         PE::Copy(v) => EE::Copy(v),
-        PE::Name(n) => EE::Name(n),
-        PE::MName(n) => match context.module_alias_get(&n) {
-            Some(n) => EE::ModuleIdent(n.clone()),
-            None => EE::MName(n),
+        PE::Name(n) => match context.module_alias_get(&n) {
+            Some(_) => {
+                let msg = format!("Unexpected module alias '{}'. Modules are not values.'", n);
+                context.error(vec![(loc, msg)]);
+                EE::UnresolvedError
+            }
+            None => EE::Name(n),
         },
-        PE::MNameTypeArgs(n, _) | PE::NameTypeArgs(n, _) => {
-            context.error(vec![(
-                loc,
-                format!("Unexpected name with type arguments '{}'", &n),
-            )]);
-            EE::UnresolvedError
+        PE::GlobalCall(n, ptys_opt, sp!(rloc, prs)) => {
+            let tys_opt = ptys_opt.map(|pss| single_types(context, pss));
+            let ers = sp(rloc, exps(context, prs));
+            EE::GlobalCall(n, tys_opt, ers)
         }
-        PE::GlobalApply(plhs, parg) => match call_or_pack(context, *plhs, *parg) {
-            None => {
-                assert!(context.has_errors());
-                EE::UnresolvedError
+        PE::Call(pn, ptys_opt, sp!(rloc, prs)) => {
+            let en_opt = module_access(context, pn);
+            let tys_opt = ptys_opt.map(|pss| single_types(context, pss));
+            let ers = sp(rloc, exps(context, prs));
+            match en_opt {
+                Some(en) => EE::Call(en, tys_opt, ers),
+                None => {
+                    assert!(context.has_errors());
+                    EE::UnresolvedError
+                }
             }
-            Some(EE::Pack(_, _, _)) => {
-                context.error(vec![(
-                    loc,
-                    "Unexpected construction. Found a global-identifier access, and thus expected a function call",
-                )]);
-                EE::UnresolvedError
+        }
+        PE::Pack(pn, ptys_opt, pfields) => {
+            let en_opt = module_access(context, pn);
+            let tys_opt = ptys_opt.map(|pss| single_types(context, pss));
+            let efields_vec = pfields
+                .into_iter()
+                .map(|(f, pe)| (f, exp_(context, pe)))
+                .collect();
+            let efields = fields(context, loc, "construction", "argument", efields_vec);
+            match en_opt {
+                Some(en) => EE::Pack(en, tys_opt, efields),
+                None => {
+                    assert!(context.has_errors());
+                    EE::UnresolvedError
+                }
             }
-            Some(EE::Call(e1, tys, e2)) => EE::GlobalCall(e1, tys, e2),
-            Some(_) => panic!("ICE expected call or pack from call_or_pack"),
-        },
-        PE::Apply(plhs, parg) => match call_or_pack(context, *plhs, *parg) {
-            None => {
-                assert!(context.has_errors());
-                EE::UnresolvedError
-            }
-            Some(e_) => e_,
-        },
-        PE::Fields(_) => {
-            context.error(vec![(
-                loc,
-                "Unexpected field arguments. Fields are used only to instantiate a struct",
-            )]);
-            EE::UnresolvedError
         }
         PE::IfElse(pb, pt, pf_opt) => {
             let eb = exp(context, *pb);
@@ -626,8 +668,8 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::Loop(ploop) => EE::Loop(exp(context, *ploop)),
         PE::Block(seq) => EE::Block(sequence(context, loc, seq)),
         PE::ExpList(pes) => {
-            assert!(!pes.is_empty());
-            EE::ExpList(pes.into_iter().map(|pe| exp_(context, pe)).collect())
+            assert!(pes.len() > 1);
+            EE::ExpList(exps(context, pes))
         }
 
         PE::Assign(lvalue, rhs) => {
@@ -651,242 +693,30 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::UnaryExp(op, pe) => EE::UnaryExp(op, exp(context, *pe)),
         PE::BinopExp(pl, op, pr) => EE::BinopExp(exp(context, *pl), op, exp(context, *pr)),
         PE::Borrow(mut_, pr) => EE::Borrow(mut_, exp(context, *pr)),
-        pdotted_ @ PE::MDot(_, _, _) | pdotted_ @ PE::Dot(_, _, _) => {
-            match exp_dotted(context, sp(loc, pdotted_)) {
-                Some(edotted) => EE::ExpDotted(Box::new(edotted)),
-                None => {
-                    assert!(context.has_errors());
-                    EE::UnresolvedError
-                }
+        pdotted_ @ PE::Dot(_, _) => match exp_dotted(context, sp(loc, pdotted_)) {
+            Some(edotted) => EE::ExpDotted(Box::new(edotted)),
+            None => {
+                assert!(context.has_errors());
+                EE::UnresolvedError
             }
-        }
+        },
         PE::Annotate(e, ty) => EE::Annotate(exp(context, *e), type_(context, ty)),
         PE::UnresolvedError => panic!("ICE error should have been thrown"),
     };
     sp(loc, e_)
 }
 
-macro_rules! mdot {
-    ($loc:pat, $lhs:pat, $field:pat, $tys_opt:pat) => {
-        sp!($loc, P::Exp_::MDot($lhs, $field, $tys_opt))
-    };
-}
-
-fn exp_dotted(context: &mut Context, pdotted: P::Exp) -> Option<E::ExpDotted> {
-    let (edotted, tys_opt) = exp_dotted_rec(context, pdotted)?;
-    if let Some(_tys) = tys_opt {
-        context.error(vec![(
-            edotted.loc,
-            "Unexpected type arguments. Thus, expected a function applied to its arguments",
-        )]);
-        None
-    } else {
-        Some(edotted)
-    }
-}
-
-fn exp_dotted_rec(
-    context: &mut Context,
-    sp!(loc, pdotted_): P::Exp,
-) -> Option<(E::ExpDotted, Option<Vec<E::SingleType>>)> {
+fn exp_dotted(context: &mut Context, sp!(loc, pdotted_): P::Exp) -> Option<E::ExpDotted> {
     use E::ExpDotted_ as EE;
-    use P::{Exp_ as PE, Value_ as V};
-    let (edotted_, tys_opt) = match pdotted_ {
-        PE::Dot(plhs, field, ptys_opt) => {
+    use P::Exp_ as PE;
+    let edotted_ = match pdotted_ {
+        PE::Dot(plhs, field) => {
             let lhs = exp_dotted(context, *plhs)?;
-            let tys_opt = ptys_opt.map(|tys| single_types(context, tys));
-            (EE::Dot(Box::new(lhs), field), tys_opt)
+            EE::Dot(Box::new(lhs), field)
         }
-        PE::MDot(maybe_addr, m, ptys_opt) => {
-            let addr = match *maybe_addr {
-                sp!(_, P::Exp_::Value(sp!(_, V::Address(addr)))) => addr,
-                sp!(aloc, _) => {
-                    context.error(vec![
-                        (loc, "Invalid access. Expected a qualified module access"),
-                        (aloc, "Or an struct value or reference"),
-                        (m.loc, "Followed by a field access"),
-                    ]);
-                    return None;
-                }
-            };
-            let tys_opt = ptys_opt.map(|tys| single_types(context, tys));
-            let mn = ModuleName(m);
-            let mi_ = ModuleIdent_ {
-                address: addr,
-                name: mn,
-            };
-            let mi = ModuleIdent(sp(loc, mi_));
-            (EE::Exp(sp(loc, E::Exp_::ModuleIdent(mi))), tys_opt)
-        }
-        pe_ => (EE::Exp(exp_(context, sp(loc, pe_))), None),
+        pe_ => EE::Exp(exp_(context, sp(loc, pe_))),
     };
-    Some((sp(loc, edotted_), tys_opt))
-}
-
-fn exp_to_type_name(
-    context: &mut Context,
-    sp!(loc, p_): P::Exp,
-) -> Option<(E::TypeName, Option<Vec<E::SingleType>>)> {
-    use E::TypeName_ as ET;
-    use P::Exp_ as PE;
-    match p_ {
-        PE::Name(n) | PE::MName(n) => Some((sp(loc, ET::Name(n)), None)),
-        PE::MNameTypeArgs(n, ptys) | PE::NameTypeArgs(n, ptys) => {
-            let tys = single_types(context, ptys);
-            Some((sp(loc, ET::Name(n)), Some(tys)))
-        }
-        pdotted_ @ PE::MDot(_, _, _) | pdotted_ @ PE::Dot(_, _, _) => {
-            exp_dotted_to_type_name(context, sp(loc, pdotted_))
-        }
-        _ => {
-            context.error(vec![
-                (loc, "Invalid type name. Expected: a name, a name with type arguments, or a module identifier and struct name"),
-            ]);
-            None
-        }
-    }
-}
-
-fn exp_dotted_to_type_name(
-    context: &mut Context,
-    pdotted: P::Exp,
-) -> Option<(E::TypeName, Option<Vec<E::SingleType>>)> {
-    use E::TypeName_ as ET;
-    use P::{Exp_ as PE, Value_ as V};
-    let (tn, ptys_opt) = match pdotted {
-        mdot!(loc, inner, nf, ptys_opt) => match *inner {
-            mdot!(mloc, maybe_addr, mf, None) => {
-                let addr = match *maybe_addr {
-                    sp!(_, PE::Value(sp!(_, V::Address(addr)))) => addr,
-                    sp!(loc, _) => {
-                        context.error(vec![(
-                            loc,
-                            "Invalid fully qualified module type name. Expected: an address",
-                        )]);
-                        return None;
-                    }
-                };
-                let mn = ModuleName(mf);
-                let mi_ = ModuleIdent_ {
-                    address: addr,
-                    name: mn,
-                };
-                let mi = ModuleIdent(sp(mloc, mi_));
-                let n = StructName(nf);
-                (sp(loc, ET::ModuleType(mi, n)), ptys_opt)
-            }
-            sp!(_, PE::MName(m)) => {
-                let mn = ModuleName(m);
-                let sn = StructName(nf);
-                let tn_ = type_name(context, sp(loc, P::TypeName_::ModuleType(mn, sn)))?.value;
-                (sp(loc, tn_), ptys_opt)
-            }
-            _ => {
-                context.error(vec![(
-                    loc,
-                    "Invalid module type name access. Expected: a (possibly qualified) struct name",
-                )]);
-                return None;
-            }
-        },
-        sp!(loc, _) => {
-            context.error(vec![(
-                loc,
-                "Invalid type name. Expected: a module identifier and struct name",
-            )]);
-            return None;
-        }
-    };
-    let tys_opt = ptys_opt.map(|tys| single_types(context, tys));
-    Some((tn, tys_opt))
-}
-
-//**************************************************************************************************
-// Call
-//**************************************************************************************************
-
-fn is_mname(plhs: &P::Exp) -> bool {
-    use P::Exp_ as PE;
-    match &plhs.value {
-        PE::MName(_) | PE::MNameTypeArgs(_, _) | PE::MDot(_, _, _) => true,
-        _ => false,
-    }
-}
-
-fn call_or_pack(context: &mut Context, plhs: P::Exp, prhs: P::Exp) -> Option<E::Exp_> {
-    Some(if is_mname(&plhs) {
-        let (tn, tys_opt) = exp_to_type_name(context, plhs)?;
-        let fields = exp_fields(context, prhs)?;
-        E::Exp_::Pack(tn, tys_opt, fields)
-    } else {
-        let (lhs, tys_opt) = call(context, plhs)?;
-        let rhs = exp(context, prhs);
-        E::Exp_::Call(Box::new(lhs), tys_opt, rhs)
-    })
-}
-
-fn call(
-    context: &mut Context,
-    sp!(loc, pe_): P::Exp,
-) -> Option<(E::Exp, Option<Vec<E::SingleType>>)> {
-    use E::Exp_ as EE;
-    use P::Exp_ as PE;
-    Some(match pe_ {
-        PE::NameTypeArgs(n, ptys) => {
-            let e = sp(loc, EE::Name(n));
-            let tys = single_types(context, ptys);
-            (e, Some(tys))
-        }
-        pdotted_ @ PE::Dot(_, _, _) => {
-            let (edotted, tys_opt) = exp_dotted_rec(context, sp(loc, pdotted_))?;
-            assert!(match &edotted.value {
-                E::ExpDotted_::Dot(_, _) => true,
-                _ => false,
-            });
-            (sp(loc, EE::ExpDotted(Box::new(edotted))), tys_opt)
-        }
-        _ => (exp_(context, sp(loc, pe_)), None),
-    })
-}
-
-fn exp_fields(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<Fields<E::Exp>> {
-    use E::Exp_ as EE;
-    use P::Exp_ as PE;
-    let msg = "Invalid fields for struct construction. Expected: named arguments";
-    let fields = match e_ {
-        PE::Block((v, last)) => {
-            if !v.is_empty() {
-                context.error(vec![(loc, msg)]);
-                return None;
-            }
-            match *last {
-                None => Fields::new(),
-                Some(sp!(_, PE::Name(n))) => {
-                    let f = Field(n.clone());
-                    let fa = sp(f.loc(), EE::Name(n));
-                    let mut fields = Fields::new();
-                    fields.add(f, (0, fa)).unwrap();
-                    fields
-                }
-                Some(_) => {
-                    context.error(vec![(loc, msg)]);
-                    return None;
-                }
-            }
-        }
-        PE::Fields(pfields) => {
-            let efields = pfields
-                .into_iter()
-                .map(|(f, e)| (f, exp_(context, e)))
-                .collect();
-            fields(context, loc, "struct construction", "argument", efields)
-        }
-        _ => {
-            context.error(vec![(loc, msg)]);
-            return None;
-        }
-    };
-    Some(fields)
+    Some(sp(loc, edotted_))
 }
 
 //**************************************************************************************************
@@ -931,7 +761,7 @@ fn bind(context: &mut Context, sp!(loc, pb_): P::Bind) -> Option<E::Bind> {
     let b_ = match pb_ {
         PB::Var(v) => EB::Var(v),
         PB::Unpack(ptn, ptys_opt, pfields) => {
-            let tn = type_name(context, ptn)?;
+            let tn = module_access(context, ptn)?;
             let tys_opt = ptys_opt.map(|pss| single_types(context, pss));
             let vfields: Option<Vec<(Field, E::Bind)>> = pfields
                 .into_iter()
@@ -964,7 +794,7 @@ fn lvalues(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<LValue> {
             let er = exp(context, *pr);
             L::Mutate(er)
         }
-        pdotted_ @ PE::Dot(_, _, _) => {
+        pdotted_ @ PE::Dot(_, _) => {
             let dotted = exp_dotted(context, sp(loc, pdotted_))?;
             L::FieldMutate(Box::new(dotted))
         }
@@ -978,10 +808,11 @@ fn assign(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<E::Assign> {
     use P::Exp_ as PE;
     let a_ = match e_ {
         PE::Name(n) => EA::Var(Var(n)),
-        PE::Apply(lhs, rhs) => {
-            let (tn, tys_opt) = exp_to_type_name(context, *lhs)?;
-            let fields = assign_unpack_fields(context, *rhs)?;
-            EA::Unpack(tn, tys_opt, fields)
+        PE::Pack(pn, ptys_opt, pfields) => {
+            let en = module_access(context, pn)?;
+            let tys_opt = ptys_opt.map(|pss| single_types(context, pss));
+            let efields = assign_unpack_fields(context, loc, pfields)?;
+            EA::Unpack(en, tys_opt, efields)
         }
         _ => {
             context.error(vec![
@@ -993,48 +824,20 @@ fn assign(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<E::Assign> {
     Some(sp(loc, a_))
 }
 
-fn assign_unpack_fields(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<Fields<E::Assign>> {
-    use E::Assign_ as EA;
-    use P::Exp_ as PE;
-    let msg = "Invalid fields for deconstructing assignment. Expected: named arguments";
-    let fields = match e_ {
-        PE::Block((v, last)) => {
-            if !v.is_empty() {
-                context.error(vec![(loc, msg)]);
-                return None;
-            }
-            match *last {
-                None => Fields::new(),
-                Some(sp!(_, PE::Name(n))) => {
-                    let f = Field(n.clone());
-                    let fa = sp(f.loc(), EA::Var(Var(n)));
-                    let mut fields = Fields::new();
-                    fields.add(f, (0, fa)).unwrap();
-                    fields
-                }
-                Some(_) => {
-                    context.error(vec![(loc, msg)]);
-                    return None;
-                }
-            }
-        }
-        PE::Fields(pfields) => {
-            let afields = pfields
-                .into_iter()
-                .map(|(f, e)| Some((f, assign(context, e)?)))
-                .collect::<Option<_>>()?;
-            fields(
-                context,
-                loc,
-                "deconstructing assignment",
-                "assignment binding",
-                afields,
-            )
-        }
-        _ => {
-            context.error(vec![(loc, msg)]);
-            return None;
-        }
-    };
-    Some(fields)
+fn assign_unpack_fields(
+    context: &mut Context,
+    loc: Loc,
+    pfields: Vec<(Field, P::Exp)>,
+) -> Option<Fields<E::Assign>> {
+    let afields = pfields
+        .into_iter()
+        .map(|(f, e)| Some((f, assign(context, e)?)))
+        .collect::<Option<_>>()?;
+    Some(fields(
+        context,
+        loc,
+        "deconstructing assignment",
+        "assignment binding",
+        afields,
+    ))
 }

@@ -12,10 +12,7 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
-use tokio::{
-    executor::Executor,
-    timer::{delay_for, Delay},
-};
+use tokio::time::{delay_for, Delay};
 
 /// A [`TimeoutTransport`] is a transport which wraps another transport with a timeout on all
 /// inbound and outbound connection setup.
@@ -135,10 +132,6 @@ where
     type Output = Result<O, TimeoutTransportError<E>>;
 
     fn poll(mut self: Pin<&mut Self>, mut context: &mut Context) -> Poll<Self::Output> {
-        // Make sure we're inside of a Tokio Runtime since Tokio Timers
-        // don't work outside of a Tokio context.
-        assert!(tokio::executor::DefaultExecutor::current().status().is_ok());
-
         // Try polling the inner future first
         match self.as_mut().project().future.poll(&mut context) {
             Poll::Pending => {}
@@ -159,7 +152,7 @@ where
 #[derive(Debug)]
 pub enum TimeoutTransportError<E> {
     Timeout,
-    TimerError(::tokio::timer::Error),
+    TimerError(::tokio::time::Error),
     TransportError(E),
 }
 

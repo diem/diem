@@ -12,7 +12,7 @@ use crate::{
     },
     ProtocolId,
 };
-use futures::{executor::block_on, future::join, StreamExt};
+use futures::{future::join, StreamExt};
 use libra_config::config::RoleType;
 use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, traits::ValidKey, x25519};
 use libra_types::{
@@ -43,7 +43,7 @@ fn test_network_builder() {
     let (_identity_private_key, identity_public_key) = x25519::compat::generate_keypair(&mut rng);
 
     let (_listen_addr, mut network_provider) =
-        NetworkBuilder::new(runtime.executor(), peer_id, addr, RoleType::Validator)
+        NetworkBuilder::new(runtime.handle().clone(), peer_id, addr, RoleType::Validator)
             .transport(TransportType::Memory)
             .signing_keys((signing_private_key, signing_public_key.clone()))
             .trusted_peers(
@@ -70,13 +70,13 @@ fn test_network_builder() {
         network_provider.add_consensus(vec![consensus_get_blocks_protocol.clone()]);
     let (_state_sync_network_sender, _state_sync_network_events) =
         network_provider.add_state_synchronizer(vec![synchronizer_get_chunks_protocol.clone()]);
-    runtime.executor().spawn(network_provider.start());
+    runtime.spawn(network_provider.start());
 }
 
 #[test]
 fn test_mempool_sync() {
     ::libra_logger::try_init_for_testing();
-    let runtime = Runtime::new().unwrap();
+    let mut runtime = Runtime::new().unwrap();
     let mempool_sync_protocol = ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL);
 
     // Setup peer ids.
@@ -116,7 +116,7 @@ fn test_mempool_sync() {
     // Set up the listener network
     let listener_addr: Multiaddr = "/memory/0".parse().unwrap();
     let (listener_addr, mut network_provider) = NetworkBuilder::new(
-        runtime.executor(),
+        runtime.handle().clone(),
         listener_peer_id,
         listener_addr,
         RoleType::Validator,
@@ -129,12 +129,12 @@ fn test_mempool_sync() {
     .build();
     let (_, mut listener_mp_net_events) =
         network_provider.add_mempool(vec![mempool_sync_protocol.clone()]);
-    runtime.executor().spawn(network_provider.start());
+    runtime.handle().spawn(network_provider.start());
 
     // Set up the dialer network
     let dialer_addr: Multiaddr = "/memory/0".parse().unwrap();
     let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
-        runtime.executor(),
+        runtime.handle().clone(),
         dialer_peer_id,
         dialer_addr,
         RoleType::Validator,
@@ -153,7 +153,7 @@ fn test_mempool_sync() {
     .build();
     let (mut dialer_mp_net_sender, mut dialer_mp_net_events) =
         network_provider.add_mempool(vec![mempool_sync_protocol.clone()]);
-    runtime.executor().spawn(network_provider.start());
+    runtime.handle().spawn(network_provider.start());
 
     // The dialer dials the listener and sends a mempool sync message
     let mut mempool_msg = MempoolSyncMsg::default();
@@ -204,7 +204,7 @@ fn test_mempool_sync() {
         }
     };
 
-    block_on(join(f_dialer, f_listener));
+    runtime.block_on(join(f_dialer, f_listener));
 }
 
 // Test that a permissioned end-point can connect to a permission-less end-point if both are
@@ -212,7 +212,7 @@ fn test_mempool_sync() {
 #[test]
 fn test_permissionless_mempool_sync() {
     ::libra_logger::try_init_for_testing();
-    let runtime = Runtime::new().unwrap();
+    let mut runtime = Runtime::new().unwrap();
     let mempool_sync_protocol = ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL);
 
     // Setup signing public keys.
@@ -251,7 +251,7 @@ fn test_permissionless_mempool_sync() {
     // Set up the listener network
     let listener_addr: Multiaddr = "/memory/0".parse().unwrap();
     let (listener_addr, mut network_provider) = NetworkBuilder::new(
-        runtime.executor(),
+        runtime.handle().clone(),
         listener_peer_id,
         listener_addr,
         RoleType::Validator,
@@ -267,12 +267,12 @@ fn test_permissionless_mempool_sync() {
     .build();
     let (_, mut listener_mp_net_events) =
         network_provider.add_mempool(vec![mempool_sync_protocol.clone()]);
-    runtime.executor().spawn(network_provider.start());
+    runtime.handle().spawn(network_provider.start());
 
     // Set up the dialer network
     let dialer_addr: Multiaddr = "/memory/0".parse().unwrap();
     let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
-        runtime.executor(),
+        runtime.handle().clone(),
         dialer_peer_id,
         dialer_addr,
         RoleType::Validator,
@@ -294,7 +294,7 @@ fn test_permissionless_mempool_sync() {
     .build();
     let (mut dialer_mp_net_sender, mut dialer_mp_net_events) =
         network_provider.add_mempool(vec![mempool_sync_protocol.clone()]);
-    runtime.executor().spawn(network_provider.start());
+    runtime.handle().spawn(network_provider.start());
 
     // The dialer dials the listener and sends a mempool sync message
     let mut mempool_msg = MempoolSyncMsg::default();
@@ -345,13 +345,13 @@ fn test_permissionless_mempool_sync() {
         }
     };
 
-    block_on(join(f_dialer, f_listener));
+    runtime.block_on(join(f_dialer, f_listener));
 }
 
 #[test]
 fn test_consensus_rpc() {
     ::libra_logger::try_init_for_testing();
-    let runtime = Runtime::new().unwrap();
+    let mut runtime = Runtime::new().unwrap();
     let rpc_protocol = ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL);
 
     // Setup peer ids.
@@ -391,7 +391,7 @@ fn test_consensus_rpc() {
     // Set up the listener network
     let listener_addr: Multiaddr = "/memory/0".parse().unwrap();
     let (listener_addr, mut network_provider) = NetworkBuilder::new(
-        runtime.executor(),
+        runtime.handle().clone(),
         listener_peer_id,
         listener_addr,
         RoleType::Validator,
@@ -404,12 +404,12 @@ fn test_consensus_rpc() {
     .build();
     let (_, mut listener_con_net_events) =
         network_provider.add_consensus(vec![rpc_protocol.clone()]);
-    runtime.executor().spawn(network_provider.start());
+    runtime.handle().spawn(network_provider.start());
 
     // Set up the dialer network
     let dialer_addr: Multiaddr = "/memory/0".parse().unwrap();
     let (_dialer_addr, mut network_provider) = NetworkBuilder::new(
-        runtime.executor(),
+        runtime.handle().clone(),
         dialer_peer_id,
         dialer_addr,
         RoleType::Validator,
@@ -428,7 +428,7 @@ fn test_consensus_rpc() {
     .build();
     let (mut dialer_con_net_sender, mut dialer_con_net_events) =
         network_provider.add_consensus(vec![rpc_protocol.clone()]);
-    runtime.executor().spawn(network_provider.start());
+    runtime.handle().spawn(network_provider.start());
 
     let req_block_msg = RequestBlock::default();
 
@@ -493,5 +493,5 @@ fn test_consensus_rpc() {
         }
     };
 
-    block_on(join(f_dialer, f_listener));
+    runtime.block_on(join(f_dialer, f_listener));
 }

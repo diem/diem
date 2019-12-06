@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vote_data::VoteData;
-use failure::prelude::*;
+use anyhow::{ensure, Context};
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
     block_info::BlockInfo,
@@ -94,7 +94,7 @@ impl QuorumCert {
         )
     }
 
-    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
         let vote_hash = self.vote_data.hash();
         ensure!(
             self.ledger_info().ledger_info().consensus_data_hash() == vote_hash,
@@ -120,7 +120,7 @@ impl QuorumCert {
         }
         self.ledger_info()
             .verify(validator)
-            .with_context(|e| format!("Fail to verify QuorumCert: {:?}", e))?;
+            .context("Fail to verify QuorumCert")?;
         Ok(())
     }
 }

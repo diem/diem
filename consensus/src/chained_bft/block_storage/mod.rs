@@ -5,6 +5,7 @@ use consensus_types::{
     executed_block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
 };
 use libra_crypto::HashValue;
+use libra_types::validator_verifier::VerifyError;
 use std::sync::Arc;
 
 mod block_store;
@@ -30,6 +31,8 @@ pub enum VoteReceptionResult {
     NewQuorumCertificate(Arc<QuorumCert>),
     /// The vote completes a new TimeoutCertificate
     NewTimeoutCertificate(Arc<TimeoutCertificate>),
+    /// There might be some issues adding a vote
+    ErrorAddingVote(VerifyError),
 }
 
 pub trait BlockReader: Send + Sync {
@@ -63,7 +66,7 @@ pub trait BlockReader: Send + Sync {
     fn highest_quorum_cert(&self) -> Arc<QuorumCert>;
 
     /// Return the quorum certificate that carries ledger info with the highest round
-    fn highest_ledger_info(&self) -> Arc<QuorumCert>;
+    fn highest_commit_cert(&self) -> Arc<QuorumCert>;
 
     /// Return the highest timeout certificate if available.
     fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>>;

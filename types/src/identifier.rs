@@ -26,7 +26,7 @@
 //! * specify keys for lookups in storage
 //! * do cross-module lookups while executing transactions
 
-use failure::prelude::*;
+use anyhow::{bail, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};

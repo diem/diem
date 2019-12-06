@@ -9,12 +9,13 @@
 /// module cache of all loaded modules in the VM.
 #[macro_export]
 macro_rules! with_loaded_vm {
-    ($module_generator:expr, $root_account:expr => $vm:ident, $mod:ident, $module_cache:ident) => {
+    ($num_modules:expr, $table_size:expr, $root_account:expr => $vm:ident, $mod:ident, $module_cache:ident) => {
         use vm::access::ModuleAccess;
 
         let mut modules = ::stdlib::stdlib_modules().to_vec();
-        let mut generated_modules = $module_generator.collect();
-        modules.append(&mut generated_modules);
+        let (root, mut callee_modules) = generate_padded_modules($num_modules, $table_size);
+        modules.append(&mut callee_modules);
+        modules.push(root);
         // The last module is the root module based upon how we generate modules.
         let root_module = modules
             .last()

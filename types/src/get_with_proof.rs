@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -19,7 +21,7 @@ use crate::{
     validator_change::ValidatorChangeEventWithProof,
     validator_verifier::ValidatorVerifier,
 };
-use failure::prelude::*;
+use anyhow::{bail, ensure, format_err, Error, Result};
 use libra_crypto::{hash::CryptoHash, *};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;

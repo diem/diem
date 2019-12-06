@@ -15,8 +15,8 @@ use crate::{
     },
 };
 use accumulator::{HashReader, MerkleAccumulator};
+use anyhow::{ensure, format_err, Result};
 use arc_swap::ArcSwap;
-use failure::prelude::*;
 use itertools::Itertools;
 use libra_crypto::{
     hash::{CryptoHash, TransactionAccumulatorHasher},

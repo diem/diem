@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{common::Round, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate};
-use failure::{ensure, ResultExt};
+use anyhow::{ensure, Context};
 use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use network;
@@ -18,7 +18,7 @@ pub struct SyncInfo {
     /// Highest quorum certificate known to the peer.
     highest_quorum_cert: QuorumCert,
     /// Highest ledger info known to the peer.
-    highest_ledger_info: QuorumCert,
+    highest_commit_cert: QuorumCert,
     /// Optional highest timeout certificate if available.
     highest_timeout_cert: Option<TimeoutCertificate>,
 }
@@ -31,10 +31,10 @@ impl Display for SyncInfo {
         };
         write!(
             f,
-            "SyncInfo[round: {}, HQC: {}, HLI: {}, HTC: {}]",
+            "SyncInfo[round: {}, HQC: {}, HCC: {}, HTC: {}]",
             self.highest_round(),
             self.highest_quorum_cert,
-            self.highest_ledger_info,
+            self.highest_commit_cert,
             htc_repr,
         )
     }
@@ -43,12 +43,12 @@ impl Display for SyncInfo {
 impl SyncInfo {
     pub fn new(
         highest_quorum_cert: QuorumCert,
-        highest_ledger_info: QuorumCert,
+        highest_commit_cert: QuorumCert,
         highest_timeout_cert: Option<TimeoutCertificate>,
     ) -> Self {
         Self {
             highest_quorum_cert,
-            highest_ledger_info,
+            highest_commit_cert,
             highest_timeout_cert,
         }
     }
@@ -59,8 +59,8 @@ impl SyncInfo {
     }
 
     /// Highest ledger info
-    pub fn highest_ledger_info(&self) -> &QuorumCert {
-        &self.highest_ledger_info
+    pub fn highest_commit_cert(&self) -> &QuorumCert {
+        &self.highest_commit_cert
     }
 
     /// Highest timeout certificate if available
@@ -82,11 +82,11 @@ impl SyncInfo {
         std::cmp::max(self.hqc_round(), self.htc_round())
     }
 
-    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
         let epoch = self.highest_quorum_cert.certified_block().epoch();
         ensure!(
-            epoch == self.highest_ledger_info.certified_block().epoch(),
-            "Multi epoch in SyncInfo - HLI and HQC"
+            epoch == self.highest_commit_cert.certified_block().epoch(),
+            "Multi epoch in SyncInfo - HCC and HQC"
         );
         if let Some(tc) = &self.highest_timeout_cert {
             ensure!(epoch == tc.epoch(), "Multi epoch in SyncInfo - TC and HQC");
@@ -94,23 +94,23 @@ impl SyncInfo {
 
         ensure!(
             self.highest_quorum_cert.certified_block().round()
-                >= self.highest_ledger_info.certified_block().round(),
-            "HQC has lower round than HLI"
+                >= self.highest_commit_cert.certified_block().round(),
+            "HQC has lower round than HCC"
         );
         ensure!(
-            *self.highest_ledger_info.commit_info() != BlockInfo::empty(),
-            "HLI has no committed block"
+            *self.highest_commit_cert.commit_info() != BlockInfo::empty(),
+            "HCC has no committed block"
         );
         self.highest_quorum_cert
             .verify(validator)
-            .and_then(|_| self.highest_ledger_info.verify(validator))
+            .and_then(|_| self.highest_commit_cert.verify(validator))
             .and_then(|_| {
                 if let Some(tc) = &self.highest_timeout_cert {
                     tc.verify(validator)?;
                 }
                 Ok(())
             })
-            .with_context(|e| format!("Fail to verify SyncInfo: {:?}", e))?;
+            .context("Fail to verify SyncInfo")?;
         Ok(())
     }
 
@@ -120,17 +120,17 @@ impl SyncInfo {
 }
 
 impl TryFrom<network::proto::SyncInfo> for SyncInfo {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(proto: network::proto::SyncInfo) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::SyncInfo) -> anyhow::Result<Self> {
         Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }
 
 impl TryFrom<SyncInfo> for network::proto::SyncInfo {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(info: SyncInfo) -> failure::Result<Self> {
+    fn try_from(info: SyncInfo) -> anyhow::Result<Self> {
         Ok(Self {
             bytes: lcs::to_bytes(&info)?,
         })

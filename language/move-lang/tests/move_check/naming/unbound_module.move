@@ -1,6 +1,6 @@
 module M {
-    use 0x0.X as X;
+    use 0x0::X as X;
     foo() {
-        X.foo();
+        X::foo();
     }
 }

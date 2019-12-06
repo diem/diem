@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Serialization of transactions and modules.
 //!
 //! This module exposes two entry points for serialization of `CompiledScript` and
@@ -8,7 +10,7 @@
 //! `CompiledModule`.
 
 use crate::{file_format::*, file_format_common::*, vm_string::VMString};
-use failure::*;
+use anyhow::{bail, Result};
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
 use std::ops::Deref;
 

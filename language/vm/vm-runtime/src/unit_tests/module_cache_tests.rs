@@ -14,10 +14,9 @@ use crate::{
         loaded_module::LoadedModule,
     },
 };
+use anyhow::{format_err, Result};
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
 use compiler::Compiler;
-use failure::*;
-use hex;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,

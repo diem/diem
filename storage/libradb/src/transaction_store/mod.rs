@@ -8,7 +8,7 @@ use crate::{
     change_set::ChangeSet, errors::LibraDbError,
     schema::transaction_by_account::TransactionByAccountSchema,
 };
-use failure::prelude::*;
+use anyhow::Result;
 use libra_types::{
     account_address::AccountAddress,
     transaction::{Transaction, Version},

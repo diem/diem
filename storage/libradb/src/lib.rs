@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This crate provides [`LibraDB`] which represents physical storage of the core Libra data
 //! structures.
 //!
@@ -42,7 +44,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use failure::prelude::*;
+use anyhow::{bail, ensure, format_err, Result};
 use itertools::{izip, zip_eq};
 use lazy_static::lazy_static;
 use libra_crypto::hash::{CryptoHash, HashValue};
@@ -138,7 +140,6 @@ impl LibraDB {
                 ColumnFamilyOptions::default(),
             ),
             (TRANSACTION_INFO_CF_NAME, ColumnFamilyOptions::default()),
-            (VALIDATOR_CF_NAME, ColumnFamilyOptions::default()),
             (BLOCK_INDEX_CF_NAME, ColumnFamilyOptions::default()),
         ]
         .iter()
@@ -147,10 +148,7 @@ impl LibraDB {
 
         let path = db_root_path.as_ref().join("libradb");
         let instant = Instant::now();
-        let db = Arc::new(
-            DB::open(path.clone(), cf_opts_map)
-                .unwrap_or_else(|e| panic!("LibraDB open failed: {:?}", e)),
-        );
+        let db = Arc::new(DB::open(path.clone(), cf_opts_map).expect("LibraDB open failed"));
 
         info!(
             "Opened LibraDB at {:?} in {} ms",
@@ -644,6 +642,19 @@ impl LibraDB {
         };
         let li_version = ledger_info_with_sigs.ledger_info().version();
         assert!(latest_tree_state.version >= li_version);
+        let current_epoch = if ledger_info_with_sigs
+            .ledger_info()
+            .next_validator_set()
+            .is_some()
+        {
+            ledger_info_with_sigs.ledger_info().epoch() + 1
+        } else {
+            ledger_info_with_sigs.ledger_info().epoch()
+        };
+        let ledger_info_with_validators = self
+            .get_epoch_change_ledger_infos(current_epoch - 1)?
+            .pop()
+            .ok_or_else(|| format_err!("ledger info with validators not found"))?;
 
         let startup_info = if latest_tree_state.version != li_version {
             // We synced to some version ahead of the version of the latest ledger info. Thus, we are still in sync mode.
@@ -655,6 +666,7 @@ impl LibraDB {
                 .get_ledger_frozen_subtree_hashes(committed_version)?;
             StartupInfo {
                 ledger_info: ledger_info_with_sigs,
+                ledger_info_with_validators,
                 committed_tree_state: TreeState::new(
                     committed_version,
                     committed_ledger_frozen_subtree_hashes,
@@ -666,6 +678,7 @@ impl LibraDB {
             // The version of the latest ledger info matches other data. So the storage is not in sync mode.
             StartupInfo {
                 ledger_info: ledger_info_with_sigs,
+                ledger_info_with_validators,
                 committed_tree_state: latest_tree_state,
                 synced_tree_state: None,
             }

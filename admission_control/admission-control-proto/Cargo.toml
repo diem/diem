@@ -10,12 +10,12 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 bytes = "0.4.12"
 futures = "0.1.28"
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 prost = "0.5.0"
 
-failure = { package = "libra-failure-ext", path = "../../common/failure-ext", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }

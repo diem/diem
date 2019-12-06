@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -11,7 +13,7 @@ use crate::{
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
-use failure::prelude::*;
+use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
     ed25519::*,
     hash::{CryptoHash, CryptoHasher, EventAccumulatorHasher},
@@ -29,6 +31,7 @@ use std::{
     time::Duration,
 };
 
+mod change_set;
 mod channel_transaction_payload;
 pub mod helpers;
 mod module;
@@ -36,6 +39,7 @@ mod script;
 mod script_action;
 mod transaction_argument;
 
+pub use change_set::ChangeSet;
 pub use module::Module;
 pub use script::{Script, SCRIPT_HASH_LENGTH};
 pub use script_action::{Action, ScriptAction};
@@ -178,7 +182,24 @@ impl RawTransaction {
         RawTransaction {
             sender,
             sequence_number,
-            payload: TransactionPayload::WriteSet(write_set),
+            payload: TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![])),
+            // Since write-set transactions bypass the VM, these fields aren't relevant.
+            max_gas_amount: 0,
+            gas_unit_price: 0,
+            // Write-set transactions are special and important and shouldn't expire.
+            expiration_time: Duration::new(u64::max_value(), 0),
+        }
+    }
+
+    pub fn new_change_set(
+        sender: AccountAddress,
+        sequence_number: u64,
+        change_set: ChangeSet,
+    ) -> Self {
+        RawTransaction {
+            sender,
+            sequence_number,
+            payload: TransactionPayload::WriteSet(change_set),
             // Since write-set transactions bypass the VM, these fields aren't relevant.
             max_gas_amount: 0,
             gas_unit_price: 0,
@@ -326,7 +347,7 @@ pub enum TransactionPayload {
     /// Deprecated. See https://developers.libra.org/blog/2019/10/22/simplifying-payloads for more
     /// details.
     Program,
-    WriteSet(WriteSet),
+    WriteSet(ChangeSet),
     /// A transaction that executes code.
     Script(Script),
     /// A transaction that publishes code.

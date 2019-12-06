@@ -141,12 +141,15 @@ message StartupInfo {
     // start up sync.
     types.LedgerInfoWithSignatures ledger_info = 1;
 
+    // The latest LedgerInfo that carries a ValidatorSet
+    types.LedgerInfoWithSignatures ledger_info_with_validators = 2;
+
     // The latest committed tree state matching the ledger info above.
-    TreeState committed_tree_state = 2;
+    TreeState committed_tree_state = 3;
 
     // The latest synced tree state when the number of transactions is more than ledger_info
     // indicates.
-    TreeState synced_tree_state = 3;
+    TreeState synced_tree_state = 4;
 }
 
 message GetEpochChangeLedgerInfosRequest {

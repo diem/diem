@@ -14,7 +14,7 @@ use channel;
 use libra_types::PeerId;
 
 /// Protocol id for mempool direct-send calls
-pub const MEMPOOL_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/mempool/direct-send/0.1.0";
+pub const MEMPOOL_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/mempool/0.1.0";
 
 /// The interface from Network to Mempool layer.
 ///

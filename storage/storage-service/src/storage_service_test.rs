@@ -4,7 +4,7 @@
 use super::*;
 use grpcio::EnvBuilder;
 use itertools::zip_eq;
-use libra_config::config::NodeConfigHelpers;
+use libra_config::config::NodeConfig;
 use libra_types::get_with_proof::{RequestItem, ResponseItem};
 use libradb::mock_genesis::db_with_mock_genesis;
 #[cfg(test)]
@@ -23,7 +23,7 @@ fn start_test_storage_with_read_write_client(
     StorageReadServiceClient,
     StorageWriteServiceClient,
 ) {
-    let mut config = NodeConfigHelpers::get_single_node_test_config(/* random_ports = */ true);
+    let mut config = NodeConfig::random();
     let tmp_dir = libra_tools::tempdir::TempPath::new();
     config.storage.dir = tmp_dir.path().to_path_buf();
 

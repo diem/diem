@@ -10,5 +10,4 @@ main() {
     return;
 }
 
-// check: VerificationFailure
 // check: WRITEREF_NO_MUTABLE_REFERENCE_ERROR

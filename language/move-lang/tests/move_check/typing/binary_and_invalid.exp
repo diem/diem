@@ -1,0 +1,238 @@
+error: 
+
+   ┌── tests/move_check/typing/binary_and_invalid.move:8:9 ───
+   │
+ 8 │         0 && 1;
+   │         ^ Invalid argument to '&&'
+   ·
+ 8 │         0 && 1;
+   │         - The type: 'u64'
+   ·
+ 8 │         0 && 1;
+   │         - Is not compatible with: 'bool'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/binary_and_invalid.move:8:9 ───
+   │
+ 8 │         0 && 1;
+   │              ^ Invalid argument to '&&'
+   ·
+ 8 │         0 && 1;
+   │              - The type: 'u64'
+   ·
+ 8 │         0 && 1;
+   │         - Is not compatible with: 'bool'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/binary_and_invalid.move:9:9 ───
+   │
+ 9 │         1 && false;
+   │         ^ Invalid argument to '&&'
+   ·
+ 9 │         1 && false;
+   │         - The type: 'u64'
+   ·
+ 9 │         1 && false;
+   │         - Is not compatible with: 'bool'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:10:9 ───
+    │
+ 10 │         false && 1;
+    │                  ^ Invalid argument to '&&'
+    ·
+ 10 │         false && 1;
+    │                  - The type: 'u64'
+    ·
+ 10 │         false && 1;
+    │         ----- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:11:9 ───
+    │
+ 11 │         0x0 && 0x1;
+    │         ^^^ Invalid argument to '&&'
+    ·
+ 11 │         0x0 && 0x1;
+    │         --- The type: 'address'
+    ·
+ 11 │         0x0 && 0x1;
+    │         --- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:11:9 ───
+    │
+ 11 │         0x0 && 0x1;
+    │                ^^^ Invalid argument to '&&'
+    ·
+ 11 │         0x0 && 0x1;
+    │                --- The type: 'address'
+    ·
+ 11 │         0x0 && 0x1;
+    │         --- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:7:19 ───
+    │
+ 12 │         r && r;
+    │         ^ Invalid argument to '&&'
+    ·
+ 7 │     t0(x: u64, r: R, s: S) {
+    │                   - The type: '0x8675309::M::R'
+    ·
+ 12 │         r && r;
+    │         - Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:7:19 ───
+    │
+ 12 │         r && r;
+    │              ^ Invalid argument to '&&'
+    ·
+ 7 │     t0(x: u64, r: R, s: S) {
+    │                   - The type: '0x8675309::M::R'
+    ·
+ 12 │         r && r;
+    │         - Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:7:25 ───
+    │
+ 13 │         s && s;
+    │         ^ Invalid argument to '&&'
+    ·
+ 7 │     t0(x: u64, r: R, s: S) {
+    │                         - The type: '0x8675309::M::S'
+    ·
+ 13 │         s && s;
+    │         - Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:7:25 ───
+    │
+ 13 │         s && s;
+    │              ^ Invalid argument to '&&'
+    ·
+ 7 │     t0(x: u64, r: R, s: S) {
+    │                         - The type: '0x8675309::M::S'
+    ·
+ 13 │         s && s;
+    │         - Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:14:9 ───
+    │
+ 14 │         () && ();
+    │         ^^ Invalid argument to '&&'
+    ·
+ 14 │         () && ();
+    │         -- The type: '()'
+    ·
+ 14 │         () && ();
+    │         -- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:14:9 ───
+    │
+ 14 │         () && ();
+    │               ^^ Invalid argument to '&&'
+    ·
+ 14 │         () && ();
+    │               -- The type: '()'
+    ·
+ 14 │         () && ();
+    │         -- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:15:9 ───
+    │
+ 15 │         true && ();
+    │                 ^^ Invalid argument to '&&'
+    ·
+ 15 │         true && ();
+    │                 -- The type: '()'
+    ·
+ 15 │         true && ();
+    │         ---- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:16:9 ───
+    │
+ 16 │         (true, false) && (true, false, true);
+    │         ^^^^^^^^^^^^^ Invalid argument to '&&'
+    ·
+ 16 │         (true, false) && (true, false, true);
+    │         ------------- The type: '(bool,bool)'
+    ·
+ 16 │         (true, false) && (true, false, true);
+    │         ------------- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:16:9 ───
+    │
+ 16 │         (true, false) && (true, false, true);
+    │                          ^^^^^^^^^^^^^^^^^^^ Invalid argument to '&&'
+    ·
+ 16 │         (true, false) && (true, false, true);
+    │                          ------------------- The type: '(bool,bool,bool)'
+    ·
+ 16 │         (true, false) && (true, false, true);
+    │         ------------- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:17:9 ───
+    │
+ 17 │         (true, true) && (false, false);
+    │         ^^^^^^^^^^^^ Invalid argument to '&&'
+    ·
+ 17 │         (true, true) && (false, false);
+    │         ------------ The type: '(bool,bool)'
+    ·
+ 17 │         (true, true) && (false, false);
+    │         ------------ Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_and_invalid.move:17:9 ───
+    │
+ 17 │         (true, true) && (false, false);
+    │                         ^^^^^^^^^^^^^^ Invalid argument to '&&'
+    ·
+ 17 │         (true, true) && (false, false);
+    │                         -------------- The type: '(bool,bool)'
+    ·
+ 17 │         (true, true) && (false, false);
+    │         ------------ Is not compatible with: 'bool'
+    │
+

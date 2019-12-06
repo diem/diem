@@ -4,12 +4,10 @@
 // The config holds the options that define the testing environment.
 // A config entry starts with "//!", differentiating it from a directive.
 
-use crate::{config::strip, errors::*, genesis_accounts::make_genesis_accounts};
+use crate::{common::strip, errors::*, genesis_accounts::make_genesis_accounts};
 use language_e2e_tests::account::{Account, AccountData};
-use libra_config::trusted_peers::ConfigHelpers;
-use libra_crypto::ed25519::{Ed25519PublicKey, Ed25519Signature};
-use libra_crypto::{HashValue, SigningKey};
-use libra_types::account_address::AccountAddress;
+use libra_config::generator;
+use libra_crypto::PrivateKey;
 use libra_types::validator_set::ValidatorSet;
 use std::{
     collections::{btree_map, BTreeMap},
@@ -204,9 +202,26 @@ impl Config {
         let mut validator_accounts = entries.iter().filter(|entry| entry.is_validator()).count();
 
         // generate a validator set with |validator_accounts| validators
-        let (validator_keys, consensus_config, network_config) =
-            ConfigHelpers::gen_validator_nodes(validator_accounts, None);
-        let validator_set = consensus_config.get_validator_set(&network_config);
+        let (validator_keys, validator_set) = if validator_accounts > 0 {
+            let mut configs = generator::validator_swarm_for_testing(validator_accounts)?;
+            let consensus_peers = &configs[0].consensus.consensus_peers;
+            let network_peers = &configs[0].validator_network.as_ref().unwrap().network_peers;
+            let validator_set = consensus_peers.get_validator_set(&network_peers);
+            let validator_keys: BTreeMap<_, _> = configs
+                .iter_mut()
+                .map(|c| {
+                    let peer_id = c.validator_network.as_ref().unwrap().peer_id;
+                    println!("{:?}", peer_id);
+                    let account_keypair =
+                        c.test.as_mut().unwrap().account_keypair.as_mut().unwrap();
+                    let privkey = account_keypair.take_private().unwrap();
+                    (peer_id, privkey)
+                })
+                .collect();
+            (validator_keys, validator_set)
+        } else {
+            (BTreeMap::new(), ValidatorSet::new(vec![]))
+        };
 
         let mut channels = BTreeMap::new();
         // initialize the keys of validator entries with the validator set
@@ -216,14 +231,10 @@ impl Config {
                 Entry::AccountDefinition(def) => {
                     let account_data = if entry.is_validator() {
                         validator_accounts -= 1;
-                        let validator_public_keys =
-                            validator_set.payload()[validator_accounts].clone();
-                        let validator_pubkey = validator_public_keys.consensus_public_key();
-                        let (validator_privkey, _) =
-                            &validator_keys[validator_public_keys.account_address()];
+                        let privkey = validator_keys.iter().nth(validator_accounts).unwrap().1;
                         AccountData::with_keypair(
-                            validator_privkey.consensus_private_key.clone(),
-                            validator_pubkey.clone(),
+                            privkey.clone(),
+                            privkey.public_key(),
                             def.balance.unwrap_or(DEFAULT_BALANCE),
                             def.sequence_number.unwrap_or(0),
                         )

@@ -14,9 +14,9 @@ use crate::{
     state_replication::{StateComputer, StateMachineReplication, TxnManager},
     util::time_service::ClockTimeService,
 };
+use anyhow::Result;
 use channel;
 use consensus_types::common::{Payload, Round};
-use failure::prelude::*;
 use futures::{select, stream::StreamExt};
 use libra_config::config::{ConsensusConfig, ConsensusProposerType, SafetyRulesConfig};
 use libra_logger::prelude::*;
@@ -24,7 +24,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use tokio::runtime::{Runtime, TaskExecutor};
+use tokio::runtime::{Handle, Runtime};
 
 /// Consensus configuration derived from ConsensusConfig
 pub struct ChainedBftSMRConfig {
@@ -92,7 +92,7 @@ impl<T: Payload> ChainedBftSMR<T> {
     }
 
     fn start_event_processing(
-        executor: TaskExecutor,
+        executor: Handle,
         mut epoch_manager: EpochManager<T>,
         mut event_processor: EventProcessor<T>,
         mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
@@ -171,13 +171,11 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             .initial_data
             .take()
             .expect("already started, initial data is None");
-        // Step 1 TODO: read validators from libradb instead of config
-        let validator = Arc::new(initial_setup.validator);
         let executor = self
             .runtime
             .as_mut()
             .expect("Consensus start: No valid runtime found!")
-            .executor();
+            .handle();
         let time_service = Arc::new(ClockTimeService::new(executor.clone()));
 
         let (timeout_sender, timeout_receiver) =
@@ -185,7 +183,8 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         let signer = Arc::new(initial_setup.signer);
         let epoch = initial_data.epoch();
-        let epoch_mgr = EpochManager::new(
+        let validators = initial_data.validators();
+        let mut epoch_mgr = EpochManager::new(
             epoch,
             self.config.take().expect("already started, config is None"),
             time_service,
@@ -199,7 +198,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         );
 
         // Step 2
-        let event_processor = epoch_mgr.start_epoch(signer, validator.clone(), initial_data);
+        let event_processor = epoch_mgr.start_epoch(signer, initial_data);
 
         // TODO: this is test only, we should remove this
         self.block_store = Some(event_processor.block_store());
@@ -208,11 +207,11 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             epoch,
             initial_setup.network_events,
             self_receiver,
-            validator,
+            validators,
         );
 
         Self::start_event_processing(
-            executor,
+            executor.clone(),
             epoch_mgr,
             event_processor,
             timeout_receiver,
@@ -225,8 +224,7 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
 
     /// Stop is synchronous: waits for all the worker threads to terminate.
     fn stop(&mut self) {
-        if let Some(rt) = self.runtime.take() {
-            rt.shutdown_now();
+        if let Some(_rt) = self.runtime.take() {
             debug!("Chained BFT SMR stopped.")
         }
     }

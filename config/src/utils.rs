@@ -2,8 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use get_if_addrs::get_if_addrs;
+use libra_types::PeerId;
 use parity_multiaddr::{Multiaddr, Protocol};
-use std::net::{IpAddr, TcpListener, TcpStream};
+use serde::{Serialize, Serializer};
+use std::{
+    collections::{BTreeMap, HashMap},
+    hash::BuildHasher,
+    net::{IpAddr, TcpListener, TcpStream},
+};
 
 /// Return an ephemeral, available port. On unix systems, the port returned will be in the
 /// TIME_WAIT state ensuring that the OS won't hand out this port for some grace period.
@@ -53,4 +59,29 @@ pub fn get_local_ip() -> Option<Multiaddr> {
                 Some(addr)
             })
     })
+}
+
+pub fn get_available_port_in_multiaddr(is_ipv4: bool) -> Multiaddr {
+    let mut addr = Multiaddr::empty();
+    if is_ipv4 {
+        addr.push(Protocol::Ip4("0.0.0.0".parse().unwrap()));
+    } else {
+        addr.push(Protocol::Ip6("::1".parse().unwrap()));
+    }
+    addr.push(Protocol::Tcp(get_available_port()));
+    addr
+}
+
+/// Serialize HashMaps as BTreeMaps for consistent ordering
+pub fn serialize_ordered_map<S, V, H>(
+    value: &HashMap<PeerId, V, H>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+    H: BuildHasher,
+    V: Serialize,
+{
+    let ordered: BTreeMap<_, _> = value.iter().collect();
+    ordered.serialize(serializer)
 }

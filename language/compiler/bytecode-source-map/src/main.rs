@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use bytecode_source_map::disassembler::{Disassembler, DisassemblerOptions};
 use bytecode_source_map::mapping::SourceMapping;
 use bytecode_source_map::source_map::ModuleSourceMap;

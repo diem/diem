@@ -19,9 +19,9 @@ use libra_types::{validator_public_keys::ValidatorPublicKeys, PeerId};
 use std::time::Duration;
 
 /// Protocol id for consensus RPC calls
-pub const CONSENSUS_RPC_PROTOCOL: &[u8] = b"/libra/consensus/rpc/0.1.0";
+pub const CONSENSUS_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/consensus/0.1.0";
 /// Protocol id for consensus direct-send calls
-pub const CONSENSUS_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/consensus/direct-send/0.1.0";
+pub const CONSENSUS_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/consensus/0.1.0";
 
 /// The interface from Network to Consensus layer.
 ///

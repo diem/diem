@@ -1,6 +1,3 @@
-// check: VerificationFailure
-// check: NEGATIVE_STACK_SIZE_WITHIN_BLOCK
-
 module Test {
     resource T { }
 
@@ -17,24 +14,4 @@ module Test {
         return;
     }
 }
-
-//! new-transaction
-
-import {{default}}.Test;
-
-main() {
-    let i: u64;
-    let t: Test.T;
-    let a: u64;
-    let b: bool;
-    let x: Test.T;
-
-    i = 0;
-    t = Test.new();
-    a, x, b = Test.test(&i, move(t));
-    assert(move(a) == 0, 42);
-    Test.destroy(move(x));
-    assert(!move(b), 43);
-
-    return;
-}
+// check: NEGATIVE_STACK_SIZE_WITHIN_BLOCK

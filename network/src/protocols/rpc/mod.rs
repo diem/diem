@@ -21,7 +21,7 @@
 //!    higher layers to specify. The rpc protocol is only concerned with shipping
 //!    around opaque blobs. Current libra rpc clients (consensus, mempool) mostly
 //!    send protobuf enums around over a single rpc protocol,
-//!    e.g., `/libra/consensus/rpc/0.1.0`.
+//!    e.g., `/libra/rpc/0.1.0/consensus/0.1.0`.
 //!
 //! ## Wire Protocol (dialer):
 //!
@@ -29,7 +29,7 @@
 //!
 //! 1. Requests a new outbound substream from the muxer.
 //! 2. Negotiates the substream using [`protocol-select`] to the rpc method they
-//!    wish to call, e.g., `/libra/mempool/rpc/0.1.0`.
+//!    wish to call, e.g., `/libra/rpc/0.1.0/mempool/0.10`.
 //! 3. Sends the serialized request arguments on the newly negotiated substream.
 //! 4. Half-closes their output side.
 //! 5. Awaits the serialized response message from remote.
@@ -62,7 +62,7 @@ use crate::{
     ProtocolId,
 };
 use bounded_executor::BoundedExecutor;
-use bytes::Bytes;
+use bytes05::Bytes;
 use channel;
 use error::RpcError;
 use futures::{
@@ -77,11 +77,8 @@ use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::compat::IoCompat;
 use std::{fmt::Debug, io, time::Duration};
-use tokio::{
-    codec::{Framed, LengthDelimitedCodec},
-    future::FutureExt as _,
-    runtime::TaskExecutor,
-};
+use tokio::runtime::Handle;
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 pub mod error;
 pub mod utils;
@@ -97,7 +94,7 @@ pub mod fuzzing;
 /// A wrapper struct for an inbound rpc request and its associated context.
 #[derive(Debug)]
 pub struct InboundRpcRequest {
-    /// Rpc method identifier, e.g., `/libra/consensus/rpc/0.1.0`. This is used
+    /// Rpc method identifier, e.g., `/libra/rpc/0.1.0/consensus/0.1.0`. This is used
     /// to dispatch the request to the corresponding client handler.
     pub protocol: ProtocolId,
     /// The serialized request data received from the sender.
@@ -122,7 +119,7 @@ pub struct InboundRpcRequest {
 /// A wrapper struct for an outbound rpc request and its associated context.
 #[derive(Debug)]
 pub struct OutboundRpcRequest {
-    /// Rpc method identifier, e.g., `/libra/consensus/rpc/0.1.0`. This is the
+    /// Rpc method identifier, e.g., `/libra/rpc/0.1.0/consensus/0.1.0`. This is the
     /// protocol we will negotiate our outbound substream to.
     pub protocol: ProtocolId,
     /// The serialized request data to be sent to the receiver.
@@ -158,7 +155,7 @@ pub enum RpcNotification {
 /// The rpc actor.
 pub struct Rpc<TSubstream> {
     /// Executor to spawn inbound and outbound handler tasks.
-    executor: TaskExecutor,
+    executor: Handle,
     /// Channel to receive requests from other upstream actors.
     requests_rx: channel::Receiver<RpcRequest>,
     /// Channel to receive notifications from [`PeerManager`](crate::peer_manager::PeerManager).
@@ -185,7 +182,7 @@ where
 {
     /// Create a new instance of the [`Rpc`] protocol actor.
     pub fn new(
-        executor: TaskExecutor,
+        executor: Handle,
         requests_rx: channel::Receiver<RpcRequest>,
         peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
         peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
@@ -301,17 +298,19 @@ async fn handle_outbound_rpc<TSubstream>(
             let timeout = req.timeout;
 
             // Future to run the actual outbound rpc protocol and get the results.
-            let mut f_rpc_res = handle_outbound_rpc_inner(peer_mgr_tx, peer_id, protocol, req_data)
-                .timeout(timeout)
-                .map_err(Into::<RpcError>::into)
-                .map(|r| r.and_then(|x| x))
-                .boxed()
-                .fuse();
+            let mut f_rpc_res = tokio::time::timeout(
+                timeout,
+                handle_outbound_rpc_inner(peer_mgr_tx, peer_id, protocol, req_data),
+            )
+            .map_err(Into::<RpcError>::into)
+            .map(|r| r.and_then(|x| x))
+            .boxed()
+            .fuse();
 
             // If the rpc client drops their oneshot receiver, this future should
             // cancel the request.
             let mut f_rpc_cancel =
-                future::poll_fn(|cx: &mut Context| res_tx.poll_cancel(cx)).fuse();
+                future::poll_fn(|cx: &mut Context| res_tx.poll_canceled(cx)).fuse();
 
             futures::select! {
                 res = f_rpc_res => {
@@ -400,13 +399,15 @@ async fn handle_inbound_substream<TSubstream>(
     match notif {
         PeerManagerNotification::NewInboundSubstream(peer_id, substream) => {
             // Run the actual inbound rpc protocol.
-            let res = handle_inbound_substream_inner(
-                notification_tx,
-                peer_id,
-                substream.protocol,
-                substream.substream,
+            let res = tokio::time::timeout(
+                timeout,
+                handle_inbound_substream_inner(
+                    notification_tx,
+                    peer_id,
+                    substream.protocol,
+                    substream.substream,
+                ),
             )
-            .timeout(timeout)
             .map_err(Into::<RpcError>::into)
             .map(|r| r.and_then(|x| x))
             .await;

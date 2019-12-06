@@ -51,7 +51,7 @@ error:
    │                        --- The type: 'u64'
    ·
  8 │     t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-   │                                                  ---- Is is not compatible with: 'bool'
+   │                                                  ---- Is not compatible with: 'bool'
    │
 
 error: 
@@ -65,7 +65,7 @@ error:
     │                                                  ---- The type: 'bool'
     ·
  8 │     t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                        --- Is is not compatible with: 'u64'
+    │                        --- Is not compatible with: 'u64'
     │
 
 error: 
@@ -79,7 +79,7 @@ error:
     │                                         --- The type: 'u64'
     ·
  8 │     t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                                                  ---- Is is not compatible with: 'bool'
+    │                                                  ---- Is not compatible with: 'bool'
     │
 
 error: 
@@ -93,7 +93,7 @@ error:
     │                                                  ---- The type: 'bool'
     ·
  8 │     t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                                         --- Is is not compatible with: 'u64'
+    │                                         --- Is not compatible with: 'u64'
     │
 
 error: 
@@ -107,7 +107,7 @@ error:
     │                        --- The type: 'u64'
     ·
  8 │     t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                                                                    ---- Is is not compatible with: 'bool'
+    │                                                                    ---- Is not compatible with: 'bool'
     │
 
 error: 
@@ -121,7 +121,7 @@ error:
     │                                                                    ---- The type: 'bool'
     ·
  8 │     t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                        --- Is is not compatible with: 'u64'
+    │                        --- Is not compatible with: 'u64'
     │
 
 error: 
@@ -135,7 +135,7 @@ error:
     │                                         --- The type: 'u64'
     ·
  8 │     t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                                                                    ---- Is is not compatible with: 'bool'
+    │                                                                    ---- Is not compatible with: 'bool'
     │
 
 error: 
@@ -149,7 +149,7 @@ error:
     │                                                                    ---- The type: 'bool'
     ·
  8 │     t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                                         --- Is is not compatible with: 'u64'
+    │                                         --- Is not compatible with: 'u64'
     │
 
 error: 

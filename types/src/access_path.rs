@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Suppose we have the following data structure in a smart contract:
 //!
 //! struct B {
@@ -48,10 +50,10 @@ use crate::{
     language_storage::{ModuleId, ResourceKey, StructTag},
     validator_set::validator_set_path,
 };
-use failure::prelude::*;
-use hex;
+use anyhow::{Error, Result};
 use lazy_static::lazy_static;
-use libra_crypto::hash::HashValue;
+use libra_crypto::hash::{CryptoHash, HashValue};
+use mirai_annotations::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use radix_trie::TrieKey;
@@ -117,6 +119,7 @@ impl fmt::Display for Access {
 /// Non-empty sequence of field accesses
 #[derive(Eq, Hash, Serialize, Deserialize, Debug, Clone, PartialEq, Ord, PartialOrd)]
 pub struct Accesses(Vec<Access>);
+// invariant self.0.len() == 1
 
 /// SEPARATOR is used as a delimiter between fields. It should not be a legal part of any identifier
 /// in the language
@@ -173,6 +176,7 @@ impl Accesses {
 
     /// Return the last access in the sequence
     pub fn last(&self) -> &Access {
+        assume!(self.0.last().is_some()); // follows from invariant
         self.0.last().unwrap() // guaranteed not to fail because sequence is non-empty
     }
 

@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This crate implements the storage [GRPC](http://grpc.io) service.
 //!
 //! The user of storage service is supposed to use it via client lib provided in
@@ -12,7 +14,7 @@ pub mod mocks;
 mod storage_service;
 pub use storage_service::start_storage_service_and_return_service;
 
-use failure::prelude::*;
+use anyhow::Result;
 use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle};
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
@@ -38,7 +40,7 @@ use storage_proto::proto::storage::{
 };
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
-    let (storage_service, shutdown_receiver) = StorageService::new(&config.get_storage_dir());
+    let (storage_service, shutdown_receiver) = StorageService::new(&config.storage.dir());
     spawn_service_thread_with_drop_closure(
         create_storage(storage_service),
         config.storage.address.clone(),

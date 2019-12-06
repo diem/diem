@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use libra_config::config::{NodeConfig, RoleType};
 use libra_swarm::{client, swarm::LibraSwarm};
 use libra_tools::tempdir::TempPath;
@@ -83,7 +85,7 @@ fn main() {
             .expect("Failed to launch full node swarm");
     }
 
-    let validator_config = NodeConfig::load(&validator_swarm.config.configs[0]).unwrap();
+    let validator_config = NodeConfig::load(&validator_swarm.config.config_files[0]).unwrap();
     let validator_set_file = validator_swarm
         .dir
         .as_ref()
@@ -100,7 +102,7 @@ fn main() {
     );
     let node_address_list = validator_swarm
         .config
-        .configs
+        .config_files
         .iter()
         .map(|config| {
             let port = NodeConfig::load(config)
@@ -117,7 +119,7 @@ fn main() {
         faucet_key_file_path, node_address_list,
     );
     if let Some(ref swarm) = full_node_swarm {
-        let full_node_config = NodeConfig::load(&swarm.config.configs[0]).unwrap();
+        let full_node_config = NodeConfig::load(&swarm.config.config_files[0]).unwrap();
         println!("To connect to the full nodes you just spawned, use this command:");
         println!(
             "\tcargo run --bin client -- -a localhost -p {} -s {:?} -m {:?}",

@@ -2,5 +2,4 @@ module No {
     native public made_up(x: u64): u64;
 }
 
-// check: VerificationFailure
 // check: MISSING_DEPENDENCY

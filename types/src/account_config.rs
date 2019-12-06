@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
@@ -10,7 +12,7 @@ use crate::{
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
-use failure::prelude::*;
+use anyhow::{bail, Result};
 use lazy_static::lazy_static;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -232,6 +234,15 @@ pub struct AccountEvent {
 }
 
 impl AccountEvent {
+    // TODO: should only be used for libra client testing and be removed eventually
+    pub fn new(amount: u64, account: AccountAddress, metadata: Vec<u8>) -> Self {
+        Self {
+            amount,
+            account,
+            metadata,
+        }
+    }
+
     pub fn try_from(bytes: &[u8]) -> Result<AccountEvent> {
         lcs::from_bytes(bytes).map_err(Into::into)
     }

@@ -10,11 +10,12 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bytes = { version = "0.4.12", default-features = false }
-futures = { version = "=0.3.0-alpha.19", package = "futures-preview", features = ["async-await", "io-compat", "compat"] }
+bytes = "0.5"
+futures = { version = "0.3.0", features = ["io-compat", "compat"] }
 futures_01 = { version = "0.1.28", package = "futures" }
 parity-multiaddr = "0.5.0"
-tokio = "=0.2.0-alpha.6"
+tokio = { version = "0.2", features = ["full"] }
+tokio-util = { version = "0.2", features = ["codec"] }
 
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 memsocket = { path = "../memsocket", version = "0.1.0" }

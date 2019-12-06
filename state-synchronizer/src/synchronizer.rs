@@ -6,10 +6,11 @@ use crate::{
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     SynchronizerState,
 };
+use anyhow::Result;
 use executor::Executor;
-use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
+    executor::block_on,
     future::Future,
     SinkExt,
 };
@@ -36,7 +37,7 @@ impl StateSynchronizer {
         let executor_proxy = ExecutorProxy::new(executor, config);
         Self::bootstrap_with_executor_proxy(
             network,
-            config.get_role(),
+            config.base.role,
             &config.state_sync,
             executor_proxy,
         )
@@ -49,18 +50,23 @@ impl StateSynchronizer {
         executor_proxy: E,
     ) -> Self {
         let runtime = Builder::new()
-            .name_prefix("state-sync-")
+            .thread_name("state-sync-")
+            .threaded_scheduler()
+            .enable_all()
             .build()
             .expect("[state synchronizer] failed to create runtime");
-        let executor = runtime.executor();
+        let executor = runtime.handle();
 
         let (coordinator_sender, coordinator_receiver) = mpsc::unbounded();
 
+        let initial_state = block_on(executor_proxy.get_local_storage_state())
+            .expect("[state sync] Start failure: cannot sync with storage.");
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,
             role,
             state_sync_config.clone(),
             executor_proxy,
+            initial_state,
         );
         executor.spawn(coordinator.start(network));
 

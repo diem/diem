@@ -9,7 +9,7 @@ error:
    │              - The type: 'u64'
    ·
  3 │         loop 0
-   │              - Is is not compatible with: '()'
+   │              - Is not compatible with: '()'
    │
 
 error: 
@@ -23,7 +23,7 @@ error:
    │              ----- The type: 'bool'
    ·
  7 │         loop false
-   │              ----- Is is not compatible with: '()'
+   │              ----- Is not compatible with: '()'
    │
 
 error: 
@@ -37,7 +37,7 @@ error:
     │                --- The type: 'address'
     ·
  11 │         loop { 0x0 }
-    │              ------- Is is not compatible with: '()'
+    │              ------- Is not compatible with: '()'
     │
 
 error: 
@@ -51,7 +51,7 @@ error:
     │                        - The type: 'u64'
     ·
  15 │         loop { let x = 0; x }
-    │              ---------------- Is is not compatible with: '()'
+    │              ---------------- Is not compatible with: '()'
     │
 
 error: 
@@ -65,6 +65,6 @@ error:
     │                          - The type: 'u64'
     ·
  19 │         loop { if (true) 1 else 0 }
-    │              ---------------------- Is is not compatible with: '()'
+    │              ---------------------- Is not compatible with: '()'
     │
 

@@ -12,7 +12,6 @@ use consensus_types::{
     vote_data::VoteData,
     vote_proposal::VoteProposal,
 };
-use failure::Fail;
 use libra_crypto::hash::HashValue;
 use libra_types::{
     block_info::BlockInfo,
@@ -22,28 +21,27 @@ use libra_types::{
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
+use thiserror::Error;
 
-#[derive(Debug, Fail, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 /// Different reasons for proposal rejection
 pub enum Error {
-    #[fail(
-        display = "Unable to verify that the new tree extneds the parent: {:?}",
-        error
-    )]
+    #[error("Unable to verify that the new tree extneds the parent: {:?}", error)]
     InvalidAccumulatorExtension { error: String },
 
     /// This proposal's round is less than round of preferred block.
     /// Returns the id of the preferred block.
-    #[fail(
-        display = "Proposal's round is lower than round of preferred block at round {:?}",
+    #[error(
+        "Proposal's round is lower than round of preferred block at round {:?}",
         preferred_round
     )]
     ProposalRoundLowerThenPreferredBlock { preferred_round: Round },
 
     /// This proposal is too old - return last_voted_round
-    #[fail(
-        display = "Proposal at round {:?} is not newer than the last vote round {:?}",
-        proposal_round, last_voted_round
+    #[error(
+        "Proposal at round {:?} is not newer than the last vote round {:?}",
+        proposal_round,
+        last_voted_round
     )]
     OldProposal {
         last_voted_round: Round,

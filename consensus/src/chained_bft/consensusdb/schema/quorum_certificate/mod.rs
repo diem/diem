@@ -10,8 +10,8 @@
 //! ```
 
 use super::QC_CF_NAME;
+use anyhow::Result;
 use consensus_types::quorum_cert::QuorumCert;
-use failure::prelude::*;
 use libra_crypto::HashValue;
 use schemadb::{
     define_schema,

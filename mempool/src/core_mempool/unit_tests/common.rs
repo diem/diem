@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::core_mempool::{CoreMempool, TimelineState, TxnPointer};
-use failure::prelude::*;
+use anyhow::{format_err, Result};
 use lazy_static::lazy_static;
-use libra_config::config::NodeConfigHelpers;
+use libra_config::config::NodeConfig;
 use libra_crypto::ed25519::*;
 use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use libra_types::{
@@ -16,7 +16,7 @@ use std::{collections::HashSet, iter::FromIterator};
 
 pub(crate) fn setup_mempool() -> (CoreMempool, ConsensusMock) {
     (
-        CoreMempool::new(&NodeConfigHelpers::get_single_node_test_config(true)),
+        CoreMempool::new(&NodeConfig::random()),
         ConsensusMock::new(),
     )
 }

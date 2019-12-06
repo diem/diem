@@ -1,0 +1,112 @@
+error: 
+
+   ┌── tests/move_check/typing/unary_not_invalid.move:7:10 ───
+   │
+ 7 │         !&true;
+   │          ^^^^^ Invalid argument to '!'
+   ·
+ 7 │         !&true;
+   │          ----- The type: '&bool'
+   ·
+ 7 │         !&true;
+   │          ----- Is not compatible with: 'bool'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/unary_not_invalid.move:8:10 ───
+   │
+ 8 │         !&false;
+   │          ^^^^^^ Invalid argument to '!'
+   ·
+ 8 │         !&false;
+   │          ------ The type: '&bool'
+   ·
+ 8 │         !&false;
+   │          ------ Is not compatible with: 'bool'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/unary_not_invalid.move:9:10 ───
+   │
+ 9 │         !0;
+   │          ^ Invalid argument to '!'
+   ·
+ 9 │         !0;
+   │          - The type: 'u64'
+   ·
+ 9 │         !0;
+   │          - Is not compatible with: 'bool'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/unary_not_invalid.move:10:10 ───
+    │
+ 10 │         !1;
+    │          ^ Invalid argument to '!'
+    ·
+ 10 │         !1;
+    │          - The type: 'u64'
+    ·
+ 10 │         !1;
+    │          - Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/unary_not_invalid.move:6:20 ───
+    │
+ 11 │         !r;
+    │          ^ Invalid argument to '!'
+    ·
+ 6 │     t0(x: bool, r: R) {
+    │                    - The type: '0x8675309::M::R'
+    ·
+ 11 │         !r;
+    │          - Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/unary_not_invalid.move:6:20 ───
+    │
+ 12 │         !r;
+    │          ^ Invalid argument to '!'
+    ·
+ 6 │     t0(x: bool, r: R) {
+    │                    - The type: '0x8675309::M::R'
+    ·
+ 12 │         !r;
+    │          - Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/unary_not_invalid.move:13:10 ───
+    │
+ 13 │         !(0, false);
+    │          ^^^^^^^^^^ Invalid argument to '!'
+    ·
+ 13 │         !(0, false);
+    │          ---------- The type: '(u64,bool)'
+    ·
+ 13 │         !(0, false);
+    │          ---------- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/unary_not_invalid.move:14:10 ───
+    │
+ 14 │         !();
+    │          ^^ Invalid argument to '!'
+    ·
+ 14 │         !();
+    │          -- The type: '()'
+    ·
+ 14 │         !();
+    │          -- Is not compatible with: 'bool'
+    │
+

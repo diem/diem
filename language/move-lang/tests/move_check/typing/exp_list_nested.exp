@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/typing/exp_list_nested.move:6:13 ───
+   │
+ 6 │         (0, (S{}, R{}))
+   │             ^^^^^^^^^^ Invalid result list item. Expected an expression of a single type but got an expression of the list: (0x8675309::M::S,0x8675309::M::R<_>)
+   ·
+ 6 │         (0, (S{}, R{}))
+   │             ---------- Type found here
+   │
+

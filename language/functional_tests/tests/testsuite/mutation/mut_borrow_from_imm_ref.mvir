@@ -1,6 +1,3 @@
-// check: VerificationFailure
-// check: MOVELOC_UNAVAILABLE_ERROR
-
 module Token {
     resource T{value: u64}
     public new(m: u64): Self.T {
@@ -21,17 +18,4 @@ module Token {
         return;
     }
 }
-
-//! new-transaction
-
-import {{default}}.Token;
-
-main() {
-    let t: Token.T;
-    let tr: &Token.T;
-    t = Token.new(42);
-    tr = &t;
-    Token.bump_value(move(tr));
-    Token.destroy(move(t));
-    return;
-}
+// check: MOVELOC_UNAVAILABLE_ERROR

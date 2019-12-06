@@ -1,8 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::account_address::AccountAddress;
-use failure::prelude::*;
+use anyhow::{ensure, Error, Result};
 use hex;
 #[cfg(feature = "fuzzing")]
 use rand::{rngs::OsRng, RngCore};
@@ -158,7 +160,7 @@ impl<'de> de::Deserialize<'de> for EventKey {
 }
 
 impl TryFrom<&[u8]> for EventKey {
-    type Error = failure::Error;
+    type Error = Error;
 
     /// Tries to convert the provided byte array into Event Key.
     fn try_from(bytes: &[u8]) -> Result<EventKey> {

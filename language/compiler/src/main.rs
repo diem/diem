@@ -1,6 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
+use anyhow::Context;
 use bytecode_verifier::{
     verifier::{verify_module_dependencies, VerifiedProgram},
     VerifiedModule,
@@ -73,9 +76,11 @@ fn do_verify_module(module: CompiledModule, dependencies: &[VerifiedModule]) -> 
 
 fn write_output(path: &PathBuf, buf: &[u8]) {
     let mut f = fs::File::create(path)
-        .unwrap_or_else(|err| panic!("Unable to open output file {:?}: {}", path, err));
+        .with_context(|| format!("Unable to open output file {:?}", path))
+        .unwrap();
     f.write_all(&buf)
-        .unwrap_or_else(|err| panic!("Unable to write to output file {:?}: {}", path, err));
+        .with_context(|| format!("Unable to write to output file {:?}", path))
+        .unwrap();
 }
 
 fn main() {

@@ -45,6 +45,9 @@ pub enum SecurityEvent {
     /// HealthChecker received an invalid message
     InvalidHealthCheckerMsg,
 
+    /// A received block is invalid
+    InvalidRetrievedBlock,
+
     /// A block being committed or executed is invalid
     InvalidBlock,
 

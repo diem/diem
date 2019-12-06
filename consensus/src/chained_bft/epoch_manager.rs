@@ -35,7 +35,7 @@ pub struct EpochManager<T> {
     epoch: u64,
     config: ChainedBftSMRConfig,
     time_service: Arc<ClockTimeService>,
-    self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+    self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
     network_sender: ConsensusNetworkSender,
     timeout_sender: channel::Sender<Round>,
     txn_manager: Arc<dyn TxnManager<Payload = T>>,
@@ -51,7 +51,7 @@ impl<T: Payload> EpochManager<T> {
         epoch: u64,
         config: ChainedBftSMRConfig,
         time_service: Arc<ClockTimeService>,
-        self_sender: channel::Sender<failure::Result<Event<ConsensusMsg>>>,
+        self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
         network_sender: ConsensusNetworkSender,
         timeout_sender: channel::Sender<Round>,
         txn_manager: Arc<dyn TxnManager<Payload = T>>,
@@ -166,41 +166,42 @@ impl<T: Payload> EpochManager<T> {
     }
 
     pub fn start_new_epoch(&mut self, ledger_info: LedgerInfoWithSignatures) -> EventProcessor<T> {
-        let validators = ledger_info
-            .ledger_info()
-            .next_validator_set()
-            .expect("should have ValidatorSet when start new epoch")
-            .into();
         // make sure storage is on this ledger_info too, it should be no-op if it's already committed
         self.state_computer.sync_to_or_bail(ledger_info.clone());
-        let initial_data = RecoveryData::new(None, vec![], vec![], ledger_info.ledger_info(), None)
-            .expect("should be able to build new epoch RecoveryData");
+        let initial_data = self.storage.start();
         self.epoch = initial_data.epoch();
+        self.start_epoch(self.signer.clone(), initial_data)
+    }
+
+    pub fn start_epoch(
+        &mut self,
+        signer: Arc<ValidatorSigner>,
+        initial_data: RecoveryData<T>,
+    ) -> EventProcessor<T> {
+        let validators = initial_data.validators();
+        counters::EPOCH.set(self.epoch as i64);
+        counters::CURRENT_EPOCH_VALIDATORS.set(validators.len() as i64);
+        counters::CURRENT_EPOCH_QUORUM_SIZE.set(validators.quorum_voting_power() as i64);
         info!(
-            "Start new epoch {} with genesis {}, validators {}",
+            "Start EventProcessor with epoch {} with genesis {}, validators {}",
             self.epoch,
             initial_data.root_block(),
             validators,
         );
-        self.start_epoch(self.signer.clone(), Arc::new(validators), initial_data)
-    }
-
-    pub fn start_epoch(
-        &self,
-        signer: Arc<ValidatorSigner>,
-        validators: Arc<ValidatorVerifier>,
-        initial_data: RecoveryData<T>,
-    ) -> EventProcessor<T> {
-        counters::EPOCH.set(self.epoch as i64);
+        block_on(
+            self.network_sender
+                .update_eligible_nodes(initial_data.validator_keys()),
+        )
+        .expect("Unable to update network's eligible peers");
         let last_vote = initial_data.last_vote();
         let author = signer.author();
         let safety_rules_storage = match &self.config.safety_rules.backend {
             SafetyRulesBackend::InMemoryStorage => InMemoryStorage::default_storage(),
-            SafetyRulesBackend::OnDiskStorage { default, path } => {
-                if *default {
-                    OnDiskStorage::default_storage(path.clone())
+            SafetyRulesBackend::OnDiskStorage(config) => {
+                if config.default {
+                    OnDiskStorage::default_storage(config.path().clone())
                 } else {
-                    OnDiskStorage::new_storage(path.clone())
+                    OnDiskStorage::new_storage(config.path().clone())
                 }
             }
         };

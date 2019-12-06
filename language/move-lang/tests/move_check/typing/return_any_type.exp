@@ -1,0 +1,16 @@
+error: 
+
+   ┌── tests/move_check/typing/return_any_type.move:5:13 ───
+   │
+ 5 │         0 + (return ());
+   │             ^^^^^^^^^^^ Invalid use of a divergent expression. The code following the evaluation of this expression will be dead and should be removed. In some cases, this is necessary to prevent unused resource values.
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/return_any_type.move:9:13 ───
+   │
+ 9 │         foo(return ());
+   │             ^^^^^^^^^ Invalid use of a divergent expression. The code following the evaluation of this expression will be dead and should be removed. In some cases, this is necessary to prevent unused resource values.
+   │
+

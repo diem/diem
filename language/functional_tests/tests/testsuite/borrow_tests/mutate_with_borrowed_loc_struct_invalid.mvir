@@ -25,6 +25,5 @@ module M {
 
 }
 
-// check: VerificationFailure
 // check: STLOC_UNSAFE_TO_DESTROY_ERROR
 // check: STLOC_UNSAFE_TO_DESTROY_ERROR

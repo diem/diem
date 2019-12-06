@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::FuzzTargetImpl;
+use anyhow::{bail, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use failure::prelude::*;
 use libra_proptest_helpers::ValueGenerator;
 use std::io::Cursor;
 use vm_runtime_types::{

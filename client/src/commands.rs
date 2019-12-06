@@ -5,8 +5,7 @@ use crate::{
     account_commands::AccountCommand, client_proxy::ClientProxy, dev_commands::DevCommand,
     query_commands::QueryCommand, transfer_commands::TransferCommand,
 };
-
-use failure::prelude::*;
+use anyhow::Error;
 use libra_metrics::counters::*;
 use libra_types::account_address::ADDRESS_LENGTH;
 use std::{collections::HashMap, sync::Arc};

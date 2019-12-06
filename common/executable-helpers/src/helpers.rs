@@ -1,8 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_config::config::{LoggerConfig, NodeConfig, NodeConfigHelpers};
+use libra_config::config::{LoggerConfig, NodeConfig};
 use libra_logger::prelude::*;
+use libra_types::PeerId;
 use slog_scope::GlobalLoggerGuard;
 use std::path::Path;
 
@@ -13,7 +14,7 @@ pub fn load_config_from_path(config: Option<&Path>) -> NodeConfig {
         NodeConfig::load(path).expect("NodeConfig")
     } else {
         info!("Loading test configs");
-        NodeConfigHelpers::get_single_node_test_config(false /* random ports */)
+        NodeConfig::random()
     };
 
     // Node configuration contains important ephemeral port information and should
@@ -23,8 +24,8 @@ pub fn load_config_from_path(config: Option<&Path>) -> NodeConfig {
     node_config
 }
 
-pub fn setup_metrics(peer_id: &str, node_config: &NodeConfig) {
-    if let Some(metrics_dir) = node_config.get_metrics_dir() {
+pub fn setup_metrics(peer_id: PeerId, node_config: &NodeConfig) {
+    if let Some(metrics_dir) = node_config.metrics.dir() {
         libra_metrics::dump_all_metrics_to_file_periodically(
             &metrics_dir,
             &format!("{}.metrics", peer_id),
@@ -46,8 +47,11 @@ pub fn setup_executable(
     // We need to drop the global logger guard first before resetting it.
     _logger = None;
     let logger = set_default_global_logger(no_logging, &config.logger);
-    for network in &config.networks {
-        setup_metrics(&network.peer_id, &config);
+    for network in &config.full_node_networks {
+        setup_metrics(network.peer_id, &config);
+    }
+    if let Some(network) = &config.validator_network {
+        setup_metrics(network.peer_id, &config);
     }
 
     (config, logger)

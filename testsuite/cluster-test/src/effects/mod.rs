@@ -1,13 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
+mod delete_libra_data;
 mod network_delay;
 mod packet_loss;
 mod reboot;
 mod remove_network_effects;
 mod stop_container;
 
-use failure;
+use anyhow::Result;
+pub use delete_libra_data::DeleteLibraData;
+use futures::future::BoxFuture;
+pub use network_delay::three_region_simulation_effects;
 pub use network_delay::NetworkDelay;
 pub use packet_loss::PacketLoss;
 pub use reboot::Reboot;
@@ -16,11 +22,10 @@ use std::fmt::Display;
 pub use stop_container::StopContainer;
 
 pub trait Action: Display + Send {
-    fn apply(&self) -> failure::Result<()>;
-    fn is_complete(&self) -> bool;
+    fn apply(&self) -> BoxFuture<Result<()>>;
 }
 
 pub trait Effect: Display + Send {
-    fn activate(&self) -> failure::Result<()>;
-    fn deactivate(&self) -> failure::Result<()>;
+    fn activate(&self) -> BoxFuture<Result<()>>;
+    fn deactivate(&self) -> BoxFuture<Result<()>>;
 }

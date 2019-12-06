@@ -31,8 +31,8 @@
 //! performance in consensus.
 
 use crate::{traits::*, HashValue};
+use anyhow::{bail, Result};
 use core::convert::TryFrom;
-use failure::prelude::*;
 use libra_crypto_derive::{Deref, SilentDebug, SilentDisplay};
 use pairing::{
     bls12_381::{Fr, FrRepr},

@@ -1,16 +1,11 @@
 error: 
 
-   ┌── tests/move_check/expansion/weird_apply_assign.move:5:9 ───
-   │
- 5 │         { f } = S { f: 0 };
-   │         ^^^^^ Invalid assignment lvalue. Expected: a local, a field write, or a deconstructing assignment
-   │
-
-error: 
-
    ┌── tests/move_check/expansion/weird_apply_assign.move:7:11 ───
    │
  7 │         S f = S { f: 0 };
-   │           ^ Invalid fields for deconstructing assignment. Expected: named arguments
+   │           ^ Unrecognized Token: f
+   ·
+ 7 │         S f = S { f: 0 };
+   │           - Expected:  "!=", "%", "&", "&&", "(", "()", ")", "*", "+", ",", "-", ".", "/", ":", "::", ";", "<", "<=", "=", "==", ">", ">=", "^", "else", "{", "|", "||", "}",
    │
 

@@ -8,6 +8,7 @@ use crate::{
     },
     counters,
 };
+use anyhow::{bail, format_err};
 use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalStatus};
 use consensus_types::{
     block::Block,
@@ -15,9 +16,9 @@ use consensus_types::{
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
 };
-use failure;
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
+use libra_types::validator_change::ValidatorChangeEventWithProof;
 use mirai_annotations::checked_precondition;
 use rand::{prelude::*, Rng};
 use std::{
@@ -70,14 +71,14 @@ impl<T: Payload> BlockStore<T> {
     }
 
     /// Fetches dependencies for given sync_info.quorum_cert
-    /// If gap is large, performs state sync using process_highest_ledger_info
+    /// If gap is large, performs state sync using process_highest_commit_cert
     /// Inserts sync_info.quorum_cert into block store as the last step
     pub async fn sync_to(
         &self,
         sync_info: &SyncInfo,
         mut retriever: BlockRetriever,
-    ) -> failure::Result<()> {
-        self.process_highest_ledger_info(sync_info.highest_ledger_info().clone(), &mut retriever)
+    ) -> anyhow::Result<()> {
+        self.process_highest_commit_cert(sync_info.highest_commit_cert().clone(), &mut retriever)
             .await?;
 
         match self.need_fetch_for_quorum_cert(sync_info.highest_quorum_cert()) {
@@ -101,7 +102,7 @@ impl<T: Payload> BlockStore<T> {
         &self,
         qc: QuorumCert,
         mut retriever: BlockRetriever,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         let mut pending = vec![];
         let mut retrieve_qc = qc.clone();
         loop {
@@ -123,37 +124,37 @@ impl<T: Payload> BlockStore<T> {
         self.insert_single_quorum_cert(qc)
     }
 
-    /// Check the highest ledger info sent by peer to see if we're behind and start a fast
+    /// Check the highest commit cert sent by peer to see if we're behind and start a fast
     /// forward sync if the committed block doesn't exist in our tree.
     /// It works as follows:
-    /// 1. request the committed 3-chain from the peer, if C2 is the highest_ledger_info
+    /// 1. request the committed 3-chain from the peer, if C2 is the highest_commit_cert
     /// we request for B0 <- C0 <- B1 <- C1 <- B2 (<- C2)
     /// 2. We persist the 3-chain to storage before start sync to ensure we could restart if we
     /// crash in the middle of the sync.
     /// 3. We prune the old tree and replace with a new tree built with the 3-chain.
-    async fn process_highest_ledger_info(
+    async fn process_highest_commit_cert(
         &self,
-        highest_ledger_info: QuorumCert,
+        highest_commit_cert: QuorumCert,
         retriever: &mut BlockRetriever,
-    ) -> failure::Result<()> {
-        if !self.need_sync_for_quorum_cert(&highest_ledger_info) {
+    ) -> anyhow::Result<()> {
+        if !self.need_sync_for_quorum_cert(&highest_commit_cert) {
             return Ok(());
         }
         debug!(
             "Start state sync with peer: {}, to block: {} from {}",
             retriever.preferred_peer.short_str(),
-            highest_ledger_info.commit_info(),
+            highest_commit_cert.commit_info(),
             self.root()
         );
         let mut blocks = retriever
-            .retrieve_block_for_qc(&highest_ledger_info, 3)
+            .retrieve_block_for_qc(&highest_commit_cert, 3)
             .await?;
         assert_eq!(
             blocks.last().expect("should have 3-chain").id(),
-            highest_ledger_info.commit_info().id(),
+            highest_commit_cert.commit_info().id(),
         );
         let mut quorum_certs = vec![];
-        quorum_certs.push(highest_ledger_info.clone());
+        quorum_certs.push(highest_commit_cert.clone());
         quorum_certs.push(blocks[0].quorum_cert().clone());
         quorum_certs.push(blocks[1].quorum_cert().clone());
         // If a node restarts in the middle of state synchronization, it is going to try to catch up
@@ -162,17 +163,26 @@ impl<T: Payload> BlockStore<T> {
             .save_tree(blocks.clone(), quorum_certs.clone())?;
         let pre_sync_instance = Instant::now();
         self.state_computer
-            .sync_to_or_bail(highest_ledger_info.ledger_info().clone());
+            .sync_to_or_bail(highest_commit_cert.ledger_info().clone());
         counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());
         let root = (
             blocks.pop().expect("should have 3-chain"),
             quorum_certs.last().expect("should have 3-chain").clone(),
-            highest_ledger_info.clone(),
+            highest_commit_cert.clone(),
         );
         debug!("{}Sync to{} {}", Fg(Blue), Fg(Reset), root.0);
         // ensure it's [b1, b2]
         blocks.reverse();
         self.rebuild(root, blocks, quorum_certs).await;
+
+        if highest_commit_cert.ends_epoch() {
+            retriever
+                .network
+                .notify_epoch_change(ValidatorChangeEventWithProof::new(vec![
+                    highest_commit_cert.ledger_info().clone(),
+                ]))
+                .await;
+        }
         Ok(())
     }
 }
@@ -208,7 +218,7 @@ impl BlockRetriever {
         &'a mut self,
         qc: &'a QuorumCert,
         num_blocks: u64,
-    ) -> failure::Result<Vec<Block<T>>>
+    ) -> anyhow::Result<Vec<Block<T>>>
     where
         T: Payload,
     {

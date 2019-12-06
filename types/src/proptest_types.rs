@@ -1,8 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+
+#![forbid(unsafe_code)]
+
 use crate::block_info::{BlockInfo, Round};
 use crate::event::EVENT_KEY_LENGTH;
-use crate::transaction::Transaction;
+use crate::transaction::{ChangeSet, Transaction};
 use crate::validator_set::ValidatorSet;
 use crate::{
     access_path::AccessPath,
@@ -312,7 +315,7 @@ fn new_raw_transaction(
         TransactionPayload::WriteSet(write_set) => {
             // It's a bit unfortunate that max_gas_amount etc is generated but
             // not used, but it isn't a huge deal.
-            RawTransaction::new_write_set(sender, sequence_number, write_set)
+            RawTransaction::new_change_set(sender, sequence_number, write_set)
         }
         TransactionPayload::Channel(channel) => RawTransaction::new_channel(
             sender,
@@ -431,12 +434,13 @@ impl TransactionPayload {
     }
 
     pub fn write_set_strategy() -> impl Strategy<Value = Self> {
-        any::<WriteSet>().prop_map(TransactionPayload::WriteSet)
+        any::<WriteSet>().prop_map(|ws| TransactionPayload::WriteSet(ChangeSet::new(ws, vec![])))
     }
 
     /// Similar to `write_set_strategy` except generates a valid write set for the genesis block.
     pub fn genesis_strategy() -> impl Strategy<Value = Self> {
-        WriteSet::genesis_strategy().prop_map(TransactionPayload::WriteSet)
+        WriteSet::genesis_strategy()
+            .prop_map(|ws| TransactionPayload::WriteSet(ChangeSet::new(ws, vec![])))
     }
 }
 

@@ -8,7 +8,7 @@ use crate::core_mempool::{
     },
     CoreMempool, TimelineState,
 };
-use libra_config::config::NodeConfigHelpers;
+use libra_config::config::NodeConfig;
 use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use libra_types::transaction::SignedTransaction;
 use std::{collections::HashSet, time::Duration};
@@ -182,7 +182,7 @@ fn test_balance_check() {
 fn test_system_ttl() {
     // created mempool with system_transaction_timeout = 0
     // All transactions are supposed to be evicted on next gc run
-    let mut config = NodeConfigHelpers::get_single_node_test_config(true);
+    let mut config = NodeConfig::random();
     config.mempool.system_transaction_timeout_secs = 0;
     let mut mempool = CoreMempool::new(&config);
 
@@ -283,7 +283,7 @@ fn test_timeline() {
 
 #[test]
 fn test_capacity() {
-    let mut config = NodeConfigHelpers::get_single_node_test_config(true);
+    let mut config = NodeConfig::random();
     config.mempool.capacity = 1;
     config.mempool.system_transaction_timeout_secs = 0;
     let mut pool = CoreMempool::new(&config);
@@ -304,7 +304,7 @@ fn test_capacity() {
 
 #[test]
 fn test_parking_lot_eviction() {
-    let mut config = NodeConfigHelpers::get_single_node_test_config(true);
+    let mut config = NodeConfig::random();
     config.mempool.capacity = 5;
     let mut pool = CoreMempool::new(&config);
     // add transactions with following sequence numbers to Mempool

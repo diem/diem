@@ -3,10 +3,10 @@ address 0x1:
 module X {}
 
 module M {
-    use 0x1.X;
+    use 0x1::X;
     foo() {
         let x = X;
-        let x = 0x1.X;
-        let y = 0x1.Y;
+        let x = 0x1::X;
+        let y = 0x1::Y;
     }
 }

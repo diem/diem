@@ -105,7 +105,10 @@ impl PendingVotes {
             Err(VerifyError::TooLittleVotingPower { voting_power, .. }) => {
                 VoteReceptionResult::VoteAdded(voting_power)
             }
-            _ => panic!("Unexpected verification error, vote = {}", vote),
+            Err(error) => {
+                error!("MUST_FIX: vote received could not be added: {}", error);
+                VoteReceptionResult::ErrorAddingVote(error)
+            }
         }
     }
 

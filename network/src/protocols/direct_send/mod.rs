@@ -18,7 +18,7 @@
 //! 3. The actual structure of the wire messages is left for higher layers to specify. The
 //!    DirectSend protocol is only concerned with shipping around opaque blobs. Current libra
 //!    DirectSend clients (consensus, mempool) mostly send protobuf enums around over a single
-//!    DirectSend protocol, e.g., `/libra/consensus/direct_send/0.1.0`.
+//!    DirectSend protocol, e.g., `/libra/direct_send/0.1.0/consensus/0.1.0`.
 //!
 //! ## Wire Protocol (dialer):
 //!
@@ -26,7 +26,7 @@
 //!
 //! 1. Requests a new outbound substream from the muxer.
 //! 2. Negotiates the substream using [`protocol-select`] to the protocol they
-//!    wish to speak, e.g., `/libra/mempool/direct_send/0.1.0`.
+//!    wish to speak, e.g., `/libra/direct_send/0.1.0/mempool/0.1.0`.
 //! 3. Sends the serialized message on the newly negotiated substream.
 //! 4. Drops the substream.
 //!
@@ -49,7 +49,7 @@ use crate::{
     peer_manager::{PeerManagerNotification, PeerManagerRequestSender},
     ProtocolId,
 };
-use bytes::Bytes;
+use bytes05::Bytes;
 use channel;
 use futures::{
     io::{AsyncRead, AsyncWrite},
@@ -63,10 +63,8 @@ use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::Debug,
 };
-use tokio::{
-    codec::{Framed, LengthDelimitedCodec},
-    runtime::TaskExecutor,
-};
+use tokio::runtime::Handle;
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 #[cfg(test)]
 mod test;
@@ -96,7 +94,7 @@ impl Debug for Message {
         let mdata_str = if self.mdata.len() <= 10 {
             format!("{:?}", self.mdata)
         } else {
-            format!("{:?}...", self.mdata.slice_to(10))
+            format!("{:?}...", self.mdata.slice(..10))
         };
         write!(
             f,
@@ -109,7 +107,7 @@ impl Debug for Message {
 /// The DirectSend actor.
 pub struct DirectSend<TSubstream> {
     /// A handle to a tokio executor.
-    executor: TaskExecutor,
+    executor: Handle,
     /// Channel to receive requests from other upstream actors.
     ds_requests_rx: channel::Receiver<DirectSendRequest>,
     /// Channels to send notifictions to upstream actors.
@@ -127,7 +125,7 @@ where
     TSubstream: AsyncRead + AsyncWrite + Send + Unpin + Debug + 'static,
 {
     pub fn new(
-        executor: TaskExecutor,
+        executor: Handle,
         ds_requests_rx: channel::Receiver<DirectSendRequest>,
         ds_notifs_tx: channel::Sender<DirectSendNotification>,
         peer_mgr_notifs_rx: channel::Receiver<PeerManagerNotification<TSubstream>>,
@@ -218,7 +216,7 @@ where
     // Create a new message queue and spawn a task to forward the messages from the queue to the
     // corresponding substream.
     async fn start_message_queue_handler(
-        executor: TaskExecutor,
+        executor: Handle,
         mut peer_mgr_reqs_tx: PeerManagerRequestSender<TSubstream>,
         peer_id: PeerId,
         protocol: ProtocolId,

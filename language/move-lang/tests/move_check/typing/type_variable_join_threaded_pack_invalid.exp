@@ -1,0 +1,31 @@
+error: 
+
+    ┌── tests/move_check/typing/type_variable_join_threaded_pack_invalid.move:27:15 ───
+    │
+ 32 │         b
+    │         ^ Invalid return expression
+    ·
+ 31 │         Container::put(&mut v, 0);
+    │                                - The type: 'u64'
+    ·
+ 27 │     t0(): Box<bool> {
+    │               ---- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/type_variable_join_threaded_pack_invalid.move:10:19 ───
+    │
+ 37 │         let x = Container::get(&v);
+    │                 ^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    ·
+ 39 │         Container::put(&mut v, Box {f1: R{}, f2: R{}});
+    │                                ---------------------- The resource type '0x1::M::Box<0x1::M::R>' does not satisfy the constraint 'copyable'
+    ·
+ 24 │     resource struct R{}
+    │     -------- The type's constraint information was declared here
+    ·
+ 10 │     public get<V: copyable>(self: &T<V>): V {
+    │                   -------- 'copyable' constraint declared here
+    │
+

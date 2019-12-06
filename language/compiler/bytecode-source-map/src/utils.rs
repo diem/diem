@@ -3,13 +3,13 @@
 
 use crate::mapping::SourceMapping;
 use crate::source_map::{ModuleSourceMap, SourceMap};
+use anyhow::{format_err, Result};
 use codespan::{CodeMap, FileName};
 use codespan_reporting::{
     emit,
     termcolor::{ColorChoice, StandardStream},
     Diagnostic, Label,
 };
-use failure::prelude::*;
 use ir_to_bytecode_syntax::ast::Loc;
 use serde::de::DeserializeOwned;
 use std::fs::File;

@@ -1,6 +1,3 @@
-// check: VerificationFailure
-// check: RET_UNSAFE_TO_DESTROY_ERROR
-
 module Tester {
     public no(): &u64 {
         let x: u64;
@@ -11,16 +8,4 @@ module Tester {
     }
 
 }
-
-//! new-transaction
-
-import {{default}}.Tester;
-
-main() {
-    let x: u64;
-    let r: &u64;
-    x = 100;
-    r = Tester.no();
-    assert(*move(r) == 5, 42);
-    return;
-}
+// check: RET_UNSAFE_TO_DESTROY_ERROR

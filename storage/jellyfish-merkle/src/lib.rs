@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This module implements [`JellyfishMerkleTree`] backed by storage module. The tree itself doesn't
 //! persist anything, but realizes the logic of R/W only. The write path will produce all the
 //! intermediate results in a batch for storage layer to commit and the read path will return
@@ -78,7 +80,7 @@ pub mod restore;
 mod test_helper;
 mod tree_cache;
 
-use failure::prelude::*;
+use anyhow::{bail, ensure, format_err, Result};
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
     account_state_blob::AccountStateBlob,

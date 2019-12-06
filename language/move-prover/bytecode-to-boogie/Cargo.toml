@@ -16,9 +16,12 @@ ir-to-bytecode = { path = "../../compiler/ir-to-bytecode", version = "0.1.0" }
 stackless-bytecode-generator = { path = "../stackless-bytecode-generator", version = "0.1.0"}
 stdlib = { path = "../../stdlib", version = "0.1.0" }
 num = "0.2.0"
+itertools = "0.8.0"
 
 [dev-dependencies]
 proptest = "0.9"
+goldenfile = "1.1.0"
+prettydiff = "0.3.1"
 
 [features]
 default = []

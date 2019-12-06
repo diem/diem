@@ -7,6 +7,7 @@ use channel;
 use futures::executor::block_on;
 use libra_config::config::{AdmissionControlConfig, RoleType};
 use libra_proptest_helpers::ValueGenerator;
+use libra_prost_ext::MessageExt;
 use libra_types::transaction::SignedTransaction;
 use network::validator_network::AdmissionControlNetworkSender;
 use proptest;
@@ -30,9 +31,7 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
     let mut req = SubmitTransactionRequest::default();
     req.transaction = Some(signed_txn.into());
 
-    let mut bytes = bytes::BytesMut::with_capacity(req.encoded_len());
-    req.encode(&mut bytes).unwrap();
-    bytes.to_vec()
+    req.to_vec().unwrap()
 }
 
 /// fuzzer takes a serialized SubmitTransactionRequest an process it with an admission control

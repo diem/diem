@@ -7,9 +7,10 @@
 //! [`bls12381`] modules.
 
 use crate::HashValue;
+use anyhow::Result;
 use core::convert::{From, TryFrom};
-use failure::prelude::*;
 use std::{fmt::Debug, hash::Hash};
+use thiserror::Error;
 
 /// An error type for key and signature validation issues, see [`ValidKey`][ValidKey].
 ///
@@ -18,25 +19,20 @@ use std::{fmt::Debug, hash::Hash};
 /// (often, due to mangled material or curve equation failure for ECC) and
 /// validation errors (material recognizable but unacceptable for use,
 /// e.g. unsafe).
-#[derive(Clone, Debug, PartialEq, Eq, failure::prelude::Fail)]
+#[derive(Clone, Debug, PartialEq, Eq, Error)]
+#[error("{:?}", self)]
 pub enum CryptoMaterialError {
     /// Key or signature material does not deserialize correctly.
-    #[fail(display = "DeserializationError")]
     DeserializationError,
     /// Key or signature material deserializes, but is otherwise not valid.
-    #[fail(display = "ValidationError")]
     ValidationError,
     /// Key or signature material does not have the expected size.
-    #[fail(display = "WrongLengthError")]
     WrongLengthError,
     /// Part of the signature or key is not canonical resulting to malleability issues.
-    #[fail(display = "CanonicalRepresentationError")]
     CanonicalRepresentationError,
     /// A curve point (i.e., a public key) lies on a small group.
-    #[fail(display = "SmallSubgroupError")]
     SmallSubgroupError,
     /// A curve point (i.e., a public key) does not satisfy the curve equation.
-    #[fail(display = "PointNotOnCurveError")]
     PointNotOnCurveError,
 }
 

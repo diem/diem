@@ -1,5 +1,7 @@
 // Copyright (c) The Libra Core Contributors // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! # Grammar
 //! ## Identifiers
 //! ```text
@@ -204,4 +206,5 @@
 
 pub mod ast;
 mod lexer;
+pub mod spec_language_ast;
 pub mod syntax;

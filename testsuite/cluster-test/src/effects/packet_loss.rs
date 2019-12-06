@@ -1,9 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 /// PacketLoss introduces a given percentage of PacketLoss for a given instance
 use crate::{effects::Action, instance::Instance};
-use failure;
+use anyhow::Result;
+use futures::future::{BoxFuture, FutureExt};
 use slog_scope::info;
 use std::fmt;
 
@@ -19,16 +22,14 @@ impl PacketLoss {
 }
 
 impl Action for PacketLoss {
-    fn apply(&self) -> failure::Result<()> {
+    fn apply(&self) -> BoxFuture<Result<()>> {
         info!("PacketLoss {:.*}% for {}", 2, self.percent, self.instance);
-        self.instance.run_cmd(vec![format!(
+        self.instance
+            .run_cmd(vec![format!(
             "sudo tc qdisc delete dev eth0 root; sudo tc qdisc add dev eth0 root netem loss {:.*}%",
             2, self.percent
         )])
-    }
-
-    fn is_complete(&self) -> bool {
-        true
+            .boxed()
     }
 }
 

@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! An alternate representation of the file format built on top of the existing format.
 //!
 //! Some general notes:
@@ -216,10 +218,6 @@ impl<'a, T: ModuleAccess> StructHandleView<'a, T> {
 
     pub fn type_formals(&self) -> &Vec<Kind> {
         &self.struct_handle.type_formals
-    }
-
-    pub fn definition(&self) -> StructDefinitionView<'a, T> {
-        unimplemented!("this requires linking")
     }
 
     pub fn module_handle(&self) -> &ModuleHandle {

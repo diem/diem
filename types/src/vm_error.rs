@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
 #![allow(clippy::unit_arg)]
 
-use failure::prelude::*;
+use anyhow::{Error, Result};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;

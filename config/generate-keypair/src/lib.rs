@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use failure::prelude::*;
+#![forbid(unsafe_code)]
+
+use anyhow::Result;
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_tools::tempdir::TempPath;
 use rand::{rngs::OsRng, Rng, SeedableRng};

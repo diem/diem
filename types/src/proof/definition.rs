@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This module has definition of various proofs.
 
 #[cfg(test)]
@@ -16,7 +18,7 @@ use crate::{
     ledger_info::LedgerInfo,
     transaction::{TransactionInfo, Version},
 };
-use failure::prelude::*;
+use anyhow::{bail, ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::hash::TestOnlyHasher;
 use libra_crypto::{

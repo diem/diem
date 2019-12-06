@@ -8,25 +8,20 @@ use crate::{
         persistent_storage::{PersistentStorage, StorageWriteProxy},
     },
     consensus_provider::ConsensusProvider,
-    counters,
     state_computer::ExecutionProxy,
     state_replication::StateMachineReplication,
     txn_manager::MempoolProxy,
 };
+use anyhow::Result;
 use consensus_types::common::Author;
 use executor::Executor;
-use failure::prelude::*;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::MempoolClient;
-use libra_types::{
-    account_address::AccountAddress,
-    crypto_proxies::{ValidatorSigner, ValidatorVerifier},
-    transaction::SignedTransaction,
-};
+use libra_types::{crypto_proxies::ValidatorSigner, transaction::SignedTransaction};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
-use std::{convert::TryFrom, sync::Arc};
+use std::sync::Arc;
 use tokio::runtime;
 use vm_runtime::MoveVM;
 
@@ -34,7 +29,6 @@ use vm_runtime::MoveVM;
 pub struct InitialSetup {
     pub author: Author,
     pub signer: ValidatorSigner,
-    pub validator: ValidatorVerifier,
     pub network_sender: ConsensusNetworkSender,
     pub network_events: ConsensusNetworkEvents,
 }
@@ -56,19 +50,17 @@ impl ChainedBftProvider {
         synchronizer_client: Arc<StateSyncClient>,
     ) -> Self {
         let runtime = runtime::Builder::new()
-            .name_prefix("consensus-")
+            .thread_name("consensus-")
+            .threaded_scheduler()
+            .enable_all()
             .build()
             .expect("Failed to create Tokio runtime!");
 
         let initial_setup = Self::initialize_setup(network_sender, network_events, node_config);
         debug!("[Consensus] My peer: {:?}", initial_setup.author);
         let config = ChainedBftSMRConfig::from_node_config(&node_config.consensus);
-        let (storage, initial_data) = StorageWriteProxy::start(node_config);
-        info!(
-            "Starting up the consensus state machine with recovery data - [last_vote {}], [highest timeout certificate: {}]",
-            initial_data.last_vote().map_or("None".to_string(), |v| v.to_string()),
-            initial_data.highest_timeout_certificate().map_or("None".to_string(), |v| v.to_string()),
-        );
+        let storage = Arc::new(StorageWriteProxy::new(node_config));
+        let initial_data = storage.start();
         let txn_manager = Arc::new(MempoolProxy::new(mempool_client.clone()));
         let state_computer = Arc::new(ExecutionProxy::new(executor, synchronizer_client.clone()));
         let smr = ChainedBftSMR::new(initial_setup, runtime, config, storage, initial_data);
@@ -86,37 +78,16 @@ impl ChainedBftProvider {
         network_events: ConsensusNetworkEvents,
         node_config: &mut NodeConfig,
     ) -> InitialSetup {
-        let peer_id_str = node_config
-            .get_validator_network_config()
-            .unwrap()
-            .peer_id
-            .clone();
-        let author =
-            AccountAddress::try_from(peer_id_str).expect("Failed to parse peer id of a validator");
+        let author = node_config.validator_network.as_ref().unwrap().peer_id;
         let private_key = node_config
             .consensus
             .consensus_keypair
-            .take_consensus_private()
-            .expect(
-            "Failed to move a Consensus private key from a NodeConfig, key absent or already read",
-        );
+            .take_private()
+            .expect("Failed to take Consensus private key, key absent or already read");
         let signer = ValidatorSigner::new(author, private_key);
-        // Keeping the initial set of validators in a node config is embarrassing and we should
-        // all feel bad about it.
-        let validator = node_config
-            .consensus
-            .consensus_peers
-            .get_validator_verifier();
-        counters::CURRENT_EPOCH_VALIDATORS.set(validator.len() as i64);
-        counters::CURRENT_EPOCH_QUORUM_SIZE.set(validator.quorum_voting_power() as i64);
-        debug!(
-            "[Consensus]: quorum_size = {:?}",
-            validator.quorum_voting_power()
-        );
         InitialSetup {
             author,
             signer,
-            validator,
             network_sender,
             network_events,
         }

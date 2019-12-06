@@ -111,9 +111,10 @@ fn serve_public_metrics(
 }
 
 pub fn start_server(host: String, port: u16, public_metric: bool) {
+    // Only called from places that guarantee that host is parsable, but this must be assumed.
     let addr: SocketAddr = (host.as_str(), port)
         .to_socket_addrs()
-        .unwrap_or_else(|_| panic!("Failed to parse {}:{} as address", host, port))
+        .unwrap_or_else(|_| unreachable!("Failed to parse {}:{} as address", host, port))
         .next()
         .unwrap();
 

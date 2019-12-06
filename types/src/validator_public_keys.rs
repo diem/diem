@@ -1,8 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::account_address::AccountAddress;
-use failure::Result;
+use anyhow::{Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::ed25519::compat::generate_keypair as generate_ed25519_keypair;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -102,7 +104,7 @@ impl ValidatorPublicKeys {
 }
 
 impl TryFrom<crate::proto::types::ValidatorPublicKeys> for ValidatorPublicKeys {
-    type Error = failure::Error;
+    type Error = Error;
 
     fn try_from(proto: crate::proto::types::ValidatorPublicKeys) -> Result<Self> {
         let account_address = AccountAddress::try_from(proto.account_address)?;

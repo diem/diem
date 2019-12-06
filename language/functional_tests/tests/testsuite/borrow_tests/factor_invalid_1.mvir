@@ -47,6 +47,5 @@ module M {
     }
 }
 
-// check: VerificationFailure
 // check: CALL_BORROWED_MUTABLE_REFERENCE_ERROR
 // check: CALL_BORROWED_MUTABLE_REFERENCE_ERROR

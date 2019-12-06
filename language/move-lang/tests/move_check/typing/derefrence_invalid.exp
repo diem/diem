@@ -9,7 +9,7 @@ error:
    │            --- The type: 'u64'
    ·
  6 │         (*x : bool);
-   │               ---- Is is not compatible with: 'bool'
+   │               ---- Is not compatible with: 'bool'
    │
 
 error: 
@@ -23,7 +23,7 @@ error:
    │          ------ The type: 'u64'
    ·
  7 │         (*x_mut: &u64);
-   │                  ---- Is is not compatible with: '&u64'
+   │                  ---- Is not compatible with: '&u64'
    │
 
 error: 
@@ -34,10 +34,10 @@ error:
    │              ^ Invalid type annotation
    ·
  5 │     t0(x: &u64, x_mut: &mut u64, s: &S, s_mut: &mut S){
-   │                                      - The type: '0000000000000000000000000000000000000000000000000000000008675309.M.S'
+   │                                      - The type: '0x8675309::M::S'
    ·
  9 │         (*s: X);
-   │              - Is is not compatible with: '0000000000000000000000000000000000000000000000000000000008675309.M.X'
+   │              - Is not compatible with: '0x8675309::M::X'
    │
 
 error: 
@@ -51,7 +51,7 @@ error:
     │                   --- The type: 'u64'
     ·
  10 │         (*&s.f: bool);
-    │                 ---- Is is not compatible with: 'bool'
+    │                 ---- Is not compatible with: 'bool'
     │
 
 error: 
@@ -65,7 +65,7 @@ error:
     │                   --- The type: 'u64'
     ·
  11 │         (s.f: &u64);
-    │               ---- Is is not compatible with: '&u64'
+    │               ---- Is not compatible with: '&u64'
     │
 
 error: 
@@ -76,10 +76,10 @@ error:
     │                 ^^ Invalid type annotation
     ·
  12 │         (*&s.x: &X);
-    │          ----- The type: '0000000000000000000000000000000000000000000000000000000008675309.M.X'
+    │          ----- The type: '0x8675309::M::X'
     ·
  12 │         (*&s.x: &X);
-    │                 -- Is is not compatible with: '&0000000000000000000000000000000000000000000000000000000008675309.M.X'
+    │                 -- Is not compatible with: '&0x8675309::M::X'
     │
 
 error: 
@@ -90,10 +90,10 @@ error:
     │                  ^ Invalid type annotation
     ·
  5 │     t0(x: &u64, x_mut: &mut u64, s: &S, s_mut: &mut S){
-    │                                                     - The type: '0000000000000000000000000000000000000000000000000000000008675309.M.S'
+    │                                                     - The type: '0x8675309::M::S'
     ·
  14 │         (*s_mut: X);
-    │                  - Is is not compatible with: '0000000000000000000000000000000000000000000000000000000008675309.M.X'
+    │                  - Is not compatible with: '0x8675309::M::X'
     │
 
 error: 
@@ -107,7 +107,7 @@ error:
     │                   --- The type: 'u64'
     ·
  15 │         (*&s_mut.f: bool);
-    │                     ---- Is is not compatible with: 'bool'
+    │                     ---- Is not compatible with: 'bool'
     │
 
 error: 
@@ -121,7 +121,7 @@ error:
     │          ------------- The type: 'u64'
     ·
  16 │         (*&mut s_mut.f: (bool, u64));
-    │                         ----------- Is is not compatible with: '(bool,u64)'
+    │                         ----------- Is not compatible with: '(bool,u64)'
     │
 
 error: 
@@ -135,7 +135,7 @@ error:
     │                   --- The type: 'u64'
     ·
  17 │         (s_mut.f: &u64);
-    │                   ---- Is is not compatible with: '&u64'
+    │                   ---- Is not compatible with: '&u64'
     │
 
 error: 
@@ -146,10 +146,10 @@ error:
     │                     ^^^^^^ Invalid type annotation
     ·
  18 │         (*&s_mut.x: (X, S));
-    │          --------- The type: '0000000000000000000000000000000000000000000000000000000008675309.M.X'
+    │          --------- The type: '0x8675309::M::X'
     ·
  18 │         (*&s_mut.x: (X, S));
-    │                     ------ Is is not compatible with: '(0000000000000000000000000000000000000000000000000000000008675309.M.X,0000000000000000000000000000000000000000000000000000000008675309.M.S)'
+    │                     ------ Is not compatible with: '(0x8675309::M::X,0x8675309::M::S)'
     │
 
 error: 
@@ -160,9 +160,9 @@ error:
     │                         ^^ Invalid type annotation
     ·
  19 │         (*&mut s_mut.x: ());
-    │          ------------- The type: '0000000000000000000000000000000000000000000000000000000008675309.M.X'
+    │          ------------- The type: '0x8675309::M::X'
     ·
  19 │         (*&mut s_mut.x: ());
-    │                         -- Is is not compatible with: '()'
+    │                         -- Is not compatible with: '()'
     │
 

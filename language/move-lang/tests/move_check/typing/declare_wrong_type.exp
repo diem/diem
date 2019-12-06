@@ -6,10 +6,10 @@ error:
    │             ^^^^^^^ Invalid deconstruction binding
    ·
  6 │         let S { g } : R;
-   │             ------- The type: '0000000000000000000000000000000000000000000000000000000008675309.M.S'
+   │             ------- The type: '0x8675309::M::S'
    ·
  6 │         let S { g } : R;
-   │                       - Is is not compatible with: '0000000000000000000000000000000000000000000000000000000008675309.M.R'
+   │                       - Is not compatible with: '0x8675309::M::R'
    │
 
 error: 
@@ -20,9 +20,9 @@ error:
    │              ^^^^^^^ Invalid deconstruction binding
    ·
  7 │         let (S { g }, R { f }): (R, R);
-   │              ------- The type: '0000000000000000000000000000000000000000000000000000000008675309.M.S'
+   │              ------- The type: '0x8675309::M::S'
    ·
  7 │         let (S { g }, R { f }): (R, R);
-   │                                  - Is is not compatible with: '0000000000000000000000000000000000000000000000000000000008675309.M.R'
+   │                                  - Is not compatible with: '0x8675309::M::R'
    │
 

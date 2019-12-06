@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::FuzzTarget;
-use failure::prelude::*;
+use anyhow::{bail, format_err, Context, Result};
 use libra_proptest_helpers::ValueGenerator;
 use sha1::{Digest, Sha1};
 use std::{
@@ -45,13 +45,13 @@ pub fn make_corpus(
         let name = hex::encode(hash.as_slice());
         let path = corpus_dir.join(name);
         let mut f = fs::File::create(&path)
-            .with_context(|_| format!("Failed to create file: {:?}", path))?;
+            .with_context(|| format!("Failed to create file: {:?}", path))?;
         if debug {
             println!("Writing {} bytes to file: {:?}", result.len(), path);
         }
 
         f.write_all(&result)
-            .with_context(|_| format!("Failed to write to file: {:?}", path))?;
+            .with_context(|| format!("Failed to write to file: {:?}", path))?;
         idx += 1;
     }
     Ok(idx)

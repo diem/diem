@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This module lays out the basic abstract costing schedule for bytecode instructions.
 //!
 //! It is important to note that the cost schedule defined in this file does not track hashing

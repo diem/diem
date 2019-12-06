@@ -5,7 +5,7 @@ use crate::{
     Chunk, Command, CommittableBlock, CommittableBlockBatch, ExecutableBlock, ExecutedTrees,
     ProcessedVMOutput, TransactionData, OP_COUNTERS,
 };
-use failure::prelude::*;
+use anyhow::{bail, ensure, format_err, Result};
 use futures::channel::oneshot;
 use libra_config::config::VMConfig;
 use libra_crypto::{
@@ -13,7 +13,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_logger::prelude::*;
-use libra_types::block_info::BlockInfo;
+use libra_types::block_info::{BlockInfo, Round};
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -43,12 +43,15 @@ enum Mode {
     Syncing,
 }
 
+pub const GENESIS_EPOCH: u64 = 0;
+pub const GENESIS_ROUND: Round = 0;
+
 pub(crate) struct BlockProcessor<V> {
     /// Where the processor receives commands.
     command_receiver: mpsc::Receiver<Command>,
 
-    /// The timestamp of the last committed ledger info.
-    committed_timestamp_usecs: u64,
+    /// The epoch/round of the last committed ledger info.
+    committed_epoch_and_round: (u64, u64),
 
     /// The latest committed merkle trees.
     committed_trees: Arc<Mutex<ExecutedTrees>>,
@@ -83,14 +86,14 @@ where
         storage_write_client: Arc<dyn StorageWrite>,
         committed_trees: Arc<Mutex<ExecutedTrees>>,
         synced_trees: Option<ExecutedTrees>,
-        committed_timestamp_usecs: u64,
+        committed_epoch_and_round: (u64, u64),
         vm_config: VMConfig,
         genesis_txn: Transaction,
         resp_sender: oneshot::Sender<()>,
     ) -> Self {
         let mut processor = BlockProcessor {
             command_receiver,
-            committed_timestamp_usecs,
+            committed_epoch_and_round,
             committed_trees,
             synced_trees,
             blocks_to_execute: VecDeque::new(),
@@ -136,13 +139,13 @@ where
         let root_hash = output.accu_root();
         let ledger_info = LedgerInfo::new(
             BlockInfo::new(
-                0,
-                0,
+                GENESIS_EPOCH,
+                GENESIS_ROUND,
                 *PRE_GENESIS_BLOCK_ID,
                 root_hash,
                 0,
                 0,
-                Some(ValidatorSet::new(vec![])),
+                output.validators().clone(),
             ),
             HashValue::zero(),
         );
@@ -283,13 +286,14 @@ where
     /// Verifies the transactions based on the provided proofs and ledger info. If the transactions
     /// are valid, executes them and commits immediately if execution results match the proofs.
     fn execute_and_commit_chunk(&mut self, chunk: Chunk) -> Result<()> {
-        if chunk.ledger_info_with_sigs.ledger_info().timestamp_usecs()
-            <= self.committed_timestamp_usecs
-        {
+        let epoch_and_round = (
+            chunk.ledger_info_with_sigs.ledger_info().epoch(),
+            chunk.ledger_info_with_sigs.ledger_info().round(),
+        );
+        if epoch_and_round <= self.committed_epoch_and_round {
             warn!(
-                "Ledger info is too old: local timestamp: {}, timestamp in request: {}.",
-                self.committed_timestamp_usecs,
-                chunk.ledger_info_with_sigs.ledger_info().timestamp_usecs(),
+                "Ledger info is too old: local epoch/round: {:?}, epoch/round in request: {:?}.",
+                self.committed_epoch_and_round, epoch_and_round
             );
             return Ok(());
         }
@@ -400,7 +404,10 @@ where
         );
 
         if let Some(ledger_info_with_sigs) = ledger_info_to_commit {
-            self.committed_timestamp_usecs = ledger_info_with_sigs.ledger_info().timestamp_usecs();
+            self.committed_epoch_and_round = (
+                ledger_info_with_sigs.ledger_info().epoch(),
+                ledger_info_with_sigs.ledger_info().round(),
+            );
             assert!(self.sync_mode());
             *self.committed_trees.lock().unwrap() =
                 self.synced_trees.take().expect("synced trees must exist.");
@@ -580,7 +587,10 @@ where
 
         // Now that the blocks are persisted successfully, we can reply to consensus and update
         // in-memory state.
-        self.committed_timestamp_usecs = ledger_info_with_sigs.ledger_info().timestamp_usecs();
+        self.committed_epoch_and_round = (
+            ledger_info_with_sigs.ledger_info().epoch(),
+            ledger_info_with_sigs.ledger_info().round(),
+        );
         *self.committed_trees.lock().unwrap() = last_block.output.executed_trees().clone();
         for block in block_batch.blocks {
             for txn_data in block.output.transaction_data() {

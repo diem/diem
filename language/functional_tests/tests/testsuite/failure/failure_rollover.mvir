@@ -13,5 +13,4 @@ main() {
     return;
 }
 
-// check: VerificationFailure
 // check: MOVELOC_UNAVAILABLE_ERROR

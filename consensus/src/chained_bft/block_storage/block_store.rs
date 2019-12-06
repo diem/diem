@@ -9,12 +9,13 @@ use crate::{
     counters,
     state_replication::StateComputer,
 };
+use anyhow::{bail, ensure, format_err, Context};
 use consensus_types::{
     block::Block, common::Payload, executed_block::ExecutedBlock, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
+use debug_interface::event;
 use executor::ProcessedVMOutput;
-use failure::ResultExt;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 
@@ -159,7 +160,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn commit(
         &self,
         finality_proof: LedgerInfoWithSignatures,
-    ) -> failure::Result<Vec<Arc<ExecutedBlock<T>>>> {
+    ) -> anyhow::Result<Vec<Arc<ExecutedBlock<T>>>> {
         let block_id_to_commit = finality_proof.ledger_info().consensus_block_id();
         let block_to_commit = self
             .get_block(block_id_to_commit)
@@ -181,7 +182,7 @@ impl<T: Payload> BlockStore<T> {
                 finality_proof,
             )
             .await
-            .unwrap_or_else(|e| panic!("Failed to persist commit due to {:?}", e));
+            .expect("Failed to persist commit");
         counters::LAST_COMMITTED_ROUND.set(block_to_commit.round() as i64);
         debug!("{}Committed{} {}", Fg(Blue), Fg(Reset), *block_to_commit);
         event!("committed",
@@ -217,13 +218,13 @@ impl<T: Payload> BlockStore<T> {
             error!("fail to delete block: {:?}", e);
         }
         *self.inner.write().unwrap() = tree;
-        // If we fail to commit B_i via state computer and crash, after restart our highest ledger info
+        // If we fail to commit B_i via state computer and crash, after restart our highest commit cert
         // will not match the latest commit B_j(j<i) of state computer.
         // This introduces an inconsistent state if we send out SyncInfo and others try to sync to
         // B_i and figure out we only have B_j.
-        // Here we commit up to the highest_ledger_info to maintain highest_ledger_info == state_computer.committed_trees.
-        if self.highest_ledger_info().commit_info().round() > self.root().round() {
-            let finality_proof = self.highest_ledger_info().ledger_info().clone();
+        // Here we commit up to the highest_commit_cert to maintain highest_commit_cert == state_computer.committed_trees.
+        if self.highest_commit_cert().commit_info().round() > self.root().round() {
+            let finality_proof = self.highest_commit_cert().ledger_info().clone();
             if let Err(e) = self.commit(finality_proof).await {
                 warn!("{:?}", e);
             }
@@ -241,38 +242,30 @@ impl<T: Payload> BlockStore<T> {
     pub async fn execute_and_insert_block(
         &self,
         block: Block<T>,
-    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
+    ) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
         if let Some(existing_block) = self.get_block(block.id()) {
             return Ok(existing_block);
         }
         let executed_block = self.execute_block(block).await?;
         self.storage
             .save_tree(vec![executed_block.block().clone()], vec![])
-            .with_context(|e| format!("Insert block failed with {:?} when saving block", e))?;
+            .context("Insert block failed when saving block")?;
         self.inner.write().unwrap().insert_block(executed_block)
     }
 
-    async fn execute_block(&self, block: Block<T>) -> failure::Result<ExecutedBlock<T>> {
-        let parent_block = match self.verify_and_get_parent(&block) {
-            Ok(t) => t,
-            Err(e) => {
-                security_log(SecurityEvent::InvalidBlock)
-                    .error(&e)
-                    .data(&block)
-                    .log();
-                return Err(e);
-            }
-        };
+    async fn execute_block(&self, block: Block<T>) -> anyhow::Result<ExecutedBlock<T>> {
+        ensure!(
+            self.inner.read().unwrap().root().round() < block.round(),
+            "Block with old round"
+        );
+
+        let parent_block = self
+            .get_block(block.parent_id())
+            .ok_or_else(|| format_err!("Block with missing parent {}", block.parent_id()))?;
 
         // Reconfiguration rule - if a block is a child of pending reconfiguration, it needs to be empty
         // So we roll over the executed state until it's committed and we start new epoch.
-        let parent_state = parent_block.compute_result();
-
-        let output = if self.root() != parent_block && parent_state.has_reconfiguration() {
-            ensure!(
-                block.payload().filter(|p| **p != T::default()).is_none(),
-                "Reconfiguration suffix should not carry payload"
-            );
+        let output = if parent_block.compute_result().has_reconfiguration() {
             ProcessedVMOutput::new(
                 vec![],
                 parent_block.output().executed_trees().clone(),
@@ -285,13 +278,13 @@ impl<T: Payload> BlockStore<T> {
             self.state_computer
                 .compute(&block, parent_trees)
                 .await
-                .with_context(|e| format!("Execution failure for block {}: {:?}", block, e))?
+                .with_context(|| format!("Execution failure for block {}", block))?
         };
         Ok(ExecutedBlock::new(block, output))
     }
 
     /// Validates quorum certificates and inserts it into block tree assuming dependencies exist.
-    pub fn insert_single_quorum_cert(&self, qc: QuorumCert) -> failure::Result<()> {
+    pub fn insert_single_quorum_cert(&self, qc: QuorumCert) -> anyhow::Result<()> {
         // If the parent block is not the root block (i.e not None), ensure the executed state
         // of a block is consistent with its QuorumCert, otherwise persist the QuorumCert's
         // state and on restart, a new execution will agree with it.  A new execution will match
@@ -312,25 +305,20 @@ impl<T: Payload> BlockStore<T> {
 
         self.storage
             .save_tree(vec![], vec![qc.clone()])
-            .with_context(|e| format!("Insert block failed with {:?} when saving quorum", e))?;
+            .context("Insert block failed when saving quorum")?;
         self.inner.write().unwrap().insert_quorum_cert(qc)
     }
 
     /// Replace the highest timeout certificate in case the given one has a higher round.
     /// In case a timeout certificate is updated, persist it to storage.
-    pub fn insert_timeout_certificate(&self, tc: Arc<TimeoutCertificate>) -> failure::Result<()> {
+    pub fn insert_timeout_certificate(&self, tc: Arc<TimeoutCertificate>) -> anyhow::Result<()> {
         let cur_tc_round = self.highest_timeout_cert().map_or(0, |tc| tc.round());
         if tc.round() <= cur_tc_round {
             return Ok(());
         }
         self.storage
             .save_highest_timeout_cert(tc.as_ref().clone())
-            .with_context(|e| {
-                format!(
-                    "Timeout certificate insert failed with {:?} when persisting to DB",
-                    e
-                )
-            })?;
+            .context("Timeout certificate insert failed when persisting to DB")?;
         self.inner.write().unwrap().replace_timeout_cert(tc);
         Ok(())
     }
@@ -387,24 +375,6 @@ impl<T: Payload> BlockStore<T> {
             .process_pruned_blocks(next_root_id, id_to_remove.clone());
         id_to_remove
     }
-
-    fn verify_and_get_parent(&self, block: &Block<T>) -> failure::Result<Arc<ExecutedBlock<T>>> {
-        ensure!(
-            self.inner.read().unwrap().root().round() < block.round(),
-            "Block with old round"
-        );
-
-        let parent = self
-            .get_block(block.parent_id())
-            .ok_or_else(|| format_err!("Block with missing parent {}", block.parent_id()))?;
-        ensure!(parent.round() < block.round(), "Block with invalid round");
-        ensure!(
-            block.timestamp_usecs() > parent.timestamp_usecs(),
-            "Block with non-increasing timestamp"
-        );
-
-        Ok(parent)
-    }
 }
 
 impl<T: Payload> BlockReader for BlockStore<T> {
@@ -441,8 +411,8 @@ impl<T: Payload> BlockReader for BlockStore<T> {
         self.inner.read().unwrap().highest_quorum_cert()
     }
 
-    fn highest_ledger_info(&self) -> Arc<QuorumCert> {
-        self.inner.read().unwrap().highest_ledger_info()
+    fn highest_commit_cert(&self) -> Arc<QuorumCert> {
+        self.inner.read().unwrap().highest_commit_cert()
     }
 
     fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>> {
@@ -485,7 +455,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn insert_block_with_qc(
         &self,
         block: Block<T>,
-    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
+    ) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
         Ok(self.execute_and_insert_block(block).await?)
     }
@@ -494,7 +464,7 @@ impl<T: Payload> BlockStore<T> {
     pub async fn insert_reconfiguration_block(
         &self,
         block: Block<T>,
-    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
+    ) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
         let executed_block = self.execute_block(block).await?;
         let mut output = executed_block.output().as_ref().clone();

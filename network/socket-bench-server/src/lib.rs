@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use futures::{
     future::Future,
     io::{AsyncRead, AsyncWrite},
@@ -20,10 +22,8 @@ use netcore::{
 use noise::{NoiseConfig, NoiseSocket};
 use parity_multiaddr::Multiaddr;
 use std::{convert::TryInto, env, ffi::OsString, sync::Arc};
-use tokio::{
-    codec::{Framed, LengthDelimitedCodec},
-    runtime::TaskExecutor,
-};
+use tokio::runtime::Handle;
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 #[derive(Debug)]
 pub struct Args {
@@ -204,7 +204,7 @@ where
 }
 
 pub fn start_stream_server<T, L, I, S, E>(
-    executor: &TaskExecutor,
+    executor: &Handle,
     transport: T,
     listen_addr: Multiaddr,
 ) -> Multiaddr
@@ -221,7 +221,7 @@ where
 }
 
 pub fn start_muxer_server<T, L, I, M, E>(
-    executor: &TaskExecutor,
+    executor: &Handle,
     transport: T,
     listen_addr: Multiaddr,
 ) -> Multiaddr

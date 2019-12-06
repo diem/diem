@@ -9,7 +9,7 @@ error:
    │             - The type: 'u64'
    ·
  8 │         R { s1: S { f }, s2 } = &R { s1: S{f: 0}, s2: S{f: 1} };
-   │                 ------- Is is not compatible with: '&u64'
+   │                 ------- Is not compatible with: '&u64'
    │
 
 error: 
@@ -20,10 +20,10 @@ error:
     │         ^^ Invalid assignment to local 's2'
     ·
  10 │         s2 = S { f: 0 }
-    │              ---------- The type: '0000000000000000000000000000000000000000000000000000000008675309.M.S'
+    │              ---------- The type: '0x8675309::M::S'
     ·
  8 │         R { s1: S { f }, s2 } = &R { s1: S{f: 0}, s2: S{f: 1} };
-    │         --------------------- Is is not compatible with: '&0000000000000000000000000000000000000000000000000000000008675309.M.S'
+    │         --------------------- Is not compatible with: '&0x8675309::M::S'
     │
 
 error: 
@@ -37,7 +37,7 @@ error:
     │             - The type: 'u64'
     ·
  16 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
-    │                 ------- Is is not compatible with: '&mut u64'
+    │                 ------- Is not compatible with: '&mut u64'
     │
 
 error: 
@@ -48,10 +48,10 @@ error:
     │         ^^ Invalid assignment to local 's2'
     ·
  18 │         s2 = S { f: 0 }
-    │              ---------- The type: '0000000000000000000000000000000000000000000000000000000008675309.M.S'
+    │              ---------- The type: '0x8675309::M::S'
     ·
  16 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
-    │         --------------------- Is is not compatible with: '&mut 0000000000000000000000000000000000000000000000000000000008675309.M.S'
+    │         --------------------- Is not compatible with: '&mut 0x8675309::M::S'
     │
 
 error: 
@@ -62,7 +62,7 @@ error:
     │         ^ Invalid assignment to local 'f'
     ·
  26 │         f = &0;
-    │              - The type: '&u64'
+    │             -- The type: '&u64'
     ·
  25 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
     │                 ------- Is not a subtype of: '&mut u64'
@@ -76,9 +76,9 @@ error:
     │         ^^ Invalid assignment to local 's2'
     ·
  27 │         s2 = &S { f: 0 }
-    │               ---------- The type: '&0000000000000000000000000000000000000000000000000000000008675309.M.S'
+    │              ----------- The type: '&0x8675309::M::S'
     ·
  25 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
-    │         --------------------- Is not a subtype of: '&mut 0000000000000000000000000000000000000000000000000000000008675309.M.S'
+    │         --------------------- Is not a subtype of: '&mut 0x8675309::M::S'
     │
 

@@ -9,21 +9,21 @@ error:
    │                -- The type: '()'
    ·
  3 │         while (()) ();
-   │                -- Is is not compatible with: 'bool'
+   │                -- Is not compatible with: 'bool'
    │
 
 error: 
 
-   ┌── tests/move_check/typing/while_condition_invalid.move:4:17 ───
+   ┌── tests/move_check/typing/while_condition_invalid.move:4:16 ───
    │
  4 │         while ((())) ();
-   │                 ^^ Invalid while condition
+   │                ^^^^ Invalid while condition
    ·
  4 │         while ((())) ();
-   │                 -- The type: '()'
+   │                ---- The type: '()'
    ·
  4 │         while ((())) ();
-   │                 -- Is is not compatible with: 'bool'
+   │                ---- Is not compatible with: 'bool'
    │
 
 error: 
@@ -37,7 +37,7 @@ error:
    │                -- The type: '()'
    ·
  5 │         while ({}) ()
-   │                -- Is is not compatible with: 'bool'
+   │                -- Is not compatible with: 'bool'
    │
 
 error: 
@@ -51,7 +51,7 @@ error:
    │                        - The type: 'T'
    ·
  9 │         while (x) ();
-   │                - Is is not compatible with: 'bool'
+   │                - Is not compatible with: 'bool'
    │
 
 error: 
@@ -65,7 +65,7 @@ error:
     │                - The type: 'u64'
     ·
  10 │         while (0) ();
-    │                - Is is not compatible with: 'bool'
+    │                - Is not compatible with: 'bool'
     │
 
 error: 
@@ -79,7 +79,7 @@ error:
     │                --- The type: 'address'
     ·
  11 │         while (0x0) ()
-    │                --- Is is not compatible with: 'bool'
+    │                --- Is not compatible with: 'bool'
     │
 
 error: 
@@ -93,7 +93,7 @@ error:
     │                ------------- The type: '(bool,bool)'
     ·
  15 │         while ((false, true)) ();
-    │                ------------- Is is not compatible with: 'bool'
+    │                ------------- Is not compatible with: 'bool'
     │
 
 error: 
@@ -107,6 +107,6 @@ error:
     │                ---------- The type: '(u64,bool)'
     ·
  16 │         while ((0, false)) ()
-    │                ---------- Is is not compatible with: 'bool'
+    │                ---------- Is not compatible with: 'bool'
     │
 

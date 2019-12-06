@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Consensus for the Libra Core blockchain
 //!
 //! Encapsulates public consensus traits and any implementations of those traits.
@@ -9,12 +11,7 @@
 
 #![cfg_attr(not(feature = "fuzzing"), deny(missing_docs))]
 #![cfg_attr(feature = "fuzzing", allow(dead_code))]
-#![recursion_limit = "2048"]
-extern crate failure;
-
-#[allow(unused_imports)]
-#[macro_use]
-extern crate debug_interface;
+#![recursion_limit = "512"]
 
 #[macro_use]
 extern crate prometheus;

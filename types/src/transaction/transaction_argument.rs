@@ -1,14 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//use crate::errors::*;
-use crate::{
-    account_address::AccountAddress, byte_array::ByteArray,
-    proto::types::transaction_argument::ArgType as TransactionArgument_ArgType,
-};
-use failure::prelude::*;
+#![forbid(unsafe_code)]
+
+use crate::{account_address::AccountAddress, byte_array::ByteArray};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
+use thiserror::Error;
 
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionArgument {
@@ -33,80 +32,9 @@ impl fmt::Debug for TransactionArgument {
     }
 }
 
-impl fmt::Display for TransactionArgument {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TransactionArgument::U64(value) => write!(f, "{}", value),
-            TransactionArgument::Bool(boolean) => write!(f, "{}", boolean),
-            TransactionArgument::Address(address) => write!(f, "{}", address),
-            TransactionArgument::String(string) => write!(f, "{}", string),
-            TransactionArgument::ByteArray(byte_array) => {
-                write!(f, "b\"{}\"", hex::encode(byte_array.as_bytes()))
-            }
-        }
-    }
-}
-
-impl TryFrom<crate::proto::types::TransactionArgument> for TransactionArgument {
-    type Error = Error;
-
-    fn try_from(proto_trans: crate::proto::types::TransactionArgument) -> Result<Self> {
-        let transaction_argument = match proto_trans.arg_type() {
-            TransactionArgument_ArgType::U64 => TransactionArgument::U64 {
-                0: decode_bytes(proto_trans.arg_value.as_slice()),
-            },
-            TransactionArgument_ArgType::Address => TransactionArgument::Address {
-                0: AccountAddress::try_from(proto_trans.arg_value).unwrap(),
-            },
-            TransactionArgument_ArgType::String => TransactionArgument::String {
-                0: String::from_utf8(proto_trans.arg_value).unwrap(),
-            },
-            TransactionArgument_ArgType::ByteArray => TransactionArgument::ByteArray {
-                0: ByteArray::new(proto_trans.arg_value),
-            },
-        };
-        Ok(transaction_argument)
-    }
-}
-
-impl From<TransactionArgument> for crate::proto::types::TransactionArgument {
-    fn from(transaction_argument: TransactionArgument) -> Self {
-        let mut arg_value: std::vec::Vec<u8> = Vec::new();
-        let mut arg_type: i32 = 0;
-        match transaction_argument {
-            TransactionArgument::U64(value) => {
-                arg_type = 0;
-                arg_value = value.to_le_bytes().to_vec();
-            }
-            TransactionArgument::Address(address) => {
-                arg_type = 1;
-                arg_value = address.to_vec();
-            }
-            TransactionArgument::String(string) => {
-                arg_type = 2;
-                arg_value = string.into_bytes();
-            }
-            TransactionArgument::ByteArray(byte_array) => {
-                arg_type = 3;
-                arg_value = byte_array.into_inner();
-            }
-            _ => {}
-        };
-        Self {
-            arg_type,
-            arg_value,
-        }
-    }
-}
-
-fn decode_bytes(bytes: &[u8]) -> u64 {
-    let mut buf = [0; 8];
-    buf.copy_from_slice(bytes);
-    u64::from_le_bytes(buf)
-}
-#[derive(Clone, Debug, Fail)]
+#[derive(Clone, Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "ParseError: {}", _0)]
+    #[error("ParseError: {0}")]
     ParseError(String),
 }
 

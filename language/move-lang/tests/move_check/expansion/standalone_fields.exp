@@ -1,8 +1,11 @@
 error: 
 
-   ┌── tests/move_check/expansion/standalone_fields.move:3:9 ───
+   ┌── tests/move_check/expansion/standalone_fields.move:3:11 ───
    │
  3 │         {f: 1, g: 0};
-   │         ^^^^^^^^^^^^ Unexpected field arguments. Fields are used only to instantiate a struct
+   │           ^ Unrecognized Token: :
+   ·
+ 3 │         {f: 1, g: 0};
+   │           - Expected:  ";", "}",
    │
 

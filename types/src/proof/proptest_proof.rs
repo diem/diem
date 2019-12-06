@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! All proofs generated in this module are not valid proofs. They are only for the purpose of
 //! testing conversion between Rust and Protobuf.
 

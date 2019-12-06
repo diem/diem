@@ -13,7 +13,7 @@ pub async fn read_u16frame<'stream, 'buf, 'c, TSocket>(
 where
     'stream: 'c,
     'buf: 'c,
-    TSocket: AsyncRead + AsyncWrite + Unpin,
+    TSocket: AsyncRead + Unpin,
 {
     let len = read_u16frame_len(&mut stream).await?;
     buf.resize(len as usize, 0);
@@ -24,7 +24,7 @@ where
 /// Read a u16 (encoded as BE bytes) from `Stream` and return the length.
 async fn read_u16frame_len<TSocket>(stream: &mut TSocket) -> Result<u16>
 where
-    TSocket: AsyncRead + AsyncWrite + Unpin,
+    TSocket: AsyncRead + Unpin,
 {
     let mut len_buf = [0, 0];
     stream.read_exact(&mut len_buf).await?;
@@ -43,7 +43,7 @@ pub async fn write_u16frame<'stream, 'buf, 'c, TSocket>(
 where
     'stream: 'c,
     'buf: 'c,
-    TSocket: AsyncRead + AsyncWrite + Unpin,
+    TSocket: AsyncWrite + Unpin,
 {
     let len = buf
         .len()
@@ -61,7 +61,7 @@ where
 /// Caller is responsible for flushing the write to `stream`.
 async fn write_u16frame_len<TSocket>(stream: &mut TSocket, len: u16) -> Result<()>
 where
-    TSocket: AsyncRead + AsyncWrite + Unpin,
+    TSocket: AsyncWrite + Unpin,
 {
     let len = u16::to_be_bytes(len);
     stream.write_all(&len).await?;

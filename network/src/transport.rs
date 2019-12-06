@@ -25,7 +25,7 @@ use std::{
 };
 
 /// A timeout for the connection to open and complete all of the upgrade steps.
-const TRANSPORT_TIMEOUT: Duration = Duration::from_secs(30);
+pub const TRANSPORT_TIMEOUT: Duration = Duration::from_secs(30);
 
 const LIBRA_TCP_TRANSPORT: tcp::TcpTransport = tcp::TcpTransport {
     // Use default options.

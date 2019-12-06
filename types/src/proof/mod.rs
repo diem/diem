@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 pub mod accumulator;
 pub mod definition;
 pub mod position;
@@ -15,7 +17,7 @@ use crate::{
     ledger_info::LedgerInfo,
     transaction::{TransactionInfo, Version},
 };
-use failure::prelude::*;
+use anyhow::{ensure, Result};
 use libra_crypto::{
     hash::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, SparseMerkleInternalHasher,
