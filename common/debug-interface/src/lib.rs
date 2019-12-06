@@ -3,50 +3,78 @@
 
 #![forbid(unsafe_code)]
 
-use crate::proto::{GetNodeDetailsRequest, NodeDebugInterfaceClient};
+use crate::proto::{
+    node_debug_interface_client::NodeDebugInterfaceClient, GetEventsRequest, GetEventsResponse,
+    GetNodeDetailsRequest,
+};
 use anyhow::{Context, Result};
-use grpcio::{ChannelBuilder, EnvBuilder};
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
+use tokio::runtime::{Builder, Runtime};
 
 // Generated
 pub mod proto;
 
-pub mod node_debug_helpers;
 pub mod node_debug_service;
 #[macro_use]
 pub mod json_log;
 
 /// Implement default utility client for NodeDebugInterface
 pub struct NodeDebugClient {
-    client: NodeDebugInterfaceClient,
+    // Currently the runtime but be ordered before the tonic client to ensure that the runtime is
+    // dropped last when this struct is dropped.
+    // See https://github.com/tokio-rs/tokio/issues/1948 for more info.
+    rt: Runtime,
+    addr: String,
+    client: Option<NodeDebugInterfaceClient<tonic::transport::Channel>>,
 }
 
 impl NodeDebugClient {
-    pub fn new<A: AsRef<str>>(address: A, port: u16) -> Self {
-        Self::from_socket_addr_str(&format!("{}:{}", address.as_ref(), port))
-    }
-
     /// Create NodeDebugInterfaceClient from a valid socket address.
-    pub fn from_socket_addr_str<A: AsRef<str>>(socket_addr: A) -> Self {
-        let env = Arc::new(EnvBuilder::new().name_prefix("grpc-debug-").build());
-        let ch = ChannelBuilder::new(env).connect(&socket_addr.as_ref());
-        let client = NodeDebugInterfaceClient::new(ch);
+    pub fn new<A: AsRef<str>>(address: A, port: u16) -> Self {
+        let rt = Builder::new()
+            .basic_scheduler()
+            .enable_all()
+            .build()
+            .unwrap();
+        let addr = format!("http://{}:{}", address.as_ref(), port);
 
-        Self { client }
+        Self {
+            client: None,
+            addr,
+            rt,
+        }
     }
 
-    pub fn get_node_metric<S: AsRef<str>>(&self, metric: S) -> Result<Option<i64>> {
+    fn client(
+        &mut self,
+    ) -> Result<(
+        &mut Runtime,
+        &mut NodeDebugInterfaceClient<tonic::transport::Channel>,
+    )> {
+        if self.client.is_none() {
+            self.client = Some(
+                self.rt
+                    .block_on(NodeDebugInterfaceClient::connect(self.addr.clone()))?,
+            );
+        }
+
+        // client is guaranteed to be populated by the time we reach here
+        Ok((&mut self.rt, self.client.as_mut().unwrap()))
+    }
+
+    pub fn get_node_metric<S: AsRef<str>>(&mut self, metric: S) -> Result<Option<i64>> {
         let metrics = self.get_node_metrics()?;
         Ok(metrics.get(metric.as_ref()).cloned())
     }
 
-    pub fn get_node_metrics(&self) -> Result<HashMap<String, i64>> {
-        let response = self
-            .client
-            .get_node_details(&GetNodeDetailsRequest::default())
+    pub fn get_node_metrics(&mut self) -> Result<HashMap<String, i64>> {
+        let (rt, client) = self.client()?;
+        let response = rt
+            .block_on(client.get_node_details(GetNodeDetailsRequest::default()))
             .context("Unable to query Node metrics")?;
 
         response
+            .into_inner()
             .stats
             .into_iter()
             .map(|(k, v)| match v.parse::<i64>() {
@@ -58,5 +86,13 @@ impl NodeDebugClient {
                 )),
             })
             .collect()
+    }
+
+    pub fn get_events(&mut self) -> Result<GetEventsResponse> {
+        let (rt, client) = self.client()?;
+        let response = rt
+            .block_on(client.get_events(GetEventsRequest::default()))
+            .context("Unable to query Node events")?;
+        Ok(response.into_inner())
     }
 }

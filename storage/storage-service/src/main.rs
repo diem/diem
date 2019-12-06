@@ -4,11 +4,14 @@
 #![forbid(unsafe_code)]
 
 use anyhow::Result;
-use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
+use debug_interface::{
+    node_debug_service::NodeDebugService,
+    proto::node_debug_interface_server::NodeDebugInterfaceServer,
+};
 use executable_helpers::helpers::setup_executable;
-use grpc_helpers::spawn_service_thread;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
+use std::net::ToSocketAddrs;
 use std::{path::PathBuf, thread};
 use structopt::StructOpt;
 
@@ -29,16 +32,25 @@ impl StorageNode {
 
     pub fn run(&self) -> Result<()> {
         info!("Starting storage node");
+        let rt = tokio::runtime::Runtime::new().unwrap();
 
         let _handle = storage_service::start_storage_service(&self.node_config);
 
         // Start Debug interface
-        let debug_service = create_node_debug_interface(NodeDebugService::new());
-        let _debug_handle = spawn_service_thread(
-            debug_service,
-            self.node_config.storage.address.clone(),
-            self.node_config.debug_interface.storage_node_debug_port,
-            "debug_service",
+        let addr = format!(
+            "{}:{}",
+            self.node_config.storage.address,
+            self.node_config.debug_interface.storage_node_debug_port
+        )
+        .to_socket_addrs()
+        .unwrap()
+        .next()
+        .unwrap();
+
+        rt.spawn(
+            tonic::transport::Server::builder()
+                .add_service(NodeDebugInterfaceServer::new(NodeDebugService::new()))
+                .serve(addr),
         );
 
         info!("Started Storage Service");

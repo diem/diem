@@ -24,7 +24,6 @@ prometheus = { version = "0.7.0", default-features = false }
 admission-control-proto = { path = "../admission-control-proto", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-debug-interface = { path = "../../common/debug-interface", version = "0.1.0" }
 executable-helpers = { path = "../../common/executable-helpers", version = "0.1.0" }
 grpc-helpers = { path = "../../common/grpc-helpers", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
