@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::Context;
 use codespan::{ByteIndex, Span};
 use std::fmt;
 use std::str::FromStr;
@@ -139,13 +140,14 @@ fn parse_account_address<'input>(
             location: tokens.start_loc(),
         });
     }
-    let addr = AccountAddress::from_hex_literal(&tokens.content()).unwrap_or_else(|_| {
-        // The lexer guarantees this, but tracking it all the way to here is tedious.
-        unreachable!(
-            "The address {:?} is of invalid length. Addresses are at most 32-bytes long",
-            tokens.content()
-        )
-    });
+    let addr = AccountAddress::from_hex_literal(&tokens.content())
+        .with_context(|| {
+            format!(
+                "The address {:?} is of invalid length. Addresses are at most 32-bytes long",
+                tokens.content()
+            )
+        })
+        .unwrap();
     tokens.advance()?;
     Ok(addr)
 }
