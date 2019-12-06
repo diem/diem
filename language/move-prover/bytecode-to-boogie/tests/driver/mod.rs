@@ -78,7 +78,21 @@ pub fn run_boogie(boogie_str: &str) {
     //    boogie_file_path.push("/tmp/output.bpl");
     fs::write(&boogie_file_path, boogie_str).unwrap();
     if let Ok(boogie_path) = env::var("BOOGIE_EXE") {
-        if let Ok(z3_path) = env::var("Z3_EXE") {
+        if let Ok(cvc4_path) = env::var("CVC4_EXE") {
+            let status = Command::new(boogie_path)
+                .args(&[
+                    &format!("{}{}", "-cvc4exe:", cvc4_path).as_str(),
+                    "-proverOpt:SOLVER=CVC4",
+                    "-doModSetAnalysis",
+                    "-useArrayTheory",
+                    "-noinfer",
+                    "-noVerify",
+                    boogie_file_path.to_str().unwrap(),
+                ])
+                .status()
+                .expect("failed to execute Boogie");
+            assert!(status.success());
+        } else if let Ok(z3_path) = env::var("Z3_EXE") {
             let status = Command::new(boogie_path)
                 .args(&[
                     &format!("{}{}", "-z3exe:", z3_path).as_str(),
