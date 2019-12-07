@@ -321,10 +321,7 @@ impl Storage for StorageService {
                 let f = sink
                     .send_all(futures01::stream::iter_result(iter.map(|res| match res {
                         Ok((hash, blob)) => Ok((
-                            BackupAccountStateResponse {
-                                account_key: hash.to_vec(),
-                                account_state_blob: Some(blob.into()),
-                            },
+                            storage_proto::BackupAccountStateResponse::new(hash, blob).into(),
                             grpcio::WriteFlags::default(),
                         )),
                         Err(e) => Err(grpcio::Error::RpcFailure(grpcio::RpcStatus::new(
