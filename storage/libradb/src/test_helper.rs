@@ -93,7 +93,7 @@ prop_compose! {
         mut universe in any_with::<AccountInfoUniverse>(5).no_shrink(),
         batches in vec(
             (
-                vec(any::<TransactionToCommitGen>(), 0..=2),
+                vec(any::<TransactionToCommitGen>(), 1..=2),
                 any::<LedgerInfoWithSignaturesGen>(),
             ),
             1..10,

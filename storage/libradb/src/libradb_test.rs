@@ -23,8 +23,12 @@ fn verify_epochs(db: &LibraDB, ledger_infos_with_sigs: &[LedgerInfoWithSignature
         .cloned()
         .collect();
 
-    let (_, _, proof, _) = db.update_to_latest_ledger(0, Vec::new())?;
+    let (_, _, mut proof, _) = db.update_to_latest_ledger(0, Vec::new())?;
 
+    // The very first validator change in the returned proof is the
+    // validator change of genesis (LedgerInfo with epoch 0).
+    let first_epoch_change_li = proof.ledger_info_with_sigs.remove(0);
+    assert_eq!(first_epoch_change_li.ledger_info().epoch(), 0);
     assert_eq!(epoch_change_lis, proof.ledger_info_with_sigs);
 
     Ok(())

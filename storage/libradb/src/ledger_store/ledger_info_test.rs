@@ -58,20 +58,26 @@ proptest! {
         // verify get_epoch()
         let epoch_change_versions: Vec<_> = epoch_ledgers.iter().map(|li| {
             let ledger_info = li.ledger_info();
-            (ledger_info.epoch() + 1, ledger_info.version())
+            (ledger_info.epoch(), ledger_info.version())
         }).collect();
         for pair in (&epoch_change_versions).windows(2) {
             let prev = pair[0];
             let prev_epoch = prev.0;
-            let prev_ver = prev.1;
+            let prev_epoch_last_ver = prev.1;
             let this = pair[1];
             let this_epoch = this.0;
-            let this_ver = this.1;
+            let this_epoch_last_ver = this.1;
             prop_assert_eq!(prev_epoch + 1, this_epoch);
 
-            let mid_ver = (prev_ver + this_ver) / 2;
-            prop_assert_eq!(store.get_epoch(mid_ver).unwrap(), prev_epoch, "{}", mid_ver);
-            prop_assert_eq!(store.get_epoch(this_ver).unwrap(), this_epoch, "{}", this_ver);
+            let mid_ver = (prev_epoch_last_ver + this_epoch_last_ver) / 2;
+            let expected_for_mid_ver = if mid_ver > prev_epoch_last_ver { this_epoch } else { prev_epoch };
+            prop_assert_eq!
+            (
+                store.get_epoch(mid_ver).unwrap(), expected_for_mid_ver,
+                "prev_epoch_last_ver: {}, this_epoch_last_ver: {}, mid_ver: {}",
+                    prev_epoch_last_ver, this_epoch_last_ver, mid_ver
+            );
+            prop_assert_eq!(store.get_epoch(this_epoch_last_ver).unwrap(), this_epoch, "{}", this_epoch_last_ver);
         }
     }
 }
