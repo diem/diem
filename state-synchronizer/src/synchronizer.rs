@@ -20,7 +20,7 @@ use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
-use vm_runtime::MoveVM;
+use vm_runtime::LibraVM;
 
 pub struct StateSynchronizer {
     _runtime: Runtime,
@@ -31,7 +31,7 @@ impl StateSynchronizer {
     /// Setup state synchronizer. spawns coordinator and downloader routines on executor
     pub fn bootstrap(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
-        executor: Arc<Executor<MoveVM>>,
+        executor: Arc<Executor<LibraVM>>,
         config: &NodeConfig,
     ) -> Self {
         let executor_proxy = ExecutorProxy::new(executor, config);

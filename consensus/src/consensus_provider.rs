@@ -12,7 +12,7 @@ use libra_mempool::proto::mempool::MempoolClient;
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
-use vm_runtime::MoveVM;
+use vm_runtime::LibraVM;
 
 /// Public interface to a consensus protocol.
 pub trait ConsensusProvider {
@@ -32,7 +32,7 @@ pub fn make_consensus_provider(
     node_config: &mut NodeConfig,
     network_sender: ConsensusNetworkSender,
     network_receiver: ConsensusNetworkEvents,
-    executor: Arc<Executor<MoveVM>>,
+    executor: Arc<Executor<LibraVM>>,
     state_sync_client: Arc<StateSyncClient>,
 ) -> Box<dyn ConsensusProvider> {
     Box::new(ChainedBftProvider::new(

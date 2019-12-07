@@ -2,30 +2,38 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    block_processor::execute_user_transaction_block,
     code_cache::{
         module_adapter::ModuleFetcherImpl,
+        module_cache::ModuleCache,
         module_cache::{BlockModuleCache, VMModuleCache},
         script_cache::ScriptCache,
     },
-    counters::report_verification_status,
     data_cache::BlockDataCache,
+    execution_context::InterpreterContext,
     gas_meter::load_gas_schedule,
-    loaded_data::loaded_module::LoadedModule,
-    process_txn::{validate::ValidationMode, ProcessTransaction},
-    system_txn::block_metadata_processor::process_block_metadata,
+    interpreter::Interpreter,
+    loaded_data::{function::FunctionReference, loaded_module::LoadedModule},
 };
+use bytecode_verifier::VerifiedModule;
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
-    block_metadata::BlockMetadata,
-    transaction::{SignedTransaction, Transaction, TransactionOutput},
-    vm_error::{sub_status, StatusCode, VMStatus},
-    write_set::WriteSet,
+    account_address::AccountAddress,
+    identifier::{IdentStr, Identifier},
+    language_storage::ModuleId,
+    vm_error::{StatusCode, VMStatus},
 };
-use vm::{errors::VMResult, gas_schedule::CostTable};
+use vm::{
+    access::ModuleAccess,
+    errors::{verification_error, vm_error, Location, VMResult},
+    file_format::FunctionSignature,
+    gas_schedule::CostTable,
+    transaction_metadata::TransactionMetadata,
+    CompiledModule, IndexKind,
+};
 use vm_cache_map::Arena;
+use vm_runtime_types::{loaded_data::struct_def::StructDef, value::Value};
 
 /// An instantiation of the MoveVM.
 /// `code_cache` is the top level module cache that holds loaded published modules.
@@ -52,147 +60,165 @@ impl<'alloc> VMRuntime<'alloc> {
         }
     }
 
-    /// Determine if a transaction is valid. Will return `None` if the transaction is accepted,
-    /// `Some(Err)` if the VM rejects it, with `Err` as an error code. We verify the following
-    /// items:
-    /// 1. The signature on the `SignedTransaction` matches the public key included in the
-    ///    transaction
-    /// 2. The script to be executed is in the whitelist.
-    /// 3. Invokes `LibraAccount.prologue`, which checks properties such as the transaction has the
-    /// right sequence number and the sender has enough balance to pay for the gas. 4.
-    /// Transaction arguments matches the main function's type signature. 5. Script and modules
-    /// in the transaction pass the bytecode static verifier.
-    ///
-    /// Note: In the future. we may defer these checks to a later pass, as all the scripts we will
-    /// execute are pre-verified scripts. And bytecode verification is expensive. Thus whether we
-    /// want to perform this check here remains unknown.
-    pub fn verify_transaction(
+    pub(crate) fn load_gas_schedule(
         &self,
-        txn: SignedTransaction,
-        data_view: &dyn StateView,
-    ) -> Option<VMStatus> {
-        trace!("[VM] Verify transaction: {:?}", txn);
-        // Treat a transaction as a single block.
-        let module_cache =
-            BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(data_view));
-        let data_cache = BlockDataCache::new(data_view);
+        data_cache: &mut BlockDataCache<'_>,
+        state_view: &dyn StateView,
+    ) -> VMResult<CostTable> {
+        let code_cache =
+            BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(state_view));
+        load_gas_schedule(&code_cache, data_cache)
+    }
 
-        // If we fail to load the gas schedule, then we fail to process the block.
-        let gas_schedule = match load_gas_schedule(&module_cache, &data_cache) {
-            // TODO/XXX: This is a hack to get around not having proper writesets yet. Once that gets
-            // in remove this line.
-            Err(_) if data_view.is_genesis() => CostTable::zero(),
-            Ok(cost_table) => cost_table,
-            Err(_error) => {
-                return Some(
-                    VMStatus::new(StatusCode::VM_STARTUP_FAILURE)
-                        .with_sub_status(sub_status::VSF_GAS_SCHEDULE_NOT_FOUND),
-                )
+    pub(crate) fn publishing_option(&self) -> &VMPublishingOption {
+        &self.publishing_option
+    }
+
+    pub(crate) fn publish_module(
+        &self,
+        module: &[u8],
+        _state_view: &dyn StateView,
+        context: &mut dyn InterpreterContext,
+        txn_data: &TransactionMetadata,
+        _gas_schedule: &CostTable,
+    ) -> VMResult<ModuleId> {
+        let compiled_module = match CompiledModule::deserialize(module) {
+            Ok(module) => module,
+            Err(err) => {
+                warn!("[VM] module deserialization failed {:?}", err);
+                return Err(err);
             }
         };
 
-        let signature_verified_txn = match txn.check_signature() {
-            Ok(t) => t,
-            Err(_) => return Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
+        // Make sure the module's self address matches the transaction sender. The self address is
+        // where the module will actually be published. If we did not check this, the sender could
+        // publish a module under anyone's account.
+        if compiled_module.address() != &txn_data.sender {
+            return Err(verification_error(
+                IndexKind::AddressPool,
+                CompiledModule::IMPLEMENTED_MODULE_INDEX as usize,
+                StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER,
+            ));
+        }
+
+        // Make sure that there is not already a module with this name published
+        // under the transaction sender's account.
+        let module_id = compiled_module.self_id();
+        if context.exists_module(&module_id) {
+            return Err(vm_error(
+                Location::default(),
+                StatusCode::DUPLICATE_MODULE_NAME,
+            ));
         };
 
-        let process_txn = ProcessTransaction::new(
-            signature_verified_txn,
-            &gas_schedule,
-            module_cache,
-            &data_cache,
+        match VerifiedModule::new(compiled_module) {
+            Ok(ver_module) => ver_module,
+            Err((_, mut errors)) => {
+                let err = if errors.is_empty() {
+                    VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                } else {
+                    errors.remove(0)
+                };
+
+                return Err(err);
+            }
+        };
+
+        Ok(module_id)
+    }
+
+    pub fn create_account(
+        &self,
+        state_view: &dyn StateView,
+        context: &mut dyn InterpreterContext,
+        txn_data: &TransactionMetadata,
+        gas_schedule: &CostTable,
+        addr: AccountAddress,
+    ) -> VMResult<()> {
+        let code_cache =
+            BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(state_view));
+        Interpreter::create_account_entry(context, &code_cache, txn_data, gas_schedule, addr)
+    }
+
+    pub fn execute_script(
+        &self,
+        state_view: &dyn StateView,
+        context: &mut dyn InterpreterContext,
+        txn_data: &TransactionMetadata,
+        gas_schedule: &CostTable,
+        script: Vec<u8>,
+        args: Vec<Value>,
+    ) -> VMResult<()> {
+        let main = self.script_cache.cache_script(&script)?;
+
+        if !verify_actuals(main.signature(), &args) {
+            return Err(VMStatus::new(StatusCode::TYPE_MISMATCH)
+                .with_message("Actual Type Mismatch".to_string()));
+        }
+
+        let code_cache =
+            BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(state_view));
+        Interpreter::entrypoint(context, &code_cache, txn_data, gas_schedule, main, args)
+    }
+
+    pub fn execute_function(
+        &self,
+        state_view: &dyn StateView,
+        context: &mut dyn InterpreterContext,
+        txn_data: &TransactionMetadata,
+        gas_schedule: &CostTable,
+        module: &ModuleId,
+        function_name: &IdentStr,
+        args: Vec<Value>,
+    ) -> VMResult<()> {
+        let code_cache =
+            BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(state_view));
+        Interpreter::execute_function(
+            context,
+            &code_cache,
+            txn_data,
+            gas_schedule,
+            module,
+            function_name,
+            args,
+        )
+    }
+
+    pub fn cache_module(&mut self, module: VerifiedModule) {
+        self.code_cache.cache_module(module);
+    }
+
+    pub fn resolve_struct_def(
+        &self,
+        module_id: &ModuleId,
+        name: &Identifier,
+        context: &mut dyn InterpreterContext,
+    ) -> VMResult<StructDef> {
+        let gas_module = self.code_cache.get_loaded_module(module_id).unwrap();
+        let struct_idx = gas_module.get_struct_def_index(name).unwrap();
+        self.code_cache
+            .resolve_struct_def(gas_module, *struct_idx, context)
+    }
+}
+
+/// Verify if the transaction arguments match the type signature of the main function.
+fn verify_actuals(signature: &FunctionSignature, args: &[Value]) -> bool {
+    if signature.arg_types.len() != args.len() {
+        warn!(
+            "[VM] different argument length: actuals {}, formals {}",
+            args.len(),
+            signature.arg_types.len()
         );
-        let mode = if data_view.is_genesis() {
-            ValidationMode::Genesis
-        } else {
-            ValidationMode::Validating
-        };
-
-        let validated_txn = match process_txn.validate(mode, &self.publishing_option) {
-            Ok(validated_txn) => validated_txn,
-            Err(vm_status) => {
-                let res = Some(vm_status);
-                report_verification_status(&res);
-                return res;
-            }
-        };
-        let res = match validated_txn.verify(&self.script_cache) {
-            Ok(_) => None,
-            Err(vm_status) => Some(vm_status),
-        };
-        report_verification_status(&res);
-        res
+        return false;
     }
-
-    /// Execute a block of transactions. The output vector will have the exact same length as the
-    /// input vector. The discarded transactions will be marked as `TransactionStatus::Discard` and
-    /// have an empty writeset. Also the data view is immutable, and also does not have interior
-    /// mutability. writes to be applied to the data view are encoded in the write set part of a
-    /// transaction output.
-    pub fn execute_block_transactions(
-        &self,
-        txn_block: Vec<Transaction>,
-        data_view: &dyn StateView,
-    ) -> VMResult<Vec<TransactionOutput>> {
-        let mut result = vec![];
-        let blocks = chunk_block_transactions(txn_block);
-        let mut data_cache = BlockDataCache::new(data_view);
-        let code_cache = BlockModuleCache::new(&self.code_cache, ModuleFetcherImpl::new(data_view));
-
-        for block in blocks {
-            match block {
-                TransactionBlock::UserTransaction(txns) => {
-                    result.append(&mut execute_user_transaction_block(
-                        txns,
-                        &code_cache,
-                        &self.script_cache,
-                        &mut data_cache,
-                        &self.publishing_option,
-                    )?)
-                }
-                TransactionBlock::BlockPrologue(block_metadata) => result.push(
-                    process_block_metadata(block_metadata, &code_cache, &mut data_cache),
-                ),
-                // TODO: Implement the logic for processing writeset transactions.
-                TransactionBlock::WriteSet(_) => unimplemented!(""),
-            }
-        }
-        Ok(result)
-    }
-}
-
-pub(crate) enum TransactionBlock {
-    UserTransaction(Vec<SignedTransaction>),
-    WriteSet(WriteSet),
-    BlockPrologue(BlockMetadata),
-}
-
-pub(crate) fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock> {
-    let mut blocks = vec![];
-    let mut buf = vec![];
-    for txn in txns {
-        match txn {
-            Transaction::BlockMetadata(data) => {
-                if !buf.is_empty() {
-                    blocks.push(TransactionBlock::UserTransaction(buf));
-                    buf = vec![];
-                }
-                blocks.push(TransactionBlock::BlockPrologue(data));
-            }
-            Transaction::WriteSet(ws) => {
-                if !buf.is_empty() {
-                    blocks.push(TransactionBlock::UserTransaction(buf));
-                    buf = vec![];
-                }
-                blocks.push(TransactionBlock::WriteSet(ws));
-            }
-            Transaction::UserTransaction(txn) => {
-                buf.push(txn);
-            }
+    for (ty, arg) in signature.arg_types.iter().zip(args.iter()) {
+        if !arg.is_valid_script_arg(ty) {
+            warn!(
+                "[VM] different argument type: formal {:?}, actual {:?}",
+                ty, arg
+            );
+            return false;
         }
     }
-    if !buf.is_empty() {
-        blocks.push(TransactionBlock::UserTransaction(buf));
-    }
-    blocks
+    true
 }

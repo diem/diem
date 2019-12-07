@@ -13,7 +13,7 @@ use libra_types::{
 };
 use std::{pin::Pin, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
-use vm_runtime::MoveVM;
+use vm_runtime::LibraVM;
 
 /// Proxies interactions with execution and storage for state synchronization
 pub trait ExecutorProxyTrait: Sync + Send {
@@ -43,11 +43,11 @@ pub trait ExecutorProxyTrait: Sync + Send {
 
 pub(crate) struct ExecutorProxy {
     storage_read_client: Arc<StorageReadServiceClient>,
-    executor: Arc<Executor<MoveVM>>,
+    executor: Arc<Executor<LibraVM>>,
 }
 
 impl ExecutorProxy {
-    pub(crate) fn new(executor: Arc<Executor<MoveVM>>, config: &NodeConfig) -> Self {
+    pub(crate) fn new(executor: Arc<Executor<LibraVM>>, config: &NodeConfig) -> Self {
         let client_env = Arc::new(EnvBuilder::new().name_prefix("grpc-coord-").build());
         let storage_read_client = Arc::new(StorageReadServiceClient::new(
             client_env,

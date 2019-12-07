@@ -22,7 +22,7 @@ use libra_types::{
 };
 use vm::CompiledModule;
 use vm_genesis::GENESIS_KEYPAIR;
-use vm_runtime::{MoveVM, VMExecutor, VMVerifier};
+use vm_runtime::{LibraVM, VMExecutor, VMVerifier};
 
 /// Provides an environment to run a VM instance.
 ///
@@ -157,7 +157,7 @@ impl FakeExecutor {
         &self,
         txn_block: Vec<SignedTransaction>,
     ) -> Result<Vec<TransactionOutput>, VMStatus> {
-        MoveVM::execute_block(
+        LibraVM::execute_block(
             txn_block
                 .into_iter()
                 .map(Transaction::UserTransaction)
@@ -204,7 +204,7 @@ impl FakeExecutor {
 
     /// Verifies the given transaction by running it through the VM verifier.
     pub fn verify_transaction(&self, txn: SignedTransaction) -> Option<VMStatus> {
-        let vm = MoveVM::new(&self.config);
+        let vm = LibraVM::new(&self.config);
         vm.validate_transaction(txn, &self.data_store)
     }
 

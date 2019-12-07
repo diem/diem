@@ -21,6 +21,7 @@ use std::{
     ops::Add,
     rc::Rc,
 };
+use vm::file_format::SignatureToken;
 use vm::{
     errors::*,
     gas_schedule::{
@@ -361,6 +362,16 @@ impl Value {
 
     pub fn pretty_string(&self) -> String {
         self.0.pretty_string()
+    }
+
+    pub fn is_valid_script_arg(&self, sig: &SignatureToken) -> bool {
+        match (sig, &self.0) {
+            (SignatureToken::U64, ValueImpl::U64(_)) => true,
+            (SignatureToken::Address, ValueImpl::Address(_)) => true,
+            (SignatureToken::ByteArray, ValueImpl::ByteArray(_)) => true,
+            (SignatureToken::String, ValueImpl::String(_)) => true,
+            _ => false,
+        }
     }
 }
 

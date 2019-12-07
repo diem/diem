@@ -117,9 +117,8 @@ pub mod foreign_contracts;
 mod block_processor;
 #[macro_use]
 pub mod gas_meter;
-mod move_vm;
+mod libra_vm;
 mod process_txn;
-mod runtime;
 mod system_txn;
 #[cfg(test)]
 mod unit_tests;
@@ -130,9 +129,10 @@ pub mod execution_context;
 pub mod identifier;
 pub mod interpreter;
 pub mod loaded_data;
+pub mod runtime;
 pub mod txn_executor;
 
-pub use move_vm::MoveVM;
+pub use libra_vm::LibraVM;
 pub use txn_executor::execute_function_in_module;
 
 use libra_config::config::VMConfig;

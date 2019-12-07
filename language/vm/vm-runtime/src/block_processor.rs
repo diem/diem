@@ -2,31 +2,31 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    code_cache::{module_cache::ModuleCache, script_cache::ScriptCache},
     counters::*,
     data_cache::BlockDataCache,
-    gas_meter::load_gas_schedule,
-    process_txn::{execute::ExecutedTransaction, validate::ValidationMode, ProcessTransaction},
+    process_txn::{
+        execute::ExecutedTransaction,
+        validate::{ValidatedTransaction, ValidationMode},
+    },
+    runtime::VMRuntime,
+    txn_executor::TransactionExecutor,
 };
-use libra_config::config::VMPublishingOption;
 use libra_logger::prelude::*;
+use libra_state_view::StateView;
 use libra_types::{
     transaction::{SignatureCheckedTransaction, SignedTransaction, TransactionOutput},
     vm_error::{sub_status, StatusCode, VMStatus},
 };
 use rayon::prelude::*;
-use vm::gas_schedule::CostTable;
+use vm::{gas_schedule::CostTable, transaction_metadata::TransactionMetadata};
 
-pub fn execute_user_transaction_block<'alloc, P>(
+/// Executes a block of `UserTransaction`.
+pub fn execute_user_transaction_block(
     txn_block: Vec<SignedTransaction>,
-    module_cache: P,
-    script_cache: &ScriptCache<'alloc>,
-    data_cache: &mut BlockDataCache<'_>,
-    publishing_option: &VMPublishingOption,
-) -> Result<Vec<TransactionOutput>, VMStatus>
-where
-    P: ModuleCache<'alloc>,
-{
+    runtime: &VMRuntime,
+    data_cache: &mut BlockDataCache,
+    state_view: &dyn StateView,
+) -> Result<Vec<TransactionOutput>, VMStatus> {
     trace!("[VM] Execute block, transaction count: {}", txn_block.len());
     report_block_count(txn_block.len());
 
@@ -44,7 +44,7 @@ where
     let mut result = vec![];
 
     // If we fail to load the gas schedule, then we fail to process the block.
-    let gas_schedule = match load_gas_schedule(&module_cache, data_cache) {
+    let gas_schedule = match runtime.load_gas_schedule(data_cache, state_view) {
         // TODO/XXX: This is a hack to get around not having proper writesets yet. Once that gets
         // in remove this line.
         Err(_) if data_cache.is_genesis() => CostTable::zero(),
@@ -68,19 +68,18 @@ where
                 let output = match transaction {
                     Ok(t) => transaction_flow(
                         t,
-                        &module_cache,
-                        script_cache,
-                        data_cache,
-                        mode,
-                        publishing_option,
+                        runtime,
                         &gas_schedule,
+                        data_cache,
+                        state_view,
+                        mode,
                     ),
                     Err(vm_status) => ExecutedTransaction::discard_error_output(vm_status),
                 };
                 report_execution_status(output.status());
                 data_cache.push_write_set(&output.write_set());
 
-                // `result` is initally empty, a single element is pushed per loop iteration and
+                // `result` is initially empty, a single element is pushed per loop iteration and
                 // the number of iterations is bound to the max size of `signature_verified_block`
                 assume!(result.len() < usize::max_value());
                 result.push(output);
@@ -105,44 +104,44 @@ where
 /// and this transaction is executed successfully, this function will update `module_cache` to
 /// include those newly published modules. This function will also update the `script_cache` to
 /// cache this `txn`
-fn transaction_flow<'alloc, P>(
+fn transaction_flow(
     txn: SignatureCheckedTransaction,
-    module_cache: P,
-    script_cache: &ScriptCache<'alloc>,
-    data_cache: &BlockDataCache<'_>,
-    mode: ValidationMode,
-    publishing_option: &VMPublishingOption,
+    runtime: &VMRuntime,
     gas_schedule: &CostTable,
-) -> TransactionOutput
-where
-    P: ModuleCache<'alloc>,
-{
-    let process_txn = ProcessTransaction::new(txn, gas_schedule, &module_cache, data_cache);
-
+    data_cache: &BlockDataCache,
+    state_view: &dyn StateView,
+    mode: ValidationMode,
+) -> TransactionOutput {
     let validated_txn = record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
-    match process_txn.validate(mode, publishing_option) {
-        Ok(validated_txn) => validated_txn,
-        Err(vm_status) => {
-            return ExecutedTransaction::discard_error_output(vm_status);
+        match ValidatedTransaction::new(
+            txn,
+            runtime,
+            state_view,
+            gas_schedule,
+            data_cache,
+            mode,
+        ) {
+            Ok(validated_txn) => validated_txn,
+            Err(vm_status) => {
+                return ExecutedTransaction::discard_error_output(vm_status);
+            }
         }
-    }
-    }
-    };
+    }};
 
+    let txn_data = TransactionMetadata::new(validated_txn.as_inner());
     let verified_txn = record_stats! {time_hist | TXN_VERIFICATION_TIME_TAKEN | {
-     match validated_txn.verify(script_cache) {
-        Ok(verified_txn) => verified_txn,
-        Err(vm_status) => {
-            return ExecutedTransaction::discard_error_output(vm_status);
+         match validated_txn.verify(&txn_data) {
+            Ok(verified_txn) => verified_txn,
+            Err(vm_status) => {
+                return ExecutedTransaction::discard_error_output(vm_status);
+            }
         }
-    }
-    }
-    };
+    }};
 
+    let mut txn_executor = TransactionExecutor::new(gas_schedule, data_cache, txn_data);
     let executed_txn = record_stats! {time_hist | TXN_EXECUTION_TIME_TAKEN | {
-        verified_txn.execute()
-        }
-    };
+        verified_txn.execute(runtime, state_view, &mut txn_executor)
+    }};
 
     // On success, publish the modules into the cache so that future transactions can refer to them
     // directly.
