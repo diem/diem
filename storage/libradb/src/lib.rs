@@ -535,12 +535,7 @@ impl LibraDB {
 
         // TODO: cache last epoch change version to avoid a DB access in most cases.
         let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
-        let current_epoch = if ledger_info.next_validator_set().is_some() {
-            ledger_info.epoch() + 1
-        } else {
-            ledger_info.epoch()
-        };
-        let validator_change_proof = if client_epoch < current_epoch {
+        let validator_change_proof = if client_epoch < ledger_info.epoch() {
             self.ledger_store
                 .get_epoch_change_ledger_infos(client_epoch, ledger_info.version())?
         } else {

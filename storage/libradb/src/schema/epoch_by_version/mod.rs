@@ -3,7 +3,8 @@
 
 //! This module defines physical storage schema for an index to help us find out which epoch a
 //! ledger version is in, by storing a version <-> epoch pair for each version where the epoch
-//! number bumps.
+//! number bumps: a pair (`version`, `epoch_num`) indicates that the last version of `epoch_num` is
+//! `version`.
 //!
 //! ```text
 //! |<--key-->|<---value-->|

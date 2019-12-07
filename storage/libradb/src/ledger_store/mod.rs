@@ -69,19 +69,26 @@ impl LedgerStore {
         let mut iter = self
             .db
             .iter::<EpochByVersionSchema>(ReadOptions::default())?;
+        // Search for the end of the previous epoch.
         iter.seek_for_prev(&version)?;
-        let (epoch_start_version, epoch) = iter
+        let (epoch_end_version, epoch) = iter
             .next()
             .transpose()?
             .ok_or_else(|| LibraDbError::NotFound(format!("version {}", version)))?;
         ensure!(
-            epoch_start_version <= version,
-            "DB corruption: looking for epoch at version {}, got epoch {} started at version {}",
+            epoch_end_version <= version,
+            "DB corruption: looking for epoch for version {}, got epoch {} ends at version {}",
             version,
             epoch,
-            epoch_start_version
+            epoch_end_version
         );
-        Ok(epoch)
+        // If the obtained epoch ended before the given version, return epoch+1, otherwise
+        // the given version is exactly the last version of the found epoch.
+        Ok(if epoch_end_version < version {
+            epoch + 1
+        } else {
+            epoch
+        })
     }
 
     /// Return the ledger infos reflecting epoch bumps with their least 2f+1 signatures starting
@@ -244,11 +251,9 @@ impl LedgerStore {
         let ledger_info = ledger_info_with_sigs.ledger_info();
 
         if ledger_info.next_validator_set().is_some() {
-            // Although the current block is under `epoch`, from now on the ledger is considered to
-            // be in `epoch+1`, this is useful in the case that the next block is empty (hence still
-            // has the same `version`)
+            // This is the last version of the current epoch, update the epoch by version index.
             cs.batch
-                .put::<EpochByVersionSchema>(&ledger_info.version(), &(ledger_info.epoch() + 1))?;
+                .put::<EpochByVersionSchema>(&ledger_info.version(), &ledger_info.epoch())?;
         }
         cs.batch.put::<LedgerInfoSchema>(
             &ledger_info_with_sigs.ledger_info().epoch(),
