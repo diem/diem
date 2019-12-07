@@ -16,7 +16,6 @@ use libra_types::{
 use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
 use vm::{errors::*, CompiledModule};
 use vm_runtime::data_cache::RemoteCache;
-use walkdir::WalkDir;
 
 lazy_static! {
     /// The write set encoded in the genesis transaction.
@@ -26,23 +25,6 @@ lazy_static! {
         path.push("vm/vm-genesis/genesis/genesis.blob");
 
         load_genesis(path)
-    };
-
-    pub static ref TESTNET_GENESIS: Vec<WriteSet> = {
-        let mut base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        base_path.pop();
-        base_path.pop();
-        base_path.push("terraform/validator-sets/");
-
-        let files = WalkDir::new(base_path)
-            .into_iter()
-            .filter_map(|f| f.ok())
-            .filter(|f| f.path().ends_with("genesis.blob"))
-            .map(|f| load_genesis(f.path().to_path_buf()))
-            .collect::<Vec<_>>();
-
-        assert!(!files.is_empty());
-        files
     };
 }
 

@@ -5,7 +5,7 @@
 
 use crate::{
     account::{Account, AccountData},
-    data_store::{FakeDataStore, GENESIS_WRITE_SET, TESTNET_GENESIS},
+    data_store::{FakeDataStore, GENESIS_WRITE_SET},
 };
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_state_view::StateView;
@@ -37,8 +37,7 @@ pub fn test_all_genesis_impl<T, F>(test_fn: F) -> Result<(), T>
 where
     F: Fn(FakeExecutor) -> Result<(), T>,
 {
-    let mut genesis: Vec<&WriteSet> = TESTNET_GENESIS.iter().collect();
-    genesis.push(&GENESIS_WRITE_SET);
+    let genesis: Vec<&WriteSet> = vec![&GENESIS_WRITE_SET];
     genesis
         .iter()
         .map(|ws| test_fn(FakeExecutor::from_genesis(ws, None)))
