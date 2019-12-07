@@ -120,16 +120,6 @@ jobs:
           command: |
             [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --package testsuite -- --test-threads 1
       - build_teardown
-  validate-config:
-    description: Validate that committed docker configs are up to date
-    executor: build-executor
-    steps:
-      - build_setup
-      - run:
-          # generate config; diff config to existing one
-          name: Validate Validator-Sets Configs
-          command: ./scripts/circle_validate_configs.sh
-      - build_teardown
   validate-cluster-test-dockerfile:
     description: Validate that committed docker files for cluster test are up to date
     executor: build-executor
@@ -218,7 +208,6 @@ workflows:
     jobs:
       - build
       - build-docker
-      - validate-config
       - validate-cluster-test-dockerfile
       - terraform
 
