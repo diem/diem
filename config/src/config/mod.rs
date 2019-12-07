@@ -449,7 +449,6 @@ mod test {
 
     #[test]
     fn verify_all_configs() {
-        // First test well defined configs
         let _ = vec![
             // This contains all the default fields written to disk, it verifies that the default
             // is consistent and can be loaded without failure
@@ -466,29 +465,6 @@ mod test {
         .iter()
         .map(|path| {
             NodeConfig::load(PathBuf::from(path)).unwrap_or_else(|_| panic!("Error in {}", path))
-        })
-        .collect::<Vec<_>>();
-
-        // Now test configs that require some additional manipulation
-        let _ = vec![
-            "../terraform/validator-sets/100/fn/node.config.toml",
-            "../terraform/validator-sets/100/val/node.config.toml",
-            "../terraform/validator-sets/dev/fn/node.config.toml",
-            "../terraform/validator-sets/dev/val/node.config.toml",
-        ]
-        .iter()
-        .map(|path| {
-            let mut file =
-                File::open(&path).unwrap_or_else(|_| panic!("Unable to open file: {}", path));
-            let mut contents = String::new();
-            file.read_to_string(&mut contents)
-                .unwrap_or_else(|_| panic!("Unable to read file: {}", path));
-            let new_contents = contents
-                .replace("${peer_id}", &PeerId::default().to_string())
-                .replace("${fullnode_id}", &PeerId::default().to_string())
-                .replace("${upstream_peer}", &PeerId::default().to_string())
-                .replace("${self_ip}", "0.0.0.0");
-            NodeConfig::parse(&new_contents).unwrap_or_else(|_| panic!("Error in {}", path));
         })
         .collect::<Vec<_>>();
     }
