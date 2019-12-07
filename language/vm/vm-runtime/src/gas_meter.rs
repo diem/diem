@@ -25,8 +25,8 @@ lazy_static! {
         { ModuleId::new(account_config::core_code_address(), Identifier::new("GasSchedule").unwrap()) };
 }
 
-pub(crate) fn load_gas_schedule<'alloc>(
-    module_cache: &dyn ModuleCache<'alloc>,
+pub(crate) fn load_gas_schedule(
+    module_cache: &dyn ModuleCache,
     data_view: &dyn RemoteCache,
 ) -> VMResult<CostTable> {
     let address = account_config::association_address();

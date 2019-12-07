@@ -20,17 +20,17 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use vm_runtime::MoveVM;
+use vm_runtime::LibraVM;
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
-    executor: Arc<Executor<MoveVM>>,
+    executor: Arc<Executor<LibraVM>>,
     synchronizer: Arc<StateSyncClient>,
 }
 
 impl ExecutionProxy {
-    pub fn new(executor: Arc<Executor<MoveVM>>, synchronizer: Arc<StateSyncClient>) -> Self {
+    pub fn new(executor: Arc<Executor<LibraVM>>, synchronizer: Arc<StateSyncClient>) -> Self {
         Self {
             executor,
             synchronizer,

@@ -31,7 +31,7 @@ use std::{sync::Arc, thread, time::Instant};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
-use vm_runtime::MoveVM;
+use vm_runtime::LibraVM;
 
 pub struct LibraHandle {
     _ac: AdmissionControlRuntime,
@@ -51,7 +51,7 @@ impl Drop for LibraHandle {
     }
 }
 
-fn setup_executor(config: &NodeConfig) -> Arc<Executor<MoveVM>> {
+fn setup_executor(config: &NodeConfig) -> Arc<Executor<LibraVM>> {
     let client_env = Arc::new(EnvBuilder::new().name_prefix("grpc-exe-sto-").build());
     let storage_read_client = Arc::new(StorageReadServiceClient::new(
         Arc::clone(&client_env),

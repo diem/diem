@@ -23,7 +23,7 @@ use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender}
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use tokio::runtime;
-use vm_runtime::MoveVM;
+use vm_runtime::LibraVM;
 
 ///  The state necessary to begin state machine replication including ValidatorSet, networking etc.
 pub struct InitialSetup {
@@ -46,7 +46,7 @@ impl ChainedBftProvider {
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
         mempool_client: Arc<MempoolClient>,
-        executor: Arc<Executor<MoveVM>>,
+        executor: Arc<Executor<LibraVM>>,
         synchronizer_client: Arc<StateSyncClient>,
     ) -> Self {
         let runtime = runtime::Builder::new()

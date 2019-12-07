@@ -8,6 +8,7 @@ mod genesis_gas_schedule;
 use crate::genesis_gas_schedule::initial_gas_schedule;
 use anyhow::Result;
 use lazy_static::lazy_static;
+use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, traits::ValidKey};
 use libra_state_view::StateView;
 use libra_types::{
@@ -30,11 +31,8 @@ use vm::{
 };
 use vm_cache_map::Arena;
 use vm_runtime::{
-    code_cache::{
-        module_adapter::FakeFetcher,
-        module_cache::{BlockModuleCache, VMModuleCache},
-    },
     data_cache::BlockDataCache,
+    runtime::VMRuntime,
     txn_executor::{
         TransactionExecutor, ACCOUNT_MODULE, COIN_MODULE, GAS_SCHEDULE_MODULE, LIBRA_SYSTEM_MODULE,
         VALIDATOR_CONFIG_MODULE,
@@ -215,39 +213,58 @@ pub fn encode_genesis_transaction_with_validator(
 
     // Compile the needed stdlib modules.
     let modules = stdlib_modules();
+
     let arena = Arena::new();
+    let config = VMConfig {
+        publishing_options: VMPublishingOption::Open,
+    };
+    let mut runtime = VMRuntime::new(&arena, &config);
+    for module in modules {
+        runtime.cache_module(module.clone());
+    }
+
     let state_view = FakeStateView;
-    let vm_cache = VMModuleCache::new(&arena);
     let genesis_addr = account_config::association_address();
     let genesis_auth_key = ByteArray::new(AccountAddress::from_public_key(&public_key).to_vec());
     let gas_schedule = CostTable::zero();
+    let data_cache = BlockDataCache::new(&state_view);
+    let initial_gas_schedule = initial_gas_schedule(&runtime, &data_cache);
 
     let genesis_write_set = {
-        let fake_fetcher = FakeFetcher::new(modules.iter().map(|m| m.as_inner().clone()).collect());
-        let data_cache = BlockDataCache::new(&state_view);
-        let block_cache = BlockModuleCache::new(&vm_cache, fake_fetcher);
-        let initial_gas_schedule = initial_gas_schedule(&block_cache, &data_cache);
         {
             let mut txn_data = TransactionMetadata::default();
             txn_data.sender = genesis_addr;
 
-            let mut txn_executor =
-                TransactionExecutor::new(&block_cache, &gas_schedule, &data_cache, txn_data);
-            txn_executor.create_account(genesis_addr).unwrap();
+            let mut txn_executor = TransactionExecutor::new(&gas_schedule, &data_cache, txn_data);
             txn_executor
-                .create_account(account_config::transaction_fee_address())
+                .create_account(&runtime, &state_view, genesis_addr)
                 .unwrap();
             txn_executor
-                .create_account(account_config::core_code_address())
+                .create_account(
+                    &runtime,
+                    &state_view,
+                    account_config::transaction_fee_address(),
+                )
                 .unwrap();
             txn_executor
-                .execute_function(&COIN_MODULE, &INITIALIZE, vec![])
+                .create_account(&runtime, &state_view, account_config::core_code_address())
                 .unwrap();
             txn_executor
-                .execute_function(&LIBRA_SYSTEM_MODULE, &INITIALIZE_BLOCK, vec![])
+                .execute_function(&runtime, &state_view, &COIN_MODULE, &INITIALIZE, vec![])
+                .unwrap();
+            txn_executor
+                .execute_function(
+                    &runtime,
+                    &state_view,
+                    &LIBRA_SYSTEM_MODULE,
+                    &INITIALIZE_BLOCK,
+                    vec![],
+                )
                 .unwrap();
             txn_executor
                 .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    &runtime,
+                    &state_view,
                     account_config::association_address(),
                     &GAS_SCHEDULE_MODULE,
                     &INITIALIZE,
@@ -257,6 +274,8 @@ pub fn encode_genesis_transaction_with_validator(
 
             txn_executor
                 .execute_function(
+                    &runtime,
+                    &state_view,
                     &ACCOUNT_MODULE,
                     &MINT_TO_ADDRESS,
                     vec![Value::address(genesis_addr), Value::u64(INIT_BALANCE)],
@@ -265,6 +284,8 @@ pub fn encode_genesis_transaction_with_validator(
 
             txn_executor
                 .execute_function(
+                    &runtime,
+                    &state_view,
                     &ACCOUNT_MODULE,
                     &ROTATE_AUTHENTICATION_KEY,
                     vec![Value::byte_array(genesis_auth_key)],
@@ -276,12 +297,14 @@ pub fn encode_genesis_transaction_with_validator(
             // arises: both the genesis transaction and the subsequent transaction have sequence
             // number 0
             txn_executor
-                .execute_function(&ACCOUNT_MODULE, &EPILOGUE, vec![])
+                .execute_function(&runtime, &state_view, &ACCOUNT_MODULE, &EPILOGUE, vec![])
                 .unwrap();
 
             // Create the transaction fees resource under the fees account
             txn_executor
                 .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    &runtime,
+                    &state_view,
                     account_config::transaction_fee_address(),
                     &LIBRA_SYSTEM_MODULE,
                     &INITIALIZE_TXN_FEES,
@@ -291,10 +314,16 @@ pub fn encode_genesis_transaction_with_validator(
 
             // Initialize the validator set.
             txn_executor
-                .create_account(account_config::validator_set_address())
+                .create_account(
+                    &runtime,
+                    &state_view,
+                    account_config::validator_set_address(),
+                )
                 .unwrap();
             txn_executor
                 .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    &runtime,
+                    &state_view,
                     account_config::validator_set_address(),
                     &LIBRA_SYSTEM_MODULE,
                     &INITIALIZE_VALIDATOR_SET,
@@ -304,10 +333,16 @@ pub fn encode_genesis_transaction_with_validator(
 
             // Initialize the discovery set.
             txn_executor
-                .create_account(account_config::discovery_set_address())
+                .create_account(
+                    &runtime,
+                    &state_view,
+                    account_config::discovery_set_address(),
+                )
                 .unwrap();
             txn_executor
                 .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    &runtime,
+                    &state_view,
                     account_config::discovery_set_address(),
                     &LIBRA_SYSTEM_MODULE,
                     &INITIALIZE_DISCOVERY_SET,
@@ -319,9 +354,13 @@ pub fn encode_genesis_transaction_with_validator(
             for validator_keys in validator_set.payload().iter().rev() {
                 // First, add a ValidatorConfig resource under each account
                 let validator_address = *validator_keys.account_address();
-                txn_executor.create_account(validator_address).unwrap();
+                txn_executor
+                    .create_account(&runtime, &state_view, validator_address)
+                    .unwrap();
                 txn_executor
                     .execute_function_with_sender_FOR_GENESIS_ONLY(
+                        &runtime,
+                        &state_view,
                         validator_address,
                         &VALIDATOR_CONFIG_MODULE,
                         &REGISTER_CANDIDATE_VALIDATOR,
@@ -357,6 +396,8 @@ pub fn encode_genesis_transaction_with_validator(
                 // Then, add the account to the validator set
                 txn_executor
                     .execute_function(
+                        &runtime,
+                        &state_view,
                         &LIBRA_SYSTEM_MODULE,
                         &ADD_VALIDATOR,
                         vec![Value::address(validator_address)],
@@ -369,6 +410,8 @@ pub fn encode_genesis_transaction_with_validator(
             // will not work.
             txn_executor
                 .execute_function_with_sender_FOR_GENESIS_ONLY(
+                    &runtime,
+                    &state_view,
                     account_config::validator_set_address(),
                     &LIBRA_SYSTEM_MODULE,
                     &RECONFIGURE,

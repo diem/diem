@@ -20,7 +20,7 @@ use std::{sync::Arc, u64};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use transaction_builder::encode_transfer_script;
-use vm_runtime::MoveVM;
+use vm_runtime::LibraVM;
 
 struct TestValidator {
     _storage: ServerHandle,
@@ -47,7 +47,7 @@ impl TestValidator {
 
         // Create executor to initialize genesis state. Otherwise gprc will report error when
         // fetching data from storage.
-        let _executor = Executor::<MoveVM>::new(
+        let _executor = Executor::<LibraVM>::new(
             Arc::clone(&storage_read_client) as Arc<dyn StorageRead>,
             storage_write_client,
             config,

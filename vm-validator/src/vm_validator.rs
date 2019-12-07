@@ -14,7 +14,7 @@ use libra_types::{
 use scratchpad::SparseMerkleTree;
 use std::sync::Arc;
 use storage_client::{StorageRead, VerifiedStateView};
-use vm_runtime::{MoveVM, VMVerifier};
+use vm_runtime::{LibraVM, VMVerifier};
 
 #[cfg(test)]
 #[path = "unit_tests/vm_validator_test.rs"]
@@ -32,20 +32,20 @@ pub trait TransactionValidation: Send + Sync {
 #[derive(Clone)]
 pub struct VMValidator {
     storage_read_client: Arc<dyn StorageRead>,
-    vm: MoveVM,
+    vm: LibraVM,
 }
 
 impl VMValidator {
     pub fn new(config: &NodeConfig, storage_read_client: Arc<dyn StorageRead>) -> Self {
         VMValidator {
             storage_read_client,
-            vm: MoveVM::new(&config.vm_config),
+            vm: LibraVM::new(&config.vm_config),
         }
     }
 }
 
 impl TransactionValidation for VMValidator {
-    type ValidationInstance = MoveVM;
+    type ValidationInstance = LibraVM;
 
     fn validate_transaction(
         &self,

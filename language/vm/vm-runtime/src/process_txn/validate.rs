@@ -1,15 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    code_cache::{module_cache::ModuleCache, script_cache::ScriptCache},
-    data_cache::RemoteCache,
-    process_txn::{verify::VerifiedTransaction, ProcessTransaction},
-    txn_executor::TransactionExecutor,
-};
+use crate::runtime::VMRuntime;
+use crate::txn_executor::TransactionExecutor;
+use crate::{data_cache::RemoteCache, process_txn::verify::VerifiedTransaction};
 use libra_config::config::VMPublishingOption;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
+use libra_state_view::StateView;
 use libra_types::{
     transaction::{SignatureCheckedTransaction, TransactionPayload, MAX_TRANSACTION_SIZE_IN_BYTES},
     vm_error::{StatusCode, VMStatus},
@@ -32,13 +30,8 @@ pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8])
 
 /// Represents a [`SignedTransaction`] that has been *validated*. This includes all the steps
 /// required to ensure that a transaction is valid, other than verifying the submitted program.
-pub struct ValidatedTransaction<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
+pub struct ValidatedTransaction {
     txn: SignatureCheckedTransaction,
-    txn_state: Option<ValidatedTransactionState<'alloc, 'txn, P>>,
 }
 
 /// The mode to validate transactions in.
@@ -55,63 +48,56 @@ pub enum ValidationMode {
     Executing,
 }
 
-impl<'alloc, 'txn, P> ValidatedTransaction<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
+impl ValidatedTransaction {
     /// Creates a new instance by validating a `SignedTransaction`.
     ///
     /// This should be called through [`ProcessTransaction::validate`].
-    pub(super) fn new(
-        process_txn: ProcessTransaction<'alloc, 'txn, P>,
+    pub(crate) fn new(
+        txn: SignatureCheckedTransaction,
+        runtime: &VMRuntime,
+        state_view: &dyn StateView,
+        gas_schedule: &CostTable,
+        data_cache: &dyn RemoteCache,
         mode: ValidationMode,
-        publishing_option: &VMPublishingOption,
     ) -> Result<Self, VMStatus> {
-        let ProcessTransaction {
-            txn,
-            gas_schedule,
-            module_cache,
-            data_cache,
-            ..
-        } = process_txn;
-
-        let txn_state = match txn.payload() {
+        match txn.payload() {
             TransactionPayload::Program => return Err(VMStatus::new(StatusCode::MALFORMED)),
             TransactionPayload::Script(script) => {
-                Some(ValidatedTransaction::validate(
+                ValidatedTransaction::validate(
                     &txn,
+                    runtime,
+                    state_view,
                     gas_schedule,
-                    module_cache,
                     data_cache,
                     mode,
                     || {
                         // Verify against whitelist if we are locked. Otherwise allow.
-                        if !is_allowed_script(&publishing_option, &script.code()) {
+                        if !is_allowed_script(&runtime.publishing_option(), &script.code()) {
                             warn!("[VM] Custom scripts not allowed: {:?}", &script.code());
                             return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT));
                         }
                         Ok(())
                     },
-                )?)
+                )?
             }
             TransactionPayload::Module(module) => {
                 debug!("validate module {:?}", module);
-                Some(ValidatedTransaction::validate(
+                ValidatedTransaction::validate(
                     &txn,
+                    runtime,
+                    state_view,
                     gas_schedule,
-                    module_cache,
                     data_cache,
                     mode,
                     || {
-                        if !publishing_option.is_open() {
+                        if !runtime.publishing_option().is_open() {
                             warn!("[VM] Custom modules not allowed");
                             Err(VMStatus::new(StatusCode::UNKNOWN_MODULE))
                         } else {
                             Ok(())
                         }
                     },
-                )?)
+                )?
             }
             TransactionPayload::WriteSet(write_set_payload) => {
                 // The only acceptable write-set transaction for now is for the genesis
@@ -130,46 +116,35 @@ where
                         return Err(VMStatus::new(StatusCode::INVALID_WRITE_SET));
                     }
                 }
-
-                None
             }
-        };
+        }
 
-        Ok(Self { txn, txn_state })
+        Ok(Self { txn })
     }
 
     /// Verifies the bytecode in this transaction.
-    pub fn verify(
-        self,
-        script_cache: &'txn ScriptCache<'alloc>,
-    ) -> Result<VerifiedTransaction<'alloc, 'txn, P>, VMStatus> {
-        VerifiedTransaction::new(self, script_cache)
-    }
-
-    /// Returns a reference to the `SignatureCheckedTransaction` within.
-    pub fn as_inner(&self) -> &SignatureCheckedTransaction {
-        &self.txn
+    pub fn verify(self, txn_data: &TransactionMetadata) -> Result<VerifiedTransaction, VMStatus> {
+        VerifiedTransaction::new(self, txn_data)
     }
 
     /// Consumes `self` and returns the `SignatureCheckedTransaction` within.
-    #[allow(dead_code)]
     pub fn into_inner(self) -> SignatureCheckedTransaction {
         self.txn
     }
 
-    /// Returns the `ValidatedTransactionState` within.
-    pub(super) fn take_state(&mut self) -> Option<ValidatedTransactionState<'alloc, 'txn, P>> {
-        self.txn_state.take()
+    pub fn as_inner(&self) -> &SignatureCheckedTransaction {
+        &self.txn
     }
 
     fn validate(
         txn: &SignatureCheckedTransaction,
-        gas_schedule: &'txn CostTable,
-        module_cache: P,
-        data_cache: &'txn dyn RemoteCache,
+        runtime: &VMRuntime,
+        state_view: &dyn StateView,
+        gas_schedule: &CostTable,
+        data_cache: &dyn RemoteCache,
         mode: ValidationMode,
         payload_check: impl Fn() -> Result<(), VMStatus>,
-    ) -> Result<ValidatedTransactionState<'alloc, 'txn, P>, VMStatus> {
+    ) -> Result<(), VMStatus> {
         let raw_bytes_len = AbstractMemorySize::new(txn.raw_txn_bytes_len() as GasCarrier);
         // The transaction is too large.
         if txn.raw_txn_bytes_len() > MAX_TRANSACTION_SIZE_IN_BYTES {
@@ -273,16 +248,15 @@ where
 
         payload_check()?;
 
-        let metadata = TransactionMetadata::new(&txn);
-        let mut txn_state =
-            ValidatedTransactionState::new(metadata, gas_schedule, module_cache, data_cache);
+        let txn_data = TransactionMetadata::new(&txn);
 
         // Run the prologue to ensure that clients have enough gas and aren't tricking us by
         // sending us garbage.
         // TODO: write-set transactions (other than genesis??) should also run the prologue.
-        match txn_state.txn_executor.run_prologue() {
-            Ok(_) => {}
-            Err(err) => {
+        let mut txn_executor = TransactionExecutor::new(gas_schedule, data_cache, txn_data);
+        txn_executor
+            .run_prologue(runtime, state_view)
+            .or_else(|err| {
                 let vm_status = convert_prologue_runtime_error(&err, &txn.sender());
 
                 // In validating mode, accept transactions with sequence number greater
@@ -290,41 +264,13 @@ where
                 match (mode, vm_status.major_status) {
                     (ValidationMode::Validating, StatusCode::SEQUENCE_NUMBER_TOO_NEW) => {
                         trace!("[VM] Sequence number too new error ignored");
+                        Ok(())
                     }
                     (_, _) => {
                         warn!("[VM] Error in prologue: {:?}", err);
-                        return Err(vm_status);
+                        Err(vm_status)
                     }
                 }
-            }
-        };
-
-        Ok(txn_state)
-    }
-}
-
-/// State for program-based [`ValidatedTransaction`] instances.
-pub(super) struct ValidatedTransactionState<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
-    pub(super) txn_executor: TransactionExecutor<'alloc, 'txn, P>,
-}
-
-impl<'alloc, 'txn, P> ValidatedTransactionState<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
-    fn new(
-        metadata: TransactionMetadata,
-        gas_schedule: &'txn CostTable,
-        module_cache: P,
-        data_cache: &'txn dyn RemoteCache,
-    ) -> Self {
-        let txn_executor =
-            TransactionExecutor::new(module_cache, gas_schedule, data_cache, metadata);
-        Self { txn_executor }
+            })
     }
 }

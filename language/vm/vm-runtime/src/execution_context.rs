@@ -40,10 +40,6 @@ impl<'txn> TransactionExecutionContext<'txn> {
         }
     }
 
-    pub fn exists_module(&self, m: &ModuleId) -> bool {
-        self.data_view.exists_module(m)
-    }
-
     /// Clear all the writes local to this execution.
     pub fn clear(&mut self) {
         self.data_view.clear();
@@ -94,6 +90,8 @@ pub trait InterpreterContext {
     fn deduct_gas(&mut self, amount: GasUnits<GasCarrier>) -> VMResult<()>;
 
     fn remaining_gas(&self) -> GasUnits<GasCarrier>;
+
+    fn exists_module(&self, m: &ModuleId) -> bool;
 }
 
 impl<'txn> InterpreterContext for TransactionExecutionContext<'txn> {
@@ -142,5 +140,9 @@ impl<'txn> InterpreterContext for TransactionExecutionContext<'txn> {
             self.gas_left = GasUnits::new(0);
             Err(VMStatus::new(StatusCode::OUT_OF_GAS))
         }
+    }
+
+    fn exists_module(&self, m: &ModuleId) -> bool {
+        self.data_view.exists_module(m)
     }
 }

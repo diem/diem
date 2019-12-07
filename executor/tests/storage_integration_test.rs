@@ -29,7 +29,7 @@ use transaction_builder::{
     encode_block_prologue_script, encode_create_account_script,
     encode_rotate_consensus_pubkey_script, encode_transfer_script,
 };
-use vm_runtime::MoveVM;
+use vm_runtime::LibraVM;
 
 fn gen_block_id(index: u8) -> HashValue {
     HashValue::new([index; HashValue::LENGTH])
@@ -53,7 +53,7 @@ fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
 
 fn create_storage_service_and_executor(
     config: &NodeConfig,
-) -> (ServerHandle, Executor<MoveVM>, ExecutedTrees) {
+) -> (ServerHandle, Executor<LibraVM>, ExecutedTrees) {
     let storage_server_handle = start_storage_service(config);
 
     let client_env = Arc::new(EnvBuilder::new().build());

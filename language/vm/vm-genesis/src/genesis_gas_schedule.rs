@@ -13,8 +13,8 @@ use vm::{
     gas_schedule::{CostTable, GasCost, GAS_SCHEDULE_NAME, MAXIMUM_NUMBER_OF_GAS_UNITS},
 };
 use vm_runtime::{
-    code_cache::module_cache::ModuleCache, data_cache::RemoteCache,
-    execution_context::TransactionExecutionContext, gas_meter::GAS_SCHEDULE_MODULE,
+    data_cache::RemoteCache, execution_context::TransactionExecutionContext,
+    gas_meter::GAS_SCHEDULE_MODULE, runtime::VMRuntime,
 };
 use vm_runtime_types::value::Value;
 
@@ -116,18 +116,11 @@ lazy_static! {
     };
 }
 
-pub(crate) fn initial_gas_schedule(
-    module_cache: &dyn ModuleCache,
-    data_view: &dyn RemoteCache,
-) -> Value {
-    let gas_module = module_cache
-        .get_loaded_module(&GAS_SCHEDULE_MODULE)
-        .unwrap();
-    let struct_idx = gas_module.get_struct_def_index(&GAS_SCHEDULE_NAME).unwrap();
-    let struct_def = module_cache
+pub(crate) fn initial_gas_schedule(runtime: &VMRuntime, data_view: &dyn RemoteCache) -> Value {
+    let struct_def = runtime
         .resolve_struct_def(
-            gas_module,
-            *struct_idx,
+            &GAS_SCHEDULE_MODULE,
+            &GAS_SCHEDULE_NAME,
             &mut TransactionExecutionContext::new(*MAXIMUM_NUMBER_OF_GAS_UNITS, data_view),
         )
         .unwrap();
