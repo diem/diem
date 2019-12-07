@@ -1,7 +1,0 @@
-[signing_keys]
-private_key = "b019645fd330c715ec609ad0c3d59c00289e7382e6dd2436dac2fa7ed4867da5"
-public_key = "16adb7fae30f5f1580cb9d2be238c8ad6aaac0eff2a7806f49cfb301dd7ba812"
-
-[identity_keys]
-private_key = "f8ffec99e0287d2fdd28a2affd8664e0654b6967ab369365b224915bff9bb042"
-public_key = "e56a56966f3987bb7eaa8ff7f0536aebacd0dff367c6b2f3846b3ba1e80ebf53"
