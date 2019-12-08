@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
 use anyhow::Error;
 use libra_crypto::{test_utils::TEST_SEED, HashValue, *};

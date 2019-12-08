@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 use crate::{account_address::AccountAddress, byte_array::ByteArray};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};

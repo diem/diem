@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 use crate::crypto_proxies::ValidatorVerifier;
 use crate::ledger_info::LedgerInfoWithSignatures;
 use anyhow::{ensure, format_err, Error, Result};
