@@ -3,25 +3,15 @@
 
 #![forbid(unsafe_code)]
 
-use dynamic_config_builder::DynamicConfigBuilder;
+use dynamic_config_builder::ValidatorConfig;
 use libra_config::config::{NodeConfig, PersistableConfig};
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::KeyPair,
-};
 use parity_multiaddr::Multiaddr;
-use std::{
-    convert::TryInto,
-    fs::{self, File},
-    io::Write,
-    path::PathBuf,
-};
+use std::{convert::TryInto, fs, path::PathBuf};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-#[structopt(about = "Tool to create Libra Configs")]
+#[structopt(about = "Tool to create Libra Validator Configs")]
 struct Args {
-    // The following are generic options for generating both validator and full node networks
     #[structopt(short = "6", long)]
     /// Use IPv6
     ipv6: bool,
@@ -52,11 +42,6 @@ struct Args {
     #[structopt(short = "t", long, parse(from_os_str))]
     /// Path to a template NodeConfig
     template: Option<PathBuf>,
-
-    // Specialized options
-    #[structopt(short = "c", long)]
-    /// Build a faucet / client config
-    faucet_client: bool,
 }
 
 fn parse_addr(src: &str) -> Multiaddr {
@@ -72,7 +57,7 @@ fn main() {
         NodeConfig::default()
     };
 
-    let mut config_builder = DynamicConfigBuilder::new();
+    let mut config_builder = ValidatorConfig::new();
     config_builder
         .advertised(args.advertised)
         .bootstrap(args.bootstrap)
@@ -88,38 +73,18 @@ fn main() {
     }
 
     fs::create_dir_all(&args.output_dir).expect("Unable to create output directory");
-
-    if args.faucet_client {
-        let (consensus_peers, faucet_key) = config_builder
-            .build_faucet_client()
-            .expect("ConfigBuilder failed");
-
-        let key_path = args.output_dir.join("mint.key");
-        let faucet_keypair = KeyPair::<Ed25519PrivateKey, Ed25519PublicKey>::from(faucet_key);
-        let serialized_keys = lcs::to_bytes(&faucet_keypair).expect("Unable to serialize keys");
-        let mut key_file = File::create(key_path).expect("Unable to create key file");
-        key_file
-            .write_all(&serialized_keys)
-            .expect("Unable to write to key file");
-
-        let consensus_peers_path = args.output_dir.join("consensus_peers.config.toml");
-        consensus_peers
-            .save_config(consensus_peers_path)
-            .expect("Unable to save consensus_peers.config");
-    } else {
-        let mut node_config = config_builder.build().expect("ConfigBuilder failed");
-        node_config
-            .set_data_dir(args.output_dir.clone())
-            .expect("Unable to set directory");
-        let config_file = args.output_dir.join("node.config.toml");
-        node_config
-            .save(&config_file)
-            .expect("Unable to save configs");
-        node_config
-            .set_data_dir(args.data_dir)
-            .expect("Unable to set directory");
-        node_config
-            .save_config(&config_file)
-            .expect("Unable to save node.config");
-    }
+    let mut node_config = config_builder.build().expect("ConfigBuilder failed");
+    node_config
+        .set_data_dir(args.output_dir.clone())
+        .expect("Unable to set directory");
+    node_config
+        .save(&PathBuf::from("node.config.toml"))
+        .expect("Unable to save configs");
+    node_config
+        .set_data_dir(args.data_dir)
+        .expect("Unable to set directory");
+    let config_file = args.output_dir.join("node.config.toml");
+    node_config
+        .save_config(&config_file)
+        .expect("Unable to save node.config");
 }
