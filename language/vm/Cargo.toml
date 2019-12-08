@@ -17,6 +17,7 @@ lazy_static = "1.3.0"
 mirai-annotations = "1.4.0"
 proptest = { version = "0.9", optional = true }
 proptest-derive = { version = "0.1.1", optional = true }
+ref-cast = "1.0"
 serde = { version = "1", features = ["derive"] }
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
