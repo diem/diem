@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 use crate::block_info::{BlockInfo, Round};
 use crate::crypto_proxies::ValidatorSet;
 use crate::event::EVENT_KEY_LENGTH;

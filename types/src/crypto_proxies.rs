@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 //! This module defines a data structure made to contain a cryptographic
 //! signature, in the sense of an implementation of
 //! libra_crypto::traits::Signature. The container is an opaque NewType that

@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 //! This module implements an in-memory Merkle Accumulator that is similar to what we use in
 //! storage. This accumulator will only store a small portion of the tree -- for any subtree that
 //! is full, we store only the root. Also we only store the frozen nodes, therefore this structure

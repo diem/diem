@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 use crate::language_storage::ModuleId;
 use crate::test_helpers::assert_canonical_encode_decode;
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;

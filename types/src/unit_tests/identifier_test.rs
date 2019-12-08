@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 use crate::identifier::{IdentStr, Identifier, ALLOWED_IDENTIFIERS};
 use crate::test_helpers::assert_canonical_encode_decode;
 use lazy_static::lazy_static;

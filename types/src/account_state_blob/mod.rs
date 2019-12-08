@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 #[cfg(any(test, feature = "fuzzing"))]
 use crate::account_config::{account_resource_path, AccountResource};
 use crate::{

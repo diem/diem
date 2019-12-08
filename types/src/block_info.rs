@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 use crate::{crypto_proxies::ValidatorSet, transaction::Version};
 use libra_crypto::hash::HashValue;
 #[cfg(any(test, feature = "fuzzing"))]
