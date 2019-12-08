@@ -105,8 +105,7 @@ impl fmt::Display for VMString {
 pub struct VMStr(str);
 
 impl VMStr {
-    pub fn new<'a>(s: impl AsRef<str> + 'a) -> &'a VMStr {
-        let s = s.as_ref();
+    pub fn new(s: &str) -> &VMStr {
         // UNSAFE CODE: This code requires auditing before modifications may land.
         // JUSTIFICATION: The input and output references have the same
         // lifetime and VMStr and str have the same layout, so this is safe to
