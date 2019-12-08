@@ -10,6 +10,7 @@
 
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
+use ref_cast::RefCast;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Borrow, fmt, ops::Deref, result, string::FromUtf8Error};
 
@@ -100,19 +101,13 @@ impl fmt::Display for VMString {
 /// A borrowed string in Move code.
 ///
 /// For more details, see the module level documentation.
-#[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd, RefCast)]
 #[repr(transparent)]
 pub struct VMStr(str);
 
 impl VMStr {
     pub fn new(s: &str) -> &VMStr {
-        // UNSAFE CODE: This code requires auditing before modifications may land.
-        // JUSTIFICATION: The input and output references have the same
-        // lifetime and VMStr and str have the same layout, so this is safe to
-        // do. See
-        // https://rust-lang.github.io/unsafe-code-guidelines/layout/structs-and-tuples.html#single-field-structs
-        // AUDITOR: metajack
-        unsafe { &*(s as *const str as *const VMStr) }
+        VMStr::ref_cast(s)
     }
 
     /// Returns the length of `self` in bytes.
