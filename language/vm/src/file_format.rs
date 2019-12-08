@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 //! Binary format for transactions and modules.
 //!
 //! This module provides a simple Rust abstraction over the binary format. That is the format of

@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 use crate::{errors::*, file_format::*, file_format_common::*, vm_string::VMString};
 use byteorder::{LittleEndian, ReadBytesExt};
 use libra_types::{
