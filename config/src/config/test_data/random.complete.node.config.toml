@@ -9,7 +9,7 @@ secs = 1
 nanos = 0
 
 [base]
-data_dir = "data/configs"
+data_dir = "src/config/test_data"
 role = "validator"
 
 [consensus]
