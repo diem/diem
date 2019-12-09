@@ -359,9 +359,9 @@ impl<T: ?Sized> PersistableConfig for T where T: Serialize + DeserializeOwned {}
 mod test {
     use super::*;
 
-    const DEFAULT: &str = "data/configs/single.node.config.toml";
-    const RANDOM_DEFAULT: &str = "data/configs/random.default.node.config.toml";
-    const RANDOM_COMPLETE: &str = "data/configs/random.complete.node.config.toml";
+    const DEFAULT: &str = "src/config/test_data/single.node.config.toml";
+    const RANDOM_DEFAULT: &str = "src/config/test_data/random.default.node.config.toml";
+    const RANDOM_COMPLETE: &str = "src/config/test_data/random.complete.node.config.toml";
 
     #[test]
     fn verify_default_config() {

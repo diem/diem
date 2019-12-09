@@ -178,6 +178,8 @@ addresses, have dependecies outside the Libra code base. These tests serve as
 a reminder that there may be rammifications from breaking these that impact
 production deployments.
 
+The test configs currently live in `src/config/test_data`.
+
 ## TODO
 
 - Add ability to turn off services that are optional (debug interface, AC
