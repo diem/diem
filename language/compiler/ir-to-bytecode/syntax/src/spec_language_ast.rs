@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::ast::{BinOp, CopyableVal, Field, StructName, UnaryOp};
+use crate::ast::{BinOp, CopyableVal, Field, StructName};
 use libra_types::account_address::AccountAddress;
 
 /// AST for the Move Prover specification language. Just postconditions for now
@@ -30,7 +30,6 @@ pub enum StorageLocation {
     Address(AccountAddress),
     /// The return value of the current procedure
     Ret,
-    // TODO: & and * operators
     // TODO: useful constants like U64_MAX
     // TODO: add generics to GlobalResource
 }
@@ -47,13 +46,16 @@ pub enum SpecExp {
         type_: StructName,
         address: StorageLocation,
     },
-    /// Unary operators also suported by Move
-    Unop(Box<SpecExp>, UnaryOp),
+    /// Dereference of a storage location (written *s)
+    Dereference(StorageLocation),
+    /// Reference to a storage location (written &s)
+    Reference(StorageLocation),
+    /// Negation of a boolean expression (written !e),
+    Not(Box<SpecExp>),
     /// Binary operators also suported by Move
     Binop(Box<SpecExp>, BinOp, Box<SpecExp>),
-    /// Implication, which is not supported by Move
-    Implies(Box<SpecExp>, Box<SpecExp>), // TODO: add generics to GlobalExists
-                                         // TODO: iff
+    // TODO: add generics to GlobalExists
+    // TODO: binary operators not supported by Move like implies and iff
 }
 
 /// A specification directive to be verified

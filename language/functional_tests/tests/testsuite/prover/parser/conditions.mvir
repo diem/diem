@@ -1,4 +1,4 @@
-// Tests for parsing of postconditions
+// Tests for parsing specifications
 
 // Test parsing the conditions themselves relative to return values, acquires clauses
 //! no-run: runtime
@@ -175,6 +175,50 @@ module TestEnsuresAccessPath {
   ensures global<T>(t/a)
   {
       return move(t);
+  }
+
+}
+
+//! new-transaction
+//! no-run: runtime
+module TestBinaryOps {
+  resource T { b: bool }
+  resource Pair { x: u64, y: u64}
+
+  public ret_eq_seven(): u64
+  ensures return == 7
+  {
+      return 7;
+  }
+
+  public ret_neq_seven(): u64
+  ensures return != 7
+  {
+      return 5;
+  }
+
+  public ret_add(x: u64): u64
+  ensures return == x + 1
+  {
+      return move(x) + 1;
+  }
+
+  public ret_sub(x: u64): u64
+  ensures return - 1 == x
+  {
+      return move(x) + 1;
+  }
+
+  public ret_unop(x: bool): bool
+  ensures return == !x
+  {
+      return !move(x);
+  }
+
+  public ret_access_path_exp(p: &Self.Pair): u64
+  ensures return == p/x + p/y
+  {
+      return *&copy(p).x + *&move(p).y;
   }
 
 }
