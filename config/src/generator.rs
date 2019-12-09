@@ -14,6 +14,9 @@ use crate::{
 use anyhow::Result;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashMap, path::PathBuf};
+use libra_crypto::ed25519::Ed25519PrivateKey;
+use libra_crypto::x25519::X25519StaticPrivateKey;
+use libra_crypto::traits::Uniform;
 
 /// Produces a new set of FullNodes that connect to the specified upstream peer. The resulting
 /// configs copy all relevant data from this peer including the data used for generating the
@@ -100,9 +103,35 @@ pub fn validator_swarm(
     key_seed: Option<[u8; 32]>,
     randomize_ports: bool,
 ) -> Result<Vec<NodeConfig>> {
-    init(&mut template, is_ipv4);
     let seed = key_seed.unwrap_or([1u8; 32]);
     let mut rng = StdRng::from_seed(seed);
+    validator_swarm_inner(template, num_nodes, prune_seed_peers, is_ipv4, rng, randomize_ports, 1, false)
+}
+
+fn validator_swarm_times(
+    mut template: NodeConfig,
+    num_nodes: usize,
+    prune_seed_peers: bool,
+    is_ipv4: bool,
+    randomize_ports: bool,
+    times: usize,
+    network_random: bool
+) -> Result<Vec<NodeConfig>> {
+    let mut rng = StdRng::from_seed([1u8; 32]);
+    validator_swarm_inner(template, num_nodes, prune_seed_peers, is_ipv4, rng, randomize_ports, times, network_random)
+}
+
+fn validator_swarm_inner(
+    mut template: NodeConfig,
+    num_nodes: usize,
+    prune_seed_peers: bool,
+    is_ipv4: bool,
+    mut rng: StdRng,
+    randomize_ports: bool,
+    times: usize,
+    network_random: bool
+) -> Result<Vec<NodeConfig>> {
+    init(&mut template, is_ipv4);
 
     let mut network_peers = NetworkPeersConfig {
         peers: HashMap::new(),
@@ -114,9 +143,13 @@ pub fn validator_swarm(
     let mut configs = Vec::new();
 
     for _index in 0..num_nodes {
-        let mut config = NodeConfig::random_with_template(&template, &mut rng);
+        let mut config = NodeConfig::random_with_template_times(&template, &mut rng, times);
         if randomize_ports {
-            config.randomize_ports();
+            if network_random {
+                config.randomize_ports_with_network(true);
+            } else {
+                config.randomize_ports();
+            }
         }
 
         config.consensus.safety_rules.backend =
@@ -166,6 +199,12 @@ pub fn validator_swarm_for_testing(num_nodes: usize) -> Result<Vec<NodeConfig>> 
     let mut config = NodeConfig::default();
     config.vm_config.publishing_options = VMPublishingOption::Open;
     validator_swarm(NodeConfig::default(), num_nodes, true, true, None, true)
+}
+
+pub fn validator_swarm_for_testing_times(times: usize, network_random:bool) -> Result<Vec<NodeConfig>> {
+    let mut config = NodeConfig::default();
+    config.vm_config.publishing_options = VMPublishingOption::Open;
+    validator_swarm_times(NodeConfig::default(), 1, true, true, true, times, network_random)
 }
 
 fn add_peer(

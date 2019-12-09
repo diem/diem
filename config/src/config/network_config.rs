@@ -220,6 +220,13 @@ impl NetworkConfig {
         self.network_peers = Self::default_peers(&self.network_keypairs, &self.peer_id);
     }
 
+    pub fn randomize_ports(&mut self) {
+        let address = format!("/ip4/0.0.0.0/tcp/{}", utils::get_available_port());
+        let multi_address = address.parse::<Multiaddr>().unwrap();
+        self.listen_address = multi_address.clone();
+        self.advertised_address = multi_address;
+    }
+
     pub fn set_default_peer_id(&mut self) {
         self.peer_id =
             PeerId::try_from(self.network_keypairs.identity_keys.public().to_bytes()).unwrap();

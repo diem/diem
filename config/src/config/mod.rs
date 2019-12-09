@@ -286,11 +286,18 @@ impl NodeConfig {
     }
 
     pub fn randomize_ports(&mut self) {
+        self.randomize_ports_with_network(false)
+    }
+
+    pub fn randomize_ports_with_network(&mut self, network_flag:bool) {
         self.admission_control.randomize_ports();
         self.debug_interface.randomize_ports();
         self.execution.randomize_ports();
         self.mempool.randomize_ports();
         self.storage.randomize_ports();
+        if network_flag {
+            self.validator_network.as_mut().unwrap().randomize_ports();
+        }
     }
 
     pub fn random() -> Self {
@@ -310,27 +317,39 @@ impl NodeConfig {
         config
     }
 
+    pub fn random_with_template_times(template: &Self, rng: &mut StdRng, times:usize) -> Self {
+        let mut config = template.clone_for_template();
+        config.random_internal_times(rng, times);
+        config
+    }
+
     fn random_internal(&mut self, rng: &mut StdRng) {
+        self.random_internal_times(rng, 1)
+    }
+
+    fn random_internal_times(&mut self, rng: &mut StdRng, times:usize) {
         let mut test = TestConfig::new_with_temp_dir();
 
-        if self.base.role == RoleType::Validator {
-            test.random(rng);
-            let peer_id = PeerId::from_public_key(test.account_keypair.as_ref().unwrap().public());
+        for _ in 0..times {
+            if self.base.role == RoleType::Validator {
+                test.random(rng);
+                let peer_id = PeerId::from_public_key(test.account_keypair.as_ref().unwrap().public());
 
-            if self.validator_network.is_none() {
-                self.validator_network = Some(NetworkConfig::default());
-            }
+                if self.validator_network.is_none() {
+                    self.validator_network = Some(NetworkConfig::default());
+                }
 
-            let validator_network = self.validator_network.as_mut().unwrap();
-            validator_network.random_with_peer_id(rng, Some(peer_id));
-            self.consensus.random(rng, peer_id);
-        } else {
-            self.validator_network = None;
-            if self.full_node_networks.is_empty() {
-                self.full_node_networks.push(NetworkConfig::default());
-            }
-            for network in &mut self.full_node_networks {
-                network.random(rng);
+                let validator_network = self.validator_network.as_mut().unwrap();
+                validator_network.random_with_peer_id(rng, Some(peer_id));
+                self.consensus.random(rng, peer_id);
+            } else {
+                self.validator_network = None;
+                if self.full_node_networks.is_empty() {
+                    self.full_node_networks.push(NetworkConfig::default());
+                }
+                for network in &mut self.full_node_networks {
+                    network.random(rng);
+                }
             }
         }
 
