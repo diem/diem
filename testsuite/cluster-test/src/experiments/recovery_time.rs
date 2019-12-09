@@ -48,7 +48,7 @@ impl ExperimentParam for RecoveryTimeParams {
 impl Experiment for RecoveryTime {
     fn affected_validators(&self) -> HashSet<String> {
         let mut result = HashSet::new();
-        result.insert(self.instance.short_hash().clone());
+        result.insert(self.instance.peer_name().clone());
         result
     }
 

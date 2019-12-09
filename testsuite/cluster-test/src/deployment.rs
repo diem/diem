@@ -70,7 +70,7 @@ impl DeploymentManager {
             request.service = format!(
                 "{w}/{w}-validator-{hash}",
                 w = self.aws.workspace(),
-                hash = instance.short_hash()
+                hash = instance.peer_name()
             );
 
             self.aws

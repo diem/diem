@@ -327,7 +327,7 @@ impl ClusterUtil {
 
     pub fn discovery(&self) {
         for instance in self.cluster.instances() {
-            println!("{} {}", instance.short_hash(), instance.ip());
+            println!("{} {}", instance.peer_name(), instance.ip());
         }
     }
 
@@ -686,7 +686,7 @@ impl ClusterTestRunner {
             }
             let stop_validator = rng.gen_range(0, instances.len());
             let stop_validator = instances.remove(stop_validator);
-            stopped_instance_ids.push(stop_validator.short_hash().clone());
+            stopped_instance_ids.push(stop_validator.peer_name().clone());
             let stop_effect = StopContainer::new(stop_validator);
             info!(
                 "Stopped {} validators: {}",
@@ -728,7 +728,7 @@ impl ClusterTestRunner {
     fn wait_until_all_healthy(&mut self) -> Result<()> {
         let wait_deadline = Instant::now() + Duration::from_secs(20 * 60);
         for instance in self.cluster.instances() {
-            self.health_check_runner.invalidate(instance.short_hash());
+            self.health_check_runner.invalidate(instance.peer_name());
         }
         loop {
             let now = Instant::now();

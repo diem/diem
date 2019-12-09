@@ -48,7 +48,7 @@ impl DebugPortLogThread {
                 started_sender: Some(started_sender),
             };
             thread::Builder::new()
-                .name(format!("log-tail-{}", instance.short_hash()))
+                .name(format!("log-tail-{}", instance.peer_name()))
                 .spawn(move || debug_port_log_thread.run())
                 .expect("Failed to spawn log tail thread");
         }
@@ -107,7 +107,7 @@ impl DebugPortLogThread {
             return None;
         };
         Some(ValidatorEvent {
-            validator: self.instance.short_hash().clone(),
+            validator: self.instance.peer_name().clone(),
             timestamp: Duration::from_millis(event.timestamp as u64),
             received_timestamp: unix_timestamp_now(),
             event: e,
