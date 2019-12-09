@@ -699,7 +699,7 @@ fn test_full_node_basic_flow() {
 
 #[test]
 fn test_e2e_reconfiguration() {
-    let (mut env, mut client_proxy_1) = setup_swarm_and_client_proxy(5, 1);
+    let (mut env, mut client_proxy_1) = setup_swarm_and_client_proxy(3, 1);
     // the client connected to the removed validator
     let mut client_proxy_0 = env.get_validator_ac_client(0);
     client_proxy_1.create_next_account(false).unwrap();

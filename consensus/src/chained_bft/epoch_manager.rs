@@ -116,8 +116,16 @@ impl<T: Payload> EpochManager<T> {
         }
     }
 
-    pub async fn process_epoch_retrieval(&mut self, start_epoch: u64, peer_id: AccountAddress) {
-        let proof = match self.state_computer.get_epoch_proof(start_epoch).await {
+    pub async fn process_epoch_retrieval(
+        &mut self,
+        request: EpochRetrievalRequest,
+        peer_id: AccountAddress,
+    ) {
+        let proof = match self
+            .state_computer
+            .get_epoch_proof(request.start_epoch, request.end_epoch)
+            .await
+        {
             Ok(proof) => proof,
             Err(e) => {
                 warn!("Failed to get epoch proof from storage: {:?}", e);
@@ -138,12 +146,21 @@ impl<T: Payload> EpochManager<T> {
     pub async fn process_different_epoch(&mut self, different_epoch: u64, peer_id: AccountAddress) {
         match different_epoch.cmp(&self.epoch) {
             // We try to help nodes that have lower epoch than us
-            Ordering::Less => self.process_epoch_retrieval(different_epoch, peer_id).await,
+            Ordering::Less => {
+                self.process_epoch_retrieval(
+                    EpochRetrievalRequest {
+                        start_epoch: different_epoch,
+                        end_epoch: self.epoch,
+                    },
+                    peer_id,
+                )
+                .await
+            }
             // We request proof to join higher epoch
             Ordering::Greater => {
                 let request = EpochRetrievalRequest {
                     start_epoch: self.epoch,
-                    target_epoch: different_epoch,
+                    end_epoch: different_epoch,
                 };
                 let msg = match request.try_into() {
                     Ok(bytes) => ConsensusMsg {

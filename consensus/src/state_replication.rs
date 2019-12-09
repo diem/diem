@@ -83,6 +83,7 @@ pub trait StateComputer: Send + Sync {
     fn get_epoch_proof(
         &self,
         start_epoch: u64,
+        end_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>>;
 }
 

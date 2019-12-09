@@ -40,6 +40,7 @@ pub(crate) struct SyncRequest {
 
 pub(crate) struct EpochRetrievalRequest {
     pub start_epoch: u64,
+    pub end_epoch: u64,
     pub callback: oneshot::Sender<Result<ValidatorChangeEventWithProof>>,
 }
 
@@ -407,7 +408,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         if target_li.ledger_info().epoch() > request_epoch {
             let end_of_epoch_li = self
                 .executor_proxy
-                .get_epoch_proof(request_epoch)?
+                .get_epoch_proof(request_epoch, request_epoch + 1)?
                 .ledger_info_with_sigs
                 .first()
                 .ok_or_else(|| {
@@ -672,7 +673,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     async fn get_epoch_proof(&self, request: EpochRetrievalRequest) {
         if request
             .callback
-            .send(self.executor_proxy.get_epoch_proof(request.start_epoch))
+            .send(
+                self.executor_proxy
+                    .get_epoch_proof(request.start_epoch, request.end_epoch),
+            )
             .is_err()
         {
             error!("[state sync] coordinator failed to send back epoch proof");

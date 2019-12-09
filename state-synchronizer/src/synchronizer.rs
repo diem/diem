@@ -127,11 +127,13 @@ impl StateSyncClient {
     pub fn get_epoch_proof(
         &self,
         start_epoch: u64,
+        end_epoch: u64,
     ) -> impl Future<Output = Result<ValidatorChangeEventWithProof>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
         let request = EpochRetrievalRequest {
             start_epoch,
+            end_epoch,
             callback: cb_sender,
         };
         async move {

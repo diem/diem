@@ -138,6 +138,8 @@ message StartupInfo {
 message GetEpochChangeLedgerInfosRequest {
     /// The last epoch number with available information to the client.
     uint64 start_epoch = 1;
+    /// The target epoch number that client wants to sync to.
+    uint64 end_epoch = 2;
 }
 
 message GetEpochChangeLedgerInfosResponse {
