@@ -442,12 +442,16 @@ impl From<GetStartupInfoResponse> for crate::proto::storage::GetStartupInfoRespo
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct GetEpochChangeLedgerInfosRequest {
     pub start_epoch: u64,
+    pub end_epoch: u64,
 }
 
 impl GetEpochChangeLedgerInfosRequest {
     /// Constructor.
-    pub fn new(start_epoch: u64) -> Self {
-        Self { start_epoch }
+    pub fn new(start_epoch: u64, end_epoch: u64) -> Self {
+        Self {
+            start_epoch,
+            end_epoch,
+        }
     }
 }
 
@@ -459,6 +463,7 @@ impl TryFrom<crate::proto::storage::GetEpochChangeLedgerInfosRequest>
     fn try_from(proto: crate::proto::storage::GetEpochChangeLedgerInfosRequest) -> Result<Self> {
         Ok(Self {
             start_epoch: proto.start_epoch,
+            end_epoch: proto.end_epoch,
         })
     }
 }
@@ -469,6 +474,7 @@ impl From<GetEpochChangeLedgerInfosRequest>
     fn from(request: GetEpochChangeLedgerInfosRequest) -> Self {
         Self {
             start_epoch: request.start_epoch,
+            end_epoch: request.end_epoch,
         }
     }
 }

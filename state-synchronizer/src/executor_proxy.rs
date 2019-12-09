@@ -38,7 +38,12 @@ pub trait ExecutorProxyTrait: Sync + Send {
         target_version: u64,
     ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>>;
 
-    fn get_epoch_proof(&self, start_epoch: u64) -> Result<ValidatorChangeEventWithProof>;
+    /// Get the epoch change ledger info for [start_epoch, end_epoch) so that we can move to end_epoch.
+    fn get_epoch_proof(
+        &self,
+        start_epoch: u64,
+        end_epoch: u64,
+    ) -> Result<ValidatorChangeEventWithProof>;
 }
 
 pub(crate) struct ExecutorProxy {
@@ -120,10 +125,14 @@ impl ExecutorProxyTrait for ExecutorProxy {
             .boxed()
     }
 
-    fn get_epoch_proof(&self, start_epoch: u64) -> Result<ValidatorChangeEventWithProof> {
+    fn get_epoch_proof(
+        &self,
+        start_epoch: u64,
+        end_epoch: u64,
+    ) -> Result<ValidatorChangeEventWithProof> {
         let ledger_info_per_epoch = self
             .storage_read_client
-            .get_epoch_change_ledger_infos(start_epoch)?;
+            .get_epoch_change_ledger_infos(start_epoch, end_epoch)?;
         Ok(ValidatorChangeEventWithProof::new(ledger_info_per_epoch))
     }
 }

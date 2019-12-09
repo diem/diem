@@ -8,7 +8,7 @@ use std::convert::TryFrom;
 #[derive(Serialize, Deserialize)]
 pub struct EpochRetrievalRequest {
     pub start_epoch: u64,
-    pub target_epoch: u64,
+    pub end_epoch: u64,
 }
 
 impl TryFrom<network::proto::RequestEpoch> for EpochRetrievalRequest {

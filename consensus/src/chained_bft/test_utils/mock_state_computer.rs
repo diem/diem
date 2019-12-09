@@ -87,6 +87,7 @@ impl StateComputer for MockStateComputer {
     fn get_epoch_proof(
         &self,
         _start_epoch: u64,
+        _end_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>> {
         future::err(format_err!(
             "epoch proof not supported in mock state computer"
@@ -131,6 +132,7 @@ impl StateComputer for EmptyStateComputer {
     fn get_epoch_proof(
         &self,
         _start_epoch: u64,
+        _end_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeEventWithProof>> + Send>> {
         future::err(format_err!(
             "epoch proof not supported in empty state computer"

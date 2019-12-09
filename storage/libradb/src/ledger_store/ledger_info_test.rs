@@ -48,18 +48,21 @@ proptest! {
             .filter(|info| info.ledger_info().next_validator_set().is_some())
             .cloned()
             .collect();
-        let start_epoch = ledger_infos_with_sigs.first().unwrap().ledger_info().epoch();
-        let ledger_version = ledger_infos_with_sigs.last().unwrap().ledger_info().version();
-        prop_assert_eq!(
-            &store.get_epoch_change_ledger_infos(start_epoch, ledger_version).unwrap(),
-            &epoch_ledgers
-        );
-
-        // verify get_epoch()
         let epoch_change_versions: Vec<_> = epoch_ledgers.iter().map(|li| {
             let ledger_info = li.ledger_info();
             (ledger_info.epoch(), ledger_info.version())
         }).collect();
+        let start_epoch = ledger_infos_with_sigs.first().unwrap().ledger_info().epoch();
+        let latest_ledger_info = ledger_infos_with_sigs.last().unwrap().ledger_info();
+        let latest_epoch = latest_ledger_info.epoch();
+        let proof = store.get_epoch_change_ledger_infos(start_epoch, latest_epoch).unwrap();
+        let expected_proof = epoch_ledgers
+                .into_iter()
+                .filter(|li| li.ledger_info().epoch() < latest_epoch)
+                .collect::<Vec<_>>();
+        prop_assert_eq!(&proof, &expected_proof);
+
+        // verify get_epoch()
         for pair in (&epoch_change_versions).windows(2) {
             let prev = pair[0];
             let prev_epoch = prev.0;

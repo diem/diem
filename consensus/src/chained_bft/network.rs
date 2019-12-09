@@ -50,7 +50,8 @@ pub struct NetworkReceivers<T> {
     pub sync_info_msgs: libra_channel::Receiver<AccountAddress, (SyncInfo, AccountAddress)>,
     pub epoch_change: libra_channel::Receiver<AccountAddress, LedgerInfoWithSignatures>,
     pub different_epoch: libra_channel::Receiver<AccountAddress, (u64, AccountAddress)>,
-    pub epoch_retrieval: libra_channel::Receiver<AccountAddress, (u64, AccountAddress)>,
+    pub epoch_retrieval:
+        libra_channel::Receiver<AccountAddress, (EpochRetrievalRequest, AccountAddress)>,
 }
 
 impl<T> NetworkReceivers<T> {
@@ -277,7 +278,8 @@ pub struct NetworkTask<T> {
     sync_info_tx: libra_channel::Sender<AccountAddress, (SyncInfo, AccountAddress)>,
     epoch_change_tx: libra_channel::Sender<AccountAddress, LedgerInfoWithSignatures>,
     different_epoch_tx: libra_channel::Sender<AccountAddress, (u64, AccountAddress)>,
-    epoch_retrieval_tx: libra_channel::Sender<AccountAddress, (u64, AccountAddress)>,
+    epoch_retrieval_tx:
+        libra_channel::Sender<AccountAddress, (EpochRetrievalRequest, AccountAddress)>,
     all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,
     validators: Arc<ValidatorVerifier>,
 }
@@ -513,13 +515,13 @@ impl<T: Payload> NetworkTask<T> {
     ) -> anyhow::Result<()> {
         let request = EpochRetrievalRequest::try_from(request)?;
         debug!(
-            "Received epoch retrieval from {} to {}",
-            peer_id, request.start_epoch
+            "Received epoch retrieval from peer {}, start epoch {}, end epoch {}",
+            peer_id, request.start_epoch, request.end_epoch
         );
-        match request.target_epoch.cmp(&self.epoch) {
-            Ordering::Less | Ordering::Equal => self
-                .epoch_retrieval_tx
-                .push(peer_id, (request.start_epoch, peer_id)),
+        match request.end_epoch.cmp(&self.epoch) {
+            Ordering::Less | Ordering::Equal => {
+                self.epoch_retrieval_tx.push(peer_id, (request, peer_id))
+            }
             Ordering::Greater => {
                 warn!("Received EpochRetrievalRequest beyond what we have locally");
                 Ok(())

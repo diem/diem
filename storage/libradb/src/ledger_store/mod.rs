@@ -91,14 +91,12 @@ impl LedgerStore {
         })
     }
 
-    /// Return the ledger infos reflecting epoch bumps with their least 2f+1 signatures starting
-    /// from `start_epoch` to the most recent one.
-    /// Note: ledger infos and signatures are available at the last version of each earlier epoch
-    /// and at the latest version of current epoch, we filter out the latter.
+    /// Return the ledger infos reflecting epoch bumps with their 2f+1 signatures
+    /// in [`start_epoch`, `end_epoch`).
     pub fn get_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,
-        ledger_version: Version,
+        end_epoch: u64,
     ) -> Result<Vec<LedgerInfoWithSignatures>> {
         let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
         iter.seek(&start_epoch)?;
@@ -106,14 +104,7 @@ impl LedgerStore {
         let mut result = Vec::new();
         for res in iter {
             let (_epoch, ledger_info_with_sigs) = res?;
-            if ledger_info_with_sigs.ledger_info().version() > ledger_version {
-                break;
-            }
-            if ledger_info_with_sigs
-                .ledger_info()
-                .next_validator_set()
-                .is_none()
-            {
+            if ledger_info_with_sigs.ledger_info().epoch() >= end_epoch {
                 break;
             }
             if result.len() >= MAX_NUM_EPOCH_CHANGE_LEDGER_INFO {
@@ -121,6 +112,17 @@ impl LedgerStore {
                     MAX_NUM_EPOCH_CHANGE_LEDGER_INFO as u64 + 1,
                     MAX_NUM_EPOCH_CHANGE_LEDGER_INFO as u64,
                 )
+                .into());
+            }
+            if ledger_info_with_sigs
+                .ledger_info()
+                .next_validator_set()
+                .is_none()
+            {
+                return Err((LibraDbError::NotFound(format!(
+                    "Epoch {} change proof",
+                    ledger_info_with_sigs.ledger_info().epoch()
+                )))
                 .into());
             }
             result.push(ledger_info_with_sigs);

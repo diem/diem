@@ -17,13 +17,15 @@ use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::collections::HashMap;
 
 fn verify_epochs(db: &LibraDB, ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) -> Result<()> {
+    let (_, latest_li, mut proof, _) = db.update_to_latest_ledger(0, Vec::new())?;
     let epoch_change_lis: Vec<_> = ledger_infos_with_sigs
         .iter()
-        .filter(|info| info.ledger_info().next_validator_set().is_some())
+        .filter(|info| {
+            info.ledger_info().next_validator_set().is_some()
+                && info.ledger_info().epoch() < latest_li.ledger_info().epoch()
+        })
         .cloned()
         .collect();
-
-    let (_, _, mut proof, _) = db.update_to_latest_ledger(0, Vec::new())?;
 
     // The very first validator change in the returned proof is the
     // validator change of genesis (LedgerInfo with epoch 0).

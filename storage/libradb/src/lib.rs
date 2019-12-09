@@ -331,9 +331,10 @@ impl LibraDB {
     pub fn get_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,
+        end_epoch: u64,
     ) -> Result<Vec<LedgerInfoWithSignatures>> {
         self.ledger_store
-            .get_epoch_change_ledger_infos(start_epoch, self.get_latest_version()?)
+            .get_epoch_change_ledger_infos(start_epoch, end_epoch)
     }
 
     /// Persist transactions. Called by the executor module when either syncing nodes or committing
@@ -562,8 +563,10 @@ impl LibraDB {
         // TODO: cache last epoch change version to avoid a DB access in most cases.
         let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
         let validator_change_proof = if client_epoch < ledger_info.epoch() {
-            self.ledger_store
-                .get_epoch_change_ledger_infos(client_epoch, ledger_info.version())?
+            self.ledger_store.get_epoch_change_ledger_infos(
+                client_epoch,
+                self.ledger_store.get_epoch(ledger_info.version())?,
+            )?
         } else {
             Vec::new()
         };
@@ -620,17 +623,16 @@ impl LibraDB {
         };
         let li_version = ledger_info_with_sigs.ledger_info().version();
         assert!(latest_tree_state.version >= li_version);
-        let current_epoch = if ledger_info_with_sigs
+        let mut target_epoch = ledger_info_with_sigs.ledger_info().epoch();
+        if ledger_info_with_sigs
             .ledger_info()
             .next_validator_set()
             .is_some()
         {
-            ledger_info_with_sigs.ledger_info().epoch() + 1
-        } else {
-            ledger_info_with_sigs.ledger_info().epoch()
-        };
+            target_epoch += 1;
+        }
         let ledger_info_with_validators = self
-            .get_epoch_change_ledger_infos(current_epoch - 1)?
+            .get_epoch_change_ledger_infos(target_epoch - 1, target_epoch)?
             .pop()
             .ok_or_else(|| format_err!("ledger info with validators not found"))?;
 

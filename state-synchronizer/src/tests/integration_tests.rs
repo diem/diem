@@ -102,7 +102,11 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         async move { response }.boxed()
     }
 
-    fn get_epoch_proof(&self, start_epoch: u64) -> Result<ValidatorChangeEventWithProof> {
+    fn get_epoch_proof(
+        &self,
+        start_epoch: u64,
+        _end_epoch: u64,
+    ) -> Result<ValidatorChangeEventWithProof> {
         Ok(self.storage.read().unwrap().get_epoch_changes(start_epoch))
     }
 }
