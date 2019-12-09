@@ -16,7 +16,6 @@ use libra_types::crypto_proxies::ValidatorPublicKeys;
 use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use libra_types::ledger_info::LedgerInfo;
-use rmp_serde::{from_slice, to_vec_named};
 use std::{collections::HashSet, sync::Arc};
 use storage_client::StorageRead;
 
@@ -264,7 +263,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
     }
 
     fn save_state(&self, vote: &Vote) -> Result<()> {
-        self.db.save_state(to_vec_named(vote)?)
+        self.db.save_state(lcs::to_bytes(vote)?)
     }
 
     fn start(&self) -> RecoveryData<T> {
@@ -275,11 +274,11 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             .expect("unable to recover consensus data");
 
         let last_vote = raw_data.0.map(|vote_data| {
-            from_slice(&vote_data[..]).expect("unable to deserialize last vote msg")
+            lcs::from_bytes(&vote_data[..]).expect("unable to deserialize last vote msg")
         });
 
         let highest_timeout_certificate = raw_data.1.map(|ts| {
-            from_slice(&ts[..]).expect("unable to deserialize highest timeout certificate")
+            lcs::from_bytes(&ts[..]).expect("unable to deserialize highest timeout certificate")
         });
         let blocks = raw_data.2;
         let quorum_certs: Vec<_> = raw_data.3;
@@ -342,6 +341,6 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
 
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()> {
         self.db
-            .save_highest_timeout_certificate(to_vec_named(&highest_timeout_cert)?)
+            .save_highest_timeout_certificate(lcs::to_bytes(&highest_timeout_cert)?)
     }
 }
