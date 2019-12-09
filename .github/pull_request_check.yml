@@ -1,0 +1,91 @@
+name: Pull Request Workflow
+on: pull_request
+jobs:
+  check-fmt:
+    name: check fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          submodules: recursive
+      - name: setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.39.0
+          components: rustfmt,clippy
+      - name: run fmt check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+  build-all:
+    name: build project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          submodules: recursive
+      - name: setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.39.0
+      - name: setup environment
+        run: bash ./scripts/dev_setup.sh
+      - name: build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all -j 4
+      - name: check for changed and untracked files
+        run: bash ./scripts/changed-files.sh
+  test-vm:
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          submodules: recursive
+      - name: setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.39.0
+      - name: dev setup
+        run: bash ./scripts/dev_setup.sh
+      - name: build testbin
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-targets -p functional_tests --no-run -j 4
+      - name: test
+        env:
+          RUST_LOG: info
+          RUST_BACKTRACE: full
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-targets -p functional_tests -- --nocapture
+  test-unit:
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          submodules: recursive
+      - name: setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.39.0
+      - name: dev setup
+        run: bash ./scripts/dev_setup.sh
+      - name: test
+        env:
+          RUST_LOG: info
+          RUST_BACKTRACE: full
+        uses: actions-rs/cargo@v1
+        with:
+          command: x
+          args: test --unit -- --nocapture
