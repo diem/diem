@@ -10,4 +10,4 @@ This directory contains [Docker](https://www.docker.com/) configuration and scri
 4. To test the validator image locally, run `docker/validator/run.sh`
 5. To test the faucet server image locally, run `docker/mint/run.sh`
 6. Run the client as follows:
-   `cargo run -p client --bin client -- -a localhost -p 8001 -f localhost:8080 -s terraform/validator-sets/dev/consensus_peers.config.toml`
+   `cargo run -p client --bin client -- -a localhost -p 8000 -f localhost:8080 -s terraform/validator-sets/dev/consensus_peers.config.toml`
