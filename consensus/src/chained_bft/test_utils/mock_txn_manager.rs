@@ -5,6 +5,7 @@ use crate::state_replication::TxnManager;
 use anyhow::Result;
 use executor::StateComputeResult;
 use futures::{channel::mpsc, future, Future, FutureExt, SinkExt};
+use libra_types::transaction::TransactionStatus;
 use std::{
     pin::Pin,
     sync::{
@@ -83,5 +84,14 @@ impl TxnManager for MockTransactionManager {
             Ok(())
         }
             .boxed()
+    }
+
+    fn commit_txns_with_status<'a>(
+        &'a self,
+        _txns: &Self::Payload,
+        _txns_status: Vec<TransactionStatus>,
+        _timestamp_usecs: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
+        unimplemented!()
     }
 }

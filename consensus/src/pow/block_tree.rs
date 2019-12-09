@@ -435,33 +435,6 @@ impl BlockInfo {
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-impl BlockTree {
-    pub fn add_block_info_for_test(&mut self, id: &HashValue, parent_id: &HashValue) {
-        //1. new_block_info not exist
-        let id_exist = self.id_to_block.contains_key(id);
-        ensure!(!id_exist, "block already exist in block tree.");
-
-        //2. parent exist
-        let parent_height = self
-            .id_to_block
-            .get(parent_id)
-            .expect("parent block not exist in block tree.")
-            .height();
-
-        //3. is new root
-        let (height, new_root) = if parent_height == self.height {
-            // new root
-            (self.height + 1, true)
-        } else {
-            (parent_height + 1, false)
-        };
-
-        let new_block_info = BlockInfo::new_for_test(id, parent_id, height);
-        self.add_block_info_inner(new_block_info, new_root);
-    }
-}
-
-#[cfg(any(test, feature = "fuzzing"))]
 impl BlockInfo {
     fn new_for_test(id: &HashValue, parent_id: &HashValue, height: BlockHeight) -> Self {
         Self::new_inner(id, parent_id, height, 0, None)

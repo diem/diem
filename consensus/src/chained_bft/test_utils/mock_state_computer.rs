@@ -10,7 +10,9 @@ use consensus_types::block::Block;
 use consensus_types::executed_block::ExecutedBlock;
 use executor::{ExecutedTrees, ProcessedVMOutput};
 use futures::{channel::mpsc, future, Future, FutureExt};
+use libra_crypto::HashValue;
 use libra_logger::prelude::*;
+use libra_types::block_metadata::BlockMetadata;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof};
 use libra_types::validator_set::ValidatorSet;
 use std::{pin::Pin, sync::Arc};
@@ -51,6 +53,16 @@ impl StateComputer for MockStateComputer {
         .boxed()
     }
 
+    fn compute_by_hash(
+        &self,
+        _grandpa_block_id: &HashValue,
+        _parent_block_id: &HashValue,
+        _block_id: &HashValue,
+        _transactions: Vec<(BlockMetadata, Self::Payload)>,
+    ) -> Pin<Box<dyn Future<Output = Result<ProcessedVMOutput>> + Send>> {
+        unimplemented!()
+    }
+
     fn commit(
         &self,
         _blocks: Vec<&ExecutedBlock<Self::Payload>>,
@@ -87,6 +99,10 @@ impl StateComputer for MockStateComputer {
         ExecutedTrees::new_empty()
     }
 
+    fn sync_to_or_bail(&self, _commit: LedgerInfoWithSignatures) {
+        unimplemented!()
+    }
+
     fn get_epoch_proof(
         &self,
         _start_epoch: u64,
@@ -115,6 +131,16 @@ impl StateComputer for EmptyStateComputer {
         .boxed()
     }
 
+    fn compute_by_hash(
+        &self,
+        _grandpa_block_id: &HashValue,
+        _parent_block_id: &HashValue,
+        _block_id: &HashValue,
+        _transactions: Vec<(BlockMetadata, Self::Payload)>,
+    ) -> Pin<Box<dyn Future<Output = Result<ProcessedVMOutput>> + Send>> {
+        unimplemented!()
+    }
+
     fn commit(
         &self,
         _blocks: Vec<&ExecutedBlock<Self::Payload>>,
@@ -132,6 +158,10 @@ impl StateComputer for EmptyStateComputer {
 
     fn committed_trees(&self) -> ExecutedTrees {
         ExecutedTrees::new_empty()
+    }
+
+    fn sync_to_or_bail(&self, _commit: LedgerInfoWithSignatures) {
+        unimplemented!()
     }
 
     fn get_epoch_proof(

@@ -7,7 +7,7 @@ use executor::{CommittableBlock, Executor};
 use futures::executor::block_on;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
-use libra_config::config::{NodeConfig, VMConfig, VMPublishingOption};
+use libra_config::config::{NodeConfig, VMConfig, VMMode, VMPublishingOption};
 use libra_crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue};
 use libra_types::{
     access_path::AccessPath,
@@ -101,6 +101,7 @@ fn test_reconfiguration() {
     let (mut config, genesis_keypair) = get_test_config();
     config.vm_config = VMConfig {
         publishing_options: VMPublishingOption::CustomScripts,
+        mode: VMMode::Onchain,
     };
     let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
 
