@@ -5,6 +5,7 @@ use crate::pow::mint_manager::MintManager;
 use crate::pow::payload_ext::BlockPayloadExt;
 use crate::pow::sync_manager::SyncManager;
 use crate::state_replication::{StateComputer, TxnManager};
+use anyhow::{Error, Result};
 use atomic_refcell::AtomicRefCell;
 use channel;
 use consensus_types::block::Block;
@@ -36,7 +37,6 @@ use std::sync::Arc;
 use std::{convert::TryFrom, path::PathBuf};
 use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
-use anyhow::{Result, Error};
 
 pub struct EventProcessor {
     block_cache_sender: mpsc::Sender<Block<BlockPayloadExt>>,

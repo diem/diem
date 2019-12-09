@@ -48,7 +48,8 @@ impl PowConsensusProvider {
         let state_computer = Arc::new(ExecutionProxy::new(executor, synchronizer_client.clone()));
 
         let peer_id_str = node_config
-            .validator_network.as_ref()
+            .validator_network
+            .as_ref()
             .unwrap()
             .peer_id
             .clone();

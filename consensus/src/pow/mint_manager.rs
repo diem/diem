@@ -3,6 +3,7 @@ use crate::pow::chain_manager::ChainManager;
 use crate::pow::event_processor::EventProcessor;
 use crate::pow::payload_ext::{genesis_id, BlockPayloadExt};
 use crate::state_replication::{StateComputer, TxnManager};
+use anyhow::Result;
 use atomic_refcell::AtomicRefCell;
 use consensus_types::{block::Block, quorum_cert::QuorumCert, vote_data::VoteData};
 use cuckoo::consensus::PowService;
@@ -37,7 +38,6 @@ use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
 use tokio::runtime::Handle;
-use anyhow::Result;
 
 pub struct MintManager {
     txn_manager: Arc<dyn TxnManager<Payload = Vec<SignedTransaction>>>,

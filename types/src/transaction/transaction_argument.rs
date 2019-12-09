@@ -7,10 +7,10 @@ use crate::{
     account_address::AccountAddress, byte_array::ByteArray,
     proto::types::transaction_argument::ArgType as TransactionArgument_ArgType,
 };
-use anyhow::{Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
-use thiserror::{Error};
+use thiserror::Error;
 
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionArgument {

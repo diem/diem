@@ -1,6 +1,7 @@
 use crate::pow::chain_manager::ChainManager;
 use crate::pow::event_processor::EventProcessor;
 use crate::pow::payload_ext::BlockPayloadExt;
+use anyhow::Result;
 use atomic_refcell::AtomicRefCell;
 use channel;
 use consensus_types::block::Block;
@@ -26,7 +27,6 @@ use std::convert::TryInto;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::runtime::Handle;
-use anyhow::Result;
 
 pub struct SyncManager {
     author: AccountAddress,
