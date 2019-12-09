@@ -190,7 +190,4 @@ root of NodeConfig
 - Is the execution gRPC interface being deprecated? Cleanup configs.
 - LoggerConfig should allow specifying the severity.
 - Eliminate generate-keypair
-- Move data to src/config/test\_data
-- Build distinct binaries in dynamic-config-builder for validator, full node,
-  and faucet nodes then delete config-builder
 - Generating public networks is broken

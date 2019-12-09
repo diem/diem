@@ -4,4 +4,6 @@
 mod error;
 mod validator_config;
 
-pub use crate::{error::Error, validator_config::ValidatorConfig};
+pub use crate::{
+    error::Error, full_node_config::FullNodeConfig, validator_config::ValidatorConfig,
+};
