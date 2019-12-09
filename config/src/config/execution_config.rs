@@ -44,17 +44,6 @@ impl ExecutionConfig {
     }
 
     pub fn load(&mut self) -> Result<()> {
-        // By default genesis_file_location is empty so that load can always succeed from an empty
-        // slate. At the same time, configs typically store genesis at this location, so make the
-        // config somewhat flexible by allowing genesis.blob to be filled in by default if and only
-        // if the file exists on disk and the genesis blob is None.
-        self.base.test_and_set_full_path(
-            &self.genesis,
-            &None,
-            &mut self.genesis_file_location,
-            GENESIS_DEFAULT,
-        );
-
         if !self.genesis_file_location.as_os_str().is_empty() {
             let mut file = File::open(&self.genesis_file_location())?;
             let mut buffer = vec![];
@@ -103,7 +92,7 @@ mod test {
     }
 
     #[test]
-    fn test_some_and_default_genesis() {
+    fn test_some_and_load_genesis() {
         let fake_genesis = Transaction::WriteSet(WriteSetMut::new(vec![]).freeze().unwrap());
         let (mut config, _path) = generate_config();
         config.genesis = Some(fake_genesis.clone());
