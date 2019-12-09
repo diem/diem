@@ -1338,7 +1338,7 @@ fn parse_storage_location<'input>(
     }
 }
 
-fn parse_spec_exp<'input>(
+fn parse_unary_spec_exp<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<SpecExp, ParseError<usize, anyhow::Error>> {
     Ok(match tokens.peek() {
@@ -1354,11 +1354,79 @@ fn parse_spec_exp<'input>(
             consume_token(tokens, Tok::RParen)?;
             SpecExp::GlobalExists { type_, address }
         }
-        // TODO: unary ops
-        // TODO: binary ops
-        // TODO: implies
+        Tok::Star => {
+            tokens.advance()?;
+            let stloc = parse_storage_location(tokens)?;
+            SpecExp::Dereference(stloc)
+        }
+        Tok::Amp => {
+            tokens.advance()?;
+            let stloc = parse_storage_location(tokens)?;
+            SpecExp::Reference(stloc)
+        }
+        Tok::Exclaim => {
+            tokens.advance()?;
+            let exp = parse_spec_exp(tokens)?;
+            SpecExp::Not(Box::new(exp))
+        }
         _ => SpecExp::StorageLocation(parse_storage_location(tokens)?),
     })
+}
+
+fn parse_rhs_of_spec_exp<'input>(
+    tokens: &mut Lexer<'input>,
+    lhs: SpecExp,
+    min_prec: u32,
+) -> Result<SpecExp, ParseError<usize, anyhow::Error>> {
+    let mut result = lhs;
+    let mut next_tok_prec = get_precedence(&tokens.peek());
+
+    // Continue parsing binary expressions as long as they have they
+    // specified minimum precedence.
+    while next_tok_prec >= min_prec {
+        let op_token = tokens.peek();
+        tokens.advance()?;
+
+        let mut rhs = parse_unary_spec_exp(tokens)?;
+
+        // If the next token is another binary operator with a higher
+        // precedence, then recursively parse that expression as the RHS.
+        let this_prec = next_tok_prec;
+        next_tok_prec = get_precedence(&tokens.peek());
+        if this_prec < next_tok_prec {
+            rhs = parse_rhs_of_spec_exp(tokens, rhs, this_prec + 1)?;
+            next_tok_prec = get_precedence(&tokens.peek());
+        }
+
+        let op = match op_token {
+            Tok::EqualEqual => BinOp::Eq,
+            Tok::ExclaimEqual => BinOp::Neq,
+            Tok::Less => BinOp::Lt,
+            Tok::Greater => BinOp::Gt,
+            Tok::LessEqual => BinOp::Le,
+            Tok::GreaterEqual => BinOp::Ge,
+            Tok::PipePipe => BinOp::Or,
+            Tok::AmpAmp => BinOp::And,
+            Tok::Caret => BinOp::Xor,
+            Tok::Pipe => BinOp::BitOr,
+            Tok::Amp => BinOp::BitAnd,
+            Tok::Plus => BinOp::Add,
+            Tok::Minus => BinOp::Sub,
+            Tok::Star => BinOp::Mul,
+            Tok::Slash => BinOp::Div,
+            Tok::Percent => BinOp::Mod,
+            _ => panic!("Unexpected token that is not a binary operator"),
+        };
+        result = SpecExp::Binop(Box::new(result), op, Box::new(rhs))
+    }
+    Ok(result)
+}
+
+fn parse_spec_exp<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<SpecExp, ParseError<usize, anyhow::Error>> {
+    let lhs = parse_unary_spec_exp(tokens)?;
+    parse_rhs_of_spec_exp(tokens, lhs, /* min_prec */ 1)
 }
 
 fn parse_spec_condition<'input>(
