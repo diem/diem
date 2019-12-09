@@ -12,9 +12,6 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Tool to create Libra Validator Configs")]
 struct Args {
-    #[structopt(short = "6", long)]
-    /// Use IPv6
-    ipv6: bool,
     #[structopt(short = "a", long, parse(from_str = parse_addr))]
     /// Advertised address for this node, if this is null, listen is reused
     advertised: Multiaddr,
@@ -62,7 +59,6 @@ fn main() {
         .advertised(args.advertised)
         .bootstrap(args.bootstrap)
         .index(args.index)
-        .ipv4(!args.ipv6)
         .listen(args.listen)
         .nodes(args.nodes)
         .template(template);

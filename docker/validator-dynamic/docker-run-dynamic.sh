@@ -4,9 +4,6 @@
 set -ex
 
 declare -a params
-if [ -n "${IPV4}" ]; then
-	    params+="-4 "
-fi
 if [ -n "${CFG_BASE_CONFIG}" ]; then # Path to base config
 	    params+="-t ${CFG_BASE_CONFIG} "
 fi
