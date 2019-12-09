@@ -102,19 +102,6 @@ impl StorageReadServiceClient {
 }
 
 impl StorageRead for StorageReadServiceClient {
-    fn update_to_latest_ledger(
-        &self,
-        client_known_version: Version,
-        requested_items: Vec<RequestItem>,
-    ) -> Result<(
-        Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        ValidatorChangeEventWithProof,
-        AccumulatorConsistencyProof,
-    )> {
-        block_on(self.update_to_latest_ledger_async(client_known_version, requested_items))
-    }
-
     fn update_to_latest_ledger_async(
         &self,
         client_known_version: Version,
@@ -148,21 +135,6 @@ impl StorageRead for StorageReadServiceClient {
             .boxed()
     }
 
-    fn get_transactions(
-        &self,
-        start_version: Version,
-        batch_size: u64,
-        ledger_version: Version,
-        fetch_events: bool,
-    ) -> Result<TransactionListWithProof> {
-        block_on(self.get_transactions_async(
-            start_version,
-            batch_size,
-            ledger_version,
-            fetch_events,
-        ))
-    }
-
     fn get_transactions_async(
         &self,
         start_version: Version,
@@ -178,14 +150,6 @@ impl StorageRead for StorageReadServiceClient {
                 Ok(rust_resp.txn_list_with_proof)
             })
             .boxed()
-    }
-
-    fn get_account_state_with_proof_by_version(
-        &self,
-        address: AccountAddress,
-        version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
-        block_on(self.get_account_state_with_proof_by_version_async(address, version))
     }
 
     fn get_account_state_with_proof_by_version_async(
@@ -206,10 +170,6 @@ impl StorageRead for StorageReadServiceClient {
         .boxed()
     }
 
-    fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
-        block_on(self.get_startup_info_async())
-    }
-
     fn get_startup_info_async(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>> {
@@ -220,13 +180,6 @@ impl StorageRead for StorageReadServiceClient {
                 Ok(resp.info)
             })
             .boxed()
-    }
-
-    fn get_epoch_change_ledger_infos(
-        &self,
-        start_epoch: u64,
-    ) -> Result<Vec<LedgerInfoWithSignatures>> {
-        block_on(self.get_epoch_change_ledger_infos_async(start_epoch))
     }
 
     fn get_epoch_change_ledger_infos_async(
@@ -285,15 +238,6 @@ impl StorageWriteServiceClient {
 }
 
 impl StorageWrite for StorageWriteServiceClient {
-    fn save_transactions(
-        &self,
-        txns_to_commit: Vec<TransactionToCommit>,
-        first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
-    ) -> Result<()> {
-        block_on(self.save_transactions_async(txns_to_commit, first_version, ledger_info_with_sigs))
-    }
-
     fn save_transactions_async(
         &self,
         txns_to_commit: Vec<TransactionToCommit>,
@@ -327,7 +271,9 @@ pub trait StorageRead: Send + Sync {
         LedgerInfoWithSignatures,
         ValidatorChangeEventWithProof,
         AccumulatorConsistencyProof,
-    )>;
+    )> {
+        block_on(self.update_to_latest_ledger_async(client_known_version, request_items))
+    }
 
     /// See [`LibraDB::update_to_latest_ledger`].
     ///
@@ -359,7 +305,14 @@ pub trait StorageRead: Send + Sync {
         batch_size: u64,
         ledger_version: Version,
         fetch_events: bool,
-    ) -> Result<TransactionListWithProof>;
+    ) -> Result<TransactionListWithProof> {
+        block_on(self.get_transactions_async(
+            start_version,
+            batch_size,
+            ledger_version,
+            fetch_events,
+        ))
+    }
 
     /// See [`LibraDB::get_transactions`].
     ///
@@ -380,7 +333,9 @@ pub trait StorageRead: Send + Sync {
         &self,
         address: AccountAddress,
         version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)>;
+    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+        block_on(self.get_account_state_with_proof_by_version_async(address, version))
+    }
 
     /// See [`LibraDB::get_account_state_with_proof_by_version`].
     ///
@@ -396,7 +351,9 @@ pub trait StorageRead: Send + Sync {
     ///
     /// [`LibraDB::get_startup_info`]:
     /// ../libradb/struct.LibraDB.html#method.get_startup_info
-    fn get_startup_info(&self) -> Result<Option<StartupInfo>>;
+    fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
+        block_on(self.get_startup_info_async())
+    }
 
     /// See [`LibraDB::get_startup_info`].
     ///
@@ -413,7 +370,9 @@ pub trait StorageRead: Send + Sync {
     fn get_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,
-    ) -> Result<Vec<LedgerInfoWithSignatures>>;
+    ) -> Result<Vec<LedgerInfoWithSignatures>> {
+        block_on(self.get_epoch_change_ledger_infos_async(start_epoch))
+    }
 
     /// See [`LibraDB::get_epoch_change_ledger_infos`].
     ///
@@ -450,7 +409,9 @@ pub trait StorageWrite: Send + Sync {
         txns_to_commit: Vec<TransactionToCommit>,
         first_version: Version,
         ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
-    ) -> Result<()>;
+    ) -> Result<()> {
+        block_on(self.save_transactions_async(txns_to_commit, first_version, ledger_info_with_sigs))
+    }
 
     /// See [`LibraDB::save_transactions`].
     ///

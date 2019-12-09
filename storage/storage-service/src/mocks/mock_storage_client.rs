@@ -42,32 +42,6 @@ use storage_proto::{BackupAccountStateResponse, StartupInfo};
 pub struct MockStorageReadClient;
 
 impl StorageRead for MockStorageReadClient {
-    fn update_to_latest_ledger(
-        &self,
-        client_known_version: Version,
-        request_items: Vec<RequestItem>,
-    ) -> Result<(
-        Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        ValidatorChangeEventWithProof,
-        AccumulatorConsistencyProof,
-    )> {
-        let request = libra_types::get_with_proof::UpdateToLatestLedgerRequest::new(
-            client_known_version,
-            request_items,
-        );
-        let proto_request = request.into();
-        let proto_response = get_mock_update_to_latest_ledger(&proto_request);
-        let response =
-            libra_types::get_with_proof::UpdateToLatestLedgerResponse::try_from(proto_response)?;
-        Ok((
-            response.response_items,
-            response.ledger_info_with_sigs,
-            response.validator_change_events,
-            response.ledger_consistency_proof,
-        ))
-    }
-
     fn update_to_latest_ledger_async(
         &self,
         client_known_version: Version,
@@ -84,21 +58,22 @@ impl StorageRead for MockStorageReadClient {
                 > + Send,
         >,
     > {
-        futures::future::ok(
-            self.update_to_latest_ledger(client_known_version, request_items)
-                .unwrap(),
-        )
-        .boxed()
-    }
-
-    fn get_transactions(
-        &self,
-        _start_version: Version,
-        _batch_size: u64,
-        _ledger_version: Version,
-        _fetch_events: bool,
-    ) -> Result<libra_types::transaction::TransactionListWithProof> {
-        unimplemented!()
+        let request = libra_types::get_with_proof::UpdateToLatestLedgerRequest::new(
+            client_known_version,
+            request_items,
+        );
+        let proto_request = request.into();
+        let proto_response = get_mock_update_to_latest_ledger(&proto_request);
+        let response =
+            libra_types::get_with_proof::UpdateToLatestLedgerResponse::try_from(proto_response)
+                .unwrap();
+        let ret = (
+            response.response_items,
+            response.ledger_info_with_sigs,
+            response.validator_change_events,
+            response.ledger_consistency_proof,
+        );
+        futures::future::ok(ret).boxed()
     }
 
     fn get_transactions_async(
@@ -113,14 +88,6 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!()
     }
 
-    fn get_account_state_with_proof_by_version(
-        &self,
-        _address: AccountAddress,
-        _version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
-        unimplemented!()
-    }
-
     fn get_account_state_with_proof_by_version_async(
         &self,
         _address: AccountAddress,
@@ -130,20 +97,9 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!();
     }
 
-    fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
-        unimplemented!()
-    }
-
     fn get_startup_info_async(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Option<StartupInfo>>> + Send>> {
-        unimplemented!()
-    }
-
-    fn get_epoch_change_ledger_infos(
-        &self,
-        _start_epoch: u64,
-    ) -> Result<Vec<LedgerInfoWithSignatures>> {
         unimplemented!()
     }
 
