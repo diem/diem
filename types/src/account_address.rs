@@ -17,6 +17,7 @@ use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use std::{convert::TryFrom, fmt, str::FromStr};
+use std::collections::BTreeSet;
 
 pub const ADDRESS_LENGTH: usize = 32;
 
@@ -225,6 +226,24 @@ impl TryFrom<AccountAddress> for Bech32 {
     fn try_from(addr: AccountAddress) -> Result<Bech32> {
         let base32_hash = addr.0.to_base32();
         bech32::Bech32::new(LIBRA_NETWORK_ID_SHORT.into(), base32_hash).map_err(Into::into)
+    }
+}
+
+impl From<&BTreeSet<AccountAddress>> for AccountAddress {
+    // keep the same logic with onchain
+    fn from(participants: &BTreeSet<AccountAddress>) -> AccountAddress {
+        let mut data = Vec::new();
+        for participant in participants.iter() {
+            data.extend_from_slice(participant.as_ref());
+        }
+        let hash = *HashValue::from_sha3_256(&data).as_ref();
+        AccountAddress::new(hash)
+    }
+}
+
+impl From<BTreeSet<AccountAddress>> for AccountAddress {
+    fn from(participants: BTreeSet<AccountAddress>) -> AccountAddress {
+        AccountAddress::from(&participants)
     }
 }
 

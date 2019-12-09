@@ -170,6 +170,15 @@ impl fmt::Display for RoleType {
 pub struct ParseRoleError(String);
 
 impl NodeConfig {
+
+    pub fn get_role(&self) -> RoleType {
+        if self.base.role.is_validator() {
+            RoleType::Validator
+        } else {
+            RoleType::FullNode
+        }
+    }
+
     /// This clones the underlying data except for the keypair so that this config can be used as a
     /// template for another config.
     pub fn clone_for_template(&self) -> Self {
@@ -329,6 +338,10 @@ impl NodeConfig {
         self.set_data_dir(test.temp_dir().as_ref().unwrap().into())
             .expect("Error setting data_dir");
         self.test = Some(test);
+    }
+
+    pub fn default_node_config() -> NodeConfig {
+        NodeConfig::load("data/configs/single.node.config.toml").expect("Unable to load config")
     }
 }
 

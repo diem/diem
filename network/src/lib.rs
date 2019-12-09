@@ -29,3 +29,4 @@ mod utils;
 
 /// Type for unique identifier associated with each network protocol
 pub type ProtocolId = bytes05::Bytes;
+pub use counters::TEST_NETWORK_REQUESTS;
