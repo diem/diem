@@ -18,7 +18,7 @@ use structopt::StructOpt;
 )]
 struct Args {
     /// Admission Control port to connect to.
-    #[structopt(short = "p", long, default_value = "8001")]
+    #[structopt(short = "p", long, default_value = "8000")]
     pub port: NonZeroU16,
     /// Host address/name to connect to.
     #[structopt(short = "a", long)]
@@ -162,8 +162,8 @@ mod tests {
     #[test]
     fn test_args_port() {
         let args = Args::from_iter(&["test", "--host=h", "--validator-set-file=vsf"]);
-        assert_eq!(args.port.get(), 8001);
-        assert_eq!(format!("{}:{}", args.host, args.port.get()), "h:8001");
+        assert_eq!(args.port.get(), 8000);
+        assert_eq!(format!("{}:{}", args.host, args.port.get()), "h:8000");
         let args = Args::from_iter(&[
             "test",
             "--port=65535",
