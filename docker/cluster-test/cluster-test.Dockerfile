@@ -22,7 +22,6 @@ RUN apt-get update && apt-get install -y openssh-client
 RUN mkdir /etc/cluster-test
 WORKDIR /etc/cluster-test
 COPY --from=builder /target/release/cluster-test /usr/local/bin/cluster-test
-COPY terraform/validator-sets/100/mint.key /etc/cluster-test/
 ENTRYPOINT ["cluster-test"]
 ARG BUILD_DATE
 ARG GIT_REV

@@ -22,7 +22,7 @@ pub struct DeploymentManager {
     running_tag: String,
 }
 
-const VALIDATOR_IMAGE_REPO: &str = "libra_e2e";
+const VALIDATOR_IMAGE_REPO: &str = "libra_validator";
 const NIGHTLY_PREFIX: &str = "nightly";
 const UPSTREAM_PREFIX: &str = "upstream_";
 const MASTER_PREFIX: &str = "master_";
@@ -120,32 +120,6 @@ impl DeploymentManager {
                 }
             }
         }
-    }
-
-    pub fn get_master_tag(&self, digest: &str) -> Result<String> {
-        let image_id = ImageIdentifier {
-            image_digest: Some(digest.to_string()),
-            image_tag: None,
-        };
-        let images = self.get_images(VALIDATOR_IMAGE_REPO, &image_id)?;
-        for image in &images {
-            let image_id = match &image.image_id {
-                Some(image_id) => image_id,
-                None => continue,
-            };
-            let tag = match &image_id.image_tag {
-                Some(tag) => tag,
-                None => continue,
-            };
-            if tag.starts_with(MASTER_PREFIX) {
-                return Ok(tag.clone());
-            }
-        }
-        Err(format_err!(
-            "Failed to find upstream tag for {}. Images: {:?}",
-            digest,
-            images
-        ))
     }
 
     fn get_images(&self, repository: &str, image_id: &ImageIdentifier) -> Result<Vec<Image>> {

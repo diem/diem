@@ -39,6 +39,7 @@ variable "image_tag" {
   default     = "latest_dynamic"
 }
 
+# This var is used by cluster test in cluster.rs, please update in both places if this value changes
 variable "config_seed" {
   default     = 1337133713371337133713371337133713371337133713371337133713371337
   description = "Seed to be used by libra-config for"

@@ -5,11 +5,16 @@
 
 use crate::{aws::Aws, instance::Instance};
 use anyhow::{ensure, format_err, Result};
+use dynamic_config_builder::init_from_seed;
+use generate_keypair::load_key_from_file;
 use libra_config::config::AdmissionControlConfig;
+use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
+use libra_crypto::test_utils::KeyPair;
 use rand::prelude::*;
 use rusoto_ec2::{DescribeInstancesRequest, Ec2, Filter, Tag};
 use slog_scope::*;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::{thread, time::Duration};
 
 #[derive(Clone)]
@@ -17,7 +22,7 @@ pub struct Cluster {
     // guaranteed non-empty
     instances: Vec<Instance>,
     prometheus_ip: Option<String>,
-    mint_file: String,
+    mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
 }
 
 impl Cluster {
@@ -32,14 +37,16 @@ impl Cluster {
                 )
             })
             .collect();
+        let mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
+            load_key_from_file(mint_file).expect("invalid faucet keypair file");
         Self {
             instances,
             prometheus_ip: None,
-            mint_file: mint_file.to_string(),
+            mint_key_pair,
         }
     }
 
-    pub fn discover(aws: &Aws, mint_file: &str) -> Result<Self> {
+    pub fn discover(aws: &Aws) -> Result<Self> {
         let mut instances = vec![];
         let mut next_token = None;
         let mut retries_left = 10;
@@ -111,10 +118,15 @@ impl Cluster {
         );
         let prometheus_ip =
             prometheus_ip.ok_or_else(|| format_err!("Prometheus was not found in workspace"))?;
+        let seed = "1337133713371337133713371337133713371337133713371337133713371337";
+        let seed = hex::decode(seed).expect("Invalid hex in seed.");
+        let seed = seed[..32].try_into().expect("Invalid seed");
+        let (mint_key, _) = init_from_seed(seed);
+        let mint_key_pair = KeyPair::from(mint_key);
         Ok(Self {
             instances,
             prometheus_ip: Some(prometheus_ip),
-            mint_file: mint_file.to_string(),
+            mint_key_pair,
         })
     }
 
@@ -135,8 +147,8 @@ impl Cluster {
         self.prometheus_ip.as_ref()
     }
 
-    pub fn mint_file(&self) -> &str {
-        &self.mint_file
+    pub fn mint_key_pair(&self) -> &KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
+        &self.mint_key_pair
     }
 
     pub fn get_instance(&self, name: &str) -> Option<&Instance> {
@@ -167,7 +179,7 @@ impl Cluster {
         Cluster {
             instances,
             prometheus_ip: self.prometheus_ip.clone(),
-            mint_file: self.mint_file.clone(),
+            mint_key_pair: self.mint_key_pair.clone(),
         }
     }
 

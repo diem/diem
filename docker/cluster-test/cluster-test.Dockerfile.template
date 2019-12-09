@@ -29,8 +29,6 @@ COPY cluster_test_docker_builder_cluster_test /usr/local/bin/cluster-test
 COPY --from=builder /target/release/cluster-test /usr/local/bin/cluster-test
 #endif
 
-COPY terraform/validator-sets/100/mint.key /etc/cluster-test/
-
 ENTRYPOINT ["cluster-test"]
 
 ARG BUILD_DATE

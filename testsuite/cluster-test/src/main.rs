@@ -302,7 +302,7 @@ impl BasicSwarmUtil {
 impl ClusterUtil {
     pub fn setup(args: &Args) -> Self {
         let aws = Aws::new();
-        let cluster = Cluster::discover(&aws, &args.mint_file).expect("Failed to discover cluster");
+        let cluster = Cluster::discover(&aws).expect("Failed to discover cluster");
         let cluster = if args.peers.is_empty() {
             cluster
         } else {
@@ -483,11 +483,6 @@ impl ClusterTestRunner {
         } else {
             info!("WIPE_ON_DEPLOY is set to no, keeping database");
         }
-        let marker = self
-            .deployment_manager
-            .get_master_tag(hash)
-            .map_err(|e| format_err!("Failed to get upstream tag: {}", e))?;
-        self.fetch_genesis(&marker)?;
         self.deployment_manager.redeploy(hash.to_string())?;
         thread::sleep(Duration::from_secs(60));
         self.logs.recv_all();
@@ -496,26 +491,6 @@ impl ClusterTestRunner {
         self.start();
         info!("Waiting until all validators healthy after deployment");
         self.wait_until_all_healthy()?;
-        Ok(())
-    }
-
-    fn fetch_genesis(&mut self, marker: &str) -> Result<()> {
-        let cmd = format!(
-            "sudo aws s3 cp s3://toro-validator-sets/{}/100/genesis.blob /opt/libra/genesis.blob",
-            marker
-        );
-        info!("Running {} to fetch genesis blob", cmd);
-        let futures = self
-            .cluster
-            .instances()
-            .iter()
-            .map(|instance| instance.run_cmd_tee_err(vec![&cmd]));
-        let results = self.runtime.block_on(join_all(futures));
-        if results.iter().any(Result::is_err) {
-            return Err(format_err!(
-                "Failed to update genesis.blob on one of validators"
-            ));
-        }
         Ok(())
     }
 
