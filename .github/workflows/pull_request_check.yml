@@ -88,4 +88,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --exclude functional_tests --exclude consensus --exclude language-e2e-tests --exclude miner --exclude testsuite
+          args: --workspace --all-targets  --no-fail-fast --exclude consensus --exclude language-e2e-tests --exclude miner --exclude testsuite
