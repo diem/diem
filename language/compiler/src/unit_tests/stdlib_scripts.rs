@@ -25,6 +25,9 @@ fn compile_account_module() {
 
     let hash_code = include_str!("../../../stdlib/modules/hash.mvir");
     let coin_code = include_str!("../../../stdlib/modules/libra_coin.mvir");
+    let vector_code = include_str!("../../../stdlib/modules/vector.mvir");
+    let channel_util_code = include_str!("../../../stdlib/modules/channel_util.mvir");
+    let channel_transaction_code = include_str!("../../../stdlib/modules/channel_transaction.mvir");
     let account_code = include_str!("../../../stdlib/modules/libra_account.mvir");
 
     let address_util_module = compile_module_string(address_util_code).unwrap();
@@ -34,6 +37,12 @@ fn compile_account_module() {
 
     let coin_module = compile_module_string(coin_code).unwrap();
 
+    let vector_module = compile_module_string(vector_code).unwrap();
+    let channel_util_module = compile_module_string(channel_util_code).unwrap();
+    let channel_transaction_module =
+        compile_module_string_with_deps(channel_transaction_code, vec![vector_module.clone()])
+            .unwrap();
+
     let _compiled_module = compile_module_string_with_deps(
         account_code,
         vec![
@@ -42,6 +51,9 @@ fn compile_account_module() {
             u64_util_module,
             bytearray_util_module,
             coin_module,
+            vector_module,
+            channel_util_module,
+            channel_transaction_module,
         ],
     )
     .unwrap();
