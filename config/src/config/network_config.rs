@@ -110,31 +110,6 @@ impl NetworkConfig {
     }
 
     pub fn load(&mut self, network_role: RoleType) -> Result<()> {
-        let default_keypair = NetworkKeyPairs::default();
-        let default_peer_id = PeerId::try_from(default_keypair.identity_keys.public().to_bytes())?;
-
-        let network_peers_default = self.default_path(NETWORK_PEERS_DEFAULT);
-        self.base.test_and_set_full_path(
-            &self.network_peers,
-            &Self::default_peers(&default_keypair, &default_peer_id),
-            &mut self.network_peers_file,
-            &network_peers_default,
-        );
-        let network_keypairs_default = self.default_path(NETWORK_KEYPAIRS_DEFAULT);
-        self.base.test_and_set_full_path(
-            &self.network_keypairs,
-            &default_keypair,
-            &mut self.network_keypairs_file,
-            &network_keypairs_default,
-        );
-        let seed_peers_default = self.default_path(SEED_PEERS_DEFAULT);
-        self.base.test_and_set_full_path(
-            &self.seed_peers,
-            &SeedPeersConfig::default(),
-            &mut self.seed_peers_file,
-            &seed_peers_default,
-        );
-
         if !self.network_peers_file.as_os_str().is_empty() {
             self.network_peers = NetworkPeersConfig::load_config(self.network_peers_file())?;
         }

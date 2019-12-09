@@ -110,19 +110,6 @@ impl ConsensusConfig {
     }
 
     pub fn load(&mut self) -> Result<()> {
-        self.base.test_and_set_full_path(
-            &self.consensus_keypair,
-            &ConsensusKeyPair::default(),
-            &mut self.consensus_keypair_file,
-            CONSENSUS_KEYPAIR_DEFAULT,
-        );
-        self.base.test_and_set_full_path(
-            &self.consensus_peers,
-            &Self::default_peers(&ConsensusKeyPair::default(), PeerId::default()),
-            &mut self.consensus_peers_file,
-            CONSENSUS_PEERS_DEFAULT,
-        );
-
         if !self.consensus_keypair_file.as_os_str().is_empty() {
             self.consensus_keypair = ConsensusKeyPair::load_config(self.consensus_keypair_file())?;
         }
@@ -302,6 +289,9 @@ mod test {
         // First that paths are empty
         assert_eq!(new_config.consensus_keypair_file, PathBuf::new());
         assert_eq!(new_config.consensus_peers_file, PathBuf::new());
+        // Now set them to the defaults
+        new_config.consensus_keypair_file = PathBuf::from(CONSENSUS_KEYPAIR_DEFAULT);
+        new_config.consensus_peers_file = PathBuf::from(CONSENSUS_PEERS_DEFAULT);
         // Loading populates things correctly
         new_config.load().unwrap();
         assert_eq!(new_config.consensus_keypair, keypair);
