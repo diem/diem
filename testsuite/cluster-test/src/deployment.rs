@@ -67,18 +67,14 @@ impl DeploymentManager {
             let mut request = UpdateServiceRequest::default();
             request.cluster = Some(self.aws.workspace().clone());
             request.force_new_deployment = Some(true);
-            request.service = format!(
-                "{w}/{w}-validator-{hash}",
-                w = self.aws.workspace(),
-                hash = instance.peer_name()
-            );
+            request.service = instance.peer_name().to_string();
 
             self.aws
                 .ecs()
                 .update_service(request)
                 .sync()
                 .map_err(|e| format_err!("Failed to update {}: {:?}", instance, e))?;
-            thread::sleep(Duration::from_millis(100));
+            thread::sleep(Duration::from_millis(200));
         }
         Ok(())
     }
