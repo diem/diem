@@ -16,8 +16,8 @@ use libra_crypto_derive::CryptoHasher;
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
-use std::{convert::TryFrom, fmt, str::FromStr};
 use std::collections::BTreeSet;
+use std::{convert::TryFrom, fmt, str::FromStr};
 
 pub const ADDRESS_LENGTH: usize = 32;
 

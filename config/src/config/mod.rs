@@ -170,7 +170,6 @@ impl fmt::Display for RoleType {
 pub struct ParseRoleError(String);
 
 impl NodeConfig {
-
     pub fn get_role(&self) -> RoleType {
         if self.base.role.is_validator() {
             RoleType::Validator
