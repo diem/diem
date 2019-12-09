@@ -1,10 +1,3 @@
-resource "aws_s3_bucket_object" "fullnode_peers" {
-  bucket = aws_s3_bucket.config.id
-  key    = "fullnode_peers.config.toml"
-  source = "${var.validator_set}/fn/network_peers.config.toml"
-  etag   = filemd5("${var.validator_set}/fn/network_peers.config.toml")
-}
-
 resource "aws_instance" "fullnode" {
   count         = var.num_fullnodes
   ami           = local.aws_ecs_ami

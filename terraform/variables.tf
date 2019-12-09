@@ -88,11 +88,6 @@ variable "zone_id" {
   default     = ""
 }
 
-variable "validator_set" {
-  description = "Relative path to directory containing validator set configs"
-  default     = "validator-sets/dev"
-}
-
 variable "validator_log_level" {
   description = "Log level for validator processes (set with RUST_LOG)"
   default     = "debug"
