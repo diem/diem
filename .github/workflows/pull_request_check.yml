@@ -30,7 +30,7 @@ jobs:
         with:
           toolchain: 1.39.0
       - name: setup environment
-        run: bash echo y|./scripts/dev_setup.sh
+        run: bash ./scripts/dev_setup.sh <<< $'y\n'
       - name: build
         uses: actions-rs/cargo@v1
         with:
@@ -52,7 +52,7 @@ jobs:
         with:
           toolchain: 1.39.0
       - name: dev setup
-        run: bash echo y|./scripts/dev_setup.sh
+        run: bash ./scripts/dev_setup.sh <<< $'y\n'
       - name: build testbin
         uses: actions-rs/cargo@v1
         with:
@@ -80,7 +80,7 @@ jobs:
         with:
           toolchain: 1.39.0
       - name: dev setup
-        run: bash echo y|./scripts/dev_setup.sh
+        run: bash ./scripts/dev_setup.sh <<< $'y\n'
       - name: test
         env:
           RUST_LOG: info
