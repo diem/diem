@@ -15,10 +15,8 @@ use std::collections::HashMap;
 use vm_genesis;
 
 const DEFAULT_SEED: [u8; 32] = [13u8; 32];
-const DEFAULT_IPV4_ADVERTISED: &str = "/ip4/127.0.0.1/tcp/6180";
-const DEFAULT_IPV4_LISTEN: &str = "/ip4/0.0.0.0/tcp/6180";
-const DEFAULT_IPV6_ADVERTISED: &str = "/ip6/::1/tcp/6180";
-const DEFAULT_IPV6_LISTEN: &str = "/ip6/::/tcp/6180";
+const DEFAULT_ADVERTISED: &str = "/ip4/127.0.0.1/tcp/6180";
+const DEFAULT_LISTEN: &str = "/ip4/0.0.0.0/tcp/6180";
 
 pub struct ValidatorConfig {
     advertised: Multiaddr,
@@ -34,11 +32,11 @@ pub struct ValidatorConfig {
 impl Default for ValidatorConfig {
     fn default() -> Self {
         Self {
-            advertised: DEFAULT_IPV4_ADVERTISED.parse::<Multiaddr>().unwrap(),
-            bootstrap: DEFAULT_IPV4_ADVERTISED.parse::<Multiaddr>().unwrap(),
+            advertised: DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap(),
+            bootstrap: DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap(),
             index: 0,
             ipv4: true,
-            listen: DEFAULT_IPV4_LISTEN.parse::<Multiaddr>().unwrap(),
+            listen: DEFAULT_LISTEN.parse::<Multiaddr>().unwrap(),
             nodes: 1,
             seed: DEFAULT_SEED,
             template: NodeConfig::default(),
@@ -63,32 +61,6 @@ impl ValidatorConfig {
 
     pub fn index(&mut self, index: usize) -> &mut Self {
         self.index = index;
-        self
-    }
-
-    pub fn ipv4(&mut self, ipv4: bool) -> &mut Self {
-        self.ipv4 = ipv4;
-        if self.ipv4 {
-            if self.advertised.to_string() == DEFAULT_IPV6_ADVERTISED {
-                self.advertised = DEFAULT_IPV4_ADVERTISED.parse::<Multiaddr>().unwrap();
-            }
-            if self.bootstrap.to_string() == DEFAULT_IPV6_ADVERTISED {
-                self.bootstrap = DEFAULT_IPV4_ADVERTISED.parse::<Multiaddr>().unwrap();
-            }
-            if self.listen.to_string() == DEFAULT_IPV6_ADVERTISED {
-                self.listen = DEFAULT_IPV4_LISTEN.parse::<Multiaddr>().unwrap();
-            }
-        } else {
-            if self.advertised.to_string() == DEFAULT_IPV4_ADVERTISED {
-                self.advertised = DEFAULT_IPV6_ADVERTISED.parse::<Multiaddr>().unwrap();
-            }
-            if self.bootstrap.to_string() == DEFAULT_IPV4_ADVERTISED {
-                self.bootstrap = DEFAULT_IPV6_ADVERTISED.parse::<Multiaddr>().unwrap();
-            }
-            if self.listen.to_string() == DEFAULT_IPV4_ADVERTISED {
-                self.listen = DEFAULT_IPV6_LISTEN.parse::<Multiaddr>().unwrap();
-            }
-        }
         self
     }
 
