@@ -12,7 +12,7 @@
 #[cfg(feature = "fuzzing")]
 pub mod mocks;
 mod storage_service;
-pub use storage_service::start_storage_service_and_return_service;
+pub use crate::storage_service::start_storage_service_and_return_service;
 
 use anyhow::Result;
 use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle};
