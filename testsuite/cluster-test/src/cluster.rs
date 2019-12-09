@@ -92,9 +92,8 @@ impl Cluster {
                         InstanceRole::Prometheus => {
                             prometheus_ip = Some(ip);
                         }
-                        InstanceRole::Peer(peer_id) => {
-                            let short_hash = peer_id[..8].into();
-                            instances.push(Instance::new(short_hash, ip, ac_port));
+                        InstanceRole::Peer(peer_name) => {
+                            instances.push(Instance::new(peer_name, ip, ac_port));
                         }
                         _ => {}
                     }
@@ -142,7 +141,7 @@ impl Cluster {
     pub fn get_instance(&self, name: &str) -> Option<&Instance> {
         self.instances
             .iter()
-            .find(|instance| instance.short_hash() == name)
+            .find(|instance| instance.peer_name() == name)
     }
 
     /// Splits this cluster into two
@@ -189,10 +188,10 @@ fn parse_tags(tags: Vec<Tag>) -> InstanceRole {
     let mut map: HashMap<_, _> = tags.into_iter().map(|tag| (tag.key, tag.value)).collect();
     let role = map.remove(&Some("Role".to_string()));
     if role == Some(Some("validator".to_string())) {
-        let peer_id = map.remove(&Some("PeerId".to_string()));
-        let peer_id = peer_id.expect("Validator instance without PeerId");
-        let peer_id = peer_id.expect("PeerId tag without value");
-        return InstanceRole::Peer(peer_id);
+        let peer_name = map.remove(&Some("Name".to_string()));
+        let peer_name = peer_name.expect("Validator instance without Name");
+        let peer_name = peer_name.expect("'Name' tag without value");
+        return InstanceRole::Peer(peer_name);
     } else if role == Some(Some("monitoring".to_string())) {
         return InstanceRole::Prometheus;
     }

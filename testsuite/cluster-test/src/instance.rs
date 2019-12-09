@@ -11,15 +11,15 @@ use tokio;
 
 #[derive(Clone)]
 pub struct Instance {
-    short_hash: String,
+    peer_name: String,
     ip: String,
     ac_port: u32,
 }
 
 impl Instance {
-    pub fn new(short_hash: String, ip: String, ac_port: u32) -> Instance {
+    pub fn new(peer_name: String, ip: String, ac_port: u32) -> Instance {
         Instance {
-            short_hash,
+            peer_name,
             ip,
             ac_port,
         }
@@ -98,8 +98,8 @@ impl Instance {
             .unwrap_or(false)
     }
 
-    pub fn short_hash(&self) -> &String {
-        &self.short_hash
+    pub fn peer_name(&self) -> &String {
+        &self.peer_name
     }
 
     pub fn ip(&self) -> &String {
@@ -113,14 +113,14 @@ impl Instance {
 
 impl fmt::Display for Instance {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}({})", self.short_hash, self.ip)
+        write!(f, "{}({})", self.peer_name, self.ip)
     }
 }
 
 pub fn instancelist_to_set(instances: &[Instance]) -> HashSet<String> {
     let mut r = HashSet::new();
     for instance in instances {
-        r.insert(instance.short_hash().clone());
+        r.insert(instance.peer_name().clone());
     }
     r
 }

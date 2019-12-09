@@ -120,7 +120,7 @@ impl TxEmitter {
             let accounts = (&mut all_accounts).take(req.accounts_per_client).collect();
             let all_addresses = all_addresses.clone();
             let stop = stop.clone();
-            let peer_id = instance.short_hash().clone();
+            let peer_id = instance.peer_name().clone();
             let params = req.thread_params.clone();
             let thread = SubmissionThread {
                 accounts,
