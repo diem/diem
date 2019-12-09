@@ -87,5 +87,5 @@ jobs:
           RUST_BACKTRACE: full
         uses: actions-rs/cargo@v1
         with:
-          command: x
-          args: test --unit -- --nocapture
+          command: test
+          args: --workspace --exclude functional_tests --exclude consensus --exclude language-e2e-tests --exclude miner --exclude testsuite
