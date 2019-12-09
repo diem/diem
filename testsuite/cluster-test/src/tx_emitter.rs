@@ -18,7 +18,6 @@ use std::{
 
 use admission_control_proto::{AdmissionControlStatus, SubmitTransactionResponse};
 use anyhow::{bail, format_err, Result};
-use generate_keypair::load_key_from_file;
 use itertools::zip;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -56,7 +55,7 @@ const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempoo
 #[derive(Clone)]
 pub struct TxEmitter {
     accounts: Vec<AccountData>,
-    mint_file: String,
+    mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
 }
 
 pub struct EmitJob {
@@ -89,7 +88,7 @@ impl TxEmitter {
     pub fn new(cluster: &Cluster) -> Self {
         Self {
             accounts: vec![],
-            mint_file: cluster.mint_file().to_string(),
+            mint_key_pair: cluster.mint_key_pair().clone(),
         }
     }
 
@@ -145,8 +144,10 @@ impl TxEmitter {
             info!("Not minting accounts");
             return Ok(()); // Early return to skip printing 'Minting ...' logs
         }
-        let mut faucet_account =
-            load_faucet_account(&Self::pick_mint_client(&req.instances), &self.mint_file)?;
+        let mut faucet_account = load_faucet_account(
+            &Self::pick_mint_client(&req.instances),
+            self.mint_key_pair.clone(),
+        )?;
         let faucet_address = faucet_account.address;
         let mint_txn = gen_mint_request(
             &mut faucet_account,
@@ -502,10 +503,8 @@ fn execute_and_wait_transactions(
 
 fn load_faucet_account(
     client: &NamedAdmissionControlClient,
-    faucet_account_path: &str,
+    key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
 ) -> Result<AccountData> {
-    let key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
-        load_key_from_file(faucet_account_path).expect("invalid faucet keypair file");
     let address = association_address();
     let sequence_number = query_sequence_numbers(client, &[address]).map_err(|e| {
         format_err!(

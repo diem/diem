@@ -154,8 +154,7 @@ impl DynamicConfigBuilder {
     fn build_common(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
         self.validate()?;
 
-        let mut rng = StdRng::from_seed(self.seed);
-        let faucet_key = Ed25519PrivateKey::generate_for_testing(&mut rng);
+        let (faucet_key, mut rng) = init_from_seed(self.seed);
         let config_seed: [u8; 32] = rng.gen();
 
         let configs = generator::validator_swarm(
@@ -187,6 +186,12 @@ impl DynamicConfigBuilder {
         );
         Ok(())
     }
+}
+
+// This function is used by cluster test, if updated please make sure it is still working
+pub fn init_from_seed(seed: [u8; 32]) -> (Ed25519PrivateKey, StdRng) {
+    let mut rng = StdRng::from_seed(seed);
+    (Ed25519PrivateKey::generate_for_testing(&mut rng), rng)
 }
 
 #[derive(Error, Debug)]
