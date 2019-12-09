@@ -109,10 +109,11 @@ impl ExecutorProxyTrait for ExecutorProxy {
         txn_list_with_proof: TransactionListWithProof,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
-        convert_to_future(
-            self.executor
-                .execute_and_commit_chunk(txn_list_with_proof, ledger_info_with_sigs),
-        )
+        convert_to_future(self.executor.execute_and_commit_chunk(
+            txn_list_with_proof,
+            ledger_info_with_sigs,
+            None,
+        ))
     }
 
     fn get_chunk(

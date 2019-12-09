@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    Chunk, Command, CommittableBlock, CommittableBlockBatch, ExecutableBlock, ExecutedTrees,
-    ProcessedVMOutput, TransactionData, OP_COUNTERS,
+    Command, CommittableBlock, CommittableBlockBatch, CommittedChunk, ExecutableBlock,
+    ExecutedTrees, ProcessedVMOutput, TransactionData, OP_COUNTERS,
 };
 use anyhow::{bail, ensure, format_err, Result};
 use futures::channel::oneshot;
@@ -14,6 +14,7 @@ use libra_crypto::{
 };
 use libra_logger::prelude::*;
 use libra_types::block_info::{BlockInfo, Round};
+use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -236,7 +237,7 @@ where
                     security_log(SecurityEvent::InvalidChunkExecutor)
                         .error(&e)
                         .data(chunk.txn_list_with_proof)
-                        .data(chunk.ledger_info_with_sigs)
+                        .data(chunk.verified_target_li)
                         .log();
                     e
                 });
@@ -249,10 +250,10 @@ where
 
     /// Verifies the transactions based on the provided proofs and ledger info. If the transactions
     /// are valid, executes them and commits immediately if execution results match the proofs.
-    fn execute_and_commit_chunk(&mut self, chunk: Chunk) -> Result<()> {
+    fn execute_and_commit_chunk(&mut self, chunk: CommittedChunk) -> Result<()> {
         let epoch_and_round = (
-            chunk.ledger_info_with_sigs.ledger_info().epoch(),
-            chunk.ledger_info_with_sigs.ledger_info().round(),
+            chunk.verified_target_li.ledger_info().epoch(),
+            chunk.verified_target_li.ledger_info().round(),
         );
         if epoch_and_round <= self.committed_epoch_and_round {
             warn!(
@@ -279,10 +280,9 @@ where
         let (num_txns_to_skip, first_version) =
             Self::verify_chunk(&chunk, synced_trees.txn_accumulator().num_leaves())?;
 
-        let (txn_list_with_proof, li_with_sigs) =
-            (chunk.txn_list_with_proof, chunk.ledger_info_with_sigs);
         info!("Skipping the first {} transactions.", num_txns_to_skip);
-        let transactions: Vec<_> = txn_list_with_proof
+        let transactions: Vec<_> = chunk
+            .txn_list_with_proof
             .transactions
             .into_iter()
             .skip(num_txns_to_skip as usize)
@@ -331,27 +331,14 @@ where
             ));
         }
 
-        // If this is the last chunk corresponding to this ledger info, send the ledger info to
-        // storage.
-        let ledger_info_to_commit = if synced_trees.txn_accumulator().num_leaves()
-            + txns_to_commit.len() as LeafCount
-            == li_with_sigs.ledger_info().version() + 1
-        {
-            ensure!(
-                li_with_sigs.ledger_info().transaction_accumulator_hash()
-                    == output.executed_trees().txn_accumulator().root_hash(),
-                "Root hash in ledger info does not match local computation."
-            );
-            Some(li_with_sigs)
-        } else {
-            // This means that the current chunk is not the last one. If it's empty, there's
-            // nothing to write to storage. Since storage expect either new transaction or new
-            // ledger info, we need to return here.
-            if txns_to_commit.is_empty() {
-                return Ok(());
-            }
-            None
-        };
+        let ledger_info_to_commit = Self::find_chunk_li(
+            &chunk.verified_target_li,
+            chunk.epoch_change_li.as_ref(),
+            &output,
+        )?;
+        if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
+            return Ok(());
+        }
         self.storage_write_client.save_transactions(
             txns_to_commit,
             first_version,
@@ -383,12 +370,62 @@ where
         Ok(())
     }
 
+    /// In case there is a new LI to be added to a LedgerStore, verify and return it.
+    fn find_chunk_li(
+        verified_target_li: &LedgerInfoWithSignatures,
+        epoch_change_li: Option<&ValidatorChangeEventWithProof>,
+        new_output: &ProcessedVMOutput,
+    ) -> Result<Option<LedgerInfoWithSignatures>> {
+        // If the chunk corresponds to the target LI, the target LI can be added to storage as well.
+        if verified_target_li.ledger_info().version() == new_output.version().unwrap_or(0) {
+            ensure!(
+                verified_target_li
+                    .ledger_info()
+                    .transaction_accumulator_hash()
+                    == new_output.accu_root(),
+                "Root hash in target ledger info does not match local computation."
+            );
+            return Ok(Some(verified_target_li.clone()));
+        }
+        // If the epoch change LI is present, it must match the version of the chunk:
+        // verify the version and the root hash.
+        if let Some(epoch_change_li) = epoch_change_li
+            .as_ref()
+            .and_then(|change_li| change_li.ledger_info_with_sigs.first())
+        {
+            // Verify that the given ledger info corresponds to the new accumulator.
+            ensure!(
+                epoch_change_li.ledger_info().transaction_accumulator_hash()
+                    == new_output.accu_root(),
+                "Root hash of a given epoch LI does not match local computation."
+            );
+            ensure!(
+                epoch_change_li.ledger_info().version() == new_output.version().unwrap_or(0),
+                "Version of a given epoch LI does not match local computation."
+            );
+            ensure!(
+                epoch_change_li.ledger_info().next_validator_set().is_some(),
+                "Epoch change LI does not carry validator set"
+            );
+            ensure!(
+                epoch_change_li.ledger_info().next_validator_set()
+                    == new_output.validators().as_ref(),
+                "New validator set of a given epoch LI does not match local computation"
+            );
+            return Ok(Some(epoch_change_li.clone()));
+        }
+        Ok(None)
+    }
+
     /// Verifies proofs using provided ledger info. Also verifies that the version of the first
     /// transaction matches the latest committed transaction. If the first few transaction happens
     /// to be older, returns how many need to be skipped and the first version to be committed.
-    fn verify_chunk(chunk: &Chunk, num_committed_txns: u64) -> Result<(LeafCount, Version)> {
+    fn verify_chunk(
+        chunk: &CommittedChunk,
+        num_committed_txns: u64,
+    ) -> Result<(LeafCount, Version)> {
         let txn_list_with_proof = &chunk.txn_list_with_proof;
-        let ledger_info_with_sigs = &chunk.ledger_info_with_sigs;
+        let ledger_info_with_sigs = &chunk.verified_target_li;
         txn_list_with_proof.verify(
             ledger_info_with_sigs.ledger_info(),
             txn_list_with_proof.first_transaction_version,

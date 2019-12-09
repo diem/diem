@@ -25,6 +25,7 @@ use libra_crypto::{
 };
 use libra_logger::prelude::*;
 
+use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -459,12 +460,13 @@ where
     pub fn execute_and_commit_chunk(
         &self,
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        verified_target_li: LedgerInfoWithSignatures,
+        epoch_change_li: Option<ValidatorChangeEventWithProof>,
     ) -> oneshot::Receiver<Result<()>> {
         debug!(
             "Received request to execute chunk. Chunk size: {}. Target version: {}.",
             txn_list_with_proof.transactions.len(),
-            ledger_info_with_sigs.ledger_info().version(),
+            verified_target_li.ledger_info().version(),
         );
 
         let (resp_sender, resp_receiver) = oneshot::channel();
@@ -476,9 +478,10 @@ where
         {
             Some(sender) => sender
                 .send(Command::ExecuteAndCommitChunk {
-                    chunk: Chunk {
+                    chunk: CommittedChunk {
                         txn_list_with_proof,
-                        ledger_info_with_sigs,
+                        verified_target_li,
+                        epoch_change_li,
                     },
                     resp_sender,
                 })
@@ -541,14 +544,29 @@ struct ExecutableBlock {
 }
 
 #[derive(Clone, Debug)]
-struct Chunk {
+/// Chunk of committed transactions received from a remote peer.
+struct CommittedChunk {
+    /// The transactions to be executed and stored.
+    /// The proofs are relative to the `verified_target_li`.
     txn_list_with_proof: TransactionListWithProof,
-    ledger_info_with_sigs: LedgerInfoWithSignatures,
+    /// The LedgerInfo that has been independently verified by a caller (either via signatures,
+    /// or a waypoint).
+    /// This target LI is also going to be recorded in the LedgerStore in case the accumulator
+    /// reaches the version certified by this LI.
+    verified_target_li: LedgerInfoWithSignatures,
+    /// In some cases there are additional LedgerInfos carrying the validator set changes that
+    /// we want to store in addition to the `verified_target_li`.
+    /// For example, if a node at epoch 1 starts with a waypoint for epoch 10, the chunks it's going
+    /// to receive are going to carry the `verified_target_li` of epoch 10, while the
+    /// `epoch_change_li` is going to carry the intermediate epoch bump LedgerInfos with proofs.
+    /// The new validator change LI is written to storage if its version is the last version of the
+    /// accumulator (and the proofs are verified).
+    epoch_change_li: Option<ValidatorChangeEventWithProof>,
 }
 
-impl Chunk {
-    fn ledger_info(&self) -> &LedgerInfo {
-        self.ledger_info_with_sigs.ledger_info()
+impl CommittedChunk {
+    fn verified_target_li(&self) -> &LedgerInfo {
+        self.verified_target_li.ledger_info()
     }
 }
 
@@ -564,7 +582,7 @@ enum Command {
         resp_sender: oneshot::Sender<Result<()>>,
     },
     ExecuteAndCommitChunk {
-        chunk: Chunk,
+        chunk: CommittedChunk,
         resp_sender: oneshot::Sender<Result<()>>,
     },
 }

@@ -441,7 +441,7 @@ fn test_executor_execute_and_commit_chunk() {
     );
 
     // Execute the first chunk. After that we should still get the genesis ledger info from DB.
-    block_on(executor.execute_and_commit_chunk(chunks[0].clone(), ledger_info.clone()))
+    block_on(executor.execute_and_commit_chunk(chunks[0].clone(), ledger_info.clone(), None))
         .unwrap()
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -449,7 +449,7 @@ fn test_executor_execute_and_commit_chunk() {
     assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
 
     // Execute the second chunk. After that we should still get the genesis ledger info from DB.
-    block_on(executor.execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone()))
+    block_on(executor.execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone(), None))
         .unwrap()
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -457,10 +457,11 @@ fn test_executor_execute_and_commit_chunk() {
     assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
 
     // Execute an empty chunk. After that we should still get the genesis ledger info from DB.
-    block_on(
-        executor
-            .execute_and_commit_chunk(TransactionListWithProof::new_empty(), ledger_info.clone()),
-    )
+    block_on(executor.execute_and_commit_chunk(
+        TransactionListWithProof::new_empty(),
+        ledger_info.clone(),
+        None,
+    ))
     .unwrap()
     .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -468,7 +469,7 @@ fn test_executor_execute_and_commit_chunk() {
     assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
 
     // Execute the second chunk again. After that we should still get the same thing.
-    block_on(executor.execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone()))
+    block_on(executor.execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone(), None))
         .unwrap()
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -476,7 +477,7 @@ fn test_executor_execute_and_commit_chunk() {
     assert_eq!(li.ledger_info().consensus_block_id(), *PRE_GENESIS_BLOCK_ID);
 
     // Execute the third chunk. After that we should get the new ledger info.
-    block_on(executor.execute_and_commit_chunk(chunks[2].clone(), ledger_info.clone()))
+    block_on(executor.execute_and_commit_chunk(chunks[2].clone(), ledger_info.clone(), None))
         .unwrap()
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -512,7 +513,7 @@ fn test_executor_execute_and_commit_chunk_restart() {
             config.storage.port,
         );
 
-        block_on(executor.execute_and_commit_chunk(chunks[0].clone(), ledger_info.clone()))
+        block_on(executor.execute_and_commit_chunk(chunks[0].clone(), ledger_info.clone(), None))
             .unwrap()
             .unwrap();
         let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -529,7 +530,7 @@ fn test_executor_execute_and_commit_chunk_restart() {
             config.storage.port,
         );
 
-        block_on(executor.execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone()))
+        block_on(executor.execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone(), None))
             .unwrap()
             .unwrap();
         let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -735,7 +736,7 @@ proptest! {
         let committed_trees_at_genesis = executor.committed_trees().clone();
 
         // Commit the first chunk without committing the ledger info.
-        block_on(executor.execute_and_commit_chunk(txn_list_with_proof_to_commit, ledger_info.clone()))
+        block_on(executor.execute_and_commit_chunk(txn_list_with_proof_to_commit, ledger_info.clone(), None))
             .unwrap()
             .unwrap();
 

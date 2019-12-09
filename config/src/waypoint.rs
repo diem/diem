@@ -4,13 +4,12 @@
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
 use libra_crypto_derive::CryptoHasher;
+use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::ledger_info::LedgerInfo;
 use libra_types::transaction::Version;
-use libra_types::crypto_proxies::ValidatorSet;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-
 
 // The delimiter between the version and the hash.
 const WAYPOINT_DELIMITER: char = ':';
@@ -128,8 +127,8 @@ mod test {
     use super::Waypoint;
     use libra_crypto::HashValue;
     use libra_types::block_info::BlockInfo;
-    use libra_types::ledger_info::LedgerInfo;
     use libra_types::crypto_proxies::ValidatorSet;
+    use libra_types::ledger_info::LedgerInfo;
     use std::str::FromStr;
 
     #[test]
