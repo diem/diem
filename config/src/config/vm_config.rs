@@ -6,6 +6,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::HashSet, hash::BuildHasher};
 
 #[derive(Clone, Debug, Deserialize, Serialize, Copy, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
 #[serde(tag = "type")]
 pub enum VMMode {
     Onchain,

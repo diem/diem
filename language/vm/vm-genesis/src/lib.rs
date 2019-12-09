@@ -225,7 +225,7 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
     validator_set: ValidatorSet,
     is_pow: bool,
 ) -> SignatureCheckedTransaction {
-    const INIT_BALANCE: u64 = 1_000_000_000_000;
+    const INIT_BALANCE: u64 = 1_000_000_000;
 
     // Compile the needed stdlib modules.
     let modules = stdlib_modules();
@@ -309,7 +309,7 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
                 .execute_function(
                     &ACCOUNT_MODULE,
                     &MINT_TO_ADDRESS,
-                    vec![Value::address(genesis_addr), Value::u64(INIT_BALANCE * 2)],
+                    vec![Value::address(genesis_addr), Value::u64(INIT_BALANCE)],
                 )
                 .unwrap();
 

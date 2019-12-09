@@ -492,4 +492,12 @@ mod test {
         })
         .collect::<Vec<_>>();
     }
+
+    // Ensure default config serialize success.
+    #[test]
+    fn test_config_serialize() {
+        let config = NodeConfig::random();
+        let _toml = toml::to_string(&config).unwrap();
+        //println!("{}", toml);
+    }
 }

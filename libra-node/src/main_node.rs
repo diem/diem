@@ -10,7 +10,6 @@ use executor::Executor;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_config::config::{ConsensusType::POW, NetworkConfig, NodeConfig, RoleType};
-use libra_crypto::{ed25519::*, ValidKey};
 use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
 use libra_metrics::metric_server;
@@ -30,12 +29,12 @@ use network::{
 };
 use state_synchronizer::StateSynchronizer;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::{sync::Arc, thread, time::Instant};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
 use vm_runtime::MoveVM;
-use std::convert::TryInto;
 
 pub struct LibraHandle {
     pub _ac: AdmissionControlRuntime,
@@ -190,9 +189,10 @@ pub fn setup_network(
             .expect("Failed to take Network identity private key, key absent or already read");
         let identity_public = config.network_keypairs.identity_keys.public().clone();
         network_builder
-            .transport(TransportType::PermissionlessTcpNoise(Some(
-                (identity_private,identity_public)
-            )))
+            .transport(TransportType::PermissionlessTcpNoise(Some((
+                identity_private,
+                identity_public,
+            ))))
             .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
             .seed_peers(seed_peers)
             .signing_keys((signing_private, signing_public))

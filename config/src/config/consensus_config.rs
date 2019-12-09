@@ -35,6 +35,11 @@ pub struct ConsensusConfig {
     pub contiguous_rounds: u32,
     pub max_pruned_blocks_in_mem: Option<u64>,
     pub pacemaker_initial_timeout_ms: Option<u64>,
+
+    pub miner_client_enable: bool,
+    pub consensus_type: ConsensusType,
+    pub miner_rpc_address: String,
+
     // consensus_keypair contains the node's consensus keypair.
     // it is filled later on from consensus_keypair_file.
     #[serde(skip)]
@@ -46,9 +51,6 @@ pub struct ConsensusConfig {
     pub safety_rules: SafetyRulesConfig,
     #[serde(skip)]
     pub base: Arc<BaseConfig>,
-    pub consensus_type: ConsensusType,
-    pub miner_rpc_address: String,
-    pub miner_client_enable: bool,
 }
 
 impl Default for ConsensusConfig {
@@ -87,7 +89,7 @@ pub enum ConsensusProposerType {
 }
 
 #[derive(Debug, Eq, PartialEq, Deserialize, Serialize, Clone, Copy)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "lowercase")]
 pub enum ConsensusType {
     PBFT,
     POW,
