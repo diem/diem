@@ -447,7 +447,12 @@ fn test_executor_execute_and_commit_chunk() {
 
     // Execute the first chunk. After that we should still get the genesis ledger info from DB.
     executor
-        .execute_and_commit_chunk(chunks[0].clone(), ledger_info.clone(), &mut committed_trees)
+        .execute_and_commit_chunk(
+            chunks[0].clone(),
+            ledger_info.clone(),
+            None,
+            &mut committed_trees,
+        )
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
@@ -455,7 +460,12 @@ fn test_executor_execute_and_commit_chunk() {
 
     // Execute the second chunk. After that we should still get the genesis ledger info from DB.
     executor
-        .execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone(), &mut committed_trees)
+        .execute_and_commit_chunk(
+            chunks[1].clone(),
+            ledger_info.clone(),
+            None,
+            &mut committed_trees,
+        )
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
@@ -466,6 +476,7 @@ fn test_executor_execute_and_commit_chunk() {
         .execute_and_commit_chunk(
             TransactionListWithProof::new_empty(),
             ledger_info.clone(),
+            None,
             &mut committed_trees,
         )
         .unwrap();
@@ -475,7 +486,12 @@ fn test_executor_execute_and_commit_chunk() {
 
     // Execute the second chunk again. After that we should still get the same thing.
     executor
-        .execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone(), &mut committed_trees)
+        .execute_and_commit_chunk(
+            chunks[1].clone(),
+            ledger_info.clone(),
+            None,
+            &mut committed_trees,
+        )
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li.ledger_info().version(), 0);
@@ -483,7 +499,12 @@ fn test_executor_execute_and_commit_chunk() {
 
     // Execute the third chunk. After that we should get the new ledger info.
     executor
-        .execute_and_commit_chunk(chunks[2].clone(), ledger_info.clone(), &mut committed_trees)
+        .execute_and_commit_chunk(
+            chunks[2].clone(),
+            ledger_info.clone(),
+            None,
+            &mut committed_trees,
+        )
         .unwrap();
     let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
     assert_eq!(li, ledger_info);
@@ -520,7 +541,12 @@ fn test_executor_execute_and_commit_chunk_restart() {
         );
 
         executor
-            .execute_and_commit_chunk(chunks[0].clone(), ledger_info.clone(), &mut committed_trees)
+            .execute_and_commit_chunk(
+                chunks[0].clone(),
+                ledger_info.clone(),
+                None,
+                &mut committed_trees,
+            )
             .unwrap();
         synced_trees = committed_trees;
         let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
@@ -538,7 +564,12 @@ fn test_executor_execute_and_commit_chunk_restart() {
         );
 
         executor
-            .execute_and_commit_chunk(chunks[1].clone(), ledger_info.clone(), &mut synced_trees)
+            .execute_and_commit_chunk(
+                chunks[1].clone(),
+                ledger_info.clone(),
+                None,
+                &mut synced_trees,
+            )
             .unwrap();
         let (_, li, _, _) = storage_client.update_to_latest_ledger(0, vec![]).unwrap();
         assert_eq!(li, ledger_info);
@@ -759,7 +790,7 @@ proptest! {
 
         let mut synced_trees = committed_trees.clone();
         // Commit the first chunk without committing the ledger info.
-        executor.execute_and_commit_chunk(txn_list_with_proof_to_commit, ledger_info.clone(), &mut synced_trees)
+        executor.execute_and_commit_chunk(txn_list_with_proof_to_commit, ledger_info.clone(), None, &mut synced_trees)
             .unwrap();
 
         let parent_block_id = HashValue::zero();

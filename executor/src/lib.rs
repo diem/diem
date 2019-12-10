@@ -545,7 +545,11 @@ where
     pub fn execute_and_commit_chunk(
         &self,
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        // Target LI that has been verified independently: the proofs are relative to this version.
+        verified_target_li: LedgerInfoWithSignatures,
+        // An optional end of epoch LedgerInfo. We do not allow chunks that end epoch without
+        // carrying any epoch change LI.
+        epoch_change_li: Option<LedgerInfoWithSignatures>,
         synced_trees: &mut ExecutedTrees,
     ) -> Result<()> {
         info!(
@@ -558,7 +562,7 @@ where
 
         let (num_txns_to_skip, first_version) = Self::verify_chunk(
             &txn_list_with_proof,
-            &ledger_info_with_sigs,
+            &verified_target_li,
             synced_trees.txn_accumulator().num_leaves(),
         )?;
 
@@ -612,29 +616,11 @@ where
             ));
         }
 
-        // If this is the last chunk corresponding to this ledger info, send the ledger info to
-        // storage.
-        let ledger_info_to_commit = if synced_trees.txn_accumulator().num_leaves()
-            + txns_to_commit.len() as LeafCount
-            == ledger_info_with_sigs.ledger_info().version() + 1
-        {
-            ensure!(
-                ledger_info_with_sigs
-                    .ledger_info()
-                    .transaction_accumulator_hash()
-                    == output.executed_trees().txn_accumulator().root_hash(),
-                "Root hash in ledger info does not match local computation."
-            );
-            Some(ledger_info_with_sigs)
-        } else {
-            // This means that the current chunk is not the last one. If it's empty, there's
-            // nothing to write to storage. Since storage expect either new transaction or new
-            // ledger info, we need to return here.
-            if txns_to_commit.is_empty() {
-                return Ok(());
-            }
-            None
-        };
+        let ledger_info_to_commit =
+            Self::find_chunk_li(verified_target_li, epoch_change_li, &output)?;
+        if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
+            return Ok(());
+        }
         self.storage_write_client.save_transactions(
             txns_to_commit,
             first_version,
@@ -643,17 +629,63 @@ where
 
         *synced_trees = output.executed_trees().clone();
         info!(
-            "Synced to version {}.",
+            "Synced to version {}, the corresponding LedgerInfo is {}.",
             synced_trees.version().expect("version must exist"),
+            if ledger_info_to_commit.is_some() {
+                "committed"
+            } else {
+                "not committed"
+            },
         );
-
-        if let Some(ledger_info_with_sigs) = ledger_info_to_commit {
-            info!(
-                "Synced to version {} with ledger info committed.",
-                ledger_info_with_sigs.ledger_info().version()
-            );
-        }
         Ok(())
+    }
+
+    /// In case there is a new LI to be added to a LedgerStore, verify and return it.
+    fn find_chunk_li(
+        verified_target_li: LedgerInfoWithSignatures,
+        epoch_change_li: Option<LedgerInfoWithSignatures>,
+        new_output: &ProcessedVMOutput,
+    ) -> Result<Option<LedgerInfoWithSignatures>> {
+        // If the chunk corresponds to the target LI, the target LI can be added to storage.
+        if verified_target_li.ledger_info().version() == new_output.version().unwrap_or(0) {
+            ensure!(
+                verified_target_li
+                    .ledger_info()
+                    .transaction_accumulator_hash()
+                    == new_output.accu_root(),
+                "Root hash in target ledger info does not match local computation."
+            );
+            return Ok(Some(verified_target_li));
+        }
+        // If the epoch change LI is present, it must match the version of the chunk:
+        // verify the version and the root hash.
+        if let Some(epoch_change_li) = epoch_change_li {
+            // Verify that the given ledger info corresponds to the new accumulator.
+            ensure!(
+                epoch_change_li.ledger_info().transaction_accumulator_hash()
+                    == new_output.accu_root(),
+                "Root hash of a given epoch LI does not match local computation."
+            );
+            ensure!(
+                epoch_change_li.ledger_info().version() == new_output.version().unwrap_or(0),
+                "Version of a given epoch LI does not match local computation."
+            );
+            ensure!(
+                epoch_change_li.ledger_info().next_validator_set().is_some(),
+                "Epoch change LI does not carry validator set"
+            );
+            ensure!(
+                epoch_change_li.ledger_info().next_validator_set()
+                    == new_output.validators().as_ref(),
+                "New validator set of a given epoch LI does not match local computation"
+            );
+            return Ok(Some(epoch_change_li));
+        }
+        ensure!(
+            new_output.validators.is_none(),
+            "End of epoch chunk based on local computation but no EoE LedgerInfo provided."
+        );
+        Ok(None)
     }
 
     /// Verifies proofs using provided ledger info. Also verifies that the version of the first
