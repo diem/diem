@@ -5,7 +5,7 @@ use crate::{
     block_processor::execute_user_transaction_block,
     counters::*,
     data_cache::BlockDataCache,
-    loaded_data::loaded_module::LoadedModule,
+    move_vm::MoveVM,
     process_txn::validate::{ValidatedTransaction, ValidationMode},
     runtime::VMRuntime,
     system_txn::block_metadata_processor::process_block_metadata,
@@ -22,35 +22,16 @@ use libra_types::{
 };
 use std::sync::Arc;
 use vm::{errors::VMResult, gas_schedule::CostTable, transaction_metadata::TransactionMetadata};
-use vm_cache_map::Arena;
-
-// MoveVMImpl is the type that will evolve to MoveVM.
-// Right now, VMRuntime flows around but we may want to develop the API around MoveVM
-pub use move_vm_definition::MoveVMImpl;
-
-rental! {
-    mod move_vm_definition {
-        use super::*;
-
-        #[rental]
-        pub struct MoveVMImpl {
-            alloc: Box<Arena<LoadedModule>>,
-            runtime: VMRuntime<'alloc>,
-        }
-    }
-}
 
 /// A wrapper to make VMRuntime standalone and thread safe.
 #[derive(Clone)]
 pub struct LibraVM {
-    move_vm: Arc<MoveVMImpl>,
+    move_vm: Arc<MoveVM>,
 }
 
 impl LibraVM {
     pub fn new(config: &VMConfig) -> Self {
-        let inner = MoveVMImpl::new(Box::new(Arena::new()), |arena| {
-            VMRuntime::new(&*arena, config)
-        });
+        let inner = MoveVM::new(config);
         Self {
             move_vm: Arc::new(inner),
         }
@@ -66,8 +47,10 @@ impl VMVerifier for LibraVM {
     ) -> Option<VMStatus> {
         // TODO: This should be implemented as an async function.
         record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
+            // XXX: This is different from invoking bytecode verifier. Will clean the code up after
+            // refactor.
             self.move_vm
-                .rent(move |runtime| verify_transaction(runtime, transaction, state_view))
+                .execute_runtime(move |runtime| verify_transaction(runtime, transaction, state_view))
             }
         }
     }
@@ -85,11 +68,7 @@ impl VMExecutor for LibraVM {
         config: &VMConfig,
         state_view: &dyn StateView,
     ) -> VMResult<Vec<TransactionOutput>> {
-        let vm = MoveVMImpl::new(Box::new(Arena::new()), |arena| {
-            // XXX This means that scripts and modules are NOT tested against the whitelist! This
-            // needs to be fixed.
-            VMRuntime::new(&*arena, config)
-        });
+        let vm = MoveVM::new(config);
 
         let mut result = vec![];
         let blocks = chunk_block_transactions(transactions);
@@ -97,13 +76,13 @@ impl VMExecutor for LibraVM {
         for block in blocks {
             match block {
                 TransactionBlock::UserTransaction(txns) => {
-                    let outs = vm.rent(|runtime| {
+                    let outs = vm.execute_runtime(|runtime| {
                         execute_user_transaction_block(txns, runtime, &mut data_cache, state_view)
                     });
                     result.append(&mut outs?);
                 }
                 TransactionBlock::BlockPrologue(block_metadata) => {
-                    result.push(vm.rent(|runtime| {
+                    result.push(vm.execute_runtime(|runtime| {
                         process_block_metadata(block_metadata, runtime, state_view, &mut data_cache)
                     })?)
                 }
@@ -226,6 +205,6 @@ fn vm_thread_safe() {
 
     assert_send::<LibraVM>();
     assert_sync::<LibraVM>();
-    assert_send::<MoveVMImpl>();
-    assert_sync::<MoveVMImpl>();
+    assert_send::<MoveVM>();
+    assert_sync::<MoveVM>();
 }

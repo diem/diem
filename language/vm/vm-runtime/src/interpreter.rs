@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(any(test, feature = "instruction_synthesis"))]
-use crate::data_cache::RemoteCache;
+use crate::chain_state::TransactionExecutionContext;
 #[cfg(any(test, feature = "instruction_synthesis"))]
-use crate::execution_context::TransactionExecutionContext;
+use crate::data_cache::RemoteCache;
 use crate::{
     code_cache::module_cache::ModuleCache,
     counters::*,

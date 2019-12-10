@@ -118,11 +118,13 @@ mod block_processor;
 #[macro_use]
 pub mod gas_meter;
 mod libra_vm;
+mod move_vm;
 mod process_txn;
 mod system_txn;
 #[cfg(test)]
 mod unit_tests;
 
+pub mod chain_state;
 pub mod code_cache;
 pub mod data_cache;
 pub mod execution_context;

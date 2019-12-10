@@ -3,12 +3,12 @@
 
 use super::*;
 use crate::{
+    chain_state::TransactionExecutionContext,
     code_cache::{
         module_adapter::FakeFetcher,
         module_cache::{BlockModuleCache, ModuleCache, VMModuleCache},
     },
     data_cache::BlockDataCache,
-    execution_context::TransactionExecutionContext,
     loaded_data::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,

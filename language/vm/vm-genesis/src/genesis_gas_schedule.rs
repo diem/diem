@@ -13,7 +13,7 @@ use vm::{
     gas_schedule::{CostTable, GasCost, GAS_SCHEDULE_NAME, MAXIMUM_NUMBER_OF_GAS_UNITS},
 };
 use vm_runtime::{
-    data_cache::RemoteCache, execution_context::TransactionExecutionContext,
+    chain_state::TransactionExecutionContext, data_cache::RemoteCache,
     gas_meter::GAS_SCHEDULE_MODULE, runtime::VMRuntime,
 };
 use vm_runtime_types::value::Value;
