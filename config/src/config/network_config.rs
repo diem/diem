@@ -227,6 +227,12 @@ impl NetworkConfig {
         self.advertised_address = multi_address;
     }
 
+    pub fn listen_address(&mut self, address: &str) {
+        let multi_address = address.parse::<Multiaddr>().unwrap();
+        self.listen_address = multi_address.clone();
+        self.advertised_address = multi_address;
+    }
+
     pub fn set_default_peer_id(&mut self) {
         self.peer_id =
             PeerId::try_from(self.network_keypairs.identity_keys.public().to_bytes()).unwrap();
