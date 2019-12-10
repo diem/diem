@@ -28,7 +28,7 @@ struct Args {
     /// Advertised address for the first node in this test net
     bootstrap: Multiaddr,
     #[structopt(short = "d", long, parse(from_os_str))]
-    /// The data directory for the configs (e.g. /opt/libra/etc)
+    /// The data directory for the configs (e.g. /opt/libra/data)
     data_dir: PathBuf,
     #[structopt(short = "c", long)]
     /// Use the provided seed for generating keys for each of the FullNodes
@@ -99,34 +99,26 @@ fn main() {
     // Replace the new config if there is already one on disk, this appends the network in the old
     // config with the one in the new config
     let orig_config = NodeConfig::load_config(&config_file);
-    if let Ok(mut orig_config) = orig_config {
+    if let Ok(orig_config) = orig_config {
         // This is some nasty logic to trick it into thinking files are local, we need to eliminate
         // this code in the next couple of diffs
         orig_config
-            .set_data_dir(args.output_dir.clone())
-            .expect("Unable to set directory");
-        orig_config
             .save_config(&config_file)
             .expect("Unable to save node.config");
-        let mut orig_config = NodeConfig::load(&config_file).expect("Unable to load config for updating");
+        let mut orig_config =
+            NodeConfig::load(&config_file).expect("Unable to load config for updating");
         let new_net = node_config.full_node_networks.swap_remove(0);
         for net in &orig_config.full_node_networks {
             assert!(new_net.peer_id != net.peer_id, "Network already exists");
         }
         orig_config.full_node_networks.push(new_net);
         node_config = orig_config;
+    } else {
+        // Only update data dir if this is a new config
+        node_config.set_data_dir(args.data_dir);
     }
 
     node_config
-        .set_data_dir(args.output_dir.clone())
-        .expect("Unable to set directory");
-    node_config
-        .save(&PathBuf::from("node.config.toml"))
+        .save(args.output_dir.join("node.config.toml"))
         .expect("Unable to save configs");
-    node_config
-        .set_data_dir(args.data_dir)
-        .expect("Unable to set directory");
-    node_config
-        .save_config(&config_file)
-        .expect("Unable to save node.config");
 }

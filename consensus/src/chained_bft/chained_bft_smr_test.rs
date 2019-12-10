@@ -23,7 +23,7 @@ use consensus_types::{
 use futures::{channel::mpsc, executor::block_on, prelude::*};
 use libra_config::config::{
     ConsensusProposerType::{self, FixedProposer, MultipleOrderedProposers, RotatingProposer},
-    {BaseConfig, OnDiskStorageConfig, SafetyRulesBackend, SafetyRulesConfig},
+    {OnDiskStorageConfig, SafetyRulesBackend, SafetyRulesConfig},
 };
 use libra_crypto::hash::CryptoHash;
 use libra_types::{
@@ -84,11 +84,9 @@ impl SMRNode {
             .expect("Failed to create Tokio runtime!");
 
         let mut safety_rules_config = SafetyRulesConfig::default();
-        safety_rules_config.backend = SafetyRulesBackend::OnDiskStorage(OnDiskStorageConfig {
-            default: false,
-            path: safety_rules_path.clone(),
-            base: Arc::new(BaseConfig::default()),
-        });
+        let mut safety_rules_storage = OnDiskStorageConfig::default();
+        safety_rules_storage.path = safety_rules_path.clone();
+        safety_rules_config.backend = SafetyRulesBackend::OnDiskStorage(safety_rules_storage);
 
         let config = ChainedBftSMRConfig {
             max_pruned_blocks_in_mem: 10000,

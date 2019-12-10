@@ -1,31 +1,27 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::config::BaseConfig;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct SafetyRulesConfig {
     pub backend: SafetyRulesBackend,
-    #[serde(skip)]
-    pub base: Arc<BaseConfig>,
 }
 
 impl Default for SafetyRulesConfig {
     fn default() -> Self {
         Self {
             backend: SafetyRulesBackend::InMemoryStorage,
-            base: Arc::new(BaseConfig::default()),
         }
     }
 }
 
 impl SafetyRulesConfig {
-    pub fn prepare(&mut self, base: Arc<BaseConfig>) {
+    pub fn set_data_dir(&mut self, data_dir: PathBuf) {
         if let SafetyRulesBackend::OnDiskStorage(backend) = &mut self.backend {
-            backend.prepare(base);
+            backend.set_data_dir(data_dir);
         }
     }
 }
@@ -46,15 +42,29 @@ pub struct OnDiskStorageConfig {
     // Required path for on disk storage
     pub path: PathBuf,
     #[serde(skip)]
-    pub base: Arc<BaseConfig>,
+    data_dir: PathBuf,
+}
+
+impl Default for OnDiskStorageConfig {
+    fn default() -> Self {
+        Self {
+            default: false,
+            path: PathBuf::from("safety_rules.toml"),
+            data_dir: PathBuf::from("/opt/libra/data"),
+        }
+    }
 }
 
 impl OnDiskStorageConfig {
-    pub fn prepare(&mut self, base: Arc<BaseConfig>) {
-        self.base = base;
+    pub fn path(&self) -> PathBuf {
+        if self.path.is_relative() {
+            self.data_dir.join(&self.path)
+        } else {
+            self.path.clone()
+        }
     }
 
-    pub fn path(&self) -> PathBuf {
-        self.base.full_path(&self.path)
+    pub fn set_data_dir(&mut self, data_dir: PathBuf) {
+        self.data_dir = data_dir;
     }
 }

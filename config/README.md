@@ -66,7 +66,7 @@ As an example, this is the 2nd node (offset 1) in a set of 4:
     validator-config-builder \
         -a "/ip4/1.1.1.2/tcp/7000" \
         -b "/ip4/1.1.1.1/tcp/7000" \
-        -d /opt/libra/etc \
+        -d /opt/libra/data \
         -i 1 \
         -l "/ip4/0.0.0.0/tcp/7000" \
         -n 4 \
@@ -184,10 +184,6 @@ The test configs currently live in `src/config/test_data`.
 
 - Add ability to turn off services that are optional (debug interface, AC
   gRPC)
-- Eliminate BaseConfig, the data directory should be explicitly defined for
-  each path, configs that are relative should be using the path of the
-NodeConfig handed over during load / save. The Role can go directly into the
-root of NodeConfig
 - Eliminate ConsensusPeersConfig from ConsensusConfig and make it top level.
 - Is the execution gRPC interface being deprecated? Cleanup configs.
 - LoggerConfig should allow specifying the severity.

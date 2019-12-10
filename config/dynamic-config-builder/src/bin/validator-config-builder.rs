@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use dynamic_config_builder::ValidatorConfig;
-use libra_config::config::{NodeConfig, PersistableConfig};
+use libra_config::config::NodeConfig;
 use parity_multiaddr::Multiaddr;
 use std::{convert::TryInto, fs, path::PathBuf};
 use structopt::StructOpt;
@@ -70,17 +70,8 @@ fn main() {
 
     fs::create_dir_all(&args.output_dir).expect("Unable to create output directory");
     let mut node_config = config_builder.build().expect("ConfigBuilder failed");
+    node_config.set_data_dir(args.data_dir);
     node_config
-        .set_data_dir(args.output_dir.clone())
-        .expect("Unable to set directory");
-    node_config
-        .save(&PathBuf::from("node.config.toml"))
+        .save(args.output_dir.join("node.config.toml"))
         .expect("Unable to save configs");
-    node_config
-        .set_data_dir(args.data_dir)
-        .expect("Unable to set directory");
-    let config_file = args.output_dir.join("node.config.toml");
-    node_config
-        .save_config(&config_file)
-        .expect("Unable to save node.config");
 }

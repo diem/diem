@@ -120,7 +120,10 @@ impl Cluster {
         let seed = "1337133713371337133713371337133713371337133713371337133713371337";
         let seed = hex::decode(seed).expect("Invalid hex in seed.");
         let seed = seed[..32].try_into().expect("Invalid seed");
-        let (_, mint_key) = ValidatorConfig::new().seed(seed).build_faucet_client().expect("Unable to build faucet keys");
+        let (_, mint_key) = ValidatorConfig::new()
+            .seed(seed)
+            .build_faucet_client()
+            .expect("Unable to build faucet keys");
         let mint_key_pair = KeyPair::from(mint_key);
         Ok(Self {
             instances,

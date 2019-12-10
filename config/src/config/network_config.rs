@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    config::{BaseConfig, PersistableConfig, RoleType},
+    config::{PersistableConfig, RoleType, RootPath},
     keys::{self, KeyPair},
     utils,
 };
@@ -16,7 +16,7 @@ use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, convert::TryFrom, path::PathBuf, string::ToString, sync::Arc};
+use std::{collections::HashMap, convert::TryFrom, path::PathBuf, string::ToString};
 
 const NETWORK_KEYPAIRS_DEFAULT: &str = "network.keys.toml";
 const NETWORK_PEERS_DEFAULT: &str = "network_peers.config.toml";
@@ -54,8 +54,6 @@ pub struct NetworkConfig {
     #[serde(skip)]
     pub seed_peers: SeedPeersConfig,
     pub seed_peers_file: PathBuf,
-    #[serde(skip)]
-    pub base: Arc<BaseConfig>,
 }
 
 impl Default for NetworkConfig {
@@ -78,7 +76,6 @@ impl Default for NetworkConfig {
             network_peers: peers,
             seed_peers_file: PathBuf::new(),
             seed_peers: SeedPeersConfig::default(),
-            base: Arc::new(BaseConfig::default()),
         }
     }
 }
@@ -101,23 +98,21 @@ impl NetworkConfig {
             network_peers: self.network_peers.clone(),
             seed_peers_file: self.seed_peers_file.clone(),
             seed_peers: self.seed_peers.clone(),
-            base: self.base.clone(),
         }
     }
 
-    pub fn prepare(&mut self, base: Arc<BaseConfig>) {
-        self.base = base;
-    }
-
-    pub fn load(&mut self, network_role: RoleType) -> Result<()> {
+    pub fn load(&mut self, root_dir: &RootPath, network_role: RoleType) -> Result<()> {
         if !self.network_peers_file.as_os_str().is_empty() {
-            self.network_peers = NetworkPeersConfig::load_config(self.network_peers_file())?;
+            let path = root_dir.full_path(&self.network_peers_file);
+            self.network_peers = NetworkPeersConfig::load_config(&path)?;
         }
         if !self.network_keypairs_file.as_os_str().is_empty() {
-            self.network_keypairs = NetworkKeyPairs::load_config(self.network_keypairs_file())?;
+            let path = root_dir.full_path(&self.network_keypairs_file);
+            self.network_keypairs = NetworkKeyPairs::load_config(&path)?;
         }
         if !self.seed_peers_file.as_os_str().is_empty() {
-            self.seed_peers = SeedPeersConfig::load_config(self.seed_peers_file())?;
+            let path = root_dir.full_path(&self.seed_peers_file);
+            self.seed_peers = SeedPeersConfig::load_config(&path)?;
         }
         if self.advertised_address.to_string().is_empty() {
             self.advertised_address =
@@ -151,27 +146,29 @@ impl NetworkConfig {
         format!("{}.{}", self.peer_id.to_string(), config_path)
     }
 
-    pub fn save(&mut self) -> Result<()> {
+    pub fn save(&mut self, root_dir: &RootPath) -> Result<()> {
         if self.is_permissioned {
             if self.network_keypairs_file.as_os_str().is_empty() {
                 let file_name = self.default_path(NETWORK_KEYPAIRS_DEFAULT);
                 self.network_keypairs_file = PathBuf::from(file_name);
             }
-            self.network_keypairs
-                .save_config(self.network_keypairs_file())?;
+            let path = root_dir.full_path(&self.network_keypairs_file);
+            self.network_keypairs.save_config(&path)?;
         }
 
         if self.network_peers_file.as_os_str().is_empty() {
             let file_name = self.default_path(NETWORK_PEERS_DEFAULT);
             self.network_peers_file = PathBuf::from(file_name);
         }
-        self.network_peers.save_config(self.network_peers_file())?;
+        let path = root_dir.full_path(&self.network_peers_file);
+        self.network_peers.save_config(&path)?;
 
         if self.seed_peers_file.as_os_str().is_empty() {
             let file_name = self.default_path(SEED_PEERS_DEFAULT);
             self.seed_peers_file = PathBuf::from(file_name);
         }
-        self.seed_peers.save_config(self.seed_peers_file())?;
+        let path = root_dir.full_path(&self.seed_peers_file);
+        self.seed_peers.save_config(&path)?;
         Ok(())
     }
 
@@ -195,18 +192,6 @@ impl NetworkConfig {
     pub fn set_default_peer_id(&mut self) {
         self.peer_id =
             PeerId::try_from(self.network_keypairs.identity_keys.public().to_bytes()).unwrap();
-    }
-
-    pub fn network_peers_file(&self) -> PathBuf {
-        self.base.full_path(&self.network_peers_file)
-    }
-
-    pub fn network_keypairs_file(&self) -> PathBuf {
-        self.base.full_path(&self.network_keypairs_file)
-    }
-
-    pub fn seed_peers_file(&self) -> PathBuf {
-        self.base.full_path(&self.seed_peers_file)
     }
 
     fn default_peers(keypair: &NetworkKeyPairs, peer_id: &PeerId) -> NetworkPeersConfig {
@@ -296,7 +281,7 @@ mod test {
         let peers = NetworkConfig::default_peers(&keypair, &peer_id);
 
         // Assert default exists
-        let (mut config, _path) = generate_config();
+        let (mut config, path) = generate_config();
         assert_eq!(config.network_peers, peers);
         assert_eq!(config.network_peers_file, PathBuf::new());
         assert_eq!(config.network_keypairs, NetworkKeyPairs::default());
@@ -305,7 +290,8 @@ mod test {
         assert_eq!(config.seed_peers_file, PathBuf::new());
 
         // Assert default loading doesn't affect paths and defaults remain in place
-        config.load(RoleType::Validator).unwrap();
+        let root_dir = RootPath::new_path(path.path());
+        config.load(&root_dir, RoleType::Validator).unwrap();
         assert_eq!(config.network_peers, peers);
         assert_eq!(config.network_peers_file, PathBuf::new());
         assert_eq!(config.network_keypairs, NetworkKeyPairs::default());
@@ -314,7 +300,7 @@ mod test {
         assert_eq!(config.seed_peers, SeedPeersConfig::default());
 
         // Assert saving updates paths
-        config.save().unwrap();
+        config.save(&root_dir).unwrap();
         assert_eq!(config.network_peers, peers);
         assert_eq!(
             config.network_keypairs_file,
@@ -334,7 +320,7 @@ mod test {
 
     #[test]
     fn test_with_random() {
-        let (mut config, _path) = generate_config();
+        let (mut config, path) = generate_config();
         let mut rng = StdRng::from_seed([5u8; 32]);
         config.random(&mut rng);
         // This is default (empty) otherwise
@@ -350,7 +336,8 @@ mod test {
         assert_eq!(config.seed_peers_file, PathBuf::new());
 
         // Assert saving updates paths
-        config.save().unwrap();
+        let root_dir = RootPath::new_path(path.path());
+        config.save(&root_dir).unwrap();
         assert_eq!(config.network_keypairs, keypairs);
         assert_eq!(
             config.network_keypairs_file,
@@ -369,14 +356,13 @@ mod test {
 
         // Assert a fresh load correctly populates the config
         let mut new_config = NetworkConfig::default();
-        new_config.base = Arc::clone(&config.base);
         new_config.peer_id = config.peer_id;
         // First that paths are empty
         assert_eq!(new_config.network_keypairs_file, PathBuf::new());
         assert_eq!(new_config.network_peers_file, PathBuf::new());
         assert_eq!(new_config.seed_peers_file, PathBuf::new());
         // Loading populates things correctly
-        let result = new_config.load(RoleType::Validator);
+        let result = new_config.load(&root_dir, RoleType::Validator);
         assert!(result.is_ok());
         assert_eq!(config.network_keypairs, keypairs);
         assert_eq!(
@@ -398,9 +384,7 @@ mod test {
     fn generate_config() -> (NetworkConfig, TempPath) {
         let temp_dir = TempPath::new();
         temp_dir.create_as_dir().expect("error creating tempdir");
-        let base_config = BaseConfig::new(temp_dir.path().into(), RoleType::Validator);
-        let mut network_config = NetworkConfig::default();
-        network_config.base = Arc::new(base_config);
+        let network_config = NetworkConfig::default();
         (network_config, temp_dir)
     }
 }

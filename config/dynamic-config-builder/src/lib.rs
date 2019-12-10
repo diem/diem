@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod error;
+mod full_node_config;
 mod validator_config;
 
 pub use crate::{

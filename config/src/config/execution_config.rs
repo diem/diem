@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{config::BaseConfig, utils};
+use crate::{config::RootPath, utils};
 use anyhow::Result;
 use libra_types::transaction::Transaction;
 use serde::{Deserialize, Serialize};
@@ -9,7 +9,6 @@ use std::{
     fs::File,
     io::{Read, Write},
     path::PathBuf,
-    sync::Arc,
 };
 
 const GENESIS_DEFAULT: &str = "genesis.blob";
@@ -22,8 +21,6 @@ pub struct ExecutionConfig {
     #[serde(skip)]
     pub genesis: Option<Transaction>,
     pub genesis_file_location: PathBuf,
-    #[serde(skip)]
-    pub base: Arc<BaseConfig>,
 }
 
 impl Default for ExecutionConfig {
@@ -33,19 +30,15 @@ impl Default for ExecutionConfig {
             port: 6183,
             genesis: None,
             genesis_file_location: PathBuf::new(),
-            base: Arc::new(BaseConfig::default()),
         }
     }
 }
 
 impl ExecutionConfig {
-    pub fn prepare(&mut self, base: Arc<BaseConfig>) {
-        self.base = base;
-    }
-
-    pub fn load(&mut self) -> Result<()> {
+    pub fn load(&mut self, root_dir: &RootPath) -> Result<()> {
         if !self.genesis_file_location.as_os_str().is_empty() {
-            let mut file = File::open(&self.genesis_file_location())?;
+            let path = root_dir.full_path(&self.genesis_file_location);
+            let mut file = File::open(&path)?;
             let mut buffer = vec![];
             file.read_to_end(&mut buffer)?;
             // TODO: update to use `Transaction::WriteSet` variant when ready.
@@ -55,19 +48,16 @@ impl ExecutionConfig {
         Ok(())
     }
 
-    pub fn save(&mut self) -> Result<()> {
+    pub fn save(&mut self, root_dir: &RootPath) -> Result<()> {
         if let Some(genesis) = &self.genesis {
             if self.genesis_file_location.as_os_str().is_empty() {
                 self.genesis_file_location = PathBuf::from(GENESIS_DEFAULT);
             }
-            let mut file = File::create(self.genesis_file_location())?;
+            let path = root_dir.full_path(&self.genesis_file_location);
+            let mut file = File::create(&path)?;
             file.write_all(&lcs::to_bytes(&genesis)?)?;
         }
         Ok(())
-    }
-
-    pub fn genesis_file_location(&self) -> PathBuf {
-        self.base.full_path(&self.genesis_file_location)
     }
 
     pub fn randomize_ports(&mut self) {
@@ -78,15 +68,15 @@ impl ExecutionConfig {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::config::RoleType;
     use libra_tools::tempdir::TempPath;
     use libra_types::{transaction::Transaction, write_set::WriteSetMut};
 
     #[test]
     fn test_no_genesis() {
-        let (mut config, _path) = generate_config();
+        let (mut config, path) = generate_config();
         assert_eq!(config.genesis, None);
-        let result = config.load();
+        let root_dir = RootPath::new_path(path.path());
+        let result = config.load(&root_dir);
         assert!(result.is_ok());
         assert_eq!(config.genesis_file_location, PathBuf::new());
     }
@@ -94,14 +84,15 @@ mod test {
     #[test]
     fn test_some_and_load_genesis() {
         let fake_genesis = Transaction::WriteSet(WriteSetMut::new(vec![]).freeze().unwrap());
-        let (mut config, _path) = generate_config();
+        let (mut config, path) = generate_config();
         config.genesis = Some(fake_genesis.clone());
-        config.save().expect("Unable to save");
+        let root_dir = RootPath::new_path(path.path());
+        config.save(&root_dir).expect("Unable to save");
         // Verifies some without path
         assert_eq!(config.genesis_file_location, PathBuf::from(GENESIS_DEFAULT));
 
         config.genesis = None;
-        let result = config.load();
+        let result = config.load(&root_dir);
         assert!(result.is_ok());
         assert_eq!(config.genesis, Some(fake_genesis));
     }
@@ -109,9 +100,7 @@ mod test {
     fn generate_config() -> (ExecutionConfig, TempPath) {
         let temp_dir = TempPath::new();
         temp_dir.create_as_dir().expect("error creating tempdir");
-        let base_config = BaseConfig::new(temp_dir.path().into(), RoleType::Validator);
-        let mut execution_config = ExecutionConfig::default();
-        execution_config.base = Arc::new(base_config);
+        let execution_config = ExecutionConfig::default();
         (execution_config, temp_dir)
     }
 }

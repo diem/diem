@@ -1,6 +1,3 @@
-[base]
-data_dir = "src/config/test_data"
-
 [consensus]
 consensus_keypair_file = "consensus.keys.toml"
 consensus_peers_file = "consensus_peers.config.toml"

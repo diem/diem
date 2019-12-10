@@ -51,7 +51,7 @@ pub fn full_node_swarm(
     };
     add_peer(&upstream_network, &mut network_peers, &mut seed_peers);
 
-    template.set_role(RoleType::FullNode)?;
+    template.base.role = RoleType::FullNode;
     template.consensus.consensus_peers = upstream_peer.consensus.consensus_peers.clone();
     template.execution.genesis = upstream_peer.execution.genesis.clone();
     template.state_sync.upstream_peers = UpstreamPeersConfig {
@@ -82,7 +82,6 @@ pub fn full_node_swarm(
     }
 
     // Modify upstream peer config to add the new network config.
-    upstream_network.base = upstream_peer.base.clone();
     upstream_network.network_peers = network_peers;
     upstream_network.seed_peers = seed_peers;
     upstream_peer.full_node_networks.push(upstream_network);
@@ -119,12 +118,9 @@ pub fn validator_swarm(
             config.randomize_ports();
         }
 
-        config.consensus.safety_rules.backend =
-            SafetyRulesBackend::OnDiskStorage(OnDiskStorageConfig {
-                default: true,
-                path: PathBuf::from("safety_rules.toml"),
-                base: config.base.clone(),
-            });
+        let mut storage_config = OnDiskStorageConfig::default();
+        storage_config.default = true;
+        config.consensus.safety_rules.backend = SafetyRulesBackend::OnDiskStorage(storage_config);
 
         let network = &mut config.validator_network.as_mut().unwrap();
         network.listen_address = utils::get_available_port_in_multiaddr(is_ipv4);

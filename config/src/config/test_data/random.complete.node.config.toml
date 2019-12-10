@@ -9,7 +9,7 @@ secs = 1
 nanos = 0
 
 [base]
-data_dir = "src/config/test_data"
+data_dir = "/opt/libra/data"
 role = "validator"
 
 [consensus]
