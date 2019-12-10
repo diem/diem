@@ -163,9 +163,8 @@ fn check_errors(errors: Errors) -> Result<(), Errors> {
 //**************************************************************************************************
 
 fn parsing_error(fname: &'static str, e: ParseError) -> Error {
-    let fmt_expected = |expected: Vec<String>| -> String {
-        format!("Expected: {}", expected.join(", "))
-    };
+    let fmt_expected =
+        |expected: Vec<String>| -> String { format!("Expected: {}", expected.join(", ")) };
     match e {
         ParseError::InvalidToken { location: l } => {
             let span = Span::new(ByteIndex(l as u32), ByteIndex(l as u32));
