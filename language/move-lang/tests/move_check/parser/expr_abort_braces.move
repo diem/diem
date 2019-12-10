@@ -1,6 +1,7 @@
 module M {
     f(v: u64) {
-        // Braces are not required for a control expression inside "abort"
+        // Braces or parenthesis are not required for a control expression
+        // inside an "abort" expression.
         abort if (v == 0) 10 else v
     }
 }

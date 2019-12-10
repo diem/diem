@@ -1,6 +1,9 @@
 module M {
     f(v: u64) {
-        // Braces are not required for a control expression inside "loop"
+        // Braces or parenthesis are not required for a control expression
+        // inside a "loop" expression.
+        loop { if (v < 10) break };
+        loop ( if (v < 10) break );
         loop if (v < 10) break
     }
 }
