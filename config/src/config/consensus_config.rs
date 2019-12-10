@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    config::{BaseConfig, NetworkPeersConfig, PersistableConfig, SafetyRulesConfig},
+    config::{NetworkPeersConfig, PersistableConfig, RootPath, SafetyRulesConfig},
     keys::{self, KeyPair},
     utils,
 };
@@ -17,7 +17,7 @@ use libra_types::{
 };
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf};
 
 type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
 
@@ -42,8 +42,6 @@ pub struct ConsensusConfig {
     pub consensus_peers: ConsensusPeersConfig,
     pub consensus_peers_file: PathBuf,
     pub safety_rules: SafetyRulesConfig,
-    #[serde(skip)]
-    pub base: Arc<BaseConfig>,
 }
 
 impl Default for ConsensusConfig {
@@ -62,7 +60,6 @@ impl Default for ConsensusConfig {
             consensus_peers: peers,
             consensus_peers_file: PathBuf::new(),
             safety_rules: SafetyRulesConfig::default(),
-            base: Arc::new(BaseConfig::default()),
         }
     }
 }
@@ -93,7 +90,6 @@ impl ConsensusConfig {
             consensus_peers: self.consensus_peers.clone(),
             consensus_peers_file: self.consensus_peers_file.clone(),
             safety_rules: self.safety_rules.clone(),
-            base: self.base.clone(),
         }
     }
 
@@ -104,45 +100,34 @@ impl ConsensusConfig {
         self.consensus_keypair = consensus_keypair;
     }
 
-    pub fn prepare(&mut self, base: Arc<BaseConfig>) {
-        self.base = base;
-        self.safety_rules.prepare(self.base.clone());
-    }
-
-    pub fn load(&mut self) -> Result<()> {
+    pub fn load(&mut self, root_dir: &RootPath) -> Result<()> {
         if !self.consensus_keypair_file.as_os_str().is_empty() {
-            self.consensus_keypair = ConsensusKeyPair::load_config(self.consensus_keypair_file())?;
+            let path = root_dir.full_path(&self.consensus_keypair_file);
+            self.consensus_keypair = ConsensusKeyPair::load_config(path)?;
         }
         if !self.consensus_peers_file.as_os_str().is_empty() {
-            self.consensus_peers = ConsensusPeersConfig::load_config(self.consensus_peers_file())?;
+            let path = root_dir.full_path(&self.consensus_peers_file);
+            self.consensus_peers = ConsensusPeersConfig::load_config(path)?;
         }
         Ok(())
     }
 
-    pub fn save(&mut self) -> Result<()> {
+    pub fn save(&mut self, root_dir: &RootPath) -> Result<()> {
         if self.consensus_keypair != ConsensusKeyPair::default() {
             if self.consensus_keypair_file.as_os_str().is_empty() {
                 self.consensus_keypair_file = PathBuf::from(CONSENSUS_KEYPAIR_DEFAULT);
             }
 
-            self.consensus_keypair
-                .save_config(self.consensus_keypair_file())?;
+            let path = root_dir.full_path(&self.consensus_keypair_file);
+            self.consensus_keypair.save_config(&path)?;
         }
 
         if self.consensus_peers_file.as_os_str().is_empty() {
             self.consensus_peers_file = PathBuf::from(CONSENSUS_PEERS_DEFAULT);
         }
-        self.consensus_peers
-            .save_config(self.consensus_peers_file())?;
+        let path = root_dir.full_path(&self.consensus_peers_file);
+        self.consensus_peers.save_config(path)?;
         Ok(())
-    }
-
-    pub fn consensus_keypair_file(&self) -> PathBuf {
-        self.base.full_path(&self.consensus_keypair_file)
-    }
-
-    pub fn consensus_peers_file(&self) -> PathBuf {
-        self.base.full_path(&self.consensus_peers_file)
     }
 
     fn default_peers(keypair: &ConsensusKeyPair, peer_id: PeerId) -> ConsensusPeersConfig {
@@ -223,7 +208,6 @@ pub struct ConsensusPeerInfo {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::config::RoleType;
     use libra_tools::tempdir::TempPath;
     use rand::{rngs::StdRng, SeedableRng};
 
@@ -233,21 +217,22 @@ mod test {
         let peers = ConsensusConfig::default_peers(&keypair, PeerId::default());
 
         // Assert default exists
-        let (mut config, _path) = generate_config();
+        let (mut config, path) = generate_config();
         assert_eq!(config.consensus_keypair, keypair);
         assert_eq!(config.consensus_keypair_file, PathBuf::new());
         assert_eq!(config.consensus_peers, peers);
         assert_eq!(config.consensus_peers_file, PathBuf::new());
 
         // Assert default loading doesn't affect paths and default remain in place
-        config.load().unwrap();
+        let root_dir = RootPath::new_path(path.path());
+        config.load(&root_dir).unwrap();
         assert_eq!(config.consensus_keypair, keypair);
         assert_eq!(config.consensus_keypair_file, PathBuf::new());
         assert_eq!(config.consensus_peers, peers);
         assert_eq!(config.consensus_peers_file, PathBuf::new());
 
         // Assert saving updates peers but not key pairs due to default behavior
-        config.save().unwrap();
+        config.save(&root_dir).unwrap();
         assert_eq!(config.consensus_keypair, keypair);
         assert_eq!(config.consensus_keypair_file, PathBuf::new());
         assert_eq!(config.consensus_peers, peers);
@@ -259,7 +244,7 @@ mod test {
 
     #[test]
     fn test_with_random() {
-        let (mut config, _path) = generate_config();
+        let (mut config, path) = generate_config();
         let mut rng = StdRng::from_seed([6u8; 32]);
         config.random(&mut rng, PeerId::random());
 
@@ -271,7 +256,8 @@ mod test {
         assert_eq!(config.consensus_peers_file, PathBuf::new());
 
         // Assert saving updates paths
-        config.save().unwrap();
+        let root_dir = RootPath::new_path(path.path());
+        config.save(&root_dir).unwrap();
         assert_eq!(config.consensus_keypair, keypair);
         assert_eq!(
             config.consensus_keypair_file,
@@ -285,7 +271,6 @@ mod test {
 
         // Assert a fresh load correctly populates the config
         let mut new_config = ConsensusConfig::default();
-        new_config.base = Arc::clone(&config.base);
         // First that paths are empty
         assert_eq!(new_config.consensus_keypair_file, PathBuf::new());
         assert_eq!(new_config.consensus_peers_file, PathBuf::new());
@@ -293,7 +278,7 @@ mod test {
         new_config.consensus_keypair_file = PathBuf::from(CONSENSUS_KEYPAIR_DEFAULT);
         new_config.consensus_peers_file = PathBuf::from(CONSENSUS_PEERS_DEFAULT);
         // Loading populates things correctly
-        new_config.load().unwrap();
+        new_config.load(&root_dir).unwrap();
         assert_eq!(new_config.consensus_keypair, keypair);
         assert_eq!(
             new_config.consensus_keypair_file,
@@ -309,9 +294,7 @@ mod test {
     fn generate_config() -> (ConsensusConfig, TempPath) {
         let temp_dir = TempPath::new();
         temp_dir.create_as_dir().expect("error creating tempdir");
-        let base_config = BaseConfig::new(temp_dir.path().into(), RoleType::Validator);
-        let mut consensus_config = ConsensusConfig::default();
-        consensus_config.base = Arc::new(base_config);
+        let consensus_config = ConsensusConfig::default();
         (consensus_config, temp_dir)
     }
 }

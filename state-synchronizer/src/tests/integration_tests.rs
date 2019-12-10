@@ -253,7 +253,7 @@ impl SynchronizerEnv {
             config.full_node_networks = vec![network];
             config.validator_network = None;
         }
-        config.set_role(role).expect("Unable to set role");
+        config.base.role = role;
         config
             .state_sync
             .upstream_peers

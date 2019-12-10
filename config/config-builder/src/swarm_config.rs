@@ -182,8 +182,8 @@ impl SwarmConfigBuilder {
                 .upstream_peer_dir
                 .as_ref()
                 .ok_or_else(|| format_err!("Missing upstream_peer_dir"))?;
-            let upstream_peer_dir = PathBuf::from(upstream_peer_dir);
-            let mut upstream_peer = NodeConfig::load(upstream_peer_dir.join("node.config.toml"))?;
+            let upstream_peer_dir = PathBuf::from(upstream_peer_dir).join("node.config.toml");
+            let mut upstream_peer = NodeConfig::load(&upstream_peer_dir)?;
             genesis = upstream_peer.execution.genesis.clone();
             configs = generator::full_node_swarm(
                 &mut upstream_peer,
@@ -195,7 +195,7 @@ impl SwarmConfigBuilder {
                 self.is_permissioned,
                 true,
             )?;
-            upstream_peer.save(&PathBuf::from("node.config.toml"))?;
+            upstream_peer.save(&upstream_peer_dir)?;
         }
 
         ensure!(
@@ -213,10 +213,11 @@ impl SwarmConfigBuilder {
             let node_dir = self.output_dir.join(format!("{}", index));
             std::fs::create_dir_all(&node_dir).expect("unable to create config dir");
 
-            config.set_data_dir(node_dir.clone())?;
-            config_files.push(node_dir.join("node.config.toml"));
+            let node_path = node_dir.join("node.config.toml");
+            config.set_data_dir(node_dir);
             config.execution.genesis = genesis.clone();
-            config.save(&PathBuf::from("node.config.toml"))?;
+            config.save(&node_path)?;
+            config_files.push(node_path);
         }
 
         Ok(SwarmConfig { config_files })

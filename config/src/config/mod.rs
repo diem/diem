@@ -10,7 +10,6 @@ use std::{
     fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
-    sync::Arc,
 };
 use thiserror::Error;
 use toml;
@@ -53,7 +52,7 @@ pub struct NodeConfig {
     #[serde(default)]
     pub admission_control: AdmissionControlConfig,
     #[serde(default)]
-    pub base: Arc<BaseConfig>,
+    pub base: BaseConfig,
     #[serde(default)]
     pub consensus: ConsensusConfig,
     #[serde(default)]
@@ -83,31 +82,15 @@ pub struct NodeConfig {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct BaseConfig {
-    pub data_dir: PathBuf,
+    data_dir: PathBuf,
     pub role: RoleType,
 }
 
 impl Default for BaseConfig {
     fn default() -> BaseConfig {
         BaseConfig {
-            data_dir: PathBuf::from("."),
+            data_dir: PathBuf::from("/opt/libra/data"),
             role: RoleType::Validator,
-        }
-    }
-}
-
-impl BaseConfig {
-    pub fn new(data_dir: PathBuf, role: RoleType) -> Self {
-        BaseConfig { data_dir, role }
-    }
-
-    /// Returns the full path to a file path. If the file_path is relative, it prepends with the
-    /// data_dir. Otherwise it returns the provided full_path.
-    pub fn full_path(&self, file_path: &PathBuf) -> PathBuf {
-        if file_path.is_relative() {
-            self.data_dir.join(file_path)
-        } else {
-            file_path.clone()
         }
     }
 }
@@ -151,6 +134,17 @@ impl fmt::Display for RoleType {
 pub struct ParseRoleError(String);
 
 impl NodeConfig {
+    pub fn data_dir(&self) -> &PathBuf {
+        &self.base.data_dir
+    }
+
+    pub fn set_data_dir(&mut self, data_dir: PathBuf) {
+        self.base.data_dir = data_dir.clone();
+        self.metrics.set_data_dir(data_dir.clone());
+        self.storage.set_data_dir(data_dir.clone());
+        self.consensus.safety_rules.set_data_dir(data_dir);
+    }
+
     /// This clones the underlying data except for the keypair so that this config can be used as a
     /// template for another config.
     pub fn clone_for_template(&self) -> Self {
@@ -180,40 +174,11 @@ impl NodeConfig {
         }
     }
 
-    pub fn set_data_dir(&mut self, path: PathBuf) -> Result<()> {
-        self.base = Arc::new(BaseConfig::new(path, self.base.role));
-        self.prepare();
-        Ok(())
-    }
-
-    pub fn set_role(&mut self, role: RoleType) -> Result<()> {
-        self.base = Arc::new(BaseConfig::new(self.base.data_dir.clone(), role));
-        self.prepare();
-        Ok(())
-    }
-
-    pub fn base(&self) -> &Arc<BaseConfig> {
-        &self.base
-    }
-
-    fn prepare(&mut self) {
-        for network in &mut self.full_node_networks {
-            network.prepare(self.base.clone());
-        }
-        if let Some(network) = &mut self.validator_network {
-            network.prepare(self.base.clone());
-        }
-        self.consensus.prepare(self.base.clone());
-        self.execution.prepare(self.base.clone());
-        self.metrics.prepare(self.base.clone());
-        self.storage.prepare(self.base.clone());
-    }
-
     /// Reads the config file and returns the configuration object in addition to doing some
     /// post-processing of the config
     /// Paths used in the config are either absolute or relative to the config location
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let mut config = Self::load_config(&path)?;
+    pub fn load<P: AsRef<Path>>(input_path: P) -> Result<Self> {
+        let mut config = Self::load_config(&input_path)?;
         if config.base.role.is_validator() {
             ensure!(
                 config.validator_network.is_some(),
@@ -225,28 +190,31 @@ impl NodeConfig {
                 "Provided a validator network config for a full_node node"
             );
         }
-        config.prepare();
-        config.consensus.load()?;
-        config.execution.load()?;
+
+        let input_dir = RootPath::new(input_path);
+        config.consensus.load(&input_dir)?;
+        config.execution.load(&input_dir)?;
         if let Some(network) = &mut config.validator_network {
-            network.load(RoleType::Validator)?;
+            network.load(&input_dir, RoleType::Validator)?;
         }
         for network in &mut config.full_node_networks {
-            network.load(RoleType::FullNode)?;
+            network.load(&input_dir, RoleType::FullNode)?;
         }
+        config.set_data_dir(config.data_dir().clone());
         Ok(config)
     }
 
-    pub fn save(&mut self, output_file: &PathBuf) -> Result<()> {
-        self.consensus.save()?;
-        self.execution.save()?;
+    pub fn save<P: AsRef<Path>>(&mut self, output_path: P) -> Result<()> {
+        let output_dir = RootPath::new(&output_path);
+        self.consensus.save(&output_dir)?;
+        self.execution.save(&output_dir)?;
         if let Some(network) = &mut self.validator_network {
-            network.save()?;
+            network.save(&output_dir)?;
         }
         for network in &mut self.full_node_networks {
-            network.save()?;
+            network.save(&output_dir)?;
         }
-        self.save_config(self.base.full_path(output_file))?;
+        self.save_config(&output_path)?;
         Ok(())
     }
 
@@ -307,9 +275,7 @@ impl NodeConfig {
                 network.random(rng);
             }
         }
-
-        self.set_data_dir(test.temp_dir().as_ref().unwrap().into())
-            .expect("Error setting data_dir");
+        self.set_data_dir(test.temp_dir().unwrap().to_path_buf());
         self.test = Some(test);
     }
 }
@@ -336,6 +302,38 @@ pub trait PersistableConfig: Serialize + DeserializeOwned {
 
 impl<T: ?Sized> PersistableConfig for T where T: Serialize + DeserializeOwned {}
 
+#[derive(Debug)]
+pub struct RootPath {
+    root_path: PathBuf,
+}
+
+impl RootPath {
+    pub fn new<P: AsRef<Path>>(path: P) -> Self {
+        let root_path = if let Some(parent) = path.as_ref().parent() {
+            parent.to_path_buf()
+        } else {
+            PathBuf::from("")
+        };
+
+        Self { root_path }
+    }
+
+    /// This function assumes that the path is already a directory
+    pub fn new_path<P: AsRef<Path>>(path: P) -> Self {
+        let root_path = path.as_ref().to_path_buf();
+        Self { root_path }
+    }
+
+    /// This adds a full path when loading / storing if one is not specified
+    pub fn full_path(&self, file_path: &PathBuf) -> PathBuf {
+        if file_path.is_relative() {
+            self.root_path.join(file_path)
+        } else {
+            file_path.clone()
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -353,9 +351,6 @@ mod test {
 
         // These are randomly generated, so let's force them to be the same, perhaps we can use a
         // random seed so that these can be made uniform...
-        expected
-            .set_data_dir(actual.base.data_dir.clone())
-            .expect("Unable to set data_dir");
         expected.consensus.consensus_keypair = actual.consensus.consensus_keypair.clone();
         expected.consensus.consensus_peers = actual.consensus.consensus_peers.clone();
 
@@ -374,6 +369,7 @@ mod test {
         expected_network.network_peers = actual_network.network_peers.clone();
         expected_network.seed_peers = actual_network.seed_peers.clone();
 
+        expected.set_data_dir(actual.data_dir().clone());
         compare_configs(&actual, &expected);
     }
 
@@ -381,15 +377,14 @@ mod test {
     fn verify_random_complete_config() {
         let mut rng = StdRng::from_seed([255u8; 32]);
         let mut expected = NodeConfig::random_with_rng(&mut rng);
-        // Required to update paths
-        expected.save(&PathBuf::from("node.config.toml")).unwrap();
+
+        // Update paths after save
+        let root_dir = RootPath::new(expected.test.as_ref().unwrap().temp_dir().unwrap());
+        let path = root_dir.full_path(&PathBuf::from("node.config.toml"));
+        expected.save(&path).expect("Unable to save config");
 
         let actual = NodeConfig::load(RANDOM_COMPLETE).expect("Unable to load config");
-        // This is randomly generated, so make them consistent, loading has already occurred
-        expected
-            .set_data_dir(actual.base.data_dir.clone())
-            .expect("Unable to set data_dir");
-
+        expected.set_data_dir(actual.data_dir().clone());
         compare_configs(&actual, &expected);
     }
 
@@ -397,15 +392,14 @@ mod test {
     fn verify_random_default_config() {
         let mut rng = StdRng::from_seed([255u8; 32]);
         let mut expected = NodeConfig::random_with_rng(&mut rng);
-        // Required to update paths
-        expected.save(&PathBuf::from("node.config.toml")).unwrap();
+
+        // Update paths after save
+        let root_dir = RootPath::new(expected.test.as_ref().unwrap().temp_dir().unwrap());
+        let path = root_dir.full_path(&PathBuf::from("node.config.toml"));
+        expected.save(&path).expect("Unable to save config");
 
         let actual = NodeConfig::load(RANDOM_DEFAULT).expect("Unable to load config");
-        // This is randomly generated, so make them consistent, loading has already occurred
-        expected
-            .set_data_dir(actual.base.data_dir.clone())
-            .expect("Unable to set data_dir");
-
+        expected.set_data_dir(actual.data_dir().clone());
         compare_configs(&actual, &expected);
     }
 
