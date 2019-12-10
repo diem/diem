@@ -295,6 +295,7 @@ impl NodeConfig {
         self.execution.randomize_ports();
         self.mempool.randomize_ports();
         self.storage.randomize_ports();
+        self.consensus.randomize_ports();
         if network_flag {
             self.validator_network.as_mut().unwrap().randomize_ports();
         }

@@ -20,8 +20,9 @@ use libra_types::{
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use libra_types::account_address::AccountAddress;
 
-type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
+pub type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
 
 const CONSENSUS_KEYPAIR_DEFAULT: &str = "consensus.keys.toml";
 const CONSENSUS_PEERS_DEFAULT: &str = "consensus_peers.config.toml";
@@ -175,6 +176,10 @@ impl ConsensusConfig {
 
     pub fn consensus_peers_file(&self) -> PathBuf {
         self.base.full_path(&self.consensus_peers_file)
+    }
+
+    pub fn randomize_ports(&mut self) {
+        self.miner_rpc_address = format!("127.0.0.1:{}", utils::get_available_port());
     }
 
     fn default_peers(keypair: &ConsensusKeyPair, peer_id: PeerId) -> ConsensusPeersConfig {
@@ -344,5 +349,11 @@ mod test {
         let mut consensus_config = ConsensusConfig::default();
         consensus_config.base = Arc::new(base_config);
         (consensus_config, temp_dir)
+    }
+}
+
+impl ConsensusKeyPair {
+    pub fn consensus_address(&self) -> AccountAddress {
+        AccountAddress::from_public_key(self.public())
     }
 }

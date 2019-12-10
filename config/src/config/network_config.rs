@@ -261,6 +261,18 @@ impl NetworkConfig {
         );
         peers
     }
+
+    pub fn add_peer(&mut self, peer_id: PeerId, peer_info: NetworkPeerInfo) {
+        self.network_peers.peers.insert(peer_id, peer_info);
+    }
+
+    pub fn get_peer_info(&self) -> (PeerId, NetworkPeerInfo) {
+        let peer_info = NetworkPeerInfo {
+            identity_public_key: self.network_keypairs.identity_keys.public().clone(),
+            signing_public_key: self.network_keypairs.signing_keys.public().clone(),
+        };
+        (self.peer_id, peer_info)
+    }
 }
 
 // This is separated to another config so that it can be written to its own file
