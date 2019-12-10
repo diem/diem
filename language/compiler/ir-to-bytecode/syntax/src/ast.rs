@@ -172,8 +172,6 @@ pub enum Type {
     Bool,
     /// `bytearray`
     ByteArray,
-    /// `string`, currently unused
-    String,
     /// A module defined struct
     Struct(QualifiedStructIdent, Vec<Type>),
     /// A reference type, the bool flag indicates whether the reference is mutable
@@ -453,8 +451,6 @@ pub enum CopyableVal {
     Bool(bool),
     /// `b"<bytes>"`
     ByteArray(ByteArray),
-    /// Not yet supported in the parser
-    String(String),
 }
 
 /// The type of a value and its location
@@ -1328,7 +1324,6 @@ impl fmt::Display for Type {
             Type::Bool => write!(f, "bool"),
             Type::Address => write!(f, "address"),
             Type::ByteArray => write!(f, "bytearray"),
-            Type::String => write!(f, "string"),
             Type::Struct(ident, tys) => write!(f, "{}{}", ident, format_type_actuals(tys)),
             Type::Reference(is_mutable, t) => {
                 write!(f, "&{}{}", if *is_mutable { "mut " } else { "" }, t)
@@ -1499,7 +1494,6 @@ impl fmt::Display for CopyableVal {
             CopyableVal::Bool(v) => write!(f, "{}", v),
             CopyableVal::ByteArray(v) => write!(f, "{}", v),
             CopyableVal::Address(v) => write!(f, "0x{}", hex::encode(&v)),
-            CopyableVal::String(v) => write!(f, "{}", v),
         }
     }
 }
