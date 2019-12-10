@@ -71,12 +71,14 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         &self,
         txn_list_with_proof: TransactionListWithProof,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
+        intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
         _synced_trees: &mut ExecutedTrees,
     ) -> Result<()> {
-        self.storage
-            .write()
-            .unwrap()
-            .add_txns_with_li(txn_list_with_proof.transactions, ledger_info_with_sigs);
+        self.storage.write().unwrap().add_txns_with_li(
+            txn_list_with_proof.transactions,
+            ledger_info_with_sigs,
+            intermediate_end_of_epoch_li,
+        );
         Ok(())
     }
 
@@ -108,6 +110,10 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         _end_epoch: u64,
     ) -> Result<ValidatorChangeEventWithProof> {
         Ok(self.storage.read().unwrap().get_epoch_changes(start_epoch))
+    }
+
+    fn get_ledger_info(&self, version: u64) -> Option<LedgerInfoWithSignatures> {
+        self.storage.read().unwrap().get_ledger_info(version)
     }
 }
 
@@ -279,13 +285,15 @@ impl SynchronizerEnv {
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_a, events_a)],
                 role,
+                None,
                 &config.state_sync,
                 MockExecutorProxy::new(Self::default_handler(), storage_proxies[0].clone()),
             ),
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_b, events_b)],
                 role,
-                &config_builder::test_config().0.state_sync,
+                None,
+                &config.state_sync,
                 MockExecutorProxy::new(handler, storage_proxies[1].clone()),
             ),
         ];

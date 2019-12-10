@@ -26,7 +26,8 @@ pub trait ExecutorProxyTrait: Sync + Send {
     fn execute_chunk(
         &self,
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        verified_target_li: LedgerInfoWithSignatures,
+        intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
         synced_trees: &mut ExecutedTrees,
     ) -> Result<()>;
 
@@ -44,6 +45,9 @@ pub trait ExecutorProxyTrait: Sync + Send {
         start_epoch: u64,
         end_epoch: u64,
     ) -> Result<ValidatorChangeEventWithProof>;
+
+    /// Tries to find a LedgerInfo for a given version.
+    fn get_ledger_info(&self, version: u64) -> Option<LedgerInfoWithSignatures>;
 }
 
 pub(crate) struct ExecutorProxy {
@@ -97,13 +101,14 @@ impl ExecutorProxyTrait for ExecutorProxy {
     fn execute_chunk(
         &self,
         txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        verified_target_li: LedgerInfoWithSignatures,
+        intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
         synced_trees: &mut ExecutedTrees,
     ) -> Result<()> {
         self.executor.execute_and_commit_chunk(
             txn_list_with_proof,
-            ledger_info_with_sigs,
-            None,
+            verified_target_li,
+            intermediate_end_of_epoch_li,
             synced_trees,
         )
     }
@@ -132,5 +137,9 @@ impl ExecutorProxyTrait for ExecutorProxy {
             .storage_read_client
             .get_epoch_change_ledger_infos(start_epoch, end_epoch)?;
         Ok(ValidatorChangeEventWithProof::new(ledger_info_per_epoch))
+    }
+
+    fn get_ledger_info(&self, _version: u64) -> Option<LedgerInfoWithSignatures> {
+        panic!("Not implemented");
     }
 }

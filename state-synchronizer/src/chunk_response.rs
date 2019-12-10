@@ -3,30 +3,58 @@
 
 use anyhow::{Error, Result};
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
-use libra_types::transaction::TransactionListWithProof;
+use libra_types::transaction::{TransactionListWithProof, Version};
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::fmt;
+
+/// The response can carry different LedgerInfo types depending on whether the verification
+/// is done via the local trusted validator set or a local waypoint.
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+pub enum ResponseLedgerInfo {
+    /// A typical response carries a LedgerInfo with signatures that should be verified using the
+    /// local trusted validator set.
+    VerifiableLedgerInfo(LedgerInfoWithSignatures),
+    /// During the initial catchup upon startup the chunks carry LedgerInfo that is verified
+    /// using the local waypoint.
+    LedgerInfoForWaypoint {
+        // LedgerInfo corresponding to the waypoint version.
+        waypoint_li: LedgerInfoWithSignatures,
+        // In case a chunk terminates an epoch, the LedgerInfo corresponding to the epoch boundary.
+        end_of_epoch_li: Option<LedgerInfoWithSignatures>,
+    },
+}
+
+impl ResponseLedgerInfo {
+    /// The version of the LedgerInfo relative to which the transactions proofs are built.
+    pub fn version(&self) -> Version {
+        match self {
+            ResponseLedgerInfo::VerifiableLedgerInfo(li) => li.ledger_info().version(),
+            ResponseLedgerInfo::LedgerInfoForWaypoint { waypoint_li, .. } => {
+                waypoint_li.ledger_info().version()
+            }
+        }
+    }
+}
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 /// The returned chunk is bounded by the end of the known_epoch of the requester
 /// (i.e., a chunk never crosses epoch boundaries).
 pub struct GetChunkResponse {
-    /// Transaction proofs are built relative to this ledger info.
-    /// It could either be the end of the epoch of the known version in the request,
-    /// or a target / highest LI.
-    pub ledger_info_with_sigs: LedgerInfoWithSignatures,
-    /// chunk of transactions with proof corresponding to version in `ledger_info_with_sigs`
+    /// The proofs are built relative to the LedgerInfo in `response_ledger_info`.
+    /// The specifics of ledger info verification depend on its type.
+    pub response_li: ResponseLedgerInfo,
+    /// chunk of transactions with proof corresponding to the ledger info carried by the response.
     pub txn_list_with_proof: TransactionListWithProof,
 }
 
 impl GetChunkResponse {
     pub fn new(
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
+        response_li: ResponseLedgerInfo,
         txn_list_with_proof: TransactionListWithProof,
     ) -> Self {
         Self {
-            ledger_info_with_sigs,
+            response_li,
             txn_list_with_proof,
         }
     }
@@ -42,11 +70,25 @@ impl fmt::Display for GetChunkResponse {
                 first_ver - 1 + self.txn_list_with_proof.len() as u64
             ),
         };
+        let response_li_repr = match &self.response_li {
+            ResponseLedgerInfo::VerifiableLedgerInfo(li) => {
+                format!("[verifiable LI {}]", li.ledger_info())
+            }
+            ResponseLedgerInfo::LedgerInfoForWaypoint {
+                waypoint_li,
+                end_of_epoch_li,
+            } => format!(
+                "[waypoint LI {}, end of epoch LI {}]",
+                waypoint_li.ledger_info(),
+                end_of_epoch_li
+                    .as_ref()
+                    .map_or("None".to_string(), |li| li.ledger_info().to_string())
+            ),
+        };
         write!(
             f,
-            "[ChunkResponse: ledger_info: {}, txns: {}]",
-            self.ledger_info_with_sigs.ledger_info(),
-            txns_repr,
+            "[ChunkResponse: response li: {}, txns: {}]",
+            response_li_repr, txns_repr,
         )
     }
 }
