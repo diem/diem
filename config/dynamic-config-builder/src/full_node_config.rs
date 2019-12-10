@@ -3,8 +3,12 @@
 
 use crate::{Error, ValidatorConfig};
 use anyhow::{ensure, Result};
-use libra_config::{config::NodeConfig, generator};
+use libra_config::{
+    config::{NodeConfig, SeedPeersConfig},
+    generator,
+};
 use parity_multiaddr::Multiaddr;
+use std::collections::HashMap;
 
 pub struct FullNodeConfig {
     advertised: Multiaddr,
@@ -109,8 +113,54 @@ impl FullNodeConfig {
         );
 
         let mut validator_config = self.validator_config.build()?;
-        let mut configs = generator::full_node_swarm(
-            &mut validator_config,
+        let mut configs = self.build_internal(&mut validator_config)?;
+
+        let network = validator_config
+            .full_node_networks
+            .last()
+            .ok_or(Error::MissingFullNodeNetwork)?;
+        let mut seed_peers = HashMap::new();
+        seed_peers.insert(network.peer_id, vec![self.bootstrap.clone()]);
+
+        let mut config = configs.swap_remove(self.full_node_index);
+        let network = config
+            .full_node_networks
+            .get_mut(0)
+            .ok_or(Error::MissingFullNodeNetwork)?;
+        network.advertised_address = self.advertised.clone();
+        network.listen_address = self.listen.clone();
+        network.seed_peers = SeedPeersConfig { seed_peers };
+
+        Ok(config)
+    }
+
+    pub fn extend_validator(&self, config: &mut NodeConfig) -> Result<()> {
+        self.build_internal(config)?;
+        let network = config
+            .full_node_networks
+            .get_mut(0)
+            .ok_or(Error::MissingFullNodeNetwork)?;
+        network.advertised_address = self.advertised.clone();
+        network.listen_address = self.listen.clone();
+        let mut seed_peers = HashMap::new();
+        seed_peers.insert(network.peer_id, vec![self.bootstrap.clone()]);
+        network.seed_peers = SeedPeersConfig { seed_peers };
+        Ok(())
+    }
+
+    pub fn extend(&self, config: &mut NodeConfig) -> Result<()> {
+        let mut full_node_config = self.build()?;
+        let new_net = full_node_config.full_node_networks.swap_remove(0);
+        for net in &config.full_node_networks {
+            ensure!(new_net.peer_id != net.peer_id, "Network already exists");
+        }
+        config.full_node_networks.push(new_net);
+        Ok(())
+    }
+
+    fn build_internal(&self, validator_config: &mut NodeConfig) -> Result<Vec<NodeConfig>> {
+        generator::full_node_swarm(
+            validator_config,
             self.template.clone_for_template(),
             self.full_nodes,
             true,
@@ -118,7 +168,83 @@ impl FullNodeConfig {
             Some(self.full_node_seed),
             self.permissioned,
             false,
-        )?;
-        Ok(configs.swap_remove(self.full_node_index))
+        )
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn verify_correctness() {
+        // @TODO eventually if we do not have a validator config, the first peer in this network
+        // should be the bootstrap
+        let config = FullNodeConfig::new().build().unwrap();
+        let network = &config.full_node_networks[0];
+        let (seed_peer_id, seed_peer_ips) = network.seed_peers.seed_peers.iter().next().unwrap();
+        assert!(&network.peer_id != seed_peer_id);
+        // This is true because  we didn't update the DEFAULT_ADVERTISED
+        assert_eq!(network.advertised_address, seed_peer_ips[0]);
+        assert_eq!(
+            network.advertised_address,
+            DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap()
+        );
+        assert_eq!(
+            network.listen_address,
+            DEFAULT_LISTEN.parse::<Multiaddr>().unwrap()
+        );
+        assert!(config.execution.genesis.is_some());
+        assert_eq!(config.consensus.consensus_peers.peers.len(), 1);
+    }
+
+    #[test]
+    fn verify_state_sync() {
+        let mut validator_config = ValidatorConfig::new().build().unwrap();
+        FullNodeConfig::new()
+            .extend_validator(&mut validator_config)
+            .unwrap();
+        let val_fn = &validator_config.full_node_networks[0];
+
+        let fnc = FullNodeConfig::new().build().unwrap();
+        assert_eq!(
+            val_fn.peer_id,
+            fnc.state_sync.upstream_peers.upstream_peers[0]
+        );
+    }
+
+    #[test]
+    fn verify_validator_append() {
+        let config_orig = ValidatorConfig::new().build().unwrap();
+        let mut config_extended = ValidatorConfig::new().build().unwrap();
+        FullNodeConfig::new()
+            .extend_validator(&mut config_extended)
+            .unwrap();
+        let config_full = FullNodeConfig::new().build().unwrap();
+        assert_eq!(config_extended.consensus, config_orig.consensus);
+        assert_eq!(
+            config_extended.validator_network,
+            config_orig.validator_network
+        );
+        assert!(config_extended.full_node_networks != config_orig.full_node_networks);
+        assert_eq!(
+            config_extended.full_node_networks[0].network_peers,
+            config_full.full_node_networks[0].network_peers
+        );
+    }
+
+    #[test]
+    fn verify_full_node_append() {
+        let config_one = FullNodeConfig::new().build().unwrap();
+        let mut config_two = FullNodeConfig::new().build().unwrap();
+        let mut fnc = FullNodeConfig::new();
+        fnc.full_node_seed([33u8; 32]);
+        fnc.extend(&mut config_two).unwrap();
+        assert_eq!(config_one.consensus, config_two.consensus);
+        assert_eq!(
+            config_one.full_node_networks[0],
+            config_two.full_node_networks[0]
+        );
+        assert_eq!(config_two.full_node_networks.len(), 2);
     }
 }

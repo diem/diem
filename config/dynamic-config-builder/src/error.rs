@@ -9,6 +9,8 @@ pub enum Error {
     IndexError { index: usize, nodes: usize },
     #[error("Missing configs only found {}", found)]
     MissingConfigs { found: usize },
+    #[error("Missing full node network")]
+    MissingFullNodeNetwork,
     #[error("Config does not contain a validator network")]
     MissingValidatorNetwork,
     #[error("network size should be at least 1")]
