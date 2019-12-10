@@ -289,7 +289,7 @@ impl NodeConfig {
         self.randomize_ports_with_network(false)
     }
 
-    pub fn randomize_ports_with_network(&mut self, network_flag:bool) {
+    pub fn randomize_ports_with_network(&mut self, network_flag: bool) {
         self.admission_control.randomize_ports();
         self.debug_interface.randomize_ports();
         self.execution.randomize_ports();
@@ -318,7 +318,7 @@ impl NodeConfig {
         config
     }
 
-    pub fn random_with_template_times(template: &Self, rng: &mut StdRng, times:usize) -> Self {
+    pub fn random_with_template_times(template: &Self, rng: &mut StdRng, times: usize) -> Self {
         let mut config = template.clone_for_template();
         config.random_internal_times(rng, times);
         config
@@ -338,7 +338,8 @@ impl NodeConfig {
         for _ in 0..times {
             if self.base.role == RoleType::Validator {
                 test.random(rng);
-                let peer_id = PeerId::from_public_key(test.account_keypair.as_ref().unwrap().public());
+                let peer_id =
+                    PeerId::from_public_key(test.account_keypair.as_ref().unwrap().public());
 
                 if self.validator_network.is_none() {
                     self.validator_network = Some(NetworkConfig::default());

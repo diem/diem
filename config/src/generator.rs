@@ -102,7 +102,16 @@ pub fn validator_swarm(
 ) -> Result<Vec<NodeConfig>> {
     let seed = key_seed.unwrap_or([1u8; 32]);
     let rng = StdRng::from_seed(seed);
-    validator_swarm_inner(template, num_nodes, prune_seed_peers, is_ipv4, rng, randomize_ports, 1, false)
+    validator_swarm_inner(
+        template,
+        num_nodes,
+        prune_seed_peers,
+        is_ipv4,
+        rng,
+        randomize_ports,
+        1,
+        false,
+    )
 }
 
 fn validator_swarm_times(
@@ -112,10 +121,19 @@ fn validator_swarm_times(
     is_ipv4: bool,
     randomize_ports: bool,
     times: usize,
-    network_random: bool
+    network_random: bool,
 ) -> Result<Vec<NodeConfig>> {
     let rng = StdRng::from_seed([1u8; 32]);
-    validator_swarm_inner(template, num_nodes, prune_seed_peers, is_ipv4, rng, randomize_ports, times, network_random)
+    validator_swarm_inner(
+        template,
+        num_nodes,
+        prune_seed_peers,
+        is_ipv4,
+        rng,
+        randomize_ports,
+        times,
+        network_random,
+    )
 }
 
 fn validator_swarm_inner(
@@ -126,7 +144,7 @@ fn validator_swarm_inner(
     mut rng: StdRng,
     randomize_ports: bool,
     times: usize,
-    network_random: bool
+    network_random: bool,
 ) -> Result<Vec<NodeConfig>> {
     init(&mut template, is_ipv4);
 
@@ -198,10 +216,21 @@ pub fn validator_swarm_for_testing(num_nodes: usize) -> Result<Vec<NodeConfig>> 
     validator_swarm(NodeConfig::default(), num_nodes, true, true, None, true)
 }
 
-pub fn validator_swarm_for_testing_times(times: usize, network_random:bool) -> Result<Vec<NodeConfig>> {
+pub fn validator_swarm_for_testing_times(
+    times: usize,
+    network_random: bool,
+) -> Result<Vec<NodeConfig>> {
     let mut config = NodeConfig::default();
     config.vm_config.publishing_options = VMPublishingOption::Open;
-    validator_swarm_times(NodeConfig::default(), 1, true, true, true, times, network_random)
+    validator_swarm_times(
+        NodeConfig::default(),
+        1,
+        true,
+        true,
+        true,
+        times,
+        network_random,
+    )
 }
 
 fn add_peer(

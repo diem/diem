@@ -11,6 +11,7 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     Uniform,
 };
+use libra_types::account_address::AccountAddress;
 use libra_types::{
     crypto_proxies::{ValidatorInfo, ValidatorVerifier},
     validator_public_keys::ValidatorPublicKeys,
@@ -20,7 +21,6 @@ use libra_types::{
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
-use libra_types::account_address::AccountAddress;
 
 pub type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
 
