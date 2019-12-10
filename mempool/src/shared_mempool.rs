@@ -55,6 +55,7 @@ pub enum SharedMempoolNotification {
 }
 
 /// Struct that owns all dependencies required by shared mempool routines
+#[derive(Clone)]
 struct SharedMempool<V>
 where
     V: TransactionValidation + 'static,
@@ -66,25 +67,6 @@ where
     validator: Arc<V>,
     peer_info: Arc<Mutex<PeerInfo>>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
-}
-
-// TODO(gzh): Cannot derive `Clone`.
-// Issue: https://github.com/rust-lang/rust/issues/26925
-impl<V> Clone for SharedMempool<V>
-where
-    V: TransactionValidation + 'static,
-{
-    fn clone(&self) -> Self {
-        Self {
-            mempool: Arc::clone(&self.mempool),
-            network_sender: self.network_sender.clone(),
-            config: self.config.clone(),
-            storage_read_client: Arc::clone(&self.storage_read_client),
-            validator: Arc::clone(&self.validator),
-            peer_info: self.peer_info.clone(),
-            subscribers: self.subscribers.clone(),
-        }
-    }
 }
 
 fn notify_subscribers(

@@ -20,7 +20,7 @@ use vm_runtime::{LibraVM, VMVerifier};
 #[path = "unit_tests/vm_validator_test.rs"]
 mod vm_validator_test;
 
-pub trait TransactionValidation: Send + Sync {
+pub trait TransactionValidation: Send + Sync + Clone {
     type ValidationInstance: VMVerifier;
     /// Validate a txn from client
     fn validate_transaction(
