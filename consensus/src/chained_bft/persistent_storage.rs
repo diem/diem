@@ -317,7 +317,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             last_vote,
             blocks,
             quorum_certs,
-            startup_info.ledger_info.ledger_info(),
+            startup_info.latest_ledger_info.ledger_info(),
             root_executed_trees,
             highest_timeout_certificate,
             startup_info

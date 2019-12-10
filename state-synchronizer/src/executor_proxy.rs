@@ -88,7 +88,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
                 .expect("No ValidatorSet found for the start of the epoch")
                 .into();
             Ok(SynchronizerState::new(
-                storage_info.ledger_info,
+                storage_info.latest_ledger_info,
                 synced_trees,
                 current_verifier,
             ))

@@ -360,7 +360,7 @@ impl From<TreeState> for crate::proto::storage::TreeState {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct StartupInfo {
-    pub ledger_info: LedgerInfoWithSignatures,
+    pub latest_ledger_info: LedgerInfoWithSignatures,
     pub ledger_info_with_validators: LedgerInfoWithSignatures,
     pub committed_tree_state: TreeState,
     pub synced_tree_state: Option<TreeState>,
@@ -388,7 +388,7 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
             .transpose()?;
 
         Ok(Self {
-            ledger_info,
+            latest_ledger_info: ledger_info,
             ledger_info_with_validators,
             committed_tree_state,
             synced_tree_state,
@@ -398,7 +398,7 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
 
 impl From<StartupInfo> for crate::proto::storage::StartupInfo {
     fn from(info: StartupInfo) -> Self {
-        let ledger_info = Some(info.ledger_info.into());
+        let ledger_info = Some(info.latest_ledger_info.into());
         let ledger_info_with_validators = Some(info.ledger_info_with_validators.into());
         let committed_tree_state = Some(info.committed_tree_state.into());
         let synced_tree_state = info.synced_tree_state.map(Into::into);

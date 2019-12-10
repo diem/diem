@@ -623,6 +623,8 @@ impl LibraDB {
         };
         let li_version = ledger_info_with_sigs.ledger_info().version();
         assert!(latest_tree_state.version >= li_version);
+        // To get the current validator set, if the latest_ledger_info is at epoch boundary, we
+        // move to the next epoch
         let mut target_epoch = ledger_info_with_sigs.ledger_info().epoch();
         if ledger_info_with_sigs
             .ledger_info()
@@ -645,7 +647,7 @@ impl LibraDB {
                 .ledger_store
                 .get_ledger_frozen_subtree_hashes(committed_version)?;
             StartupInfo {
-                ledger_info: ledger_info_with_sigs,
+                latest_ledger_info: ledger_info_with_sigs,
                 ledger_info_with_validators,
                 committed_tree_state: TreeState::new(
                     committed_version,
@@ -657,7 +659,7 @@ impl LibraDB {
         } else {
             // The version of the latest ledger info matches other data. So the storage is not in sync mode.
             StartupInfo {
-                ledger_info: ledger_info_with_sigs,
+                latest_ledger_info: ledger_info_with_sigs,
                 ledger_info_with_validators,
                 committed_tree_state: latest_tree_state,
                 synced_tree_state: None,
