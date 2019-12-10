@@ -11,13 +11,10 @@ use libra_types::{
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use std::{collections::btree_map::BTreeMap, mem::replace};
-use vm::{
-    errors::*,
-    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
-};
+use vm::errors::*;
 use vm_runtime_types::{
     loaded_data::struct_def::StructDef,
-    value::{GlobalRef, Struct, Value},
+    value::{GlobalRef, Value},
 };
 
 /// The wrapper around the StateVersionView for the block.
@@ -114,13 +111,22 @@ impl<'txn> TransactionDataCache<'txn> {
         }
     }
 
+    pub fn publish_resource(&mut self, ap: &AccessPath, root: GlobalRef) -> VMResult<()> {
+        self.data_map.insert(ap.clone(), root);
+        Ok(())
+    }
+
     // Retrieve data from the local cache or loads it from the remote cache into the local cache.
     // All operations on the global data are based on this API and they all load the data
     // into the cache.
     // TODO: this may not be the most efficient model because we always load data into the
     // cache even when that would not be strictly needed. Review once we have the whole story
     // working
-    fn load_data(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&mut GlobalRef> {
+    pub(crate) fn load_data(
+        &mut self,
+        ap: &AccessPath,
+        def: StructDef,
+    ) -> VMResult<&mut GlobalRef> {
         if !self.data_map.contains_key(ap) {
             match self.data_cache.get(ap)? {
                 Some(bytes) => {
@@ -134,94 +140,6 @@ impl<'txn> TransactionDataCache<'txn> {
             };
         }
         Ok(self.data_map.get_mut(ap).expect("data must exist"))
-    }
-
-    /// BorrowGlobal opcode cache implementation
-    pub fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<GlobalRef> {
-        let root_ref = match self.load_data(ap, def) {
-            Ok(gref) => gref,
-            Err(e) => {
-                error!("[VM] (BorrowGlobal) Error reading data for {}: {:?}", ap, e);
-                return Err(e);
-            }
-        };
-        // is_loadable() checks ref count and whether the data was deleted
-        if root_ref.is_loadable() {
-            // shallow_ref increment ref count
-            Ok(root_ref.clone())
-        } else {
-            Err(
-                vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
-                    .with_sub_status(sub_status::DRE_GLOBAL_ALREADY_BORROWED),
-            )
-        }
-    }
-
-    /// Exists opcode cache implementation
-    pub fn resource_exists(
-        &mut self,
-        ap: &AccessPath,
-        def: StructDef,
-    ) -> VMResult<(bool, AbstractMemorySize<GasCarrier>)> {
-        Ok(match self.load_data(ap, def) {
-            Ok(gref) => {
-                if gref.is_deleted() {
-                    (false, AbstractMemorySize::new(0))
-                } else {
-                    (true, gref.size())
-                }
-            }
-            Err(_) => (false, AbstractMemorySize::new(0)),
-        })
-    }
-
-    /// MoveFrom opcode cache implementation
-    pub fn move_resource_from(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<Value> {
-        let root_ref = match self.load_data(ap, def) {
-            Ok(gref) => gref,
-            Err(e) => {
-                warn!("[VM] (MoveFrom) Error reading data for {}: {:?}", ap, e);
-                return Err(e);
-            }
-        };
-        // is_loadable() checks ref count and whether the data was deleted
-        if root_ref.is_loadable() {
-            Ok(root_ref.move_from()?)
-        } else {
-            Err(
-                vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
-                    .with_sub_status(sub_status::DRE_GLOBAL_ALREADY_BORROWED),
-            )
-        }
-    }
-
-    /// MoveToSender opcode cache implementation
-    pub fn move_resource_to(
-        &mut self,
-        ap: &AccessPath,
-        def: StructDef,
-        res: Struct,
-    ) -> VMResult<()> {
-        // a resource can be written to an AccessPath if the data does not exists or
-        // it was deleted (MoveFrom)
-        let can_write = match self.load_data(ap, def) {
-            Ok(data) => data.is_deleted(),
-            Err(e) => match e.major_status {
-                StatusCode::MISSING_DATA => true,
-                _ => return Err(e),
-            },
-        };
-        if can_write {
-            let new_root = GlobalRef::move_to(ap.clone(), res);
-            self.data_map.insert(ap.clone(), new_root);
-            Ok(())
-        } else {
-            warn!("[VM] Cannot write over existing resource {}", ap);
-            Err(vm_error(
-                Location::new(),
-                StatusCode::CANNOT_WRITE_EXISTING_RESOURCE,
-            ))
-        }
     }
 
     /// Make a write set from the updated (dirty, deleted) global resources along with

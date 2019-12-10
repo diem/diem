@@ -115,9 +115,11 @@ mod counters;
 pub mod foreign_contracts;
 
 mod block_processor;
+mod chain_state;
 #[macro_use]
 pub mod gas_meter;
 mod libra_vm;
+mod move_vm;
 mod process_txn;
 mod system_txn;
 #[cfg(test)]

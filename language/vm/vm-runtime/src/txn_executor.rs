@@ -3,9 +3,9 @@
 //! Processor for a single transaction.
 
 use crate::{
+    chain_state::TransactionExecutionContext,
     counters::*,
     data_cache::{BlockDataCache, RemoteCache},
-    execution_context::TransactionExecutionContext,
     runtime::VMRuntime,
 };
 use bytecode_verifier::VerifiedModule;
@@ -195,15 +195,9 @@ impl<'txn> TransactionExecutor<'txn> {
         &mut self,
         module: &[u8],
         runtime: &VMRuntime,
-        state_view: &dyn StateView,
+        _state_view: &dyn StateView,
     ) -> VMResult<ModuleId> {
-        runtime.publish_module(
-            module,
-            state_view,
-            &mut self.interpreter_context,
-            &self.txn_data,
-            self.gas_schedule,
-        )
+        runtime.publish_module(module, &mut self.interpreter_context, &self.txn_data)
     }
 
     /// Execute a function with the sender set to `sender`, restoring the original sender afterward.

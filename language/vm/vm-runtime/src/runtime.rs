@@ -77,10 +77,8 @@ impl<'alloc> VMRuntime<'alloc> {
     pub(crate) fn publish_module(
         &self,
         module: &[u8],
-        _state_view: &dyn StateView,
         context: &mut dyn InterpreterContext,
         txn_data: &TransactionMetadata,
-        _gas_schedule: &CostTable,
     ) -> VMResult<ModuleId> {
         let compiled_module = match CompiledModule::deserialize(module) {
             Ok(module) => module,
