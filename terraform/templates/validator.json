@@ -16,7 +16,7 @@
             {"containerPort": 6191, "hostPort": 6191}
         ],
         "mountPoints": [
-            {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"}
+            {"sourceVolume": "libra-data", "containerPath": "/opt/libra/etc/libradb/db"}
         ],
         "environment": [
             %{ if cfg_upstream_node_index != "" }
