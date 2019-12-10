@@ -139,7 +139,6 @@ enum InferredType {
     // Signature tokens
     Bool,
     U64,
-    String,
     ByteArray,
     Address,
     Struct(StructHandleIndex),
@@ -155,7 +154,7 @@ impl InferredType {
         match sig_token {
             S::Bool => I::Bool,
             S::U64 => I::U64,
-            S::String => I::String,
+            S::String => panic!("strings will be removed"),
             S::ByteArray => I::ByteArray,
             S::Address => I::Address,
             S::Struct(si, _) => I::Struct(*si),
@@ -176,7 +175,6 @@ impl InferredType {
             InferredType::Anything => bail!("could not infer struct type"),
             InferredType::Bool => bail!("no struct type for Bool"),
             InferredType::U64 => bail!("no struct type for U64"),
-            InferredType::String => bail!("no struct type for String"),
             InferredType::ByteArray => bail!("no struct type for ByteArray"),
             InferredType::Address => bail!("no struct type for Address"),
             InferredType::Reference(inner) | InferredType::MutableReference(inner) => {
@@ -358,7 +356,6 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
             function_signatures,
             locals_signatures,
             identifiers,
-            user_strings,
             byte_array_pool,
             address_pool,
         },
@@ -372,7 +369,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
         function_signatures,
         locals_signatures,
         identifiers,
-        user_strings,
+        user_strings: vec![], // TODO: remove this once string pool is removed
         byte_array_pool,
         address_pool,
         main,
@@ -428,7 +425,6 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
             function_signatures,
             locals_signatures,
             identifiers,
-            user_strings,
             byte_array_pool,
             address_pool,
         },
@@ -442,7 +438,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         function_signatures,
         locals_signatures,
         identifiers,
-        user_strings,
+        user_strings: vec![], // TODO: remove this once string pool is removed
         byte_array_pool,
         address_pool,
         struct_defs,
@@ -519,7 +515,6 @@ fn compile_type(context: &mut Context, ty: &Type) -> Result<SignatureToken> {
         Type::TypeParameter(ty_var) => {
             SignatureToken::TypeParameter(context.type_formal_index(ty_var)?)
         }
-        Type::String => bail!("`string` type is currently unused"),
     })
 }
 
@@ -1028,7 +1023,6 @@ fn compile_expression(
                 function_frame.push()?;
                 vec_deque![InferredType::Bool]
             }
-            CopyableVal::String(_) => bail!("nice try! come back later {:?}", cv),
         },
         Exp::Pack(name, tys, fields) => {
             let tokens = LocalsSignature(compile_types(context, &tys)?);
