@@ -123,13 +123,21 @@ impl MockStorage {
     pub fn add_txns_with_li(
         &mut self,
         mut transactions: Vec<Transaction>,
-        li: LedgerInfoWithSignatures,
+        verified_target_li: LedgerInfoWithSignatures,
+        intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
     ) {
-        assert_eq!(self.epoch_num, li.ledger_info().epoch());
         self.add_txns(&mut transactions);
-        self.ledger_infos.insert(self.epoch_num(), li.clone());
-        if let Some(next_validator_set) = li.ledger_info().next_validator_set() {
-            self.epoch_num += 1;
+        self.ledger_infos.insert(
+            verified_target_li.ledger_info().epoch(),
+            verified_target_li.clone(),
+        );
+        if let Some(li) = intermediate_end_of_epoch_li {
+            self.epoch_num = li.ledger_info().epoch() + 1;
+            self.ledger_infos.insert(li.ledger_info().epoch(), li);
+        } else if let Some(next_validator_set) =
+            verified_target_li.ledger_info().next_validator_set()
+        {
+            self.epoch_num = verified_target_li.ledger_info().epoch() + 1;
             self.verifier = next_validator_set.into();
         }
     }
@@ -194,5 +202,15 @@ impl MockStorage {
             .next_validator_set()
             .unwrap()
             .into();
+    }
+
+    // Find LedgerInfo for a given version.
+    pub fn get_ledger_info(&self, version: u64) -> Option<LedgerInfoWithSignatures> {
+        for li in self.ledger_infos.values() {
+            if li.ledger_info().version() == version {
+                return Some(li.clone());
+            }
+        }
+        None
     }
 }

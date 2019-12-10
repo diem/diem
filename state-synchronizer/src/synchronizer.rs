@@ -15,6 +15,7 @@ use futures::{
     SinkExt,
 };
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
+use libra_config::waypoint::Waypoint;
 use libra_types::crypto_proxies::LedgerInfoWithSignatures;
 use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use network::validator_network::{StateSynchronizerEvents, StateSynchronizerSender};
@@ -38,6 +39,7 @@ impl StateSynchronizer {
         Self::bootstrap_with_executor_proxy(
             network,
             config.base.role,
+            config.base.waypoint.clone(),
             &config.state_sync,
             executor_proxy,
         )
@@ -46,6 +48,7 @@ impl StateSynchronizer {
     pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
         role: RoleType,
+        waypoint: Option<Waypoint>,
         state_sync_config: &StateSyncConfig,
         executor_proxy: E,
     ) -> Self {
@@ -64,6 +67,7 @@ impl StateSynchronizer {
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,
             role,
+            waypoint,
             state_sync_config.clone(),
             executor_proxy,
             initial_state,
@@ -80,6 +84,17 @@ impl StateSynchronizer {
         Arc::new(StateSyncClient {
             coordinator_sender: self.coordinator_sender.clone(),
         })
+    }
+
+    /// The function returns a future that is fulfilled when the state synchronizer is
+    /// caught up with the waypoint specified in the local config.
+    pub async fn wait_until_initialized(&self) -> Result<()> {
+        let mut sender = self.coordinator_sender.clone();
+        let (cb_sender, cb_receiver) = oneshot::channel();
+        sender
+            .send(CoordinatorMessage::WaitInitialize(cb_sender))
+            .await?;
+        cb_receiver.await?
     }
 }
 
