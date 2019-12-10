@@ -14,9 +14,6 @@ use crate::{
 use anyhow::Result;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashMap, path::PathBuf};
-use libra_crypto::ed25519::Ed25519PrivateKey;
-use libra_crypto::x25519::X25519StaticPrivateKey;
-use libra_crypto::traits::Uniform;
 
 /// Produces a new set of FullNodes that connect to the specified upstream peer. The resulting
 /// configs copy all relevant data from this peer including the data used for generating the
@@ -96,7 +93,7 @@ pub fn full_node_swarm(
 /// Generate a set of validator nodes. This does not include the genesis.blob to eliminate crate
 /// dependency issues.
 pub fn validator_swarm(
-    mut template: NodeConfig,
+    template: NodeConfig,
     num_nodes: usize,
     prune_seed_peers: bool,
     is_ipv4: bool,
@@ -104,12 +101,12 @@ pub fn validator_swarm(
     randomize_ports: bool,
 ) -> Result<Vec<NodeConfig>> {
     let seed = key_seed.unwrap_or([1u8; 32]);
-    let mut rng = StdRng::from_seed(seed);
+    let rng = StdRng::from_seed(seed);
     validator_swarm_inner(template, num_nodes, prune_seed_peers, is_ipv4, rng, randomize_ports, 1, false)
 }
 
 fn validator_swarm_times(
-    mut template: NodeConfig,
+    template: NodeConfig,
     num_nodes: usize,
     prune_seed_peers: bool,
     is_ipv4: bool,
@@ -117,7 +114,7 @@ fn validator_swarm_times(
     times: usize,
     network_random: bool
 ) -> Result<Vec<NodeConfig>> {
-    let mut rng = StdRng::from_seed([1u8; 32]);
+    let rng = StdRng::from_seed([1u8; 32]);
     validator_swarm_inner(template, num_nodes, prune_seed_peers, is_ipv4, rng, randomize_ports, times, network_random)
 }
 

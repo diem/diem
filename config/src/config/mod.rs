@@ -327,8 +327,12 @@ impl NodeConfig {
         self.random_internal_times(rng, 1)
     }
 
-    fn random_internal_times(&mut self, rng: &mut StdRng, times:usize) {
+    fn random_internal_times(&mut self, rng: &mut StdRng, mut times: usize) {
         let mut test = TestConfig::new_with_temp_dir();
+
+        if times == 0 {
+            times = 1;
+        }
 
         for _ in 0..times {
             if self.base.role == RoleType::Validator {
