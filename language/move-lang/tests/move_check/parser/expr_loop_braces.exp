@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/expr_loop_braces.move:4:14 ───
    │
  4 │         loop if (v < 10) break
-   │              ^^ Unrecognized Token: if
+   │              ^^ Unexpected token: 'if'
    ·
  4 │         loop if (v < 10) break
-   │              -- Expected:  "move", "copy", "break", "continue", "[Name]", "[Name<Types>]", "[Address]", "true", "false", "[U64]", "(", "{", "::"
+   │              -- Expected: 'move', 'copy', 'break', 'continue', '[Name]', '[Name<Types>]', '[Address]', 'true', 'false', '[U64]', '(', '{', '::'
    │
 

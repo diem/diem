@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/expr_if_braces.move:4:19 ───
    │
  4 │         if (cond) if (cond) ()
-   │                   ^^ Unrecognized Token: if
+   │                   ^^ Unexpected token: 'if'
    ·
  4 │         if (cond) if (cond) ()
-   │                   -- Expected:  "move", "copy", "break", "continue", "[Name]", "[Name<Types>]", "[Address]", "true", "false", "[U64]", "(", "{", "::"
+   │                   -- Expected: 'move', 'copy', 'break', 'continue', '[Name]', '[Name<Types>]', '[Address]', 'true', 'false', '[U64]', '(', '{', '::'
    │
 

@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/expansion/standalone_name_with_type_args.move:3:23 ───
    │
  3 │         let _ = n<u64>;
-   │                       ^ Unrecognized Token: ;
+   │                       ^ Unexpected token: ';'
    ·
  3 │         let _ = n<u64>;
-   │                       - Expected:  "{", "("
+   │                       - Expected: '{', '('
    │
 
