@@ -43,7 +43,9 @@ timeout $WAIT_TO bash -c 'while [ $(docker ps --quiet --filter name=$CONTAINER) 
 # Cleanup container in case it was terminated but not removed (no -f flags to avoid killing alive container)
 docker rm $CONTAINER 2>/dev/null >/dev/null || :
 
-trap "echo Terminating on signal; docker rm -f $CONTAINER >/dev/null" SIGINT SIGTERM
+trap "echo Terminating on SIGINT; docker rm -f $CONTAINER >/dev/null" SIGINT
+trap "echo Terminating on SIGTERM; docker rm -f $CONTAINER >/dev/null" SIGTERM
+trap "echo Terminating on SIGHUP; docker rm -f $CONTAINER >/dev/null" SIGHUP
 
 VARS="-e SLACK_CHANGELOG_URL"
 
