@@ -160,3 +160,27 @@ impl ValidatorConfig {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn verify_correctness() {
+        let config = ValidatorConfig::new().build().unwrap();
+        let network = config.validator_network.as_ref().unwrap();
+        let (seed_peer_id, seed_peer_ips) = network.seed_peers.seed_peers.iter().next().unwrap();
+        assert_eq!(&network.peer_id, seed_peer_id);
+        assert_eq!(network.advertised_address, seed_peer_ips[0]);
+        assert_eq!(
+            network.advertised_address,
+            DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap()
+        );
+        assert_eq!(
+            network.listen_address,
+            DEFAULT_LISTEN.parse::<Multiaddr>().unwrap()
+        );
+        assert!(config.execution.genesis.is_some());
+        assert_eq!(config.consensus.consensus_peers.peers.len(), 1);
+    }
+}

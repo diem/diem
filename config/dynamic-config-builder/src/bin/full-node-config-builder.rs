@@ -94,29 +94,24 @@ fn main() {
     fs::create_dir_all(&args.output_dir).expect("Unable to create output directory");
 
     let config_file = args.output_dir.join("node.config.toml");
-    let mut node_config = config_builder.build().expect("ConfigBuilder failed");
 
-    // Replace the new config if there is already one on disk, this appends the network in the old
-    // config with the one in the new config
     let orig_config = NodeConfig::load_config(&config_file);
-    if let Ok(orig_config) = orig_config {
-        // This is some nasty logic to trick it into thinking files are local, we need to eliminate
-        // this code in the next couple of diffs
-        orig_config
-            .save_config(&config_file)
-            .expect("Unable to save node.config");
-        let mut orig_config =
-            NodeConfig::load(&config_file).expect("Unable to load config for updating");
-        let new_net = node_config.full_node_networks.swap_remove(0);
-        for net in &orig_config.full_node_networks {
-            assert!(new_net.peer_id != net.peer_id, "Network already exists");
+    let mut node_config = if let Ok(mut orig_config) = orig_config {
+        if orig_config.base.role.is_validator() {
+            config_builder
+                .extend_validator(&mut orig_config)
+                .expect("Unable to add full node network to validator");
+        } else {
+            config_builder
+                .extend(&mut orig_config)
+                .expect("Unable to append full node network");
         }
-        orig_config.full_node_networks.push(new_net);
-        node_config = orig_config;
+        orig_config
     } else {
-        // Only update data dir if this is a new config
-        node_config.set_data_dir(args.data_dir);
-    }
+        let mut new_config = config_builder.build().expect("ConfigBuilder failed");
+        new_config.set_data_dir(args.data_dir);
+        new_config
+    };
 
     node_config
         .save(args.output_dir.join("node.config.toml"))
