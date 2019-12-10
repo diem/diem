@@ -100,6 +100,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
         self.executor.execute_and_commit_chunk(
             txn_list_with_proof,
             ledger_info_with_sigs,
+            None,
             synced_trees,
         )
     }
