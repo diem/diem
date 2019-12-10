@@ -250,16 +250,24 @@ impl<Location: Clone + Eq + Default> Disassembler<Location> {
             SignatureToken::String => "string".to_string(),
             SignatureToken::ByteArray => "bytearray".to_string(),
             SignatureToken::Address => "address".to_string(),
-            SignatureToken::Struct(struct_handle_idx, _) => self
-                .source_mapper
-                .bytecode
-                .identifier_at(
-                    self.source_mapper
-                        .bytecode
-                        .struct_handle_at(struct_handle_idx)
-                        .name,
-                )
-                .to_string(),
+            SignatureToken::Struct(struct_handle_idx, instantiation) => {
+                let instantiation = instantiation
+                    .into_iter()
+                    .map(|tok| self.disassemble_sig_tok(tok, type_param_context))
+                    .collect::<Result<Vec<_>>>()?;
+                let formatted_instantiation = Self::format_type_params(&instantiation);
+                let name = self
+                    .source_mapper
+                    .bytecode
+                    .identifier_at(
+                        self.source_mapper
+                            .bytecode
+                            .struct_handle_at(struct_handle_idx)
+                            .name,
+                    )
+                    .to_string();
+                format!("{}{}", name, formatted_instantiation)
+            }
             SignatureToken::Reference(sig_tok) => format!(
                 "&{}",
                 self.disassemble_sig_tok(*sig_tok, type_param_context)?
