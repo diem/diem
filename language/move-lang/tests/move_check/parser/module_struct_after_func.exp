@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/module_struct_after_func.move:4:5 ───
    │
  4 │     struct S {}
-   │     ^^^^^^ Unrecognized Token: struct
+   │     ^^^^^^ Unexpected token: 'struct'
    ·
  4 │     struct S {}
-   │     ------ Expected:  a name value
+   │     ------ Expected: a name value
    │
 

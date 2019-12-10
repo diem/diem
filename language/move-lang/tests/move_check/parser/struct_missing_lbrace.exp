@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/struct_missing_lbrace.move:3:5 ───
    │
  3 │     f() {}
-   │     ^ Unrecognized Token: f
+   │     ^ Unexpected token: 'f'
    ·
  3 │     f() {}
-   │     - Expected:  ","
+   │     - Expected: ','
    │
 

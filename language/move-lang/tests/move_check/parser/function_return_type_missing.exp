@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/parser/function_return_type_missing.move:3:10 ───
    │
  3 │     f(): { }
-   │          ^ Unrecognized Token: {
+   │          ^ Unexpected token: '{'
    ·
  3 │     f(): { }
-   │          - Expected:  "[Name]", "[Name<Types>]", "[Address]"
+   │          - Expected: '[Name]', '[Name<Types>]', '[Address]'
    │
 

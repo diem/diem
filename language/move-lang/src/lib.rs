@@ -163,11 +163,8 @@ fn check_errors(errors: Errors) -> Result<(), Errors> {
 //**************************************************************************************************
 
 fn parsing_error(fname: &'static str, e: ParseError) -> Error {
-    let fmt_expected = |expected: Vec<String>| -> String {
-        // FIXME: Remove extra space after "Expected:" that was inserted to match the
-        // old parser and minimize test changes during the transition.
-        format!("Expected:  {}", expected.join(", "))
-    };
+    let fmt_expected =
+        |expected: Vec<String>| -> String { format!("Expected: {}", expected.join(", ")) };
     match e {
         ParseError::InvalidToken { location: l } => {
             let span = Span::new(ByteIndex(l as u32), ByteIndex(l as u32));
@@ -183,7 +180,7 @@ fn parsing_error(fname: &'static str, e: ParseError) -> Error {
             let span = Span::new(ByteIndex(l as u32), ByteIndex(end_loc as u32));
             let loc = Loc::new(fname, span);
             vec![
-                (loc, format!("Unrecognized Token: {}", actual)),
+                (loc, format!("Unexpected token: '{}'", actual)),
                 (loc, fmt_expected(expected)),
             ]
         }

@@ -44,7 +44,7 @@ macro_rules! token_match {
             $($p => {{ $e_p }},)*
             _ => {{
                 let mut v = vec![];
-                $(v.push(format!("\"{}\"", $p.to_string()));)*
+                $(v.push(format!("'{}'", $p.to_string()));)*
                 return Err(ParseError::UnrecognizedToken {
                     location: $loc,
                     actual: $actual,
@@ -75,7 +75,7 @@ fn consume_token<'input>(tokens: &mut Lexer<'input>, tok: Tok) -> Result<(), Par
         return Err(ParseError::UnrecognizedToken {
             location: tokens.start_loc(),
             actual: tokens.content().to_string(),
-            expected: vec![format!("\"{}\"", tok.to_string())],
+            expected: vec![format!("'{}'", tok.to_string())],
         });
     }
     tokens.advance()?;
