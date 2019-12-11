@@ -385,6 +385,8 @@ pub enum StatusCode {
     LOOP_IN_INSTANTIATION_GRAPH = 1077,
     UNUSED_LOCALS_SIGNATURE = 1078,
     UNUSED_TYPE_SIGNATURE = 1079,
+    /// Reported when a struct has zero fields
+    ZERO_SIZED_STRUCT = 1080,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

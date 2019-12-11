@@ -2,7 +2,7 @@
 // One error for each loop.
 
 module M {
-    struct S<T> {}
+    struct S<T> { b: bool }
 
     f<T>() {
         Self.f<Self.S<T>>();

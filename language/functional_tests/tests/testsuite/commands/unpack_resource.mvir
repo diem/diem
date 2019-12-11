@@ -1,9 +1,9 @@
 module Test {
-    resource X { }
+    resource X { b: bool }
     resource T { i: u64, x: Self.X, b: bool }
 
     public new_x(): Self.X {
-        return X { };
+        return X { b: true };
     }
 
     public new_t(x: Self.X): Self.T {
@@ -11,7 +11,8 @@ module Test {
     }
 
     public destroy_x(x: Self.X) {
-        X { } = move(x);
+        let b: bool;
+        X { b } = move(x);
         return;
     }
 

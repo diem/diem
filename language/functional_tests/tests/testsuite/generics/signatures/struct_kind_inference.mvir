@@ -1,6 +1,6 @@
 // ensure that generic structs instantiated with resource types behave like resources
 module M1 {
-    resource MyResource {}
+    resource MyResource { b: bool }
     struct S<T> { t: T }
 
     // verifer should reject; didn't move resource;
@@ -13,7 +13,7 @@ module M1 {
 
 //! new-transaction
 module M2 {
-    resource MyResource {}
+    resource MyResource { b: bool }
     struct S<T> { t: T }
 
     // verifier should reject; drops s2 on the floor
@@ -27,7 +27,7 @@ module M2 {
 
 //! new-transaction
 module M3 {
-    resource MyResource {}
+    resource MyResource { b: bool }
     struct S<T> { t: T }
 
     // verifier should reject; copies s
@@ -40,7 +40,7 @@ module M3 {
 
 //! new-transaction
 module M4 {
-    resource MyResource {}
+    resource MyResource { b: bool }
     struct S<T> { t: T }
 
     // verifier should reject; drops s1 on the floor
@@ -54,7 +54,7 @@ module M4 {
 
 //! new-transaction
 module M5 {
-    resource MyResource {}
+    resource MyResource { b: bool }
     struct S<T> { t: T }
 
     // verifier should reject; copies s

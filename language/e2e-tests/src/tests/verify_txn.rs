@@ -504,13 +504,13 @@ fn test_dependency_fails_verification() {
     // Get a module that fails verification into the store.
     let bad_module_code = "
     module Test {
-        resource R1 { }
+        resource R1 { b: bool }
         struct S1 { r1: Self.R1 }
 
         public new_S1(): Self.S1 {
             let s: Self.S1;
             let r: Self.R1;
-            r = R1 {};
+            r = R1 { b: true };
             s = S1 { r1: move(r) };
             return move(s);
         }

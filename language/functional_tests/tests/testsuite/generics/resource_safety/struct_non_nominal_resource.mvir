@@ -1,5 +1,5 @@
 module M {
-    resource R {}
+    resource R { b: bool }
     struct Box<T> { x: T }
 
     foo(x: Self.Box<Self.R>): Self.Box<Self.R> {

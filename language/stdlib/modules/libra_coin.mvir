@@ -6,7 +6,9 @@ module LibraCoin {
     }
 
     // A singleton resource that grants access to `LibraCoin.mint`. Only the Association has one.
-    resource MintCapability {}
+    resource MintCapability {
+        _dummy: bool // dummy field because Move doesn't allow zero-sized structs
+    }
 
     resource MarketCap {
         // The sum of the values of all LibraCoin.T resources in the system
@@ -49,7 +51,7 @@ module LibraCoin {
         // Only callable by the Association address
         assert(get_txn_sender() == 0xA550C18, 1);
 
-        move_to_sender<MintCapability>(MintCapability{});
+        move_to_sender<MintCapability>(MintCapability{ _dummy: true });
         move_to_sender<MarketCap>(MarketCap { total_value: 0 });
 
         return;

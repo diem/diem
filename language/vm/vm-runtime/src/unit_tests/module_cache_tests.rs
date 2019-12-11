@@ -480,7 +480,7 @@ fn test_same_module_struct_resolution() {
     let code = "
         modules:
         module M1 {
-            struct X {}
+            struct X { b: bool }
             struct T { i: u64, x: Self.X }
         }
         script:
@@ -504,10 +504,13 @@ fn test_same_module_struct_resolution() {
         let struct_t = block_cache
             .resolve_struct_def(module_ref, StructDefinitionIndex::new(1), &mut context)
             .unwrap();
-        assert_eq!(struct_x, StructDef::new(vec![]));
+        assert_eq!(struct_x, StructDef::new(vec![Type::Bool]));
         assert_eq!(
             struct_t,
-            StructDef::new(vec![Type::U64, Type::Struct(StructDef::new(vec![]))]),
+            StructDef::new(vec![
+                Type::U64,
+                Type::Struct(StructDef::new(vec![Type::Bool]))
+            ]),
         );
     }
 }
@@ -521,7 +524,7 @@ fn test_multi_module_struct_resolution() {
         "
         modules:
         module M1 {{
-            struct X {{}}
+            struct X {{ b: bool }}
         }}
         module M2 {{
             import 0x{0}.M1;
@@ -550,7 +553,10 @@ fn test_multi_module_struct_resolution() {
             .unwrap();
         assert_eq!(
             struct_t,
-            StructDef::new(vec![Type::U64, Type::Struct(StructDef::new(vec![]))]),
+            StructDef::new(vec![
+                Type::U64,
+                Type::Struct(StructDef::new(vec![Type::Bool]))
+            ]),
         );
     }
 }
@@ -607,13 +613,13 @@ fn test_dependency_fails_verification() {
     let code = "
     modules:
     module Test {
-        resource R1 { }
+        resource R1 { b: bool }
         struct S1 { r1: Self.R1 }
 
         public new_S1(): Self.S1 {
             let s: Self.S1;
             let r: Self.R1;
-            r = R1 {};
+            r = R1 { b: true };
             s = S1 { r1: move(r) };
             return move(s);
         }

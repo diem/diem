@@ -1,5 +1,5 @@
 module M {
-    struct S<T: unrestricted> {}
+    struct S<T: unrestricted> { b: bool }
 
     foo<T>() {
         let x: Self.S<T>;
