@@ -11,7 +11,6 @@ use thiserror::Error;
 pub enum TransactionArgument {
     U64(u64),
     Address(AccountAddress),
-    String(String),
     ByteArray(ByteArray),
     Bool(bool),
 }
@@ -22,7 +21,6 @@ impl fmt::Debug for TransactionArgument {
             TransactionArgument::U64(value) => write!(f, "{{U64: {}}}", value),
             TransactionArgument::Bool(boolean) => write!(f, "{{BOOL: {}}}", boolean),
             TransactionArgument::Address(address) => write!(f, "{{ADDRESS: {:?}}}", address),
-            TransactionArgument::String(string) => write!(f, "{{STRING: {}}}", string),
             TransactionArgument::ByteArray(byte_array) => {
                 write!(f, "{{ByteArray: 0x{}}}", byte_array)
             }

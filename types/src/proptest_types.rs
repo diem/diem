@@ -529,7 +529,6 @@ impl Arbitrary for TransactionArgument {
             any::<u64>().prop_map(TransactionArgument::U64),
             any::<AccountAddress>().prop_map(TransactionArgument::Address),
             any::<ByteArray>().prop_map(TransactionArgument::ByteArray),
-            ".*".prop_map(TransactionArgument::String),
         ]
         .boxed()
     }

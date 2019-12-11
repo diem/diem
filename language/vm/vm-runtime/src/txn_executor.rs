@@ -329,8 +329,6 @@ pub fn convert_txn_args(args: Vec<TransactionArgument>) -> VMResult<Vec<Value>> 
             TransactionArgument::Address(a) => Ok(Value::address(a)),
             TransactionArgument::Bool(b) => Ok(Value::bool(b)),
             TransactionArgument::ByteArray(b) => Ok(Value::byte_array(b)),
-            TransactionArgument::String(_) => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
-                .with_message("strings will be removed soon".to_string())),
         })
         .collect()
 }
