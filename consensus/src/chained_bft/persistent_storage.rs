@@ -312,6 +312,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             .get_startup_info()
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
+        let validator_set = startup_info.get_validator_set().clone();
         let root_executed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
         let mut initial_data = RecoveryData::new(
             last_vote,
@@ -320,12 +321,7 @@ impl<T: Payload> PersistentStorage<T> for StorageWriteProxy {
             startup_info.latest_ledger_info.ledger_info(),
             root_executed_trees,
             highest_timeout_certificate,
-            startup_info
-                .ledger_info_with_validators
-                .ledger_info()
-                .next_validator_set()
-                .expect("should have ValidatorSet when start new epoch")
-                .clone(),
+            validator_set,
         )
         .expect("Cannot construct recovery data");
 

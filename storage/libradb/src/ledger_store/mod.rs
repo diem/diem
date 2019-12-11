@@ -22,7 +22,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_types::{
-    crypto_proxies::LedgerInfoWithSignatures,
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet},
     proof::{
         position::Position, AccumulatorConsistencyProof, TransactionAccumulatorProof,
         TransactionAccumulatorRangeProof,
@@ -150,6 +150,49 @@ impl LedgerStore {
     pub fn set_latest_ledger_info(&self, ledger_info_with_sigs: LedgerInfoWithSignatures) {
         self.latest_ledger_info
             .store(Arc::new(Some(ledger_info_with_sigs)));
+    }
+
+    /// Returns `None` if the DB is empty. Otherwise returns a tuple
+    /// `(LedgerInfoWithSignatures, Option<ValidatorSet>)`: either the first element carries a
+    /// validator set and the second element is `None`, or the second element carries a validator
+    /// set.
+    pub fn get_startup_info(
+        &self,
+    ) -> Result<Option<(LedgerInfoWithSignatures, Option<ValidatorSet>)>> {
+        let latest_ledger_info_with_sigs = match self.get_latest_ledger_info_option() {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        if latest_ledger_info_with_sigs
+            .ledger_info()
+            .next_validator_set()
+            .is_some()
+        {
+            return Ok(Some((latest_ledger_info_with_sigs, None)));
+        }
+
+        // If the latest LedgerInfo doesn't carry a validator set, we look for the previous
+        // LedgerInfo which should always carry a validator set.
+        let latest_epoch = latest_ledger_info_with_sigs.ledger_info().epoch();
+        ensure!(
+            latest_epoch > 0,
+            "Genesis epoch should always carry a validator set.",
+        );
+
+        let prev_ledger_info_with_sigs = self
+            .db
+            .get::<LedgerInfoSchema>(&(latest_epoch - 1))?
+            .ok_or_else(|| format_err!("At least one epoch change LedgerInfo must exist."))?;
+
+        let latest_validator_set = prev_ledger_info_with_sigs
+            .ledger_info()
+            .next_validator_set()
+            .ok_or_else(|| format_err!("All previous LedgerInfo should have a validator set."))?;
+        Ok(Some((
+            latest_ledger_info_with_sigs,
+            Some(latest_validator_set.clone()),
+        )))
     }
 
     /// Get transaction info given `version`

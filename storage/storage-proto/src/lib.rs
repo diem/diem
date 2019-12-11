@@ -27,15 +27,17 @@
 
 pub mod proto;
 
-use anyhow::{format_err, Error, Result};
+use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
-    crypto_proxies::LedgerInfoWithSignatures,
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet},
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use std::convert::{TryFrom, TryInto};
@@ -358,38 +360,120 @@ impl From<TreeState> for crate::proto::storage::TreeState {
 
 /// Helper to construct and parse [`proto::storage::StartupInfo`]
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct StartupInfo {
+    /// The latest ledger info.
     pub latest_ledger_info: LedgerInfoWithSignatures,
-    pub ledger_info_with_validators: LedgerInfoWithSignatures,
+    /// If the above ledger info doesn't carry a validator set, the latest validator set. Otherwise
+    /// `None`.
+    pub latest_validator_set: Option<ValidatorSet>,
     pub committed_tree_state: TreeState,
     pub synced_tree_state: Option<TreeState>,
+}
+
+impl StartupInfo {
+    pub fn new(
+        latest_ledger_info: LedgerInfoWithSignatures,
+        latest_validator_set: Option<ValidatorSet>,
+        committed_tree_state: TreeState,
+        synced_tree_state: Option<TreeState>,
+    ) -> Self {
+        Self {
+            latest_ledger_info,
+            latest_validator_set,
+            committed_tree_state,
+            synced_tree_state,
+        }
+    }
+
+    pub fn get_validator_set(&self) -> &ValidatorSet {
+        match self.latest_ledger_info.ledger_info().next_validator_set() {
+            Some(x) => x,
+            None => self
+                .latest_validator_set
+                .as_ref()
+                .expect("Validator set must exist."),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+fn arb_startup_info() -> impl Strategy<Value = StartupInfo> {
+    any::<LedgerInfoWithSignatures>()
+        .prop_flat_map(|latest_ledger_info| {
+            let latest_validator_set_strategy = if latest_ledger_info
+                .ledger_info()
+                .next_validator_set()
+                .is_some()
+            {
+                Just(None).boxed()
+            } else {
+                any::<ValidatorSet>().prop_map(Some).boxed()
+            };
+
+            (
+                Just(latest_ledger_info),
+                latest_validator_set_strategy,
+                any::<TreeState>(),
+                any::<Option<TreeState>>(),
+            )
+        })
+        .prop_map(
+            |(
+                latest_ledger_info,
+                latest_validator_set,
+                committed_tree_state,
+                synced_tree_state,
+            )| {
+                StartupInfo::new(
+                    latest_ledger_info,
+                    latest_validator_set,
+                    committed_tree_state,
+                    synced_tree_state,
+                )
+            },
+        )
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for StartupInfo {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        arb_startup_info().boxed()
+    }
 }
 
 impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
     type Error = Error;
 
     fn try_from(proto: crate::proto::storage::StartupInfo) -> Result<Self> {
-        let ledger_info = proto
-            .ledger_info
-            .ok_or_else(|| format_err!("Missing ledger_info"))?
+        let latest_ledger_info: LedgerInfoWithSignatures = proto
+            .latest_ledger_info
+            .ok_or_else(|| format_err!("Missing latest_ledger_info"))?
             .try_into()?;
-        let ledger_info_with_validators = proto
-            .ledger_info_with_validators
-            .ok_or_else(|| format_err!("Missing ledger_info"))?
-            .try_into()?;
+        let latest_validator_set = proto
+            .latest_validator_set
+            .map(TryInto::try_into)
+            .transpose()?;
         let committed_tree_state = proto
             .committed_tree_state
             .ok_or_else(|| format_err!("Missing committed_tree_state"))?
             .try_into()?;
-        let synced_tree_state = proto
-            .synced_tree_state
-            .map(TreeState::try_from)
-            .transpose()?;
+        let synced_tree_state = proto.synced_tree_state.map(TryInto::try_into).transpose()?;
+
+        ensure!(
+            latest_ledger_info
+                .ledger_info()
+                .next_validator_set()
+                .is_some()
+                != latest_validator_set.is_some(),
+            "Only one validator set should exist.",
+        );
 
         Ok(Self {
-            latest_ledger_info: ledger_info,
-            ledger_info_with_validators,
+            latest_ledger_info,
+            latest_validator_set,
             committed_tree_state,
             synced_tree_state,
         })
@@ -398,14 +482,14 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
 
 impl From<StartupInfo> for crate::proto::storage::StartupInfo {
     fn from(info: StartupInfo) -> Self {
-        let ledger_info = Some(info.latest_ledger_info.into());
-        let ledger_info_with_validators = Some(info.ledger_info_with_validators.into());
+        let latest_ledger_info = Some(info.latest_ledger_info.into());
+        let latest_validator_set = info.latest_validator_set.map(Into::into);
         let committed_tree_state = Some(info.committed_tree_state.into());
         let synced_tree_state = info.synced_tree_state.map(Into::into);
 
         Self {
-            ledger_info,
-            ledger_info_with_validators,
+            latest_ledger_info,
+            latest_validator_set,
             committed_tree_state,
             synced_tree_state,
         }

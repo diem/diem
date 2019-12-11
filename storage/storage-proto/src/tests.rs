@@ -3,7 +3,6 @@
 
 use super::*;
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
-use proptest::prelude::*;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]

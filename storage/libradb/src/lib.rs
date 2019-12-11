@@ -42,7 +42,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{bail, ensure, format_err, Result};
+use anyhow::{bail, ensure, Result};
 use itertools::{izip, zip_eq};
 use jellyfish_merkle::iterator::JellyfishMerkleIterator;
 use lazy_static::lazy_static;
@@ -610,10 +610,11 @@ impl LibraDB {
     /// This is used by the libra core (executor, state synchronizer) internally.
     pub fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
         // Get the latest ledger info. Return None if not bootstrapped.
-        let ledger_info_with_sigs = match self.ledger_store.get_latest_ledger_info_option() {
-            Some(x) => x,
-            None => return Ok(None),
-        };
+        let (latest_ledger_info, latest_validator_set) =
+            match self.ledger_store.get_startup_info()? {
+                Some(x) => x,
+                None => return Ok(None),
+            };
 
         let latest_tree_state = {
             let (latest_version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
@@ -627,23 +628,9 @@ impl LibraDB {
                 account_state_root_hash,
             )
         };
-        let li_version = ledger_info_with_sigs.ledger_info().version();
-        assert!(latest_tree_state.version >= li_version);
-        // To get the current validator set, if the latest_ledger_info is at epoch boundary, we
-        // move to the next epoch
-        let mut target_epoch = ledger_info_with_sigs.ledger_info().epoch();
-        if ledger_info_with_sigs
-            .ledger_info()
-            .next_validator_set()
-            .is_some()
-        {
-            target_epoch += 1;
-        }
-        let ledger_info_with_validators = self
-            .get_epoch_change_ledger_infos(target_epoch - 1, target_epoch)?
-            .pop()
-            .ok_or_else(|| format_err!("ledger info with validators not found"))?;
 
+        let li_version = latest_ledger_info.ledger_info().version();
+        assert!(latest_tree_state.version >= li_version);
         let startup_info = if latest_tree_state.version != li_version {
             // We synced to some version ahead of the version of the latest ledger info. Thus, we are still in sync mode.
             let committed_version = li_version;
@@ -652,24 +639,24 @@ impl LibraDB {
             let committed_ledger_frozen_subtree_hashes = self
                 .ledger_store
                 .get_ledger_frozen_subtree_hashes(committed_version)?;
-            StartupInfo {
-                latest_ledger_info: ledger_info_with_sigs,
-                ledger_info_with_validators,
-                committed_tree_state: TreeState::new(
+            StartupInfo::new(
+                latest_ledger_info,
+                latest_validator_set,
+                TreeState::new(
                     committed_version,
                     committed_ledger_frozen_subtree_hashes,
                     committed_account_state_root_hash,
                 ),
-                synced_tree_state: Some(latest_tree_state),
-            }
+                Some(latest_tree_state),
+            )
         } else {
             // The version of the latest ledger info matches other data. So the storage is not in sync mode.
-            StartupInfo {
-                latest_ledger_info: ledger_info_with_sigs,
-                ledger_info_with_validators,
-                committed_tree_state: latest_tree_state,
-                synced_tree_state: None,
-            }
+            StartupInfo::new(
+                latest_ledger_info,
+                latest_validator_set,
+                latest_tree_state,
+                None,
+            )
         };
 
         Ok(Some(startup_info))
