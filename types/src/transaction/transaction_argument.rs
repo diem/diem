@@ -1,11 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//use crate::errors::*;
+#![forbid(unsafe_code)]
+
 use crate::{account_address::AccountAddress, byte_array::ByteArray};
-use failure::prelude::*;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
+use thiserror::Error;
 
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionArgument {
@@ -30,9 +32,9 @@ impl fmt::Debug for TransactionArgument {
     }
 }
 
-#[derive(Clone, Debug, Fail)]
+#[derive(Clone, Debug, Error)]
 pub enum ErrorKind {
-    #[fail(display = "ParseError: {}", _0)]
+    #[error("ParseError: {0}")]
     ParseError(String),
 }
 

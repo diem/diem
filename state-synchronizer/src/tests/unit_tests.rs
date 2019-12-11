@@ -55,9 +55,25 @@ fn test_remove_requests() {
 
     peer_manager.remove_requests(5);
 
-    assert!(!peer_manager.has_requested(1, peers[0]));
-    assert!(!peer_manager.has_requested(3, peers[1]));
-    assert!(!peer_manager.has_requested(5, peers[0]));
-    assert!(peer_manager.has_requested(10, peers[0]));
-    assert!(peer_manager.has_requested(12, peers[1]));
+    assert!(peer_manager.get_last_request_time(1).is_none());
+    assert!(peer_manager.get_last_request_time(3).is_none());
+    assert!(peer_manager.get_last_request_time(5).is_none());
+    assert!(peer_manager.get_last_request_time(10).is_some());
+    assert!(peer_manager.get_last_request_time(12).is_some());
+}
+
+#[test]
+fn test_peer_manager_request_metadata() {
+    let peers = vec![PeerId::random(), PeerId::random()];
+    let mut peer_manager = PeerManager::new(peers.clone());
+    assert!(peer_manager.get_first_request_time(1).is_none());
+    peer_manager.process_request(1, peers[0]);
+    peer_manager.process_timeout(1, true);
+    peer_manager.process_request(1, peers[1]);
+    assert!(peer_manager.peer_score(&peers[0]).unwrap() < 99.0);
+    assert!(peer_manager.peer_score(&peers[1]).unwrap() > 99.0);
+    assert!(
+        peer_manager.get_first_request_time(1).unwrap()
+            <= peer_manager.get_last_request_time(1).unwrap()
+    );
 }

@@ -10,17 +10,18 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 hex = { version = "0.3.2", default-features = false }
 parity-multiaddr = { version = "0.5.0", default-features = false }
 rand = "0.6.5"
+serde = { version = "1.0.99", default-features = false }
 structopt = "0.3.2"
 
 libra-config = { path = "..", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
 generate-keypair = { path = "../generate-keypair", version = "0.1.0" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
-libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 vm-genesis = { path = "../../language/vm/vm-genesis", version = "0.1.0" }
 

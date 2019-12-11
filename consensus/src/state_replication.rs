@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::Result;
 use consensus_types::block::Block;
+use consensus_types::executed_block::ExecutedBlock;
 use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
-use failure::Result;
 use futures::Future;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof};
 use std::{pin::Pin, sync::Arc};
@@ -52,7 +53,7 @@ pub trait StateComputer: Send + Sync {
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     fn commit(
         &self,
-        blocks: Vec<(Self::Payload, Arc<ProcessedVMOutput>)>,
+        blocks: Vec<&ExecutedBlock<Self::Payload>>,
         finality_proof: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
@@ -69,16 +70,12 @@ pub trait StateComputer: Send + Sync {
 
     fn sync_to_or_bail(&self, commit: LedgerInfoWithSignatures) {
         let status = futures::executor::block_on(self.sync_to(commit));
-        match status {
-            Ok(()) => (),
-            // TODO: this is going to change after https://github.com/libra/libra/issues/1590
-            Err(e) => panic!(
-                "state synchronizer failure: {:?}, this validator will be killed as it can not \
-                 recover from this error.  After the validator is restarted, synchronization will \
-                 be retried.",
-                e
-            ),
-        }
+        // TODO: this is going to change after https://github.com/libra/libra/issues/1590
+        status.expect(
+            "state synchronizer failure, this validator will be killed as it can not \
+             recover from this error.  After the validator is restarted, synchronization will \
+             be retried. failure:",
+        )
     }
 
     /// Generate the epoch change proof from start_epoch to the latest epoch.

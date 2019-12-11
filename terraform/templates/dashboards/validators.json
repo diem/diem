@@ -237,7 +237,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_gauge{op='current_round',role='validator'}[1m])",
+          "expr": "irate(libra_consensus_current_round{role='validator'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -326,7 +326,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_gauge{op='last_committed_version',role='validator'}[1m])",
+          "expr": "irate(libra_consensus_last_committed_version{role='validator'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -504,7 +504,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_gauge{op='last_committed_round',role='validator'}[1m])",
+          "expr": "irate(libra_consensus_last_committed_round{role='validator'}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -593,7 +593,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus{op=\"failed_txns_count\"}[1m]) / irate(consensus{op=\"committed_txns_count\"}[1m])",
+          "expr": "irate(libra_consensus_committed_txns_count{state=\"failed\"}[1m]) / irate(libra_consensus_committed_txns_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",

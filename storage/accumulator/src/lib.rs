@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This module provides algorithms for accessing and updating a Merkle Accumulator structure
 //! persisted in a key-value store. Note that this doesn't write to the storage directly, rather,
 //! it reads from it via the `HashReader` trait and yields writes via an in memory `HashMap`.
@@ -101,13 +103,14 @@
 //! |  ...  |   ...     |
 //! ```
 
-use failure::prelude::*;
+use anyhow::{ensure, format_err, Result};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
 use libra_types::proof::{
-    definition::LeafCount,
+    definition::{LeafCount, MAX_ACCUMULATOR_PROOF_DEPTH},
     position::{FrozenSubTreeIterator, FrozenSubtreeSiblingIterator, Position},
     AccumulatorConsistencyProof, AccumulatorProof, AccumulatorRangeProof, MerkleTreeInternalNode,
 };
+use mirai_annotations::*;
 use std::marker::PhantomData;
 
 /// Defines the interface between `MerkleAccumulator` and underlying storage.
@@ -296,6 +299,9 @@ where
     ///     and the full route from root of that subtree to the accumulator root turns frozen
     ///         height - (log2(num_new_leaves) + 1) < height - 1 = root_level
     fn max_to_freeze(num_new_leaves: usize, root_level: u32) -> usize {
+        precondition!(root_level as usize <= MAX_ACCUMULATOR_PROOF_DEPTH);
+        precondition!(num_new_leaves < (usize::max_value() / 2));
+        precondition!(num_new_leaves * 2 <= usize::max_value() - root_level as usize);
         num_new_leaves * 2 + root_level as usize
     }
 

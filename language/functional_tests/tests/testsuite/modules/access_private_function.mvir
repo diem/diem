@@ -14,5 +14,4 @@ main() {
     return;
 }
 
-// check: VerificationFailure
 // check: VISIBILITY_MISMATCH

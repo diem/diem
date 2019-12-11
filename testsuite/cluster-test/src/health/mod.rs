@@ -1,17 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-mod aws_log_tail;
+#![forbid(unsafe_code)]
+
 mod commit_check;
 mod debug_interface_log_tail;
 mod liveness_check;
 mod log_tail;
 
 use crate::{cluster::Cluster, util::unix_timestamp_now};
-pub use aws_log_tail::AwsLogThread;
+use anyhow::{bail, Result};
 pub use commit_check::CommitHistoryHealthCheck;
 pub use debug_interface_log_tail::DebugPortLogThread;
-use failure::prelude::*;
 use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
 pub use log_tail::LogTail;
@@ -103,15 +103,13 @@ impl HealthCheckRunner {
     /// which were not part of the experiment, then it returns an Err with a string
     /// of all the unexpected failures.
     /// Otherwise, it returns a list of ALL the failed validators
-    /// It also takes a bool parameter: only_print_on_failure. If this is set
-    /// to true, messages are printed only when there are failures.
-    /// If this is set to false, messages are always printed
+    /// It also takes print_failures parameter that controls level of verbosity of health check
     pub fn run(
         &mut self,
         events: &[ValidatorEvent],
         affected_validators_set: &HashSet<String>,
-        only_print_on_failure: bool,
-    ) -> failure::Result<Vec<String>> {
+        print_failures: PrintFailures,
+    ) -> Result<Vec<String>> {
         let mut node_health = HashMap::new();
         for instance in self.cluster.instances() {
             node_health.insert(instance.short_hash().clone(), true);
@@ -162,12 +160,13 @@ impl HealthCheckRunner {
 
         let affected_validators_set_refs = HashSet::from_iter(affected_validators_set.iter());
         let failed_set: HashSet<&String> = HashSet::from_iter(failed.iter());
-        let unexpected_failures = !failed_set.is_subset(&affected_validators_set_refs);
-        if !only_print_on_failure || unexpected_failures {
+        let has_unexpected_failures = !failed_set.is_subset(&affected_validators_set_refs);
+
+        if print_failures.should_print(has_unexpected_failures) {
             messages.iter().for_each(|m| println!("{}", m));
         }
 
-        if unexpected_failures {
+        if has_unexpected_failures {
             let unexpected_failures = failed_set
                 .difference(&affected_validators_set_refs)
                 .join(",");
@@ -185,6 +184,22 @@ impl HealthCheckRunner {
     pub fn clear(&mut self) {
         for hc in self.health_checks.iter_mut() {
             hc.clear();
+        }
+    }
+}
+
+pub enum PrintFailures {
+    None,
+    UnexpectedOnly,
+    All,
+}
+
+impl PrintFailures {
+    fn should_print(&self, has_unexpected_failures: bool) -> bool {
+        match self {
+            PrintFailures::None => false,
+            PrintFailures::UnexpectedOnly => has_unexpected_failures,
+            PrintFailures::All => true,
         }
     }
 }

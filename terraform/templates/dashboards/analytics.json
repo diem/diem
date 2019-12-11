@@ -83,7 +83,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "max(consensus{op='committed_txns_count'})",
+          "expr": "max(libra_consensus_committed_txns_count)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -232,7 +232,7 @@
       "pluginVersion": "6.2.2",
       "targets": [
         {
-          "expr": "max(rate(consensus{op='committed_txns_count'}[5m]))",
+          "expr": "max(rate(libra_consensus_committed_txns_count[5m]))",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -345,7 +345,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(rate(consensus{op='committed_txns_count'}[5m]))",
+          "expr": "max(rate(libra_consensus_committed_txns_count[5m]))",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -520,7 +520,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "consensus{op='committed_txns_count'}",
+          "expr": "libra_consensus_committed_txns_count",
           "format": "time_series",
           "instant": false,
           "interval": "",

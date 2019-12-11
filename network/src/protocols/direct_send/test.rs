@@ -9,16 +9,14 @@ use crate::{
     protocols::direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
     ProtocolId,
 };
-use bytes::Bytes;
+use bytes05::Bytes;
 use channel;
 use futures::{sink::SinkExt, stream::StreamExt};
 use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::compat::IoCompat;
-use tokio::{
-    codec::{Framed, LengthDelimitedCodec},
-    runtime::{Runtime, TaskExecutor},
-};
+use tokio::runtime::{Handle, Runtime};
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 const PROTOCOL_1: &[u8] = b"/direct_send/1.0.0";
 const PROTOCOL_2: &[u8] = b"/direct_send/2.0.0";
@@ -27,7 +25,7 @@ const MESSAGE_2: &[u8] = b"Direct Send 2";
 const MESSAGE_3: &[u8] = b"Direct Send 3";
 
 fn start_direct_send_actor(
-    executor: TaskExecutor,
+    executor: Handle,
 ) -> (
     channel::Sender<DirectSendRequest>,
     channel::Receiver<DirectSendNotification>,
@@ -90,10 +88,10 @@ async fn expect_open_substream_request<TSubstream>(
 
 #[test]
 fn test_inbound_substream() {
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
 
     let (_ds_requests_tx, mut ds_notifs_rx, mut peer_mgr_notifs_tx, _peer_mgr_reqs_rx) =
-        start_direct_send_actor(rt.executor());
+        start_direct_send_actor(rt.handle().clone());
 
     let peer_id = PeerId::random();
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
@@ -138,10 +136,10 @@ fn test_inbound_substream() {
 
 #[test]
 fn test_inbound_substream_closed() {
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
 
     let (_ds_requests_tx, mut ds_notifs_rx, mut peer_mgr_notifs_tx, _peer_mgr_reqs_rx) =
-        start_direct_send_actor(rt.executor());
+        start_direct_send_actor(rt.handle().clone());
 
     let peer_id = PeerId::random();
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
@@ -181,10 +179,10 @@ fn test_inbound_substream_closed() {
 
 #[test]
 fn test_outbound_single_protocol() {
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_mgr_notifs_tx, mut peer_mgr_reqs_rx) =
-        start_direct_send_actor(rt.executor());
+        start_direct_send_actor(rt.handle().clone());
 
     let peer_id = PeerId::random();
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
@@ -241,10 +239,10 @@ fn test_outbound_single_protocol() {
 
 #[test]
 fn test_outbound_multiple_protocols() {
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_mgr_notifs_tx, mut peer_mgr_reqs_rx) =
-        start_direct_send_actor(rt.executor());
+        start_direct_send_actor(rt.handle().clone());
 
     let peer_id = PeerId::random();
     let (dialer_substream_1, listener_substream_1) = MemorySocket::new_pair();
@@ -314,10 +312,10 @@ fn test_outbound_multiple_protocols() {
 #[test]
 fn test_outbound_not_connected() {
     ::libra_logger::try_init_for_testing();
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_mgr_notifs_tx, mut peer_mgr_reqs_rx) =
-        start_direct_send_actor(rt.executor());
+        start_direct_send_actor(rt.handle().clone());
 
     let peer_id = PeerId::random();
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
@@ -386,10 +384,10 @@ fn test_outbound_not_connected() {
 #[test]
 fn test_outbound_connection_closed() {
     ::libra_logger::try_init_for_testing();
-    let rt = Runtime::new().unwrap();
+    let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_mgr_notifs_tx, mut peer_mgr_reqs_rx) =
-        start_direct_send_actor(rt.executor());
+        start_direct_send_actor(rt.handle().clone());
 
     let peer_id = PeerId::random();
     let (dialer_substream_1, listener_substream_1) = MemorySocket::new_pair();

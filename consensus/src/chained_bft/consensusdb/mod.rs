@@ -10,8 +10,8 @@ use crate::chained_bft::consensusdb::schema::{
     quorum_certificate::QCSchema,
     single_entry::{SingleEntryKey, SingleEntrySchema},
 };
+use anyhow::{ensure, Result};
 use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert};
-use failure::prelude::*;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
@@ -21,7 +21,6 @@ use schemadb::{
 use std::{collections::HashMap, iter::Iterator, path::Path, time::Instant};
 
 type HighestTimeoutCertificate = Vec<u8>;
-type ConsensusStateData = Vec<u8>;
 type VoteMsgData = Vec<u8>;
 
 pub struct ConsensusDB {
@@ -45,9 +44,8 @@ impl ConsensusDB {
 
         let path = db_root_path.as_ref().join("consensusdb");
         let instant = Instant::now();
-        let db = DB::open(path.clone(), cf_opts_map).unwrap_or_else(|e| {
-            panic!("ConsensusDB open failed due to {:?}, unable to continue", e)
-        });
+        let db = DB::open(path.clone(), cf_opts_map)
+            .expect("ConsensusDB open failed; unable to continue");
 
         info!(
             "Opened ConsensusDB at {:?} in {} ms",
@@ -61,13 +59,11 @@ impl ConsensusDB {
     pub fn get_data<T: Payload>(
         &self,
     ) -> Result<(
-        Option<ConsensusStateData>,
         Option<VoteMsgData>,
         Option<HighestTimeoutCertificate>,
         Vec<Block<T>>,
         Vec<QuorumCert>,
     )> {
-        let consensus_state = self.get_state()?;
         let last_vote_msg_data = self.get_last_vote_msg_data()?;
         let highest_timeout_certificate = self.get_highest_timeout_certificate()?;
         let consensus_blocks = self
@@ -81,7 +77,6 @@ impl ConsensusDB {
             .map(|(_block_hash, qc)| qc)
             .collect::<Vec<_>>();
         Ok((
-            consensus_state,
             last_vote_msg_data,
             highest_timeout_certificate,
             consensus_blocks,
@@ -101,9 +96,8 @@ impl ConsensusDB {
         self.commit(batch)
     }
 
-    pub fn save_state(&self, state: ConsensusStateData, last_vote: VoteMsgData) -> Result<()> {
+    pub fn save_state(&self, last_vote: VoteMsgData) -> Result<()> {
         let mut batch = SchemaBatch::new();
-        batch.put::<SingleEntrySchema>(&SingleEntryKey::ConsensusState, &state)?;
         batch.put::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg, &last_vote)?;
         self.commit(batch)
     }
@@ -162,16 +156,23 @@ impl ConsensusDB {
             .get::<SingleEntrySchema>(&SingleEntryKey::HighestTimeoutCertificate)
     }
 
-    /// Get latest consensus state (we only store the latest state).
-    fn get_state(&self) -> Result<Option<Vec<u8>>> {
-        self.db
-            .get::<SingleEntrySchema>(&SingleEntryKey::ConsensusState)
+    /// Delete the timeout certificates
+    pub fn delete_highest_timeout_certificate(&self) -> Result<()> {
+        let mut batch = SchemaBatch::new();
+        batch.delete::<SingleEntrySchema>(&SingleEntryKey::HighestTimeoutCertificate)?;
+        self.commit(batch)
     }
 
     /// Get latest vote message data (if available)
     fn get_last_vote_msg_data(&self) -> Result<Option<Vec<u8>>> {
         self.db
             .get::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg)
+    }
+
+    pub fn delete_last_vote_msg(&self) -> Result<()> {
+        let mut batch = SchemaBatch::new();
+        batch.delete::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg)?;
+        self.commit(batch)
     }
 
     /// Get all consensus blocks.

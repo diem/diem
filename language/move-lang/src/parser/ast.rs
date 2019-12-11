@@ -56,14 +56,14 @@ pub struct Program {
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum FileDefinition {
-    Modules(AddressDirective, Vec<ModuleDefinition>),
+    Modules(Vec<ModuleOrAddress>),
     Main(Main),
 }
 
 #[derive(Debug)]
-pub enum AddressDirective {
-    Sender,
-    Specified(Loc, Address),
+pub enum ModuleOrAddress {
+    Module(ModuleDefinition),
+    Address(Loc, Address),
 }
 
 #[derive(Debug)]
@@ -161,15 +161,15 @@ pub struct Function {
 //**************************************************************************************************
 
 #[derive(Debug, PartialEq)]
-pub enum TypeName_ {
+pub enum ModuleAccess_ {
     // N
     Name(Name),
     // M.S
-    ModuleType(ModuleName, StructName),
+    ModuleAccess(ModuleName, Name),
     // OxADDR.M.S
-    QualifiedModuleType(ModuleIdent, StructName),
+    QualifiedModuleAccess(ModuleIdent, Name),
 }
-pub type TypeName = Spanned<TypeName_>;
+pub type ModuleAccess = Spanned<ModuleAccess_>;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum Kind_ {
@@ -188,7 +188,7 @@ pub type Kind = Spanned<Kind_>;
 pub enum SingleType_ {
     // N
     // N<t1, ... , tn>
-    Apply(TypeName, Vec<SingleType>),
+    Apply(ModuleAccess, Vec<SingleType>),
     // &t
     // &mut t
     Ref(bool, Box<SingleType>),
@@ -220,7 +220,7 @@ pub enum Bind_ {
     Var(Var),
     // T { f1: b1, ... fn: bn }
     // T<t1, ... , tn> { f1: b1, ... fn: bn }
-    Unpack(TypeName, Option<Vec<SingleType>>, Vec<(Field, Bind)>),
+    Unpack(ModuleAccess, Option<Vec<SingleType>>, Vec<(Field, Bind)>),
 }
 pub type Bind = Spanned<Bind_>;
 // b1, ..., bn
@@ -299,20 +299,14 @@ pub enum Exp_ {
     Copy(Var),
     // n
     Name(Name),
-    // n<t1, ..., tn>
-    NameTypeArgs(Name, Vec<SingleType>),
-    // M
-    MName(Name),
-    // M<t1, ..., tn>
-    MNameTypeArgs(Name, Vec<SingleType>),
-    // .e e
-    GlobalApply(Box<Exp>, Box<Exp>),
+    // .n(e)
+    GlobalCall(Name, Option<Vec<SingleType>>, Spanned<Vec<Exp>>),
 
-    // e earg
-    Apply(Box<Exp>, Box<Exp>),
+    // f(earg,*)
+    Call(ModuleAccess, Option<Vec<SingleType>>, Spanned<Vec<Exp>>),
 
-    // f1: e1, ... , f2: e2
-    Fields(Vec<(Field, Exp)>),
+    // tn {f1: e1, ... , f_n: e_n }
+    Pack(ModuleAccess, Option<Vec<SingleType>>, Vec<(Field, Exp)>),
 
     // if (eb) et else ef
     IfElse(Box<Exp>, Box<Exp>, Option<Box<Exp>>),
@@ -351,11 +345,7 @@ pub enum Exp_ {
     // &mut e
     Borrow(bool, Box<Exp>),
     // e.f
-    // e.f<t1, ..., tn>
-    Dot(Box<Exp>, Name, Option<Vec<SingleType>>),
-    // e.M
-    // e.M<t1, ..., tn>
-    MDot(Box<Exp>, Name, Option<Vec<SingleType>>),
+    Dot(Box<Exp>, Name),
 
     // (e: t)
     Annotate(Box<Exp>, Type),
@@ -449,7 +439,7 @@ impl Type_ {
 
 impl fmt::Display for ModuleIdent {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}.{}", self.0.value.address, &self.0.value.name)
+        write!(f, "{}::{}", self.0.value.address, &self.0.value.name)
     }
 }
 

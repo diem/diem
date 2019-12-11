@@ -23,7 +23,7 @@ use libra_prost_ext::MessageExt;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
 use network::{proto::Proposal, validator_network::ConsensusNetworkSender};
 use prost::Message as _;
-use safety_rules::SafetyRules;
+use safety_rules::{InMemoryStorage, SafetyRules};
 use std::convert::TryFrom;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -85,17 +85,15 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     let signer = FUZZING_SIGNER.clone();
 
     // TODO: remove
-    let validator = Arc::new(ValidatorVerifier::new_single(
-        signer.author(),
-        signer.public_key(),
-    ));
+    let validator = ValidatorVerifier::new_single(signer.author(), signer.public_key());
+    let validator_set = (&validator).into();
 
     // TODO: EmptyStorage
-    let (storage, initial_data) = MockStorage::<TestPayload>::start_for_testing();
-    let consensus_state = initial_data.state();
+    let (initial_data, storage) = MockStorage::<TestPayload>::start_for_testing(validator_set);
 
     // TODO: remove
-    let safety_rules = SafetyRules::new(consensus_state, Arc::new(signer.clone()));
+    let safety_rules =
+        SafetyRules::new(InMemoryStorage::default_storage(), Arc::new(signer.clone()));
 
     // TODO: mock channels
     let (network_reqs_tx, _network_reqs_rx) = channel::new_test(8);
@@ -105,8 +103,10 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         signer.author(),
         network_sender,
         self_sender,
-        Arc::clone(&validator),
+        initial_data.validators(),
     );
+
+    let validators = initial_data.validators();
 
     // TODO: mock
     let block_store = build_empty_store(storage.clone(), initial_data);
@@ -141,7 +141,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         network,
         storage.clone(),
         time_service,
-        validator,
+        validators,
     )
 }
 

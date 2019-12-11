@@ -1,16 +1,16 @@
 address 0x0:
 
 module LibraCoin {
-    use 0x0.Transaction;
+    use 0x0::Transaction;
 
     // A resource representing the Libra coin
     // The value of the coin. May be zero
     resource struct T { value: u64 }
 
-    // A singleton resource that grants access to `LibraCoin.mint`. Only the Association has one.
+    // A singleton resource that grants access to `LibraCoin::mint`. Only the Association has one.
     resource struct MintCapability {}
 
-    // The sum of the values of all LibraCoin.T resources in the system
+    // The sum of the values of all LibraCoin::T resources in the system
     resource struct MarketCap { total_value: u64 }
 
     // Return a reference to the MintCapability published under the sender's account. Fails if the
@@ -18,10 +18,10 @@ module LibraCoin {
     // Since only the Association account has a mint capability, this will only succeed if it is
     // invoked by a transaction sent by that account.
     public mint_with_default_capability(amount: u64): T acquires MintCapability, MarketCap {
-        mint(amount, borrow_global<MintCapability>(Transaction.sender()))
+        mint(amount, borrow_global<MintCapability>(Transaction::sender()))
     }
 
-    // Mint a new LibraCoin.T worth `value`. The caller must have a reference to a MintCapability.
+    // Mint a new LibraCoin::T worth `value`. The caller must have a reference to a MintCapability.
     // Only the Association account can acquire such a reference, and it can do so only via
     // `borrow_sender_mint_capability`
     public mint(value: u64, capability: &MintCapability): T acquires MarketCap {
@@ -30,7 +30,7 @@ module LibraCoin {
         // minting. This will not be a problem in the production Libra system because coins will
         // be backed with real-world assets, and thus minting will be correspondingly rarer.
         // * 1000000 because the unit is microlibra
-        Transaction.assert(value <= 1000000000 * 1000000, 11);
+        Transaction::assert(value <= 1000000000 * 1000000, 11);
 
         // update market cap resource to reflect minting
         let market_cap = borrow_global_mut<MarketCap>(0xA550C18);
@@ -43,7 +43,7 @@ module LibraCoin {
     // Currently, it is invoked in the genesis transaction
     public initialize() {
         // Only callable by the Association address
-        Transaction.assert(Transaction.sender() == 0xA550C18, 1);
+        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
 
         move_to_sender(MintCapability{});
         move_to_sender(MarketCap { total_value: 0 });
@@ -54,7 +54,7 @@ module LibraCoin {
         borrow_global<MarketCap>(0xA550C18).total_value
     }
 
-    // Create a new LibraCoin.T with a value of 0
+    // Create a new LibraCoin::T with a value of 0
     public zero(): T {
         T { value: 0 }
     }
@@ -65,9 +65,9 @@ module LibraCoin {
     }
 
     // Splits the given coin into two and returns them both
-    // It leverages `Self.withdraw` for any verifications of the values
+    // It leverages `Self::withdraw` for any verifications of the values
     public split(coin: T, amount: u64): (T, T) {
-        let other = coin.withdraw(amount);
+        let other = withdraw(&mut coin, amount);
         (coin, other)
     }
 
@@ -77,7 +77,7 @@ module LibraCoin {
     // Fails if the coins value is less than `amount`
     public withdraw(coin: &mut T, amount: u64): T {
         // Check that `amount` is less than the coin's value
-        Transaction.assert(coin.value >= amount, 10);
+        Transaction::assert(coin.value >= amount, 10);
         // Split the coin
         coin.value = coin.value - amount;
         T { value: amount }
@@ -85,7 +85,7 @@ module LibraCoin {
 
     // Merges two coins and returns a new coin whose value is equal to the sum of the two inputs
     public join(coin1: T, coin2: T): T  {
-        coin1.deposit(coin2);
+        deposit(&mut coin1, coin2);
         coin1
     }
 
@@ -99,11 +99,11 @@ module LibraCoin {
 
     // Destroy a coin
     // Fails if the value is non-zero
-    // The amount of LibraCoin.T in the system is a tightly controlled property,
-    // so you cannot "burn" any non-zero amount of LibraCoin.T
-    public destroy_zero(coin: Self.T) {
+    // The amount of LibraCoin::T in the system is a tightly controlled property,
+    // so you cannot "burn" any non-zero amount of LibraCoin::T
+    public destroy_zero(coin: Self::T) {
         let T { value } = coin;
-        Transaction.assert(value == 0, 11)
+        Transaction::assert(value == 0, 11)
     }
 
 }

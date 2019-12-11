@@ -1,0 +1,42 @@
+error: 
+
+   ┌── tests/move_check/typing/block_empty_invalid.move:3:10 ───
+   │
+ 3 │         ({}: u64);
+   │              ^^^ Invalid type annotation
+   ·
+ 3 │         ({}: u64);
+   │          -- The type: '()'
+   ·
+ 3 │         ({}: u64);
+   │              --- Is not compatible with: 'u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/block_empty_invalid.move:4:10 ───
+   │
+ 4 │         ({}: &u64);
+   │              ^^^^ Invalid type annotation
+   ·
+ 4 │         ({}: &u64);
+   │          -- The type: '()'
+   ·
+ 4 │         ({}: &u64);
+   │              ---- Is not compatible with: '&u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/block_empty_invalid.move:5:10 ───
+   │
+ 5 │         ({}: (u64, bool));
+   │              ^^^^^^^^^^^ Invalid type annotation
+   ·
+ 5 │         ({}: (u64, bool));
+   │          -- The type: '()'
+   ·
+ 5 │         ({}: (u64, bool));
+   │              ----------- Is not compatible with: '(u64,bool)'
+   │
+

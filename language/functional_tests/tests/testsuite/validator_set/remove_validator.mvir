@@ -1,0 +1,55 @@
+//! account: alice
+//! account: vivian, 1000000, 0, validator
+
+
+//! new-transaction
+//! sender: association
+// remove_validator cannot be called on a non-validator
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.remove_validator({{alice}});
+
+    return;
+}
+
+// check: ABORTED
+// check: 21
+
+// remove_validator can only be called by the Association
+//! new-transaction
+//! sender: alice
+import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
+main() {
+    LibraSystem.remove_validator({{vivian}});
+
+    return;
+}
+
+// check: ABORTED
+// check: 1
+
+//! new-transaction
+//! sender: association
+// should work because Vivian is a validator
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.remove_validator({{vivian}});
+
+    return;
+}
+
+// check: EXECUTED
+
+//! new-transaction
+//! sender: association
+// double-removing Vivian should fail
+import 0x0.LibraSystem;
+main() {
+    LibraSystem.remove_validator({{vivian}});
+
+    return;
+}
+
+// check: ABORTED
+// check: 22

@@ -3,13 +3,14 @@
 
 use crate::{
     admission_control_service::AdmissionControlService,
+    counters,
     upstream_proxy::{process_network_messages, UpstreamProxyData},
 };
 use admission_control_proto::proto::admission_control::create_admission_control;
 use futures::channel::mpsc;
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
-use libra_config::config::NodeConfig;
+use libra_config::config::{NodeConfig, RoleType};
 use libra_mempool::proto::mempool::MempoolClient;
 use network::validator_network::{AdmissionControlNetworkEvents, AdmissionControlNetworkSender};
 use std::{cmp::min, collections::HashMap, sync::Arc};
@@ -45,7 +46,7 @@ impl AdmissionControlRuntime {
         // Create mempool client if the node is validator.
         let connection_str = format!("localhost:{}", config.mempool.mempool_service_port);
         let env2 = Arc::new(EnvBuilder::new().name_prefix("grpc-ac-mem-").build());
-        let mempool_client = if config.is_validator() {
+        let mempool_client = if config.base.role == RoleType::Validator {
             Some(Arc::new(MempoolClient::new(
                 ChannelBuilder::new(env2).connect(&connection_str),
             )))
@@ -73,22 +74,25 @@ impl AdmissionControlRuntime {
             .expect("Unable to create grpc server");
 
         let upstream_proxy_runtime = Builder::new()
-            .name_prefix("ac-upstream-proxy-")
+            .thread_name("ac-upstream-proxy-")
+            .threaded_scheduler()
+            .enable_all()
             .build()
             .expect("[admission control] failed to create runtime");
 
-        let executor = upstream_proxy_runtime.executor();
+        let executor = upstream_proxy_runtime.handle();
 
-        let upstream_peer_ids = config.get_upstream_peer_ids();
+        let upstream_peer_ids = &config.state_sync.upstream_peers.upstream_peers;
         let peer_info: HashMap<_, _> = upstream_peer_ids
             .iter()
             .map(|peer_id| (*peer_id, true))
             .collect();
+        counters::UPSTREAM_PEERS.set(upstream_peer_ids.len() as i64);
 
         let upstream_proxy_data = UpstreamProxyData::new(
             config.admission_control.clone(),
             network_sender,
-            config.get_role(),
+            config.base.role,
             mempool_client,
             storage_client,
             vm_validator,

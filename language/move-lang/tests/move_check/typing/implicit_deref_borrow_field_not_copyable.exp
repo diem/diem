@@ -1,0 +1,56 @@
+error: 
+
+   ┌── tests/move_check/typing/implicit_deref_borrow_field_not_copyable.move:3:12 ───
+   │
+ 7 │         (b.s: S);
+   │          ^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
+   ·
+ 4 │     resource struct B { s: S, r: R }
+   │                            - The type: 0x8675309::M::S
+   ·
+ 3 │     struct S {}
+   │            - Is declared as a non-implicitly copyable type here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/implicit_deref_borrow_field_not_copyable.move:2:5 ───
+   │
+ 8 │         R{} = b.r;
+   │               ^^^ Invalid implicit copy of field 'r'.
+   ·
+ 4 │     resource struct B { s: S, r: R }
+   │                                  - The type: 0x8675309::M::R
+   ·
+ 2 │     resource struct R {}
+   │     -------- Is declared as a non-copyable type here
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/implicit_deref_borrow_field_not_copyable.move:3:12 ───
+    │
+ 10 │         (bref.s: S);
+    │          ^^^^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
+    ·
+ 4 │     resource struct B { s: S, r: R }
+    │                            - The type: 0x8675309::M::S
+    ·
+ 3 │     struct S {}
+    │            - Is declared as a non-implicitly copyable type here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/implicit_deref_borrow_field_not_copyable.move:2:5 ───
+    │
+ 11 │         R{} = bref.r;
+    │               ^^^^^^ Invalid implicit copy of field 'r'.
+    ·
+ 4 │     resource struct B { s: S, r: R }
+    │                                  - The type: 0x8675309::M::R
+    ·
+ 2 │     resource struct R {}
+    │     -------- Is declared as a non-copyable type here
+    │
+

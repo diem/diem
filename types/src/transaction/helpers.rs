@@ -1,13 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{
     account_address::AccountAddress,
     proto::types::SignedTransaction as ProtoSignedTransaction,
     transaction::{RawTransaction, SignedTransaction, TransactionPayload},
 };
+use anyhow::Result;
 use chrono::Utc;
-use failure::prelude::*;
 use libra_crypto::{
     ed25519::*,
     hash::{CryptoHash, TestOnlyHash},
@@ -72,7 +74,7 @@ pub fn create_user_txn<T: TransactionSigner + ?Sized>(
 }
 
 impl TransactionSigner for KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
-    fn sign_txn(&self, raw_txn: RawTransaction) -> failure::prelude::Result<SignedTransaction> {
+    fn sign_txn(&self, raw_txn: RawTransaction) -> Result<SignedTransaction> {
         let signature = self.private_key.sign_message(&raw_txn.hash());
         Ok(SignedTransaction::new(
             raw_txn,

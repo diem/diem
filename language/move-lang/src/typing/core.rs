@@ -22,7 +22,12 @@ use std::collections::{BTreeSet, HashMap};
 
 pub enum Constraint {
     IsCopyable(Loc, String, SingleType),
-    IsImplicitlyCopyable(Loc, String, BaseType),
+    IsImplicitlyCopyable {
+        loc: Loc,
+        msg: String,
+        ty: BaseType,
+        fix: String,
+    },
     KindConstraint(Loc, BaseType, Kind),
 }
 pub type Subst = HashMap<TVar, BaseType>;
@@ -59,6 +64,7 @@ pub struct Context {
     pub constraints: Constraints,
 
     pub in_loop: bool,
+    pub break_type: Option<Type>,
 
     errors: Errors,
 }
@@ -83,6 +89,7 @@ impl Context {
             errors,
             locals: UniqueMap::new(),
             in_loop: false,
+            break_type: None,
             modules,
         }
     }
@@ -112,10 +119,13 @@ impl Context {
         &mut self,
         loc: Loc,
         msg: impl Into<String>,
-        bt: BaseType,
+        ty: BaseType,
+        fix: impl Into<String>,
     ) {
+        let msg = msg.into();
+        let fix = fix.into();
         self.constraints
-            .push(Constraint::IsImplicitlyCopyable(loc, msg.into(), bt))
+            .push(Constraint::IsImplicitlyCopyable { loc, msg, ty, fix })
     }
 
     pub fn add_copyable_constraint(&mut self, loc: Loc, msg: impl Into<String>, s: SingleType) {
@@ -167,20 +177,15 @@ impl Context {
         &self.struct_definition(m, n).type_parameters
     }
 
-    fn function_info(&mut self, m: &ModuleIdent, n: &FunctionName) -> Option<&FunctionInfo> {
-        if !self.module_info(m).functions.contains_key(n) {
-            self.error(vec![(
-                n.loc(),
-                format!("Unbound function '{}' in module '{}'", n, m),
-            )])
-        }
-        self.module_info(m).functions.get(n)
+    fn function_info(&mut self, m: &ModuleIdent, n: &FunctionName) -> &FunctionInfo {
+        self.module_info(m)
+            .functions
+            .get(n)
+            .expect("ICE should have failed in naming")
     }
 
     pub fn function_acquires(&mut self, m: &ModuleIdent, n: &FunctionName) -> BTreeSet<BaseType> {
-        self.function_info(m, n)
-            .map(|info| info.acquires.clone())
-            .unwrap_or_else(BTreeSet::new)
+        self.function_info(m, n).acquires.clone()
     }
 }
 
@@ -188,33 +193,49 @@ impl Context {
 // Type utils
 //**************************************************************************************************
 
-pub fn infer_kind(subst: &Subst, s: SingleType) -> Kind {
+pub fn infer_kind(context: &Context, subst: &Subst, s: SingleType) -> Option<Kind> {
     use SingleType_ as S;
     match s.value {
-        S::Ref(_, _) => sp(s.loc, Kind_::Unrestricted),
-        S::Base(b) => infer_kind_base(subst, b),
+        S::Ref(_, _) => Some(sp(s.loc, Kind_::Unrestricted)),
+        S::Base(b) => infer_kind_base(context, subst, b),
     }
 }
 
-pub fn infer_kind_base(subst: &Subst, b: BaseType) -> Kind {
+pub fn infer_kind_base(context: &Context, subst: &Subst, b: BaseType) -> Option<Kind> {
     use BaseType_ as B;
     match unfold_type_base(&subst, b) {
         sp!(_, B::Var(_)) => panic!("ICE unfold_type_base failed, which is impossible"),
-        sp!(loc, B::Anything) => sp(loc, Kind_::Unknown),
-        sp!(_, B::Param(TParam { kind, .. })) => kind,
-        sp!(_, B::Apply(Some(kind), _, _)) => kind,
+        sp!(_, B::Anything) => None,
+        sp!(_, B::Param(TParam { kind, .. })) | sp!(_, B::Apply(Some(kind), _, _)) => Some(kind),
+        // if any unknown, give unkown
+        // else if any resource, give resource
+        // else affine
         sp!(_, B::Apply(None, n, tyl)) => {
-            // if any unknown, give unkown
-            // else if any resource, give resource
-            // else affine
-            tyl.into_iter()
-                .map(|t| infer_kind_base(subst, t))
+            // If an anything is found, we get a none. Then use the constraint for the
+            // default kind
+            let contraints = match &n.value {
+                TypeName_::Builtin(_) => tyl.iter().map(|_| None).collect::<Vec<_>>(),
+                TypeName_::ModuleType(m, n) => {
+                    let sdef = context.struct_definition(m, n);
+                    sdef.type_parameters
+                        .iter()
+                        .map(|tp| Some(tp.kind.clone()))
+                        .collect::<Vec<_>>()
+                }
+            };
+            let res = tyl
+                .into_iter()
+                .zip(contraints)
+                .filter_map(|(t, constraint_opt)| {
+                    infer_kind_base(context, subst, t).or(constraint_opt)
+                })
                 .map(|k| match k {
                     sp!(loc, Kind_::Unrestricted) => sp(loc, Kind_::Affine),
                     k => k,
                 })
                 .max_by(most_general_kind)
-                .unwrap_or_else(|| sp(n.loc, Kind_::Affine))
+                .unwrap_or_else(|| sp(type_name_declared_loc(context, &n), Kind_::Affine));
+            Some(res)
         }
     }
 }
@@ -234,6 +255,13 @@ fn most_general_kind(k1: &Kind, k2: &Kind) -> std::cmp::Ordering {
         (_, K::Resource) => O::Less,
 
         (K::Affine, K::Affine) => O::Equal,
+    }
+}
+
+fn type_name_declared_loc(context: &Context, sp!(loc, n_): &TypeName) -> Loc {
+    match n_ {
+        TypeName_::Builtin(_) => *loc,
+        TypeName_::ModuleType(m, n) => context.struct_declared_loc(m, n),
     }
 }
 
@@ -311,7 +339,7 @@ pub fn make_field_type(
             context.error(vec![
                 (
                     loc,
-                    format!("Unbound field '{}' for native struct '{}.{}'", field, m, n),
+                    format!("Unbound field '{}' for native struct '{}::{}'", field, m, n),
                 ),
                 (nloc, "Declared 'native' here".into()),
             ]);
@@ -323,7 +351,7 @@ pub fn make_field_type(
         None => {
             context.error(vec![(
                 loc,
-                format!("Unbound field '{}' in '{}.{}'", field, m, n),
+                format!("Unbound field '{}' in '{}::{}'", field, m, n),
             )]);
             sp(loc, BaseType_::Anything)
         }
@@ -345,19 +373,19 @@ pub fn make_function_type(
     m: &ModuleIdent,
     f: &FunctionName,
     ty_args_opt: Option<Vec<BaseType>>,
-) -> Option<(
+) -> (
     Loc,
     Vec<BaseType>,
     Vec<(Var, SingleType)>,
     BTreeSet<BaseType>,
     Type,
-)> {
+) {
     let in_current_module = match &context.current_module {
         Some(current) => m == current,
         None => false,
     };
     let constraints = context
-        .function_info(m, f)?
+        .function_info(m, f)
         .signature
         .type_parameters
         .iter()
@@ -370,7 +398,7 @@ pub fn make_function_type(
             let ty_args = check_type_argument_arity(
                 context,
                 loc,
-                || format!("{}.{}", m, f),
+                || format!("{}::{}", m, f),
                 ty_args,
                 &constraints,
             );
@@ -378,7 +406,7 @@ pub fn make_function_type(
         }
     };
 
-    let finfo = context.function_info(m, f)?;
+    let finfo = context.function_info(m, f);
     let tparam_subst = &make_tparam_subst(&finfo.signature.type_parameters, ty_args.clone());
     let params = finfo
         .signature
@@ -396,13 +424,13 @@ pub fn make_function_type(
     match &finfo.visibility {
         FunctionVisibility::Internal if !in_current_module => {
             context.error(vec![
-                (loc, format!("Invalid call to '{}.{}'", m, f)),
+                (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (defined_loc, "This function is internal to its module. Only 'public' functions can be called outside of their module".into()),
             ])
         }
         _ => (),
     };
-    Some((defined_loc, ty_args, params, acquires, return_ty))
+    (defined_loc, ty_args, params, acquires, return_ty)
 }
 
 //**************************************************************************************************
@@ -414,8 +442,8 @@ pub fn solve_constraints(context: &mut Context) {
     for constraint in constraints {
         match constraint {
             Constraint::IsCopyable(loc, msg, s) => solve_copyable_constraint(context, loc, msg, s),
-            Constraint::IsImplicitlyCopyable(loc, msg, b) => {
-                solve_implicitly_copyable_constraint(context, loc, msg, b)
+            Constraint::IsImplicitlyCopyable { loc, msg, ty, fix } => {
+                solve_implicitly_copyable_constraint(context, loc, msg, ty, fix)
             }
             Constraint::KindConstraint(loc, b, k) => solve_kind_constraint(context, loc, b, k),
         }
@@ -424,12 +452,14 @@ pub fn solve_constraints(context: &mut Context) {
 
 fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) {
     use Kind_ as K;
-    let sp!(bloc, b_) = unfold_type_base(&context.subst, b);
-    // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
-    if let BaseType_::Anything = &b_ {
-        return;
-    }
-    let b_kind = infer_kind_base(&context.subst, sp(bloc, b_.clone()));
+    let b = unfold_type_base(&context.subst, b);
+    let bloc = b.loc;
+    let b_kind = match infer_kind_base(&context, &context.subst, b.clone()) {
+        // Anything => None
+        // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
+        None => return,
+        Some(k) => k,
+    };
     match (b_kind.value, &k.value) {
             (_, K::Unrestricted) => panic!("ICE tparams cannot have unrestricted constraints"),
             // _ <: all
@@ -447,26 +477,28 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) 
             (K::Affine, K::Resource) |
             // all </: linear
             (K::Unknown, K::Resource) => {
-                let ty_str = b_.subst_format(&Subst::new());
+                let ty_str = b.value.subst_format(&context.subst);
                 context.error(vec![
-                    (loc, format!("Constraint not satisfied. The {} type '{}' does not satisfy the constraint '{}'", Kind_::VALUE_CONSTRAINT, ty_str, Kind_::RESOURCE_CONSTRAINT)),
+                    (loc, "Constraint not satisfied.".into()),
+                    (bloc, format!("The {} type '{}' does not satisfy the constraint '{}'", Kind_::VALUE_CONSTRAINT, ty_str, Kind_::RESOURCE_CONSTRAINT)),
                     (b_kind.loc, "The type's constraint information was declared here".into()),
                     (k.loc, format!("'{}' constraint declared here", Kind_::RESOURCE_CONSTRAINT))
                 ])
             }
 
             // all </: affine
-            (K::Unknown, K::Affine) |
+            (bk @ K::Unknown, K::Affine) |
             // linear </: affine
-            (K::Resource, K::Affine) => {
-                let resource_msg = match &k.value {
+            (bk @ K::Resource, K::Affine) => {
+                let resource_msg = match bk {
                     K::Unrestricted | K::Affine => panic!("ICE covered above"),
                     K::Resource => "resource ",
                     K::Unknown => "",
                 };
-                let ty_str = b_.subst_format(&Subst::new());
+                let ty_str = b.value.subst_format(&context.subst);
                 context.error(vec![
-                    (loc, format!("Constraint not satisfied. The {}type '{}' does not satisfy the constraint '{}'", resource_msg, ty_str, Kind_::VALUE_CONSTRAINT)),
+                    (loc, "Constraint not satisfied.".into()),
+                    (bloc, format!("The {}type '{}' does not satisfy the constraint '{}'", resource_msg, ty_str, Kind_::VALUE_CONSTRAINT)),
                     (b_kind.loc, "The type's constraint information was declared here".into()),
                     (k.loc, format!("'{}' constraint declared here", Kind_::VALUE_CONSTRAINT))
                 ])
@@ -477,36 +509,62 @@ fn solve_kind_constraint(context: &mut Context, loc: Loc, b: BaseType, k: Kind) 
 
 fn solve_copyable_constraint(context: &mut Context, loc: Loc, msg: String, s: SingleType) {
     let s = unfold_type_single(&context.subst, s);
-    if let SingleType_::Base(sp!(_, BaseType_::Anything)) = &s.value {
-        return;
-    }
-    match infer_kind(&context.subst, s.clone()) {
+    let sloc = s.loc;
+    let kind = match infer_kind(&context, &context.subst, s.clone()) {
+        // Anything => None
+        // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
+        None => return,
+        Some(k) => k,
+    };
+    match kind {
         sp!(_, Kind_::Unrestricted) | sp!(_, Kind_::Affine) => (),
         sp!(rloc, Kind_::Unknown) | sp!(rloc, Kind_::Resource) => {
-            let ty_str = s.value.subst_format(&Subst::new());
+            let ty_str = s.value.subst_format(&context.subst);
             context.error(vec![
                 (loc, msg),
-                (
-                    rloc,
-                    format!("{} is found to be a non-copyable type here", ty_str),
-                ),
+                (sloc, format!("The type: {}", ty_str)),
+                (rloc, "Is found to be a non-copyable type here".into()),
             ])
         }
     }
 }
 
-fn solve_implicitly_copyable_constraint(context: &mut Context, loc: Loc, msg: String, b: BaseType) {
+fn solve_implicitly_copyable_constraint(
+    context: &mut Context,
+    loc: Loc,
+    msg: String,
+    b: BaseType,
+    fix: String,
+) {
     let b = unfold_type_base(&context.subst, b);
-    if let BaseType_::Anything = &b.value {
-        return;
-    }
-    match infer_kind_base(&context.subst, b) {
+    let bloc = b.loc;
+    let kind = match infer_kind_base(&context, &context.subst, b.clone()) {
+        // Anything => None
+        // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
+        None => return,
+        Some(k) => k,
+    };
+    match kind {
         sp!(_, Kind_::Unrestricted) => (),
-        sp!(_, Kind_::Affine) => context.error(vec![(loc, msg)]),
-        sp!(rloc, Kind_::Unknown) | sp!(rloc, Kind_::Resource) => context.error(vec![
-            (loc, msg),
-            (rloc, "Declared as a non-copyable type here".into()),
-        ]),
+        sp!(kloc, Kind_::Affine) => {
+            let ty_str = b.value.subst_format(&context.subst);
+            context.error(vec![
+                (loc, format!("{} {}", msg, fix)),
+                (bloc, format!("The type: {}", ty_str)),
+                (
+                    kloc,
+                    "Is declared as a non-implicitly copyable type here".into(),
+                ),
+            ])
+        }
+        sp!(kloc, Kind_::Unknown) | sp!(kloc, Kind_::Resource) => {
+            let ty_str = b.value.subst_format(&context.subst);
+            context.error(vec![
+                (loc, msg),
+                (bloc, format!("The type: {}", ty_str)),
+                (kloc, "Is declared as a non-copyable type here".into()),
+            ])
+        }
     }
 }
 
@@ -828,7 +886,7 @@ pub fn join(mut subst: Subst, t1: &Type, t2: &Type) -> Result<(Subst, Type), Typ
         }
         (sp!(loc, Multiple(tys1)), sp!(_, Multiple(tys2))) if tys1.len() == tys2.len() => {
             let mut tys = vec![];
-            for (ty1, ty2) in tys1.iter().zip(tys1) {
+            for (ty1, ty2) in tys1.iter().zip(tys2) {
                 let (nsubst, t) = join_single(subst, ty1, ty2)?;
                 subst = nsubst;
                 tys.push(t)
@@ -886,7 +944,14 @@ pub fn join_base_type(
         }
 
         (sp!(loc, Apply(k1, n1, tys1)), sp!(_, Apply(k2, n2, tys2))) if n1 == n2 => {
-            assert!(k1 == k2);
+            assert!(
+                k1 == k2,
+                "ICE failed naming: {:#?}kind != {:#?}kind. {:#?} !=  {:#?}",
+                n1,
+                n2,
+                k1,
+                k2
+            );
             let (subst, tys) = join_base_types(subst, tys1, tys2)?;
             Ok((subst, sp(*loc, Apply(k1.clone(), n1.clone(), tys))))
         }

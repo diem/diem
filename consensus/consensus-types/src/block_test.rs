@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::block::block_test_utils::placeholder_certificate_for_block;
+use crate::block::block_test_utils::certificate_for_genesis;
 use crate::{
     block::{block_test_utils::*, Block},
     quorum_cert::QuorumCert,
@@ -22,7 +22,7 @@ fn test_genesis() {
 #[test]
 fn test_nil_block() {
     let genesis_block = Block::<i16>::make_genesis_block();
-    let quorum_cert = QuorumCert::certificate_for_genesis();
+    let quorum_cert = certificate_for_genesis();
 
     let nil_block = Block::<i16>::new_nil(1, quorum_cert);
     assert_eq!(
@@ -30,10 +30,7 @@ fn test_nil_block() {
         genesis_block.id()
     );
     assert_eq!(nil_block.round(), 1);
-    assert_eq!(
-        nil_block.timestamp_usecs(),
-        genesis_block.timestamp_usecs() + 1
-    );
+    assert_eq!(nil_block.timestamp_usecs(), genesis_block.timestamp_usecs());
     assert_eq!(nil_block.is_nil_block(), true);
     assert!(nil_block.author().is_none());
 
@@ -45,12 +42,15 @@ fn test_nil_block() {
 
     let signer = ValidatorSigner::random(None);
     let payload = 101;
-    let nil_block_qc = placeholder_certificate_for_block(
+    let parent_block_info = nil_block.quorum_cert().certified_block();
+    let nil_block_qc = gen_test_certificate(
         vec![&signer],
-        nil_block.id(),
-        nil_block.round(),
-        nil_block.quorum_cert().certified_block().id(),
-        nil_block.quorum_cert().certified_block().round(),
+        nil_block.gen_block_info(
+            parent_block_info.executed_state_id(),
+            parent_block_info.version(),
+            parent_block_info.next_validator_set().cloned(),
+        ),
+        nil_block.quorum_cert().certified_block().clone(),
         None,
     );
     println!(
@@ -75,7 +75,7 @@ fn test_block_relation() {
     let signer = ValidatorSigner::random(None);
     // Test genesis and the next block
     let genesis_block = Block::make_genesis_block();
-    let quorum_cert = QuorumCert::certificate_for_genesis();
+    let quorum_cert = certificate_for_genesis();
     let payload = 101;
     let next_block = Block::new_proposal(
         payload,
@@ -101,7 +101,7 @@ fn test_block_relation() {
 #[test]
 fn test_same_qc_different_authors() {
     let signer = ValidatorSigner::random(None);
-    let genesis_qc = QuorumCert::certificate_for_genesis();
+    let genesis_qc = certificate_for_genesis();
     let round = 1;
     let payload = 42;
     let current_timestamp = get_current_timestamp().as_micros() as u64;

@@ -3,7 +3,7 @@
 
 use crate::chained_bft::block_storage::{BlockReader, BlockStore};
 use consensus_types::{
-    block::{block_test_utils::placeholder_certificate_for_block, Block},
+    block::{block_test_utils::certificate_for_genesis, Block},
     common::Round,
     executed_block::ExecutedBlock,
     quorum_cert::QuorumCert,
@@ -21,6 +21,8 @@ mod mock_state_computer;
 mod mock_storage;
 mod mock_txn_manager;
 
+use consensus_types::block::block_test_utils::gen_test_certificate;
+use libra_types::block_info::BlockInfo;
 pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
 pub use mock_storage::{EmptyStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;
@@ -45,12 +47,10 @@ pub fn build_simple_tree() -> (
     //       ╭--> A1--> A2--> A3
     // Genesis--> B1--> B2
     //             ╰--> C1
-    let a1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis_block, 1);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis_block, 1);
     let a2 = inserter.insert_block(&a1, 2, None);
-    let a3 = inserter.insert_block(&a2, 3, Some(genesis.id()));
-    let b1 =
-        inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis_block, 4);
+    let a3 = inserter.insert_block(&a2, 3, Some(genesis.block_info()));
+    let b1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis_block, 4);
     let b2 = inserter.insert_block(&b1, 5, None);
     let c1 = inserter.insert_block(&b1, 6, None);
 
@@ -64,18 +64,18 @@ pub fn build_chain() -> Vec<Arc<ExecutedBlock<TestPayload>>> {
     let mut inserter = TreeInserter::default();
     let block_store = inserter.block_store();
     let genesis = block_store.root();
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     let a2 = inserter.insert_block(&a1, 2, None);
-    let a3 = inserter.insert_block(&a2, 3, Some(genesis.id()));
-    let a4 = inserter.insert_block(&a3, 4, Some(a1.id()));
-    let a5 = inserter.insert_block(&a4, 5, Some(a2.id()));
-    let a6 = inserter.insert_block(&a5, 6, Some(a3.id()));
-    let a7 = inserter.insert_block(&a6, 7, Some(a4.id()));
+    let a3 = inserter.insert_block(&a2, 3, Some(genesis.block_info()));
+    let a4 = inserter.insert_block(&a3, 4, Some(a1.block_info()));
+    let a5 = inserter.insert_block(&a4, 5, Some(a2.block_info()));
+    let a6 = inserter.insert_block(&a5, 6, Some(a3.block_info()));
+    let a7 = inserter.insert_block(&a6, 7, Some(a4.block_info()));
     vec![genesis, a1, a2, a3, a4, a5, a6, a7]
 }
 
 pub fn build_empty_tree() -> Arc<BlockStore<TestPayload>> {
-    let (storage, initial_data) = EmptyStorage::start_for_testing();
+    let (initial_data, storage) = EmptyStorage::start_for_testing();
     Arc::new(block_on(BlockStore::new(
         storage,
         initial_data,
@@ -130,10 +130,10 @@ impl TreeInserter {
         &mut self,
         parent: &ExecutedBlock<TestPayload>,
         round: Round,
-        consensus_block_id: Option<HashValue>,
+        committed_block: Option<BlockInfo>,
     ) -> Arc<ExecutedBlock<TestPayload>> {
         // Node must carry a QC to its parent
-        let parent_qc = self.create_qc_for_block(parent, consensus_block_id);
+        let parent_qc = self.create_qc_for_block(parent, committed_block);
         self.insert_block_with_qc(parent_qc, parent, round)
     }
 
@@ -148,7 +148,7 @@ impl TreeInserter {
             self.block_store
                 .insert_block_with_qc(self.create_block_with_qc(
                     parent_qc,
-                    parent,
+                    parent.timestamp_usecs() + 1,
                     round,
                     vec![self.payload_val],
                 )),
@@ -159,42 +159,34 @@ impl TreeInserter {
     pub fn create_qc_for_block(
         &self,
         block: &ExecutedBlock<TestPayload>,
-        consensus_block_id: Option<HashValue>,
+        committed_block: Option<BlockInfo>,
     ) -> QuorumCert {
-        placeholder_certificate_for_block(
+        gen_test_certificate(
             vec![&self.signer],
-            block.id(),
-            block.round(),
-            block.quorum_cert().certified_block().id(),
-            block.quorum_cert().certified_block().round(),
-            consensus_block_id,
+            block.block_info(),
+            block.quorum_cert().certified_block().clone(),
+            committed_block,
         )
     }
 
     pub fn insert_qc_for_block(
         &self,
         block: &ExecutedBlock<TestPayload>,
-        consensus_block_id: Option<HashValue>,
+        committed_block: Option<BlockInfo>,
     ) {
         self.block_store
-            .insert_single_quorum_cert(self.create_qc_for_block(block, consensus_block_id))
+            .insert_single_quorum_cert(self.create_qc_for_block(block, committed_block))
             .unwrap()
     }
 
     pub fn create_block_with_qc(
         &self,
         parent_qc: QuorumCert,
-        parent: &ExecutedBlock<TestPayload>,
+        timestamp_usecs: u64,
         round: Round,
         payload: TestPayload,
     ) -> Block<TestPayload> {
-        Block::new_proposal(
-            payload,
-            round,
-            parent.timestamp_usecs() + 1,
-            parent_qc,
-            &self.signer,
-        )
+        Block::new_proposal(payload, round, timestamp_usecs, parent_qc, &self.signer)
     }
 
     pub fn insert_reconfiguration_block(
@@ -207,7 +199,7 @@ impl TreeInserter {
             self.block_store
                 .insert_reconfiguration_block(self.create_block_with_qc(
                     self.create_qc_for_block(parent, None),
-                    parent,
+                    parent.timestamp_usecs() + 1,
                     round,
                     vec![self.payload_val],
                 )),
@@ -217,23 +209,11 @@ impl TreeInserter {
 }
 
 pub fn placeholder_ledger_info() -> LedgerInfo {
-    LedgerInfo::new(
-        0,
-        HashValue::zero(),
-        HashValue::zero(),
-        HashValue::zero(),
-        0,
-        0,
-        None,
-    )
+    LedgerInfo::new(BlockInfo::empty(), HashValue::zero())
 }
 
 pub fn placeholder_sync_info() -> SyncInfo {
-    SyncInfo::new(
-        QuorumCert::certificate_for_genesis(),
-        QuorumCert::certificate_for_genesis(),
-        None,
-    )
+    SyncInfo::new(certificate_for_genesis(), certificate_for_genesis(), None)
 }
 
 fn nocapture() -> bool {
@@ -246,6 +226,8 @@ pub fn consensus_runtime() -> runtime::Runtime {
     }
 
     runtime::Builder::new()
+        .threaded_scheduler()
+        .enable_all()
         .build()
         .expect("Failed to create Tokio runtime!")
 }

@@ -1,8 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::proto::{GetNodeDetailsRequest, NodeDebugInterfaceClient};
-use failure::prelude::*;
+use anyhow::{Context, Result};
 use grpcio::{ChannelBuilder, EnvBuilder};
 use std::{collections::HashMap, sync::Arc};
 
@@ -49,7 +51,7 @@ impl NodeDebugClient {
             .into_iter()
             .map(|(k, v)| match v.parse::<i64>() {
                 Ok(v) => Ok((k, v)),
-                Err(_) => Err(format_err!(
+                Err(_) => Err(anyhow::format_err!(
                     "Failed to parse stat value to i64 {}: {}",
                     &k,
                     &v

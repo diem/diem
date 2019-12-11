@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::utils;
+use anyhow::{Context, Result};
 use config_builder::swarm_config::{SwarmConfig, SwarmConfigBuilder};
 use debug_interface::NodeDebugClient;
-use failure::prelude::*;
 use libra_config::config::{NodeConfig, RoleType};
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_logger::prelude::*;
@@ -18,6 +18,7 @@ use std::{
     process::{Child, Command},
     str::FromStr,
 };
+use thiserror::Error;
 
 const LIBRA_NODE_BIN: &str = "libra-node";
 
@@ -175,7 +176,7 @@ impl LibraNode {
 pub enum HealthStatus {
     Healthy,
     Crashed(::std::process::ExitStatus),
-    RpcFailure(failure::Error),
+    RpcFailure(anyhow::Error),
 }
 
 /// A wrapper that unifies PathBuf and TempPath.
@@ -203,25 +204,19 @@ pub struct LibraSwarm {
     pub config: SwarmConfig,
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum SwarmLaunchFailure {
     /// Timeout while waiting for nodes to start
-    #[fail(display = "Node launch check timeout")]
+    #[error("Node launch check timeout")]
     LaunchTimeout,
     /// Node return status indicates a crash
-    #[fail(display = "Node crash")]
+    #[error("Node crash")]
     NodeCrash,
     /// Timeout while waiting for the nodes to report that they're all interconnected
-    #[fail(display = "Node connectivity check timeout")]
+    #[error("Node connectivity check timeout")]
     ConnectivityTimeout,
-    #[fail(display = "IO Error")]
-    IoError(#[cause] io::Error),
-}
-
-impl From<io::Error> for SwarmLaunchFailure {
-    fn from(err: io::Error) -> Self {
-        SwarmLaunchFailure::IoError(err)
-    }
+    #[error("IO Error")]
+    IoError(#[from] io::Error),
 }
 
 impl LibraSwarm {
@@ -294,16 +289,13 @@ impl LibraSwarm {
         upstream_config_dir: Option<String>,
     ) -> Result<LibraSwarm> {
         let swarm_config_dir = Self::setup_config_dir(&config_dir);
-        let base = utils::workspace_root().join(
-            template_path
-                .as_ref()
-                .unwrap_or(&"config/data/configs/node.config.toml".to_string()),
-        );
         let mut config_builder = SwarmConfigBuilder::new();
+        if let Some(template_path) = template_path {
+            config_builder.with_base(utils::workspace_root().join(template_path));
+        }
         config_builder
             .with_ipv4()
             .with_num_nodes(num_nodes)
-            .with_base(base)
             .with_output_dir(&swarm_config_dir)
             .with_faucet_keypair(faucet_account_keypair)
             .with_role(role)
@@ -320,11 +312,11 @@ impl LibraSwarm {
         &mut self,
         role: RoleType,
         disable_logging: bool,
-    ) -> std::result::Result<(), SwarmLaunchFailure> {
+    ) -> Result<(), SwarmLaunchFailure> {
         let logs_dir_path = self.dir.as_ref().join("logs");
         std::fs::create_dir(&logs_dir_path)?;
         // For each config launch a node
-        for (index, path) in self.config.configs.iter().enumerate() {
+        for (index, path) in self.config.config_files.iter().enumerate() {
             // Use index as node id.
             let node_id = format!("{}", index);
             let node = LibraNode::launch(
@@ -343,7 +335,7 @@ impl LibraSwarm {
         Ok(())
     }
 
-    fn wait_for_connectivity(&self) -> std::result::Result<(), SwarmLaunchFailure> {
+    fn wait_for_connectivity(&self) -> Result<(), SwarmLaunchFailure> {
         // Early return if we're only launching a single node
         if self.nodes.len() == 1 {
             return Ok(());
@@ -369,7 +361,7 @@ impl LibraSwarm {
         Err(SwarmLaunchFailure::ConnectivityTimeout)
     }
 
-    fn wait_for_startup(&mut self) -> std::result::Result<(), SwarmLaunchFailure> {
+    fn wait_for_startup(&mut self) -> Result<(), SwarmLaunchFailure> {
         let num_attempts = 120;
         let mut done = vec![false; self.nodes.len()];
         for i in 0..num_attempts {
@@ -410,7 +402,7 @@ impl LibraSwarm {
     /// function are now available at all the nodes.
     pub fn wait_for_all_nodes_to_catchup(&mut self) -> bool {
         let num_attempts = 60;
-        let last_committed_round_str = "consensus{op=committed_blocks_count}";
+        let last_committed_round_str = "libra_consensus_committed_blocks_count{}";
         let mut done = vec![false; self.nodes.len()];
 
         let mut last_committed_round = 0;
@@ -493,7 +485,7 @@ impl LibraSwarm {
     /// Vector with the debug ports of all the validators in the swarm.
     pub fn get_validators_debug_ports(&self) -> Vec<u16> {
         self.config
-            .configs
+            .config_files
             .iter()
             .map(|path| {
                 let config = NodeConfig::load(&path).unwrap();
@@ -517,12 +509,12 @@ impl LibraSwarm {
         idx: usize,
         role: RoleType,
         disable_logging: bool,
-    ) -> std::result::Result<(), SwarmLaunchFailure> {
+    ) -> Result<(), SwarmLaunchFailure> {
         // First take the configs out to not keep immutable borrow on self when calling
         // `launch_node`.
         let path = self
             .config
-            .configs
+            .config_files
             .get(idx)
             .unwrap_or_else(|| panic!("Node at index {} not found", idx));
         let log_file_path = self.dir.as_ref().join("logs").join(format!("{}.log", idx));

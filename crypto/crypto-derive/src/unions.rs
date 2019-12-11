@@ -8,15 +8,14 @@ use syn::{DataEnum, Ident};
 pub fn parse_newtype_fields(item: &syn::DeriveInput) -> (syn::Type, proc_macro2::TokenStream) {
     let fields = match item.data {
         syn::Data::Struct(ref body) => body.fields.iter().collect::<Vec<&syn::Field>>(),
-        _ => panic!("#[derive(Deref)] can only be used on structs"),
+        _ => vec![],
     };
 
     let field_ty = match fields.len() {
         1 => Some(fields[0].ty.clone()),
         _ => None,
     };
-    let field_ty = field_ty
-        .unwrap_or_else(|| panic!("#[derive(Deref)] can only be used on structs with one field."));
+    let field_ty = field_ty.expect("#[derive(Deref)] can only be used on structs with one field.");
 
     let field_name = match fields[0].ident {
         Some(ref ident) => quote!(#ident),
@@ -24,9 +23,7 @@ pub fn parse_newtype_fields(item: &syn::DeriveInput) -> (syn::Type, proc_macro2:
     };
 
     match field_ty {
-        syn::Type::Reference(syn::TypeReference { elem, .. }) => {
-            (*elem.clone(), quote!(self.#field_name))
-        }
+        syn::Type::Reference(syn::TypeReference { elem, .. }) => (*elem, quote!(self.#field_name)),
         x => (x, quote!(&self.#field_name)),
     }
 }
@@ -103,33 +100,33 @@ pub fn impl_enum_validkey(name: &Ident, variants: &DataEnum) -> TokenStream {
 }
 
 pub fn get_type_from_attrs(attrs: &[syn::Attribute], attr_name: &str) -> syn::Result<syn::LitStr> {
-    for attr in attrs {
-        if !attr.path.is_ident(attr_name) {
-            continue;
-        }
-        match attr.parse_meta()? {
-            syn::Meta::NameValue(meta) => {
-                if let syn::Lit::Str(lit) = &meta.lit {
-                    return Ok(lit.clone());
-                } else {
-                    return Err(syn::Error::new_spanned(
-                        meta,
-                        &format!("Could not parse {} attribute", attr_name)[..],
-                    ));
+    attrs
+        .iter()
+        .find(|attr| attr.path.is_ident(attr_name))
+        .map_or_else(
+            || {
+                Err(syn::Error::new(
+                    proc_macro2::Span::call_site(),
+                    format!("Could not find attribute {}", attr_name),
+                ))
+            },
+            |attr| match attr.parse_meta()? {
+                syn::Meta::NameValue(meta) => {
+                    if let syn::Lit::Str(lit) = &meta.lit {
+                        Ok(lit.clone())
+                    } else {
+                        Err(syn::Error::new_spanned(
+                            meta,
+                            &format!("Could not parse {} attribute", attr_name)[..],
+                        ))
+                    }
                 }
-            }
-            bad => {
-                return Err(syn::Error::new_spanned(
+                bad => Err(syn::Error::new_spanned(
                     bad,
                     &format!("Could not parse {} attribute", attr_name)[..],
-                ))
-            }
-        }
-    }
-    Err(syn::Error::new(
-        proc_macro2::Span::call_site(),
-        format!("Could not find attribute {}", attr_name),
-    ))
+                )),
+            },
+        )
 }
 
 pub fn impl_enum_publickey(
@@ -254,14 +251,14 @@ pub fn impl_enum_signature(
             type VerifyingKeyMaterial = #pub_kt;
             type SigningKeyMaterial = #priv_kt;
 
-            fn verify(&self, message: &HashValue, public_key: &Self::VerifyingKeyMaterial) -> ::std::result::Result<(), ::failure::Error> {
+            fn verify(&self, message: &HashValue, public_key: &Self::VerifyingKeyMaterial) -> ::std::result::Result<(), libra_crypto::error::Error> {
                 self.verify_arbitrary_msg(message.as_ref(), public_key)
             }
 
-            fn verify_arbitrary_msg(&self, message: &[u8], public_key: &Self::VerifyingKeyMaterial) -> std::result::Result<(), ::failure::Error> {
+            fn verify_arbitrary_msg(&self, message: &[u8], public_key: &Self::VerifyingKeyMaterial) -> std::result::Result<(), libra_crypto::error::Error> {
                 match (self, public_key) {
                     #match_arms
-                    _ => ::failure::bail!(
+                    _ => libra_crypto::error::bail!(
                         "provided the wrong alternative in {:?}!",
                         (self, public_key)
                     ),

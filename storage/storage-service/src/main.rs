@@ -1,9 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
+use anyhow::Result;
 use debug_interface::{node_debug_service::NodeDebugService, proto::create_node_debug_interface};
 use executable_helpers::helpers::setup_executable;
-use failure::prelude::*;
 use grpc_helpers::spawn_service_thread;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;

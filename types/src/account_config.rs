@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
@@ -10,7 +12,7 @@ use crate::{
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
-use failure::prelude::*;
+use anyhow::{bail, Result};
 use lazy_static::lazy_static;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -83,6 +85,7 @@ pub struct AccountResource {
     received_events: EventHandle,
     sent_events: EventHandle,
     sequence_number: u64,
+    event_generator: u64,
 }
 
 impl AccountResource {
@@ -95,6 +98,7 @@ impl AccountResource {
         delegated_withdrawal_capability: bool,
         sent_events: EventHandle,
         received_events: EventHandle,
+        event_generator: u64,
     ) -> Self {
         AccountResource {
             balance,
@@ -104,6 +108,7 @@ impl AccountResource {
             delegated_withdrawal_capability,
             sent_events,
             received_events,
+            event_generator,
         }
     }
 
@@ -200,14 +205,24 @@ lazy_static! {
 
 /// Generic struct that represents an Account event.
 /// Both SentPaymentEvent and ReceivedPaymentEvent are representable with this struct.
-/// They have an AccountAddress for the sender or receiver and the amount transferred.
+/// They have an AccountAddress for the sender or receiver, the amount transferred, and metadata.
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct AccountEvent {
     amount: u64,
     account: AccountAddress,
+    metadata: Vec<u8>,
 }
 
 impl AccountEvent {
+    // TODO: should only be used for libra client testing and be removed eventually
+    pub fn new(amount: u64, account: AccountAddress, metadata: Vec<u8>) -> Self {
+        Self {
+            amount,
+            account,
+            metadata,
+        }
+    }
+
     pub fn try_from(bytes: &[u8]) -> Result<AccountEvent> {
         lcs::from_bytes(bytes).map_err(Into::into)
     }
@@ -220,5 +235,10 @@ impl AccountEvent {
     /// Get the amount sent or received
     pub fn amount(&self) -> u64 {
         self.amount
+    }
+
+    /// Get the metadata associated with this event
+    pub fn metadata(&self) -> &Vec<u8> {
+        &self.metadata
     }
 }

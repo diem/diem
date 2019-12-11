@@ -14,16 +14,14 @@
 mod node_type_test;
 
 use crate::nibble_path::NibblePath;
+use anyhow::{ensure, Context, Result};
 use bincode::{deserialize, serialize};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-use failure::{Fail, Result, *};
 use libra_crypto::{
-    hash::{
-        CryptoHash, SparseMerkleInternalHasher, SparseMerkleLeafHasher,
-        SPARSE_MERKLE_PLACEHOLDER_HASH,
-    },
+    hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
+use libra_crypto_derive::CryptoHasher;
 use libra_nibble::Nibble;
 use libra_types::{
     account_state_blob::AccountStateBlob,
@@ -42,6 +40,7 @@ use std::{
     io::{prelude::*, Cursor, Read, SeekFrom, Write},
     mem::size_of,
 };
+use thiserror::Error;
 
 /// The unique key of each node.
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -163,21 +162,10 @@ pub(crate) type Children = HashMap<Nibble, Child>;
 /// Though we choose the same internal node structure as that of Patricia Merkle tree, the root hash
 /// computation logic is similar to a 4-level sparse Merkle tree except for some customizations. See
 /// the `CryptoHash` trait implementation below for details.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, CryptoHasher)]
 pub struct InternalNode {
     // Up to 16 children.
     children: Children,
-}
-
-/// Represents an account.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct LeafNode {
-    // The hashed account address associated with this leaf node.
-    account_key: HashValue,
-    // The hash of the account state blob.
-    blob_hash: HashValue,
-    // The account blob associated with `account_key`.
-    blob: AccountStateBlob,
 }
 
 /// Computes the hash of internal node according to [`JellyfishTree`](crate::JellyfishTree)
@@ -227,8 +215,7 @@ pub struct LeafNode {
 /// Note: @ denotes placeholder hash.
 /// ```
 impl CryptoHash for InternalNode {
-    // Unused hasher.
-    type Hasher = SparseMerkleInternalHasher;
+    type Hasher = InternalNodeHasher;
 
     fn hash(&self) -> HashValue {
         self.merkle_hash(
@@ -236,53 +223,6 @@ impl CryptoHash for InternalNode {
             16, /* the number of leaves in the subtree of which we want the hash of root */
             self.generate_bitmaps(),
         )
-    }
-}
-
-/// Computes the hash of a [`LeafNode`].
-impl CryptoHash for LeafNode {
-    // Unused hasher.
-    type Hasher = SparseMerkleLeafHasher;
-
-    fn hash(&self) -> HashValue {
-        SparseMerkleLeafNode::new(self.account_key, self.blob_hash).hash()
-    }
-}
-
-/// The concrete node type of [`JellyfishMerkleTree`](crate::JellyfishMerkleTree).
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Node {
-    /// Represents `null`.
-    Null,
-    /// A wrapper of [`InternalNode`].
-    Internal(InternalNode),
-    /// A wrapper of [`LeafNode`].
-    Leaf(LeafNode),
-}
-
-#[repr(u8)]
-#[derive(FromPrimitive, ToPrimitive)]
-enum NodeTag {
-    Null = 0,
-    Internal = 1,
-    Leaf = 2,
-}
-
-impl From<InternalNode> for Node {
-    fn from(node: InternalNode) -> Self {
-        Node::Internal(node)
-    }
-}
-
-impl From<InternalNode> for Children {
-    fn from(node: InternalNode) -> Self {
-        node.children
-    }
-}
-
-impl From<LeafNode> for Node {
-    fn from(node: LeafNode) -> Self {
-        Node::Leaf(node)
     }
 }
 
@@ -431,7 +371,7 @@ impl InternalNode {
     ) -> HashValue {
         // Given a bit [start, 1 << nibble_height], return the value of that range.
         let (range_existence_bitmap, range_leaf_bitmap) =
-            InternalNode::range_bitmaps(start, width, (existence_bitmap, leaf_bitmap));
+            Self::range_bitmaps(start, width, (existence_bitmap, leaf_bitmap));
         if range_existence_bitmap == 0 {
             // No child under this subtree
             *SPARSE_MERKLE_PLACEHOLDER_HASH
@@ -440,13 +380,14 @@ impl InternalNode {
             // Only 1 leaf child under this subtree or reach the lowest level
             let only_child_index = Nibble::from(range_existence_bitmap.trailing_zeros() as u8);
             self.child(only_child_index)
-                .unwrap_or_else(|| {
-                    panic!(
+                .with_context(|| {
+                    format!(
                         "Corrupted internal node: existence_bitmap indicates \
                          the existence of a non-exist child at index {:x}",
                         only_child_index
                     )
                 })
+                .unwrap()
                 .hash
         } else {
             let left_child = self.merkle_hash(start, width / 2, (existence_bitmap, leaf_bitmap));
@@ -492,13 +433,7 @@ impl InternalNode {
             // Get the number of children of the internal node that each subtree at this height
             // covers.
             let width = 1 << h;
-            // Get the index of the first child belonging to the same subtree whose root, let's say
-            // `r` is at height `h` that the n-th child belongs to.
-            // Note:  `child_half_start` will be always equal to `n` at height 0.
-            let child_half_start = (0xff << h) & u8::from(n);
-            // Get the index of the first child belonging to the subtree whose root is the sibling
-            // of `r` at height `h`.
-            let sibling_half_start = child_half_start ^ (1 << h);
+            let (child_half_start, sibling_half_start) = get_child_and_sibling_half_start(n, h);
             // Compute the root hash of the subtree rooted at the sibling of `r`.
             siblings.push(self.merkle_hash(
                 sibling_half_start,
@@ -506,11 +441,8 @@ impl InternalNode {
                 (existence_bitmap, leaf_bitmap),
             ));
 
-            let (range_existence_bitmap, range_leaf_bitmap) = InternalNode::range_bitmaps(
-                child_half_start,
-                width,
-                (existence_bitmap, leaf_bitmap),
-            );
+            let (range_existence_bitmap, range_leaf_bitmap) =
+                Self::range_bitmaps(child_half_start, width, (existence_bitmap, leaf_bitmap));
 
             if range_existence_bitmap == 0 {
                 // No child in this range.
@@ -527,13 +459,15 @@ impl InternalNode {
                     {
                         let only_child_version = self
                             .child(only_child_index)
-                            .unwrap_or_else(|| {
-                                panic!(
+                            // Should be guaranteed by the self invariants, but these are not easy to express at the moment
+                            .with_context(|| {
+                                format!(
                                     "Corrupted internal node: child_bitmap indicates \
                                      the existence of a non-exist child at index {:x}",
                                     only_child_index
                                 )
                             })
+                            .unwrap()
                             .version;
                         Some(node_key.gen_child_node_key(only_child_version, only_child_index))
                     },
@@ -543,6 +477,32 @@ impl InternalNode {
         }
         unreachable!("Impossible to get here without returning even at the lowest level.")
     }
+}
+
+/// Given a nibble, computes the start position of its `child_half_start` and `sibling_half_start`
+/// at `height` level.
+pub(crate) fn get_child_and_sibling_half_start(n: Nibble, height: u8) -> (u8, u8) {
+    // Get the index of the first child belonging to the same subtree whose root, let's say `r` is
+    // at `height` that the n-th child belongs to.
+    // Note: `child_half_start` will be always equal to `n` at height 0.
+    let child_half_start = (0xff << height) & u8::from(n);
+
+    // Get the index of the first child belonging to the subtree whose root is the sibling of `r`
+    // at `height`.
+    let sibling_half_start = child_half_start ^ (1 << height);
+
+    (child_half_start, sibling_half_start)
+}
+
+/// Represents an account.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
+pub struct LeafNode {
+    // The hashed account address associated with this leaf node.
+    account_key: HashValue,
+    // The hash of the account state blob.
+    blob_hash: HashValue,
+    // The account blob associated with `account_key`.
+    blob: AccountStateBlob,
 }
 
 impl LeafNode {
@@ -569,6 +529,53 @@ impl LeafNode {
     /// Gets the associated blob itself.
     pub fn blob(&self) -> &AccountStateBlob {
         &self.blob
+    }
+}
+
+/// Computes the hash of a [`LeafNode`].
+impl CryptoHash for LeafNode {
+    // Unused hasher.
+    type Hasher = LeafNodeHasher;
+
+    fn hash(&self) -> HashValue {
+        SparseMerkleLeafNode::new(self.account_key, self.blob_hash).hash()
+    }
+}
+
+#[repr(u8)]
+#[derive(FromPrimitive, ToPrimitive)]
+enum NodeTag {
+    Null = 0,
+    Internal = 1,
+    Leaf = 2,
+}
+
+/// The concrete node type of [`JellyfishMerkleTree`](crate::JellyfishMerkleTree).
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Node {
+    /// Represents `null`.
+    Null,
+    /// A wrapper of [`InternalNode`].
+    Internal(InternalNode),
+    /// A wrapper of [`LeafNode`].
+    Leaf(LeafNode),
+}
+
+impl From<InternalNode> for Node {
+    fn from(node: InternalNode) -> Self {
+        Node::Internal(node)
+    }
+}
+
+impl From<InternalNode> for Children {
+    fn from(node: InternalNode) -> Self {
+        node.children
+    }
+}
+
+impl From<LeafNode> for Node {
+    fn from(node: LeafNode) -> Self {
+        Node::Leaf(node)
     }
 }
 
@@ -642,24 +649,25 @@ impl Node {
 
 /// Error thrown when a [`Node`] fails to be deserialized out of a byte sequence stored in physical
 /// storage, via [`Node::decode`].
-#[derive(Debug, Fail, Eq, PartialEq)]
+#[derive(Debug, Error, Eq, PartialEq)]
 pub enum NodeDecodeError {
     /// Input is empty.
-    #[fail(display = "Missing tag due to empty input")]
+    #[error("Missing tag due to empty input")]
     EmptyInput,
 
     /// The first byte of the input is not a known tag representing one of the variants.
-    #[fail(display = "lead tag byte is unknown: {}", unknown_tag)]
+    #[error("lead tag byte is unknown: {}", unknown_tag)]
     UnknownTag { unknown_tag: u8 },
 
     /// No children found in internal node
-    #[fail(display = "No children found in internal node")]
+    #[error("No children found in internal node")]
     NoChildren,
 
     /// Extra leaf bits set
-    #[fail(
-        display = "Non-existent leaf bits set, existing: {}, leaves: {}",
-        existing, leaves
+    #[error(
+        "Non-existent leaf bits set, existing: {}, leaves: {}",
+        existing,
+        leaves
     )]
     ExtraLeaves { existing: u16, leaves: u16 },
 }

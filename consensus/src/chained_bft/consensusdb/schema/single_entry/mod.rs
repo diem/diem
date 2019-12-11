@@ -11,8 +11,8 @@
 //! ```
 
 use super::{ensure_slice_len_eq, SINGLE_ENTRY_CF_NAME};
+use anyhow::{format_err, Result};
 use byteorder::ReadBytesExt;
-use failure::prelude::*;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use schemadb::{
@@ -31,12 +31,10 @@ define_schema!(
 #[derive(Debug, Eq, PartialEq, FromPrimitive, ToPrimitive)]
 #[repr(u8)]
 pub enum SingleEntryKey {
-    // Used to store ConsensusState
-    ConsensusState = 0,
     // Used to store the highest timeout certificate
-    HighestTimeoutCertificate = 1,
+    HighestTimeoutCertificate = 0,
     // Used to store the last vote
-    LastVoteMsg = 2,
+    LastVoteMsg = 1,
 }
 
 impl KeyCodec<SingleEntrySchema> for SingleEntryKey {

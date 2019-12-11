@@ -40,7 +40,7 @@ resource "aws_instance" "fullnode" {
 
 data "local_file" "fullnode_keys" {
   count    = var.num_fullnodes
-  filename = "${var.validator_set}/fn/${var.fullnode_ids[count.index]}.node.network.keys.toml"
+  filename = "${var.validator_set}/fn/${var.fullnode_ids[count.index]}.network.keys.toml"
 }
 
 resource "aws_secretsmanager_secret" "fullnode_network" {
@@ -62,15 +62,16 @@ data "template_file" "fullnode_config" {
   vars = {
     self_ip = element(aws_instance.fullnode.*.private_ip, count.index)
     peer_id = var.fullnode_ids[count.index]
-    upstream_peer = var.validator_fullnode_id
+    upstream_peer = var.validator_fullnode_id[local.fullnode_list[count.index]]
   }
 }
 
 data "template_file" "fullnode_seeds" {
+  count    = var.num_fullnodes
   template = file("templates/seed_peers.config.toml")
 
   vars = {
-    validators = "${var.validator_fullnode_id}:${element(aws_instance.validator.*.private_ip, 0)}"
+    validators = "${var.validator_fullnode_id[local.fullnode_list[count.index]]}:${element(aws_instance.validator.*.private_ip, local.fullnode_list[count.index])}"
     port       = 6181
   }
 }
@@ -85,7 +86,7 @@ data "template_file" "fullnode_ecs_task_definition" {
     cpu              = local.cpu_by_instance[var.validator_type]
     mem              = local.mem_by_instance[var.validator_type]
     node_config      = jsonencode(element(data.template_file.fullnode_config.*.rendered, count.index))
-    seed_peers       = jsonencode(data.template_file.fullnode_seeds.rendered)
+    seed_peers       = jsonencode(element(data.template_file.fullnode_seeds.*.rendered, count.index))
     genesis_blob     = jsonencode(filebase64("${var.validator_set}/genesis.blob"))
     peer_id          = var.fullnode_ids[count.index]
     network_secret   = element(aws_secretsmanager_secret.fullnode_network.*.arn, count.index)

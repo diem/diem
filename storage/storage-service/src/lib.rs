@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This crate implements the storage [GRPC](http://grpc.io) service.
 //!
 //! The user of storage service is supposed to use it via client lib provided in
@@ -10,7 +12,7 @@
 #[cfg(feature = "fuzzing")]
 pub mod mocks;
 
-use failure::prelude::*;
+use anyhow::Result;
 use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure, ServerHandle};
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
@@ -25,15 +27,15 @@ use std::{
 };
 use storage_proto::proto::storage::{
     create_storage, GetAccountStateWithProofByVersionRequest,
-    GetAccountStateWithProofByVersionResponse, GetLatestLedgerInfosPerEpochRequest,
-    GetLatestLedgerInfosPerEpochResponse, GetStartupInfoRequest, GetStartupInfoResponse,
+    GetAccountStateWithProofByVersionResponse, GetEpochChangeLedgerInfosRequest,
+    GetEpochChangeLedgerInfosResponse, GetStartupInfoRequest, GetStartupInfoResponse,
     GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
     SaveTransactionsResponse, Storage,
 };
 
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> ServerHandle {
-    let (storage_service, shutdown_receiver) = StorageService::new(&config.get_storage_dir());
+    let (storage_service, shutdown_receiver) = StorageService::new(&config.storage.dir());
     spawn_service_thread_with_drop_closure(
         create_storage(storage_service),
         config.storage.address.clone(),
@@ -217,15 +219,15 @@ impl StorageService {
         Ok(rust_resp.into())
     }
 
-    fn get_latest_ledger_infos_per_epoch_inner(
+    fn get_epoch_change_ledger_infos_inner(
         &self,
-        req: GetLatestLedgerInfosPerEpochRequest,
-    ) -> Result<GetLatestLedgerInfosPerEpochResponse> {
-        let rust_req = storage_proto::GetLatestLedgerInfosPerEpochRequest::try_from(req)?;
+        req: GetEpochChangeLedgerInfosRequest,
+    ) -> Result<GetEpochChangeLedgerInfosResponse> {
+        let rust_req = storage_proto::GetEpochChangeLedgerInfosRequest::try_from(req)?;
         let ledger_infos = self
             .db
-            .get_latest_ledger_infos_per_epoch(rust_req.start_epoch)?;
-        let rust_resp = storage_proto::GetLatestLedgerInfosPerEpochResponse::new(ledger_infos);
+            .get_epoch_change_ledger_infos(rust_req.start_epoch)?;
+        let rust_resp = storage_proto::GetEpochChangeLedgerInfosResponse::new(ledger_infos);
         Ok(rust_resp.into())
     }
 }
@@ -291,15 +293,15 @@ impl Storage for StorageService {
         provide_grpc_response(resp, ctx, sink);
     }
 
-    fn get_latest_ledger_infos_per_epoch(
+    fn get_epoch_change_ledger_infos(
         &mut self,
         ctx: grpcio::RpcContext,
-        req: GetLatestLedgerInfosPerEpochRequest,
-        sink: grpcio::UnarySink<GetLatestLedgerInfosPerEpochResponse>,
+        req: GetEpochChangeLedgerInfosRequest,
+        sink: grpcio::UnarySink<GetEpochChangeLedgerInfosResponse>,
     ) {
-        debug!("[GRPC] Storage::get_latest_ledger_infos_per_epoch");
+        debug!("[GRPC] Storage::get_epoch_change_ledger_infos");
         let _timer = SVC_COUNTERS.req(&ctx);
-        let resp = self.get_latest_ledger_infos_per_epoch_inner(req);
+        let resp = self.get_epoch_change_ledger_infos_inner(req);
         provide_grpc_response(resp, ctx, sink);
     }
 }

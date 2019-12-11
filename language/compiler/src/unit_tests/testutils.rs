@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::Result;
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
-use failure::prelude::*;
 use ir_to_bytecode::{
     compiler::{compile_module, compile_program},
     parser::{parse_module, parse_program},

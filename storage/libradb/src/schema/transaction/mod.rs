@@ -13,8 +13,8 @@
 //! numeric value.
 
 use crate::schema::{ensure_slice_len_eq, TRANSACTION_CF_NAME};
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt};
-use failure::prelude::*;
 use libra_types::transaction::{Transaction, Version};
 use schemadb::{
     define_schema,

@@ -93,7 +93,7 @@ impl TestEnvironment {
     }
 
     fn get_ac_client(&self, port: u16) -> ClientProxy {
-        let config = NodeConfig::load(&self.validator_swarm.config.configs[0]).unwrap();
+        let config = NodeConfig::load(&self.validator_swarm.config.config_files[0]).unwrap();
         let validator_set_file = self
             .validator_swarm
             .dir
@@ -241,6 +241,19 @@ fn smoke_test_single_node() {
 }
 
 #[test]
+fn smoke_test_single_node_block_metadata() {
+    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    // just need an address to get the latest version
+    let address = AccountAddress::from_hex_literal("0xA550C18").unwrap();
+    // sleep 1s to commit some blocks
+    thread::sleep(time::Duration::from_secs(1));
+    let (_state, version) = client_proxy
+        .get_latest_account_state(&["q", &address.to_string()])
+        .unwrap();
+    assert!(version > 0, "BlockMetadata txn not persisted");
+}
+
+#[test]
 fn smoke_test_multi_node() {
     let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(4, 0);
     test_smoke_script(client_proxy);
@@ -349,13 +362,13 @@ fn test_startup_sync_state() {
     let node_config = NodeConfig::load(
         env.validator_swarm
             .config
-            .configs
+            .config_files
             .get(peer_to_stop)
             .unwrap(),
     )
     .unwrap();
     // TODO Remove hardcoded path to state db
-    let state_db_path = node_config.get_storage_dir().join("libradb");
+    let state_db_path = node_config.storage.dir().join("libradb");
     // Verify that state_db_path exists and
     // we are not deleting a non-existent directory
     assert!(state_db_path.as_path().exists());

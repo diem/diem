@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{counters, state_replication::TxnManager};
+use anyhow::Result;
 use executor::StateComputeResult;
-use failure::Result;
 use futures::{compat::Future01CompatExt, future, Future, FutureExt};
 use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::{
@@ -32,18 +32,24 @@ impl MempoolProxy {
         timestamp_usecs: u64,
     ) -> CommitTransactionsRequest {
         let mut all_updates = Vec::new();
-        assert_eq!(txns.len(), compute_result.compute_status.len());
+        // we exclude the prologue txn, we probably need a way to ensure this aligns with state_computer
+        let status = compute_result.compute_status[1..].to_vec();
+        assert_eq!(txns.len(), status.len());
         for (txn, status) in txns.iter().zip(compute_result.compute_status.iter()) {
             let mut transaction = CommittedTransaction::default();
             transaction.sender = txn.sender().as_ref().to_vec();
             transaction.sequence_number = txn.sequence_number();
             match status {
                 TransactionStatus::Keep(_) => {
-                    counters::SUCCESS_TXNS_COUNT.inc();
+                    counters::COMMITTED_TXNS_COUNT
+                        .with_label_values(&["success"])
+                        .inc();
                     transaction.is_rejected = false;
                 }
                 TransactionStatus::Discard(_) => {
-                    counters::FAILED_TXNS_COUNT.inc();
+                    counters::COMMITTED_TXNS_COUNT
+                        .with_label_values(&["failed"])
+                        .inc();
                     transaction.is_rejected = true;
                 }
             };
@@ -131,7 +137,6 @@ impl TxnManager for MempoolProxy {
         timestamp_usecs: u64,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         counters::COMMITTED_BLOCKS_COUNT.inc();
-        counters::COMMITTED_TXNS_COUNT.inc_by(txns.len() as i64);
         counters::NUM_TXNS_PER_BLOCK.observe(txns.len() as f64);
         let req =
             Self::gen_commit_transactions_request(txns.as_slice(), compute_result, timestamp_usecs);

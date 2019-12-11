@@ -69,6 +69,12 @@ lazy_static::lazy_static! {
     /// Counter of pending network events to Admission Control
     pub static ref PENDING_ADMISSION_CONTROL_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_admission_control_network_events");
 
+    /// Counter of pending network events to Health Checker.
+    pub static ref PENDING_HEALTH_CHECKER_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_health_checker_network_events");
+
+    /// Counter of pending network events to Discovery.
+    pub static ref PENDING_DISCOVERY_NETWORK_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_discovery_network_events");
+
     /// Counter of pending requests in Peer Manager
     pub static ref PENDING_PEER_MANAGER_REQUESTS: IntGauge = OP_COUNTERS.gauge("pending_peer_manager_requests");
 
@@ -105,8 +111,11 @@ lazy_static::lazy_static! {
     /// Counter of pending Peer Manager notifications to Connectivity Manager
     pub static ref PENDING_PEER_MANAGER_CONNECTIVITY_MANAGER_NOTIFICATIONS: IntGauge = OP_COUNTERS.gauge("pending_peer_manager_connectivity_manager_notifications");
 
-    /// Counter of pending internal events in Peer Manager
-    pub static ref PENDING_PEER_MANAGER_INTERNAL_EVENTS: IntGauge = OP_COUNTERS.gauge("pending_peer_manager_internal_events");
+    /// Counter of pending Peer events to PeerManager.
+    pub static ref PENDING_PEER_NOTIFICATIONS: IntGauge = OP_COUNTERS.gauge("pending_peer_notifications");
+
+    /// Counter of pending Connection Handler notifications to PeerManager.
+    pub static ref PENDING_CONNECTION_HANDLER_NOTIFICATIONS: IntGauge = OP_COUNTERS.gauge("pending_connection_handler_notifications");
 
     /// Counter of pending dial requests in Peer Manager
     pub static ref PENDING_PEER_MANAGER_DIAL_REQUESTS: IntGauge  = OP_COUNTERS.gauge("pending_peer_manager_dial_requests");

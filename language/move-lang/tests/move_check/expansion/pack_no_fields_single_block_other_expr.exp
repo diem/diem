@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/pack_no_fields_single_block_other_expr.move:6:19 ───
+   │
+ 6 │         let s = S 0;
+   │                   ^ Unrecognized Token: 0
+   ·
+ 6 │         let s = S 0;
+   │                   - Expected:  "!=", "%", "&", "&&", "(", "()", ")", "*", "+", ",", "-", ".", "/", ":", "::", ";", "<", "<=", "=", "==", ">", ">=", "^", "acquires", "as", "else", "{", "|", "||", "}", r#"0[xX][0-9a-fA-F]+"#, r#"[a-zA-Z_][a-zA-Z0-9_]*"#,
+   │
+

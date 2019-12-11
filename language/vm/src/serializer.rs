@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Serialization of transactions and modules.
 //!
 //! This module exposes two entry points for serialization of `CompiledScript` and
@@ -8,7 +10,7 @@
 //! `CompiledModule`.
 
 use crate::{file_format::*, file_format_common::*, vm_string::VMString};
-use failure::*;
+use anyhow::{bail, Result};
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
 use std::ops::Deref;
 
@@ -554,14 +556,6 @@ fn serialize_code_unit(binary: &mut BinaryData, code: &CodeUnit) -> Result<()> {
     serialize_code(binary, &code.code)
 }
 
-/// Serializes a single `Bytecode` instruction into a vector
-pub(crate) fn serialize_instruction(binary: &mut Vec<u8>, opcode: &Bytecode) -> Result<()> {
-    let mut binary_data = BinaryData::from(binary.clone());
-    serialize_instruction_inner(&mut binary_data, opcode)?;
-    *binary = binary_data.into_inner();
-    Ok(())
-}
-
 /// Serializes a single `Bytecode` instruction.
 fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Result<()> {
     let res = match opcode {
@@ -690,7 +684,6 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             write_u16_as_uleb128(binary, class_idx.0)?;
             write_u16_as_uleb128(binary, types_idx.0)
         }
-        Bytecode::CreateAccount => binary.push(Opcodes::CREATE_ACCOUNT as u8),
         Bytecode::GetTxnSequenceNumber => binary.push(Opcodes::GET_TXN_SEQUENCE_NUMBER as u8),
         Bytecode::GetTxnPublicKey => binary.push(Opcodes::GET_TXN_PUBLIC_KEY as u8),
     };

@@ -176,7 +176,7 @@ pub fn stack_satisfies_struct_signature(
         .flatten()
         .map(|field| field.type_signature().token());
     let mut satisfied = true;
-    for (i, token_view) in field_token_views.enumerate() {
+    for (i, token_view) in field_token_views.rev().enumerate() {
         let abstract_value = AbstractValue {
             token: token_view.as_inner().clone(),
             kind: token_view.kind(&[]),
@@ -198,8 +198,7 @@ pub fn stack_struct_popn(
     let mut state = state.clone();
     let struct_def = state_copy.module.struct_def_at(struct_index);
     let struct_def_view = StructDefinitionView::new(&state_copy.module, struct_def);
-    let number_of_pops = struct_def_view.fields().iter().len();
-    for _ in 0..number_of_pops {
+    for _ in struct_def_view.fields().unwrap() {
         state = stack_pop(&state)?;
     }
     Ok(state)

@@ -30,7 +30,7 @@ impl TransactionValidation for MockVMValidator {
     fn validate_transaction(
         &self,
         txn: SignedTransaction,
-    ) -> Box<dyn Future<Item = Option<VMStatus>, Error = failure::Error> + Send> {
+    ) -> Box<dyn Future<Item = Option<VMStatus>, Error = anyhow::Error> + Send> {
         let txn = match txn.check_signature() {
             Ok(txn) => txn,
             Err(_) => return Box::new(ok(Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)))),

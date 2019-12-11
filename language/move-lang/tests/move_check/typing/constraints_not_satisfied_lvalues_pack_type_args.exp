@@ -1,0 +1,34 @@
+error: 
+
+   ┌── tests/move_check/typing/constraints_not_satisfied_lvalues_pack_type_args.move:2:20 ───
+   │
+ 8 │         let B<CupC<R>> {} = abort 0;
+   │               ^^^^^^^ Constraint not satisfied.
+   ·
+ 8 │         let B<CupC<R>> {} = abort 0;
+   │                    - The resource type '0x8675309::M::R' does not satisfy the constraint 'copyable'
+   ·
+ 3 │     resource struct R {}
+   │     -------- The type's constraint information was declared here
+   ·
+ 2 │     struct CupC<T: copyable> {}
+   │                    -------- 'copyable' constraint declared here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/constraints_not_satisfied_lvalues_pack_type_args.move:2:20 ───
+   │
+ 9 │         B<CupC<R>> {} = abort 0;
+   │           ^^^^^^^ Constraint not satisfied.
+   ·
+ 9 │         B<CupC<R>> {} = abort 0;
+   │                - The resource type '0x8675309::M::R' does not satisfy the constraint 'copyable'
+   ·
+ 3 │     resource struct R {}
+   │     -------- The type's constraint information was declared here
+   ·
+ 2 │     struct CupC<T: copyable> {}
+   │                    -------- 'copyable' constraint declared here
+   │
+

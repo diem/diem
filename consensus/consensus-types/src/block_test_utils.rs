@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    block::Block, block_data::BlockData, block_info::BlockInfo, common::Round,
-    quorum_cert::QuorumCert, vote_data::VoteData,
+    block::Block, block_data::BlockData, common::Round, quorum_cert::QuorumCert,
+    vote_data::VoteData,
 };
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::{
+    block_info::BlockInfo,
     crypto_proxies::{SecretKey, ValidatorSigner},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     validator_signer::proptests,
@@ -57,7 +58,7 @@ prop_compose! {
             ancestor_id,
             Round::arbitrary(),
             proptests::arb_signer(),
-            QuorumCert::certificate_for_genesis(),
+            certificate_for_genesis(),
         )
     ) -> Block<Vec<usize>> {
         block
@@ -179,14 +180,36 @@ pub fn get_current_timestamp() -> Duration {
 }
 
 pub fn placeholder_ledger_info() -> LedgerInfo {
-    LedgerInfo::new(
-        0,
-        HashValue::zero(),
-        HashValue::zero(),
-        HashValue::zero(),
-        0,
-        0,
-        None,
+    LedgerInfo::new(BlockInfo::empty(), HashValue::zero())
+}
+
+pub fn gen_test_certificate(
+    signers: Vec<&ValidatorSigner>,
+    block: BlockInfo,
+    parent_block: BlockInfo,
+    committed_block: Option<BlockInfo>,
+) -> QuorumCert {
+    let vote_data = VoteData::new(block.clone(), parent_block.clone());
+    let ledger_info = match committed_block {
+        Some(info) => LedgerInfo::new(info, vote_data.hash()),
+        None => {
+            let mut placeholder = placeholder_ledger_info();
+            placeholder.set_consensus_data_hash(vote_data.hash());
+            placeholder
+        }
+    };
+
+    let mut signatures = BTreeMap::new();
+    for signer in signers {
+        let li_sig = signer
+            .sign_message(ledger_info.hash())
+            .expect("Failed to sign LedgerInfo");
+        signatures.insert(signer.author(), li_sig);
+    }
+
+    QuorumCert::new(
+        vote_data,
+        LedgerInfoWithSignatures::new(ledger_info, signatures),
     )
 }
 
@@ -196,39 +219,35 @@ pub fn placeholder_certificate_for_block(
     certified_block_round: u64,
     certified_parent_block_id: HashValue,
     certified_parent_block_round: u64,
-    consensus_block_id: Option<HashValue>,
 ) -> QuorumCert {
     // Assuming executed state to be Genesis state.
     let genesis_ledger_info = LedgerInfo::genesis();
     let vote_data = VoteData::new(
         BlockInfo::new(
-            genesis_ledger_info.epoch(),
+            genesis_ledger_info.epoch() + 1,
             certified_block_round,
             certified_block_id,
             genesis_ledger_info.transaction_accumulator_hash(),
             genesis_ledger_info.version(),
             genesis_ledger_info.timestamp_usecs(),
-            genesis_ledger_info.next_validator_set().cloned(),
+            None,
         ),
         BlockInfo::new(
-            genesis_ledger_info.epoch(),
+            genesis_ledger_info.epoch() + 1,
             certified_parent_block_round,
             certified_parent_block_id,
             genesis_ledger_info.transaction_accumulator_hash(),
             genesis_ledger_info.version(),
             genesis_ledger_info.timestamp_usecs(),
-            genesis_ledger_info.next_validator_set().cloned(),
+            None,
         ),
     );
 
     // This ledger info doesn't carry any meaningful information: it is all zeros except for
     // the consensus data hash that carries the actual vote.
     let mut ledger_info_placeholder = placeholder_ledger_info();
-    ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
 
-    if let Some(bid) = consensus_block_id {
-        ledger_info_placeholder.set_consensus_block_id(bid)
-    }
+    ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
 
     let mut signatures = BTreeMap::new();
     for signer in signers {
@@ -241,5 +260,13 @@ pub fn placeholder_certificate_for_block(
     QuorumCert::new(
         vote_data,
         LedgerInfoWithSignatures::new(ledger_info_placeholder, signatures),
+    )
+}
+
+pub fn certificate_for_genesis() -> QuorumCert {
+    let ledger_info = LedgerInfo::genesis();
+    QuorumCert::certificate_for_genesis_from_ledger_info(
+        &ledger_info,
+        Block::<Vec<usize>>::make_genesis_block_from_ledger_info(&ledger_info).id(),
     )
 }

@@ -10,6 +10,6 @@ edition = "2018"
 publish = false
 
 [dependencies]
-futures = { version = "=0.3.0-alpha.19", package = "futures-preview" }
-bytes = { version = "0.4.12", default-features = false }
-lazy_static = { version = "1.3.0", default-features = false }
+futures = "0.3.0"
+bytes = "0.5"
+once_cell = "1.2.0"

@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use failure::{self, prelude::format_err};
+#![forbid(unsafe_code)]
+
+use anyhow::{format_err, Result};
 use reqwest::Url;
 use serde::Deserialize;
 
@@ -36,7 +38,7 @@ impl GitHub {
     /// repo in format owner/repo_name
     /// sha can be long or short hash, or branch name
     /// Paging is not implemented yet
-    pub fn get_commits(&self, repo: &str, sha: &str) -> failure::Result<Vec<CommitInfo>> {
+    pub fn get_commits(&self, repo: &str, sha: &str) -> Result<Vec<CommitInfo>> {
         let url = format!("https://api.github.com/repos/{}/commits?sha={}", repo, sha);
         let url: Url = url.parse().expect("Failed to parse github url");
         let request = self.client.get(url);

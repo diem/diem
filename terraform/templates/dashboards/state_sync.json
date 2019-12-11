@@ -74,7 +74,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "state_sync_gauge{op=\"active_upstream_peers\"}",
+          "expr": "libra_state_sync_active_upstream_peers",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -165,7 +165,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(state_sync{op=~'apply_chunk_success.*'}, 'chunk_sender_id', '$1', 'op', 'apply_chunk_success.(.*)')",
+          "expr": "libra_state_sync_apply_chunk_success_total",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}: {{chunk_sender_id}}",
@@ -254,7 +254,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(state_sync{op=~'apply_chunk_failure.*'}, 'chunk_sender_id', '$1', 'op', 'apply_chunk_failure.(.*)')",
+          "expr": "libra_state_sync_apply_chunk_failure_total",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}: {{chunk_sender_id}}",
@@ -355,7 +355,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "state_sync_gauge{op=\"committed_version\"}",
+          "expr": "libra_state_sync_committed_version",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -444,7 +444,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "state_sync_duration_sum{op=\"sync_progress_duration\"}",
+          "expr": "libra_state_sync_sync_progress_duration_s",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -532,7 +532,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "state_sync_gauge{op=\"target_version\"}",
+          "expr": "libra_state_sync_target_version",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -620,7 +620,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "state_sync{op=\"timeout\"}",
+          "expr": "libra_state_sync_timeout_total",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -709,7 +709,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "state_sync{op=\"state_sync_txns_replayed\"}",
+          "expr": "libra_state_sync_txns_replayed_total",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -810,7 +810,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(state_sync{op=~'requests_sent.*'}, 'requested_peer_id', '$1', 'op', 'requests_sent.(.*)')",
+          "expr": "libra_state_sync_requests_sent_total",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}} : {{requested_peer_id}}",
@@ -898,7 +898,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(state_sync{op=~'responses_received.*'}, 'response_sender_id', '$1', 'op', 'responses_received.(.*)')",
+          "expr": "libra_state_sync_responses_received_total",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}} : {{response_sender_id}}",

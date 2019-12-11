@@ -1,0 +1,70 @@
+error: 
+
+   ┌── tests/move_check/typing/implicit_deref_borrow_field_chain_missing.move:7:9 ───
+   │
+ 7 │         x1.f;
+   │         ^^^^ Unbound field 'f' in '0x8675309::M::X1'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/implicit_deref_borrow_field_chain_missing.move:8:9 ───
+   │
+ 8 │         x1.x2.f;
+   │         ^^^^^^^ Unbound field 'f' in '0x8675309::M::X2'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/implicit_deref_borrow_field_chain_missing.move:9:9 ───
+   │
+ 9 │         x1.x2.x3.g;
+   │         ^^^^^^^^^^ Unbound field 'g' in '0x8675309::M::X3'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/implicit_deref_borrow_field_chain_missing.move:4:20 ───
+    │
+ 10 │         x1.x2.x3.f.g;
+    │         ^^^^^^^^^^^^ Unbound field 'g'
+    ·
+ 4 │     struct X3 { f: u64, }
+    │                    --- Expected a struct type in the current module but got: u64
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/implicit_deref_borrow_field_chain_missing.move:11:9 ───
+    │
+ 11 │         x1_mut.f;
+    │         ^^^^^^^^ Unbound field 'f' in '0x8675309::M::X1'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/implicit_deref_borrow_field_chain_missing.move:12:9 ───
+    │
+ 12 │         x1_mut.x2.f;
+    │         ^^^^^^^^^^^ Unbound field 'f' in '0x8675309::M::X2'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/implicit_deref_borrow_field_chain_missing.move:13:9 ───
+    │
+ 13 │         x1_mut.x2.x3.g;
+    │         ^^^^^^^^^^^^^^ Unbound field 'g' in '0x8675309::M::X3'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/implicit_deref_borrow_field_chain_missing.move:4:20 ───
+    │
+ 14 │         x1_mut.x2.x3.f.g;
+    │         ^^^^^^^^^^^^^^^^ Unbound field 'g'
+    ·
+ 4 │     struct X3 { f: u64, }
+    │                    --- Expected a struct type in the current module but got: u64
+    │
+

@@ -8,5 +8,4 @@ main() {
     return;
 }
 
-// check: VerificationFailure
 // check: EQUALITY_OP_TYPE_MISMATCH_ERROR

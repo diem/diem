@@ -1,10 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 #[macro_use]
 pub mod shared;
 
-mod errors;
+pub mod errors;
 
 pub mod cfgir;
 pub mod expansion;
@@ -16,7 +18,9 @@ pub mod typing;
 
 pub mod command_line;
 
-use codespan::{ByteIndex, FileMap, FileName, Span};
+pub mod test_utils;
+
+use codespan::{ByteIndex, Span};
 use errors::*;
 use lalrpop_util::ParseError;
 use shared::{Address, Loc};
@@ -44,10 +48,23 @@ pub fn move_check(
     deps: &[&'static str],
     sender_opt: Option<Address>,
 ) -> io::Result<()> {
+    let (files, errors) = move_check_no_report(targets, deps, sender_opt)?;
+    if !errors.is_empty() {
+        errors::report_errors(files, errors)
+    }
+    Ok(())
+}
+
+/// Move check but it returns the errors instead of reporting them to stderr
+pub fn move_check_no_report(
+    targets: &[&'static str],
+    deps: &[&'static str],
+    sender_opt: Option<Address>,
+) -> io::Result<(FilesSourceText, Errors)> {
     let (files, pprog_res) = parse_program(targets, deps)?;
     match check_program(pprog_res, sender_opt) {
-        Err(errors) => errors::report_errors(files, errors),
-        Ok(_) => Ok(()),
+        Err(errors) => Ok((files, errors)),
+        Ok(_) => Ok((files, vec![])),
     }
 }
 
@@ -60,7 +77,7 @@ pub fn move_compile(
     targets: &[&'static str],
     deps: &[&'static str],
     sender_opt: Option<Address>,
-) -> io::Result<(Files, Vec<to_bytecode::translate::CompiledUnit>)> {
+) -> io::Result<(FilesSourceText, Vec<to_bytecode::translate::CompiledUnit>)> {
     let (files, pprog_res) = parse_program(targets, deps)?;
     match compile_program(pprog_res, sender_opt) {
         Err(errors) => errors::report_errors(files, errors),
@@ -71,7 +88,7 @@ pub fn move_compile(
 /// Runs the bytecode verifier on the compiled units
 /// Fails if the bytecode verifier errors
 pub fn sanity_check_compiled_units(
-    files: Files,
+    files: FilesSourceText,
     compiled_units: Vec<to_bytecode::translate::CompiledUnit>,
 ) {
     let (_, ice_errors) = to_bytecode::translate::verify_units(compiled_units);
@@ -82,7 +99,7 @@ pub fn sanity_check_compiled_units(
 
 /// Given a file map and a set of compiled programs, saves the compiled programs to disk
 pub fn output_compiled_units(
-    files: Files,
+    files: FilesSourceText,
     compiled_units: Vec<to_bytecode::translate::CompiledUnit>,
     out_dir: &str,
 ) -> io::Result<()> {
@@ -200,8 +217,8 @@ where
 fn parse_program(
     targets: &[&'static str],
     deps: &[&'static str],
-) -> io::Result<(Files, Result<parser::ast::Program, Errors>)> {
-    let mut files: Files = HashMap::new();
+) -> io::Result<(FilesSourceText, Result<parser::ast::Program, Errors>)> {
+    let mut files: FilesSourceText = HashMap::new();
     let mut source_definitions = Vec::new();
     let mut lib_definitions = Vec::new();
     let mut errors: Errors = Vec::new();
@@ -234,7 +251,7 @@ fn parse_program(
 }
 
 fn parse_file(
-    files: &mut Files,
+    files: &mut FilesSourceText,
     fname: &'static str,
 ) -> io::Result<(Option<parser::ast::FileDefinition>, Errors)> {
     let mut errors: Errors = Vec::new();
@@ -256,10 +273,7 @@ fn parse_file(
             None
         }
     };
-    files.insert(
-        fname,
-        FileMap::new(FileName::real(fname), no_comments_buffer),
-    );
+    files.insert(fname, no_comments_buffer);
     Ok((def_opt, errors))
 }
 

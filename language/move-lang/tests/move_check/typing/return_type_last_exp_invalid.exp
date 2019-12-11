@@ -1,0 +1,70 @@
+error: 
+
+   ┌── tests/move_check/typing/return_type_last_exp_invalid.move:4:11 ───
+   │
+ 5 │         ()
+   │         ^^ Invalid return expression
+   ·
+ 5 │         ()
+   │         -- The type: '()'
+   ·
+ 4 │     t0(): u64 {
+   │           --- Is not compatible with: 'u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/return_type_last_exp_invalid.move:8:11 ───
+   │
+ 9 │         0
+   │         ^ Invalid return expression
+   ·
+ 9 │         0
+   │         - The type: 'u64'
+   ·
+ 8 │     t1(): () {
+   │           -- Is not compatible with: '()'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/return_type_last_exp_invalid.move:12:11 ───
+    │
+ 13 │         (0, false, R{})
+    │         ^^^^^^^^^^^^^^^ Invalid return expression
+    ·
+ 13 │         (0, false, R{})
+    │         --------------- The type: '(u64,bool,0x8675309::M::R)'
+    ·
+ 12 │     t2(): (u64, bool) {
+    │           ----------- Is not compatible with: '(u64,bool)'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/return_type_last_exp_invalid.move:16:11 ───
+    │
+ 17 │         (0, false, R{})
+    │         ^^^^^^^^^^^^^^^ Invalid return expression
+    ·
+ 17 │         (0, false, R{})
+    │         --------------- The type: '(u64,bool,0x8675309::M::R)'
+    ·
+ 16 │     t3(): (u64, bool, R, bool) {
+    │           -------------------- Is not compatible with: '(u64,bool,0x8675309::M::R,bool)'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/return_type_last_exp_invalid.move:20:12 ───
+    │
+ 21 │         (0, false, R{})
+    │         ^^^^^^^^^^^^^^^ Invalid return expression
+    ·
+ 21 │         (0, false, R{})
+    │          - The type: 'u64'
+    ·
+ 20 │     t4(): (bool, u64, R) {
+    │            ---- Is not compatible with: 'bool'
+    │
+

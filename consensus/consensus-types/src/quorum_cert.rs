@@ -1,14 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{block_info::BlockInfo, vote_data::VoteData};
-use failure::prelude::*;
-use libra_crypto::{
-    hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
-    HashValue,
-};
+use crate::vote_data::VoteData;
+use anyhow::{ensure, Context};
+use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier},
+    block_info::BlockInfo,
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
     ledger_info::LedgerInfo,
 };
 use serde::{Deserialize, Serialize};
@@ -57,18 +55,16 @@ impl QuorumCert {
         &self.signed_ledger_info
     }
 
-    pub fn committed_block_id(&self) -> Option<HashValue> {
-        let id = self.ledger_info().ledger_info().consensus_block_id();
-        if id.is_zero() {
-            None
-        } else {
-            Some(id)
-        }
+    pub fn commit_info(&self) -> &BlockInfo {
+        self.ledger_info().ledger_info().commit_info()
     }
 
-    #[cfg(any(test, feature = "fuzzing"))]
-    pub fn certificate_for_genesis() -> QuorumCert {
-        Self::certificate_for_genesis_from_ledger_info(&LedgerInfo::genesis(), *GENESIS_BLOCK_ID)
+    /// If the QC commits reconfiguration and starts a new epoch
+    pub fn ends_epoch(&self) -> bool {
+        self.signed_ledger_info
+            .ledger_info()
+            .next_validator_set()
+            .is_some()
     }
 
     /// QuorumCert for the genesis block deterministically generated from end-epoch LedgerInfo:
@@ -87,45 +83,44 @@ impl QuorumCert {
             ledger_info.transaction_accumulator_hash(),
             ledger_info.version(),
             ledger_info.timestamp_usecs(),
-            ledger_info.next_validator_set().cloned(),
+            None,
         );
-        let vote_data = VoteData::new(ancestor.clone(), ancestor);
+        let vote_data = VoteData::new(ancestor.clone(), ancestor.clone());
+        let li = LedgerInfo::new(ancestor, vote_data.hash());
 
-        let li = LedgerInfo::new(
-            ledger_info.version(),
-            ledger_info.transaction_accumulator_hash(),
-            vote_data.hash(),
-            genesis_id,
-            ledger_info.epoch() + 1,
-            ledger_info.timestamp_usecs(),
-            ledger_info.next_validator_set().cloned(),
-        );
-
-        let signer = ValidatorSigner::genesis();
-        let signature = signer
-            .sign_message(li.hash())
-            .expect("Fail to sign genesis ledger info");
-        let mut signatures = BTreeMap::new();
-        signatures.insert(signer.author(), signature);
-        QuorumCert::new(vote_data, LedgerInfoWithSignatures::new(li, signatures))
+        QuorumCert::new(
+            vote_data,
+            LedgerInfoWithSignatures::new(li, BTreeMap::new()),
+        )
     }
 
-    pub fn verify(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
+    pub fn verify(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
         let vote_hash = self.vote_data.hash();
         ensure!(
             self.ledger_info().ledger_info().consensus_data_hash() == vote_hash,
             "Quorum Cert's hash mismatch LedgerInfo"
         );
-        // Genesis is implicitly agreed upon, it doesn't have real signatures.
-        if self.certified_block().round() == 0
-            && self.certified_block().id() == *GENESIS_BLOCK_ID
-            && self.certified_block().executed_state_id() == *ACCUMULATOR_PLACEHOLDER_HASH
-        {
+        // Genesis's QC is implicitly agreed upon, it doesn't have real signatures.
+        // If someone sends us a QC on a fake genesis, it'll fail to insert into BlockStore
+        // because of the round constraint.
+        if self.certified_block().round() == 0 {
+            ensure!(
+                self.parent_block() == self.certified_block(),
+                "Genesis QC has inconsistent parent block with certified block"
+            );
+            ensure!(
+                self.certified_block() == self.ledger_info().ledger_info().commit_info(),
+                "Genesis QC has inconsistent commit block with certified block"
+            );
+            ensure!(
+                self.ledger_info().signatures().is_empty(),
+                "Genesis QC should not carry signatures"
+            );
             return Ok(());
         }
         self.ledger_info()
             .verify(validator)
-            .with_context(|e| format!("Fail to verify QuorumCert: {:?}", e))?;
+            .context("Fail to verify QuorumCert")?;
         Ok(())
     }
 }

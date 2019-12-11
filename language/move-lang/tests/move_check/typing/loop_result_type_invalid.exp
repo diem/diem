@@ -1,0 +1,85 @@
+error: 
+
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:10:11 ───
+    │
+ 11 │         loop { if (false) break }
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid return expression
+    ·
+ 11 │         loop { if (false) break }
+    │         ------------------------- The type: '()'
+    ·
+ 10 │     t0(): X::R {
+    │           ---- Is not compatible with: '0x1::X::R'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:14:11 ───
+    │
+ 15 │         loop { let x = 0; break }
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid return expression
+    ·
+ 15 │         loop { let x = 0; break }
+    │         ------------------------- The type: '()'
+    ·
+ 14 │     t1(): u64 {
+    │           --- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:19:9 ───
+    │
+ 19 │         foo(loop { break })
+    │         ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::foo'. The call of '0x1::M::foo' expected 1 argument(s) but got 0
+    ·
+ 19 │         foo(loop { break })
+    │             -------------- Found 0 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:25:13 ───
+    │
+ 25 │         let x = loop { break };
+    │             ^ Invalid list-binding. The list-binding expected 1 argument(s) but got 0
+    ·
+ 25 │         let x = loop { break };
+    │                 -------------- Found 0 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:25:13 ───
+    │
+ 25 │         let x = loop { break };
+    │             ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:26:13 ───
+    │
+ 26 │         let (x, y) = loop { if (false) break };
+    │             ^^^^^^ Invalid list-binding. The list-binding expected 2 argument(s) but got 0
+    ·
+ 26 │         let (x, y) = loop { if (false) break };
+    │                      ------------------------- Found 0 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:26:14 ───
+    │
+ 26 │         let (x, y) = loop { if (false) break };
+    │              ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:26:17 ───
+    │
+ 26 │         let (x, y) = loop { if (false) break };
+    │                 ^ Unused local 'y'. Consider removing or prefixing with an underscore: '_y'
+    │
+

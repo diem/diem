@@ -6,6 +6,7 @@ use crate::{
     chained_bft::block_storage::VoteReceptionResult, counters,
     util::time_service::duration_since_epoch,
 };
+use anyhow::bail;
 use consensus_types::{
     executed_block::ExecutedBlock, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
@@ -80,8 +81,8 @@ pub struct BlockTree<T> {
     highest_quorum_cert: Arc<QuorumCert>,
     /// The highest timeout certificate (if any).
     highest_timeout_cert: Option<Arc<TimeoutCertificate>>,
-    /// The quorum certificate that carries a highest ledger info
-    highest_ledger_info: Arc<QuorumCert>,
+    /// The quorum certificate that has highest commit info.
+    highest_commit_cert: Arc<QuorumCert>,
     /// Manages pending votes to be aggregated.
     pending_votes: PendingVotes,
     /// Map of block id to its completed quorum certificate (2f + 1 votes)
@@ -105,10 +106,7 @@ where
     ) -> Self {
         assert_eq!(
             root.id(),
-            root_ledger_info
-                .ledger_info()
-                .ledger_info()
-                .consensus_block_id(),
+            root_ledger_info.commit_info().id(),
             "inconsistent root and ledger info"
         );
         let root_id = root.id();
@@ -132,7 +130,7 @@ where
             highest_certified_block_id: root_id,
             highest_quorum_cert: Arc::clone(&root_quorum_cert),
             highest_timeout_cert,
-            highest_ledger_info: Arc::new(root_ledger_info),
+            highest_commit_cert: Arc::new(root_ledger_info),
             pending_votes: PendingVotes::new(),
             id_to_quorum_cert,
             pruned_block_ids,
@@ -193,8 +191,8 @@ where
         self.highest_timeout_cert.replace(tc);
     }
 
-    pub(super) fn highest_ledger_info(&self) -> Arc<QuorumCert> {
-        Arc::clone(&self.highest_ledger_info)
+    pub(super) fn highest_commit_cert(&self) -> Arc<QuorumCert> {
+        Arc::clone(&self.highest_commit_cert)
     }
 
     pub(super) fn get_quorum_cert_for_block(
@@ -207,7 +205,7 @@ where
     pub(super) fn insert_block(
         &mut self,
         block: ExecutedBlock<T>,
-    ) -> failure::Result<Arc<ExecutedBlock<T>>> {
+    ) -> anyhow::Result<Arc<ExecutedBlock<T>>> {
         let block_id = block.id();
         if let Some(existing_block) = self.get_block(&block_id) {
             debug!("Already had block {:?} for id {:?} when trying to add another block {:?} for the same id",
@@ -229,7 +227,7 @@ where
         }
     }
 
-    pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> failure::Result<()> {
+    pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> anyhow::Result<()> {
         let block_id = qc.certified_block().id();
         let qc = Arc::new(qc);
 
@@ -260,23 +258,10 @@ where
             .entry(block_id)
             .or_insert_with(|| Arc::clone(&qc));
 
-        let committed_block_id = qc.ledger_info().ledger_info().consensus_block_id();
-        if let Some(block) = self.get_block(&committed_block_id) {
-            if block.round()
-                > self
-                    .get_block(
-                        &self
-                            .highest_ledger_info
-                            .ledger_info()
-                            .ledger_info()
-                            .consensus_block_id(),
-                    )
-                    .expect("Highest ledger info's block should exist")
-                    .round()
-            {
-                self.highest_ledger_info = qc;
-            }
+        if self.highest_commit_cert.commit_info().round() < qc.commit_info().round() {
+            self.highest_commit_cert = qc;
         }
+
         Ok(())
     }
 

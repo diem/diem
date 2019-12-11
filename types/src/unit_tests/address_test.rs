@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
 use bech32::Bech32;
 use hex::FromHex;
@@ -53,7 +55,7 @@ fn test_address() {
     });
 
     let hash_vec =
-        &Vec::from_hex("2e10c936c9c69d9b4d99030e13b41c88bd09bb2b29bec7f48699f76eac383956")
+        &Vec::from_hex("84a1bb90a6130da458abde12cc8ea21f29c6e0bcda007491fff1852561b830a7")
             .expect("You must provide a valid Hex format");
 
     let mut hash = [0u8; 32];

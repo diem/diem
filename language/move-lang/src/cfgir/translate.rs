@@ -282,7 +282,7 @@ fn block(context: &mut Context, mut cur_label: Label, blocks: H::Block) {
         (begin: $begin:expr, end: $end:expr, body: $body:expr, $block:expr) => {{
             let begin = $begin;
             let old_begin = std::mem::replace(&mut context.loop_begin, Some(begin));
-            let old_end = std::mem::replace(&mut context.loop_begin, Some($end));
+            let old_end = std::mem::replace(&mut context.loop_end, Some($end));
             let old_next = std::mem::replace(&mut context.next_label, Some(begin));
             block(context, $body, $block);
             context.next_label = old_next;

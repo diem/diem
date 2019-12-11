@@ -1,6 +1,3 @@
-// check: VerificationFailure
-// check: WRITEREF_RESOURCE_ERROR
-
 module A {
     import 0x0.LibraCoin;
     resource T {fr: LibraCoin.T}
@@ -21,19 +18,4 @@ module A {
         return;
     }
 }
-
-//! new-transaction
-
-import {{default}}.A;
-import 0x0.LibraCoin;
-
-main() {
-    let z: LibraCoin.T;
-    let r: A.T;
-    z = LibraCoin.zero();
-    r = A.new(move(z));
-    z = LibraCoin.zero();
-    A.t(&mut r, move(z));
-    A.destroy(move(r));
-    return;
-}
+// check: WRITEREF_RESOURCE_ERROR

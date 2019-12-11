@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This crate provides Protocol Buffers definitions for the services provided by the
 //! [`storage_service`](../storage_service/index.html) crate.
 //!
@@ -25,13 +27,12 @@
 
 pub mod proto;
 
-use failure::prelude::*;
+use anyhow::{format_err, Error, Result};
 use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     crypto_proxies::LedgerInfoWithSignatures,
-    ledger_info::LedgerInfo,
     proof::SparseMerkleProof,
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
@@ -294,22 +295,32 @@ impl From<GetTransactionsResponse> for crate::proto::storage::GetTransactionsRes
     }
 }
 
-/// Helper to construct and parse [`proto::storage::StartupInfo`]
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct StartupInfo {
-    pub ledger_info: LedgerInfo,
-    pub latest_version: Version,
-    pub account_state_root_hash: HashValue,
+pub struct TreeState {
+    pub version: Version,
     pub ledger_frozen_subtree_hashes: Vec<HashValue>,
+    pub account_state_root_hash: HashValue,
 }
 
-impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
+impl TreeState {
+    pub fn new(
+        version: Version,
+        ledger_frozen_subtree_hashes: Vec<HashValue>,
+        account_state_root_hash: HashValue,
+    ) -> Self {
+        Self {
+            version,
+            ledger_frozen_subtree_hashes,
+            account_state_root_hash,
+        }
+    }
+}
+
+impl TryFrom<crate::proto::storage::TreeState> for TreeState {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::StartupInfo) -> Result<Self> {
-        let ledger_info = LedgerInfo::try_from(proto.ledger_info.unwrap_or_else(Default::default))?;
-        let latest_version = proto.latest_version;
+    fn try_from(proto: crate::proto::storage::TreeState) -> Result<Self> {
         let account_state_root_hash = HashValue::from_slice(&proto.account_state_root_hash[..])?;
         let ledger_frozen_subtree_hashes = proto
             .ledger_frozen_subtree_hashes
@@ -317,12 +328,70 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
             .map(|x| &x[..])
             .map(HashValue::from_slice)
             .collect::<Result<Vec<_>>>()?;
+        let version = proto.version;
+
+        Ok(Self::new(
+            version,
+            ledger_frozen_subtree_hashes,
+            account_state_root_hash,
+        ))
+    }
+}
+
+impl From<TreeState> for crate::proto::storage::TreeState {
+    fn from(info: TreeState) -> Self {
+        let account_state_root_hash = info.account_state_root_hash.to_vec();
+        let ledger_frozen_subtree_hashes = info
+            .ledger_frozen_subtree_hashes
+            .into_iter()
+            .map(|x| x.to_vec())
+            .collect();
+        let version = info.version;
+
+        Self {
+            version,
+            ledger_frozen_subtree_hashes,
+            account_state_root_hash,
+        }
+    }
+}
+
+/// Helper to construct and parse [`proto::storage::StartupInfo`]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct StartupInfo {
+    pub ledger_info: LedgerInfoWithSignatures,
+    pub ledger_info_with_validators: LedgerInfoWithSignatures,
+    pub committed_tree_state: TreeState,
+    pub synced_tree_state: Option<TreeState>,
+}
+
+impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::StartupInfo) -> Result<Self> {
+        let ledger_info = proto
+            .ledger_info
+            .ok_or_else(|| format_err!("Missing ledger_info"))?
+            .try_into()?;
+        let ledger_info_with_validators = proto
+            .ledger_info_with_validators
+            .ok_or_else(|| format_err!("Missing ledger_info"))?
+            .try_into()?;
+        let committed_tree_state = proto
+            .committed_tree_state
+            .ok_or_else(|| format_err!("Missing committed_tree_state"))?
+            .try_into()?;
+        let synced_tree_state = proto
+            .synced_tree_state
+            .map(TreeState::try_from)
+            .transpose()?;
 
         Ok(Self {
             ledger_info,
-            latest_version,
-            account_state_root_hash,
-            ledger_frozen_subtree_hashes,
+            ledger_info_with_validators,
+            committed_tree_state,
+            synced_tree_state,
         })
     }
 }
@@ -330,19 +399,15 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
 impl From<StartupInfo> for crate::proto::storage::StartupInfo {
     fn from(info: StartupInfo) -> Self {
         let ledger_info = Some(info.ledger_info.into());
-        let latest_version = info.latest_version;
-        let account_state_root_hash = info.account_state_root_hash.to_vec();
-        let ledger_frozen_subtree_hashes = info
-            .ledger_frozen_subtree_hashes
-            .into_iter()
-            .map(|x| x.to_vec())
-            .collect();
+        let ledger_info_with_validators = Some(info.ledger_info_with_validators.into());
+        let committed_tree_state = Some(info.committed_tree_state.into());
+        let synced_tree_state = info.synced_tree_state.map(Into::into);
 
         Self {
             ledger_info,
-            latest_version,
-            account_state_root_hash,
-            ledger_frozen_subtree_hashes,
+            ledger_info_with_validators,
+            committed_tree_state,
+            synced_tree_state,
         }
     }
 }
@@ -372,68 +437,66 @@ impl From<GetStartupInfoResponse> for crate::proto::storage::GetStartupInfoRespo
     }
 }
 
-/// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochRequest`]
+/// Helper to construct and parse [`proto::storage::GetEpochChangeLedgerInfosRequest`]
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct GetLatestLedgerInfosPerEpochRequest {
+pub struct GetEpochChangeLedgerInfosRequest {
     pub start_epoch: u64,
 }
 
-impl GetLatestLedgerInfosPerEpochRequest {
+impl GetEpochChangeLedgerInfosRequest {
     /// Constructor.
     pub fn new(start_epoch: u64) -> Self {
         Self { start_epoch }
     }
 }
 
-impl TryFrom<crate::proto::storage::GetLatestLedgerInfosPerEpochRequest>
-    for GetLatestLedgerInfosPerEpochRequest
+impl TryFrom<crate::proto::storage::GetEpochChangeLedgerInfosRequest>
+    for GetEpochChangeLedgerInfosRequest
 {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::storage::GetLatestLedgerInfosPerEpochRequest) -> Result<Self> {
+    fn try_from(proto: crate::proto::storage::GetEpochChangeLedgerInfosRequest) -> Result<Self> {
         Ok(Self {
             start_epoch: proto.start_epoch,
         })
     }
 }
 
-impl From<GetLatestLedgerInfosPerEpochRequest>
-    for crate::proto::storage::GetLatestLedgerInfosPerEpochRequest
+impl From<GetEpochChangeLedgerInfosRequest>
+    for crate::proto::storage::GetEpochChangeLedgerInfosRequest
 {
-    fn from(request: GetLatestLedgerInfosPerEpochRequest) -> Self {
+    fn from(request: GetEpochChangeLedgerInfosRequest) -> Self {
         Self {
             start_epoch: request.start_epoch,
         }
     }
 }
 
-/// Helper to construct and parse [`proto::storage::GetLatestLedgerInfosPerEpochResponse`]
+/// Helper to construct and parse [`proto::storage::GetEpochChangeLedgerInfosResponse`]
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct GetLatestLedgerInfosPerEpochResponse {
-    pub latest_ledger_infos: Vec<LedgerInfoWithSignatures>,
+pub struct GetEpochChangeLedgerInfosResponse {
+    pub ledger_infos_with_sigs: Vec<LedgerInfoWithSignatures>,
 }
 
-impl GetLatestLedgerInfosPerEpochResponse {
+impl GetEpochChangeLedgerInfosResponse {
     /// Constructor.
     pub fn new(latest_ledger_infos: Vec<LedgerInfoWithSignatures>) -> Self {
         Self {
-            latest_ledger_infos,
+            ledger_infos_with_sigs: latest_ledger_infos,
         }
     }
 }
 
-impl TryFrom<crate::proto::storage::GetLatestLedgerInfosPerEpochResponse>
-    for GetLatestLedgerInfosPerEpochResponse
+impl TryFrom<crate::proto::storage::GetEpochChangeLedgerInfosResponse>
+    for GetEpochChangeLedgerInfosResponse
 {
     type Error = Error;
 
-    fn try_from(
-        proto: crate::proto::storage::GetLatestLedgerInfosPerEpochResponse,
-    ) -> Result<Self> {
+    fn try_from(proto: crate::proto::storage::GetEpochChangeLedgerInfosResponse) -> Result<Self> {
         Ok(Self {
-            latest_ledger_infos: proto
+            ledger_infos_with_sigs: proto
                 .latest_ledger_infos
                 .into_iter()
                 .map(TryFrom::try_from)
@@ -442,13 +505,13 @@ impl TryFrom<crate::proto::storage::GetLatestLedgerInfosPerEpochResponse>
     }
 }
 
-impl From<GetLatestLedgerInfosPerEpochResponse>
-    for crate::proto::storage::GetLatestLedgerInfosPerEpochResponse
+impl From<GetEpochChangeLedgerInfosResponse>
+    for crate::proto::storage::GetEpochChangeLedgerInfosResponse
 {
-    fn from(response: GetLatestLedgerInfosPerEpochResponse) -> Self {
+    fn from(response: GetEpochChangeLedgerInfosResponse) -> Self {
         Self {
             latest_ledger_infos: response
-                .latest_ledger_infos
+                .ledger_infos_with_sigs
                 .into_iter()
                 .map(Into::into)
                 .collect(),
@@ -456,9 +519,9 @@ impl From<GetLatestLedgerInfosPerEpochResponse>
     }
 }
 
-impl Into<Vec<LedgerInfoWithSignatures>> for GetLatestLedgerInfosPerEpochResponse {
+impl Into<Vec<LedgerInfoWithSignatures>> for GetEpochChangeLedgerInfosResponse {
     fn into(self) -> Vec<LedgerInfoWithSignatures> {
-        self.latest_ledger_infos
+        self.ledger_infos_with_sigs
     }
 }
 

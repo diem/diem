@@ -2,28 +2,24 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    code_cache::{
-        module_cache::{ModuleCache, TransactionModuleCache},
-        script_cache::ScriptCache,
-    },
+    code_cache::{module_cache::ModuleCache, script_cache::ScriptCache},
     loaded_data::function::{FunctionRef, FunctionReference},
     process_txn::{execute::ExecutedTransaction, validate::ValidatedTransaction},
     txn_executor::TransactionExecutor,
 };
-use bytecode_verifier::{VerifiedModule, VerifiedScript};
+use bytecode_verifier::VerifiedModule;
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     transaction::{
-        Module, Program, Script, SignatureCheckedTransaction, TransactionArgument,
-        TransactionPayload,
+        Module, Script, SignatureCheckedTransaction, TransactionArgument, TransactionPayload,
     },
     vm_error::{StatusCode, VMStatus},
 };
 use vm::{
     access::ModuleAccess,
-    errors::{verification_error, VMResult},
-    file_format::{CompiledModule, CompiledScript, FunctionSignature, SignatureToken},
+    errors::verification_error,
+    file_format::{CompiledModule, FunctionSignature, SignatureToken},
     IndexKind,
 };
 
@@ -52,17 +48,7 @@ where
         let txn_state = validated_txn.take_state();
         let txn = validated_txn.as_inner();
         let txn_state = match txn.payload() {
-            TransactionPayload::Program(program) => {
-                let txn_state = txn_state
-                    .expect("program-based transactions should always have associated state");
-
-                let (main, modules) = Self::verify_program(&txn.sender(), program, script_cache)?;
-
-                Some(VerifiedTransactionState {
-                    txn_executor: txn_state.txn_executor,
-                    verified_txn: VerTxn::Program(VerProgram { main, modules }),
-                })
-            }
+            TransactionPayload::Program => return Err(VMStatus::new(StatusCode::MALFORMED)),
             TransactionPayload::WriteSet(_write_set) => {
                 // All the checks are performed in validation, so there's no need for more checks
                 // here.
@@ -96,50 +82,6 @@ where
             txn: validated_txn.into_inner(),
             txn_state,
         })
-    }
-
-    fn verify_program(
-        sender_address: &AccountAddress,
-        program: &Program,
-        script_cache: &'txn ScriptCache<'alloc>,
-    ) -> VMResult<(FunctionRef<'alloc>, Vec<VerifiedModule>)> {
-        // Ensure the script can correctly be resolved into main.
-        let main = script_cache.cache_script(&program.code())?;
-
-        if !verify_actuals(main.signature(), program.args()) {
-            return Err(VMStatus::new(StatusCode::TYPE_MISMATCH)
-                .with_message("Actual Type Mismatch".to_string()));
-        }
-
-        // Make sure all the modules trying to be published in this module are valid.
-        let modules: Vec<CompiledModule> = match program
-            .modules()
-            .iter()
-            .map(|module_blob| CompiledModule::deserialize(&module_blob))
-            .collect()
-        {
-            Ok(modules) => modules,
-            Err(err) => {
-                warn!("[VM] module deserialization failed {:?}", err);
-                return Err(err);
-            }
-        };
-
-        // Run the modules through the bytecode verifier.
-        let modules = match static_verify_modules(sender_address, modules) {
-            Ok(modules) => modules,
-            Err(mut statuses) => {
-                warn!("[VM] bytecode verifier returned errors");
-                let err = if statuses.is_empty() {
-                    VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
-                } else {
-                    statuses.remove(0)
-                };
-                return Err(err);
-            }
-        };
-
-        Ok((main, modules))
     }
 
     fn verify_module(
@@ -223,116 +165,17 @@ where
     'alloc: 'txn,
     P: ModuleCache<'alloc>,
 {
-    pub(super) txn_executor:
-        TransactionExecutor<'txn, 'txn, TransactionModuleCache<'alloc, 'txn, P>>,
+    pub(super) txn_executor: TransactionExecutor<'alloc, 'txn, P>,
     pub(super) verified_txn: VerTxn<'alloc>,
-}
-
-/// A verified `Program` is a main and a list of modules.
-pub struct VerProgram<'alloc> {
-    pub(super) main: FunctionRef<'alloc>,
-    pub(super) modules: Vec<VerifiedModule>,
 }
 
 /// A verified transaction is a transaction executing code that has gone through the verifier.
 ///
 /// It can be a program, a script or a module. A transaction script gets executed by the VM.
 /// A module script publishes the module provided.
-// TODO: A Script will be a FunctionRef once we remove the ability to publish in scripts.
 pub enum VerTxn<'alloc> {
-    Program(VerProgram<'alloc>),
     Script(FunctionRef<'alloc>),
     Module(Box<VerifiedModule>),
-}
-
-fn static_verify_modules(
-    sender_address: &AccountAddress,
-    modules: Vec<CompiledModule>,
-) -> Result<Vec<VerifiedModule>, Vec<VMStatus>> {
-    // It is possible to write this function without the expects, but that makes it very ugly.
-    let mut statuses: Vec<Box<dyn Iterator<Item = VMStatus>>> = vec![];
-
-    let modules_len = modules.len();
-
-    let mut modules_out = vec![];
-    for module in modules.into_iter() {
-        // Make sure the module's self address matches the transaction sender. The self address is
-        // where the module will actually be published. If we did not check this, the sender could
-        // publish a module under anyone's account.
-        //
-        // For scripts this isn't a problem because they don't get published to accounts.
-        let self_error = if module.address() != sender_address {
-            Some(verification_error(
-                IndexKind::AddressPool,
-                CompiledModule::IMPLEMENTED_MODULE_INDEX as usize,
-                StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER,
-            ))
-        } else {
-            None
-        };
-
-        let (module, mut errors) = match VerifiedModule::new(module) {
-            Ok(module) => (Some(module), vec![]),
-            Err((_, errors)) => (None, errors),
-        };
-
-        if let Some(error) = self_error {
-            // Verification should stop before we generate enough errors to overflow
-            assume!(errors.len() < usize::max_value());
-            errors.push(error);
-        }
-
-        if errors.is_empty() {
-            // `modules_out` is initally empty, a single element is pushed per loop iteration and
-            // the number of iterations is bound to the max size of `modules``
-            assume!(modules_out.len() < usize::max_value());
-            modules_out.push(module.expect("empty errors => module should verify"));
-        } else {
-            statuses.push(Box::new(errors.into_iter()));
-        }
-    }
-
-    let statuses: Vec<_> = statuses.into_iter().flatten().collect();
-    if statuses.is_empty() {
-        assert_eq!(modules_out.len(), modules_len);
-        Ok(modules_out)
-    } else {
-        Err(statuses)
-    }
-}
-
-/// Run static checks on a program directly. Provided as an alternative API for tests.
-pub fn static_verify_program(
-    sender_address: &AccountAddress,
-    script: CompiledScript,
-    modules: Vec<CompiledModule>,
-) -> Result<(VerifiedScript, Vec<VerifiedModule>), Vec<VMStatus>> {
-    // It is possible to write this function without the expects, but that makes it very ugly.
-    let mut statuses: Vec<VMStatus> = vec![];
-    let script = match VerifiedScript::new(script) {
-        Ok(script) => Some(script),
-        Err((_, errors)) => {
-            statuses.extend(errors.into_iter());
-            None
-        }
-    };
-
-    let modules = match static_verify_modules(sender_address, modules) {
-        Ok(modules) => Some(modules),
-        Err(module_statuses) => {
-            statuses.extend(module_statuses);
-            None
-        }
-    };
-
-    if statuses.is_empty() {
-        Ok((
-            script.expect("Ok case => script should verify"),
-            modules.expect("Ok case => modules should verify"),
-        ))
-    } else {
-        Err(statuses)
-    }
 }
 
 /// Verify if the transaction arguments match the type signature of the main function.

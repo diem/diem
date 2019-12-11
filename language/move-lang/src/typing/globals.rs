@@ -100,7 +100,7 @@ fn exp(
                         .into_iter()
                         .filter(|a| valid_acquires_annot(context, loc, a))
                         .collect::<BTreeSet<_>>();
-                    let msg = || format!("Invalid call to '{}.{}'", &call.module, &call.name);
+                    let msg = || format!("Invalid call to '{}::{}'", &call.module, &call.name);
                     for bt in acquires {
                         check_acquire_listed(context, annotated_acquires, loc, msg, &bt);
                         seen.insert(bt);
@@ -125,7 +125,7 @@ fn exp(
             exp(context, annotated_acquires, seen, eb);
             exp(context, annotated_acquires, seen, eloop);
         }
-        E::Loop(eloop) => exp(context, annotated_acquires, seen, eloop),
+        E::Loop { body: eloop, .. } => exp(context, annotated_acquires, seen, eloop),
         E::Block(seq) => sequence(context, annotated_acquires, seen, seq),
         E::Assign(_, _, er) => {
             exp(context, annotated_acquires, seen, er);
@@ -188,9 +188,9 @@ fn builtin_function(
     match &b.value {
         B::MoveFrom(bt) => {
             let msg = mk_msg(N::BuiltinFunction_::MOVE_FROM);
-            check_global_access(context, loc, msg, bt);
-
-            check_acquire_listed(context, annotated_acquires, loc, msg, bt);
+            if check_global_access(context, loc, msg, bt) {
+                check_acquire_listed(context, annotated_acquires, loc, msg, bt);
+            }
             seen.insert(bt.clone());
         }
         B::BorrowGlobal(mut_, bt) => {
@@ -200,9 +200,9 @@ fn builtin_function(
                 N::BuiltinFunction_::BORROW_GLOBAL
             };
             let msg = mk_msg(name);
-            check_global_access(context, loc, msg, bt);
-
-            check_acquire_listed(context, annotated_acquires, loc, msg, bt);
+            if check_global_access(context, loc, msg, bt) {
+                check_acquire_listed(context, annotated_acquires, loc, msg, bt);
+            }
             seen.insert(bt.clone());
         }
         B::MoveToSender(bt) => {
@@ -234,7 +234,7 @@ fn check_acquire_listed<F>(
         let ty_debug = global_type.value.subst_format(&HashMap::new());
         context.error(vec![
             (*loc, msg()),
-            (global_type.loc, format!("The call acquires '{}', but the 'acquires' list for the current function does not contain this type. It must be present to make this call", ty_debug))
+            (global_type.loc, format!("The call acquires '{}', but the 'acquires' list for the current function does not contain this type. It must be present in the calling context's acquires list", ty_debug))
         ]);
     }
 }

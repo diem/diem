@@ -27,5 +27,4 @@ module Tester {
     }
 }
 
-// check: VerificationFailure
 // check: BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR

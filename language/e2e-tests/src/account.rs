@@ -141,16 +141,16 @@ impl Account {
         gas_unit_price: u64,
     ) -> SignedTransaction {
         let raw_txn = match payload {
-            TransactionPayload::Program(program) => RawTransaction::new(
+            TransactionPayload::Program => RawTransaction::new(
                 *self.address(),
                 sequence_number,
-                TransactionPayload::Program(program),
+                TransactionPayload::Program,
                 max_gas_amount,
                 gas_unit_price,
                 Duration::from_secs(u64::max_value()),
             ),
             TransactionPayload::WriteSet(writeset) => {
-                RawTransaction::new_write_set(*self.address(), sequence_number, writeset)
+                RawTransaction::new_change_set(*self.address(), sequence_number, writeset)
             }
             TransactionPayload::Module(module) => RawTransaction::new_module(
                 *self.address(),
@@ -259,6 +259,7 @@ pub struct AccountData {
     delegated_withdrawal_capability: bool,
     sent_events: EventHandle,
     received_events: EventHandle,
+    event_generator: u64,
 }
 
 fn new_event_handle(count: u64) -> EventHandle {
@@ -307,6 +308,7 @@ impl AccountData {
             delegated_withdrawal_capability,
             sent_events: new_event_handle(sent_events_count),
             received_events: new_event_handle(received_events_count),
+            event_generator: 2,
         }
     }
 
@@ -335,6 +337,7 @@ impl AccountData {
                 Value::byte_array(ByteArray::new(self.sent_events.key().to_vec())),
             ])),
             Value::u64(self.sequence_number),
+            Value::struct_(Struct::new(vec![Value::u64(self.event_generator)])),
         ]))
     }
 

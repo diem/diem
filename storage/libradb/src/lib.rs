@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This crate provides [`LibraDB`] which represents physical storage of the core Libra data
 //! structures.
 //!
@@ -40,7 +42,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use failure::prelude::*;
+use anyhow::{bail, ensure, format_err, Result};
 use itertools::{izip, zip_eq};
 use lazy_static::lazy_static;
 use libra_crypto::hash::{CryptoHash, HashValue};
@@ -66,6 +68,7 @@ use libra_types::{
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{convert::TryInto, iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_proto::StartupInfo;
+use storage_proto::TreeState;
 
 lazy_static! {
     static ref OP_COUNTER: OpMetrics = OpMetrics::new_and_registered("storage");
@@ -105,6 +108,7 @@ impl LibraDB {
                 /* LedgerInfo CF = */ DEFAULT_CF_NAME,
                 ColumnFamilyOptions::default(),
             ),
+            (EPOCH_BY_VERSION_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_ACCUMULATOR_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_BY_KEY_CF_NAME, ColumnFamilyOptions::default()),
             (EVENT_CF_NAME, ColumnFamilyOptions::default()),
@@ -124,7 +128,6 @@ impl LibraDB {
                 ColumnFamilyOptions::default(),
             ),
             (TRANSACTION_INFO_CF_NAME, ColumnFamilyOptions::default()),
-            (VALIDATOR_CF_NAME, ColumnFamilyOptions::default()),
         ]
         .iter()
         .cloned()
@@ -132,10 +135,7 @@ impl LibraDB {
 
         let path = db_root_path.as_ref().join("libradb");
         let instant = Instant::now();
-        let db = Arc::new(
-            DB::open(path.clone(), cf_opts_map)
-                .unwrap_or_else(|e| panic!("LibraDB open failed: {:?}", e)),
-        );
+        let db = Arc::new(DB::open(path.clone(), cf_opts_map).expect("LibraDB open failed"));
 
         info!(
             "Opened LibraDB at {:?} in {} ms",
@@ -302,18 +302,13 @@ impl LibraDB {
             .version())
     }
 
-    /// Returns the latest ledger infos per epoch starting with the given epoch num:
-    /// - the latest ledger info of the current epoch is just the last ledger info in the system
-    /// - the latest ledger infos of previous epochs contain reconfiguration validator sets.
-    /// Returns error in case `start_epoch` is higher than the currently known epoch.
-    /// The returned vector is not necessarily sorted: the client should make sure to sort it
-    /// by epoch number.
-    pub fn get_latest_ledger_infos_per_epoch(
+    /// Returns ledger infos reflecting epoch bumps starting with the given epoch.
+    pub fn get_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,
     ) -> Result<Vec<LedgerInfoWithSignatures>> {
         self.ledger_store
-            .get_latest_ledger_infos_per_epoch(start_epoch)
+            .get_epoch_change_ledger_infos(start_epoch, self.get_latest_version()?)
     }
 
     /// Persist transactions. Called by the executor module when either syncing nodes or committing
@@ -462,7 +457,8 @@ impl LibraDB {
 
         // Get the latest ledger info and signatures
         let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
-        let ledger_version = ledger_info_with_sigs.ledger_info().version();
+        let ledger_info = ledger_info_with_sigs.ledger_info();
+        let ledger_version = ledger_info.version();
 
         // Fulfill all request items
         let response_items = request_items
@@ -536,6 +532,20 @@ impl LibraDB {
             })
             .collect::<Result<Vec<_>>>()?;
 
+        // TODO: cache last epoch change version to avoid a DB access in most cases.
+        let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
+        let current_epoch = if ledger_info.next_validator_set().is_some() {
+            ledger_info.epoch() + 1
+        } else {
+            ledger_info.epoch()
+        };
+        let validator_change_proof = if client_epoch < current_epoch {
+            self.ledger_store
+                .get_epoch_change_ledger_infos(client_epoch, ledger_info.version())?
+        } else {
+            Vec::new()
+        };
+
         let ledger_consistency_proof = self
             .ledger_store
             .get_consistency_proof(client_known_version, ledger_version)?;
@@ -543,7 +553,7 @@ impl LibraDB {
         Ok((
             response_items,
             ledger_info_with_sigs,
-            ValidatorChangeEventWithProof::new(vec![]),
+            ValidatorChangeEventWithProof::new(validator_change_proof),
             ledger_consistency_proof,
         ))
     }
@@ -573,22 +583,64 @@ impl LibraDB {
             Some(x) => x,
             None => return Ok(None),
         };
-        let ledger_info = ledger_info_with_sigs.ledger_info().clone();
 
-        let (latest_version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
+        let latest_tree_state = {
+            let (latest_version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
+            let account_state_root_hash = txn_info.state_root_hash();
+            let ledger_frozen_subtree_hashes = self
+                .ledger_store
+                .get_ledger_frozen_subtree_hashes(latest_version)?;
+            TreeState::new(
+                latest_version,
+                ledger_frozen_subtree_hashes,
+                account_state_root_hash,
+            )
+        };
+        let li_version = ledger_info_with_sigs.ledger_info().version();
+        assert!(latest_tree_state.version >= li_version);
+        let current_epoch = if ledger_info_with_sigs
+            .ledger_info()
+            .next_validator_set()
+            .is_some()
+        {
+            ledger_info_with_sigs.ledger_info().epoch() + 1
+        } else {
+            ledger_info_with_sigs.ledger_info().epoch()
+        };
+        let ledger_info_with_validators = self
+            .get_epoch_change_ledger_infos(current_epoch - 1)?
+            .pop()
+            .ok_or_else(|| format_err!("ledger info with validators not found"))?;
 
-        let account_state_root_hash = txn_info.state_root_hash();
+        let startup_info = if latest_tree_state.version != li_version {
+            // We synced to some version ahead of the version of the latest ledger info. Thus, we are still in sync mode.
+            let committed_version = li_version;
+            let committed_txn_info = self.ledger_store.get_transaction_info(committed_version)?;
+            let committed_account_state_root_hash = committed_txn_info.state_root_hash();
+            let committed_ledger_frozen_subtree_hashes = self
+                .ledger_store
+                .get_ledger_frozen_subtree_hashes(committed_version)?;
+            StartupInfo {
+                ledger_info: ledger_info_with_sigs,
+                ledger_info_with_validators,
+                committed_tree_state: TreeState::new(
+                    committed_version,
+                    committed_ledger_frozen_subtree_hashes,
+                    committed_account_state_root_hash,
+                ),
+                synced_tree_state: Some(latest_tree_state),
+            }
+        } else {
+            // The version of the latest ledger info matches other data. So the storage is not in sync mode.
+            StartupInfo {
+                ledger_info: ledger_info_with_sigs,
+                ledger_info_with_validators,
+                committed_tree_state: latest_tree_state,
+                synced_tree_state: None,
+            }
+        };
 
-        let ledger_frozen_subtree_hashes = self
-            .ledger_store
-            .get_ledger_frozen_subtree_hashes(latest_version)?;
-
-        Ok(Some(StartupInfo {
-            ledger_info,
-            latest_version,
-            account_state_root_hash,
-            ledger_frozen_subtree_hashes,
-        }))
+        Ok(Some(startup_info))
     }
 
     // ======================= State Synchronizer Internal APIs ===================================

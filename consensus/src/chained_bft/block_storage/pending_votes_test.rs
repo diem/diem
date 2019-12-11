@@ -3,20 +3,16 @@
 
 use crate::chained_bft::block_storage::pending_votes::PendingVotes;
 use crate::chained_bft::block_storage::VoteReceptionResult;
-use consensus_types::{block_info::BlockInfo, common::Round, vote::Vote, vote_data::VoteData};
+use consensus_types::{common::Round, vote::Vote, vote_data::VoteData};
 use libra_crypto::HashValue;
+use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::random_validator_verifier;
 use libra_types::ledger_info::LedgerInfo;
 
 fn random_ledger_info() -> LedgerInfo {
     LedgerInfo::new(
-        0,
+        BlockInfo::new(1, 0, HashValue::random(), HashValue::random(), 0, 0, None),
         HashValue::random(),
-        HashValue::random(),
-        HashValue::random(),
-        0,
-        0,
-        None,
     )
 }
 

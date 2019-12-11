@@ -9,7 +9,7 @@ use admission_control_proto::{
     },
     AdmissionControlStatus, SubmitTransactionResponse,
 };
-use failure::prelude::*;
+use anyhow::{bail, Result};
 use futures::Future;
 use grpcio::{CallOption, ChannelBuilder, EnvBuilder};
 use libra_crypto::ed25519::*;
@@ -109,7 +109,7 @@ impl GRPCClient {
     pub fn submit_transaction_async(
         &self,
         req: &SubmitTransactionRequest,
-    ) -> Result<impl Future<Item = SubmitTransactionResponse, Error = failure::Error>> {
+    ) -> Result<impl Future<Item = SubmitTransactionResponse, Error = anyhow::Error>> {
         let resp = self
             .client
             .submit_transaction_async_opt(&req, Self::get_default_grpc_call_option())?
@@ -133,7 +133,7 @@ impl GRPCClient {
         &self,
         requested_items: Vec<RequestItem>,
     ) -> Result<
-        impl Future<Item = UpdateToLatestLedgerResponse<Ed25519Signature>, Error = failure::Error>,
+        impl Future<Item = UpdateToLatestLedgerResponse<Ed25519Signature>, Error = anyhow::Error>,
     > {
         let req = UpdateToLatestLedgerRequest::new(0, requested_items.clone());
         debug!("get_with_proof with request: {:?}", req);

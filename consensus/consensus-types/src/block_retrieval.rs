@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{block::Block, common::Payload};
-use failure::prelude::*;
+use anyhow::ensure;
 use libra_crypto::hash::HashValue;
 use libra_types::crypto_proxies::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
@@ -42,17 +42,17 @@ impl fmt::Display for BlockRetrievalRequest {
 }
 
 impl TryFrom<network::proto::RequestBlock> for BlockRetrievalRequest {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(proto: network::proto::RequestBlock) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::RequestBlock) -> anyhow::Result<Self> {
         Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }
 
 impl TryFrom<BlockRetrievalRequest> for network::proto::RequestBlock {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(block_retrieval_request: BlockRetrievalRequest) -> failure::Result<Self> {
+    fn try_from(block_retrieval_request: BlockRetrievalRequest) -> anyhow::Result<Self> {
         Ok(Self {
             bytes: lcs::to_bytes(&block_retrieval_request)?,
         })
@@ -95,7 +95,7 @@ impl<T: Payload> BlockRetrievalResponse<T> {
         block_id: HashValue,
         num_blocks: u64,
         sig_verifier: &ValidatorVerifier,
-    ) -> failure::Result<()> {
+    ) -> anyhow::Result<()> {
         ensure!(
             self.status != BlockRetrievalStatus::Succeeded
                 || self.blocks.len() as u64 == num_blocks,
@@ -143,17 +143,17 @@ impl<T: Payload> fmt::Display for BlockRetrievalResponse<T> {
 }
 
 impl<T: Payload> TryFrom<network::proto::RespondBlock> for BlockRetrievalResponse<T> {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(proto: network::proto::RespondBlock) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::RespondBlock) -> anyhow::Result<Self> {
         Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }
 
 impl<T: Payload> TryFrom<BlockRetrievalResponse<T>> for network::proto::RespondBlock {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(block_retrieval_response: BlockRetrievalResponse<T>) -> failure::Result<Self> {
+    fn try_from(block_retrieval_response: BlockRetrievalResponse<T>) -> anyhow::Result<Self> {
         Ok(Self {
             bytes: lcs::to_bytes(&block_retrieval_response)?,
         })

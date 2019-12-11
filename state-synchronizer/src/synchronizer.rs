@@ -4,11 +4,13 @@ use crate::coordinator::EpochRetrievalRequest;
 use crate::{
     coordinator::{CoordinatorMessage, SyncCoordinator, SyncRequest},
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
+    SynchronizerState,
 };
+use anyhow::Result;
 use executor::Executor;
-use failure::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
+    executor::block_on,
     future::Future,
     SinkExt,
 };
@@ -35,7 +37,7 @@ impl StateSynchronizer {
         let executor_proxy = ExecutorProxy::new(executor, config);
         Self::bootstrap_with_executor_proxy(
             network,
-            config.get_role(),
+            config.base.role,
             &config.state_sync,
             executor_proxy,
         )
@@ -48,18 +50,23 @@ impl StateSynchronizer {
         executor_proxy: E,
     ) -> Self {
         let runtime = Builder::new()
-            .name_prefix("state-sync-")
+            .thread_name("state-sync-")
+            .threaded_scheduler()
+            .enable_all()
             .build()
             .expect("[state synchronizer] failed to create runtime");
-        let executor = runtime.executor();
+        let executor = runtime.handle();
 
         let (coordinator_sender, coordinator_receiver) = mpsc::unbounded();
 
+        let initial_state = block_on(executor_proxy.get_local_storage_state())
+            .expect("[state sync] Start failure: cannot sync with storage.");
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,
             role,
             state_sync_config.clone(),
             executor_proxy,
+            initial_state,
         );
         executor.spawn(coordinator.start(network));
 
@@ -98,16 +105,16 @@ impl StateSyncClient {
     }
 
     /// Notifies state synchronizer about new version
-    pub fn commit(&self, version: u64) -> impl Future<Output = Result<()>> {
+    pub fn commit(&self) -> impl Future<Output = Result<()>> {
         let mut sender = self.coordinator_sender.clone();
         async move {
-            sender.send(CoordinatorMessage::Commit(version)).await?;
+            sender.send(CoordinatorMessage::Commit).await?;
             Ok(())
         }
     }
 
     /// Returns information about StateSynchronizer internal state
-    pub fn get_state(&self) -> impl Future<Output = Result<u64>> {
+    pub fn get_state(&self) -> impl Future<Output = Result<SynchronizerState>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
         async move {

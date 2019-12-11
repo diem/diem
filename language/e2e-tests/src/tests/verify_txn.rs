@@ -11,8 +11,8 @@ use crate::{
 };
 use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
-use libra_config::config::{NodeConfigHelpers, VMPublishingOption};
-use libra_crypto::{ed25519::*, HashValue};
+use libra_config::config::{NodeConfig, VMPublishingOption};
+use libra_crypto::ed25519::*;
 use libra_types::{
     test_helpers::transaction_test_helpers,
     transaction::{
@@ -21,7 +21,6 @@ use libra_types::{
     },
     vm_error::{StatusCode, StatusType, VMStatus},
 };
-use std::collections::HashSet;
 use transaction_builder::encode_transfer_script;
 use vm::gas_schedule::{self, GasAlgebra};
 
@@ -76,22 +75,18 @@ fn verify_whitelist() {
     // Making sure the whitelist's hash matches the current compiled script. If this fails, please
     // try run `cargo run` under vm_genesis and update the vm_config in node.config.toml and in
     // config.rs in libra/config crate.
-    let programs: HashSet<_> = vec![
-        PEER_TO_PEER.clone(),
-        MINT.clone(),
-        ROTATE_KEY.clone(),
-        CREATE_ACCOUNT.clone(),
-    ]
-    .into_iter()
-    .map(|s| *HashValue::from_sha3_256(&s).as_ref())
-    .collect();
+    let programs = transaction_builder::allowing_script_hashes();
 
-    let config = NodeConfigHelpers::get_single_node_test_config(false);
-
-    assert_eq!(
-        Some(&programs),
-        config.vm_config.publishing_options.get_whitelist_set()
-    )
+    let config = NodeConfig::random();
+    let whitelist = config
+        .vm_config
+        .publishing_options
+        .get_whitelist_set()
+        .unwrap();
+    assert_eq!(whitelist.len(), programs.len());
+    for program in programs {
+        assert!(whitelist.contains(&program));
+    }
 }
 
 #[test]

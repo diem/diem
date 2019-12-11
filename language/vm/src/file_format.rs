@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Binary format for transactions and modules.
 //!
 //! This module provides a simple Rust abstraction over the binary format. That is the format of
@@ -38,6 +40,7 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
+use mirai_annotations::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 #[cfg(any(test, feature = "fuzzing"))]
@@ -1164,12 +1167,6 @@ pub enum Bytecode {
     ///
     /// ```..., value -> ...```
     MoveToSender(StructDefinitionIndex, LocalsSignatureIndex),
-    /// Create an account at the address specified. Does not return anything.
-    ///
-    /// Stack transition:
-    ///
-    /// ```..., address_value -> ...```
-    CreateAccount,
     /// Get the sequence number submitted with the transaction and pushes it on the stack.
     ///
     /// Stack transition:
@@ -1187,7 +1184,9 @@ pub enum Bytecode {
 /// The number of bytecode instructions.
 /// This is necessary for checking that all instructions are covered since Rust
 /// does not provide a way of determining the number of variants of an enum.
-pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 54;
+pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 53;
+
+pub const NUMBER_OF_NATIVE_FUNCTIONS: usize = 17;
 
 impl ::std::fmt::Debug for Bytecode {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -1243,7 +1242,6 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::Exists(a, b) => write!(f, "Exists({}, {:?})", a, b),
             Bytecode::MoveFrom(a, b) => write!(f, "MoveFrom({}, {:?})", a, b),
             Bytecode::MoveToSender(a, b) => write!(f, "MoveToSender({}, {:?})", a, b),
-            Bytecode::CreateAccount => write!(f, "CreateAccount"),
             Bytecode::GetTxnSequenceNumber => write!(f, "GetTxnSequenceNumber"),
             Bytecode::GetTxnPublicKey => write!(f, "GetTxnPublicKey"),
         }
@@ -1613,7 +1611,9 @@ impl CompiledModuleMut {
             // XXX these two don't seem to belong here
             other @ IndexKind::LocalPool
             | other @ IndexKind::CodeDefinition
-            | other @ IndexKind::TypeParameter => panic!("invalid kind for count: {:?}", other),
+            | other @ IndexKind::TypeParameter => {
+                unreachable!("invalid kind for count: {:?}", other)
+            }
         }
     }
 

@@ -1,17 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::PeerId;
-use crate::OP_COUNTERS;
+use crate::{counters, PeerId};
 use admission_control_proto::proto::admission_control::{
     admission_control_msg::Message as AdmissionControlMsg_oneof,
     submit_transaction_response::Status, AdmissionControlMsg, SubmitTransactionRequest,
     SubmitTransactionResponse,
 };
 use admission_control_proto::AdmissionControlStatus;
+use anyhow::{format_err, Result};
 use bounded_executor::BoundedExecutor;
 use bytes::Bytes;
-use failure::format_err;
 use futures::compat::Future01CompatExt;
 use futures::{
     channel::{mpsc, oneshot},
@@ -36,8 +35,9 @@ use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
+use std::time::Instant;
 use storage_client::StorageRead;
-use tokio::runtime::TaskExecutor;
+use tokio::runtime::Handle;
 use vm_validator::vm_validator::{get_account_state, TransactionValidation};
 
 /// UpstreamProxyData is the set of data needed for a full node to send transaction write
@@ -92,10 +92,10 @@ pub async fn process_network_messages<M, V>(
     upstream_proxy_data: UpstreamProxyData<M, V>,
     network_events: Vec<AdmissionControlNetworkEvents>,
     mut peer_info: HashMap<PeerId, bool>,
-    executor: TaskExecutor,
+    executor: Handle,
     mut client_events: mpsc::Receiver<(
         SubmitTransactionRequest,
-        oneshot::Sender<failure::Result<SubmitTransactionResponse>>,
+        oneshot::Sender<Result<SubmitTransactionResponse>>,
     )>,
 ) where
     M: MempoolClientTrait + Clone + 'static,
@@ -120,10 +120,12 @@ pub async fn process_network_messages<M, V>(
                             Event::NewPeer(peer_id) => {
                                 debug!("[admission control] new peer {}", peer_id);
                                 new_peer(&mut peer_info, peer_id);
+                                counters::UPSTREAM_PEERS.set(count_active_peers(&peer_info) as i64);
                             }
                             Event::LostPeer(peer_id) => {
                                 debug!("[admission control] lost peer {}", peer_id);
                                 lost_peer(&mut peer_info, peer_id);
+                                counters::UPSTREAM_PEERS.set(count_active_peers(&peer_info) as i64);
                             }
                             Event::RpcRequest((peer_id, mut message, callback)) => {
                                 if let Some(AdmissionControlMsg_oneof::SubmitTransactionRequest(request)) = message.message {
@@ -170,16 +172,22 @@ fn pick_peer(peer_info: &HashMap<PeerId, bool>) -> Option<PeerId> {
     None
 }
 
+fn count_active_peers(peer_info: &HashMap<PeerId, bool>) -> usize {
+    peer_info.iter().filter(|(_, &is_alive)| is_alive).count()
+}
+
 async fn submit_transaction<M, V>(
     request: SubmitTransactionRequest,
-    upstream_proxy_data: UpstreamProxyData<M, V>,
+    mut upstream_proxy_data: UpstreamProxyData<M, V>,
     peer_id: Option<PeerId>,
-    callback: oneshot::Sender<failure::Result<SubmitTransactionResponse>>,
+    callback: oneshot::Sender<Result<SubmitTransactionResponse>>,
 ) where
     M: MempoolClientTrait,
     V: TransactionValidation,
 {
+    let start_time = Instant::now();
     let mut response = None;
+    let mut txn_result = "success";
     match upstream_proxy_data.role {
         RoleType::Validator => {
             response = Some(submit_transaction_to_mempool(upstream_proxy_data, request).await);
@@ -199,6 +207,7 @@ async fn submit_transaction<M, V>(
                         response = Some(Ok(res));
                     }
                     Err(e) => {
+                        txn_result = "failure";
                         response = Some(Err(format_err!(
                             "[admission-control] Sending transaction upstream returned an error: {:?}",
                             e
@@ -209,23 +218,38 @@ async fn submit_transaction<M, V>(
         }
     };
     let res = response.unwrap_or_else(|| {
+        // timeout
+        txn_result = "failure";
+        counters::TIMEOUT
+            .with_label_values(&["client", "timeout"])
+            .inc();
         Err(format_err!(
             "[admission-control] Processing write request failed"
         ))
     });
     if let Err(e) = callback.send(res) {
+        txn_result = "failure";
+        counters::TIMEOUT
+            .with_label_values(&["client", "callback_timeout"])
+            .inc();
         error!(
             "[admission control] failed to send back transaction result with error: {:?}",
             e
         );
     };
+    counters::TRANSACTION_LATENCY
+        .with_label_values(&[txn_result])
+        .observe(start_time.elapsed().as_secs() as f64);
+    counters::TRANSACTION_PROXY
+        .with_label_values(&["client", txn_result])
+        .inc();
 }
 
 async fn submit_transaction_upstream<M, V>(
     request: SubmitTransactionRequest,
-    upstream_proxy_data: &UpstreamProxyData<M, V>,
+    upstream_proxy_data: &mut UpstreamProxyData<M, V>,
     peer_id: Option<PeerId>,
-) -> failure::Result<SubmitTransactionResponse> {
+) -> Result<SubmitTransactionResponse> {
     if let Some(peer_id) = peer_id {
         let result = upstream_proxy_data
             .network_sender
@@ -241,7 +265,7 @@ async fn submit_transaction_upstream<M, V>(
 }
 
 async fn process_submit_transaction_request<M, V>(
-    upstream_proxy_data: UpstreamProxyData<M, V>,
+    mut upstream_proxy_data: UpstreamProxyData<M, V>,
     peer_id: Option<PeerId>,
     request: SubmitTransactionRequest,
     callback: oneshot::Sender<Result<Bytes, RpcError>>,
@@ -249,7 +273,9 @@ async fn process_submit_transaction_request<M, V>(
     M: MempoolClientTrait,
     V: TransactionValidation,
 {
+    let start_time = Instant::now();
     let mut response_msg = None;
+    let mut txn_result = "success";
     match upstream_proxy_data.role {
         RoleType::Validator => {
             if let Ok(response) = submit_transaction_to_mempool(upstream_proxy_data, request).await
@@ -260,12 +286,14 @@ async fn process_submit_transaction_request<M, V>(
                     )),
                 };
                 response_msg = Some(ac_control_msg);
+            } else {
+                txn_result = "failure";
             }
         }
         RoleType::FullNode => {
             // node is not a validator, so send the transaction to upstream AC via networking stack
             if let Ok(response) =
-                submit_transaction_upstream(request, &upstream_proxy_data, peer_id).await
+                submit_transaction_upstream(request, &mut upstream_proxy_data, peer_id).await
             {
                 let ac_control_msg = AdmissionControlMsg {
                     message: Some(AdmissionControlMsg_oneof::SubmitTransactionResponse(
@@ -273,6 +301,8 @@ async fn process_submit_transaction_request<M, V>(
                     )),
                 };
                 response_msg = Some(ac_control_msg);
+            } else {
+                txn_result = "failure";
             }
         }
     };
@@ -282,23 +312,37 @@ async fn process_submit_transaction_request<M, V>(
             .send(Ok(response_data))
             .map_err(|_| format_err!("[admission-control] handling inbound rpc call timed out"))
         {
+            txn_result = "failure";
+            counters::TIMEOUT
+                .with_label_values(&["full_node", "callback_timeout"])
+                .inc();
             error!(
                 "[admission control] failed to process transaction request, error: {:?}",
                 err
             );
         }
     } else {
+        txn_result = "failure";
+        counters::TIMEOUT
+            .with_label_values(&["full_node", "timeout"])
+            .inc();
         error!(
             "[admission control] Did not get a response msg back from submit transaction upstream request",
         );
     }
+    counters::TRANSACTION_LATENCY
+        .with_label_values(&[txn_result])
+        .observe(start_time.elapsed().as_secs() as f64);
+    counters::TRANSACTION_PROXY
+        .with_label_values(&["full_node", txn_result])
+        .inc();
 }
 
 /// Validate transaction signature, then via VM, and add it to Mempool if it passes VM check.
 pub(crate) async fn submit_transaction_to_mempool<M, V>(
     upstream_proxy_data: UpstreamProxyData<M, V>,
     req: SubmitTransactionRequest,
-) -> failure::Result<SubmitTransactionResponse>
+) -> Result<SubmitTransactionResponse>
 where
     M: MempoolClientTrait,
     V: TransactionValidation,
@@ -307,7 +351,9 @@ where
     // unnecessary resources.
     if !can_send_txn_to_mempool(&upstream_proxy_data)? {
         debug!("Mempool is full");
-        OP_COUNTERS.inc_by("submit_txn.rejected.mempool_full", 1);
+        counters::TRANSACTION_SUBMISSION
+            .with_label_values(&["rejected", "mempool_full"])
+            .inc();
         let mut response = SubmitTransactionResponse::default();
         let mut status = MempoolAddTransactionStatus::default();
         status.set_code(MempoolIsFull);
@@ -329,7 +375,9 @@ where
             response.status = Some(Status::AcStatus(
                 AdmissionControlStatus::Rejected("submit txn rejected".to_string()).into(),
             ));
-            OP_COUNTERS.inc_by("submit_txn.rejected.invalid_txn", 1);
+            counters::TRANSACTION_SUBMISSION
+                .with_label_values(&["rejected", "invalid_txn"])
+                .inc();
             return Ok(response);
         }
     };
@@ -350,7 +398,9 @@ where
 
     if let Some(validation_status) = validation_status {
         let mut response = SubmitTransactionResponse::default();
-        OP_COUNTERS.inc_by("submit_txn.vm_validation.failure", 1);
+        counters::TRANSACTION_SUBMISSION
+            .with_label_values(&["rejected", "vm_validation"])
+            .inc();
         debug!(
             "txn failed in vm validation, status: {:?}, txn: {:?}",
             validation_status, transaction
@@ -373,9 +423,7 @@ where
     add_txn_to_mempool(&upstream_proxy_data, add_transaction_request)
 }
 
-fn can_send_txn_to_mempool<M, V>(
-    upstream_proxy_data: &UpstreamProxyData<M, V>,
-) -> failure::Result<bool>
+fn can_send_txn_to_mempool<M, V>(upstream_proxy_data: &UpstreamProxyData<M, V>) -> Result<bool>
 where
     M: MempoolClientTrait,
 {
@@ -394,7 +442,7 @@ where
 fn add_txn_to_mempool<M, V>(
     upstream_proxy_data: &UpstreamProxyData<M, V>,
     add_transaction_request: AddTransactionWithValidationRequest,
-) -> failure::Result<SubmitTransactionResponse>
+) -> Result<SubmitTransactionResponse>
 where
     M: MempoolClientTrait,
 {
@@ -407,7 +455,9 @@ where
             let mut response = SubmitTransactionResponse::default();
             if let Some(status) = mempool_result.status {
                 if status.code() == MempoolAddTransactionStatusCode::Valid {
-                    OP_COUNTERS.inc_by("submit_txn.txn_accepted", 1);
+                    counters::TRANSACTION_SUBMISSION
+                        .with_label_values(&["accepted", ""])
+                        .inc();
                     response.status =
                         Some(Status::AcStatus(AdmissionControlStatus::Accepted.into()));
                 } else {
@@ -415,7 +465,9 @@ where
                         "txn failed in mempool, status: {:?}, txn: {:?}",
                         status, add_transaction_request.transaction
                     );
-                    OP_COUNTERS.inc_by("submit_txn.mempool.failure", 1);
+                    counters::TRANSACTION_SUBMISSION
+                        .with_label_values(&["rejected", "mempool"])
+                        .inc();
                     response.status = Some(Status::MempoolStatus(status));
                 }
             }

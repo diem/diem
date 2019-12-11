@@ -17,22 +17,4 @@ module Test {
     }
 
 }
-
-//! new-transaction
-
-import {{default}}.Test;
-
-main() {
-    let x: Test.X;
-    let i: u64;
-    let t: Test.T;
-    let b: bool;
-
-    t = Test.new_t();
-    i, x, b = Test.destroy_t(move(t));
-
-    return;
-}
-
-// check: VerificationFailure
 // check: POSITIVE_STACK_SIZE_AT_BLOCK_END

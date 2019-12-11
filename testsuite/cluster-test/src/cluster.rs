@@ -1,10 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{aws::Aws, instance::Instance};
-use failure::{self, prelude::*};
+use anyhow::{ensure, format_err, Result};
+use libra_config::config::AdmissionControlConfig;
 use rand::prelude::*;
 use rusoto_ec2::{DescribeInstancesRequest, Ec2, Filter, Tag};
+use slog_scope::*;
 use std::collections::HashMap;
 use std::{thread, time::Duration};
 
@@ -35,7 +39,7 @@ impl Cluster {
         }
     }
 
-    pub fn discover(aws: &Aws, mint_file: &str) -> failure::Result<Self> {
+    pub fn discover(aws: &Aws, mint_file: &str) -> Result<Self> {
         let mut instances = vec![];
         let mut next_token = None;
         let mut retries_left = 10;
@@ -44,7 +48,7 @@ impl Cluster {
             let filters = vec![
                 Filter {
                     name: Some("tag:Workspace".into()),
-                    values: Some(vec![aws.workplace().clone()]),
+                    values: Some(vec![aws.workspace().clone()]),
                 },
                 Filter {
                     name: Some("instance-state-name".into()),
@@ -63,7 +67,7 @@ impl Cluster {
                 .sync();
             let result = match result {
                 Err(e) => {
-                    println!(
+                    warn!(
                         "Failed to describe aws instances: {:?}, retries left: {}",
                         e, retries_left
                     );
@@ -76,6 +80,7 @@ impl Cluster {
                 }
                 Ok(r) => r,
             };
+            let ac_port = AdmissionControlConfig::default().admission_control_service_port as u32;
             for reservation in result.reservations.expect("no reservations") {
                 for aws_instance in reservation.instances.expect("no instances") {
                     let ip = aws_instance
@@ -89,7 +94,7 @@ impl Cluster {
                         }
                         InstanceRole::Peer(peer_id) => {
                             let short_hash = peer_id[..8].into();
-                            instances.push(Instance::new(short_hash, ip, 8000));
+                            instances.push(Instance::new(short_hash, ip, ac_port));
                         }
                         _ => {}
                     }
@@ -105,7 +110,7 @@ impl Cluster {
             "No instances were discovered for cluster"
         );
         let prometheus_ip =
-            prometheus_ip.ok_or_else(|| format_err!("Prometheus was not found in workplace"))?;
+            prometheus_ip.ok_or_else(|| format_err!("Prometheus was not found in workspace"))?;
         Ok(Self {
             instances,
             prometheus_ip: Some(prometheus_ip),

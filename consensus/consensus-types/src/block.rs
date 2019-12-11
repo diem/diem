@@ -3,13 +3,17 @@
 
 use crate::{
     block_data::{BlockData, BlockType},
-    block_info::BlockInfo,
     common::{Author, Round},
     quorum_cert::QuorumCert,
     vote_data::VoteData,
 };
-use failure::{ensure, format_err};
+use anyhow::{bail, ensure, format_err};
 use libra_crypto::hash::{CryptoHash, HashValue};
+use libra_types::account_address::{AccountAddress, ADDRESS_LENGTH};
+use libra_types::block_info::BlockInfo;
+use libra_types::block_metadata::BlockMetadata;
+use libra_types::transaction::Version;
+use libra_types::validator_set::ValidatorSet;
 use libra_types::{
     crypto_proxies::{LedgerInfoWithSignatures, Signature, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
@@ -101,6 +105,23 @@ impl<T> Block<T> {
     pub fn timestamp_usecs(&self) -> u64 {
         self.block_data.timestamp_usecs()
     }
+
+    pub fn gen_block_info(
+        &self,
+        executed_state_id: HashValue,
+        version: Version,
+        next_validator_set: Option<ValidatorSet>,
+    ) -> BlockInfo {
+        BlockInfo::new(
+            self.epoch(),
+            self.round(),
+            self.id(),
+            executed_state_id,
+            version,
+            self.timestamp_usecs(),
+            next_validator_set,
+        )
+    }
 }
 
 impl<T> Block<T>
@@ -136,23 +157,15 @@ where
             ledger_info.transaction_accumulator_hash(),
             ledger_info.version(),
             ledger_info.timestamp_usecs(),
-            ledger_info.next_validator_set().cloned(),
+            None,
         );
 
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
         // carrying information about version from the last LedgerInfo of previous epoch.
         let genesis_quorum_cert = QuorumCert::new(
-            VoteData::new(ancestor.clone(), ancestor),
+            VoteData::new(ancestor.clone(), ancestor.clone()),
             LedgerInfoWithSignatures::new(
-                LedgerInfo::new(
-                    ledger_info.version(),
-                    ledger_info.transaction_accumulator_hash(),
-                    HashValue::zero(),
-                    HashValue::zero(),
-                    ledger_info.epoch(),
-                    ledger_info.timestamp_usecs(),
-                    None,
-                ),
+                LedgerInfo::new(ancestor, HashValue::zero()),
                 BTreeMap::new(),
             ),
         );
@@ -214,9 +227,9 @@ where
 
     /// Verifies that the proposal and the QC are correctly signed.
     /// If this is the genesis block, we skip these checks.
-    pub fn validate_signatures(&self, validator: &ValidatorVerifier) -> failure::Result<()> {
+    pub fn validate_signatures(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
         match self.block_data.block_type() {
-            BlockType::Genesis => Ok(()),
+            BlockType::Genesis => bail!("We should not accept genesis from others"),
             BlockType::NilBlock => self.quorum_cert().verify(validator),
             BlockType::Proposal { author, .. } => {
                 let signature = self
@@ -231,19 +244,22 @@ where
 
     /// Makes sure that the proposal makes sense, independently of the current state.
     /// If this is the genesis block, we skip these checks.
-    pub fn verify_well_formed(&self) -> failure::Result<()> {
-        if self.is_genesis_block() {
-            return Ok(());
-        }
-        debug_checked_verify_eq!(
-            self.id(),
-            self.block_data.hash(),
-            "Block id mismatch the hash"
+    pub fn verify_well_formed(&self) -> anyhow::Result<()> {
+        ensure!(
+            !self.is_genesis_block(),
+            "We should not accept genesis from others"
         );
         ensure!(
             self.quorum_cert().certified_block().round() < self.round(),
             "Block has invalid round"
         );
+        debug_checked_verify_eq!(
+            self.id(),
+            self.block_data.hash(),
+            "Block id mismatch the hash"
+        );
+
+        ensure!(!self.quorum_cert().ends_epoch(), "Block after epoch ends");
         Ok(())
     }
 }
@@ -252,9 +268,9 @@ impl<T> TryFrom<network::proto::Block> for Block<T>
 where
     T: DeserializeOwned + Serialize,
 {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(proto: network::proto::Block) -> failure::Result<Self> {
+    fn try_from(proto: network::proto::Block) -> anyhow::Result<Self> {
         Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }
@@ -263,9 +279,9 @@ impl<T> TryFrom<Block<T>> for network::proto::Block
 where
     T: Serialize + Default + PartialEq,
 {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_from(block: Block<T>) -> failure::Result<Self> {
+    fn try_from(block: Block<T>) -> anyhow::Result<Self> {
         Ok(Self {
             bytes: lcs::to_bytes(&block)?,
         })
@@ -294,5 +310,19 @@ impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for Block<T> {
             block_data,
             signature,
         })
+    }
+}
+
+impl<T> From<&Block<T>> for BlockMetadata {
+    fn from(block: &Block<T>) -> Self {
+        Self::new(
+            block.id(),
+            block.timestamp_usecs(),
+            block.quorum_cert().ledger_info().signatures().clone(),
+            // For nil block, we use 0x0 which is convention for nil address in move.
+            block
+                .author()
+                .unwrap_or_else(|| AccountAddress::new([0u8; ADDRESS_LENGTH])),
+        )
     }
 }

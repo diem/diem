@@ -1,22 +1,25 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{
     account_config::AccountEvent, event::EventKey, language_storage::TypeTag,
     ledger_info::LedgerInfo, proof::EventProof, transaction::Version,
 };
-use failure::prelude::*;
+use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
-    hash::{ContractEventHasher, CryptoHash, CryptoHasher},
+    hash::{CryptoHash, CryptoHasher},
     HashValue,
 };
+use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 
 /// Entry produced via a call to the `emit_event` builtin.
-#[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Hash, Clone, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
 pub struct ContractEvent {
     /// The unique key that the event was emitted to
     key: EventKey,

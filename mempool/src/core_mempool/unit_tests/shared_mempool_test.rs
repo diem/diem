@@ -11,7 +11,7 @@ use futures::{
     Stream,
 };
 use futures_preview::{compat::Stream01CompatExt, executor::block_on, SinkExt, StreamExt};
-use libra_config::config::{NodeConfig, NodeConfigHelpers};
+use libra_config::config::NodeConfig;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     interface::{NetworkNotification, NetworkRequest},
@@ -74,7 +74,7 @@ impl SharedMempoolNetwork {
     }
 
     fn bootstrap(peers: Vec<PeerId>) -> Self {
-        Self::bootstrap_with_config(peers, NodeConfigHelpers::get_single_node_test_config(true))
+        Self::bootstrap_with_config(peers, NodeConfig::random())
     }
 
     fn add_txns(&mut self, peer_id: &PeerId, txns: Vec<TestTransaction>) {

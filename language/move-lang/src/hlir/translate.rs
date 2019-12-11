@@ -7,19 +7,50 @@ use crate::{
     expansion::ast::Fields,
     hlir::ast::{self as H, Block},
     naming::ast as N,
-    parser::ast::{Field, FunctionName, ModuleIdent, StructName, Var},
+    parser::ast::{BinOp_, Field, FunctionName, ModuleIdent, StructName, Var},
     shared::*,
     typing::ast as T,
 };
 use std::collections::VecDeque;
 
 //**************************************************************************************************
-// Context
+// Vars
 //**************************************************************************************************
 
+const NEW_NAME_DELIM: &str = "#";
+
 fn new_name(n: &str) -> String {
-    format!("{}#{}", n, Counter::next())
+    format!("{}{}{}", n, NEW_NAME_DELIM, Counter::next())
 }
+
+const TEMP_PREFIX: &str = "tmp%";
+
+fn new_temp_name() -> String {
+    new_name(TEMP_PREFIX)
+}
+
+fn is_temp_name(s: &str) -> bool {
+    s.starts_with(TEMP_PREFIX)
+}
+
+pub enum DisplayVar {
+    Orig(String),
+    Tmp,
+}
+
+pub fn display_var(s: &str) -> DisplayVar {
+    if is_temp_name(s) {
+        DisplayVar::Tmp
+    } else {
+        let mut orig = s.to_owned();
+        orig.split_off(orig.find('#').unwrap_or_else(|| s.len()));
+        DisplayVar::Orig(orig)
+    }
+}
+
+//**************************************************************************************************
+// Context
+//**************************************************************************************************
 
 struct Context {
     errors: Errors,
@@ -63,7 +94,7 @@ impl Context {
     }
 
     pub fn new_temp(&mut self, loc: Loc, t: H::SingleType) -> Var {
-        let new_var = Var(sp(loc, new_name("tmp%")));
+        let new_var = Var(sp(loc, new_temp_name()));
         self.function_locals.add(new_var.clone(), t).unwrap();
         self.local_scope
             .add(new_var.clone(), new_var.clone())
@@ -466,7 +497,9 @@ fn statement(context: &mut Context, result: &mut Block, e: T::Exp) {
                 block: loop_block,
             }
         }
-        TE::Loop(loop_body) => {
+        TE::Loop {
+            body: loop_body, ..
+        } => {
             let mut loop_block = Block::new();
             let el = maybe_exp(context, &mut loop_block, None, *loop_body);
             ignore_and_pop(context, &mut loop_block, true, el);
@@ -656,6 +689,9 @@ fn ignore_and_pop(
         Unreachable { .. } if last_stmt => (),
         Unreachable { report, loc } => dead_code_err(context, report, loc),
         Reachable(exp) => {
+            if let H::UnannotatedExp_::Unit = &exp.exp.value {
+                return;
+            }
             let pop_num = match &exp.ty.value {
                 H::Type_::Unit => 0,
                 H::Type_::Single(_) => 1,
@@ -707,10 +743,22 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             let mut else_block = Block::new();
             let ef = maybe_exp(context, &mut else_block, Some(&ty), *tf);
 
-            let tmps = make_temps(context, eloc, ty);
+            if let (Unreachable { .. }, Unreachable { .. }) = (&et, &ef) {
+                let s_ = S::IfElse {
+                    cond,
+                    if_block,
+                    else_block,
+                };
+                result.push_back(sp(eloc, s_));
+                return Unreachable {
+                    report: true,
+                    loc: eloc,
+                };
+            }
+
+            let tmps = make_temps(context, eloc, ty.clone());
             let tres = bind_result(&mut if_block, eloc, tmps.clone(), et);
             let fres = bind_result(&mut else_block, eloc, tmps, ef);
-
             let s_ = S::IfElse {
                 cond,
                 if_block,
@@ -718,13 +766,12 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             };
             result.push_back(sp(eloc, s_));
 
-            return match (tres, fres) {
-                (res @ Reachable(_), _) | (_, res @ Reachable(_)) => res,
-                (Unreachable { .. }, Unreachable { .. }) => Unreachable {
-                    report: true,
-                    loc: eloc,
-                },
-            };
+            match (tres, fres) {
+                (Reachable(res), _) | (_, Reachable(res)) => res.exp.value,
+                (Unreachable { .. }, Unreachable { .. }) => {
+                    unreachable!("ICE should have been covered in (et, ef) match")
+                }
+            }
         }
         TE::While(tb, loop_body) => {
             let cond = exp!(context, result, None, *tb);
@@ -740,13 +787,22 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             result.push_back(sp(eloc, s_));
             unit_()
         }
-        TE::Loop(loop_body) => {
+        TE::Loop {
+            has_break,
+            body: loop_body,
+        } => {
             let mut loop_block = Block::new();
             let el = maybe_exp(context, &mut loop_block, None, *loop_body);
             ignore_and_pop(context, &mut loop_block, true, el);
 
             let s_ = S::Loop { block: loop_block };
             result.push_back(sp(eloc, s_));
+            if !has_break {
+                return Unreachable {
+                    report: true,
+                    loc: eloc,
+                };
+            }
             unit_()
         }
         TE::Block(seq) => return block(context, result, eloc, None, seq),
@@ -812,6 +868,8 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             from_user,
             var: context.remapped_local(var),
         },
+        TE::BorrowLocal(mut_, v) => HE::BorrowLocal(mut_, context.remapped_local(v)),
+
         TE::Use(_) => panic!("ICE unexpanded use"),
         TE::ModuleCall(call) => {
             use crate::shared::fake_natives::transaction as TXN;
@@ -832,8 +890,8 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
                 let tbool = N::SingleType_::bool(eloc);
                 let tu64 = N::SingleType_::u64(eloc);
                 let tunit = sp(eloc, N::Type_::Unit);
-                let vcond = Var(sp(eloc, new_name("tmp%")));
-                let vcode = Var(sp(eloc, new_name("tmp%")));
+                let vcond = Var(sp(eloc, new_temp_name()));
+                let vcode = Var(sp(eloc, new_temp_name()));
 
                 let mut stmts = VecDeque::new();
 
@@ -889,6 +947,12 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
         TE::UnaryExp(op, te) => {
             let e = exp!(context, result, None, *te);
             HE::UnaryExp(op, e)
+        }
+        TE::BinopExp(tl, op @ sp!(_, BinOp_::Eq), tr)
+        | TE::BinopExp(tl, op @ sp!(_, BinOp_::Neq), tr) => {
+            let el = exp!(context, result, None, *tl);
+            let er = exp!(context, result, Some(&el.ty), *tr);
+            HE::BinopExp(el, op, er)
         }
         TE::BinopExp(tl, op, tr) => {
             let el = exp!(context, result, None, *tl);
@@ -952,7 +1016,6 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             let e = exp!(context, result, None, *te);
             HE::Borrow(mut_, e, f)
         }
-        TE::BorrowLocal(mut_, v) => HE::BorrowLocal(mut_, v),
         TE::TempBorrow(mut_, te) => {
             let e = exp_!(context, result, None, *te);
             let st = match &e.ty.value {
@@ -1101,7 +1164,9 @@ fn needs_freeze(sp!(_, actual): &H::Type, sp!(_, expected): &H::Type) -> Freeze 
                 Freeze::NotNeeded
             }
         }
-        _ => unreachable!("ICE type checking failed"),
+        (actual, expected) => {
+            unreachable!("ICE type checking failed, {:#?} !~ {:#?}", actual, expected)
+        }
     }
 }
 
@@ -1129,11 +1194,7 @@ fn freeze(context: &mut Context, result: &mut Block, expected_type: &H::Type, e:
             assert!(actual_tys.len() == points.len());
             let new_temps = actual_tys
                 .into_iter()
-                .zip(&points)
-                .map(|(ty, needs_freeze)| {
-                    let ty = if *needs_freeze { freeze_single(ty) } else { ty };
-                    (context.new_temp(loc, ty.clone()), ty)
-                })
+                .map(|ty| (context.new_temp(loc, ty.clone()), ty))
                 .collect::<Vec<_>>();
 
             let lvalues = new_temps
@@ -1193,7 +1254,7 @@ fn freeze_ty(sp!(tloc, t): H::Type) -> H::Type {
     use H::Type_ as T;
     match t {
         T::Single(s) => sp(tloc, T::Single(freeze_single(s))),
-        _ => panic!("ICE freezing anything but a mutable ref"),
+        t => panic!("ICE MULTIPLE freezing anything but a mutable ref: {:#?}", t),
     }
 }
 
@@ -1201,6 +1262,6 @@ fn freeze_single(sp!(sloc, s): H::SingleType) -> H::SingleType {
     use H::SingleType_ as S;
     match s {
         S::Ref(true, inner) => sp(sloc, S::Ref(false, inner)),
-        _ => panic!("ICE freezing anything but a mutable ref"),
+        t => panic!("ICE SINGLE freezing anything but a mutable ref: {:#?}", t),
     }
 }

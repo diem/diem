@@ -14,8 +14,8 @@ use crate::{
     },
 };
 
+use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
-use failure::*;
 use libra_types::{account_address::AccountAddress, identifier::Identifier};
 use std::{
     clone::Clone,
@@ -1255,12 +1255,6 @@ fn compile_call(
                     } else {
                         InferredType::Reference(inner)
                     }]
-                }
-                Builtin::CreateAccount => {
-                    push_instr!(call.span, Bytecode::CreateAccount);
-                    function_frame.pop()?;
-                    function_frame.push()?;
-                    vec_deque![]
                 }
                 Builtin::MoveFrom(name, tys) => {
                     let tokens = LocalsSignature(compile_types(context, &tys)?);

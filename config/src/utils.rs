@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use get_if_addrs::get_if_addrs;
-use libra_types::transaction::SCRIPT_HASH_LENGTH;
+use libra_types::PeerId;
 use parity_multiaddr::{Multiaddr, Protocol};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Serialize, Serializer};
 use std::{
-    collections::HashSet,
+    collections::{BTreeMap, HashMap},
     hash::BuildHasher,
     net::{IpAddr, TcpListener, TcpStream},
 };
@@ -61,35 +61,27 @@ pub fn get_local_ip() -> Option<Multiaddr> {
     })
 }
 
-pub fn deserialize_whitelist<'de, D>(
-    deserializer: D,
-) -> ::std::result::Result<HashSet<[u8; SCRIPT_HASH_LENGTH]>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let whitelisted_scripts: Vec<String> = Deserialize::deserialize(deserializer)?;
-    let whitelist = whitelisted_scripts
-        .iter()
-        .map(|s| {
-            let mut hash = [0u8; SCRIPT_HASH_LENGTH];
-            let decoded_hash =
-                hex::decode(s).expect("Unable to decode script hash from configuration file.");
-            assert_eq!(decoded_hash.len(), SCRIPT_HASH_LENGTH);
-            hash.copy_from_slice(decoded_hash.as_slice());
-            hash
-        })
-        .collect();
-    Ok(whitelist)
+pub fn get_available_port_in_multiaddr(is_ipv4: bool) -> Multiaddr {
+    let mut addr = Multiaddr::empty();
+    if is_ipv4 {
+        addr.push(Protocol::Ip4("0.0.0.0".parse().unwrap()));
+    } else {
+        addr.push(Protocol::Ip6("::1".parse().unwrap()));
+    }
+    addr.push(Protocol::Tcp(get_available_port()));
+    addr
 }
 
-pub fn serialize_whitelist<S, H>(
-    whitelist: &HashSet<[u8; SCRIPT_HASH_LENGTH], H>,
+/// Serialize HashMaps as BTreeMaps for consistent ordering
+pub fn serialize_ordered_map<S, V, H>(
+    value: &HashMap<PeerId, V, H>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
     H: BuildHasher,
+    V: Serialize,
 {
-    let encoded_whitelist: Vec<String> = whitelist.iter().map(hex::encode).collect();
-    encoded_whitelist.serialize(serializer)
+    let ordered: BTreeMap<_, _> = value.iter().collect();
+    ordered.serialize(serializer)
 }

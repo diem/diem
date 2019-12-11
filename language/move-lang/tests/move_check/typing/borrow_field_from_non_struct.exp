@@ -1,0 +1,88 @@
+error: 
+
+   ┌── tests/move_check/typing/borrow_field_from_non_struct.move:6:10 ───
+   │
+ 6 │         &0.f;
+   │          ^^^ Unbound field 'f'
+   ·
+ 6 │         &0.f;
+   │          - Expected a struct type in the current module but got: u64
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/borrow_field_from_non_struct.move:7:10 ───
+   │
+ 7 │         &0.g;
+   │          ^^^ Unbound field 'g'
+   ·
+ 7 │         &0.g;
+   │          - Expected a struct type in the current module but got: u64
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/borrow_field_from_non_struct.move:5:11 ───
+   │
+ 8 │         &u.value;
+   │          ^^^^^^^ Unbound field 'value'
+   ·
+ 5 │     t0(u: u64, cond: bool, addr: address) {
+   │           --- Expected a struct type in the current module but got: u64
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/borrow_field_from_non_struct.move:5:22 ───
+   │
+ 9 │         &cond.value;
+   │          ^^^^^^^^^^ Unbound field 'value'
+   ·
+ 5 │     t0(u: u64, cond: bool, addr: address) {
+   │                      ---- Expected a struct type in the current module but got: bool
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/borrow_field_from_non_struct.move:5:34 ───
+    │
+ 10 │         &addr.R;
+    │          ^^^^^^ Unbound field 'R'
+    ·
+ 5 │     t0(u: u64, cond: bool, addr: address) {
+    │                                  ------- Expected a struct type in the current module but got: address
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/borrow_field_from_non_struct.move:5:34 ───
+    │
+ 11 │         &addr.f;
+    │          ^^^^^^ Unbound field 'f'
+    ·
+ 5 │     t0(u: u64, cond: bool, addr: address) {
+    │                                  ------- Expected a struct type in the current module but got: address
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/borrow_field_from_non_struct.move:12:10 ───
+    │
+ 12 │         &().R;
+    │          ^^ Invalid dot access. Expected an expression of a single type but got an expression of type: '()'
+    ·
+ 12 │         &().R;
+    │          -- Type found here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/borrow_field_from_non_struct.move:13:10 ───
+    │
+ 13 │         &(&S{f: 0}, &S{f:0}).f;
+    │          ^^^^^^^^^^^^^^^^^^^ Invalid dot access. Expected an expression of a single type but got an expression of type: '(&0x8675309::M::S,&0x8675309::M::S)'
+    ·
+ 13 │         &(&S{f: 0}, &S{f:0}).f;
+    │          ------------------- Type found here
+    │
+

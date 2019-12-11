@@ -1,11 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use codespan::{ByteIndex, Span};
+use codespan::Span;
 use hex;
 use std::{
     cmp::Ordering,
-    collections::VecDeque,
     convert::TryFrom,
     fmt,
     hash::{Hash, Hasher},
@@ -72,23 +71,28 @@ impl AsRef<[u8]> for Address {
 
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:#x}", self)
+        write!(f, "0x{:#x}", self)
     }
 }
 
 impl fmt::Debug for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:#x}", self)
+        write!(f, "0x{:#x}", self)
     }
 }
 
 impl fmt::LowerHex for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut vec: VecDeque<u8> = self.0.iter().cloned().collect();
-        while vec.len() > 1 && vec[0] == 0 {
-            vec.pop_front();
+        let encoded = hex::encode(&self.0);
+        let dropped = encoded
+            .chars()
+            .skip_while(|c| c == &'0')
+            .collect::<String>();
+        if dropped.is_empty() {
+            write!(f, "0")
+        } else {
+            write!(f, "{}", dropped)
         }
-        write!(f, "{}", hex::encode(&self.0))
     }
 }
 
@@ -113,10 +117,10 @@ impl TryFrom<&[u8]> for Address {
 #[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
 pub struct Loc {
     file: &'static str,
-    span: Span<ByteIndex>,
+    span: Span,
 }
 impl Loc {
-    pub fn new(file: &'static str, span: Span<ByteIndex>) -> Loc {
+    pub fn new(file: &'static str, span: Span) -> Loc {
         Loc { file, span }
     }
 
@@ -124,8 +128,35 @@ impl Loc {
         self.file
     }
 
-    pub fn span(self) -> Span<ByteIndex> {
+    pub fn span(self) -> Span {
         self.span
+    }
+}
+
+impl PartialOrd for Loc {
+    fn partial_cmp(&self, other: &Loc) -> Option<Ordering> {
+        let file_ord = self.file.partial_cmp(other.file)?;
+        if file_ord != Ordering::Equal {
+            return Some(file_ord);
+        }
+
+        let start_ord = self.span.start().partial_cmp(&other.span.start())?;
+        if start_ord != Ordering::Equal {
+            return Some(start_ord);
+        }
+
+        self.span.end().partial_cmp(&other.span.end())
+    }
+}
+
+impl Ord for Loc {
+    fn cmp(&self, other: &Loc) -> Ordering {
+        self.file.cmp(other.file).then_with(|| {
+            self.span
+                .start()
+                .cmp(&other.span.start())
+                .then_with(|| self.span.end().cmp(&other.span.end()))
+        })
     }
 }
 

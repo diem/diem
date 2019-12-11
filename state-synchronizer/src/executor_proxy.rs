@@ -1,30 +1,26 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::LedgerInfo;
+use crate::SynchronizerState;
+use anyhow::{format_err, Result};
 use executor::Executor;
-use failure::prelude::*;
 use futures::{channel::oneshot, Future, FutureExt};
 use grpcio::EnvBuilder;
 use libra_config::config::NodeConfig;
-use libra_logger::prelude::*;
-use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
 use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     transaction::TransactionListWithProof,
 };
-use network::proto::GetChunkResponse;
 use std::{pin::Pin, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
 use vm_runtime::MoveVM;
 
 /// Proxies interactions with execution and storage for state synchronization
 pub trait ExecutorProxyTrait: Sync + Send {
-    /// Return the latest known version
-    fn get_latest_version(&self) -> Pin<Box<dyn Future<Output = Result<u64>> + Send>>;
-
-    /// Return the latest known ledger info
-    fn get_latest_ledger_info(&self) -> Pin<Box<dyn Future<Output = Result<LedgerInfo>> + Send>>;
+    /// Sync the local state with the latest in storage.
+    fn get_local_storage_state(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>>;
 
     /// Execute and commit a batch of transactions
     fn execute_chunk(
@@ -33,15 +29,13 @@ pub trait ExecutorProxyTrait: Sync + Send {
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
-    /// Gets chunk of transactions
+    /// Gets chunk of transactions given the known version, target version and the max limit.
     fn get_chunk(
         &self,
         known_version: u64,
         limit: u64,
-        target: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<GetChunkResponse>> + Send>>;
-
-    fn validate_ledger_info(&self, target: &LedgerInfoWithSignatures) -> Result<()>;
+        target_version: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>>;
 
     fn get_epoch_proof(&self, start_epoch: u64) -> Result<ValidatorChangeEventWithProof>;
 }
@@ -49,7 +43,6 @@ pub trait ExecutorProxyTrait: Sync + Send {
 pub(crate) struct ExecutorProxy {
     storage_read_client: Arc<StorageReadServiceClient>,
     executor: Arc<Executor<MoveVM>>,
-    validator_verifier: ValidatorVerifier,
 }
 
 impl ExecutorProxy {
@@ -60,11 +53,9 @@ impl ExecutorProxy {
             &config.storage.address,
             config.storage.port,
         ));
-        let validator_verifier = config.consensus.consensus_peers.get_validator_verifier();
         Self {
             storage_read_client,
             executor,
-            validator_verifier,
         }
     }
 }
@@ -85,19 +76,32 @@ fn convert_to_future<T: Send + 'static>(
 }
 
 impl ExecutorProxyTrait for ExecutorProxy {
-    fn get_latest_version(&self) -> Pin<Box<dyn Future<Output = Result<u64>> + Send>> {
+    fn get_local_storage_state(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<SynchronizerState>> + Send>> {
         let client = Arc::clone(&self.storage_read_client);
         async move {
-            let resp = client.get_startup_info_async().await?;
-            resp.map(|r| r.latest_version)
-                .ok_or_else(|| format_err!("failed to fetch startup info"))
+            let storage_info = client
+                .get_startup_info_async()
+                .await?
+                .ok_or_else(|| format_err!("[state sync] Failed to access storage info"))?;
+            let highest_synced_version = std::cmp::max(
+                storage_info.ledger_info.ledger_info().version(),
+                storage_info.synced_tree_state.map_or(0, |t| t.version),
+            );
+            let current_verifier = storage_info
+                .ledger_info_with_validators
+                .ledger_info()
+                .next_validator_set()
+                .expect("No ValidatorSet found for the start of the epoch")
+                .into();
+            Ok(SynchronizerState::new(
+                storage_info.ledger_info,
+                highest_synced_version,
+                current_verifier,
+            ))
         }
             .boxed()
-    }
-
-    fn get_latest_ledger_info(&self) -> Pin<Box<dyn Future<Output = Result<LedgerInfo>> + Send>> {
-        let client = Arc::clone(&self.storage_read_client);
-        async move { Ok(client.update_to_latest_ledger_async(0, vec![]).await?.1) }.boxed()
     }
 
     fn execute_chunk(
@@ -115,48 +119,21 @@ impl ExecutorProxyTrait for ExecutorProxy {
         &self,
         known_version: u64,
         limit: u64,
-        target: LedgerInfoWithSignatures,
-    ) -> Pin<Box<dyn Future<Output = Result<GetChunkResponse>> + Send>> {
+        target_version: u64,
+    ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>> {
         let client = Arc::clone(&self.storage_read_client);
         async move {
-            let transactions = client
-                .get_transactions_async(
-                    known_version + 1,
-                    limit,
-                    target.ledger_info().version(),
-                    false,
-                )
-                .await?;
-            if transactions.transactions.is_empty() {
-                error!(
-                    "[state sync] can't get {} txns from version {}",
-                    limit, known_version
-                );
-            }
-            Ok(GetChunkResponse {
-                ledger_info_with_sigs: Some(target.into()),
-                txn_list_with_proof: Some(transactions.into()),
-            })
+            client
+                .get_transactions_async(known_version + 1, limit, target_version, false)
+                .await
         }
             .boxed()
     }
 
-    fn validate_ledger_info(&self, target: &LedgerInfo) -> Result<()> {
-        target.verify(&self.validator_verifier)?;
-        Ok(())
-    }
-
     fn get_epoch_proof(&self, start_epoch: u64) -> Result<ValidatorChangeEventWithProof> {
-        let mut ledger_info_per_epoch = self
+        let ledger_info_per_epoch = self
             .storage_read_client
-            .get_latest_ledger_infos_per_epoch(start_epoch)?;
-        // The latest ledger info may not carry the validator set.
-        match ledger_info_per_epoch.pop() {
-            Some(li) if li.ledger_info().next_validator_set().is_some() => {
-                ledger_info_per_epoch.push(li);
-            }
-            _ => (),
-        }
+            .get_epoch_change_ledger_infos(start_epoch)?;
         Ok(ValidatorChangeEventWithProof::new(ledger_info_per_epoch))
     }
 }

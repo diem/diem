@@ -1,18 +1,20 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Verifies bytecode sanity.
 
 // Bounds checks are implemented in the `vm` crate.
 pub mod absint;
 pub mod abstract_state;
 pub mod acquires_list_verifier;
+pub mod borrow_graph;
 pub mod check_duplication;
 pub mod code_unit_verifier;
 pub mod control_flow_graph;
 pub mod instantiation_loops;
 pub mod nonce;
-pub mod partition;
 pub mod resources;
 pub mod signature;
 pub mod stack_usage_verifier;

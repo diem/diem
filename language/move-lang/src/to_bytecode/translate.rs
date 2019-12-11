@@ -926,7 +926,6 @@ fn call(
         (&A::LIBRA_CORE, TXN::MOD, TXN::MAX_GAS) => code.push(B::GetTxnMaxGasUnits),
         (&A::LIBRA_CORE, TXN::MOD, TXN::GAS_REMAINING) => code.push(B::GetGasRemaining),
         (&A::LIBRA_CORE, TXN::MOD, TXN::SENDER) => code.push(B::GetTxnSenderAddress),
-        (&A::LIBRA_CORE, TXN::MOD, TXN::CREATE_ACCOUNT) => code.push(B::CreateAccount),
         (&A::LIBRA_CORE, TXN::MOD, TXN::SEQUENCE_NUM) => code.push(B::GetTxnSequenceNumber),
         (&A::LIBRA_CORE, TXN::MOD, TXN::PUBLIC_KEY) => code.push(B::GetTxnPublicKey),
         (&A::LIBRA_CORE, TXN::MOD, TXN::ASSERT) => panic!("ICE should have been covered in hlir"),

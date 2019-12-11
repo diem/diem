@@ -1,0 +1,10 @@
+[package]
+name = "libra-util"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra libra-util"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"

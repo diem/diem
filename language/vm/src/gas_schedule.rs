@@ -1,22 +1,23 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This module lays out the basic abstract costing schedule for bytecode instructions.
 //!
 //! It is important to note that the cost schedule defined in this file does not track hashing
 //! operations or other native operations; the cost of each native operation will be returned by the
 //! native function itself.
-use crate::{
-    file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex, FunctionHandleIndex,
-        StructDefinitionIndex, UserStringIndex, NO_TYPE_ACTUALS, NUMBER_OF_BYTECODE_INSTRUCTIONS,
-    },
-    serializer::serialize_instruction,
+use crate::file_format::{
+    AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex, FunctionHandleIndex,
+    StructDefinitionIndex, UserStringIndex, NO_TYPE_ACTUALS, NUMBER_OF_BYTECODE_INSTRUCTIONS,
+    NUMBER_OF_NATIVE_FUNCTIONS,
 };
+pub use crate::file_format_common::Opcodes;
 use lazy_static::lazy_static;
-use libra_types::transaction::MAX_TRANSACTION_SIZE_IN_BYTES;
+use libra_types::{identifier::Identifier, transaction::MAX_TRANSACTION_SIZE_IN_BYTES};
+use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap,
     ops::{Add, Div, Mul, Sub},
     u64,
 };
@@ -105,7 +106,7 @@ macro_rules! define_gas_unit {
         carrier: $carrier: ty,
         doc: $comment: literal
     } => {
-        #[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]
+        #[derive(Debug, Hash, Eq, PartialEq, Copy, Clone, Serialize, Deserialize)]
         #[doc=$comment]
         pub struct $name<GasCarrier>(GasCarrier);
         impl GasAlgebra<$carrier> for $name<$carrier> {
@@ -136,11 +137,6 @@ define_gas_unit! {
     carrier: GasCarrier,
     doc: "A newtype wrapper around the gas price for each unit of gas consumed."
 }
-
-/// A newtype wrapper around the on-chain representation of an instruction key. This is the
-/// serialization of the instruction but disregarding any instruction arguments.
-#[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]
-pub struct InstructionKey(pub u8);
 
 lazy_static! {
     /// The cost per-byte written to global storage.
@@ -189,165 +185,260 @@ lazy_static! {
 
     /// Any transaction over this size will be charged `INTRINSIC_GAS_PER_BYTE` per byte
     pub static ref LARGE_TRANSACTION_CUTOFF: AbstractMemorySize<GasCarrier> = AbstractMemorySize::new(600);
+
+    pub static ref GAS_SCHEDULE_NAME: Identifier = Identifier::new("T").unwrap();
+}
+
+/// The encoding of the instruction is the serialized form of it, but disregarding the
+/// serialization of the instruction's argument(s).
+pub fn instruction_key(instruction: &Bytecode) -> u8 {
+    use Bytecode::*;
+    let opcode = match instruction {
+        Pop => Opcodes::POP,
+        Ret => Opcodes::RET,
+        BrTrue(_) => Opcodes::BR_TRUE,
+        BrFalse(_) => Opcodes::BR_FALSE,
+        Branch(_) => Opcodes::BRANCH,
+        LdConst(_) => Opcodes::LD_CONST,
+        LdStr(_) => Opcodes::LD_STR,
+        LdByteArray(_) => Opcodes::LD_BYTEARRAY,
+        LdAddr(_) => Opcodes::LD_ADDR,
+        LdTrue => Opcodes::LD_TRUE,
+        LdFalse => Opcodes::LD_FALSE,
+        CopyLoc(_) => Opcodes::COPY_LOC,
+        MoveLoc(_) => Opcodes::MOVE_LOC,
+        StLoc(_) => Opcodes::ST_LOC,
+        Call(_, _) => Opcodes::CALL,
+        Pack(_, _) => Opcodes::PACK,
+        Unpack(_, _) => Opcodes::UNPACK,
+        ReadRef => Opcodes::READ_REF,
+        WriteRef => Opcodes::WRITE_REF,
+        FreezeRef => Opcodes::FREEZE_REF,
+        MutBorrowLoc(_) => Opcodes::MUT_BORROW_LOC,
+        ImmBorrowLoc(_) => Opcodes::IMM_BORROW_LOC,
+        MutBorrowField(_) => Opcodes::MUT_BORROW_FIELD,
+        ImmBorrowField(_) => Opcodes::IMM_BORROW_FIELD,
+        MutBorrowGlobal(_, _) => Opcodes::MUT_BORROW_GLOBAL,
+        ImmBorrowGlobal(_, _) => Opcodes::IMM_BORROW_GLOBAL,
+        Add => Opcodes::ADD,
+        Sub => Opcodes::SUB,
+        Mul => Opcodes::MUL,
+        Mod => Opcodes::MOD,
+        Div => Opcodes::DIV,
+        BitOr => Opcodes::BIT_OR,
+        BitAnd => Opcodes::BIT_AND,
+        Xor => Opcodes::XOR,
+        Or => Opcodes::OR,
+        And => Opcodes::AND,
+        Not => Opcodes::NOT,
+        Eq => Opcodes::EQ,
+        Neq => Opcodes::NEQ,
+        Lt => Opcodes::LT,
+        Gt => Opcodes::GT,
+        Le => Opcodes::LE,
+        Ge => Opcodes::GE,
+        Abort => Opcodes::ABORT,
+        GetTxnGasUnitPrice => Opcodes::GET_TXN_GAS_UNIT_PRICE,
+        GetTxnMaxGasUnits => Opcodes::GET_TXN_MAX_GAS_UNITS,
+        GetGasRemaining => Opcodes::GET_GAS_REMAINING,
+        GetTxnSenderAddress => Opcodes::GET_TXN_SENDER,
+        Exists(_, _) => Opcodes::EXISTS,
+        MoveFrom(_, _) => Opcodes::MOVE_FROM,
+        MoveToSender(_, _) => Opcodes::MOVE_TO,
+        GetTxnSequenceNumber => Opcodes::GET_TXN_SEQUENCE_NUMBER,
+        GetTxnPublicKey => Opcodes::GET_TXN_PUBLIC_KEY,
+    };
+    opcode as u8
 }
 
 /// The cost tables, keyed by the serialized form of the bytecode instruction.  We use the
 /// serialized form as opposed to the instruction enum itself as the key since this will be the
 /// on-chain representation of bytecode instructions in the future.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CostTable {
-    pub compute_table: HashMap<InstructionKey, GasUnits<GasCarrier>>,
-    pub memory_table: HashMap<InstructionKey, GasUnits<GasCarrier>>,
-}
-
-impl InstructionKey {
-    /// The encoding of the instruction is the serialized form of it, but disregarding the
-    /// serializtion of the instructions arguments.
-    pub fn new(instruction: &Bytecode) -> Self {
-        let mut vec = Vec::new();
-        serialize_instruction(&mut vec, instruction).unwrap();
-        Self(vec[0])
-    }
+    pub instruction_table: Vec<GasCost>,
+    pub native_table: Vec<GasCost>,
 }
 
 impl CostTable {
-    pub fn new(instrs: Vec<(Bytecode, u64, u64)>) -> Self {
-        let mut compute_table = HashMap::new();
-        let mut memory_table = HashMap::new();
-        let mut instructions_covered = 0;
-        for (instr, comp_cost, mem_cost) in instrs.into_iter() {
-            let code = InstructionKey::new(&instr);
-            if cfg!(debug_assertions) && compute_table.get(&code).is_none() {
-                instructions_covered += 1;
+    pub fn new(mut instrs: Vec<(Bytecode, GasCost)>, native_table: Vec<GasCost>) -> Self {
+        instrs.sort_by_key(|cost| instruction_key(&cost.0));
+
+        if cfg!(debug_assertions) {
+            let mut instructions_covered = 0;
+            for (index, (instr, _)) in instrs.iter().enumerate() {
+                let key = instruction_key(instr);
+                if index == (key - 1) as usize {
+                    instructions_covered += 1;
+                }
             }
-            compute_table.insert(code, GasUnits::new(comp_cost));
-            memory_table.insert(code, GasUnits::new(mem_cost));
+            debug_assert!(
+                instructions_covered == NUMBER_OF_BYTECODE_INSTRUCTIONS,
+                "all instructions must be in the cost table"
+            );
         }
-        debug_assert!(
-            instructions_covered == NUMBER_OF_BYTECODE_INSTRUCTIONS,
-            "all instructions must be in the cost table"
-        );
+
+        let instruction_table = instrs
+            .into_iter()
+            .map(|(_, cost)| cost)
+            .collect::<Vec<GasCost>>();
         Self {
-            compute_table,
-            memory_table,
+            instruction_table,
+            native_table,
         }
     }
 
-    pub fn memory_gas(
+    #[inline]
+    pub fn instruction_cost(&self, instr_index: u8) -> &GasCost {
+        &self.instruction_table[(instr_index - 1) as usize]
+    }
+
+    #[inline]
+    pub fn native_cost(&self, native_index: NativeCostIndex) -> &GasCost {
+        &self.native_table[native_index as usize]
+    }
+
+    pub fn get_gas(
         &self,
         instr: &Bytecode,
         size_provider: AbstractMemorySize<GasCarrier>,
-    ) -> GasUnits<GasCarrier> {
-        let code = InstructionKey::new(instr);
-        let memory_cost = self.memory_table.get(&code);
-        // CostTable initialization checks that every instruction is included in the memory_table
-        assume!(memory_cost.is_some());
-        memory_cost.unwrap().map2(size_provider, Mul::mul)
+    ) -> GasCost {
+        // NB: instruction keys are 1-indexed. This means that their location in the cost array
+        // will be the key - 1.
+        let key = instruction_key(instr);
+        let cost = self.instruction_table.get((key - 1) as usize);
+        assume!(cost.is_some());
+        let good_cost = cost.unwrap();
+        GasCost {
+            instruction_gas: good_cost.instruction_gas.map2(size_provider, Mul::mul),
+            memory_gas: good_cost.memory_gas.map2(size_provider, Mul::mul),
+        }
     }
 
-    pub fn comp_gas(
-        &self,
-        instr: &Bytecode,
-        size_provider: AbstractMemorySize<GasCarrier>,
-    ) -> GasUnits<GasCarrier> {
-        let code = InstructionKey::new(instr);
-        let compute_cost = self.compute_table.get(&code);
-        // CostTable initialization checks that every instruction is included in the compute_table
-        assume!(compute_cost.is_some());
-        compute_cost.unwrap().map2(size_provider, Mul::mul)
-    }
-}
-
-lazy_static! {
-    static ref GAS_SCHEDULE: CostTable = {
+    // Only used for genesis, cost synthesis (for now) and for tests where we need a cost table and
+    // don't have a genesis storage state.
+    pub fn zero() -> Self {
         use Bytecode::*;
-        // Arguments to the instructions don't matter -- these will be removed in the
-        // `encode_instruction` function.
-        //
-        // The second element of the tuple is the computational cost. The third element of the
-        // tuple is the memory cost per-byte for the instruction.
-        // TODO: At the moment the computational cost is correct, and the memory cost is not
-        // correct at all (hence why they're all 1's at the moment).
+        // The actual costs for the instructions in this table _DO NOT MATTER_. This is only used
+        // for genesis, cost synthesis, and testing, and for these cases we don't need to worry
+        // about the actual gas for instructions.  The only thing we care about is having an entry
+        // in the gas schedule for each instruction.
         let instrs = vec![
-            (MoveToSender(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 774, 1),
-            (GetTxnSenderAddress, 30, 1),
-            (MoveFrom(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 917, 1),
-            (BrTrue(0), 31, 1),
-            (WriteRef, 65, 1),
-            (Mul, 41, 1),
-            (MoveLoc(0), 41, 1),
-            (And, 49, 1),
-            (GetTxnPublicKey, 41, 1),
-            (Pop, 27, 1),
-            (BitAnd, 44, 1),
-            (ReadRef, 51, 1),
-            (Sub, 44, 1),
-            (MutBorrowField(FieldDefinitionIndex::new(0)), 58, 1),
-            (ImmBorrowField(FieldDefinitionIndex::new(0)), 58, 1),
-            (Add, 45, 1),
-            (CopyLoc(0), 41, 1),
-            (StLoc(0), 28, 1),
-            (Ret, 28, 1),
-            (Lt, 49, 1),
-            (LdConst(0), 29, 1),
-            (Abort, 39, 1),
-            (MutBorrowLoc(0), 45, 1),
-            (ImmBorrowLoc(0), 45, 1),
-            (LdStr(UserStringIndex::new(0)), 52, 1),
-            (LdAddr(AddressPoolIndex::new(0)), 36, 1),
-            (Ge, 46, 1),
-            (Xor, 46, 1),
-            (Neq, 51, 1),
-            (Not, 35,1),
-            (Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS), 197, 1),
-            (Le, 47, 1),
-            (CreateAccount, 1119, 1),
-            (Branch(0), 10, 1),
-            (Unpack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 94, 1),
-            (Or, 43, 1),
-            (LdFalse, 30, 1),
-            (LdTrue, 29, 1),
-            (GetTxnGasUnitPrice, 29, 1),
-            (Mod, 42, 1),
-            (BrFalse(0), 29, 1),
-            (Exists(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 856, 1),
-            (GetGasRemaining, 32, 1),
-            (BitOr, 45, 1),
-            (GetTxnMaxGasUnits, 34, 1),
-            (GetTxnSequenceNumber, 29, 1),
-            (FreezeRef, 10, 1),
-            (MutBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 929, 1),
-            (ImmBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 929, 1),
-            (Div, 41, 1),
-            (Eq, 48, 1),
-            (LdByteArray(ByteArrayPoolIndex::new(0)), 56, 1),
-            (Gt, 46, 1),
-            (Pack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS), 73, 1),
+            (
+                MoveToSender(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                GasCost::new(0, 0),
+            ),
+            (GetTxnSenderAddress, GasCost::new(0, 0)),
+            (
+                MoveFrom(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                GasCost::new(0, 0),
+            ),
+            (BrTrue(0), GasCost::new(0, 0)),
+            (WriteRef, GasCost::new(0, 0)),
+            (Mul, GasCost::new(0, 0)),
+            (MoveLoc(0), GasCost::new(0, 0)),
+            (And, GasCost::new(0, 0)),
+            (GetTxnPublicKey, GasCost::new(0, 0)),
+            (Pop, GasCost::new(0, 0)),
+            (BitAnd, GasCost::new(0, 0)),
+            (ReadRef, GasCost::new(0, 0)),
+            (Sub, GasCost::new(0, 0)),
+            (
+                MutBorrowField(FieldDefinitionIndex::new(0)),
+                GasCost::new(0, 0),
+            ),
+            (
+                ImmBorrowField(FieldDefinitionIndex::new(0)),
+                GasCost::new(0, 0),
+            ),
+            (Add, GasCost::new(0, 0)),
+            (CopyLoc(0), GasCost::new(0, 0)),
+            (StLoc(0), GasCost::new(0, 0)),
+            (Ret, GasCost::new(0, 0)),
+            (Lt, GasCost::new(0, 0)),
+            (LdConst(0), GasCost::new(0, 0)),
+            (Abort, GasCost::new(0, 0)),
+            (MutBorrowLoc(0), GasCost::new(0, 0)),
+            (ImmBorrowLoc(0), GasCost::new(0, 0)),
+            (LdStr(UserStringIndex::new(0)), GasCost::new(0, 0)),
+            (LdAddr(AddressPoolIndex::new(0)), GasCost::new(0, 0)),
+            (Ge, GasCost::new(0, 0)),
+            (Xor, GasCost::new(0, 0)),
+            (Neq, GasCost::new(0, 0)),
+            (Not, GasCost::new(0, 0)),
+            (
+                Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS),
+                GasCost::new(0, 0),
+            ),
+            (Le, GasCost::new(0, 0)),
+            (Branch(0), GasCost::new(0, 0)),
+            (
+                Unpack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                GasCost::new(0, 0),
+            ),
+            (Or, GasCost::new(0, 0)),
+            (LdFalse, GasCost::new(0, 0)),
+            (LdTrue, GasCost::new(0, 0)),
+            (GetTxnGasUnitPrice, GasCost::new(0, 0)),
+            (Mod, GasCost::new(0, 0)),
+            (BrFalse(0), GasCost::new(0, 0)),
+            (
+                Exists(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                GasCost::new(0, 0),
+            ),
+            (GetGasRemaining, GasCost::new(0, 0)),
+            (BitOr, GasCost::new(0, 0)),
+            (GetTxnMaxGasUnits, GasCost::new(0, 0)),
+            (GetTxnSequenceNumber, GasCost::new(0, 0)),
+            (FreezeRef, GasCost::new(0, 0)),
+            (
+                MutBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                GasCost::new(0, 0),
+            ),
+            (
+                ImmBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                GasCost::new(0, 0),
+            ),
+            (Div, GasCost::new(0, 0)),
+            (Eq, GasCost::new(0, 0)),
+            (LdByteArray(ByteArrayPoolIndex::new(0)), GasCost::new(0, 0)),
+            (Gt, GasCost::new(0, 0)),
+            (
+                Pack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+                GasCost::new(0, 0),
+            ),
         ];
-        CostTable::new(instrs)
-    };
+        let native_table = (0..NUMBER_OF_NATIVE_FUNCTIONS)
+            .map(|_| GasCost::new(0, 0))
+            .collect::<Vec<GasCost>>();
+        CostTable::new(instrs, native_table)
+    }
 }
 
 /// The  `GasCost` tracks:
 /// - instruction cost: how much time/computational power is needed to perform the instruction
 /// - memory cost: how much memory is required for the instruction, and storage overhead
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GasCost {
     pub instruction_gas: GasUnits<GasCarrier>,
     pub memory_gas: GasUnits<GasCarrier>,
 }
 
-/// Statically cost a bytecode instruction.
-///
-/// Don't take into account current stack or memory size. Don't track whether references are to
-/// global or local storage.
-pub fn static_cost_instr(
-    instr: &Bytecode,
-    size_provider: AbstractMemorySize<GasCarrier>,
-) -> GasCost {
-    GasCost {
-        instruction_gas: GAS_SCHEDULE.comp_gas(instr, size_provider),
-        memory_gas: GAS_SCHEDULE.memory_gas(instr, size_provider),
+impl GasCost {
+    pub fn new(instr_gas: GasCarrier, mem_gas: GasCarrier) -> Self {
+        Self {
+            instruction_gas: GasUnits::new(instr_gas),
+            memory_gas: GasUnits::new(mem_gas),
+        }
+    }
+
+    /// Take a GasCost from our gas schedule and convert it to a total gas charge in `GasUnits`.
+    ///
+    /// This is used internally for converting from a `GasCost` which is a triple of numbers
+    /// represeing instruction, stack, and memory consumption into a number of `GasUnits`.
+    #[inline]
+    pub fn total(&self) -> GasUnits<GasCarrier> {
+        self.instruction_gas.add(self.memory_gas)
     }
 }
 
@@ -373,4 +464,27 @@ pub fn calculate_intrinsic_gas(
     } else {
         min_transaction_fee.unitary_cast()
     }
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[repr(u8)]
+pub enum NativeCostIndex {
+    SHA2_256 = 0,
+    SHA3_256 = 1,
+    ED25519_VERIFY = 2,
+    ED25519_THRESHOLD_VERIFY = 3,
+    ADDRESS_TO_BYTES = 4,
+    U64_TO_BYTES = 5,
+    BYTEARRAY_CONCAT = 6,
+    LENGTH = 7,
+    EMPTY = 8,
+    BORROW = 9,
+    BORROW_MUT = 10,
+    PUSH_BACK = 11,
+    POP_BACK = 12,
+    DESTROY_EMPTY = 13,
+    SWAP = 14,
+    WRITE_TO_EVENT_STORE = 15,
+    SAVE_ACCOUNT = 16,
 }

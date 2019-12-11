@@ -1,0 +1,36 @@
+error: 
+
+   ┌── tests/move_check/typing/pack_unit.move:2:16 ───
+   │
+ 5 │         Box { f: () };
+   │         ^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+   ·
+ 5 │         Box { f: () };
+   │         ------------- The type: 0x8675309::M::Box<_>
+   ·
+ 2 │     struct Box<T> { f: T }
+   │                - Is found to be a non-copyable type here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/pack_unit.move:5:9 ───
+   │
+ 5 │         Box { f: () };
+   │         ^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/pack_unit.move:5:9 ───
+   │
+ 5 │         Box { f: () };
+   │                  ^^ Invalid argument for field 'f' for '0x8675309::M::Box'
+   ·
+ 5 │         Box { f: () };
+   │                  -- The type: '()'
+   ·
+ 5 │         Box { f: () };
+   │         ------------- Is not compatible with: '_'
+   │
+

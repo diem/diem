@@ -1,0 +1,19 @@
+//! no-run: runtime
+module M {
+    public foo() {
+        return;
+    }
+}
+// Module M passes the verifier, but does not get published on-chain.
+
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    M.foo();
+    return;
+}
+// The script is compiled against M, but since M is not published on-chain,
+// it will be rejected by the runtime.
+// check: LINKER_ERROR

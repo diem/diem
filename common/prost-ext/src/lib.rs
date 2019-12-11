@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bytes::{Bytes, BytesMut};
+#![forbid(unsafe_code)]
+
+use bytes::Bytes;
 use prost::{EncodeError, Message};
 
 impl<T: ?Sized> MessageExt for T where T: Message {}
@@ -11,9 +13,9 @@ pub trait MessageExt: Message {
     where
         Self: Sized,
     {
-        let mut bytes = BytesMut::with_capacity(self.encoded_len());
+        let mut bytes = Vec::with_capacity(self.encoded_len());
         self.encode(&mut bytes)?;
-        Ok(bytes.freeze())
+        Ok(bytes.into())
     }
 
     fn to_vec(&self) -> Result<Vec<u8>, EncodeError>

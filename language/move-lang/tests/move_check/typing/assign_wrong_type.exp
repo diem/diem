@@ -1,0 +1,128 @@
+error: 
+
+   ┌── tests/move_check/typing/assign_wrong_type.move:8:9 ───
+   │
+ 8 │         S { g } = R {f :0};
+   │         ^^^^^^^ Invalid deconstruction assignment
+   ·
+ 8 │         S { g } = R {f :0};
+   │         ------- The type: '0x8675309::M::S'
+   ·
+ 8 │         S { g } = R {f :0};
+   │                   -------- Is not compatible with: '0x8675309::M::R'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/assign_wrong_type.move:9:10 ───
+   │
+ 9 │         (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
+   │          ^^^^^^^ Invalid deconstruction assignment
+   ·
+ 9 │         (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
+   │          ------- The type: '0x8675309::M::S'
+   ·
+ 9 │         (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
+   │                               --------- Is not compatible with: '0x8675309::M::R'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/assign_wrong_type.move:16:9 ───
+    │
+ 16 │         x = ();
+    │         ^ Invalid list-assignment. The list-assignment expected 1 argument(s) but got 0
+    ·
+ 16 │         x = ();
+    │             -- Found 0 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/assign_wrong_type.move:17:9 ───
+    │
+ 17 │         () = 0;
+    │         ^^ Invalid list-assignment. The list-assignment expected 0 argument(s) but got 1
+    ·
+ 17 │         () = 0;
+    │              - Found 1 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/assign_wrong_type.move:18:9 ───
+    │
+ 18 │         (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
+    │         ^^^^^^^^^^^^ Invalid list-assignment. The list-assignment expected 3 argument(s) but got 4
+    ·
+ 18 │         (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
+    │                        ---------------------------- Found 4 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/assign_wrong_type.move:19:9 ───
+    │
+ 19 │         (x, b, R{f}) = (0, false);
+    │         ^^^^^^^^^^^^ Invalid list-assignment. The list-assignment expected 3 argument(s) but got 2
+    ·
+ 19 │         (x, b, R{f}) = (0, false);
+    │                        ---------- Found 2 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/assign_wrong_type.move:23:17 ───
+    │
+ 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
+    │          ^ Invalid assignment to local 'x'
+    ·
+ 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
+    │                            - The type: 'u64'
+    ·
+ 23 │         let x = false;
+    │                 ----- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/assign_wrong_type.move:24:17 ───
+    │
+ 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
+    │             ^ Invalid assignment to local 'b'
+    ·
+ 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
+    │                               ----- The type: 'bool'
+    ·
+ 24 │         let b = 0;
+    │                 - Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/assign_wrong_type.move:2:27 ───
+    │
+ 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
+    │                  ^ Invalid assignment to local 'f'
+    ·
+ 2 │     resource struct R {f: u64}
+    │                           --- The type: 'u64'
+    ·
+ 25 │         let f = 0x0;
+    │                 --- Is not compatible with: 'address'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/assign_wrong_type.move:26:17 ───
+    │
+ 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
+    │                      ^ Invalid assignment to local 'r'
+    ·
+ 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
+    │                                               ------- The type: '0x8675309::M::R'
+    ·
+ 26 │         let r = S{ g: 0 };
+    │                 --------- Is not compatible with: '0x8675309::M::S'
+    │
+

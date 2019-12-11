@@ -10,13 +10,11 @@
 //! benefit.
 
 mod account_universe;
-mod arithmetic;
 mod create_account;
-mod function_call;
 mod genesis;
 mod mint;
 mod module_publishing;
-mod pack_unpack;
 mod peer_to_peer;
 mod rotate_key;
+mod validator_set_management;
 mod verify_txn;

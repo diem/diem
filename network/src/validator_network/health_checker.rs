@@ -5,26 +5,18 @@
 
 use crate::{
     error::NetworkError,
-    interface::{NetworkNotification, NetworkRequest},
-    proto::{HealthCheckerMsg, HealthCheckerMsg_oneof, Ping2, Pong2},
-    protocols::rpc::{self, error::RpcError},
-    validator_network::Event,
+    interface::NetworkRequest,
+    proto::{HealthCheckerMsg, HealthCheckerMsg_oneof, Ping, Pong},
+    protocols::rpc::error::RpcError,
+    validator_network::{NetworkEvents, NetworkSender},
     ProtocolId,
 };
 use channel;
-use futures::{
-    stream::Map,
-    task::{Context, Poll},
-    Stream, StreamExt,
-};
 use libra_types::PeerId;
-use pin_project::pin_project;
-use prost::Message as _;
-use std::{pin::Pin, time::Duration};
+use std::time::Duration;
 
 /// Protocol id for HealthChecker RPC calls
-#[allow(dead_code)]
-pub const HEALTH_CHECKER_RPC_PROTOCOL: &[u8] = b"/libra/health-checker/rpc/0.1.0";
+pub const HEALTH_CHECKER_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/health-checker/0.1.0";
 
 /// The interface from Network to HealthChecker layer.
 ///
@@ -32,44 +24,12 @@ pub const HEALTH_CHECKER_RPC_PROTOCOL: &[u8] = b"/libra/health-checker/rpc/0.1.0
 /// raw `Bytes` rpc messages are deserialized into
 /// `HealthCheckerMsg` types. `HealthCheckerNetworkEvents` is a thin wrapper
 /// around an `channel::Receiver<NetworkNotification>`.
-#[pin_project]
-pub struct HealthCheckerNetworkEvents {
-    #[pin]
-    inner: Map<
-        channel::Receiver<NetworkNotification>,
-        fn(NetworkNotification) -> Result<Event<HealthCheckerMsg>, NetworkError>,
-    >,
-}
-
-impl HealthCheckerNetworkEvents {
-    pub fn new(receiver: channel::Receiver<NetworkNotification>) -> Self {
-        let inner = receiver.map::<_, fn(_) -> _>(|notification| match notification {
-            NetworkNotification::NewPeer(peer_id) => Ok(Event::NewPeer(peer_id)),
-            NetworkNotification::LostPeer(peer_id) => Ok(Event::LostPeer(peer_id)),
-            NetworkNotification::RecvRpc(peer_id, rpc_req) => {
-                let req_msg = HealthCheckerMsg::decode(rpc_req.data.as_ref())?;
-                Ok(Event::RpcRequest((peer_id, req_msg, rpc_req.res_tx)))
-            }
-            NetworkNotification::RecvMessage(_, _) => {
-                unreachable!("HealthChecker does not currently use DirectSend");
-            }
-        });
-
-        Self { inner }
-    }
-}
-
-impl Stream for HealthCheckerNetworkEvents {
-    type Item = Result<Event<HealthCheckerMsg>, NetworkError>;
-
-    fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
-        self.project().inner.poll_next(context)
-    }
-}
+pub type HealthCheckerNetworkEvents = NetworkEvents<HealthCheckerMsg>;
 
 /// The interface from HealthChecker to Networking layer.
 ///
-/// This is a thin wrapper around an `channel::Sender<NetworkRequest>`, so it is
+/// This is a thin wrapper around a `NetworkSender<HealthCheckerMsg>`, which is
+/// in turn a thin wrapper around a `channel::Sender<NetworkRequest>`, so it is
 /// easy to clone and send off to a separate task. For example, the rpc requests
 /// return Futures that encapsulate the whole flow, from sending the request to
 /// remote, to finally receiving the response and deserializing. It therefore
@@ -77,13 +37,14 @@ impl Stream for HealthCheckerNetworkEvents {
 /// requires the `HealthCheckerNetworkSender` to be `Clone` and `Send`.
 #[derive(Clone)]
 pub struct HealthCheckerNetworkSender {
-    inner: channel::Sender<NetworkRequest>,
+    inner: NetworkSender<HealthCheckerMsg>,
 }
 
 impl HealthCheckerNetworkSender {
-    #[allow(dead_code)]
     pub fn new(inner: channel::Sender<NetworkRequest>) -> Self {
-        Self { inner }
+        Self {
+            inner: NetworkSender::new(inner),
+        }
     }
 
     /// Send a HealthChecker Ping RPC request to remote peer `recipient`. Returns
@@ -91,25 +52,21 @@ impl HealthCheckerNetworkSender {
     ///
     /// The rpc request can be canceled at any point by dropping the returned
     /// future.
-    #[allow(dead_code)]
     pub async fn ping(
         &mut self,
         recipient: PeerId,
-        req_msg: Ping2,
+        req_msg: Ping,
         timeout: Duration,
-    ) -> Result<Pong2, RpcError> {
+    ) -> Result<Pong, RpcError> {
         let protocol = ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL);
         let req_msg_enum = HealthCheckerMsg {
             message: Some(HealthCheckerMsg_oneof::Ping(req_msg)),
         };
-        let res_msg_enum = rpc::utils::unary_rpc(
-            self.inner.clone(),
-            recipient,
-            protocol,
-            req_msg_enum,
-            timeout,
-        )
-        .await?;
+
+        let res_msg_enum = self
+            .inner
+            .unary_rpc(recipient, protocol, req_msg_enum, timeout)
+            .await?;
 
         if let Some(HealthCheckerMsg_oneof::Pong(response)) = res_msg_enum.message {
             Ok(response)
@@ -118,13 +75,24 @@ impl HealthCheckerNetworkSender {
             Err(RpcError::InvalidRpcResponse)
         }
     }
+
+    pub async fn disconnect_peer(&mut self, peer_id: PeerId) -> Result<(), NetworkError> {
+        self.inner.disconnect_peer(peer_id).await
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{protocols::rpc::InboundRpcRequest, utils::MessageExt};
-    use futures::{channel::oneshot, executor::block_on, future::try_join, sink::SinkExt};
+    use crate::{
+        protocols::rpc::InboundRpcRequest,
+        utils::MessageExt,
+        validator_network::{Event, NetworkNotification},
+    };
+    use futures::{
+        channel::oneshot, executor::block_on, future::try_join, sink::SinkExt, stream::StreamExt,
+    };
+    use prost::Message as _;
 
     // `HealthCheckerNetworkEvents` should deserialize inbound RPC requests
     #[test]
@@ -133,7 +101,7 @@ mod tests {
         let mut stream = HealthCheckerNetworkEvents::new(network_reqs_rx);
 
         // build rpc request
-        let req_msg = Ping2 { nonce: 1234 };
+        let req_msg = Ping { nonce: 1234 };
         let req_msg_enum = HealthCheckerMsg {
             message: Some(HealthCheckerMsg_oneof::Ping(req_msg)),
         };
@@ -167,11 +135,11 @@ mod tests {
 
         // send ping rpc request
         let peer_id = PeerId::random();
-        let req_msg = Ping2 { nonce: 1234 };
+        let req_msg = Ping { nonce: 1234 };
         let f_res_msg = sender.ping(peer_id, req_msg.clone(), Duration::from_secs(5));
 
         // build rpc response
-        let res_msg = Pong2 { nonce: 1234 };
+        let res_msg = Pong { nonce: 1234 };
         let res_msg_enum = HealthCheckerMsg {
             message: Some(HealthCheckerMsg_oneof::Pong(res_msg.clone())),
         };

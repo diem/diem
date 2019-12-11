@@ -9,8 +9,8 @@ use crate::{
     },
     util::mock_time_service::SimulatedTimeService,
 };
-use consensus_types::block::block_test_utils::placeholder_certificate_for_block;
-use consensus_types::{block::Block, quorum_cert::QuorumCert};
+use consensus_types::block::block_test_utils::{certificate_for_genesis, gen_test_certificate};
+use consensus_types::block::Block;
 use futures::executor::block_on;
 use libra_types::crypto_proxies::ValidatorSigner;
 use std::{
@@ -60,8 +60,8 @@ fn test_proposal_generation_parent() {
         1,
     );
     let genesis = block_store.root();
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
-    let b1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 2);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
+    let b1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 2);
 
     // With no certifications the parent is genesis
     // generate proposals for an empty tree.
@@ -101,7 +101,7 @@ fn test_old_proposal_generation() {
         1,
     );
     let genesis = block_store.root();
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     inserter.insert_qc_for_block(a1.as_ref(), None);
 
     let proposal_err = block_on(proposal_generator.generate_proposal(1, minute_from_now())).err();
@@ -120,45 +120,45 @@ fn test_empty_proposal_after_reconfiguration() {
         1,
     );
     let genesis = block_store.root();
-    let a1 = inserter.insert_block_with_qc(QuorumCert::certificate_for_genesis(), &genesis, 1);
+    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     // Normal proposal is not empty
     let normal_proposal_1 =
         block_on(proposal_generator.generate_proposal(42, minute_from_now())).unwrap();
     assert!(!normal_proposal_1.payload().unwrap().is_empty());
     let a2 = inserter.insert_reconfiguration_block(&a1, 2);
     inserter.insert_qc_for_block(a2.as_ref(), None);
-    // if reconfiguration is committed, generate normal proposal
-    let li = placeholder_certificate_for_block(
-        vec![inserter.signer()],
-        a2.id(),
-        a2.round(),
-        a2.id(),
-        a2.round(),
-        Some(a2.id()),
-    );
-    block_on(block_store.commit(li.ledger_info().clone())).unwrap();
-    let normal_proposal_2 =
-        block_on(proposal_generator.generate_proposal(43, minute_from_now())).unwrap();
-    assert!(!normal_proposal_2.payload().unwrap().is_empty());
-    // insert another pending reconfiguration block
-    let a3 = inserter.insert_reconfiguration_block(&a2, 3);
-    inserter.insert_qc_for_block(&a3, None);
-
     // The direct child is empty
     let empty_proposal_1 =
-        block_on(proposal_generator.generate_proposal(44, minute_from_now())).unwrap();
+        block_on(proposal_generator.generate_proposal(43, minute_from_now())).unwrap();
     assert!(empty_proposal_1.payload().unwrap().is_empty());
     // insert one more block after reconfiguration
+    let a3 = inserter.create_block_with_qc(
+        inserter.create_qc_for_block(a2.as_ref(), None),
+        a2.as_ref().timestamp_usecs(),
+        3,
+        vec![],
+    );
+    let a3 = block_on(block_store.execute_and_insert_block(a3)).unwrap();
+    inserter.insert_qc_for_block(a3.as_ref(), None);
+    // Indirect child is empty too
+    let empty_proposal_2 =
+        block_on(proposal_generator.generate_proposal(44, minute_from_now())).unwrap();
+    assert!(empty_proposal_2.payload().unwrap().is_empty());
+    // if reconfiguration is committed, not allow to generate proposal
     let a4 = inserter.create_block_with_qc(
         inserter.create_qc_for_block(a3.as_ref(), None),
-        a3.as_ref(),
+        a2.as_ref().timestamp_usecs(),
         4,
         vec![],
     );
     let a4 = block_on(block_store.execute_and_insert_block(a4)).unwrap();
-    inserter.insert_qc_for_block(a4.as_ref(), None);
-    // Indirect child is empty too
-    let empty_proposal_2 =
-        block_on(proposal_generator.generate_proposal(45, minute_from_now())).unwrap();
-    assert!(empty_proposal_2.payload().unwrap().is_empty());
+    let li = gen_test_certificate(
+        vec![inserter.signer()],
+        a4.block_info(),
+        a3.block_info(),
+        Some(a2.block_info()),
+    );
+    block_store.insert_single_quorum_cert(li).unwrap();
+    let err_proposal = block_on(proposal_generator.generate_proposal(45, minute_from_now()));
+    assert!(err_proposal.is_err());
 }

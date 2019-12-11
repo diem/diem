@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This performs instruction cost synthesis for the various bytecode instructions that we have. We
 //! separate instructions into three sets:
 //! * Global-memory independent instructions;
@@ -8,7 +10,7 @@
 //! * Native operations.
 use cost_synthesis::{
     global_state::{account::Account, inhabitor::RandomInhabitor},
-    module_generator::ModuleGenerator,
+    module_generator::generate_padded_modules,
     natives::StackAccessorMocker,
     stack_generator::RandomStackGenerator,
     with_loaded_vm,
@@ -30,13 +32,12 @@ use vm::{
         FunctionDefinitionIndex, FunctionHandleIndex, StructDefinitionIndex, UserStringIndex,
         NO_TYPE_ACTUALS,
     },
-    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
+    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier},
     transaction_metadata::TransactionMetadata,
 };
 use vm_cache_map::Arena;
 use vm_runtime::{
     code_cache::module_cache::{ModuleCache, VMModuleCache},
-    data_cache::TransactionDataCache,
     interpreter::InterpreterForCostSynthesis,
     loaded_data::function::{FunctionRef, FunctionReference},
 };
@@ -119,7 +120,6 @@ fn stack_instructions(options: &Opt) {
         Unpack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         Pack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
         Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS),
-        CreateAccount,
         Sub,
         Ret,
         Add,
@@ -157,9 +157,8 @@ fn stack_instructions(options: &Opt) {
         GetTxnPublicKey,
     ];
 
-    let mod_gen: ModuleGenerator = ModuleGenerator::new(options.num_iters as u16, 3);
     let mut account = Account::new();
-    with_loaded_vm! (mod_gen, account => vm, loaded_module, module_cache);
+    with_loaded_vm! (3, options.num_iters as usize, account => vm, loaded_module, module_cache);
     let costs: HashMap<String, Vec<u64>> = stack_opcodes
         .into_iter()
         .map(|instruction| {
@@ -216,6 +215,7 @@ fn stack_instructions(options: &Opt) {
 macro_rules! bench_native {
     ($name:expr, $function:path, $table:ident, $iters:expr) => {
         let mut stack_access = StackAccessorMocker::new();
+        let cost_table = CostTable::zero();
         let per_byte_costs: Vec<u64> = (1..512)
             .map(|i| {
                 stack_access.set_hash_length(i);
@@ -223,7 +223,7 @@ macro_rules! bench_native {
                     let before = Instant::now();
                     let mut args = VecDeque::new();
                     args.push_front(Value::byte_array(stack_access.next_bytearray()));
-                    let _ = $function(args);
+                    let _ = $function(args, &cost_table);
                     acc + before.elapsed().as_nanos()
                 });
                 // Time per byte averaged over the number of iterations that we performed.

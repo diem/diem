@@ -1,10 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 pub mod accumulator_extension_proof;
 pub mod block;
 pub mod block_data;
-pub mod block_info;
 pub mod block_retrieval;
 pub mod common;
 pub mod epoch_retrieval;

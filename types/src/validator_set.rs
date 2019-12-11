@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{
     access_path::{AccessPath, Accesses},
     account_config,
@@ -9,7 +11,7 @@ use crate::{
     language_storage::StructTag,
     validator_public_keys::ValidatorPublicKeys,
 };
-use failure::prelude::*;
+use anyhow::{Error, Result};
 use lazy_static::lazy_static;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -70,7 +72,7 @@ impl ValidatorSet {
     }
 
     pub fn change_event_key() -> EventKey {
-        EventKey::new_from_address(&account_config::validator_set_address(), 0)
+        EventKey::new_from_address(&account_config::validator_set_address(), 2)
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {

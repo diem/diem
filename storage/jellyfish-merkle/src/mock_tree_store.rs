@@ -5,7 +5,7 @@ use crate::{
     node_type::{LeafNode, Node, NodeKey},
     NodeBatch, StaleNodeIndex, TreeReader, TreeUpdateBatch, TreeWriter,
 };
-use failure::prelude::*;
+use anyhow::{bail, ensure, Result};
 use libra_types::transaction::Version;
 use std::{
     collections::{hash_map::Entry, BTreeSet, HashMap},
@@ -13,7 +13,7 @@ use std::{
 };
 
 #[derive(Default)]
-pub(crate) struct MockTreeStore(RwLock<(HashMap<NodeKey, Node>, BTreeSet<StaleNodeIndex>)>);
+pub struct MockTreeStore(RwLock<(HashMap<NodeKey, Node>, BTreeSet<StaleNodeIndex>)>);
 
 impl TreeReader for MockTreeStore {
     fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {

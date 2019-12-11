@@ -1,0 +1,77 @@
+error: 
+
+   ┌── tests/move_check/typing/borrow_local_temp_invalid.move:3:9 ───
+   │
+ 3 │         &();
+   │         ^^^ Invalid borrow
+   ·
+ 3 │         &();
+   │          -- Expected a single non-reference type, but got: ()
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/borrow_local_temp_invalid.move:4:9 ───
+   │
+ 4 │         &(0, 1);
+   │         ^^^^^^^ Invalid borrow
+   ·
+ 4 │         &(0, 1);
+   │          ------ Expected a single non-reference type, but got: (u64,u64)
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/borrow_local_temp_invalid.move:5:9 ───
+   │
+ 5 │         &(0, 1, true, 0x0);
+   │         ^^^^^^^^^^^^^^^^^^ Invalid borrow
+   ·
+ 5 │         &(0, 1, true, 0x0);
+   │          ----------------- Expected a single non-reference type, but got: (u64,u64,bool,address)
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/borrow_local_temp_invalid.move:9:9 ───
+   │
+ 9 │         &(&0);
+   │         ^^^^^ Invalid borrow
+   ·
+ 9 │         &(&0);
+   │          ---- Expected a single non-reference type, but got: &u64
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/borrow_local_temp_invalid.move:10:9 ───
+    │
+ 10 │         &(&mut 1);
+    │         ^^^^^^^^^ Invalid borrow
+    ·
+ 10 │         &(&mut 1);
+    │          -------- Expected a single non-reference type, but got: &mut u64
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/borrow_local_temp_invalid.move:11:9 ───
+    │
+ 11 │         &mut &2;
+    │         ^^^^^^^ Invalid borrow
+    ·
+ 11 │         &mut &2;
+    │              -- Expected a single non-reference type, but got: &u64
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/borrow_local_temp_invalid.move:12:9 ───
+    │
+ 12 │         &mut &mut 3;
+    │         ^^^^^^^^^^^ Invalid borrow
+    ·
+ 12 │         &mut &mut 3;
+    │              ------ Expected a single non-reference type, but got: &mut u64
+    │
+

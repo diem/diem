@@ -129,8 +129,7 @@ pub enum BuiltinFunction_ {
      * GetSender,
      * GetSequenceNumber,
      * GetGasRemaining,
-     * EmitEvent,
-     * CreateAccount, */
+     * EmitEvent, */
 }
 pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 
@@ -153,7 +152,10 @@ pub enum UnannotatedExp_ {
 
     IfElse(Box<Exp>, Box<Exp>, Box<Exp>),
     While(Box<Exp>, Box<Exp>),
-    Loop(Box<Exp>),
+    Loop {
+        has_break: bool,
+        body: Box<Exp>,
+    },
     Block(Sequence),
     Assign(AssignList, Vec<Option<SingleType>>, Box<Exp>),
     Mutate(Box<Exp>, Box<Exp>),
@@ -204,15 +206,19 @@ pub enum ExpListItem {
     Single(Exp, Box<SingleType>),
     Splat(Loc, Exp, Vec<SingleType>),
 }
+
 pub fn single_item(e: Exp) -> ExpListItem {
+    single_item_opt(e).expect("ICE invalid call to single_item")
+}
+
+pub fn single_item_opt(e: Exp) -> Option<ExpListItem> {
     let st = match &e.ty {
-        sp!(_, Type_::Unit) | sp!(_, Type_::Multiple(_)) => {
-            panic!("ICE invalid call to single_item")
-        }
+        sp!(_, Type_::Unit) | sp!(_, Type_::Multiple(_)) => return None,
         sp!(_, Type_::Single(s)) => s.clone(),
     };
-    ExpListItem::Single(e, Box::new(st))
+    Some(ExpListItem::Single(e, Box::new(st)))
 }
+
 pub fn splat_item(splat_loc: Loc, e: Exp) -> ExpListItem {
     let ss = match &e.ty {
         sp!(_, Type_::Single(_)) => panic!("ICE invalid call to splat_item"),

@@ -7,15 +7,17 @@ use crate::{
     account::{Account, AccountData},
     data_store::{FakeDataStore, GENESIS_WRITE_SET, TESTNET_GENESIS},
 };
-use libra_config::config::{NodeConfig, NodeConfigHelpers, VMPublishingOption};
+use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_config::AccountResource,
     language_storage::ModuleId,
-    transaction::{SignedTransaction, Transaction, TransactionOutput, TransactionPayload},
+    transaction::{
+        SignedTransaction, Transaction, TransactionOutput, TransactionPayload, TransactionStatus,
+    },
     validator_set::ValidatorSet,
-    vm_error::VMStatus,
+    vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
 use vm::CompiledModule;
@@ -27,7 +29,7 @@ use vm_runtime::{MoveVM, VMExecutor, VMVerifier};
 /// This struct is a mock in-memory implementation of the Libra executor.
 #[derive(Debug)]
 pub struct FakeExecutor {
-    config: NodeConfig,
+    config: VMConfig,
     data_store: FakeDataStore,
 }
 
@@ -57,11 +59,13 @@ impl FakeExecutor {
         write_set: &WriteSet,
         publishing_options: Option<VMPublishingOption>,
     ) -> Self {
+        let mut config = VMConfig::default();
+        if let Some(vm_publishing_options) = publishing_options {
+            config.publishing_options = vm_publishing_options;
+        }
+
         let mut executor = FakeExecutor {
-            config: NodeConfigHelpers::get_single_node_test_config_publish_options(
-                false,
-                publishing_options,
-            ),
+            config,
             data_store: FakeDataStore::default(),
         };
         executor.apply_write_set(write_set);
@@ -94,7 +98,7 @@ impl FakeExecutor {
         )
         .payload()
         {
-            TransactionPayload::WriteSet(ws) => ws.clone(),
+            TransactionPayload::WriteSet(ws) => ws.write_set().clone(),
             _ => panic!("Expected writeset txn in genesis txn"),
         };
         Self::from_genesis(&genesis_write_set, Some(publishing_options))
@@ -103,7 +107,7 @@ impl FakeExecutor {
     /// Creates an executor in which no genesis state has been applied yet.
     pub fn no_genesis() -> Self {
         FakeExecutor {
-            config: NodeConfigHelpers::get_single_node_test_config(false),
+            config: VMConfig::default(),
             data_store: FakeDataStore::default(),
         }
     }
@@ -150,21 +154,45 @@ impl FakeExecutor {
     ///
     /// Typical tests will call this method and check that the output matches what was expected.
     /// However, this doesn't apply the results of successful transactions to the data store.
-    pub fn execute_block(&self, txn_block: Vec<SignedTransaction>) -> Vec<TransactionOutput> {
+    pub fn execute_block(
+        &self,
+        txn_block: Vec<SignedTransaction>,
+    ) -> Result<Vec<TransactionOutput>, VMStatus> {
         MoveVM::execute_block(
             txn_block
                 .into_iter()
                 .map(Transaction::UserTransaction)
                 .collect(),
-            &self.config.vm_config,
+            &self.config,
             &self.data_store,
         )
-        .expect("The VM should not fail to start")
+    }
+
+    /// Executes the transaction as a singleton block and applies the resulting write set to the
+    /// data store. Panics if execution fails
+    pub fn execute_and_apply(&mut self, transaction: SignedTransaction) -> TransactionOutput {
+        let mut outputs = self.execute_block(vec![transaction]).unwrap();
+        assert!(outputs.len() == 1, "transaction outputs size mismatch");
+        let output = outputs.pop().unwrap();
+        match output.status() {
+            TransactionStatus::Keep(status) => {
+                self.apply_write_set(output.write_set());
+                assert!(
+                    status.major_status == StatusCode::EXECUTED,
+                    "transaction failed with {:?}",
+                    status
+                );
+                output
+            }
+            TransactionStatus::Discard(_) => panic!("transaction discarded"),
+        }
     }
 
     pub fn execute_transaction(&self, txn: SignedTransaction) -> TransactionOutput {
         let txn_block = vec![txn];
-        let mut outputs = self.execute_block(txn_block);
+        let mut outputs = self
+            .execute_block(txn_block)
+            .expect("The VM should not fail to startup");
         outputs
             .pop()
             .expect("A block with one transaction should have one output")
@@ -177,7 +205,11 @@ impl FakeExecutor {
 
     /// Verifies the given transaction by running it through the VM verifier.
     pub fn verify_transaction(&self, txn: SignedTransaction) -> Option<VMStatus> {
-        let vm = MoveVM::new(&self.config.vm_config);
+        let vm = MoveVM::new(&self.config);
         vm.validate_transaction(txn, &self.data_store)
+    }
+
+    pub fn get_state_view(&self) -> &FakeDataStore {
+        &self.data_store
     }
 }

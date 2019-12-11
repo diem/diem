@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Provides an mpsc (multi-producer single-consumer) channel wrapped in an
 //! [`IntGauge`](libra_metrics::IntGauge)
 

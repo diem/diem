@@ -9,5 +9,4 @@ main() {
     return;
 }
 
-// check: VerificationFailure
 // check: POP_RESOURCE_ERROR

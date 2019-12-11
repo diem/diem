@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{accumulator_extension_proof::AccumulatorExtensionProof, block::Block};
-use failure::prelude::{Error, Result};
+use anyhow::{Error, Result};
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_types::validator_set::ValidatorSet;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};

@@ -1,0 +1,188 @@
+error: 
+
+   ┌── tests/move_check/typing/bind_wrong_type.move:6:13 ───
+   │
+ 6 │         let S { g } = R {f :0};
+   │             ^^^^^^^ Invalid deconstruction binding
+   ·
+ 6 │         let S { g } = R {f :0};
+   │             ------- The type: '0x8675309::M::S'
+   ·
+ 6 │         let S { g } = R {f :0};
+   │                       -------- Is not compatible with: '0x8675309::M::R'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/bind_wrong_type.move:7:14 ───
+   │
+ 7 │         let (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
+   │              ^^^^^^^ Invalid deconstruction binding
+   ·
+ 7 │         let (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
+   │              ------- The type: '0x8675309::M::S'
+   ·
+ 7 │         let (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
+   │                                   --------- Is not compatible with: '0x8675309::M::R'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:11:13 ───
+    │
+ 11 │         let x = ();
+    │             ^ Invalid list-binding. The list-binding expected 1 argument(s) but got 0
+    ·
+ 11 │         let x = ();
+    │                 -- Found 0 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:11:13 ───
+    │
+ 11 │         let x = ();
+    │             ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:12:13 ───
+    │
+ 12 │         let () = 0;
+    │             ^^ Invalid list-binding. The list-binding expected 0 argument(s) but got 1
+    ·
+ 12 │         let () = 0;
+    │                  - Found 1 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:13:13 ───
+    │
+ 13 │         let (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
+    │             ^^^^^^^^^^^^ Invalid list-binding. The list-binding expected 3 argument(s) but got 4
+    ·
+ 13 │         let (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
+    │                            ---------------------------- Found 4 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:14:13 ───
+    │
+ 14 │         let (x, b, R{f}) = (0, false);
+    │             ^^^^^^^^^^^^ Invalid list-binding. The list-binding expected 3 argument(s) but got 2
+    ·
+ 14 │         let (x, b, R{f}) = (0, false);
+    │                            ---------- Found 2 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:18:13 ───
+    │
+ 18 │         let x: () = 0;
+    │             ^ Invalid list-binding. The list-binding expected 1 argument(s) but got 0
+    ·
+ 18 │         let x: () = 0;
+    │                -- Found 0 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:18:13 ───
+    │
+ 18 │         let x: () = 0;
+    │             ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:18:16 ───
+    │
+ 18 │         let x: () = 0;
+    │                ^^ Invalid type annotation
+    ·
+ 18 │         let x: () = 0;
+    │                     - The type: 'u64'
+    ·
+ 18 │         let x: () = 0;
+    │                -- Is not compatible with: '()'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:19:13 ───
+    │
+ 19 │         let (): u64 = ();
+    │             ^^ Invalid list-binding. The list-binding expected 0 argument(s) but got 1
+    ·
+ 19 │         let (): u64 = ();
+    │                 --- Found 1 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:19:17 ───
+    │
+ 19 │         let (): u64 = ();
+    │                 ^^^ Invalid type annotation
+    ·
+ 19 │         let (): u64 = ();
+    │                       -- The type: '()'
+    ·
+ 19 │         let (): u64 = ();
+    │                 --- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:20:13 ───
+    │
+ 20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
+    │             ^^^^^^^^^^^^ Invalid list-binding. The list-binding expected 3 argument(s) but got 4
+    ·
+ 20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
+    │                           ----------------- Found 4 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:20:27 ───
+    │
+ 20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
+    │                           ^^^^^^^^^^^^^^^^^ Invalid type annotation
+    ·
+ 20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
+    │                                               ------------------- The type: '(u64,bool,0x8675309::M::R)'
+    ·
+ 20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
+    │                           ----------------- Is not compatible with: '(u64,bool,0x8675309::M::R,0x8675309::M::R)'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:21:13 ───
+    │
+ 21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
+    │             ^^^^^^^^^^^^ Invalid list-binding. The list-binding expected 3 argument(s) but got 2
+    ·
+ 21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
+    │                           ----------- Found 2 arguments here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bind_wrong_type.move:21:27 ───
+    │
+ 21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
+    │                           ^^^^^^^^^^^ Invalid type annotation
+    ·
+ 21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
+    │                                         ------------------- The type: '(u64,bool,0x8675309::M::R)'
+    ·
+ 21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
+    │                           ----------- Is not compatible with: '(u64,bool)'
+    │
+

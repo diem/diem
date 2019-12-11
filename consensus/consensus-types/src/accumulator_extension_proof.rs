@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use failure::ensure;
+use anyhow::ensure;
 #[cfg(test)]
 use libra_crypto::hash::{CryptoHash, TestOnlyHasher, ACCUMULATOR_PLACEHOLDER_HASH};
 use libra_crypto::hash::{CryptoHasher, HashValue};
@@ -41,7 +41,7 @@ impl<H: CryptoHasher> AccumulatorExtensionProof<H> {
         }
     }
 
-    pub fn verify(&self, original_root: HashValue) -> failure::Result<InMemoryAccumulator<H>> {
+    pub fn verify(&self, original_root: HashValue) -> anyhow::Result<InMemoryAccumulator<H>> {
         let original_tree =
             InMemoryAccumulator::<H>::new(self.frozen_subtree_roots.clone(), self.num_leaves)?;
         ensure!(

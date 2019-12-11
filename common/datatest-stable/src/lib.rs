@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! `datatest-stable` is a very simple test harness intended to meet some of the needs provided by
 //! the `datatest` crate when using a stable rust compiler without using the `RUSTC_BOOTSTRAP` hack
 //! to use nightly features on the stable track.
@@ -26,7 +28,7 @@
 
 mod macros;
 mod runner;
-mod utils;
+pub mod utils;
 
 pub type Result<T> = ::std::result::Result<T, Box<dyn ::std::error::Error>>;
 

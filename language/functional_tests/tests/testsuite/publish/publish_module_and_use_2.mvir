@@ -1,0 +1,34 @@
+module M {
+    public max(a: u64, b: u64): u64 {
+        if (copy(a) > copy(b)) {
+            return copy(a);
+        } else {
+            return copy(b);
+        }
+        return 0;
+    }
+
+    public sum(a: u64, b: u64): u64 {
+        let c: u64;
+        c = copy(a) + copy(b);
+        return copy(c);
+    }
+}
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    let a: u64;
+    let b: u64;
+    let c: u64;
+    let d: u64;
+
+    a = 10;
+    b = 2;
+    c = M.max(copy(a), copy(b));
+    d = M.sum(copy(a), copy(b));
+    assert(copy(c) == 10, 42);
+    assert(copy(d) == 12, 42);
+    return;
+}

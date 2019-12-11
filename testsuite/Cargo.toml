@@ -20,7 +20,6 @@ rusty-fork = "0.2.1"
 # In order to limit the potential waiting time for binaries to be built while
 # running tests all binaries which are being tested under this testsuite
 # should have their crates listed as dev-dependencies.
-benchmark = { path = "../benchmark", version = "0.1.0" }
 cli = { path = "../client", version = "0.1.0", package="client", features = ["fuzzing"] }
 generate-keypair = { path = "../config/generate-keypair", version = "0.1.0" }
 libra-swarm = { path = "../libra-swarm", version = "0.1.0" }

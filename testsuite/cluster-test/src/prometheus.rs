@@ -1,14 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use failure::{
-    self,
-    prelude::{bail, format_err},
-};
+#![forbid(unsafe_code)]
+
+use anyhow::{bail, format_err, Result};
 use reqwest::Url;
 use serde::Deserialize;
 use std::{collections::HashMap, time::Duration};
 
+#[derive(Clone)]
 pub struct Prometheus {
     url: Url,
     client: reqwest::Client,
@@ -31,13 +31,13 @@ impl Prometheus {
         Self { url, client }
     }
 
-    pub fn query_range(
+    fn query_range(
         &self,
         query: String,
         start: &Duration,
         end: &Duration,
         step: u64,
-    ) -> failure::Result<MatrixResponse> {
+    ) -> Result<MatrixResponse> {
         let url = self
             .url
             .join(&format!(
@@ -51,16 +51,16 @@ impl Prometheus {
 
         let mut response = self
             .client
-            .get(url)
+            .get(url.clone())
             .send()
             .map_err(|e| format_err!("Failed to query prometheus: {:?}", e))?;
 
         // We don't check HTTP error code here
         // Prometheus supplies error status in json response along with error text
 
-        let response: PrometheusResponse = response
-            .json()
-            .map_err(|e| format_err!("Failed to parse prometheus response: {:?}", e))?;
+        let response: PrometheusResponse = response.json().map_err(|e| {
+            format_err!("Failed to parse prometheus response: {:?}. Url: {}", e, url)
+        })?;
 
         match response.data {
             Some(data) => MatrixResponse::from_prometheus(data),
@@ -70,6 +70,18 @@ impl Prometheus {
                 response.error
             ),
         }
+    }
+    pub fn query_range_avg(
+        &self,
+        query: String,
+        start: &Duration,
+        end: &Duration,
+        step: u64,
+    ) -> Result<f64> {
+        let response = self.query_range(query, start, end, step)?;
+        response
+            .avg()
+            .ok_or_else(|| format_err!("Failed to compute avg"))
     }
 }
 
@@ -145,12 +157,12 @@ struct PrometheusResult {
 
 #[derive(Debug, Deserialize)]
 struct PrometheusMetric {
-    op: String,
+    op: Option<String>,
     peer_id: String,
 }
 
 impl MatrixResponse {
-    fn from_prometheus(data: PrometheusData) -> failure::Result<Self> {
+    fn from_prometheus(data: PrometheusData) -> Result<Self> {
         let mut inner = HashMap::new();
         for entry in data.result {
             let peer_id = entry.metric.peer_id;
@@ -165,7 +177,7 @@ impl MatrixResponse {
 }
 
 impl TimeSeries {
-    fn from_prometheus(values: Vec<(u64, String)>) -> failure::Result<Self> {
+    fn from_prometheus(values: Vec<(u64, String)>) -> Result<Self> {
         let mut inner = vec![];
         for (ts, value) in values {
             let value = value.parse().map_err(|e| {

@@ -2,11 +2,11 @@ address 0x0:
 
 // This module is used for emitting events into the event_store.
 module Event {
-    use 0x0.Transaction;
-    use 0x0.AddressUtil;
-    use 0x0.BytearrayUtil;
-    use 0x0.Hash;
-    use 0x0.U64Util;
+    use 0x0::Transaction;
+    use 0x0::AddressUtil;
+    use 0x0::BytearrayUtil;
+    use 0x0::Hash;
+    use 0x0::U64Util;
 
     // A resource representing the counter used to generate uniqueness under each account. There won't be destructor for
     // this resource to guarantee the uniqueness of the generated handle.
@@ -31,19 +31,19 @@ module Event {
     // such counter is going to give distinct value for each of the new event stream under each sender. And since we
     // hash it with the sender's address, the result is guaranteed to be globally unique.
     fresh_guid(): bytearray acquires HandleIdGenerator {
-        let sender = Transaction.sender();
+        let sender = Transaction::sender();
 
         if (!exists<HandleIdGenerator>(sender))
             move_to_sender<HandleIdGenerator>(HandleIdGenerator { count: 0 });
 
         let generator = borrow_global_mut<HandleIdGenerator>(sender);
 
-        let count_bytes = U64Util.u64_to_bytes(generator.count);
+        let count_bytes = U64Util::u64_to_bytes(generator.count);
         generator.count = generator.count + 1;
-        let sender_bytes = AddressUtil.address_to_bytes(sender);
+        let sender_bytes = AddressUtil::address_to_bytes(sender);
 
         // HandleIdGenerator goes first just in case we want to extend address in the future.
-        Hash.sha3_256(BytearrayUtil.bytearray_concat(count_bytes, sender_bytes))
+        Hash::sha3_256(BytearrayUtil::bytearray_concat(count_bytes, sender_bytes))
     }
 
     // Use the sender's HandleIdGenerator to generate a unique event handle that one can emit an event to.

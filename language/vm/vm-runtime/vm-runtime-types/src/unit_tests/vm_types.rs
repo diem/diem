@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::value::{Struct, Value};
-use libra_types::{
-    account_address::AccountAddress, account_config::AccountResource, byte_array::ByteArray,
-};
+use libra_types::{account_config::AccountResource, byte_array::ByteArray, event::EventKey};
 
 #[test]
 fn account_type() {
@@ -14,8 +12,9 @@ fn account_type() {
     let received_events_count = 8u64;
     let sent_events_count = 16u64;
     let sequence_number = 32u64;
-    let sent_events_key = ByteArray::new(AccountAddress::random().to_vec());
-    let recv_events_key = ByteArray::new(AccountAddress::random().to_vec());
+    let sent_events_key = ByteArray::new(EventKey::random().to_vec());
+    let recv_events_key = ByteArray::new(EventKey::random().to_vec());
+    let evt_count = 32u64;
 
     let mut account_fields: Vec<Value> = Vec::new();
     account_fields.push(Value::byte_array(authentication_key.clone()));
@@ -33,6 +32,7 @@ fn account_type() {
         Value::byte_array(sent_events_key.clone()),
     ])));
     account_fields.push(Value::u64(sequence_number));
+    account_fields.push(Value::struct_(Struct::new(vec![Value::u64(evt_count)])));
 
     let account = Value::struct_(Struct::new(account_fields));
     let blob = &account.simple_serialize().expect("blob must serialize");

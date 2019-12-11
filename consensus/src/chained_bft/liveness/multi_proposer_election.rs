@@ -7,14 +7,18 @@ use consensus_types::{
     common::{Author, Payload, Round},
 };
 use libra_logger::prelude::*;
-use siphasher::sip::SipHasher24;
-use std::hash::{Hash, Hasher};
 
-// A deterministic hashing function based on SipHash 2-4 hasher
-pub fn hash(val: u64) -> u64 {
-    let mut hasher = SipHasher24::new();
-    val.hash(&mut hasher);
-    hasher.finish()
+// next continuously mutates a state and returns a u64-index
+pub fn next(state: &mut Vec<u8>) -> u64 {
+    // state = SHA-3-256(state)
+    std::mem::replace(
+        state,
+        libra_crypto::HashValue::from_sha3_256(state).to_vec(),
+    );
+    let mut temp = [0u8; 8];
+    temp.copy_from_slice(&state[..8]);
+    // return state[0..8]
+    u64::from_le_bytes(temp)
 }
 
 /// The MultiProposer maps a round to an ordered list of authors.
@@ -30,6 +34,8 @@ pub fn hash(val: u64) -> u64 {
 /// considered for `process_proposal`. The best backup proposer is returned in
 /// `get_best_backup_proposal()`.
 pub struct MultiProposer<T> {
+    // Epoch is used as seed for electing different leaders per-epoch
+    epoch: u64,
     // Ordering of proposers to rotate through (all honest replicas must agree on this)
     proposers: Vec<Author>,
     // Number of proposers per round
@@ -44,7 +50,7 @@ pub struct MultiProposer<T> {
 }
 
 impl<T> MultiProposer<T> {
-    pub fn new(proposers: Vec<Author>, mut num_proposers_per_round: usize) -> Self {
+    pub fn new(epoch: u64, proposers: Vec<Author>, mut num_proposers_per_round: usize) -> Self {
         assert!(num_proposers_per_round > 0);
         if num_proposers_per_round > proposers.len() {
             error!(
@@ -58,6 +64,7 @@ impl<T> MultiProposer<T> {
 
         assert!(num_proposers_per_round <= proposers.len());
         Self {
+            epoch,
             proposers,
             num_proposers_per_round,
             backup_proposal_round: 0,
@@ -68,11 +75,16 @@ impl<T> MultiProposer<T> {
     fn get_candidates(&self, round: Round) -> Vec<Author> {
         let mut res = vec![];
         let mut candidates = self.proposers.clone();
-        let mut cur_val = round;
+        // state = epoch | round
+        let mut state = self.epoch.to_le_bytes().to_vec();
+        state.extend_from_slice(&round.to_le_bytes());
         for _ in 0..self.num_proposers_per_round {
-            cur_val = hash(cur_val);
-            let idx = (cur_val % candidates.len() as u64) as usize;
-            res.push(candidates.swap_remove(idx));
+            let idx = next(&mut state);
+            // note: this modular reduction has a slight bias.
+            // Yet, the bias is so small in practice that it is not worth
+            // addressing this edge case.
+            let idx = idx % (candidates.len() as u64);
+            res.push(candidates.swap_remove(idx as usize));
         }
         res
     }

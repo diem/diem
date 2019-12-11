@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Constants for the binary format.
 //!
 //! Definition for the constants of the binary format, used by the serializer and the deserializer.
@@ -10,8 +12,8 @@
 //! We use LEB128 for integer compression. LEB128 is a representation from the DWARF3 spec,
 //! http://dwarfstd.org/Dwarf3Std.php or https://en.wikipedia.org/wiki/LEB128.
 //! It's used to compress mostly indexes into the main binary tables.
+use anyhow::{bail, Result};
 use byteorder::ReadBytesExt;
-use failure::*;
 use std::{io::Cursor, mem::size_of};
 
 /// Constant values for the binary format header.
@@ -168,10 +170,9 @@ pub enum Opcodes {
     IMM_BORROW_GLOBAL       = 0x30,
     MOVE_FROM               = 0x31,
     MOVE_TO                 = 0x32,
-    CREATE_ACCOUNT          = 0x33,
-    GET_TXN_SEQUENCE_NUMBER = 0x34,
-    GET_TXN_PUBLIC_KEY      = 0x35,
-    FREEZE_REF              = 0x36,
+    GET_TXN_SEQUENCE_NUMBER = 0x33,
+    GET_TXN_PUBLIC_KEY      = 0x34,
+    FREEZE_REF              = 0x35,
 }
 
 /// Upper limit on the binary size

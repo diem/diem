@@ -1,0 +1,98 @@
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:17:19 ───
+    │
+ 24 │         foo(0);
+    │         ^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 's'
+    ·
+ 24 │         foo(0);
+    │             - The type: 'u64'
+    ·
+ 17 │     public foo(s: S) {
+    │                   - Is not compatible with: '0x1::M::S'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:20:19 ───
+    │
+ 25 │         bar(S{});
+    │         ^^^^^^^^ Invalid call of '0x1::M::bar'. Invalid argument for parameter 'x'
+    ·
+ 25 │         bar(S{});
+    │             --- The type: '0x1::M::S'
+    ·
+ 20 │     public bar(x: u64) {
+    │                   --- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:20:19 ───
+    │
+ 26 │         bar(0x0);
+    │         ^^^^^^^^ Invalid call of '0x1::M::bar'. Invalid argument for parameter 'x'
+    ·
+ 26 │         bar(0x0);
+    │             --- The type: 'address'
+    ·
+ 20 │     public bar(x: u64) {
+    │                   --- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:6:19 ───
+    │
+ 30 │         X::foo(S{});
+    │         ^^^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 's'
+    ·
+ 30 │         X::foo(S{});
+    │                --- The type: '0x1::M::S'
+    ·
+ 6 │     public foo(s: S) {
+    │                   - Is not compatible with: '0x1::X::S'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:6:19 ───
+    │
+ 31 │         X::foo(0);
+    │         ^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 's'
+    ·
+ 31 │         X::foo(0);
+    │                - The type: 'u64'
+    ·
+ 6 │     public foo(s: S) {
+    │                   - Is not compatible with: '0x1::X::S'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:9:19 ───
+    │
+ 32 │         X::bar(S{});
+    │         ^^^^^^^^^^^ Invalid call of '0x1::X::bar'. Invalid argument for parameter 'x'
+    ·
+ 32 │         X::bar(S{});
+    │                --- The type: '0x1::M::S'
+    ·
+ 9 │     public bar(x: u64) {
+    │                   --- Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:9:19 ───
+    │
+ 33 │         X::bar(false);
+    │         ^^^^^^^^^^^^^ Invalid call of '0x1::X::bar'. Invalid argument for parameter 'x'
+    ·
+ 33 │         X::bar(false);
+    │                ----- The type: 'bool'
+    ·
+ 9 │     public bar(x: u64) {
+    │                   --- Is not compatible with: 'u64'
+    │
+

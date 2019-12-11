@@ -1,21 +1,6 @@
-// check: VerificationFailure
-// check: RET_TYPE_MISMATCH_ERROR
-
 module Test {
     public no(r: &mut u64): &u64 {
         return move(r);
     }
 }
-
-//! new-transaction
-
-import {{default}}.Test;
-
-main() {
-    let x: u64;
-    let r: &u64;
-    x = 0;
-    r = Test.no(&mut x);
-    _ = move(r);
-    return;
-}
+// check: RET_TYPE_MISMATCH_ERROR

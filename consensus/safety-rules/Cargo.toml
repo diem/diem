@@ -8,10 +8,14 @@ edition = "2018"
 
 [dependencies]
 consensus-types = { path = "../consensus-types", version = "0.1.0" }
+libra-config = { path = "../../config", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
-serde = { version = "1.0.99", default-features = false }
 libra-types = { path = "../../types", version = "0.1.0" }
+serde = { version = "1.0.99", default-features = false }
+thiserror = "1.0"
+
+[dev-dependencies]
+tempfile = "3.1.0"
 
 [features]
 default = []

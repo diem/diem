@@ -5,5 +5,4 @@ main() {
   x = 7;
 }
 
-// check: VerificationFailure
 // check: INVALID_FALL_THROUGH

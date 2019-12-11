@@ -4,7 +4,7 @@
 
 use crate::{
     code_cache::module_adapter::{ModuleFetcher, NullFetcher},
-    gas_meter::GasMeter,
+    execution_context::InterpreterContext,
     loaded_data::{
         function::{FunctionRef, FunctionReference},
         loaded_module::LoadedModule,
@@ -15,7 +15,6 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
-use std::marker::PhantomData;
 use vm::{
     access::ModuleAccess,
     errors::*,
@@ -43,45 +42,39 @@ pub trait ModuleCache<'alloc> {
     ///
     /// Returns:
     ///
-    /// * `Ok(Some(FunctionRef))` if such function exists.
-    /// * `Ok(None)` if such function doesn't exists.
-    /// * `Err(...)` for a verification issue in a resolved dependency or VM invariant violation.
+    /// * `Ok(FunctionRef)` if such function exists.
+    /// * `Err(...)` for a verification issue in a resolved dependency, VM invariant violation, or
+    ///   function not found.
     fn resolve_function_ref(
         &self,
         caller_module: &LoadedModule,
         idx: FunctionHandleIndex,
-    ) -> VMResult<Option<FunctionRef<'alloc>>>;
+    ) -> VMResult<FunctionRef<'alloc>>;
 
     /// Resolve a StructDefinitionIndex into a StructDef. This process will be recursive so we may
     /// charge gas on each recursive step.
     ///
     /// Returns:
     ///
-    /// * `Ok(Some(StructDef))` if such struct exists.
-    /// * `Ok(None)` if such function doesn't exists.
+    /// * `Ok(StructDef)` if such struct exists.
     /// * `Err(...)` for a verification or other issue in a resolved dependency, out of gas, or for
     ///   a VM invariant violation.
     fn resolve_struct_def(
         &self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
-        gas_meter: &GasMeter,
-    ) -> VMResult<Option<StructDef>>;
+        context: &mut dyn InterpreterContext,
+    ) -> VMResult<StructDef>;
 
     /// Resolve a ModuleId into a LoadedModule if the module has been cached already.
     ///
     /// Returns:
     ///
-    /// * `Ok(Some(LoadedModule))` if such module exists.
-    /// * `Ok(None)` if such module doesn't exists.
+    /// * `Ok(LoadedModule)` if such module exists.
     /// * `Err(...)` for a verification issue in the module or for a VM invariant violation.
-    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'alloc LoadedModule>>;
+    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<&'alloc LoadedModule>;
 
     fn cache_module(&self, module: VerifiedModule);
-
-    /// Recache the list of previously resolved modules. Think of the cache as a generational
-    /// cache and we need to move modules across generations.
-    fn reclaim_cached_module(&self, v: Vec<LoadedModule>);
 }
 
 /// `ModuleCache` is also implemented for references.
@@ -93,7 +86,7 @@ where
         &self,
         caller_module: &LoadedModule,
         idx: FunctionHandleIndex,
-    ) -> VMResult<Option<FunctionRef<'alloc>>> {
+    ) -> VMResult<FunctionRef<'alloc>> {
         (*self).resolve_function_ref(caller_module, idx)
     }
 
@@ -101,21 +94,17 @@ where
         &self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
-        gas_meter: &GasMeter,
-    ) -> VMResult<Option<StructDef>> {
-        (*self).resolve_struct_def(module, idx, gas_meter)
+        context: &mut dyn InterpreterContext,
+    ) -> VMResult<StructDef> {
+        (*self).resolve_struct_def(module, idx, context)
     }
 
-    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'alloc LoadedModule>> {
+    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<&'alloc LoadedModule> {
         (*self).get_loaded_module(id)
     }
 
     fn cache_module(&self, module: VerifiedModule) {
         (*self).cache_module(module)
-    }
-
-    fn reclaim_cached_module(&self, v: Vec<LoadedModule>) {
-        (*self).reclaim_cached_module(v)
     }
 }
 
@@ -144,16 +133,17 @@ impl<'alloc> VMModuleCache<'alloc> {
         &self,
         id: &ModuleId,
         fetcher: &F,
-    ) -> VMResult<Option<&'alloc LoadedModule>> {
+    ) -> VMResult<&'alloc LoadedModule> {
         // Currently it is still possible for a script to invoke a nonsense module id function.
         // However, once we have the verifier that checks the well-formedness of the all the linked
         // module id, we should get rid of that ok_or_else case here.
         if let Some(m) = self.map.get(id) {
-            return Ok(Some(&*m));
+            return Ok(&*m);
         }
+        // TODO: Add a better error message for what failed to be loaded.
         let module = match fetcher.get_module(id) {
             Some(module) => module,
-            None => return Ok(None),
+            None => return Err(VMStatus::new(StatusCode::LINKER_ERROR)),
         };
 
         // Verify the module before using it.
@@ -173,7 +163,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         };
 
         let loaded_module = LoadedModule::new(module);
-        Ok(Some(self.map.or_insert(id.clone(), loaded_module)))
+        Ok(self.map.or_insert(id.clone(), loaded_module))
     }
 
     #[cfg(test)]
@@ -195,7 +185,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         caller_module: &LoadedModule,
         idx: FunctionHandleIndex,
         fetcher: &F,
-    ) -> VMResult<Option<FunctionRef<'alloc>>>
+    ) -> VMResult<FunctionRef<'alloc>>
     where
         F: ModuleFetcher,
     {
@@ -204,14 +194,13 @@ impl<'alloc> VMModuleCache<'alloc> {
         let callee_module_id = FunctionHandleView::new(caller_module, function_handle).module_id();
 
         match self.get_loaded_module_with_fetcher(&callee_module_id, fetcher) {
-            Ok(Some(callee_module)) => {
+            Ok(callee_module) => {
                 let callee_func_id = callee_module
                     .function_defs_table
                     .get(callee_name)
                     .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
-                Ok(Some(FunctionRef::new(callee_module, *callee_func_id)))
+                Ok(FunctionRef::new(callee_module, *callee_func_id))
             }
-            Ok(None) => Ok(None),
             Err(errors) => Err(errors),
         }
     }
@@ -221,21 +210,17 @@ impl<'alloc> VMModuleCache<'alloc> {
         &self,
         module: &LoadedModule,
         idx: StructHandleIndex,
-        gas_meter: &GasMeter,
+        context: &mut dyn InterpreterContext,
         fetcher: &F,
-    ) -> VMResult<Option<StructDef>> {
+    ) -> VMResult<StructDef> {
         let struct_handle = module.struct_handle_at(idx);
         let struct_name = module.identifier_at(struct_handle.name);
         let struct_def_module_id = StructHandleView::new(module, struct_handle).module_id();
         match self.get_loaded_module_with_fetcher(&struct_def_module_id, fetcher) {
-            Ok(Some(module)) => {
-                let struct_def_idx = module
-                    .struct_defs_table
-                    .get(struct_name)
-                    .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
-                self.resolve_struct_def_with_fetcher(module, *struct_def_idx, gas_meter, fetcher)
+            Ok(module) => {
+                let struct_def_idx = module.get_struct_def_index(struct_name)?;
+                self.resolve_struct_def_with_fetcher(module, *struct_def_idx, context, fetcher)
             }
-            Ok(None) => Ok(None),
             Err(errors) => Err(errors),
         }
     }
@@ -246,16 +231,16 @@ impl<'alloc> VMModuleCache<'alloc> {
         module: &LoadedModule,
         tok: &SignatureToken,
         type_context: &TypeContext,
-        gas_meter: &GasMeter,
+        context: &mut dyn InterpreterContext,
         fetcher: &F,
-    ) -> VMResult<Option<Type>> {
+    ) -> VMResult<Type> {
         match tok {
-            SignatureToken::Bool => Ok(Some(Type::Bool)),
-            SignatureToken::U64 => Ok(Some(Type::U64)),
-            SignatureToken::String => Ok(Some(Type::String)),
-            SignatureToken::ByteArray => Ok(Some(Type::ByteArray)),
-            SignatureToken::Address => Ok(Some(Type::Address)),
-            SignatureToken::TypeParameter(idx) => Ok(Some(type_context.get_type(*idx)?)),
+            SignatureToken::Bool => Ok(Type::Bool),
+            SignatureToken::U64 => Ok(Type::U64),
+            SignatureToken::String => Ok(Type::String),
+            SignatureToken::ByteArray => Ok(Type::ByteArray),
+            SignatureToken::Address => Ok(Type::Address),
+            SignatureToken::TypeParameter(idx) => Ok(type_context.get_type(*idx)?),
             SignatureToken::Struct(sh_idx, tys) => {
                 let ctx = {
                     let mut ctx = vec![];
@@ -264,42 +249,37 @@ impl<'alloc> VMModuleCache<'alloc> {
                             module,
                             ty,
                             type_context,
-                            gas_meter,
+                            context,
                             fetcher,
                         )?;
-                        if let Some(t) = resolved_type {
-                            ctx.push(t);
-                        } else {
-                            return Ok(None);
-                        }
+                        ctx.push(resolved_type);
                     }
                     TypeContext::new(ctx)
                 };
-                let struct_def = self
-                    .resolve_struct_handle_with_fetcher(module, *sh_idx, gas_meter, fetcher)?
-                    .map(|def| ctx.subst_struct_def(&def))
-                    .transpose()?;
-                Ok(struct_def.map(Type::Struct))
+                let struct_def = ctx.subst_struct_def(
+                    &self.resolve_struct_handle_with_fetcher(module, *sh_idx, context, fetcher)?,
+                )?;
+                Ok(Type::Struct(struct_def))
             }
             SignatureToken::Reference(sub_tok) => {
                 let inner_ty = self.resolve_signature_token_with_fetcher(
                     module,
                     sub_tok,
                     type_context,
-                    gas_meter,
+                    context,
                     fetcher,
                 )?;
-                Ok(inner_ty.map(|t| Type::Reference(Box::new(t))))
+                Ok(Type::Reference(Box::new(inner_ty)))
             }
             SignatureToken::MutableReference(sub_tok) => {
                 let inner_ty = self.resolve_signature_token_with_fetcher(
                     module,
                     sub_tok,
                     type_context,
-                    gas_meter,
+                    context,
                     fetcher,
                 )?;
-                Ok(inner_ty.map(|t| Type::MutableReference(Box::new(t))))
+                Ok(Type::MutableReference(Box::new(inner_ty)))
             }
         }
     }
@@ -310,11 +290,11 @@ impl<'alloc> VMModuleCache<'alloc> {
         &'txn self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
-        gas_meter: &GasMeter,
+        context: &mut dyn InterpreterContext,
         fetcher: &F,
-    ) -> VMResult<Option<StructDef>> {
+    ) -> VMResult<StructDef> {
         if let Some(def) = module.cached_struct_def_at(idx) {
-            return Ok(Some(def));
+            return Ok(def);
         }
         let def = {
             let struct_def = module.struct_def_at(idx);
@@ -344,20 +324,16 @@ impl<'alloc> VMModuleCache<'alloc> {
                             module,
                             &module.type_signature_at(field.signature).0,
                             &type_context,
-                            gas_meter,
+                            context,
                             fetcher,
                         )?;
-                        if let Some(t) = ty {
-                            // `field_types` is initally empty, a single element is pushed
-                            // per loop iteration and the number of iterations is bound to
-                            // the max size of `module.field_def_range()`.
-                            // MIRAI cannot currently check this bound in terms of
-                            // `field_count`.
-                            assume!(field_types.len() < usize::max_value());
-                            field_types.push(t);
-                        } else {
-                            return Ok(None);
-                        }
+                        // `field_types` is initally empty, a single element is pushed
+                        // per loop iteration and the number of iterations is bound to
+                        // the max size of `module.field_def_range()`.
+                        // MIRAI cannot currently check this bound in terms of
+                        // `field_count`.
+                        assume!(field_types.len() < usize::max_value());
+                        field_types.push(ty);
                     }
                     StructDef::new(field_types)
                 }
@@ -367,7 +343,7 @@ impl<'alloc> VMModuleCache<'alloc> {
         // to have multiple copies of a struct def floating around, but that probably isn't going
         // to be a big deal.
         module.cache_struct_def(idx, def.clone());
-        Ok(Some(def))
+        Ok(def)
     }
 }
 
@@ -376,7 +352,7 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
         &self,
         caller_module: &LoadedModule,
         idx: FunctionHandleIndex,
-    ) -> VMResult<Option<FunctionRef<'alloc>>> {
+    ) -> VMResult<FunctionRef<'alloc>> {
         self.resolve_function_ref_with_fetcher(caller_module, idx, &NullFetcher())
     }
 
@@ -384,16 +360,15 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
         &self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
-        gas_meter: &GasMeter,
-    ) -> VMResult<Option<StructDef>> {
-        self.resolve_struct_def_with_fetcher(module, idx, gas_meter, &NullFetcher())
+        context: &mut dyn InterpreterContext,
+    ) -> VMResult<StructDef> {
+        self.resolve_struct_def_with_fetcher(module, idx, context, &NullFetcher())
     }
 
-    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'alloc LoadedModule>> {
-        // Currently it is still possible for a script to invoke a nonsense module id function.
-        // However, once we have the verifier that checks the well-formedness of the all the linked
-        // module id, we should get rid of that ok_or case here.
-        Ok(self.map.get(id))
+    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<&'alloc LoadedModule> {
+        self.map
+            .get(id)
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))
     }
 
     fn cache_module(&self, module: VerifiedModule) {
@@ -401,13 +376,6 @@ impl<'alloc> ModuleCache<'alloc> for VMModuleCache<'alloc> {
         // TODO: Check ModuleId duplication in statedb
         let loaded_module = LoadedModule::new(module);
         self.map.or_insert(module_id, loaded_module);
-    }
-
-    fn reclaim_cached_module(&self, v: Vec<LoadedModule>) {
-        for m in v.into_iter() {
-            let module_id = m.self_id();
-            self.map.or_insert(module_id, m);
-        }
     }
 }
 
@@ -450,7 +418,7 @@ impl<'alloc, 'blk, F: ModuleFetcher> ModuleCache<'alloc> for BlockModuleCache<'a
         &self,
         caller_module: &LoadedModule,
         idx: FunctionHandleIndex,
-    ) -> VMResult<Option<FunctionRef<'alloc>>> {
+    ) -> VMResult<FunctionRef<'alloc>> {
         self.vm_cache
             .resolve_function_ref_with_fetcher(caller_module, idx, &self.storage)
     }
@@ -459,101 +427,18 @@ impl<'alloc, 'blk, F: ModuleFetcher> ModuleCache<'alloc> for BlockModuleCache<'a
         &self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
-        gas_meter: &GasMeter,
-    ) -> VMResult<Option<StructDef>> {
+        context: &mut dyn InterpreterContext,
+    ) -> VMResult<StructDef> {
         self.vm_cache
-            .resolve_struct_def_with_fetcher(module, idx, gas_meter, &self.storage)
+            .resolve_struct_def_with_fetcher(module, idx, context, &self.storage)
     }
 
-    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'alloc LoadedModule>> {
+    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<&'alloc LoadedModule> {
         self.vm_cache
             .get_loaded_module_with_fetcher(id, &self.storage)
     }
 
     fn cache_module(&self, module: VerifiedModule) {
         self.vm_cache.cache_module(module)
-    }
-
-    fn reclaim_cached_module(&self, v: Vec<LoadedModule>) {
-        self.vm_cache.reclaim_cached_module(v)
-    }
-}
-
-/// A temporary cache for module published by a single transaction. This cache allows the
-/// transaction script to refer to either those newly published modules in `local_cache` or those
-/// existing on chain modules in `block_cache`. VM can choose to discard those newly published
-/// modules if there is an error during execution.
-pub struct TransactionModuleCache<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
-    block_cache: P,
-    local_cache: VMModuleCache<'txn>,
-
-    phantom: PhantomData<&'alloc ()>,
-}
-
-impl<'alloc, 'txn, P> TransactionModuleCache<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
-    pub fn new(block_cache: P, allocator: &'txn Arena<LoadedModule>) -> Self {
-        TransactionModuleCache {
-            block_cache,
-            local_cache: VMModuleCache::new(allocator),
-            phantom: PhantomData,
-        }
-    }
-}
-
-impl<'alloc, 'txn, P> ModuleCache<'txn> for TransactionModuleCache<'alloc, 'txn, P>
-where
-    'alloc: 'txn,
-    P: ModuleCache<'alloc>,
-{
-    fn resolve_function_ref(
-        &self,
-        caller_module: &LoadedModule,
-        idx: FunctionHandleIndex,
-    ) -> VMResult<Option<FunctionRef<'txn>>> {
-        if let Some(f) = self.local_cache.resolve_function_ref(caller_module, idx)? {
-            Ok(Some(f))
-        } else {
-            self.block_cache.resolve_function_ref(caller_module, idx)
-        }
-    }
-
-    fn resolve_struct_def(
-        &self,
-        module: &LoadedModule,
-        idx: StructDefinitionIndex,
-        gas_meter: &GasMeter,
-    ) -> VMResult<Option<StructDef>> {
-        if let Some(f) = self
-            .local_cache
-            .resolve_struct_def(module, idx, gas_meter)?
-        {
-            Ok(Some(f))
-        } else {
-            self.block_cache.resolve_struct_def(module, idx, gas_meter)
-        }
-    }
-
-    fn get_loaded_module(&self, id: &ModuleId) -> VMResult<Option<&'txn LoadedModule>> {
-        if let Some(m) = self.local_cache.get_loaded_module(id)? {
-            Ok(Some(m))
-        } else {
-            self.block_cache.get_loaded_module(id)
-        }
-    }
-
-    fn cache_module(&self, module: VerifiedModule) {
-        self.local_cache.cache_module(module)
-    }
-
-    fn reclaim_cached_module(&self, _v: Vec<LoadedModule>) {
-        panic!("reclaim_cached_module should never be called on TransactionModuleCache");
     }
 }

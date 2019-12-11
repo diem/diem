@@ -10,10 +10,10 @@ publish = false
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 mirai-annotations = "1.4.0"
 petgraph = "0.4"
 
-failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
 vm = { path = "../vm", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 vm-runtime-types = { path = "../vm/vm-runtime/vm-runtime-types", version = "0.1.0" }

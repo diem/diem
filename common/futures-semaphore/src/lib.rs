@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! `Semaphore` holds a set of permits. Permits are used to synchronize access
 //! to a shared resource. Before accessing the shared resource, callers must
 //! acquire a permit from the semaphore. Once the permit is acquired, the caller
@@ -160,7 +162,7 @@ mod test {
         sync::atomic::{AtomicU32, Ordering},
         time::Duration,
     };
-    use tokio::{runtime::Runtime, timer::delay_for};
+    use tokio::{runtime::Runtime, time::delay_for};
 
     #[test]
     fn basic_functionality_semaphore() {

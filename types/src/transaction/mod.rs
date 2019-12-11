@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -11,16 +13,14 @@ use crate::{
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
-use failure::prelude::*;
+use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
     ed25519::*,
-    hash::{
-        CryptoHash, CryptoHasher, EventAccumulatorHasher, RawTransactionHasher, TransactionHasher,
-        TransactionInfoHasher,
-    },
+    hash::{CryptoHash, CryptoHasher, EventAccumulatorHasher},
     traits::*,
     HashValue,
 };
+use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{de, ser, Deserialize, Serialize};
@@ -31,17 +31,14 @@ use std::{
     time::Duration,
 };
 
+mod change_set;
 pub mod helpers;
 mod module;
-mod program;
 mod script;
 mod transaction_argument;
 
-#[cfg(test)]
-mod unit_tests;
-
+pub use change_set::ChangeSet;
 pub use module::Module;
-pub use program::Program;
 pub use script::{Script, SCRIPT_HASH_LENGTH};
 
 use std::ops::Deref;
@@ -52,7 +49,7 @@ pub type Version = u64; // Height - also used for MVCC in StateDB
 pub const MAX_TRANSACTION_SIZE_IN_BYTES: usize = 4096;
 
 /// RawTransaction is the portion of a transaction that a client signs
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
 pub struct RawTransaction {
     /// Sender's address.
     sender: AccountAddress,
@@ -181,7 +178,24 @@ impl RawTransaction {
         RawTransaction {
             sender,
             sequence_number,
-            payload: TransactionPayload::WriteSet(write_set),
+            payload: TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![])),
+            // Since write-set transactions bypass the VM, these fields aren't relevant.
+            max_gas_amount: 0,
+            gas_unit_price: 0,
+            // Write-set transactions are special and important and shouldn't expire.
+            expiration_time: Duration::new(u64::max_value(), 0),
+        }
+    }
+
+    pub fn new_change_set(
+        sender: AccountAddress,
+        sequence_number: u64,
+        change_set: ChangeSet,
+    ) -> Self {
+        RawTransaction {
+            sender,
+            sequence_number,
+            payload: TransactionPayload::WriteSet(change_set),
             // Since write-set transactions bypass the VM, these fields aren't relevant.
             max_gas_amount: 0,
             gas_unit_price: 0,
@@ -212,8 +226,8 @@ impl RawTransaction {
     pub fn format_for_client(&self, get_transaction_name: impl Fn(&[u8]) -> String) -> String {
         let empty_vec = vec![];
         let (code, args) = match &self.payload {
-            TransactionPayload::Program(program) => {
-                (get_transaction_name(program.code()), program.args())
+            TransactionPayload::Program => {
+                return "Deprecated".to_string();
             }
             TransactionPayload::WriteSet(_) => ("genesis".to_string(), &empty_vec[..]),
             TransactionPayload::Script(script) => {
@@ -269,9 +283,10 @@ impl CryptoHash for RawTransaction {
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionPayload {
-    /// A regular programmatic transaction that is executed by the VM.
-    Program(Program),
-    WriteSet(WriteSet),
+    /// Deprecated. See https://developers.libra.org/blog/2019/10/22/simplifying-payloads for more
+    /// details.
+    Program,
+    WriteSet(ChangeSet),
     /// A transaction that executes code.
     Script(Script),
     /// A transaction that publishes code.
@@ -286,7 +301,7 @@ pub enum TransactionPayload {
 /// **IMPORTANT:** The signature of a `SignedTransaction` is not guaranteed to be verified. For a
 /// transaction whose signature is statically guaranteed to be verified, see
 /// [`SignatureCheckedTransaction`].
-#[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize, CryptoHasher)]
 pub struct SignedTransaction {
     /// The raw transaction
     raw_txn: RawTransaction,
@@ -680,7 +695,7 @@ impl From<TransactionInfo> for crate::proto::types::TransactionInfo {
 
 /// `TransactionInfo` is the object we store in the transaction accumulator. It consists of the
 /// transaction as well as the execution result of this transaction.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct TransactionInfo {
     /// The hash of this transaction.
@@ -1045,7 +1060,7 @@ impl From<TransactionListWithProof> for crate::proto::types::TransactionListWith
 /// transaction.
 #[allow(clippy::large_enum_variant)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
 pub enum Transaction {
     /// Transaction submitted by the user. e.g: P2P payment transaction, publishing module
     /// transaction, etc.

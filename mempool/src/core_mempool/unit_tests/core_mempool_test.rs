@@ -8,7 +8,7 @@ use crate::core_mempool::{
     },
     CoreMempool, TimelineState,
 };
-use libra_config::config::NodeConfigHelpers;
+use libra_config::config::NodeConfig;
 use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use libra_types::transaction::SignedTransaction;
 use std::{collections::HashSet, time::Duration};
@@ -182,7 +182,7 @@ fn test_balance_check() {
 fn test_system_ttl() {
     // created mempool with system_transaction_timeout = 0
     // All transactions are supposed to be evicted on next gc run
-    let mut config = NodeConfigHelpers::get_single_node_test_config(true);
+    let mut config = NodeConfig::random();
     config.mempool.system_transaction_timeout_secs = 0;
     let mut mempool = CoreMempool::new(&config);
 
@@ -283,7 +283,7 @@ fn test_timeline() {
 
 #[test]
 fn test_capacity() {
-    let mut config = NodeConfigHelpers::get_single_node_test_config(true);
+    let mut config = NodeConfig::random();
     config.mempool.capacity = 1;
     config.mempool.system_transaction_timeout_secs = 0;
     let mut pool = CoreMempool::new(&config);
@@ -304,7 +304,7 @@ fn test_capacity() {
 
 #[test]
 fn test_parking_lot_eviction() {
-    let mut config = NodeConfigHelpers::get_single_node_test_config(true);
+    let mut config = NodeConfig::random();
     config.mempool.capacity = 5;
     let mut pool = CoreMempool::new(&config);
     // add transactions with following sequence numbers to Mempool
@@ -358,4 +358,18 @@ fn test_gc_ready_transaction() {
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(timeline.len(), 1);
     assert_eq!(timeline[0].sequence_number(), 0);
+}
+
+#[test]
+fn test_clean_stuck_transactions() {
+    let mut pool = setup_mempool().0;
+    for seq in 0..5 {
+        add_txn(&mut pool, TestTransaction::new(0, seq, 1)).unwrap();
+    }
+    let db_sequence_number = 10;
+    let txn = TestTransaction::new(0, db_sequence_number, 1).make_signed_transaction();
+    pool.add_txn(txn, 0, db_sequence_number, 100, TimelineState::NotReady);
+    let block = pool.get_block(10, HashSet::new());
+    assert_eq!(block.len(), 1);
+    assert_eq!(block[0].sequence_number(), 10);
 }

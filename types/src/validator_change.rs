@@ -1,9 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::crypto_proxies::ValidatorVerifier;
 use crate::ledger_info::LedgerInfoWithSignatures;
-use failure::*;
+use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::ed25519::*;
 use libra_crypto::*;
 use std::convert::{TryFrom, TryInto};
@@ -12,7 +14,7 @@ use std::convert::{TryFrom, TryInto};
 /// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of
 /// validator changes from the first LedgerInfo's epoch.
 pub struct ValidatorChangeEventWithProof<Sig> {
-    ledger_info_with_sigs: Vec<LedgerInfoWithSignatures<Sig>>,
+    pub ledger_info_with_sigs: Vec<LedgerInfoWithSignatures<Sig>>,
 }
 
 impl<Sig: Signature> ValidatorChangeEventWithProof<Sig> {
@@ -79,13 +81,16 @@ fn verify_validator_set_change_proof() {
             random_validator_verifier((*epoch + 1) as usize, None, true);
         let validator_set = Some((&next_verifier).into());
         let ledger_info = LedgerInfo::new(
-            42,
+            BlockInfo::new(
+                *epoch,
+                0,
+                HashValue::zero(),
+                HashValue::zero(),
+                42,
+                0,
+                validator_set,
+            ),
             HashValue::zero(),
-            HashValue::zero(),
-            HashValue::zero(),
-            *epoch,
-            0,
-            validator_set,
         );
         let signatures = current_signers
             .iter()
@@ -166,11 +171,12 @@ impl<Sig: Signature> From<ValidatorChangeEventWithProof<Sig>>
     }
 }
 
+#[allow(unused_imports)]
+use crate::block_info::BlockInfo;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::collection::vec;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
-
 #[cfg(any(test, feature = "fuzzing"))]
 prop_compose! {
     fn arb_validator_change_event_with_proof()(

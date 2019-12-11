@@ -8,11 +8,9 @@ use executor::Executor;
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
-use libra_crypto::{ed25519::*, ValidKey};
 use libra_logger::prelude::*;
 use libra_mempool::MempoolRuntime;
 use libra_metrics::metric_server;
-use libra_types::account_address::AccountAddress as PeerId;
 use network::{
     validator_network::{
         network_builder::{NetworkBuilder, TransportType},
@@ -23,18 +21,13 @@ use network::{
         CONSENSUS_DIRECT_SEND_PROTOCOL,
         CONSENSUS_RPC_PROTOCOL,
         MEMPOOL_DIRECT_SEND_PROTOCOL,
-        STATE_SYNCHRONIZER_MSG_PROTOCOL,
+        STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
     },
-    NetworkPublicKeys, ProtocolId,
+    ProtocolId,
 };
 use state_synchronizer::StateSynchronizer;
-use std::{
-    convert::{TryFrom, TryInto},
-    str::FromStr,
-    sync::Arc,
-    thread,
-    time::Instant,
-};
+use std::collections::HashMap;
+use std::{sync::Arc, thread, time::Instant};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use tokio::runtime::{Builder, Runtime};
@@ -95,17 +88,18 @@ fn setup_debug_interface(config: &NodeConfig) -> ::grpcio::Server {
 
 // TODO(abhayb): Move to network crate (similar to consensus).
 pub fn setup_network(
-    peer_id: PeerId,
     config: &mut NetworkConfig,
+    role: RoleType,
 ) -> (Runtime, Box<dyn LibraNetworkProvider>) {
     let runtime = Builder::new()
-        .name_prefix("network-")
+        .thread_name("network-")
+        .threaded_scheduler()
+        .enable_all()
         .build()
         .expect("Failed to start runtime. Won't be able to start networking.");
-    let role: RoleType = (&config.role).into();
     let mut network_builder = NetworkBuilder::new(
-        runtime.executor(),
-        peer_id,
+        runtime.handle().clone(),
+        config.peer_id,
         config.listen_address.clone(),
         role,
     );
@@ -115,7 +109,7 @@ pub fn setup_network(
         .direct_send_protocols(vec![
             ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL),
-            ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
+            ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
         ])
         .rpc_protocols(vec![
             ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
@@ -128,45 +122,48 @@ pub fn setup_network(
             config.enable_encryption_and_authentication,
             "Permissioned network end-points should use authentication"
         );
-        let trusted_peers = config
-            .network_peers
-            .peers
-            .iter()
-            .map(|(peer_id, keys)| {
-                (
-                    PeerId::from_str(peer_id).unwrap(),
-                    NetworkPublicKeys {
-                        signing_public_key: keys.network_signing_pubkey.clone(),
-                        identity_public_key: keys.network_identity_pubkey.clone(),
-                    },
-                )
-            })
-            .collect();
-        let seed_peers = config
-            .seed_peers
-            .seed_peers
-            .clone()
-            .into_iter()
-            .map(|(peer_id, addrs)| (peer_id.try_into().expect("Invalid PeerId"), addrs))
-            .collect();
-        let network_signing_private = config.network_keypairs.take_network_signing_private()
-            .expect("Failed to move network signing private key out of NodeConfig, key not set or moved already");
-        let network_signing_public: Ed25519PublicKey = (&network_signing_private).into();
+        let seed_peers = config.seed_peers.seed_peers.clone();
+        let signing_private = config
+            .network_keypairs
+            .signing_keys
+            .take_private()
+            .expect("Failed to take Network signing private key, key absent or already read");
+        let signing_public = config.network_keypairs.signing_keys.public().clone();
+        let identity_private = config
+            .network_keypairs
+            .identity_keys
+            .take_private()
+            .expect("Failed to take Network identity private key, key absent or already read");
+        let identity_public = config.network_keypairs.identity_keys.public().clone();
+        let trusted_peers = if role == RoleType::Validator {
+            // for validators, trusted_peers is empty will be populated from consensus
+            HashMap::new()
+        } else {
+            config.network_peers.peers.clone()
+        };
         network_builder
-            .transport(TransportType::TcpNoise(Some(
-                config.network_keypairs.get_network_identity_keypair(),
-            )))
+            .transport(TransportType::TcpNoise(Some((
+                identity_private,
+                identity_public,
+            ))))
             .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
             .seed_peers(seed_peers)
             .trusted_peers(trusted_peers)
-            .signing_keys((network_signing_private, network_signing_public))
+            .signing_keys((signing_private, signing_public))
             .discovery_interval_ms(config.discovery_interval_ms);
     } else if config.enable_encryption_and_authentication {
+        let identity_private = config
+            .network_keypairs
+            .identity_keys
+            .take_private()
+            .expect("Failed to take Network identity private key, key absent or already read");
+        let identity_public = config.network_keypairs.identity_keys.public().clone();
         // Even if a network end-point is permissionless, it might want to prove its identity to
         // another peer it connects to. For this, we use TCP + Noise but in a permission-less way.
-        network_builder.transport(TransportType::PermissionlessTcpNoise(Some(
-            config.network_keypairs.get_network_identity_keypair(),
-        )));
+        network_builder.transport(TransportType::TcpNoise(Some((
+            identity_private,
+            identity_public,
+        ))));
     } else {
         network_builder.transport(TransportType::Tcp);
     }
@@ -200,12 +197,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut ac_network_events = vec![];
     let mut validator_network_provider = None;
 
-    for i in 0..node_config.networks.len() {
-        let peer_id =
-            PeerId::try_from(node_config.networks[i].peer_id.clone()).expect("Invalid PeerId");
-        let (runtime, mut network_provider) = setup_network(peer_id, &mut node_config.networks[i]);
+    if let Some(network) = node_config.validator_network.as_mut() {
+        let (runtime, mut network_provider) = setup_network(network, RoleType::Validator);
         state_sync_network_handles.push(network_provider.add_state_synchronizer(vec![
-            ProtocolId::from_static(STATE_SYNCHRONIZER_MSG_PROTOCOL),
+            ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
         ]));
 
         let (ac_sender, ac_events) =
@@ -214,31 +209,31 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             )]);
         ac_network_events.push(ac_events);
 
-        let network = &node_config.networks[i];
-        if let RoleType::Validator = (&network.role).into() {
-            validator_network_provider = Some((peer_id, runtime, network_provider));
+        validator_network_provider = Some((network.peer_id, runtime, network_provider));
+        ac_network_sender = Some(ac_sender);
+    }
+
+    for i in 0..node_config.full_node_networks.len() {
+        let (runtime, mut network_provider) =
+            setup_network(&mut node_config.full_node_networks[i], RoleType::FullNode);
+        state_sync_network_handles.push(network_provider.add_state_synchronizer(vec![
+            ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL),
+        ]));
+
+        let (ac_sender, ac_events) =
+            network_provider.add_admission_control(vec![ProtocolId::from_static(
+                ADMISSION_CONTROL_RPC_PROTOCOL,
+            )]);
+        ac_network_events.push(ac_events);
+
+        let network = &node_config.full_node_networks[i];
+        if node_config.is_upstream_network(network) {
             ac_network_sender = Some(ac_sender);
-        } else {
-            if node_config.is_upstream_network(network) {
-                ac_network_sender = Some(ac_sender);
-            }
-            // For non-validator roles, the peer_id should be derived from the network identity
-            // key.
-            assert_eq!(
-                peer_id,
-                PeerId::try_from(
-                    network
-                        .network_keypairs
-                        .get_network_identity_public()
-                        .to_bytes()
-                )
-                .unwrap()
-            );
-            // Start the network provider.
-            runtime.executor().spawn(network_provider.start());
-            network_runtimes.push(runtime);
-            debug!("Network started for peer_id: {}", peer_id);
         }
+        // Start the network provider.
+        runtime.handle().spawn(network_provider.start());
+        network_runtimes.push(runtime);
+        debug!("Network started for peer_id: {}", network.peer_id);
     }
 
     let debug_if = ServerHandle::setup(setup_debug_interface(&node_config));
@@ -282,7 +277,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL),
                 ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL),
             ]);
-        runtime.executor().spawn(network_provider.start());
+        runtime.handle().spawn(network_provider.start());
         network_runtimes.push(runtime);
         debug!("Network started for peer_id: {}", peer_id);
 

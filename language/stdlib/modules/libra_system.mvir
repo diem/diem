@@ -1,5 +1,5 @@
 module LibraSystem {
-    import 0x0.Event;
+    import 0x0.LibraCoin;
     import 0x0.LibraAccount;
     import 0x0.ValidatorConfig;
     import 0x0.Vector;
@@ -17,10 +17,15 @@ module LibraSystem {
     }
 
     resource ValidatorSet {
+        // The current validator set. Updated only at epoch boundaries via reconfiguration.
         validators: Vector.T<Self.ValidatorInfo>,
-        change_events: Event.Handle<Self.ValidatorSetChangeEvent>,
+        // List of validators to add at the next reconfiguration.
+        additions: Vector.T<address>,
+        // List of validators to removal at the next reconfiguration. Disjoint with additions.
+        removals: Vector.T<address>,
+        // Handle where validator set change events are emitted
+        change_events: LibraAccount.EventHandle<Self.ValidatorSetChangeEvent>,
     }
-
 
     resource BlockMetadata {
       // Height of the current block
@@ -38,15 +43,21 @@ module LibraSystem {
       proposer: address,
     }
 
+    resource TransactionFees {
+        fee_withdrawal_capability: LibraAccount.WithdrawalCapability,
+    }
+
     // This can only be invoked by the Association address, and only a single time.
     // Currently, it is invoked in the genesis transaction
     public initialize_validator_set() {
-      // Only callable by the Association address
+      // Only callable by the validator set address
       assert(get_txn_sender() == 0x1D8, 1);
 
       move_to_sender<ValidatorSet>(ValidatorSet {
           validators: Vector.empty<Self.ValidatorInfo>(),
-          change_events: Event.new_event_handle<Self.ValidatorSetChangeEvent>(),
+          additions: Vector.empty<address>(),
+          removals: Vector.empty<address>(),
+          change_events: LibraAccount.new_event_handle<Self.ValidatorSetChangeEvent>(),
       });
       return;
     }
@@ -66,6 +77,10 @@ module LibraSystem {
         proposer: 0xA550C18,
       });
       return;
+    }
+
+    public get_address(v: &Self.ValidatorInfo): &address {
+      return &move(v).addr;
     }
 
     public get_consensus_pubkey(v: &Self.ValidatorInfo): &bytearray {
@@ -94,8 +109,13 @@ module LibraSystem {
         new_block_hash: bytearray,
         previous_block_votes: bytearray,
         proposer: address
-    ) acquires BlockMetadata, ValidatorSet {
+    ) acquires BlockMetadata, ValidatorSet, TransactionFees {
       Self.process_block_prologue(move(timestamp), move(new_block_hash), move(previous_block_votes), move(proposer));
+
+      // Currently distribute once per-block.
+      // TODO: Once we have a better on-chain representation of epochs we will make this per-epoch.
+      Self.distribute_transaction_fees();
+
       // triggers a reconfiguration if the validator keys or validator set has changed
       Self.reconfigure();
       return;
@@ -151,14 +171,11 @@ module LibraSystem {
         return Vector.length<Self.ValidatorInfo>(&move(validator_set_ref).validators);
     }
 
-    // Return true if addr is a current validator
-    public is_validator(addr: address): bool acquires ValidatorSet {
+   is_validator_(addr: &address, vector_ref: &Vector.T<Self.ValidatorInfo>): bool {
         let size: u64;
         let i: u64;
-        let vector_ref: &Vector.T<Self.ValidatorInfo>;
         let info_ref: &Self.ValidatorInfo;
 
-        vector_ref = &borrow_global<ValidatorSet>(0x1D8).validators;
         size = Vector.length<Self.ValidatorInfo>(copy(vector_ref));
         if (copy(size) == 0) {
             return false;
@@ -168,7 +185,7 @@ module LibraSystem {
         // this is only needed to make the bytecode verifier happy
         info_ref = Vector.borrow<Self.ValidatorInfo>(copy(vector_ref), copy(i));
         loop {
-            if (*&copy(info_ref).addr == copy(addr)) {
+            if (&copy(info_ref).addr == copy(addr)) {
                 return true;
             }
             i = copy(i) + 1;
@@ -181,25 +198,75 @@ module LibraSystem {
         return false;
     }
 
-    // TODO: Decide on access control policy. For now, we ensure that this is only callable from the
-    // genesis txn. Obviously, we'll need a different policy once we support reconfiguration.
-    add_validator(account_address: address) acquires ValidatorSet {
-        let validator_set_ref: &mut Self.ValidatorSet;
+    // Return true if addr is a current validator
+    public is_validator(addr: address): bool acquires ValidatorSet {
+        return Self.is_validator_(&addr, &borrow_global<ValidatorSet>(0x1D8).validators);
+    }
 
+    // Adds a validator to the addition buffer, which will cause it to be added to the validator
+    // set in the next epoch.
+    // Fails if `account_address` is already a validator or has already been added to the addition
+    // buffer.
+    // Only callable by the Association address
+    public add_validator(account_address: address) acquires ValidatorSet {
+        let validator_set_ref: &mut Self.ValidatorSet;
+        let validator_set_additions: &mut Vector.T<address>;
+
+        // Only the Association can add new validators
+        assert(get_txn_sender() == 0xA550C18, 1);
         // A prospective validator must have a validator config resource
         assert(ValidatorConfig.has(copy(account_address)), 17);
 
         validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
-        Vector.push_back<Self.ValidatorInfo>(
-            &mut move(validator_set_ref).validators,
-            ValidatorInfo {
-                addr: move(account_address),
-                consensus_pubkey: h"",
-                // TODO: check for LIT, compute voting power based on LIT + stake
-                consensus_voting_power: 1,
-                network_signing_pubkey: h"",
-                network_identity_pubkey: h"",
-            }
+        validator_set_additions = &mut copy(validator_set_ref).additions;
+        // Ensure that this address is not already a validator
+        assert(
+            !Self.is_validator_(&account_address, &copy(validator_set_ref).validators),
+            18
+        );
+        // Ensure that this is not already an addition
+        assert(
+            !Vector.contains<address>(
+                freeze(copy(validator_set_additions)),
+                &account_address,
+            ),
+            19
+        );
+
+        // Add to candidates
+        Vector.push_back<address>(
+            move(validator_set_additions),
+            copy(account_address),
+        );
+
+        return;
+    }
+
+    public remove_validator(account_address: address) acquires ValidatorSet {
+        let validator_set_ref: &mut Self.ValidatorSet;
+
+        // Only the Association can remove validators
+        assert(get_txn_sender() == 0xA550C18, 1);
+
+        validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
+        // Ensure that this address is already a validator
+        assert(
+            Self.is_validator_(&account_address, &copy(validator_set_ref).validators),
+            21
+        );
+        // Ensure that this is not already a removal
+        assert(
+            !Vector.contains<address>(
+                &copy(validator_set_ref).removals,
+                &account_address,
+            ),
+            22
+        );
+
+        // Add to removals
+        Vector.push_back<address>(
+            &mut move(validator_set_ref).removals,
+            copy(account_address),
         );
 
         return;
@@ -225,7 +292,7 @@ module LibraSystem {
             *&mut copy(validator_info).consensus_pubkey = move(consensus_pubkey);
             changed = true;
         }
-       if (&network_signing_pubkey != &copy(validator_info).network_signing_pubkey) {
+        if (&network_signing_pubkey != &copy(validator_info).network_signing_pubkey) {
             *&mut copy(validator_info).network_signing_pubkey = move(network_signing_pubkey);
             changed = true;
         }
@@ -237,14 +304,36 @@ module LibraSystem {
         return move(changed);
     }
 
+    // Create a ValidatorInfo from the ValidatorConfig stored at addr.
+    // Aborts if addr does not have a ValidatorConfig
+    make_info(addr: address): Self.ValidatorInfo {
+        let config: ValidatorConfig.Config;
+        config = ValidatorConfig.config(copy(addr));
+
+       return ValidatorInfo {
+           addr: move(addr),
+           consensus_pubkey: ValidatorConfig.consensus_pubkey(&config),
+           consensus_voting_power: 1,
+           network_signing_pubkey: ValidatorConfig.network_signing_pubkey(&config),
+           network_identity_pubkey: ValidatorConfig.network_identity_pubkey(&config),
+       };
+    }
+
     // Trigger a reconfiguation the Libra system by:
-    // (1) Computing a new validator set and storing it on chain
-    // (2) Emitting an event containing new validator set, which will be passed to the executor
-    // TODO: make  this private + only callable from block prologue
+    // (1) Checking if there have been any additions since the last reconfiguration (and adding
+    //     the validator's config if so)
+    // (2) Checking if there have been any removals since the last reconfiguration (and removing
+    //     the validator if so)
+    // (3) Checking if there have been any key rotations since the last reconfiguration (and
+    //     updating the key info if so)
+    // (4) Emitting an event containing new validator set, which will be passed to the executor
     reconfigure() acquires ValidatorSet {
         let validator_set_ref: &mut Self.ValidatorSet;
+        let additions_ref: &mut Vector.T<address>;
+        let removals_ref: &mut Vector.T<address>;
         let vector_ref: &mut Vector.T<Self.ValidatorInfo>;
         let info_ref: &mut Self.ValidatorInfo;
+        let to_remove_index: u64;
         let i: u64;
         let len: u64;
         let changed: bool;
@@ -254,12 +343,62 @@ module LibraSystem {
         // TODO: support adding and removing validators. Eventually, we will do this by computing
         // the new validator set from a larger list of candidate validators sorted by stake.
         validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
+        additions_ref = &mut copy(validator_set_ref).additions;
+        removals_ref = &mut copy(validator_set_ref).removals;
         vector_ref = &mut copy(validator_set_ref).validators;
+        changed = false;
 
+        // (1) Check for additions
+        i = 0;
+        len = Vector.length<address>(freeze(copy(additions_ref)));
+        // if additions is nonempty, we have an addition to process
+        if (copy(len) > 0) {
+            loop {
+                // remove validator address from additions and add corresponding ValidatorInfo to
+                // the validator set
+                Vector.push_back<Self.ValidatorInfo>(
+                    copy(vector_ref),
+                    Self.make_info(Vector.pop_back<address>(copy(additions_ref)))
+                );
+                i = move(i) + 1;
+                if (copy(i) >= copy(len)) {
+                    break;
+                }
+            }
+            // ensures additions.length == 0
+            // ensures validators.length == old(validators).length + old(additions).length
+            changed = true;
+        }
+
+        // (2) Check for removals
+        i = 0;
+        len = Vector.length<address>(freeze(copy(removals_ref)));
+        if (copy(len) > 0) {
+            loop {
+                // remove validator address from removals
+                to_remove_index = Self.get_validator_index(
+                    freeze(copy(vector_ref)),
+                    Vector.pop_back<address>(copy(removals_ref))
+                );
+                // remove corresponding Validator info from the validator set
+                _  = Vector.remove_unstable<Self.ValidatorInfo>(
+                    copy(vector_ref),
+                    move(to_remove_index)
+                );
+                i = move(i) + 1;
+                if (copy(i) >= copy(len)) {
+                    break;
+                }
+            }
+            // ensures removals.length == 0
+            // ensures validators.length == old(validators).length - old(removals).length
+            changed = true;
+        }
+
+        // (3) Check for key rotation
         i = 0;
         len = Vector.length<Self.ValidatorInfo>(freeze(copy(vector_ref)));
         // assume(len > 0), since an empty validator set is nonsensical
-        changed = false;
         info_ref = Vector.borrow_mut<Self.ValidatorInfo>(copy(vector_ref), copy(i));
         // check if each validator has rotated their keys, copy their new info and note the change
         // if so.
@@ -275,8 +414,9 @@ module LibraSystem {
             info_ref = Vector.borrow_mut<Self.ValidatorInfo>(copy(vector_ref), copy(i));
         }
 
+        // (4) emit changed event if appropriate
         if (move(changed)) {
-            Event.emit_event<Self.ValidatorSetChangeEvent>(
+            LibraAccount.emit_event<Self.ValidatorSetChangeEvent>(
                 &mut move(validator_set_ref).change_events,
                 ValidatorSetChangeEvent {
                     new_validator_set: *move(vector_ref),
@@ -311,5 +451,149 @@ module LibraSystem {
       addr = *(&move(peer).addr);
 
       return move(addr);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Transaction Fee Distribution
+    ///////////////////////////////////////////////////////////////////////////
+    // Implements a basic transaction fee distribution logic.
+    //
+    // We have made a couple design decisions here that are worth noting:
+    //  * We pay out once per-block for now.
+    //    TODO: Once we have a better on-chain representation of
+    //          epochs this should be changed over to be once per-epoch.
+    //  * Sometimes the number of validators does not evenly divide the transaction fees to be
+    //    distributed. In such cases the remainder ("dust") is left in the transaction fees pot and
+    //    these remaining fees will be included in the calculations for the transaction fee
+    //    distribution in the next epoch. This distribution strategy is meant to in part minimize the
+    //    benefit of being the first validator in the validator set.
+
+     // Initialize the transaction fee distribution module. We keep track of the last paid block
+     // height in order to ensure that we don't try to pay more than once per-block. We also
+     // encapsulate the withdrawal capability to the transaction fee account so that we can withdraw
+     // the fees from this account from block metadata transactions.
+     initialize_transaction_fees() {
+         assert(get_txn_sender() == 0xFEE, 0);
+         move_to_sender<TransactionFees>(TransactionFees {
+             fee_withdrawal_capability: LibraAccount.extract_sender_withdrawal_capability(),
+         });
+         return;
+     }
+
+     distribute_transaction_fees() acquires TransactionFees, ValidatorSet {
+       let num_validators: u64;
+       let amount_to_distribute_per_validator: u64;
+       let lib_coin_to_distribute: LibraCoin.T;
+       let amount_collected: u64;
+       let distribution_resource: &mut Self.TransactionFees;
+
+       distribution_resource = borrow_global_mut<TransactionFees>(0xFEE);
+
+       num_validators = Self.validator_set_size();
+       amount_collected = LibraAccount.balance(0xFEE);
+
+       lib_coin_to_distribute = LibraAccount.withdraw_with_capability(
+           &move(distribution_resource).fee_withdrawal_capability,
+           copy(amount_collected)
+       );
+
+       // Calculate the amount of money to be dispursed, along with the remainder.
+       amount_to_distribute_per_validator = Self.per_validator_distribution_amount(
+           copy(amount_collected),
+           copy(num_validators)
+       );
+
+       // Iterate through the validators distributing fees equally
+       Self.distribute_transaction_fees_internal(
+           move(lib_coin_to_distribute),
+           move(amount_to_distribute_per_validator),
+           move(num_validators),
+       );
+
+       return;
+     }
+
+     // After the book keeping has been performed, this then distributes the
+     // transaction fees equally to all validators with the exception that
+     // any remainder (in the case that the number of validators does not
+     // evenly divide the transaction fee pot) is distributed to the first
+     // validator.
+     distribute_transaction_fees_internal(
+         collected_fees: LibraCoin.T,
+         amount_to_distribute_per_validator: u64,
+         num_validators: u64
+     ) acquires ValidatorSet {
+         let index: u64;
+         let addr: address;
+         let payment_coin: LibraCoin.T;
+
+         if (LibraCoin.value(&collected_fees) == 0)  {
+             LibraCoin.destroy_zero(move(collected_fees));
+             return;
+         }
+
+         index = 0;
+
+         while (copy(index) < copy(num_validators)) {
+
+             addr = Self.get_ith_validator_address(copy(index));
+             // Increment the index into the validator set.
+             index = copy(index) + 1;
+
+             collected_fees, payment_coin = LibraCoin.split(
+                 move(collected_fees),
+                 copy(amount_to_distribute_per_validator)
+             );
+
+             LibraAccount.deposit(move(addr), move(payment_coin));
+         }
+
+         // Now pay back any remainder to the transaction fees. Deposits with value zero
+         // are not allowed so if the remainder is zero we have to destroy the coin.
+         if (LibraCoin.value(&collected_fees) == 0) {
+             LibraCoin.destroy_zero(move(collected_fees));
+         } else {
+             LibraAccount.deposit(0xFEE, move(collected_fees));
+         }
+
+         return;
+     }
+
+     // This calculates the amount to be distributed to each validator equally. We do this by calculating
+     // the integer division of the transaction fees collected by the number of validators. In
+     // particular, this means that if the number of validators does not evenly divide the
+     // transaction fees collected, then there will be a remainder that is left in the transaction
+     // fees pot to be distributed later.
+     per_validator_distribution_amount(amount_collected: u64, num_validators: u64): u64 {
+         let validator_payout: u64;
+         assert(copy(num_validators) != 0, 0);
+         validator_payout = copy(amount_collected) / copy(num_validators);
+         assert(copy(validator_payout) * move(num_validators) <= move(amount_collected), 1);
+         return move(validator_payout);
+     }
+
+    // Get the index of the validator with address `addr` in `validators`.
+    // Aborts if `addr` is not the address of any validator
+    public get_validator_index(validators: &Vector.T<Self.ValidatorInfo>, addr: address): u64 {
+        let i: u64;
+        let len: u64;
+
+        len = Vector.length<Self.ValidatorInfo>(copy(validators));
+        i = 0;
+        loop {
+            if (Self.get_address(Vector.borrow<Self.ValidatorInfo>(copy(validators), copy(i)))
+                ==
+                &addr
+            ) {
+                return move(i);
+            }
+
+            i = move(i) + 1;
+            if (copy(i) >= copy(len)) {
+                break;
+            }
+
+        }
+        abort(99);
     }
 }

@@ -3,16 +3,19 @@
 //! Processor for a single transaction.
 
 use crate::{
-    code_cache::module_cache::{ModuleCache, VMModuleCache},
-    counters::*,
-    data_cache::{RemoteCache, TransactionDataCache},
-    interpreter::Interpreter,
-    loaded_data::{
-        function::{FunctionRef, FunctionReference},
-        loaded_module::LoadedModule,
+    code_cache::{
+        module_adapter::ModuleFetcherImpl,
+        module_cache::{BlockModuleCache, ModuleCache, VMModuleCache},
     },
+    counters::*,
+    data_cache::{BlockDataCache, RemoteCache},
+    execution_context::TransactionExecutionContext,
+    gas_meter::load_gas_schedule,
+    interpreter::Interpreter,
+    loaded_data::function::FunctionRef,
 };
-use bytecode_verifier::{VerifiedModule, VerifiedScript};
+use bytecode_verifier::VerifiedModule;
+use libra_state_view::StateView;
 use libra_types::{
     account_address::AccountAddress,
     account_config,
@@ -22,12 +25,19 @@ use libra_types::{
     vm_error::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
+use std::marker::PhantomData;
 use vm::{
-    errors::*, file_format::CompiledScript, transaction_metadata::TransactionMetadata,
+    access::ModuleAccess,
+    errors::*,
+    file_format::FunctionDefinitionIndex,
+    gas_schedule::{CostTable, GasAlgebra},
+    transaction_metadata::TransactionMetadata,
     vm_string::VMString,
 };
 use vm_cache_map::Arena;
 use vm_runtime_types::value::Value;
+
+pub use crate::gas_meter::GAS_SCHEDULE_MODULE;
 
 // Metadata needed for resolving the account module.
 lazy_static! {
@@ -46,10 +56,6 @@ lazy_static! {
     /// The ModuleId for the libra system module
     pub static ref LIBRA_SYSTEM_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("LibraSystem").unwrap()) };
-
-    /// The ModuleId for the transaction fee distribution module
-    pub static ref TRANSACTION_FEE_DISTRIBUTION_MODULE: ModuleId =
-        { ModuleId::new(account_config::core_code_address(), Identifier::new("TransactionFeeDistribution").unwrap()) };
 }
 
 // Names for special functions.
@@ -70,7 +76,11 @@ where
     'alloc: 'txn,
     P: ModuleCache<'alloc>,
 {
-    interpreter: Interpreter<'alloc, 'txn, P>,
+    interpreter_context: TransactionExecutionContext<'txn>,
+    module_cache: P,
+    txn_data: TransactionMetadata,
+    gas_schedule: &'txn CostTable,
+    phantom: PhantomData<&'alloc ()>,
 }
 
 impl<'alloc, 'txn, P> TransactionExecutor<'alloc, 'txn, P>
@@ -84,51 +94,72 @@ where
     /// transactions within the same block.
     pub fn new(
         module_cache: P,
+        gas_schedule: &'txn CostTable,
         data_cache: &'txn dyn RemoteCache,
         txn_data: TransactionMetadata,
     ) -> Self {
+        let interpreter_context =
+            TransactionExecutionContext::new(txn_data.max_gas_amount(), data_cache);
         TransactionExecutor {
-            interpreter: Interpreter::new(
-                module_cache,
-                txn_data,
-                TransactionDataCache::new(data_cache),
-            ),
+            interpreter_context,
+            module_cache,
+            txn_data,
+            gas_schedule,
+            phantom: PhantomData,
         }
     }
 
     /// Returns the module cache for this executor.
     pub fn module_cache(&self) -> &P {
-        &self.interpreter.module_cache()
+        &self.module_cache
     }
 
     /// Create an account on the blockchain by calling into `CREATE_ACCOUNT_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     pub fn create_account(&mut self, addr: AccountAddress) -> VMResult<()> {
-        self.interpreter.create_account_entry(addr)
+        Interpreter::create_account_entry(
+            &mut self.interpreter_context,
+            &self.module_cache,
+            &self.txn_data,
+            &self.gas_schedule,
+            addr,
+        )
     }
 
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_prologue(&mut self) -> VMResult<()> {
         record_stats! {time_hist | TXN_PROLOGUE_TIME_TAKEN | {
-                self.interpreter.disable_metering();
-                let result = self.execute_function(&ACCOUNT_MODULE, &PROLOGUE_NAME, vec![]);
-                self.interpreter.enable_metering();
-                result
+            Interpreter::execute_function(
+                &mut self.interpreter_context,
+                &self.module_cache,
+                &self.txn_data,
+                &CostTable::zero(),
+                &ACCOUNT_MODULE,
+                &PROLOGUE_NAME,
+                vec![],
+                )?;
             }
-        }
+        };
+        Ok(())
     }
 
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_epilogue(&mut self) -> VMResult<()> {
         record_stats! {time_hist | TXN_EPILOGUE_TIME_TAKEN | {
-                self.interpreter.disable_metering();
-                let result = self.execute_function(&ACCOUNT_MODULE, &EPILOGUE_NAME, vec![]);
-                self.interpreter.enable_metering();
-                result
+            Interpreter::execute_function(
+                &mut self.interpreter_context,
+                &self.module_cache,
+                &self.txn_data,
+                &CostTable::zero(),
+                &ACCOUNT_MODULE,
+                &EPILOGUE_NAME,
+                vec![],
+                )?;
             }
         }
+        Ok(())
     }
 
     /// Generate the TransactionOutput on failure. There can be two possibilities:
@@ -152,7 +183,7 @@ where
 
     /// Clear all the writes local to this transaction.
     fn clear(&mut self) {
-        self.interpreter.clear();
+        self.interpreter_context.clear();
     }
 
     /// Generate the TransactionOutput for a successful transaction
@@ -184,8 +215,14 @@ where
         func: FunctionRef<'txn>,
         args: Vec<TransactionArgument>,
     ) -> VMResult<()> {
-        self.interpreter
-            .interpeter_entrypoint(func, convert_txn_args(args))
+        Interpreter::entrypoint(
+            &mut self.interpreter_context,
+            &self.module_cache,
+            &self.txn_data,
+            &self.gas_schedule,
+            func,
+            convert_txn_args(args),
+        )
     }
 
     /// Execute a function.
@@ -199,8 +236,15 @@ where
         function_name: &IdentStr,
         args: Vec<Value>,
     ) -> VMResult<()> {
-        self.interpreter
-            .execute_function(module, function_name, args)
+        Interpreter::execute_function(
+            &mut self.interpreter_context,
+            &self.module_cache,
+            &self.txn_data,
+            &self.gas_schedule,
+            module,
+            function_name,
+            args,
+        )
     }
 
     /// Execute a function with the sender set to `sender`, restoring the original sender afterward.
@@ -213,9 +257,10 @@ where
         function_name: &IdentStr,
         args: Vec<Value>,
     ) -> VMResult<()> {
-        let old_sender = self.interpreter.swap_sender(address);
+        let old_sender = self.txn_data.sender;
+        self.txn_data.sender = address;
         let res = self.execute_function(module, function_name, args);
-        self.interpreter.swap_sender(old_sender);
+        self.txn_data.sender = old_sender;
         res
     }
 
@@ -228,20 +273,31 @@ where
     ) -> VMResult<TransactionOutput> {
         // This should only be used for bookkeeping. The gas is already deducted from the sender's
         // account in the account module's epilogue.
-        let gas_used: u64 = self.interpreter.gas_used();
-        let write_set = self.interpreter.make_write_set(to_be_published_modules)?;
+        let gas_used: u64 = self
+            .txn_data
+            .max_gas_amount()
+            .sub(self.interpreter_context.gas_left())
+            .mul(self.txn_data.gas_unit_price())
+            .get();
+        let write_set = self
+            .interpreter_context
+            .make_write_set(to_be_published_modules)?;
 
         record_stats!(observe | TXN_TOTAL_GAS_USAGE | gas_used);
 
         Ok(TransactionOutput::new(
             write_set,
-            self.interpreter.events().to_vec(),
+            self.interpreter_context.events().to_vec(),
             gas_used,
             match result {
                 Ok(()) => TransactionStatus::from(VMStatus::new(StatusCode::EXECUTED)),
                 Err(err) => TransactionStatus::from(err),
             },
         ))
+    }
+
+    pub fn exists_module(&self, m: &ModuleId) -> bool {
+        self.interpreter_context.exists_module(m)
     }
 }
 
@@ -257,7 +313,7 @@ fn error_output(err: VMStatus) -> TransactionOutput {
 }
 
 /// Convert the transaction arguments into move values.
-pub(crate) fn convert_txn_args(args: Vec<TransactionArgument>) -> Vec<Value> {
+pub fn convert_txn_args(args: Vec<TransactionArgument>) -> Vec<Value> {
     args.into_iter()
         .map(|arg| match arg {
             TransactionArgument::U64(i) => Value::u64(i),
@@ -269,27 +325,33 @@ pub(crate) fn convert_txn_args(args: Vec<TransactionArgument>) -> Vec<Value> {
         .collect()
 }
 
-/// A helper function for executing a single script. Will be deprecated once we have a better
-/// testing framework for executing arbitrary script.
-pub fn execute_function(
-    caller_script: VerifiedScript,
-    modules: Vec<VerifiedModule>,
+/// Execute the first function in a module
+pub fn execute_function_in_module(
+    state_view: &dyn StateView,
+    module: VerifiedModule,
+    idx: FunctionDefinitionIndex,
     args: Vec<TransactionArgument>,
-    data_cache: &dyn RemoteCache,
 ) -> VMResult<()> {
-    let allocator = Arena::new();
-    let module_cache = VMModuleCache::new(&allocator);
-    let main_module = caller_script.into_module();
-    let loaded_main = LoadedModule::new(main_module);
-    let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
-    let txn_metadata = TransactionMetadata::default();
-    for m in modules {
-        module_cache.cache_module(m);
+    let module_id = module.as_inner().self_id();
+    let entry_name = {
+        let entry_func_idx = module.function_def_at(idx).function;
+        let entry_name_idx = module.function_handle_at(entry_func_idx).name;
+        module.identifier_at(entry_name_idx)
+    };
+    {
+        let arena = Arena::new();
+        let vm_module_cache = VMModuleCache::new(&arena);
+        let code_cache =
+            BlockModuleCache::new(&vm_module_cache, ModuleFetcherImpl::new(state_view));
+        code_cache.cache_module(module.clone());
+        let data_cache = BlockDataCache::new(state_view);
+        let gas_schedule = load_gas_schedule(&code_cache, &data_cache)?;
+        let mut txn_executor = TransactionExecutor::new(
+            code_cache,
+            &gas_schedule,
+            &data_cache,
+            TransactionMetadata::default(),
+        );
+        txn_executor.execute_function(&module_id, &entry_name, convert_txn_args(args))
     }
-    let mut interpreter = Interpreter::new(
-        module_cache,
-        txn_metadata,
-        TransactionDataCache::new(data_cache),
-    );
-    interpreter.interpeter_entrypoint(entry_func, convert_txn_args(args))
 }

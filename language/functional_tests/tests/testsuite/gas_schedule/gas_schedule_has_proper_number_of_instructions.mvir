@@ -1,0 +1,7 @@
+import 0x0.GasSchedule;
+
+main() {
+  assert(GasSchedule.instruction_table_size() == 53, 0);
+  assert(GasSchedule.native_table_size() == 17, 0);
+  return;
+}

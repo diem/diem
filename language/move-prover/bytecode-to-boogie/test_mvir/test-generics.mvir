@@ -1,0 +1,45 @@
+module TestGenerics {
+    import 0x0.Vector;
+
+    resource R {
+        v: Vector.T<u64>
+    }
+
+    struct T<E: unrestricted> {
+         v: Vector.T<E>
+    }
+
+    public move2(x1: u64, x2: u64) {
+        let v: Vector.T<u64>;
+        let r: Self.R;
+        v = Vector.empty<u64>();
+        Vector.push_back<u64>(&mut v, move(x1));
+        Vector.push_back<u64>(&mut v, move(x2));
+        r = R{ v: move(v) };
+        move_to_sender<R>(move(r));
+        return;
+    }
+
+    public create<E: unrestricted>(x: E): Self.T<E> {
+        let v: Vector.T<E>;
+        v = Vector.empty<E>();
+        Vector.push_back<E>(&mut v, move(x));
+        return T<E>{ v: move(v) };
+    }
+
+    public overcomplicated_equals<E: unrestricted>(x: E, y: E): bool {
+        let r: bool;
+        let x1: Self.T<E>;
+        let y1: Self.T<E>;
+        x1 = Self.create<E>(move(x));
+        y1 = Self.create<E>(move(y));
+        r = move(x1) == move(y1);
+        return move(r);
+    }
+
+    public test(): bool {
+      let r: bool;
+      r = Self.overcomplicated_equals<u64>(1, 1);
+      return move(r);
+    }
+}

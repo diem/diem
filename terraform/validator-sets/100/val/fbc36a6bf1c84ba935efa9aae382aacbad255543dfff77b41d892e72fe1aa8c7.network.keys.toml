@@ -1,0 +1,7 @@
+[signing_keys]
+private_key = "9bc357a28c4cc1a1a6b413e7a25bcc5cd44510c7a908deffd1496292f02189db"
+public_key = "60dec43f6e9fe138c84dbcc89a9fb475a93dad3cbadce0dc9fe3e92135bb57e1"
+
+[identity_keys]
+private_key = "9879f0282671437e4b1dfdad5cf02988a8e1936e8b351365d4c8979591f0774f"
+public_key = "d0f991cea2efaa6ec0456ccd0dbd974ba49819da08b85d2ea70659d197b76105"

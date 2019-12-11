@@ -4,13 +4,15 @@
 //! This module provides helpers to initialize [`LibraDB`] with fake generic state in tests.
 
 use crate::LibraDB;
-use failure::Result;
+use anyhow::Result;
 use lazy_static::lazy_static;
 use libra_crypto::{
     ed25519::*,
     hash::{CryptoHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID},
     HashValue,
 };
+use libra_types::block_info::BlockInfo;
+use libra_types::validator_set::ValidatorSet;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -76,13 +78,16 @@ fn gen_mock_genesis() -> (
     );
 
     let ledger_info = LedgerInfo::new(
-        0,
-        txn_info.hash(),
+        BlockInfo::new(
+            0,
+            0,
+            *GENESIS_BLOCK_ID,
+            txn_info.hash(),
+            0,
+            0,
+            Some(ValidatorSet::new(Vec::new())),
+        ),
         HashValue::random(),
-        *GENESIS_BLOCK_ID,
-        0,
-        0,
-        None,
     );
     let ledger_info_with_sigs =
         LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new() /* signatures */);

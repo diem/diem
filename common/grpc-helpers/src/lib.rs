@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use failure::{prelude::*, Result};
+#![forbid(unsafe_code)]
+
+use anyhow::{format_err, Error, Result};
 use futures::{compat::Future01CompatExt, future::Future, prelude::*};
 use futures_01::future::Future as Future01;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
@@ -20,7 +22,7 @@ pub fn default_reply_error_logger<T: std::fmt::Debug>(e: T) {
     error!("Failed to reply error due to {:?}", e)
 }
 
-pub fn create_grpc_invalid_arg_status(method: &str, err: ::failure::Error) -> ::grpcio::RpcStatus {
+pub fn create_grpc_invalid_arg_status(method: &str, err: ::anyhow::Error) -> ::grpcio::RpcStatus {
     let msg = format!("Request failed {}", err);
     error!("{} failed with {}", method, &msg);
     ::grpcio::RpcStatus::new(::grpcio::RpcStatusCode::INVALID_ARGUMENT, Some(msg))

@@ -1,6 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
+use crate::block_info::BlockInfo;
 use crate::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -272,13 +275,8 @@ fn test_verify_transaction() {
         TransactionAccumulatorInternalNode::new(internal_a_hash, internal_b_hash).hash();
     let consensus_data_hash = b"c".test_only_hash();
     let ledger_info = LedgerInfo::new(
-        /* version = */ 2,
-        root_hash,
+        BlockInfo::new(0, 0, *GENESIS_BLOCK_ID, root_hash, 2, 10000, None),
         consensus_data_hash,
-        *GENESIS_BLOCK_ID,
-        0,
-        /* timestamp = */ 10000,
-        None,
     );
 
     let ledger_info_to_transaction_info_proof =
@@ -379,13 +377,8 @@ fn test_verify_account_state_and_event() {
     // consensus_data_hash isn't used in proofs, but we need it to construct LedgerInfo.
     let consensus_data_hash = b"consensus_data".test_only_hash();
     let ledger_info = LedgerInfo::new(
-        /* version = */ 2,
-        root_hash,
+        BlockInfo::new(0, 0, *GENESIS_BLOCK_ID, root_hash, 2, 10000, None),
         consensus_data_hash,
-        *GENESIS_BLOCK_ID,
-        0,
-        /* timestamp = */ 10000,
-        None,
     );
 
     let ledger_info_to_transaction_info_proof =

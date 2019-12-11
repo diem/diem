@@ -7,10 +7,11 @@ use super::*;
 use crate::mock_genesis::{db_with_mock_genesis, GENESIS_INFO};
 use libra_crypto::hash::CryptoHash;
 use libra_tools::tempdir::TempPath;
+use libra_types::block_info::BlockInfo;
 use libra_types::{
     crypto_proxies::LedgerInfoWithSignatures,
     ledger_info::LedgerInfo,
-    proptest_types::{AccountInfoUniverse, TransactionToCommitGen},
+    proptest_types::{AccountInfoUniverse, LedgerInfoWithSignaturesGen, TransactionToCommitGen},
 };
 use proptest::{collection::vec, prelude::*};
 
@@ -58,28 +59,22 @@ fn to_blocks_to_commit(
                 cur_txn_accu_hash = txn_accu_hash;
             }
 
-            let ledger_info = LedgerInfo::new(
-                cur_ver,
+            let partial_ledger_info = partial_ledger_info_with_sigs.ledger_info();
+            let signatures = partial_ledger_info_with_sigs.signatures().clone();
+            assert_eq!(cur_ver, partial_ledger_info.version());
+
+            let block_info = BlockInfo::new(
+                partial_ledger_info.epoch(),
+                partial_ledger_info.round(),
+                partial_ledger_info.consensus_block_id(),
                 cur_txn_accu_hash,
-                partial_ledger_info_with_sigs
-                    .ledger_info()
-                    .consensus_data_hash(),
-                partial_ledger_info_with_sigs
-                    .ledger_info()
-                    .consensus_block_id(),
-                partial_ledger_info_with_sigs.ledger_info().epoch(),
-                partial_ledger_info_with_sigs
-                    .ledger_info()
-                    .timestamp_usecs(),
-                partial_ledger_info_with_sigs
-                    .ledger_info()
-                    .next_validator_set()
-                    .cloned(),
+                partial_ledger_info.version(),
+                partial_ledger_info.timestamp_usecs(),
+                partial_ledger_info.next_validator_set().cloned(),
             );
-            let ledger_info_with_sigs = LedgerInfoWithSignatures::new(
-                ledger_info,
-                partial_ledger_info_with_sigs.signatures().clone(),
-            );
+            let ledger_info =
+                LedgerInfo::new(block_info, partial_ledger_info.consensus_data_hash());
+            let ledger_info_with_sigs = LedgerInfoWithSignatures::new(ledger_info, signatures);
             Ok((txns_to_commit, ledger_info_with_sigs))
         })
         .collect::<Result<Vec<_>>>()?;
@@ -99,7 +94,7 @@ prop_compose! {
         batches in vec(
             (
                 vec(any::<TransactionToCommitGen>(), 0..=2),
-                any::<LedgerInfoWithSignatures>()
+                any::<LedgerInfoWithSignaturesGen>(),
             ),
             1..10,
         ),
@@ -111,13 +106,14 @@ prop_compose! {
     {
         let partial_blocks = batches
             .into_iter()
-            .map(|(txn_gens, partial_ledger_info)| {
+            .map(|(txn_gens, ledger_info_gen)| {
+                let block_size = txn_gens.len();
                 (
                     txn_gens
                         .into_iter()
                         .map(|gen| gen.materialize(&mut universe))
                         .collect(),
-                    partial_ledger_info,
+                    ledger_info_gen.materialize(&mut universe, block_size),
                 )
             })
             .collect();

@@ -144,8 +144,8 @@ proptest! {
         let hash1 = HashValue::random();
         let hash2 = HashValue::random();
 
-        children.insert(index1, Child::new(hash1, 0 /* verison */, true));
-        children.insert(index2, Child::new(hash2, 1 /* verison */, true));
+        children.insert(index1, Child::new(hash1, 0 /* version */, true));
+        children.insert(index2, Child::new(hash2, 1 /* version */, true));
         let internal_node = InternalNode::new(children);
 
         // Internal node will have a structure below
@@ -183,8 +183,8 @@ proptest! {
         let hash1 = HashValue::random();
         let hash2 = HashValue::random();
 
-        children.insert(index1, Child::new(hash1, 0 /* verison */, true));
-        children.insert(index2, Child::new(hash2, 1 /* verison */, true));
+        children.insert(index1, Child::new(hash1, 0 /* version */, true));
+        children.insert(index2, Child::new(hash2, 1 /* version */, true));
         let internal_node = InternalNode::new(children);
 
         // Internal node will have a structure below
@@ -262,9 +262,9 @@ proptest! {
         let hash2 = HashValue::random();
         let hash3 = HashValue::random();
 
-        children.insert(index1, Child::new(hash1, 0 /* verison */, true));
-        children.insert(index2, Child::new(hash2, 1 /* verison */, true));
-        children.insert(index3, Child::new(hash3, 2 /* verison */, true));
+        children.insert(index1, Child::new(hash1, 0 /* version */, true));
+        children.insert(index2, Child::new(hash2, 1 /* version */, true));
+        children.insert(index3, Child::new(hash3, 2 /* version */, true));
         let internal_node = InternalNode::new(children);
         // Internal node will have a structure below
         //

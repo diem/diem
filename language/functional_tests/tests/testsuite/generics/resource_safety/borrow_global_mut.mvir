@@ -1,0 +1,12 @@
+module M {
+    resource Foo<T: unrestricted> { x: T }
+
+    f(): u64 {
+        let foo_ref: &mut Self.Foo<u64>;
+        foo_ref = borrow_global_mut<Foo<u64>>(0x100);
+        _ = move(foo_ref);
+        return;
+    }
+}
+
+// check: TYPE_ERROR

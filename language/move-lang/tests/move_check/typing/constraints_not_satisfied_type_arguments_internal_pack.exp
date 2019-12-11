@@ -1,0 +1,45 @@
+error: 
+
+   ┌── tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:3:5 ───
+   │
+ 8 │         Box<CupC<R>>{};
+   │         ^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+   ·
+ 8 │         Box<CupC<R>>{};
+   │         -------------- The type: 0x8675309::M::Box<0x8675309::M::CupC<0x8675309::M::R>>
+   ·
+ 3 │     resource struct R {}
+   │     -------- Is found to be a non-copyable type here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:2:20 ───
+   │
+ 8 │         Box<CupC<R>>{};
+   │             ^^^^^^^ Constraint not satisfied.
+   ·
+ 8 │         Box<CupC<R>>{};
+   │                  - The resource type '0x8675309::M::R' does not satisfy the constraint 'copyable'
+   ·
+ 3 │     resource struct R {}
+   │     -------- The type's constraint information was declared here
+   ·
+ 2 │     struct CupC<T: copyable> {}
+   │                    -------- 'copyable' constraint declared here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/constraints_not_satisfied_type_arguments_internal_pack.move:3:5 ───
+   │
+ 9 │         Box<R>{};
+   │         ^^^^^^^^ Cannot ignore resource values. The value must be used
+   ·
+ 9 │         Box<R>{};
+   │         -------- The type: 0x8675309::M::Box<0x8675309::M::R>
+   ·
+ 3 │     resource struct R {}
+   │     -------- Is found to be a non-copyable type here
+   │
+

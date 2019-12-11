@@ -1,5 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+
+#![forbid(unsafe_code)]
+
 use ir_to_bytecode::{compiler::compile_program, parser::ast};
 use lazy_static::lazy_static;
 use libra_config::config::{VMConfig, VMPublishingOption};
@@ -8,14 +11,15 @@ use libra_types::block_metadata::BlockMetadata;
 use libra_types::{
     account_address::AccountAddress,
     byte_array::ByteArray,
-    transaction::{Script, TransactionArgument, SCRIPT_HASH_LENGTH},
+    transaction::{Script, Transaction, TransactionArgument, SCRIPT_HASH_LENGTH},
 };
 use std::{collections::HashSet, iter::FromIterator};
 use stdlib::{
     stdlib_modules,
     transaction_scripts::{
-        BLOCK_PROLOGUE_TXN_BODY, CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY,
-        PEER_TO_PEER_TRANSFER_TXN_BODY, ROTATE_AUTHENTICATION_KEY_TXN_BODY,
+        ADD_VALIDATOR_TXN_BODY, BLOCK_PROLOGUE_TXN_BODY, CREATE_ACCOUNT_TXN_BODY, MINT_TXN_BODY,
+        PEER_TO_PEER_TRANSFER_TXN_BODY, PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN_BODY,
+        REGISTER_VALIDATOR_TXN_BODY, REMOVE_VALIDATOR_TXN_BODY, ROTATE_AUTHENTICATION_KEY_TXN_BODY,
         ROTATE_CONSENSUS_PUBKEY_TXN_BODY,
     },
 };
@@ -23,11 +27,17 @@ use stdlib::{
 use vm::file_format::Bytecode;
 
 lazy_static! {
+    pub static ref ADD_VALIDATOR_TXN: Vec<u8> = { compile_script(&ADD_VALIDATOR_TXN_BODY) };
     static ref PEER_TO_PEER_TXN: Vec<u8> = { compile_script(&PEER_TO_PEER_TRANSFER_TXN_BODY) };
+    static ref PEER_TO_PEER_WITH_METADATA_TXN: Vec<u8> =
+        { compile_script(&PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN_BODY) };
     static ref CREATE_ACCOUNT_TXN: Vec<u8> = { compile_script(&CREATE_ACCOUNT_TXN_BODY) };
+    pub static ref REGISTER_VALIDATOR_TXN: Vec<u8> =
+        { compile_script(&REGISTER_VALIDATOR_TXN_BODY) };
+    pub static ref REMOVE_VALIDATOR_TXN: Vec<u8> = { compile_script(&REMOVE_VALIDATOR_TXN_BODY) };
     static ref ROTATE_AUTHENTICATION_KEY_TXN: Vec<u8> =
         { compile_script(&ROTATE_AUTHENTICATION_KEY_TXN_BODY) };
-    static ref ROTATE_CONSENSUS_PUBKEY_TXN: Vec<u8> =
+    pub static ref ROTATE_CONSENSUS_PUBKEY_TXN: Vec<u8> =
         { compile_script(&ROTATE_CONSENSUS_PUBKEY_TXN_BODY) };
     static ref MINT_TXN: Vec<u8> = { compile_script(&MINT_TXN_BODY) };
     static ref BLOCK_PROLOGUE_TXN: Vec<u8> = { compile_script(&BLOCK_PROLOGUE_TXN_BODY) };
@@ -46,6 +56,16 @@ fn compile_script(body: &ast::Program) -> Vec<u8> {
     script_bytes
 }
 
+/// Encode a program adding `new_validator` to the pending validator set. Fails if the
+/// `new_validator` address is already in the validator set, already in the pending valdiator set,
+/// or does not have a `ValidatorConfig` resource stored at the address
+pub fn encode_add_validator_script(new_validator: &AccountAddress) -> Script {
+    Script::new(
+        ADD_VALIDATOR_TXN.clone(),
+        vec![TransactionArgument::Address(*new_validator)],
+    )
+}
+
 /// Encode a program transferring `amount` coins from `sender` to `recipient`. Fails if there is no
 /// account at the recipient address or if the sender's balance is lower than `amount`.
 pub fn encode_transfer_script(recipient: &AccountAddress, amount: u64) -> Script {
@@ -54,6 +74,24 @@ pub fn encode_transfer_script(recipient: &AccountAddress, amount: u64) -> Script
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U64(amount),
+        ],
+    )
+}
+
+/// Encode a program transferring `amount` coins from `sender` to `recipient` with associated
+/// metadata `metadata`. Fails if there is no account at the recipient address or if the sender's
+/// balance is lower than `amount`.
+pub fn encode_transfer_with_metadata_script(
+    recipient: &AccountAddress,
+    amount: u64,
+    metadata: Vec<u8>,
+) -> Script {
+    Script::new(
+        PEER_TO_PEER_WITH_METADATA_TXN.clone(),
+        vec![
+            TransactionArgument::Address(*recipient),
+            TransactionArgument::U64(amount),
+            TransactionArgument::ByteArray(ByteArray::new(metadata)),
         ],
     )
 }
@@ -112,6 +150,34 @@ pub fn encode_create_account_script(
     )
 }
 
+/// Encode a program registering the sender as a candidate validator with the given key information.
+/// `network_signing_pubkey` should be a Ed25519 public key
+/// `network_identity_pubkey` should be a X25519 public key
+/// `consensus_pubkey` should be a Ed25519 public c=key
+pub fn encode_register_validator_script(
+    network_signing_pubkey: Vec<u8>,
+    network_identity_pubkey: Vec<u8>,
+    consensus_pubkey: Vec<u8>,
+) -> Script {
+    Script::new(
+        REGISTER_VALIDATOR_TXN.clone(),
+        vec![
+            TransactionArgument::ByteArray(ByteArray::new(network_signing_pubkey)),
+            TransactionArgument::ByteArray(ByteArray::new(network_identity_pubkey)),
+            TransactionArgument::ByteArray(ByteArray::new(consensus_pubkey)),
+        ],
+    )
+}
+
+/// Encode a program adding `to_remove` to the set of pending validator removals. Fails if
+/// the `to_remove` address is already in the validator set or already in the pending removals.
+pub fn encode_remove_validator_script(to_remove: &AccountAddress) -> Script {
+    Script::new(
+        ADD_VALIDATOR_TXN.clone(),
+        vec![TransactionArgument::Address(*to_remove)],
+    )
+}
+
 /// Encode a program that rotates the sender's consensus public key to `new_key`.
 pub fn encode_rotate_consensus_pubkey_script(new_key: Vec<u8>) -> Script {
     Script::new(
@@ -120,12 +186,13 @@ pub fn encode_rotate_consensus_pubkey_script(new_key: Vec<u8>) -> Script {
     )
 }
 
-/// Encode a program that rotates the sender's authentication key to `new_key`.
-pub fn rotate_authentication_key_script(new_key: AccountAddress) -> Script {
+/// Encode a program that rotates the sender's authentication key to `new_key`. `new_key` should be
+/// a 256 bit sha3 hash of an ed25519 public key.
+pub fn rotate_authentication_key_script(new_hashed_key: Vec<u8>) -> Script {
     Script::new(
         ROTATE_AUTHENTICATION_KEY_TXN.clone(),
         vec![TransactionArgument::ByteArray(ByteArray::new(
-            new_key.as_ref().to_vec(),
+            new_hashed_key,
         ))],
     )
 }
@@ -143,40 +210,43 @@ pub fn encode_mint_script(sender: &AccountAddress, amount: u64) -> Script {
 }
 
 // TODO: this should go away once we are no longer using it in tests
-/// Encode a program creating `amount` coins for sender
-pub fn encode_block_prologue_script(block_metadata: BlockMetadata) -> Script {
-    let (id, timestamp, previous_vote, proposer) = block_metadata.into_inner().unwrap();
-    Script::new(
-        BLOCK_PROLOGUE_TXN.clone(),
-        vec![
-            TransactionArgument::U64(timestamp),
-            TransactionArgument::ByteArray(id),
-            TransactionArgument::ByteArray(previous_vote),
-            TransactionArgument::Address(proposer),
-        ],
-    )
+pub fn encode_block_prologue_script(block_metadata: BlockMetadata) -> Transaction {
+    Transaction::BlockMetadata(block_metadata)
 }
 
 /// Returns a user friendly mnemonic for the transaction type if the transaction is
 /// for a known, white listed, transaction.
 pub fn get_transaction_name(code: &[u8]) -> String {
-    if code == &PEER_TO_PEER_TXN[..] {
+    if code == &ADD_VALIDATOR_TXN[..] {
+        return "add_validator_transaction".to_string();
+    } else if code == &PEER_TO_PEER_TXN[..] {
         return "peer_to_peer_transaction".to_string();
+    } else if code == &PEER_TO_PEER_WITH_METADATA_TXN[..] {
+        return "peer_to_peer_with_metadata_transaction".to_string();
     } else if code == &CREATE_ACCOUNT_TXN[..] {
         return "create_account_transaction".to_string();
     } else if code == &MINT_TXN[..] {
         return "mint_transaction".to_string();
+    } else if code == &REMOVE_VALIDATOR_TXN[..] {
+        return "remove_validator_transaction".to_string();
     } else if code == &ROTATE_AUTHENTICATION_KEY_TXN[..] {
         return "rotate_authentication_key_transaction".to_string();
+    } else if code == &ROTATE_CONSENSUS_PUBKEY_TXN[..] {
+        return "rotate_consensus_pubkey_transaction".to_string();
     }
     "<unknown transaction>".to_string()
 }
 
 pub fn allowing_script_hashes() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
     vec![
+        ADD_VALIDATOR_TXN.clone(),
         MINT_TXN.clone(),
         PEER_TO_PEER_TXN.clone(),
+        PEER_TO_PEER_WITH_METADATA_TXN.clone(),
+        REMOVE_VALIDATOR_TXN.clone(),
+        REGISTER_VALIDATOR_TXN.clone(),
         ROTATE_AUTHENTICATION_KEY_TXN.clone(),
+        ROTATE_CONSENSUS_PUBKEY_TXN.clone(),
         CREATE_ACCOUNT_TXN.clone(),
     ]
     .into_iter()

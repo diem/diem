@@ -7,17 +7,16 @@
 //! over how the internal queueing in the channel happens and how we schedule messages
 //! to be sent out from this channel.
 //! Internally, it uses the `PerKeyQueue` to store messages
-use std::pin::Pin;
-use std::sync::{Arc, Mutex};
-use std::task::Waker;
-
-use crate::message_queues::{Counters, PerKeyQueue, QueueStyle};
-use failure::prelude::*;
-use futures::async_await::FusedStream;
-use futures::stream::Stream;
-use futures::task::Context;
-use futures::Poll;
-use std::hash::Hash;
+use crate::message_queues::{PerKeyQueue, QueueStyle};
+use anyhow::{ensure, Result};
+use futures::{async_await::FusedStream, stream::Stream};
+use libra_metrics::IntCounterVec;
+use std::{
+    hash::Hash,
+    pin::Pin,
+    sync::{Arc, Mutex},
+    task::{Context, Poll, Waker},
+};
 
 /// SharedState is a data structure private to this module which is
 /// shared by the sender and receiver.
@@ -50,7 +49,7 @@ impl<K: Eq + Hash + Clone, M> Sender<K, M> {
     /// This adds the message into the internal queue data structure. This is a
     /// synchronous call.
     /// TODO: We can have this return a boolean if the queue of a key is capacity
-    pub fn push(&mut self, key: K, message: M) -> failure::Result<()> {
+    pub fn push(&mut self, key: K, message: M) -> Result<()> {
         let mut shared_state = self.shared_state.lock().unwrap();
         ensure!(!shared_state.receiver_dropped, "Channel is closed");
         shared_state.internal_queue.push(key, message);
@@ -121,7 +120,7 @@ impl<K: Eq + Hash + Clone, M> FusedStream for Receiver<K, M> {
 pub fn new<K: Eq + Hash + Clone, M>(
     queue_style: QueueStyle,
     max_queue_size_per_key: usize,
-    counters: Option<Counters>,
+    counters: Option<&'static IntCounterVec>,
 ) -> (Sender<K, M>, Receiver<K, M>) {
     let shared_state = Arc::new(Mutex::new(SharedState {
         internal_queue: PerKeyQueue::new(queue_style, max_queue_size_per_key, counters),

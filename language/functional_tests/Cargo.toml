@@ -9,7 +9,7 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-failure = { path = "../../common/failure-ext", version = "0.1.0", package = "libra-failure-ext" }
+anyhow = "1.0"
 ir-to-bytecode-syntax = { path = "../compiler/ir-to-bytecode/syntax", version = "0.1.0" }
 ir-to-bytecode = { path = "../compiler/ir-to-bytecode", version = "0.1.0" }
 stdlib = { path = "../stdlib", version = "0.1.0" }
@@ -22,6 +22,9 @@ libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 filecheck = "0.4.0"
 lazy_static = "1.3.0"
 regex = { version = "1.3.0", default-features = false, features = ["std", "perf"] }
+thiserror = "1.0"
+aho-corasick = "0.7.6"
+termcolor = "1.0.5"
 
 [dev-dependencies]
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }

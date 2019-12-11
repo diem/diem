@@ -1,11 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Proto crate for shared mempool
 
 pub mod proto;
 use crate::proto::mempool_status::MempoolAddTransactionStatusCode;
-use failure::prelude::*;
+use anyhow::{Error, Result};
 use std::convert::TryFrom;
 
 /// Status of transaction insertion operation

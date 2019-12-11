@@ -1,8 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use crate::{file_format::*, vm_string::VMStr};
-use failure::*;
+use anyhow::{bail, format_err, Result};
 use hex;
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::IdentStr};
 use std::{collections::VecDeque, fmt};

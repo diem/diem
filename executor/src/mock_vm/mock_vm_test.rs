@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{balance_ap, encode_mint_transaction, encode_transfer_transaction, seqnum_ap, MockVM};
-use failure::Result;
+use anyhow::Result;
 use libra_config::config::VMConfig;
 use libra_state_view::StateView;
 use libra_types::{

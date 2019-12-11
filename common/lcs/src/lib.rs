@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! # Libra Canonical Serialization (LCS)
 //!
 //! LCS defines a deterministic means for translating a message or data structure into bytes

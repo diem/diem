@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
 #![deny(missing_docs)]
 #![recursion_limit = "1024"]
 
@@ -11,11 +12,19 @@
 //! 1. SubmitTransaction, to submit transaction to associated validator.
 //! 2. UpdateToLatestLedger, to query storage, e.g. account state, transaction log, and proofs.
 
+#[macro_use]
+extern crate prometheus;
+
+#[cfg(test)]
+#[path = "unit_tests/admission_control_service_test.rs"]
+mod admission_control_service_test;
+
 #[cfg(feature = "fuzzing")]
 /// Fuzzer for admission control
 pub mod admission_control_fuzzing;
 /// AC gRPC service.
 pub mod admission_control_service;
+mod counters;
 #[cfg(feature = "fuzzing")]
 /// Useful Mocks
 pub mod mocks;
@@ -23,12 +32,6 @@ pub mod mocks;
 pub mod runtime;
 /// Handler for sending transaction write requests upstream if needed
 mod upstream_proxy;
-use lazy_static::lazy_static;
-use libra_metrics::OpMetrics;
 
 use libra_types::account_address::AccountAddress;
 type PeerId = AccountAddress;
-
-lazy_static! {
-    static ref OP_COUNTERS: OpMetrics = OpMetrics::new_and_registered("admission_control");
-}

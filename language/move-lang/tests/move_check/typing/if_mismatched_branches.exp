@@ -1,0 +1,126 @@
+error: 
+
+   ┌── tests/move_check/typing/if_mismatched_branches.move:3:9 ───
+   │
+ 3 │         if (cond) () else 0;
+   │         ^^^^^^^^^^^^^^^^^^^ Incompatible branches
+   ·
+ 3 │         if (cond) () else 0;
+   │                   -- The type: '()'
+   ·
+ 3 │         if (cond) () else 0;
+   │                           - Is not compatible with: 'u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/if_mismatched_branches.move:4:9 ───
+   │
+ 4 │         if (cond) 0 else ();
+   │         ^^^^^^^^^^^^^^^^^^^ Incompatible branches
+   ·
+ 4 │         if (cond) 0 else ();
+   │                   - The type: 'u64'
+   ·
+ 4 │         if (cond) 0 else ();
+   │                          -- Is not compatible with: '()'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/if_mismatched_branches.move:8:9 ───
+   │
+ 8 │         if (cond) 0x0 else 0;
+   │         ^^^^^^^^^^^^^^^^^^^^ Incompatible branches
+   ·
+ 8 │         if (cond) 0x0 else 0;
+   │                   --- The type: 'address'
+   ·
+ 8 │         if (cond) 0x0 else 0;
+   │                            - Is not compatible with: 'u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/if_mismatched_branches.move:9:9 ───
+   │
+ 9 │         if (cond) 0 else false;
+   │         ^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
+   ·
+ 9 │         if (cond) 0 else false;
+   │                   - The type: 'u64'
+   ·
+ 9 │         if (cond) 0 else false;
+   │                          ----- Is not compatible with: 'bool'
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/if_mismatched_branches.move:13:9 ───
+    │
+ 13 │         if (cond) (0, false) else (1, 1);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
+    ·
+ 13 │         if (cond) (0, false) else (1, 1);
+    │                       ----- The type: 'bool'
+    ·
+ 13 │         if (cond) (0, false) else (1, 1);
+    │                                       - Is not compatible with: 'u64'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/if_mismatched_branches.move:14:9 ───
+    │
+ 14 │         if (cond) (0, false) else (false, false);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
+    ·
+ 14 │         if (cond) (0, false) else (false, false);
+    │                    - The type: 'u64'
+    ·
+ 14 │         if (cond) (0, false) else (false, false);
+    │                                    ----- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/if_mismatched_branches.move:15:9 ───
+    │
+ 15 │         if (cond) (0, false) else (true, 0x0);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
+    ·
+ 15 │         if (cond) (0, false) else (true, 0x0);
+    │                    - The type: 'u64'
+    ·
+ 15 │         if (cond) (0, false) else (true, 0x0);
+    │                                    ---- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/if_mismatched_branches.move:19:9 ───
+    │
+ 19 │         if (cond) (0, false, 0) else (0, false);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
+    ·
+ 19 │         if (cond) (0, false, 0) else (0, false);
+    │                   ------------- The type: '(u64,bool,u64)'
+    ·
+ 19 │         if (cond) (0, false, 0) else (0, false);
+    │                                      ---------- Is not compatible with: '(u64,bool)'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/if_mismatched_branches.move:20:9 ───
+    │
+ 20 │         if (cond) (0, false) else (0, false, 0);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
+    ·
+ 20 │         if (cond) (0, false) else (0, false, 0);
+    │                   ---------- The type: '(u64,bool)'
+    ·
+ 20 │         if (cond) (0, false) else (0, false, 0);
+    │                                   ------------- Is not compatible with: '(u64,bool,u64)'
+    │
+
