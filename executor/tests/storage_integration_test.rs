@@ -412,7 +412,7 @@ fn test_execution_with_storage() {
     verify_update_to_latest_ledger_response(
         &mut EpochInfo {
             epoch: 0,
-            verifier: ValidatorVerifier::new(BTreeMap::new()),
+            verifier: Arc::new(ValidatorVerifier::new(BTreeMap::new())),
         },
         0,
         &request_items,
@@ -622,7 +622,7 @@ fn test_execution_with_storage() {
     verify_update_to_latest_ledger_response(
         &mut EpochInfo {
             epoch: 0,
-            verifier: ValidatorVerifier::new(BTreeMap::new()),
+            verifier: Arc::new(ValidatorVerifier::new(BTreeMap::new())),
         },
         0,
         &request_items,

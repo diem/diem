@@ -48,7 +48,8 @@ use futures::{
 use libra_crypto::HashValue;
 use libra_types::block_info::BlockInfo;
 use libra_types::crypto_proxies::{
-    random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
+    random_validator_verifier, EpochInfo, LedgerInfoWithSignatures, ValidatorSigner,
+    ValidatorVerifier,
 };
 use network::{
     proto::{ConsensusMsg, ConsensusMsg_oneof},
@@ -56,6 +57,7 @@ use network::{
 };
 use prost::Message as _;
 use safety_rules::{ConsensusState, OnDiskStorage, SafetyRules};
+use std::sync::RwLock;
 use std::{collections::HashMap, convert::TryFrom, path::PathBuf, sync::Arc, time::Duration};
 use tempfile::NamedTempFile;
 use tokio::runtime::Handle;
@@ -141,10 +143,12 @@ impl NodeSetup {
             initial_data.validators(),
         );
         let (task, _receiver) = NetworkTask::<TestPayload>::new(
-            0,
+            Arc::new(RwLock::new(EpochInfo {
+                epoch: 0,
+                verifier: initial_data.validators(),
+            })),
             network_events,
             self_receiver,
-            initial_data.validators(),
         );
         executor.spawn(task.start());
         let last_vote_sent = initial_data.last_vote();

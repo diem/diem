@@ -336,6 +336,7 @@ use consensus_types::block_retrieval::{
 use libra_crypto::HashValue;
 #[cfg(test)]
 use libra_types::crypto_proxies::random_validator_verifier;
+use libra_types::crypto_proxies::EpochInfo;
 use std::convert::{TryFrom, TryInto};
 
 #[test]
@@ -357,8 +358,14 @@ fn test_network_api() {
         playground.add_node(*peer, consensus_tx, network_reqs_rx);
         let (self_sender, self_receiver) = channel::new_test(8);
         let node = NetworkSender::new(*peer, network_sender, self_sender, Arc::clone(&validators));
-        let (task, receiver) =
-            NetworkTask::new(1, network_events, self_receiver, Arc::clone(&validators));
+        let (task, receiver) = NetworkTask::new(
+            Arc::new(RwLock::new(EpochInfo {
+                epoch: 1,
+                verifier: Arc::clone(&validators),
+            })),
+            network_events,
+            self_receiver,
+        );
         receivers.push(receiver);
         runtime.handle().spawn(task.start());
         nodes.push(node);
@@ -424,8 +431,14 @@ fn test_rpc() {
             self_sender,
             Arc::clone(&validators),
         );
-        let (task, receiver) =
-            NetworkTask::new(1, network_events, self_receiver, Arc::clone(&validators));
+        let (task, receiver) = NetworkTask::new(
+            Arc::new(RwLock::new(EpochInfo {
+                epoch: 1,
+                verifier: Arc::clone(&validators),
+            })),
+            network_events,
+            self_receiver,
+        );
         senders.push(network_sender);
         receivers.push(receiver);
         runtime.handle().spawn(task.start());

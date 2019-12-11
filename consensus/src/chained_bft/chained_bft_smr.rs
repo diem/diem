@@ -20,6 +20,8 @@ use consensus_types::common::{Payload, Round};
 use futures::{select, stream::StreamExt};
 use libra_config::config::{ConsensusConfig, ConsensusProposerType, SafetyRulesConfig};
 use libra_logger::prelude::*;
+use libra_types::crypto_proxies::EpochInfo;
+use std::sync::RwLock;
 use std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -182,10 +184,12 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
         let signer = Arc::new(initial_setup.signer);
-        let epoch = initial_data.epoch();
-        let validators = initial_data.validators();
+        let epoch_info = Arc::new(RwLock::new(EpochInfo {
+            epoch: initial_data.epoch(),
+            verifier: initial_data.validators(),
+        }));
         let mut epoch_mgr = EpochManager::new(
-            epoch,
+            Arc::clone(&epoch_info),
             self.config.take().expect("already started, config is None"),
             time_service,
             self_sender,
@@ -203,12 +207,8 @@ impl<T: Payload> StateMachineReplication for ChainedBftSMR<T> {
         // TODO: this is test only, we should remove this
         self.block_store = Some(event_processor.block_store());
 
-        let (network_task, network_receiver) = NetworkTask::new(
-            epoch,
-            initial_setup.network_events,
-            self_receiver,
-            validators,
-        );
+        let (network_task, network_receiver) =
+            NetworkTask::new(epoch_info, initial_setup.network_events, self_receiver);
 
         Self::start_event_processing(
             executor.clone(),

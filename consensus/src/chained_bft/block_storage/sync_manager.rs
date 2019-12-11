@@ -163,7 +163,8 @@ impl<T: Payload> BlockStore<T> {
             .save_tree(blocks.clone(), quorum_certs.clone())?;
         let pre_sync_instance = Instant::now();
         self.state_computer
-            .sync_to_or_bail(highest_commit_cert.ledger_info().clone());
+            .sync_to(highest_commit_cert.ledger_info().clone())
+            .await?;
         counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());
         let (root, root_executed_trees, blocks, quorum_certs) = self.storage.start().take();
         debug!("{}Sync to{} {}", Fg(Blue), Fg(Reset), root.0);

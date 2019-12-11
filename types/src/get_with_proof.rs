@@ -25,6 +25,7 @@ use crate::{
 use anyhow::{bail, ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
+use std::sync::Arc;
 use std::{
     cmp,
     convert::{TryFrom, TryInto},
@@ -209,11 +210,13 @@ pub fn verify_update_to_latest_ledger_response(
             .verify(current_epoch_info.epoch, &current_epoch_info.verifier)?;
         let new_epoch_info = EpochInfo {
             epoch: epoch_change_li.ledger_info().epoch() + 1,
-            verifier: epoch_change_li
-                .ledger_info()
-                .next_validator_set()
-                .ok_or_else(|| format_err!("No ValidatorSet in EpochProof"))?
-                .into(),
+            verifier: Arc::new(
+                epoch_change_li
+                    .ledger_info()
+                    .next_validator_set()
+                    .ok_or_else(|| format_err!("No ValidatorSet in EpochProof"))?
+                    .into(),
+            ),
         };
         ledger_info_with_sigs.verify(&new_epoch_info.verifier)?;
         Ok(Some(new_epoch_info))

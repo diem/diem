@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::counters;
-use anyhow::{bail, ensure};
+use anyhow::ensure;
 use bytes::Bytes;
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse};
@@ -16,7 +16,7 @@ use consensus_types::{
 use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
-use libra_types::crypto_proxies::ValidatorChangeEventWithProof;
+use libra_types::crypto_proxies::{EpochInfo, ValidatorChangeEventWithProof};
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier};
 use libra_types::proto::types::ValidatorChangeEventWithProof as ValidatorChangeEventWithProofProto;
 use network::{
@@ -27,6 +27,7 @@ use network::{
     validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender, Event, RpcError},
 };
 use std::cmp::Ordering;
+use std::sync::RwLock;
 use std::{
     convert::{TryFrom, TryInto},
     sync::Arc,
@@ -113,7 +114,7 @@ impl NetworkSender {
             .verify(
                 retrieval_request.block_id(),
                 retrieval_request.num_blocks(),
-                self.validators.as_ref(),
+                &self.validators,
             )
             .map_err(|e| {
                 security_log(SecurityEvent::InvalidRetrievedBlock)
@@ -271,7 +272,7 @@ impl NetworkSender {
 }
 
 pub struct NetworkTask<T> {
-    epoch: u64,
+    epoch_info: Arc<RwLock<EpochInfo>>,
     proposal_tx: libra_channel::Sender<AccountAddress, ProposalMsg<T>>,
     vote_tx: libra_channel::Sender<AccountAddress, VoteMsg>,
     block_request_tx: libra_channel::Sender<AccountAddress, IncomingBlockRetrievalRequest>,
@@ -281,16 +282,14 @@ pub struct NetworkTask<T> {
     epoch_retrieval_tx:
         libra_channel::Sender<AccountAddress, (EpochRetrievalRequest, AccountAddress)>,
     all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,
-    validators: Arc<ValidatorVerifier>,
 }
 
 impl<T: Payload> NetworkTask<T> {
     /// Establishes the initial connections with the peers and returns the receivers.
     pub fn new(
-        epoch: u64,
+        epoch_info: Arc<RwLock<EpochInfo>>,
         network_events: ConsensusNetworkEvents,
         self_receiver: channel::Receiver<anyhow::Result<Event<ConsensusMsg>>>,
-        validators: Arc<ValidatorVerifier>,
     ) -> (NetworkTask<T>, NetworkReceivers<T>) {
         let (proposal_tx, proposal_rx) =
             libra_channel::new(QueueStyle::LIFO, 1, Some(&counters::PROPOSAL_CHANNEL_MSGS));
@@ -316,7 +315,7 @@ impl<T: Payload> NetworkTask<T> {
         let all_events = Box::new(select(network_events, self_receiver));
         (
             NetworkTask {
-                epoch,
+                epoch_info,
                 proposal_tx,
                 vote_tx,
                 block_request_tx,
@@ -325,7 +324,6 @@ impl<T: Payload> NetworkTask<T> {
                 different_epoch_tx,
                 epoch_retrieval_tx,
                 all_events,
-                validators,
             },
             NetworkReceivers {
                 proposals: proposal_rx,
@@ -337,6 +335,10 @@ impl<T: Payload> NetworkTask<T> {
                 epoch_retrieval: epoch_retrieval_rx,
             },
         )
+    }
+
+    fn epoch(&self) -> u64 {
+        self.epoch_info.read().unwrap().epoch
     }
 
     pub async fn start(mut self) {
@@ -405,14 +407,14 @@ impl<T: Payload> NetworkTask<T> {
         proposal: Proposal,
     ) -> anyhow::Result<()> {
         let proposal = ProposalUncheckedSignatures::<T>::try_from(proposal)?;
-        if proposal.epoch() != self.epoch {
+        if proposal.epoch() != self.epoch() {
             return self
                 .different_epoch_tx
                 .push(peer_id, (proposal.epoch(), peer_id));
         }
 
         let proposal = proposal
-            .validate_signatures(self.validators.as_ref())?
+            .validate_signatures(&self.epoch_info.read().unwrap().verifier)?
             .verify_well_formed()?;
         ensure!(
             proposal.proposal().author() == Some(peer_id),
@@ -434,20 +436,22 @@ impl<T: Payload> NetworkTask<T> {
             "vote received must be from the sending peer"
         );
 
-        if vote_msg.epoch() != self.epoch {
+        if vote_msg.epoch() != self.epoch() {
             return self
                 .different_epoch_tx
                 .push(peer_id, (vote_msg.epoch(), peer_id));
         }
 
         debug!("Received {}", vote_msg);
-        vote_msg.verify(self.validators.as_ref()).map_err(|e| {
-            security_log(SecurityEvent::InvalidConsensusVote)
-                .error(&e)
-                .data(&vote_msg)
-                .log();
-            e
-        })?;
+        vote_msg
+            .verify(&self.epoch_info.read().unwrap().verifier)
+            .map_err(|e| {
+                security_log(SecurityEvent::InvalidConsensusVote)
+                    .error(&e)
+                    .data(&vote_msg)
+                    .log();
+                e
+            })?;
         self.vote_tx.push(peer_id, vote_msg)
     }
 
@@ -457,7 +461,7 @@ impl<T: Payload> NetworkTask<T> {
         peer_id: AccountAddress,
     ) -> anyhow::Result<()> {
         let sync_info = SyncInfo::try_from(sync_info)?;
-        match sync_info.epoch().cmp(&self.epoch) {
+        match sync_info.epoch().cmp(&self.epoch()) {
             Ordering::Equal => {
                 // SyncInfo verification is postponed to the moment it's actually used.
                 self.sync_info_tx.push(peer_id, (sync_info, peer_id))
@@ -490,16 +494,14 @@ impl<T: Payload> NetworkTask<T> {
     ) -> anyhow::Result<()> {
         let proof = ValidatorChangeEventWithProof::try_from(proof)?;
         let msg_epoch = proof.epoch()?;
-        match msg_epoch.cmp(&self.epoch) {
+        match msg_epoch.cmp(&self.epoch()) {
             Ordering::Equal => {
-                let target_ledger_info = proof.verify(self.epoch, &self.validators)?;
-                let validators = match target_ledger_info.ledger_info().next_validator_set() {
-                    Some(v) => v.into(),
-                    None => bail!("Epoch change doesn't carry next validator set"),
-                };
-                self.epoch = target_ledger_info.ledger_info().epoch() + 1;
-                debug!("Received epoch change to {}", self.epoch);
-                self.validators = Arc::new(validators);
+                let rlock = self.epoch_info.read().unwrap();
+                let target_ledger_info = proof.verify(rlock.epoch, &rlock.verifier)?;
+                debug!(
+                    "Received epoch change to {}",
+                    target_ledger_info.ledger_info().epoch() + 1
+                );
                 self.epoch_change_tx.push(peer_id, target_ledger_info)
             }
             Ordering::Less | Ordering::Greater => {
@@ -518,7 +520,7 @@ impl<T: Payload> NetworkTask<T> {
             "Received epoch retrieval from peer {}, start epoch {}, end epoch {}",
             peer_id, request.start_epoch, request.end_epoch
         );
-        match request.end_epoch.cmp(&self.epoch) {
+        match request.end_epoch.cmp(&self.epoch()) {
             Ordering::Less | Ordering::Equal => {
                 self.epoch_retrieval_tx.push(peer_id, (request, peer_id))
             }

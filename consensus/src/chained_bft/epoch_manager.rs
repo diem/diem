@@ -20,19 +20,21 @@ use futures::executor::block_on;
 use libra_config::config::{ConsensusProposerType, SafetyRulesBackend};
 use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
-use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
+use libra_types::crypto_proxies::{
+    EpochInfo, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
+};
 use network::proto::ConsensusMsg;
 use network::proto::ConsensusMsg_oneof;
 use network::validator_network::{ConsensusNetworkSender, Event};
 use safety_rules::{InMemoryStorage, OnDiskStorage, SafetyRules};
 use std::cmp::Ordering;
 use std::convert::TryInto;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 // Manager the components that shared across epoch and spawn per-epoch EventProcessor with
 // epoch-specific input.
 pub struct EpochManager<T> {
-    epoch: u64,
+    epoch_info: Arc<RwLock<EpochInfo>>,
     config: ChainedBftSMRConfig,
     time_service: Arc<ClockTimeService>,
     self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
@@ -48,7 +50,7 @@ pub struct EpochManager<T> {
 
 impl<T: Payload> EpochManager<T> {
     pub fn new(
-        epoch: u64,
+        epoch_info: Arc<RwLock<EpochInfo>>,
         config: ChainedBftSMRConfig,
         time_service: Arc<ClockTimeService>,
         self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
@@ -60,7 +62,7 @@ impl<T: Payload> EpochManager<T> {
         signer: Arc<ValidatorSigner>,
     ) -> Self {
         Self {
-            epoch,
+            epoch_info,
             config,
             time_service,
             self_sender,
@@ -71,6 +73,10 @@ impl<T: Payload> EpochManager<T> {
             storage,
             signer,
         }
+    }
+
+    fn epoch(&self) -> u64 {
+        self.epoch_info.read().unwrap().epoch
     }
 
     fn create_pacemaker(
@@ -144,13 +150,13 @@ impl<T: Payload> EpochManager<T> {
     }
 
     pub async fn process_different_epoch(&mut self, different_epoch: u64, peer_id: AccountAddress) {
-        match different_epoch.cmp(&self.epoch) {
+        match different_epoch.cmp(&self.epoch()) {
             // We try to help nodes that have lower epoch than us
             Ordering::Less => {
                 self.process_epoch_retrieval(
                     EpochRetrievalRequest {
                         start_epoch: different_epoch,
-                        end_epoch: self.epoch,
+                        end_epoch: self.epoch(),
                     },
                     peer_id,
                 )
@@ -159,7 +165,7 @@ impl<T: Payload> EpochManager<T> {
             // We request proof to join higher epoch
             Ordering::Greater => {
                 let request = EpochRetrievalRequest {
-                    start_epoch: self.epoch,
+                    start_epoch: self.epoch(),
                     end_epoch: different_epoch,
                 };
                 let msg = match request.try_into() {
@@ -186,9 +192,14 @@ impl<T: Payload> EpochManager<T> {
 
     pub fn start_new_epoch(&mut self, ledger_info: LedgerInfoWithSignatures) -> EventProcessor<T> {
         // make sure storage is on this ledger_info too, it should be no-op if it's already committed
-        self.state_computer.sync_to_or_bail(ledger_info.clone());
+        if let Err(e) = block_on(self.state_computer.sync_to(ledger_info.clone())) {
+            error!("State sync to new epoch {} failed with {:?}, we'll try to start from current libradb", ledger_info, e);
+        }
         let initial_data = self.storage.start();
-        self.epoch = initial_data.epoch();
+        *self.epoch_info.write().unwrap() = EpochInfo {
+            epoch: initial_data.epoch(),
+            verifier: initial_data.validators(),
+        };
         self.start_epoch(self.signer.clone(), initial_data)
     }
 
@@ -198,12 +209,13 @@ impl<T: Payload> EpochManager<T> {
         initial_data: RecoveryData<T>,
     ) -> EventProcessor<T> {
         let validators = initial_data.validators();
-        counters::EPOCH.set(self.epoch as i64);
+        let epoch = self.epoch();
+        counters::EPOCH.set(epoch as i64);
         counters::CURRENT_EPOCH_VALIDATORS.set(validators.len() as i64);
         counters::CURRENT_EPOCH_QUORUM_SIZE.set(validators.quorum_voting_power() as i64);
         info!(
             "Start EventProcessor with epoch {} with genesis {}, validators {}",
-            self.epoch,
+            epoch,
             initial_data.root_block(),
             validators,
         );
@@ -252,7 +264,7 @@ impl<T: Payload> EpochManager<T> {
         let pacemaker =
             self.create_pacemaker(self.time_service.clone(), self.timeout_sender.clone());
 
-        let proposer_election = self.create_proposer_election(self.epoch, &validators);
+        let proposer_election = self.create_proposer_election(epoch, &validators);
         let network_sender = NetworkSender::new(
             author,
             self.network_sender.clone(),
