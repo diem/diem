@@ -98,7 +98,8 @@ impl FullNodeConfig {
         self
     }
 
-    pub fn template(&mut self, template: NodeConfig) -> &mut Self {
+    pub fn template(&mut self, mut template: NodeConfig) -> &mut Self {
+        template.base.role = RoleType::FullNode;
         self.template = template;
         self
     }

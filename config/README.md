@@ -22,11 +22,8 @@ Libra Configuration is broken up into many utilities:
   full node set
 - src/keys specifies means for storing and accessing keys from within
   configurations
-- config-builder extends src/generation with a command-line utility and
-  support for generating genesis
-- dynamic-config-builder is the next generation of config-builder that
-  supports deterministic generation of run-time usable configurations for
-bootstrapping (test) networks
+- config-builder extends src/generation with a Rust and command-line utility
+  and support for generating genesis
 - generate-keypair generates Ed25519 key pairs in LCS format
 
 The separation of the config-builder into its own crate was dicated by the
@@ -36,11 +33,10 @@ configuration from many of the services.
 
 ## Building a Test Network
 
-dynamic-config-builder builds a single nodes configuration within a network
-or swarm of nodes. This can be used to create a LIbra TestNet or to add a
-FullNetwork to an existing Network. In addition, it enables generation of a
-mint / faucet client capable of performing mint transactions / creating
-accounts.
+config-builder builds a single nodes configuration within a network or swarm of
+nodes. This can be used to create a LIbra TestNet or to add a FullNetwork to an
+existing Network. In addition, it enables generation of a mint / faucet client
+capable of performing mint transactions / creating accounts.
 
 ## Generating a new TestNet
 

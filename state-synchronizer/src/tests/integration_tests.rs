@@ -7,7 +7,7 @@ use crate::{
     SynchronizerState,
 };
 use anyhow::{bail, Result};
-use config_builder::util::get_test_config;
+use config_builder;
 use executor::ExecutedTrees;
 use futures::{executor::block_on, future::FutureExt, Future};
 use libra_config::config::RoleType;
@@ -250,7 +250,7 @@ impl SynchronizerEnv {
         runtime.handle().spawn(network_provider.start());
 
         // create synchronizers
-        let mut config = get_test_config().0;
+        let mut config = config_builder::test_config().0;
         if !role.is_validator() {
             let mut network = config.validator_network.unwrap();
             network.set_default_peer_id();
@@ -285,7 +285,7 @@ impl SynchronizerEnv {
             StateSynchronizer::bootstrap_with_executor_proxy(
                 vec![(sender_b, events_b)],
                 role,
-                &get_test_config().0.state_sync,
+                &config_builder::test_config().0.state_sync,
                 MockExecutorProxy::new(handler, storage_proxies[1].clone()),
             ),
         ];

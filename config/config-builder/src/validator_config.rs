@@ -186,6 +186,12 @@ impl BuildSwarm for ValidatorConfig {
     }
 }
 
+pub fn test_config() -> (NodeConfig, Ed25519PrivateKey) {
+    let validator_config = ValidatorConfig::new();
+    let (mut configs, key) = validator_config.build_swarm().unwrap();
+    (configs.swap_remove(0), key)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

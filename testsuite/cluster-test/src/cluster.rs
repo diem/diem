@@ -5,7 +5,7 @@
 
 use crate::{aws::Aws, instance::Instance};
 use anyhow::{ensure, format_err, Result};
-use dynamic_config_builder::ValidatorConfig;
+use config_builder::ValidatorConfig;
 use generate_keypair::load_key_from_file;
 use libra_config::config::AdmissionControlConfig;
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};

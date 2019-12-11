@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use dynamic_config_builder::FullNodeConfig;
+use config_builder::FullNodeConfig;
 use libra_config::config::{NodeConfig, PersistableConfig};
 use parity_multiaddr::Multiaddr;
 use std::{convert::TryInto, fs, path::PathBuf};

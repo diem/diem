@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{ensure, format_err, Result};
-use config_builder::util::get_test_config;
+use config_builder;
 use executor::{ExecutedTrees, Executor};
 use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_config::config::{NodeConfig, VMConfig, VMPublishingOption};
-use libra_crypto::{ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue};
+use libra_crypto::{
+    ed25519::*, hash::GENESIS_BLOCK_ID, test_utils::TEST_SEED, HashValue, PrivateKey,
+};
 use libra_types::crypto_proxies::EpochInfo;
 use libra_types::{
     access_path::AccessPath,
@@ -105,7 +107,7 @@ fn test_reconfiguration() {
     // When executing a transaction emits a validator set change, storage should propagate the new
     // validator set
 
-    let (mut config, genesis_keypair) = get_test_config();
+    let (mut config, genesis_key) = config_builder::test_config();
     config.vm_config = VMConfig {
         publishing_options: VMPublishingOption::CustomScripts,
     };
@@ -129,8 +131,8 @@ fn test_reconfiguration() {
     let txn1 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 1,
-        genesis_keypair.private_key.clone(),
-        genesis_keypair.public_key.clone(),
+        genesis_key.clone(),
+        genesis_key.public_key(),
         Some(encode_transfer_script(&validator_account, 200_000)),
     );
     // rotate the validator's connsensus pubkey to trigger a reconfiguration
@@ -199,7 +201,7 @@ fn test_reconfiguration() {
 
 #[test]
 fn test_execution_with_storage() {
-    let (config, genesis_keypair) = get_test_config();
+    let (config, genesis_key) = config_builder::test_config();
     let (_storage_server_handle, executor, mut committed_trees) =
         create_storage_service_and_executor(&config);
 
@@ -227,8 +229,8 @@ fn test_execution_with_storage() {
     let txn1 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 1,
-        genesis_keypair.private_key.clone(),
-        genesis_keypair.public_key.clone(),
+        genesis_key.clone(),
+        genesis_key.public_key(),
         Some(encode_create_account_script(&account1, 2_000_000)),
     );
 
@@ -236,8 +238,8 @@ fn test_execution_with_storage() {
     let txn2 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 2,
-        genesis_keypair.private_key.clone(),
-        genesis_keypair.public_key.clone(),
+        genesis_key.clone(),
+        genesis_key.public_key(),
         Some(encode_create_account_script(&account2, 200_000)),
     );
 
@@ -245,8 +247,8 @@ fn test_execution_with_storage() {
     let txn3 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 3,
-        genesis_keypair.private_key.clone(),
-        genesis_keypair.public_key.clone(),
+        genesis_key.clone(),
+        genesis_key.public_key(),
         Some(encode_create_account_script(&account3, 100_000)),
     );
 
