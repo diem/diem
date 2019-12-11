@@ -3,8 +3,9 @@ data_dir = "/opt/libra/data"
 role = "validator"
 
 [metrics]
-dir = "metrics"
 collection_interval_ms = 1000
+dir = "metrics"
+enabled = false
 
 [execution]
 address = "localhost"
