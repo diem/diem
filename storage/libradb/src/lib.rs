@@ -488,8 +488,38 @@ impl LibraDB {
         let ledger_info = ledger_info_with_sigs.ledger_info();
         let ledger_version = ledger_info.version();
 
-        // Fulfill all request items
-        let response_items = request_items
+        // Fulfill all request items.
+        let response_items = self.get_response_items(request_items, ledger_version)?;
+
+        // TODO: cache last epoch change version to avoid a DB access in most cases.
+        let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
+        let validator_change_proof = if client_epoch < ledger_info.epoch() {
+            self.ledger_store.get_epoch_change_ledger_infos(
+                client_epoch,
+                self.ledger_store.get_epoch(ledger_info.version())?,
+            )?
+        } else {
+            Vec::new()
+        };
+
+        let ledger_consistency_proof = self
+            .ledger_store
+            .get_consistency_proof(client_known_version, ledger_version)?;
+
+        Ok((
+            response_items,
+            ledger_info_with_sigs,
+            ValidatorChangeEventWithProof::new(validator_change_proof),
+            ledger_consistency_proof,
+        ))
+    }
+
+    fn get_response_items(
+        &self,
+        request_items: Vec<RequestItem>,
+        ledger_version: Version,
+    ) -> Result<Vec<ResponseItem>> {
+        request_items
             .into_iter()
             .map(|request_item| match request_item {
                 RequestItem::GetAccountState { address } => Ok(ResponseItem::GetAccountState {
@@ -558,29 +588,7 @@ impl LibraDB {
                     })
                 }
             })
-            .collect::<Result<Vec<_>>>()?;
-
-        // TODO: cache last epoch change version to avoid a DB access in most cases.
-        let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
-        let validator_change_proof = if client_epoch < ledger_info.epoch() {
-            self.ledger_store.get_epoch_change_ledger_infos(
-                client_epoch,
-                self.ledger_store.get_epoch(ledger_info.version())?,
-            )?
-        } else {
-            Vec::new()
-        };
-
-        let ledger_consistency_proof = self
-            .ledger_store
-            .get_consistency_proof(client_known_version, ledger_version)?;
-
-        Ok((
-            response_items,
-            ledger_info_with_sigs,
-            ValidatorChangeEventWithProof::new(validator_change_proof),
-            ledger_consistency_proof,
-        ))
+            .collect::<Result<Vec<_>>>()
     }
 
     // =========================== Libra Core Internal APIs ========================================
