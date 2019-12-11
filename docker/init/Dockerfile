@@ -18,8 +18,8 @@ FROM toolchain AS builder
 
 COPY . /libra
 
-RUN cargo build --release -p config-builder -p generate-keypair && cd target/release && rm -r build deps incremental
-RUN strip target/release/libra-config target/release/generate-keypair
+RUN cargo build --release -p config-builder && cd target/release && rm -r build deps incremental
+RUN strip target/release/full-node-config-builder target/release/validator-config-builder
 
 ### Production Image ###
 FROM debian:buster AS prod
@@ -27,8 +27,8 @@ FROM debian:buster AS prod
 RUN apt-get update && apt-get install gettext-base && apt-get clean && rm -r /var/lib/apt/lists/*
 
 RUN mkdir -p /opt/libra/bin
-COPY --from=builder /libra/target/release/libra-config /opt/libra/bin
-COPY --from=builder /libra/target/release/generate-keypair /opt/libra/bin
+COPY --from=builder /libra/target/release/full-node-config-builder /opt/libra/bin
+COPY --from=builder /libra/target/release/validator-config-builder /opt/libra/bin
 
 ARG BUILD_DATE
 ARG GIT_REV
