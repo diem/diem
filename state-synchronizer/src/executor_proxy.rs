@@ -76,17 +76,18 @@ impl ExecutorProxyTrait for ExecutorProxy {
                 .get_startup_info_async()
                 .await?
                 .ok_or_else(|| format_err!("[state sync] Failed to access storage info"))?;
+
+            let current_verifier = storage_info
+                .get_validator_set()
+                .expect("No ValidatorSet found for the start of the epoch.")
+                .into();
+
             let synced_trees = if let Some(synced_tree_state) = storage_info.synced_tree_state {
                 ExecutedTrees::from(synced_tree_state)
             } else {
                 ExecutedTrees::from(storage_info.committed_tree_state)
             };
-            let current_verifier = storage_info
-                .ledger_info_with_validators
-                .ledger_info()
-                .next_validator_set()
-                .expect("No ValidatorSet found for the start of the epoch")
-                .into();
+
             Ok(SynchronizerState::new(
                 storage_info.latest_ledger_info,
                 synced_trees,

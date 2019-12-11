@@ -961,7 +961,9 @@ impl BlockInfoGen {
     pub fn materialize(self, universe: &mut AccountInfoUniverse, block_size: usize) -> BlockInfo {
         assert!(block_size > 0, "No empty blocks are allowed.");
 
-        let (epoch, next_validator_set) = if self.new_epoch {
+        let current_epoch = universe.get_epoch();
+        // The first LedgerInfo should always carry a validator set.
+        let (epoch, next_validator_set) = if current_epoch == 0 || self.new_epoch {
             (
                 universe.get_and_bump_epoch(),
                 Some(ValidatorSet::new(Vec::new())),

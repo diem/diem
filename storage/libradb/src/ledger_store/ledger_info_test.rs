@@ -113,6 +113,29 @@ proptest! {
         let expected = ledger_infos_with_sigs[index].ledger_info().epoch();
         prop_assert_eq!(actual, expected);
     }
+
+    #[test]
+    fn test_get_startup_info(ledger_infos_with_sigs in arb_ledger_infos_with_sigs()) {
+        let tmp_dir = TempPath::new();
+        let db = set_up(&tmp_dir, &ledger_infos_with_sigs);
+
+        let (actual_latest_li, actual_vs_opt) = db.ledger_store.get_startup_info().unwrap().unwrap();
+
+        let expected_latest_li = ledger_infos_with_sigs.last().unwrap();
+        prop_assert_eq!(&actual_latest_li, expected_latest_li);
+
+        if expected_latest_li.ledger_info().next_validator_set().is_some() {
+            prop_assert_eq!(actual_vs_opt, None);
+        } else {
+            let expected_vs_opt = ledger_infos_with_sigs
+                .iter()
+                .rev()
+                .filter_map(|x| x.ledger_info().next_validator_set().cloned())
+                .next()
+                .unwrap();
+            prop_assert_eq!(actual_vs_opt.unwrap(), expected_vs_opt);
+        }
+    }
 }
 
 fn set_up(path: &impl AsRef<Path>, ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) -> LibraDB {
@@ -127,6 +150,7 @@ fn set_up(path: &impl AsRef<Path>, ledger_infos_with_sigs: &[LedgerInfoWithSigna
         .collect::<Result<Vec<_>>>()
         .unwrap();
     store.db.write_schemas(cs.batch).unwrap();
+    store.set_latest_ledger_info(ledger_infos_with_sigs.last().unwrap().clone());
 
     db
 }
