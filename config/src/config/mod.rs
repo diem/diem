@@ -91,7 +91,7 @@ pub struct BaseConfig {
 impl Default for BaseConfig {
     fn default() -> BaseConfig {
         BaseConfig {
-            data_dir: PathBuf::from("/opt/libra/data"),
+            data_dir: PathBuf::from("/opt/libra/data/commmon"),
             role: RoleType::Validator,
             waypoint: None,
         }

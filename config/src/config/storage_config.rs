@@ -23,7 +23,7 @@ impl Default for StorageConfig {
             port: 6184,
             dir: PathBuf::from("libradb/db"),
             grpc_max_receive_len: Some(100_000_000),
-            data_dir: PathBuf::from("/opt/libra/data"),
+            data_dir: PathBuf::from("/opt/libra/data/common"),
         }
     }
 }

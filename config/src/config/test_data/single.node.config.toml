@@ -1,5 +1,5 @@
 [base]
-data_dir = "/opt/libra/data"
+data_dir = "/opt/libra/data/common"
 role = "validator"
 
 [metrics]
