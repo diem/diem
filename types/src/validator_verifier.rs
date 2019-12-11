@@ -281,7 +281,7 @@ impl<PublicKey> fmt::Display for ValidatorVerifier<PublicKey> {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         write!(f, "ValidatorSet: [")?;
         for (addr, info) in &self.address_to_validator_info {
-            writeln!(f, "{}: {}", addr.short_str(), info.voting_power)?;
+            write!(f, "{}: {}, ", addr.short_str(), info.voting_power)?;
         }
         write!(f, "]")
     }

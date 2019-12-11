@@ -99,13 +99,6 @@ impl TestEnvironment {
     }
 
     fn get_ac_client(&self, port: u16) -> ClientProxy {
-        let config = NodeConfig::load(&self.validator_swarm.config.config_files[0]).unwrap();
-        let validator_set_file = self
-            .validator_swarm
-            .dir
-            .as_ref()
-            .join("0")
-            .join(&config.consensus.consensus_peers_file);
         let mnemonic_file_path = self
             .mnemonic_file
             .path()
@@ -119,7 +112,6 @@ impl TestEnvironment {
         ClientProxy::new(
             "localhost",
             port,
-            validator_set_file.to_str().unwrap(),
             &self.faucet_key.1,
             false,
             /* faucet server */ None,
@@ -721,8 +713,15 @@ fn test_e2e_reconfiguration() {
         Decimal::from_f64(10.0),
         Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
     );
-    let peer_id = env.get_validator(0).unwrap().validator_peer_id().unwrap();
-    client_proxy_1.remove_validator(peer_id, true).unwrap();
+    let peer_id = env
+        .get_validator(0)
+        .unwrap()
+        .validator_peer_id()
+        .unwrap()
+        .to_string();
+    client_proxy_1
+        .remove_validator(&["remove_validator", &peer_id], true)
+        .unwrap();
     // mint another 10 coins after remove node 0
     client_proxy_1
         .mint_coins(&["mintb", "0", "10"], true)
@@ -737,7 +736,9 @@ fn test_e2e_reconfiguration() {
         Decimal::from_str(&client_proxy_0.get_balance(&["b", "0"]).unwrap()).ok()
     );
     // Add the node back
-    client_proxy_1.add_validator(peer_id, true).unwrap();
+    client_proxy_1
+        .add_validator(&["add_validator", &peer_id], true)
+        .unwrap();
     // Wait for it catches up, mint1 + remove + mint2 + add => seq == 4
     client_proxy_0.wait_for_transaction(association_address(), 4);
     assert_eq!(
