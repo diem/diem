@@ -7,7 +7,6 @@ use crate::{
 };
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray};
 use proptest::{collection::vec, prelude::*};
-use vm::vm_string::VMString;
 
 /// Strategies for property-based tests using `Value` instances.
 impl Value {
@@ -17,7 +16,6 @@ impl Value {
             any::<AccountAddress>().prop_map(Value::address),
             any::<u64>().prop_map(Value::u64),
             any::<bool>().prop_map(Value::bool),
-            any::<VMString>().prop_map(Value::string),
             any::<ByteArray>().prop_map(Value::byte_array),
         ]
     }
@@ -64,13 +62,7 @@ impl Type {
     pub fn single_value_strategy() -> impl Strategy<Value = Self> {
         use Type::*;
 
-        prop_oneof![
-            Just(Bool),
-            Just(U64),
-            Just(String),
-            Just(ByteArray),
-            Just(Address),
-        ]
+        prop_oneof![Just(Bool), Just(U64), Just(ByteArray), Just(Address),]
     }
 
     /// Generate either a primitive Value or a Struct.

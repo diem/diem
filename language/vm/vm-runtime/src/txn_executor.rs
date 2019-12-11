@@ -26,7 +26,6 @@ use vm::{
     file_format::FunctionDefinitionIndex,
     gas_schedule::{CostTable, GasAlgebra},
     transaction_metadata::TransactionMetadata,
-    vm_string::VMString,
 };
 use vm_cache_map::Arena;
 use vm_runtime_types::value::Value;
@@ -186,7 +185,7 @@ impl<'txn> TransactionExecutor<'txn> {
             &self.txn_data,
             &self.gas_schedule,
             script,
-            convert_txn_args(args),
+            convert_txn_args(args)?,
         )
     }
 
@@ -323,14 +322,15 @@ fn error_output(err: VMStatus) -> TransactionOutput {
 }
 
 /// Convert the transaction arguments into move values.
-pub fn convert_txn_args(args: Vec<TransactionArgument>) -> Vec<Value> {
+pub fn convert_txn_args(args: Vec<TransactionArgument>) -> VMResult<Vec<Value>> {
     args.into_iter()
         .map(|arg| match arg {
-            TransactionArgument::U64(i) => Value::u64(i),
-            TransactionArgument::Address(a) => Value::address(a),
-            TransactionArgument::Bool(b) => Value::bool(b),
-            TransactionArgument::ByteArray(b) => Value::byte_array(b),
-            TransactionArgument::String(s) => Value::string(VMString::new(s)),
+            TransactionArgument::U64(i) => Ok(Value::u64(i)),
+            TransactionArgument::Address(a) => Ok(Value::address(a)),
+            TransactionArgument::Bool(b) => Ok(Value::bool(b)),
+            TransactionArgument::ByteArray(b) => Ok(Value::byte_array(b)),
+            TransactionArgument::String(_) => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message("strings will be removed soon".to_string())),
         })
         .collect()
 }
@@ -365,7 +365,7 @@ pub fn execute_function_in_module(
             state_view,
             &module_id,
             &entry_name,
-            convert_txn_args(args),
+            convert_txn_args(args)?,
         )
     }
 }

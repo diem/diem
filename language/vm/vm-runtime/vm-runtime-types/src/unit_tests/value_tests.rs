@@ -31,13 +31,6 @@ fn test_value() {
             .expect("must find ByteArray"),
         ba,
     );
-    let s = VMString::new("hello");
-    assert_eq!(
-        Value::string(s.clone())
-            .value_as::<VMString>()
-            .expect("must find String"),
-        s,
-    );
     let struct_ = Struct::new(vec![Value::u64(10), Value::address(addr)]);
     assert_eq!(
         Value::struct_(struct_.clone())
@@ -83,7 +76,7 @@ fn test_locals() {
         .store_loc(1, Value::bool(true))
         .expect("local 1 must exist");
     locals
-        .store_loc(2, Value::string(VMString::new("hello")))
+        .store_loc(2, Value::u64(13))
         .expect("local 2 must exist");
     assert_eq!(
         locals.copy_loc(0).expect("local 0 must be valid"),
@@ -95,7 +88,7 @@ fn test_locals() {
     );
     assert_eq!(
         locals.copy_loc(2).expect("local 2 must be valid"),
-        Value::string(VMString::new("hello"))
+        Value::u64(13)
     );
     for idx in 3..5 {
         match locals.copy_loc(idx) {
@@ -154,7 +147,7 @@ fn test_locals() {
     );
     assert_eq!(
         locals.move_loc(2).expect("local 2 must be valid"),
-        Value::string(VMString::new("hello")),
+        Value::u64(13),
     );
     for local in &locals.0 {
         assert_eq!(local, &invalid);
@@ -201,10 +194,10 @@ fn test_references() {
         .store_loc(1, Value::bool(true))
         .expect("local 1 must exist");
     locals
-        .store_loc(2, Value::string(VMString::new("hello")))
+        .store_loc(2, Value::u64(13))
         .expect("local 2 must exist");
     let addr = AccountAddress::random();
-    let struct_inner = Struct::new(vec![Value::u64(20), Value::string(VMString::new("hello"))]);
+    let struct_inner = Struct::new(vec![Value::u64(20), Value::u64(13)]);
     let struct_outer = Struct::new(vec![
         Value::u64(10),
         Value::address(addr),
@@ -276,24 +269,24 @@ fn test_references() {
             .expect("value must be a reference")
             .read_ref()
             .expect("reference must be valid"),
-        Value::string(VMString::new("hello")),
+        Value::u64(13),
     );
     let ref2 = locals.borrow_loc(2).expect("local 2 must exist");
     ref2.value_as::<ReferenceValue>()
         .expect("value must be a reference")
-        .write_ref(Value::string(VMString::new("world")));
+        .write_ref(Value::u64(21));
     let ref2 = locals.borrow_loc(2).expect("local 2 must exist");
     assert_eq!(
         ref2.value_as::<ReferenceValue>()
             .expect("value must be a reference")
             .read_ref()
             .expect("reference must be valid"),
-        Value::string(VMString::new("world")),
+        Value::u64(21),
     );
 
     // check 4th local
     let ref3 = locals.borrow_loc(3).expect("local 3 must exist");
-    let struct_inner = Struct::new(vec![Value::u64(20), Value::string(VMString::new("hello"))]);
+    let struct_inner = Struct::new(vec![Value::u64(20), Value::u64(13)]);
     let struct_outer = Struct::new(vec![
         Value::u64(10),
         Value::address(addr),
@@ -365,7 +358,7 @@ fn test_references() {
             .expect("value must be a reference")
             .read_ref()
             .expect("reference must be valid"),
-        Value::string(VMString::new("hello")),
+        Value::u64(13),
     );
     let ref3 = locals.borrow_loc(3).expect("local 3 must exist");
     let field_ref = ref3
@@ -381,11 +374,11 @@ fn test_references() {
     inner_field_ref
         .value_as::<ReferenceValue>()
         .expect("value must be a reference")
-        .write_ref(Value::string(VMString::new("world")));
+        .write_ref(Value::u64(21));
 
     // verify struct in 4th local is changed
     let ref3 = locals.borrow_loc(3).expect("local 3 must exist");
-    let struct_inner = Struct::new(vec![Value::u64(20), Value::string(VMString::new("world"))]);
+    let struct_inner = Struct::new(vec![Value::u64(20), Value::u64(21)]);
     let struct_outer = Struct::new(vec![
         Value::u64(100),
         Value::address(addr),

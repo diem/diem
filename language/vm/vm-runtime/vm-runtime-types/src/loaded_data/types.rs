@@ -14,7 +14,6 @@ mod type_prop_tests;
 pub enum Type {
     Bool,
     U64,
-    String,
     ByteArray,
     Address,
     Struct(StructDef),
