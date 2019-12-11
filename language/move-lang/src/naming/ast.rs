@@ -195,7 +195,6 @@ pub enum BuiltinFunction_ {
      * GetPublicKey,
      * GetSender,
      * GetSequenceNumber,
-     * GetGasRemaining,
      * EmitEvent, */
 }
 pub type BuiltinFunction = Spanned<BuiltinFunction_>;
@@ -345,7 +344,6 @@ impl BuiltinFunction_ {
     // pub const GET_PUBLIC_KEY: &'static str = "get_public_key";
     // pub const GET_SENDER: &'static str = "get_sender";
     // pub const GET_SEQUENCE_NUMBER: &'static str = "get_sequence_number";
-    // pub const GET_GAS_REMAINING: &'static str = "get_gas_remaining";
     // pub const EMIT_EVENT: &'static str = "emit_event";
     pub fn all_names() -> BTreeSet<&'static str> {
         let mut s = BTreeSet::new();

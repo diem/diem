@@ -132,6 +132,7 @@ impl<'txn> TransactionExecutor<'txn> {
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_epilogue(&mut self, runtime: &VMRuntime, state_view: &dyn StateView) -> VMResult<()> {
+        let gas_remaining = self.interpreter_context.gas_left().get();
         record_stats! {time_hist | TXN_EPILOGUE_TIME_TAKEN | {
             runtime.execute_function(
                 state_view,
@@ -140,7 +141,7 @@ impl<'txn> TransactionExecutor<'txn> {
                 &CostTable::zero(),
                 &ACCOUNT_MODULE,
                 &EPILOGUE_NAME,
-                vec![],
+                vec![Value::u64(gas_remaining)],
                 )?;
             }
         }

@@ -678,9 +678,11 @@ where
                         self.operand_stack.push(Value::bool(value))?;
                     }
                     Bytecode::GetGasRemaining => {
-                        gas!(const_instr: context, self, Opcodes::GET_GAS_REMAINING)?;
-                        let remaining_gas = context.remaining_gas().get();
-                        self.operand_stack.push(Value::u64(remaining_gas))?;
+                        return Err(VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                            .with_message(
+                            "The get_gas_remaining opcode is deprecated and will be removed soon"
+                                .to_string(),
+                        ));
                     }
                 }
             }

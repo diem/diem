@@ -323,8 +323,6 @@ pub enum Builtin {
     GetTxnSender,
     /// Returns the sequence number of the current transaction.
     GetTxnSequenceNumber,
-    /// Returns the unit of gas remain to be used for now.
-    GetGasRemaining,
 
     /// Remove a resource of the given type from the account with the given address
     MoveFrom(StructName, Vec<Type>),
@@ -1358,7 +1356,6 @@ impl fmt::Display for Builtin {
             Builtin::GetTxnPublicKey => write!(f, "get_txn_public_key"),
             Builtin::GetTxnSender => write!(f, "get_txn_sender"),
             Builtin::GetTxnSequenceNumber => write!(f, "get_txn_sequence_number"),
-            Builtin::GetGasRemaining => write!(f, "get_gas_remaining"),
             Builtin::MoveFrom(t, tys) => write!(f, "move_from<{}{}>", t, format_type_actuals(tys)),
             Builtin::MoveToSender(t, tys) => {
                 write!(f, "move_to_sender<{}{}>", t, format_type_actuals(tys))

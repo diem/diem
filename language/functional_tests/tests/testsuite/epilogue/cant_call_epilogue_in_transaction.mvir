@@ -1,7 +1,7 @@
 import 0x0.LibraAccount;
 
 main() {
-    LibraAccount.epilogue();
+    LibraAccount.epilogue(0);
     return;
 }
 
