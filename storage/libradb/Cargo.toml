@@ -22,7 +22,6 @@ proptest-derive = { version = "0.1.2", optional = true }
 prost = "0.5.0"
 prometheus = { version = "0.7.0", default-features = false }
 rand = "0.6.5"
-rusty-fork = "0.2.1"
 strum = "0.15.0"
 strum_macros = "0.15.0"
 serde = "1.0.96"

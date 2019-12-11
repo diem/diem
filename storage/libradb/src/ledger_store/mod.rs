@@ -71,10 +71,15 @@ impl LedgerStore {
             .iter::<EpochByVersionSchema>(ReadOptions::default())?;
         // Search for the end of the previous epoch.
         iter.seek_for_prev(&version)?;
-        let (epoch_end_version, epoch) = iter
-            .next()
-            .transpose()?
-            .ok_or_else(|| LibraDbError::NotFound(format!("version {}", version)))?;
+        let (epoch_end_version, epoch) = match iter.next().transpose()? {
+            Some(x) => x,
+            None => {
+                // There should be a genesis LedgerInfo at version 0 (genesis only consists of one
+                // transaction), so this normally doesn't happen. However this part of
+                // implementation doesn't need to rely on this assumption.
+                return Ok(0);
+            }
+        };
         ensure!(
             epoch_end_version <= version,
             "DB corruption: looking for epoch for version {}, got epoch {} ends at version {}",

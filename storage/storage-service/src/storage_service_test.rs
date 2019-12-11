@@ -8,7 +8,6 @@ use itertools::zip_eq;
 use libra_config::config::NodeConfig;
 use libra_crypto::hash::CryptoHash;
 use libra_types::get_with_proof::{RequestItem, ResponseItem};
-use libradb::mock_genesis::{db_with_mock_genesis, GENESIS_INFO};
 #[cfg(test)]
 use libradb::test_helper::arb_blocks_to_commit;
 use proptest::prelude::*;
@@ -17,9 +16,7 @@ use storage_client::{
     StorageRead, StorageReadServiceClient, StorageWrite, StorageWriteServiceClient,
 };
 
-fn start_test_storage_with_read_write_client(
-    need_to_use_genesis: bool,
-) -> (
+fn start_test_storage_with_read_write_client() -> (
     libra_tools::tempdir::TempPath,
     ServerHandle,
     StorageReadServiceClient,
@@ -29,12 +26,6 @@ fn start_test_storage_with_read_write_client(
     let tmp_dir = libra_tools::tempdir::TempPath::new();
     config.storage.dir = tmp_dir.path().to_path_buf();
 
-    // initialize db with genesis info.
-    if need_to_use_genesis {
-        db_with_mock_genesis(&tmp_dir).unwrap();
-    } else {
-        LibraDB::new(&tmp_dir);
-    }
     let storage_server_handle = start_storage_service(&config);
 
     let read_client = StorageReadServiceClient::new(
@@ -57,19 +48,15 @@ proptest! {
     #[test]
     fn test_storage_service_basic(blocks in arb_blocks_to_commit().no_shrink()) {
         let(_tmp_dir, _server_handler, read_client, write_client) =
-            start_test_storage_with_read_write_client(/* need_to_use_genesis = */ true);
+            start_test_storage_with_read_write_client();
 
         let mut version = 0;
         let mut all_accounts = BTreeMap::new();
 
-        // Add the genesis account to the list of all accounts; we will validate
-        // it when testing the backup API.
-        all_accounts.insert(GENESIS_INFO.3.hash(), GENESIS_INFO.4.clone());
-
         for (txns_to_commit, ledger_info_with_sigs) in &blocks {
             write_client
                 .save_transactions(txns_to_commit.clone(),
-                                   version + 1, /* first_version */
+                                   version, /* first_version */
                                    Some(ledger_info_with_sigs.clone()),
                 ).unwrap();
             version += txns_to_commit.len() as u64;
@@ -108,7 +95,7 @@ proptest! {
                             prop_assert_eq!(&Some(blob), &account_state_with_proof.blob);
                             prop_assert!(account_state_with_proof.verify(
                                 response_ledger_info_with_sigs.ledger_info(),
-                                version,
+                                version - 1,
                                 address,
                             ).is_ok())
                         }
@@ -121,7 +108,7 @@ proptest! {
         }
 
         // Check state backup for all account states.
-        let backup_responses = block_on(read_client.backup_account_state_async(version).unwrap().collect::<Vec<_>>());
+        let backup_responses = block_on(read_client.backup_account_state_async(version - 1).unwrap().collect::<Vec<_>>());
         for ((hash, blob), response) in zip_eq(all_accounts, backup_responses) {
             let resp = response.unwrap();
             prop_assert_eq!(&hash, &resp.account_key);
