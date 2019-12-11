@@ -18,7 +18,10 @@ use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_metrics::counters::SVC_COUNTERS;
-use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
+use libra_types::proto::types::{
+    RetrieveItemsRequest, RetrieveItemsResponse, UpdateToLatestLedgerRequest,
+    UpdateToLatestLedgerResponse,
+};
 use libradb::LibraDB;
 use std::{
     convert::TryFrom,
@@ -165,6 +168,20 @@ impl StorageService {
         Ok(rust_resp.into())
     }
 
+    fn retrieve_items_inner(&self, req: RetrieveItemsRequest) -> Result<RetrieveItemsResponse> {
+        let rust_req = libra_types::get_with_proof::RetrieveItemsRequest::try_from(req)?;
+
+        let (response_items, ledger_info_with_sigs) =
+            self.db.retrieve_items(rust_req.requested_items)?;
+
+        let rust_resp = libra_types::get_with_proof::RetrieveItemsResponse {
+            response_items,
+            ledger_info_with_sigs,
+        };
+
+        Ok(rust_resp.into())
+    }
+
     fn get_transactions_inner(
         &self,
         req: GetTransactionsRequest,
@@ -255,6 +272,18 @@ impl Storage for StorageService {
         debug!("[GRPC] Storage::update_to_latest_ledger");
         let _timer = SVC_COUNTERS.req(&ctx);
         let resp = self.update_to_latest_ledger_inner(req);
+        provide_grpc_response(resp, ctx, sink);
+    }
+
+    fn retrieve_items(
+        &mut self,
+        ctx: grpcio::RpcContext<'_>,
+        req: RetrieveItemsRequest,
+        sink: grpcio::UnarySink<RetrieveItemsResponse>,
+    ) {
+        debug!("[GRPC] Storage::retrieve_items");
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.retrieve_items_inner(req);
         provide_grpc_response(resp, ctx, sink);
     }
 

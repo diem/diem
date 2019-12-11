@@ -171,6 +171,81 @@ impl UpdateToLatestLedgerResponse {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct RetrieveItemsRequest {
+    pub requested_items: Vec<RequestItem>,
+}
+
+impl TryFrom<crate::proto::types::RetrieveItemsRequest> for RetrieveItemsRequest {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::RetrieveItemsRequest) -> Result<Self> {
+        Ok(Self {
+            requested_items: proto
+                .requested_items
+                .into_iter()
+                .map(TryFrom::try_from)
+                .collect::<Result<Vec<_>>>()?,
+        })
+    }
+}
+
+impl From<RetrieveItemsRequest> for crate::proto::types::RetrieveItemsRequest {
+    fn from(request: RetrieveItemsRequest) -> Self {
+        Self {
+            requested_items: request
+                .requested_items
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RetrieveItemsResponse {
+    pub response_items: Vec<ResponseItem>,
+    pub ledger_info_with_sigs: LedgerInfoWithSignatures,
+}
+
+impl TryFrom<crate::proto::types::RetrieveItemsResponse> for RetrieveItemsResponse {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::types::RetrieveItemsResponse) -> Result<Self> {
+        let response_items = proto
+            .response_items
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<Vec<_>>>()?;
+        let ledger_info_with_sigs = proto
+            .ledger_info_with_sigs
+            .unwrap_or_else(Default::default)
+            .try_into()?;
+
+        Ok(Self {
+            response_items,
+            ledger_info_with_sigs,
+        })
+    }
+}
+
+impl From<RetrieveItemsResponse> for crate::proto::types::RetrieveItemsResponse {
+    fn from(response: RetrieveItemsResponse) -> Self {
+        let response_items = response
+            .response_items
+            .into_iter()
+            .map(Into::into)
+            .collect();
+        let ledger_info_with_sigs = Some(response.ledger_info_with_sigs.into());
+
+        Self {
+            response_items,
+            ledger_info_with_sigs,
+        }
+    }
+}
+
 /// Verifies content of an [`UpdateToLatestLedgerResponse`] against the proofs it
 /// carries and the content of the corresponding [`UpdateToLatestLedgerRequest`]
 /// Return EpochInfo if there're validator change events.

@@ -481,15 +481,9 @@ impl LibraDB {
         ValidatorChangeEventWithProof,
         AccumulatorConsistencyProof,
     )> {
-        error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
-
-        // Get the latest ledger info and signatures
-        let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
+        let (response_items, ledger_info_with_sigs) = self.retrieve_items(request_items)?;
         let ledger_info = ledger_info_with_sigs.ledger_info();
         let ledger_version = ledger_info.version();
-
-        // Fulfill all request items.
-        let response_items = self.get_response_items(request_items, ledger_version)?;
 
         // TODO: cache last epoch change version to avoid a DB access in most cases.
         let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
@@ -512,6 +506,19 @@ impl LibraDB {
             ValidatorChangeEventWithProof::new(validator_change_proof),
             ledger_consistency_proof,
         ))
+    }
+
+    /// Retrieve response items from the latest state of the ledger without providing any proofs.
+    pub fn retrieve_items(
+        &self,
+        request_items: Vec<RequestItem>,
+    ) -> Result<(Vec<ResponseItem>, LedgerInfoWithSignatures)> {
+        error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
+
+        // Get the latest ledger info and signatures
+        let li = self.ledger_store.get_latest_ledger_info()?;
+        let response_items = self.get_response_items(request_items, li.ledger_info().version())?;
+        Ok((response_items, li))
     }
 
     fn get_response_items(

@@ -23,7 +23,8 @@ use libra_types::{
     account_state_blob::AccountStateBlob,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
     get_with_proof::{
-        RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
+        RequestItem, ResponseItem, RetrieveItemsRequest, RetrieveItemsResponse,
+        UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
     proof::AccumulatorConsistencyProof,
     proof::SparseMerkleProof,
@@ -131,6 +132,20 @@ impl StorageRead for StorageReadServiceClient {
                     rust_resp.validator_change_events,
                     rust_resp.ledger_consistency_proof,
                 ))
+            })
+            .boxed()
+    }
+
+    fn retrieve_items_async(
+        &self,
+        requested_items: Vec<RequestItem>,
+    ) -> Pin<Box<dyn Future<Output = Result<(Vec<ResponseItem>, LedgerInfoWithSignatures)>> + Send>>
+    {
+        let req = RetrieveItemsRequest { requested_items };
+        convert_grpc_response(self.client().retrieve_items_async(&req.into()))
+            .map(|resp| {
+                let rust_resp = RetrieveItemsResponse::try_from(resp?)?;
+                Ok((rust_resp.response_items, rust_resp.ledger_info_with_sigs))
             })
             .boxed()
     }
@@ -296,6 +311,20 @@ pub trait StorageRead: Send + Sync {
                 > + Send,
         >,
     >;
+
+    /// Retrieve response items from the latest state of the ledger without providing any proofs.
+    /// Used by internal systems only for the non-critical preliminary verifications, which trust
+    /// storage (e.g., preliminary verification of transactions at Mempool).
+    fn retrieve_items_async(
+        &self,
+        request_items: Vec<RequestItem>,
+    ) -> Pin<Box<dyn Future<Output = Result<(Vec<ResponseItem>, LedgerInfoWithSignatures)>> + Send>>;
+    fn retrieve_items(
+        &self,
+        request_items: Vec<RequestItem>,
+    ) -> Result<(Vec<ResponseItem>, LedgerInfoWithSignatures)> {
+        block_on(self.retrieve_items_async(request_items))
+    }
 
     /// See [`LibraDB::get_transactions`].
     ///

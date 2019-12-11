@@ -190,6 +190,20 @@ message ResponseItem {
 }
 
 // -----------------------------------------------------------------------------
+// ---------------- Retrieving items without any proofs from storage
+// ---------------- Can be used for non-critical / preliminary requests
+// ---------------- that wish to remain lightweight.
+// -----------------------------------------------------------------------------
+message RetrieveItemsRequest {
+    repeated RequestItem requested_items = 1;
+}
+
+message RetrieveItemsResponse {
+    repeated ResponseItem response_items = 1;
+    LedgerInfoWithSignatures ledger_info_with_sigs = 2;
+}
+
+// -----------------------------------------------------------------------------
 // ---------------- Get account state (balance, sequence number, etc.)
 // -----------------------------------------------------------------------------
 

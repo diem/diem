@@ -32,6 +32,10 @@ service Storage {
     types.UpdateToLatestLedgerRequest)
     returns (types.UpdateToLatestLedgerResponse);
 
+    // Retrieving items without any proofs from storage.
+    // Can be used for non-critical / preliminary requests that with to remain lightweight.
+    rpc RetrieveItems(types.RetrieveItemsRequest) returns (types.RetrieveItemsResponse);
+
     // When we receive a request from a peer validator asking a list of
     // transactions for state synchronization, this API can be used to serve the
     // request. Note that the peer should specify a ledger version and all proofs

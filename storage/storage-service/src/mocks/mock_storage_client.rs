@@ -76,6 +76,14 @@ impl StorageRead for MockStorageReadClient {
         futures::future::ok(ret).boxed()
     }
 
+    fn retrieve_items_async(
+        &self,
+        _request_items: Vec<RequestItem>,
+    ) -> Pin<Box<dyn Future<Output = Result<(Vec<ResponseItem>, LedgerInfoWithSignatures)>> + Send>>
+    {
+        unimplemented!()
+    }
+
     fn get_transactions_async(
         &self,
         _start_version: Version,

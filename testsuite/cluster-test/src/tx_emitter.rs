@@ -349,6 +349,7 @@ fn query_sequence_numbers(
     let mut result = vec![];
     for addresses_batch in addresses.chunks(MAX_TXN_BATCH_SIZE) {
         let mut update_request = UpdateToLatestLedgerRequest::default();
+        update_request.client_known_version = 1;
         for address in addresses_batch {
             let mut request_item = RequestItem::default();
             let mut account_state_request = GetAccountStateRequest::default();
