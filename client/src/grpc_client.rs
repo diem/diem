@@ -147,6 +147,7 @@ impl GRPCClient {
                 let resp = UpdateToLatestLedgerResponse::try_from(get_with_proof_resp?)?;
                 let mut wlock = known_version_and_epoch.lock().unwrap();
                 if let Some(new_epoch_info) = resp.verify(&wlock.1, &req)? {
+                    info!("Trusted epoch change to :{}", new_epoch_info);
                     wlock.1 = new_epoch_info;
                 }
                 wlock.0 = resp.ledger_info_with_sigs.ledger_info().version();

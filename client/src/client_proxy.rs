@@ -4,11 +4,10 @@
 use crate::{commands::*, grpc_client::GRPCClient, AccountData, AccountStatus};
 use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
 use anyhow::{bail, ensure, format_err, Error, Result};
-use libra_config::config::{ConsensusPeersConfig, PersistableConfig};
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_logger::prelude::*;
 use libra_tools::tempdir::TempPath;
-use libra_types::crypto_proxies::EpochInfo;
+use libra_types::crypto_proxies::{EpochInfo, ValidatorVerifier};
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -107,19 +106,19 @@ impl ClientProxy {
     pub fn new(
         host: &str,
         ac_port: u16,
-        validator_set_file: &str,
         faucet_account_file: &str,
         sync_on_wallet_recovery: bool,
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
     ) -> Result<Self> {
-        let verifier =
-            ConsensusPeersConfig::load_config(validator_set_file)?.get_validator_verifier();
-        ensure!(
-            !verifier.is_empty(),
-            "Not able to load any validators from trusted peers config!"
-        );
-        let client = GRPCClient::new(host, ac_port, EpochInfo { epoch: 1, verifier })?;
+        let client = GRPCClient::new(
+            host,
+            ac_port,
+            EpochInfo {
+                epoch: 0,
+                verifier: ValidatorVerifier::new(BTreeMap::new()),
+            },
+        )?;
 
         let accounts = vec![];
 
@@ -302,9 +301,14 @@ impl ClientProxy {
     /// Remove a existing validator.
     pub fn remove_validator(
         &mut self,
-        account_address: AccountAddress,
+        space_delim_strings: &[&str],
         is_blocking: bool,
     ) -> Result<()> {
+        ensure!(
+            space_delim_strings.len() == 2,
+            "Invalid number of arguments for removing validator"
+        );
+        let account_address = self.get_account_address_from_parameter(space_delim_strings[1])?;
         match self.faucet_account {
             Some(_) => self.association_transaction_with_local_faucet_account(
                 transaction_builder::encode_remove_validator_script(&account_address),
@@ -315,11 +319,12 @@ impl ClientProxy {
     }
 
     /// Add a new validator.
-    pub fn add_validator(
-        &mut self,
-        account_address: AccountAddress,
-        is_blocking: bool,
-    ) -> Result<()> {
+    pub fn add_validator(&mut self, space_delim_strings: &[&str], is_blocking: bool) -> Result<()> {
+        ensure!(
+            space_delim_strings.len() == 2,
+            "Invalid number of arguments for removing validator"
+        );
+        let account_address = self.get_account_address_from_parameter(space_delim_strings[1])?;
         match self.faucet_account {
             Some(_) => self.association_transaction_with_local_faucet_account(
                 transaction_builder::encode_add_validator_script(&account_address),
@@ -335,7 +340,6 @@ impl ClientProxy {
         print!("waiting ");
         loop {
             stdout().flush().unwrap();
-            max_iterations -= 1;
 
             match self
                 .client
@@ -348,15 +352,16 @@ impl ClientProxy {
                     }
                     break;
                 }
-                Ok(_) if max_iterations == 0 => {
-                    panic!("wait_for_transaction timeout");
-                }
                 Err(e) => {
                     println!("Response with error: {:?}", e);
                 }
                 _ => {
                     print!(".");
                 }
+            }
+            max_iterations -= 1;
+            if max_iterations == 0 {
+                panic!("wait_for_transaction timeout");
             }
             thread::sleep(time::Duration::from_millis(10));
         }
@@ -1130,7 +1135,6 @@ impl fmt::Display for AccountEntry {
 #[cfg(test)]
 mod tests {
     use crate::client_proxy::{parse_bool, AddressAndIndex, ClientProxy};
-    use libra_config::config::{ConsensusConfig, PersistableConfig};
     use libra_tools::tempdir::TempPath;
     use libra_wallet::io_utils;
     use proptest::prelude::*;
@@ -1141,21 +1145,11 @@ mod tests {
         let file = TempPath::new();
         let mnemonic_path = file.path().to_str().unwrap().to_string();
 
-        let consensus_config = ConsensusConfig::default();
-        let consensus_peer_file = TempPath::new();
-        let consensus_peers_path = consensus_peer_file.path();
-        consensus_config
-            .consensus_peers
-            .save_config(consensus_peers_path)
-            .expect("Unable to save consensus_peers.config");
-        let val_set_file = consensus_peers_path.to_str().unwrap().to_string();
-
         // We don't need to specify host/port since the client won't be used to connect, only to
         // generate random accounts
         let mut client_proxy = ClientProxy::new(
             "", /* host */
             0,  /* port */
-            &val_set_file,
             &"",
             false,
             None,

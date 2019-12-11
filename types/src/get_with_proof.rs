@@ -203,10 +203,6 @@ pub fn verify_update_to_latest_ledger_response(
         .map(|(req, res)| verify_response_item(ledger_info, req, res))
         .collect::<Result<Vec<_>>>()?;
 
-    // TODO: use waypoint instead of skipping the genesis ledger info
-    if ledger_info.version() == 0 && ledger_info_with_sigs.signatures().is_empty() {
-        return Ok(None);
-    }
     // Verify ledger info signatures and potential epoch changes
     if ledger_info.epoch() > current_epoch_info.epoch {
         let epoch_change_li = validator_change_events

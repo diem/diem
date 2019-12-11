@@ -18,6 +18,8 @@ impl Command for DevCommand {
             Box::new(DevCommandCompile {}),
             Box::new(DevCommandPublish {}),
             Box::new(DevCommandExecute {}),
+            Box::new(DevCommandAddValidator {}),
+            Box::new(DevCommandRemoveValidator {}),
         ];
         subcommand_execute(&params[0], commands, client, &params[1..]);
     }
@@ -99,6 +101,60 @@ impl Command for DevCommandExecute {
             return;
         }
         match client.execute_script(params) {
+            Ok(_) => println!("Successfully finished execution"),
+            Err(e) => println!("{}", e),
+        }
+    }
+}
+
+pub struct DevCommandAddValidator {}
+
+impl Command for DevCommandAddValidator {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["add_validator"]
+    }
+
+    fn get_params_help(&self) -> &'static str {
+        "<validator_account_address>"
+    }
+
+    fn get_description(&self) -> &'static str {
+        "Add an account address to the validator set"
+    }
+
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        if params.len() != 2 {
+            println!("Invalid number of arguments to add validator");
+            return;
+        }
+        match client.add_validator(params, true) {
+            Ok(_) => println!("Successfully finished execution"),
+            Err(e) => println!("{}", e),
+        }
+    }
+}
+
+pub struct DevCommandRemoveValidator {}
+
+impl Command for DevCommandRemoveValidator {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["remove_validator"]
+    }
+
+    fn get_params_help(&self) -> &'static str {
+        "<validator_account_address>"
+    }
+
+    fn get_description(&self) -> &'static str {
+        "Remove an existing account address from the validator set"
+    }
+
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        if params.len() != 2 {
+            println!("Invalid number of arguments to remove validator");
+            return;
+        }
+        match client.remove_validator(params, true) {
             Ok(_) => println!("Successfully finished execution"),
             Err(e) => println!("{}", e),
         }

@@ -81,6 +81,7 @@ impl<Sig: RawSignature> From<Sig> for SignatureWrapper<Sig> {
 
 use libra_crypto::ed25519::*;
 use std::collections::BTreeMap;
+use std::fmt;
 
 // used in chained_bft::consensus_types::block_test
 #[cfg(any(test, feature = "fuzzing"))]
@@ -101,6 +102,16 @@ pub use crate::validator_change::ValidatorChangeEventWithProof;
 pub struct EpochInfo {
     pub epoch: u64,
     pub verifier: ValidatorVerifier,
+}
+
+impl fmt::Display for EpochInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "EpochInfo [epoch: {}, validator: {}]",
+            self.epoch, self.verifier
+        )
+    }
 }
 
 /// Helper function to get random validator signers and a corresponding validator verifier for
