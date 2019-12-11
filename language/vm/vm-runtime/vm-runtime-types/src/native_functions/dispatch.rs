@@ -479,6 +479,16 @@ lazy_static! {
             vec![Address],
             vec![Bool]
         );
+        add!(m, addr, "ChannelUtil", "exist_channel_shared",
+          |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "exist_channel_shared does not have a native implementation"
+                                .to_string()))
+             },
+            vec![Kind::Resource],
+            vec![],
+            vec![Bool]
+        );
         add!(m, addr, "ChannelUtil", "module_id",
           |_, _| {
                 Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(

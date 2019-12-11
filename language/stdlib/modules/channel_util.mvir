@@ -24,6 +24,8 @@ module ChannelUtil{
 
     native public exist_channel_participant<T: resource>(participant: address): bool;
 
+    native public exist_channel_shared<T: resource>(): bool;
+
     native module_id<T: resource>(): bytearray;
 
     public create_module_list() {

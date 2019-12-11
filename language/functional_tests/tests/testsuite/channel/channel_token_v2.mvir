@@ -42,6 +42,14 @@ module Token {
         return;
     }
 
+    public move_to_channel_shared(value:u64) {
+        let t: Self.T;
+
+        t = Self.new(move(value));
+        ChannelUtil.move_to_shared<Self.T>(move(t));
+        return;
+    }
+
     public exist_channel_sender(): bool {
         let sender: address;
         sender = get_txn_sender();
@@ -50,6 +58,10 @@ module Token {
 
     public exist_channel_receiver(receiver:address): bool {
         return ChannelUtil.exist_channel_participant<Self.T>(move(receiver));
+    }
+
+    public exist_channel_shared(): bool {
+        return ChannelUtil.exist_channel_shared<Self.T>();
     }
 
     public move_from_channel_sender(): Self.T {
@@ -220,6 +232,19 @@ main(receiver:address) {
 
     return;
 
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{bob}}
+import 0x0.ChannelTransaction;
+import {{default}}.Token;
+main(receiver:address) {
+     assert(Token.exist_channel_shared() == false, 11);
+     Token.move_to_channel_shared(1);
+     assert(Token.exist_channel_shared() == true, 11);
+     return;
 }
 
 //! new-transaction

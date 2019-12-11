@@ -783,6 +783,9 @@ where
                 "exist_channel_participant" => {
                     self.call_exist_channel_participant(context, type_actual_tags)
                 }
+                "exist_channel_shared" => {
+                    self.call_exist_channel_shared(context, type_actual_tags)
+                }
                 "module_id" => {
                     self.call_parse_module_id(type_actual_tags)
                 }
@@ -1082,6 +1085,20 @@ where
         let channel_address = self.get_channel_metadata()?.channel_address;
         let (module, idx, struct_def) = self.resolve_struct_def(context, type_actual_tags)?;
         let ap = Self::make_channel_access_path(module, idx, channel_address, participant);
+
+        let (exists, _memsize) = context.resource_exists(&ap, struct_def)?;
+        self.operand_stack.push(Value::bool(exists))
+    }
+
+    /// call `exist_channel_shared`.
+    fn call_exist_channel_shared(
+        &mut self,
+        context: &mut dyn InterpreterContext,
+        type_actual_tags: Vec<TypeTag>,
+    ) -> VMResult<()> {
+        let channel_address = self.get_channel_metadata()?.channel_address;
+        let (module, idx, struct_def) = self.resolve_struct_def(context, type_actual_tags)?;
+        let ap = Self::make_channel_access_path(module, idx, channel_address, channel_address);
 
         let (exists, _memsize) = context.resource_exists(&ap, struct_def)?;
         self.operand_stack.push(Value::bool(exists))
