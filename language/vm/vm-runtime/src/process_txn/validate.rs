@@ -27,11 +27,10 @@ use vm::{
 pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8]) -> bool {
     match publishing_option {
         VMPublishingOption::Open | VMPublishingOption::CustomScripts => true,
-        //        VMPublishingOption::Locked(whitelist) => {
-        //            let hash_value = HashValue::from_sha3_256(program);
-        //            whitelist.contains(hash_value.as_ref())
-        //        }
-        VMPublishingOption::Locked(whitelist) => true,
+        VMPublishingOption::Locked(whitelist) => {
+            let hash_value = HashValue::from_sha3_256(program);
+            whitelist.contains(hash_value.as_ref())
+        }
     }
 }
 
