@@ -4,11 +4,12 @@
 use crate::{BuildSwarm, Error, ValidatorConfig};
 use anyhow::{ensure, Result};
 use libra_config::{
-    config::{NodeConfig, SeedPeersConfig},
-    generator,
+    config::{NetworkPeersConfig, NodeConfig, RoleType, SeedPeersConfig, UpstreamPeersConfig},
+    utils,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use parity_multiaddr::Multiaddr;
+use rand::{rngs::StdRng, SeedableRng};
 use std::collections::HashMap;
 
 pub struct FullNodeConfig {
@@ -29,6 +30,9 @@ const DEFAULT_LISTEN: &str = "/ip4/0.0.0.0/tcp/7180";
 
 impl Default for FullNodeConfig {
     fn default() -> Self {
+        let mut template = NodeConfig::default();
+        template.base.role = RoleType::FullNode;
+
         Self {
             advertised: DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap(),
             bootstrap: DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap(),
@@ -37,7 +41,7 @@ impl Default for FullNodeConfig {
             full_nodes: 1,
             listen: DEFAULT_LISTEN.parse::<Multiaddr>().unwrap(),
             permissioned: true,
-            template: NodeConfig::default(),
+            template,
             validator_config: ValidatorConfig::new(),
         }
     }
@@ -105,18 +109,9 @@ impl FullNodeConfig {
     }
 
     pub fn build(&self) -> Result<NodeConfig> {
-        ensure!(self.full_nodes > 0, Error::NonZeroNetwork);
-        ensure!(
-            self.full_node_index < self.full_nodes,
-            Error::IndexError {
-                index: self.full_node_index,
-                nodes: self.full_nodes
-            }
-        );
-
-        let mut validator_config = self.validator_config.build()?;
-        let mut configs = self.build_internal(false, &mut validator_config)?;
-
+        let (mut configs, _) = self.build_internal(false)?;
+        let validator_config = configs.last().ok_or(Error::NoConfigs)?;
+        let seed_peers = self.build_seed_peers(&validator_config)?;
         let mut config = configs.swap_remove(self.full_node_index);
         let network = &mut config
             .full_node_networks
@@ -124,20 +119,20 @@ impl FullNodeConfig {
             .ok_or(Error::MissingFullNodeNetwork)?;
         network.advertised_address = self.advertised.clone();
         network.listen_address = self.listen.clone();
+        network.seed_peers = seed_peers;
 
         Ok(config)
     }
 
     pub fn extend_validator(&self, config: &mut NodeConfig) -> Result<()> {
-        self.build_internal(false, config)?;
-        let seed_peers = self.build_seed_peers(&config)?;
-        let network = config
-            .full_node_networks
-            .last_mut()
-            .ok_or(Error::MissingFullNodeNetwork)?;
+        let (mut configs, _) = self.build_internal(false)?;
+        let mut new_net = configs.swap_remove(configs.len() - 1);
+        let seed_peers = self.build_seed_peers(&new_net)?;
+        let mut network = new_net.full_node_networks.swap_remove(0);
         network.advertised_address = self.advertised.clone();
         network.listen_address = self.listen.clone();
         network.seed_peers = seed_peers;
+        config.full_node_networks.push(network);
         Ok(())
     }
 
@@ -154,8 +149,7 @@ impl FullNodeConfig {
     fn build_internal(
         &self,
         randomize_ports: bool,
-        validator_config: &mut NodeConfig,
-    ) -> Result<Vec<NodeConfig>> {
+    ) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
         ensure!(self.full_nodes > 0, Error::NonZeroNetwork);
         ensure!(
             self.full_node_index < self.full_nodes,
@@ -165,27 +159,61 @@ impl FullNodeConfig {
             }
         );
 
-        let mut configs = generator::full_node_swarm(
-            validator_config,
-            self.template.clone_for_template(),
-            self.full_nodes,
-            true,
-            true,
-            Some(self.full_node_seed),
-            self.permissioned,
-            randomize_ports,
-        )?;
+        let (validator_configs, faucet_key) = self.validator_config.build_swarm()?;
+        let validator_config = validator_configs.first().ok_or(Error::NoConfigs)?;
 
-        let seed_peers = self.build_seed_peers(&validator_config)?;
+        let mut rng = StdRng::from_seed(self.full_node_seed);
+        let mut configs = Vec::new();
+        let mut network_peers = NetworkPeersConfig {
+            peers: HashMap::new(),
+        };
+
+        // @TODO The last one is the upstream peer, note at some point we'll have to support taking
+        // in a genesis instead at which point we may not have an upstream peer config
+        let actual_nodes = self.full_nodes + 1;
+        for _index in 0..actual_nodes {
+            let mut config = NodeConfig::random_with_template(&self.template, &mut rng);
+            if randomize_ports {
+                config.randomize_ports();
+            }
+
+            config.execution.genesis = validator_config.execution.genesis.clone();
+            let network = config
+                .full_node_networks
+                .get_mut(0)
+                .ok_or(Error::MissingFullNodeNetwork)?;
+            network.listen_address = utils::get_available_port_in_multiaddr(true);
+            network.advertised_address = network.listen_address.clone();
+            network.is_permissioned = self.permissioned;
+
+            network_peers
+                .peers
+                .insert(network.peer_id, network.network_keypairs.as_peer_info());
+
+            configs.push(config);
+        }
+
+        let validator_full_node_config = configs.last().ok_or(Error::NoConfigs)?;
+        let validator_full_node_network = validator_full_node_config
+            .full_node_networks
+            .last()
+            .ok_or(Error::MissingFullNodeNetwork)?;
+        let upstream_peers = UpstreamPeersConfig {
+            upstream_peers: vec![validator_full_node_network.peer_id],
+        };
+
+        let seed_peers = self.build_seed_peers(&validator_full_node_config)?;
         for config in configs.iter_mut() {
+            config.state_sync.upstream_peers = upstream_peers.clone();
             let network = config
                 .full_node_networks
                 .last_mut()
                 .ok_or(Error::MissingFullNodeNetwork)?;
+            network.network_peers = network_peers.clone();
             network.seed_peers = seed_peers.clone();
         }
 
-        Ok(configs)
+        Ok((configs, faucet_key))
     }
 
     fn build_seed_peers(&self, config: &NodeConfig) -> Result<SeedPeersConfig> {
@@ -201,12 +229,9 @@ impl FullNodeConfig {
 
 impl BuildSwarm for FullNodeConfig {
     fn build_swarm(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
-        let mut validator_config = self.validator_config.build()?;
-        let (_, faucet_key) = self.validator_config.build_faucet_client()?;
-        Ok((
-            self.build_internal(true, &mut validator_config)?,
-            faucet_key,
-        ))
+        let (mut configs, faucet_key) = self.build_internal(true)?;
+        configs.swap_remove(configs.len() - 1);
+        Ok((configs, faucet_key))
     }
 }
 

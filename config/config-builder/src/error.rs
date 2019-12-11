@@ -13,6 +13,8 @@ pub enum Error {
     MissingFullNodeNetwork,
     #[error("Config does not contain a validator network")]
     MissingValidatorNetwork,
+    #[error("Unable to find any configs")]
+    NoConfigs,
     #[error("network size should be at least 1")]
     NonZeroNetwork,
 }
