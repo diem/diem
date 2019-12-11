@@ -950,17 +950,19 @@ impl Arbitrary for BlockMetadata {
     type Strategy = BoxedStrategy<Self>;
 }
 
-#[derive(Arbitrary, Debug)]
+#[derive(Debug)]
 struct BlockInfoGen {
     id: HashValue,
     executed_state_id: HashValue,
     timestamp_usecs: u64,
-    new_epoch_if_not_empty: bool,
+    new_epoch: bool,
 }
 
 impl BlockInfoGen {
     pub fn materialize(self, universe: &mut AccountInfoUniverse, block_size: usize) -> BlockInfo {
-        let (epoch, next_validator_set) = if self.new_epoch_if_not_empty && block_size > 0 {
+        assert!(block_size > 0, "No empty blocks are allowed.");
+
+        let (epoch, next_validator_set) = if self.new_epoch {
             (
                 universe.get_and_bump_epoch(),
                 Some(ValidatorSet::new(Vec::new())),
@@ -978,6 +980,28 @@ impl BlockInfoGen {
             self.timestamp_usecs,
             next_validator_set,
         )
+    }
+}
+
+impl Arbitrary for BlockInfoGen {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        // A small percent of them generate epoch changes.
+        (
+            any::<HashValue>(),
+            any::<HashValue>(),
+            any::<u64>(),
+            prop_oneof![1 => Just(true), 3 => Just(false)],
+        )
+            .prop_map(|(id, executed_state_id, timestamp_usecs, new_epoch)| Self {
+                id,
+                executed_state_id,
+                timestamp_usecs,
+                new_epoch,
+            })
+            .boxed()
     }
 }
 
