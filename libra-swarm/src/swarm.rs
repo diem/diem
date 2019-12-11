@@ -4,10 +4,9 @@
 use crate::utils;
 use anyhow::{Context, Result};
 use client_lib::AccountAddress;
-use config_builder::swarm_config::{SwarmConfig, SwarmConfigBuilder};
 use debug_interface::NodeDebugClient;
-use libra_config::config::{NodeConfig, RoleType};
-use libra_crypto::{ed25519::*, test_utils::KeyPair};
+use dynamic_config_builder::{FullNodeConfig, SwarmConfig, ValidatorConfig};
+use libra_config::config::{NodeConfig, RoleType, VMPublishingOption};
 use libra_logger::prelude::*;
 use libra_tools::tempdir::TempPath;
 use std::{
@@ -235,7 +234,6 @@ impl LibraSwarm {
         num_nodes: usize,
         role: RoleType,
         disable_logging: bool,
-        faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         config_dir: Option<String>,
         template_path: Option<String>,
         upstream_config_dir: Option<String>,
@@ -247,7 +245,6 @@ impl LibraSwarm {
             if let Ok(mut swarm) = Self::configure_swarm(
                 num_nodes,
                 role,
-                faucet_account_keypair.clone(),
                 config_dir.clone(),
                 template_path.clone(),
                 upstream_config_dir.clone(),
@@ -294,24 +291,46 @@ impl LibraSwarm {
     pub fn configure_swarm(
         num_nodes: usize,
         role: RoleType,
-        faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
         config_dir: Option<String>,
         template_path: Option<String>,
         upstream_config_dir: Option<String>,
     ) -> Result<LibraSwarm> {
         let swarm_config_dir = Self::setup_config_dir(&config_dir);
-        let mut config_builder = SwarmConfigBuilder::new();
-        if let Some(template_path) = template_path {
-            config_builder.with_base(utils::workspace_root().join(template_path));
-        }
-        config_builder
-            .with_ipv4()
-            .with_num_nodes(num_nodes)
-            .with_output_dir(&swarm_config_dir)
-            .with_faucet_keypair(faucet_account_keypair)
-            .with_role(role)
-            .with_upstream_config_dir(upstream_config_dir.clone());
-        let config = config_builder.build()?;
+        let template = if let Some(template_path) = template_path {
+            NodeConfig::load(utils::workspace_root().join(template_path)).unwrap_or_default()
+        } else {
+            let mut template = NodeConfig::default();
+            template.vm_config.publishing_options = VMPublishingOption::Open;
+            template
+        };
+
+        let config_path = &swarm_config_dir.as_ref().to_path_buf();
+        let config = if role.is_validator() {
+            let mut validator_builder = ValidatorConfig::new();
+            validator_builder.template(template).nodes(num_nodes);
+            SwarmConfig::build(&validator_builder, config_path)?
+        } else {
+            let upstream_config_dir_str =
+                upstream_config_dir.expect("No upstream node for full nodes");
+            let upstream_config_file =
+                PathBuf::from(upstream_config_dir_str).join("node.config.toml");
+            let mut validator_config = NodeConfig::load(&upstream_config_file)?;
+            let validator_nodes = validator_config.consensus.consensus_peers.peers.len();
+            let mut full_node_builder = FullNodeConfig::new();
+            full_node_builder
+                .template(template)
+                .full_nodes(num_nodes)
+                .nodes(validator_nodes);
+            full_node_builder.extend_validator(&mut validator_config)?;
+            validator_config.save(&upstream_config_file)?;
+            full_node_builder.bootstrap(
+                validator_config.full_node_networks[0]
+                    .advertised_address
+                    .clone(),
+            );
+            SwarmConfig::build(&full_node_builder, config_path)?
+        };
+
         Ok(Self {
             dir: swarm_config_dir,
             nodes: HashMap::new(),
@@ -485,6 +504,7 @@ impl LibraSwarm {
     /// A specific public AC port of a validator or a full node.
     pub fn get_ac_port(&self, index: usize) -> u16 {
         let node_id = format!("{}", index);
+        println!("HERE, {} {}", index, self.nodes.len());
         self.nodes.get(&node_id).map(|node| node.ac_port()).unwrap()
     }
 

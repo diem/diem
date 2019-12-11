@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::Error;
+use crate::{BuildSwarm, Error};
 use anyhow::{ensure, Result};
 use libra_config::{
     config::{ConsensusPeersConfig, NodeConfig, SeedPeersConfig},
@@ -85,13 +85,45 @@ impl ValidatorConfig {
     }
 
     pub fn build(&self) -> Result<NodeConfig> {
-        let (mut configs, faucet_key) = self.build_common()?;
+        let mut configs = self.build_set()?;
+        let mut config = configs.swap_remove(self.index);
+
+        let validator_network = config
+            .validator_network
+            .as_mut()
+            .ok_or(Error::MissingValidatorNetwork)?;
+        validator_network.listen_address = self.listen.clone();
+        validator_network.advertised_address = self.advertised.clone();
+
+        let mut seed_peers = HashMap::new();
+        let first_peer_id = validator_network.peer_id;
+        seed_peers.insert(first_peer_id, vec![self.bootstrap.clone()]);
+        let seed_peers_config = SeedPeersConfig { seed_peers };
+        validator_network.seed_peers = seed_peers_config.clone();
+
+        Ok(config)
+    }
+
+    pub fn build_set(&self) -> Result<Vec<NodeConfig>> {
+        let (configs, _) = self.build_set_internal(false)?;
+        Ok(configs)
+    }
+
+    pub fn build_faucet_client(&self) -> Result<(ConsensusPeersConfig, Ed25519PrivateKey)> {
+        let (configs, faucet_key) = self.build_common(false)?;
+        Ok((configs[0].consensus.consensus_peers.clone(), faucet_key))
+    }
+
+    fn build_set_internal(
+        &self,
+        randomize_ports: bool,
+    ) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
+        let (mut configs, faucet_key) = self.build_common(randomize_ports)?;
         let first_config = &configs[0];
         let validator_network = first_config
             .validator_network
             .as_ref()
             .ok_or(Error::MissingValidatorNetwork)?;
-        let first_peer_id = validator_network.peer_id;
         let consensus_peers = &first_config.consensus.consensus_peers;
 
         let genesis = Some(Transaction::UserTransaction(
@@ -103,27 +135,14 @@ impl ValidatorConfig {
             .into_inner(),
         ));
 
-        let config = &mut configs[self.index];
-        config.execution.genesis = genesis;
-        let validator_network = config
-            .validator_network
-            .as_mut()
-            .ok_or(Error::MissingValidatorNetwork)?;
-        validator_network.listen_address = self.listen.clone();
-        validator_network.advertised_address = self.advertised.clone();
-        let mut seed_peers = HashMap::new();
-        seed_peers.insert(first_peer_id, vec![self.bootstrap.clone()]);
-        validator_network.seed_peers = SeedPeersConfig { seed_peers };
+        for config in configs.iter_mut() {
+            config.execution.genesis = genesis.clone();
+        }
 
-        Ok(configs.swap_remove(self.index))
+        Ok((configs, faucet_key))
     }
 
-    pub fn build_faucet_client(&self) -> Result<(ConsensusPeersConfig, Ed25519PrivateKey)> {
-        let (configs, faucet_key) = self.build_common()?;
-        Ok((configs[0].consensus.consensus_peers.clone(), faucet_key))
-    }
-
-    fn build_common(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
+    fn build_common(&self, randomize_ports: bool) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
         self.validate()?;
 
         let mut rng = StdRng::from_seed(self.seed);
@@ -136,7 +155,7 @@ impl ValidatorConfig {
             true,
             self.ipv4,
             Some(config_seed),
-            false,
+            randomize_ports,
         )?;
 
         ensure!(
@@ -158,6 +177,12 @@ impl ValidatorConfig {
             }
         );
         Ok(())
+    }
+}
+
+impl BuildSwarm for ValidatorConfig {
+    fn build_swarm(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
+        self.build_set_internal(true)
     }
 }
 
