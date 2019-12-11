@@ -389,7 +389,7 @@ impl<T: Payload> EventProcessor<T> {
                 match backup_vote_res {
                     Ok(backup_vote) => backup_vote,
                     Err(e) => {
-                        error!("Failed to generate a backup vote: {}", e);
+                        error!("Failed to generate a backup vote: {:?}", e);
                         return;
                     }
                 }
@@ -724,7 +724,7 @@ impl<T: Payload> EventProcessor<T> {
             };
         }
         if let Err(e) = self.add_vote(vote_msg.vote()).await {
-            error!("Error adding a new vote: {}", e);
+            error!("Error adding a new vote: {:?}", e);
         }
     }
 
@@ -785,7 +785,7 @@ impl<T: Payload> EventProcessor<T> {
         let blocks_to_commit = match self.block_store.commit(finality_proof.clone()).await {
             Ok(blocks) => blocks,
             Err(e) => {
-                error!("{}", e);
+                error!("{:?}", e);
                 return;
             }
         };

@@ -141,9 +141,6 @@ pub static ref NUM_TXNS_PER_BLOCK: Histogram = register_histogram!("libra_consen
 /// (calculated as the overall execution time of a block divided by the number of transactions).
 pub static ref TXN_EXECUTION_DURATION_S: DurationHistogram = DurationHistogram::new(register_histogram!("libra_consensus_txn_execution_duration_s", "Histogram of per-transaction execution time of non-empty blocks (calculated as the overall execution time of a block divided by the number of transactions).").unwrap());
 
-/// Histogram of execution time of empty blocks.
-pub static ref EMPTY_BLOCK_EXECUTION_DURATION_S: DurationHistogram = DurationHistogram::new(register_histogram!("libra_consensus_empty_block_execution_duration_s", "Histogram of execution time of empty blocks.").unwrap());
-
 /// Histogram of the time it takes for a block to get committed.
 /// Measured as the commit time minus block's timestamp.
 pub static ref CREATION_TO_COMMIT_S: DurationHistogram = DurationHistogram::new(register_histogram!("libra_consensus_creation_to_commit_s", "Histogram of the time it takes for a block to get committed. Measured as the commit time minus block's timestamp.").unwrap());

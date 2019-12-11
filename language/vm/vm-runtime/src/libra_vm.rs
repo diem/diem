@@ -105,7 +105,7 @@ impl VMExecutor for LibraVM {
                 TransactionBlock::BlockPrologue(block_metadata) => {
                     result.push(vm.rent(|runtime| {
                         process_block_metadata(block_metadata, runtime, state_view, &mut data_cache)
-                    }))
+                    })?)
                 }
                 // TODO: Implement the logic for processing writeset transactions.
                 TransactionBlock::WriteSet(_) => unimplemented!(""),
