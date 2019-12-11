@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{counters, state_replication::StateComputer};
-use anyhow::Result;
+use anyhow::{ensure, Result};
 use consensus_types::block::Block;
 use consensus_types::executed_block::ExecutedBlock;
 use executor::{ExecutedTrees, Executor, ProcessedVMOutput};
@@ -72,24 +72,20 @@ impl StateComputer for ExecutionProxy {
                 block.parent_id(),
                 block.id(),
             )
-            .map(|output| {
+            .and_then(|output| {
                 let execution_duration = pre_execution_instant.elapsed();
                 let num_txns = output.transaction_data().len();
-                if num_txns == 0 {
-                    // no txns in that block
-                    counters::EMPTY_BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
-                } else {
-                    counters::BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
-                    if let Ok(nanos_per_txn) =
-                        u64::try_from(execution_duration.as_nanos() / num_txns as u128)
-                    {
-                        // TODO: use duration_float once it's stable
-                        // Tracking: https://github.com/rust-lang/rust/issues/54361
-                        counters::TXN_EXECUTION_DURATION_S
-                            .observe_duration(Duration::from_nanos(nanos_per_txn));
-                    }
+                ensure!(num_txns > 0, "metadata txn failed to execute");
+                counters::BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
+                if let Ok(nanos_per_txn) =
+                    u64::try_from(execution_duration.as_nanos() / num_txns as u128)
+                {
+                    // TODO: use duration_float once it's stable
+                    // Tracking: https://github.com/rust-lang/rust/issues/54361
+                    counters::TXN_EXECUTION_DURATION_S
+                        .observe_duration(Duration::from_nanos(nanos_per_txn));
                 }
-                output
+                Ok(output)
             })
     }
 
