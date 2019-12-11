@@ -266,6 +266,13 @@ impl NetworkConfig {
         self.network_peers.peers.insert(peer_id, peer_info);
     }
 
+    pub fn add_seed(&mut self, peer_id: PeerId, address: &str) {
+        let multi_address = address.parse::<Multiaddr>().unwrap();
+        self.seed_peers
+            .seed_peers
+            .insert(peer_id, vec![multi_address]);
+    }
+
     pub fn get_peer_info(&self) -> (PeerId, NetworkPeerInfo) {
         let peer_info = NetworkPeerInfo {
             identity_public_key: self.network_keypairs.identity_keys.public().clone(),
