@@ -13,43 +13,48 @@ use libra_swarm::{swarm::LibraSwarm, utils};
 use libra_tools::tempdir::TempPath;
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
-use std::fs;
+use std::fs::{self, File};
+use std::io::Read;
 use std::str::FromStr;
 use std::{thread, time};
 
 struct TestEnvironment {
     validator_swarm: LibraSwarm,
     full_node_swarm: Option<LibraSwarm>,
-    faucet_key: (
-        KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
-        String,
-        Option<TempPath>,
-    ),
+    faucet_key: (KeyPair<Ed25519PrivateKey, Ed25519PublicKey>, String),
     mnemonic_file: TempPath,
 }
 
 impl TestEnvironment {
     fn new(num_validators: usize) -> Self {
         ::libra_logger::init_for_e2e_testing();
-        let faucet_key = generate_keypair::load_faucet_key_or_create_default(None);
-        let validator_swarm = LibraSwarm::configure_swarm(
-            num_validators,
-            RoleType::Validator,
-            faucet_key.0.clone(),
-            None,
-            None,
-            None,
-        )
-        .unwrap();
+        let validator_swarm =
+            LibraSwarm::configure_swarm(num_validators, RoleType::Validator, None, None, None)
+                .unwrap();
 
         let mnemonic_file = libra_tools::tempdir::TempPath::new();
         mnemonic_file
             .create_as_file()
             .expect("could not create temporary mnemonic_file_path");
+
+        let mut key_file = File::open(&validator_swarm.config.faucet_key_path)
+            .expect("Unable to create faucet key file");
+        let mut serialized_key = Vec::new();
+        key_file
+            .read_to_end(&mut serialized_key)
+            .expect("Unable to read serialized faucet key");
+        let keypair = lcs::from_bytes(&serialized_key).expect("Unable to deserialize faucet key");
+        let keypair_path = validator_swarm
+            .config
+            .faucet_key_path
+            .to_str()
+            .expect("Unable to read faucet path")
+            .to_string();
+
         Self {
             validator_swarm,
             full_node_swarm: None,
-            faucet_key,
+            faucet_key: (keypair, keypair_path),
             mnemonic_file,
         }
     }
@@ -59,7 +64,6 @@ impl TestEnvironment {
             LibraSwarm::configure_swarm(
                 num_full_nodes,
                 RoleType::FullNode,
-                self.faucet_key.0.clone(),
                 None,
                 None,
                 Some(String::from(

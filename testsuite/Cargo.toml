@@ -22,6 +22,7 @@ rusty-fork = "0.2.1"
 # should have their crates listed as dev-dependencies.
 cli = { path = "../client", version = "0.1.0", package="client", features = ["fuzzing"] }
 generate-keypair = { path = "../config/generate-keypair", version = "0.1.0" }
+lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-swarm = { path = "../libra-swarm", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-config = { path = "../config", version = "0.1.0" }

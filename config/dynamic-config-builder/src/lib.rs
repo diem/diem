@@ -3,8 +3,12 @@
 
 mod error;
 mod full_node_config;
+mod swarm_config;
 mod validator_config;
 
 pub use crate::{
-    error::Error, full_node_config::FullNodeConfig, validator_config::ValidatorConfig,
+    error::Error,
+    full_node_config::FullNodeConfig,
+    swarm_config::{BuildSwarm, SwarmConfig},
+    validator_config::ValidatorConfig,
 };

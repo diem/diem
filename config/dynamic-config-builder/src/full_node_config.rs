@@ -1,12 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Error, ValidatorConfig};
+use crate::{BuildSwarm, Error, ValidatorConfig};
 use anyhow::{ensure, Result};
 use libra_config::{
     config::{NodeConfig, SeedPeersConfig},
     generator,
 };
+use libra_crypto::ed25519::Ed25519PrivateKey;
 use parity_multiaddr::Multiaddr;
 use std::collections::HashMap;
 
@@ -113,38 +114,29 @@ impl FullNodeConfig {
         );
 
         let mut validator_config = self.validator_config.build()?;
-        let mut configs = self.build_internal(&mut validator_config)?;
-
-        let network = validator_config
-            .full_node_networks
-            .last()
-            .ok_or(Error::MissingFullNodeNetwork)?;
-        let mut seed_peers = HashMap::new();
-        seed_peers.insert(network.peer_id, vec![self.bootstrap.clone()]);
+        let mut configs = self.build_internal(false, &mut validator_config)?;
 
         let mut config = configs.swap_remove(self.full_node_index);
-        let network = config
+        let network = &mut config
             .full_node_networks
-            .get_mut(0)
+            .last_mut()
             .ok_or(Error::MissingFullNodeNetwork)?;
         network.advertised_address = self.advertised.clone();
         network.listen_address = self.listen.clone();
-        network.seed_peers = SeedPeersConfig { seed_peers };
 
         Ok(config)
     }
 
     pub fn extend_validator(&self, config: &mut NodeConfig) -> Result<()> {
-        self.build_internal(config)?;
+        self.build_internal(false, config)?;
+        let seed_peers = self.build_seed_peers(&config)?;
         let network = config
             .full_node_networks
-            .get_mut(0)
+            .last_mut()
             .ok_or(Error::MissingFullNodeNetwork)?;
         network.advertised_address = self.advertised.clone();
         network.listen_address = self.listen.clone();
-        let mut seed_peers = HashMap::new();
-        seed_peers.insert(network.peer_id, vec![self.bootstrap.clone()]);
-        network.seed_peers = SeedPeersConfig { seed_peers };
+        network.seed_peers = seed_peers;
         Ok(())
     }
 
@@ -158,8 +150,21 @@ impl FullNodeConfig {
         Ok(())
     }
 
-    fn build_internal(&self, validator_config: &mut NodeConfig) -> Result<Vec<NodeConfig>> {
-        generator::full_node_swarm(
+    fn build_internal(
+        &self,
+        randomize_ports: bool,
+        validator_config: &mut NodeConfig,
+    ) -> Result<Vec<NodeConfig>> {
+        ensure!(self.full_nodes > 0, Error::NonZeroNetwork);
+        ensure!(
+            self.full_node_index < self.full_nodes,
+            Error::IndexError {
+                index: self.full_node_index,
+                nodes: self.full_nodes
+            }
+        );
+
+        let mut configs = generator::full_node_swarm(
             validator_config,
             self.template.clone_for_template(),
             self.full_nodes,
@@ -167,8 +172,40 @@ impl FullNodeConfig {
             true,
             Some(self.full_node_seed),
             self.permissioned,
-            false,
-        )
+            randomize_ports,
+        )?;
+
+        let seed_peers = self.build_seed_peers(&validator_config)?;
+        for config in configs.iter_mut() {
+            let network = config
+                .full_node_networks
+                .last_mut()
+                .ok_or(Error::MissingFullNodeNetwork)?;
+            network.seed_peers = seed_peers.clone();
+        }
+
+        Ok(configs)
+    }
+
+    fn build_seed_peers(&self, config: &NodeConfig) -> Result<SeedPeersConfig> {
+        let network = config
+            .full_node_networks
+            .last()
+            .ok_or(Error::MissingFullNodeNetwork)?;
+        let mut seed_peers = HashMap::new();
+        seed_peers.insert(network.peer_id, vec![self.bootstrap.clone()]);
+        Ok(SeedPeersConfig { seed_peers })
+    }
+}
+
+impl BuildSwarm for FullNodeConfig {
+    fn build_swarm(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
+        let mut validator_config = self.validator_config.build()?;
+        let (_, faucet_key) = self.validator_config.build_faucet_client()?;
+        Ok((
+            self.build_internal(true, &mut validator_config)?,
+            faucet_key,
+        ))
     }
 }
 
