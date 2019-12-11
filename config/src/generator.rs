@@ -222,15 +222,7 @@ pub fn validator_swarm_for_testing_times(
 ) -> Result<Vec<NodeConfig>> {
     let mut config = NodeConfig::default();
     config.vm_config.publishing_options = VMPublishingOption::Open;
-    validator_swarm_times(
-        NodeConfig::default(),
-        1,
-        true,
-        true,
-        true,
-        times,
-        network_random,
-    )
+    validator_swarm_times(config, 1, true, true, true, times, network_random)
 }
 
 fn add_peer(
