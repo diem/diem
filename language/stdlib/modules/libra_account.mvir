@@ -743,6 +743,21 @@ module LibraAccount {
 
     native move_to_channel<R:resource>(r: R);
     native move_from_channel<R:resource>():R;
+    native destroy_resource(lock_owner: address, module_id: bytearray);
+    close_resources(lock_owner: address) {
+        let len: u64;
+        let i: u64;
+        let module_id: bytearray;
+
+        len = ChannelUtil.channel_modules_len();
+        i = 0;
+        while (copy(i) < copy(len)) {
+            module_id = ChannelUtil.channel_modules_pop();
+            Self.destroy_resource(copy(lock_owner), copy(module_id));
+            i = copy(i) + 1;
+        }
+        return;
+    }
 
     //only support one participant currently.
     public open_channel(participant: address, sender_amount: u64, participant_amount: u64) acquires T,Channel, UserChannels, ChannelGlobalEvents {
@@ -791,6 +806,7 @@ module LibraAccount {
             balance: Self.withdraw_from_participant(copy(participant), move(participant_amount)),
         };
         Self.move_to_channel<Self.Channel>(move(channel));
+        ChannelUtil.create_module_list();
         ChannelUtil.move_to_shared<Self.ChannelMirror>(move(channel_mirror));
         ChannelUtil.move_to_participant<Self.ChannelParticipantAccount>(copy(sender), move(sender_channel_account));
         ChannelUtil.move_to_participant<Self.ChannelParticipantAccount>(copy(participant), move(participant_channel_account));
@@ -919,6 +935,7 @@ module LibraAccount {
             participant: copy(proposer),
         };
         Self.move_to_channel<Self.ChannelChallengedBy>(move(challenged_by));
+        Self.close_resources(*&copy(locked_by).participant);
         Self.do_close(copy(channel_address), move(channel));
         return;
     }
@@ -1087,4 +1104,11 @@ module LibraAccount {
         }
         return;
     }
+
+    // for test, will be removed after challenge test is ready
+    public test(lock_owner: address) {
+        Self.close_resources(copy(lock_owner));
+        return;
+    }
+
 }

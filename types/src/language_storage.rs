@@ -83,6 +83,14 @@ impl ModuleId {
     pub fn address(&self) -> &AccountAddress {
         &self.address
     }
+
+    pub fn make_from(bytes: Vec<u8>) -> Result<Self> {
+        lcs::from_bytes(bytes.as_slice()).map_err(|e| Into::into(e))
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        lcs::to_bytes(self).unwrap()
+    }
 }
 
 impl TryFrom<crate::proto::types::ModuleId> for ModuleId {

@@ -80,6 +80,17 @@ module Token {
         return *&move(ref).value;
     }
 
+    challenge_succeed(lock_owner: address) {
+        let bob_token: Self.T;
+        let bob_value: u64;
+
+        bob_token = Self.move_from_channel_receiver(copy(lock_owner));
+        bob_value = Self.value(&bob_token);
+
+        Self.destroy(move(bob_token));
+        return;
+    }
+
 }
 
 //! new-transaction
@@ -209,4 +220,22 @@ main(receiver:address) {
 
     return;
 
+}
+
+//! new-transaction
+//! sender: alice
+//! txn-channel: ch1,alice
+//! args: {{bob}}
+import 0x0.LibraAccount;
+import {{default}}.Token;
+main(lock_owner: address) {
+    Token.move_to_channel_receiver(copy(lock_owner), 1);
+    assert(Token.exist_channel_sender() == false, 11);
+    assert(Token.exist_channel_receiver(copy(lock_owner)) == true, 11);
+
+    LibraAccount.test(copy(lock_owner));
+
+    assert(Token.exist_channel_sender() == false, 11);
+    assert(Token.exist_channel_receiver(copy(lock_owner)) == false, 11);
+    return;
 }

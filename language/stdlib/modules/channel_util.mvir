@@ -1,8 +1,14 @@
 module ChannelUtil{
+    import 0x0.Vector;
 
-    native public move_to_participant<T:resource>(participant: address, t: T);
+    // should be cleaned up after all the other resources are cleaned up
+    resource ChannelModules {
+        module_list: Vector.T<bytearray>,
+    }
 
-    native public move_to_shared<T:resource>(t: T);
+    native do_move_to_participant<T:resource>(participant: address, t: T);
+
+    native do_move_to_shared<T:resource>(t: T);
 
     native public move_from_participant<T:resource>(participant: address): T;
 
@@ -17,4 +23,73 @@ module ChannelUtil{
     native public borrow_from_shared_mut<T:resource>(): &mut T;
 
     native public exist_channel_participant<T: resource>(participant: address): bool;
+
+    native module_id<T: resource>(): bytearray;
+
+    public create_module_list() {
+        let channel_modules: Self.ChannelModules;
+        let vec: Vector.T<bytearray>;
+
+        vec = Vector.empty<bytearray>();
+        channel_modules = ChannelModules {
+            module_list: move(vec),
+        };
+        Self.do_move_to_shared<Self.ChannelModules>(move(channel_modules));
+        return;
+    }
+
+    module_list(): &Vector.T<bytearray> {
+        let channel_modules: &Self.ChannelModules;
+        let module_list: &Vector.T<bytearray>;
+
+        channel_modules = Self.borrow_from_shared<Self.ChannelModules>();
+        return &move(channel_modules).module_list;
+    }
+
+    module_list_mut(): &mut Vector.T<bytearray> {
+        let channel_modules: &mut Self.ChannelModules;
+        let module_list: &mut Vector.T<bytearray>;
+
+        channel_modules = Self.borrow_from_shared_mut<Self.ChannelModules>();
+        return &mut move(channel_modules).module_list;
+    }
+
+    public channel_modules_len(): u64 {
+        return Vector.length<bytearray>(Self.module_list());
+    }
+
+    public channel_modules_push(mod: bytearray) {
+        let module_list_mut: &mut Vector.T<bytearray>;
+        let module_list: &Vector.T<bytearray>;
+
+        module_list_mut = Self.module_list_mut();
+        module_list = Self.module_list();
+        if (!Vector.contains<bytearray>(copy(module_list), &mod)) {
+            Vector.push_back<bytearray>(copy(module_list_mut), copy(mod));
+        }
+        return;
+    }
+
+    public channel_modules_pop(): bytearray {
+        return Vector.pop_back<bytearray>(Self.module_list_mut());
+    }
+
+    public move_to_participant<T: resource>(participant: address, t: T) {
+        let module_id: bytearray;
+
+        module_id = Self.module_id<T>();
+        Self.channel_modules_push(move(module_id));
+        Self.do_move_to_participant<T>(move(participant), move(t));
+        return;
+    }
+
+    public move_to_shared<T: resource>(t: T) {
+        let module_id: bytearray;
+
+        module_id = Self.module_id<T>();
+        Self.channel_modules_push(move(module_id));
+        Self.do_move_to_shared<T>(move(t));
+        return;
+    }
+
 }

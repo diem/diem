@@ -74,6 +74,9 @@ lazy_static! {
     static ref ACCOUNT_STRUCT_NAME: Identifier = Identifier::new("T").unwrap();
     static ref EMIT_EVENT_NAME: Identifier = Identifier::new("write_to_event_store").unwrap();
     static ref SAVE_ACCOUNT_NAME: Identifier = Identifier::new("save_account").unwrap();
+    static ref DESTRUCT_FUNC_NAME: Identifier = Identifier::new("challenge_succeed").unwrap();
+    static ref CHALLENGE_STRUCT_NAME: Identifier = Identifier::new("ChannelChallengedBy").unwrap();
+
 }
 
 fn derive_type_tag(
@@ -756,12 +759,13 @@ where
             match function_name.as_str() {
                 "move_to_channel" => self.call_move_to_channel(context, type_actual_tags),
                 "move_from_channel" => self.call_move_from_channel(context, type_actual_tags),
+                "destroy_resource" => self.call_destroy_resource(context),
                 _ => Err(VMStatus::new(StatusCode::LINKER_ERROR)),
             }
         } else if module_id == *CHANNEL_UTIL_MODULE {
             match function_name.as_str() {
-                "move_to_participant" => self.call_move_to_participant(context, type_actual_tags),
-                "move_to_shared" => self.call_move_to_shared(context, type_actual_tags),
+                "do_move_to_participant" => self.call_move_to_participant(context, type_actual_tags),
+                "do_move_to_shared" => self.call_move_to_shared(context, type_actual_tags),
                 "move_from_participant" => {
                     self.call_move_from_participant(context, type_actual_tags)
                 }
@@ -778,6 +782,9 @@ where
                 }
                 "exist_channel_participant" => {
                     self.call_exist_channel_participant(context, type_actual_tags)
+                }
+                "module_id" => {
+                    self.call_parse_module_id(type_actual_tags)
                 }
                 _ => Err(VMStatus::new(StatusCode::LINKER_ERROR)),
             }
@@ -862,13 +869,86 @@ where
         &mut self,
         context: &mut dyn InterpreterContext,
         participant: AccountAddress,
-    ) -> bool {
+    ) -> VMResult<bool> {
         let proposer = self.txn_data.channel_metadata.as_ref().unwrap().proposer;
         let authorized = &self.txn_data.channel_metadata.as_ref().unwrap().authorized;
-        if context.vm_mode().is_offchain() || participant == proposer || *authorized {
-            return true;
+        if context.vm_mode().is_offchain()
+            || participant == proposer
+            || *authorized
+            || self.is_challenge_succeed(context)? {
+            return Ok(true);
         }
-        return false;
+        return Ok(false);
+    }
+
+    /// call `authorize_challenger`.
+    fn is_challenge_succeed(
+        &mut self,
+        context: &mut dyn InterpreterContext,
+    ) -> VMResult<bool> {
+        let channel_address = self.get_channel_metadata()?.channel_address;
+        let account_module = self.module_cache.get_loaded_module(&ACCOUNT_MODULE)?;
+        let challenge_struct_id = account_module
+            .struct_defs_table
+            .get(&*CHALLENGE_STRUCT_NAME)
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
+        let struct_def =
+            self.module_cache
+                .resolve_struct_def(account_module, *challenge_struct_id, context)?;
+        let ap = Self::make_access_path(account_module, *challenge_struct_id, channel_address);
+        let (exists, _memsize) = context.resource_exists(&ap, struct_def)?;
+        return Ok(exists);
+    }
+
+    /// call `destroy_resource`.
+    fn call_destroy_resource(
+        &mut self,
+        context: &mut dyn InterpreterContext,
+    ) -> VMResult<()> {
+        let module_id_bytes = self.operand_stack.pop_as::<ByteArray>()?.as_bytes().to_vec();
+        let locker = self.operand_stack.pop_as::<AccountAddress>()?;
+        let module_id = ModuleId::make_from(module_id_bytes).unwrap();
+        let module = self.module_cache.get_loaded_module(&module_id)?;
+        let func_idx = module.function_defs_table.get(&*DESTRUCT_FUNC_NAME);
+        if func_idx.is_some() {
+            self.execute_function_call(
+                context,
+                &module_id,
+                &DESTRUCT_FUNC_NAME,
+                vec![Value::address(locker)],
+            )
+        } else {
+            // do nothing
+            Ok(())
+        }
+    }
+
+    /// call `parse_module_id`.
+    fn call_parse_module_id(
+        &mut self,
+        mut type_actual_tags: Vec<TypeTag>,
+    ) -> VMResult<()> {
+        if type_actual_tags.len() != 1 {
+            return Err(
+                VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
+                    "call_module_id expects 1 argument got {}.",
+                    type_actual_tags.len()
+                )),
+            );
+        }
+        let type_tag = type_actual_tags.pop().unwrap();
+
+        match type_tag {
+            TypeTag::Struct(struct_tag) => {
+                let tag = &struct_tag;
+                let module_address = tag.address;
+                let module_name = tag.module.clone();
+                let module_id = ModuleId::new(module_address, module_name);
+                self.operand_stack.push(Value::byte_array(ByteArray::new(module_id.to_bytes())))
+            }
+            _ => Err(VMStatus::new(StatusCode::TYPE_ERROR)
+                .with_message(format!("resolve_struct_def parse struct tag error."))),
+        }
     }
 
     /// call `move_to_participant`.
@@ -879,7 +959,7 @@ where
     ) -> VMResult<()> {
         let res = self.operand_stack.pop_as::<Struct>()?;
         let participant = self.operand_stack.pop_as::<AccountAddress>()?;
-        if !self.is_authorized(context, participant) {
+        if !self.is_authorized(context, participant)? {
             Err(VMStatus::new(StatusCode::MISSING_SIGNATURE_ERROR)
                 .with_message(format!("Access to private resource not authorized.")))
         } else {
@@ -909,7 +989,7 @@ where
         type_actual_tags: Vec<TypeTag>,
     ) -> VMResult<()> {
         let participant = self.operand_stack.pop_as::<AccountAddress>()?;
-        if !self.is_authorized(context, participant) {
+        if !self.is_authorized(context, participant)? {
             Err(VMStatus::new(StatusCode::MISSING_SIGNATURE_ERROR)
                 .with_message(format!("Access to private resource not authorized.")))
         } else {
@@ -967,7 +1047,7 @@ where
         type_actual_tags: Vec<TypeTag>,
     ) -> VMResult<()> {
         let participant = self.operand_stack.pop_as::<AccountAddress>()?;
-        if !self.is_authorized(context, participant) {
+        if !self.is_authorized(context, participant)? {
             Err(VMStatus::new(StatusCode::MISSING_SIGNATURE_ERROR)
                 .with_message(format!("Access to private resource not authorized.")))
         } else {

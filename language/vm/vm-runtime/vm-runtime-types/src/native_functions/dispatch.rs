@@ -389,20 +389,20 @@ lazy_static! {
             vec![TypeParameter(0)]
         );
         //ChannelUtil
-        add!(m, addr, "ChannelUtil", "move_to_participant",
+        add!(m, addr, "ChannelUtil", "do_move_to_participant",
            |_, _| {
                 Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
-                            "move_to_participant does not have a native implementation"
+                            "do_move_to_participant does not have a native implementation"
                                 .to_string()))
              },
             vec![Kind::Resource],
             vec![Address, TypeParameter(0)],
             vec![]
         );
-        add!(m, addr, "ChannelUtil", "move_to_shared",
+        add!(m, addr, "ChannelUtil", "do_move_to_shared",
            |_, _| {
                 Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
-                            "move_to_shared does not have a native implementation"
+                            "do_move_to_shared does not have a native implementation"
                                 .to_string()))
              },
             vec![Kind::Resource],
@@ -478,6 +478,36 @@ lazy_static! {
             vec![Kind::Resource],
             vec![Address],
             vec![Bool]
+        );
+        add!(m, addr, "ChannelUtil", "module_id",
+          |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "module_id does not have a native implementation"
+                                .to_string()))
+             },
+            vec![Kind::Resource],
+            vec![],
+            vec![ByteArray]
+        );
+        add!(m, addr, "LibraAccount", "destroy_resource",
+          |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "destroy_resource does not have a native implementation"
+                                .to_string()))
+             },
+            vec![],
+            vec![Address, ByteArray],
+            vec![]
+        );
+        add!(m, addr, "LibraAccount", "authorize_challenger",
+          |_, _| {
+                Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                            "authorize_challenger does not have a native implementation"
+                                .to_string()))
+             },
+            vec![],
+            vec![],
+            vec![]
         );
         m
     };
