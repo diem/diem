@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use dynamic_config_builder::ValidatorConfig;
+use config_builder::ValidatorConfig;
 use libra_config::config::NodeConfig;
 use parity_multiaddr::Multiaddr;
 use std::{convert::TryInto, fs, path::PathBuf};

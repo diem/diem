@@ -8,7 +8,7 @@ use crate::{
     },
     Executor, OP_COUNTERS,
 };
-use config_builder::util;
+use config_builder;
 use grpcio::{EnvBuilder, ServerBuilder};
 use libra_config::config::NodeConfig;
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
@@ -117,7 +117,7 @@ struct TestExecutor {
 
 impl TestExecutor {
     fn new() -> (TestExecutor, ExecutedTrees) {
-        let (mut config, _) = util::get_test_config();
+        let (mut config, _) = config_builder::test_config();
         let (storage_server, shutdown_receiver) = create_storage_server(&mut config);
         let (executor, committed_trees) = create_executor(&config);
 
@@ -361,7 +361,7 @@ fn create_transaction_chunks(
 
     // To obtain the batches of transactions, we first execute and save all these transactions in a
     // separate DB. Then we call get_transactions to retrieve them.
-    let (mut config, _) = util::get_test_config();
+    let (mut config, _) = config_builder::test_config();
     let (storage_server, shutdown_receiver) = create_storage_server(&mut config);
     let (executor, root_trees) = create_executor(&config);
 
@@ -436,7 +436,7 @@ fn test_executor_execute_and_commit_chunk() {
     };
 
     // Now we execute these two chunks of transactions.
-    let (mut config, _) = util::get_test_config();
+    let (mut config, _) = config_builder::test_config();
     let (storage_server, shutdown_receiver) = create_storage_server(&mut config);
     let (executor, mut committed_trees) = create_executor(&config);
     let storage_client = StorageReadServiceClient::new(
@@ -527,7 +527,7 @@ fn test_executor_execute_and_commit_chunk_restart() {
         ])
     };
 
-    let (mut config, _) = util::get_test_config();
+    let (mut config, _) = config_builder::test_config();
     let (storage_server, shutdown_receiver) = create_storage_server(&mut config);
     let mut synced_trees;
 
@@ -721,7 +721,7 @@ proptest! {
         let block_a = TestBlock::new(0..a_size, amount, *PRE_GENESIS_BLOCK_ID, gen_block_id(1));
         let block_b = TestBlock::new(0..b_size, amount, gen_block_id(1), gen_block_id(2));
 
-        let (mut config, _) = util::get_test_config();
+        let (mut config, _) = config_builder::test_config();
         let (storage_server, shutdown_receiver) = create_storage_server(&mut config);
 
         // First execute and commit one block, then destroy executor.
@@ -780,7 +780,7 @@ proptest! {
                 overlap_start..overlap_end
             ]);
 
-        let (mut config, _) = util::get_test_config();
+        let (mut config, _) = config_builder::test_config();
         let (storage_server, shutdown_receiver) = create_storage_server(&mut config);
         let (executor, committed_trees) = create_executor(&config);
 
