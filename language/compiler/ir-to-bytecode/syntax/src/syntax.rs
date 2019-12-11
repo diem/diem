@@ -342,7 +342,6 @@ fn parse_qualified_function_name_<'input>(
         | Tok::GetTxnSequenceNumber
         | Tok::MoveFrom
         | Tok::MoveToSender
-        | Tok::GetGasRemaining
         | Tok::Freeze => {
             let f = parse_builtin(tokens)?;
             FunctionCall::Builtin(f)
@@ -478,7 +477,6 @@ fn parse_call_or_term<'input>(
         | Tok::GetTxnSequenceNumber
         | Tok::MoveFrom
         | Tok::MoveToSender
-        | Tok::GetGasRemaining
         | Tok::Freeze
         | Tok::DotNameValue => {
             let f = parse_qualified_function_name_(tokens)?;
@@ -625,7 +623,6 @@ fn parse_module_name<'input>(
 //     "get_txn_sequence_number" => Builtin::GetTxnSequenceNumber,
 //     "move_from<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
 //     "move_to_sender<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ...},
-//     "get_gas_remaining" => Builtin::GetGasRemaining,
 //     "freeze" => Builtin::Freeze,
 // }
 
@@ -693,10 +690,6 @@ fn parse_builtin<'input>(
                 StructName::parse(name)?,
                 type_actuals,
             ))
-        }
-        Tok::GetGasRemaining => {
-            tokens.advance()?;
-            Ok(Builtin::GetGasRemaining)
         }
         Tok::Freeze => {
             tokens.advance()?;
@@ -862,7 +855,6 @@ fn parse_cmd<'input>(tokens: &mut Lexer<'input>) -> Result<Cmd, ParseError<usize
         | Tok::GetTxnSequenceNumber
         | Tok::MoveFrom
         | Tok::MoveToSender
-        | Tok::GetGasRemaining
         | Tok::Freeze
         | Tok::DotNameValue => Ok(Cmd::Exp(Box::new(parse_call_(tokens)?))),
         Tok::LParen => {

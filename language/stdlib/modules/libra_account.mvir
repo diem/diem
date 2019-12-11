@@ -467,13 +467,12 @@ module LibraAccount {
 
     // The epilogue is invoked at the end of transactions.
     // It collects gas and bumps the sequence number
-    epilogue() acquires T {
+    epilogue(gas_units_remaining: u64) acquires T {
         let transaction_sender: address;
         let sender_account: &mut Self.T;
         let transaction_fee_account: &mut Self.T;
         let imm_sender_account: &Self.T;
         let gas_price: u64;
-        let gas_units_remaining: u64;
         let starting_gas_units: u64;
         let transaction_fee_amount: u64;
         let balance_amount: u64;
@@ -488,7 +487,6 @@ module LibraAccount {
         // Charge for gas
         gas_price = get_txn_gas_unit_price();
         starting_gas_units = get_txn_max_gas_units();
-        gas_units_remaining = get_gas_remaining();
         transaction_fee_amount = move(gas_price) * (move(starting_gas_units) - move(gas_units_remaining));
         imm_sender_account = freeze(copy(sender_account));
         balance_amount = Self.balance_for_account(move(imm_sender_account));

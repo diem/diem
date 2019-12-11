@@ -297,7 +297,13 @@ pub fn encode_genesis_transaction_with_validator(
             // arises: both the genesis transaction and the subsequent transaction have sequence
             // number 0
             txn_executor
-                .execute_function(&runtime, &state_view, &ACCOUNT_MODULE, &EPILOGUE, vec![])
+                .execute_function(
+                    &runtime,
+                    &state_view,
+                    &ACCOUNT_MODULE,
+                    &EPILOGUE,
+                    vec![Value::u64(/* gas_remaining */ 0)],
+                )
                 .unwrap();
 
             // Create the transaction fees resource under the fees account

@@ -373,7 +373,7 @@ fn transform_code_with_txn_builtins() {
                 let gas_price: u64;
                 let gas: u64;
                 let pk: bytearray;
-                gas = get_gas_remaining();
+                gas = get_txn_sequence_number();
                 seq_num = get_txn_sequence_number();
                 max_gas = get_txn_max_gas_units();
                 gas_price = get_txn_gas_unit_price();
@@ -386,7 +386,7 @@ fn transform_code_with_txn_builtins() {
     );
     let (actual_code, actual_types) = generate_code_from_string(code);
     let expected_code = vec![
-        GetGasRemaining(6),
+        GetTxnSequenceNumber(6),
         StLoc(4, 6),
         GetTxnSequenceNumber(7),
         StLoc(1, 7),

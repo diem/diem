@@ -1204,11 +1204,6 @@ fn compile_call(
                     function_frame.push()?;
                     vec_deque![InferredType::U64]
                 }
-                Builtin::GetGasRemaining => {
-                    push_instr!(call.span, Bytecode::GetGasRemaining);
-                    function_frame.push()?;
-                    vec_deque![InferredType::U64]
-                }
                 Builtin::GetTxnSender => {
                     push_instr!(call.span, Bytecode::GetTxnSenderAddress);
                     function_frame.push()?;
