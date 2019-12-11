@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 use std::cmp::min;
+use std::env;
 
 use crate::experiments::ExperimentParam;
 use crate::{
@@ -21,12 +22,14 @@ pub struct ExperimentSuite {
 impl ExperimentSuite {
     pub fn new_pre_release(cluster: &Cluster) -> Self {
         let mut experiments: Vec<Box<dyn Experiment>> = vec![];
-        experiments.push(Box::new(
-            RecoveryTimeParams {
-                num_accounts_to_mint: 100_000,
-            }
-            .build(cluster),
-        ));
+        if env::var("RECOVERY_EXP").is_ok() {
+            experiments.push(Box::new(
+                RecoveryTimeParams {
+                    num_accounts_to_mint: 100_000,
+                }
+                .build(cluster),
+            ));
+        }
         let count = min(3, cluster.instances().len() / 3);
         // Reboot different sets of 3 validators *100 times
         for _ in 0..10 {
