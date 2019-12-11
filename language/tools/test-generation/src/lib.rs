@@ -59,7 +59,6 @@ fn run_vm(module: VerifiedModule) -> Result<(), String> {
             SignatureToken::Address => TransactionArgument::Address(AccountAddress::new([0; 32])),
             SignatureToken::U64 => TransactionArgument::U64(0),
             SignatureToken::Bool => TransactionArgument::Bool(true),
-            SignatureToken::String => TransactionArgument::String("".into()),
             SignatureToken::ByteArray => TransactionArgument::ByteArray(ByteArray::new(vec![])),
             _ => unimplemented!("Unsupported argument type: {:#?}", sig_tok),
         })

@@ -118,7 +118,10 @@ fn verify_actuals(signature: &FunctionSignature, args: &[TransactionArgument]) -
             (SignatureToken::U64, TransactionArgument::U64(_)) => (),
             (SignatureToken::Address, TransactionArgument::Address(_)) => (),
             (SignatureToken::ByteArray, TransactionArgument::ByteArray(_)) => (),
-            (SignatureToken::String, TransactionArgument::String(_)) => (),
+            (SignatureToken::String, _) => {
+                warn!("strings will be removed soon");
+                return false;
+            }
             _ => {
                 warn!(
                     "[VM] different argument type: formal {:?}, actual {:?}",
