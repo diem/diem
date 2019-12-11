@@ -28,7 +28,6 @@ use vm::{
         words_in, AbstractMemorySize, GasAlgebra, GasCarrier, CONST_SIZE, REFERENCE_SIZE,
         STRUCT_SIZE,
     },
-    vm_string::VMString,
     IndexKind,
 };
 
@@ -60,7 +59,6 @@ enum ValueImpl {
     Address(AccountAddress),
     Bool(bool),
     ByteArray(ByteArray),
-    String(VMString),
 
     /// A struct in Move.
     Struct(Struct),
@@ -185,7 +183,6 @@ impl ValueImpl {
             // the semantics that we utilize currently, but this string may
             // need to be copied at some later time, so we need to charge based
             // upon the size of the memory that will possibly need to be accessed.
-            ValueImpl::String(s) => words_in(AbstractMemorySize::new(s.len() as u64)),
             ValueImpl::ByteArray(key) => AbstractMemorySize::new(key.len() as u64),
             ValueImpl::Struct(s) => s.size(),
             ValueImpl::NativeStruct(s) => s.size(),
@@ -205,7 +202,6 @@ impl ValueImpl {
             (ValueImpl::Bool(b1), ValueImpl::Bool(b2)) => Ok(b1 == b2),
             (ValueImpl::Address(a1), ValueImpl::Address(a2)) => Ok(a1 == a2),
             (ValueImpl::ByteArray(ba1), ValueImpl::ByteArray(ba2)) => Ok(ba1 == ba2),
-            (ValueImpl::String(s1), ValueImpl::String(s2)) => Ok(s1 == s2),
             (ValueImpl::Struct(s1), ValueImpl::Struct(s2)) => s1.equals(s2),
             // references
             (ValueImpl::Reference(ref1), ValueImpl::Reference(ref2)) => ref1.equals(ref2),
@@ -231,7 +227,6 @@ impl ValueImpl {
             ValueImpl::Address(_) => Type::Address,
             ValueImpl::Bool(_) => Type::Bool,
             ValueImpl::ByteArray(_) => Type::ByteArray,
-            ValueImpl::String(_) => Type::String,
             ValueImpl::Struct(s) => Type::Struct(s.to_struct_def_FOR_TESTING()),
             ValueImpl::NativeStruct(v) => Type::Struct(v.to_struct_def_FOR_TESTING()),
             ValueImpl::Reference(reference) => {
@@ -251,7 +246,6 @@ impl ValueImpl {
             ValueImpl::Address(addr) => format!("Address({})", addr.short_str()),
             ValueImpl::Bool(b) => format!("Bool({})", b),
             ValueImpl::ByteArray(ba) => format!("ByteArray({})", ba),
-            ValueImpl::String(s) => format!("String({})", s),
             ValueImpl::Struct(s) => format!("Struct({})", s.pretty_string()),
             ValueImpl::NativeStruct(v) => format!("NativeStruct({:?})", v),
             ValueImpl::Reference(reference) => format!("Reference({})", reference.pretty_string()),
@@ -287,11 +281,6 @@ impl Value {
     /// Return a `Value` representing a `ByteArray` in the VM.
     pub fn byte_array(bytearray: ByteArray) -> Self {
         Value(ValueImpl::ByteArray(bytearray))
-    }
-
-    /// Return a `Value` representing a `String` in the VM.
-    pub fn string(s: VMString) -> Self {
-        Value(ValueImpl::String(s))
     }
 
     /// Return a `Value` representing a `Struct` in the VM.
@@ -369,7 +358,6 @@ impl Value {
             (SignatureToken::U64, ValueImpl::U64(_)) => true,
             (SignatureToken::Address, ValueImpl::Address(_)) => true,
             (SignatureToken::ByteArray, ValueImpl::ByteArray(_)) => true,
-            (SignatureToken::String, ValueImpl::String(_)) => true,
             _ => false,
         }
     }
@@ -423,18 +411,6 @@ impl From<Value> for VMResult<ByteArray> {
             ValueImpl::ByteArray(byte_array) => Ok(byte_array),
             _ => {
                 let msg = format!("Cannot cast {:?} to ByteArray", value);
-                Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
-            }
-        }
-    }
-}
-
-impl From<Value> for VMResult<VMString> {
-    fn from(value: Value) -> VMResult<VMString> {
-        match value.0 {
-            ValueImpl::String(s) => Ok(s),
-            _ => {
-                let msg = format!("Cannot cast {:?} to String", value);
                 Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg))
             }
         }
@@ -1120,7 +1096,6 @@ impl<'de> de::DeserializeSeed<'de> for &Type {
         match self {
             Type::Bool => bool::deserialize(deserializer).map(Value::bool),
             Type::U64 => u64::deserialize(deserializer).map(Value::u64),
-            Type::String => VMString::deserialize(deserializer).map(Value::string),
             Type::ByteArray => ByteArray::deserialize(deserializer).map(Value::byte_array),
             Type::Address => AccountAddress::deserialize(deserializer).map(Value::address),
             Type::Struct(s_fields) => s_fields.deserialize(deserializer),
@@ -1196,11 +1171,6 @@ impl Serialize for ValueImpl {
                 addr.serialize(serializer)
             }
             ValueImpl::Bool(b) => serializer.serialize_bool(*b),
-            ValueImpl::String(s) => {
-                // TODO: must define an api for canonical serializations of string.
-                // Right now we are just using Rust to serialize the string
-                serializer.serialize_bytes(s.as_bytes())
-            }
             ValueImpl::Struct(vals) => {
                 let mut t = serializer.serialize_tuple(vals.0.len())?;
                 for mut_val in &vals.0 {

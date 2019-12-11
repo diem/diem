@@ -408,15 +408,9 @@ where
                         self.operand_stack
                             .push(Value::address(*frame.module().address_at(*idx)))?;
                     }
-                    Bytecode::LdStr(idx) => {
-                        let string = frame.module().user_string_at(*idx);
-                        gas!(
-                            instr: context,
-                            self,
-                            Opcodes::LD_STR,
-                            AbstractMemorySize::new(string.len() as GasCarrier)
-                        )?;
-                        self.operand_stack.push(Value::string(string.into()))?;
+                    Bytecode::LdStr(_) => {
+                        return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                            .with_message("strings will be removed soon".to_string()))
                     }
                     Bytecode::LdByteArray(idx) => {
                         let byte_array = frame.module().byte_array_at(*idx);

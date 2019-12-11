@@ -28,7 +28,6 @@ use vm::{
         UserStringIndex, NO_TYPE_ACTUALS,
     },
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
-    vm_string::VMString,
 };
 use vm_runtime::{
     code_cache::module_cache::ModuleCache, interpreter::InterpreterForCostSynthesis,
@@ -113,9 +112,6 @@ where
     /// The maximum size of the generated value stack.
     max_stack_size: u64,
 
-    /// Cursor into the user string pool. Used for the generation of random user strings.
-    user_string_index: TableIndex,
-
     /// Cursor into the address pool. Used for the generation of random addresses.  We use this since we need the
     /// addresses to be unique, and we don't want a mutable reference into the underlying `root_module`.
     address_pool_index: TableIndex,
@@ -160,7 +156,6 @@ where
             module_cache,
             iters,
             table_size: iters,
-            user_string_index: 0,
             address_pool_index: 0,
             struct_handle_table: HashMap::new(),
             function_handle_table: HashMap::new(),
@@ -217,24 +212,6 @@ where
         let len: usize = self.gen.gen_range(1, BYTE_ARRAY_MAX_SIZE);
         let bytes: Vec<u8> = (0..len).map(|_| self.gen.gen::<u8>()).collect();
         ByteArray::new(bytes)
-    }
-
-    // Strings and addresses are already randomly generated in the module that we create these
-    // pools from so we simply pop off from them. This assumes that the module was generated with
-    // at least `self.iters` number of strings and addresses. In the case where we are just padding
-    // the stack, or where the instructions semantics don't require having an address in the
-    // address pool, we don't waste our pools and generate a random value.
-    fn next_vm_string(&mut self, is_padding: bool) -> VMString {
-        if is_padding {
-            let len: usize = self.gen.gen_range(1, MAX_STRING_SIZE);
-            random_string(&mut self.gen, len).into()
-        } else {
-            let user_string = self
-                .root_module
-                .user_string_at(UserStringIndex::new(self.user_string_index));
-            self.user_string_index = (self.user_string_index + 1) % self.table_size;
-            user_string.to_owned()
-        }
     }
 
     fn next_addr(&mut self, is_padding: bool) -> AccountAddress {
@@ -301,11 +278,10 @@ where
     }
 
     fn next_stack_value(&mut self, stk: &[Value], is_padding: bool) -> Value {
-        match self.gen.gen_range(0, 5) {
+        match self.gen.gen_range(0, 4) {
             0 => Value::u64(self.next_int(stk)),
             1 => Value::bool(self.next_bool()),
-            2 => Value::string(self.next_vm_string(is_padding)),
-            3 => Value::byte_array(self.next_bytearray()),
+            2 => Value::byte_array(self.next_bytearray()),
             _ => Value::address(self.next_addr(is_padding)),
         }
     }
@@ -480,7 +456,7 @@ where
         match sig_token {
             SignatureToken::Bool => Value::bool(self.next_bool()),
             SignatureToken::U64 => Value::u64(self.next_int(stk)),
-            SignatureToken::String => Value::string(self.next_vm_string(false)),
+            SignatureToken::String => panic!("strings will be removed soon"),
             SignatureToken::Address => Value::address(self.next_addr(false)),
             SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
                 let underlying_value = self.resolve_to_value(sig, stk);
