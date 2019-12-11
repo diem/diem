@@ -699,8 +699,11 @@ fn aggregate_timeout_votes() {
     // proposal: both can then aggregate the QC for the first proposal.
     let nodes = SMRNode::start_num_nodes(3, &mut playground, FixedProposer, false);
     block_on(async move {
+        // Nodes 1 and 2 cannot send messages to anyone
         playground.drop_message_for(&nodes[1].signer.author(), nodes[0].signer.author());
         playground.drop_message_for(&nodes[2].signer.author(), nodes[0].signer.author());
+        playground.drop_message_for(&nodes[1].signer.author(), nodes[2].signer.author());
+        playground.drop_message_for(&nodes[2].signer.author(), nodes[1].signer.author());
 
         // Node 0 sends proposals to nodes 1 and 2
         let msg = playground
@@ -717,6 +720,11 @@ fn aggregate_timeout_votes() {
             .await;
         playground.drop_message_for(&nodes[0].signer.author(), nodes[1].signer.author());
         playground.drop_message_for(&nodes[0].signer.author(), nodes[2].signer.author());
+
+        // Now when the nodes 1 and 2 have the votes from 0, enable communication between them.
+        // As a result they should get the votes from each other and thus be able to form a QC.
+        playground.stop_drop_message_for(&nodes[2].signer.author(), &nodes[1].signer.author());
+        playground.stop_drop_message_for(&nodes[1].signer.author(), &nodes[2].signer.author());
 
         // Wait for the timeout messages sent by 1 and 2 to each other
         playground
