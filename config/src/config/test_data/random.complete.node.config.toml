@@ -39,8 +39,9 @@ is_async = true
 chan_size = 256
 
 [metrics]
-dir = "metrics"
 collection_interval_ms = 1000
+dir = "metrics"
+enabled = false
 
 [mempool]
 broadcast_transactions = true

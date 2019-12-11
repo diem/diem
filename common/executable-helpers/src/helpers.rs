@@ -25,9 +25,9 @@ pub fn load_config_from_path(config: Option<&Path>) -> NodeConfig {
 }
 
 pub fn setup_metrics(peer_id: PeerId, node_config: &NodeConfig) {
-    if let Some(metrics_dir) = node_config.metrics.dir() {
+    if node_config.metrics.enabled {
         libra_metrics::dump_all_metrics_to_file_periodically(
-            &metrics_dir,
+            &node_config.metrics.dir(),
             &format!("{}.metrics", peer_id),
             node_config.metrics.collection_interval_ms,
         );

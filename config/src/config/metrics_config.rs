@@ -7,8 +7,9 @@ use std::path::PathBuf;
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct MetricsConfig {
-    pub dir: PathBuf,
     pub collection_interval_ms: u64,
+    pub dir: PathBuf,
+    pub enabled: bool,
     #[serde(skip)]
     data_dir: PathBuf,
 }
@@ -16,21 +17,20 @@ pub struct MetricsConfig {
 impl Default for MetricsConfig {
     fn default() -> MetricsConfig {
         MetricsConfig {
-            dir: PathBuf::from("metrics"),
             collection_interval_ms: 1000,
             data_dir: PathBuf::from("/opt/libra/data"),
+            enabled: false,
+            dir: PathBuf::from("metrics"),
         }
     }
 }
 
 impl MetricsConfig {
-    pub fn dir(&self) -> Option<PathBuf> {
-        if self.dir.as_os_str().is_empty() {
-            None
-        } else if self.dir.is_relative() {
-            Some(self.data_dir.join(&self.dir))
+    pub fn dir(&self) -> PathBuf {
+        if self.dir.is_relative() {
+            self.data_dir.join(&self.dir)
         } else {
-            Some(self.dir.clone())
+            self.dir.clone()
         }
     }
 
