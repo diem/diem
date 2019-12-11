@@ -22,7 +22,6 @@ pub struct ValidatorConfig {
     advertised: Multiaddr,
     bootstrap: Multiaddr,
     index: usize,
-    ipv4: bool,
     listen: Multiaddr,
     nodes: usize,
     seed: [u8; 32],
@@ -35,7 +34,6 @@ impl Default for ValidatorConfig {
             advertised: DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap(),
             bootstrap: DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap(),
             index: 0,
-            ipv4: true,
             listen: DEFAULT_LISTEN.parse::<Multiaddr>().unwrap(),
             nodes: 1,
             seed: DEFAULT_SEED,
@@ -105,7 +103,7 @@ impl ValidatorConfig {
     }
 
     pub fn build_set(&self) -> Result<Vec<NodeConfig>> {
-        let (configs, _) = self.build_set_internal(false)?;
+        let (configs, _) = self.build_common(false)?;
         Ok(configs)
     }
 
@@ -114,60 +112,7 @@ impl ValidatorConfig {
         Ok((configs[0].consensus.consensus_peers.clone(), faucet_key))
     }
 
-    fn build_set_internal(
-        &self,
-        randomize_ports: bool,
-    ) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
-        let (mut configs, faucet_key) = self.build_common(randomize_ports)?;
-        let first_config = &configs[0];
-        let validator_network = first_config
-            .validator_network
-            .as_ref()
-            .ok_or(Error::MissingValidatorNetwork)?;
-        let consensus_peers = &first_config.consensus.consensus_peers;
-
-        let genesis = Some(Transaction::UserTransaction(
-            vm_genesis::encode_genesis_transaction_with_validator(
-                &faucet_key,
-                faucet_key.public_key(),
-                consensus_peers.get_validator_set(&validator_network.network_peers),
-            )
-            .into_inner(),
-        ));
-
-        for config in configs.iter_mut() {
-            config.execution.genesis = genesis.clone();
-        }
-
-        Ok((configs, faucet_key))
-    }
-
     fn build_common(&self, randomize_ports: bool) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
-        self.validate()?;
-
-        let mut rng = StdRng::from_seed(self.seed);
-        let faucet_key = Ed25519PrivateKey::generate_for_testing(&mut rng);
-        let config_seed: [u8; 32] = rng.gen();
-
-        let configs = generator::validator_swarm(
-            self.template.clone_for_template(),
-            self.nodes,
-            true,
-            self.ipv4,
-            Some(config_seed),
-            randomize_ports,
-        )?;
-
-        ensure!(
-            configs.len() == self.nodes,
-            Error::MissingConfigs {
-                found: configs.len()
-            }
-        );
-        Ok((configs, faucet_key))
-    }
-
-    fn validate(&self) -> Result<()> {
         ensure!(self.nodes > 0, Error::NonZeroNetwork);
         ensure!(
             self.index < self.nodes,
@@ -176,13 +121,47 @@ impl ValidatorConfig {
                 nodes: self.nodes
             }
         );
-        Ok(())
+
+        let mut faucet_rng = StdRng::from_seed(self.seed);
+        let faucet_key = Ed25519PrivateKey::generate_for_testing(&mut faucet_rng);
+        let config_seed: [u8; 32] = faucet_rng.gen();
+        let mut configs =
+            generator::validator_swarm(&self.template, self.nodes, config_seed, randomize_ports);
+
+        ensure!(
+            configs.len() == self.nodes,
+            Error::MissingConfigs {
+                found: configs.len()
+            }
+        );
+
+        let consensus_peers = &configs[0].consensus.consensus_peers;
+        let network_peers = &configs[0]
+            .validator_network
+            .as_ref()
+            .ok_or(Error::MissingValidatorNetwork)?
+            .network_peers;
+
+        let genesis = Some(Transaction::UserTransaction(
+            vm_genesis::encode_genesis_transaction_with_validator(
+                &faucet_key,
+                faucet_key.public_key(),
+                consensus_peers.get_validator_set(network_peers),
+            )
+            .into_inner(),
+        ));
+
+        for config in &mut configs {
+            config.execution.genesis = genesis.clone();
+        }
+
+        Ok((configs, faucet_key))
     }
 }
 
 impl BuildSwarm for ValidatorConfig {
     fn build_swarm(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
-        self.build_set_internal(true)
+        self.build_common(true)
     }
 }
 

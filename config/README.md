@@ -185,3 +185,4 @@ The test configs currently live in `src/config/test_data`.
 - LoggerConfig should allow specifying the severity.
 - Eliminate generate-keypair
 - Generating public networks is broken
+- Make SafetyRule use on disk by default and remove from config generator
