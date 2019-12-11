@@ -137,7 +137,7 @@ pub struct AccountInfoUniverse {
     accounts: Vec<AccountInfo>,
     epoch: u64,
     round: Round,
-    version: Version,
+    next_version: Version,
 }
 
 impl AccountInfoUniverse {
@@ -145,24 +145,18 @@ impl AccountInfoUniverse {
         keypairs: Vec<(Ed25519PrivateKey, Ed25519PublicKey)>,
         epoch: u64,
         round: Round,
-        version: Version,
+        next_version: Version,
     ) -> Self {
         let accounts = keypairs
             .into_iter()
             .map(|(private_key, public_key)| AccountInfo::new(private_key, public_key))
             .collect();
 
-        // Notice that the Genesis LedgerInfo has round=0, epoch=0, version=0,
-        // and if the first block after Genesis is empty, it has round=1, epoch=1 and version=0.
-        assert!(1 <= epoch);
-        assert!(epoch <= round);
-        assert!(round <= version + 1);
-
         Self {
             accounts,
             epoch,
             round,
-            version,
+            next_version,
         }
     }
 
@@ -181,8 +175,8 @@ impl AccountInfoUniverse {
     }
 
     fn bump_and_get_version(&mut self, block_size: usize) -> Version {
-        self.version += block_size as u64;
-        self.version
+        self.next_version += block_size as u64;
+        self.next_version - 1
     }
 
     fn get_epoch(&self) -> u64 {
@@ -200,7 +194,12 @@ impl Arbitrary for AccountInfoUniverse {
     type Parameters = usize;
     fn arbitrary_with(num_accounts: Self::Parameters) -> Self::Strategy {
         vec(keypair_strategy(), num_accounts)
-            .prop_map(|keypairs| AccountInfoUniverse::new(keypairs, 1, 1, 0))
+            .prop_map(|keypairs| {
+                AccountInfoUniverse::new(
+                    keypairs, /* epoch = */ 0, /* round = */ 0,
+                    /* next_version = */ 0,
+                )
+            })
             .boxed()
     }
 
