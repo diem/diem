@@ -7,24 +7,15 @@ use libra_config::{config::PersistableConfig, generator};
 use libra_types::transaction::Transaction;
 use std::{fs::File, io::prelude::*};
 use transaction_builder::default_config;
-use vm_genesis::{encode_genesis_transaction_with_validator, GENESIS_KEYPAIR};
+use vm_genesis::{generate_genesis_blob_with_consensus, GENESIS_KEYPAIR};
 
 const CONFIG_LOCATION: &str = "genesis/vm_config.toml";
 const GENESIS_LOCATION: &str = "genesis/genesis.blob";
 
 /// Generate the genesis blob used by the Libra blockchain
 fn generate_genesis_blob() -> Vec<u8> {
-    let configs = generator::validator_swarm_for_testing(10).expect("Unable to generate configs");
-    let consensus_peers = &configs[0].consensus.consensus_peers;
-    let network_peers = &configs[0].validator_network.as_ref().unwrap().network_peers;
-
     lcs::to_bytes(&Transaction::UserTransaction(
-        encode_genesis_transaction_with_validator(
-            &GENESIS_KEYPAIR.0,
-            GENESIS_KEYPAIR.1.clone(),
-            consensus_peers.get_validator_set(network_peers),
-        )
-        .into_inner(),
+        generate_genesis_blob_with_consensus(false),
     ))
     .expect("Generating genesis block failed")
 }

@@ -88,6 +88,7 @@ impl SyncManager {
                                     (peer_id, (height, root_hash)) = sync_signal_receiver.select_next_some() => {
                                         //1. sync data from latest block
                                         //TODO:timeout
+                                        println!("---------6666------->{:?}------{}", peer_id, height);
                                         if max_height.load(Ordering::Relaxed) < height {
                                             max_height.store(height, Ordering::Relaxed);
                                             let sync_block_req_msg = Self::sync_block_req(root_hash);
@@ -122,9 +123,11 @@ impl SyncManager {
                                         }
 
                                         if end_flag {
+                                            println!("---------77777------->{:?}------", peer_id);
                                             let mut block_vec = sync_block_cache_lock.remove(&peer_id).expect("peer block not exist.");
                                             block_vec.reverse();
                                             for b in block_vec {
+                                                println!("---------88888------->{:?}--------->{:?}", peer_id, b.id());
                                                 sync_block_cache_sender.send(b).await.expect("send block err.");
                                             }
                                         } else {
@@ -155,7 +158,7 @@ impl SyncManager {
 
         let req = BlockRetrievalRequest::new(hash, num_blocks)
             .try_into()
-            .expect("xxx");
+            .expect("BlockRetrievalRequest pb err.");
 
         ConsensusMsg {
             message: Some(ConsensusMsg_oneof::RequestBlock(req)),

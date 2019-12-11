@@ -8,8 +8,12 @@ mod genesis_gas_schedule;
 use crate::genesis_gas_schedule::initial_gas_schedule;
 use anyhow::Result;
 use lazy_static::lazy_static;
+use libra_config::generator;
+use libra_crypto::hash::CryptoHash;
 use libra_crypto::{ed25519::*, traits::ValidKey};
+use libra_logger::prelude::*;
 use libra_state_view::StateView;
+use libra_types::transaction::SignedTransaction;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -375,6 +379,7 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
                     vec![],
                 )
                 .unwrap();
+
             for validator_keys in validator_set.payload().iter().rev() {
                 // First, add a ValidatorConfig resource under each account
                 let validator_address = *validator_keys.account_address();
@@ -455,6 +460,7 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
                 txn_output.events().len(),
                 txn_output.events()
             );
+
             // (2) The last event should be the validator set change event
             let validator_set_change_event = if is_pow {
                 &txn_output.events()[4]
@@ -486,5 +492,20 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
         }
     };
     let transaction = RawTransaction::new_change_set(genesis_addr, 0, genesis_write_set);
+    info!("genesis txn is {:?}", transaction.hash());
+
     transaction.sign(private_key, public_key).unwrap()
+}
+
+pub fn generate_genesis_blob_with_consensus(is_pow: bool) -> SignedTransaction {
+    let configs = generator::validator_swarm_for_testing(10).expect("Unable to generate configs");
+    let consensus_peers = &configs[0].consensus.consensus_peers;
+    let network_peers = &configs[0].validator_network.as_ref().unwrap().network_peers;
+    encode_genesis_transaction_with_validator_and_consensus(
+        &GENESIS_KEYPAIR.0,
+        GENESIS_KEYPAIR.1.clone(),
+        consensus_peers.get_validator_set(network_peers),
+        is_pow,
+    )
+    .into_inner()
 }

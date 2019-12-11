@@ -112,6 +112,7 @@ impl ChainManager {
                     // 1. orphan block
                     let parent_block_id = block.parent_id();
                     let block_index = BlockIndex::new(&block.id(), &parent_block_id);
+                    let aa = block.id().clone();
                     let mut chain_lock = block_tree.write().compat().await.unwrap();
                     if chain_lock.block_exist(&parent_block_id) {
                         // 2. find ancestors
@@ -137,6 +138,7 @@ impl ChainManager {
                         let block_meta_data = BlockMetadata::new(parent_block_id.clone(), block.timestamp_usecs(), BTreeMap::new(), miner_address.clone());
                         commit_txn_vec.push((block_meta_data.clone(), payload.clone()));
 
+                        println!("------11111111--------{:?}--------{}", aa, commit_txn_vec.len());
                         // 4. call pre_compute
                         match state_computer.compute_by_hash(&pre_compute_grandpa_block_id, &parent_block_id, &block.id(), commit_txn_vec).await {
                             Ok(processed_vm_output) => {
@@ -161,6 +163,8 @@ impl ChainManager {
                                     txn_data_list.push(processed_vm_output.transaction_data()[total_len - len + i].clone());
                                 }
 
+                                println!("------22222222-----{:?}----{}---{}------{}", aa, len, total_len, txn_data_list.len());
+
                                 let mut txns_to_commit = vec![];
                                 for (txn, txn_data) in itertools::zip_eq(txn_vec, txn_data_list) {
                                     txns_to_commit.push(TransactionToCommit::new(
@@ -171,7 +175,7 @@ impl ChainManager {
                                         txn_data.status().vm_status().major_status,
                                     ));
                                 }
-
+                                println!("------3333333-----{:?}-----{}------", aa, txns_to_commit.len());
                                 let commit_data = CommitData {txns_to_commit,
                                     first_version: (block.quorum_cert().ledger_info().ledger_info().commit_info().version() - (len as u64) + 1) as u64,
                                     ledger_info_with_sigs: Some(block.quorum_cert().ledger_info().clone())};
@@ -197,6 +201,9 @@ impl ChainManager {
                     write_lock.insert(block_index.parent_id(), vec![block_index.id()]);
                 }
                     }
+                    complete => {
+                       break;
+                   }
                 }
             }
         };

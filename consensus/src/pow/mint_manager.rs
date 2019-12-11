@@ -5,6 +5,7 @@ use crate::pow::payload_ext::{genesis_id, BlockPayloadExt};
 use crate::state_replication::{StateComputer, TxnManager};
 use anyhow::Result;
 use atomic_refcell::AtomicRefCell;
+use chrono::prelude::*;
 use consensus_types::{block::Block, quorum_cert::QuorumCert, vote_data::VoteData};
 use cuckoo::consensus::PowService;
 use libra_crypto::ed25519::Ed25519PrivateKey;
@@ -222,16 +223,24 @@ impl MintManager {
                                 error!("{:?}", e);
                             }
                         }
-
-                        let mut r = rand::thread_rng();
-                        r.gen::<i32>();
-                        let sleep_time = r.gen_range(1, 5);
-                        debug!("sleep begin.");
-                        sleep(Duration::from_secs(sleep_time));
-                        debug!("sleep end.");
                     }
                     _ => {}
                 }
+
+                let mut r = rand::thread_rng();
+                r.gen::<i32>();
+                let sleep_time = r.gen_range(1, 5);
+                let begin_utc: DateTime<Utc> = Utc::now();
+                debug!(
+                    "{:?} sleep {} begin at {:?}",
+                    mint_author, sleep_time, begin_utc
+                );
+                sleep(Duration::from_secs(sleep_time));
+                let end_utc: DateTime<Utc> = Utc::now();
+                debug!(
+                    "{:?} sleep {} end at {:?}",
+                    mint_author, sleep_time, end_utc
+                );
             }
         };
         executor.spawn(mint_fut);
