@@ -309,7 +309,7 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
                 .execute_function(
                     &ACCOUNT_MODULE,
                     &MINT_TO_ADDRESS,
-                    vec![Value::address(genesis_addr), Value::u64(INIT_BALANCE)],
+                    vec![Value::address(genesis_addr), Value::u64(INIT_BALANCE * 2)],
                 )
                 .unwrap();
 
