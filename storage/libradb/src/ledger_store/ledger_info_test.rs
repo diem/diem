@@ -10,7 +10,7 @@ use proptest::{collection::vec, prelude::*};
 fn arb_ledger_infos_with_sigs() -> impl Strategy<Value = Vec<LedgerInfoWithSignatures>> {
     (
         any_with::<AccountInfoUniverse>(3),
-        vec((any::<LedgerInfoWithSignaturesGen>(), 0..10usize), 1..100),
+        vec((any::<LedgerInfoWithSignaturesGen>(), 1..10usize), 1..100),
     )
         .prop_map(|(mut universe, gens)| {
             gens.into_iter()
