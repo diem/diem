@@ -305,8 +305,7 @@ impl NodeConfig {
         let mut config = NodeConfig::default();
         config.vm_config = VMConfig::onchain();
         let mut rng = StdRng::from_seed([0u8; 32]);
-        Self::random_with_template(&config, &mut rng);
-        return config;
+        Self::random_with_template(&config, &mut rng)
     }
 
     pub fn random() -> Self {
