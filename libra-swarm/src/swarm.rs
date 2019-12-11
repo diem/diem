@@ -267,7 +267,7 @@ impl LibraSwarm {
     /// assumably due to previous launch failure, it will be removed.
     /// The directory for the last failed attempt won't be removed.
     fn setup_config_dir(config_dir: &Option<String>) -> LibraSwarmDir {
-        let dir = match config_dir {
+        match config_dir {
             Some(dir_str) => {
                 let path_buf = PathBuf::from_str(&dir_str).expect("unable to create config dir");
                 if path_buf.exists() {
@@ -283,8 +283,7 @@ impl LibraSwarm {
                     .expect("unable to create temporary config dir");
                 LibraSwarmDir::Temporary(temp_dir)
             }
-        };
-        dir
+        }
     }
 
     pub fn configure_swarm(
