@@ -1,9 +1,9 @@
 module Token {
-    resource T { }
+    resource T { b: bool }
 
     public test() {
         let no: bool;
-        no = T{} == T{};
+        no = T{ b: true } == T{ b: true };
         return;
     }
 }

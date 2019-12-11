@@ -1,5 +1,5 @@
 module M {
-    struct S<T> {}
+    struct S<T> { b: bool }
 
     foo() {
         let x: Self.S<bool>;

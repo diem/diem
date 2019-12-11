@@ -1,6 +1,6 @@
 // check: DUPLICATE_ELEMENT
 
 module M {
-    struct T{}
-    struct T{}
+    struct T{b: bool}
+    struct T{x: u64}
 }

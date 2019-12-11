@@ -146,7 +146,8 @@ impl<'a> DuplicationChecker<'a> {
         // Check that:
         // (1) the order of struct definitions matches the order of field definitions,
         // (2) each struct definition and its field definitions point to the same struct handle,
-        // (3) there are no unused fields.
+        // (3) there are no unused fields,
+        // (4) each struct has at least one field. serializing a struct with zero fields is problematic
         let mut start_field_index: usize = 0;
         let mut idx_opt = None;
         for (idx, struct_def) in self.module.struct_defs().iter().enumerate() {
@@ -157,6 +158,13 @@ impl<'a> DuplicationChecker<'a> {
                     fields,
                 } => (field_count, fields),
             };
+            if field_count == 0 {
+                errors.push(verification_error(
+                    IndexKind::StructDefinition,
+                    idx,
+                    StatusCode::ZERO_SIZED_STRUCT,
+                ));
+            }
             if FieldDefinitionIndex::new(start_field_index as u16) != fields {
                 idx_opt = Some(idx);
                 break;

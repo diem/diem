@@ -36,7 +36,7 @@ pub struct ModuleGeneratorOptions {
 impl Default for ModuleGeneratorOptions {
     fn default() -> Self {
         Self {
-            min_fields: 0,
+            min_fields: 1,
             max_locals: 10,
             max_fields: 20,
             max_structs: 100,

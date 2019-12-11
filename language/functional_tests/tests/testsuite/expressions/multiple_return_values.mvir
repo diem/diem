@@ -1,8 +1,8 @@
 module Test {
-    resource T { }
+    resource T { b: bool }
 
     public new(): Self.T {
-        return T { };
+        return T { b: true };
     }
 
     public test(i: &u64, x: Self.T): u64 * Self.T * bool {
@@ -10,7 +10,8 @@ module Test {
     }
 
     public destroy(x: Self.T) {
-        T { } = move(x);
+        let b: bool;
+        T { b } = move(x);
         return;
     }
 }

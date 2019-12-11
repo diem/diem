@@ -1,7 +1,7 @@
 module M {
-    struct M { }
+    struct M { b: bool }
     public new(): Self.M {
-        return M{ };
+        return M{ b: true };
     }
 }
 

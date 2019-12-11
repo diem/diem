@@ -1,10 +1,10 @@
 // Bad! Can have infinitely many instances: f<T>, f<S<T>>, f<S<S<T>>>, ...
 
 module M {
-    struct S<T> {}
+    struct S<T> { b: bool }
 
     f<T>(x: T) {
-        Self.f<Self.S<T>>(S<T> {});
+        Self.f<Self.S<T>>(S<T> { b: true });
         return;
     }
 }

@@ -1,13 +1,14 @@
 module Test {
-    struct X { }
-    struct T { }
+    struct X { b: bool }
+    struct T { b: bool }
 
     public new_t(): Self.T {
-        return T { };
+        return T { b: true };
     }
 
     public destroy_t(t: Self.T) {
-        X { } = move(t);
+        let b: bool;
+        X { b } = move(t);
         return;
     }
 

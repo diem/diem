@@ -2,7 +2,7 @@
 //           f<T>, g<S<T>>, f<S<T>>, g<S<S<T>>>, ...
 
 module M {
-    struct S<T> {}
+    struct S<T> { b: bool }
 
     f<T>() {
         Self.g<Self.S<T>>();
