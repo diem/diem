@@ -69,16 +69,6 @@ pub trait StateComputer: Send + Sync {
         target: LedgerInfoWithSignatures,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 
-    fn sync_to_or_bail(&self, commit: LedgerInfoWithSignatures) {
-        let status = futures::executor::block_on(self.sync_to(commit));
-        // TODO: this is going to change after https://github.com/libra/libra/issues/1590
-        status.expect(
-            "state synchronizer failure, this validator will be killed as it can not \
-             recover from this error.  After the validator is restarted, synchronization will \
-             be retried. failure:",
-        )
-    }
-
     /// Generate the epoch change proof from start_epoch to the latest epoch.
     fn get_epoch_proof(
         &self,

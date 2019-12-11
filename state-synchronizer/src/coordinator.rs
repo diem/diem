@@ -278,23 +278,29 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         );
         let highest_local_li = self.local_state.highest_local_li.ledger_info();
         let target_version = request.target.ledger_info().version();
-        counters::TARGET_VERSION.set(target_version as i64);
-        debug!(
-            "[state sync] sync requested. Known LI: {}, requested_version: {}",
-            highest_local_li, target_version
-        );
-
-        if target_version <= highest_local_li.version() {
-            warn!(
-                "[state sync] Sync request for version {} <= known version {}",
-                target_version,
-                highest_local_li.version()
-            );
+        if target_version == highest_local_li.version() {
             return request
                 .callback
                 .send(Ok(()))
                 .map_err(|_| format_err!("Callback error"));
         }
+
+        if target_version < highest_local_li.version() {
+            request
+                .callback
+                .send(Err(format_err!("Sync request to old version")))
+                .map_err(|_| format_err!("Callback error"))?;
+            bail!(
+                "[state sync] Sync request for version {} < known version {}",
+                target_version,
+                highest_local_li.version()
+            );
+        }
+        counters::TARGET_VERSION.set(target_version as i64);
+        debug!(
+            "[state sync] sync requested. Known LI: {}, requested_version: {}",
+            highest_local_li, target_version
+        );
 
         self.peer_manager
             .set_peers(request.target.signatures().keys().copied().collect());

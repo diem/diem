@@ -31,6 +31,7 @@ use num_traits::{
 use reqwest;
 use rust_decimal::Decimal;
 use serde_json;
+use std::sync::Arc;
 use std::{
     collections::{BTreeMap, HashMap},
     convert::TryFrom,
@@ -116,7 +117,7 @@ impl ClientProxy {
             ac_port,
             EpochInfo {
                 epoch: 0,
-                verifier: ValidatorVerifier::new(BTreeMap::new()),
+                verifier: Arc::new(ValidatorVerifier::new(BTreeMap::new())),
             },
         )?;
 
