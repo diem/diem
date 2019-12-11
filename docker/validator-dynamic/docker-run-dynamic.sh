@@ -27,7 +27,7 @@ if [ -n "${CFG_SEED_PEER_IP}" ]; then # Seed peer ip for discovery
 fi
 
 /opt/libra/bin/validator-config-builder \
-    --data-dir /opt/libra/data \
+    --data-dir /opt/libra/data/common \
     --output-dir /opt/libra/etc/ \
     ${params[@]}
 
