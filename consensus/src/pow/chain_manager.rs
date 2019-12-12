@@ -21,6 +21,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
+use libra_types::transaction::TransactionStatus;
 
 pub struct ChainManager {
     block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,

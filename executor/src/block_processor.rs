@@ -697,7 +697,7 @@ where
             println!("-----11111-------->{:?}", tx);
         }
 
-        for tx in vm_outputs {
+        for tx in &vm_outputs {
             println!("-----22222-------->{:?}", tx);
         }
 
