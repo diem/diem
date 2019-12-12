@@ -1,13 +1,15 @@
-name: Pull Request Workflow
-push:
-  # only build master
-  branches:
-    - master
-  paths-ignore:
-    - '**.md'
+name: Build Workflow
+on:
+  push:
+    # only build master
+    branches:
+      - master
+    paths-ignore:
+      - '**.md'
   pull_request:
     paths-ignore:
       - '**.md'
+
 jobs:
   check-fmt:
     name: check fmt
