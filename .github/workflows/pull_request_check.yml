@@ -1,9 +1,9 @@
 name: Build Workflow
 on:
   push:
-    # only build master
+    # only build starcoin
     branches:
-      - master
+      - starcoin
     paths-ignore:
       - '**.md'
   pull_request:
