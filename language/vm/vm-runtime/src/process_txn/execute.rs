@@ -163,7 +163,6 @@ impl ExecutedTransaction {
     #[inline]
     pub(crate) fn discard_error_output(err: VMStatus) -> TransactionOutput {
         // Since this transaction will be discarded, no writeset will be included.
-        println!("======33333======={:?}", err);
         TransactionOutput::new(
             WriteSet::default(),
             vec![],

@@ -62,9 +62,8 @@ where
     match result.and_then(|_| txn_executor.make_write_set(vec![], Ok(()))) {
         Ok(output) => {
             data_cache.push_write_set(output.write_set());
-            println!("======111111======={:?}", output);
             output
         }
-        Err(err) => {println!("======2222======={:?}", err);ExecutedTransaction::discard_error_output(err)},
+        Err(err) => ExecutedTransaction::discard_error_output(err),
     }
 }

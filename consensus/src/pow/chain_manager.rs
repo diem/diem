@@ -14,13 +14,13 @@ use libra_logger::prelude::*;
 use libra_types::account_address::AccountAddress;
 use libra_types::block_index::BlockIndex;
 use libra_types::block_metadata::BlockMetadata;
+use libra_types::transaction::TransactionStatus;
 use libra_types::transaction::TransactionToCommit;
 use libra_types::transaction::{SignedTransaction, Transaction};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
-use libra_types::transaction::TransactionStatus;
 
 pub struct ChainManager {
     block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
