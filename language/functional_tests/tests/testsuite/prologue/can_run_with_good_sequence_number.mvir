@@ -1,0 +1,11 @@
+//! account: alice, 10000, 10
+
+import 0x0.LibraAccount;
+//! sequence-number: 10
+//! sender: alice
+main() {
+    assert(LibraAccount.sequence_number({{alice}}) == 10, 72);
+    return;
+}
+
+// check: EXECUTED

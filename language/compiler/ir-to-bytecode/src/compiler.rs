@@ -1194,16 +1194,6 @@ fn compile_call(
     Ok(match call.value {
         FunctionCall::Builtin(function) => {
             match function {
-                Builtin::GetTxnGasUnitPrice => {
-                    push_instr!(call.span, Bytecode::GetTxnGasUnitPrice);
-                    function_frame.push()?;
-                    vec_deque![InferredType::U64]
-                }
-                Builtin::GetTxnMaxGasUnits => {
-                    push_instr!(call.span, Bytecode::GetTxnMaxGasUnits);
-                    function_frame.push()?;
-                    vec_deque![InferredType::U64]
-                }
                 Builtin::GetTxnSender => {
                     push_instr!(call.span, Bytecode::GetTxnSenderAddress);
                     function_frame.push()?;
@@ -1269,16 +1259,6 @@ fn compile_call(
                     push_instr!(call.span, Bytecode::MoveToSender(def_idx, type_actuals_id));
                     function_frame.push()?;
                     vec_deque![]
-                }
-                Builtin::GetTxnSequenceNumber => {
-                    push_instr!(call.span, Bytecode::GetTxnSequenceNumber);
-                    function_frame.push()?;
-                    vec_deque![InferredType::U64]
-                }
-                Builtin::GetTxnPublicKey => {
-                    push_instr!(call.span, Bytecode::GetTxnPublicKey);
-                    function_frame.push()?;
-                    vec_deque![InferredType::ByteArray]
                 }
                 Builtin::Freeze => {
                     push_instr!(call.span, Bytecode::FreezeRef);
