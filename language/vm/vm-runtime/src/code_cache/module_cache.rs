@@ -237,8 +237,6 @@ impl<'alloc> VMModuleCache<'alloc> {
         match tok {
             SignatureToken::Bool => Ok(Type::Bool),
             SignatureToken::U64 => Ok(Type::U64),
-            SignatureToken::String => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
-                .with_message("strings will be removed soon".to_string())),
             SignatureToken::ByteArray => Ok(Type::ByteArray),
             SignatureToken::Address => Ok(Type::Address),
             SignatureToken::TypeParameter(idx) => Ok(type_context.get_type(*idx)?),

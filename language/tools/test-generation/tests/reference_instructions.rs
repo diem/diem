@@ -60,7 +60,7 @@ fn bytecode_writeref() {
 #[should_panic]
 fn bytecode_writeref_type_mismatch() {
     let mut state1 = AbstractState::new();
-    state1.stack_push(AbstractValue::new_primitive(SignatureToken::String));
+    state1.stack_push(AbstractValue::new_primitive(SignatureToken::Bool));
     state1.stack_push(AbstractValue::new_reference(
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
         Kind::Unrestricted,

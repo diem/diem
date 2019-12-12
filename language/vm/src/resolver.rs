@@ -62,7 +62,6 @@ impl Resolver {
         match sig_token {
             SignatureToken::Bool
             | SignatureToken::U64
-            | SignatureToken::String
             | SignatureToken::ByteArray
             | SignatureToken::Address
             | SignatureToken::TypeParameter(_) => Ok(sig_token.clone()),

@@ -48,12 +48,6 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
                 SignatureToken::U64
             ))],
         },
-        Bytecode::LdStr(_) => Summary {
-            preconditions: vec![],
-            effects: vec![state_stack_push!(AbstractValue::new_primitive(
-                SignatureToken::String
-            ))],
-        },
         Bytecode::LdAddr(_) => Summary {
             preconditions: vec![],
             effects: vec![state_stack_push!(AbstractValue::new_primitive(

@@ -94,7 +94,6 @@ fn test_module(name: &'static str) -> VerifiedModule {
             LocalsSignature(vec![SignatureToken::U64]),
         ],
         identifiers: idents(vec![name, "func1", "func2"]),
-        user_strings: vec![],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }
@@ -158,7 +157,6 @@ fn test_script() -> VerifiedScript {
         ],
         locals_signatures: vec![LocalsSignature(vec![])],
         identifiers: idents(vec!["hello", "module", "func1", "func2", "main"]),
-        user_strings: vec![],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }
@@ -421,7 +419,6 @@ fn test_multi_level_cache_write_back() {
             "func2",
             "main",
         ]),
-        user_strings: vec![],
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
     }

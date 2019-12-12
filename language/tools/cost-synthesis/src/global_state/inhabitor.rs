@@ -135,7 +135,6 @@ where
         match sig_token {
             SignatureToken::Bool => Value::bool(self.next_bool()),
             SignatureToken::U64 => Value::u64(self.next_int()),
-            SignatureToken::String => panic!("strings will be removed soon"),
             SignatureToken::Address => Value::address(self.next_addr()),
             SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
                 let underlying_value = self.inhabit(&*sig);

@@ -85,7 +85,6 @@ impl<'a> StackUsageVerifier<'a> {
             // Instructions that push, but don't pop
             Bytecode::LdConst(_)
             | Bytecode::LdAddr(_)
-            | Bytecode::LdStr(_)
             | Bytecode::LdTrue
             | Bytecode::LdFalse
             | Bytecode::LdByteArray(_)

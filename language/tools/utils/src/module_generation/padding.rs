@@ -25,7 +25,6 @@ impl Pad {
             options,
         };
         slf.pad_address_table(module);
-        slf.pad_user_string_table(module);
         slf.pad_identifier_table(module);
         slf.pad_byte_array_table(module);
         slf.pad_locals_signatures(module);
@@ -43,15 +42,6 @@ impl Pad {
             .map(|_| {
                 let len = self.gen.gen_range(10, self.options.max_string_size);
                 Identifier::new(random_string(&mut self.gen, len)).unwrap()
-            })
-            .collect()
-    }
-
-    fn pad_user_string_table(&mut self, module: &mut CompiledModuleMut) {
-        module.user_strings = (0..(self.table_size + module.user_strings.len()))
-            .map(|_| {
-                let len = self.gen.gen_range(10, self.options.max_string_size);
-                random_string(&mut self.gen, len).into()
             })
             .collect()
     }

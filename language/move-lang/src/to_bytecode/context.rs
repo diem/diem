@@ -12,15 +12,12 @@ use libra_types::{
     account_address::AccountAddress as LibraAddress, byte_array::ByteArray as LibraByteArray,
     identifier::Identifier as LibraIdentifier,
 };
-use move_vm::{
-    file_format::{
-        self as F, AddressPoolIndex, ByteArrayPoolIndex, FieldDefinitionIndex, FunctionHandle,
-        FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex, IdentifierIndex,
-        LocalsSignature, LocalsSignatureIndex, ModuleHandle, ModuleHandleIndex, SignatureToken,
-        StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
-        TypeSignatureIndex,
-    },
-    vm_string::VMString,
+use move_vm::file_format::{
+    self as F, AddressPoolIndex, ByteArrayPoolIndex, FieldDefinitionIndex, FunctionHandle,
+    FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex, IdentifierIndex,
+    LocalsSignature, LocalsSignatureIndex, ModuleHandle, ModuleHandleIndex, SignatureToken,
+    StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
+    TypeSignatureIndex,
 };
 use std::{clone::Clone, collections::HashMap, hash::Hash};
 
@@ -84,8 +81,6 @@ pub struct MaterializedPools {
     pub locals_signatures: Vec<LocalsSignature>,
     /// Identifier pool
     pub identifiers: Vec<LibraIdentifier>,
-    /// User string pool
-    pub user_strings: Vec<VMString>,
     /// Byte array pool
     pub byte_array_pool: Vec<LibraByteArray>,
     /// Address pool
@@ -197,8 +192,6 @@ impl<'a> Context<'a> {
             type_signatures: Self::materialize_map(self.type_signatures),
             locals_signatures: Self::materialize_map(self.locals_signatures),
             identifiers: Self::materialize_map(identifiers),
-            // TODO: implement support for user strings (string literals)
-            user_strings: vec![],
             byte_array_pool: Self::materialize_map(byte_arrays),
             address_pool: Self::materialize_map(addresses),
         }

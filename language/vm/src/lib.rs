@@ -27,7 +27,6 @@ pub mod resolver;
 pub mod serializer;
 pub mod transaction_metadata;
 pub mod views;
-pub mod vm_string;
 
 #[cfg(test)]
 mod unit_tests;
@@ -47,7 +46,6 @@ pub enum IndexKind {
     FunctionSignature,
     LocalsSignature,
     Identifier,
-    UserString,
     ByteArrayPool,
     AddressPool,
     LocalPool,
@@ -72,7 +70,6 @@ impl IndexKind {
             FunctionSignature,
             LocalsSignature,
             Identifier,
-            UserString,
             AddressPool,
             LocalPool,
             CodeDefinition,
@@ -96,7 +93,6 @@ impl fmt::Display for IndexKind {
             FunctionSignature => "function signature",
             LocalsSignature => "locals signature",
             Identifier => "identifier",
-            UserString => "user string",
             ByteArrayPool => "byte_array pool",
             AddressPool => "address pool",
             LocalPool => "local pool",

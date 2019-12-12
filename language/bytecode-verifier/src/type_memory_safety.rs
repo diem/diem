@@ -411,14 +411,6 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 Ok(())
             }
 
-            Bytecode::LdStr(_) => {
-                self.stack.push(TypedAbstractValue {
-                    signature: SignatureToken::String,
-                    value: AbstractValue::Value(Kind::Unrestricted),
-                });
-                Ok(())
-            }
-
             Bytecode::LdByteArray(_) => {
                 self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::ByteArray,
