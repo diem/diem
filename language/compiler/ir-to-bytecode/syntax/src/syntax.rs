@@ -335,11 +335,7 @@ fn parse_qualified_function_name_<'input>(
         Tok::Exists
         | Tok::BorrowGlobal
         | Tok::BorrowGlobalMut
-        | Tok::GetTxnGasUnitPrice
-        | Tok::GetTxnMaxGasUnits
-        | Tok::GetTxnPublicKey
         | Tok::GetTxnSender
-        | Tok::GetTxnSequenceNumber
         | Tok::MoveFrom
         | Tok::MoveToSender
         | Tok::Freeze => {
@@ -470,11 +466,7 @@ fn parse_call_or_term<'input>(
         Tok::Exists
         | Tok::BorrowGlobal
         | Tok::BorrowGlobalMut
-        | Tok::GetTxnGasUnitPrice
-        | Tok::GetTxnMaxGasUnits
-        | Tok::GetTxnPublicKey
         | Tok::GetTxnSender
-        | Tok::GetTxnSequenceNumber
         | Tok::MoveFrom
         | Tok::MoveToSender
         | Tok::Freeze
@@ -616,11 +608,7 @@ fn parse_module_name<'input>(
 //     "exists<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
 //     "borrow_global<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
 //     "borrow_global_mut<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
-//     "get_txn_gas_unit_price" => Builtin::GetTxnGasUnitPrice,
-//     "get_txn_max_gas_units" => Builtin::GetTxnMaxGasUnits,
-//     "get_txn_public_key" => Builtin::GetTxnPublicKey,
 //     "get_txn_sender" => Builtin::GetTxnSender,
-//     "get_txn_sequence_number" => Builtin::GetTxnSequenceNumber,
 //     "move_from<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
 //     "move_to_sender<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ...},
 //     "freeze" => Builtin::Freeze,
@@ -656,25 +644,9 @@ fn parse_builtin<'input>(
                 type_actuals,
             ))
         }
-        Tok::GetTxnGasUnitPrice => {
-            tokens.advance()?;
-            Ok(Builtin::GetTxnGasUnitPrice)
-        }
-        Tok::GetTxnMaxGasUnits => {
-            tokens.advance()?;
-            Ok(Builtin::GetTxnMaxGasUnits)
-        }
-        Tok::GetTxnPublicKey => {
-            tokens.advance()?;
-            Ok(Builtin::GetTxnPublicKey)
-        }
         Tok::GetTxnSender => {
             tokens.advance()?;
             Ok(Builtin::GetTxnSender)
-        }
-        Tok::GetTxnSequenceNumber => {
-            tokens.advance()?;
-            Ok(Builtin::GetTxnSequenceNumber)
         }
         Tok::MoveFrom => {
             tokens.advance()?;
@@ -848,11 +820,7 @@ fn parse_cmd<'input>(tokens: &mut Lexer<'input>) -> Result<Cmd, ParseError<usize
         Tok::Exists
         | Tok::BorrowGlobal
         | Tok::BorrowGlobalMut
-        | Tok::GetTxnGasUnitPrice
-        | Tok::GetTxnMaxGasUnits
-        | Tok::GetTxnPublicKey
         | Tok::GetTxnSender
-        | Tok::GetTxnSequenceNumber
         | Tok::MoveFrom
         | Tok::MoveToSender
         | Tok::Freeze

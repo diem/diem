@@ -601,31 +601,10 @@ where
                         self.operand_stack
                             .push(Value::bool(lhs.not_equals(&rhs)?))?;
                     }
-                    Bytecode::GetTxnGasUnitPrice => {
-                        gas!(const_instr: context, self, Opcodes::GET_TXN_GAS_UNIT_PRICE)?;
-                        self.operand_stack
-                            .push(Value::u64(self.txn_data.gas_unit_price().get()))?;
-                    }
-                    Bytecode::GetTxnMaxGasUnits => {
-                        gas!(const_instr: context, self, Opcodes::GET_TXN_MAX_GAS_UNITS)?;
-                        self.operand_stack
-                            .push(Value::u64(self.txn_data.max_gas_amount().get()))?;
-                    }
-                    Bytecode::GetTxnSequenceNumber => {
-                        gas!(const_instr: context, self, Opcodes::GET_TXN_SEQUENCE_NUMBER)?;
-                        self.operand_stack
-                            .push(Value::u64(self.txn_data.sequence_number()))?;
-                    }
                     Bytecode::GetTxnSenderAddress => {
                         gas!(const_instr: context, self, Opcodes::GET_TXN_SENDER)?;
                         self.operand_stack
                             .push(Value::address(self.txn_data.sender()))?;
-                    }
-                    Bytecode::GetTxnPublicKey => {
-                        gas!(const_instr: context, self, Opcodes::GET_TXN_PUBLIC_KEY)?;
-                        let byte_array =
-                            ByteArray::new(self.txn_data.public_key().to_bytes().to_vec());
-                        self.operand_stack.push(Value::byte_array(byte_array))?;
                     }
                     Bytecode::MutBorrowGlobal(idx, _) | Bytecode::ImmBorrowGlobal(idx, _) => {
                         let addr = self.operand_stack.pop_as::<AccountAddress>()?;
@@ -677,12 +656,15 @@ where
                         let value = !self.operand_stack.pop_as::<bool>()?;
                         self.operand_stack.push(Value::bool(value))?;
                     }
-                    Bytecode::GetGasRemaining => {
+                    Bytecode::GetGasRemaining
+                    | Bytecode::GetTxnPublicKey
+                    | Bytecode::GetTxnSequenceNumber
+                    | Bytecode::GetTxnMaxGasUnits
+                    | Bytecode::GetTxnGasUnitPrice => {
                         return Err(VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
                             .with_message(
-                            "The get_gas_remaining opcode is deprecated and will be removed soon"
-                                .to_string(),
-                        ));
+                                "This opcode is deprecated and will be removed soon".to_string(),
+                            ));
                     }
                 }
             }

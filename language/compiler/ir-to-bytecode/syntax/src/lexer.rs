@@ -57,12 +57,8 @@ pub enum Tok {
     Exists,
     False,
     Freeze,
-    GetTxnGasUnitPrice,
-    GetTxnMaxGasUnits,
-    GetTxnPublicKey,
     /// Function to get transaction sender in the Move language
     GetTxnSender,
-    GetTxnSequenceNumber,
     /// Like borrow_global, but for spec language
     Global,
     /// Like exists, but for spec language
@@ -378,11 +374,7 @@ fn get_name_token(name: &str) -> Tok {
         "ensures" => Tok::Ensures,
         "false" => Tok::False,
         "freeze" => Tok::Freeze,
-        "get_txn_gas_unit_price" => Tok::GetTxnGasUnitPrice,
-        "get_txn_max_gas_units" => Tok::GetTxnMaxGasUnits,
-        "get_txn_public_key" => Tok::GetTxnPublicKey,
         "get_txn_sender" => Tok::GetTxnSender,
-        "get_txn_sequence_number" => Tok::GetTxnSequenceNumber,
         "if" => Tok::If,
         "import" => Tok::Import,
         "let" => Tok::Let,

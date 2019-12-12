@@ -313,16 +313,8 @@ pub enum Builtin {
     /// Get a reference to the resource(`StructName` resolved by current module) associated
     /// with the given address
     BorrowGlobal(bool, StructName, Vec<Type>),
-    /// Returns the price per gas unit the current transaction is willing to pay
-    GetTxnGasUnitPrice,
-    /// Returns the maximum units of gas the current transaction is willing to use
-    GetTxnMaxGasUnits,
-    /// Returns the public key of the current transaction's sender
-    GetTxnPublicKey,
     /// Returns the address of the current transaction's sender
     GetTxnSender,
-    /// Returns the sequence number of the current transaction.
-    GetTxnSequenceNumber,
 
     /// Remove a resource of the given type from the account with the given address
     MoveFrom(StructName, Vec<Type>),
@@ -1351,11 +1343,7 @@ impl fmt::Display for Builtin {
                     format_type_actuals(tys)
                 )
             }
-            Builtin::GetTxnMaxGasUnits => write!(f, "get_txn_max_gas_units"),
-            Builtin::GetTxnGasUnitPrice => write!(f, "get_txn_gas_unit_price"),
-            Builtin::GetTxnPublicKey => write!(f, "get_txn_public_key"),
             Builtin::GetTxnSender => write!(f, "get_txn_sender"),
-            Builtin::GetTxnSequenceNumber => write!(f, "get_txn_sequence_number"),
             Builtin::MoveFrom(t, tys) => write!(f, "move_from<{}{}>", t, format_type_actuals(tys)),
             Builtin::MoveToSender(t, tys) => {
                 write!(f, "move_to_sender<{}{}>", t, format_type_actuals(tys))

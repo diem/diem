@@ -126,18 +126,7 @@
 //!                               // releases the reference given
 //!   | freeze(x)                 // type: '&mut t -> &t'
 //!                               // coerce a mutable reference to an immutable reference
-//!   | get_txn_gas_unit_price()  // type: 'unit -> u64'
-//!                               // gives the price specified per gas unit
-//!   | get_txn_max_gas_units()   // type: 'unit -> u64'
-//!                               // gives the tranaction's maximum amount of usable gas units
-//!   | get_txn_public_key()      // type: 'unit -> bytearray'
-//!                               // gives the transaction's public key
 //!   | get_txn_sender()          // type: 'unit -> address'
-//!                               // gives the transaction's sender's account address
-//!   | get_txn_sequence_number() // type: 'unit -> u64'
-//!                               // gives the sequence number for this transaction
-//!   | get_gas_remaining()       // type: 'unit -> u64'
-//!                               // gives the amount of gas gas units remaining before the transaction execution will be forced to halt execution
 //!
 //! call ∈ Call ::=
 //!   | mop

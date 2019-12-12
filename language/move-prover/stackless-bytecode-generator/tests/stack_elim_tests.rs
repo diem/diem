@@ -368,52 +368,15 @@ fn transform_code_with_txn_builtins() {
 
             public txn_builtins() {
                 let addr: address;
-                let seq_num: u64;
-                let max_gas: u64;
-                let gas_price: u64;
-                let gas: u64;
-                let pk: bytearray;
-                gas = get_txn_sequence_number();
-                seq_num = get_txn_sequence_number();
-                max_gas = get_txn_max_gas_units();
-                gas_price = get_txn_gas_unit_price();
                 addr = get_txn_sender();
-                pk = get_txn_public_key();
                 return;
             }
         }
         ",
     );
     let (actual_code, actual_types) = generate_code_from_string(code);
-    let expected_code = vec![
-        GetTxnSequenceNumber(6),
-        StLoc(4, 6),
-        GetTxnSequenceNumber(7),
-        StLoc(1, 7),
-        GetTxnMaxGasUnits(8),
-        StLoc(2, 8),
-        GetTxnGasUnitPrice(9),
-        StLoc(3, 9),
-        GetTxnSenderAddress(10),
-        StLoc(0, 10),
-        GetTxnPublicKey(11),
-        StLoc(5, 11),
-        Ret(vec![]),
-    ];
-    let expected_types = vec![
-        SignatureToken::Address,
-        SignatureToken::U64,
-        SignatureToken::U64,
-        SignatureToken::U64,
-        SignatureToken::U64,
-        SignatureToken::ByteArray,
-        SignatureToken::U64,
-        SignatureToken::U64,
-        SignatureToken::U64,
-        SignatureToken::U64,
-        SignatureToken::Address,
-        SignatureToken::ByteArray,
-    ];
+    let expected_code = vec![GetTxnSenderAddress(1), StLoc(0, 1), Ret(vec![])];
+    let expected_types = vec![SignatureToken::Address, SignatureToken::Address];
     assert_eq!(actual_code, expected_code);
     assert_eq!(actual_types, expected_types);
 }
