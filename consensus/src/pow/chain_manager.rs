@@ -20,6 +20,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageWrite};
 use tokio::runtime::Handle;
+use libra_types::transaction::TransactionStatus;
 
 pub struct ChainManager {
     block_cache_receiver: Option<mpsc::Receiver<Block<BlockPayloadExt>>>,
@@ -164,27 +165,35 @@ impl ChainManager {
 
                                 let mut txns_to_commit = vec![];
                                 for (txn, txn_data) in itertools::zip_eq(txn_vec, txn_data_list) {
-                                    txns_to_commit.push(TransactionToCommit::new(
-                                        txn,
-                                        txn_data.account_blobs().clone(),
-                                        txn_data.events().to_vec(),
-                                        txn_data.gas_used(),
-                                        txn_data.status().vm_status().major_status,
-                                    ));
+                                    if let TransactionStatus::Keep(_) = txn_data.status() {
+                                        txns_to_commit.push(TransactionToCommit::new(
+                                            txn,
+                                            txn_data.account_blobs().clone(),
+                                            txn_data.events().to_vec(),
+                                            txn_data.gas_used(),
+                                            txn_data.status().vm_status().major_status,
+                                        ));
+                                    }
                                 }
-                                let commit_data = CommitData {txns_to_commit,
-                                    first_version: (block.quorum_cert().ledger_info().ledger_info().commit_info().version() - (len as u64) + 1) as u64,
-                                    ledger_info_with_sigs: Some(block.quorum_cert().ledger_info().clone())};
+                                let commit_len = txns_to_commit.len();
+                                if (block.quorum_cert().ledger_info().ledger_info().commit_info().version() == txn_len) {
+                                    let commit_data = CommitData {txns_to_commit,
+                                        first_version: (txn_len - (commit_len as u64) + 1) as u64,
+                                        ledger_info_with_sigs: Some(block.quorum_cert().ledger_info().clone())};
 
-                                chain_lock.add_block_info(&block.id(), &parent_block_id, block.timestamp_usecs(), processed_vm_output, commit_data).await.expect("add_block_info failed.");
+                                    chain_lock.add_block_info(&block.id(), &parent_block_id, block.timestamp_usecs(), processed_vm_output, commit_data).await.expect("add_block_info failed.");
 
-                                let mut blocks: Vec<Block<BlockPayloadExt>> = Vec::new();
-                                blocks.push(block.clone());
-                                let mut qcs = Vec::new();
-                                qcs.push(block.quorum_cert().clone());
-                                block_db.save_blocks_and_quorum_certificates(blocks, qcs).expect("save_blocks err.");
+                                    let mut blocks: Vec<Block<BlockPayloadExt>> = Vec::new();
+                                    blocks.push(block.clone());
+                                    let mut qcs = Vec::new();
+                                    qcs.push(block.quorum_cert().clone());
+                                    block_db.save_blocks_and_quorum_certificates(blocks, qcs).expect("save_blocks err.");
 
-                                chain_lock.print_block_chain_root(author);
+                                    chain_lock.print_block_chain_root(author);
+                                } else {
+                                    warn!("Peer id {:?}, Drop block {:?}, block version is {}, vm output version is {}", author, block.id(),
+                                    block.quorum_cert().ledger_info().ledger_info().commit_info().version(), txn_len);
+                                }
                             } else {
                                 warn!("Peer id {:?}, Drop block {:?}, parent_block_id {:?}, grandpa_block_id {:?}", author, block.id(), parent_block_id, pre_compute_grandpa_block_id);
                             }
