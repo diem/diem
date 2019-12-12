@@ -3,7 +3,7 @@
 
 use vm::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FieldDefinitionIndex, FunctionHandleIndex,
-    LocalIndex, LocalsSignatureIndex, StructDefinitionIndex, UserStringIndex,
+    LocalIndex, LocalsSignatureIndex, StructDefinitionIndex,
 };
 
 type TempIndex = usize;
@@ -74,7 +74,6 @@ pub enum StacklessBytecode {
     LdConst(TempIndex, u64),
     LdAddr(TempIndex, AddressPoolIndex),
     LdByteArray(TempIndex, ByteArrayPoolIndex),
-    LdStr(TempIndex, UserStringIndex),
 
     Not(TempIndex, TempIndex),            // t1 = !t2
     Add(TempIndex, TempIndex, TempIndex), // t1 = t2 binop t3

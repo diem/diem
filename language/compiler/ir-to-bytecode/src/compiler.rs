@@ -154,7 +154,6 @@ impl InferredType {
         match sig_token {
             S::Bool => I::Bool,
             S::U64 => I::U64,
-            S::String => panic!("strings will be removed"),
             S::ByteArray => I::ByteArray,
             S::Address => I::Address,
             S::Struct(si, _) => I::Struct(*si),
@@ -369,7 +368,6 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
         function_signatures,
         locals_signatures,
         identifiers,
-        user_strings: vec![], // TODO: remove this once string pool is removed
         byte_array_pool,
         address_pool,
         main,
@@ -438,7 +436,6 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         function_signatures,
         locals_signatures,
         identifiers,
-        user_strings: vec![], // TODO: remove this once string pool is removed
         byte_array_pool,
         address_pool,
         struct_defs,

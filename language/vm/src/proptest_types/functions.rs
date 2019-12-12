@@ -6,7 +6,7 @@ use crate::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CodeUnit, FieldDefinitionIndex,
         FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
         FunctionSignatureIndex, IdentifierIndex, LocalIndex, LocalsSignature, LocalsSignatureIndex,
-        ModuleHandleIndex, StructDefinitionIndex, TableIndex, UserStringIndex, NO_TYPE_ACTUALS,
+        ModuleHandleIndex, StructDefinitionIndex, TableIndex, NO_TYPE_ACTUALS,
     },
     proptest_types::{
         signature::{FunctionSignatureGen, SignatureTokenGen},
@@ -25,7 +25,6 @@ pub struct FnDefnMaterializeState {
     pub struct_handles_len: usize,
     pub address_pool_len: usize,
     pub identifiers_len: usize,
-    pub user_strings_len: usize,
     pub byte_array_pool_len: usize,
     pub type_signatures_len: usize,
     pub field_defs_len: usize,
@@ -198,7 +197,6 @@ enum BytecodeGen {
     Simple(Bytecode),
     // All of these refer to other indexes.
     LdAddr(PropIndex),
-    LdStr(PropIndex),
     LdByteArray(PropIndex),
     MutBorrowField(PropIndex),
     ImmBorrowField(PropIndex),
@@ -229,7 +227,6 @@ impl BytecodeGen {
         prop_oneof![
             Self::simple_bytecode_strategy().prop_map(Simple),
             any::<PropIndex>().prop_map(LdAddr),
-            any::<PropIndex>().prop_map(LdStr),
             any::<PropIndex>().prop_map(LdByteArray),
             any::<PropIndex>().prop_map(ImmBorrowField),
             any::<PropIndex>().prop_map(MutBorrowField),
@@ -289,9 +286,6 @@ impl BytecodeGen {
             BytecodeGen::Simple(bytecode) => bytecode,
             BytecodeGen::LdAddr(idx) => Bytecode::LdAddr(AddressPoolIndex::new(
                 idx.index(state.address_pool_len) as TableIndex,
-            )),
-            BytecodeGen::LdStr(idx) => Bytecode::LdStr(UserStringIndex::new(
-                idx.index(state.user_strings_len) as TableIndex,
             )),
             BytecodeGen::LdByteArray(idx) => Bytecode::LdByteArray(ByteArrayPoolIndex::new(
                 idx.index(state.byte_array_pool_len) as TableIndex,

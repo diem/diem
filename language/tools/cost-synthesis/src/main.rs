@@ -29,8 +29,7 @@ use structopt::StructOpt;
 use vm::{
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex,
-        FunctionDefinitionIndex, FunctionHandleIndex, StructDefinitionIndex, UserStringIndex,
-        NO_TYPE_ACTUALS,
+        FunctionDefinitionIndex, FunctionHandleIndex, StructDefinitionIndex, NO_TYPE_ACTUALS,
     },
     gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier},
     transaction_metadata::TransactionMetadata,
@@ -84,7 +83,6 @@ fn size_normalize_cost(instr: &Bytecode, cost: u64, size: AbstractMemorySize<Gas
         | Bytecode::ImmBorrowGlobal(_, _)
         | Bytecode::Eq
         | Bytecode::Neq
-        | Bytecode::LdStr(_)
         | Bytecode::LdByteArray(_)
         | Bytecode::StLoc(_)
         | Bytecode::CopyLoc(_)
@@ -142,7 +140,6 @@ fn stack_instructions(options: &Opt) {
         LdFalse,
         LdTrue,
         LdConst(0),
-        LdStr(UserStringIndex::new(0)),
         LdByteArray(ByteArrayPoolIndex::new(0)),
         LdAddr(AddressPoolIndex::new(0)),
         BrFalse(0),

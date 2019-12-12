@@ -25,7 +25,7 @@ use vm::{
         FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex, FunctionSignature,
         LocalIndex, MemberCount, ModuleHandle, SignatureToken, StructDefinition,
         StructDefinitionIndex, StructFieldInformation, StructHandleIndex, TableIndex,
-        UserStringIndex, NO_TYPE_ACTUALS,
+        NO_TYPE_ACTUALS,
     },
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
 };
@@ -230,11 +230,6 @@ where
         self.gen.gen_range(1, bound)
     }
 
-    fn next_user_string_idx(&mut self) -> UserStringIndex {
-        let len = self.root_module.user_strings().len();
-        UserStringIndex::new(self.gen.gen_range(0, len) as TableIndex)
-    }
-
     fn next_address_idx(&mut self) -> AddressPoolIndex {
         let len = self.root_module.address_pool().len();
         AddressPoolIndex::new(self.gen.gen_range(0, len) as TableIndex)
@@ -348,11 +343,6 @@ where
                 let i = self.next_int(&[]);
                 (LdConst(i), 1)
             }
-            LdStr(_) => {
-                let string_idx = self.next_user_string_idx();
-                let string_size = self.root_module.user_string_at(string_idx).len();
-                (LdStr(string_idx), string_size)
-            }
             LdByteArray(_) => {
                 let bytearray_idx = self.next_bytearray_idx();
                 let bytearray_size = self.root_module.byte_array_at(bytearray_idx).len();
@@ -456,7 +446,6 @@ where
         match sig_token {
             SignatureToken::Bool => Value::bool(self.next_bool()),
             SignatureToken::U64 => Value::u64(self.next_int(stk)),
-            SignatureToken::String => panic!("strings will be removed soon"),
             SignatureToken::Address => Value::address(self.next_addr(false)),
             SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
                 let underlying_value = self.resolve_to_value(sig, stk);

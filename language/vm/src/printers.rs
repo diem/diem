@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{file_format::*, vm_string::VMStr};
+use crate::file_format::*;
 use anyhow::{bail, format_err, Result};
 use hex;
 use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::IdentStr};
@@ -76,7 +76,6 @@ pub trait TableAccess {
     fn get_function_at(&self, idx: FunctionHandleIndex) -> Result<&FunctionHandle>;
 
     fn get_identifier_at(&self, idx: IdentifierIndex) -> Result<&IdentStr>;
-    fn get_user_string_at(&self, idx: UserStringIndex) -> Result<&VMStr>;
     fn get_address_at(&self, idx: AddressPoolIndex) -> Result<&AccountAddress>;
     fn get_type_signature_at(&self, idx: TypeSignatureIndex) -> Result<&TypeSignature>;
     fn get_function_signature_at(&self, idx: FunctionSignatureIndex) -> Result<&FunctionSignature>;
@@ -111,13 +110,6 @@ impl TableAccess for CompiledScriptMut {
             .get(idx.0 as usize)
             .map(|x| x.as_ref())
             .ok_or_else(|| format_err!("bad string index {}", idx))
-    }
-
-    fn get_user_string_at(&self, idx: UserStringIndex) -> Result<&VMStr> {
-        self.user_strings
-            .get(idx.0 as usize)
-            .map(|x| x.as_ref())
-            .ok_or_else(|| format_err!("bad user string index {}", idx))
     }
 
     fn get_address_at(&self, idx: AddressPoolIndex) -> Result<&AccountAddress> {
@@ -175,13 +167,6 @@ impl TableAccess for CompiledModuleMut {
             .get(idx.0 as usize)
             .map(|x| x.as_ref())
             .ok_or_else(|| format_err!("bad string index {}", idx))
-    }
-
-    fn get_user_string_at(&self, idx: UserStringIndex) -> Result<&VMStr> {
-        self.user_strings
-            .get(idx.0 as usize)
-            .map(|x| x.as_ref())
-            .ok_or_else(|| format_err!("bad user string index {}", idx))
     }
 
     fn get_address_at(&self, idx: AddressPoolIndex) -> Result<&AccountAddress> {
@@ -595,7 +580,6 @@ fn display_signature_token<T: TableAccess>(
     match token {
         SignatureToken::Bool => write!(f, "Bool"),
         SignatureToken::U64 => write!(f, "Integer"),
-        SignatureToken::String => write!(f, "String"),
         SignatureToken::ByteArray => write!(f, "ByteArray"),
         SignatureToken::Address => write!(f, "Address"),
         SignatureToken::Struct(idx, types) => {
@@ -635,7 +619,6 @@ fn display_bytecode<T: TableAccess>(
             display_address(tables.get_address_at(*idx).unwrap(), f)?;
             write!(f, ")")
         }
-        Bytecode::LdStr(idx) => write!(f, "LdStr({})", tables.get_user_string_at(*idx).unwrap()),
         Bytecode::MutBorrowField(idx) => {
             write!(f, "MutBorrowField(")?;
             display_field_definition(tables.get_field_def_at(*idx).unwrap(), tables, f)?;

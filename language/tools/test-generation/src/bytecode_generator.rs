@@ -12,7 +12,7 @@ use utils::inhabitation::inhabit_with_bytecode_seq;
 use vm::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
     FieldDefinitionIndex, FunctionHandleIndex, FunctionSignature, LocalIndex, LocalsSignatureIndex,
-    SignatureToken, StructDefinitionIndex, TableIndex, UserStringIndex,
+    SignatureToken, StructDefinitionIndex, TableIndex,
 };
 
 /// This type represents bytecode instructions that take a `LocalIndex`
@@ -23,9 +23,6 @@ type CodeOffsetToBytecode = fn(CodeOffset) -> Bytecode;
 
 /// This type represents bytecode instructions that take a `u64`
 type U64ToBytecode = fn(u64) -> Bytecode;
-
-/// This type represents bytecode instructions that take a `UserStringIndex`
-type UserStringIndexToBytecode = fn(UserStringIndex) -> Bytecode;
 
 /// This type represents bytecode instructions that take a `AddressPoolIndex`
 type AddressPoolIndexToBytecode = fn(AddressPoolIndex) -> Bytecode;
@@ -58,9 +55,6 @@ enum BytecodeType {
 
     /// Instructions that take a `u64`
     U64(U64ToBytecode),
-
-    /// Instructions that take a `UserStringIndex`
-    UserStringIndex(UserStringIndexToBytecode),
 
     /// Instructions that take an `AddressPoolIndex`
     AddressPoolIndex(AddressPoolIndexToBytecode),
@@ -108,10 +102,6 @@ impl BytecodeGenerator {
         let instructions: Vec<(StackEffect, BytecodeType)> = vec![
             (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Pop)),
             (StackEffect::Add, BytecodeType::U64(Bytecode::LdConst)),
-            (
-                StackEffect::Add,
-                BytecodeType::UserStringIndex(Bytecode::LdStr),
-            ),
             (
                 StackEffect::Add,
                 BytecodeType::AddressPoolIndex(Bytecode::LdAddr),
@@ -274,12 +264,6 @@ impl BytecodeGenerator {
                 BytecodeType::U64(instruction) => {
                     // Generate a random u64 constant to load
                     instruction(self.rng.gen_range(0, u64::max_value()))
-                }
-                BytecodeType::UserStringIndex(instruction) => {
-                    // Select a random user string
-                    instruction(UserStringIndex::new(
-                        self.rng.gen_range(0, module.user_strings.len()) as TableIndex,
-                    ))
                 }
                 BytecodeType::AddressPoolIndex(instruction) => {
                     // Select a random address from the module's address pool

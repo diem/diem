@@ -69,7 +69,6 @@ lazy_static! {
     static ref BASE_SIG_TOKENS: Vec<SignatureToken> = vec![
         SignatureToken::Bool,
         SignatureToken::U64,
-        SignatureToken::String,
         SignatureToken::ByteArray,
         SignatureToken::Address,
         // Bogus struct handle index, but it's fine since we disregard this in the generation of
@@ -127,12 +126,6 @@ fn u64s(num: u64) -> Vec<SignatureTy> {
 fn simple_addrs(num: u64) -> Vec<SignatureTy> {
     (0..num)
         .map(|_| ty_of_sig_tok(SignatureToken::Address))
-        .collect()
-}
-
-fn strs(num: u64) -> Vec<SignatureTy> {
-    (0..num)
-        .map(|_| ty_of_sig_tok(SignatureToken::String))
         .collect()
 }
 
@@ -206,7 +199,6 @@ pub fn call_details(op: &Bytecode) -> Vec<CallDetails> {
         Bytecode::LdConst(_) => type_transition! { empty() => u64s(1) },
         Bytecode::LdAddr(_) => type_transition! { empty() => simple_addrs(1) },
         Bytecode::LdByteArray(_) => type_transition! { empty() => byte_arrays(1) },
-        Bytecode::LdStr(_) => type_transition! { empty() => strs(1) },
         Bytecode::LdFalse | Bytecode::LdTrue => type_transition! { empty() => bools(1) },
         Bytecode::BrTrue(_) | Bytecode::BrFalse(_) => {
             type_transition! { bools(1) => empty() }

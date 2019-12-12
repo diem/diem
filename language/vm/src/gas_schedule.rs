@@ -8,7 +8,7 @@
 //! native function itself.
 use crate::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex, FunctionHandleIndex,
-    StructDefinitionIndex, UserStringIndex, NO_TYPE_ACTUALS, NUMBER_OF_BYTECODE_INSTRUCTIONS,
+    StructDefinitionIndex, NO_TYPE_ACTUALS, NUMBER_OF_BYTECODE_INSTRUCTIONS,
     NUMBER_OF_NATIVE_FUNCTIONS,
 };
 pub use crate::file_format_common::Opcodes;
@@ -198,7 +198,6 @@ pub fn instruction_key(instruction: &Bytecode) -> u8 {
         BrFalse(_) => Opcodes::BR_FALSE,
         Branch(_) => Opcodes::BRANCH,
         LdConst(_) => Opcodes::LD_CONST,
-        LdStr(_) => Opcodes::LD_STR,
         LdByteArray(_) => Opcodes::LD_BYTEARRAY,
         LdAddr(_) => Opcodes::LD_ADDR,
         LdTrue => Opcodes::LD_TRUE,
@@ -358,7 +357,6 @@ impl CostTable {
             (Abort, GasCost::new(0, 0)),
             (MutBorrowLoc(0), GasCost::new(0, 0)),
             (ImmBorrowLoc(0), GasCost::new(0, 0)),
-            (LdStr(UserStringIndex::new(0)), GasCost::new(0, 0)),
             (LdAddr(AddressPoolIndex::new(0)), GasCost::new(0, 0)),
             (Ge, GasCost::new(0, 0)),
             (Xor, GasCost::new(0, 0)),

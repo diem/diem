@@ -252,7 +252,6 @@ fn module(
         function_signatures,
         locals_signatures,
         identifiers,
-        user_strings,
         byte_array_pool,
         address_pool,
     } = context.materialize_pools();
@@ -264,7 +263,6 @@ fn module(
         function_signatures,
         locals_signatures,
         identifiers,
-        user_strings,
         byte_array_pool,
         address_pool,
         struct_defs,
@@ -302,7 +300,6 @@ fn main(
         function_signatures,
         locals_signatures,
         identifiers,
-        user_strings,
         byte_array_pool,
         address_pool,
     } = context.materialize_pools();
@@ -314,7 +311,6 @@ fn main(
         function_signatures,
         locals_signatures,
         identifiers,
-        user_strings,
         byte_array_pool,
         address_pool,
         main,

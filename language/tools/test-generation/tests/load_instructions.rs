@@ -3,7 +3,7 @@
 
 extern crate test_generation;
 use test_generation::abstract_state::{AbstractState, AbstractValue};
-use vm::file_format::{AddressPoolIndex, Bytecode, SignatureToken, UserStringIndex};
+use vm::file_format::{AddressPoolIndex, Bytecode, SignatureToken};
 
 mod common;
 
@@ -36,17 +36,6 @@ fn bytecode_ldfalse() {
     assert_eq!(
         state2.stack_peek(0),
         Some(AbstractValue::new_primitive(SignatureToken::Bool)),
-        "stack type postcondition not met"
-    );
-}
-
-#[test]
-fn bytecode_ldstr() {
-    let state1 = AbstractState::new();
-    let state2 = common::run_instruction(Bytecode::LdStr(UserStringIndex::new(0)), state1);
-    assert_eq!(
-        state2.stack_peek(0),
-        Some(AbstractValue::new_primitive(SignatureToken::String)),
         "stack type postcondition not met"
     );
 }

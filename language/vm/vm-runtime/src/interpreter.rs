@@ -80,8 +80,6 @@ fn derive_type_tag(
         Address => Ok(TypeTag::Address),
         U64 => Ok(TypeTag::U64),
         ByteArray => Ok(TypeTag::ByteArray),
-        String => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-            .with_message("Cannot derive type tags for strings: unimplemented.".to_string())),
         TypeParameter(idx) => type_actual_tags
             .get(*idx as usize)
             .ok_or_else(|| {
@@ -408,16 +406,12 @@ where
                         self.operand_stack
                             .push(Value::address(*frame.module().address_at(*idx)))?;
                     }
-                    Bytecode::LdStr(_) => {
-                        return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
-                            .with_message("strings will be removed soon".to_string()))
-                    }
                     Bytecode::LdByteArray(idx) => {
                         let byte_array = frame.module().byte_array_at(*idx);
                         gas!(
                             instr: context,
                             self,
-                            Opcodes::LD_STR,
+                            Opcodes::LD_BYTEARRAY,
                             AbstractMemorySize::new(byte_array.len() as GasCarrier)
                         )?;
                         self.operand_stack

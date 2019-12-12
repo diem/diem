@@ -247,7 +247,6 @@ impl<Location: Clone + Eq + Default> Disassembler<Location> {
         Ok(match sig_tok {
             SignatureToken::Bool => "bool".to_string(),
             SignatureToken::U64 => "u64".to_string(),
-            SignatureToken::String => "string".to_string(),
             SignatureToken::ByteArray => "bytearray".to_string(),
             SignatureToken::Address => "address".to_string(),
             SignatureToken::Struct(struct_handle_idx, instantiation) => {
@@ -307,10 +306,6 @@ impl<Location: Clone + Eq + Default> Disassembler<Location> {
             Bytecode::LdByteArray(byte_array_idx) => {
                 let bytearray = self.source_mapper.bytecode.byte_array_at(*byte_array_idx);
                 Ok(format!("LdByteArray[{}]({:?})", byte_array_idx, bytearray))
-            }
-            Bytecode::LdStr(string_idx) => {
-                let string = self.source_mapper.bytecode.user_string_at(*string_idx);
-                Ok(format!("LdStr[{}]({})", string_idx, string.as_str()))
             }
             Bytecode::CopyLoc(local_idx) => {
                 let name = self.name_for_local(u64::from(*local_idx), function_source_map)?;

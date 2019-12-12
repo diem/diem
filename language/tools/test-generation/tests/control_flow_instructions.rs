@@ -23,7 +23,7 @@ fn generate_module_with_function() -> CompiledModuleMut {
         vec![],
         FunctionSignature {
             arg_types: vec![SignatureToken::U64, SignatureToken::Bool],
-            return_types: vec![SignatureToken::String, SignatureToken::Address],
+            return_types: vec![SignatureToken::Address],
             type_formals: vec![],
         },
     )];
@@ -58,11 +58,6 @@ fn bytecode_call() {
     assert_eq!(
         state2.stack_peek(0),
         Some(AbstractValue::new_primitive(SignatureToken::Address)),
-        "stack type postcondition not satisfied",
-    );
-    assert_eq!(
-        state2.stack_peek(1),
-        Some(AbstractValue::new_primitive(SignatureToken::String)),
         "stack type postcondition not satisfied",
     );
 }

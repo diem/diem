@@ -10,10 +10,9 @@ use crate::{
         FunctionHandle, FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex,
         IdentifierIndex, LocalsSignature, LocalsSignatureIndex, MemberCount, ModuleHandle,
         ModuleHandleIndex, StructDefinition, StructDefinitionIndex, StructHandle,
-        StructHandleIndex, TypeSignature, TypeSignatureIndex, UserStringIndex,
+        StructHandleIndex, TypeSignature, TypeSignatureIndex,
     },
     internals::ModuleIndex,
-    vm_string::{VMStr, VMString},
 };
 use libra_types::{
     account_address::AccountAddress,
@@ -73,10 +72,6 @@ pub trait ModuleAccess: Sync {
 
     fn identifier_at(&self, idx: IdentifierIndex) -> &IdentStr {
         &self.as_module().as_inner().identifiers[idx.into_index()]
-    }
-
-    fn user_string_at(&self, idx: UserStringIndex) -> &VMStr {
-        &self.as_module().as_inner().user_strings[idx.into_index()]
     }
 
     fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &ByteArray {
@@ -139,10 +134,6 @@ pub trait ModuleAccess: Sync {
 
     fn identifiers(&self) -> &[Identifier] {
         &self.as_module().as_inner().identifiers
-    }
-
-    fn user_strings(&self) -> &[VMString] {
-        &self.as_module().as_inner().user_strings
     }
 
     fn struct_defs(&self) -> &[StructDefinition] {

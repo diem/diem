@@ -1056,7 +1056,6 @@ pub fn format_type(module: &VerifiedModule, sig: &SignatureToken) -> String {
     match sig {
         SignatureToken::Bool => "bool".into(),
         SignatureToken::U64 => "int".into(),
-        SignatureToken::String => "string".into(),
         SignatureToken::ByteArray => "bytearray".into(),
         SignatureToken::Address => "address".into(),
         SignatureToken::Struct(idx, _) => struct_name_from_handle_index(module, *idx),
@@ -1075,7 +1074,6 @@ pub fn format_type_value(module: &VerifiedModule, sig: &SignatureToken) -> Strin
     match sig {
         SignatureToken::Bool => "BooleanType()".to_string(),
         SignatureToken::U64 => "IntegerType()".to_string(),
-        SignatureToken::String => "StrType()".to_string(),
         SignatureToken::ByteArray => "ByteArrayType()".to_string(),
         SignatureToken::Address => "AddressType()".to_string(),
         SignatureToken::Reference(t) | SignatureToken::MutableReference(t) => {

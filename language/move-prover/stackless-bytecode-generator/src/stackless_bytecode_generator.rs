@@ -264,15 +264,6 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_count += 1;
             }
 
-            Bytecode::LdStr(user_string_index) => {
-                let temp_index = self.temp_count;
-                self.temp_stack.push(temp_index);
-                self.local_types.push(SignatureToken::String);
-                self.code
-                    .push(StacklessBytecode::LdStr(temp_index, *user_string_index));
-                self.temp_count += 1;
-            }
-
             Bytecode::LdByteArray(byte_array_pool_index) => {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
