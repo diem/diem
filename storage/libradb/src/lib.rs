@@ -100,6 +100,10 @@ lazy_static! {
 const MAX_LIMIT: u64 = 1000;
 const MAX_REQUEST_ITEMS: u64 = 100;
 
+// TODO: Either implement an iteration API to allow a very old client to loop through a long history
+// or guarantee that there is always a recent enough waypoint and client knows to boot from there.
+const MAX_NUM_EPOCH_CHANGE_LEDGER_INFO: usize = 100;
+
 fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<()> {
     if num_requested > max_allowed {
         Err(LibraDbError::TooManyRequested(num_requested, max_allowed).into())
@@ -331,8 +335,13 @@ impl LibraDB {
         start_epoch: u64,
         end_epoch: u64,
     ) -> Result<Vec<LedgerInfoWithSignatures>> {
-        self.ledger_store
-            .get_epoch_change_ledger_infos(start_epoch, end_epoch)
+        let (results, more) = self.ledger_store.get_first_n_epoch_change_ledger_infos(
+            start_epoch,
+            end_epoch,
+            MAX_NUM_EPOCH_CHANGE_LEDGER_INFO,
+        )?;
+        ensure!(!more, "Exceeded max response length. TODO: remove this.");
+        Ok(results)
     }
 
     /// Persist transactions. Called by the executor module when either syncing nodes or committing
@@ -492,7 +501,7 @@ impl LibraDB {
         // TODO: cache last epoch change version to avoid a DB access in most cases.
         let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
         let validator_change_proof = if client_epoch < ledger_info.epoch() {
-            self.ledger_store.get_epoch_change_ledger_infos(
+            self.get_epoch_change_ledger_infos(
                 client_epoch,
                 self.ledger_store.get_epoch(ledger_info.version())?,
             )?

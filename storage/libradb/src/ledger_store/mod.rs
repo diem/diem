@@ -41,10 +41,6 @@ pub(crate) struct LedgerStore {
     latest_ledger_info: ArcSwap<Option<LedgerInfoWithSignatures>>,
 }
 
-// TODO: Either implement an iteration API to allow a very old client to loop through a long history
-// or guarantee that there is always a recent enough waypoint and client knows to boot from there.
-const MAX_NUM_EPOCH_CHANGE_LEDGER_INFO: usize = 100;
-
 impl LedgerStore {
     pub fn new(db: Arc<DB>) -> Self {
         // Upon restart, read the latest ledger info and signatures and cache them in memory.
@@ -96,44 +92,43 @@ impl LedgerStore {
         })
     }
 
-    /// Return the ledger infos reflecting epoch bumps with their 2f+1 signatures
-    /// in [`start_epoch`, `end_epoch`).
-    pub fn get_epoch_change_ledger_infos(
+    /// Returns the ledger infos reflecting epoch bumps with their 2f+1 signatures in
+    /// [`start_epoch`, `end_epoch`). If there is no more than `limit` results, this function
+    /// returns all of them, otherwise the first `limit` results are returned and a flag
+    /// (when true) will be used to indicate the fact that there is more.
+    pub fn get_first_n_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Result<Vec<LedgerInfoWithSignatures>> {
+        limit: usize,
+    ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
         let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
         iter.seek(&start_epoch)?;
 
-        let mut result = Vec::new();
+        let mut results = Vec::new();
         for res in iter {
-            let (_epoch, ledger_info_with_sigs) = res?;
-            if ledger_info_with_sigs.ledger_info().epoch() >= end_epoch {
+            let (epoch, ledger_info_with_sigs) = res?;
+            debug_assert_eq!(epoch, ledger_info_with_sigs.ledger_info().epoch());
+
+            if epoch >= end_epoch {
                 break;
             }
-            if result.len() >= MAX_NUM_EPOCH_CHANGE_LEDGER_INFO {
-                return Err(LibraDbError::TooManyRequested(
-                    MAX_NUM_EPOCH_CHANGE_LEDGER_INFO as u64 + 1,
-                    MAX_NUM_EPOCH_CHANGE_LEDGER_INFO as u64,
-                )
-                .into());
+            if results.len() >= limit {
+                return Ok((results, true));
             }
-            if ledger_info_with_sigs
-                .ledger_info()
-                .next_validator_set()
-                .is_none()
-            {
-                return Err((LibraDbError::NotFound(format!(
-                    "Epoch {} change proof",
-                    ledger_info_with_sigs.ledger_info().epoch()
-                )))
-                .into());
-            }
-            result.push(ledger_info_with_sigs);
+
+            ensure!(
+                ledger_info_with_sigs
+                    .ledger_info()
+                    .next_validator_set()
+                    .is_some(),
+                "DB corruption: the last ledger info of epoch {} is missing next validator set",
+                epoch,
+            );
+            results.push(ledger_info_with_sigs);
         }
 
-        Ok(result)
+        Ok((results, false))
     }
 
     pub fn get_latest_ledger_info_option(&self) -> Option<LedgerInfoWithSignatures> {
