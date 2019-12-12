@@ -1,11 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::persistent_storage::PersistentStorage;
+use crate::{
+    consensus_state::ConsensusState,
+    error::Error,
+    persistent_storage::PersistentStorage,
+};
 use consensus_types::{
     block::Block,
     block_data::BlockData,
-    common::{Payload, Round},
+    common::Payload,
     quorum_cert::QuorumCert,
     timeout::Timeout,
     vote::Vote,
@@ -18,100 +22,7 @@ use libra_types::{
     crypto_proxies::{Signature, ValidatorSigner},
     ledger_info::LedgerInfo,
 };
-use serde::{Deserialize, Serialize};
-use std::{
-    fmt::{Display, Formatter},
-    sync::Arc,
-};
-use thiserror::Error;
-
-#[derive(Debug, Error, PartialEq)]
-/// Different reasons for proposal rejection
-pub enum Error {
-    #[error("Internal error: {:?}", error)]
-    InternalError { error: String },
-
-    #[error("Unable to verify that the new tree extneds the parent: {:?}", error)]
-    InvalidAccumulatorExtension { error: String },
-
-    /// This proposal's round is less than round of preferred block.
-    /// Returns the id of the preferred block.
-    #[error(
-        "Proposal's round is lower than round of preferred block at round {:?}",
-        preferred_round
-    )]
-    ProposalRoundLowerThenPreferredBlock { preferred_round: Round },
-
-    /// This proposal is too old - return last_voted_round
-    #[error(
-        "Proposal at round {:?} is not newer than the last vote round {:?}",
-        proposal_round,
-        last_voted_round
-    )]
-    OldProposal {
-        last_voted_round: Round,
-        proposal_round: Round,
-    },
-}
-
-impl From<anyhow::Error> for Error {
-    fn from(error: anyhow::Error) -> Self {
-        Self::InternalError {
-            error: format!("{}", error),
-        }
-    }
-}
-
-/// Public representation of the internal state of SafetyRules for monitoring / debugging purposes.
-/// This does not include sensitive data like private keys.
-/// @TODO add hash of ledger info (waypoint)
-#[derive(Serialize, Default, Deserialize, Debug, Eq, PartialEq, Clone)]
-pub struct ConsensusState {
-    epoch: u64,
-    last_voted_round: Round,
-    // A "preferred block" is the two-chain head with the highest block round. The expectation is
-    // that a new proposal's parent is higher or equal to the preferred_round.
-    preferred_round: Round,
-}
-
-impl Display for ConsensusState {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "ConsensusState: [\n\
-             \tepoch = {},
-             \tlast_voted_round = {},\n\
-             \tpreferred_round = {}\n\
-             ]",
-            self.epoch, self.last_voted_round, self.preferred_round
-        )
-    }
-}
-
-impl ConsensusState {
-    pub fn new(epoch: u64, last_voted_round: Round, preferred_round: Round) -> Self {
-        Self {
-            epoch,
-            last_voted_round,
-            preferred_round,
-        }
-    }
-
-    /// Returns the current epoch
-    pub fn epoch(&self) -> u64 {
-        self.epoch
-    }
-
-    /// Returns the last round that was voted on
-    pub fn last_voted_round(&self) -> Round {
-        self.last_voted_round
-    }
-
-    /// Returns the preferred block round
-    pub fn preferred_round(&self) -> Round {
-        self.preferred_round
-    }
-}
+use std::sync::Arc;
 
 /// SafetyRules is responsible for the safety of the consensus:
 /// 1) voting rules
@@ -202,11 +113,11 @@ impl SafetyRules {
     /// Provides the internal state of SafetyRules for monitoring / debugging purposes. This does
     /// not include sensitive data like private keys.
     pub fn consensus_state(&self) -> ConsensusState {
-        ConsensusState {
-            epoch: self.persistent_storage.epoch(),
-            last_voted_round: self.persistent_storage.last_voted_round(),
-            preferred_round: self.persistent_storage.preferred_round(),
-        }
+        ConsensusState::new(
+            self.persistent_storage.epoch(),
+            self.persistent_storage.last_voted_round(),
+             self.persistent_storage.preferred_round(),
+        )
     }
 
     /// Attempts to vote for a given proposal following the voting rules.
