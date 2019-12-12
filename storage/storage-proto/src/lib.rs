@@ -77,10 +77,10 @@ impl TryFrom<crate::proto::storage::GetAccountStateWithProofByVersionRequest>
 impl From<GetAccountStateWithProofByVersionRequest>
     for crate::proto::storage::GetAccountStateWithProofByVersionRequest
 {
-    fn from(version: GetAccountStateWithProofByVersionRequest) -> Self {
+    fn from(request: GetAccountStateWithProofByVersionRequest) -> Self {
         Self {
-            address: version.address.into(),
-            version: version.version,
+            address: request.address.into(),
+            version: request.version,
         }
     }
 }
