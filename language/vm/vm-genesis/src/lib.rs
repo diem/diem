@@ -332,7 +332,12 @@ pub fn encode_genesis_transaction_with_validator(
                     &state_view,
                     &ACCOUNT_MODULE,
                     &EPILOGUE,
-                    vec![Value::u64(/* gas_remaining */ 0)],
+                    vec![
+                        Value::u64(/* txn_sequence_number */ 0),
+                        Value::u64(/* txn_gas_price */ 0),
+                        Value::u64(/* txn_max_gas_units */ 0),
+                        Value::u64(/* gas_units_remaining */ 0),
+                    ],
                 )
                 .unwrap();
 
