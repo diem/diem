@@ -43,6 +43,7 @@ byteorder = "1.3.2"
 proptest = "0.9.1"
 proptest-derive = "0.1.0"
 ripemd160 = "0.8.0"
+criterion = "0.3"
 
 [features]
 default = ["std", "u64_backend"]
@@ -52,3 +53,7 @@ fuzzing = ["proptest", "proptest-derive", "cloneable-private-keys"]
 std = ["curve25519-dalek/std", "ed25519-dalek/std", "x25519-dalek/std"]
 u64_backend = ["curve25519-dalek/u64_backend", "ed25519-dalek/u64_backend", "x25519-dalek/u64_backend"]
 fiat_u64_backend = ["curve25519-dalek/fiat_u64_backend", "ed25519-dalek/fiat_u64_backend", "x25519-dalek/fiat_u64_backend"]
+
+[[bench]]
+name = "hash"
+harness = false
