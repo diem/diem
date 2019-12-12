@@ -1,13 +1,13 @@
 use crate::chained_bft::consensusdb::ConsensusDB;
 use crate::pow::chain_manager::ChainManager;
 use crate::pow::event_processor::EventProcessor;
+use crate::pow::mine_state::{BlockIndex, MineStateManager};
 use crate::pow::payload_ext::{genesis_id, BlockPayloadExt};
 use crate::state_replication::{StateComputer, TxnManager};
 use anyhow::Result;
 use atomic_refcell::AtomicRefCell;
 use chrono::prelude::*;
 use consensus_types::{block::Block, quorum_cert::QuorumCert, vote_data::VoteData};
-use cuckoo::consensus::PowService;
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_crypto::x25519::{X25519StaticPrivateKey, X25519StaticPublicKey};
 use libra_crypto::HashValue;
@@ -23,7 +23,7 @@ use libra_types::{
     validator_public_keys::ValidatorPublicKeys,
     validator_set::ValidatorSet,
 };
-use miner::types::{MineCtx, MineState, MineStateManager};
+use miner::types::MineState;
 use network::{
     proto::{
         Block as BlockProto, ConsensusMsg,
@@ -47,9 +47,8 @@ pub struct MintManager {
     author: AccountAddress,
     self_sender: channel::Sender<Result<Event<ConsensusMsg>>>,
     block_store: Arc<ConsensusDB>,
-    _pow_srv: Arc<dyn PowService>,
     chain_manager: Arc<AtomicRefCell<ChainManager>>,
-    mine_state: MineStateManager,
+    mine_state: MineStateManager<BlockIndex>,
     self_key: Option<Ed25519PrivateKey>,
 }
 
@@ -61,9 +60,8 @@ impl MintManager {
         author: AccountAddress,
         self_sender: channel::Sender<Result<Event<ConsensusMsg>>>,
         block_store: Arc<ConsensusDB>,
-        pow_srv: Arc<dyn PowService>,
         chain_manager: Arc<AtomicRefCell<ChainManager>>,
-        mine_state: MineStateManager,
+        mine_state: MineStateManager<BlockIndex>,
         pri_key: Ed25519PrivateKey,
     ) -> Self {
         MintManager {
@@ -73,7 +71,6 @@ impl MintManager {
             author,
             self_sender,
             block_store,
-            _pow_srv: pow_srv,
             chain_manager,
             mine_state,
             self_key: Some(pri_key),
@@ -178,15 +175,16 @@ impl MintManager {
                                 );
 
                                 //mint
-                                let nonce = generate_nonce();
-
-                                let (rx, _tx) = mine_state.mine_block(MineCtx {
-                                    header: li.hash().to_vec(),
-                                    nonce,
-                                });
-
-                                let solve = rx.recv().await.unwrap();
-                                let mint_data = BlockPayloadExt { txns, nonce, solve };
+                                mine_state.set_latest_block(parent_block_id);
+                                let (rx, _tx) = mine_state.mine_block(li.hash().to_vec());
+                                let proof = rx.recv().await.unwrap();
+                                let mint_data = BlockPayloadExt {
+                                    txns,
+                                    nonce: proof.nonce,
+                                    solve: proof.solution,
+                                    target: proof.target.to_vec(),
+                                    algo: proof.algo.into(),
+                                };
 
                                 //block data
                                 let block = Block::<BlockPayloadExt>::new_proposal(

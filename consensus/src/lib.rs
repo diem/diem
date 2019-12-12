@@ -9,7 +9,7 @@
 //! Currently, the only consensus protocol supported is LibraBFT (based on
 //! [HotStuff](https://arxiv.org/pdf/1803.05069.pdf)).
 
-#![cfg_attr(not(feature = "fuzzing"), deny(missing_docs))]
+#![cfg_attr(not(feature = "fuzzing"), allow(missing_docs))]
 #![cfg_attr(feature = "fuzzing", allow(dead_code))]
 #![recursion_limit = "1024"]
 
@@ -34,4 +34,5 @@ mod state_computer;
 mod state_replication;
 mod txn_manager;
 
-pub use miner::MineClient;
+pub use miner::{client::MineClient, server::setup_minerproxy_service, types::MineState};
+pub use pow::mine_state;
