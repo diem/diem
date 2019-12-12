@@ -10,7 +10,7 @@ use vm::{
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
         FieldDefinitionIndex, FunctionHandleIndex, LocalIndex, StructDefinitionIndex, TableIndex,
-        UserStringIndex, NO_TYPE_ACTUALS,
+        NO_TYPE_ACTUALS,
     },
     internals::ModuleIndex,
     IndexKind,
@@ -168,7 +168,6 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
 
         // These have to be computed upfront because self.module is being mutated below.
         let address_pool_len = self.module.address_pool.len();
-        let user_strings_len = self.module.user_strings.len();
         let byte_array_pool_len = self.module.byte_array_pool.len();
         let function_handles_len = self.module.function_handles.len();
         let field_defs_len = self.module.field_defs.len();
@@ -189,13 +188,6 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                         offset,
                         AddressPoolIndex,
                         LdAddr
-                    ),
-                    LdStr(_) => new_bytecode!(
-                        user_strings_len,
-                        bytecode_idx,
-                        offset,
-                        UserStringIndex,
-                        LdStr
                     ),
                     LdByteArray(_) => new_bytecode!(
                         byte_array_pool_len,
@@ -311,7 +303,6 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
 
     match bytecode {
         LdAddr(_)
-        | LdStr(_)
         | LdByteArray(_)
         | ImmBorrowField(_)
         | MutBorrowField(_)

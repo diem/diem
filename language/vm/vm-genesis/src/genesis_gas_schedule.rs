@@ -8,7 +8,7 @@ use lcs;
 use vm::{
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex, FunctionHandleIndex,
-        StructDefinitionIndex, UserStringIndex, NO_TYPE_ACTUALS, NUMBER_OF_NATIVE_FUNCTIONS,
+        StructDefinitionIndex, NO_TYPE_ACTUALS, NUMBER_OF_NATIVE_FUNCTIONS,
     },
     gas_schedule::{CostTable, GasCost, GAS_SCHEDULE_NAME, MAXIMUM_NUMBER_OF_GAS_UNITS},
 };
@@ -58,7 +58,6 @@ lazy_static! {
             (Abort, GasCost::new(39, 1)),
             (MutBorrowLoc(0), GasCost::new(45, 1)),
             (ImmBorrowLoc(0), GasCost::new(45, 1)),
-            (LdStr(UserStringIndex::new(0)), GasCost::new(52, 1)),
             (LdAddr(AddressPoolIndex::new(0)), GasCost::new(36, 1)),
             (Ge, GasCost::new(46, 1)),
             (Xor, GasCost::new(46, 1)),

@@ -579,7 +579,6 @@ impl<'a> Context<'a> {
         orig: SignatureToken,
     ) -> Result<SignatureToken> {
         Ok(match orig {
-            SignatureToken::String => panic!("strings will be removed"),
             x @ SignatureToken::Bool
             | x @ SignatureToken::U64
             | x @ SignatureToken::ByteArray

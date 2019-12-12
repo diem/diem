@@ -560,7 +560,6 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
             | SignatureToken::MutableReference(_)
             | SignatureToken::Bool
             | SignatureToken::U64
-            | SignatureToken::String
             | SignatureToken::ByteArray
             | SignatureToken::Address => false,
 

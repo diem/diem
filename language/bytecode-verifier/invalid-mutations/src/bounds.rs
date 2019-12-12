@@ -59,7 +59,6 @@ impl PointerKind {
             FunctionSignature => &[Star(StructHandle)],
             LocalsSignature => &[Star(StructHandle)],
             Identifier => &[],
-            UserString => &[],
             ByteArrayPool => &[],
             AddressPool => &[],
             // LocalPool and CodeDefinition are function-local, and this only works for
