@@ -124,6 +124,9 @@ module LibraSystem {
 
             start_height = *&copy(subsidy_info).subsidy_height + 1;
             subsidy_coin = ConsensusConfig.subsidy_coin(copy(start_height));
+            if (copy(subsidy_coin) == 0) {
+                return;
+            }
 
             if (Vector.length<u64>(&copy(subsidy_info).heights) == ConsensusConfig.subsidy_delay()) {//pay
                 tmp_height = copy(start_height) + ConsensusConfig.subsidy_delay();

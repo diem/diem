@@ -289,8 +289,8 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
                         &POW_INIT,
                         vec![
                             Value::bool(true),
-                            Value::u64(10 as u64),
-                            Value::u64(50_000_000 as u64),
+                            Value::u64(1000 as u64),
+                            Value::u64(50 as u64),
                             Value::u64(2 as u64),
                         ],
                     )

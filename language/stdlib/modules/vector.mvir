@@ -127,6 +127,12 @@ module Vector {
   }
 
   public remove_head<Element: unrestricted>(v: &mut Self.T<Element>) {
+    let len: u64;
+    len = Self.length<Element>(freeze(copy(v)));
+    if (copy(len) == 0) {
+        return;
+    }
+
     Self.reverse<Element>(copy(v));
 
     _ = Self.pop_back<Element>(copy(v));

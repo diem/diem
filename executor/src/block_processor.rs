@@ -728,7 +728,8 @@ where
                     txn_info_hashes.push(real_txn_info_hash);
                     txn_info_hash = Some(real_txn_info_hash);
                 }
-                TransactionStatus::Discard(_) => {
+                TransactionStatus::Discard(discard_txn) => {
+                    warn!("Discard txn status : {:?}.", discard_txn);
                     ensure!(
                         vm_output.write_set().is_empty(),
                         "Discarded transaction has non-empty write set.",
