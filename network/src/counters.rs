@@ -15,6 +15,15 @@ lazy_static::lazy_static! {
         &["role_type", "state"]
     ).unwrap();
 
+    pub static ref LIBRA_NETWORK_DISCOVERY_NOTES: IntGaugeVec = register_int_gauge_vec!(
+        // metric name
+        "libra_network_discovery_notes",
+        // metric description
+        "Libra network discovery notes",
+        // metric labels (dimensions)
+        &["role_type"]
+    ).unwrap();
+
     pub static ref LIBRA_NETWORK_RPC_MESSAGES: IntCounterVec = register_int_counter_vec!(
         "libra_network_rpc_messages",
         "Libra network rpc messages counter",

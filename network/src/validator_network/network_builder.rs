@@ -530,6 +530,7 @@ impl NetworkBuilder {
                 vec![ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL)],
             );
             let peer_id = self.peer_id;
+            let role = self.role;
             let addrs = vec![self
                 .advertised_address
                 .clone()
@@ -541,6 +542,7 @@ impl NetworkBuilder {
             let f = async move {
                 let discovery = Discovery::new(
                     peer_id,
+                    role,
                     addrs,
                     signer,
                     seed_peers,

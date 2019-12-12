@@ -291,7 +291,7 @@ where
                 }
                 // update libra_network_peer counter
                 counters::LIBRA_NETWORK_PEERS
-                    .with_label_values(&[&role.to_string(), "connected"])
+                    .with_label_values(&[role.as_str(), "connected"])
                     .dec();
                 // Send LostPeer notifications to subscribers
                 for ch in &mut self.peer_event_handlers {
@@ -467,7 +467,7 @@ where
         if send_new_peer_notification {
             // update libra_network_peer counter
             counters::LIBRA_NETWORK_PEERS
-                .with_label_values(&[&role.to_string(), "connected"])
+                .with_label_values(&[role.as_str(), "connected"])
                 .inc();
 
             for ch in &mut self.peer_event_handlers {

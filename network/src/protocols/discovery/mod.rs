@@ -32,6 +32,7 @@
 //! [`ConnectivityManager`]: ../../connectivity_manager
 use crate::{
     connectivity_manager::ConnectivityRequest,
+    counters,
     error::{NetworkError, NetworkErrorKind},
     proto::{DiscoveryMsg, FullNodePayload, Note, PeerInfo, SignedFullNodePayload, SignedPeerInfo},
     utils::MessageExt,
@@ -45,6 +46,7 @@ use futures::{
     sink::SinkExt,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
+use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::*,
     hash::{CryptoHasher, DiscoveryMsgHasher},
@@ -58,7 +60,7 @@ use rand::{rngs::SmallRng, FromEntropy, Rng};
 use std::pin::Pin;
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryFrom,
+    convert::{TryFrom, TryInto},
     sync::{Arc, RwLock},
     time::{Duration, SystemTime},
 };
@@ -73,6 +75,8 @@ pub struct Discovery<TTicker> {
     _note: Note,
     /// PeerId for self.
     peer_id: PeerId,
+    /// Our node type.
+    role: RoleType,
     /// Validator for verifying signatures on messages.
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     /// Current state, maintaining the most recent Note for each peer, alongside parsed PeerInfo.
@@ -102,6 +106,7 @@ where
 {
     pub fn new(
         self_peer_id: PeerId,
+        role: RoleType,
         self_addrs: Vec<Multiaddr>,
         signer: Signer,
         seed_peers: HashMap<PeerId, PeerInfo>,
@@ -134,9 +139,11 @@ where
         let known_peers = vec![(self_peer_id, self_verified_note)]
             .into_iter()
             .collect();
+
         Self {
             _note: self_note,
             peer_id: self_peer_id,
+            role,
             seed_peers,
             trusted_peers,
             known_peers,
@@ -154,6 +161,8 @@ where
     // list.
     async fn connect_to_seed_peers(&mut self) {
         debug!("Connecting to seed peers");
+        self.record_num_discovery_notes();
+
         let self_peer_id = self.peer_id;
         for (peer_id, peer_info) in self
             .seed_peers
@@ -251,6 +260,7 @@ where
                         match handle_discovery_msg(msg, self.trusted_peers.clone(), peer_id) {
                             Ok(verified_notes) => {
                                 self.reconcile(peer_id, verified_notes).await;
+                                self.record_num_discovery_notes();
                             }
                             Err(e) => {
                                 warn!(
@@ -346,6 +356,22 @@ where
                 }
             }
         }
+    }
+
+    // Record the number of verified discovery notes we have for _other_ peers
+    // (not including our own note). We exclude counting our own note to be
+    // consistent with the "connected_peers" metric.
+    fn record_num_discovery_notes(&self) {
+        let num_other_notes = self
+            .known_peers
+            .iter()
+            .filter(|(peer_id, _)| *peer_id != &self.peer_id)
+            .count();
+        let num_other_notes: i64 = num_other_notes.try_into().unwrap_or(0);
+
+        counters::LIBRA_NETWORK_DISCOVERY_NOTES
+            .with_label_values(&[self.role.as_str()])
+            .set(num_other_notes);
     }
 }
 
