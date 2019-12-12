@@ -145,12 +145,15 @@ impl ValidatorConfig {
             .as_ref()
             .ok_or(Error::MissingValidatorNetwork)?
             .network_peers;
+        let validator_set = consensus_peers.get_validator_set(network_peers);
+        let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
 
         let genesis = Some(Transaction::UserTransaction(
             vm_genesis::encode_genesis_transaction_with_validator(
                 &faucet_key,
                 faucet_key.public_key(),
-                consensus_peers.get_validator_set(network_peers),
+                validator_set,
+                discovery_set,
             )
             .into_inner(),
         ));

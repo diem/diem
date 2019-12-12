@@ -9,7 +9,11 @@ use crate::genesis_gas_schedule::initial_gas_schedule;
 use anyhow::Result;
 use lazy_static::lazy_static;
 use libra_config::config::{VMConfig, VMPublishingOption};
-use libra_crypto::{ed25519::*, traits::ValidKey};
+use libra_crypto::{
+    ed25519::*,
+    traits::ValidKey,
+    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
@@ -17,14 +21,16 @@ use libra_types::{
     account_config,
     byte_array::ByteArray,
     crypto_proxies::ValidatorSet,
+    discovery_info::DiscoveryInfo,
     discovery_set::DiscoverySet,
     identifier::Identifier,
     transaction::{
         ChangeSet, RawTransaction, Script, SignatureCheckedTransaction, TransactionArgument,
     },
 };
+use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 use stdlib::stdlib_modules;
 use vm::{
     access::ModuleAccess, gas_schedule::CostTable, transaction_metadata::TransactionMetadata,
@@ -52,6 +58,14 @@ lazy_static! {
         let mut account = Accounts::empty();
         account.new_account();
         account
+    };
+    // TODO(philiphayes): remove this when we add discovery set to genesis config.
+    static ref PLACEHOLDER_PUBKEY: X25519StaticPublicKey = {
+        let salt = None;
+        let seed = [69u8; 32];
+        let app_info = None;
+        let (_, pubkey) = X25519StaticPrivateKey::derive_keypair_from_seed(salt, &seed, app_info);
+        pubkey
     };
 }
 
@@ -197,17 +211,33 @@ impl StateView for FakeStateView {
     }
 }
 
-pub fn encode_genesis_transaction(
-    private_key: &Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
-) -> SignatureCheckedTransaction {
-    encode_genesis_transaction_with_validator(private_key, public_key, ValidatorSet::new(vec![]))
+// TODO(philiphayes): remove this after integrating on-chain discovery with config.
+/// Make a placeholder `DiscoverySet` from the `ValidatorSet`.
+pub fn make_placeholder_discovery_set(validator_set: &ValidatorSet) -> DiscoverySet {
+    let discovery_set = validator_set
+        .iter()
+        .map(|validator_pubkeys| {
+            DiscoveryInfo::new(
+                *validator_pubkeys.account_address(),
+                // validator_network_identity_pubkey
+                validator_pubkeys.network_identity_public_key().clone(),
+                // validator_network_address PLACEHOLDER
+                Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap(),
+                // fullnodes_network_identity_pubkey PLACEHOLDER
+                PLACEHOLDER_PUBKEY.clone(),
+                // fullnodes_network_address PLACEHOLDER
+                Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap(),
+            )
+        })
+        .collect::<Vec<_>>();
+    DiscoverySet::new(discovery_set)
 }
 
 pub fn encode_genesis_transaction_with_validator(
     private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     validator_set: ValidatorSet,
+    discovery_set: DiscoverySet,
 ) -> SignatureCheckedTransaction {
     const INIT_BALANCE: u64 = 1_000_000_000;
 
@@ -357,7 +387,9 @@ pub fn encode_genesis_transaction_with_validator(
                 .unwrap();
 
             // Initialize each validator.
-            for validator_keys in validator_set.iter().rev() {
+            for (validator_keys, discovery_info) in
+                validator_set.iter().zip(discovery_set.iter()).rev()
+            {
                 // First, add a ValidatorConfig resource under each account
                 let validator_address = *validator_keys.account_address();
                 txn_executor
@@ -384,18 +416,26 @@ pub fn encode_genesis_transaction_with_validator(
                             )),
                             // validator_network_identity_pubkey
                             Value::byte_array(ByteArray::new(
-                                validator_keys
-                                    .network_identity_public_key()
+                                discovery_info
+                                    .validator_network_identity_pubkey()
                                     .to_bytes()
                                     .to_vec(),
                             )),
-                            // TODO(philiphayes): need some config here
                             // validator_network_address placeholder
-                            Value::byte_array(ByteArray::new(vec![])),
+                            Value::byte_array(ByteArray::new(
+                                discovery_info.validator_network_address().to_vec(),
+                            )),
                             // fullnodes_network_identity_pubkey placeholder
-                            Value::byte_array(ByteArray::new(vec![])),
+                            Value::byte_array(ByteArray::new(
+                                discovery_info
+                                    .fullnodes_network_identity_pubkey()
+                                    .to_bytes()
+                                    .to_vec(),
+                            )),
                             // fullnodes_network_address placeholder
-                            Value::byte_array(ByteArray::new(vec![])),
+                            Value::byte_array(ByteArray::new(
+                                discovery_info.fullnodes_network_address().to_vec(),
+                            )),
                         ],
                     )
                     .unwrap();
@@ -487,7 +527,12 @@ pub fn encode_genesis_transaction_with_validator(
                 "Expected sequence number 0 for discovery set change event but got {}",
                 discovery_set_change_event.sequence_number()
             );
-            // TODO(philiphayes): add DiscoverySet deserialize into rust struct
+            // (7) It should emit the discovery set we fed into the genesis tx
+            assert_eq!(
+                DiscoverySet::from_bytes(discovery_set_change_event.event_data()).unwrap(),
+                discovery_set,
+                "Discovery set in emitted event does not match discovery set fed into genesis transaction",
+            );
 
             ChangeSet::new(txn_output.write_set().clone(), txn_output.events().to_vec())
         }

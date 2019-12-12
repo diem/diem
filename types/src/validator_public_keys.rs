@@ -21,7 +21,9 @@ use std::{convert::TryFrom, fmt};
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct ValidatorPublicKeys<PublicKey> {
-    // Hash value of the current public key of the account address
+    // The validator's account address. AccountAddresses are initially derived from the account
+    // auth pubkey; however, the auth key can be rotated, so one should not rely on this
+    // initial property.
     account_address: AccountAddress,
     // This key can validate messages sent from this validator
     consensus_public_key: PublicKey,
