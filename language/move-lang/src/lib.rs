@@ -22,7 +22,7 @@ pub mod test_utils;
 
 use codespan::{ByteIndex, Span};
 use errors::*;
-use parser::syntax::{parse_file_string, ParseError};
+use parser::syntax::parse_file_string;
 use shared::{Address, Loc};
 use std::{
     collections::HashMap,
@@ -162,36 +162,6 @@ fn check_errors(errors: Errors) -> Result<(), Errors> {
 // Parsing
 //**************************************************************************************************
 
-fn parsing_error(fname: &'static str, e: ParseError) -> Error {
-    let fmt_expected =
-        |expected: Vec<String>| -> String { format!("Expected: {}", expected.join(", ")) };
-    match e {
-        ParseError::InvalidToken { location: l } => {
-            let span = Span::new(ByteIndex(l as u32), ByteIndex(l as u32));
-            let loc = Loc::new(fname, span);
-            vec![(loc, "Invalid token".into())]
-        }
-        ParseError::UnrecognizedToken {
-            location: l,
-            actual,
-            expected,
-        } => {
-            let end_loc = l + actual.len();
-            let span = Span::new(ByteIndex(l as u32), ByteIndex(end_loc as u32));
-            let loc = Loc::new(fname, span);
-            vec![
-                (loc, format!("Unexpected token: '{}'", actual)),
-                (loc, fmt_expected(expected)),
-            ]
-        }
-        ParseError::User { location: l, error } => {
-            let span = Span::new(ByteIndex(l as u32), ByteIndex(l as u32));
-            let loc = Loc::new(fname, span);
-            vec![(loc, error)]
-        }
-    }
-}
-
 fn parse_program(
     targets: &[&'static str],
     deps: &[&'static str],
@@ -246,7 +216,7 @@ fn parse_file(
     let def_opt = match parse_file_string(fname, &no_comments_buffer) {
         Ok(def) => Some(def),
         Err(err) => {
-            errors.push(parsing_error(fname, err));
+            errors.push(err);
             None
         }
     };

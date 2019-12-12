@@ -1,8 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::parser::syntax::ParseError;
+use codespan::{ByteIndex, Span};
 use std::fmt;
+
+use crate::errors::*;
+use crate::shared::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tok {
@@ -180,20 +183,20 @@ impl<'input> Lexer<'input> {
         self.previous_end
     }
 
-    pub fn lookahead(&self) -> Result<Tok, ParseError> {
+    pub fn lookahead(&self) -> Result<Tok, Error> {
         let text = self.text.trim_start();
         let whitespace = self.text.len() - text.len();
         let start_offset = self.consumed + whitespace;
-        let (tok, _) = find_token(text, start_offset)?;
+        let (tok, _) = find_token(self.file, text, start_offset)?;
         Ok(tok)
     }
 
-    pub fn advance(&mut self) -> Result<(), ParseError> {
+    pub fn advance(&mut self) -> Result<(), Error> {
         self.previous_end = self.token.2;
         let text = self.text.trim_start();
         let whitespace = self.text.len() - text.len();
         let start_offset = self.consumed + whitespace;
-        let (tok, len) = find_token(text, start_offset)?;
+        let (tok, len) = find_token(self.file, text, start_offset)?;
         let result = &text[..len];
         let remaining = &text[len..];
         let end_offset = start_offset + len;
@@ -205,7 +208,7 @@ impl<'input> Lexer<'input> {
 }
 
 // Find the next token and its length without changing the state of the lexer.
-fn find_token(text: &str, start_offset: usize) -> Result<(Tok, usize), ParseError> {
+fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(Tok, usize), Error> {
     let c: char = match text.chars().next() {
         Some(next_char) => next_char,
         None => {
@@ -298,9 +301,12 @@ fn find_token(text: &str, start_offset: usize) -> Result<(Tok, usize), ParseErro
         '{' => (Tok::LBrace, 1),
         '}' => (Tok::RBrace, 1),
         _ => {
-            return Err(ParseError::InvalidToken {
-                location: start_offset,
-            });
+            let span = Span::new(
+                ByteIndex(start_offset as u32),
+                ByteIndex(start_offset as u32),
+            );
+            let loc = Loc::new(file, span);
+            return Err(vec![(loc, "Invalid token".into())]);
         }
     };
 
