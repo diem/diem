@@ -8,6 +8,7 @@ use crate::protocols::direct_send::Message;
 use crate::validator_network::DISCOVERY_DIRECT_SEND_PROTOCOL;
 use crate::ProtocolId;
 use core::str::FromStr;
+use libra_config::config::RoleType;
 use libra_crypto::{test_utils::TEST_SEED, *};
 use prost::Message as _;
 use rand::{rngs::StdRng, SeedableRng};
@@ -81,9 +82,11 @@ fn setup_discovery(
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(1);
     let (network_notifs_tx, network_notifs_rx) = channel::new_test(0);
     let (ticker_tx, ticker_rx) = channel::new_test(0);
+    let role = RoleType::Validator;
     let discovery = {
         Discovery::new(
             peer_id,
+            role,
             addrs,
             signer,
             vec![(seed_peer_id, seed_peer_info)].into_iter().collect(),

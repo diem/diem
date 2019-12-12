@@ -109,6 +109,13 @@ impl RoleType {
     pub fn is_validator(&self) -> bool {
         *self == RoleType::Validator
     }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            RoleType::Validator => "validator",
+            RoleType::FullNode => "full_node",
+        }
+    }
 }
 
 impl std::str::FromStr for RoleType {
@@ -125,10 +132,7 @@ impl std::str::FromStr for RoleType {
 
 impl fmt::Display for RoleType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            RoleType::Validator => write!(f, "validator"),
-            RoleType::FullNode => write!(f, "full_node"),
-        }
+        write!(f, "{}", self.as_str())
     }
 }
 
