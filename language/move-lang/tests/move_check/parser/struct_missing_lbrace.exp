@@ -1,11 +1,11 @@
 error: 
 
-   ┌── tests/move_check/parser/struct_missing_lbrace.move:3:5 ───
+   ┌── tests/move_check/parser/struct_missing_lbrace.move:2:14 ───
    │
  3 │     f() {}
-   │     ^ Unexpected token: 'f'
+   │     ^ Expected '}'
    ·
- 3 │     f() {}
-   │     - Expected: ','
+ 2 │     struct S { f: u64
+   │              - To match this '{'
    │
 

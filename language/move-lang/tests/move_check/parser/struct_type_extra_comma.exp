@@ -3,9 +3,6 @@ error:
    ┌── tests/move_check/parser/struct_type_extra_comma.move:2:14 ───
    │
  2 │     struct S<,T> { }
-   │              ^ Unexpected token: ','
-   ·
- 2 │     struct S<,T> { }
-   │              - Expected: a name value
+   │              ^ Expected a type parameter
    │
 

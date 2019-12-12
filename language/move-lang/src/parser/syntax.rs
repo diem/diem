@@ -25,9 +25,7 @@ fn unexpected_token_error(
 ) -> Error {
     let fmt_expected =
         |expected: Vec<String>| -> String { format!("Expected: {}", expected.join(", ")) };
-    let end_loc = start_loc + actual.len();
-    let span = Span::new(ByteIndex(start_loc as u32), ByteIndex(end_loc as u32));
-    let loc = Loc::new(file, span);
+    let loc = make_loc(file, start_loc, start_loc + actual.len());
     vec![
         (loc, format!("Unexpected token: '{}'", actual)),
         (loc, fmt_expected(expected)),
@@ -35,8 +33,7 @@ fn unexpected_token_error(
 }
 
 fn user_error(file: &'static str, start_loc: usize, error: String) -> Error {
-    let span = Span::new(ByteIndex(start_loc as u32), ByteIndex(start_loc as u32));
-    let loc = Loc::new(file, span);
+    let loc = make_loc(file, start_loc, start_loc);
     vec![(loc, error)]
 }
 
@@ -73,9 +70,20 @@ fn spanned<T>(file: &'static str, start: usize, end: usize, value: T) -> Spanned
     }
 }
 
+// Check for the specified token and consume it if it matches.
+// Returns true if the token matches.
+fn match_token<'input>(tokens: &mut Lexer<'input>, tok: Tok) -> Result<bool, Error> {
+    if tokens.peek() == tok {
+        tokens.advance()?;
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+// Check for the specified token and return an error if it does not match.
 fn consume_token<'input>(tokens: &mut Lexer<'input>, tok: Tok) -> Result<(), Error> {
-    let peeked = tokens.peek();
-    if tok != peeked {
+    if tokens.peek() != tok {
         return Err(unexpected_token_error(
             tokens.file_name(),
             tokens.start_loc(),
@@ -103,25 +111,67 @@ fn consume_optional_token_with_loc<'input>(
     }
 }
 
+// Parse a comma-separated list of items, including the specified starting and
+// ending tokens.
 fn parse_comma_list<'input, F, R>(
     tokens: &mut Lexer<'input>,
-    list_end_token: Tok,
+    start_token: Tok,
+    end_token: Tok,
     parse_list_item: F,
+    item_description: &str,
 ) -> Result<Vec<R>, Error>
 where
     F: Fn(&mut Lexer<'input>) -> Result<R, Error>,
 {
-    if tokens.peek() == list_end_token {
+    let start_loc = tokens.start_loc();
+    consume_token(tokens, start_token)?;
+    parse_comma_list_after_start(
+        tokens,
+        start_loc,
+        start_token,
+        end_token,
+        parse_list_item,
+        item_description,
+    )
+}
+
+// Parse a comma-separated list of items, including the specified ending token, but
+// assuming that the starting token has already been consumed.
+fn parse_comma_list_after_start<'input, F, R>(
+    tokens: &mut Lexer<'input>,
+    start_loc: usize,
+    start_token: Tok,
+    end_token: Tok,
+    parse_list_item: F,
+    item_description: &str,
+) -> Result<Vec<R>, Error>
+where
+    F: Fn(&mut Lexer<'input>) -> Result<R, Error>,
+{
+    if match_token(tokens, end_token)? {
         return Ok(vec![]);
     }
     let mut v = vec![];
     loop {
+        if tokens.peek() == Tok::Comma || tokens.peek() == end_token {
+            let current_loc = tokens.start_loc();
+            let loc = make_loc(tokens.file_name(), current_loc, current_loc);
+            return Err(vec![(loc, format!("Expected {}", item_description))]);
+        }
         v.push(parse_list_item(tokens)?);
-        if tokens.peek() == list_end_token {
+        if match_token(tokens, end_token)? {
             break Ok(v);
         }
-        consume_token(tokens, Tok::Comma)?;
-        if tokens.peek() == list_end_token {
+        if !match_token(tokens, Tok::Comma)? {
+            let current_loc = tokens.start_loc();
+            let loc = make_loc(tokens.file_name(), current_loc, current_loc);
+            let loc2 = make_loc(tokens.file_name(), start_loc, start_loc);
+            return Err(vec![
+                (loc, format!("Expected '{}'", end_token)),
+                (loc2, format!("To match this '{}'", start_token)),
+            ]);
+        }
+        if match_token(tokens, end_token)? {
             break Ok(v);
         }
     }
@@ -212,8 +262,7 @@ fn parse_module_access<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleAcces
         Tok::NameValue => {
             // Check if this is a ModuleName followed by "::".
             let m = parse_name(tokens)?;
-            if tokens.peek() == Tok::ColonColon {
-                tokens.advance()?;
+            if match_token(tokens, Tok::ColonColon)? {
                 let n = parse_name(tokens)?;
                 ModuleAccess_::ModuleAccess(ModuleName(m), n)
             } else {
@@ -240,8 +289,7 @@ fn parse_module_access<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleAcces
 //      ExpField = <Field> <":" <Exp>>?
 fn parse_exp_field<'input>(tokens: &mut Lexer<'input>) -> Result<(Field, Exp), Error> {
     let f = parse_field(tokens)?;
-    let arg = if tokens.peek() == Tok::Colon {
-        tokens.advance()?; // consume the colon
+    let arg = if match_token(tokens, Tok::Colon)? {
         parse_exp(tokens)?
     } else {
         sp(f.loc(), Exp_::Name(f.0.clone()))
@@ -256,8 +304,7 @@ fn parse_exp_field<'input>(tokens: &mut Lexer<'input>) -> Result<(Field, Exp), E
 // with the same name as the field.
 fn parse_bind_field<'input>(tokens: &mut Lexer<'input>) -> Result<(Field, Bind), Error> {
     let f = parse_field(tokens)?;
-    let arg = if tokens.peek() == Tok::Colon {
-        tokens.advance()?; // consume the colon
+    let arg = if match_token(tokens, Tok::Colon)? {
         parse_bind(tokens)?
     } else {
         let v = Var(f.0.clone());
@@ -269,8 +316,7 @@ fn parse_bind_field<'input>(tokens: &mut Lexer<'input>) -> Result<(Field, Bind),
 // Parse a binding:
 //      Bind =
 //          <Var>
-//          | <ModuleAccess> "{" Comma<BindField> "}"
-//          | <ModuleAccess> "<" <TypeArgs> "{" Comma<BindField> "}"
+//          | <ModuleAccess> ("<" Comma<BaseType> ">")? "{" Comma<BindField> "}"
 fn parse_bind<'input>(tokens: &mut Lexer<'input>) -> Result<Bind, Error> {
     let start_loc = tokens.start_loc();
     if tokens.peek() == Tok::NameValue {
@@ -283,14 +329,23 @@ fn parse_bind<'input>(tokens: &mut Lexer<'input>) -> Result<Bind, Error> {
     }
     let ty = parse_module_access(tokens)?;
     let ty_args = if tokens.peek() == Tok::Less {
-        tokens.advance()?; // consume the "<"
-        Some(parse_type_args(tokens)?)
+        Some(parse_comma_list(
+            tokens,
+            Tok::Less,
+            Tok::Greater,
+            parse_base_type,
+            "a type",
+        )?)
     } else {
         None
     };
-    consume_token(tokens, Tok::LBrace)?;
-    let args = parse_comma_list(tokens, Tok::RBrace, parse_bind_field)?;
-    consume_token(tokens, Tok::RBrace)?;
+    let args = parse_comma_list(
+        tokens,
+        Tok::LBrace,
+        Tok::RBrace,
+        parse_bind_field,
+        "a field binding",
+    )?;
     let end_loc = tokens.previous_end_loc();
     let unpack = Bind_::Unpack(ty, ty_args, args);
     Ok(spanned(tokens.file_name(), start_loc, end_loc, unpack))
@@ -308,10 +363,13 @@ fn parse_bind_list<'input>(tokens: &mut Lexer<'input>) -> Result<BindList, Error
     let b = if tokens.peek() != Tok::LParen {
         vec![parse_bind(tokens)?]
     } else {
-        tokens.advance()?; // consume the LParen
-        let list = parse_comma_list(tokens, Tok::RParen, parse_bind)?;
-        consume_token(tokens, Tok::RParen)?;
-        list
+        parse_comma_list(
+            tokens,
+            Tok::LParen,
+            Tok::RParen,
+            parse_bind,
+            "a variable or structure binding",
+        )?
     };
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(tokens.file_name(), start_loc, end_loc, b))
@@ -362,25 +420,22 @@ fn parse_value<'input>(tokens: &mut Lexer<'input>) -> Result<Value, Error> {
 //          | "let" <BindList> (":" <Type>)? ("=" <Exp>)?
 fn parse_sequence_item<'input>(tokens: &mut Lexer<'input>) -> Result<SequenceItem, Error> {
     let start_loc = tokens.start_loc();
-    let item = if tokens.peek() != Tok::Let {
-        let e = parse_exp(tokens)?;
-        SequenceItem_::Seq(Box::new(e))
-    } else {
-        tokens.advance()?; // consume the "let"
+    let item = if match_token(tokens, Tok::Let)? {
         let b = parse_bind_list(tokens)?;
-        let ty_opt = if tokens.peek() == Tok::Colon {
-            tokens.advance()?;
+        let ty_opt = if match_token(tokens, Tok::Colon)? {
             Some(parse_type(tokens)?)
         } else {
             None
         };
-        if tokens.peek() != Tok::Equal {
-            SequenceItem_::Declare(b, ty_opt)
-        } else {
-            tokens.advance()?; // consume the Equal
+        if match_token(tokens, Tok::Equal)? {
             let e = parse_exp(tokens)?;
             SequenceItem_::Bind(b, ty_opt, Box::new(e))
+        } else {
+            SequenceItem_::Declare(b, ty_opt)
         }
+    } else {
+        let e = parse_exp(tokens)?;
+        SequenceItem_::Seq(Box::new(e))
     };
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(tokens.file_name(), start_loc, end_loc, item))
@@ -432,12 +487,9 @@ fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error>
 //          | "(" Comma<Exp> ")"
 //          | "(" <Exp> ":" <Type> ")"
 //          | "{" <Sequence>
-//          | <ModuleAccess> "{" Comma<ExpField> "}"
-//          | <ModuleAccess> "<" <TypeArgs> "{" Comma<ExpField> "}"
-//          | <ModuleAccess> "(" Comma<Exp> ")"
-//          | <ModuleAccess> "<" <TypeArgs> "(" Comma<Exp> ")"
-//          | "::" <Name> "(" Comma<Exp> ")"
-//          | "::" <Name> "<" <TypeArgs> "(" Comma<Exp> ")"
+//          | <ModuleAccess> ("<" Comma<BaseType> ">")? "{" Comma<ExpField> "}"
+//          | <ModuleAccess> ("<" Comma<BaseType> ">")? "(" Comma<Exp> ")"
+//          | "::" <Name> ("<" Comma<BaseType> ">")? "(" Comma<Exp> ")"
 fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     let start_loc = tokens.start_loc();
     let term = token_match!(tokens.peek(), tokens.file_name(), start_loc, tokens.content(), {
@@ -496,16 +548,15 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
         // "(" Comma<Exp> ")"
         // "(" <Exp> ":" <Type> ")"
         Tok::LParen => {
+            let list_loc = tokens.start_loc();
             tokens.advance()?; // consume the LParen
-            if tokens.peek() == Tok::RParen {
-                tokens.advance()?; // consume the RParen
+            if match_token(tokens, Tok::RParen)? {
                 Exp_::Unit
             } else {
                 // If there is a single expression inside the parens,
                 // then it may be followed by a colon and a type annotation.
                 let e = parse_exp(tokens)?;
-                if tokens.peek() == Tok::Colon {
-                    tokens.advance()?; // consume the Colon
+                if match_token(tokens, Tok::Colon)? {
                     let ty = parse_type(tokens)?;
                     consume_token(tokens, Tok::RParen)?;
                     Exp_::Annotate(Box::new(e), ty)
@@ -513,8 +564,14 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
                     if tokens.peek() != Tok::RParen {
                         consume_token(tokens, Tok::Comma)?;
                     }
-                    let mut es = parse_comma_list(tokens, Tok::RParen, parse_exp)?;
-                    consume_token(tokens, Tok::RParen)?;
+                    let mut es = parse_comma_list_after_start(
+                        tokens,
+                        list_loc,
+                        Tok::LParen,
+                        Tok::RParen,
+                        parse_exp,
+                        "an expression",
+                    )?;
                     if es.is_empty() {
                         e.value
                     } else {
@@ -531,14 +588,18 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             Exp_::Block(parse_sequence(tokens)?)
         },
 
-        // "::" <Name> "(" Comma<Exp> ")"
-        // "::" <Name> "<" <TypeArgs> "(" Comma<Exp> ")"
+        // "::" <Name> ("<" Comma<BaseType> ">")? "(" Comma<Exp> ")"
         Tok::ColonColon => {
             tokens.advance()?; // consume the "::"
             let n = parse_name(tokens)?;
             let tys = if tokens.peek() == Tok::Less {
-                tokens.advance()?; // consume the "<"
-                Some(parse_type_args(tokens)?)
+                Some(parse_comma_list(
+                    tokens,
+                    Tok::Less,
+                    Tok::Greater,
+                    parse_base_type,
+                    "a type",
+                )?)
             } else {
                 None
             };
@@ -555,24 +616,31 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
 fn parse_pack_or_call<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
     let n = parse_module_access(tokens)?;
     let tys = if tokens.peek() == Tok::Less {
-        tokens.advance()?; // consume the "<"
-        Some(parse_type_args(tokens)?)
+        Some(parse_comma_list(
+            tokens,
+            Tok::Less,
+            Tok::Greater,
+            parse_base_type,
+            "a type",
+        )?)
     } else {
         None
     };
     token_match!(tokens.peek(), tokens.file_name(), tokens.start_loc(), tokens.content(), {
 
-        // <ModuleAccess> "{" Comma<ExpField> "}"
-        // <ModuleAccess> "<" <TypeArgs> "{" Comma<ExpField> "}"
+        // <ModuleAccess> ("<" Comma<BaseType> ">")? "{" Comma<ExpField> "}"
         Tok::LBrace => {
-            tokens.advance()?;
-            let fs = parse_comma_list(tokens, Tok::RBrace, parse_exp_field)?;
-            consume_token(tokens, Tok::RBrace)?;
+            let fs = parse_comma_list(
+                tokens,
+                Tok::LBrace,
+                Tok::RBrace,
+                parse_exp_field,
+                "a field expression",
+            )?;
             Ok(Exp_::Pack(n, tys, fs))
         },
 
-        // <ModuleAccess> "(" Comma<Exp> ")"
-        // <ModuleAccess> "<" <TypeArgs> "(" Comma<Exp> ")"
+        // <ModuleAccess> ("<" Comma<BaseType> ">")? "(" Comma<Exp> ")"
         Tok::LParen => {
             let rhs = parse_call_args(tokens)?;
             Ok(Exp_::Call(n, tys, rhs))
@@ -583,9 +651,13 @@ fn parse_pack_or_call<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error>
 // Parse the arguments to a call: "(" Comma<Exp> ")"
 fn parse_call_args<'input>(tokens: &mut Lexer<'input>) -> Result<Spanned<Vec<Exp>>, Error> {
     let start_loc = tokens.start_loc();
-    consume_token(tokens, Tok::LParen)?;
-    let args = parse_comma_list(tokens, Tok::RParen, parse_exp)?;
-    consume_token(tokens, Tok::RParen)?;
+    let args = parse_comma_list(
+        tokens,
+        Tok::LParen,
+        Tok::RParen,
+        parse_exp,
+        "a call argument expression",
+    )?;
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(tokens.file_name(), start_loc, end_loc, args))
 }
@@ -608,8 +680,7 @@ fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             let eb = Box::new(parse_exp(tokens)?);
             consume_token(tokens, Tok::RParen)?;
             let et = Box::new(parse_exp(tokens)?);
-            let ef = if tokens.peek() == Tok::Else {
-                tokens.advance()?;
+            let ef = if match_token(tokens, Tok::Else)? {
                 Some(Box::new(parse_exp(tokens)?))
             } else {
                 None
@@ -811,8 +882,7 @@ fn parse_dot_chain<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     let start_loc = tokens.start_loc();
     let mut lhs = parse_term(tokens)?;
 
-    while tokens.peek() == Tok::Period {
-        tokens.advance()?; // consume the period
+    while match_token(tokens, Tok::Period)? {
         let n = parse_name(tokens)?;
         let exp = Exp_::Dot(Box::new(lhs), n);
         let end_loc = tokens.previous_end_loc();
@@ -826,31 +896,18 @@ fn parse_dot_chain<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
 //**************************************************************************************************
 
 // Parse a base type:
-//      BaseType =
-//          <ModuleAccess>
-//          | <ModuleAccess> "<" <TypeArgs>
+//      BaseType = <ModuleAccess> ("<" Comma<BaseType> ">")?
 fn parse_base_type<'input>(tokens: &mut Lexer<'input>) -> Result<SingleType, Error> {
     let start_loc = tokens.start_loc();
     let tn = parse_module_access(tokens)?;
     let tys = if tokens.peek() == Tok::Less {
-        tokens.advance()?; // consume the "<"
-        parse_type_args(tokens)?
+        parse_comma_list(tokens, Tok::Less, Tok::Greater, parse_base_type, "a type")?
     } else {
         vec![]
     };
     let end_loc = tokens.previous_end_loc();
     let t = SingleType_::Apply(tn, tys);
     Ok(spanned(tokens.file_name(), start_loc, end_loc, t))
-}
-
-// Parse a list of type arguments:
-//      TypeArgs = Comma<BaseType> ">"
-//
-// This is used for the type arguments following a Name and "<" token.
-fn parse_type_args<'input>(tokens: &mut Lexer<'input>) -> Result<Vec<SingleType>, Error> {
-    let tys = parse_comma_list(tokens, Tok::Greater, parse_base_type)?;
-    consume_token(tokens, Tok::Greater)?;
-    Ok(tys)
 }
 
 // Parse a SingleType:
@@ -884,13 +941,16 @@ fn parse_single_type<'input>(tokens: &mut Lexer<'input>) -> Result<SingleType, E
 //          | "(" Comma<SingleType> ")"
 fn parse_type<'input>(tokens: &mut Lexer<'input>) -> Result<Type, Error> {
     let start_loc = tokens.start_loc();
-    let mut ts = if tokens.peek() != Tok::LParen {
-        vec![parse_single_type(tokens)?]
+    let mut ts = if tokens.peek() == Tok::LParen {
+        parse_comma_list(
+            tokens,
+            Tok::LParen,
+            Tok::RParen,
+            parse_single_type,
+            "a type",
+        )?
     } else {
-        tokens.advance()?; // consume the LParen
-        let list = parse_comma_list(tokens, Tok::RParen, parse_single_type)?;
-        consume_token(tokens, Tok::RParen)?;
-        list
+        vec![parse_single_type(tokens)?]
     };
     let t = match ts.len() {
         0 => Type_::Unit,
@@ -910,8 +970,7 @@ fn parse_type<'input>(tokens: &mut Lexer<'input>) -> Result<Type, Error> {
 fn parse_type_parameter<'input>(tokens: &mut Lexer<'input>) -> Result<(Name, Kind), Error> {
     let n = parse_name(tokens)?;
 
-    let kind = if tokens.peek() == Tok::Colon {
-        tokens.advance()?;
+    let kind = if match_token(tokens, Tok::Colon)? {
         let start_loc = tokens.start_loc();
         let k = token_match!(tokens.peek(), tokens.file_name(), start_loc, tokens.content(), {
             Tok::Copyable => Kind_::Affine,
@@ -981,22 +1040,28 @@ fn parse_function_decl<'input>(
     // <FunctionDefName>
     let name = FunctionName(parse_name(tokens)?);
     let type_parameters = if tokens.peek() == Tok::Less {
-        tokens.advance()?; // consume the "<"
-        let list = parse_comma_list(tokens, Tok::Greater, parse_type_parameter)?;
-        consume_token(tokens, Tok::Greater)?;
-        list
+        parse_comma_list(
+            tokens,
+            Tok::Less,
+            Tok::Greater,
+            parse_type_parameter,
+            "a type parameter",
+        )?
     } else {
         vec![]
     };
 
     // "(" Comma<Parameter> ")"
-    consume_token(tokens, Tok::LParen)?;
-    let parameters = parse_comma_list(tokens, Tok::RParen, parse_parameter)?;
-    consume_token(tokens, Tok::RParen)?;
+    let parameters = parse_comma_list(
+        tokens,
+        Tok::LParen,
+        Tok::RParen,
+        parse_parameter,
+        "a function parameter",
+    )?;
 
     // (":" <Type>)?
-    let return_type = if tokens.peek() == Tok::Colon {
-        tokens.advance()?;
+    let return_type = if match_token(tokens, Tok::Colon)? {
         parse_type(tokens)?
     } else {
         sp(name.loc(), Type_::Unit)
@@ -1004,8 +1069,7 @@ fn parse_function_decl<'input>(
 
     // ("acquires" (<BaseType> ",")* <BaseType> ","?
     let mut acquires = vec![];
-    if tokens.peek() == Tok::Acquires {
-        tokens.advance()?;
+    if match_token(tokens, Tok::Acquires)? {
         loop {
             acquires.push(parse_base_type(tokens)?);
             if tokens.peek() == Tok::Semicolon || tokens.peek() == Tok::LBrace {
@@ -1082,10 +1146,13 @@ fn parse_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<StructD
     // <StructDefName>
     let name = StructName(parse_name(tokens)?);
     let type_parameters = if tokens.peek() == Tok::Less {
-        tokens.advance()?; // consume the "<"
-        let list = parse_comma_list(tokens, Tok::Greater, parse_type_parameter)?;
-        consume_token(tokens, Tok::Greater)?;
-        list
+        parse_comma_list(
+            tokens,
+            Tok::Less,
+            Tok::Greater,
+            parse_type_parameter,
+            "a type parameter",
+        )?
     } else {
         vec![]
     };
@@ -1096,9 +1163,13 @@ fn parse_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<StructD
             StructFields::Native(loc)
         }
         _ => {
-            consume_token(tokens, Tok::LBrace)?;
-            let list = parse_comma_list(tokens, Tok::RBrace, parse_field_annot)?;
-            consume_token(tokens, Tok::RBrace)?;
+            let list = parse_comma_list(
+                tokens,
+                Tok::LBrace,
+                Tok::RBrace,
+                parse_field_annot,
+                "a field",
+            )?;
             StructFields::Defined(list)
         }
     };

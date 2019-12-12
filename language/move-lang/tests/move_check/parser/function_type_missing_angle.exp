@@ -1,11 +1,11 @@
 error: 
 
-   ┌── tests/move_check/parser/function_type_missing_angle.move:3:15 ───
+   ┌── tests/move_check/parser/function_type_missing_angle.move:3:7 ───
    │
  3 │     fn<T1, T2 () { }
-   │               ^ Unexpected token: '('
+   │               ^ Expected '>'
    ·
  3 │     fn<T1, T2 () { }
-   │               - Expected: ','
+   │       - To match this '<'
    │
 
