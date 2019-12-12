@@ -29,7 +29,8 @@ use std::{
 use storage_proto::proto::storage::{
     create_storage, BackupAccountStateRequest, BackupAccountStateResponse,
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
-    GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse, GetLatestStateRootRequest,
+    GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse,
+    GetLatestAccountStateRequest, GetLatestAccountStateResponse, GetLatestStateRootRequest,
     GetLatestStateRootResponse, GetStartupInfoRequest, GetStartupInfoResponse,
     GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
     SaveTransactionsResponse, Storage,
@@ -193,6 +194,16 @@ impl StorageService {
         Ok(rust_resp.into())
     }
 
+    fn get_latest_account_state_inner(
+        &self,
+        req: GetLatestAccountStateRequest,
+    ) -> Result<GetLatestAccountStateResponse> {
+        let rust_req = storage_proto::GetLatestAccountStateRequest::try_from(req)?;
+        let account_state_blob = self.db.get_latest_account_state(rust_req.address)?;
+        let rust_resp = storage_proto::GetLatestAccountStateResponse::new(account_state_blob);
+        Ok(rust_resp.into())
+    }
+
     fn get_account_state_with_proof_by_version_inner(
         &self,
         req: GetAccountStateWithProofByVersionRequest,
@@ -289,6 +300,18 @@ impl Storage for StorageService {
         debug!("[GRPC] Storage::get_latest_state_root");
         let _timer = SVC_COUNTERS.req(&ctx);
         let resp = self.get_latest_state_root_inner(req);
+        provide_grpc_response(resp, ctx, sink);
+    }
+
+    fn get_latest_account_state(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: GetLatestAccountStateRequest,
+        sink: grpcio::UnarySink<GetLatestAccountStateResponse>,
+    ) {
+        debug!("[GRPC] Storage::get_latest_account_state");
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.get_latest_account_state_inner(req);
         provide_grpc_response(resp, ctx, sink);
     }
 

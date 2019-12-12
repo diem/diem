@@ -38,8 +38,9 @@ use storage_proto::{
     BackupAccountStateRequest, BackupAccountStateResponse,
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
     GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse,
-    GetLatestStateRootResponse, GetStartupInfoResponse, GetTransactionsRequest,
-    GetTransactionsResponse, SaveTransactionsRequest, StartupInfo,
+    GetLatestAccountStateRequest, GetLatestAccountStateResponse, GetLatestStateRootResponse,
+    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
+    SaveTransactionsRequest, StartupInfo,
 };
 
 pub use crate::state_view::VerifiedStateView;
@@ -162,6 +163,19 @@ impl StorageRead for StorageReadServiceClient {
             .map(|resp| {
                 let rust_resp = GetLatestStateRootResponse::try_from(resp?)?;
                 Ok(rust_resp.into())
+            })
+            .boxed()
+    }
+
+    fn get_latest_account_state_async(
+        &self,
+        address: AccountAddress,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountStateBlob>>> + Send>> {
+        let req = GetLatestAccountStateRequest::new(address);
+        convert_grpc_response(self.client().get_latest_account_state_async(&req.into()))
+            .map(|resp| {
+                let rust_resp = GetLatestAccountStateResponse::try_from(resp?)?;
+                Ok(rust_resp.account_state_blob)
             })
             .boxed()
     }
@@ -355,6 +369,26 @@ pub trait StorageRead: Send + Sync {
     fn get_latest_state_root_async(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<(Version, HashValue)>> + Send>>;
+
+    /// See [`LibraDB::get_latest_account_state`].
+    ///
+    /// [`LibraDB::get_latest_account_state`]:
+    /// ../libradb/struct.LibraDB.html#method.get_latest_account_state
+    fn get_latest_account_state(
+        &self,
+        address: AccountAddress,
+    ) -> Result<Option<AccountStateBlob>> {
+        block_on(self.get_latest_account_state_async(address))
+    }
+
+    /// See [`LibraDB::get_latest_account_state`].
+    ///
+    /// [`LibraDB::get_latest_account_state`]:
+    /// ../libradb/struct.LibraDB.html#method.get_latest_account_state
+    fn get_latest_account_state_async(
+        &self,
+        address: AccountAddress,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountStateBlob>>> + Send>>;
 
     /// See [`LibraDB::get_account_state_with_proof_by_version`].
     ///

@@ -619,6 +619,20 @@ impl LibraDB {
             .get_account_state_with_proof_by_version(address, version)
     }
 
+    /// Given an account address, returns the latest account state. `None` if the account does not
+    /// exist.
+    pub fn get_latest_account_state(
+        &self,
+        address: AccountAddress,
+    ) -> Result<Option<AccountStateBlob>> {
+        let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
+        let version = ledger_info_with_sigs.ledger_info().version();
+        let (blob, _proof) = self
+            .state_store
+            .get_account_state_with_proof_by_version(address, version)?;
+        Ok(blob)
+    }
+
     /// Gets information needed from storage during the startup of the executor or state
     /// synchronizer module.
     ///

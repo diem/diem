@@ -42,6 +42,9 @@ service Storage {
     rpc GetLatestStateRoot(GetLatestStateRootRequest)
     returns (GetLatestStateRootResponse);
 
+    rpc GetLatestAccountState(GetLatestAccountStateRequest)
+    returns (GetLatestAccountStateResponse);
+
     rpc GetAccountStateWithProofByVersion(
     GetAccountStateWithProofByVersionRequest)
     returns (GetAccountStateWithProofByVersionResponse);
@@ -95,6 +98,14 @@ message GetLatestStateRootRequest {}
 message GetLatestStateRootResponse {
     uint64 version = 1;
     bytes state_root_hash = 2;
+}
+
+message GetLatestAccountStateRequest {
+    bytes address = 1;
+}
+
+message GetLatestAccountStateResponse {
+    types.AccountStateBlob account_state_blob = 1;
 }
 
 message GetAccountStateWithProofByVersionRequest {

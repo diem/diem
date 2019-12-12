@@ -94,6 +94,13 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!()
     }
 
+    fn get_latest_account_state_async(
+        &self,
+        _address: AccountAddress,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountStateBlob>>> + Send>> {
+        unimplemented!()
+    }
+
     fn get_account_state_with_proof_by_version_async(
         &self,
         _address: AccountAddress,

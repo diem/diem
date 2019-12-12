@@ -13,6 +13,16 @@ proptest! {
     }
 
     #[test]
+    fn test_get_latest_account_state_request(req in any::<GetLatestAccountStateRequest>()) {
+        assert_protobuf_encode_decode::<crate::proto::storage::GetLatestAccountStateRequest, GetLatestAccountStateRequest>(&req);
+    }
+
+    #[test]
+    fn test_get_latest_account_state_response(resp in any::<GetLatestAccountStateResponse>()) {
+        assert_protobuf_encode_decode::<crate::proto::storage::GetLatestAccountStateResponse, GetLatestAccountStateResponse>(&resp);
+    }
+
+    #[test]
     fn test_save_transactions_request(req in any::<SaveTransactionsRequest>()) {
         assert_protobuf_encode_decode::<crate::proto::storage::SaveTransactionsRequest, SaveTransactionsRequest>(&req);
     }
