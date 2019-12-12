@@ -7,7 +7,9 @@ use libra_config::{config::PersistableConfig, generator};
 use libra_types::transaction::Transaction;
 use std::{fs::File, io::prelude::*};
 use transaction_builder::default_config;
-use vm_genesis::{encode_genesis_transaction_with_validator, GENESIS_KEYPAIR};
+use vm_genesis::{
+    encode_genesis_transaction_with_validator, make_placeholder_discovery_set, GENESIS_KEYPAIR,
+};
 
 const CONFIG_LOCATION: &str = "genesis/vm_config.toml";
 const GENESIS_LOCATION: &str = "genesis/genesis.blob";
@@ -17,12 +19,15 @@ fn generate_genesis_blob() -> Vec<u8> {
     let configs = generator::validator_swarm_for_testing(10);
     let consensus_peers = &configs[0].consensus.consensus_peers;
     let network_peers = &configs[0].validator_network.as_ref().unwrap().network_peers;
+    let validator_set = consensus_peers.get_validator_set(network_peers);
+    let discovery_set = make_placeholder_discovery_set(&validator_set);
 
     lcs::to_bytes(&Transaction::UserTransaction(
         encode_genesis_transaction_with_validator(
             &GENESIS_KEYPAIR.0,
             GENESIS_KEYPAIR.1.clone(),
-            consensus_peers.get_validator_set(network_peers),
+            validator_set,
+            discovery_set,
         )
         .into_inner(),
     ))

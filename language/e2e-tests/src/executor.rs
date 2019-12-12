@@ -90,10 +90,12 @@ impl FakeExecutor {
         validator_set: ValidatorSet,
         publishing_options: VMPublishingOption,
     ) -> Self {
+        let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
         let genesis_write_set = match vm_genesis::encode_genesis_transaction_with_validator(
             &GENESIS_KEYPAIR.0,
             GENESIS_KEYPAIR.1.clone(),
             validator_set,
+            discovery_set,
         )
         .payload()
         {
