@@ -2285,6 +2285,7 @@ dependencies = [
  "libra-prost-ext 0.1.0",
  "mirai-annotations 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_enum 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-multiaddr 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",

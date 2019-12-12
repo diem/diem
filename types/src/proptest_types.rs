@@ -1,29 +1,27 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::block_info::{BlockInfo, Round};
-use crate::crypto_proxies::ValidatorSet;
-use crate::event::EVENT_KEY_LENGTH;
-use crate::transaction::{ChangeSet, Transaction};
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::AccountResource,
     account_state_blob::AccountStateBlob,
+    block_info::{BlockInfo, Round},
     block_metadata::BlockMetadata,
     byte_array::ByteArray,
     contract_event::ContractEvent,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof},
-    event::{EventHandle, EventKey},
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeEventWithProof, ValidatorSet},
+    discovery_info::DiscoveryInfo,
+    event::{EventHandle, EventKey, EVENT_KEY_LENGTH},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
     ledger_info::LedgerInfo,
     proof::{AccumulatorConsistencyProof, TransactionListProof},
     transaction::{
-        Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction,
-        TransactionArgument, TransactionListWithProof, TransactionPayload, TransactionStatus,
-        TransactionToCommit, Version,
+        ChangeSet, Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction,
+        Transaction, TransactionArgument, TransactionListWithProof, TransactionPayload,
+        TransactionStatus, TransactionToCommit, Version,
     },
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
@@ -32,16 +30,23 @@ use libra_crypto::{
     ed25519::{compat::keypair_strategy, *},
     hash::CryptoHash,
     traits::*,
+    x25519::X25519StaticPublicKey,
     HashValue,
 };
 use libra_proptest_helpers::Index;
+use parity_multiaddr::{Multiaddr, Protocol};
 use proptest::{
     collection::{vec, SizeRange},
     option,
     prelude::*,
 };
 use proptest_derive::Arbitrary;
-use std::time::Duration;
+use std::{
+    borrow::Cow,
+    iter::{FromIterator, Iterator},
+    net::{Ipv4Addr, Ipv6Addr},
+    time::Duration,
+};
 
 prop_compose! {
     #[inline]
@@ -1061,5 +1066,54 @@ impl LedgerInfoWithSignaturesGen {
             .collect();
 
         LedgerInfoWithSignatures::new(ledger_info, signatures)
+    }
+}
+
+pub fn arb_multiaddr_protocol() -> impl Strategy<Value = Protocol<'static>> {
+    prop_oneof![
+        any::<u16>().prop_map(Protocol::Tcp),
+        any::<u16>().prop_map(Protocol::Udp),
+        any::<u16>().prop_map(|port| Protocol::Memory(port as u64)),
+        any::<u32>().prop_map(|addr| Protocol::Ip4(Ipv4Addr::from(addr))),
+        any::<u128>().prop_map(|addr| Protocol::Ip6(Ipv6Addr::from(addr))),
+        any::<String>().prop_map(|domain| Protocol::Dns4(Cow::Owned(domain))),
+        any::<String>().prop_map(|domain| Protocol::Dns6(Cow::Owned(domain))),
+    ]
+}
+
+pub fn arb_multiaddr() -> impl Strategy<Value = Multiaddr> {
+    vec(arb_multiaddr_protocol(), 0..10).prop_map(Multiaddr::from_iter)
+}
+
+impl Arbitrary for DiscoveryInfo {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (
+            any::<AccountAddress>(),
+            any::<X25519StaticPublicKey>(),
+            arb_multiaddr(),
+            any::<X25519StaticPublicKey>(),
+            arb_multiaddr(),
+        )
+            .prop_map(
+                |(
+                    account_address,
+                    validator_network_identity_pubkey,
+                    validator_network_address,
+                    fullnodes_network_identity_pubkey,
+                    fullnodes_network_address,
+                )| {
+                    DiscoveryInfo::new(
+                        account_address,
+                        validator_network_identity_pubkey,
+                        validator_network_address,
+                        fullnodes_network_identity_pubkey,
+                        fullnodes_network_address,
+                    )
+                },
+            )
+            .boxed()
     }
 }
