@@ -230,6 +230,7 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
     is_pow: bool,
 ) -> SignatureCheckedTransaction {
     const INIT_BALANCE: u64 = 1_000_000_000;
+    const SUBSIDY_BALANCE: u64 = 1_000_000_000;
 
     // Compile the needed stdlib modules.
     let modules = stdlib_modules();
@@ -313,19 +314,18 @@ pub fn encode_genesis_transaction_with_validator_and_consensus(
                 .execute_function(
                     &ACCOUNT_MODULE,
                     &MINT_TO_ADDRESS,
-                    vec![Value::address(genesis_addr), Value::u64(INIT_BALANCE * 2)],
+                    vec![Value::address(genesis_addr), Value::u64(INIT_BALANCE)],
                 )
                 .unwrap();
 
             if is_pow {
                 txn_executor
-                    .execute_function_with_sender_FOR_GENESIS_ONLY(
-                        account_config::association_address(),
+                    .execute_function(
                         &ACCOUNT_MODULE,
-                        &PAY,
+                        &MINT_TO_ADDRESS,
                         vec![
                             Value::address(account_config::subsidy_address()),
-                            Value::u64(INIT_BALANCE),
+                            Value::u64(SUBSIDY_BALANCE),
                         ],
                     )
                     .unwrap();
