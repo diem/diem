@@ -121,22 +121,21 @@ impl NetworkConfig {
         if self.listen_address.to_string().is_empty() {
             self.listen_address = utils::get_local_ip().ok_or_else(|| anyhow!("No local IP"))?;
         }
+
+        let keypair = NetworkKeyPairs::default();
+        let default_peer_id = PeerId::try_from(keypair.identity_keys.public().to_bytes()).unwrap();
+        let identity_key = self.network_keypairs.identity_keys.public();
+        let key_peer_id = PeerId::try_from(identity_key.to_bytes()).unwrap();
+
         // If PeerId is not set, it is derived from NetworkIdentityKey.
-        if self.peer_id == PeerId::default() {
-            self.peer_id =
-                PeerId::try_from(self.network_keypairs.identity_keys.public().to_bytes()).unwrap();
+        if self.peer_id == default_peer_id {
+            self.peer_id = key_peer_id;
         }
 
         if !network_role.is_validator() {
             ensure!(
-                self.peer_id ==
-                PeerId::try_from(
-                        self.network_keypairs
-                        .identity_keys
-                        .public()
-                        .to_bytes()
-                )?,
-                "For non-validator roles, the peer_id should be derived from the network identity key.",
+                self.peer_id == key_peer_id,
+                "For non-validators, the peer_id should be derived from the identity key.",
             );
         }
         Ok(())
@@ -379,6 +378,29 @@ mod test {
             config.seed_peers_file,
             PathBuf::from(config.default_path(SEED_PEERS_DEFAULT))
         );
+    }
+
+    #[test]
+    fn test_default_peer_id() {
+        // Generate a random node and verify a distinct peer id
+        let (mut config, path) = generate_config();
+        let mut rng = StdRng::from_seed([32u8; 32]);
+        config.random(&mut rng);
+        let root_dir = RootPath::new_path(path.path());
+
+        let keypair = NetworkKeyPairs::default();
+        let default_peer_id = PeerId::try_from(keypair.identity_keys.public().to_bytes()).unwrap();
+        let actual_peer_id = config.peer_id;
+        assert!(actual_peer_id != default_peer_id);
+
+        // Now reset and save
+        config.peer_id = default_peer_id;
+        config.save(&root_dir).unwrap();
+
+        // Now load and verify the distinct peer id
+        assert_eq!(config.peer_id, default_peer_id);
+        config.load(&root_dir, RoleType::FullNode).unwrap();
+        assert_eq!(config.peer_id, actual_peer_id);
     }
 
     fn generate_config() -> (NetworkConfig, TempPath) {

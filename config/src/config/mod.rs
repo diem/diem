@@ -217,6 +217,7 @@ impl NodeConfig {
         for network in &mut self.full_node_networks {
             network.save(&output_dir)?;
         }
+        // This must be last as calling save on subconfigs may change their fields
         self.save_config(&output_path)?;
         Ok(())
     }
