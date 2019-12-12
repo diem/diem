@@ -4,13 +4,10 @@
 use crate::state_replication::TxnManager;
 use anyhow::Result;
 use executor::StateComputeResult;
-use futures::{channel::mpsc, future, Future, FutureExt, SinkExt};
-use std::{
-    pin::Pin,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc, RwLock,
-    },
+use futures::{channel::mpsc, SinkExt};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc, RwLock,
 };
 
 pub type MockTransaction = usize;
@@ -47,41 +44,39 @@ impl MockTransactionManager {
     }
 }
 
+#[tonic::async_trait]
 impl TxnManager for MockTransactionManager {
     type Payload = Vec<MockTransaction>;
 
     /// The returned future is fulfilled with the vector of SignedTransactions
-    fn pull_txns(
+    async fn pull_txns(
         &self,
         max_size: u64,
         _exclude_txns: Vec<&Self::Payload>,
-    ) -> Pin<Box<dyn Future<Output = Result<Self::Payload>> + Send>> {
+    ) -> Result<Self::Payload> {
         let next_value = self.next_val.load(Ordering::SeqCst);
         let upper_bound = next_value + max_size as usize;
         let res = (next_value..upper_bound).collect();
         self.next_val.store(upper_bound, Ordering::SeqCst);
-        future::ok(res).boxed()
+        Ok(res)
     }
 
-    fn commit_txns<'a>(
-        &'a self,
+    async fn commit_txns(
+        &self,
         txns: &Self::Payload,
         _compute_result: &StateComputeResult,
         _timestamp_usecs: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
+    ) -> Result<()> {
         let committed_tns = txns.clone();
         let mut commit_sender = self.commit_sender.clone();
-        async move {
-            for txn in committed_tns {
-                self.committed_txns.write().unwrap().push(txn);
-            }
-            let len = self.committed_txns.read().unwrap().len();
-            commit_sender
-                .send(len)
-                .await
-                .expect("Failed to notify about mempool commit");
-            Ok(())
+        for txn in committed_tns {
+            self.committed_txns.write().unwrap().push(txn);
         }
-            .boxed()
+        let len = self.committed_txns.read().unwrap().len();
+        commit_sender
+            .send(len)
+            .await
+            .expect("Failed to notify about mempool commit");
+        Ok(())
     }
 }

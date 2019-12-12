@@ -17,7 +17,7 @@ use consensus_types::common::Author;
 use executor::Executor;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
-use libra_mempool::proto::mempool::MempoolClient;
+use libra_mempool::proto::mempool_client::MempoolClientWrapper;
 use libra_types::{crypto_proxies::ValidatorSigner, transaction::SignedTransaction};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;
@@ -45,7 +45,6 @@ impl ChainedBftProvider {
         node_config: &mut NodeConfig,
         network_sender: ConsensusNetworkSender,
         network_events: ConsensusNetworkEvents,
-        mempool_client: Arc<MempoolClient>,
         executor: Arc<Executor<LibraVM>>,
         synchronizer_client: Arc<StateSyncClient>,
     ) -> Self {
@@ -61,7 +60,11 @@ impl ChainedBftProvider {
         let config = ChainedBftSMRConfig::from_node_config(&node_config.consensus);
         let storage = Arc::new(StorageWriteProxy::new(node_config));
         let initial_data = storage.start();
-        let txn_manager = Arc::new(MempoolProxy::new(mempool_client.clone()));
+
+        let mempool_client =
+            MempoolClientWrapper::new("localhost", node_config.mempool.mempool_service_port);
+        let txn_manager = Arc::new(MempoolProxy::new(mempool_client));
+
         let state_computer = Arc::new(ExecutionProxy::new(executor, synchronizer_client.clone()));
         let smr = ChainedBftSMR::new(initial_setup, runtime, config, storage, initial_data);
         Self {

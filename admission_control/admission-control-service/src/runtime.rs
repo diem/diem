@@ -9,9 +9,9 @@ use crate::{
 use admission_control_proto::proto::admission_control::create_admission_control;
 use futures::channel::mpsc;
 use grpc_helpers::ServerHandle;
-use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
+use grpcio::{EnvBuilder, ServerBuilder};
 use libra_config::config::{NodeConfig, RoleType};
-use libra_mempool::proto::mempool::MempoolClient;
+use libra_mempool::proto::mempool_client::MempoolClientWrapper;
 use network::validator_network::{AdmissionControlNetworkEvents, AdmissionControlNetworkSender};
 use std::{cmp::min, collections::HashMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};
@@ -44,11 +44,10 @@ impl AdmissionControlRuntime {
         let port = config.admission_control.admission_control_service_port;
 
         // Create mempool client if the node is validator.
-        let connection_str = format!("localhost:{}", config.mempool.mempool_service_port);
-        let env2 = Arc::new(EnvBuilder::new().name_prefix("grpc-ac-mem-").build());
         let mempool_client = if config.base.role == RoleType::Validator {
-            Some(Arc::new(MempoolClient::new(
-                ChannelBuilder::new(env2).connect(&connection_str),
+            Some(Arc::new(MempoolClientWrapper::new(
+                "localhost",
+                config.mempool.mempool_service_port,
             )))
         } else {
             None

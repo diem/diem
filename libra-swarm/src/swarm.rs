@@ -294,6 +294,7 @@ impl LibraSwarm {
         upstream_config_dir: Option<String>,
     ) -> Result<LibraSwarm> {
         let swarm_config_dir = Self::setup_config_dir(&config_dir);
+        info!("logs at {:?}", swarm_config_dir);
         let mut template = if let Some(template_path) = template_path {
             NodeConfig::load(utils::workspace_root().join(template_path)).unwrap_or_default()
         } else {

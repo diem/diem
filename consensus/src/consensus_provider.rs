@@ -7,8 +7,7 @@ use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender}
 
 use crate::chained_bft::chained_bft_consensus_provider::ChainedBftProvider;
 use executor::Executor;
-use grpcio::{ChannelBuilder, EnvBuilder};
-use libra_mempool::proto::mempool::MempoolClient;
+use grpcio::EnvBuilder;
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
@@ -39,20 +38,8 @@ pub fn make_consensus_provider(
         node_config,
         network_sender,
         network_receiver,
-        create_mempool_client(node_config),
         executor,
         state_sync_client,
-    ))
-}
-
-/// Create a mempool client assuming the mempool is running on localhost
-fn create_mempool_client(config: &NodeConfig) -> Arc<MempoolClient> {
-    let port = config.mempool.mempool_service_port;
-    let connection_str = format!("localhost:{}", port);
-
-    let env = Arc::new(EnvBuilder::new().name_prefix("grpc-con-mem-").build());
-    Arc::new(MempoolClient::new(
-        ChannelBuilder::new(env).connect(&connection_str),
     ))
 }
 

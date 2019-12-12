@@ -66,6 +66,7 @@ dependencies = [
  "storage-client 0.1.0",
  "storage-service 0.1.0",
  "tokio 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tonic 0.1.0-alpha.6 (git+https://github.com/hyperium/tonic.git)",
  "vm-validator 0.1.0",
 ]
 
@@ -806,6 +807,7 @@ dependencies = [
  "termion 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tonic 0.1.0-alpha.6 (git+https://github.com/hyperium/tonic.git)",
  "vm-genesis 0.1.0",
  "vm-runtime 0.1.0",
  "vm-validator 0.1.0",
@@ -2205,9 +2207,7 @@ dependencies = [
  "chrono 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc-helpers 0.1.0",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpcio-compiler 0.5.0-alpha.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
@@ -2224,6 +2224,8 @@ dependencies = [
  "storage-client 0.1.0",
  "storage-service 0.1.0",
  "tokio 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tonic 0.1.0-alpha.6 (git+https://github.com/hyperium/tonic.git)",
+ "tonic-build 0.1.0-alpha.6 (git+https://github.com/hyperium/tonic.git)",
  "ttl_cache 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm-validator 0.1.0",
 ]
