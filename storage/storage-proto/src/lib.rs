@@ -37,7 +37,7 @@ use libra_types::{
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
 #[cfg(any(test, feature = "fuzzing"))]
-use proptest::prelude::*;
+use proptest::{collection::vec, prelude::*};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use std::convert::{TryFrom, TryInto};
@@ -148,7 +148,8 @@ impl From<GetLatestAccountStateResponse> for crate::proto::storage::GetLatestAcc
 }
 
 /// Helper to construct and parse [`proto::storage::GetAccountStateWithProofByVersionRequest`]
-#[derive(PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct GetAccountStateWithProofByVersionRequest {
     /// The access path to query with.
     pub address: AccountAddress,
@@ -191,7 +192,8 @@ impl From<GetAccountStateWithProofByVersionRequest>
 }
 
 /// Helper to construct and parse [`proto::storage::GetAccountStateWithProofByVersionResponse`]
-#[derive(PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct GetAccountStateWithProofByVersionResponse {
     /// The account state blob requested.
     pub account_state_blob: Option<AccountStateBlob>,
@@ -670,7 +672,6 @@ impl From<GetEpochChangeLedgerInfosRequest>
 
 /// Helper to construct and parse [`proto::storage::GetEpochChangeLedgerInfosResponse`]
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct GetEpochChangeLedgerInfosResponse {
     pub ledger_infos_with_sigs: Vec<LedgerInfoWithSignatures>,
     pub more: bool,
@@ -724,8 +725,21 @@ impl Into<(Vec<LedgerInfoWithSignatures>, bool)> for GetEpochChangeLedgerInfosRe
     }
 }
 
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for GetEpochChangeLedgerInfosResponse {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (vec(any::<LedgerInfoWithSignatures>(), 0..10), any::<bool>())
+            .prop_map(|(ledger_infos_with_sigs, more)| Self::new(ledger_infos_with_sigs, more))
+            .boxed()
+    }
+}
+
 /// Helper to construct and parse [`proto::storage::BackupAccountStateRequest`]
-#[derive(PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct BackupAccountStateRequest {
     /// The version of state to backup.
     pub version: Version,
@@ -757,7 +771,8 @@ impl From<BackupAccountStateRequest> for crate::proto::storage::BackupAccountSta
 }
 
 /// Helper to construct and parse [`proto::storage::BackupAccountStateResponse`]
-#[derive(PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct BackupAccountStateResponse {
     /// The hashed account address
     pub account_key: HashValue,
