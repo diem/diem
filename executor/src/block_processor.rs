@@ -691,6 +691,18 @@ where
         let mut txn_info_hashes = vec![];
         let mut next_validator_set = None;
 
+        println!("----------begin----------");
+
+        for tx in transactions {
+            println!("-----11111-------->{:?}", tx);
+        }
+
+        for tx in vm_outputs {
+            println!("-----22222-------->{:?}", tx);
+        }
+
+        println!("----------end----------");
+
         let proof_reader = ProofReader::new(account_to_proof);
         for (vm_output, txn) in itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()) {
             let (blobs, state_tree, num_accounts_created) = Self::process_write_set(
