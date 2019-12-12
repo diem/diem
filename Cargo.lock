@@ -803,7 +803,7 @@ dependencies = [
  "debug-interface 0.1.0",
  "executor 0.1.0",
  "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures-locks 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-locks 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpcio 0.5.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1604,11 +1604,12 @@ dependencies = [
 
 [[package]]
 name = "futures-locks"
-version = "0.3.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio-current-thread 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio-executor 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -5938,7 +5939,7 @@ dependencies = [
 "checksum futures-io 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "e676577d229e70952ab25f3945795ba5b16d63ca794ca9d2c860e5595d20b5ff"
 "checksum futures-io-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)" = "f4914ae450db1921a56c91bde97a27846287d062087d4a652efc09bb3a01ebda"
 "checksum futures-join-macro-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)" = "59e260e6b48ce7d99936c40a7088d782a499a67bef41da5481d21b439454bcea"
-"checksum futures-locks 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "12902f93b1ef0374d804ce609cf073d6d14c1d56c902cccb264612ae62f7ce77"
+"checksum futures-locks 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e4297dd1d9d6268237e4f93aeb9c90fc1bf0d8cec7e1cef22798939e4c43a251"
 "checksum futures-macro 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "52e7c56c15537adb4f76d0b7a76ad131cb4d2f4f32d3b0bcabcbe1c7c5e87764"
 "checksum futures-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)" = "3b1dce2a0267ada5c6ff75a8ba864b4e679a9e2aa44262af7a3b5516d530d76e"
 "checksum futures-select-macro-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)" = "df2ae43560eb10b5e50604c53bead6c9c75eade7081390cd3cce66e1582958f7"
