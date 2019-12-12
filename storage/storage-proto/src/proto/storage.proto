@@ -39,6 +39,9 @@ service Storage {
     // in the response will be relative to this given ledger version.
     rpc GetTransactions(GetTransactionsRequest) returns (GetTransactionsResponse);
 
+    rpc GetLatestStateRoot(GetLatestStateRootRequest)
+    returns (GetLatestStateRootResponse);
+
     rpc GetAccountStateWithProofByVersion(
     GetAccountStateWithProofByVersionRequest)
     returns (GetAccountStateWithProofByVersionResponse);
@@ -85,6 +88,13 @@ message GetTransactionsRequest {
 
 message GetTransactionsResponse {
     types.TransactionListWithProof txn_list_with_proof = 1;
+}
+
+message GetLatestStateRootRequest {}
+
+message GetLatestStateRootResponse {
+    uint64 version = 1;
+    bytes state_root_hash = 2;
 }
 
 message GetAccountStateWithProofByVersionRequest {

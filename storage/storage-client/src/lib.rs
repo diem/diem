@@ -18,6 +18,7 @@ use futures::{
 };
 use futures_01::{future::Future as Future01, stream::Stream as Stream01};
 use grpcio::{ChannelBuilder, Environment};
+use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -33,11 +34,12 @@ use rand::Rng;
 use std::convert::TryFrom;
 use std::{pin::Pin, sync::Arc};
 use storage_proto::{
-    proto::storage::{GetStartupInfoRequest, StorageClient},
+    proto::storage::{GetLatestStateRootRequest, GetStartupInfoRequest, StorageClient},
     BackupAccountStateRequest, BackupAccountStateResponse,
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
-    GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse, GetStartupInfoResponse,
-    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest, StartupInfo,
+    GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse,
+    GetLatestStateRootResponse, GetStartupInfoResponse, GetTransactionsRequest,
+    GetTransactionsResponse, SaveTransactionsRequest, StartupInfo,
 };
 
 pub use crate::state_view::VerifiedStateView;
@@ -148,6 +150,18 @@ impl StorageRead for StorageReadServiceClient {
             .map(|resp| {
                 let rust_resp = GetTransactionsResponse::try_from(resp?)?;
                 Ok(rust_resp.txn_list_with_proof)
+            })
+            .boxed()
+    }
+
+    fn get_latest_state_root_async(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<(Version, HashValue)>> + Send>> {
+        let req = GetLatestStateRootRequest::default();
+        convert_grpc_response(self.client().get_latest_state_root_async(&req))
+            .map(|resp| {
+                let rust_resp = GetLatestStateRootResponse::try_from(resp?)?;
+                Ok(rust_resp.into())
             })
             .boxed()
     }
@@ -325,6 +339,22 @@ pub trait StorageRead: Send + Sync {
         ledger_version: Version,
         fetch_events: bool,
     ) -> Pin<Box<dyn Future<Output = Result<TransactionListWithProof>> + Send>>;
+
+    /// See [`LibraDB::get_latest_state_root`].
+    ///
+    /// [`LibraDB::get_latest_state_root`]:
+    /// ../libradb/struct.LibraDB.html#method.get_latest_state_root
+    fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
+        block_on(self.get_latest_state_root_async())
+    }
+
+    /// See [`LibraDB::get_latest_state_root`].
+    ///
+    /// [`LibraDB::get_latest_state_root`]:
+    /// ../libradb/struct.LibraDB.html#method.get_latest_state_root
+    fn get_latest_state_root_async(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<(Version, HashValue)>> + Send>>;
 
     /// See [`LibraDB::get_account_state_with_proof_by_version`].
     ///
