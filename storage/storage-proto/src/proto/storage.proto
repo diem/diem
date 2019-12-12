@@ -167,8 +167,11 @@ message GetEpochChangeLedgerInfosRequest {
 }
 
 message GetEpochChangeLedgerInfosResponse {
-    /// Vector of latest ledger infos per epoch (not sorted)
+    // Vector of latest ledger infos per epoch (not sorted)
     repeated types.LedgerInfoWithSignatures latest_ledger_infos = 1;
+    // Whether the above field has everything. true means the response is
+    // incomplete -- only first N are returned and there are more.
+    bool more = 2;
 }
 
 message BackupAccountStateRequest {

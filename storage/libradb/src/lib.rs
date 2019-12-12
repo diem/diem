@@ -329,19 +329,20 @@ impl LibraDB {
             .version())
     }
 
-    /// Returns ledger infos reflecting epoch bumps starting with the given epoch.
+    /// Returns ledger infos reflecting epoch bumps starting with the given epoch. If there are no
+    /// more than `MAX_NUM_EPOCH_CHANGE_LEDGER_INFO` results, this function returns all of them,
+    /// otherwise the first `MAX_NUM_EPOCH_CHANGE_LEDGER_INFO` results are returned and a flag
+    /// (when true) will be used to indicate the fact that there is more.
     pub fn get_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Result<Vec<LedgerInfoWithSignatures>> {
-        let (results, more) = self.ledger_store.get_first_n_epoch_change_ledger_infos(
+    ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
+        self.ledger_store.get_first_n_epoch_change_ledger_infos(
             start_epoch,
             end_epoch,
             MAX_NUM_EPOCH_CHANGE_LEDGER_INFO,
-        )?;
-        ensure!(!more, "Exceeded max response length. TODO: remove this.");
-        Ok(results)
+        )
     }
 
     /// Persist transactions. Called by the executor module when either syncing nodes or committing
@@ -501,10 +502,12 @@ impl LibraDB {
         // TODO: cache last epoch change version to avoid a DB access in most cases.
         let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
         let validator_change_proof = if client_epoch < ledger_info.epoch() {
-            self.get_epoch_change_ledger_infos(
+            let (epoch_changes, more) = self.get_epoch_change_ledger_infos(
                 client_epoch,
                 self.ledger_store.get_epoch(ledger_info.version())?,
-            )?
+            )?;
+            ensure!(!more, "Exceeded max response length. TODO: remove.");
+            epoch_changes
         } else {
             Vec::new()
         };

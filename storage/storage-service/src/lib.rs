@@ -246,10 +246,10 @@ impl StorageService {
         req: GetEpochChangeLedgerInfosRequest,
     ) -> Result<GetEpochChangeLedgerInfosResponse> {
         let rust_req = storage_proto::GetEpochChangeLedgerInfosRequest::try_from(req)?;
-        let ledger_infos = self
+        let (ledger_infos, more) = self
             .db
             .get_epoch_change_ledger_infos(rust_req.start_epoch, rust_req.end_epoch)?;
-        let rust_resp = storage_proto::GetEpochChangeLedgerInfosResponse::new(ledger_infos);
+        let rust_resp = storage_proto::GetEpochChangeLedgerInfosResponse::new(ledger_infos, more);
         Ok(rust_resp.into())
     }
 }
