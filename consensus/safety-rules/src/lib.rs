@@ -3,12 +3,16 @@
 
 #![forbid(unsafe_code)]
 
+mod consensus_state;
+mod error;
 mod persistent_storage;
 mod safety_rules;
 
 pub use crate::{
+    consensus_state::ConsensusState,
+    error::Error,
     persistent_storage::{InMemoryStorage, OnDiskStorage},
-    safety_rules::{ConsensusState, Error, SafetyRules},
+    safety_rules::SafetyRules,
 };
 
 #[cfg(test)]
