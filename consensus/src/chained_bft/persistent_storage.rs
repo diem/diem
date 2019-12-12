@@ -162,7 +162,7 @@ impl<T: Payload> RecoveryData<T> {
     }
 
     pub fn validator_keys(&self) -> Vec<ValidatorPublicKeys> {
-        self.validator_keys.payload().to_vec()
+        self.validator_keys.to_vec()
     }
 
     /// Finds the root (last committed block) and returns the root block, the QC to the root block

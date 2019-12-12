@@ -18,6 +18,9 @@ use serde::{Deserialize, Serialize};
 use std::{
     convert::{TryFrom, TryInto},
     fmt,
+    iter::IntoIterator,
+    ops::Deref,
+    vec,
 };
 
 lazy_static! {
@@ -51,7 +54,7 @@ pub(crate) fn validator_set_path() -> Vec<u8> {
 pub struct ValidatorSet<PublicKey>(Vec<ValidatorPublicKeys<PublicKey>>);
 
 impl<PublicKey> fmt::Display for ValidatorSet<PublicKey> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[")?;
         for validator in &self.0 {
             write!(f, "{} ", validator)?;
@@ -66,16 +69,29 @@ impl<PublicKey: VerifyingKey> ValidatorSet<PublicKey> {
         ValidatorSet(payload)
     }
 
-    pub fn payload(&self) -> &[ValidatorPublicKeys<PublicKey>] {
-        &self.0
-    }
-
     pub fn change_event_key() -> EventKey {
         EventKey::new_from_address(&account_config::validator_set_address(), 2)
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         lcs::from_bytes(bytes).map_err(Into::into)
+    }
+}
+
+impl<PublicKey> Deref for ValidatorSet<PublicKey> {
+    type Target = [ValidatorPublicKeys<PublicKey>];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<PublicKey> IntoIterator for ValidatorSet<PublicKey> {
+    type Item = ValidatorPublicKeys<PublicKey>;
+    type IntoIter = vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 

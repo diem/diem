@@ -489,7 +489,7 @@ pub fn eval(config: &GlobalConfig, transactions: &[Transaction]) -> Result<Evalu
     let mut log = EvaluationLog { outputs: vec![] };
 
     // Set up a fake executor with the genesis block and create the accounts.
-    let mut exec = if config.validator_set.payload().is_empty() {
+    let mut exec = if config.validator_set.is_empty() {
         // use the default validator set. this uses a precomputed validator set and is cheap
         FakeExecutor::from_genesis_with_options(VMPublishingOption::Open)
     } else {
