@@ -467,36 +467,37 @@ module LibraAccount {
 
     // The epilogue is invoked at the end of transactions.
     // It collects gas and bumps the sequence number
-    epilogue(gas_units_remaining: u64) acquires T {
-        let transaction_sender: address;
+    epilogue(
+        txn_sequence_number: u64,
+        txn_gas_price: u64,
+        txn_max_gas_units: u64,
+        gas_units_remaining: u64
+    ) acquires T {
         let sender_account: &mut Self.T;
         let transaction_fee_account: &mut Self.T;
         let imm_sender_account: &Self.T;
-        let gas_price: u64;
-        let starting_gas_units: u64;
         let transaction_fee_amount: u64;
-        let balance_amount: u64;
         let transaction_fee: LibraCoin.T;
-        let transaction_sequence_number_value: u64;
-
-        transaction_sender = get_txn_sender();
 
         // Load the transaction sender's account
-        sender_account = borrow_global_mut<T>(copy(transaction_sender));
+        sender_account = borrow_global_mut<T>(get_txn_sender());
 
         // Charge for gas
-        gas_price = get_txn_gas_unit_price();
-        starting_gas_units = get_txn_max_gas_units();
-        transaction_fee_amount = move(gas_price) * (move(starting_gas_units) - move(gas_units_remaining));
+        transaction_fee_amount =
+            move(txn_gas_price) * (move(txn_max_gas_units) - move(gas_units_remaining));
         imm_sender_account = freeze(copy(sender_account));
-        balance_amount = Self.balance_for_account(move(imm_sender_account));
-        assert(move(balance_amount) >= copy(transaction_fee_amount), 6);
-
-        transaction_fee = Self.withdraw_from_account(copy(sender_account), move(transaction_fee_amount));
+        assert(
+            Self.balance_for_account(move(imm_sender_account)) >= copy(transaction_fee_amount),
+            6
+        );
+        transaction_fee =
+            Self.withdraw_from_account(
+                copy(sender_account),
+                move(transaction_fee_amount)
+            );
 
         // Bump the sequence number
-        transaction_sequence_number_value = get_txn_sequence_number();
-        *(&mut move(sender_account).sequence_number) = move(transaction_sequence_number_value) + 1;
+        *(&mut move(sender_account).sequence_number) = move(txn_sequence_number) + 1;
         // Pay the transaction fee into the transaction fee pot
         transaction_fee_account = borrow_global_mut<T>(0xFEE);
         LibraCoin.deposit(&mut move(transaction_fee_account).balance, move(transaction_fee));
