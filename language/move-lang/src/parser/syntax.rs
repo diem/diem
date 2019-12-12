@@ -634,11 +634,13 @@ fn parse_call_args<'input>(tokens: &mut Lexer<'input>) -> Result<Spanned<Vec<Exp
 
 // Parse an expression:
 //      Exp =
-//          "if" "(" <Exp> ")" <ReturnAbortExp> ("else" <ReturnAbortExp>)?
-//          | "while" "(" <Exp> ")" <ReturnAbortExp>
-//          | "loop" <ReturnAbortExp>
+//          "if" "(" <Exp> ")" <Exp> ("else" <Exp>)?
+//          | "while" "(" <Exp> ")" <Exp>
+//          | "loop" <Exp>
 //          | <UnaryExp> "=" <Exp>
-//          | <ReturnAbortExp>
+//          | "return" <Exp>
+//          | "abort" <Exp>
+//          | <BinOpExp>
 fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, ParseError> {
     let start_loc = tokens.start_loc();
     let exp = match tokens.peek() {
@@ -647,10 +649,10 @@ fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, ParseError> {
             consume_token(tokens, Tok::LParen)?;
             let eb = Box::new(parse_exp(tokens)?);
             consume_token(tokens, Tok::RParen)?;
-            let et = Box::new(parse_return_abort_exp(tokens)?);
+            let et = Box::new(parse_exp(tokens)?);
             let ef = if tokens.peek() == Tok::Else {
                 tokens.advance()?;
-                Some(Box::new(parse_return_abort_exp(tokens)?))
+                Some(Box::new(parse_exp(tokens)?))
             } else {
                 None
             };
@@ -661,20 +663,27 @@ fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, ParseError> {
             consume_token(tokens, Tok::LParen)?;
             let eb = Box::new(parse_exp(tokens)?);
             consume_token(tokens, Tok::RParen)?;
-            let eloop = Box::new(parse_return_abort_exp(tokens)?);
+            let eloop = Box::new(parse_exp(tokens)?);
             Exp_::While(eb, eloop)
         }
         Tok::Loop => {
             tokens.advance()?;
-            let eloop = Box::new(parse_return_abort_exp(tokens)?);
+            let eloop = Box::new(parse_exp(tokens)?);
             Exp_::Loop(eloop)
         }
-        Tok::Return | Tok::Abort => {
-            return parse_return_abort_exp(tokens);
+        Tok::Return => {
+            tokens.advance()?;
+            let e = Box::new(parse_exp(tokens)?);
+            Exp_::Return(e)
+        }
+        Tok::Abort => {
+            tokens.advance()?;
+            let e = Box::new(parse_exp(tokens)?);
+            Exp_::Abort(e)
         }
         _ => {
             // This could be either an assignment or a binary operator
-            // expression (from ReturnAbortExp).
+            // expression.
             let lhs = parse_unary_exp(tokens)?;
             if tokens.peek() != Tok::Equal {
                 return parse_binop_exp(tokens, lhs, /* min_prec */ 1);
@@ -682,33 +691,6 @@ fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, ParseError> {
             tokens.advance()?; // consume the "="
             let rhs = Box::new(parse_exp(tokens)?);
             Exp_::Assign(Box::new(lhs), rhs)
-        }
-    };
-    let end_loc = tokens.previous_end_loc();
-    Ok(spanned(tokens.file_name(), start_loc, end_loc, exp))
-}
-
-// Parse a return/abort expression:
-//      ReturnAbortExp =
-//          "return" <ReturnAbortExp>
-//          | "abort" <ReturnAbortExp>
-//          | <BinOpExp>
-fn parse_return_abort_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, ParseError> {
-    let start_loc = tokens.start_loc();
-    let exp = match tokens.peek() {
-        Tok::Return => {
-            tokens.advance()?;
-            let e = Box::new(parse_return_abort_exp(tokens)?);
-            Exp_::Return(e)
-        }
-        Tok::Abort => {
-            tokens.advance()?;
-            let e = Box::new(parse_return_abort_exp(tokens)?);
-            Exp_::Abort(e)
-        }
-        _ => {
-            let lhs = parse_unary_exp(tokens)?;
-            return parse_binop_exp(tokens, lhs, /* min_prec */ 1);
         }
     };
     let end_loc = tokens.previous_end_loc();

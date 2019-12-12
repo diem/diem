@@ -1,6 +1,6 @@
 module M {
     f(v: u64) {
-        // Braces required for assignment inside "while" expression
+        // Braces are not required for a control expression inside "while"
         while (v < 10) v = v + 1
     }
 }
