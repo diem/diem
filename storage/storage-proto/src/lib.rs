@@ -673,13 +673,15 @@ impl From<GetEpochChangeLedgerInfosRequest>
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct GetEpochChangeLedgerInfosResponse {
     pub ledger_infos_with_sigs: Vec<LedgerInfoWithSignatures>,
+    pub more: bool,
 }
 
 impl GetEpochChangeLedgerInfosResponse {
     /// Constructor.
-    pub fn new(latest_ledger_infos: Vec<LedgerInfoWithSignatures>) -> Self {
+    pub fn new(ledger_infos_with_sigs: Vec<LedgerInfoWithSignatures>, more: bool) -> Self {
         Self {
-            ledger_infos_with_sigs: latest_ledger_infos,
+            ledger_infos_with_sigs,
+            more,
         }
     }
 }
@@ -696,6 +698,7 @@ impl TryFrom<crate::proto::storage::GetEpochChangeLedgerInfosResponse>
                 .into_iter()
                 .map(TryFrom::try_from)
                 .collect::<Result<Vec<_>>>()?,
+            more: proto.more,
         })
     }
 }
@@ -710,13 +713,14 @@ impl From<GetEpochChangeLedgerInfosResponse>
                 .into_iter()
                 .map(Into::into)
                 .collect(),
+            more: response.more,
         }
     }
 }
 
-impl Into<Vec<LedgerInfoWithSignatures>> for GetEpochChangeLedgerInfosResponse {
-    fn into(self) -> Vec<LedgerInfoWithSignatures> {
-        self.ledger_infos_with_sigs
+impl Into<(Vec<LedgerInfoWithSignatures>, bool)> for GetEpochChangeLedgerInfosResponse {
+    fn into(self) -> (Vec<LedgerInfoWithSignatures>, bool) {
+        (self.ledger_infos_with_sigs, self.more)
     }
 }
 

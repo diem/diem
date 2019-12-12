@@ -214,7 +214,7 @@ impl StorageRead for StorageReadServiceClient {
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(Vec<LedgerInfoWithSignatures>, bool)>> + Send>> {
         let proto_req = GetEpochChangeLedgerInfosRequest::new(start_epoch, end_epoch);
         convert_grpc_response(
             self.client()
@@ -436,7 +436,7 @@ pub trait StorageRead: Send + Sync {
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Result<Vec<LedgerInfoWithSignatures>> {
+    ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
         block_on(self.get_epoch_change_ledger_infos_async(start_epoch, end_epoch))
     }
 
@@ -448,7 +448,7 @@ pub trait StorageRead: Send + Sync {
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>>;
+    ) -> Pin<Box<dyn Future<Output = Result<(Vec<LedgerInfoWithSignatures>, bool)>> + Send>>;
 
     /// See [`LibraDB::backup_account_state`].
     ///

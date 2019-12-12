@@ -120,7 +120,7 @@ impl StorageRead for MockStorageReadClient {
         &self,
         _start_epoch: u64,
         _end_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(Vec<LedgerInfoWithSignatures>, bool)>> + Send>> {
         unimplemented!()
     }
 

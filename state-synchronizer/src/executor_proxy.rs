@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::SynchronizerState;
-use anyhow::{format_err, Result};
+use anyhow::{ensure, format_err, Result};
 use executor::{ExecutedTrees, Executor};
 use futures::{Future, FutureExt};
 use grpcio::EnvBuilder;
@@ -133,9 +133,11 @@ impl ExecutorProxyTrait for ExecutorProxy {
         start_epoch: u64,
         end_epoch: u64,
     ) -> Result<ValidatorChangeEventWithProof> {
-        let ledger_info_per_epoch = self
+        let (ledger_info_per_epoch, more) = self
             .storage_read_client
             .get_epoch_change_ledger_infos(start_epoch, end_epoch)?;
+        // TODO(zekun000): change this to query storage for more epoch changes.
+        ensure!(!more, "Exceeded max response length.");
         Ok(ValidatorChangeEventWithProof::new(ledger_info_per_epoch))
     }
 
