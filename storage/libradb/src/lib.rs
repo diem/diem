@@ -600,6 +600,12 @@ impl LibraDB {
 
     // =========================== Libra Core Internal APIs ========================================
 
+    /// Gets the latest state root hash together with its version.
+    pub fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
+        let (version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
+        Ok((version, txn_info.state_root_hash()))
+    }
+
     /// Gets an account state by account address, out of the ledger state indicated by the state
     /// Merkle tree root hash.
     ///

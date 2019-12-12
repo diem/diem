@@ -8,6 +8,11 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
 
     #[test]
+    fn test_get_latest_state_root_response(resp in any::<GetLatestStateRootResponse>()) {
+        assert_protobuf_encode_decode::<crate::proto::storage::GetLatestStateRootResponse, GetLatestStateRootResponse>(&resp);
+    }
+
+    #[test]
     fn test_save_transactions_request(req in any::<SaveTransactionsRequest>()) {
         assert_protobuf_encode_decode::<crate::proto::storage::SaveTransactionsRequest, SaveTransactionsRequest>(&req);
     }

@@ -42,6 +42,48 @@ use proptest::prelude::*;
 use proptest_derive::Arbitrary;
 use std::convert::{TryFrom, TryInto};
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct GetLatestStateRootResponse {
+    pub version: Version,
+    pub state_root_hash: HashValue,
+}
+
+impl GetLatestStateRootResponse {
+    pub fn new(version: Version, state_root_hash: HashValue) -> Self {
+        Self {
+            version,
+            state_root_hash,
+        }
+    }
+}
+
+impl TryFrom<crate::proto::storage::GetLatestStateRootResponse> for GetLatestStateRootResponse {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::GetLatestStateRootResponse) -> Result<Self> {
+        let version = proto.version;
+        let state_root_hash = HashValue::from_slice(&proto.state_root_hash)?;
+
+        Ok(Self::new(version, state_root_hash))
+    }
+}
+
+impl From<GetLatestStateRootResponse> for crate::proto::storage::GetLatestStateRootResponse {
+    fn from(response: GetLatestStateRootResponse) -> Self {
+        Self {
+            version: response.version,
+            state_root_hash: response.state_root_hash.to_vec(),
+        }
+    }
+}
+
+impl Into<(Version, HashValue)> for GetLatestStateRootResponse {
+    fn into(self) -> (Version, HashValue) {
+        (self.version, self.state_root_hash)
+    }
+}
+
 /// Helper to construct and parse [`proto::storage::GetAccountStateWithProofByVersionRequest`]
 #[derive(PartialEq, Eq, Clone)]
 pub struct GetAccountStateWithProofByVersionRequest {

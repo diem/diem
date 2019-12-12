@@ -29,9 +29,10 @@ use std::{
 use storage_proto::proto::storage::{
     create_storage, BackupAccountStateRequest, BackupAccountStateResponse,
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
-    GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse, GetStartupInfoRequest,
-    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    SaveTransactionsRequest, SaveTransactionsResponse, Storage,
+    GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse, GetLatestStateRootRequest,
+    GetLatestStateRootResponse, GetStartupInfoRequest, GetStartupInfoResponse,
+    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
+    SaveTransactionsResponse, Storage,
 };
 
 /// Starts storage service according to config.
@@ -183,6 +184,15 @@ impl StorageService {
         Ok(rust_resp.into())
     }
 
+    fn get_latest_state_root_inner(
+        &self,
+        _req: GetLatestStateRootRequest,
+    ) -> Result<GetLatestStateRootResponse> {
+        let (version, state_root_hash) = self.db.get_latest_state_root()?;
+        let rust_resp = storage_proto::GetLatestStateRootResponse::new(version, state_root_hash);
+        Ok(rust_resp.into())
+    }
+
     fn get_account_state_with_proof_by_version_inner(
         &self,
         req: GetAccountStateWithProofByVersionRequest,
@@ -267,6 +277,18 @@ impl Storage for StorageService {
         debug!("[GRPC] Storage::get_transactions");
         let _timer = SVC_COUNTERS.req(&ctx);
         let resp = self.get_transactions_inner(req);
+        provide_grpc_response(resp, ctx, sink);
+    }
+
+    fn get_latest_state_root(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: GetLatestStateRootRequest,
+        sink: grpcio::UnarySink<GetLatestStateRootResponse>,
+    ) {
+        debug!("[GRPC] Storage::get_latest_state_root");
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.get_latest_state_root_inner(req);
         provide_grpc_response(resp, ctx, sink);
     }
 
