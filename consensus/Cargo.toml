@@ -29,6 +29,7 @@ siphasher = { version = "0.3.0", default-features = false }
 thiserror = "1.0"
 termion = { version = "1.5.3", default-features = false }
 tokio = { version = "0.2", features = ["full"] }
+tonic = { git = "https://github.com/hyperium/tonic.git" }
 prometheus = { version = "0.7.0", default-features = false }
 proptest = { version = "0.9.4", optional = true }
 

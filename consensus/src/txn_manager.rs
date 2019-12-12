@@ -4,25 +4,22 @@
 use crate::{counters, state_replication::TxnManager};
 use anyhow::Result;
 use executor::StateComputeResult;
-use futures::{compat::Future01CompatExt, future, Future, FutureExt};
 use libra_logger::prelude::*;
 use libra_mempool::proto::mempool::{
-    CommitTransactionsRequest, CommittedTransaction, GetBlockRequest, MempoolClient,
-    TransactionExclusion,
+    CommitTransactionsRequest, CommittedTransaction, GetBlockRequest, TransactionExclusion,
 };
+use libra_mempool::proto::mempool_client::MempoolClientWrapper;
 use libra_types::transaction::{SignedTransaction, TransactionStatus};
-use std::{convert::TryFrom, pin::Pin, sync::Arc};
+use std::convert::TryFrom;
 
 /// Proxy interface to mempool
 pub struct MempoolProxy {
-    mempool: Arc<MempoolClient>,
+    mempool: MempoolClientWrapper,
 }
 
 impl MempoolProxy {
-    pub fn new(mempool: Arc<MempoolClient>) -> Self {
-        Self {
-            mempool: Arc::clone(&mempool),
-        }
+    pub fn new(mempool: MempoolClientWrapper) -> Self {
+        Self { mempool }
     }
 
     /// Generate mempool commit transactions request given the set of txns and their status
@@ -62,32 +59,25 @@ impl MempoolProxy {
     }
 
     /// Submit the request and return the future, which is fulfilled when the response is received.
-    fn submit_commit_transactions_request(
+    async fn submit_commit_transactions_request(
         &self,
-        req: CommitTransactionsRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> {
-        match self.mempool.commit_transactions_async(&req) {
-            Ok(receiver) => async move {
-                match receiver.compat().await {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e.into()),
-                }
-            }
-                .boxed(),
-            Err(e) => future::err(e.into()).boxed(),
-        }
+        request: CommitTransactionsRequest,
+    ) -> Result<()> {
+        self.mempool.clone().commit_transactions(request).await?;
+        Ok(())
     }
 }
 
+#[tonic::async_trait]
 impl TxnManager for MempoolProxy {
     type Payload = Vec<SignedTransaction>;
 
     /// The returned future is fulfilled with the vector of SignedTransactions
-    fn pull_txns(
+    async fn pull_txns(
         &self,
         max_size: u64,
         exclude_payloads: Vec<&Self::Payload>,
-    ) -> Pin<Box<dyn Future<Output = Result<Self::Payload>> + Send>> {
+    ) -> Result<Self::Payload> {
         let mut exclude_txns = vec![];
         for payload in exclude_payloads {
             for transaction in payload {
@@ -100,46 +90,38 @@ impl TxnManager for MempoolProxy {
         let mut get_block_request = GetBlockRequest::default();
         get_block_request.max_block_size = max_size;
         get_block_request.transactions = exclude_txns;
-        match self.mempool.get_block_async(&get_block_request) {
-            Ok(receiver) => async move {
-                match receiver.compat().await {
-                    Ok(response) => Ok(response
-                        .block
-                        .unwrap_or_else(Default::default)
-                        .transactions
-                        .into_iter()
-                        .filter_map(|proto_txn| {
-                            match SignedTransaction::try_from(proto_txn.clone()) {
-                                Ok(t) => Some(t),
-                                Err(e) => {
-                                    security_log(SecurityEvent::InvalidTransactionConsensus)
-                                        .error(&e)
-                                        .data(&proto_txn)
-                                        .log();
-                                    None
-                                }
-                            }
-                        })
-                        .collect()),
-                    Err(e) => Err(e.into()),
-                }
-            }
-                .boxed(),
-            Err(e) => future::err(e.into()).boxed(),
-        }
+        let response = self.mempool.clone().get_block(get_block_request).await?;
+        Ok(response
+            .block
+            .unwrap_or_else(Default::default)
+            .transactions
+            .into_iter()
+            .filter_map(
+                |proto_txn| match SignedTransaction::try_from(proto_txn.clone()) {
+                    Ok(t) => Some(t),
+                    Err(e) => {
+                        security_log(SecurityEvent::InvalidTransactionConsensus)
+                            .error(&e)
+                            .data(&proto_txn)
+                            .log();
+                        None
+                    }
+                },
+            )
+            .collect())
     }
 
-    fn commit_txns<'a>(
-        &'a self,
+    async fn commit_txns(
+        &self,
         txns: &Self::Payload,
         compute_result: &StateComputeResult,
         // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
         timestamp_usecs: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
+    ) -> Result<()> {
         counters::COMMITTED_BLOCKS_COUNT.inc();
         counters::NUM_TXNS_PER_BLOCK.observe(txns.len() as f64);
         let req =
             Self::gen_commit_transactions_request(txns.as_slice(), compute_result, timestamp_usecs);
-        self.submit_commit_transactions_request(req)
+        self.submit_commit_transactions_request(req).await
     }
 }

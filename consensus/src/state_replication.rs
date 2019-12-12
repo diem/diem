@@ -10,27 +10,28 @@ use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof
 use std::{pin::Pin, sync::Arc};
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
+#[tonic::async_trait]
 pub trait TxnManager: Send + Sync {
     type Payload;
 
     /// Brings new transactions to be applied.
     /// The `exclude_txns` list includes the transactions that are already pending in the
     /// branch of blocks consensus is trying to extend.
-    fn pull_txns(
+    async fn pull_txns(
         &self,
         max_size: u64,
         exclude_txns: Vec<&Self::Payload>,
-    ) -> Pin<Box<dyn Future<Output = Result<Self::Payload>> + Send>>;
+    ) -> Result<Self::Payload>;
 
     /// Notifies TxnManager about the payload of the committed block including the state compute
     /// result, which includes the specifics of what transactions succeeded and failed.
-    fn commit_txns<'a>(
-        &'a self,
+    async fn commit_txns(
+        &self,
         txns: &Self::Payload,
         compute_result: &StateComputeResult,
         // Monotonic timestamp_usecs of committed blocks is used to GC expired transactions.
         timestamp_usecs: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>;
+    ) -> Result<()>;
 }
 
 /// While Consensus is managing proposed blocks, `StateComputer` is managing the results of the

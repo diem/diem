@@ -5,22 +5,21 @@ use crate::{
     core_mempool::CoreMempool, mempool_service::MempoolService, proto::mempool,
     shared_mempool::start_shared_mempool,
 };
-use grpc_helpers::ServerHandle;
 use grpcio::EnvBuilder;
 use libra_config::config::NodeConfig;
 use network::validator_network::{MempoolNetworkEvents, MempoolNetworkSender};
 use std::{
-    cmp::max,
+    net::ToSocketAddrs,
     sync::{Arc, Mutex},
 };
 use storage_client::{StorageRead, StorageReadServiceClient};
-use tokio::runtime::Runtime;
+use tokio::runtime::{Builder, Runtime};
 use vm_validator::vm_validator::VMValidator;
 
 /// Handle for Mempool Runtime
 pub struct MempoolRuntime {
-    /// gRPC server to serve request from AC and Consensus
-    pub grpc_server: ServerHandle,
+    /// mempool service runtime
+    pub mempool_service_rt: Runtime,
     /// separate shared mempool runtime
     pub shared_mempool: Runtime,
 }
@@ -33,27 +32,9 @@ impl MempoolRuntime {
         network_events: MempoolNetworkEvents,
     ) -> Self {
         let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
-
-        // setup grpc server
-        let env = Arc::new(
-            EnvBuilder::new()
-                .name_prefix("grpc-mempool-")
-                .cq_count(max(num_cpus::get() / 2, 2))
-                .build(),
-        );
-        let handle = MempoolService {
+        let mempool_service = MempoolService {
             core_mempool: Arc::clone(&mempool),
         };
-        let service = mempool::create_mempool(handle);
-        let grpc_server = ::grpcio::ServerBuilder::new(env)
-            .register_service(service)
-            .bind(
-                config.mempool.address.clone(),
-                config.mempool.mempool_service_port,
-            )
-            .build()
-            .expect("[mempool] unable to create grpc server");
-
         // setup shared mempool
         let storage_client: Arc<dyn StorageRead> = Arc::new(StorageReadServiceClient::new(
             Arc::new(EnvBuilder::new().name_prefix("grpc-mem-sto-").build()),
@@ -71,8 +52,29 @@ impl MempoolRuntime {
             vec![],
             None,
         );
+
+        let mempool_service_rt = Builder::new()
+            .thread_name("mempool-service-")
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .unwrap();
+        let addr = format!(
+            "{}:{}",
+            config.mempool.address, config.mempool.mempool_service_port,
+        )
+        .to_socket_addrs()
+        .unwrap()
+        .next()
+        .unwrap();
+        mempool_service_rt.spawn(
+            tonic::transport::Server::builder()
+                .add_service(mempool::mempool_server::MempoolServer::new(mempool_service))
+                .serve(addr),
+        );
+
         Self {
-            grpc_server: ServerHandle::setup(grpc_server),
+            mempool_service_rt,
             shared_mempool,
         }
     }

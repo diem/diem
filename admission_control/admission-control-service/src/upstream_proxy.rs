@@ -349,7 +349,7 @@ where
 {
     // Drop requests first if mempool is full (validator is lagging behind) so not to consume
     // unnecessary resources.
-    if !can_send_txn_to_mempool(&upstream_proxy_data)? {
+    if !can_send_txn_to_mempool(&upstream_proxy_data).await? {
         debug!("Mempool is full");
         counters::TRANSACTION_SUBMISSION
             .with_label_values(&["rejected", "mempool_full"])
@@ -420,17 +420,19 @@ where
         add_transaction_request.latest_sequence_number = sequence_number;
     }
 
-    add_txn_to_mempool(&upstream_proxy_data, add_transaction_request)
+    add_txn_to_mempool(&upstream_proxy_data, add_transaction_request).await
 }
 
-fn can_send_txn_to_mempool<M, V>(upstream_proxy_data: &UpstreamProxyData<M, V>) -> Result<bool>
+async fn can_send_txn_to_mempool<M, V>(
+    upstream_proxy_data: &UpstreamProxyData<M, V>,
+) -> Result<bool>
 where
     M: MempoolClientTrait,
 {
     if upstream_proxy_data.need_to_check_mempool_before_validation {
         let req = HealthCheckRequest::default();
         let is_mempool_healthy = match &upstream_proxy_data.mempool_client {
-            Some(client) => client.health_check(&req)?.is_healthy,
+            Some(client) => client.as_ref().clone().health_check(req).await?.is_healthy,
             None => false,
         };
         return Ok(is_mempool_healthy);
@@ -439,7 +441,7 @@ where
 }
 
 /// Add signed transaction to mempool once it passes vm check
-fn add_txn_to_mempool<M, V>(
+async fn add_txn_to_mempool<M, V>(
     upstream_proxy_data: &UpstreamProxyData<M, V>,
     add_transaction_request: AddTransactionWithValidationRequest,
 ) -> Result<SubmitTransactionResponse>
@@ -448,8 +450,11 @@ where
 {
     match &upstream_proxy_data.mempool_client {
         Some(mempool_client) => {
-            let mempool_result =
-                mempool_client.add_transaction_with_validation(&add_transaction_request)?;
+            let mempool_result = mempool_client
+                .as_ref()
+                .clone()
+                .add_transaction_with_validation(add_transaction_request.clone())
+                .await?;
 
             debug!("[GRPC] Done with transaction submission request");
             let mut response = SubmitTransactionResponse::default();
