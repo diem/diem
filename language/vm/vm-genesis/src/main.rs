@@ -3,11 +3,11 @@
 
 #![forbid(unsafe_code)]
 
-use libra_config::{config::PersistableConfig, generator};
+use libra_config::config::PersistableConfig;
 use libra_types::transaction::Transaction;
 use std::{fs::File, io::prelude::*};
 use transaction_builder::default_config;
-use vm_genesis::{generate_genesis_blob_with_consensus, GENESIS_KEYPAIR};
+use vm_genesis::generate_genesis_blob_with_consensus;
 
 const CONFIG_LOCATION: &str = "genesis/vm_config.toml";
 const GENESIS_LOCATION: &str = "genesis/genesis.blob";
