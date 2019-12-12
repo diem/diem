@@ -14,6 +14,7 @@ use libra_state_view::StateView;
 use libra_types::{
     account_address::AccountAddress,
     account_config,
+    byte_array::ByteArray,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
     transaction::{TransactionArgument, TransactionOutput, TransactionStatus},
@@ -114,6 +115,10 @@ impl<'txn> TransactionExecutor<'txn> {
         runtime: &VMRuntime,
         state_view: &dyn StateView,
     ) -> VMResult<()> {
+        let txn_sequence_number = self.txn_data.sequence_number();
+        let txn_public_key = self.txn_data.public_key().to_bytes().to_vec();
+        let txn_gas_price = self.txn_data.gas_unit_price().get();
+        let txn_max_gas_units = self.txn_data.max_gas_amount().get();
         record_stats! {time_hist | TXN_PROLOGUE_TIME_TAKEN | {
             runtime.execute_function(
                 state_view,
@@ -122,7 +127,12 @@ impl<'txn> TransactionExecutor<'txn> {
                 &CostTable::zero(),
                 &ACCOUNT_MODULE,
                 &PROLOGUE_NAME,
-                vec![],
+                vec![
+                    Value::u64(txn_sequence_number),
+                    Value::byte_array(ByteArray::new(txn_public_key)),
+                    Value::u64(txn_gas_price),
+                    Value::u64(txn_max_gas_units),
+                ],
                 )?;
             }
         };
