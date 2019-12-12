@@ -770,7 +770,7 @@ impl ClusterTestRunner {
 
     async fn wipe_instance(log_file: &str, suffix: &str, instance: &Instance) {
         instance
-            .run_cmd_tee_err(vec!["sudo", "rm", "-rf", "/data/libra/*db"])
+            .run_cmd_tee_err(vec!["sudo", "rm", "-rf", "/data/libra/common"])
             .await
             .map_err(|e| info!("Failed to wipe {}: {:?}", instance, e))
             .ok();

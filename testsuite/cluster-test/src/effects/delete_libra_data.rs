@@ -24,7 +24,7 @@ impl Action for DeleteLibraData {
         async move {
             info!("DeleteLibraData {}", self.instance);
             self.instance
-                .run_cmd(vec!["sudo rm -rf /data/libra/*db"])
+                .run_cmd(vec!["sudo rm -rf /data/libra/common"])
                 .await
         }
             .boxed()
