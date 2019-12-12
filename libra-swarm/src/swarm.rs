@@ -309,10 +309,8 @@ impl LibraSwarm {
             validator_builder.template(template).nodes(num_nodes);
             SwarmConfig::build(&validator_builder, config_path)?
         } else {
-            let upstream_config_dir_str =
-                upstream_config_dir.expect("No upstream node for full nodes");
-            let upstream_config_file =
-                PathBuf::from(upstream_config_dir_str).join("node.config.toml");
+            let upstream_config_dir = upstream_config_dir.expect("No upstream node for full nodes");
+            let upstream_config_file = PathBuf::from(upstream_config_dir).join("node.config.toml");
             let mut validator_config = NodeConfig::load(&upstream_config_file)?;
             let validator_nodes = validator_config.consensus.consensus_peers.peers.len();
             let mut full_node_builder = FullNodeConfig::new();
