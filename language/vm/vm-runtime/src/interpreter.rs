@@ -76,7 +76,6 @@ lazy_static! {
     static ref SAVE_ACCOUNT_NAME: Identifier = Identifier::new("save_account").unwrap();
     static ref DESTRUCT_FUNC_NAME: Identifier = Identifier::new("challenge_succeed").unwrap();
     static ref CHALLENGE_STRUCT_NAME: Identifier = Identifier::new("ChannelChallengedBy").unwrap();
-
 }
 
 fn derive_type_tag(
@@ -764,7 +763,9 @@ where
             }
         } else if module_id == *CHANNEL_UTIL_MODULE {
             match function_name.as_str() {
-                "do_move_to_participant" => self.call_move_to_participant(context, type_actual_tags),
+                "do_move_to_participant" => {
+                    self.call_move_to_participant(context, type_actual_tags)
+                }
                 "do_move_to_shared" => self.call_move_to_shared(context, type_actual_tags),
                 "move_from_participant" => {
                     self.call_move_from_participant(context, type_actual_tags)
@@ -783,12 +784,8 @@ where
                 "exist_channel_participant" => {
                     self.call_exist_channel_participant(context, type_actual_tags)
                 }
-                "exist_channel_shared" => {
-                    self.call_exist_channel_shared(context, type_actual_tags)
-                }
-                "module_id" => {
-                    self.call_parse_module_id(type_actual_tags)
-                }
+                "exist_channel_shared" => self.call_exist_channel_shared(context, type_actual_tags),
+                "module_id" => self.call_parse_module_id(type_actual_tags),
                 _ => Err(VMStatus::new(StatusCode::LINKER_ERROR)),
             }
         } else if module_id == *CHANNEL_TXN_MODULE {
@@ -878,17 +875,15 @@ where
         if context.vm_mode().is_offchain()
             || participant == proposer
             || *authorized
-            || self.is_challenge_succeed(context)? {
+            || self.is_challenge_succeed(context)?
+        {
             return Ok(true);
         }
         return Ok(false);
     }
 
     /// call `authorize_challenger`.
-    fn is_challenge_succeed(
-        &mut self,
-        context: &mut dyn InterpreterContext,
-    ) -> VMResult<bool> {
+    fn is_challenge_succeed(&mut self, context: &mut dyn InterpreterContext) -> VMResult<bool> {
         let channel_address = self.get_channel_metadata()?.channel_address;
         let account_module = self.module_cache.get_loaded_module(&ACCOUNT_MODULE)?;
         let challenge_struct_id = account_module
@@ -904,11 +899,12 @@ where
     }
 
     /// call `destroy_resource`.
-    fn call_destroy_resource(
-        &mut self,
-        context: &mut dyn InterpreterContext,
-    ) -> VMResult<()> {
-        let module_id_bytes = self.operand_stack.pop_as::<ByteArray>()?.as_bytes().to_vec();
+    fn call_destroy_resource(&mut self, context: &mut dyn InterpreterContext) -> VMResult<()> {
+        let module_id_bytes = self
+            .operand_stack
+            .pop_as::<ByteArray>()?
+            .as_bytes()
+            .to_vec();
         let locker = self.operand_stack.pop_as::<AccountAddress>()?;
         let module_id = ModuleId::make_from(module_id_bytes).unwrap();
         let module = self.module_cache.get_loaded_module(&module_id)?;
@@ -927,10 +923,7 @@ where
     }
 
     /// call `parse_module_id`.
-    fn call_parse_module_id(
-        &mut self,
-        mut type_actual_tags: Vec<TypeTag>,
-    ) -> VMResult<()> {
+    fn call_parse_module_id(&mut self, mut type_actual_tags: Vec<TypeTag>) -> VMResult<()> {
         if type_actual_tags.len() != 1 {
             return Err(
                 VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
@@ -947,7 +940,8 @@ where
                 let module_address = tag.address;
                 let module_name = tag.module.clone();
                 let module_id = ModuleId::new(module_address, module_name);
-                self.operand_stack.push(Value::byte_array(ByteArray::new(module_id.to_bytes())))
+                self.operand_stack
+                    .push(Value::byte_array(ByteArray::new(module_id.to_bytes())))
             }
             _ => Err(VMStatus::new(StatusCode::TYPE_ERROR)
                 .with_message(format!("resolve_struct_def parse struct tag error."))),
