@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::core_mempool::{CoreMempool, TimelineState, TxnPointer};
+use crate::{CoreMempool, TimelineState, TxnPointer};
 use anyhow::{format_err, Result};
 use lazy_static::lazy_static;
 use libra_config::config::NodeConfig;

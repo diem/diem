@@ -6,11 +6,9 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::{
-    core_mempool::{
         index::TxnPointer,
         transaction::{MempoolTransaction, TimelineState},
         transaction_store::TransactionStore,
-    },
     OP_COUNTERS,
 };
 use chrono::Utc;
@@ -33,12 +31,12 @@ pub struct Mempool {
     // for each transaction, entry with timestamp is added when transaction enters mempool
     // used to measure e2e latency of transaction in system, as well as time it takes to pick it up
     // by consensus
-    pub(crate) metrics_cache: TtlCache<(AccountAddress, u64), i64>,
+    pub metrics_cache: TtlCache<(AccountAddress, u64), i64>,
     pub system_transaction_timeout: Duration,
 }
 
 impl Mempool {
-    pub(crate) fn new(config: &NodeConfig) -> Self {
+    pub fn new(config: &NodeConfig) -> Self {
         Mempool {
             transactions: TransactionStore::new(&config.mempool),
             sequence_number_cache: LruCache::new(config.mempool.capacity),
@@ -50,7 +48,7 @@ impl Mempool {
     }
 
     /// This function will be called once the transaction has been stored
-    pub(crate) fn remove_transaction(
+    pub fn remove_transaction(
         &mut self,
         sender: &AccountAddress,
         sequence_number: u64,
@@ -100,7 +98,7 @@ impl Mempool {
 
     /// Used to add a transaction to the Mempool
     /// Performs basic validation: checks account's balance and sequence number
-    pub(crate) fn add_txn(
+    pub fn add_txn(
         &mut self,
         txn: SignedTransaction,
         gas_amount: u64,
@@ -167,7 +165,7 @@ impl Mempool {
     /// `batch_size` - size of requested block
     /// `seen_txns` - transactions that were sent to Consensus but were not committed yet
     ///  Mempool should filter out such transactions
-    pub(crate) fn get_block(
+    pub fn get_block(
         &mut self,
         batch_size: u64,
         mut seen: HashSet<TxnPointer>,
@@ -230,18 +228,18 @@ impl Mempool {
     }
 
     /// TTL based garbage collection. Remove all transactions that got expired
-    pub(crate) fn gc_by_system_ttl(&mut self) {
+    pub fn gc_by_system_ttl(&mut self) {
         self.transactions.gc_by_system_ttl();
     }
 
     /// Garbage collection based on client-specified expiration time
-    pub(crate) fn gc_by_expiration_time(&mut self, block_time: Duration) {
+    pub fn gc_by_expiration_time(&mut self, block_time: Duration) {
         self.transactions.gc_by_expiration_time(block_time);
     }
 
     /// Read `count` transactions from timeline since `timeline_id`
     /// Returns block of transactions and new last_timeline_id
-    pub(crate) fn read_timeline(
+    pub fn read_timeline(
         &mut self,
         timeline_id: u64,
         count: usize,
@@ -250,7 +248,7 @@ impl Mempool {
     }
 
     /// Check the health of core mempool.
-    pub(crate) fn health_check(&self) -> bool {
+    pub fn health_check(&self) -> bool {
         self.transactions.health_check()
     }
 }

@@ -1,17 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    core_mempool::{unit_tests::common::TestTransaction, CoreMempool, TimelineState},
-    shared_mempool::{start_shared_mempool, SharedMempoolNotification, SyncEvent},
-};
+use crate::shared_mempool::{start_shared_mempool, SharedMempoolNotification, SyncEvent};
 use channel;
-use futures::{
+use futures_01::{
     sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
     Stream,
 };
-use futures_preview::{compat::Stream01CompatExt, executor::block_on, SinkExt, StreamExt};
+use futures::{compat::Stream01CompatExt, executor::block_on, SinkExt, StreamExt};
 use libra_config::config::NodeConfig;
+use crate::unit_tests::common::TestTransaction;
+use libra_core_mempool::{CoreMempool, TimelineState};
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     interface::{NetworkNotification, NetworkRequest},

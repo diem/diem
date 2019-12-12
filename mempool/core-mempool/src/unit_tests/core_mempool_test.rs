@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::core_mempool::{
+use crate::{
     unit_tests::common::{
         add_signed_txn, add_txn, add_txns_to_mempool, exist_in_metrics_cache, setup_mempool,
         TestTransaction,

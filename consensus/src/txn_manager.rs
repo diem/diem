@@ -6,7 +6,7 @@ use anyhow::Result;
 use executor::StateComputeResult;
 use futures::{compat::Future01CompatExt, future, Future, FutureExt};
 use libra_logger::prelude::*;
-use libra_mempool::proto::mempool::{
+use libra_mempool_service::proto::mempool::{
     CommitTransactionsRequest, CommittedTransaction, GetBlockRequest, MempoolClient,
     TransactionExclusion,
 };

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_mempool::proto::{
+use libra_mempool_service::proto::{
     mempool::{
         AddTransactionWithValidationRequest, AddTransactionWithValidationResponse,
         HealthCheckRequest, HealthCheckResponse,

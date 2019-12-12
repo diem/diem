@@ -18,7 +18,7 @@ use futures::{
 };
 use libra_config::config::{AdmissionControlConfig, RoleType};
 use libra_logger::prelude::*;
-use libra_mempool::proto::{
+use libra_mempool_service::proto::{
     mempool::{AddTransactionWithValidationRequest, HealthCheckRequest},
     mempool_client::MempoolClientTrait,
 };

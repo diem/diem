@@ -41,6 +41,7 @@ executor = { path = "../executor", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../mempool", version = "0.1.0" }
+libra-mempool-service = { path = "../mempool/mempool-service", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 network = { path = "../network", version = "0.1.0" }
 libra-prost-ext = { path = "../common/prost-ext", version = "0.1.0" }

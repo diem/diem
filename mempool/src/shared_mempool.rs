@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::{CoreMempool, TimelineState},
     OP_COUNTERS,
 };
+use libra_core_mempool::{CoreMempool, TimelineState};
 use bounded_executor::BoundedExecutor;
-use futures::sync::mpsc::UnboundedSender;
-use futures_preview::{compat::Future01CompatExt, future::join_all, Stream, StreamExt};
+use futures_01::sync::mpsc::UnboundedSender;
+use futures::{compat::Future01CompatExt, future::join_all, Stream, StreamExt};
 use libra_config::config::{MempoolConfig, NodeConfig};
 use libra_logger::prelude::*;
 use libra_types::{transaction::SignedTransaction, PeerId};

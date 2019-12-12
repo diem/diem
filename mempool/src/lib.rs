@@ -54,20 +54,13 @@
 //! every Consensus commit request. We use a separate system TTL to ensure that a transaction won't
 //! remain stuck in Mempool forever, even if Consensus doesn't make progress
 
-pub mod proto;
 pub use runtime::MempoolRuntime;
 
-mod core_mempool;
-mod mempool_service;
 mod runtime;
 mod shared_mempool;
 
 // module op counters
-use lazy_static::lazy_static;
-use libra_metrics::OpMetrics;
-lazy_static! {
-    static ref OP_COUNTERS: OpMetrics = OpMetrics::new_and_registered("mempool");
-}
+use libra_core_mempool::OP_COUNTERS;
 
 #[cfg(test)]
 mod unit_tests;

@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{core_mempool::CoreMempool, mempool_service::MempoolService, proto::mempool::*};
+use libra_core_mempool::CoreMempool;
+use libra_mempool_service::{MempoolService, proto::mempool::*};
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder};
 use libra_config::config::NodeConfig;

@@ -13,8 +13,8 @@ edition = "2018"
 anyhow = "1.0"
 bytes = "0.4.12"
 chrono = "0.4.7"
-futures = "0.1.28"
-futures-preview = { version = "0.3.0", package = "futures", features = ["compat"] }
+futures_01 = {version = "0.1.28", package = "futures"}
+futures = { version = "0.3.0", features = ["compat"] }
 grpcio = { version = "=0.5.0-alpha.4", default-features = false, features = ["prost-codec"] }
 num_cpus = "1.10.1"
 lazy_static = "1.3.0"
@@ -23,6 +23,8 @@ prost = "0.5.0"
 tokio = { version = "0.2", features = ["full"] }
 ttl_cache = "0.4.2"
 
+libra-core-mempool = { path = "core-mempool", version = "0.1.0" }
+libra-mempool-service = { path = "mempool-service", version = "0.1.0" }
 libra-mempool-shared-proto = { path = "mempool-shared-proto", version = "0.1.0" }
 bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }
 libra-config = { path = "../config", version = "0.1.0" }

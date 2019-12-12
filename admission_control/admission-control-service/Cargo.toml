@@ -29,6 +29,7 @@ executable-helpers = { path = "../../common/executable-helpers", version = "0.1.
 grpc-helpers = { path = "../../common/grpc-helpers", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../../mempool", version = "0.1.0" }
+libra-mempool-service = { path = "../../mempool/mempool-service", version = "0.1.0" }
 libra-mempool-shared-proto = { path = "../../mempool/mempool-shared-proto", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
 storage-client = { path = "../../storage/storage-client", version = "0.1.0" }

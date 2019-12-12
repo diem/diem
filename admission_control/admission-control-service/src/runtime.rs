@@ -11,7 +11,7 @@ use futures::channel::mpsc;
 use grpc_helpers::ServerHandle;
 use grpcio::{ChannelBuilder, EnvBuilder, ServerBuilder};
 use libra_config::config::{NodeConfig, RoleType};
-use libra_mempool::proto::mempool::MempoolClient;
+use libra_mempool_service::proto::mempool::MempoolClient;
 use network::validator_network::{AdmissionControlNetworkEvents, AdmissionControlNetworkSender};
 use std::{cmp::min, collections::HashMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient};

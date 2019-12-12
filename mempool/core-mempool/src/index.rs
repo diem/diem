@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// This module provides various indexes used by Mempool
-use crate::core_mempool::transaction::{MempoolTransaction, TimelineState};
+use crate::transaction::{MempoolTransaction, TimelineState};
 use libra_types::account_address::AccountAddress;
 use std::{
     cmp::Ordering,

@@ -17,7 +17,7 @@ use consensus_types::common::Author;
 use executor::Executor;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
-use libra_mempool::proto::mempool::MempoolClient;
+use libra_mempool_service::proto::mempool::MempoolClient;
 use libra_types::{crypto_proxies::ValidatorSigner, transaction::SignedTransaction};
 use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
 use state_synchronizer::StateSyncClient;

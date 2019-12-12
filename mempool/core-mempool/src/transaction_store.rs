@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::{
+
         index::{
             AccountTransactions, ParkingLotIndex, PriorityIndex, PriorityQueueIter, TTLIndex,
             TimelineIndex,
         },
         transaction::{MempoolTransaction, TimelineState},
-    },
+
     OP_COUNTERS,
 };
 use anyhow::{format_err, Result};

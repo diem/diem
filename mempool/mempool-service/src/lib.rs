@@ -1,10 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod proto;
+
 use crate::{
-    core_mempool::{CoreMempool, TimelineState, TxnPointer},
     proto::mempool::Mempool,
-    OP_COUNTERS,
+};
+use libra_core_mempool::{
+    CoreMempool, TimelineState, TxnPointer, OP_COUNTERS,
 };
 use futures::Future;
 use grpc_helpers::{create_grpc_invalid_arg_status, default_reply_error_logger};
@@ -23,8 +26,8 @@ use std::{
 };
 
 #[derive(Clone)]
-pub(crate) struct MempoolService {
-    pub(crate) core_mempool: Arc<Mutex<CoreMempool>>,
+pub struct MempoolService {
+    pub core_mempool: Arc<Mutex<CoreMempool>>,
 }
 
 impl Mempool for MempoolService {
@@ -74,8 +77,8 @@ impl Mempool for MempoolService {
     fn get_block(
         &mut self,
         ctx: ::grpcio::RpcContext<'_>,
-        req: super::proto::mempool::GetBlockRequest,
-        sink: ::grpcio::UnarySink<super::proto::mempool::GetBlockResponse>,
+        req: crate::proto::mempool::GetBlockRequest,
+        sink: ::grpcio::UnarySink<crate::proto::mempool::GetBlockResponse>,
     ) {
         trace!("[GRPC] Mempool::get_block");
         let _timer = SVC_COUNTERS.req(&ctx);
