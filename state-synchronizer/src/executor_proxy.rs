@@ -77,10 +77,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
                 .await?
                 .ok_or_else(|| format_err!("[state sync] Failed to access storage info"))?;
 
-            let current_verifier = storage_info
-                .get_validator_set()
-                .expect("No ValidatorSet found for the start of the epoch.")
-                .into();
+            let current_verifier = storage_info.get_validator_set().into();
 
             let synced_trees = if let Some(synced_tree_state) = storage_info.synced_tree_state {
                 ExecutedTrees::from(synced_tree_state)

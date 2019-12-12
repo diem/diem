@@ -385,10 +385,13 @@ impl StartupInfo {
         }
     }
 
-    pub fn get_validator_set(&self) -> Option<&ValidatorSet> {
+    pub fn get_validator_set(&self) -> &ValidatorSet {
         match self.latest_ledger_info.ledger_info().next_validator_set() {
-            Some(x) => Some(x),
-            None => self.latest_validator_set.as_ref(),
+            Some(x) => x,
+            None => self
+                .latest_validator_set
+                .as_ref()
+                .expect("Validator set must exist."),
         }
     }
 }
