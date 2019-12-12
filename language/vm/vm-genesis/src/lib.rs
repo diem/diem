@@ -357,7 +357,7 @@ pub fn encode_genesis_transaction_with_validator(
                 .unwrap();
 
             // Initialize each validator.
-            for validator_keys in validator_set.payload().iter().rev() {
+            for validator_keys in validator_set.iter().rev() {
                 // First, add a ValidatorConfig resource under each account
                 let validator_address = *validator_keys.account_address();
                 txn_executor
