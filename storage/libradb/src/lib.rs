@@ -501,11 +501,10 @@ impl LibraDB {
         // TODO: cache last epoch change version to avoid a DB access in most cases.
         let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
         let validator_change_proof = if client_epoch < ledger_info.epoch() {
-            let epoch_changes = self.get_epoch_change_ledger_infos(
+            self.get_epoch_change_ledger_infos(
                 client_epoch,
                 self.ledger_store.get_epoch(ledger_info.version())?,
-            )?;
-            epoch_changes
+            )?
         } else {
             Vec::new()
         };
