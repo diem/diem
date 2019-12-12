@@ -84,6 +84,69 @@ impl Into<(Version, HashValue)> for GetLatestStateRootResponse {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct GetLatestAccountStateRequest {
+    pub address: AccountAddress,
+}
+
+impl GetLatestAccountStateRequest {
+    pub fn new(address: AccountAddress) -> Self {
+        Self { address }
+    }
+}
+
+impl TryFrom<crate::proto::storage::GetLatestAccountStateRequest> for GetLatestAccountStateRequest {
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::GetLatestAccountStateRequest) -> Result<Self> {
+        let address = AccountAddress::try_from(&proto.address[..])?;
+        Ok(Self::new(address))
+    }
+}
+
+impl From<GetLatestAccountStateRequest> for crate::proto::storage::GetLatestAccountStateRequest {
+    fn from(request: GetLatestAccountStateRequest) -> Self {
+        Self {
+            address: request.address.into(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct GetLatestAccountStateResponse {
+    pub account_state_blob: Option<AccountStateBlob>,
+}
+
+impl GetLatestAccountStateResponse {
+    pub fn new(account_state_blob: Option<AccountStateBlob>) -> Self {
+        Self { account_state_blob }
+    }
+}
+
+impl TryFrom<crate::proto::storage::GetLatestAccountStateResponse>
+    for GetLatestAccountStateResponse
+{
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::GetLatestAccountStateResponse) -> Result<Self> {
+        let account_state_blob = proto
+            .account_state_blob
+            .map(TryFrom::try_from)
+            .transpose()?;
+        Ok(Self::new(account_state_blob))
+    }
+}
+
+impl From<GetLatestAccountStateResponse> for crate::proto::storage::GetLatestAccountStateResponse {
+    fn from(response: GetLatestAccountStateResponse) -> Self {
+        Self {
+            account_state_blob: response.account_state_blob.map(Into::into),
+        }
+    }
+}
+
 /// Helper to construct and parse [`proto::storage::GetAccountStateWithProofByVersionRequest`]
 #[derive(PartialEq, Eq, Clone)]
 pub struct GetAccountStateWithProofByVersionRequest {
