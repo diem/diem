@@ -84,6 +84,11 @@ impl ValidatorConfig {
 
     pub fn build(&self) -> Result<NodeConfig> {
         let mut configs = self.build_set()?;
+        let first_peer_id = configs[0]
+            .validator_network
+            .as_ref()
+            .ok_or(Error::MissingValidatorNetwork)?
+            .peer_id;
         let mut config = configs.swap_remove(self.index);
 
         let validator_network = config
@@ -94,7 +99,6 @@ impl ValidatorConfig {
         validator_network.advertised_address = self.advertised.clone();
 
         let mut seed_peers = HashMap::new();
-        let first_peer_id = validator_network.peer_id;
         seed_peers.insert(first_peer_id, vec![self.bootstrap.clone()]);
         let seed_peers_config = SeedPeersConfig { seed_peers };
         validator_network.seed_peers = seed_peers_config.clone();
@@ -177,10 +181,12 @@ mod test {
 
     #[test]
     fn verify_correctness() {
-        let config = ValidatorConfig::new().build().unwrap();
+        let mut validator_config = ValidatorConfig::new();
+        let config = validator_config.nodes(2).index(1).build().unwrap();
         let network = config.validator_network.as_ref().unwrap();
         let (seed_peer_id, seed_peer_ips) = network.seed_peers.seed_peers.iter().next().unwrap();
-        assert_eq!(&network.peer_id, seed_peer_id);
+        assert!(&network.peer_id != seed_peer_id);
+        // These equal cause we didn't set
         assert_eq!(network.advertised_address, seed_peer_ips[0]);
         assert_eq!(
             network.advertised_address,
@@ -191,6 +197,6 @@ mod test {
             DEFAULT_LISTEN.parse::<Multiaddr>().unwrap()
         );
         assert!(config.execution.genesis.is_some());
-        assert_eq!(config.consensus.consensus_peers.peers.len(), 1);
+        assert_eq!(config.consensus.consensus_peers.peers.len(), 2);
     }
 }
