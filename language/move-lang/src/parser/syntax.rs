@@ -1037,16 +1037,19 @@ fn parse_function_decl<'input>(
         sp(name.loc(), Type_::Unit)
     };
 
-    // ("acquires" <BaseType> ("," <BaseType>)*)?
+    // ("acquires" (<BaseType> ",")* <BaseType> ","?
     let mut acquires = vec![];
     if tokens.peek() == Tok::Acquires {
         tokens.advance()?;
         loop {
             acquires.push(parse_base_type(tokens)?);
-            if tokens.peek() != Tok::Comma {
+            if tokens.peek() == Tok::Semicolon || tokens.peek() == Tok::LBrace {
                 break;
             }
-            tokens.advance()?;
+            consume_token(tokens, Tok::Comma)?;
+            if tokens.peek() == Tok::Semicolon || tokens.peek() == Tok::LBrace {
+                break;
+            }
         }
     }
 
