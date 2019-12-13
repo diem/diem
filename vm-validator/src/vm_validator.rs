@@ -1,15 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Error, Result};
+use anyhow::{Error, Result};
 use futures::future::{err, ok, Future};
 use libra_config::config::NodeConfig;
 use libra_types::{
-    account_address::AccountAddress,
-    account_config::get_account_resource_or_default,
-    get_with_proof::{RequestItem, ResponseItem},
-    transaction::SignedTransaction,
-    vm_error::VMStatus,
+    account_address::AccountAddress, account_config::get_account_resource_or_default,
+    transaction::SignedTransaction, vm_error::VMStatus,
 };
 use scratchpad::SparseMerkleTree;
 use std::sync::Arc;
@@ -73,17 +70,10 @@ pub async fn get_account_state(
     storage_read_client: Arc<dyn StorageRead>,
     address: AccountAddress,
 ) -> Result<(u64, u64)> {
-    let req_item = RequestItem::GetAccountState { address };
-    let (response_items, _, _, _) = storage_read_client
-        .update_to_latest_ledger_async(0 /* client_known_version */, vec![req_item])
+    let account_state = storage_read_client
+        .get_latest_account_state_async(address)
         .await?;
-    let account_state = match &response_items[0] {
-        ResponseItem::GetAccountState {
-            account_state_with_proof,
-        } => &account_state_with_proof.blob,
-        _ => bail!("Not account state response."),
-    };
-    let account_resource = get_account_resource_or_default(account_state)?;
+    let account_resource = get_account_resource_or_default(&account_state)?;
     let sequence_number = account_resource.sequence_number();
     let balance = account_resource.balance();
     Ok((sequence_number, balance))
