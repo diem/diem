@@ -32,14 +32,23 @@ resource "aws_iam_instance_profile" "cluster-test-runner" {
   role = "${aws_iam_role.cluster-test-runner.name}"
 }
 
+data "template_file" "cluster_test_user_data" {
+  template = file("templates/cluster_test_user_data.sh")
+
+  vars = {
+    ssh_key = file(var.ssh_priv_key_file)
+    ct      = file("templates/cluster-test/ct")
+  }
+}
+
 resource "aws_instance" "cluster-test-runner" {
   ami                         = local.aws_ecs_ami
-  instance_type               = "c5d.2xlarge"
+  instance_type               = "c5.2xlarge"
   subnet_id                   = element(aws_subnet.testnet.*.id, 0)
   vpc_security_group_ids      = [aws_security_group.cluster-test-host.id]
   associate_public_ip_address = local.instance_public_ip
   key_name                    = aws_key_pair.libra.key_name
-  user_data                   = local.user_data
+  user_data                   = data.template_file.cluster_test_user_data.rendered
   count                       = var.cluster_test ? 1 : 0
 
   tags = {
@@ -48,6 +57,11 @@ resource "aws_instance" "cluster-test-runner" {
     Workspace = terraform.workspace
   }
   iam_instance_profile = "${aws_iam_instance_profile.cluster-test-runner.name}"
+
+  root_block_device {
+      volume_type = "gp2"
+      volume_size = 1024
+  }
 }
 
 resource "aws_security_group" "cluster-test-host" {
