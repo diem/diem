@@ -5,19 +5,14 @@ syntax = "proto3";
 
 package types;
 
-import "events.proto";
 import "ledger_info.proto";
 
-// This is used to prove validator changes.  When a validator is changing, it
-// triggers an event on /validator_change_account/events/sent.  To tell the
-// client about validator changes, we query
-// /validator_change_account/events/sent to get all versions that contain
-// validator changes after the version that we are trying to update from. For
-// each of these versions, the old validator set would have signed the ledger
-// info at that version.  The client needs this as well as the event results +
-// proof.  The client can then verify that these events were under the current
-// tree and that the changes were signed by the old validators (and that the
-// events correctly show which validators are the new validators).
+// This is used to prove validator changes.
 message ValidatorChangeProof {
+  // A list of LedgerInfos with contiguous increasing epoch numbers.
   repeated LedgerInfoWithSignatures ledger_info_with_sigs = 1;
+
+  // A flag (when true) that indicates the above list is incomplete and only
+  // contains the first N epoch changes.
+  bool more = 2;
 }

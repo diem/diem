@@ -100,7 +100,7 @@ impl MockStorage {
         for epoch_num in known_epoch..self.epoch_num() {
             epoch_change_lis.push(self.ledger_infos.get(&epoch_num).unwrap().clone());
         }
-        ValidatorChangeProof::new(epoch_change_lis)
+        ValidatorChangeProof::new(epoch_change_lis, /* more = */ false)
     }
 
     pub fn get_chunk(

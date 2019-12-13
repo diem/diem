@@ -37,10 +37,9 @@ use storage_proto::{
     proto::storage::{GetLatestStateRootRequest, GetStartupInfoRequest, StorageClient},
     BackupAccountStateRequest, BackupAccountStateResponse,
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
-    GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse,
-    GetLatestAccountStateRequest, GetLatestAccountStateResponse, GetLatestStateRootResponse,
-    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    SaveTransactionsRequest, StartupInfo,
+    GetEpochChangeLedgerInfosRequest, GetLatestAccountStateRequest, GetLatestAccountStateResponse,
+    GetLatestStateRootResponse, GetStartupInfoResponse, GetTransactionsRequest,
+    GetTransactionsResponse, SaveTransactionsRequest, StartupInfo,
 };
 
 pub use crate::state_view::VerifiedStateView;
@@ -214,16 +213,13 @@ impl StorageRead for StorageReadServiceClient {
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<(Vec<LedgerInfoWithSignatures>, bool)>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeProof>> + Send>> {
         let proto_req = GetEpochChangeLedgerInfosRequest::new(start_epoch, end_epoch);
         convert_grpc_response(
             self.client()
                 .get_epoch_change_ledger_infos_async(&proto_req.into()),
         )
-        .map(|resp| {
-            let resp = GetEpochChangeLedgerInfosResponse::try_from(resp?)?;
-            Ok(resp.into())
-        })
+        .map(|resp| ValidatorChangeProof::try_from(resp?))
         .boxed()
     }
 
@@ -436,7 +432,7 @@ pub trait StorageRead: Send + Sync {
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
+    ) -> Result<ValidatorChangeProof> {
         block_on(self.get_epoch_change_ledger_infos_async(start_epoch, end_epoch))
     }
 
@@ -448,7 +444,7 @@ pub trait StorageRead: Send + Sync {
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Pin<Box<dyn Future<Output = Result<(Vec<LedgerInfoWithSignatures>, bool)>> + Send>>;
+    ) -> Pin<Box<dyn Future<Output = Result<ValidatorChangeProof>> + Send>>;
 
     /// See [`LibraDB::backup_account_state`].
     ///

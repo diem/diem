@@ -174,9 +174,10 @@ impl<T: Payload> BlockStore<T> {
         if highest_commit_cert.ends_epoch() {
             retriever
                 .network
-                .notify_epoch_change(ValidatorChangeProof::new(vec![highest_commit_cert
-                    .ledger_info()
-                    .clone()]))
+                .notify_epoch_change(ValidatorChangeProof::new(
+                    vec![highest_commit_cert.ledger_info().clone()],
+                    /* more = */ false,
+                ))
                 .await;
         }
         Ok(())

@@ -48,10 +48,6 @@ test_conversion!(
     test_get_epoch_change_ledger_infos_request,
     GetEpochChangeLedgerInfosRequest,
 );
-test_conversion!(
-    test_get_epoch_change_ledger_infos_response,
-    GetEpochChangeLedgerInfosResponse,
-);
 test_conversion!(test_backup_account_state_request, BackupAccountStateRequest);
 test_conversion!(
     test_backup_account_state_response,

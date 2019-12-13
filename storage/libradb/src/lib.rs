@@ -496,30 +496,45 @@ impl LibraDB {
         let ledger_info = ledger_info_with_sigs.ledger_info();
         let ledger_version = ledger_info.version();
 
-        // Fulfill all request items.
-        let response_items = self.get_response_items(request_items, ledger_version)?;
-
         // TODO: cache last epoch change version to avoid a DB access in most cases.
         let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
         let validator_change_proof = if client_epoch < ledger_info.epoch() {
-            let (epoch_changes, more) = self.get_epoch_change_ledger_infos(
+            let (ledger_infos_with_sigs, more) = self.get_epoch_change_ledger_infos(
                 client_epoch,
                 self.ledger_store.get_epoch(ledger_info.version())?,
             )?;
-            ensure!(!more, "Exceeded max response length. TODO: remove.");
-            epoch_changes
+            ValidatorChangeProof::new(ledger_infos_with_sigs, more)
         } else {
-            Vec::new()
+            ValidatorChangeProof::new(vec![], /* more = */ false)
         };
 
+        let client_new_version = if !validator_change_proof.more {
+            ledger_version
+        } else {
+            validator_change_proof
+                .ledger_info_with_sigs
+                .last()
+                .expect("Must have at least one LedgerInfo.")
+                .ledger_info()
+                .version()
+        };
         let ledger_consistency_proof = self
             .ledger_store
-            .get_consistency_proof(client_known_version, ledger_version)?;
+            .get_consistency_proof(client_known_version, client_new_version)?;
+
+        // If the validator change proof in the response is enough for the client to update to
+        // latest LedgerInfo, fulfill all request items. Otherwise the client will not be able to
+        // verify the latest LedgerInfo, so do not send response items back.
+        let response_items = if !validator_change_proof.more {
+            self.get_response_items(request_items, ledger_version)?
+        } else {
+            vec![]
+        };
 
         Ok((
             response_items,
             ledger_info_with_sigs,
-            ValidatorChangeProof::new(validator_change_proof),
+            validator_change_proof,
             ledger_consistency_proof,
         ))
     }

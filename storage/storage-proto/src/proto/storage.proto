@@ -10,6 +10,7 @@ import "get_with_proof.proto";
 import "ledger_info.proto";
 import "proof.proto";
 import "transaction.proto";
+import "validator_change.proto";
 import "validator_set.proto";
 
 // -----------------------------------------------------------------------------
@@ -55,7 +56,7 @@ service Storage {
 
     // Returns latest ledger infos per epoch.
     rpc GetEpochChangeLedgerInfos(GetEpochChangeLedgerInfosRequest)
-    returns (GetEpochChangeLedgerInfosResponse);
+    returns (types.ValidatorChangeProof);
 
     // Returns a stream of account states.
     rpc BackupAccountState(BackupAccountStateRequest)
@@ -164,14 +165,6 @@ message GetEpochChangeLedgerInfosRequest {
     uint64 start_epoch = 1;
     /// The target epoch number that client wants to sync to.
     uint64 end_epoch = 2;
-}
-
-message GetEpochChangeLedgerInfosResponse {
-    // Vector of latest ledger infos per epoch (not sorted)
-    repeated types.LedgerInfoWithSignatures latest_ledger_infos = 1;
-    // Whether the above field has everything. true means the response is
-    // incomplete -- only first N are returned and there are more.
-    bool more = 2;
 }
 
 message BackupAccountStateRequest {

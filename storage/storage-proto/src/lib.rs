@@ -37,7 +37,7 @@ use libra_types::{
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };
 #[cfg(any(test, feature = "fuzzing"))]
-use proptest::{collection::vec, prelude::*};
+use proptest::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use std::convert::{TryFrom, TryInto};
@@ -667,73 +667,6 @@ impl From<GetEpochChangeLedgerInfosRequest>
             start_epoch: request.start_epoch,
             end_epoch: request.end_epoch,
         }
-    }
-}
-
-/// Helper to construct and parse [`proto::storage::GetEpochChangeLedgerInfosResponse`]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct GetEpochChangeLedgerInfosResponse {
-    pub ledger_infos_with_sigs: Vec<LedgerInfoWithSignatures>,
-    pub more: bool,
-}
-
-impl GetEpochChangeLedgerInfosResponse {
-    /// Constructor.
-    pub fn new(ledger_infos_with_sigs: Vec<LedgerInfoWithSignatures>, more: bool) -> Self {
-        Self {
-            ledger_infos_with_sigs,
-            more,
-        }
-    }
-}
-
-impl TryFrom<crate::proto::storage::GetEpochChangeLedgerInfosResponse>
-    for GetEpochChangeLedgerInfosResponse
-{
-    type Error = Error;
-
-    fn try_from(proto: crate::proto::storage::GetEpochChangeLedgerInfosResponse) -> Result<Self> {
-        Ok(Self {
-            ledger_infos_with_sigs: proto
-                .latest_ledger_infos
-                .into_iter()
-                .map(TryFrom::try_from)
-                .collect::<Result<Vec<_>>>()?,
-            more: proto.more,
-        })
-    }
-}
-
-impl From<GetEpochChangeLedgerInfosResponse>
-    for crate::proto::storage::GetEpochChangeLedgerInfosResponse
-{
-    fn from(response: GetEpochChangeLedgerInfosResponse) -> Self {
-        Self {
-            latest_ledger_infos: response
-                .ledger_infos_with_sigs
-                .into_iter()
-                .map(Into::into)
-                .collect(),
-            more: response.more,
-        }
-    }
-}
-
-impl Into<(Vec<LedgerInfoWithSignatures>, bool)> for GetEpochChangeLedgerInfosResponse {
-    fn into(self) -> (Vec<LedgerInfoWithSignatures>, bool) {
-        (self.ledger_infos_with_sigs, self.more)
-    }
-}
-
-#[cfg(any(test, feature = "fuzzing"))]
-impl Arbitrary for GetEpochChangeLedgerInfosResponse {
-    type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        (vec(any::<LedgerInfoWithSignatures>(), 0..10), any::<bool>())
-            .prop_map(|(ledger_infos_with_sigs, more)| Self::new(ledger_infos_with_sigs, more))
-            .boxed()
     }
 }
 
