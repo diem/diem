@@ -14,12 +14,14 @@ use std::convert::{TryFrom, TryInto};
 /// validator changes from the first LedgerInfo's epoch.
 pub struct ValidatorChangeProof {
     pub ledger_info_with_sigs: Vec<LedgerInfoWithSignatures>,
+    pub more: bool,
 }
 
 impl ValidatorChangeProof {
-    pub fn new(ledger_info_with_sigs: Vec<LedgerInfoWithSignatures>) -> Self {
+    pub fn new(ledger_info_with_sigs: Vec<LedgerInfoWithSignatures>, more: bool) -> Self {
         Self {
             ledger_info_with_sigs,
+            more,
         }
     }
 
@@ -70,8 +72,11 @@ impl TryFrom<crate::proto::types::ValidatorChangeProof> for ValidatorChangeProof
             .into_iter()
             .map(TryInto::try_into)
             .collect::<Result<Vec<_>>>()?;
+        let more = proto.more;
+
         Ok(ValidatorChangeProof {
             ledger_info_with_sigs,
+            more,
         })
     }
 }
@@ -84,6 +89,7 @@ impl From<ValidatorChangeProof> for crate::proto::types::ValidatorChangeProof {
                 .into_iter()
                 .map(Into::into)
                 .collect(),
+            more: change.more,
         }
     }
 }
@@ -94,8 +100,8 @@ impl Arbitrary for ValidatorChangeProof {
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        vec(any::<LedgerInfoWithSignatures>(), 0..10)
-            .prop_map(Self::new)
+        (vec(any::<LedgerInfoWithSignatures>(), 0..10), any::<bool>())
+            .prop_map(|(ledger_infos_with_sigs, more)| Self::new(ledger_infos_with_sigs, more))
             .boxed()
     }
 }
@@ -145,14 +151,15 @@ mod tests {
         }
 
         // Test well-formed proof will succeed
-        let proof_1 = ValidatorChangeProof::new(valid_ledger_info.clone());
+        let proof_1 = ValidatorChangeProof::new(valid_ledger_info.clone(), /* more = */ false);
         assert!(proof_1.verify(all_epoch[0], &validator_verifier[0]).is_ok());
 
-        let proof_2 = ValidatorChangeProof::new(valid_ledger_info[2..5].to_vec());
+        let proof_2 =
+            ValidatorChangeProof::new(valid_ledger_info[2..5].to_vec(), /* more = */ false);
         assert!(proof_2.verify(all_epoch[2], &validator_verifier[2]).is_ok());
 
         // Test empty proof will fail verification
-        let proof_3 = ValidatorChangeProof::new(vec![]);
+        let proof_3 = ValidatorChangeProof::new(vec![], /* more = */ false);
         assert!(proof_3
             .verify(all_epoch[0], &validator_verifier[0])
             .is_err());
@@ -160,7 +167,7 @@ mod tests {
         // Test non contiguous proof will fail
         let mut list = valid_ledger_info[3..5].to_vec();
         list.extend_from_slice(&valid_ledger_info[8..9]);
-        let proof_4 = ValidatorChangeProof::new(list);
+        let proof_4 = ValidatorChangeProof::new(list, /* more = */ false);
         assert!(proof_4
             .verify(all_epoch[3], &validator_verifier[3])
             .is_err());
@@ -168,16 +175,19 @@ mod tests {
         // Test non increasing proof will fail
         let mut list = valid_ledger_info.clone();
         list.reverse();
-        let proof_5 = ValidatorChangeProof::new(list);
+        let proof_5 = ValidatorChangeProof::new(list, /* more = */ false);
         assert!(proof_5
             .verify(all_epoch[9], &validator_verifier[9])
             .is_err());
 
         // Test proof with invalid signatures will fail
-        let proof_6 = ValidatorChangeProof::new(vec![LedgerInfoWithSignatures::new(
-            valid_ledger_info[0].ledger_info().clone(),
-            BTreeMap::new(),
-        )]);
+        let proof_6 = ValidatorChangeProof::new(
+            vec![LedgerInfoWithSignatures::new(
+                valid_ledger_info[0].ledger_info().clone(),
+                BTreeMap::new(),
+            )],
+            /* more = */ false,
+        );
         assert!(proof_6
             .verify(all_epoch[0], &validator_verifier[0])
             .is_err());

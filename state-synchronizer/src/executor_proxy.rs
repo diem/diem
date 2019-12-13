@@ -125,12 +125,15 @@ impl ExecutorProxyTrait for ExecutorProxy {
     }
 
     fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<ValidatorChangeProof> {
-        let (ledger_info_per_epoch, more) = self
+        let validator_change_proof = self
             .storage_read_client
             .get_epoch_change_ledger_infos(start_epoch, end_epoch)?;
-        // TODO(zekun000): change this to query storage for more epoch changes.
-        ensure!(!more, "Exceeded max response length.");
-        Ok(ValidatorChangeProof::new(ledger_info_per_epoch))
+        // TODO(zekun000): change this (or caller of this) to query storage for more epoch changes.
+        ensure!(
+            !validator_change_proof.more,
+            "Exceeded max response length."
+        );
+        Ok(validator_change_proof)
     }
 
     fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {

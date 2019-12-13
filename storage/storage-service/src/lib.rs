@@ -18,7 +18,9 @@ use grpc_helpers::{provide_grpc_response, spawn_service_thread_with_drop_closure
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_metrics::counters::SVC_COUNTERS;
-use libra_types::proto::types::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
+use libra_types::proto::types::{
+    UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, ValidatorChangeProof,
+};
 use libradb::LibraDB;
 use std::{
     convert::TryFrom,
@@ -29,11 +31,10 @@ use std::{
 use storage_proto::proto::storage::{
     create_storage, BackupAccountStateRequest, BackupAccountStateResponse,
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
-    GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse,
-    GetLatestAccountStateRequest, GetLatestAccountStateResponse, GetLatestStateRootRequest,
-    GetLatestStateRootResponse, GetStartupInfoRequest, GetStartupInfoResponse,
-    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
-    SaveTransactionsResponse, Storage,
+    GetEpochChangeLedgerInfosRequest, GetLatestAccountStateRequest, GetLatestAccountStateResponse,
+    GetLatestStateRootRequest, GetLatestStateRootResponse, GetStartupInfoRequest,
+    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
+    SaveTransactionsRequest, SaveTransactionsResponse, Storage,
 };
 
 /// Starts storage service according to config.
@@ -244,12 +245,13 @@ impl StorageService {
     fn get_epoch_change_ledger_infos_inner(
         &self,
         req: GetEpochChangeLedgerInfosRequest,
-    ) -> Result<GetEpochChangeLedgerInfosResponse> {
+    ) -> Result<ValidatorChangeProof> {
         let rust_req = storage_proto::GetEpochChangeLedgerInfosRequest::try_from(req)?;
         let (ledger_infos, more) = self
             .db
             .get_epoch_change_ledger_infos(rust_req.start_epoch, rust_req.end_epoch)?;
-        let rust_resp = storage_proto::GetEpochChangeLedgerInfosResponse::new(ledger_infos, more);
+        let rust_resp =
+            libra_types::validator_change::ValidatorChangeProof::new(ledger_infos, more);
         Ok(rust_resp.into())
     }
 }
@@ -343,7 +345,7 @@ impl Storage for StorageService {
         &mut self,
         ctx: grpcio::RpcContext,
         req: GetEpochChangeLedgerInfosRequest,
-        sink: grpcio::UnarySink<GetEpochChangeLedgerInfosResponse>,
+        sink: grpcio::UnarySink<ValidatorChangeProof>,
     ) {
         debug!("[GRPC] Storage::get_epoch_change_ledger_infos");
         let _timer = SVC_COUNTERS.req(&ctx);

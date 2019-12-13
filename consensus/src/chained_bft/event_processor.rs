@@ -815,7 +815,10 @@ where
         }
         if finality_proof.ledger_info().next_validator_set().is_some() {
             self.network
-                .broadcast_epoch_change(ValidatorChangeProof::new(vec![finality_proof]))
+                .broadcast_epoch_change(ValidatorChangeProof::new(
+                    vec![finality_proof],
+                    /* more = */ false,
+                ))
                 .await
         }
     }
