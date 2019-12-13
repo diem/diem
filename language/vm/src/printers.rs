@@ -579,7 +579,9 @@ fn display_signature_token<T: TableAccess>(
 ) -> fmt::Result {
     match token {
         SignatureToken::Bool => write!(f, "Bool"),
-        SignatureToken::U64 => write!(f, "Integer"),
+        SignatureToken::U8 => write!(f, "U8"),
+        SignatureToken::U64 => write!(f, "U64"),
+        SignatureToken::U128 => write!(f, "U128"),
         SignatureToken::ByteArray => write!(f, "ByteArray"),
         SignatureToken::Address => write!(f, "Address"),
         SignatureToken::Struct(idx, types) => {

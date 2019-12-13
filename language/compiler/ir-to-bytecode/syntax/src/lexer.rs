@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::syntax::ParseError;
-use std::fmt;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tok {
     EOF,
     AccountAddressValue,
+    U8Value,
     U64Value,
+    U128Value,
     NameValue,
     NameBeginTyValue,
     DotNameValue,
@@ -65,6 +66,9 @@ pub enum Tok {
     Global,
     /// Like exists, but for spec language
     GlobalExists,
+    ToU8,
+    ToU64,
+    ToU128,
     If,
     Import,
     Let,
@@ -87,7 +91,9 @@ pub enum Tok {
     True,
     /// Transaction sender in the specification language
     TxnSender,
+    U8,
     U64,
+    U128,
     Unrestricted,
     While,
     LBrace,
@@ -104,15 +110,6 @@ impl Tok {
             Tok::Ensures | Tok::Requires | Tok::SucceedsIf | Tok::AbortsIf => true,
             _ => false,
         }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Token<'input>(pub Tok, pub &'input str);
-
-impl<'a> fmt::Display for Token<'a> {
-    fn fmt<'f>(&self, formatter: &mut fmt::Formatter<'f>) -> Result<(), fmt::Error> {
-        fmt::Display::fmt(self.1, formatter)
     }
 }
 
@@ -201,7 +198,7 @@ fn find_token(
                     (Tok::AccountAddressValue, 2 + hex_len)
                 }
             } else {
-                (Tok::U64Value, get_decimal_digits_len(&text))
+                get_decimal_number(&text)
             }
         }
         'a'..='z' | 'A'..='Z' | '$' | '_' => {
@@ -339,14 +336,24 @@ fn get_name_len(text: &str) -> usize {
         .unwrap_or_else(|| text.len())
 }
 
-// Return the length of the substring containing characters in [0-9].
-fn get_decimal_digits_len(text: &str) -> usize {
-    text.chars()
+fn get_decimal_number(text: &str) -> (Tok, usize) {
+    let len = text
+        .chars()
         .position(|c| match c {
             '0'..='9' => false,
             _ => true,
         })
-        .unwrap_or_else(|| text.len())
+        .unwrap_or_else(|| text.len());
+    let rest = &text[len..];
+    if rest.starts_with("u8") {
+        (Tok::U8Value, len + 2)
+    } else if rest.starts_with("u64") {
+        (Tok::U64Value, len + 3)
+    } else if rest.starts_with("u128") {
+        (Tok::U128Value, len + 4)
+    } else {
+        (Tok::U64Value, len)
+    }
 }
 
 // Return the length of the substring containing characters in [0-9a-fA-F].
@@ -387,6 +394,9 @@ fn get_name_token(name: &str) -> Tok {
         "false" => Tok::False,
         "freeze" => Tok::Freeze,
         "get_txn_sender" => Tok::GetTxnSender,
+        "to_u8" => Tok::ToU8,
+        "to_u64" => Tok::ToU64,
+        "to_u128" => Tok::ToU128,
         "if" => Tok::If,
         "import" => Tok::Import,
         "let" => Tok::Let,
@@ -403,7 +413,9 @@ fn get_name_token(name: &str) -> Tok {
         "succeeds_if" => Tok::SucceedsIf,
         "true" => Tok::True,
         "txn_sender" => Tok::TxnSender,
+        "u8" => Tok::U8,
         "u64" => Tok::U64,
+        "u128" => Tok::U128,
         "unrestricted" => Tok::Unrestricted,
         "while" => Tok::While,
         _ => Tok::NameValue,

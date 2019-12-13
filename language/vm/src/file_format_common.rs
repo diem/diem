@@ -73,13 +73,15 @@ pub enum SignatureType {
 #[derive(Clone, Copy, Debug)]
 pub enum SerializedType {
     BOOL                    = 0x1,
-    INTEGER                 = 0x2,
-    ADDRESS                 = 0x3,
-    REFERENCE               = 0x4,
-    MUTABLE_REFERENCE       = 0x5,
-    STRUCT                  = 0x6,
-    BYTEARRAY               = 0x7,
-    TYPE_PARAMETER          = 0x8,
+    U8                      = 0x2,
+    U64                     = 0x3,
+    U128                    = 0x4,
+    ADDRESS                 = 0x5,
+    REFERENCE               = 0x6,
+    MUTABLE_REFERENCE       = 0x7,
+    STRUCT                  = 0x8,
+    BYTEARRAY               = 0x9,
+    TYPE_PARAMETER          = 0xA,
 }
 
 #[rustfmt::skip]
@@ -121,7 +123,7 @@ pub enum Opcodes {
     BR_TRUE                 = 0x03,
     BR_FALSE                = 0x04,
     BRANCH                  = 0x05,
-    LD_CONST                = 0x06,
+    LD_U64                  = 0x06,
     LD_ADDR                 = 0x07,
     LD_TRUE                 = 0x08,
     LD_FALSE                = 0x09,
@@ -168,8 +170,14 @@ pub enum Opcodes {
     GET_TXN_SEQUENCE_NUMBER = 0x32,
     GET_TXN_PUBLIC_KEY      = 0x33,
     FREEZE_REF              = 0x34,
-    SHL = 0x35,
-    SHR = 0x36,
+    // TODO: reshuffle once file format stabilizes
+    SHL                     = 0x35,
+    SHR                     = 0x36,
+    LD_U8                   = 0x37,
+    LD_U128                 = 0x38,
+    CAST_U8                 = 0x39,
+    CAST_U64                = 0x3A,
+    CAST_U128               = 0x3B,
 }
 
 /// Upper limit on the binary size
@@ -282,6 +290,11 @@ pub fn write_u32(binary: &mut BinaryData, value: u32) -> Result<()> {
 
 /// Write a `u64` in Little Endian format.
 pub fn write_u64(binary: &mut BinaryData, value: u64) -> Result<()> {
+    binary.extend(&value.to_le_bytes())
+}
+
+/// Write a `u128` in Little Endian format.
+pub fn write_u128(binary: &mut BinaryData, value: u128) -> Result<()> {
     binary.extend(&value.to_le_bytes())
 }
 

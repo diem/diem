@@ -50,7 +50,7 @@ use vm::{
 use vm_runtime_types::{
     loaded_data::struct_def::StructDef,
     native_functions::dispatch::resolve_native_function,
-    value::{Locals, ReferenceValue, Struct, Value},
+    value::{IntegerValue, Locals, ReferenceValue, Struct, Value},
 };
 
 // Data to resolve basic account and transaction flow functions and structs
@@ -78,7 +78,9 @@ fn derive_type_tag(
     match ty {
         Bool => Ok(TypeTag::Bool),
         Address => Ok(TypeTag::Address),
+        U8 => Ok(TypeTag::U8),
         U64 => Ok(TypeTag::U64),
+        U128 => Ok(TypeTag::U128),
         ByteArray => Ok(TypeTag::ByteArray),
         TypeParameter(idx) => type_actual_tags
             .get(*idx as usize)
@@ -397,9 +399,17 @@ where
                         frame.pc = *offset;
                         break;
                     }
-                    Bytecode::LdConst(int_const) => {
-                        gas!(const_instr: context, self, Opcodes::LD_CONST)?;
+                    Bytecode::LdU8(int_const) => {
+                        gas!(const_instr: context, self, Opcodes::LD_U8)?;
+                        self.operand_stack.push(Value::u8(*int_const))?;
+                    }
+                    Bytecode::LdU64(int_const) => {
+                        gas!(const_instr: context, self, Opcodes::LD_U64)?;
                         self.operand_stack.push(Value::u64(*int_const))?;
+                    }
+                    Bytecode::LdU128(int_const) => {
+                        gas!(const_instr: context, self, Opcodes::LD_U128)?;
+                        self.operand_stack.push(Value::u128(*int_const))?;
                     }
                     Bytecode::LdAddr(idx) => {
                         gas!(const_instr: context, self, Opcodes::LD_ADDR)?;
@@ -504,46 +514,61 @@ where
                         gas!(instr: context, self, Opcodes::WRITE_REF, value.size())?;
                         reference.write_ref(value);
                     }
+                    Bytecode::CastU8 => {
+                        gas!(const_instr: context, self, Opcodes::CAST_U8)?;
+                        let integer_value = self.operand_stack.pop_as::<IntegerValue>()?;
+                        self.operand_stack.push(Value::u8(integer_value.into()))?;
+                    }
+                    Bytecode::CastU64 => {
+                        gas!(const_instr: context, self, Opcodes::CAST_U64)?;
+                        let integer_value = self.operand_stack.pop_as::<IntegerValue>()?;
+                        self.operand_stack.push(Value::u64(integer_value.into()))?;
+                    }
+                    Bytecode::CastU128 => {
+                        gas!(const_instr: context, self, Opcodes::CAST_U128)?;
+                        let integer_value = self.operand_stack.pop_as::<IntegerValue>()?;
+                        self.operand_stack.push(Value::u128(integer_value.into()))?;
+                    }
                     // Arithmetic Operations
                     Bytecode::Add => {
                         gas!(const_instr: context, self, Opcodes::ADD)?;
-                        self.binop_int(u64::checked_add)?
+                        self.binop_int(IntegerValue::add_checked)?
                     }
                     Bytecode::Sub => {
                         gas!(const_instr: context, self, Opcodes::SUB)?;
-                        self.binop_int(u64::checked_sub)?
+                        self.binop_int(IntegerValue::sub_checked)?
                     }
                     Bytecode::Mul => {
                         gas!(const_instr: context, self, Opcodes::MUL)?;
-                        self.binop_int(u64::checked_mul)?
+                        self.binop_int(IntegerValue::mul_checked)?
                     }
                     Bytecode::Mod => {
                         gas!(const_instr: context, self, Opcodes::MOD)?;
-                        self.binop_int(u64::checked_rem)?
+                        self.binop_int(IntegerValue::rem_checked)?
                     }
                     Bytecode::Div => {
                         gas!(const_instr: context, self, Opcodes::DIV)?;
-                        self.binop_int(u64::checked_div)?
+                        self.binop_int(IntegerValue::div_checked)?
                     }
                     Bytecode::BitOr => {
                         gas!(const_instr: context, self, Opcodes::BIT_OR)?;
-                        self.binop_int(|l: u64, r| Some(l | r))?
+                        self.binop_int(IntegerValue::bit_or)?
                     }
                     Bytecode::BitAnd => {
                         gas!(const_instr: context, self, Opcodes::BIT_AND)?;
-                        self.binop_int(|l: u64, r| Some(l & r))?
+                        self.binop_int(IntegerValue::bit_and)?
                     }
                     Bytecode::Xor => {
                         gas!(const_instr: context, self, Opcodes::XOR)?;
-                        self.binop_int(|l: u64, r| Some(l ^ r))?
+                        self.binop_int(IntegerValue::bit_xor)?
                     }
                     Bytecode::Shl => {
                         gas!(const_instr: context, self, Opcodes::SHL)?;
-                        self.binop_int(|l: u64, r| if r < 64 { Some(l << r) } else { None })?
+                        self.binop_int(IntegerValue::shl_checked)?
                     }
                     Bytecode::Shr => {
                         gas!(const_instr: context, self, Opcodes::SHR)?;
-                        self.binop_int(|l: u64, r| if r < 64 { Some(l >> r) } else { None })?
+                        self.binop_int(IntegerValue::shr_checked)?
                     }
                     Bytecode::Or => {
                         gas!(const_instr: context, self, Opcodes::OR)?;
@@ -789,26 +814,26 @@ where
     fn binop<F, T>(&mut self, f: F) -> VMResult<()>
     where
         VMResult<T>: From<Value>,
-        F: FnOnce(T, T) -> Option<Value>,
+        F: FnOnce(T, T) -> VMResult<Value>,
     {
         let rhs = self.operand_stack.pop_as::<T>()?;
         let lhs = self.operand_stack.pop_as::<T>()?;
-        let result = f(lhs, rhs);
-        if let Some(v) = result {
-            self.operand_stack.push(v)?;
-            Ok(())
-        } else {
-            Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR))
-        }
+        let result = f(lhs, rhs)?;
+        self.operand_stack.push(result)
     }
 
     /// Perform a binary operation for integer values.
-    fn binop_int<F, T>(&mut self, f: F) -> VMResult<()>
+    fn binop_int<F>(&mut self, f: F) -> VMResult<()>
     where
-        VMResult<T>: From<Value>,
-        F: FnOnce(T, T) -> Option<u64>,
+        F: FnOnce(IntegerValue, IntegerValue) -> VMResult<IntegerValue>,
     {
-        self.binop(|lhs, rhs| f(lhs, rhs).map(Value::u64))
+        self.binop(|lhs, rhs| {
+            Ok(match f(lhs, rhs)? {
+                IntegerValue::U8(x) => Value::u8(x),
+                IntegerValue::U64(x) => Value::u64(x),
+                IntegerValue::U128(x) => Value::u128(x),
+            })
+        })
     }
 
     /// Perform a binary operation for boolean values.
@@ -817,7 +842,7 @@ where
         VMResult<T>: From<Value>,
         F: FnOnce(T, T) -> bool,
     {
-        self.binop(|lhs, rhs| Some(Value::bool(f(lhs, rhs))))
+        self.binop(|lhs, rhs| Ok(Value::bool(f(lhs, rhs))))
     }
 
     /// Entry point for all global store operations (effectively opcodes).

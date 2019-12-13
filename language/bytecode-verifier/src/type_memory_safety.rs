@@ -395,9 +395,25 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 self.borrow_field(state, offset, false, *field_definition_index)
             }
 
-            Bytecode::LdConst(_) => {
+            Bytecode::LdU8(_) => {
+                self.stack.push(TypedAbstractValue {
+                    signature: SignatureToken::U8,
+                    value: AbstractValue::Value(Kind::Unrestricted),
+                });
+                Ok(())
+            }
+
+            Bytecode::LdU64(_) => {
                 self.stack.push(TypedAbstractValue {
                     signature: SignatureToken::U64,
+                    value: AbstractValue::Value(Kind::Unrestricted),
+                });
+                Ok(())
+            }
+
+            Bytecode::LdU128(_) => {
+                self.stack.push(TypedAbstractValue {
+                    signature: SignatureToken::U128,
                     value: AbstractValue::Value(Kind::Unrestricted),
                 });
                 Ok(())
@@ -717,6 +733,52 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 }
             }
 
+            Bytecode::CastU8 => {
+                let operand = self.stack.pop().unwrap();
+                if operand.signature.is_integer() {
+                    self.stack.push(TypedAbstractValue {
+                        signature: SignatureToken::U8,
+                        value: AbstractValue::Value(Kind::Unrestricted),
+                    });
+                    Ok(())
+                } else {
+                    Err(err_at_offset(
+                        StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
+                }
+            }
+            Bytecode::CastU64 => {
+                let operand = self.stack.pop().unwrap();
+                if operand.signature.is_integer() {
+                    self.stack.push(TypedAbstractValue {
+                        signature: SignatureToken::U64,
+                        value: AbstractValue::Value(Kind::Unrestricted),
+                    });
+                    Ok(())
+                } else {
+                    Err(err_at_offset(
+                        StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
+                }
+            }
+            Bytecode::CastU128 => {
+                let operand = self.stack.pop().unwrap();
+                if operand.signature.is_integer() {
+                    self.stack.push(TypedAbstractValue {
+                        signature: SignatureToken::U128,
+                        value: AbstractValue::Value(Kind::Unrestricted),
+                    });
+                    Ok(())
+                } else {
+                    Err(err_at_offset(
+                        StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
+                }
+            }
+
             Bytecode::Add
             | Bytecode::Sub
             | Bytecode::Mul
@@ -724,16 +786,29 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             | Bytecode::Div
             | Bytecode::BitOr
             | Bytecode::BitAnd
-            | Bytecode::Xor
-            | Bytecode::Shl
-            | Bytecode::Shr => {
+            | Bytecode::Xor => {
                 let operand1 = self.stack.pop().unwrap();
                 let operand2 = self.stack.pop().unwrap();
-                if operand1.signature == SignatureToken::U64
-                    && operand2.signature == SignatureToken::U64
-                {
+                if operand1.signature.is_integer() && operand1.signature == operand2.signature {
                     self.stack.push(TypedAbstractValue {
-                        signature: SignatureToken::U64,
+                        signature: operand1.signature.clone(),
+                        value: AbstractValue::Value(Kind::Unrestricted),
+                    });
+                    Ok(())
+                } else {
+                    Err(err_at_offset(
+                        StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR,
+                        offset,
+                    ))
+                }
+            }
+
+            Bytecode::Shl | Bytecode::Shr => {
+                let operand1 = self.stack.pop().unwrap();
+                let operand2 = self.stack.pop().unwrap();
+                if operand1.signature.is_integer() && operand2.signature.is_integer() {
+                    self.stack.push(TypedAbstractValue {
+                        signature: operand2.signature.clone(),
                         value: AbstractValue::Value(Kind::Unrestricted),
                     });
                     Ok(())
@@ -823,9 +898,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::Lt | Bytecode::Gt | Bytecode::Le | Bytecode::Ge => {
                 let operand1 = self.stack.pop().unwrap();
                 let operand2 = self.stack.pop().unwrap();
-                if operand1.signature == SignatureToken::U64
-                    && operand2.signature == SignatureToken::U64
-                {
+                if operand1.signature.is_integer() && operand1.signature == operand2.signature {
                     self.stack.push(TypedAbstractValue {
                         signature: SignatureToken::Bool,
                         value: AbstractValue::Value(Kind::Unrestricted),

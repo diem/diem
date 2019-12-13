@@ -13,7 +13,9 @@ mod type_prop_tests;
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub enum Type {
     Bool,
+    U8,
     U64,
+    U128,
     ByteArray,
     Address,
     Struct(StructDef),

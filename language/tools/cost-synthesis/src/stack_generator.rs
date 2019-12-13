@@ -187,7 +187,24 @@ where
         }
     }
 
-    fn next_int(&mut self, stk: &[Value]) -> u64 {
+    // TODO: merge the following three.
+    fn next_u8(&mut self, stk: &[Value]) -> u8 {
+        if self.op == Bytecode::Sub && !stk.is_empty() {
+            let peek: VMResult<u8> = stk
+                .last()
+                .expect("[Next Integer] The impossible happened: the value stack became empty while still full.")
+                .clone()
+                .into();
+            self.gen.gen_range(
+                0,
+                peek.expect("[Next Integer] Unable to cast peeked stack value to a u8."),
+            )
+        } else {
+            self.gen.gen_range(0, u8::max_value())
+        }
+    }
+
+    fn next_u64(&mut self, stk: &[Value]) -> u64 {
         if self.op == Bytecode::Sub && !stk.is_empty() {
             let peek: VMResult<u64> = stk
                 .last()
@@ -196,10 +213,26 @@ where
                 .into();
             self.gen.gen_range(
                 0,
-                peek.expect("[Next Integer] Unable to cast peeked stack value to an integer."),
+                peek.expect("[Next Integer] Unable to cast peeked stack value to a u64."),
             )
         } else {
             u64::from(self.gen.gen_range(0, u32::max_value()))
+        }
+    }
+
+    fn next_u128(&mut self, stk: &[Value]) -> u128 {
+        if self.op == Bytecode::Sub && !stk.is_empty() {
+            let peek: VMResult<u128> = stk
+                .last()
+                .expect("[Next Integer] The impossible happened: the value stack became empty while still full.")
+                .clone()
+                .into();
+            self.gen.gen_range(
+                0,
+                peek.expect("[Next Integer] Unable to cast peeked stack value to a u128."),
+            )
+        } else {
+            u128::from(self.gen.gen_range(0, u32::max_value()))
         }
     }
 
@@ -273,10 +306,12 @@ where
     }
 
     fn next_stack_value(&mut self, stk: &[Value], is_padding: bool) -> Value {
-        match self.gen.gen_range(0, 4) {
-            0 => Value::u64(self.next_int(stk)),
-            1 => Value::bool(self.next_bool()),
-            2 => Value::byte_array(self.next_bytearray()),
+        match self.gen.gen_range(0, 6) {
+            0 => Value::u8(self.next_u8(stk)),
+            1 => Value::u64(self.next_u64(stk)),
+            2 => Value::u128(self.next_u128(stk)),
+            3 => Value::bool(self.next_bool()),
+            4 => Value::byte_array(self.next_bytearray()),
             _ => Value::address(self.next_addr(is_padding)),
         }
     }
@@ -339,9 +374,17 @@ where
                 let index = self.next_bounded_index(frame_len as TableIndex);
                 (Branch(index as CodeOffset), 1)
             }
-            LdConst(_) => {
-                let i = self.next_int(&[]);
-                (LdConst(i), 1)
+            LdU8(_) => {
+                let i = self.next_u8(&[]);
+                (LdU8(i), 1)
+            }
+            LdU64(_) => {
+                let i = self.next_u64(&[]);
+                (LdU64(i), 1)
+            }
+            LdU128(_) => {
+                let i = self.next_u128(&[]);
+                (LdU128(i), 1)
             }
             LdByteArray(_) => {
                 let bytearray_idx = self.next_bytearray_idx();
@@ -445,7 +488,9 @@ where
     fn resolve_to_value(&mut self, sig_token: &SignatureToken, stk: &[Value]) -> Value {
         match sig_token {
             SignatureToken::Bool => Value::bool(self.next_bool()),
-            SignatureToken::U64 => Value::u64(self.next_int(stk)),
+            SignatureToken::U8 => Value::u8(self.next_u8(stk)),
+            SignatureToken::U64 => Value::u64(self.next_u64(stk)),
+            SignatureToken::U128 => Value::u128(self.next_u128(stk)),
             SignatureToken::Address => Value::address(self.next_addr(false)),
             SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
                 let underlying_value = self.resolve_to_value(sig, stk);

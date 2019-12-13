@@ -29,6 +29,15 @@ pub fn stack_has(
     }
 }
 
+/// Determine whether the stack contains an integer value at given index.
+pub fn stack_has_integer(state: &AbstractState, index: usize) -> bool {
+    index < state.stack_len()
+        && match state.stack_peek(index) {
+            Some(AbstractValue { token, .. }) => token.is_integer(),
+            None => false,
+        }
+}
+
 /// Determine the abstract value at `index` is of the given kind, if it exists.
 /// If it does not exist, return `false`.
 pub fn stack_kind_is(state: &AbstractState, index: usize, kind: Kind) -> bool {
@@ -56,6 +65,34 @@ pub fn stack_has_polymorphic_eq(state: &AbstractState, index1: usize, index2: us
 pub fn stack_pop(state: &AbstractState) -> Result<AbstractState, VMError> {
     let mut state = state.clone();
     state.stack_pop()?;
+    Ok(state)
+}
+
+pub enum StackBinOpResult {
+    Left,
+    Right,
+    Other(AbstractValue),
+}
+
+/// Perform a binary operation using the top two values on the stack as operands.
+pub fn stack_bin_op(
+    state: &AbstractState,
+    res: StackBinOpResult,
+) -> Result<AbstractState, VMError> {
+    let mut state = state.clone();
+    let right = {
+        state.stack_pop()?;
+        state.register_move().unwrap()
+    };
+    let left = {
+        state.stack_pop()?;
+        state.register_move().unwrap()
+    };
+    state.stack_push(match res {
+        StackBinOpResult::Left => left,
+        StackBinOpResult::Right => right,
+        StackBinOpResult::Other(val) => val,
+    });
     Ok(state)
 }
 
@@ -375,6 +412,7 @@ pub fn register_dereference(state: &AbstractState) -> Result<AbstractState, VMEr
             )),
         }
     } else {
+        println!("{:?}", state);
         Err(VMError::new("Register is empty".to_string()))
     }
 }
@@ -502,6 +540,15 @@ pub fn memory_safe(state: &AbstractState, index: Option<usize>) -> bool {
 macro_rules! state_stack_has {
     ($e1: expr, $e2: expr) => {
         Box::new(move |state| stack_has(state, $e1, $e2))
+    };
+}
+
+/// Wrapper for enclosing the arguments of `stack_has_integer` so that only the `state` needs
+/// to be given.
+#[macro_export]
+macro_rules! state_stack_has_integer {
+    ($e1: expr) => {
+        Box::new(move |state| stack_has_integer(state, $e1))
     };
 }
 
@@ -780,5 +827,21 @@ macro_rules! state_memory_safe {
 macro_rules! state_never {
     () => {
         Box::new(|_| (false))
+    };
+}
+
+#[macro_export]
+macro_rules! state_stack_bin_op {
+    (#left) => {
+        Box::new(move |state| stack_bin_op(state, crate::transitions::StackBinOpResult::Left))
+    };
+    (#right) => {
+        Box::new(move |state| stack_bin_op(state, crate::transitions::StackBinOpResult::Right))
+    };
+    () => {
+        state_stack_bin_op!(#left);
+    };
+    ($e: expr) => {
+        Box::new(move |state| stack_bin_op(state, crate::transitions::StackBinOpResult::Other($e)))
     };
 }

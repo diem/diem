@@ -580,7 +580,9 @@ impl<'a> Context<'a> {
     ) -> Result<SignatureToken> {
         Ok(match orig {
             x @ SignatureToken::Bool
+            | x @ SignatureToken::U8
             | x @ SignatureToken::U64
+            | x @ SignatureToken::U128
             | x @ SignatureToken::ByteArray
             | x @ SignatureToken::Address
             | x @ SignatureToken::TypeParameter(_) => x,

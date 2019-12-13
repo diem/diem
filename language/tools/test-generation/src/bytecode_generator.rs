@@ -21,8 +21,14 @@ type LocalIndexToBytecode = fn(LocalIndex) -> Bytecode;
 /// This type represents bytecode instructions that take a `u16`
 type CodeOffsetToBytecode = fn(CodeOffset) -> Bytecode;
 
+/// This type represents bytecode instructions that take a `u8`
+type U8ToBytecode = fn(u8) -> Bytecode;
+
 /// This type represents bytecode instructions that take a `u64`
 type U64ToBytecode = fn(u64) -> Bytecode;
+
+/// This type represents bytecode instructions that take a `u128`
+type U128ToBytecode = fn(u128) -> Bytecode;
 
 /// This type represents bytecode instructions that take a `AddressPoolIndex`
 type AddressPoolIndexToBytecode = fn(AddressPoolIndex) -> Bytecode;
@@ -53,8 +59,14 @@ enum BytecodeType {
     /// Instructions that take a `CodeOffset`
     CodeOffset(CodeOffsetToBytecode),
 
+    /// Instructions that take a `u8`
+    U8(U8ToBytecode),
+
     /// Instructions that take a `u64`
     U64(U64ToBytecode),
+
+    /// Instructions that take a `u128`
+    U128(U128ToBytecode),
 
     /// Instructions that take an `AddressPoolIndex`
     AddressPoolIndex(AddressPoolIndexToBytecode),
@@ -101,7 +113,12 @@ impl BytecodeGenerator {
     pub fn new(seed: Option<[u8; 32]>) -> Self {
         let instructions: Vec<(StackEffect, BytecodeType)> = vec![
             (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Pop)),
-            (StackEffect::Add, BytecodeType::U64(Bytecode::LdConst)),
+            (StackEffect::Add, BytecodeType::U8(Bytecode::LdU8)),
+            (StackEffect::Add, BytecodeType::U64(Bytecode::LdU64)),
+            (StackEffect::Add, BytecodeType::U128(Bytecode::LdU128)),
+            (StackEffect::Nop, BytecodeType::NoArg(Bytecode::CastU8)),
+            (StackEffect::Nop, BytecodeType::NoArg(Bytecode::CastU64)),
+            (StackEffect::Nop, BytecodeType::NoArg(Bytecode::CastU128)),
             (
                 StackEffect::Add,
                 BytecodeType::AddressPoolIndex(Bytecode::LdAddr),
@@ -261,9 +278,17 @@ impl BytecodeGenerator {
                     // Set 0 as the offset. This will be set correctly during serialization
                     instruction(0)
                 }
+                BytecodeType::U8(instruction) => {
+                    // Generate a random u8 constant to load
+                    instruction(self.rng.gen_range(0, u8::max_value()))
+                }
                 BytecodeType::U64(instruction) => {
                     // Generate a random u64 constant to load
                     instruction(self.rng.gen_range(0, u64::max_value()))
+                }
+                BytecodeType::U128(instruction) => {
+                    // Generate a random u128 constant to load
+                    instruction(self.rng.gen_range(0, u128::max_value()))
                 }
                 BytecodeType::AddressPoolIndex(instruction) => {
                     // Select a random address from the module's address pool
@@ -458,7 +483,7 @@ impl BytecodeGenerator {
                     if state.is_final() {
                         break;
                     } else if state.has_aborted() {
-                        state = self.apply_instruction(state, &mut bytecode, Bytecode::LdConst(0));
+                        state = self.apply_instruction(state, &mut bytecode, Bytecode::LdU64(0));
                         self.apply_instruction(state, &mut bytecode, Bytecode::Abort);
                         return bytecode;
                     }

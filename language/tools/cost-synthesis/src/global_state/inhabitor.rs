@@ -69,8 +69,16 @@ where
         ModuleId::new(address, name.into())
     }
 
-    fn next_int(&mut self) -> u64 {
+    fn next_u8(&mut self) -> u8 {
+        self.gen.gen_range(0, u8::max_value())
+    }
+
+    fn next_u64(&mut self) -> u64 {
         u64::from(self.gen.gen_range(0, u32::max_value()))
+    }
+
+    fn next_u128(&mut self) -> u128 {
+        u128::from(self.gen.gen_range(0, u32::max_value()))
     }
 
     fn next_bool(&mut self) -> bool {
@@ -134,7 +142,9 @@ where
     pub fn inhabit(&mut self, sig_token: &SignatureToken) -> Value {
         match sig_token {
             SignatureToken::Bool => Value::bool(self.next_bool()),
-            SignatureToken::U64 => Value::u64(self.next_int()),
+            SignatureToken::U8 => Value::u8(self.next_u8()),
+            SignatureToken::U64 => Value::u64(self.next_u64()),
+            SignatureToken::U128 => Value::u128(self.next_u128()),
             SignatureToken::Address => Value::address(self.next_addr()),
             SignatureToken::Reference(sig) | SignatureToken::MutableReference(sig) => {
                 let underlying_value = self.inhabit(&*sig);

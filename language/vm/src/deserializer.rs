@@ -665,7 +665,9 @@ fn load_signature_token(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Signat
     if let Ok(byte) = cursor.read_u8() {
         match SerializedType::from_u8(byte)? {
             SerializedType::BOOL => Ok(SignatureToken::Bool),
-            SerializedType::INTEGER => Ok(SignatureToken::U64),
+            SerializedType::U8 => Ok(SignatureToken::U8),
+            SerializedType::U64 => Ok(SignatureToken::U64),
+            SerializedType::U128 => Ok(SignatureToken::U128),
             SerializedType::BYTEARRAY => Ok(SignatureToken::ByteArray),
             SerializedType::ADDRESS => Ok(SignatureToken::Address),
             SerializedType::REFERENCE => {
@@ -883,10 +885,23 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
                 let jump = read_u16_internal(cursor)?;
                 Bytecode::Branch(jump)
             }
-            Opcodes::LD_CONST => {
-                let value = read_u64_internal(cursor)?;
-                Bytecode::LdConst(value)
+            Opcodes::LD_U8 => {
+                let value = cursor
+                    .read_u8()
+                    .map_err(|_| VMStatus::new(StatusCode::MALFORMED))?;
+                Bytecode::LdU8(value)
             }
+            Opcodes::LD_U64 => {
+                let value = read_u64_internal(cursor)?;
+                Bytecode::LdU64(value)
+            }
+            Opcodes::LD_U128 => {
+                let value = read_u128_internal(cursor)?;
+                Bytecode::LdU128(value)
+            }
+            Opcodes::CAST_U8 => Bytecode::CastU8,
+            Opcodes::CAST_U64 => Bytecode::CastU64,
+            Opcodes::CAST_U128 => Bytecode::CastU128,
             Opcodes::LD_ADDR => {
                 let idx = read_uleb_u16_internal(cursor)?;
                 Bytecode::LdAddr(AddressPoolIndex(idx))
@@ -1046,6 +1061,12 @@ fn read_u64_internal(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u64> {
         .map_err(|_| VMStatus::new(StatusCode::MALFORMED))
 }
 
+fn read_u128_internal(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u128> {
+    cursor
+        .read_u128::<LittleEndian>()
+        .map_err(|_| VMStatus::new(StatusCode::MALFORMED))
+}
+
 impl TableType {
     fn from_u8(value: u8) -> BinaryLoaderResult<TableType> {
         match value {
@@ -1083,13 +1104,15 @@ impl SerializedType {
     fn from_u8(value: u8) -> BinaryLoaderResult<SerializedType> {
         match value {
             0x1 => Ok(SerializedType::BOOL),
-            0x2 => Ok(SerializedType::INTEGER),
-            0x3 => Ok(SerializedType::ADDRESS),
-            0x4 => Ok(SerializedType::REFERENCE),
-            0x5 => Ok(SerializedType::MUTABLE_REFERENCE),
-            0x6 => Ok(SerializedType::STRUCT),
-            0x7 => Ok(SerializedType::BYTEARRAY),
-            0x8 => Ok(SerializedType::TYPE_PARAMETER),
+            0x2 => Ok(SerializedType::U8),
+            0x3 => Ok(SerializedType::U64),
+            0x4 => Ok(SerializedType::U128),
+            0x5 => Ok(SerializedType::ADDRESS),
+            0x6 => Ok(SerializedType::REFERENCE),
+            0x7 => Ok(SerializedType::MUTABLE_REFERENCE),
+            0x8 => Ok(SerializedType::STRUCT),
+            0x9 => Ok(SerializedType::BYTEARRAY),
+            0xA => Ok(SerializedType::TYPE_PARAMETER),
             _ => Err(VMStatus::new(StatusCode::UNKNOWN_SERIALIZED_TYPE)),
         }
     }
@@ -1134,7 +1157,7 @@ impl Opcodes {
             0x03 => Ok(Opcodes::BR_TRUE),
             0x04 => Ok(Opcodes::BR_FALSE),
             0x05 => Ok(Opcodes::BRANCH),
-            0x06 => Ok(Opcodes::LD_CONST),
+            0x06 => Ok(Opcodes::LD_U64),
             0x07 => Ok(Opcodes::LD_ADDR),
             0x08 => Ok(Opcodes::LD_TRUE),
             0x09 => Ok(Opcodes::LD_FALSE),
@@ -1183,6 +1206,11 @@ impl Opcodes {
             0x34 => Ok(Opcodes::FREEZE_REF),
             0x35 => Ok(Opcodes::SHL),
             0x36 => Ok(Opcodes::SHR),
+            0x37 => Ok(Opcodes::LD_U8),
+            0x38 => Ok(Opcodes::LD_U128),
+            0x39 => Ok(Opcodes::CAST_U8),
+            0x3A => Ok(Opcodes::CAST_U64),
+            0x3B => Ok(Opcodes::CAST_U128),
             _ => Err(VMStatus::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }

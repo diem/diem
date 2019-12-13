@@ -246,12 +246,59 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     .push(SignatureToken::Reference(Box::new(field_type)));
             }
 
-            Bytecode::LdConst(number) => {
+            Bytecode::LdU8(number) => {
+                let temp_index = self.temp_count;
+                self.temp_stack.push(temp_index);
+                self.local_types.push(SignatureToken::U8);
+                self.code.push(StacklessBytecode::LdU8(temp_index, *number));
+                self.temp_count += 1;
+            }
+
+            Bytecode::LdU64(number) => {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(SignatureToken::U64);
                 self.code
-                    .push(StacklessBytecode::LdConst(temp_index, *number));
+                    .push(StacklessBytecode::LdU64(temp_index, *number));
+                self.temp_count += 1;
+            }
+
+            Bytecode::LdU128(number) => {
+                let temp_index = self.temp_count;
+                self.temp_stack.push(temp_index);
+                self.local_types.push(SignatureToken::U128);
+                self.code
+                    .push(StacklessBytecode::LdU128(temp_index, *number));
+                self.temp_count += 1;
+            }
+
+            Bytecode::CastU8 => {
+                let operand_index = self.temp_stack.pop().unwrap();
+                let temp_index = self.temp_count;
+                self.temp_stack.push(temp_index);
+                self.local_types.push(SignatureToken::U8);
+                self.code
+                    .push(StacklessBytecode::CastU8(temp_index, operand_index));
+                self.temp_count += 1;
+            }
+
+            Bytecode::CastU64 => {
+                let operand_index = self.temp_stack.pop().unwrap();
+                let temp_index = self.temp_count;
+                self.temp_stack.push(temp_index);
+                self.local_types.push(SignatureToken::U8);
+                self.code
+                    .push(StacklessBytecode::CastU64(temp_index, operand_index));
+                self.temp_count += 1;
+            }
+
+            Bytecode::CastU128 => {
+                let operand_index = self.temp_stack.pop().unwrap();
+                let temp_index = self.temp_count;
+                self.temp_stack.push(temp_index);
+                self.local_types.push(SignatureToken::U8);
+                self.code
+                    .push(StacklessBytecode::CastU128(temp_index, operand_index));
                 self.temp_count += 1;
             }
 
@@ -459,8 +506,9 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             | Bytecode::Shr => {
                 let operand2_index = self.temp_stack.pop().unwrap();
                 let operand1_index = self.temp_stack.pop().unwrap();
+                let operand_type = self.local_types[operand1_index].clone();
                 let temp_index = self.temp_count;
-                self.local_types.push(SignatureToken::U64);
+                self.local_types.push(operand_type);
                 self.temp_stack.push(temp_index);
                 self.temp_count += 1;
                 match bytecode {

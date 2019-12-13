@@ -7,13 +7,14 @@ use crate::{
     state_create_struct, state_function_can_acquire_resource, state_local_availability_is,
     state_local_exists, state_local_kind_is, state_local_place, state_local_set, state_local_take,
     state_local_take_borrow, state_memory_safe, state_never, state_register_dereference,
-    state_stack_function_call, state_stack_function_popn, state_stack_has,
-    state_stack_has_polymorphic_eq, state_stack_has_reference, state_stack_has_struct,
-    state_stack_kind_is, state_stack_local_polymorphic_eq, state_stack_pop, state_stack_push,
-    state_stack_push_register, state_stack_push_register_borrow, state_stack_ref_polymorphic_eq,
-    state_stack_satisfies_function_signature, state_stack_satisfies_struct_signature,
-    state_stack_struct_borrow_field, state_stack_struct_has_field, state_stack_struct_popn,
-    state_stack_unpack_struct, state_struct_is_resource,
+    state_stack_bin_op, state_stack_function_call, state_stack_function_popn, state_stack_has,
+    state_stack_has_integer, state_stack_has_polymorphic_eq, state_stack_has_reference,
+    state_stack_has_struct, state_stack_kind_is, state_stack_local_polymorphic_eq, state_stack_pop,
+    state_stack_push, state_stack_push_register, state_stack_push_register_borrow,
+    state_stack_ref_polymorphic_eq, state_stack_satisfies_function_signature,
+    state_stack_satisfies_struct_signature, state_stack_struct_borrow_field,
+    state_stack_struct_has_field, state_stack_struct_popn, state_stack_unpack_struct,
+    state_struct_is_resource,
     transitions::*,
 };
 use vm::file_format::{Bytecode, Kind, SignatureToken};
@@ -42,11 +43,44 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
             ],
             effects: vec![state_stack_pop!()],
         },
-        Bytecode::LdConst(_) => Summary {
+        Bytecode::LdU8(_) => Summary {
+            preconditions: vec![],
+            effects: vec![state_stack_push!(AbstractValue::new_primitive(
+                SignatureToken::U8
+            ))],
+        },
+        Bytecode::LdU64(_) => Summary {
             preconditions: vec![],
             effects: vec![state_stack_push!(AbstractValue::new_primitive(
                 SignatureToken::U64
             ))],
+        },
+        Bytecode::LdU128(_) => Summary {
+            preconditions: vec![],
+            effects: vec![state_stack_push!(AbstractValue::new_primitive(
+                SignatureToken::U128
+            ))],
+        },
+        Bytecode::CastU8 => Summary {
+            preconditions: vec![state_stack_has_integer!(0)],
+            effects: vec![
+                state_stack_pop!(),
+                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U8)),
+            ],
+        },
+        Bytecode::CastU64 => Summary {
+            preconditions: vec![state_stack_has_integer!(0)],
+            effects: vec![
+                state_stack_pop!(),
+                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
+            ],
+        },
+        Bytecode::CastU128 => Summary {
+            preconditions: vec![state_stack_has_integer!(0)],
+            effects: vec![
+                state_stack_pop!(),
+                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U128)),
+            ],
         },
         Bytecode::LdAddr(_) => Summary {
             preconditions: vec![],
@@ -161,138 +195,31 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
                 state_stack_push_register_borrow!(Mutability::Immutable),
             ],
         },
-        Bytecode::Add => Summary {
+        Bytecode::Add
+        | Bytecode::Sub
+        | Bytecode::Mul
+        | Bytecode::Div
+        | Bytecode::Mod
+        | Bytecode::BitAnd
+        | Bytecode::BitOr
+        | Bytecode::Xor => Summary {
             preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
+                state_stack_has_integer!(0),
+                state_stack_has_integer!(1),
+                state_stack_has_polymorphic_eq!(0, 1),
             ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
-            ],
+            effects: vec![state_stack_bin_op!()],
         },
-        Bytecode::Sub => Summary {
-            preconditions: vec![
-                // TODO: op1 needs to be >= op2 (negative numbers not supported)
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
-            ],
+        Bytecode::Shl | Bytecode::Shr => Summary {
+            preconditions: vec![state_stack_has_integer!(0), state_stack_has_integer!(1)],
+            effects: vec![state_stack_bin_op!()],
         },
-        Bytecode::Mul => Summary {
-            preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
-            ],
-        },
-        Bytecode::Div => Summary {
-            preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
-            ],
-        },
-        Bytecode::Mod => Summary {
-            preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
-            ],
-        },
-        Bytecode::BitAnd => Summary {
-            preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
-            ],
-        },
-        Bytecode::BitOr => Summary {
-            preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
-            ],
-        },
-        Bytecode::Xor => Summary {
-            preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
-            ],
-        },
-        Bytecode::Shl => Summary {
-            preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
-            ],
-        },
-        Bytecode::Shr => Summary {
-            preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U64)),
-            ],
-        },
-        Bytecode::Or => Summary {
+        Bytecode::Or | Bytecode::And => Summary {
             preconditions: vec![
                 state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::Bool))),
                 state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::Bool))),
             ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::Bool)),
-            ],
-        },
-        Bytecode::And => Summary {
-            preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::Bool))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::Bool))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::Bool)),
-            ],
+            effects: vec![state_stack_bin_op!()],
         },
         Bytecode::Not => Summary {
             preconditions: vec![state_stack_has!(
@@ -304,7 +231,7 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
                 state_stack_push!(AbstractValue::new_primitive(SignatureToken::Bool)),
             ],
         },
-        Bytecode::Eq => Summary {
+        Bytecode::Eq | Bytecode::Neq => Summary {
             preconditions: vec![
                 state_stack_has!(0, None),
                 state_stack_has!(1, None),
@@ -319,64 +246,15 @@ pub fn instruction_summary(instruction: Bytecode) -> Summary {
                 state_stack_push!(AbstractValue::new_primitive(SignatureToken::Bool)),
             ],
         },
-        Bytecode::Neq => Summary {
+        Bytecode::Lt | Bytecode::Gt | Bytecode::Le | Bytecode::Ge => Summary {
             preconditions: vec![
-                state_stack_has!(0, None),
-                state_stack_has!(1, None),
-                state_stack_kind_is!(0, Kind::Unrestricted),
+                state_stack_has_integer!(0),
+                state_stack_has_integer!(1),
                 state_stack_has_polymorphic_eq!(0, 1),
-                state_memory_safe!(Some(0)),
-                state_memory_safe!(Some(1)),
             ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::Bool)),
-            ],
-        },
-        Bytecode::Lt => Summary {
-            preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::Bool)),
-            ],
-        },
-        Bytecode::Gt => Summary {
-            preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::Bool)),
-            ],
-        },
-        Bytecode::Le => Summary {
-            preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::Bool)),
-            ],
-        },
-        Bytecode::Ge => Summary {
-            preconditions: vec![
-                state_stack_has!(0, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-                state_stack_has!(1, Some(AbstractValue::new_primitive(SignatureToken::U64))),
-            ],
-            effects: vec![
-                state_stack_pop!(),
-                state_stack_pop!(),
-                state_stack_push!(AbstractValue::new_primitive(SignatureToken::Bool)),
-            ],
+            effects: vec![state_stack_bin_op!(AbstractValue::new_primitive(
+                SignatureToken::Bool
+            ))],
         },
         Bytecode::GetTxnGasUnitPrice => Summary {
             preconditions: vec![],

@@ -71,9 +71,15 @@ pub enum StacklessBytecode {
 
     LdTrue(TempIndex),
     LdFalse(TempIndex),
-    LdConst(TempIndex, u64),
+    LdU8(TempIndex, u8),
+    LdU64(TempIndex, u64),
+    LdU128(TempIndex, u128),
     LdAddr(TempIndex, AddressPoolIndex),
     LdByteArray(TempIndex, ByteArrayPoolIndex),
+
+    CastU8(TempIndex, TempIndex),
+    CastU64(TempIndex, TempIndex),
+    CastU128(TempIndex, TempIndex),
 
     Not(TempIndex, TempIndex),            // t1 = !t2
     Add(TempIndex, TempIndex, TempIndex), // t1 = t2 binop t3
