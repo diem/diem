@@ -14,7 +14,7 @@ use libra_types::crypto_proxies::EpochInfo;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::{association_address, get_account_resource_or_default},
+    account_config::{association_address, AccountResource},
     account_state_blob::AccountStateWithProof,
     block_info::BlockInfo,
     block_metadata::BlockMetadata,
@@ -25,7 +25,7 @@ use libra_types::{
     transaction::{Script, Transaction, TransactionListWithProof, TransactionWithProof},
 };
 use rand::SeedableRng;
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use transaction_builder::{
@@ -709,7 +709,11 @@ fn verify_account_balance<F>(account_state_with_proof: &AccountStateWithProof, f
 where
     F: Fn(u64) -> bool,
 {
-    let balance = get_account_resource_or_default(&account_state_with_proof.blob)?.balance();
+    let balance = if let Some(blob) = &account_state_with_proof.blob {
+        AccountResource::try_from(blob)?.balance()
+    } else {
+        0
+    };
     ensure!(
         f(balance),
         "balance {} doesn't satisfy the condition passed in",
@@ -765,8 +769,11 @@ fn verify_uncommitted_txn_status(
         "proof_of_current_sequence_number should be provided when transaction is not committed."
     )
     })?;
-    let seq_num_in_account =
-        get_account_resource_or_default(&proof_of_current_sequence_number.blob)?.sequence_number();
+    let seq_num_in_account = if let Some(blob) = &proof_of_current_sequence_number.blob {
+        AccountResource::try_from(blob)?.sequence_number()
+    } else {
+        0
+    };
 
     ensure!(
         expected_seq_num == seq_num_in_account,

@@ -26,7 +26,7 @@ use libra_crypto::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{association_address, get_account_resource_or_default},
+    account_config::{association_address, AccountResource},
     get_with_proof::ResponseItem,
     proto::types::{
         request_item::RequestedItems, GetAccountStateRequest, RequestItem,
@@ -369,11 +369,14 @@ fn query_sequence_numbers(
                 account_state_with_proof,
             } = item
             {
-                let account_resource = get_account_resource_or_default(
-                    &account_state_with_proof.blob,
-                )
-                .map_err(|e| format_err!("get_account_resource_or_default failed: {:?} ", e))?;
-                result.push(account_resource.sequence_number());
+                let sequence_number = if let Some(blob) = account_state_with_proof.blob {
+                    let account_resource = AccountResource::try_from(&blob)
+                        .map_err(|e| format_err!("AccountResource::try_from failed: {:?} ", e))?;
+                    account_resource.sequence_number()
+                } else {
+                    0
+                };
+                result.push(sequence_number);
             } else {
                 bail!(
                     "Unexpected item in UpdateToLatestLedgerResponse: {:?}",

@@ -12,7 +12,7 @@ use libra_types::crypto_proxies::EpochInfo;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::get_account_resource_or_default,
+    account_config::AccountResource,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
     get_with_proof::{
@@ -156,7 +156,10 @@ impl GRPCClient {
 
     /// Get the latest account sequence number for the account specified.
     pub fn get_sequence_number(&mut self, address: AccountAddress) -> Result<u64> {
-        Ok(get_account_resource_or_default(&self.get_account_blob(address)?.0)?.sequence_number())
+        Ok(match self.get_account_blob(address)?.0 {
+            Some(blob) => AccountResource::try_from(&blob)?.sequence_number(),
+            None => 0,
+        })
     }
 
     /// Get the latest account state blob from validator.

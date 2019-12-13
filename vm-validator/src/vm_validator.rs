@@ -5,10 +5,11 @@ use anyhow::{Error, Result};
 use futures::future::{err, ok, Future};
 use libra_config::config::NodeConfig;
 use libra_types::{
-    account_address::AccountAddress, account_config::get_account_resource_or_default,
+    account_address::AccountAddress, account_config::AccountResource,
     transaction::SignedTransaction, vm_error::VMStatus,
 };
 use scratchpad::SparseMerkleTree;
+use std::convert::TryFrom;
 use std::sync::Arc;
 use storage_client::{StorageRead, VerifiedStateView};
 use vm_runtime::{LibraVM, VMVerifier};
@@ -73,8 +74,12 @@ pub async fn get_account_state(
     let account_state = storage_read_client
         .get_latest_account_state_async(address)
         .await?;
-    let account_resource = get_account_resource_or_default(&account_state)?;
-    let sequence_number = account_resource.sequence_number();
-    let balance = account_resource.balance();
-    Ok((sequence_number, balance))
+    Ok(if let Some(blob) = account_state {
+        let account_resource = AccountResource::try_from(&blob)?;
+        let sequence_number = account_resource.sequence_number();
+        let balance = account_resource.balance();
+        (sequence_number, balance)
+    } else {
+        (0, 0)
+    })
 }

@@ -10,12 +10,15 @@ use crate::{
     identifier::{IdentStr, Identifier},
     language_storage::StructTag,
 };
-use anyhow::{bail, Result};
+use anyhow::{bail, Error, Result};
 use lazy_static::lazy_static;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, convert::TryInto};
+use std::{
+    collections::BTreeMap,
+    convert::{TryFrom, TryInto},
+};
 
 lazy_static! {
     // LibraCoin
@@ -108,7 +111,7 @@ pub fn received_payment_tag() -> StructTag {
 
 /// A Rust representation of an Account resource.
 /// This is not how the Account is represented in the VM but it's a convenient representation.
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountResource {
     authentication_key: ByteArray,
@@ -200,15 +203,12 @@ impl AccountResource {
     }
 }
 
-pub fn get_account_resource_or_default(
-    account_state: &Option<AccountStateBlob>,
-) -> Result<AccountResource> {
-    match account_state {
-        Some(blob) => {
-            let account_btree = blob.try_into()?;
-            AccountResource::make_from(&account_btree)
-        }
-        None => Ok(AccountResource::default()),
+impl TryFrom<&AccountStateBlob> for AccountResource {
+    type Error = Error;
+
+    fn try_from(account_state_blob: &AccountStateBlob) -> Result<Self> {
+        let account_btree = account_state_blob.try_into()?;
+        AccountResource::make_from(&account_btree)
     }
 }
 
@@ -237,7 +237,7 @@ lazy_static! {
 }
 
 /// Struct that represents a SentPaymentEvent.
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SentPaymentEvent {
     amount: u64,
     receiver: AccountAddress,
@@ -275,7 +275,7 @@ impl SentPaymentEvent {
 }
 
 /// Struct that represents a ReceivedPaymentEvent.
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ReceivedPaymentEvent {
     amount: u64,
     sender: AccountAddress,

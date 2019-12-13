@@ -12,8 +12,8 @@ use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_config::{
-        association_address, core_code_address, get_account_resource_or_default, AccountResource,
-        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
+        association_address, core_code_address, AccountResource, ACCOUNT_RECEIVED_EVENT_PATH,
+        ACCOUNT_SENT_EVENT_PATH,
     },
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
@@ -873,7 +873,11 @@ impl ClientProxy {
         address: AccountAddress,
     ) -> Result<AccountResource> {
         let account_state = self.get_account_state_and_update(address)?;
-        get_account_resource_or_default(&account_state.0)
+        if let Some(blob) = account_state.0 {
+            AccountResource::try_from(&blob)
+        } else {
+            bail!("No account exists at {:?}", address)
+        }
     }
 
     /// Get account using specific address.
@@ -889,8 +893,7 @@ impl ClientProxy {
             match client.get_account_blob(address) {
                 Ok(resp) => match resp.0 {
                     Some(account_state_blob) => (
-                        get_account_resource_or_default(&Some(account_state_blob))?
-                            .sequence_number(),
+                        AccountResource::try_from(&account_state_blob)?.sequence_number(),
                         AccountStatus::Persisted,
                     ),
                     None => (0, AccountStatus::Local),

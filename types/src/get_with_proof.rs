@@ -7,7 +7,7 @@ use crate::crypto_proxies::EpochInfo;
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::get_account_resource_or_default,
+    account_config::AccountResource,
     account_state_blob::AccountStateWithProof,
     contract_event::EventWithProof,
     crypto_proxies::LedgerInfoWithSignatures,
@@ -329,9 +329,16 @@ fn verify_get_txn_by_seq_num_resp(
             )
         },
         (None, Some(proof_of_current_sequence_number)) => {
-            let sequence_number_in_ledger =
-                get_account_resource_or_default(&proof_of_current_sequence_number.blob)?
-                    .sequence_number();
+            let sequence_number_in_ledger = {
+                if let Some(blob) = &proof_of_current_sequence_number.blob {
+                    AccountResource::try_from(blob)?.sequence_number()
+                } else {
+                    // Account does not exist. From the sequence number perspective, it's
+                    // equivalent to the situation when the account does exist but has never sent
+                    // a transaction. Use default value of sequence number.
+                    0
+                }
+            };
             ensure!(
                 sequence_number_in_ledger <= req_sequence_number,
                 "Server returned no transactions while it should. Seq num requested: {}, latest seq num in ledger: {}.",
@@ -357,16 +364,17 @@ fn verify_get_events_by_access_path_resp(
     events_with_proof: &[EventWithProof],
     proof_of_latest_event: &AccountStateWithProof,
 ) -> Result<()> {
-    let account_resource = get_account_resource_or_default(&proof_of_latest_event.blob)?;
-    let (seq_num_upper_bound, expected_event_key) = {
-        proof_of_latest_event.verify(
-            ledger_info,
-            ledger_info.version(),
-            req_access_path.address,
-        )?;
-        let event_handle =
-            account_resource.get_event_handle_by_query_path(&req_access_path.path)?;
-        (event_handle.count(), event_handle.key())
+    proof_of_latest_event.verify(ledger_info, ledger_info.version(), req_access_path.address)?;
+
+    let (seq_num_upper_bound, expected_event_key_opt) = {
+        if let Some(blob) = &proof_of_latest_event.blob {
+            let account_resource = AccountResource::try_from(blob)?;
+            let event_handle =
+                account_resource.get_event_handle_by_query_path(&req_access_path.path)?;
+            (event_handle.count(), Some(*event_handle.key()))
+        } else {
+            (0, None)
+        }
     };
 
     let cursor =
@@ -396,17 +404,21 @@ fn verify_get_events_by_access_path_resp(
         expected_seq_nums.len(),
         events_with_proof.len(),
     );
-    itertools::zip_eq(events_with_proof, expected_seq_nums)
-        .map(|(e, seq_num)| {
-            e.verify(
-                ledger_info,
-                expected_event_key,
-                seq_num,
-                e.transaction_version,
-                e.event_index,
-            )
-        })
-        .collect::<Result<Vec<_>>>()?;
+    if let Some(expected_event_key) = expected_event_key_opt {
+        itertools::zip_eq(events_with_proof, expected_seq_nums)
+            .map(|(e, seq_num)| {
+                e.verify(
+                    ledger_info,
+                    &expected_event_key,
+                    seq_num,
+                    e.transaction_version,
+                    e.event_index,
+                )
+            })
+            .collect::<Result<Vec<_>>>()?;
+    } else if !events_with_proof.is_empty() {
+        bail!("Bad events_with_proof: nonempty event list for nonexistent account")
+    } // else, empty event list for nonexistent account, which is fine
 
     Ok(())
 }

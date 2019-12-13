@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(any(test, feature = "fuzzing"))]
-use crate::account_config::{account_resource_path, AccountResource};
+use crate::account_config::account_resource_path;
 use crate::{
-    account_address::AccountAddress, account_config::get_account_resource_or_default,
-    ledger_info::LedgerInfo, proof::AccountStateProof, transaction::Version,
+    account_address::AccountAddress, account_config::AccountResource, ledger_info::LedgerInfo,
+    proof::AccountStateProof, transaction::Version,
 };
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
@@ -31,7 +31,7 @@ pub struct AccountStateBlob {
 
 impl fmt::Debug for AccountStateBlob {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let decoded = get_account_resource_or_default(&Some(self.clone()))
+        let decoded = AccountResource::try_from(self)
             .map(|resource| format!("{:#?}", resource))
             .unwrap_or_else(|_| String::from("[fail]"));
 

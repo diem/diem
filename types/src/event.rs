@@ -102,12 +102,6 @@ impl Clone for EventKey {
     }
 }
 
-impl Default for EventKey {
-    fn default() -> Self {
-        Self([0; EVENT_KEY_LENGTH])
-    }
-}
-
 impl fmt::Debug for EventKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "EventKey({:?})", self.as_bytes())
@@ -174,7 +168,7 @@ impl TryFrom<&[u8]> for EventKey {
 }
 
 /// A Rust representation of an Event Handle Resource.
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EventHandle {
     /// Number of events in the event stream.
     count: u64,

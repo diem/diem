@@ -5,12 +5,10 @@ use super::*;
 use crate::test_helper::arb_blocks_to_commit;
 use libra_crypto::hash::CryptoHash;
 use libra_tools::tempdir::TempPath;
-use libra_types::{
-    account_config::get_account_resource_or_default, contract_event::ContractEvent,
-    ledger_info::LedgerInfo,
-};
+use libra_types::{contract_event::ContractEvent, ledger_info::LedgerInfo};
 use proptest::prelude::*;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 fn verify_epochs(db: &LibraDB, ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) {
     let (_, latest_li, actual_epoch_change_lis, _) =
@@ -146,10 +144,13 @@ fn get_events_by_query_path(
             ledger_info.version(),
         )?;
 
-        let account_resource = get_account_resource_or_default(&proof_of_latest_event.blob)?;
-        let expected_event_key = account_resource
-            .get_event_handle_by_query_path(&query_path.path)?
-            .key();
+        let expected_event_key_opt = proof_of_latest_event.blob.clone().map(|blob| {
+            let account_resource = AccountResource::try_from(&blob).unwrap();
+            let event_handle = account_resource
+                .get_event_handle_by_query_path(&query_path.path)
+                .unwrap();
+            *event_handle.key()
+        });
 
         let num_events = events_with_proof.len() as u64;
         proof_of_latest_event.verify(ledger_info, ledger_info.version(), query_path.address)?;
@@ -167,7 +168,8 @@ fn get_events_by_query_path(
             .map(|(e, seq_num)| {
                 e.verify(
                     ledger_info,
-                    &expected_event_key,
+                    &expected_event_key_opt
+                        .expect("Event stream is nonempty, but event key doesn't exist"),
                     seq_num,
                     e.transaction_version,
                     e.event_index,
