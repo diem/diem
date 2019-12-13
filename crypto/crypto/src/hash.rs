@@ -98,7 +98,6 @@ use proptest_derive::Arbitrary;
 use rand::{rngs::EntropyRng, Rng};
 use serde::{de, ser};
 use std::{self, convert::AsRef, fmt};
-use tiny_keccak::Keccak;
 
 const LIBRA_HASH_SUFFIX: &[u8] = b"@@$$LIBRA$$@@";
 
@@ -175,9 +174,10 @@ impl HashValue {
     /// Convenience function to compute a sha3-256 HashValue of the buffer. It will handle hasher
     /// creation, data feeding and finalization.
     pub fn from_sha3_256(buffer: &[u8]) -> Self {
-        let mut sha3 = Keccak::new_sha3_256();
-        sha3.update(buffer);
-        HashValue::from_keccak(sha3)
+        let mut ctx = ring::digest::Context::new(&ring::digest::SHA256);
+        ctx.update(buffer);
+        // unwrap: the output of SHA-256 must be of size HashValue::LENGTH
+        HashValue::from_slice(ctx.finish().as_ref()).unwrap()
     }
 
     #[cfg(test)]
@@ -185,21 +185,15 @@ impl HashValue {
     where
         I: IntoIterator<Item = &'a [u8]>,
     {
-        let mut sha3 = Keccak::new_sha3_256();
+        let mut ctx = ring::digest::Context::new(&ring::digest::SHA256);
         for buffer in buffers {
-            sha3.update(buffer);
+            ctx.update(buffer);
         }
-        HashValue::from_keccak(sha3)
+        HashValue::from_slice(ctx.finish().as_ref()).unwrap()
     }
 
     fn as_ref_mut(&mut self) -> &mut [u8] {
         &mut self.hash[..]
-    }
-
-    fn from_keccak(state: Keccak) -> Self {
-        let mut hash = Self::zero();
-        state.finalize(hash.as_ref_mut());
-        hash
     }
 
     /// Returns a `HashValueBitIterator` over all the bits that represent this `HashValue`.
@@ -446,41 +440,37 @@ pub trait CryptoHasher: Default {
 /// ambiguities within a same domain.
 /// * Only used internally within this crate
 #[derive(Clone)]
-pub struct DefaultHasher {
-    state: Keccak,
-}
+pub struct DefaultHasher(Box<ring::digest::Context>);
 
 impl CryptoHasher for DefaultHasher {
     fn finish(self) -> HashValue {
-        let mut hasher = HashValue::default();
-        self.state.finalize(hasher.as_ref_mut());
-        hasher
+        // unwrap: SHA-256 should output a result of length HashValue::LENGTH
+        HashValue::from_slice(self.0.finish().as_ref()).unwrap()
     }
 
     fn write(&mut self, bytes: &[u8]) -> &mut Self {
-        self.state.update(bytes);
+        self.0.update(bytes);
         self
     }
 }
 
 impl Default for DefaultHasher {
     fn default() -> Self {
-        DefaultHasher {
-            state: Keccak::new_sha3_256(),
-        }
+        let state = Box::new(ring::digest::Context::new(&ring::digest::SHA256));
+        Self(state)
     }
 }
 
 impl DefaultHasher {
     /// initialize a new hasher with a specific salt
     pub fn new_with_salt(typename: &[u8]) -> Self {
-        let mut state = Keccak::new_sha3_256();
+        let mut hasher = ring::digest::Context::new(&ring::digest::SHA256);
         if !typename.is_empty() {
             let mut salt = typename.to_vec();
             salt.extend_from_slice(LIBRA_HASH_SUFFIX);
-            state.update(HashValue::from_sha3_256(&salt[..]).as_ref());
+            hasher.update(HashValue::from_sha3_256(&salt[..]).as_ref());
         }
-        DefaultHasher { state }
+        Self(Box::new(hasher))
     }
 }
 
