@@ -1,4 +1,5 @@
 use autotools::Config;
+use std::env;
 
 fn main() {
     let openssl = pkg_config::probe_library("openssl")
@@ -6,11 +7,14 @@ fn main() {
         .unwrap();
     let mut dst = Config::new("scrypt-sys");
     for p in openssl.link_paths {
-        dst.cflag(format!("-L{}", p.to_str().unwrap()));
+        dst.ldflag(format!("-L{}", p.to_str().unwrap()));
     }
     for p in openssl.include_paths {
         dst.cflag(format!("-I{}", p.to_str().unwrap()));
     }
-
-    dst.enable_static().enable("libscrypt-kdf.a", None).build();
+    dst.enable("libscrypt-kdf", None);
+    dst.enable_shared();
+    dst.build();
+    let out_dir = env::var("OUT_DIR").unwrap();
+    println!("cargo:rustc-link-search=native={}/lib", out_dir);
 }

@@ -192,6 +192,7 @@ impl Solution {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::util::blake2b_256;
 
     #[test]
     fn test_mine() {
