@@ -19,11 +19,11 @@ fn test_default_hasher() {
     );
     assert_eq!(
         format!("{:x}", b"hello".test_only_hash()),
-        "3338be694f50c5f338814986cdf0686453a888b84f424d792af4b9202398f392",
+        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
     );
     assert_eq!(
         format!("{:x}", b"world".test_only_hash()),
-        "420baf620e3fcd9b3715b42b92506e9304d56e02d3a103499a3a292560cb66b2",
+        "486ea46224d1bb4fb680f34f7c9ad96a8f24ec88be73ea8e5a6c65260e9cb8a7",
     );
 }
 
@@ -91,18 +91,18 @@ fn test_hash_value_iter_bits() {
     assert_eq!(bits[0], false);
     assert_eq!(bits[1], false);
     assert_eq!(bits[2], true);
-    assert_eq!(bits[3], true);
-    assert_eq!(bits[4], false);
-    assert_eq!(bits[5], false);
-    assert_eq!(bits[6], true);
-    assert_eq!(bits[7], true);
-    assert_eq!(bits[248], true);
+    assert_eq!(bits[3], false);
+    assert_eq!(bits[4], true);
+    assert_eq!(bits[5], true);
+    assert_eq!(bits[6], false);
+    assert_eq!(bits[7], false);
+    assert_eq!(bits[248], false);
     assert_eq!(bits[249], false);
-    assert_eq!(bits[250], false);
-    assert_eq!(bits[251], true);
+    assert_eq!(bits[250], true);
+    assert_eq!(bits[251], false);
     assert_eq!(bits[252], false);
-    assert_eq!(bits[253], false);
-    assert_eq!(bits[254], true);
+    assert_eq!(bits[253], true);
+    assert_eq!(bits[254], false);
     assert_eq!(bits[255], false);
 
     let mut bits_rev = hash.iter_bits().rev().collect::<Vec<_>>();
@@ -141,38 +141,41 @@ fn test_fmt_binary() {
 #[test]
 fn test_get_nibble() {
     let hash = b"hello".test_only_hash();
-    assert_eq!(hash.get_nibble(0), Nibble::from(3));
-    assert_eq!(hash.get_nibble(1), Nibble::from(3));
-    assert_eq!(hash.get_nibble(2), Nibble::from(3));
-    assert_eq!(hash.get_nibble(3), Nibble::from(8));
-    assert_eq!(hash.get_nibble(62), Nibble::from(9));
-    assert_eq!(hash.get_nibble(63), Nibble::from(2));
+    assert_eq!(hash.get_nibble(0), Nibble::from(2));
+    assert_eq!(hash.get_nibble(1), Nibble::from(12));
+    assert_eq!(hash.get_nibble(2), Nibble::from(15));
+    assert_eq!(hash.get_nibble(3), Nibble::from(2));
+    assert_eq!(hash.get_nibble(62), Nibble::from(2));
+    assert_eq!(hash.get_nibble(63), Nibble::from(4));
 }
 
 #[test]
-fn test_common_prefix_bits_len() {
+fn test_common_prefix_bits_and_nibbles() {
     {
         let hash1 = b"hello".test_only_hash();
         let hash2 = b"HELLO".test_only_hash();
-        assert_eq!(hash1[0], 0b0011_0011);
-        assert_eq!(hash2[0], 0b1011_1000);
-        assert_eq!(hash1.common_prefix_bits_len(hash2), 0);
+        assert_eq!(hash1[0], 0b0010_1100);
+        assert_eq!(hash2[0], 0b0011_0111);
+        assert_eq!(hash1.common_prefix_bits_len(hash2), 3);
+        assert_eq!(hash1.common_prefix_nibbles_len(hash2), 0);
     }
     {
         let hash1 = b"hello".test_only_hash();
         let hash2 = b"world".test_only_hash();
-        assert_eq!(hash1[0], 0b0011_0011);
-        assert_eq!(hash2[0], 0b0100_0010);
+        assert_eq!(hash1[0], 0b0010_1100);
+        assert_eq!(hash2[0], 0b0100_1000);
         assert_eq!(hash1.common_prefix_bits_len(hash2), 1);
+        assert_eq!(hash1.common_prefix_nibbles_len(hash2), 0);
     }
     {
         let hash1 = b"hello".test_only_hash();
         let hash2 = b"100011001000".test_only_hash();
-        assert_eq!(hash1[0], 0b0011_0011);
-        assert_eq!(hash2[0], 0b0011_0011);
-        assert_eq!(hash1[1], 0b0011_1000);
-        assert_eq!(hash2[1], 0b0010_0010);
-        assert_eq!(hash1.common_prefix_bits_len(hash2), 11);
+        assert_eq!(hash1[0], 0b0010_1100);
+        assert_eq!(hash2[0], 0b0001_0111);
+        assert_eq!(hash1[1], 0b1111_0010);
+        assert_eq!(hash2[1], 0b1011_0011);
+        assert_eq!(hash1.common_prefix_bits_len(hash2), 2);
+        assert_eq!(hash1.common_prefix_nibbles_len(hash2), 0);
     }
     {
         let hash1 = b"hello".test_only_hash();
@@ -181,37 +184,6 @@ fn test_common_prefix_bits_len() {
             hash1.common_prefix_bits_len(hash2),
             HashValue::LENGTH_IN_BITS
         );
-    }
-}
-
-#[test]
-fn test_common_prefix_nibbles_len() {
-    {
-        let hash1 = b"hello".test_only_hash();
-        let hash2 = b"HELLO".test_only_hash();
-        assert_eq!(hash1[0], 0b0011_0011);
-        assert_eq!(hash2[0], 0b1011_1000);
-        assert_eq!(hash1.common_prefix_nibbles_len(hash2), 0);
-    }
-    {
-        let hash1 = b"hello".test_only_hash();
-        let hash2 = b"world".test_only_hash();
-        assert_eq!(hash1[0], 0b0011_0011);
-        assert_eq!(hash2[0], 0b0100_0010);
-        assert_eq!(hash1.common_prefix_nibbles_len(hash2), 0);
-    }
-    {
-        let hash1 = b"hello".test_only_hash();
-        let hash2 = b"100011001000".test_only_hash();
-        assert_eq!(hash1[0], 0b0011_0011);
-        assert_eq!(hash2[0], 0b0011_0011);
-        assert_eq!(hash1[1], 0b0011_1000);
-        assert_eq!(hash2[1], 0b0010_0010);
-        assert_eq!(hash1.common_prefix_nibbles_len(hash2), 2);
-    }
-    {
-        let hash1 = b"hello".test_only_hash();
-        let hash2 = b"hello".test_only_hash();
         assert_eq!(
             hash1.common_prefix_nibbles_len(hash2),
             HashValue::LENGTH_IN_NIBBLES

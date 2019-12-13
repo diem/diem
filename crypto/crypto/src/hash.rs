@@ -192,10 +192,6 @@ impl HashValue {
         HashValue::from_slice(ctx.finish().as_ref()).unwrap()
     }
 
-    fn as_ref_mut(&mut self) -> &mut [u8] {
-        &mut self.hash[..]
-    }
-
     /// Returns a `HashValueBitIterator` over all the bits that represent this `HashValue`.
     pub fn iter_bits(&self) -> HashValueBitIterator<'_> {
         HashValueBitIterator::new(self)
