@@ -24,11 +24,10 @@ def create_client():
         ac_port = os.environ['AC_PORT']
 
         print("Connecting to ac on: {}:{}".format(ac_host, ac_port))
-        cmd = "/opt/libra/bin/client --host {} --port {} -m {} -s {}".format(
+        cmd = "/opt/libra/bin/client --host {} --port {} -m {}".format(
             ac_host,
             ac_port,
-            "/opt/libra/etc/mint.key",
-            "/opt/libra/etc/consensus_peers.config.toml")
+            "/opt/libra/etc/mint.key")
 
         application.client = pexpect.spawn(cmd)
         application.client.delaybeforesend = 0.1
