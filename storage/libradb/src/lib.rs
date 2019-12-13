@@ -42,7 +42,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{bail, ensure, Result};
+use anyhow::{bail, ensure, format_err, Result};
 use itertools::{izip, zip_eq};
 use jellyfish_merkle::iterator::JellyfishMerkleIterator;
 use lazy_static::lazy_static;
@@ -689,6 +689,20 @@ impl LibraDB {
         };
 
         Ok(Some(startup_info))
+    }
+
+    /// Finds the lowest ledger info that is covering the given version.
+    /// In case the given version is the end of an epoch, the returned LedgerInfo is exactly at
+    /// epoch boundary.
+    pub fn get_ledger_info_by_version(&self, version: Version) -> Result<LedgerInfoWithSignatures> {
+        // Return the last LedgerInfo in the epoch of the given version.
+        let epoch = self.ledger_store.get_epoch(version)?;
+        self.ledger_store
+            .get_first_n_epoch_change_ledger_infos(epoch, epoch + 1, 1)?
+            .0
+            .first()
+            .cloned()
+            .ok_or_else(|| format_err!("No LedgerInfo found for epoch {}", epoch))
     }
 
     // ======================= State Synchronizer Internal APIs ===================================

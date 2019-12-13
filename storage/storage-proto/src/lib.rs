@@ -720,6 +720,63 @@ impl Into<Vec<LedgerInfoWithSignatures>> for GetEpochChangeLedgerInfosResponse {
     }
 }
 
+/// Helper to construct and parse [`proto::storage::GetLedgerInfoByVersionRequest`]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct GetLedgerInfoByVersionRequest {
+    pub version: Version,
+}
+
+impl TryFrom<crate::proto::storage::GetLedgerInfoByVersionRequest>
+    for GetLedgerInfoByVersionRequest
+{
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::GetLedgerInfoByVersionRequest) -> Result<Self> {
+        Ok(Self {
+            version: proto.version,
+        })
+    }
+}
+
+impl From<GetLedgerInfoByVersionRequest> for crate::proto::storage::GetLedgerInfoByVersionRequest {
+    fn from(request: GetLedgerInfoByVersionRequest) -> Self {
+        Self {
+            version: request.version,
+        }
+    }
+}
+
+/// Helper to construct and parse [`proto::storage::GetLedgerInfoByVersionResponse`]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct GetLedgerInfoByVersionResponse {
+    pub ledger_info: LedgerInfoWithSignatures,
+}
+
+impl TryFrom<crate::proto::storage::GetLedgerInfoByVersionResponse>
+    for GetLedgerInfoByVersionResponse
+{
+    type Error = Error;
+
+    fn try_from(proto: crate::proto::storage::GetLedgerInfoByVersionResponse) -> Result<Self> {
+        let ledger_info: LedgerInfoWithSignatures = proto
+            .ledger_info
+            .ok_or_else(|| format_err!("Missing ledger_info"))?
+            .try_into()?;
+        Ok(Self { ledger_info })
+    }
+}
+
+impl From<GetLedgerInfoByVersionResponse>
+    for crate::proto::storage::GetLedgerInfoByVersionResponse
+{
+    fn from(response: GetLedgerInfoByVersionResponse) -> Self {
+        let ledger_info = Some(response.ledger_info.into());
+        Self { ledger_info }
+    }
+}
+
 /// Helper to construct and parse [`proto::storage::BackupAccountStateRequest`]
 #[derive(PartialEq, Eq, Clone)]
 pub struct BackupAccountStateRequest {

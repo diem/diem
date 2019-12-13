@@ -124,6 +124,13 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!()
     }
 
+    fn get_ledger_info_by_version_async(
+        &self,
+        _version: Version,
+    ) -> Pin<Box<dyn Future<Output = Result<LedgerInfoWithSignatures>> + Send>> {
+        unimplemented!()
+    }
+
     fn backup_account_state_async(
         &self,
         _version: u64,

@@ -31,9 +31,9 @@ use storage_proto::proto::storage::{
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
     GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse,
     GetLatestAccountStateRequest, GetLatestAccountStateResponse, GetLatestStateRootRequest,
-    GetLatestStateRootResponse, GetStartupInfoRequest, GetStartupInfoResponse,
-    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest,
-    SaveTransactionsResponse, Storage,
+    GetLatestStateRootResponse, GetLedgerInfoByVersionRequest, GetLedgerInfoByVersionResponse,
+    GetStartupInfoRequest, GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
+    SaveTransactionsRequest, SaveTransactionsResponse, Storage,
 };
 
 /// Starts storage service according to config.
@@ -252,6 +252,16 @@ impl StorageService {
         let rust_resp = storage_proto::GetEpochChangeLedgerInfosResponse::new(ledger_infos);
         Ok(rust_resp.into())
     }
+
+    fn get_ledger_info_by_version_inner(
+        &self,
+        req: GetLedgerInfoByVersionRequest,
+    ) -> Result<GetLedgerInfoByVersionResponse> {
+        let rust_req = storage_proto::GetLedgerInfoByVersionRequest::try_from(req)?;
+        let ledger_info = self.db.get_ledger_info_by_version(rust_req.version)?;
+        let rust_resp = storage_proto::GetLedgerInfoByVersionResponse { ledger_info };
+        Ok(rust_resp.into())
+    }
 }
 
 impl Storage for StorageService {
@@ -348,6 +358,18 @@ impl Storage for StorageService {
         debug!("[GRPC] Storage::get_epoch_change_ledger_infos");
         let _timer = SVC_COUNTERS.req(&ctx);
         let resp = self.get_epoch_change_ledger_infos_inner(req);
+        provide_grpc_response(resp, ctx, sink);
+    }
+
+    fn get_ledger_info_by_version(
+        &mut self,
+        ctx: grpcio::RpcContext,
+        req: GetLedgerInfoByVersionRequest,
+        sink: grpcio::UnarySink<GetLedgerInfoByVersionResponse>,
+    ) {
+        debug!("[GRPC] Storage::get_ledger_info_by_version");
+        let _timer = SVC_COUNTERS.req(&ctx);
+        let resp = self.get_ledger_info_by_version_inner(req);
         provide_grpc_response(resp, ctx, sink);
     }
 

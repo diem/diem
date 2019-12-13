@@ -139,7 +139,16 @@ impl ExecutorProxyTrait for ExecutorProxy {
         Ok(ValidatorChangeEventWithProof::new(ledger_info_per_epoch))
     }
 
-    fn get_ledger_info(&self, _version: u64) -> Option<LedgerInfoWithSignatures> {
-        panic!("Not implemented");
+    fn get_ledger_info(&self, version: u64) -> Option<LedgerInfoWithSignatures> {
+        match self.storage_read_client.get_ledger_info_by_version(version) {
+            Ok(li) => {
+                if li.ledger_info().version() == version {
+                    Some(li)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        }
     }
 }

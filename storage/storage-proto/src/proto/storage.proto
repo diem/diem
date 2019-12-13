@@ -57,6 +57,10 @@ service Storage {
     rpc GetEpochChangeLedgerInfos(GetEpochChangeLedgerInfosRequest)
     returns (GetEpochChangeLedgerInfosResponse);
 
+    // Returns the lowest ledger info that includes the given version.
+    rpc GetLedgerInfoByVersion(GetLedgerInfoByVersionRequest)
+    returns (GetLedgerInfoByVersionResponse);
+
     // Returns a stream of account states.
     rpc BackupAccountState(BackupAccountStateRequest)
     returns (stream BackupAccountStateResponse);
@@ -169,6 +173,16 @@ message GetEpochChangeLedgerInfosRequest {
 message GetEpochChangeLedgerInfosResponse {
     /// Vector of latest ledger infos per epoch (not sorted)
     repeated types.LedgerInfoWithSignatures latest_ledger_infos = 1;
+}
+
+message GetLedgerInfoByVersionRequest {
+    /// The returned LedgerInfo is a minimal LedgerInfo that is equal or higher than the given version.
+    uint64 version = 1;
+}
+
+message GetLedgerInfoByVersionResponse {
+    /// The LedgerInfoWithSignatures corresponding to the given version.
+    types.LedgerInfoWithSignatures ledger_info = 1;
 }
 
 message BackupAccountStateRequest {

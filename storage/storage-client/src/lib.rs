@@ -39,8 +39,8 @@ use storage_proto::{
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
     GetEpochChangeLedgerInfosRequest, GetEpochChangeLedgerInfosResponse,
     GetLatestAccountStateRequest, GetLatestAccountStateResponse, GetLatestStateRootResponse,
-    GetStartupInfoResponse, GetTransactionsRequest, GetTransactionsResponse,
-    SaveTransactionsRequest, StartupInfo,
+    GetLedgerInfoByVersionRequest, GetLedgerInfoByVersionResponse, GetStartupInfoResponse,
+    GetTransactionsRequest, GetTransactionsResponse, SaveTransactionsRequest, StartupInfo,
 };
 
 pub use crate::state_view::VerifiedStateView;
@@ -223,6 +223,22 @@ impl StorageRead for StorageReadServiceClient {
         .map(|resp| {
             let resp = GetEpochChangeLedgerInfosResponse::try_from(resp?)?;
             Ok(resp.into())
+        })
+        .boxed()
+    }
+
+    fn get_ledger_info_by_version_async(
+        &self,
+        version: Version,
+    ) -> Pin<Box<dyn Future<Output = Result<LedgerInfoWithSignatures>> + Send>> {
+        let proto_req = GetLedgerInfoByVersionRequest { version };
+        convert_grpc_response(
+            self.client()
+                .get_ledger_info_by_version_async(&proto_req.into()),
+        )
+        .map(|resp| {
+            let resp = GetLedgerInfoByVersionResponse::try_from(resp?)?;
+            Ok(resp.ledger_info)
         })
         .boxed()
     }
@@ -449,6 +465,19 @@ pub trait StorageRead: Send + Sync {
         start_epoch: u64,
         end_epoch: u64,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<LedgerInfoWithSignatures>>> + Send>>;
+
+    /// See [`LibraDB::get_ledger_info_by_version`].
+    ///
+    /// [`LibraDB::get_ledger_info_by_version`]:
+    /// ../libradb/struct.LibraDB.html#method.get_ledger_info_by_version
+    fn get_ledger_info_by_version_async(
+        &self,
+        version: Version,
+    ) -> Pin<Box<dyn Future<Output = Result<LedgerInfoWithSignatures>> + Send>>;
+
+    fn get_ledger_info_by_version(&self, version: Version) -> Result<LedgerInfoWithSignatures> {
+        block_on(self.get_ledger_info_by_version_async(version))
+    }
 
     /// See [`LibraDB::backup_account_state`].
     ///
