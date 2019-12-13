@@ -7,6 +7,9 @@ cat > /libra_rsa <<'EOF'
 ${ssh_key}
 EOF
 
+chmod 600 /libra_rsa
+chown ec2-user /libra_rsa
+
 cat > /usr/local/bin/ct <<'EOF'
 ${ct}
 EOF
