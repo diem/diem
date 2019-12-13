@@ -509,15 +509,15 @@ lazy_static! {
             vec![Address, ByteArray],
             vec![]
         );
-        add!(m, addr, "LibraAccount", "authorize_challenger",
-          |_, _| {
+        add!(m, addr, "ChannelTransaction", "get_current_block_height",
+            |_, _| {
                 Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
-                            "authorize_challenger does not have a native implementation"
+                            "get_current_block_height does not have a native implementation"
                                 .to_string()))
              },
             vec![],
             vec![],
-            vec![]
+            vec![U64]
         );
         m
     };

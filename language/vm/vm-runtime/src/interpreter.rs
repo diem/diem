@@ -66,6 +66,8 @@ lazy_static! {
     /// The ModuleId for the ChannelUtil module
     pub static ref CHANNEL_UTIL_MODULE: ModuleId =
         { ModuleId::new(account_config::core_code_address(), Identifier::new("ChannelUtil").unwrap()) };
+    pub static ref SYSTEM_MODULE: ModuleId =
+        { ModuleId::new(account_config::core_code_address(), Identifier::new("LibraSystem").unwrap()) };
 }
 
 // Names for special functions and structs
@@ -76,6 +78,8 @@ lazy_static! {
     static ref SAVE_ACCOUNT_NAME: Identifier = Identifier::new("save_account").unwrap();
     static ref DESTRUCT_FUNC_NAME: Identifier = Identifier::new("challenge_succeed").unwrap();
     static ref CHALLENGE_STRUCT_NAME: Identifier = Identifier::new("ChannelChallengedBy").unwrap();
+    static ref GET_BLOCK_HEIGHT_FUNC_NAME: Identifier = Identifier::new("get_current_block_height").unwrap();
+    static ref CHANNELLOCKEDBY_STRUCT_NAME: Identifier = Identifier::new("ChannelLockedBy").unwrap();
 }
 
 fn derive_type_tag(
@@ -797,6 +801,7 @@ where
                 "get_proposer" => self.call_get_proposer(),
                 "get_public_keys" => self.call_get_public_keys(),
                 "get_signatures" => self.call_get_signatures(),
+                "get_current_block_height" => self.call_get_current_block_height(context),
                 _ => Err(VMStatus::new(StatusCode::LINKER_ERROR)),
             }
         } else {
@@ -876,19 +881,34 @@ where
             || participant == proposer
             || *authorized
             || self.is_challenge_succeed(context)?
+            || self.is_channel_locked(context)?  // lock timeout
         {
             return Ok(true);
         }
         return Ok(false);
     }
 
-    /// call `authorize_challenger`.
     fn is_challenge_succeed(&mut self, context: &mut dyn InterpreterContext) -> VMResult<bool> {
         let channel_address = self.get_channel_metadata()?.channel_address;
         let account_module = self.module_cache.get_loaded_module(&ACCOUNT_MODULE)?;
         let challenge_struct_id = account_module
             .struct_defs_table
             .get(&*CHALLENGE_STRUCT_NAME)
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
+        let struct_def =
+            self.module_cache
+                .resolve_struct_def(account_module, *challenge_struct_id, context)?;
+        let ap = Self::make_access_path(account_module, *challenge_struct_id, channel_address);
+        let (exists, _memsize) = context.resource_exists(&ap, struct_def)?;
+        return Ok(exists);
+    }
+
+    fn is_channel_locked(&mut self, context: &mut dyn InterpreterContext) -> VMResult<bool> {
+        let channel_address = self.get_channel_metadata()?.channel_address;
+        let account_module = self.module_cache.get_loaded_module(&ACCOUNT_MODULE)?;
+        let challenge_struct_id = account_module
+            .struct_defs_table
+            .get(&*CHANNELLOCKEDBY_STRUCT_NAME)
             .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
         let struct_def =
             self.module_cache
@@ -905,7 +925,7 @@ where
             .pop_as::<ByteArray>()?
             .as_bytes()
             .to_vec();
-        let locker = self.operand_stack.pop_as::<AccountAddress>()?;
+        let violator = self.operand_stack.pop_as::<AccountAddress>()?;
         let module_id = ModuleId::make_from(module_id_bytes).unwrap();
         let module = self.module_cache.get_loaded_module(&module_id)?;
         let func_idx = module.function_defs_table.get(&*DESTRUCT_FUNC_NAME);
@@ -914,7 +934,7 @@ where
                 context,
                 &module_id,
                 &DESTRUCT_FUNC_NAME,
-                vec![Value::address(locker)],
+                vec![Value::address(violator)],
             )
         } else {
             // do nothing
@@ -1166,6 +1186,16 @@ where
 
         let ret_val = Value::native_struct(NativeStructValue::Vector(NativeVector(val)));
         self.operand_stack.push(ret_val)
+    }
+
+    /// call `get_current_block_height`.
+    fn call_get_current_block_height(&mut self, context: &mut dyn InterpreterContext) -> VMResult<()> {
+        self.execute_function_call(
+            context,
+            &SYSTEM_MODULE,
+            &GET_BLOCK_HEIGHT_FUNC_NAME,
+            vec![],
+        )
     }
 
     /// call `do_move_to_channel`.
