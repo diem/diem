@@ -27,7 +27,7 @@ admission_control_node_debug_port = 6191
 storage_node_debug_port = 6194
 metrics_server_port = 9101
 public_metrics_server_port = 9102
-address = "localhost"
+address = "0.0.0.0"
 
 [execution]
 address = "localhost"
