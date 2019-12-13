@@ -49,7 +49,7 @@ impl AccountAddress {
     }
 
     pub fn from_public_key<PublicKey: VerifyingKey>(public_key: &PublicKey) -> Self {
-        let hash = *HashValue::from_sha3_256(&public_key.to_bytes()).as_ref();
+        let hash = *HashValue::hash(&public_key.to_bytes()).as_ref();
         AccountAddress::new(hash)
     }
 

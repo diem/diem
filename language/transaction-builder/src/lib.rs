@@ -256,7 +256,7 @@ pub fn allowing_script_hashes() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
         CREATE_ACCOUNT_TXN.clone(),
     ]
     .into_iter()
-    .map(|s| *HashValue::from_sha3_256(&s).as_ref())
+    .map(|s| *HashValue::hash(&s).as_ref())
     .collect()
 }
 

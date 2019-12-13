@@ -11,10 +11,7 @@ use libra_logger::prelude::*;
 // next continuously mutates a state and returns a u64-index
 pub fn next(state: &mut Vec<u8>) -> u64 {
     // state = SHA-3-256(state)
-    std::mem::replace(
-        state,
-        libra_crypto::HashValue::from_sha3_256(state).to_vec(),
-    );
+    std::mem::replace(state, libra_crypto::HashValue::hash(state).to_vec());
     let mut temp = [0u8; 8];
     temp.copy_from_slice(&state[..8]);
     // return state[0..8]

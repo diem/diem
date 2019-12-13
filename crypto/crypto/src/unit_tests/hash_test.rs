@@ -15,7 +15,7 @@ struct Foo(u32);
 fn test_default_hasher() {
     assert_eq!(
         Foo(3).test_only_hash(),
-        HashValue::from_iter_sha3(vec![lcs::to_bytes(&Foo(3)).unwrap().as_slice()]),
+        HashValue::from_iter(vec![lcs::to_bytes(&Foo(3)).unwrap().as_slice()]),
     );
     assert_eq!(
         format!("{:x}", b"hello".test_only_hash()),
@@ -32,17 +32,17 @@ fn test_primitive_type() {
     let x = 0xf312_u16;
     let mut wtr: Vec<u8> = vec![];
     wtr.write_u16::<LittleEndian>(x).unwrap();
-    assert_eq!(x.test_only_hash(), HashValue::from_sha3_256(&wtr[..]));
+    assert_eq!(x.test_only_hash(), HashValue::hash(&wtr[..]));
 
     let x = 0x_ff001234_u32;
     let mut wtr: Vec<u8> = vec![];
     wtr.write_u32::<LittleEndian>(x).unwrap();
-    assert_eq!(x.test_only_hash(), HashValue::from_sha3_256(&wtr[..]));
+    assert_eq!(x.test_only_hash(), HashValue::hash(&wtr[..]));
 
     let x = 0x_89abcdef_01234567_u64;
     let mut wtr: Vec<u8> = vec![];
     wtr.write_u64::<LittleEndian>(x).unwrap();
-    assert_eq!(x.test_only_hash(), HashValue::from_sha3_256(&wtr[..]));
+    assert_eq!(x.test_only_hash(), HashValue::hash(&wtr[..]));
 }
 
 #[test]

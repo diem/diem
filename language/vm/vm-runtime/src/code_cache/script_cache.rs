@@ -36,7 +36,7 @@ impl<'alloc> ScriptCache<'alloc> {
     /// Compiles, verifies, caches and resolves `raw_bytes` into a `FunctionRef` that can be
     /// executed.
     pub fn cache_script(&self, raw_bytes: &[u8]) -> VMResult<FunctionRef<'alloc>> {
-        let hash_value = HashValue::from_sha3_256(raw_bytes);
+        let hash_value = HashValue::hash(raw_bytes);
 
         // XXX We may want to put in some negative caching for scripts that fail verification.
         if let Some(f) = self.map.get(hash_value.as_ref()) {

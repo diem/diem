@@ -98,7 +98,7 @@ impl ExtendedPrivKey {
     /// from the raw bytes of the pubkey hash
     pub fn get_address(&self) -> Result<AccountAddress> {
         let public_key = self.get_public();
-        let hash = *HashValue::from_sha3_256(&public_key.to_bytes()).as_ref();
+        let hash = *HashValue::hash(&public_key.to_bytes()).as_ref();
         let addr = AccountAddress::try_from(&hash[..])?;
         Ok(addr)
     }

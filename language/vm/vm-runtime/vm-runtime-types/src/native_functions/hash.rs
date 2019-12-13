@@ -48,7 +48,7 @@ pub fn native_sha3_256(
     }
     let hash_arg = pop_arg!(arguments, ByteArray);
     let cost = native_gas(cost_table, NativeCostIndex::SHA3_256, hash_arg.len());
-    let hash_vec = HashValue::from_sha3_256(hash_arg.as_bytes()).to_vec();
+    let hash_vec = HashValue::hash(hash_arg.as_bytes()).to_vec();
     let return_values = vec![Value::byte_array(ByteArray::new(hash_vec))];
     Ok(NativeResult::ok(cost, return_values))
 }
