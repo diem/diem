@@ -98,7 +98,7 @@ impl StorageRead for MockStorageReadClient {
         &self,
         _address: AccountAddress,
     ) -> Pin<Box<dyn Future<Output = Result<Option<AccountStateBlob>>> + Send>> {
-        unimplemented!()
+        futures::future::ok(Some(get_mock_account_state_blob())).boxed()
     }
 
     fn get_account_state_with_proof_by_version_async(
@@ -157,24 +157,9 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
         match requested_item {
             RequestedItems::GetAccountStateRequest(_request) => {
                 let mut resp = GetAccountStateResponse::default();
-                let mut version_data = BTreeMap::new();
 
-                let account_resource = libra_types::account_config::AccountResource::new(
-                    100,
-                    0,
-                    libra_types::byte_array::ByteArray::new(vec![]),
-                    false,
-                    false,
-                    EventHandle::random_handle(0),
-                    EventHandle::random_handle(0),
-                    0,
-                );
-                version_data.insert(
-                    libra_types::account_config::account_resource_path(),
-                    lcs::to_bytes(&account_resource)?,
-                );
                 let mut account_state_with_proof = AccountStateWithProof::default();
-                let blob = AccountStateBlob::from(lcs::to_bytes(&version_data)?).into();
+                let blob = get_mock_account_state_blob().into();
                 let proof = {
                     let ledger_info_to_transaction_info_proof =
                         libra_types::proof::AccumulatorProof::new(vec![]);
@@ -221,6 +206,27 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
         }
     }
     Ok(response_item)
+}
+
+fn get_mock_account_state_blob() -> AccountStateBlob {
+    let account_resource = libra_types::account_config::AccountResource::new(
+        100,
+        0,
+        libra_types::byte_array::ByteArray::new(vec![]),
+        false,
+        false,
+        EventHandle::random_handle(0),
+        EventHandle::random_handle(0),
+        0,
+    );
+
+    let mut version_data = BTreeMap::new();
+    version_data.insert(
+        libra_types::account_config::account_resource_path(),
+        lcs::to_bytes(&account_resource).unwrap(),
+    );
+
+    AccountStateBlob::from(lcs::to_bytes(&version_data).unwrap())
 }
 
 fn get_mock_txn_data(
