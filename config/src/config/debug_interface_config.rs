@@ -22,7 +22,7 @@ impl Default for DebugInterfaceConfig {
             storage_node_debug_port: 6194,
             metrics_server_port: 9101,
             public_metrics_server_port: 9102,
-            address: "localhost".to_string(),
+            address: "0.0.0.0".to_string(),
         }
     }
 }
