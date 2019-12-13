@@ -132,6 +132,8 @@ pub enum Statement_ {
     },
     Loop {
         block: Block,
+        has_break: bool,
+        has_return_abort: bool,
     },
 }
 pub type Statement = Spanned<Statement_>;

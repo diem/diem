@@ -229,6 +229,14 @@ impl Command_ {
         }
     }
 
+    pub fn is_exit(&self) -> bool {
+        use Command_::*;
+        match self {
+            Assign(_, _) | Mutate(_, _) | IgnoreAndPop { .. } | Jump(_) | JumpIf { .. } => false,
+            Abort(_) | Return(_) => true,
+        }
+    }
+
     pub fn successors(&self) -> BTreeSet<Label> {
         use Command_::*;
 

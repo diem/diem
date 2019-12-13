@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{ast::*, cfg::BlockCFG};
+use super::{ast::*, cfg::CFG};
 use crate::errors::*;
 use std::collections::HashMap;
 
@@ -82,7 +82,7 @@ pub trait TransferFunctions {
 
 pub trait AbstractInterpreter: TransferFunctions {
     /// Analyze procedure local@function_view starting from pre-state local@initial_state.
-    fn analyze_function(&mut self, cfg: &BlockCFG, initial_state: Self::State) -> Errors {
+    fn analyze_function(&mut self, cfg: &dyn CFG, initial_state: Self::State) -> Errors {
         let mut inv_map: InvariantMap<Self::State> = InvariantMap::new();
         let start = cfg.start_block();
         let mut work_list = vec![start];
@@ -117,7 +117,7 @@ pub trait AbstractInterpreter: TransferFunctions {
             }
 
             // propagate postcondition of this block to successor blocks
-            for next_lbl in cfg.successors(&block_lbl) {
+            for next_lbl in cfg.successors(block_lbl) {
                 match inv_map.get_mut(next_lbl) {
                     Some(next_block_invariant) => {
                         match next_block_invariant.pre.join(&state) {
@@ -153,12 +153,12 @@ pub trait AbstractInterpreter: TransferFunctions {
 
     fn execute_block(
         &mut self,
-        cfg: &BlockCFG,
+        cfg: &dyn CFG,
         state: &mut Self::State,
         block_lbl: Label,
     ) -> Result<(), Errors> {
         let mut errors = vec![];
-        for cmd in cfg.block(&block_lbl) {
+        for cmd in cfg.commands(block_lbl) {
             errors.append(&mut self.execute(state, cmd));
         }
         if errors.is_empty() {
