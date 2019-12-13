@@ -1103,7 +1103,7 @@
           "refId": "A"
         },
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -1648,13 +1648,13 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
         },
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -1833,7 +1833,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -2317,13 +2317,13 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
         },
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -2508,7 +2508,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -2995,13 +2995,13 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
         },
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -3186,7 +3186,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -3673,13 +3673,13 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
         },
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -3864,7 +3864,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -4351,13 +4351,13 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
         },
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -4542,7 +4542,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -5029,13 +5029,13 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
         },
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -5220,7 +5220,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -5707,13 +5707,13 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
         },
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -5898,7 +5898,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -6385,13 +6385,13 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
         },
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -6576,7 +6576,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -7063,13 +7063,13 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
         },
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -7254,7 +7254,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -7741,13 +7741,13 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
         },
         {
-          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',peer_id='$peer_id'}[5m]))))",
+          "expr": "100 * (1 - avg((irate(node_cpu_seconds_total{job='validator_instances',mode='idle',peer_id='$peer_id'}[5m]))))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -7932,7 +7932,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_nodes',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_nodes'} * 100) by (peer_id)",
+          "expr": "avg(100 - node_filesystem_avail_bytes{job='validator_instances',peer_id='$peer_id',mountpoint='/data'} / node_filesystem_size_bytes{job='validator_instances'} * 100) by (peer_id)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"

@@ -9,7 +9,7 @@
   new PromConsole.Graph({
     node: document.querySelector("#diskioGraph"),
     expr: [
-      "irate(node_disk_io_time_seconds_total{job='validator_nodes',instance='{{ .Params.instance }}',device!~'^(md\\\\d+$|dm-)'}[5m]) * 100",
+      "irate(node_disk_io_time_seconds_total{job='validator_instances',instance='{{ .Params.instance }}',device!~'^(md\\\\d+$|dm-)'}[5m]) * 100",
     ],
     min: 0,
     name: '[[ device ]]',
@@ -24,7 +24,7 @@
   <script>
   new PromConsole.Graph({
     node: document.querySelector("#fsGraph"),
-    expr: "100 - node_filesystem_avail_bytes{job='validator_nodes',instance='{{ .Params.instance }}'} / node_filesystem_size_bytes{job='validator_nodes'} * 100",
+    expr: "100 - node_filesystem_avail_bytes{job='validator_instances',instance='{{ .Params.instance }}'} / node_filesystem_size_bytes{job='validator_instances'} * 100",
     min: 0,
     max: 100,
     name: '[[ mountpoint ]]',
@@ -38,23 +38,23 @@
 {{ template "prom_right_table_head" }}
   <th colspan="2">Disks</th>
 </tr>
-{{ range printf "node_disk_io_time_seconds_total{job='validator_nodes',instance='%s'}" .Params.instance | query | sortByLabel "device" }}
+{{ range printf "node_disk_io_time_seconds_total{job='validator_instances',instance='%s'}" .Params.instance | query | sortByLabel "device" }}
   <th colspan="2">{{ .Labels.device }}</th>
   <tr>
     <td>Utilization</td>
-    <td>{{ template "prom_query_drilldown" (args (printf "irate(node_disk_io_time_seconds_total{job='validator_nodes',instance='%s',device='%s'}[5m]) * 100" .Labels.instance .Labels.device) "%" "printf.1f") }}</td>
+    <td>{{ template "prom_query_drilldown" (args (printf "irate(node_disk_io_time_seconds_total{job='validator_instances',instance='%s',device='%s'}[5m]) * 100" .Labels.instance .Labels.device) "%" "printf.1f") }}</td>
   </tr>
   <tr>
     <td>Throughput</td>
-    <td>{{ template "prom_query_drilldown" (args (printf "irate(node_disk_read_bytes_total{job='validator_nodes',instance='%s',device='%s'}[5m]) + irate(node_disk_written_bytes_total{job='validator_nodes',instance='%s',device='%s'}[5m])" .Labels.instance .Labels.device .Labels.instance .Labels.device) "B/s" "humanize") }}</td>
+    <td>{{ template "prom_query_drilldown" (args (printf "irate(node_disk_read_bytes_total{job='validator_instances',instance='%s',device='%s'}[5m]) + irate(node_disk_written_bytes_total{job='validator_instances',instance='%s',device='%s'}[5m])" .Labels.instance .Labels.device .Labels.instance .Labels.device) "B/s" "humanize") }}</td>
   </tr>
   <tr>
     <td>Avg Read Time</td>
-    <td>{{ template "prom_query_drilldown" (args (printf "irate(node_disk_read_time_seconds_total{job='validator_nodes',instance='%s',device='%s'}[5m]) / irate(node_disk_reads_completed_total{job='validator_nodes',instance='%s',device='%s'}[5m])" .Labels.instance .Labels.device .Labels.instance .Labels.device) "s" "humanize") }}</td>
+    <td>{{ template "prom_query_drilldown" (args (printf "irate(node_disk_read_time_seconds_total{job='validator_instances',instance='%s',device='%s'}[5m]) / irate(node_disk_reads_completed_total{job='validator_instances',instance='%s',device='%s'}[5m])" .Labels.instance .Labels.device .Labels.instance .Labels.device) "s" "humanize") }}</td>
   </tr>
   <tr>
     <td>Avg Write Time</td>
-    <td>{{ template "prom_query_drilldown" (args (printf "irate(node_disk_write_time_seconds_total{job='validator_nodes',instance='%s',device='%s'}[5m]) / irate(node_disk_writes_completed_total{job='validator_nodes',instance='%s',device='%s'}[5m])" .Labels.instance .Labels.device .Labels.instance .Labels.device) "s" "humanize") }}</td>
+    <td>{{ template "prom_query_drilldown" (args (printf "irate(node_disk_write_time_seconds_total{job='validator_instances',instance='%s',device='%s'}[5m]) / irate(node_disk_writes_completed_total{job='validator_instances',instance='%s',device='%s'}[5m])" .Labels.instance .Labels.device .Labels.instance .Labels.device) "s" "humanize") }}</td>
   </tr>
 {{ end }}
   <th colspan="2">Filesystem Fullness</th>
@@ -62,10 +62,10 @@
 {{ define "roughlyNearZero" }}
 {{ if gt .1 . }}~0{{ else }}{{ printf "%.1f" . }}{{ end }}
 {{ end }}
-{{ range printf "node_filesystem_size_bytes{job='validator_nodes',instance='%s'}" .Params.instance | query | sortByLabel "mountpoint" }}
+{{ range printf "node_filesystem_size_bytes{job='validator_instances',instance='%s'}" .Params.instance | query | sortByLabel "mountpoint" }}
   <tr>
     <td>{{ .Labels.mountpoint }}</td>
-    <td>{{ template "prom_query_drilldown" (args (printf "100 - node_filesystem_avail_bytes{job='validator_nodes',instance='%s',mountpoint='%s'} / node_filesystem_size_bytes{job='validator_nodes'} * 100" .Labels.instance .Labels.mountpoint) "%" "roughlyNearZero") }}</td>
+    <td>{{ template "prom_query_drilldown" (args (printf "100 - node_filesystem_avail_bytes{job='validator_instances',instance='%s',mountpoint='%s'} / node_filesystem_size_bytes{job='validator_instances'} * 100" .Labels.instance .Labels.mountpoint) "%" "roughlyNearZero") }}</td>
   </tr>
 {{ end }}
 <tr>
