@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::SynchronizerState;
+use anyhow::{bail, Result};
 use executor::ExecutedTrees;
 use libra_crypto::hash::CryptoHash;
 use libra_crypto::HashValue;
@@ -127,16 +128,19 @@ impl MockStorage {
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
     ) {
         self.add_txns(&mut transactions);
+        if let Some(li) = intermediate_end_of_epoch_li {
+            self.epoch_num = li.ledger_info().epoch() + 1;
+            self.ledger_infos.insert(li.ledger_info().epoch(), li);
+            return;
+        }
+        if verified_target_li.ledger_info().epoch() != self.epoch_num() {
+            return;
+        }
         self.ledger_infos.insert(
             verified_target_li.ledger_info().epoch(),
             verified_target_li.clone(),
         );
-        if let Some(li) = intermediate_end_of_epoch_li {
-            self.epoch_num = li.ledger_info().epoch() + 1;
-            self.ledger_infos.insert(li.ledger_info().epoch(), li);
-        } else if let Some(next_validator_set) =
-            verified_target_li.ledger_info().next_validator_set()
-        {
+        if let Some(next_validator_set) = verified_target_li.ledger_info().next_validator_set() {
             self.epoch_num = verified_target_li.ledger_info().epoch() + 1;
             self.verifier = next_validator_set.into();
         }
@@ -205,12 +209,12 @@ impl MockStorage {
     }
 
     // Find LedgerInfo for a given version.
-    pub fn get_ledger_info(&self, version: u64) -> Option<LedgerInfoWithSignatures> {
+    pub fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
         for li in self.ledger_infos.values() {
             if li.ledger_info().version() == version {
-                return Some(li.clone());
+                return Ok(li.clone());
             }
         }
-        None
+        bail!("No LedgerInfo found for version {}", version);
     }
 }

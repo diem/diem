@@ -490,37 +490,34 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             self.local_state.highest_local_li.ledger_info().version(),
             waypoint_version
         );
+        ensure!(
+            request.known_version < waypoint_version,
+            "Waypoint request version {} is not smaller than waypoint {}",
+            request.known_version,
+            waypoint_version
+        );
 
         // Retrieve the waypoint LI.
-        let waypoint_li = self
-            .executor_proxy
-            .get_ledger_info(waypoint_version)
-            .ok_or_else(|| {
-                format_err!(
-                    "No waypoint found for the given version {}",
-                    waypoint_version
-                )
-            })?;
+        let waypoint_li = self.executor_proxy.get_ledger_info(waypoint_version)?;
 
         // Txns are up to the end of request epoch with the proofs relative to the waypoint LI.
-        let end_of_epoch_li =
-            if self.local_state.highest_local_li.ledger_info().epoch() > request.current_epoch {
-                Some(
-                    self.executor_proxy
-                        .get_epoch_proof(request.current_epoch, request.current_epoch + 1)?
-                        .ledger_info_with_sigs
-                        .first()
-                        .ok_or_else(|| {
-                            format_err!(
-                                "No end of epoch LedgerInfo found for epoch {}",
-                                request.current_epoch
-                            )
-                        })?
-                        .clone(),
-                )
-            } else {
-                None
-            };
+        let end_of_epoch_li = if waypoint_li.ledger_info().epoch() > request.current_epoch {
+            Some(
+                self.executor_proxy
+                    .get_epoch_proof(request.current_epoch, request.current_epoch + 1)?
+                    .ledger_info_with_sigs
+                    .first()
+                    .ok_or_else(|| {
+                        format_err!(
+                            "No end of epoch LedgerInfo found for epoch {}",
+                            request.current_epoch
+                        )
+                    })?
+                    .clone(),
+            )
+        } else {
+            None
+        };
         if let Some(li) = end_of_epoch_li.as_ref() {
             let num_txns_until_end_of_epoch = li.ledger_info().version() - request.known_version;
             limit = std::cmp::min(limit, num_txns_until_end_of_epoch);
@@ -607,7 +604,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         counters::RESPONSES_RECEIVED
             .with_label_values(&[&*peer_id.to_string()])
             .inc();
-        debug!("Processing chunk response {}", response);
+        debug!("[state sync] Processing chunk response {}", response);
         let txn_list_with_proof = response.txn_list_with_proof.clone();
 
         let known_version = self.local_state.highest_version_in_local_storage();
@@ -728,7 +725,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let new_epoch = end_of_epoch_li
             .as_ref()
             .map_or(self.local_state.epoch(), |li| li.ledger_info().epoch() + 1);
-        self.send_chunk_request(new_version, new_epoch).await?;
+        if new_version < self.waypoint.as_ref().map_or(0, |w| w.version()) {
+            self.send_chunk_request(new_version, new_epoch).await?;
+        }
 
         self.waypoint
             .as_ref()
