@@ -189,11 +189,6 @@ impl BlockTree {
         }
 
         // 2. commit
-        println!(
-            "------4444444-----{:?}-----------{}",
-            block_index.id(),
-            commit_data.txns_len()
-        );
         self.write_storage
             .save_transactions(
                 commit_data.txns_to_commit,
