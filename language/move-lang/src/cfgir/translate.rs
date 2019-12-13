@@ -13,6 +13,8 @@ use crate::{
     parser::ast::{FunctionName, ModuleIdent, StructName},
     shared::*,
 };
+use std::collections::BTreeSet;
+use std::mem;
 
 //**************************************************************************************************
 // Context
@@ -26,6 +28,7 @@ struct Context {
     next_label: Option<Label>,
     label_count: usize,
     blocks: Blocks,
+    infinite_loop_starts: BTreeSet<Label>,
 }
 
 impl Context {
@@ -38,6 +41,7 @@ impl Context {
             start: None,
             label_count: 0,
             blocks: Blocks::new(),
+            infinite_loop_starts: BTreeSet::new(),
         }
     }
 
@@ -60,14 +64,15 @@ impl Context {
         Label(count)
     }
 
-    pub fn finish_blocks(&mut self) -> (Label, Blocks) {
+    pub fn finish_blocks(&mut self) -> (Label, Blocks, BTreeSet<Label>) {
         self.next_label = None;
-        let start = std::mem::replace(&mut self.start, None);
-        let blocks = std::mem::replace(&mut self.blocks, Blocks::new());
+        let start = mem::replace(&mut self.start, None);
+        let blocks = mem::replace(&mut self.blocks, Blocks::new());
+        let infinite_loop_starts = mem::replace(&mut self.infinite_loop_starts, BTreeSet::new());
         self.label_count = 0;
         self.loop_begin = None;
         self.loop_end = None;
-        (start.unwrap(), blocks)
+        (start.unwrap(), blocks, infinite_loop_starts)
     }
 }
 
@@ -157,20 +162,21 @@ fn function_body(
     assert!(context.blocks.is_empty());
     assert!(context.loop_begin.is_none());
     assert!(context.loop_end.is_none());
+    assert!(context.infinite_loop_starts.is_empty());
     let b_ = match tb_ {
         HB::Native => GB::Native,
         HB::Defined { locals, body } => {
             let locals = locals.map(|_, st| single_type(context, st));
             function_block(context, body);
-            let (start, mut blocks) = context.finish_blocks();
+            let (start, mut blocks, infinite_loop_starts) = context.finish_blocks();
 
             let (mut cfg, errors) = BlockCFG::new(start, &mut blocks);
             for e in errors {
                 context.error(e);
             }
 
-            cfgir::refine(signature, &locals, &mut cfg);
-            cfgir::verify(&mut context.errors, signature, &locals, &cfg);
+            cfgir::refine(signature, &locals, &mut cfg, infinite_loop_starts);
+            cfgir::verify(&mut context.errors, signature, &locals, &mut cfg);
 
             GB::Defined {
                 locals,
@@ -272,8 +278,8 @@ fn block(context: &mut Context, mut cur_label: Label, blocks: H::Block) {
 
     macro_rules! finish_block {
         (next_label: $next_label:expr) => {{
-            let lbl = std::mem::replace(&mut cur_label, $next_label);
-            let bb = std::mem::replace(&mut basic_block, BasicBlock::new());
+            let lbl = mem::replace(&mut cur_label, $next_label);
+            let bb = mem::replace(&mut basic_block, BasicBlock::new());
             context.blocks.insert(lbl, bb);
         }};
     }
@@ -281,9 +287,9 @@ fn block(context: &mut Context, mut cur_label: Label, blocks: H::Block) {
     macro_rules! loop_block {
         (begin: $begin:expr, end: $end:expr, body: $body:expr, $block:expr) => {{
             let begin = $begin;
-            let old_begin = std::mem::replace(&mut context.loop_begin, Some(begin));
-            let old_end = std::mem::replace(&mut context.loop_end, Some($end));
-            let old_next = std::mem::replace(&mut context.next_label, Some(begin));
+            let old_begin = mem::replace(&mut context.loop_begin, Some(begin));
+            let old_end = mem::replace(&mut context.loop_end, Some($end));
+            let old_next = mem::replace(&mut context.next_label, Some(begin));
             block(context, $body, $block);
             context.next_label = old_next;
             context.loop_end = old_end;
@@ -315,7 +321,7 @@ fn block(context: &mut Context, mut cur_label: Label, blocks: H::Block) {
                 finish_block!(next_label: next_label);
 
                 // If branches
-                let old_next = std::mem::replace(&mut context.next_label, Some(next_label));
+                let old_next = mem::replace(&mut context.next_label, Some(next_label));
                 block(context, if_true, if_block);
                 block(context, if_false, else_block);
                 context.next_label = old_next;
@@ -346,9 +352,19 @@ fn block(context: &mut Context, mut cur_label: Label, blocks: H::Block) {
                 loop_block!(begin: loop_cond, end: loop_end, body: loop_body, loop_block)
             }
 
-            S::Loop { block: loop_block } => {
+            S::Loop {
+                block: loop_block,
+                has_break,
+                has_return_abort,
+            } => {
                 let loop_body = context.new_label();
                 let loop_end = context.new_label();
+                assert!(cur_label.0 < loop_body.0);
+                assert!(loop_body.0 < loop_end.0);
+
+                if !has_return_abort && !has_break {
+                    context.infinite_loop_starts.insert(loop_body);
+                }
 
                 // Jump to loop
                 basic_block.push_back(sp(loc, C::Jump(loop_body)));

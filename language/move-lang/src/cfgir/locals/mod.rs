@@ -81,7 +81,7 @@ pub fn verify(
     errors: &mut Errors,
     signature: &FunctionSignature,
     locals: &UniqueMap<Var, SingleType>,
-    cfg: &super::cfg::BlockCFG,
+    cfg: &mut super::cfg::BlockCFG,
 ) {
     let initial_state = LocalStates::initial(&signature.parameters, locals);
     let mut locals_safety = LocalsSafety::new(locals);

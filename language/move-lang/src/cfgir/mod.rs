@@ -12,6 +12,7 @@ use crate::shared::unique_map::UniqueMap;
 use crate::{errors::Errors, parser::ast::Var};
 use ast::*;
 use cfg::*;
+use std::collections::BTreeSet;
 
 /// This is a placeholder for "optimization passes" that "fix" operations so the behave as expected
 /// The two major passes here are:
@@ -22,15 +23,17 @@ use cfg::*;
 pub fn refine(
     _signature: &FunctionSignature,
     _locals: &UniqueMap<Var, SingleType>,
-    _cfg: &mut BlockCFG,
+    cfg: &mut BlockCFG,
+    infinite_loop_starts: BTreeSet<Label>,
 ) {
+    ReverseBlockCFG::new(cfg, infinite_loop_starts);
 }
 
 pub fn verify(
     errors: &mut Errors,
     signature: &FunctionSignature,
     locals: &UniqueMap<Var, SingleType>,
-    cfg: &BlockCFG,
+    cfg: &mut BlockCFG,
 ) {
     locals::verify(errors, signature, locals, cfg);
     borrows::verify(errors, signature, locals, cfg)

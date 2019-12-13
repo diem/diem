@@ -71,7 +71,7 @@ pub fn verify(
     errors: &mut Errors,
     signature: &FunctionSignature,
     locals: &UniqueMap<Var, SingleType>,
-    cfg: &super::cfg::BlockCFG,
+    cfg: &mut super::cfg::BlockCFG,
 ) {
     let mut initial_state = BorrowState::initial(locals);
     initial_state.bind_arguments(&signature.parameters);

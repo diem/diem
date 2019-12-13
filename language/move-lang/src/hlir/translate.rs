@@ -58,6 +58,7 @@ struct Context {
     function_locals: UniqueMap<Var, H::SingleType>,
     local_scope: UniqueMap<Var, Var>,
     return_type: Option<H::Type>,
+    has_return_abort: bool,
 }
 
 impl Context {
@@ -68,6 +69,7 @@ impl Context {
             function_locals: UniqueMap::new(),
             local_scope: UniqueMap::new(),
             return_type: None,
+            has_return_abort: false,
         }
     }
 
@@ -241,8 +243,10 @@ fn function_body(
         TB::Defined(seq) => {
             let mut body = VecDeque::new();
             context.return_type = Some(ret_ty.clone());
+            assert!(!context.has_return_abort);
             let final_exp = block(context, &mut body, loc, Some(&ret_ty), seq);
             context.return_type = None;
+            context.has_return_abort = false;
             match final_exp {
                 Unreachable { .. } => (),
                 Reachable(e) => {
@@ -498,13 +502,16 @@ fn statement(context: &mut Context, result: &mut Block, e: T::Exp) {
             }
         }
         TE::Loop {
-            body: loop_body, ..
+            body: loop_body,
+            has_break,
         } => {
-            let mut loop_block = Block::new();
-            let el = maybe_exp(context, &mut loop_block, None, *loop_body);
-            ignore_and_pop(context, &mut loop_block, true, el);
+            let (loop_block, has_return_abort) = statement_loop_body(context, *loop_body);
 
-            S::Loop { block: loop_block }
+            S::Loop {
+                block: loop_block,
+                has_break,
+                has_return_abort,
+            }
         }
         TE::Block(seq) => {
             let res = block(context, result, eloc, None, seq);
@@ -519,6 +526,17 @@ fn statement(context: &mut Context, result: &mut Block, e: T::Exp) {
         }
     };
     result.push_back(sp(eloc, stmt_))
+}
+
+fn statement_loop_body(context: &mut Context, body: T::Exp) -> (Block, bool) {
+    let old_has_return_abort = context.has_return_abort;
+    context.has_return_abort = false;
+    let mut loop_block = Block::new();
+    let el = maybe_exp(context, &mut loop_block, None, body);
+    ignore_and_pop(context, &mut loop_block, true, el);
+    let has_return_abort = context.has_return_abort;
+    context.has_return_abort = context.has_return_abort || old_has_return_abort;
+    (loop_block, has_return_abort)
 }
 
 //**************************************************************************************************
@@ -791,11 +809,13 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
             has_break,
             body: loop_body,
         } => {
-            let mut loop_block = Block::new();
-            let el = maybe_exp(context, &mut loop_block, None, *loop_body);
-            ignore_and_pop(context, &mut loop_block, true, el);
+            let (loop_block, has_return_abort) = statement_loop_body(context, *loop_body);
 
-            let s_ = S::Loop { block: loop_block };
+            let s_ = S::Loop {
+                block: loop_block,
+                has_break,
+                has_return_abort,
+            };
             result.push_back(sp(eloc, s_));
             if !has_break {
                 return Unreachable {
@@ -810,6 +830,7 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
         TE::Return(te) => {
             let expected_type = context.return_type.clone();
             let e = exp_!(context, result, expected_type.as_ref(), *te);
+            context.has_return_abort = true;
             let c = sp(eloc, C::Return(e));
             result.push_back(sp(eloc, S::Command(c)));
             return Unreachable {
@@ -819,6 +840,7 @@ fn maybe_exp_(context: &mut Context, result: &mut Block, e: T::Exp) -> ExpResult
         }
         TE::Abort(te) => {
             let e = exp_!(context, result, None, *te);
+            context.has_return_abort = true;
             let c = sp(eloc, C::Abort(e));
             result.push_back(sp(eloc, S::Command(c)));
             return Unreachable {
