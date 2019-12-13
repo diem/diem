@@ -107,7 +107,6 @@ fn parse_comma_list<'input, F, R>(
     tokens: &mut Lexer<'input>,
     list_end_token: Tok,
     parse_list_item: F,
-    allow_trailing_comma: bool,
 ) -> Result<Vec<R>, Error>
 where
     F: Fn(&mut Lexer<'input>) -> Result<R, Error>,
@@ -122,7 +121,7 @@ where
             break Ok(v);
         }
         consume_token(tokens, Tok::Comma)?;
-        if allow_trailing_comma && tokens.peek() == list_end_token {
+        if tokens.peek() == list_end_token {
             break Ok(v);
         }
     }
@@ -336,7 +335,7 @@ fn parse_bind<'input>(tokens: &mut Lexer<'input>) -> Result<Bind, Error> {
         None
     };
     consume_token(tokens, Tok::LBrace)?;
-    let args = parse_comma_list(tokens, Tok::RBrace, parse_bind_field, true)?;
+    let args = parse_comma_list(tokens, Tok::RBrace, parse_bind_field)?;
     consume_token(tokens, Tok::RBrace)?;
     let end_loc = tokens.previous_end_loc();
     let unpack = Bind_::Unpack(ty, ty_args, args);
@@ -356,7 +355,7 @@ fn parse_bind_list<'input>(tokens: &mut Lexer<'input>) -> Result<BindList, Error
         vec![parse_bind(tokens)?]
     } else {
         tokens.advance()?; // consume the LParen
-        let list = parse_comma_list(tokens, Tok::RParen, parse_bind, true)?;
+        let list = parse_comma_list(tokens, Tok::RParen, parse_bind)?;
         consume_token(tokens, Tok::RParen)?;
         list
     };
@@ -551,7 +550,7 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
                     if tokens.peek() != Tok::RParen {
                         consume_token(tokens, Tok::Comma)?;
                     }
-                    let mut es = parse_comma_list(tokens, Tok::RParen, parse_exp, true)?;
+                    let mut es = parse_comma_list(tokens, Tok::RParen, parse_exp)?;
                     consume_token(tokens, Tok::RParen)?;
                     if es.is_empty() {
                         e.value
@@ -602,7 +601,7 @@ fn parse_pack_or_call<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error>
         // <ModuleAccessBeginArgs> <TypeArgs> "{" Comma<ExpField> "}"
         Tok::LBrace => {
             tokens.advance()?;
-            let fs = parse_comma_list(tokens, Tok::RBrace, parse_exp_field, true)?;
+            let fs = parse_comma_list(tokens, Tok::RBrace, parse_exp_field)?;
             consume_token(tokens, Tok::RBrace)?;
             Ok(Exp_::Pack(n, tys, fs))
         },
@@ -620,7 +619,7 @@ fn parse_pack_or_call<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error>
 fn parse_call_args<'input>(tokens: &mut Lexer<'input>) -> Result<Spanned<Vec<Exp>>, Error> {
     let start_loc = tokens.start_loc();
     consume_token(tokens, Tok::LParen)?;
-    let args = parse_comma_list(tokens, Tok::RParen, parse_exp, true)?;
+    let args = parse_comma_list(tokens, Tok::RParen, parse_exp)?;
     consume_token(tokens, Tok::RParen)?;
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(tokens.file_name(), start_loc, end_loc, args))
@@ -883,7 +882,7 @@ fn parse_base_type<'input>(tokens: &mut Lexer<'input>) -> Result<SingleType, Err
 //
 // This is used for the type arguments following NameBeginArgs.
 fn parse_type_args<'input>(tokens: &mut Lexer<'input>) -> Result<Vec<SingleType>, Error> {
-    let tys = parse_comma_list(tokens, Tok::Greater, parse_base_type, true)?;
+    let tys = parse_comma_list(tokens, Tok::Greater, parse_base_type)?;
     consume_token(tokens, Tok::Greater)?;
     Ok(tys)
 }
@@ -923,7 +922,7 @@ fn parse_type<'input>(tokens: &mut Lexer<'input>) -> Result<Type, Error> {
         vec![parse_single_type(tokens)?]
     } else {
         tokens.advance()?; // consume the LParen
-        let list = parse_comma_list(tokens, Tok::RParen, parse_single_type, true)?;
+        let list = parse_comma_list(tokens, Tok::RParen, parse_single_type)?;
         consume_token(tokens, Tok::RParen)?;
         list
     };
@@ -1017,7 +1016,7 @@ fn parse_function_decl<'input>(
     let (n, has_params) = parse_name_maybe_args(tokens)?;
     let name = FunctionName(n);
     let type_parameters = if has_params {
-        let list = parse_comma_list(tokens, Tok::Greater, parse_type_parameter, true)?;
+        let list = parse_comma_list(tokens, Tok::Greater, parse_type_parameter)?;
         consume_token(tokens, Tok::Greater)?;
         list
     } else {
@@ -1026,7 +1025,7 @@ fn parse_function_decl<'input>(
 
     // "(" Comma<Parameter> ")"
     consume_token(tokens, Tok::LParen)?;
-    let parameters = parse_comma_list(tokens, Tok::RParen, parse_parameter, true)?;
+    let parameters = parse_comma_list(tokens, Tok::RParen, parse_parameter)?;
     consume_token(tokens, Tok::RParen)?;
 
     // (":" <Type>)?
@@ -1118,7 +1117,7 @@ fn parse_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<StructD
     let (n, has_params) = parse_name_maybe_args(tokens)?;
     let name = StructName(n);
     let type_parameters = if has_params {
-        let list = parse_comma_list(tokens, Tok::Greater, parse_type_parameter, true)?;
+        let list = parse_comma_list(tokens, Tok::Greater, parse_type_parameter)?;
         consume_token(tokens, Tok::Greater)?;
         list
     } else {
@@ -1132,7 +1131,7 @@ fn parse_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<StructD
         }
         _ => {
             consume_token(tokens, Tok::LBrace)?;
-            let list = parse_comma_list(tokens, Tok::RBrace, parse_field_annot, true)?;
+            let list = parse_comma_list(tokens, Tok::RBrace, parse_field_annot)?;
             consume_token(tokens, Tok::RBrace)?;
             StructFields::Defined(list)
         }
