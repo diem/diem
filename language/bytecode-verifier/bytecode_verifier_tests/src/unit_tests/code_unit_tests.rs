@@ -43,7 +43,7 @@ fn valid_fallthrough_ret() {
 
 #[test]
 fn valid_fallthrough_abort() {
-    let module = file_format::dummy_procedure_module(vec![Bytecode::LdConst(7), Bytecode::Abort]);
+    let module = file_format::dummy_procedure_module(vec![Bytecode::LdU64(7), Bytecode::Abort]);
     let errors = CodeUnitVerifier::verify(&module);
     assert!(errors.is_empty());
 }

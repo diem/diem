@@ -35,7 +35,7 @@ fn transform_code_with_refs() {
 
     let (actual_code, actual_types) = generate_code_from_string(code);
     let expected_code = vec![
-        LdConst(5, 0),
+        LdU64(5, 0),
         MoveLoc(6, 1),
         WriteRef(6, 5),
         MoveLoc(7, 0),
@@ -111,19 +111,19 @@ fn transform_code_with_arithmetic_ops() {
         CopyLoc(3, 0),
         MoveLoc(4, 1),
         Add(5, 3, 4),
-        LdConst(6, 1),
+        LdU64(6, 1),
         Sub(7, 5, 6),
-        LdConst(8, 2),
+        LdU64(8, 2),
         Mul(9, 7, 8),
-        LdConst(10, 3),
+        LdU64(10, 3),
         Div(11, 9, 10),
-        LdConst(12, 4),
+        LdU64(12, 4),
         Mod(13, 11, 12),
-        LdConst(14, 5),
-        LdConst(15, 6),
+        LdU64(14, 5),
+        LdU64(15, 6),
         BitAnd(16, 14, 15),
         BitOr(17, 13, 16),
-        LdConst(18, 7),
+        LdU64(18, 7),
         Xor(19, 17, 18),
         StLoc(2, 19),
         MoveLoc(20, 2),
@@ -158,7 +158,7 @@ fn transform_code_with_pack_unpack() {
     );
     let (actual_code, actual_types) = generate_code_from_string(code);
     let expected_code = vec![
-        LdConst(4, 42),
+        LdU64(4, 42),
         MoveLoc(5, 0),
         Pack(
             6,
@@ -270,7 +270,7 @@ fn transform_code_with_easy_branching() {
         Not(2, 1),
         Not(3, 2),
         BrFalse(12, 3),
-        LdConst(4, 42),
+        LdU64(4, 42),
         Abort(4),
         Ret(vec![]),
     ];
@@ -326,7 +326,7 @@ fn transform_code_with_bool_ops() {
         Not(21, 20),
         Not(22, 21),
         BrFalse(24, 22),
-        LdConst(23, 42),
+        LdU64(23, 42),
         Abort(23),
         Ret(vec![]),
     ];

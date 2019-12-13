@@ -17,7 +17,9 @@ use std::convert::{TryFrom, TryInto};
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 pub enum TypeTag {
     Bool,
+    U8,
     U64,
+    U128,
     ByteArray,
     Address,
     Struct(StructTag),

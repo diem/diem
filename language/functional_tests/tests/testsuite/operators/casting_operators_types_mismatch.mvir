@@ -1,0 +1,67 @@
+main() {
+    _ = to_u8(true);
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = to_u64(true);
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = to_u128(true);
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+
+
+//! new-transaction
+main() {
+    _ = to_u8(0x0);
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = to_u64(0x0);
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = to_u128(0x0);
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+
+
+//! new-transaction
+module M {
+    struct S { x: bool }
+
+    f() {
+        _ = to_u8(S { x: true });
+        return;
+    }
+
+    g() {
+        _ = to_u64(S { x: true });
+        return;
+    }
+
+    h() {
+        _ = to_u128(S { x: true });
+        return;
+    }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR

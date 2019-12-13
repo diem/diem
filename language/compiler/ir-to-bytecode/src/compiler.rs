@@ -138,7 +138,9 @@ enum InferredType {
 
     // Signature tokens
     Bool,
+    U8,
     U64,
+    U128,
     ByteArray,
     Address,
     Struct(StructHandleIndex),
@@ -153,7 +155,9 @@ impl InferredType {
         use SignatureToken as S;
         match sig_token {
             S::Bool => I::Bool,
+            S::U8 => I::U8,
             S::U64 => I::U64,
+            S::U128 => I::U128,
             S::ByteArray => I::ByteArray,
             S::Address => I::Address,
             S::Struct(si, _) => I::Struct(*si),
@@ -173,7 +177,9 @@ impl InferredType {
         match self {
             InferredType::Anything => bail!("could not infer struct type"),
             InferredType::Bool => bail!("no struct type for Bool"),
+            InferredType::U8 => bail!("no struct type for U8"),
             InferredType::U64 => bail!("no struct type for U64"),
+            InferredType::U128 => bail!("no struct type for U128"),
             InferredType::ByteArray => bail!("no struct type for ByteArray"),
             InferredType::Address => bail!("no struct type for Address"),
             InferredType::Reference(inner) | InferredType::MutableReference(inner) => {
@@ -493,7 +499,9 @@ fn compile_types(context: &mut Context, tys: &[Type]) -> Result<Vec<SignatureTok
 fn compile_type(context: &mut Context, ty: &Type) -> Result<SignatureToken> {
     Ok(match ty {
         Type::Address => SignatureToken::Address,
+        Type::U8 => SignatureToken::U8,
         Type::U64 => SignatureToken::U64,
+        Type::U128 => SignatureToken::U128,
         Type::Bool => SignatureToken::Bool,
         Type::ByteArray => SignatureToken::ByteArray,
         Type::Reference(is_mutable, inner_type) => {
@@ -953,6 +961,22 @@ macro_rules! vec_deque {
     }
 }
 
+fn infer_int_bin_op_result_ty(
+    tys1: &VecDeque<InferredType>,
+    tys2: &VecDeque<InferredType>,
+) -> InferredType {
+    use InferredType as I;
+    if tys1.len() != 1 || tys2.len() != 1 {
+        return I::Anything;
+    }
+    match (&tys1[0], &tys2[0]) {
+        (I::U8, I::U8) => I::U8,
+        (I::U64, I::U64) => I::U64,
+        (I::U128, I::U128) => I::U128,
+        _ => I::Anything,
+    }
+}
+
 fn compile_expression(
     context: &mut Context,
     function_frame: &mut FunctionFrame,
@@ -998,10 +1022,20 @@ fn compile_expression(
                 function_frame.push()?;
                 vec_deque![InferredType::Address]
             }
+            CopyableVal::U8(i) => {
+                push_instr!(exp.span, Bytecode::LdU8(i));
+                function_frame.push()?;
+                vec_deque![InferredType::U8]
+            }
             CopyableVal::U64(i) => {
-                push_instr!(exp.span, Bytecode::LdConst(i));
+                push_instr!(exp.span, Bytecode::LdU64(i));
                 function_frame.push()?;
                 vec_deque![InferredType::U64]
+            }
+            CopyableVal::U128(i) => {
+                push_instr!(exp.span, Bytecode::LdU128(i));
+                function_frame.push()?;
+                vec_deque![InferredType::U128]
             }
             CopyableVal::ByteArray(buf) => {
                 let buf_idx = context.byte_array_index(&buf)?;
@@ -1061,49 +1095,50 @@ fn compile_expression(
             }
         }
         Exp::BinopExp(e1, op, e2) => {
-            compile_expression(context, function_frame, code, *e1)?;
-            compile_expression(context, function_frame, code, *e2)?;
+            let tys1 = compile_expression(context, function_frame, code, *e1)?;
+            let tys2 = compile_expression(context, function_frame, code, *e2)?;
+
             function_frame.pop()?;
             match op {
                 BinOp::Add => {
                     push_instr!(exp.span, Bytecode::Add);
-                    vec_deque![InferredType::U64]
+                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Sub => {
                     push_instr!(exp.span, Bytecode::Sub);
-                    vec_deque![InferredType::U64]
+                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Mul => {
                     push_instr!(exp.span, Bytecode::Mul);
-                    vec_deque![InferredType::U64]
+                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Mod => {
                     push_instr!(exp.span, Bytecode::Mod);
-                    vec_deque![InferredType::U64]
+                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Div => {
                     push_instr!(exp.span, Bytecode::Div);
-                    vec_deque![InferredType::U64]
+                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::BitOr => {
                     push_instr!(exp.span, Bytecode::BitOr);
-                    vec_deque![InferredType::U64]
+                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::BitAnd => {
                     push_instr!(exp.span, Bytecode::BitAnd);
-                    vec_deque![InferredType::U64]
+                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Xor => {
                     push_instr!(exp.span, Bytecode::Xor);
-                    vec_deque![InferredType::U64]
+                    vec_deque![infer_int_bin_op_result_ty(&tys1, &tys2)]
                 }
                 BinOp::Shl => {
                     push_instr!(exp.span, Bytecode::Shl);
-                    vec_deque![InferredType::U64]
+                    tys1
                 }
                 BinOp::Shr => {
                     push_instr!(exp.span, Bytecode::Shr);
-                    vec_deque![InferredType::U64]
+                    tys1
                 }
                 BinOp::Or => {
                     push_instr!(exp.span, Bytecode::Or);
@@ -1276,6 +1311,24 @@ fn compile_call(
                         _ => Box::new(InferredType::Anything),
                     };
                     vec_deque![InferredType::Reference(inner_token)]
+                }
+                Builtin::ToU8 => {
+                    push_instr!(call.span, Bytecode::CastU8);
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                    vec_deque![InferredType::U8]
+                }
+                Builtin::ToU64 => {
+                    push_instr!(call.span, Bytecode::CastU64);
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                    vec_deque![InferredType::U64]
+                }
+                Builtin::ToU128 => {
+                    push_instr!(call.span, Bytecode::CastU128);
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                    vec_deque![InferredType::U128]
                 }
             }
         }

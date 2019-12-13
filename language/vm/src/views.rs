@@ -559,7 +559,9 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
             SignatureToken::Reference(_)
             | SignatureToken::MutableReference(_)
             | SignatureToken::Bool
+            | SignatureToken::U8
             | SignatureToken::U64
+            | SignatureToken::U128
             | SignatureToken::ByteArray
             | SignatureToken::Address => false,
 

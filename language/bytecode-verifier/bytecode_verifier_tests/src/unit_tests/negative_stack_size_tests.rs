@@ -30,11 +30,8 @@ fn one_pop_one_push() {
 #[test]
 fn two_pop_one_push() {
     // Height: 0 + 1 + (-2 + 1) = 0 would have passed original usage verifier
-    let module = file_format::dummy_procedure_module(vec![
-        Bytecode::LdConst(0),
-        Bytecode::Add,
-        Bytecode::Ret,
-    ]);
+    let module =
+        file_format::dummy_procedure_module(vec![Bytecode::LdU64(0), Bytecode::Add, Bytecode::Ret]);
     let errors = CodeUnitVerifier::verify(&module);
     assert_eq!(
         errors[0].major_status,

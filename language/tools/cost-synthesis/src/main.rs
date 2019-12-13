@@ -141,7 +141,7 @@ fn stack_instructions(options: &Opt) {
         Abort,
         LdFalse,
         LdTrue,
-        LdConst(0),
+        LdU64(0),
         LdByteArray(ByteArrayPoolIndex::new(0)),
         LdAddr(AddressPoolIndex::new(0)),
         BrFalse(0),

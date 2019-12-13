@@ -1,0 +1,1043 @@
+// !!!! generated file, do NOT edit manually !!!!
+
+// operator +
+main() {
+    _ = 0u8 + 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u8 + 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 + 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 + 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 + 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 + 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 + true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true + 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true + true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 + 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 + 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 + 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+module M {
+    resource R { x: bool }
+    f() {
+        _ = 0 + (R { x: true });
+        return;
+    }
+    g() {
+        _ = (R { x: true }) + 0;
+        return;
+    }
+    h() {
+        _ = (R { x: true }) + (R { x: true });
+        return;
+    }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+
+// operator -
+//! new-transaction
+main() {
+    _ = 0u8 - 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u8 - 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 - 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 - 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 - 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 - 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 - true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true - 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true - true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 - 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 - 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 - 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+module M {
+    resource R { x: bool }
+    f() {
+        _ = 0 - (R { x: true });
+        return;
+    }
+    g() {
+        _ = (R { x: true }) - 0;
+        return;
+    }
+    h() {
+        _ = (R { x: true }) - (R { x: true });
+        return;
+    }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+
+// operator *
+//! new-transaction
+main() {
+    _ = 0u8 * 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u8 * 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 * 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 * 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 * 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 * 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 * true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true * 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true * true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 * 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 * 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 * 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+module M {
+    resource R { x: bool }
+    f() {
+        _ = 0 * (R { x: true });
+        return;
+    }
+    g() {
+        _ = (R { x: true }) * 0;
+        return;
+    }
+    h() {
+        _ = (R { x: true }) * (R { x: true });
+        return;
+    }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+
+// operator /
+//! new-transaction
+main() {
+    _ = 0u8 / 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u8 / 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 / 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 / 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 / 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 / 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 / true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true / 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true / true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 / 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 / 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 / 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+module M {
+    resource R { x: bool }
+    f() {
+        _ = 0 / (R { x: true });
+        return;
+    }
+    g() {
+        _ = (R { x: true }) / 0;
+        return;
+    }
+    h() {
+        _ = (R { x: true }) / (R { x: true });
+        return;
+    }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+
+// operator &
+//! new-transaction
+main() {
+    _ = 0u8 & 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u8 & 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 & 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 & 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 & 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 & 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 & true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true & 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true & true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 & 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 & 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 & 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+module M {
+    resource R { x: bool }
+    f() {
+        _ = 0 & (R { x: true });
+        return;
+    }
+    g() {
+        _ = (R { x: true }) & 0;
+        return;
+    }
+    h() {
+        _ = (R { x: true }) & (R { x: true });
+        return;
+    }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+
+// operator |
+//! new-transaction
+main() {
+    _ = 0u8 | 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u8 | 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 | 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 | 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 | 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 | 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 | true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true | 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true | true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 | 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 | 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 | 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+module M {
+    resource R { x: bool }
+    f() {
+        _ = 0 | (R { x: true });
+        return;
+    }
+    g() {
+        _ = (R { x: true }) | 0;
+        return;
+    }
+    h() {
+        _ = (R { x: true }) | (R { x: true });
+        return;
+    }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+
+// operator ^
+//! new-transaction
+main() {
+    _ = 0u8 ^ 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u8 ^ 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 ^ 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 ^ 0u128;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 ^ 0u8;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 ^ 0u64;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 ^ true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true ^ 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true ^ true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 ^ 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 ^ 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 ^ 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+module M {
+    resource R { x: bool }
+    f() {
+        _ = 0 ^ (R { x: true });
+        return;
+    }
+    g() {
+        _ = (R { x: true }) ^ 0;
+        return;
+    }
+    h() {
+        _ = (R { x: true }) ^ (R { x: true });
+        return;
+    }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+
+// operator ==
+//! new-transaction
+main() {
+    _ = 0u8 == 0u64;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u8 == 0u128;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 == 0u8;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 == 0u128;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 == 0u8;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 == 0u64;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 == true;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true == 0;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 == 0x0;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 == 0;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+module M {
+    resource R { x: bool }
+    f() {
+        _ = 0 == (R { x: true });
+        return;
+    }
+    g() {
+        _ = (R { x: true }) == 0;
+        return;
+    }
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+
+// operator !=
+//! new-transaction
+main() {
+    _ = 0u8 != 0u64;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u8 != 0u128;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 != 0u8;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u64 != 0u128;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 != 0u8;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0u128 != 0u64;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 != true;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true != 0;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 != 0x0;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 != 0;
+    return;
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+module M {
+    resource R { x: bool }
+    f() {
+        _ = 0 != (R { x: true });
+        return;
+    }
+    g() {
+        _ = (R { x: true }) != 0;
+        return;
+    }
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+
+
+// operator <<
+//! new-transaction
+main() {
+    _ = 0 << true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true << 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true << true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 << 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 << 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 << 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+module M {
+    resource R { x: bool }
+    f() {
+        _ = 0 << (R { x: true });
+        return;
+    }
+    g() {
+        _ = (R { x: true }) << 0;
+        return;
+    }
+    h() {
+        _ = (R { x: true }) << (R { x: true });
+        return;
+    }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+
+// operator >>
+//! new-transaction
+main() {
+    _ = 0 >> true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true >> 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = true >> true;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0 >> 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 >> 0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+main() {
+    _ = 0x0 >> 0x0;
+    return;
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+module M {
+    resource R { x: bool }
+    f() {
+        _ = 0 >> (R { x: true });
+        return;
+    }
+    g() {
+        _ = (R { x: true }) >> 0;
+        return;
+    }
+    h() {
+        _ = (R { x: true }) >> (R { x: true });
+        return;
+    }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR

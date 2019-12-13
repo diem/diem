@@ -493,8 +493,12 @@ impl Kind {
 pub enum SignatureToken {
     /// Boolean, `true` or `false`.
     Bool,
+    /// Unsigned integers, 8 bits length.
+    U8,
     /// Unsigned integers, 64 bits length.
     U64,
+    /// Unsigned integers, 128 bits length.
+    U128,
     /// ByteArray, variable size, immutable byte array.
     ByteArray,
     /// Address, a 32 bytes immutable type.
@@ -548,7 +552,9 @@ impl ::std::fmt::Debug for SignatureToken {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         match self {
             SignatureToken::Bool => write!(f, "Bool"),
+            SignatureToken::U8 => write!(f, "U8"),
             SignatureToken::U64 => write!(f, "U64"),
+            SignatureToken::U128 => write!(f, "U128"),
             SignatureToken::ByteArray => write!(f, "ByteArray"),
             SignatureToken::Address => write!(f, "Address"),
             SignatureToken::Struct(idx, types) => write!(f, "Struct({:?}, {:?})", idx, types),
@@ -602,7 +608,9 @@ impl SignatureToken {
         match self {
             Reference(_) => SignatureTokenKind::Reference,
             MutableReference(_) => SignatureTokenKind::MutableReference,
-            Bool | U64 | ByteArray | Address | Struct(_, _) => SignatureTokenKind::Value,
+            Bool | U8 | U64 | U128 | ByteArray | Address | Struct(_, _) => {
+                SignatureTokenKind::Value
+            }
             // TODO: This is a temporary hack to please the verifier. SignatureTokenKind will soon
             // be completely removed. `SignatureTokenView::kind()` should be used instead.
             TypeParameter(_) => SignatureTokenKind::Value,
@@ -618,7 +626,7 @@ impl SignatureToken {
         match self {
             Struct(sh_idx, _) => Some(*sh_idx),
             Reference(token) | MutableReference(token) => token.struct_index(),
-            Bool | U64 | ByteArray | Address | TypeParameter(_) => None,
+            Bool | U8 | U64 | U128 | ByteArray | Address | TypeParameter(_) => None,
         }
     }
 
@@ -626,8 +634,23 @@ impl SignatureToken {
     pub fn is_primitive(&self) -> bool {
         use SignatureToken::*;
         match self {
-            Bool | U64 | ByteArray | Address => true,
+            Bool | U8 | U64 | U128 | ByteArray | Address => true,
             Struct(_, _) | Reference(_) | MutableReference(_) | TypeParameter(_) => false,
+        }
+    }
+
+    // Returns `true` if the `SignatureToken` is an integer type.
+    pub fn is_integer(&self) -> bool {
+        use SignatureToken::*;
+        match self {
+            U8 | U64 | U128 => true,
+            Bool
+            | ByteArray
+            | Address
+            | Struct(_, _)
+            | Reference(_)
+            | MutableReference(_)
+            | TypeParameter(_) => false,
         }
     }
 
@@ -689,7 +712,9 @@ impl SignatureToken {
 
         match self {
             Bool => Bool,
+            U8 => U8,
             U64 => U64,
+            U128 => U128,
             ByteArray => ByteArray,
             Address => Address,
             Struct(idx, actuals) => Struct(
@@ -715,7 +740,7 @@ impl SignatureToken {
 
         match ty {
             // The primitive types & references have kind unrestricted.
-            Bool | U64 | ByteArray | Address | Reference(_) | MutableReference(_) => {
+            Bool | U8 | U64 | U128 | ByteArray | Address | Reference(_) | MutableReference(_) => {
                 Kind::Unrestricted
             }
 
@@ -819,12 +844,42 @@ pub enum Bytecode {
     ///
     /// Stack transition: none
     Branch(CodeOffset),
-    /// Push integer constant onto the stack.
+    /// Push a U8 constant onto the stack.
+    ///
+    /// Stack transition:
+    ///
+    /// ```... -> ..., u8_value```
+    LdU8(u8),
+    /// Push a U64 constant onto the stack.
     ///
     /// Stack transition:
     ///
     /// ```... -> ..., u64_value```
-    LdConst(u64),
+    LdU64(u64),
+    /// Push a U128 constant onto the stack.
+    ///
+    /// Stack transition:
+    ///
+    /// ```... -> ..., u128_value```
+    LdU128(u128),
+    /// Convert the value at the top of the stack into u8.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., integer_value -> ..., u8_value```
+    CastU8,
+    /// Convert the value at the top of the stack into u64.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., integer_value -> ..., u8_value```
+    CastU64,
+    /// Convert the value at the top of the stack into u128.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., integer_value -> ..., u128_value```
+    CastU128,
     /// Push a `ByteArray` literal onto the stack. The `ByteArray` is loaded from the
     /// `ByteArrayPool` via `ByteArrayPoolIndex`.
     ///
@@ -1174,7 +1229,7 @@ pub enum Bytecode {
 /// The number of bytecode instructions.
 /// This is necessary for checking that all instructions are covered since Rust
 /// does not provide a way of determining the number of variants of an enum.
-pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 54;
+pub const NUMBER_OF_BYTECODE_INSTRUCTIONS: usize = 59;
 
 pub const NUMBER_OF_NATIVE_FUNCTIONS: usize = 17;
 
@@ -1186,7 +1241,12 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::BrTrue(a) => write!(f, "BrTrue({})", a),
             Bytecode::BrFalse(a) => write!(f, "BrFalse({})", a),
             Bytecode::Branch(a) => write!(f, "Branch({})", a),
-            Bytecode::LdConst(a) => write!(f, "LdConst({})", a),
+            Bytecode::LdU8(a) => write!(f, "LdU8({})", a),
+            Bytecode::LdU64(a) => write!(f, "LdU64({})", a),
+            Bytecode::LdU128(a) => write!(f, "LdU128({})", a),
+            Bytecode::CastU8 => write!(f, "CastU8"),
+            Bytecode::CastU64 => write!(f, "CastU64"),
+            Bytecode::CastU128 => write!(f, "CastU128"),
             Bytecode::LdByteArray(a) => write!(f, "LdByteArray({})", a),
             Bytecode::LdAddr(a) => write!(f, "LdAddr({})", a),
             Bytecode::LdTrue => write!(f, "LdTrue"),

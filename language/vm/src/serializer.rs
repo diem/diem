@@ -477,7 +477,9 @@ fn serialize_signature_tokens(binary: &mut BinaryData, tokens: &[SignatureToken]
 fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) -> Result<()> {
     match token {
         SignatureToken::Bool => binary.push(SerializedType::BOOL as u8)?,
-        SignatureToken::U64 => binary.push(SerializedType::INTEGER as u8)?,
+        SignatureToken::U8 => binary.push(SerializedType::U8 as u8)?,
+        SignatureToken::U64 => binary.push(SerializedType::U64 as u8)?,
+        SignatureToken::U128 => binary.push(SerializedType::U128 as u8)?,
         SignatureToken::ByteArray => binary.push(SerializedType::BYTEARRAY as u8)?,
         SignatureToken::Address => binary.push(SerializedType::ADDRESS as u8)?,
         SignatureToken::Struct(idx, types) => {
@@ -561,10 +563,21 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             binary.push(Opcodes::BRANCH as u8)?;
             write_u16(binary, *code_offset)
         }
-        Bytecode::LdConst(value) => {
-            binary.push(Opcodes::LD_CONST as u8)?;
+        Bytecode::LdU8(value) => {
+            binary.push(Opcodes::LD_U8 as u8)?;
+            binary.push(*value)
+        }
+        Bytecode::LdU64(value) => {
+            binary.push(Opcodes::LD_U64 as u8)?;
             write_u64(binary, *value)
         }
+        Bytecode::LdU128(value) => {
+            binary.push(Opcodes::LD_U128 as u8)?;
+            write_u128(binary, *value)
+        }
+        Bytecode::CastU8 => binary.push(Opcodes::CAST_U8 as u8),
+        Bytecode::CastU64 => binary.push(Opcodes::CAST_U64 as u8),
+        Bytecode::CastU128 => binary.push(Opcodes::CAST_U128 as u8),
         Bytecode::LdAddr(address_idx) => {
             binary.push(Opcodes::LD_ADDR as u8)?;
             write_u16_as_uleb128(binary, address_idx.0)

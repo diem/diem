@@ -260,6 +260,8 @@ impl<'a> SpecTranslator<'a> {
                 left,
                 right,
             ),
+            BinOp::Shl => unimplemented!(),
+            BinOp::Shr => unimplemented!(),
 
             // bool
             BinOp::And => self.translate_op_helper(
@@ -351,7 +353,9 @@ impl<'a> SpecTranslator<'a> {
                 format!("Address({})", self.translate_account_address(addr)),
                 SignatureToken::Address,
             ),
+            CopyableVal::U8(_) => unimplemented!(),
             CopyableVal::U64(val) => BoogieExpr(format!("Integer({})", val), SignatureToken::U64),
+            CopyableVal::U128(_) => unimplemented!(),
             CopyableVal::Bool(val) => BoogieExpr(format!("Boolean({})", val), SignatureToken::Bool),
             // TODO: byte arrays
             CopyableVal::ByteArray(_arr) => BoogieExpr(

@@ -394,7 +394,7 @@ impl StDefnMaterializeState {
                     || targs.iter().any(|t| self.contains_nominal_resource(t))
             }
             Reference(token) | MutableReference(token) => self.contains_nominal_resource(token),
-            Bool | U64 | ByteArray | Address | TypeParameter(_) => false,
+            Bool | U8 | U64 | U128 | ByteArray | Address | TypeParameter(_) => false,
         }
     }
 }

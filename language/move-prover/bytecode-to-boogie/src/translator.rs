@@ -617,10 +617,15 @@ impl<'a> ModuleTranslator<'a> {
                 "call tmp := LdFalse();".to_string(),
                 format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
             ],
-            LdConst(idx, num) => vec![
+            LdU8(_, _) => unimplemented!(),
+            LdU64(idx, num) => vec![
                 format!("call tmp := LdConst({});", num),
                 format!("m := UpdateLocal(m, old_size + {}, tmp);", idx),
             ],
+            LdU128(_, _) => unimplemented!(),
+            CastU8(_, _) => unimplemented!(),
+            CastU64(_, _) => unimplemented!(),
+            CastU128(_, _) => unimplemented!(),
             LdAddr(idx, addr_idx) => {
                 let addr = self.module.address_pool()[(*addr_idx).into_index()];
                 let addr_int = BigInt::from_str_radix(&addr.to_string(), 16).unwrap();
@@ -1181,7 +1186,9 @@ pub fn is_struct_vector(module: &VerifiedModule, idx: StructHandleIndex) -> bool
 pub fn format_type(module: &VerifiedModule, sig: &SignatureToken) -> String {
     match sig {
         SignatureToken::Bool => "bool".into(),
+        SignatureToken::U8 => unimplemented!(),
         SignatureToken::U64 => "int".into(),
+        SignatureToken::U128 => unimplemented!(),
         SignatureToken::ByteArray => "bytearray".into(),
         SignatureToken::Address => "address".into(),
         SignatureToken::Struct(idx, _) => struct_name_from_handle_index(module, *idx),
@@ -1199,7 +1206,9 @@ pub fn format_type(module: &VerifiedModule, sig: &SignatureToken) -> String {
 pub fn format_type_value(module: &VerifiedModule, sig: &SignatureToken) -> String {
     match sig {
         SignatureToken::Bool => "BooleanType()".to_string(),
+        SignatureToken::U8 => unimplemented!(),
         SignatureToken::U64 => "IntegerType()".to_string(),
+        SignatureToken::U128 => unimplemented!(),
         SignatureToken::ByteArray => "ByteArrayType()".to_string(),
         SignatureToken::Address => "AddressType()".to_string(),
         SignatureToken::Reference(t) | SignatureToken::MutableReference(t) => {

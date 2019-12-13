@@ -62,33 +62,17 @@ fn consume_token<'input>(
     Ok(())
 }
 
-fn parse_comma_list<'input, F, G, R>(
+fn adjust_token<'input>(
     tokens: &mut Lexer<'input>,
-    is_end_of_list: G,
-    parse_list_item: F,
-    allow_trailing_comma: bool,
-) -> Result<Vec<R>, ParseError<usize, anyhow::Error>>
-where
-    F: Fn(&mut Lexer<'input>) -> Result<R, ParseError<usize, anyhow::Error>>,
-    G: Fn(&Lexer<'input>) -> bool,
-{
-    let mut v = vec![];
-    if !is_end_of_list(tokens) {
-        loop {
-            v.push(parse_list_item(tokens)?);
-            if is_end_of_list(tokens) {
-                break;
-            }
-            consume_token(tokens, Tok::Comma)?;
-            if is_end_of_list(tokens) && allow_trailing_comma {
-                break;
-            }
-        }
+    list_end_token: Tok,
+) -> Result<(), ParseError<usize, anyhow::Error>> {
+    if tokens.peek() == Tok::GreaterGreater && list_end_token == Tok::Greater {
+        tokens.replace_token(Tok::Greater, 1)?;
     }
-    Ok(v)
+    Ok(())
 }
 
-fn parse_comma_list_simple<'input, F, R>(
+fn parse_comma_list<'input, F, R>(
     tokens: &mut Lexer<'input>,
     list_end_token: Tok,
     parse_list_item: F,
@@ -97,12 +81,23 @@ fn parse_comma_list_simple<'input, F, R>(
 where
     F: Fn(&mut Lexer<'input>) -> Result<R, ParseError<usize, anyhow::Error>>,
 {
-    parse_comma_list(
-        tokens,
-        |tokens| tokens.peek() == list_end_token,
-        parse_list_item,
-        allow_trailing_comma,
-    )
+    let mut v = vec![];
+    adjust_token(tokens, list_end_token)?;
+    if tokens.peek() != list_end_token {
+        loop {
+            v.push(parse_list_item(tokens)?);
+            adjust_token(tokens, list_end_token)?;
+            if tokens.peek() == list_end_token {
+                break;
+            }
+            consume_token(tokens, Tok::Comma)?;
+            adjust_token(tokens, list_end_token)?;
+            if tokens.peek() == list_end_token && allow_trailing_comma {
+                break;
+            }
+        }
+    }
+    Ok(v)
 }
 
 fn parse_name<'input>(
@@ -225,10 +220,32 @@ fn parse_copyable_val_<'input>(
             tokens.advance()?;
             CopyableVal::Bool(false)
         }
+        Tok::U8Value => {
+            let mut s = tokens.content();
+            if s.ends_with("u8") {
+                s = &s[..s.len() - 2]
+            }
+            let i = u8::from_str(s).unwrap();
+            tokens.advance()?;
+            CopyableVal::U8(i)
+        }
         Tok::U64Value => {
-            let i = u64::from_str(tokens.content()).unwrap();
+            let mut s = tokens.content();
+            if s.ends_with("u64") {
+                s = &s[..s.len() - 3]
+            }
+            let i = u64::from_str(s).unwrap();
             tokens.advance()?;
             CopyableVal::U64(i)
+        }
+        Tok::U128Value => {
+            let mut s = tokens.content();
+            if s.ends_with("u128") {
+                s = &s[..s.len() - 4]
+            }
+            let i = u128::from_str(s).unwrap();
+            tokens.advance()?;
+            CopyableVal::U128(i)
         }
         Tok::ByteArrayValue => {
             let s = tokens.content();
@@ -360,7 +377,10 @@ fn parse_qualified_function_name_<'input>(
         | Tok::GetTxnSender
         | Tok::MoveFrom
         | Tok::MoveToSender
-        | Tok::Freeze => {
+        | Tok::Freeze
+        | Tok::ToU8
+        | Tok::ToU64
+        | Tok::ToU128 => {
             let f = parse_builtin(tokens)?;
             FunctionCall::Builtin(f)
         }
@@ -492,7 +512,10 @@ fn parse_call_or_term<'input>(
         | Tok::MoveFrom
         | Tok::MoveToSender
         | Tok::Freeze
-        | Tok::DotNameValue => {
+        | Tok::DotNameValue
+        | Tok::ToU8
+        | Tok::ToU64
+        | Tok::ToU128 => {
             let f = parse_qualified_function_name_(tokens)?;
             let exp = parse_call_or_term_(tokens)?;
             Ok(Exp::FunctionCall(f, Box::new(exp)))
@@ -539,7 +562,7 @@ fn parse_pack<'input>(
     type_actuals: Vec<Type>,
 ) -> Result<Exp, ParseError<usize, anyhow::Error>> {
     consume_token(tokens, Tok::LBrace)?;
-    let fs = parse_comma_list_simple(tokens, Tok::RBrace, parse_field_exp, true)?;
+    let fs = parse_comma_list(tokens, Tok::RBrace, parse_field_exp, true)?;
     consume_token(tokens, Tok::RBrace)?;
     Ok(Exp::Pack(
         StructName::parse(name)?,
@@ -572,16 +595,20 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, ParseError<usiz
             let v = parse_var_(tokens)?;
             Ok(Exp::BorrowLocal(false, v))
         }
-        Tok::AccountAddressValue | Tok::True | Tok::False | Tok::U64Value | Tok::ByteArrayValue => {
-            Ok(Exp::Value(parse_copyable_val_(tokens)?))
-        }
+        Tok::AccountAddressValue
+        | Tok::True
+        | Tok::False
+        | Tok::U8Value
+        | Tok::U64Value
+        | Tok::U128Value
+        | Tok::ByteArrayValue => Ok(Exp::Value(parse_copyable_val_(tokens)?)),
         Tok::NameValue | Tok::NameBeginTyValue => {
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
             parse_pack(tokens, &name, type_actuals)
         }
         Tok::LParen => {
             tokens.advance()?;
-            let exps = parse_comma_list_simple(tokens, Tok::RParen, parse_exp_, true)?;
+            let exps = parse_comma_list(tokens, Tok::RParen, parse_exp_, true)?;
             consume_token(tokens, Tok::RParen)?;
             Ok(Exp::ExprList(exps))
         }
@@ -705,6 +732,18 @@ fn parse_builtin<'input>(
             tokens.advance()?;
             Ok(Builtin::Freeze)
         }
+        Tok::ToU8 => {
+            tokens.advance()?;
+            Ok(Builtin::ToU8)
+        }
+        Tok::ToU64 => {
+            tokens.advance()?;
+            Ok(Builtin::ToU64)
+        }
+        Tok::ToU128 => {
+            tokens.advance()?;
+            Ok(Builtin::ToU128)
+        }
         _ => Err(ParseError::InvalidToken {
             location: tokens.start_loc(),
         }),
@@ -787,7 +826,7 @@ fn parse_field_bindings<'input>(
 fn parse_assign<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<Cmd, ParseError<usize, anyhow::Error>> {
-    let lvalues = parse_comma_list_simple(tokens, Tok::Equal, parse_lvalue_, false)?;
+    let lvalues = parse_comma_list(tokens, Tok::Equal, parse_lvalue_, false)?;
     if lvalues.is_empty() {
         return Err(ParseError::InvalidToken {
             location: tokens.start_loc(),
@@ -804,7 +843,7 @@ fn parse_unpack<'input>(
     type_actuals: Vec<Type>,
 ) -> Result<Cmd, ParseError<usize, anyhow::Error>> {
     consume_token(tokens, Tok::LBrace)?;
-    let bindings = parse_comma_list_simple(tokens, Tok::RBrace, parse_field_bindings, true)?;
+    let bindings = parse_comma_list(tokens, Tok::RBrace, parse_field_bindings, true)?;
     consume_token(tokens, Tok::RBrace)?;
     consume_token(tokens, Tok::Equal)?;
     let e = parse_exp_(tokens)?;
@@ -844,7 +883,7 @@ fn parse_cmd<'input>(tokens: &mut Lexer<'input>) -> Result<Cmd, ParseError<usize
         }
         Tok::Return => {
             tokens.advance()?;
-            let v = parse_comma_list_simple(tokens, Tok::Semicolon, parse_exp_, true)?;
+            let v = parse_comma_list(tokens, Tok::Semicolon, parse_exp_, true)?;
             Ok(Cmd::Return(Box::new(Spanned::no_loc(Exp::ExprList(v)))))
         }
         Tok::Continue => {
@@ -862,10 +901,13 @@ fn parse_cmd<'input>(tokens: &mut Lexer<'input>) -> Result<Cmd, ParseError<usize
         | Tok::MoveFrom
         | Tok::MoveToSender
         | Tok::Freeze
-        | Tok::DotNameValue => Ok(Cmd::Exp(Box::new(parse_call_(tokens)?))),
+        | Tok::DotNameValue
+        | Tok::ToU8
+        | Tok::ToU64
+        | Tok::ToU128 => Ok(Cmd::Exp(Box::new(parse_call_(tokens)?))),
         Tok::LParen => {
             tokens.advance()?;
-            let v = parse_comma_list_simple(tokens, Tok::RParen, parse_exp_, true)?;
+            let v = parse_comma_list(tokens, Tok::RParen, parse_exp_, true)?;
             consume_token(tokens, Tok::RParen)?;
             Ok(Cmd::Exp(Box::new(Spanned::no_loc(Exp::ExprList(v)))))
         }
@@ -1102,9 +1144,17 @@ fn parse_type<'input>(
             tokens.advance()?;
             Type::Address
         }
+        Tok::U8 => {
+            tokens.advance()?;
+            Type::U8
+        }
         Tok::U64 => {
             tokens.advance()?;
             Type::U64
+        }
+        Tok::U128 => {
+            tokens.advance()?;
+            Type::U128
         }
         Tok::Bool => {
             tokens.advance()?;
@@ -1168,13 +1218,6 @@ fn parse_type_formal<'input>(
     }
 }
 
-fn is_end_of_generics<'input>(tokens: &Lexer<'input>) -> bool {
-    match tokens.peek() {
-        Tok::Greater | Tok::GreaterGreater => true,
-        _ => false,
-    }
-}
-
 // TypeActuals: Vec<Type> = {
 //     <tys: ("<" <Comma<Type>> ">")?> => { ... }
 // }
@@ -1184,8 +1227,8 @@ fn parse_type_actuals<'input>(
 ) -> Result<Vec<Type>, ParseError<usize, anyhow::Error>> {
     let tys = if tokens.peek() == Tok::Less {
         tokens.advance()?; // consume the "<"
-        let list = parse_comma_list(tokens, is_end_of_generics, parse_type, true)?;
-        consume_end_of_generics(tokens)?;
+        let list = parse_comma_list(tokens, Tok::Greater, parse_type, true)?;
+        consume_token(tokens, Tok::Greater)?;
         list
     } else {
         vec![]
@@ -1209,8 +1252,8 @@ fn parse_name_and_type_formals<'input>(
         parse_name(tokens)?
     };
     let k = if has_types {
-        let list = parse_comma_list(tokens, is_end_of_generics, parse_type_formal, true)?;
-        consume_end_of_generics(tokens)?;
+        let list = parse_comma_list(tokens, Tok::Greater, parse_type_formal, true)?;
+        consume_token(tokens, Tok::Greater)?;
         list
     } else {
         vec![]
@@ -1234,8 +1277,8 @@ fn parse_name_and_type_actuals<'input>(
         parse_name(tokens)?
     };
     let tys = if has_types {
-        let list = parse_comma_list(tokens, is_end_of_generics, parse_type, true)?;
-        consume_end_of_generics(tokens)?;
+        let list = parse_comma_list(tokens, Tok::Greater, parse_type, true)?;
+        consume_token(tokens, Tok::Greater)?;
         list
     } else {
         vec![]
@@ -1354,9 +1397,13 @@ fn parse_unary_spec_exp<'input>(
     tokens: &mut Lexer<'input>,
 ) -> Result<SpecExp, ParseError<usize, anyhow::Error>> {
     Ok(match tokens.peek() {
-        Tok::AccountAddressValue | Tok::True | Tok::False | Tok::U64Value | Tok::ByteArrayValue => {
-            SpecExp::Constant(parse_copyable_val_(tokens)?.value)
-        }
+        Tok::AccountAddressValue
+        | Tok::True
+        | Tok::False
+        | Tok::U8Value
+        | Tok::U64Value
+        | Tok::U128Value
+        | Tok::ByteArrayValue => SpecExp::Constant(parse_copyable_val_(tokens)?.value),
         Tok::GlobalExists => {
             tokens.advance()?; // this consumes 'global_exists<' due to parser funkiness
             let type_ = parse_qualified_struct_ident(tokens)?;
@@ -1514,7 +1561,7 @@ fn parse_function_decl<'input>(
 
     let (name, type_formals) = parse_name_and_type_formals(tokens)?;
     consume_token(tokens, Tok::LParen)?;
-    let args = parse_comma_list_simple(tokens, Tok::RParen, parse_arg_decl, true)?;
+    let args = parse_comma_list(tokens, Tok::RParen, parse_arg_decl, true)?;
     consume_token(tokens, Tok::RParen)?;
 
     let ret = if tokens.peek() == Tok::Colon {
@@ -1647,7 +1694,7 @@ fn parse_script<'input>(
     }
     consume_token(tokens, Tok::Main)?;
     consume_token(tokens, Tok::LParen)?;
-    let args = parse_comma_list_simple(tokens, Tok::RParen, parse_arg_decl, true)?;
+    let args = parse_comma_list(tokens, Tok::RParen, parse_arg_decl, true)?;
     consume_token(tokens, Tok::RParen)?;
     let (locals, body) = parse_function_block(tokens)?;
     let end_loc = tokens.previous_end_loc();
@@ -1711,7 +1758,7 @@ fn parse_struct_decl<'input>(
     }
 
     consume_token(tokens, Tok::LBrace)?;
-    let fields = parse_comma_list_simple(tokens, Tok::RBrace, parse_field_decl, true)?;
+    let fields = parse_comma_list(tokens, Tok::RBrace, parse_field_decl, true)?;
     consume_token(tokens, Tok::RBrace)?;
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(

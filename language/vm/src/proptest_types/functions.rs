@@ -392,7 +392,7 @@ impl BytecodeGen {
         prop_oneof![
             // The numbers are relative weights, somewhat arbitrarily picked.
             9 => Self::just_bytecode_strategy(),
-            1 => any::<u64>().prop_map(Bytecode::LdConst),
+            1 => any::<u64>().prop_map(Bytecode::LdU64),
         ]
     }
 

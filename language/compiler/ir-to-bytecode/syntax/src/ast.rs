@@ -166,8 +166,12 @@ pub enum Kind {
 pub enum Type {
     /// `address`
     Address,
+    /// `u8`
+    U8,
     /// `u64`
     U64,
+    /// `u128`
+    U128,
     /// `bool`
     Bool,
     /// `bytearray`
@@ -323,6 +327,13 @@ pub enum Builtin {
 
     /// Convert a mutable reference into an immutable one
     Freeze,
+
+    /// Cast an integer into u8.
+    ToU8,
+    /// Cast an integer into u64.
+    ToU64,
+    /// Cast an integer into u128.
+    ToU128,
 }
 
 /// Enum for different function calls
@@ -435,8 +446,12 @@ pub type Block_ = Spanned<Block>;
 pub enum CopyableVal {
     /// An address in the global storage
     Address(AccountAddress),
+    /// An unsigned 8-bit integer
+    U8(u8),
     /// An unsigned 64-bit integer
     U64(u64),
+    /// An unsigned 128-bit integer
+    U128(u128),
     /// true or false
     Bool(bool),
     /// `b"<bytes>"`
@@ -1314,7 +1329,9 @@ fn format_type_formals(formals: &[(TypeVar_, Kind)]) -> String {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Type::U8 => write!(f, "u8"),
             Type::U64 => write!(f, "u64"),
+            Type::U128 => write!(f, "u128"),
             Type::Bool => write!(f, "bool"),
             Type::Address => write!(f, "address"),
             Type::ByteArray => write!(f, "bytearray"),
@@ -1353,6 +1370,9 @@ impl fmt::Display for Builtin {
                 write!(f, "move_to_sender<{}{}>", t, format_type_actuals(tys))
             }
             Builtin::Freeze => write!(f, "freeze"),
+            Builtin::ToU8 => write!(f, "to_u8"),
+            Builtin::ToU64 => write!(f, "to_u64"),
+            Builtin::ToU128 => write!(f, "to_u128"),
         }
     }
 }
@@ -1479,7 +1499,9 @@ impl fmt::Display for Block {
 impl fmt::Display for CopyableVal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            CopyableVal::U8(v) => write!(f, "{}u8", v),
             CopyableVal::U64(v) => write!(f, "{}", v),
+            CopyableVal::U128(v) => write!(f, "{}u128", v),
             CopyableVal::Bool(v) => write!(f, "{}", v),
             CopyableVal::ByteArray(v) => write!(f, "{}", v),
             CopyableVal::Address(v) => write!(f, "0x{}", hex::encode(&v)),

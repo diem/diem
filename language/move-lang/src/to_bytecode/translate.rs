@@ -780,7 +780,7 @@ fn exp_(
                     let idx = context.byte_array_index(eloc, bytes)?;
                     B::LdByteArray(idx)
                 }
-                V::U64(u) => B::LdConst(u),
+                V::U64(u) => B::LdU64(u),
                 V::Bool(b) => {
                     if b {
                         B::LdTrue
