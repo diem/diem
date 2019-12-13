@@ -345,9 +345,8 @@ fn parse_bind<'input>(tokens: &mut Lexer<'input>) -> Result<Bind, Error> {
 
 // Parse a list of bindings, which can be zero, one, or more bindings:
 //      BindList =
-//          "(" ")"
-//          | <Bind>
-//          | "(" (<Bind> ",")* <Bind> ")"
+//          <Bind>
+//          | "(" Comma<Bind> ")"
 //
 // The list is enclosed in parenthesis, except that the parenthesis are
 // optional if there is a single Bind.
@@ -357,7 +356,7 @@ fn parse_bind_list<'input>(tokens: &mut Lexer<'input>) -> Result<BindList, Error
         vec![parse_bind(tokens)?]
     } else {
         tokens.advance()?; // consume the LParen
-        let list = parse_comma_list(tokens, Tok::RParen, parse_bind, false)?;
+        let list = parse_comma_list(tokens, Tok::RParen, parse_bind, true)?;
         consume_token(tokens, Tok::RParen)?;
         list
     };
@@ -880,11 +879,11 @@ fn parse_base_type<'input>(tokens: &mut Lexer<'input>) -> Result<SingleType, Err
 }
 
 // Parse a list of type arguments:
-//      TypeArgs = ((<BaseType> ",")* <BaseType>)? ">"
+//      TypeArgs = Comma<BaseType> ">"
 //
 // This is used for the type arguments following NameBeginArgs.
 fn parse_type_args<'input>(tokens: &mut Lexer<'input>) -> Result<Vec<SingleType>, Error> {
-    let tys = parse_comma_list(tokens, Tok::Greater, parse_base_type, false)?;
+    let tys = parse_comma_list(tokens, Tok::Greater, parse_base_type, true)?;
     consume_token(tokens, Tok::Greater)?;
     Ok(tys)
 }
@@ -916,16 +915,15 @@ fn parse_single_type<'input>(tokens: &mut Lexer<'input>) -> Result<SingleType, E
 
 // Parse a type:
 //      Type =
-//          "(" ")"
-//          | <SingleType>
-//          | "(" (<SingleType> ",")* <SingleType> ")"
+//          <SingleType>
+//          | "(" Comma<SingleType> ")"
 fn parse_type<'input>(tokens: &mut Lexer<'input>) -> Result<Type, Error> {
     let start_loc = tokens.start_loc();
     let mut ts = if tokens.peek() != Tok::LParen {
         vec![parse_single_type(tokens)?]
     } else {
         tokens.advance()?; // consume the LParen
-        let list = parse_comma_list(tokens, Tok::RParen, parse_single_type, false)?;
+        let list = parse_comma_list(tokens, Tok::RParen, parse_single_type, true)?;
         consume_token(tokens, Tok::RParen)?;
         list
     };
