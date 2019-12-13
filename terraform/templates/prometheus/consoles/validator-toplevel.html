@@ -36,7 +36,7 @@
   new PromConsole.Graph({
   node: document.querySelector("#cpuGraph"),
   height: 100,
-  expr: "100 * (1 - avg by(address)(rate(node_cpu_seconds_total{job='validator_nodes',mode='idle'}[5m])))",
+  expr: "100 * (1 - avg by(address)(rate(node_cpu_seconds_total{job='validator_instances',mode='idle'}[5m])))",
     max: 100,
     yAxisFormatter: PromConsole.NumberFormatter.humanizeNoSmallPrefix,
     yHoverFormatter: PromConsole.NumberFormatter.humanizeNoSmallPrefix,

@@ -32,14 +32,14 @@
   <td> Total: {{ template "prom_query_drilldown" (args (printf "consensus_gauge{op='current_round',job='validators',instance='%s'}" .Labels.instance) "") }}<br/>
        Rate: {{ template "prom_query_drilldown" (args (printf "rate(consensus_gauge{op='current_round',job='validators',instance='%s'}[1m])" .Labels.instance) "" "printf.1f") }}</td>
 
-  <td>Instance: {{ template "prom_query_drilldown" (args (printf "time() - node_boot_time_seconds{job='validator_nodes',address='%s'}" .Labels.address) "" "humanizeDuration") }}
+  <td>Instance: {{ template "prom_query_drilldown" (args (printf "time() - node_boot_time_seconds{job='validator_instances',address='%s'}" .Labels.address) "" "humanizeDuration") }}
     <br />
-    Container: {{ template "prom_query_drilldown" (args (printf "time() - ecs_start_time_seconds{job='validator_nodes',address='%s'}" .Labels.address) "" "humanizeDuration") }}
+    Container: {{ template "prom_query_drilldown" (args (printf "time() - ecs_start_time_seconds{job='validator_instances',address='%s'}" .Labels.address) "" "humanizeDuration") }}
   </td>
 
-  <td>{{ template "prom_query_drilldown" (args (printf "100 * (1 - avg by(address)(irate(node_cpu_seconds_total{job='validator_nodes',mode='idle',address='%s'}[5m])))" .Labels.address) "%" "printf.1f") }}</td>
+  <td>{{ template "prom_query_drilldown" (args (printf "100 * (1 - avg by(address)(irate(node_cpu_seconds_total{job='validator_instances',mode='idle',address='%s'}[5m])))" .Labels.address) "%" "printf.1f") }}</td>
 
-  <td>{{ template "prom_query_drilldown" (args (printf "node_memory_MemFree_bytes{job='validator_nodes',address='%s'} + node_memory_Cached_bytes{job='validator_nodes',address='%s'} + node_memory_Buffers_bytes{job='validator_nodes',address='%s'}" .Labels.address .Labels.address .Labels.address) "B" "humanize1024") }}</td>
+  <td>{{ template "prom_query_drilldown" (args (printf "node_memory_MemFree_bytes{job='validator_instances',address='%s'} + node_memory_Cached_bytes{job='validator_instances',address='%s'} + node_memory_Buffers_bytes{job='validator_instances',address='%s'}" .Labels.address .Labels.address .Labels.address) "B" "humanize1024") }}</td>
 <td>{{ with query (printf "build_info{address='%s'}" .Labels.address) }}{{. | first | label "revision" | printf "%.8s"}}{{end}}</td>
 </tr>
 {{ else }}
