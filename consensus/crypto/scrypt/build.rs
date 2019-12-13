@@ -11,5 +11,6 @@ fn main() {
     for p in openssl.include_paths {
         dst.cflag(format!("-I{}", p.to_str().unwrap()));
     }
-    dst.enable("libscrypt-kdf", None).build();
+
+    dst.enable_static().enable("libscrypt-kdf.a", None).build();
 }
